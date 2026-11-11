@@ -246,6 +246,7 @@
                 .metrics,
                 .hashing,
                 .time,
+                .leanvm,
             },
         },
         .era = .{

@@ -1,4 +1,5 @@
 const std = @import("std");
+const ForkTypes = @import("fork_types").ForkTypes;
 const Allocator = std.mem.Allocator;
 
 const types = @import("consensus_types");
@@ -43,7 +44,7 @@ fn effectiveBalance(
     index: ValidatorIndex,
 ) !u64 {
     var validators = try state.validators();
-    var validator: types.phase0.Validator.Type = undefined;
+    var validator: ForkTypes(fork).Validator.Type = undefined;
     try validators.getValue(allocator, index, &validator);
     return validator.effective_balance;
 }
@@ -138,7 +139,7 @@ fn computeSyncAggregateReward(
     pre_state: *CachedBeaconState,
     body: *const fork_types.BeaconBlockBody(block_type, fork),
 ) !u64 {
-    if (comptime !fork.gte(.altair)) return 0;
+    if (comptime !fork.gte(.altair) or fork == .pq) return 0;
 
     const bits = body.syncAggregate().sync_committee_bits;
     var participants: u64 = 0;

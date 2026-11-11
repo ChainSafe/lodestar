@@ -4,7 +4,9 @@ const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
 const BeaconState = @import("fork_types").BeaconState;
 const types = @import("consensus_types");
 const c = @import("constants");
-const SignedVoluntaryExit = types.phase0.SignedVoluntaryExit.Type;
+const ForkTypes = @import("fork_types").ForkTypes;
+const pq = @import("../utils/pq.zig");
+const computeSigningRoot = @import("../utils/signing_root.zig").computeSigningRoot;
 const getPendingBalanceToWithdraw = @import("../utils/validator.zig").getPendingBalanceToWithdraw;
 const isActiveValidatorView = @import("../utils/validator.zig").isActiveValidatorView;
 const verifyVoluntaryExitSignature = @import("../signature_sets/voluntary_exits.zig").verifyVoluntaryExitSignature;
@@ -18,7 +20,7 @@ pub fn processVoluntaryExit(
     config: *const BeaconConfig,
     epoch_cache: *EpochCache,
     state: *BeaconState(fork),
-    signed_voluntary_exit: *const SignedVoluntaryExit,
+    signed_voluntary_exit: *const ForkTypes(fork).SignedVoluntaryExit.Type,
     verify_signature: bool,
 ) !void {
     if (!try isValidVoluntaryExit(fork, io, config, epoch_cache, state, signed_voluntary_exit, verify_signature)) {
@@ -36,7 +38,7 @@ pub fn isValidVoluntaryExit(
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
     state: *BeaconState(fork),
-    signed_voluntary_exit: *const SignedVoluntaryExit,
+    signed_voluntary_exit: *const ForkTypes(fork).SignedVoluntaryExit.Type,
     verify_signature: bool,
 ) !bool {
     return try getVoluntaryExitValidity(fork, io, config, epoch_cache, state, signed_voluntary_exit, verify_signature) == .valid;
@@ -58,7 +60,7 @@ pub fn getVoluntaryExitValidity(
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
     state: *BeaconState(fork),
-    signed_voluntary_exit: *const SignedVoluntaryExit,
+    signed_voluntary_exit: *const ForkTypes(fork).SignedVoluntaryExit.Type,
     verify_signature: bool,
 ) !VoluntaryExitValidity {
     const voluntary_exit = signed_voluntary_exit.message;
@@ -102,7 +104,17 @@ pub fn getVoluntaryExitValidity(
     }
 
     // verify signature
-    if (verify_signature) {
+    if (comptime fork == .pq) {
+        if (verify_signature) {
+            const domain = try config.getDomainForVoluntaryExit(current_epoch, null);
+            var signing_root: [32]u8 = undefined;
+            try computeSigningRoot(types.phase0.VoluntaryExit, &voluntary_exit, domain, &signing_root);
+            const pubkey = try validator.getFieldRoot("pubkey");
+            if (!try pq.xmssVerify(pubkey, c.RESERVED_LEAF_VOLUNTARY_EXIT, &signing_root, &signed_voluntary_exit.signature)) {
+                return .invalid_signature;
+            }
+        }
+    } else if (verify_signature) {
         if (!try verifyVoluntaryExitSignature(io, config, epoch_cache, signed_voluntary_exit)) {
             return .invalid_signature;
         }

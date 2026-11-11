@@ -14,6 +14,7 @@ const processBuilderDepositRequest = @import("./process_builder_deposit_request.
 const processBuilderExitRequest = @import("./process_builder_exit_request.zig").processBuilderExitRequestWithIndex;
 const computeEpochAtSlot = @import("../utils/epoch.zig").computeEpochAtSlot;
 const IndexedBuilderState = @import("indexed_builder_state.zig").IndexedBuilderState;
+const processPreregistrationRequest = @import("process_preregistration_request.zig").processPreregistrationRequest;
 
 pub fn processParentExecutionPayload(
     comptime fork: ForkSeq,
@@ -40,6 +41,9 @@ pub fn processParentExecutionPayload(
             requests.builder_exits.items.len != 0)
         {
             return error.ParentExecutionRequestsNotEmpty;
+        }
+        if (comptime fork == .pq) {
+            if (requests.preregistrations.items.len != 0) return error.ParentExecutionRequestsNotEmpty;
         }
         return;
     }
@@ -86,7 +90,7 @@ pub fn applyParentExecutionPayload(
     }
 
     for (requests.deposits.items) |*deposit| {
-        try processDepositRequest(fork, state, deposit);
+        try processDepositRequest(fork, allocator, state, deposit);
     }
 
     for (requests.withdrawals.items) |*withdrawal| {
@@ -102,6 +106,12 @@ pub fn applyParentExecutionPayload(
         defer indexed.deinit();
         for (requests.builder_deposits.items) |*request| try processBuilderDepositRequest(fork, allocator, config, state, request, &indexed);
         for (requests.builder_exits.items) |*request| try processBuilderExitRequest(fork, allocator, config, state, request, &indexed);
+    }
+
+    if (comptime fork == .pq) {
+        for (requests.preregistrations.items) |*request| {
+            try processPreregistrationRequest(fork, allocator, io, config, epoch_cache, state, request);
+        }
     }
 
     var execution_payload_availability = try state.inner.get("execution_payload_availability");
@@ -133,6 +143,9 @@ pub fn validateExecutionRequests(comptime fork: ForkSeq, requests: *const ForkTy
         requests.builder_exits.items.len > preset.MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD)
     {
         return error.TooManyExecutionRequests;
+    }
+    if (comptime fork == .pq) {
+        if (requests.preregistrations.items.len > preset.MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD) return error.TooManyExecutionRequests;
     }
 }
 

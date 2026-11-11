@@ -1,4 +1,5 @@
 const std = @import("std");
+const pq = @import("../utils/pq.zig");
 const ForkSeq = @import("config").ForkSeq;
 const BeaconConfig = @import("config").BeaconConfig;
 const BeaconState = @import("fork_types").BeaconState;
@@ -31,6 +32,10 @@ pub fn processConsolidationRequest(
     const source_pubkey = consolidation.source_pubkey;
     const target_pubkey = consolidation.target_pubkey;
     const source_address = consolidation.source_address;
+
+    if (comptime fork == .pq) {
+        if (pq.isLegacyPubkey(&source_pubkey) or pq.isLegacyPubkey(&target_pubkey)) return;
+    }
 
     const source_index = epoch_cache.pubkey_cache.get(io, source_pubkey) orelse return;
     const target_index = epoch_cache.pubkey_cache.get(io, target_pubkey) orelse return;

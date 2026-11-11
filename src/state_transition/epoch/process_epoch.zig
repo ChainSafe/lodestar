@@ -4,6 +4,7 @@ const observeEpochTransitionStep = metrics.observeEpochTransitionStep;
 const time = @import("time");
 const processBuilderPendingPayments = @import("process_builder_pending_payments.zig").processBuilderPendingPayments;
 const processPtcWindow = @import("process_ptc_window.zig").processPtcWindow;
+const processPreregistrationExpiry = @import("../block/process_preregistration_request.zig").processPreregistrationExpiry;
 
 const ForkSeq = @import("config").ForkSeq;
 const BeaconConfig = @import("config").BeaconConfig;
@@ -104,7 +105,7 @@ pub fn processEpoch(
         try observeEpochTransitionStep(.{ .step = .process_participation_flag_updates }, @as(u64, @intCast(time.since(io, timer).nanoseconds)));
     }
 
-    if (comptime fork.gte(.altair)) {
+    if (comptime fork.gte(.altair) and fork != .pq) {
         timer = time.start(io);
         try processSyncCommitteeUpdates(fork, allocator, io, epoch_cache, state);
         try observeEpochTransitionStep(.{ .step = .process_sync_committee_updates }, @as(u64, @intCast(time.since(io, timer).nanoseconds)));
@@ -117,5 +118,8 @@ pub fn processEpoch(
     }
     if (comptime fork.gte(.gloas)) {
         try processPtcWindow(fork, allocator, epoch_cache, state, cache);
+    }
+    if (comptime fork == .pq) {
+        try processPreregistrationExpiry(fork, allocator, state);
     }
 }

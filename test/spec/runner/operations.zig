@@ -34,7 +34,9 @@ pub const Operation = enum {
     execution_payload_bid,
     parent_execution_payload,
     payload_attestation,
+    preregistration_request,
     proposer_slashing,
+    randao,
     sync_aggregate,
     sync_aggregate_random,
     voluntary_exit,
@@ -46,7 +48,7 @@ pub const Operation = enum {
         return switch (self) {
             .block_header, .parent_execution_payload => "block",
             .bls_to_execution_change => "address_change",
-            .execution_payload => "body",
+            .execution_payload, .randao => "body",
             .withdrawals => "execution_payload",
             .sync_aggregate_random => "sync_aggregate",
             .voluntary_exit_churn => "voluntary_exit",
@@ -65,10 +67,11 @@ pub const Operation = enum {
             .consolidation_request => "ConsolidationRequest",
             .deposit => "Deposit",
             .deposit_request => "DepositRequest",
-            .execution_payload => "BeaconBlockBody",
+            .execution_payload, .randao => "BeaconBlockBody",
             .execution_payload_bid => "SignedExecutionPayloadBid",
             .parent_execution_payload => "BeaconBlock",
             .payload_attestation => "PayloadAttestation",
+            .preregistration_request => "PreregistrationRequest",
             .proposer_slashing => "ProposerSlashing",
             .sync_aggregate, .sync_aggregate_random => "SyncAggregate",
             .voluntary_exit, .voluntary_exit_churn => "SignedVoluntaryExit",
@@ -225,7 +228,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                     try state_transition.processDeposit(fork, io, config, epoch_cache, state, &self.op);
                 },
                 .deposit_request => {
-                    try state_transition.processDepositRequest(fork, state, &self.op);
+                    try state_transition.processDepositRequest(fork, allocator, state, &self.op);
                 },
                 .execution_payload => {
                     const config = cached_state.config;
@@ -254,6 +257,12 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                 // Standalone payload-attestation vectors include invalid signatures
                 // without bls_setting metadata, matching Lodestar's operation runner.
                 .payload_attestation => try state_transition.processPayloadAttestation(fork, io, cached_state.config, cached_state.epoch_cache, state, &self.op, true),
+                .preregistration_request => try state_transition.processPreregistrationRequest(fork, allocator, io, cached_state.config, cached_state.epoch_cache, state, &self.op),
+                .randao => {
+                    const body = BeaconBlockBody(.full, fork){ .inner = self.op };
+                    const proposer = try cached_state.epoch_cache.getBeaconProposer(try state.slot());
+                    try state_transition.processRandao(fork, io, cached_state.config, cached_state.epoch_cache, state, .full, &body, proposer, verify);
+                },
                 .proposer_slashing => {
                     const config = cached_state.config;
                     const epoch_cache = cached_state.epoch_cache;

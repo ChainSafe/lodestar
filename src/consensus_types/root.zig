@@ -10,6 +10,7 @@ pub const deneb = @import("deneb.zig");
 pub const electra = @import("electra.zig");
 pub const fulu = @import("fulu.zig");
 pub const gloas = @import("gloas.zig");
+pub const pq = @import("pq.zig");
 pub const heze = @import("heze.zig");
 
 test {
@@ -22,6 +23,7 @@ test {
     testing.refAllDecls(electra);
     testing.refAllDecls(fulu);
     testing.refAllDecls(gloas);
+    testing.refAllDecls(pq);
     testing.refAllDecls(heze);
 }
 

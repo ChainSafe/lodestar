@@ -166,7 +166,7 @@ pub fn processBlock(
         .{ .step = .processOperations },
         time.durationSeconds(time.since(io, timer)),
     );
-    if (comptime fork.gte(.altair)) {
+    if (comptime fork.gte(.altair) and fork != .pq) {
         timer = time.start(io);
         try processSyncAggregate(
             fork,

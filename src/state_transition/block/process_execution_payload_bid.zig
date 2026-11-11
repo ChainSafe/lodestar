@@ -8,6 +8,7 @@ const ForkTypes = @import("fork_types").ForkTypes;
 const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
 const preset = @import("preset").preset;
 const c = @import("constants");
+const pq = @import("../utils/pq.zig");
 const bls = @import("bls");
 const getRandaoMix = @import("../utils/seed.zig").getRandaoMix;
 const computeEpochAtSlot = @import("../utils/epoch.zig").computeEpochAtSlot;
@@ -35,7 +36,8 @@ pub fn processExecutionPayloadBid(
 
     if (builder_index == c.BUILDER_INDEX_SELF_BUILD) {
         if (amount != 0) return error.SelfBuildNonZeroAmount;
-        if (!std.mem.eql(u8, &signed_bid.signature, &c.G2_POINT_AT_INFINITY)) return error.SelfBuildNonZeroSignature;
+        const no_signature = if (comptime fork == .pq) std.mem.allEqual(u8, &signed_bid.signature, 0) else std.mem.eql(u8, &signed_bid.signature, &c.G2_POINT_AT_INFINITY);
+        if (!no_signature) return error.SelfBuildNonZeroSignature;
     } else {
         var builders = try state.inner.getReadonly("builders");
         var builder: ForkTypes(fork).Builder.Type = undefined;
@@ -86,10 +88,14 @@ fn verifyExecutionPayloadBidSignature(
     comptime fork: ForkSeq,
     allocator: Allocator,
     config: *const BeaconConfig,
-    pubkey: *const [48]u8,
+    pubkey: *const @FieldType(ForkTypes(fork).Builder.Type, "pubkey"),
     signed_bid: *const ForkTypes(fork).SignedExecutionPayloadBid.Type,
 ) !bool {
     const signing_root = try getExecutionPayloadBidSigningRoot(fork, allocator, config, &signed_bid.message);
+    if (comptime fork == .pq) {
+        const leaf_index = pq.computeXmssLeafIndex(signed_bid.message.slot, c.LEAF_OFFSET_EXECUTION_PAYLOAD_BID);
+        return pq.xmssVerify(pubkey, leaf_index, &signing_root, &signed_bid.signature);
+    }
 
     const public_key = bls.PublicKey.uncompress(pubkey) catch return false;
     const signature = bls.Signature.uncompress(&signed_bid.signature) catch return false;

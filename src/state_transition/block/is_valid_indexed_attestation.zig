@@ -7,6 +7,8 @@ const preset = @import("preset").preset;
 const ForkTypes = @import("fork_types").ForkTypes;
 const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
 const verifyAggregatedSignatureSet = @import("../utils/signature_sets.zig").verifyAggregatedSignatureSet;
+const appendAttestationClaims = @import("../signature_sets/indexed_attestation.zig").appendAttestationClaims;
+const pq = @import("../utils/pq.zig");
 const getIndexedAttestationSignatureSet = @import("../signature_sets/indexed_attestation.zig").getIndexedAttestationSignatureSet;
 
 pub fn isValidIndexedAttestation(
@@ -23,6 +25,13 @@ pub fn isValidIndexedAttestation(
         return false;
     }
 
+    if (comptime fork == .pq) {
+        if (!verify_signature) return true;
+        var claims: std.ArrayList(pq.Claim) = .empty;
+        defer claims.deinit(allocator);
+        try appendAttestationClaims(allocator, io, config, epoch_cache, &indexed_attestation.data, indexed_attestation.attesting_indices.items, &claims);
+        return try pq.verifyAttestationProof(claims.items, indexed_attestation.proof.items);
+    }
     if (verify_signature) {
         const signature_set = try getIndexedAttestationSignatureSet(
             fork,

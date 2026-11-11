@@ -29,7 +29,8 @@ pub fn processAttestations(
     verify_signatures: bool,
 ) !void {
     if (comptime fork.gte(.gloas)) {
-        if (attestations.len > preset.MAX_ATTESTATIONS_ELECTRA) return error.TooManyBlockOperations;
+        const max_attestations = if (fork == .pq) preset.MAX_ATTESTATIONS_PQ else preset.MAX_ATTESTATIONS_ELECTRA;
+        if (attestations.len > max_attestations) return error.TooManyBlockOperations;
     }
     try buildSlashingsCacheIfNeeded(allocator, state, slashings_cache);
     if (comptime fork == .phase0) {

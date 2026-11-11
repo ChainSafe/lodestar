@@ -1,4 +1,5 @@
 const std = @import("std");
+const ForkTypes = @import("fork_types").ForkTypes;
 const diagnostics = @import("../diagnostics.zig");
 const Allocator = std.mem.Allocator;
 const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
@@ -133,7 +134,7 @@ pub fn getExpectedWithdrawals(
                 break;
             }
 
-            var validator: types.phase0.Validator.Type = undefined;
+            var validator: ForkTypes(fork).Validator.Type = undefined;
             try validators.getValue(undefined, withdrawal.validator_index, &validator);
 
             const total_withdrawn: u64 = @intCast(withdrawal_balances.get(withdrawal.validator_index) orelse 0);

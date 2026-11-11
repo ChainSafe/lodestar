@@ -11,12 +11,9 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const BoundedArray = @import("bounded_array").BoundedArray;
-const types = @import("consensus_types");
 const Node = @import("persistent_merkle_tree").Node;
 const max_depth = @import("persistent_merkle_tree").max_depth;
 const hasCompoundingWithdrawalCredential = @import("../utils/electra.zig").hasCompoundingWithdrawalCredential;
-
-const Validator = types.phase0.Validator;
 
 /// Fields that EpochTransitionCache.init needs to know about one validator.
 pub const ValidatorFields = struct {
@@ -33,7 +30,7 @@ pub const ValidatorFields = struct {
         _: u6 = 0,
     };
 
-    pub inline fn fromValidator(v: *const Validator.Type) ValidatorFields {
+    pub inline fn fromValidator(v: anytype) ValidatorFields {
         return .{
             .activation_eligibility_epoch = v.activation_eligibility_epoch,
             .activation_epoch = v.activation_epoch,
@@ -127,7 +124,7 @@ pub const ValidatorFlatCache = struct {
     /// On error the cache is left empty and the next call refills it.
     pub fn sync(self: *ValidatorFlatCache, comptime Validators: type, root: Node.Id, new_len: usize) !void {
         comptime {
-            if (Validators.Element != Validator or (Validators.kind != .list and Validators.kind != .progressive_list)) {
+            if (Validators.kind != .list and Validators.kind != .progressive_list) {
                 @compileError("validator cache requires a list of packed Validators");
             }
         }
@@ -154,10 +151,10 @@ pub const ValidatorFlatCache = struct {
         while (try subtrees.next()) |subtree| {
             const old_subtree = if (old_subtrees) |*it| try it.next() else null;
             if (old_subtree) |old| {
-                try self.diffAndPatch(old.root, subtree.root, subtree.depth, subtree.base, old_len, new_len);
+                try self.diffAndPatch(Validators.Element, old.root, subtree.root, subtree.depth, subtree.base, old_len, new_len);
             } else {
                 var it = Node.DepthIterator.init(self.pool, subtree.root, @intCast(subtree.depth), 0);
-                for (subtree.base..subtree.end) |i| try self.patch(i, try it.next());
+                for (subtree.base..subtree.end) |i| try self.patch(Validators.Element, i, try it.next());
             }
         }
 
@@ -179,6 +176,7 @@ pub const ValidatorFlatCache = struct {
     /// checking if nodes changed, and patching the flat cache if so.
     fn diffAndPatch(
         self: *ValidatorFlatCache,
+        comptime V: type,
         old_root: Node.Id,
         new_root: Node.Id,
         depth: usize,
@@ -214,7 +212,7 @@ pub const ValidatorFlatCache = struct {
 
             if (f.depth == 0) {
                 // At a leaf, base is the validator index to patch
-                try self.patch(f.base, f.new);
+                try self.patch(V, f.base, f.new);
                 continue;
             }
 
@@ -238,8 +236,8 @@ pub const ValidatorFlatCache = struct {
     }
 
     /// Patches the cache at index `i` with validator values from the tree at `leaf`.
-    fn patch(self: *ValidatorFlatCache, i: usize, leaf: Node.Id) !void {
-        const v = try Validator.tree.getValuePtr(leaf, self.pool);
+    fn patch(self: *ValidatorFlatCache, comptime V: type, i: usize, leaf: Node.Id) !void {
+        const v = try V.tree.getValuePtr(leaf, self.pool);
         self.fields.set(i, .fromValidator(v));
         self.last_patched += 1;
     }

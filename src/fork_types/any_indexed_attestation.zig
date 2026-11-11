@@ -4,6 +4,7 @@ pub const AnyIndexedAttestation = union(enum) {
     phase0: *ct.phase0.IndexedAttestation.Type,
     electra: *ct.electra.IndexedAttestation.Type,
     gloas: *ct.gloas.IndexedAttestation.Type,
+    pq: *ct.pq.IndexedAttestation.Type,
 
     /// Get the attestation data (same struct in both forks).
     pub fn attestationData(self: *const AnyIndexedAttestation) ct.phase0.AttestationData.Type {

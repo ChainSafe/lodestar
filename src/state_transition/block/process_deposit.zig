@@ -1,4 +1,5 @@
 const std = @import("std");
+const ForkTypes = @import("fork_types").ForkTypes;
 const BeaconConfig = @import("config").BeaconConfig;
 const ForkSeq = @import("config").ForkSeq;
 const BeaconState = @import("fork_types").BeaconState;
@@ -169,16 +170,61 @@ pub fn addValidatorToRegistry(
     };
 
     try validators.pushValue(&validator);
-
     const validator_index = (try validators.length()) - 1;
+    try epoch_cache.pubkey_cache.append(io, pubkey.*, validator_index);
+    try trackNewValidator(fork, epoch_cache, state, validator_index, effective_balance, amount);
+}
+
+/// `addValidatorToRegistry` from PQ: a validator has a leanXMSS public key and a
+/// VRF root, and its deposit carried no signature to check.
+pub fn addXmssValidatorToRegistry(
+    comptime fork: ForkSeq,
+    io: std.Io,
+    epoch_cache: *EpochCache,
+    state: *BeaconState(fork),
+    pubkey: *const [32]u8,
+    vrf_root: *const [32]u8,
+    withdrawal_credentials: *const WithdrawalCredentials,
+    amount: u64,
+) !u64 {
+    var validators = try state.validators();
+    const effective_balance = @min(
+        amount - (amount % preset.EFFECTIVE_BALANCE_INCREMENT),
+        getMaxEffectiveBalance(withdrawal_credentials),
+    );
+    const validator: ForkTypes(fork).Validator.Type = .{
+        .pubkey = pubkey.*,
+        .vrf_root = vrf_root.*,
+        .withdrawal_credentials = withdrawal_credentials.*,
+        .activation_eligibility_epoch = c.FAR_FUTURE_EPOCH,
+        .activation_epoch = c.FAR_FUTURE_EPOCH,
+        .exit_epoch = c.FAR_FUTURE_EPOCH,
+        .withdrawable_epoch = c.FAR_FUTURE_EPOCH,
+        .effective_balance = effective_balance,
+        .slashed = false,
+    };
+
+    try validators.pushValue(&validator);
+    const validator_index = (try validators.length()) - 1;
+    try epoch_cache.pubkey_cache.appendXmss(io, pubkey, validator_index);
+    try trackNewValidator(fork, epoch_cache, state, validator_index, effective_balance, amount);
+    return validator_index;
+}
+
+fn trackNewValidator(
+    comptime fork: ForkSeq,
+    epoch_cache: *EpochCache,
+    state: *BeaconState(fork),
+    validator_index: u64,
+    effective_balance: u64,
+    amount: u64,
+) !void {
     // In Electra, new validators start with amount=0 (actual deposit goes through pendingDeposits)
     // Updating here is better than updating at once on epoch transition
     // - Simplify genesis fn applyDeposits(): effectiveBalanceIncrements is populated immediately
     // - Keep related code together to reduce risk of breaking this cache
     // - Should have equal performance since it sets a value in a flat array
     try epoch_cache.effectiveBalanceIncrementsAppend(validator_index, effective_balance);
-
-    try epoch_cache.pubkey_cache.append(io, pubkey.*, validator_index);
 
     // Only after altair:
     if (comptime fork.gte(.altair)) {

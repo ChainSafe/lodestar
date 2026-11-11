@@ -193,6 +193,25 @@ pub const EpochCache = struct {
         immutable_data: EpochCacheImmutableData,
         option: ?EpochCacheOpts,
     ) !*EpochCache {
+        switch (state.*) {
+            inline else => |_, f| {
+                const validators = try state.castToFork(f).validatorsPtrSlice(allocator);
+                defer allocator.free(validators);
+                return createFromValidators(allocator, io, state, immutable_data, option, validators);
+            },
+        }
+    }
+
+    /// `validators` are `state`'s, of its fork's validator type.
+    fn createFromValidators(
+        allocator: Allocator,
+        io: std.Io,
+        state: *AnyBeaconState,
+        immutable_data: EpochCacheImmutableData,
+        option: ?EpochCacheOpts,
+        validators: anytype,
+    ) !*EpochCache {
+        const is_pq = state.forkSeq() == .pq;
         const config = immutable_data.config;
         const pubkey_cache = immutable_data.pubkey_cache;
 
@@ -208,14 +227,15 @@ pub const EpochCache = struct {
         const validator_count = try state.validatorsCount();
         if (validator_count > std.math.maxInt(u32)) return error.InvalidValidatorCount;
 
-        const validators = try state.validatorsPtrSlice(allocator);
-        defer allocator.free(validators);
-
         // Sync before computing the remaining caches: sync committee indexing
         // needs a fully populated pubkey cache.
         const skip_sync_pubkeys = if (option) |opt| opt.skip_sync_pubkeys else false;
         if (!skip_sync_pubkeys) {
-            try pubkey_cache.syncPubkeys(io, validators);
+            if (comptime @FieldType(@typeInfo(@TypeOf(validators[0])).pointer.child, "pubkey") == [32]u8) {
+                try pubkey_cache.syncXmssPubkeys(io, validators);
+            } else {
+                try pubkey_cache.syncPubkeys(io, validators);
+            }
         }
 
         const effective_balance_increments_rc = try initEffectiveBalanceIncrementsRc(allocator, validator_count);
@@ -370,7 +390,8 @@ pub const EpochCache = struct {
         const sync_participant_reward_f64: f64 = @floatFromInt(sync_participant_reward);
         const sync_proposer_reward: u64 = @intFromFloat(std.math.floor(sync_participant_reward_f64 * proposer_weight_factor));
         const base_reward_pre_increment = computeBaseRewardPerIncrement(total_active_balance_increments);
-        const skip_sync_committee_cache = if (option) |opt| opt.skip_sync_committee_cache else !after_altair_fork;
+        // PQ removes the sync committees.
+        const skip_sync_committee_cache = is_pq or if (option) |opt| opt.skip_sync_committee_cache else !after_altair_fork;
         const current_sync_committee_indexed = try initCurrentSyncCommitteeCacheRc(
             allocator,
             state,

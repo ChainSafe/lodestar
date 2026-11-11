@@ -1,4 +1,5 @@
 const std = @import("std");
+const pq = @import("./pq.zig");
 const Allocator = std.mem.Allocator;
 const BeaconConfig = @import("config").BeaconConfig;
 const ForkSeq = @import("config").ForkSeq;
@@ -120,13 +121,19 @@ pub fn initiateBuilderExit(comptime fork: ForkSeq, config: *const BeaconConfig, 
     try builders.setValue(builder_index, &builder);
 }
 
+/// How requests and lookups name a builder: its BLS public key, or from PQ
+/// its leanXMSS public key behind 16 zero bytes.
+pub fn builderKey(comptime fork: ForkSeq, builder: *const ForkTypes(fork).Builder.Type) [48]u8 {
+    return if (comptime fork == .pq) pq.requestPubkey(&builder.pubkey) else builder.pubkey;
+}
+
 pub fn findBuilderIndexByPubkey(comptime fork: ForkSeq, allocator: Allocator, state: *BeaconState(fork), pubkey: *const BLSPubkey) !?usize {
     var builders = try state.inner.getReadonly("builders");
     const len = try builders.length();
     for (0..len) |i| {
         var b: ForkTypes(fork).Builder.Type = undefined;
         try builders.getValue(allocator, i, &b);
-        if (std.mem.eql(u8, &b.pubkey, pubkey)) return i;
+        if (std.mem.eql(u8, &builderKey(fork, &b), pubkey)) return i;
     }
     return null;
 }
@@ -156,7 +163,7 @@ pub fn addBuilderToRegistry(
     }
 
     const new_builder = ForkTypes(fork).Builder.Type{
-        .pubkey = pubkey.*,
+        .pubkey = if (comptime fork == .pq) pubkey[16..48].* else pubkey.*,
         .version = version,
         .execution_address = execution_address.*,
         .balance = amount,

@@ -514,6 +514,7 @@ pub fn BeaconState(comptime f: ForkSeq) type {
             .electra => .fulu,
             .fulu => .gloas,
             .gloas => .heze,
+            .pq => .pq,
             .heze => .heze,
         }) {
             const cur = self.inner;
@@ -529,7 +530,7 @@ pub fn BeaconState(comptime f: ForkSeq) type {
                 .electra => .{ .inner = try populateFields(ForkTypes(.electra).BeaconState, ForkTypes(.fulu).BeaconState, allocator, pool, cur) },
                 .fulu => .{ .inner = try populateFields(ForkTypes(.fulu).BeaconState, ForkTypes(.gloas).BeaconState, allocator, pool, cur) },
                 .gloas => .{ .inner = try populateFields(ForkTypes(.gloas).BeaconState, ForkTypes(.heze).BeaconState, allocator, pool, cur) },
-                .heze => return error.InvalidAtFork,
+                .pq, .heze => return error.InvalidAtFork,
             };
         }
     };

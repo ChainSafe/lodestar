@@ -106,6 +106,15 @@ fn loadStateForFork(
     const validators_range = ranges[validators_field_index];
     const new_validators_bytes = state_bytes[validators_range[0]..validators_range[1]];
 
+    // PQ validators have their own schema, so nothing of the seed's is reused.
+    if (comptime out_fork == .pq) {
+        const migrated_view = try StateST.TreeView.deserialize(allocator, pool, state_bytes);
+        errdefer migrated_view.deinit();
+        const modified = try allocator.alloc(ValidatorIndex, new_validators_bytes.len / ForkTypes(.pq).Validator.fixed_size);
+        for (modified, 0..) |*index, i| index.* = i;
+        return .{ .state = .{ .pq = migrated_view }, .modified_validators = modified };
+    }
+
     // Identical bytes need not have identical roots under a different list schema.
     if (!canReuseField(seed_state, StateST, "validators")) {
         const migrated_view = try StateST.TreeView.deserialize(allocator, pool, state_bytes);

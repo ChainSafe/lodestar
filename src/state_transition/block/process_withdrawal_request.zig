@@ -1,4 +1,5 @@
 const std = @import("std");
+const pq = @import("../utils/pq.zig");
 const ForkSeq = @import("config").ForkSeq;
 const BeaconConfig = @import("config").BeaconConfig;
 const BeaconState = @import("fork_types").BeaconState;
@@ -23,6 +24,10 @@ pub fn processWithdrawalRequest(
     state: *BeaconState(fork),
     withdrawal_request: *const WithdrawalRequest,
 ) !void {
+    if (comptime fork == .pq) {
+        if (pq.isLegacyPubkey(&withdrawal_request.validator_pubkey)) return;
+    }
+
     const amount = withdrawal_request.amount;
     const is_full_exit_request = amount == c.FULL_EXIT_REQUEST_AMOUNT;
 
@@ -92,7 +97,7 @@ pub fn processWithdrawalRequest(
 fn isValidatorEligibleForWithdrawOrExit(
     config: *const BeaconConfig,
     current_epoch: u64,
-    validator: *types.phase0.Validator.TreeView,
+    validator: anytype,
     source_address: []const u8,
 ) !bool {
     const withdrawal_credentials = try validator.getFieldRoot("withdrawal_credentials");

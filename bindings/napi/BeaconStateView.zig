@@ -4,6 +4,7 @@ const napi = @import("zapi:zapi").napi;
 const js = @import("zapi:zapi").js;
 const c = @import("config");
 const fork_types = @import("fork_types");
+const ForkTypes = @import("fork_types").ForkTypes;
 const st = @import("state_transition");
 const CachedBeaconState = st.CachedBeaconState;
 const AnyBeaconState = fork_types.AnyBeaconState;
@@ -975,9 +976,9 @@ pub fn proposerRewards(self: *BeaconStateView) !js_types.ProposerRewards {
 }
 
 /// Populate a `SignedVoluntaryExit.Type` from a JS object of shape
-/// `{message: {epoch, validatorIndex}, signature: Uint8Array(96)}`. Matches `phase0.SignedVoluntaryExit`
-/// from `@lodestar/types`.
-fn signedVoluntaryExitFromJsValue(value: js.Value, out: *ct.phase0.SignedVoluntaryExit.Type) !void {
+/// `{message: {epoch, validatorIndex}, signature: Uint8Array}`. Matches the fork's `SignedVoluntaryExit`
+/// from `@lodestar/types`: the signature is 96 bytes, or 2404 from PQ.
+fn signedVoluntaryExitFromJsValue(value: js.Value, out: anytype) !void {
     const raw = value.toValue();
     const message = try raw.getNamedProperty("message");
     out.message.epoch = try js_types.wrap(js.Number, try message.getNamedProperty("epoch")).toU64Exact();
@@ -997,21 +998,22 @@ pub fn getVoluntaryExitValidity(self: *BeaconStateView, signed_exit_value: js.Va
     defer self.finishState();
     const verify_signature = verify_signature_value.assertBool();
 
-    var signed_voluntary_exit: ct.phase0.SignedVoluntaryExit.Type = ct.phase0.SignedVoluntaryExit.default_value;
-    signedVoluntaryExitFromJsValue(signed_exit_value, &signed_voluntary_exit) catch {
-        return throwNullAs(js.String, "INVALID_ARG", "Failed to read SignedVoluntaryExit from JS object");
-    };
-
     const result = switch (cached_state.state.forkSeq()) {
-        inline else => |f| st.getVoluntaryExitValidity(
-            f,
-            js.io(),
-            cached_state.config,
-            cached_state.epoch_cache,
-            cached_state.state.castToFork(f),
-            &signed_voluntary_exit,
-            verify_signature,
-        ),
+        inline else => |f| blk: {
+            var signed_voluntary_exit = ForkTypes(f).SignedVoluntaryExit.default_value;
+            signedVoluntaryExitFromJsValue(signed_exit_value, &signed_voluntary_exit) catch {
+                return throwNullAs(js.String, "INVALID_ARG", "Failed to read SignedVoluntaryExit from JS object");
+            };
+            break :blk st.getVoluntaryExitValidity(
+                f,
+                js.io(),
+                cached_state.config,
+                cached_state.epoch_cache,
+                cached_state.state.castToFork(f),
+                &signed_voluntary_exit,
+                verify_signature,
+            );
+        },
     };
     const validity = result catch {
         return throwNullAs(js.String, "VALIDATION_ERROR", "Failed to get voluntary exit validity");
@@ -1025,21 +1027,22 @@ pub fn isValidVoluntaryExit(self: *BeaconStateView, signed_exit_value: js.Value,
     defer self.finishState();
     const verify_signature = verify_signature_value.assertBool();
 
-    var signed_voluntary_exit: ct.phase0.SignedVoluntaryExit.Type = ct.phase0.SignedVoluntaryExit.default_value;
-    signedVoluntaryExitFromJsValue(signed_exit_value, &signed_voluntary_exit) catch {
-        return throwNullAs(js.Boolean, "INVALID_ARG", "Failed to read SignedVoluntaryExit from JS object");
-    };
-
     const result = switch (cached_state.state.forkSeq()) {
-        inline else => |f| st.isValidVoluntaryExit(
-            f,
-            js.io(),
-            cached_state.config,
-            cached_state.epoch_cache,
-            cached_state.state.castToFork(f),
-            &signed_voluntary_exit,
-            verify_signature,
-        ),
+        inline else => |f| blk: {
+            var signed_voluntary_exit = ForkTypes(f).SignedVoluntaryExit.default_value;
+            signedVoluntaryExitFromJsValue(signed_exit_value, &signed_voluntary_exit) catch {
+                return throwNullAs(js.Boolean, "INVALID_ARG", "Failed to read SignedVoluntaryExit from JS object");
+            };
+            break :blk st.isValidVoluntaryExit(
+                f,
+                js.io(),
+                cached_state.config,
+                cached_state.epoch_cache,
+                cached_state.state.castToFork(f),
+                &signed_voluntary_exit,
+                verify_signature,
+            );
+        },
     };
     const is_valid = result catch {
         return throwNullAs(js.Boolean, "VALIDATION_ERROR", "Failed to validate voluntary exit");

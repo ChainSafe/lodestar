@@ -1,4 +1,7 @@
 const std = @import("std");
+const computeSigningRoot = @import("../utils/signing_root.zig").computeSigningRoot;
+const c = @import("constants");
+const pq = @import("../utils/pq.zig");
 const BeaconConfig = @import("config").BeaconConfig;
 const ForkSeq = @import("config").ForkSeq;
 const ForkTypes = @import("fork_types").ForkTypes;
@@ -66,14 +69,27 @@ pub fn assertValidProposerSlashing(
 
     // verify the proposer is slashable
     var proposer_view = try validators_view.get(header_1.proposer_index);
-    var proposer: types.phase0.Validator.Type = undefined;
+    var proposer: ForkTypes(fork).Validator.Type = undefined;
     try proposer_view.toValue(undefined, &proposer);
     if (!isSlashableValidator(&proposer, epoch_cache.epoch)) {
         return error.InvalidProposerSlashingProposerNotSlashable;
     }
 
     // verify signatures
-    if (verify_signature) {
+    if (comptime fork == .pq) {
+        if (verify_signature) {
+            // Both headers were signed at the leaf of their slot.
+            inline for (.{ &proposer_slashing.signed_header_1, &proposer_slashing.signed_header_2 }) |signed_header| {
+                const domain = try config.getDomain(epoch_cache.epoch, c.DOMAIN_BEACON_PROPOSER, signed_header.message.slot);
+                var signing_root: [32]u8 = undefined;
+                try computeSigningRoot(types.phase0.BeaconBlockHeader, &signed_header.message, domain, &signing_root);
+                const leaf_index = pq.computeXmssLeafIndex(signed_header.message.slot, c.LEAF_OFFSET_BEACON_PROPOSER);
+                if (!try pq.xmssVerify(&proposer.pubkey, leaf_index, &signing_root, &signed_header.signature)) {
+                    return error.InvalidProposerSlashingSignature;
+                }
+            }
+        }
+    } else if (verify_signature) {
         const signature_sets = try getProposerSlashingSignatureSets(
             io,
             config,

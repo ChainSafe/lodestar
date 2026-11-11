@@ -57,7 +57,7 @@ pub fn processAttesterSlashing(
     var validators = try state.validators();
     // Spec requires to sort indices beforehand but we validated sorted asc AttesterSlashing in the above functions
     for (intersecting_indices.items) |validator_index| {
-        var validator: types.phase0.Validator.Type = undefined;
+        var validator: ForkTypes(fork).Validator.Type = undefined;
         try validators.getValue(undefined, validator_index, &validator);
 
         if (isSlashableValidator(&validator, current_epoch)) {

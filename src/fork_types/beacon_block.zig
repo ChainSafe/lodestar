@@ -105,7 +105,8 @@ pub fn BeaconBlockBody(comptime bt: BlockType, comptime f: ForkSeq) type {
             return @ptrCast(&self.inner.execution_payload_header);
         }
 
-        pub inline fn randaoReveal(self: *const Self) *const [96]u8 {
+        /// A BLS signature, or from PQ the proposer's VRF proof.
+        pub inline fn randaoReveal(self: *const Self) *const ForkTypes(f).BeaconBlockBody.getFieldType("randao_reveal").Type {
             return &self.inner.randao_reveal;
         }
 

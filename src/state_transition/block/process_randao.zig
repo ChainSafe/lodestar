@@ -1,4 +1,6 @@
 const std = @import("std");
+const pq = @import("../utils/pq.zig");
+const c = @import("constants");
 const BeaconConfig = @import("config").BeaconConfig;
 const ForkSeq = @import("config").ForkSeq;
 const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
@@ -22,6 +24,19 @@ pub fn processRandao(
 ) !void {
     const epoch = epoch_cache.epoch;
     const randao_reveal = body.randaoReveal();
+
+    // From PQ the reveal is a leaf of the tree under the proposer's VRF root, which
+    // the proposer committed to before it knew the slot's randomness.
+    if (comptime fork == .pq) {
+        var validators = try state.validators();
+        var proposer = try validators.getReadonly(proposer_idx);
+        const vrf_root = try proposer.getFieldRoot("vrf_root");
+        if (!pq.isValidVrfProof(vrf_root, try state.slot(), randao_reveal)) return error.InvalidRandaoReveal;
+
+        var randao_mix: [32]u8 = undefined;
+        Sha256.hash(&((try getRandaoMix(fork, state, epoch)).* ++ randao_reveal[0] ++ c.DOMAIN_RANDAO), &randao_mix, .{});
+        return state.setRandaoMix(epoch, &randao_mix);
+    }
 
     // verify RANDAO reveal
     if (verify_signature) {

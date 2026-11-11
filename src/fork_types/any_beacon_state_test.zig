@@ -232,23 +232,28 @@ test "state lists retain fork tags and preserve borrowed mutations and concrete 
         {
             var state = try AnyBeaconState.fromValue(allocator, &pool, fork, &State.default_value);
             defer state.deinit();
-            const validators = try state.validators();
             const balances = try state.balances();
-            try std.testing.expectEqual(fork, validators.forkSeq());
             try std.testing.expectEqual(fork, balances.forkSeq());
-            try std.testing.expectEqual(try state.castToFork(fork).inner.get("validators"), try validators.unwrap(State.getFieldType("validators")));
             try std.testing.expectEqual(try state.castToFork(fork).inner.get("balances"), try balances.unwrap(State.getFieldType("balances")));
-            try validators.pushValue(&ct.phase0.Validator.default_value);
+            const validators = try state.validators();
+            try std.testing.expectEqual(fork, validators.forkSeq());
+            try std.testing.expectEqual(try state.castToFork(fork).inner.get("validators"), try validators.unwrap(State.getFieldType("validators")));
+            if (comptime fork == .pq) {
+                try std.testing.expectError(error.InvalidAtFork, validators.pushValue(&ct.phase0.Validator.default_value));
+                try (try state.castToFork(fork).validators()).pushValue(&ct.pq.Validator.default_value);
+            } else {
+                try validators.pushValue(&ct.phase0.Validator.default_value);
+
+                var expected_validators = State.getFieldType("validators").default_value;
+                defer expected_validators.deinit(allocator);
+                try expected_validators.append(allocator, ct.phase0.Validator.default_value);
+                try expectListRoot(State.getFieldType("validators"), &expected_validators, try validators.hashTreeRoot());
+                var iterator = validators.iteratorReadonly(0);
+                try std.testing.expectEqualDeep(ct.phase0.Validator.default_value, (try iterator.nextValuePtr()).*);
+            }
             try balances.push(123);
             try std.testing.expectEqual(@as(usize, 1), try state.validatorsCount());
             try std.testing.expectEqual(@as(u64, 123), try (try state.balances()).get(0));
-
-            var expected_validators = State.getFieldType("validators").default_value;
-            defer expected_validators.deinit(allocator);
-            try expected_validators.append(allocator, ct.phase0.Validator.default_value);
-            try expectListRoot(State.getFieldType("validators"), &expected_validators, try validators.hashTreeRoot());
-            var iterator = validators.iteratorReadonly(0);
-            try std.testing.expectEqualDeep(ct.phase0.Validator.default_value, (try iterator.nextValuePtr()).*);
 
             var expected_balances = State.getFieldType("balances").default_value;
             defer expected_balances.deinit(allocator);

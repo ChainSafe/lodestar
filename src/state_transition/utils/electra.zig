@@ -11,6 +11,7 @@ const ValidatorIndex = ct.primitive.ValidatorIndex.Type;
 
 const hasEth1WithdrawalCredential = @import("./capella.zig").hasEth1WithdrawalCredential;
 const G2_POINT_AT_INFINITY = @import("constants").G2_POINT_AT_INFINITY;
+const pq = @import("./pq.zig");
 
 pub fn hasCompoundingWithdrawalCredential(withdrawal_credentials: *const WithdrawalCredentials) bool {
     return withdrawal_credentials[0] == COMPOUNDING_WITHDRAWAL_PREFIX;
@@ -31,8 +32,15 @@ pub fn switchToCompoundingValidator(comptime fork: ForkSeq, state: *BeaconState(
 
     try validator.setValue("withdrawal_credentials", &new_withdrawal_credentials);
 
-    var pubkey: ct.primitive.BLSPubkey.Type = undefined;
-    try validator.getValue(undefined, "pubkey", &pubkey);
+    const pubkey: ct.primitive.BLSPubkey.Type = if (comptime fork == .pq) blk: {
+        var xmss_pubkey: [32]u8 = undefined;
+        try validator.getValue(undefined, "pubkey", &xmss_pubkey);
+        break :blk pq.requestPubkey(&xmss_pubkey);
+    } else blk: {
+        var bls_pubkey: ct.primitive.BLSPubkey.Type = undefined;
+        try validator.getValue(undefined, "pubkey", &bls_pubkey);
+        break :blk bls_pubkey;
+    };
 
     try queueExcessActiveBalance(
         fork,
@@ -60,8 +68,8 @@ pub fn queueExcessActiveBalance(
             .pubkey = pubkey,
             .withdrawal_credentials = withdrawal_credentials.*,
             .amount = excess_balance,
-            // Use bls.G2_POINT_AT_INFINITY as a signature field placeholder
-            .signature = G2_POINT_AT_INFINITY,
+            // A placeholder: the point at infinity, or from PQ, where deposits carry no signature, zeroes.
+            .signature = if (comptime fork == .pq) @splat(0) else G2_POINT_AT_INFINITY,
             //  Use GENESIS_SLOT to distinguish from a pending deposit request
             .slot = GENESIS_SLOT,
         };

@@ -6,6 +6,9 @@
 //! 2. Aggregation by validator index.
 //! 3. Bulk synchronization from a validator list.
 //!
+//! From the PQ fork a key is a leanXMSS public key, held as deposits name it:
+//! 16 zero bytes, then the key. Its affine form is unused and zeroed.
+//!
 //! # Safety
 //!
 //! Decoding rejects malformed compressed encodings and off-curve points. It
@@ -25,6 +28,7 @@ const types = @import("consensus_types");
 const Validator = types.phase0.Validator.Type;
 
 const HashKey = [std.hash.SipHash64(1, 3).key_length]u8;
+const xmss_prefix: [16]u8 = @splat(0);
 pub const uncompress_batch_size = 1000;
 
 fn uncompressBatch(
@@ -306,6 +310,59 @@ pub const PubkeyCache = struct {
             affine,
             self.hashContext(),
         );
+    }
+
+    /// The leanXMSS public key of a validator.
+    pub fn getXmssPubkey(self: *const PubkeyCache, io: std.Io, index: u64) ?[32]u8 {
+        const key = self.getPubkeyBytes(io, index) orelse return null;
+        return key[16..48].*;
+    }
+
+    /// The index of the validator with this leanXMSS public key.
+    pub fn getXmss(self: *const PubkeyCache, io: std.Io, pubkey: *const [32]u8) ?u64 {
+        return self.get(io, xmss_prefix ++ pubkey.*);
+    }
+
+    /// `append` for a leanXMSS public key.
+    pub fn appendXmss(self: *PubkeyCache, io: std.Io, pubkey: *const [32]u8, index: u64) !void {
+        const key = xmss_prefix ++ pubkey.*;
+
+        try self.lock.lock(io);
+        defer self.lock.unlock(io);
+
+        const current_len = self.entries.count();
+        if (index < current_len) {
+            if (!std.mem.eql(u8, &self.entries.keys()[@intCast(index)], &key)) return error.ConflictingPubkey;
+            return;
+        }
+        if (index > current_len) return error.InvalidIndexToAppend;
+        if (self.entries.getIndexContext(key, self.hashContext()) != null) return error.DuplicatePubkey;
+
+        try validateCapacity(current_len + 1);
+        try self.ensureTotalCapacityAmortizedUnlocked(current_len + 1);
+        self.entries.putAssumeCapacityNoClobberContext(key, std.mem.zeroes(bls.PublicKey), self.hashContext());
+    }
+
+    /// `syncPubkeys` for validators with leanXMSS public keys.
+    pub fn syncXmssPubkeys(self: *PubkeyCache, io: std.Io, validators: anytype) !void {
+        try validateCapacity(validators.len);
+
+        try self.lock.lock(io);
+        defer self.lock.unlock(io);
+
+        const old_len = self.entries.count();
+        if (validators.len <= old_len) return;
+        try self.ensureTotalCapacityAmortizedUnlocked(validators.len);
+
+        const context = self.hashContext();
+        for (validators[old_len..]) |validator| {
+            const result = self.entries.getOrPutAssumeCapacityContext(xmss_prefix ++ validator.pubkey, context);
+            if (result.found_existing) {
+                self.entries.shrinkRetainingCapacityContext(old_len, context);
+                return error.DuplicatePubkey;
+            }
+            result.value_ptr.* = std.mem.zeroes(bls.PublicKey);
+        }
     }
 
     /// Populate the cache from the missing suffix of a validator list. Existing

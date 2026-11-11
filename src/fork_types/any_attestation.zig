@@ -4,6 +4,7 @@ pub const AnyAttestations = union(enum) {
     phase0: ct.phase0.Attestations.Type,
     electra: ct.electra.Attestations.Type,
     gloas: ct.gloas.Attestations.Type,
+    pq: ct.pq.Attestations.Type,
 
     pub fn length(self: *const AnyAttestations) usize {
         return switch (self.*) {
@@ -16,6 +17,7 @@ pub const AnyAttestations = union(enum) {
             .phase0 => |attestations| .{ .phase0 = attestations.items },
             .electra => |attestations| .{ .electra = attestations.items },
             .gloas => |attestations| .{ .gloas = attestations.items },
+            .pq => |attestations| .{ .pq = attestations.items },
         };
     }
 };
@@ -24,4 +26,5 @@ pub const AnyAttestationItems = union(enum) {
     phase0: []ct.phase0.Attestation.Type,
     electra: []ct.electra.Attestation.Type,
     gloas: []ct.gloas.Attestation.Type,
+    pq: []ct.pq.Attestation.Type,
 };

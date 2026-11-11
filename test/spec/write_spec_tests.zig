@@ -3,6 +3,12 @@ const ForkSeq = @import("config").ForkSeq;
 const spec_test_options = @import("spec_test_options");
 const RunnerKind = @import("./runner_kind.zig").RunnerKind;
 
+// The runners' handler names come with `state_transition`, which links leanVM:
+// analyze it so that the allocator symbols leanVM needs are exported.
+comptime {
+    _ = @import("state_transition");
+}
+
 const supported_forks = [_]ForkSeq{
     .phase0,
     .altair,
@@ -12,6 +18,7 @@ const supported_forks = [_]ForkSeq{
     .electra,
     .fulu,
     .gloas,
+    .pq,
     .heze,
 };
 
@@ -130,6 +137,8 @@ pub fn writeTests(
     defer root_dir.close(io);
 
     inline for (forks) |fork| {
+        // The upgrade to PQ is not implemented.
+        if (comptime kind == .fork and fork == .pq) continue;
         const fork_path = @tagName(fork) ++ "/" ++ @tagName(kind);
 
         inline for (TestWriter(kind).handlers) |handler| {

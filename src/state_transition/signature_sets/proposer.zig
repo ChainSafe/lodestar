@@ -1,4 +1,5 @@
 const std = @import("std");
+const pq = @import("../utils/pq.zig");
 const Allocator = std.mem.Allocator;
 const BeaconConfig = @import("config").BeaconConfig;
 const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
@@ -18,6 +19,16 @@ pub fn verifyProposerSignature(
     epoch_cache: *const EpochCache,
     signed_block: AnySignedBeaconBlock,
 ) !bool {
+    if (signed_block == .full_pq) {
+        const block = signed_block.beaconBlock();
+        const domain = try config.getDomain(epoch_cache.epoch, c.DOMAIN_BEACON_PROPOSER, block.slot());
+        var signing_root: [32]u8 = undefined;
+        try computeBlockSigningRoot(allocator, block, domain, &signing_root);
+        const pubkey = epoch_cache.pubkey_cache.getXmssPubkey(io, block.proposerIndex()) orelse
+            return error.InvalidProposerIndex;
+        const leaf_index = pq.computeXmssLeafIndex(block.slot(), c.LEAF_OFFSET_BEACON_PROPOSER);
+        return pq.xmssVerify(&pubkey, leaf_index, &signing_root, &signed_block.full_pq.signature);
+    }
     const signature_set = try getBlockProposerSignatureSet(
         allocator,
         io,
@@ -35,6 +46,7 @@ pub fn getBlockProposerSignatureSet(
     epoch_cache: *const EpochCache,
     signed_block: AnySignedBeaconBlock,
 ) !SingleSignatureSet {
+    if (signed_block == .full_pq) return error.InvalidFork;
     const block = signed_block.beaconBlock();
     const domain = try config.getDomain(epoch_cache.epoch, c.DOMAIN_BEACON_PROPOSER, block.slot());
     // var signing_root: Root = undefined;
@@ -52,7 +64,7 @@ pub fn getBlockProposerSignatureSet(
     return .{
         .pubkey = pubkey,
         .signing_root = signing_root_buf,
-        .signature = signed_block.signature().*,
+        .signature = signed_block.signature()[0..96].*,
     };
 }
 

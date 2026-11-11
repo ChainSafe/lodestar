@@ -12,6 +12,7 @@ const ForkSeq = @import("config").ForkSeq;
 const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
 const ForkTypes = @import("fork_types").ForkTypes;
 const c = @import("constants");
+const pq = @import("../utils/pq.zig");
 const computeSigningRoot = @import("../utils/signing_root.zig").computeSigningRoot;
 const computeStartSlotAtEpoch = @import("../utils/epoch.zig").computeStartSlotAtEpoch;
 const AggregatedSignatureSet = @import("../utils/signature_sets.zig").AggregatedSignatureSet;
@@ -22,6 +23,25 @@ pub fn getAttestationDataSigningRoot(config: *const BeaconConfig, state_epoch: E
     const domain = try config.getDomain(state_epoch, c.DOMAIN_BEACON_ATTESTER, slot);
 
     try computeSigningRoot(types.phase0.AttestationData, data, domain, out);
+}
+
+/// Appends the claim that each of `attesting_indices` signed `data`.
+pub fn appendAttestationClaims(
+    allocator: Allocator,
+    io: std.Io,
+    config: *const BeaconConfig,
+    epoch_cache: *const EpochCache,
+    data: *const AttestationData,
+    attesting_indices: []const u64,
+    claims: *std.ArrayList(pq.Claim),
+) !void {
+    var signing_root: Root = undefined;
+    try getAttestationDataSigningRoot(config, epoch_cache.epoch, data, &signing_root);
+    try claims.ensureUnusedCapacity(allocator, attesting_indices.len);
+    for (attesting_indices) |index| {
+        const pubkey = epoch_cache.pubkey_cache.getXmssPubkey(io, index) orelse return error.PubkeyNotFound;
+        claims.appendAssumeCapacity(.{ .public_key = pubkey, .message = signing_root });
+    }
 }
 
 /// Consumer need to free the returned pubkeys array

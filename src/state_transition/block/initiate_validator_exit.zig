@@ -1,4 +1,5 @@
 const std = @import("std");
+const ForkTypes = @import("fork_types").ForkTypes;
 const ForkSeq = @import("config").ForkSeq;
 const BeaconConfig = @import("config").BeaconConfig;
 const BeaconState = @import("fork_types").BeaconState;
@@ -32,7 +33,7 @@ pub fn initiateValidatorExit(
     config: *const BeaconConfig,
     epoch_cache: *EpochCache,
     state: *BeaconState(fork),
-    validator: *types.phase0.Validator.TreeView,
+    validator: *ForkTypes(fork).Validator.TreeView,
 ) !void {
     // return if validator already initiated exit
     if ((try validator.get("exit_epoch")) != FAR_FUTURE_EPOCH) {

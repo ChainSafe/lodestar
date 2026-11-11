@@ -11,6 +11,7 @@ pub fn ForkTypes(comptime fork: ForkSeq) type {
         .electra => ct.electra,
         .fulu => ct.fulu,
         .gloas => ct.gloas,
+        .pq => ct.pq,
         .heze => ct.heze,
     };
 }

@@ -146,6 +146,16 @@ test {
 
 pub const processExecutionPayloadBid = @import("block/process_execution_payload_bid.zig").processExecutionPayloadBid;
 pub const processParentExecutionPayload = @import("block/process_parent_execution_payload.zig").processParentExecutionPayload;
+pub const processPreregistrationRequest = @import("block/process_preregistration_request.zig").processPreregistrationRequest;
+pub const processPreregistrationExpiry = @import("block/process_preregistration_request.zig").processPreregistrationExpiry;
+pub const processStark = @import("block/process_stark.zig").processStark;
+pub const pq = @import("utils/pq.zig");
+
+// The leanVM library linked with this module allocates through symbols the
+// `leanvm` module exports: reference it so that every binary has them.
+comptime {
+    _ = @import("leanvm");
+}
 pub const applyParentExecutionPayload = @import("block/process_parent_execution_payload.zig").applyParentExecutionPayload;
 pub const processBuilderDepositRequest = @import("block/process_builder_deposit_request.zig").processBuilderDepositRequest;
 pub const processBuilderExitRequest = @import("block/process_builder_exit_request.zig").processBuilderExitRequest;

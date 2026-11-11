@@ -31,6 +31,7 @@ pub const EpochProcessingFn = enum {
     proposer_lookahead,
     builder_pending_payments,
     ptc_window,
+    preregistration_expiry,
 
     pub fn suiteName(self: EpochProcessingFn) []const u8 {
         return @tagName(self) ++ "/pyspec_tests";
@@ -134,6 +135,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime epoch_process_fn: EpochProcessi
                 },
                 .builder_pending_payments => try state_transition.processBuilderPendingPayments(fork, allocator, fork_state, epoch_cache),
                 .ptc_window => try state_transition.processPtcWindow(fork, allocator, epoch_cache, fork_state, &epoch_transition_cache),
+                .preregistration_expiry => try state_transition.processPreregistrationExpiry(fork, allocator, fork_state),
             }
         }
     };

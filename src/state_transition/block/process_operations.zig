@@ -12,6 +12,7 @@ const ForkTypes = @import("fork_types").ForkTypes;
 const SlashingsCache = @import("../cache/slashings_cache.zig").SlashingsCache;
 const preset = @import("preset").preset;
 const processAttestations = @import("process_attestations.zig").processAttestations;
+const processStark = @import("process_stark.zig").processStark;
 const processPayloadAttestation = @import("process_payload_attestation.zig").processPayloadAttestation;
 
 const getEth1DepositCount = @import("../utils/deposit.zig").getEth1DepositCount;
@@ -38,7 +39,15 @@ pub fn processOperations(
     body: *const BeaconBlockBody(block_type, fork),
     opts: ProcessBlockOpts,
 ) !void {
-    if (comptime fork.gte(.gloas)) {
+    if (comptime fork == .pq) {
+        if (body.inner.proposer_slashings.items.len > preset.MAX_PROPOSER_SLASHINGS or
+            body.inner.attester_slashings.items.len > preset.MAX_ATTESTER_SLASHINGS_ELECTRA or
+            body.inner.attestations.items.len > preset.MAX_ATTESTATIONS_PQ or
+            body.inner.voluntary_exits.items.len > preset.MAX_VOLUNTARY_EXITS)
+        {
+            return error.TooManyBlockOperations;
+        }
+    } else if (comptime fork.gte(.gloas)) {
         if (body.inner.proposer_slashings.items.len > preset.MAX_PROPOSER_SLASHINGS or
             body.inner.attester_slashings.items.len > preset.MAX_ATTESTER_SLASHINGS_ELECTRA or
             body.inner.attestations.items.len > preset.MAX_ATTESTATIONS_ELECTRA or
@@ -100,7 +109,11 @@ pub fn processOperations(
         );
     }
 
-    if (comptime fork.lt(.heze)) {
+    if (comptime fork == .pq) {
+        if (opts.verify_signature) try processStark(fork, allocator, io, config, epoch_cache, body.inner.attestations.items, body.inner.proof.items);
+    }
+
+    if (comptime fork.lt(.heze) and fork != .pq) {
         const timer = time.start(io);
         for (body.inner.deposits.items) |*deposit| {
             try processDeposit(fork, io, config, epoch_cache, state, deposit);
@@ -122,7 +135,7 @@ pub fn processOperations(
         );
     }
 
-    if (comptime fork.gte(.capella)) {
+    if (comptime fork.gte(.capella) and fork != .pq) {
         const timer = time.start(io);
         for (body.inner.bls_to_execution_changes.items) |*bls_to_execution_change| {
             try processBlsToExecutionChange(fork, config, state, bls_to_execution_change);
@@ -133,7 +146,7 @@ pub fn processOperations(
         );
     }
 
-    if (comptime fork.gte(.gloas)) {
+    if (comptime fork.gte(.gloas) and fork != .pq) {
         for (body.inner.payload_attestations.items) |*attestation| {
             try processPayloadAttestation(fork, io, config, epoch_cache, state, attestation, opts.verify_signature);
         }
@@ -145,7 +158,7 @@ pub fn processOperations(
         {
             const timer = time.start(io);
             for (execution_requests.deposits.items) |*deposit_request| {
-                try processDepositRequest(fork, state, deposit_request);
+                try processDepositRequest(fork, allocator, state, deposit_request);
             }
             try metrics.state_transition.process_operations_step.observe(
                 .{ .step = .processDepositRequest },

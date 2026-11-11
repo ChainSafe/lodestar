@@ -75,7 +75,7 @@ pub fn getExpectedWithdrawals(comptime fork: ForkSeq, epoch_cache: *const EpochC
         if (out.withdrawals.items.len >= partial_bound) break;
         const partial = try partial_it.nextValue();
         if (partial.withdrawable_epoch > epoch) break;
-        var validator: ct.phase0.Validator.Type = undefined;
+        var validator: ForkTypes(fork).Validator.Type = undefined;
         try validators.getValue(undefined, partial.validator_index, &validator);
         const balance = (try balances.get(partial.validator_index)) -| validator_withdrawn.get(partial.validator_index);
         if (validator.exit_epoch == c.FAR_FUTURE_EPOCH and validator.effective_balance >= preset.MIN_ACTIVATION_BALANCE and balance > preset.MIN_ACTIVATION_BALANCE) {
@@ -119,7 +119,7 @@ pub fn getExpectedWithdrawals(comptime fork: ForkSeq, epoch_cache: *const EpochC
     for (0..@min(validator_count, preset.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)) |n| {
         if (out.withdrawals.items.len == preset.MAX_WITHDRAWALS_PER_PAYLOAD) break;
         const index = (next_validator + n) % validator_count;
-        var validator: ct.phase0.Validator.Type = undefined;
+        var validator: ForkTypes(fork).Validator.Type = undefined;
         try validators.getValue(undefined, index, &validator);
         const balance = (try balances.get(index)) -| validator_withdrawn.get(index);
         out.sampled_validators += 1;

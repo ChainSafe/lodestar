@@ -71,7 +71,8 @@ pub fn processAttestationsAltair(
         // this check is done last because its the most expensive (if signature verification is toggled on)
         // Unlike phase0 which calls isValidIndexedAttestation, altair+ only verifies the signature
         // since the other checks (sorting, bounds) are already done in validateAttestation above.
-        if (verify_signature) {
+        // From PQ, `processStark` checks one proof of every attestation's signatures.
+        if (verify_signature and comptime fork != .pq) {
             const sig_set = try getAttestationWithIndicesSignatureSet(
                 allocator,
                 io,

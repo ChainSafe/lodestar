@@ -5,6 +5,7 @@ const ForkSeq = @import("config").ForkSeq;
 const BeaconState = @import("fork_types").BeaconState;
 const ForkTypes = @import("fork_types").ForkTypes;
 const gloas_utils = @import("../utils/gloas.zig");
+const pq = @import("../utils/pq.zig");
 const findBuilderIndexByPubkey = gloas_utils.findBuilderIndexByPubkey;
 const getPendingBalanceToWithdrawForBuilder = gloas_utils.getPendingBalanceToWithdrawForBuilder;
 const initiateBuilderExit = gloas_utils.initiateBuilderExit;
@@ -29,7 +30,8 @@ pub fn processBuilderExitRequestWithIndex(
     request: *const ForkTypes(fork).BuilderExitRequest.Type,
     indexed: ?*IndexedBuilderState(fork),
 ) !void {
-    const maybe_builder_index = if (indexed) |cache| cache.find(&request.pubkey) else try findBuilderIndexByPubkey(fork, allocator, state, &request.pubkey);
+    const pubkey = if (comptime fork == .pq) pq.requestPubkey(request.pubkey[16..48]) else request.pubkey;
+    const maybe_builder_index = if (indexed) |cache| cache.find(&pubkey) else try findBuilderIndexByPubkey(fork, allocator, state, &pubkey);
     const builder_index = maybe_builder_index orelse return;
 
     var builders = try state.inner.get("builders");

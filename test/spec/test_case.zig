@@ -102,6 +102,8 @@ pub fn TestCaseUtils(comptime fork: ForkSeq) type {
         }
 
         pub fn loadPreState(allocator: Allocator, pool: *Node.Pool, dir: std.Io.Dir) !TestCachedBeaconState {
+            // The PQ vectors carry stub signatures and proofs.
+            state_transition.pq.testing.xmss_active = fork != .pq;
             var pre_state = ForkTypes.BeaconState.default_value;
             try loadSszSnappyValue(ForkTypes.BeaconState, allocator, dir, "pre.ssz_snappy", &pre_state);
             defer ForkTypes.BeaconState.deinit(allocator, &pre_state);
@@ -449,6 +451,16 @@ pub fn loadSignedBeaconBlock(allocator: std.mem.Allocator, fork: ForkSeq, dir: s
                 .full_gloas = out,
             };
         },
+        .pq => blk: {
+            const out = try allocator.create(types.pq.SignedBeaconBlock.Type);
+            errdefer allocator.destroy(out);
+            out.* = types.pq.SignedBeaconBlock.default_value;
+            errdefer types.pq.SignedBeaconBlock.deinit(allocator, out);
+            try loadSszSnappyValue(types.pq.SignedBeaconBlock, allocator, dir, file_name, out);
+            break :blk AnySignedBeaconBlock{
+                .full_pq = out,
+            };
+        },
         .heze => blk: {
             const out = try allocator.create(heze.SignedBeaconBlock.Type);
             errdefer allocator.destroy(out);
@@ -517,6 +529,10 @@ pub fn deinitSignedBeaconBlock(signed_block: AnySignedBeaconBlock, allocator: st
             gloas.SignedBeaconBlock.deinit(allocator, @constCast(b));
             allocator.destroy(b);
         },
+        .full_pq => |b| {
+            types.pq.SignedBeaconBlock.deinit(allocator, @constCast(b));
+            allocator.destroy(b);
+        },
         .full_heze => |b| {
             heze.SignedBeaconBlock.deinit(allocator, @constCast(b));
             allocator.destroy(b);
@@ -580,6 +596,7 @@ pub fn expectEqualBeaconStates(expected: *AnyBeaconState, actual: *AnyBeaconStat
             .electra => try Debug.printDiff(types.electra.BeaconState, .electra, expected, actual),
             .fulu => try Debug.printDiff(types.fulu.BeaconState, .fulu, expected, actual),
             .gloas => try Debug.printDiff(types.gloas.BeaconState, .gloas, expected, actual),
+            .pq => try Debug.printDiff(types.pq.BeaconState, .pq, expected, actual),
             .heze => try Debug.printDiff(types.heze.BeaconState, .heze, expected, actual),
         }
         return error.NotEqual;

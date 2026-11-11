@@ -5,6 +5,7 @@ const BeaconState = @import("fork_types").BeaconState;
 const c = @import("constants");
 const PubkeyHashContext = @import("../cache/pubkey_cache.zig").PubkeyHashContext;
 const computeEpochAtSlot = @import("../utils/epoch.zig").computeEpochAtSlot;
+const builderKey = @import("../utils/gloas.zig").builderKey;
 
 /// Valid only within one block while registry mutations go through addBuilder.
 /// Top-ups may invalidate reuse candidates, so candidates are checked again before reuse.
@@ -36,7 +37,7 @@ pub fn IndexedBuilderState(comptime fork: ForkSeq) type {
             var it = builders.iteratorReadonly(0);
             for (0..len) |index| {
                 const builder = try it.nextValue();
-                self.index_by_pubkey.putAssumeCapacityContext(builder.pubkey, index, self.context);
+                self.index_by_pubkey.putAssumeCapacityContext(builderKey(fork, &builder), index, self.context);
                 if (canReuse(&builder, self.epoch)) try self.reuse_candidates.append(allocator, index);
             }
             return self;
@@ -53,7 +54,7 @@ pub fn IndexedBuilderState(comptime fork: ForkSeq) type {
 
         pub fn addBuilder(self: *Self, pubkey: *const [48]u8, address: *const [20]u8, amount: u64) !void {
             const builder = ForkTypes(fork).Builder.Type{
-                .pubkey = pubkey.*,
+                .pubkey = if (comptime fork == .pq) pubkey[16..48].* else pubkey.*,
                 .version = c.PAYLOAD_BUILDER_VERSION,
                 .execution_address = address.*,
                 .balance = amount,
@@ -69,7 +70,7 @@ pub fn IndexedBuilderState(comptime fork: ForkSeq) type {
                 try builders.getValue(undefined, index, &old);
                 if (!canReuse(&old, self.epoch)) continue;
                 try builders.setValue(index, &builder);
-                _ = self.index_by_pubkey.swapRemoveContext(old.pubkey, self.context);
+                _ = self.index_by_pubkey.swapRemoveContext(builderKey(fork, &old), self.context);
                 self.index_by_pubkey.putAssumeCapacityContext(pubkey.*, index, self.context);
                 return;
             }

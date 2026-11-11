@@ -21,7 +21,7 @@ pub const SlashingsCache = struct {
     pub fn initFromValidators(
         allocator: Allocator,
         latest_block_slot: Slot,
-        validators: []const *const Validator,
+        validators: anytype,
     ) !SlashingsCache {
         var slashed_validators = try DynamicBitSet.initEmpty(allocator, validators.len);
         errdefer slashed_validators.deinit();

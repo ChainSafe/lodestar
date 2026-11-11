@@ -32,6 +32,10 @@ fn StateListUnion(comptime field: []const u8, comptime iterator: bool) type {
 
 /// Borrows a list owned by its parent state. Clones and slices own their views until
 /// transferred into a state or released with deinit(). Transfers require identical schemas.
+///
+/// A fork may give the list its own element type, as PQ does for validators and
+/// builders. Element access then fails with `error.InvalidAtFork`: reach the
+/// elements through the fork-typed state.
 pub fn AnyStateList(comptime field: []const u8) type {
     const Payload = StateListUnion(field, false);
     const FirstView = @typeInfo(Payload).@"union".fields[0].type;
@@ -43,13 +47,11 @@ pub fn AnyStateList(comptime field: []const u8) type {
         pub const Element = List.TreeView.Element;
         pub const Value = List.Type;
 
-        comptime {
-            for (@typeInfo(Payload).@"union".fields) |variant| {
-                const Variant = @typeInfo(variant.type).pointer.child.SszType;
-                if (Variant.Element != List.Element or Variant.Type != Value or Variant.TreeView.Element != Element) {
-                    @compileError("state list views must have identical element and value types across forks");
-                }
-            }
+        /// Whether the list of the fork behind `tag` has the common element type.
+        fn common(comptime tag: std.meta.Tag(Payload)) bool {
+            const fork: ForkSeq = @enumFromInt(@intFromEnum(tag));
+            const Variant = ForkTypes(fork).BeaconState.getFieldType(field);
+            return Variant.Element == List.Element and Variant.Type == Value and Variant.TreeView.Element == Element;
         }
 
         pub fn fromView(comptime fork: ForkSeq, view: *ForkTypes(fork).BeaconState.getFieldType(field).TreeView) Self {
@@ -92,31 +94,31 @@ pub fn AnyStateList(comptime field: []const u8) type {
 
         pub fn get(self: Self, index: usize) !Element {
             return switch (self.inner) {
-                inline else => |view| view.get(index),
+                inline else => |view, tag| if (comptime !common(tag)) error.InvalidAtFork else view.get(index),
             };
         }
 
         pub fn getReadonly(self: Self, index: usize) !Element {
             return switch (self.inner) {
-                inline else => |view| view.getReadonly(index),
+                inline else => |view, tag| if (comptime !common(tag)) error.InvalidAtFork else view.getReadonly(index),
             };
         }
 
         pub fn set(self: Self, index: usize, value: Element) !void {
             return switch (self.inner) {
-                inline else => |view| view.set(index, value),
+                inline else => |view, tag| if (comptime !common(tag)) error.InvalidAtFork else view.set(index, value),
             };
         }
 
         pub fn getValue(self: Self, allocator: Allocator, index: usize, out: *List.Element.Type) !void {
             return switch (self.inner) {
-                inline else => |view| view.getValue(allocator, index, out),
+                inline else => |view, tag| if (comptime !common(tag)) error.InvalidAtFork else view.getValue(allocator, index, out),
             };
         }
 
         pub fn setValue(self: Self, index: usize, value: *const List.Element.Type) !void {
             return switch (self.inner) {
-                inline else => |view| view.setValue(index, value),
+                inline else => |view, tag| if (comptime !common(tag)) error.InvalidAtFork else view.setValue(index, value),
             };
         }
 
@@ -128,31 +130,31 @@ pub fn AnyStateList(comptime field: []const u8) type {
 
         pub fn getAll(self: Self, allocator: ?Allocator) ![]Element {
             return switch (self.inner) {
-                inline else => |view| view.getAll(allocator),
+                inline else => |view, tag| if (comptime !common(tag)) error.InvalidAtFork else view.getAll(allocator),
             };
         }
 
         pub fn getAllInto(self: Self, out: []Element) ![]Element {
             return switch (self.inner) {
-                inline else => |view| view.getAllInto(out),
+                inline else => |view, tag| if (comptime !common(tag)) error.InvalidAtFork else view.getAllInto(out),
             };
         }
 
         pub fn getAllReadonlyValues(self: Self, allocator: Allocator) ![]List.Element.Type {
             return switch (self.inner) {
-                inline else => |view| view.getAllReadonlyValues(allocator),
+                inline else => |view, tag| if (comptime !common(tag)) error.InvalidAtFork else view.getAllReadonlyValues(allocator),
             };
         }
 
         pub fn push(self: Self, value: Element) !void {
             return switch (self.inner) {
-                inline else => |view| view.push(value),
+                inline else => |view, tag| if (comptime !common(tag)) error.InvalidAtFork else view.push(value),
             };
         }
 
         pub fn pushValue(self: Self, value: *const List.Element.Type) !void {
             return switch (self.inner) {
-                inline else => |view| view.pushValue(value),
+                inline else => |view, tag| if (comptime !common(tag)) error.InvalidAtFork else view.pushValue(value),
             };
         }
 
@@ -188,7 +190,7 @@ pub fn AnyStateList(comptime field: []const u8) type {
 
         pub fn toValue(self: Self, allocator: Allocator, out: *Value) !void {
             return switch (self.inner) {
-                inline else => |view| view.toValue(allocator, out),
+                inline else => |view, tag| if (comptime !common(tag)) error.InvalidAtFork else view.toValue(allocator, out),
             };
         }
 
@@ -223,13 +225,13 @@ pub fn AnyStateList(comptime field: []const u8) type {
 
             pub fn nextValue(self: *ReadonlyIterator) !List.Element.Type {
                 return switch (self.inner) {
-                    inline else => |*iterator| iterator.nextValue(),
+                    inline else => |*iterator, tag| if (comptime !common(tag)) error.InvalidAtFork else iterator.nextValue(),
                 };
             }
 
             pub fn nextValuePtr(self: *ReadonlyIterator) !*const List.Element.Type {
                 return switch (self.inner) {
-                    inline else => |*iterator| iterator.nextValuePtr(),
+                    inline else => |*iterator, tag| if (comptime !common(tag)) error.InvalidAtFork else iterator.nextValuePtr(),
                 };
             }
 

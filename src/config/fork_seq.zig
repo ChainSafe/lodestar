@@ -4,7 +4,7 @@ const std = @import("std");
 ///
 /// The numeric values define the canonical chronological ordering of forks.
 // Implementors note: when adding a new fork, append it to preserve ordering and update any
-// tests that enumerate names.
+// tests that enumerate names. `pq` is the exception: it builds on gloas, not heze.
 pub const ForkSeq = enum(u8) {
     phase0 = 0,
     altair = 1,
@@ -14,7 +14,8 @@ pub const ForkSeq = enum(u8) {
     electra = 5,
     fulu = 6,
     gloas = 7,
-    heze = 8,
+    pq = 8,
+    heze = 9,
 
     /// Total number of fork variants.
     pub const count: u8 = @intCast(@typeInfo(ForkSeq).@"enum".fields.len);

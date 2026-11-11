@@ -45,7 +45,7 @@ pub const ValidatorStatus = enum {
 };
 
 /// Get the status of a validator at a given epoch.
-pub fn getValidatorStatus(validator: *const Validator.Type, current_epoch: Epoch) ValidatorStatus {
+pub fn getValidatorStatus(validator: anytype, current_epoch: Epoch) ValidatorStatus {
     const FAR_FUTURE_EPOCH = constants.FAR_FUTURE_EPOCH;
 
     // pending

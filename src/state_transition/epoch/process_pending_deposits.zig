@@ -11,6 +11,8 @@ const preset = @import("preset").preset;
 const isValidatorKnown = @import("../utils/electra.zig").isValidatorKnown;
 const validateDepositSignature = @import("../block/process_deposit.zig").validateDepositSignature;
 const addValidatorToRegistry = @import("../block/process_deposit.zig").addValidatorToRegistry;
+const addXmssValidatorToRegistry = @import("../block/process_deposit.zig").addXmssValidatorToRegistry;
+const pq = @import("../utils/pq.zig");
 const hasCompoundingWithdrawalCredential = @import("../utils/electra.zig").hasCompoundingWithdrawalCredential;
 const increaseBalance = @import("../utils/balance.zig").increaseBalance;
 const computeStartSlotAtEpoch = @import("../utils/epoch.zig").computeStartSlotAtEpoch;
@@ -75,7 +77,7 @@ pub fn processPendingDeposits(
         // Read validator state
         var is_validator_exited = false;
         var is_validator_withdrawn = false;
-        const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
+        const validator_index = epoch_cache.pubkey_cache.get(io, depositCacheKey(fork, &deposit.pubkey));
 
         if (try isValidatorKnown(fork, state, validator_index)) {
             var validators = try state.validators();
@@ -84,7 +86,7 @@ pub fn processPendingDeposits(
             is_validator_withdrawn = try validator.get("withdrawable_epoch") < next_epoch;
         }
 
-        if (is_validator_withdrawn) {
+        if (is_validator_withdrawn or (comptime fork == .pq) and pq.isLegacyPubkey(&deposit.pubkey)) {
             // Deposited balance will never become active. Increase balance but do not consume churn
             try applyPendingDeposit(fork, io, config, epoch_cache, state, deposit, cache);
         } else if (is_validator_exited) {
@@ -122,6 +124,12 @@ pub fn processPendingDeposits(
         0);
 }
 
+/// The pubkey cache's key for the validator a deposit names.
+fn depositCacheKey(comptime fork: ForkSeq, pubkey: *const [48]u8) [48]u8 {
+    if (comptime fork != .pq) return pubkey.*;
+    return pq.requestPubkey(&pq.computeDepositPubkey(pubkey));
+}
+
 /// Records the compounding flag when this flow adds a validator.
 fn applyPendingDeposit(
     comptime fork: ForkSeq,
@@ -132,13 +140,41 @@ fn applyPendingDeposit(
     deposit: PendingDeposit,
     cache: *EpochTransitionCache,
 ) !void {
-    const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
+    const validator_index = epoch_cache.pubkey_cache.get(io, depositCacheKey(fork, &deposit.pubkey));
     const pubkey = &deposit.pubkey;
 
     const withdrawal_credentials = &deposit.withdrawal_credentials;
     const amount = deposit.amount;
     const signature = deposit.signature;
     const is_validator_known = try isValidatorKnown(fork, state, validator_index);
+
+    if (comptime fork == .pq) {
+        if (is_validator_known) {
+            try increaseBalance(fork, state, validator_index.?, amount);
+            if (cache.balances) |*balances| balances.items[validator_index.?] += amount;
+            return;
+        }
+        const new_index = try addXmssValidatorToRegistry(
+            fork,
+            io,
+            epoch_cache,
+            state,
+            &pq.computeDepositPubkey(pubkey),
+            &pq.computeDepositVrfRoot(pubkey, &signature),
+            withdrawal_credentials,
+            amount,
+        );
+        cache.appendCompoundingValidatorFlag(hasCompoundingWithdrawalCredential(withdrawal_credentials));
+        if (cache.balances) |*balances| balances.appendAssumeCapacity(amount);
+        if (pq.isLegacyPubkey(pubkey)) {
+            // No signature verifies against a legacy deposit's key: exit its validator at once.
+            var validators = try state.validators();
+            var validator = try validators.get(new_index);
+            try validator.set("exit_epoch", epoch_cache.epoch);
+            try validator.set("withdrawable_epoch", epoch_cache.epoch + config.chain.MIN_VALIDATOR_WITHDRAWABILITY_DELAY);
+        }
+        return;
+    }
 
     if (!is_validator_known) {
         if (comptime fork.gte(.heze)) {

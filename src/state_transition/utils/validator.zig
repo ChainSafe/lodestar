@@ -11,17 +11,17 @@ const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
 const WithdrawalCredentials = types.primitive.Root.Type;
 const hasCompoundingWithdrawalCredential = @import("./electra.zig").hasCompoundingWithdrawalCredential;
 
-pub fn isActiveValidator(validator: *const Validator.Type, epoch: Epoch) bool {
+pub fn isActiveValidator(validator: anytype, epoch: Epoch) bool {
     return validator.activation_epoch <= epoch and epoch < validator.exit_epoch;
 }
 
-pub fn isActiveValidatorView(validator: *Validator.TreeView, epoch: Epoch) !bool {
+pub fn isActiveValidatorView(validator: anytype, epoch: Epoch) !bool {
     const activation_epoch: Epoch = @intCast(try validator.get("activation_epoch"));
     const exit_epoch: Epoch = @intCast(try validator.get("exit_epoch"));
     return activation_epoch <= epoch and epoch < exit_epoch;
 }
 
-pub fn isSlashableValidator(validator: *const Validator.Type, epoch: Epoch) bool {
+pub fn isSlashableValidator(validator: anytype, epoch: Epoch) bool {
     return !validator.slashed and validator.activation_epoch <= epoch and epoch < validator.withdrawable_epoch;
 }
 
