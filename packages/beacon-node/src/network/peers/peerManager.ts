@@ -597,20 +597,18 @@ export class PeerManager {
         };
       }),
       // Collect subnets which we need peers for in the current slot
-      this.attnetsService
-        .getActiveSubnets()
-        .map((request) => {
-          const subscribers = this.gossipsub.getSubscribersWithOutboundStream({
-            type: GossipType.beacon_attestation,
-            boundary,
-            subnet: request.subnet,
-          });
-          let peerCount = 0;
-          for (const peer of subscribers) {
-            if (connectedHealthyPeerIds.has(peer)) peerCount++;
-          }
-          return {...request, peerCount};
-        }),
+      this.attnetsService.getActiveSubnets().map((request) => {
+        const subscribers = this.gossipsub.getSubscribersWithOutboundStream({
+          type: GossipType.beacon_attestation,
+          boundary,
+          subnet: request.subnet,
+        });
+        let peerCount = 0;
+        for (const peer of subscribers) {
+          if (connectedHealthyPeerIds.has(peer)) peerCount++;
+        }
+        return {...request, peerCount};
+      }),
       this.syncnetsService.getActiveSubnets().map((request) => {
         const subscribers = this.gossipsub.getSubscribersWithOutboundStream({
           type: GossipType.sync_committee,
