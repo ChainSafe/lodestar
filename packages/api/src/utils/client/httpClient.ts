@@ -353,12 +353,15 @@ export class HttpClient implements IHttpClient {
     // Implement fetch timeout
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), init.timeoutMs);
-    init.signal = controller.signal;
 
     // Attach global/local signal to this request's controller
+    // Check already-aborted after subscribe to avoid a race where abort fires between the check and addEventListener
     const onSignalAbort = (): void => controller.abort();
     for (const s of abortSignals) {
       s?.addEventListener("abort", onSignalAbort);
+      if (s?.aborted) {
+        controller.abort();
+      }
     }
 
     const routeId = definition.operationId;
@@ -367,7 +370,7 @@ export class HttpClient implements IHttpClient {
 
     try {
       this.logger?.debug("API request", {routeId, requestWireFormat, responseWireFormat});
-      const {url, requestInit} = createApiRequest(definition, args, init);
+      const {url, requestInit} = createApiRequest(definition, args, {...init, signal: controller.signal});
       const response = await this.fetch(url, requestInit);
       const apiResponse = new ApiResponse(definition, response.body, response);
 

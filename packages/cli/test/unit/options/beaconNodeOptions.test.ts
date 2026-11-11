@@ -15,6 +15,7 @@ describe("options / beaconNodeOptions", () => {
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
       "api.maxGindicesInProof": 1000,
+      "api.disableBidValidation": true,
       "rest.namespace": [],
       "rest.cors": "*",
       rest: true,
@@ -60,6 +61,7 @@ describe("options / beaconNodeOptions", () => {
       builder: false,
       "builder.url": "http://localhost:8661",
       "builder.timeout": 12000,
+      "builder.bidDeadline": 500,
       "builder.faultInspectionWindow": 32,
       "builder.allowedFaults": 8,
 
@@ -114,6 +116,7 @@ describe("options / beaconNodeOptions", () => {
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       api: {
         maxGindicesInProof: 1000,
+        disableBidValidation: true,
         rest: {
           api: [],
           cors: "*",
@@ -167,6 +170,7 @@ describe("options / beaconNodeOptions", () => {
         enabled: false,
         url: "http://localhost:8661",
         timeout: 12000,
+        bidDeadline: 500,
         faultInspectionWindow: 32,
         allowedFaults: 8,
       },

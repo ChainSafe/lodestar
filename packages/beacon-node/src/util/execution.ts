@@ -42,7 +42,7 @@ export enum DataColumnEngineResult {
 
 export async function getBlobSidecarsFromExecution(
   config: ChainForkConfig,
-  executionEngine: IExecutionEngine,
+  executionEngine: Pick<IExecutionEngine, "getBlobs">,
   metrics: Metrics | null,
   emitter: ChainEventEmitter,
   blockInput: IBlockInput
@@ -140,7 +140,7 @@ export async function getBlobSidecarsFromExecution(
  */
 export async function getDataColumnSidecarsFromExecution(
   config: ChainForkConfig,
-  executionEngine: IExecutionEngine,
+  executionEngine: Pick<IExecutionEngine, "getBlobs">,
   emitter: ChainEventEmitter,
   input: IBlockInput | PayloadEnvelopeInput,
   metrics: Metrics | null,
@@ -289,7 +289,7 @@ export type RebuildMiss = {slot: Slot; reason: "unavailable" | "mismatch"; error
  */
 export async function* reconstructExecutionPayloadEnvelopesByRange(
   db: IBeaconDb,
-  executionEngine: IExecutionEngine,
+  executionEngine: Pick<IExecutionEngine, "getPayloadBodiesByHashV2">,
   logger: Logger,
   metrics: Metrics | null,
   startSlot: Slot,
@@ -315,7 +315,7 @@ export async function* reconstructExecutionPayloadEnvelopesByRange(
  * RANGE_UNSERVABLE for it
  */
 async function* reconstructBatch(
-  executionEngine: IExecutionEngine,
+  executionEngine: Pick<IExecutionEngine, "getPayloadBodiesByHashV2">,
   logger: Logger,
   metrics: Metrics | null,
   batch: RangeEntry[]
@@ -355,7 +355,7 @@ async function* reconstructBatch(
  * on its path. Throws ENGINE_UNAVAILABLE only.
  */
 export async function reconstructExecutionPayloadEnvelopes(
-  executionEngine: IExecutionEngine,
+  executionEngine: Pick<IExecutionEngine, "getPayloadBodiesByHashV2">,
   metrics: Metrics | null,
   headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
@@ -382,7 +382,7 @@ export function isRebuildMiss(result: gloas.SignedExecutionPayloadEnvelope | Reb
  * incremented once, in this function.
  */
 async function reconstructEnvelopesBatch(
-  executionEngine: IExecutionEngine,
+  executionEngine: Pick<IExecutionEngine, "getPayloadBodiesByHashV2">,
   metrics: Metrics | null,
   headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {

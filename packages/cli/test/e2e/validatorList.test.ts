@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import {rimraf} from "rimraf";
 import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {runCliCommand} from "@lodestar/test-utils";
@@ -15,7 +14,7 @@ describe("cmds / validator", () => {
   const dataDir = testFilesDir;
 
   beforeAll(() => {
-    rimraf.sync(dataDir);
+    fs.rmSync(dataDir, {recursive: true, force: true});
   });
 
   beforeEach(() => {

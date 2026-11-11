@@ -1,0 +1,75 @@
+const std = @import("std");
+const Node = @import("persistent_merkle_tree").Node;
+const ct = @import("consensus_types");
+const c = @import("constants");
+const preset = @import("preset").preset;
+const BeaconConfig = @import("config").BeaconConfig;
+const BeaconState = @import("fork_types").BeaconState;
+const IndexedBuilderState = @import("indexed_builder_state.zig").IndexedBuilderState;
+const processBuilderDepositRequest = @import("process_builder_deposit_request.zig").processBuilderDepositRequestWithIndex;
+
+test "Gloas builder index rechecks reuse after topups and removes replaced keys" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 350_000 });
+    defer pool.deinit();
+    var state = BeaconState(.gloas){ .inner = try ct.gloas.BeaconState.TreeView.fromValue(allocator, &pool, &ct.gloas.BeaconState.default_value) };
+    defer state.deinit();
+    var builders = try state.inner.get("builders");
+    var builder = ct.gloas.Builder.default_value;
+    builder.pubkey = @splat(1);
+    try builders.pushValue(&builder);
+    builder.pubkey = @splat(2);
+    try builders.pushValue(&builder);
+    var indexed = try IndexedBuilderState(.gloas).init(allocator, std.testing.io, &state);
+    defer indexed.deinit();
+    var existing: ct.gloas.Builder.Type = undefined;
+    try builders.getValue(undefined, 0, &existing);
+    existing.balance = 1;
+    try builders.setValue(0, &existing);
+    const new_key: [48]u8 = @splat(3);
+    const appended_key: [48]u8 = @splat(4);
+    const address: [20]u8 = @splat(5);
+    try indexed.addBuilder(&new_key, &address, 10);
+    try indexed.addBuilder(&appended_key, &address, 20);
+    try std.testing.expectEqual(@as(?usize, 0), indexed.find(&existing.pubkey));
+    try std.testing.expectEqual(@as(?usize, null), indexed.find(&builder.pubkey));
+    try std.testing.expectEqual(@as(?usize, 1), indexed.find(&new_key));
+    try std.testing.expectEqual(@as(?usize, 2), indexed.find(&appended_key));
+    try std.testing.expectEqual(@as(usize, 3), try builders.length());
+}
+
+test "Gloas builder topups require builder credentials and only reset fully swept exits" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 350_000 });
+    defer pool.deinit();
+    var state = BeaconState(.gloas){ .inner = try ct.gloas.BeaconState.TreeView.fromValue(allocator, &pool, &ct.gloas.BeaconState.default_value) };
+    defer state.deinit();
+    try state.setSlot(10 * preset.SLOTS_PER_EPOCH);
+    var config = BeaconConfig.init(@import("config").minimal.chain_config, c.ZERO_HASH);
+    config.chain.MIN_BUILDER_WITHDRAWABILITY_DELAY = 2;
+    var builders = try state.inner.get("builders");
+    var builder = ct.gloas.Builder.default_value;
+    builder.pubkey = @splat(1);
+    builder.balance = 10;
+    builder.withdrawable_epoch = 3;
+    try builders.pushValue(&builder);
+    var indexed = try IndexedBuilderState(.gloas).init(allocator, std.testing.io, &state);
+    defer indexed.deinit();
+    var request = ct.gloas.BuilderDepositRequest.default_value;
+    request.pubkey = builder.pubkey;
+    request.amount = 5;
+    try processBuilderDepositRequest(.gloas, allocator, &config, &state, &request, &indexed);
+    try builders.getValue(undefined, 0, &builder);
+    try std.testing.expectEqual(@as(u64, 10), builder.balance);
+    request.withdrawal_credentials[0] = c.BUILDER_WITHDRAWAL_PREFIX;
+    try processBuilderDepositRequest(.gloas, allocator, &config, &state, &request, &indexed);
+    try builders.getValue(undefined, 0, &builder);
+    try std.testing.expectEqual(@as(u64, 15), builder.balance);
+    try std.testing.expectEqual(@as(u64, 3), builder.withdrawable_epoch);
+    builder.balance = 0;
+    try builders.setValue(0, &builder);
+    try processBuilderDepositRequest(.gloas, allocator, &config, &state, &request, &indexed);
+    try builders.getValue(undefined, 0, &builder);
+    try std.testing.expectEqual(@as(u64, 5), builder.balance);
+    try std.testing.expectEqual(@as(u64, 12), builder.withdrawable_epoch);
+}

@@ -1,23 +1,26 @@
-import {describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {createChainForkConfig} from "@lodestar/config";
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ColumnIndex, SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {PayloadError, PayloadErrorCode} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
-import {
-  PAYLOAD_DATA_AVAILABILITY_TIMEOUT,
-  verifyPayloadsDataAvailability,
-} from "../../../../src/chain/blocks/verifyPayloadsDataAvailability.js";
+import {verifyPayloadsDataAvailability} from "../../../../src/chain/blocks/verifyPayloadsDataAvailability.js";
+
+const config = createChainForkConfig({SLOT_DURATION_MS: 12_000, SLOT_DURATION_MS_HEZE: 10_000});
 
 function buildPayloadEnvelopeInput({
   blobCount,
   sampledColumns,
   daOutOfRange = false,
+  forkName = ForkName.gloas,
 }: {
   blobCount: number;
   sampledColumns: ColumnIndex[];
   daOutOfRange?: boolean;
+  forkName?: ForkName;
 }): {
   payloadInput: PayloadEnvelopeInput;
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope;
@@ -33,7 +36,7 @@ function buildPayloadEnvelopeInput({
   const payloadInput = PayloadEnvelopeInput.createFromBlock({
     blockRootHex,
     block: block as SignedBeaconBlock<typeof ForkName.gloas>,
-    forkName: ForkName.gloas,
+    forkName,
     sampledColumns,
     custodyColumns: sampledColumns,
     seenTimestampSec: Date.now() / 1000,
@@ -65,6 +68,7 @@ describe("verifyPayloadsDataAvailability", () => {
 
     const controller = new AbortController();
     const {dataAvailabilityStatuses, availableTime} = await verifyPayloadsDataAvailability(
+      config,
       [payloadInput],
       controller.signal
     );
@@ -86,7 +90,7 @@ describe("verifyPayloadsDataAvailability", () => {
     expect(payloadInput.hasAllData()).toBe(true);
 
     const controller = new AbortController();
-    const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability([payloadInput], controller.signal);
+    const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(config, [payloadInput], controller.signal);
     expect(dataAvailabilityStatuses).toEqual([DataAvailabilityStatus.Available]);
   });
 
@@ -96,7 +100,7 @@ describe("verifyPayloadsDataAvailability", () => {
     expect(payloadInput.hasAllData()).toBe(false);
 
     const controller = new AbortController();
-    const verifyPromise = verifyPayloadsDataAvailability([payloadInput], controller.signal);
+    const verifyPromise = verifyPayloadsDataAvailability(config, [payloadInput], controller.signal);
 
     // Columns arrive asynchronously
     await new Promise((resolve) => setTimeout(resolve, 5));
@@ -129,22 +133,46 @@ describe("verifyPayloadsDataAvailability", () => {
     expect(payloadInput.hasComputedAllData()).toBe(false);
 
     const controller = new AbortController();
-    const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability([payloadInput], controller.signal);
+    const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(config, [payloadInput], controller.signal);
     expect(dataAvailabilityStatuses).toEqual([DataAvailabilityStatus.Available]);
   });
 
-  it("rejects with timeout when columns never arrive", async () => {
-    const sampled = [0, 1];
-    const {payloadInput} = buildPayloadEnvelopeInput({blobCount: 1, sampledColumns: sampled});
-    expect(payloadInput.hasAllData()).toBe(false);
+  describe("rejects after one slot of the payload's fork when columns never arrive", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
 
-    // Temporarily shorten the timeout by monkey-patching? Better: run with natural timeout but bound the test.
-    // Instead, call waitForAllData directly with a short timeout to verify the timeout behavior
-    // (the helper uses PAYLOAD_DATA_AVAILABILITY_TIMEOUT which is too long for a unit test).
-    const controller = new AbortController();
-    await expect(payloadInput.waitForAllData(10, controller.signal)).rejects.toThrow();
-    // Sanity: the helper constant is defined and positive.
-    expect(PAYLOAD_DATA_AVAILABILITY_TIMEOUT).toBeGreaterThan(0);
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    for (const [forkName, slotDurationMs] of [
+      [ForkName.gloas, 12_000],
+      [ForkName.heze, 10_000],
+    ] as const) {
+      it(`${forkName} ${slotDurationMs}ms`, async () => {
+        const {payloadInput} = buildPayloadEnvelopeInput({blobCount: 1, sampledColumns: [0, 1], forkName});
+        expect(payloadInput.hasAllData()).toBe(false);
+
+        let outcome: unknown;
+        const verifyPromise = verifyPayloadsDataAvailability(config, [payloadInput], new AbortController().signal).then(
+          () => {
+            outcome = "resolved";
+          },
+          (e) => {
+            outcome = e;
+          }
+        );
+
+        await vi.advanceTimersByTimeAsync(slotDurationMs - 1);
+        expect(outcome).toBeUndefined();
+
+        await vi.advanceTimersByTimeAsync(1);
+        await verifyPromise;
+        expect(outcome).toBeInstanceOf(PayloadError);
+        expect((outcome as PayloadError).type.code).toBe(PayloadErrorCode.DATA_UNAVAILABLE);
+      });
+    }
   });
 
   it("rejects promptly when signal is aborted", async () => {
@@ -166,7 +194,7 @@ describe("verifyPayloadsDataAvailability", () => {
     expect(payloadInput.hasAllData()).toBe(true);
 
     const controller = new AbortController();
-    const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability([payloadInput], controller.signal);
+    const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(config, [payloadInput], controller.signal);
     expect(dataAvailabilityStatuses).toEqual([DataAvailabilityStatus.OutOfRange]);
   });
 });

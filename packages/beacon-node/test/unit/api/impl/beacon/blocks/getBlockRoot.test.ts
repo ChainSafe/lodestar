@@ -2,6 +2,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateProtoBlock, generateSignedBlockAtSlot} from "../../../../../utils/typeGenerator.js";
 
@@ -20,7 +21,7 @@ describe("getBlockRoot", () => {
 
   beforeEach(() => {
     modules = getApiTestModules();
-    api = getBeaconBlockApi(modules);
+    api = getBeaconBlockApi(defaultApiOptions, modules);
     modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: 10, blockRoot: headRoot}));
     modules.forkChoice.getFinalizedCheckpoint.mockReturnValue({
       epoch: 0,

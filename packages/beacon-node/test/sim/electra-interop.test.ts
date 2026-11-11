@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import {afterAll, afterEach, describe, it, vi} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
@@ -158,7 +159,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
       extraData: dataToBytes("0x", 0),
       baseFeePerGas: 7n,
       excessBlobGas: 0n,
-      transactions: [dataToBytes(depositTransactionA, null)],
+      transactions: SerializedList.fromArray([dataToBytes(depositTransactionA, null)]),
       withdrawals: [],
       depositRequests: [depositRequestA],
       blockNumber: 1,
@@ -207,7 +208,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
       throw Error(`Number of transactions mismatched. Expected: 1, actual: ${payload.transactions.length}`);
     }
 
-    const actualTransaction = bytesToData(payload.transactions[0]);
+    const actualTransaction = bytesToData(payload.transactions.get(0));
 
     if (actualTransaction !== depositTransactionB) {
       throw Error(`Transaction mismatched. Expected: ${depositTransactionB}, actual: ${actualTransaction}`);

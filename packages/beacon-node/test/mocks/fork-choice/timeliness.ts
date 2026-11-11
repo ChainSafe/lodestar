@@ -14,11 +14,11 @@ export class TimelinessForkChoice extends ForkChoice {
   /**
    * This is to mark the `lateSlot` as not timely.
    */
-  protected isBlockReceivedTimely(block: BeaconBlock, receiveDelaySec: number): boolean {
+  protected isBlockReceivedTimely(block: BeaconBlock, receiveDelayMs: number): boolean {
     if (block.slot === this.lateSlot) {
       return false;
     }
 
-    return super.isBlockReceivedTimely(block, receiveDelaySec);
+    return super.isBlockReceivedTimely(block, receiveDelayMs);
   }
 }

@@ -1,7 +1,7 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, LVHInvalidResponse, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {EpochShuffling, IBeaconStateView} from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -25,7 +25,7 @@ import {
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BuilderApiClient} from "../execution/builder/apiClient.js";
-import {ForkchoiceUpdatedResult, IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
+import {IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
@@ -41,7 +41,8 @@ import {IBlsVerifier} from "./bls/index.js";
 import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEventEmitter} from "./emitter.js";
-import {ExecutionInvalidSource, ForkchoiceCaller} from "./forkChoice/index.js";
+import {ForkchoiceCaller} from "./forkChoice/index.js";
+import {ForkChoiceExecutionEngine} from "./forkChoiceExecutionEngine.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
@@ -77,8 +78,7 @@ import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPa
 import {ShufflingCache} from "./shufflingCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
-export {BlockType, type AssembledBlockType};
-export {type ProposerPreparationData};
+export {type AssembledBlockType, BlockType, type ProposerPreparationData};
 export type BlockHash = RootHex;
 
 export type StateGetOpts = {
@@ -99,7 +99,7 @@ export interface IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
   earliestAvailableSlot: Slot;
-  readonly executionEngine: IExecutionEngine;
+  readonly executionEngine: ForkChoiceExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   readonly builderCircuitBreaker: BuilderCircuitBreaker;
   readonly builderApiClient: BuilderApiClient;
@@ -280,12 +280,6 @@ export interface IBeaconChain {
   getStatus(): Status;
 
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
-
-  /** Feed a forkchoiceUpdated verdict about the node (headBlockRoot, headBlockHash) back into fork choice */
-  onForkchoiceUpdated(headBlockRoot: RootHex, headBlockHash: RootHex, result: ForkchoiceUpdatedResult): void;
-
-  /** Apply an execution engine INVALID verdict to fork choice and move the head off the invalid chain */
-  invalidateExecutionPayloads(lvh: LVHInvalidResponse, source: ExecutionInvalidSource): void;
 
   /** When proposerBoostReorg is enabled, predict (as of the current slot) the head block a proposer would build on next slot */
   predictProposerHead(): ProtoBlock;

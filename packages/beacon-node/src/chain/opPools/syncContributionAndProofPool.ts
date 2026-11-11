@@ -1,10 +1,10 @@
-import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
+import {Signature, aggregateSignatures} from "@lodestar/native/blst";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, altair, ssz} from "@lodestar/types";
-import {Logger, MapDef, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
@@ -234,8 +234,18 @@ export function aggregate(
   }
 
   metrics?.opPool.syncContributionAndProofPool.getAggregateParticipants.set(participationCount);
+
+  const syncCommitteeSignature = aggregateSignatures(signatures).toBytes();
+  // The point at infinity is only a valid sync aggregate signature with empty participation bits
+  if (byteArrayEquals(syncCommitteeSignature, G2_POINT_AT_INFINITY)) {
+    return {
+      syncCommitteeBits: BitArray.fromBitLen(SYNC_COMMITTEE_SIZE),
+      syncCommitteeSignature,
+    };
+  }
+
   return {
     syncCommitteeBits,
-    syncCommitteeSignature: aggregateSignatures(signatures).toBytes(),
+    syncCommitteeSignature,
   };
 }

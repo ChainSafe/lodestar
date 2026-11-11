@@ -645,6 +645,11 @@ export function createLodestarMetrics(
       help: "Count of peers by sync type [FullySynced, Advanced, Behind]",
       labelNames: ["syncType"],
     }),
+    syncPeerFinalizedCheckpointMismatch: register.counter<{reason: string}>({
+      name: "lodestar_sync_peer_finalized_checkpoint_mismatch_total",
+      help: "Total behind peers whose Status finalized checkpoint is not in our chain, by reason",
+      labelNames: ["reason"],
+    }),
     syncSwitchGossipSubscriptions: register.gauge<{action: string}>({
       name: "lodestar_sync_switch_gossip_subscriptions",
       help: "Sync switched gossip subscriptions on/off",
@@ -1007,6 +1012,11 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_block_received_to_fully_verified_time",
         help: "Time elapsed between block received and fully verified state, signatures and payload",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
+      }),
+      receivedToConsensusVerifiedTime: register.histogram({
+        name: "lodestar_gossip_block_received_to_consensus_verified_seconds",
+        help: "Time from gossip block arrival until both the state transition and all block signature verifications are complete, excluding execution payload verification",
+        buckets: [0.01, 0.015, 0.02, 0.025, 0.03, 0.04, 0.5, 1],
       }),
       verifiedToBlobsAvailabiltyTime: register.histogram<{numBlobs: number}>({
         name: "lodestar_gossip_block_verified_to_blobs_availability_time",
@@ -1472,6 +1482,11 @@ export function createLodestarMetrics(
         gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
           name: "lodestar_oppool_execution_payload_bid_pool_gossip_insert_outcome_total",
           help: "Total number of InsertOutcome as a result of adding an execution payload bid from gossip to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_execution_payload_bid_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an execution payload bid from api to the pool",
           labelNames: ["insertOutcome"],
         }),
         apiValidationTime: register.histogram({
