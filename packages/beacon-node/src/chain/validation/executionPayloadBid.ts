@@ -1,6 +1,7 @@
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {PAYLOAD_BUILDER_VERSION, isForkPostHeze} from "@lodestar/params";
 import {
+  ETH_TO_GWEI,
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
   getExecutionPayloadBidSigningRoot,
@@ -162,20 +163,6 @@ async function validateExecutionPayloadBid(
       parentBlockRoot: bidParentBlockRoot,
       parentBlockHash: bidParentBlockHash,
       headBlockRoot: head.blockRoot,
-    });
-  }
-
-  // [IGNORE] this is the first signed bid seen with a valid signature from the given builder for
-  // the tuple `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
-  // Entries are only added after signature verification, so known tuples can be dropped before
-  // state regeneration and the other expensive validation steps.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)) {
-    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
-      builderIndex: bid.builderIndex,
-      slot: bid.slot,
-      parentBlockRoot: bidParentBlockRoot,
-      parentBlockHash: bidParentBlockHash,
     });
   }
 
@@ -366,6 +353,24 @@ async function validateExecutionPayloadBid(
     });
   }
 
+  // [IGNORE] The builder has not reached its bid limit for the tuple
+  // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)` -- i.e. one bid per ETH of builder balance,
+  // `get_builder_bid_limit(state, bid.builder_index)`.
+  const bidLimit = Math.floor(builder.balance / ETH_TO_GWEI);
+  if (
+    chain.seenExecutionPayloadBids.getCount(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot) >=
+    bidLimit
+  ) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+      parentBlockRoot: bidParentBlockRoot,
+      parentBlockHash: bidParentBlockHash,
+      bidLimit,
+    });
+  }
+
   // [IGNORE] `bid.value` is less or equal than the builder's excess balance --
   // i.e. `can_builder_cover_bid(state, builder_index, amount)` returns `True`.
   if (!state.canBuilderCoverBid(bid.builderIndex, bid.value)) {
@@ -426,15 +431,19 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // Repeat the seen check after the awaited signature verification to prevent concurrent bids
-  // for the same builder and tuple from both passing validation.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)) {
+  // Repeat the bid limit check after the awaited signature verification to prevent concurrent bids
+  // for the same builder and tuple from all passing validation.
+  if (
+    chain.seenExecutionPayloadBids.getCount(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot) >=
+    bidLimit
+  ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
+      code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
       parentBlockRoot: bidParentBlockRoot,
       parentBlockHash: bidParentBlockHash,
+      bidLimit,
     });
   }
 

@@ -2,7 +2,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {FAR_FUTURE_EPOCH, ForkName, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
-import {IBeaconStateView} from "@lodestar/state-transition";
+import {ETH_TO_GWEI, IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadBidErrorCode} from "../../../../src/chain/errors/index.js";
@@ -31,6 +31,14 @@ describe("validateGossipExecutionPayloadBid", () => {
   const proposerIndex = 11;
   let chain: MockedBeaconChain;
   let signedBid: ReturnType<typeof ssz.gloas.SignedExecutionPayloadBid.defaultValue>;
+
+  function activeBuilder(balance: number): ReturnType<typeof ssz.gloas.Builder.defaultValue> {
+    const builder = ssz.gloas.Builder.defaultValue();
+    builder.depositEpoch = 0;
+    builder.withdrawableEpoch = FAR_FUTURE_EPOCH;
+    builder.balance = balance;
+    return builder;
+  }
 
   function mockState(overrides: Partial<{builder: ReturnType<typeof ssz.gloas.Builder.defaultValue>}> = {}) {
     const builder = overrides.builder ?? ssz.gloas.Builder.defaultValue();
@@ -63,10 +71,7 @@ describe("validateGossipExecutionPayloadBid", () => {
     proposerPreferences.message.validatorIndex = proposerIndex;
     vi.mocked(chain.proposerPreferencesPool.get).mockReturnValue(proposerPreferences);
     chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
-    const builder = ssz.gloas.Builder.defaultValue();
-    builder.depositEpoch = 0;
-    builder.withdrawableEpoch = FAR_FUTURE_EPOCH;
-    chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder}));
+    chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder: activeBuilder(ETH_TO_GWEI)}));
     signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     signedBid.message.slot = 2;
     signedBid.message.parentBlockRoot = parentBlockRoot;
@@ -80,13 +85,13 @@ describe("validateGossipExecutionPayloadBid", () => {
     expect(await validateGossipExecutionPayloadBid(chain, signedBid)).toEqual({proposerIndex});
     expect(chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
     expect(
-      chain.seenExecutionPayloadBids.isKnown(
+      chain.seenExecutionPayloadBids.getCount(
         signedBid.message.slot,
         signedBid.message.builderIndex,
         toRootHex(parentBlockHash),
         toRootHex(parentBlockRoot)
       )
-    ).toBe(true);
+    ).toBe(1);
   });
 
   it("rejects a bid whose block hash equals its parent block hash", async () => {
@@ -112,11 +117,28 @@ describe("validateGossipExecutionPayloadBid", () => {
     });
   });
 
-  it("ignores an already known bid", async () => {
+  it("accepts one bid per ETH of builder balance for the same slot and parent", async () => {
+    chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder: activeBuilder(2 * ETH_TO_GWEI)}));
+    await validateGossipExecutionPayloadBid(chain, signedBid);
     await validateGossipExecutionPayloadBid(chain, signedBid);
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
-      type: {code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN},
+      type: {code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED, bidLimit: 2},
     });
+  });
+
+  it("ignores a bid from a builder with less than 1 ETH of balance", async () => {
+    chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder: activeBuilder(ETH_TO_GWEI - 1)}));
+    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+      type: {code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED, bidLimit: 0},
+    });
+  });
+
+  it("does not exceed the bid limit with concurrent bids", async () => {
+    const results = await Promise.allSettled([
+      validateGossipExecutionPayloadBid(chain, signedBid),
+      validateGossipExecutionPayloadBid(chain, signedBid),
+    ]);
+    expect(results.map((result) => result.status).sort()).toEqual(["fulfilled", "rejected"]);
   });
 
   it("rejects if the parent block is unknown", async () => {
@@ -230,10 +252,7 @@ describe("validateGossipExecutionPayloadBid", () => {
   });
 
   it("rejects on insufficient builder balance", async () => {
-    const builder = ssz.gloas.Builder.defaultValue();
-    builder.depositEpoch = 0;
-    builder.withdrawableEpoch = FAR_FUTURE_EPOCH;
-    const mockedState = mockState({builder});
+    const mockedState = mockState({builder: activeBuilder(ETH_TO_GWEI)});
     (mockedState as any).canBuilderCoverBid = () => false;
     chain.regen.getBlockSlotState.mockResolvedValue(mockedState);
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
