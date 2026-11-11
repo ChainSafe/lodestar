@@ -108,6 +108,7 @@ import {
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
+import {IPqVerifier, PqVerifier} from "./pq/index.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
@@ -181,6 +182,7 @@ export class BeaconChain implements IBeaconChain {
   readonly anchorStateLatestBlockSlot: Slot;
 
   readonly bls: IBlsVerifier;
+  readonly pq: IPqVerifier = new PqVerifier();
   readonly forkChoice: IForkChoice;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;

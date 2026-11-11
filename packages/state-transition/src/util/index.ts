@@ -21,6 +21,7 @@ export * from "./inclusionListCommittee.js";
 export * from "./interop.js";
 export * from "./loadState/index.js";
 export * from "./pendingDepositsLookup.js";
+export * from "./pq.js";
 export * from "./preVerifyBuilderDeposits.js";
 export * from "./rootCache.js";
 export * from "./seed.js";

@@ -57,6 +57,7 @@ import {
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
+import {IPqVerifier} from "./pq/index.js";
 import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
@@ -114,6 +115,7 @@ export interface IBeaconChain {
   readonly anchorStateLatestBlockSlot: Slot;
 
   readonly bls: IBlsVerifier;
+  readonly pq: IPqVerifier;
   readonly forkChoice: IForkChoice;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;

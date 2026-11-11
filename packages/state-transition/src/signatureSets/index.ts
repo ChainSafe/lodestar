@@ -21,6 +21,7 @@ export * from "./executionPayloadEnvelope.js";
 export * from "./inclusionList.js";
 export * from "./indexedAttestation.js";
 export * from "./indexedPayloadAttestation.js";
+export * from "./pq.js";
 export * from "./proposer.js";
 export * from "./proposerPreferences.js";
 export * from "./proposerSlashings.js";

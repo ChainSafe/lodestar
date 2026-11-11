@@ -121,11 +121,11 @@ export async function verifyBlocksInEpoch(
           preState0.getShufflingAtEpoch(attEpoch);
         // Unlike getIndexedAttestation, keep attestingIndices in committee order: sorting them dominates building
         // these on mainnet blocks. See FullyVerifiedBlock.indexedAttestations.
-        return {
-          attestingIndices: getAttestingIndices(shuffling, fork, attestation),
-          data: attestation.data,
-          signature: attestation.signature,
-        };
+        const attestingIndices = getAttestingIndices(shuffling, fork, attestation);
+        // From pq an attestation carries no signature: the block's proof covers all of them
+        return "signature" in attestation
+          ? {attestingIndices, data: attestation.data, signature: attestation.signature}
+          : {attestingIndices, data: attestation.data, proof: new Uint8Array(0)};
       });
     }
 
@@ -195,6 +195,7 @@ export async function verifyBlocksInEpoch(
       verifyBlocksSignatures(
         this.config,
         this.bls,
+        this.pq,
         this.logger,
         this.metrics,
         preState0,

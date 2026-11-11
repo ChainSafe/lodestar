@@ -1,8 +1,11 @@
 import {BeaconConfig} from "@lodestar/config";
+import {ForkBls, ForkName, ForkSeq} from "@lodestar/params";
 import {
   IBeaconStateView,
+  IBeaconStateViewGloas,
   SyncCommitteeCacheEmpty,
   getBlockSignatureSets,
+  getPqBlockSignatureSets,
   isStatePostAltair,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, SignedBeaconBlock} from "@lodestar/types";
@@ -11,6 +14,7 @@ import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {IBlsVerifier} from "../bls/index.js";
 import {BlockError, BlockErrorCode} from "../errors/blockError.js";
+import {IPqVerifier, getXmssPubkey} from "../pq/index.js";
 import {ImportBlockOpts} from "./types.js";
 
 /**
@@ -23,6 +27,7 @@ import {ImportBlockOpts} from "./types.js";
 export async function verifyBlocksSignatures(
   config: BeaconConfig,
   bls: IBlsVerifier,
+  pq: IPqVerifier,
   logger: Logger,
   metrics: Metrics | null,
   preState0: IBeaconStateView,
@@ -44,16 +49,29 @@ export async function verifyBlocksSignatures(
     isValidPromises[i] = opts.validSignatures
       ? // Skip all signature verification
         Promise.resolve(true)
-      : //
-        // Verify signatures per block to track which block is invalid
-        bls.verifySignatureSets(
-          getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
-            skipProposerSignature: opts.validProposerSignature,
-          }),
-          // Prioritize block verification over attestations, since
-          // attestations already buffer up to `MAX_BUFFER_WAIT_MS`
-          {priority: true}
-        );
+      : config.getForkSeq(block.message.slot) === ForkSeq.pq
+        ? verifyPqBlockSignatures(
+            config,
+            pq,
+            preState0,
+            block as SignedBeaconBlock<ForkName.pq>,
+            indexedAttestationsByBlock[i],
+            opts
+          )
+        : // Verify signatures per block to track which block is invalid
+          bls.verifySignatureSets(
+            getBlockSignatureSets(
+              config,
+              currentSyncCommitteeIndexed,
+              preState0,
+              block as SignedBeaconBlock<ForkBls>,
+              indexedAttestationsByBlock[i] as IndexedAttestation<ForkBls>[],
+              {skipProposerSignature: opts.validProposerSignature}
+            ),
+            // Prioritize block verification over attestations, since
+            // attestations already buffer up to `MAX_BUFFER_WAIT_MS`
+            {priority: true}
+          );
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks
     // segments it will block the event loop for 1400 ms, which is too much. This call will allow the event loop to
@@ -86,6 +104,33 @@ export async function verifyBlocksSignatures(
   }
 
   return {verifySignaturesTime};
+}
+
+/**
+ * From pq a block's signatures are leanXMSS and its attestations carry none: one proof covers
+ * them all. Both are checked here, outside the state transition.
+ */
+async function verifyPqBlockSignatures(
+  config: BeaconConfig,
+  pq: IPqVerifier,
+  preState: IBeaconStateView,
+  block: SignedBeaconBlock<ForkName.pq>,
+  indexedAttestations: IndexedAttestation[],
+  opts: ImportBlockOpts
+): Promise<boolean> {
+  const {signatures, proofs} = getPqBlockSignatureSets(
+    config,
+    getXmssPubkey,
+    (builderIndex) => (preState as IBeaconStateViewGloas).getBuilder(builderIndex).pubkey,
+    block,
+    indexedAttestations.map((indexedAttestation) => indexedAttestation.attestingIndices),
+    {skipProposerSignature: opts.validProposerSignature}
+  );
+  const [signaturesValid, proofsValid] = await Promise.all([
+    pq.verifySignatureSets(signatures),
+    pq.verifyProofSets(proofs),
+  ]);
+  return signaturesValid && proofsValid;
 }
 
 type AllValidRes = {allValid: true} | {allValid: false; index: number};
