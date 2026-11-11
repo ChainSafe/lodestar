@@ -343,18 +343,25 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
                     while (item_idx < length) {
                         const remaining = length - item_idx;
                         const items_in_chunked_leaf = @min(remaining, items_per_chunked_leaf);
-                        const valid_chunks: u16 = @intCast((items_in_chunked_leaf + items_per_chunk - 1) / items_per_chunk);
 
-                        var chunked_leaf_id_opt: ?Node.Id = try pool.createChunkedLeafEmpty(valid_chunks);
+                        var chunked_leaf_id_opt: ?Node.Id = null;
                         errdefer if (chunked_leaf_id_opt) |id| pool.unref(id);
-                        const storage = try chunked_leaf_id_opt.?.getChunkedLeafPtr(pool);
 
-                        for (0..items_in_chunked_leaf) |k| {
-                            const chunked_leaf_chunk_idx = k / items_per_chunk;
-                            const intra_chunk = k % items_per_chunk;
-                            const dst_off = intra_chunk * Element.fixed_size;
-                            const dst_slice = storage.chunks[chunked_leaf_chunk_idx][dst_off .. dst_off + Element.fixed_size];
-                            _ = Element.serializeIntoBytes(&value[item_idx + k], dst_slice);
+                        if (comptime canMemcpySsz(Element)) {
+                            const items = value[item_idx..][0..items_in_chunked_leaf];
+                            chunked_leaf_id_opt = try pool.createChunkedLeafFromBytes(std.mem.sliceAsBytes(items));
+                        } else {
+                            const valid_chunks: u16 = @intCast((items_in_chunked_leaf + items_per_chunk - 1) / items_per_chunk);
+                            chunked_leaf_id_opt = try pool.createChunkedLeafEmpty(valid_chunks);
+                            const storage = try chunked_leaf_id_opt.?.getChunkedLeafPtr(pool);
+
+                            for (0..items_in_chunked_leaf) |k| {
+                                const chunked_leaf_chunk_idx = k / items_per_chunk;
+                                const intra_chunk = k % items_per_chunk;
+                                const dst_off = intra_chunk * Element.fixed_size;
+                                const dst_slice = storage.chunks[chunked_leaf_chunk_idx][dst_off .. dst_off + Element.fixed_size];
+                                _ = Element.serializeIntoBytes(&value[item_idx + k], dst_slice);
+                            }
                         }
 
                         try it.append(chunked_leaf_id_opt.?);
