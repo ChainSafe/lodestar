@@ -460,6 +460,26 @@ pub const Pool = struct {
         return node_id;
     }
 
+    /// Creates a chunked_leaf Node whose chunks start with `bytes` (`bytes.len <= K * 32`) and are
+    /// zero after them, with `ceil(bytes.len / 32)` valid chunks.
+    pub fn createChunkedLeafFromBytes(self: *Pool, bytes: []const u8) Error!Id {
+        std.debug.assert(bytes.len <= ChunkedLeaf.K * 32);
+        const storage = try self.allocChunkedLeaf();
+        errdefer self.allocator.destroy(storage);
+
+        const chunk_bytes = std.mem.asBytes(&storage.chunks);
+        @memcpy(chunk_bytes[0..bytes.len], bytes);
+        @memset(chunk_bytes[bytes.len..], 0);
+        storage.len = @intCast((bytes.len + 31) / 32);
+
+        const node_id = try self.create();
+        const idx = @intFromEnum(node_id);
+        self.nodes.items(.payload)[idx] = ptrAsPayload(@ptrCast(storage));
+        self.nodes.items(.root)[idx] = lazy_sentinel;
+        self.nodes.items(.state)[idx] = State.initInUse(.chunked_leaf, 0);
+        return node_id;
+    }
+
     /// The caller must write all chunks and `len` before reading. Free with `allocator.destroy`.
     fn allocChunkedLeaf(self: *Pool) Allocator.Error!*ChunkedLeaf {
         // `Allocator.create`'s 0xAA fill exposes a read before write, but costs 2 KiB per

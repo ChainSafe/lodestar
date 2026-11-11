@@ -332,12 +332,7 @@ pub const TreeBuilder = struct {
             return self.pool.createLeaf(&chunk);
         }
 
-        const leaf = try self.pool.createChunkedLeafEmpty(@intCast((bytes.len + 31) / 32));
-        errdefer self.pool.unref(leaf);
-
-        const storage = try leaf.getChunkedLeafPtr(self.pool);
-        @memcpy(std.mem.asBytes(&storage.chunks)[0..bytes.len], bytes);
-        return leaf;
+        return self.pool.createChunkedLeafFromBytes(bytes);
     }
 
     fn appendChunks(self: *TreeBuilder, node: Node.Id, chunk_count: usize) !void {
