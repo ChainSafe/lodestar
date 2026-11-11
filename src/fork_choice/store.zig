@@ -398,7 +398,7 @@ pub const Store = struct {
             .payload_verified = false,
             .inclusion_list_satisfaction = .unknown,
         });
-        try self.refreshJustifiedBalances();
+        try self.refreshJustifiedBalances(self.justified_checkpoint);
         return self;
     }
 
@@ -534,9 +534,8 @@ pub const Store = struct {
     /// Spec `update_checkpoints`.
     pub fn updateCheckpoints(self: *Store, justified: Checkpoint, finalized: Checkpoint) !void {
         if (justified.epoch > self.justified_checkpoint.epoch) {
+            try self.refreshJustifiedBalances(justified);
             self.justified_checkpoint = justified;
-            self.head_cache.dirty = true;
-            try self.refreshJustifiedBalances();
         }
         if (finalized.epoch > self.finalized_checkpoint.epoch) {
             self.finalized_checkpoint = finalized;
@@ -554,8 +553,8 @@ pub const Store = struct {
         }
     }
 
-    fn refreshJustifiedBalances(self: *Store) !void {
-        var balances = try self.provider.justifiedBalances(self.allocator, self.justified_checkpoint);
+    fn refreshJustifiedBalances(self: *Store, checkpoint: Checkpoint) !void {
+        var balances = try self.provider.justifiedBalances(self.allocator, checkpoint);
         errdefer balances.deinit(self.allocator);
         const increments = balances.effective_balance_increments;
         const vote_increments = try self.allocator.alloc(u16, increments.len);
@@ -1040,7 +1039,8 @@ pub const Store = struct {
     /// Optimistic sync `NOT_VALIDATED -> INVALIDATED` from an engine `INVALID` verdict on
     /// a block that is not in the store: `parent_root` and `parent_block_hash` are the
     /// rejected block's parent and its payload's `parent_hash`. Every payload from the
-    /// parent down to `latest_valid_hash` (exclusive) is invalidated; a zero hash
+    /// parent down to `latest_valid_hash` (exclusive) is invalidated in every block carrying
+    /// it, as equivocating blocks can share a payload; a zero hash
     /// invalidates through the merge block. A null or unknown hash names the rejected
     /// block itself, so nothing changes. Descendants of an invalidated payload are
     /// derived invalid by `getHead`.
@@ -1064,15 +1064,21 @@ pub const Store = struct {
             count += 1;
         }
         if (!found) return error.UnknownLatestValidHash;
+        var invalid_hashes: std.AutoHashMapUnmanaged(Root, void) = .empty;
+        defer invalid_hashes.deinit(self.allocator);
         chain = self.payloadChain(start);
-        for (0..count) |_| {
-            switch (statuses[chain.next().?]) {
+        for (0..count) |_| try invalid_hashes.put(self.allocator, hashes[chain.next().?], {});
+        if (invalid_hashes.count() == 0) return;
+        for (hashes, statuses) |*hash, status| {
+            if (!invalid_hashes.contains(hash.*)) continue;
+            switch (status) {
                 .valid, .pre_merge => return error.PayloadValidToInvalid,
                 .syncing, .invalid => {},
             }
         }
-        chain = self.payloadChain(start);
-        for (0..count) |_| statuses[chain.next().?] = .invalid;
+        for (hashes, statuses) |*hash, *status| {
+            if (invalid_hashes.contains(hash.*)) status.* = .invalid;
+        }
         self.head_cache.dirty = true;
     }
 
