@@ -18,6 +18,7 @@ import {
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
+  ForkBls,
   ForkSeq,
   MAX_BUILDER_AUTH_DATA_SIZE,
 } from "@lodestar/params";
@@ -49,6 +50,7 @@ import {
   gloas,
   heze,
   phase0,
+  pq,
   ssz,
 } from "@lodestar/types";
 import {fromHex, isValidAsciiHttpUrl, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
@@ -60,6 +62,7 @@ import {isValidatePubkeyHex} from "../util/format.js";
 import {LoggerVc} from "../util/logger.js";
 import {DoppelgangerService} from "./doppelgangerService.js";
 import {IndicesService} from "./indices.js";
+import {XmssSigner, getXmssSigningTarget} from "./xmssSigner.js";
 
 type BLSPubkeyMaybeHex = BLSPubkey | PubkeyHex;
 type ExecutionAddress = string;
@@ -67,6 +70,7 @@ type ExecutionAddress = string;
 export enum SignerType {
   Local,
   Remote,
+  Xmss,
 }
 
 export type SignerLocal = {
@@ -149,7 +153,13 @@ type BuilderData = {
  * - local: With BLS secret key
  * - remote: With data to contact a remote signer
  */
-export type Signer = SignerLocal | SignerRemote;
+/** A pq validator: a leanXMSS key and a VRF tree, held in this process */
+export type SignerXmss = {
+  type: SignerType.Xmss;
+  signer: XmssSigner;
+};
+
+export type Signer = SignerLocal | SignerRemote | SignerXmss;
 
 type ValidatorData = ProposerConfig & {
   signer: Signer;
@@ -808,17 +818,31 @@ export class ValidatorStore {
   async signAggregateAndProof(
     duty: routes.validator.AttesterDuty,
     selectionProof: BLSSignature,
-    aggregate: Attestation
+    aggregate: Attestation<ForkBls> | pq.AttestationWithProof
   ): Promise<SignedAggregateAndProof> {
     this.validateAttestationDuty(duty, aggregate.data);
 
     this.assertDoppelgangerSafe(duty.pubkey);
 
-    const aggregateAndProof: AggregateAndProof = {
-      aggregate,
-      aggregatorIndex: duty.validatorIndex,
-      selectionProof,
-    };
+    // From pq the beacon node proves the signatures of the aggregate's attesters, and the
+    // selection proof is this validator's VRF proof for the slot
+    const aggregateAndProof: AggregateAndProof =
+      "proof" in aggregate
+        ? {
+            aggregatorIndex: duty.validatorIndex,
+            aggregate: {
+              aggregationBits: aggregate.aggregationBits,
+              data: aggregate.data,
+              committeeBits: aggregate.committeeBits,
+            },
+            selectionProof: ssz.pq.VRFProof.deserialize(selectionProof),
+            proof: aggregate.proof,
+          }
+        : ({
+            aggregate,
+            aggregatorIndex: duty.validatorIndex,
+            selectionProof,
+          } as AggregateAndProof<ForkBls>);
 
     const signingSlot = aggregate.data.slot;
     const domain = this.config.getDomain(signingSlot, DOMAIN_AGGREGATE_AND_PROOF);
@@ -832,12 +856,12 @@ export class ValidatorStore {
     const signableMessage: SignableMessage = {
       type: isPostElectra ? SignableMessageType.AGGREGATE_AND_PROOF_V2 : SignableMessageType.AGGREGATE_AND_PROOF,
       data: aggregateAndProof,
-    };
+    } as SignableMessage;
 
     return {
       message: aggregateAndProof,
       signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
-    };
+    } as SignedAggregateAndProof;
   }
 
   async signSyncCommitteeSignature(
@@ -1191,6 +1215,17 @@ export class ValidatorStore {
         return signature;
       }
 
+      case SignerType.Xmss: {
+        const timer = this.metrics?.localSignTime.startTimer();
+        const target = getXmssSigningTarget(signableMessage, signingSlot);
+        const signature =
+          "vrfSlot" in target
+            ? signer.signer.vrfProof(target.vrfSlot)
+            : await signer.signer.sign(signingRoot, target.leafIndex);
+        timer?.();
+        return signature;
+      }
+
       case SignerType.Remote: {
         const timer = this.metrics?.remoteSignTime.startTimer();
         try {
@@ -1266,6 +1301,9 @@ function getSignerPubkeyHex(signer: Signer): PubkeyHex {
   switch (signer.type) {
     case SignerType.Local:
       return toPubkeyHex(signer.secretKey.toPublicKey().toBytes());
+
+    case SignerType.Xmss:
+      return toPubkeyHex(signer.signer.publicKey);
 
     case SignerType.Remote:
       if (!isValidatePubkeyHex(signer.pubkey)) {

@@ -12,6 +12,7 @@ export type ProposerSlashing = ValueOf<typeof ssz.ProposerSlashing>;
 export type SignedVoluntaryExit = ValueOf<typeof ssz.SignedVoluntaryExit>;
 export type SingleAttestation = ValueOf<typeof ssz.SingleAttestation>;
 export type Attestation = ValueOf<typeof ssz.Attestation>;
+export type AttestationWithProof = ValueOf<typeof ssz.AttestationWithProof>;
 export type IndexedAttestation = ValueOf<typeof ssz.IndexedAttestation>;
 export type IndexedAttestationBigint = ValueOf<typeof ssz.IndexedAttestationBigint>;
 export type AttesterSlashing = ValueOf<typeof ssz.AttesterSlashing>;

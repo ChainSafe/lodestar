@@ -1,8 +1,10 @@
+import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
+  ForkBls,
   ForkName,
   ForkPostBellatrix,
   ForkPostDeneb,
@@ -10,6 +12,7 @@ import {
   ForkPreGloas,
   ForkSeq,
   GENESIS_SLOT,
+  MAX_COMMITTEES_PER_SLOT,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
@@ -35,6 +38,7 @@ import {
   proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
 import {
+  Attestation,
   BLSSignature,
   BeaconBlock,
   BlindedBeaconBlock,
@@ -51,6 +55,7 @@ import {
   getValidatorStatus,
   gloas,
   phase0,
+  pq,
   ssz,
 } from "@lodestar/types";
 import {
@@ -82,6 +87,7 @@ import {
 } from "../../../chain/errors/index.js";
 import {ChainEvent, CommonBlockBody} from "../../../chain/index.js";
 import {PooledExecutionPayloadBid} from "../../../chain/opPools/index.js";
+import {addPqAggregate} from "../../../chain/pq/index.js";
 import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
@@ -1850,6 +1856,28 @@ export function getValidatorApi(
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       const dataRootHex = toRootHex(attestationDataRoot);
+
+      // From pq, aggregating is proving the signatures of the committee's attestations
+      if (config.getForkName(slot) === ForkName.pq) {
+        const proven = await chain.pqAttestationPool.getAggregate(slot, dataRootHex, committeeIndex);
+        if (!proven) {
+          throw new ApiError(
+            404,
+            `No attestation to aggregate for slot=${slot}, dataRoot=${dataRootHex}, committeeIndex=${committeeIndex}`
+          );
+        }
+        const {aggregationBits, aggregate} = proven.aggregate;
+        metrics?.production.producedAggregateParticipants.observe(aggregationBits.getTrueBitIndexes().length);
+        const committeeBits = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, committeeIndex);
+        const data: pq.AttestationWithProof = {
+          aggregationBits,
+          data: proven.data,
+          committeeBits,
+          proof: aggregate.proof,
+        };
+        return {data, meta: {version: ForkName.pq}};
+      }
+
       const aggregate = chain.attestationPool.getAggregate(slot, dataRootHex, committeeIndex);
 
       if (!aggregate) {
@@ -1886,12 +1914,22 @@ export function getValidatorApi(
             const {indexedAttestation, committeeValidatorIndices, attDataRootHex} =
               await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
 
-            const insertOutcome = chain.aggregatedAttestationPool.add(
-              signedAggregateAndProof.message.aggregate,
-              attDataRootHex,
-              indexedAttestation.attestingIndices.length,
-              committeeValidatorIndices
-            );
+            const {message} = signedAggregateAndProof;
+            const insertOutcome =
+              "proof" in message
+                ? addPqAggregate(
+                    chain.config,
+                    chain.pqAttestationPool,
+                    message as unknown as pq.AggregateAndProof,
+                    attDataRootHex,
+                    indexedAttestation.attestingIndices
+                  )
+                : chain.aggregatedAttestationPool.add(
+                    message.aggregate as Attestation<ForkBls>,
+                    attDataRootHex,
+                    indexedAttestation.attestingIndices.length,
+                    committeeValidatorIndices
+                  );
             metrics?.opPool.aggregatedAttestationPool.apiInsertOutcome.inc({insertOutcome});
 
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);

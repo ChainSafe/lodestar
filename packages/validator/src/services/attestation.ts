@@ -1,4 +1,4 @@
-import {ApiClient} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
 import {IClock, computeEpochAtSlot} from "@lodestar/state-transition";
@@ -254,7 +254,11 @@ export class AttestationService {
 
     if (signedAggregateAndProofs.length > 0) {
       try {
-        (await this.api.validator.publishAggregateAndProofsV2({signedAggregateAndProofs})).assertOk();
+        (
+          await this.api.validator.publishAggregateAndProofsV2({
+            signedAggregateAndProofs: signedAggregateAndProofs as routes.validator.SignedAggregateAndProofList,
+          })
+        ).assertOk();
         this.logger.info("Published aggregateAndProofs", {
           ...logCtx,
           participants,

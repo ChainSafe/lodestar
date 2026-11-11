@@ -29,6 +29,18 @@ import {MetaHeader, VersionCodec, VersionMeta} from "../../../utils/metadata.js"
 
 const SingleAttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
 const SingleAttestationListTypeElectra = ArrayOf(ssz.electra.SingleAttestation);
+const SingleAttestationListTypePq = ArrayOf(ssz.pq.SingleAttestation);
+
+function singleAttestationListType(fork: ForkName): Type<SingleAttestation[]> {
+  return (
+    fork === ForkName.pq
+      ? SingleAttestationListTypePq
+      : isForkPostElectra(fork)
+        ? SingleAttestationListTypeElectra
+        : SingleAttestationListTypePhase0
+  ) as Type<SingleAttestation[]>;
+}
+
 const AttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
 const AttestationListTypeElectra = ArrayOf(ssz.electra.Attestation);
 function attesterSlashingType(fork: ForkName): Type<AttesterSlashing> {
@@ -310,35 +322,27 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({signedAttestations}) => {
           const fork = config.getForkName(signedAttestations[0]?.data.slot ?? 0);
           return {
-            body: isForkPostElectra(fork)
-              ? SingleAttestationListTypeElectra.toJson(signedAttestations as SingleAttestation<ForkPostElectra>[])
-              : SingleAttestationListTypePhase0.toJson(signedAttestations as SingleAttestation<ForkPreElectra>[]),
+            body: singleAttestationListType(fork).toJson(signedAttestations),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedAttestations: isForkPostElectra(fork)
-              ? SingleAttestationListTypeElectra.fromJson(body)
-              : SingleAttestationListTypePhase0.fromJson(body),
+            signedAttestations: singleAttestationListType(fork).fromJson(body),
           };
         },
         writeReqSsz: ({signedAttestations}) => {
           const fork = config.getForkName(signedAttestations[0]?.data.slot ?? 0);
           return {
-            body: isForkPostElectra(fork)
-              ? SingleAttestationListTypeElectra.serialize(signedAttestations as SingleAttestation<ForkPostElectra>[])
-              : SingleAttestationListTypePhase0.serialize(signedAttestations as SingleAttestation<ForkPreElectra>[]),
+            body: singleAttestationListType(fork).serialize(signedAttestations),
             headers: {[MetaHeader.Version]: fork},
           };
         },
         parseReqSsz: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedAttestations: isForkPostElectra(fork)
-              ? SingleAttestationListTypeElectra.deserialize(body)
-              : SingleAttestationListTypePhase0.deserialize(body),
+            signedAttestations: singleAttestationListType(fork).deserialize(body),
           };
         },
         schema: {

@@ -2,8 +2,9 @@ import path from "node:path";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {SecretKey} from "@lodestar/native/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
-import {LogLevel, Logger, isValidHttpUrl} from "@lodestar/utils";
-import {Signer, SignerType, externalSignerGetKeys} from "@lodestar/validator";
+import {LogLevel, Logger, isValidHttpUrl, toPubkeyHex} from "@lodestar/utils";
+import {Signer, SignerType, externalSignerGetKeys, interopXmssSigner} from "@lodestar/validator";
+import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {GlobalArgs, defaultNetwork} from "../../../options/index.js";
 import {YargsError, assertValidPubkeysHex} from "../../../util/index.js";
 import {showProgress} from "../../../util/progress.js";
@@ -53,6 +54,13 @@ export async function getSignersFromArgs(
     // Using a remote signer with TESTNETS
     if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
       return getRemoteSigners(args, logger);
+    }
+    // A network that starts at the pq fork has leanXMSS validators
+    if (getBeaconConfigFromArgs(args).config.PQ_FORK_EPOCH === 0) {
+      logger.info("Generating interop leanXMSS keys and VRF trees", {count: indexes.length});
+      return Promise.all(
+        indexes.map(async (index): Promise<Signer> => ({type: SignerType.Xmss, signer: await interopXmssSigner(index)}))
+      );
     }
     return indexes.map((index) => ({type: SignerType.Local, secretKey: interopSecretKey(index)}));
   }
@@ -150,6 +158,9 @@ export function getSignerPubkeyHex(signer: Signer): string {
 
     case SignerType.Remote:
       return signer.pubkey;
+
+    case SignerType.Xmss:
+      return toPubkeyHex(signer.signer.publicKey);
   }
 }
 

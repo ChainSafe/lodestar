@@ -31,6 +31,10 @@ export function toRootHex(root: Uint8Array): string {
 let pubkeyBuf: Buffer | undefined;
 
 export function toPubkeyHex(pubkey: Uint8Array): string {
+  // A leanXMSS public key, as validators have from the pq fork, is 32 bytes
+  if (pubkey.length === 32) {
+    return toRootHex(pubkey);
+  }
   if (pubkey.length !== 48) {
     throw Error(`Expect pubkey to be 48 bytes, got ${pubkey.length}`);
   }

@@ -137,6 +137,19 @@ export const Attestation = new ProgressiveContainerType(
   {typeName: "Attestation", jsonCase: "eth2"}
 );
 
+/**
+ * What a beacon node hands an aggregator: the aggregate of a committee and the proof of its
+ * attesters' signatures, which the aggregator puts in its `AggregateAndProof`. Not a spec
+ * container, never hashed.
+ */
+export const AttestationWithProof = new ContainerType(
+  {
+    ...Attestation.fields,
+    proof: AttestationProof,
+  },
+  {typeName: "AttestationWithProof", jsonCase: "eth2"}
+);
+
 export const Attestations = new ProgressiveListCompositeType(Attestation, {
   typeName: "Attestations",
   limit: MAX_ATTESTATIONS_PQ,

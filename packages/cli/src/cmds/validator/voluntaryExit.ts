@@ -278,5 +278,8 @@ function getSignerPubkeyHex(signer: Signer): string {
 
     case SignerType.Remote:
       return signer.pubkey;
+
+    case SignerType.Xmss:
+      return toPubkeyHex(signer.signer.publicKey);
   }
 }

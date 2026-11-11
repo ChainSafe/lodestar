@@ -7,9 +7,11 @@ export type {
   Signer,
   SignerLocal,
   SignerRemote,
+  SignerXmss,
   ValidatorProposerConfig,
 } from "./services/validatorStore.js";
 export {MAX_BUILDER_BOOST_FACTOR, SignerType, ValidatorStore, defaultOptions} from "./services/validatorStore.js";
+export {INTEROP_VRF_POPULATED_DEPTH, XmssSigner, interopXmssSigner} from "./services/xmssSigner.js";
 export * from "./slashingProtection/index.js";
 // Types
 export type {ProcessShutdownCallback} from "./types.js";
