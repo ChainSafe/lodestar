@@ -6,17 +6,21 @@ const SingleSignatureSet = @import("../utils/signature_sets.zig").SingleSignatur
 const c = @import("constants");
 const types = @import("consensus_types");
 const Root = types.primitive.Root;
-const computeBlockSigningRoot = @import("../utils/signing_root.zig").computeBlockSigningRoot;
+const computeSigningRootFromObjectRoot = @import("../utils/signing_root.zig").computeSigningRootFromObjectRoot;
 const computeSigningRoot = @import("../utils/signing_root.zig").computeSigningRoot;
 const verifySignatureSet = @import("../utils/signature_sets.zig").verifySingleSignatureSet;
 const AnySignedBeaconBlock = @import("fork_types").AnySignedBeaconBlock;
 
+/// `transactions_root` is the root of the block's execution payload transactions when the caller knows it.
+/// For a full block whose body carries a payload it is set on return, so the caller can reuse it
+/// instead of merkleizing the transactions again.
 pub fn verifyProposerSignature(
     allocator: Allocator,
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
     signed_block: AnySignedBeaconBlock,
+    transactions_root: *?[32]u8,
 ) !bool {
     const signature_set = try getBlockProposerSignatureSet(
         allocator,
@@ -24,24 +28,26 @@ pub fn verifyProposerSignature(
         config,
         epoch_cache,
         signed_block,
+        transactions_root,
     );
     return try verifySignatureSet(&signature_set);
 }
 
+/// See `verifyProposerSignature` for `transactions_root`.
 pub fn getBlockProposerSignatureSet(
     allocator: Allocator,
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
     signed_block: AnySignedBeaconBlock,
+    transactions_root: *?[32]u8,
 ) !SingleSignatureSet {
     const block = signed_block.beaconBlock();
     const domain = try config.getDomain(epoch_cache.epoch, c.DOMAIN_BEACON_PROPOSER, block.slot());
-    // var signing_root: Root = undefined;
+    const block_roots = try block.roots(allocator, if (transactions_root.*) |*known_root| known_root else null);
+    if (block_roots.transactions) |root| transactions_root.* = root;
     var signing_root_buf: [32]u8 = undefined;
-    try computeBlockSigningRoot(allocator, block, domain, &signing_root_buf);
-
-    // Root.uncompressFromBytes(&signing_root_buf, &signing_root);
+    try computeSigningRootFromObjectRoot(&block_roots.block, domain, &signing_root_buf);
 
     // The proposer index isn't validated until processBlockHeader, so a malicious block could
     // put an out-of-range value here.

@@ -206,6 +206,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                         state,
                         .full,
                         &fork_block,
+                        null,
                     );
                 },
                 .bls_to_execution_change => {
@@ -244,6 +245,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                             .data_availability_status = .available,
                             .execution_payload_status = self.execution_payload_status,
                         },
+                        null,
                     );
                 },
                 .execution_payload_bid => try state_transition.processExecutionPayloadBid(fork, allocator, cached_state.config, cached_state.epoch_cache, state, &self.op),

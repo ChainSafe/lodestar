@@ -105,6 +105,60 @@ test "electra - sanity" {
     try testBlockSanity(AnyBeaconBlock);
 }
 
+test "roots match the plain hash tree roots and reuse a known transactions root" {
+    const allocator = std.testing.allocator;
+
+    var block = ct.electra.BeaconBlock.default_value;
+    defer ct.electra.BeaconBlock.deinit(allocator, &block);
+    block.slot = 7;
+    try block.body.execution_payload.transactions.append(allocator, .empty);
+    try block.body.execution_payload.transactions.items[0].appendSlice(allocator, &.{ 1, 2, 3 });
+    const full: AnyBeaconBlock = .{ .full_electra = &block };
+
+    var expected_block: [32]u8 = undefined;
+    try full.hashTreeRoot(allocator, &expected_block);
+    var expected_body: [32]u8 = undefined;
+    try ct.electra.BeaconBlockBody.hashTreeRoot(allocator, &block.body, &expected_body);
+    var expected_transactions: [32]u8 = undefined;
+    try ct.bellatrix.Transactions.hashTreeRoot(
+        allocator,
+        &block.body.execution_payload.transactions,
+        &expected_transactions,
+    );
+
+    const computed = try full.roots(allocator, null);
+    try std.testing.expectEqualSlices(u8, &expected_block, &computed.block);
+    try std.testing.expectEqualSlices(u8, &expected_body, &computed.body);
+    try std.testing.expectEqualSlices(u8, &expected_transactions, &computed.transactions.?);
+
+    const from_known = try full.roots(allocator, &expected_transactions);
+    try std.testing.expectEqualSlices(u8, &expected_block, &from_known.block);
+
+    // A known root is copied without being checked.
+    const wrong_root: [32]u8 = @splat(9);
+    const from_wrong = try full.roots(allocator, &wrong_root);
+    try std.testing.expectEqualSlices(u8, &wrong_root, &from_wrong.transactions.?);
+    try expect(!std.mem.eql(u8, &expected_block, &from_wrong.block));
+
+    var blinded_block = ct.electra.BlindedBeaconBlock.default_value;
+    defer ct.electra.BlindedBeaconBlock.deinit(allocator, &blinded_block);
+    const blinded: AnyBeaconBlock = .{ .blinded_electra = &blinded_block };
+    var expected_blinded: [32]u8 = undefined;
+    try blinded.hashTreeRoot(allocator, &expected_blinded);
+    const blinded_roots = try blinded.roots(allocator, null);
+    try std.testing.expectEqualSlices(u8, &expected_blinded, &blinded_roots.block);
+    try expect(blinded_roots.transactions == null);
+
+    var phase0_block = ct.phase0.BeaconBlock.default_value;
+    defer ct.phase0.BeaconBlock.deinit(allocator, &phase0_block);
+    const phase0: AnyBeaconBlock = .{ .phase0 = &phase0_block };
+    var expected_phase0: [32]u8 = undefined;
+    try phase0.hashTreeRoot(allocator, &expected_phase0);
+    const phase0_roots = try phase0.roots(allocator, null);
+    try std.testing.expectEqualSlices(u8, &expected_phase0, &phase0_roots.block);
+    try expect(phase0_roots.transactions == null);
+}
+
 test "memory_safety: AnySignedBeaconBlock deserialize should deinit partial block on OOM" {
     const allocator = std.testing.allocator;
     const SignedBeaconBlock = ct.phase0.SignedBeaconBlock;

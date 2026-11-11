@@ -190,6 +190,12 @@ export interface TransitionOpts {
   dataAvailabilityStatus?: "Available" | "PreData" | "OutOfRange" | "NotRequired";
   /** Source of block processing for the process-block timing metric. Default: "block". */
   source?: "block" | "regen" | "get_historical_state";
+  /**
+   * Root of the block's execution payload transactions, 32 bytes, when already computed from the same block.
+   * Skips merkleizing the transactions. A wrong root yields a wrong post-state, so the caller must check the
+   * post-state root against the block's state root, with `verifyStateRoot` or itself.
+   */
+  transactionsRoot?: Uint8Array;
 }
 
 interface ProposerRewards {

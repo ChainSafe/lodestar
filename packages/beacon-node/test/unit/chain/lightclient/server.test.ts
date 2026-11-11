@@ -1,21 +1,29 @@
 import {describe, expect, it, vi} from "vitest";
+import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
+  BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX,
   CURRENT_SYNC_COMMITTEE_DEPTH_GLOAS,
   CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS,
   EXECUTION_BLOCK_HASH_GINDEX_GLOAS,
   FINALIZED_ROOT_DEPTH_GLOAS,
   FINALIZED_ROOT_GINDEX_GLOAS,
   ForkName,
+  ForkSeq,
   NEXT_SYNC_COMMITTEE_DEPTH_GLOAS,
   NEXT_SYNC_COMMITTEE_GINDEX_GLOAS,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {BeaconStateGloas, createBeaconStateView, isStatePostAltair} from "@lodestar/state-transition";
-import {LightClientUpdate, gloas, ssz} from "@lodestar/types";
+import {
+  BeaconStateGloas,
+  createBeaconStateView,
+  executionPayloadToPayloadHeader,
+  isStatePostAltair,
+} from "@lodestar/state-transition";
+import {LightClientUpdate, deneb, gloas, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {
   LightClientServer,
@@ -189,6 +197,43 @@ describe("Gloas light client server", () => {
     expect(
       verifyMerkleBranch(header.executionBlockHash, header.executionBranch, depth, index, header.beacon.bodyRoot)
     ).toBe(true);
+  });
+
+  it("creates a pre-Gloas header from the payload header without changing the execution proof", () => {
+    const block = ssz.fulu.BeaconBlock.defaultValue();
+    block.slot = 6 * SLOTS_PER_EPOCH;
+    const payload = block.body.executionPayload;
+    payload.blockHash = new Uint8Array(32).fill(0xbb);
+    payload.transactions = ssz.bellatrix.Transactions.fromJson(["0x010203", "0x04"]);
+    const payloadHeader = executionPayloadToPayloadHeader(ForkSeq.fulu, payload);
+
+    const header = blockToLightClientHeader(ForkName.fulu, block);
+    if (!("execution" in header)) {
+      throw Error("Expected a light client header with an execution payload header");
+    }
+
+    const gindex = BigInt(BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX);
+    const fullBodyProof = new Tree(ssz.fulu.BeaconBlockBody.toView(block.body).node).getSingleProof(gindex);
+    expect(header.executionBranch).toEqual(fullBodyProof);
+    expect(header.execution).toEqual(payloadHeader);
+    const depth = Math.floor(Math.log2(BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX));
+    expect(
+      verifyMerkleBranch(
+        ssz.deneb.ExecutionPayloadHeader.hashTreeRoot(payloadHeader as deneb.ExecutionPayloadHeader),
+        header.executionBranch,
+        depth,
+        BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX % 2 ** depth,
+        header.beacon.bodyRoot
+      )
+    ).toBe(true);
+
+    const fromGiven = blockToLightClientHeader(ForkName.fulu, block, payloadHeader);
+    expect("execution" in fromGiven && fromGiven.execution).toBe(payloadHeader);
+    expect(fromGiven).toEqual(header);
+
+    // The header of another payload is not used
+    const otherHeader = {...payloadHeader, blockHash: new Uint8Array(32)};
+    expect(blockToLightClientHeader(ForkName.fulu, block, otherHeader)).toEqual(header);
   });
 
   it("stores a serializable non-finality update with Gloas zero values", async () => {

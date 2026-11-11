@@ -12,6 +12,7 @@ const buildSlashingsCacheIfNeeded = @import("../cache/slashings_cache.zig").buil
 const BeaconState = @import("fork_types").BeaconState;
 const BlockType = @import("fork_types").BlockType;
 const BeaconBlock = @import("fork_types").BeaconBlock;
+const ForkTypes = @import("fork_types").ForkTypes;
 const ForkSeq = @import("config").ForkSeq;
 const types = @import("consensus_types");
 const Root = types.primitive.Root.Type;
@@ -39,6 +40,9 @@ pub const ProcessBlockOpts = struct {
     diagnostics: ?*Diagnostics = null,
     verify_signature: bool = true,
     parent_slot: ?u64 = null,
+    /// Root of the block's execution payload transactions, when the caller already computed it.
+    /// A wrong root produces a wrong post-state, so the caller must verify the post-state root.
+    transactions_root: ?*const Root = null,
 };
 
 /// Process a block and update the state following Ethereum Consensus specifications.
@@ -65,7 +69,17 @@ pub fn processBlock(
     // Build slashings cache against the *current* latest_block_header slot (pre-header update).
     try buildSlashingsCacheIfNeeded(allocator, state, slashings_cache);
     var timer = time.start(io);
-    try processBlockHeader(fork, allocator, epoch_cache, state, block_type, block);
+    // The payload header has the same root as the payload. Derive it once and reuse it for the body root and
+    // latest_execution_payload_header, so the transactions are merkleized once per block instead of twice.
+    const has_full_payload = comptime block_type == .full and fork.gte(.bellatrix) and fork.lt(.gloas);
+    var payload_header = if (has_full_payload) ForkTypes(fork).ExecutionPayloadHeader.default_value else {};
+    if (has_full_payload) {
+        try block.body().executionPayload().createExecutionPayloadHeader(allocator, opts.transactions_root, &payload_header);
+    }
+    defer if (has_full_payload) ForkTypes(fork).ExecutionPayloadHeader.deinit(allocator, &payload_header);
+    var body_root: Root = undefined;
+    if (has_full_payload) try block.body().hashTreeRootFromPayloadHeader(allocator, &payload_header, &body_root);
+    try processBlockHeader(fork, allocator, epoch_cache, state, block_type, block, if (has_full_payload) &body_root else null);
     try metrics.state_transition.process_block_step.observe(
         .{ .step = .processBlockHeader },
         time.durationSeconds(time.since(io, timer)),
@@ -107,9 +121,7 @@ pub fn processBlock(
                                 actual_withdrawals.items.len,
                             );
                         }
-                        var root: Root = undefined;
-                        try types.capella.Withdrawals.hashTreeRoot(allocator, &actual_withdrawals, &root);
-                        break :blk root;
+                        break :blk payload_header.withdrawals_root;
                     },
                     .blinded => block.body().executionPayloadHeader().inner.withdrawals_root,
                 };
@@ -130,6 +142,7 @@ pub fn processBlock(
                 block_type,
                 body,
                 external_data,
+                if (has_full_payload) &payload_header else null,
             );
             try metrics.state_transition.process_block_step.observe(
                 .{ .step = .processExecutionPayload },

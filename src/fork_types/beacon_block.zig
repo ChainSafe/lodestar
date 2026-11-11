@@ -79,6 +79,32 @@ pub fn BeaconBlockBody(comptime bt: BlockType, comptime f: ForkSeq) type {
             return ForkTypes(f).BlindedBeaconBlockBody.hashTreeRoot(allocator, &self.inner, out);
         }
 
+        /// Root of a full body computed from the header of its execution payload. The header has the same
+        /// root as the payload, so the blinded body has the same root as the full body. This avoids
+        /// merkleizing the transactions again when the header is already known.
+        ///
+        /// `payload_header` must be the header of this body's execution payload.
+        pub fn hashTreeRootFromPayloadHeader(
+            self: *const Self,
+            allocator: std.mem.Allocator,
+            payload_header: *const ForkTypes(f).ExecutionPayloadHeader.Type,
+            out: *[32]u8,
+        ) !void {
+            if (bt != .full or f.lt(.bellatrix) or f.gte(.gloas)) {
+                @compileError("hashTreeRootFromPayloadHeader is only available for full blocks with an execution payload");
+            }
+            const Blinded = ForkTypes(f).BlindedBeaconBlockBody;
+            var blinded: Blinded.Type = undefined;
+            inline for (@typeInfo(Blinded.Type).@"struct".fields) |field| {
+                if (comptime std.mem.eql(u8, field.name, "execution_payload_header")) {
+                    blinded.execution_payload_header = payload_header.*;
+                } else {
+                    @field(blinded, field.name) = @field(self.inner, field.name);
+                }
+            }
+            return Blinded.hashTreeRoot(allocator, &blinded, out);
+        }
+
         pub inline fn eth1Data(self: *const Self) *const ForkTypes(f).Eth1Data.Type {
             return &self.inner.eth1_data;
         }

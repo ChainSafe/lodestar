@@ -681,7 +681,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   stateTransition(
-    {block, ssz}: BlockSTFInput,
+    {block, ssz, transactionsRoot}: BlockSTFInput,
     options: StateTransitionOpts,
     _modules: StateTransitionModules
   ): IBeaconStateView {
@@ -694,7 +694,14 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
             .getPostBellatrixForkTypes(block.message.slot)
             .SignedBlindedBeaconBlock.serialize(block as SignedBlindedBeaconBlock)
         : this.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block as SignedBeaconBlock));
-    return new NativeBeaconStateView(this.config, this.binding.stateTransition(signedBlockBytes, isBlinded, options));
+    return new NativeBeaconStateView(
+      this.config,
+      this.binding.stateTransition(
+        signedBlockBytes,
+        isBlinded,
+        transactionsRoot !== undefined ? {...options, transactionsRoot} : options
+      )
+    );
   }
 
   processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, _modules?: StateTransitionModules): IBeaconStateView {

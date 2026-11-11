@@ -20,6 +20,7 @@ import {
   computeSyncPeriodAtEpoch,
   computeSyncPeriodAtSlot,
   executionPayloadToPayloadHeader,
+  isStatePostBellatrix,
 } from "@lodestar/state-transition";
 import {
   LightClientUpdateSummary,
@@ -30,6 +31,7 @@ import {
 import {
   BeaconBlock,
   BeaconBlockBody,
+  ExecutionPayloadHeader,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientHeader,
@@ -398,7 +400,11 @@ export class LightClientServer {
   ): Promise<void> {
     const blockSlot = block.slot;
     const fork = this.config.getForkName(blockSlot);
-    const header = blockToLightClientHeader(fork, block);
+    const header = blockToLightClientHeader(
+      fork,
+      block,
+      !isForkPostGloas(fork) && isStatePostBellatrix(postState) ? postState.latestExecutionPayloadHeader : undefined
+    );
 
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.beacon);
     const blockRootHex = toRootHex(blockRoot);
@@ -763,7 +769,16 @@ export function sumBits(bits: BitArray): number {
   return bits.getTrueBitIndexes().length;
 }
 
-export function blockToLightClientHeader(fork: ForkName, block: BeaconBlock<ForkPostAltair>): LightClientHeader {
+/**
+ * `executionPayloadHeader`, when given, is used if it is the header of the block's execution payload, for
+ * example `latestExecutionPayloadHeader` of the block's post-state. The header is otherwise derived from the
+ * payload, which merkleizes the transactions.
+ */
+export function blockToLightClientHeader(
+  fork: ForkName,
+  block: BeaconBlock<ForkPostAltair>,
+  executionPayloadHeader?: ExecutionPayloadHeader
+): LightClientHeader {
   const beacon: phase0.BeaconBlockHeader = {
     slot: block.slot,
     proposerIndex: block.proposerIndex,
@@ -783,11 +798,18 @@ export function blockToLightClientHeader(fork: ForkName, block: BeaconBlock<Fork
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
     const blockBody = block.body as BeaconBlockBody<ForkPostBellatrix & ForkPreGloas>;
-    const execution = executionPayloadToPayloadHeader(ForkSeq[fork], blockBody.executionPayload);
+    const payload = blockBody.executionPayload;
+    const execution =
+      executionPayloadHeader !== undefined && byteArrayEquals(executionPayloadHeader.blockHash, payload.blockHash)
+        ? executionPayloadHeader
+        : executionPayloadToPayloadHeader(ForkSeq[fork], payload);
     return {
       beacon,
       execution,
-      executionBranch: getBlockBodyExecutionHeaderProof(fork as ForkPostBellatrix, blockBody),
+      executionBranch: getBlockBodyExecutionHeaderProof(fork as ForkPostBellatrix & ForkPreGloas, {
+        ...blockBody,
+        executionPayloadHeader: execution,
+      }),
     } as LightClientHeader;
   }
 

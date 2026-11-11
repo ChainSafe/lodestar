@@ -31,7 +31,15 @@ pub fn ExecutionPayload(comptime f: ForkSeq) type {
 
         /// Creates an ExecutionPayloadHeader from this ExecutionPayload
         /// Caller is responsible for properly deallocating the execution payload header
-        pub fn createExecutionPayloadHeader(self: *const Self, allocator: Allocator, out: *ForkTypes(f).ExecutionPayloadHeader.Type) !void {
+        ///
+        /// `transactions_root`, when given, must be the root of this payload's transactions. It is copied
+        /// instead of merkleizing the transactions.
+        pub fn createExecutionPayloadHeader(
+            self: *const Self,
+            allocator: Allocator,
+            transactions_root: ?*const [32]u8,
+            out: *ForkTypes(f).ExecutionPayloadHeader.Type,
+        ) !void {
             out.parent_hash = self.inner.parent_hash;
             out.fee_recipient = self.inner.fee_recipient;
             out.state_root = self.inner.state_root;
@@ -46,7 +54,11 @@ pub fn ExecutionPayload(comptime f: ForkSeq) type {
             errdefer out.extra_data.deinit(allocator);
             out.base_fee_per_gas = self.inner.base_fee_per_gas;
             out.block_hash = self.inner.block_hash;
-            try ct.bellatrix.Transactions.hashTreeRoot(allocator, &self.inner.transactions, &out.transactions_root);
+            if (transactions_root) |known_root| {
+                out.transactions_root = known_root.*;
+            } else {
+                try ct.bellatrix.Transactions.hashTreeRoot(allocator, &self.inner.transactions, &out.transactions_root);
+            }
             if (comptime f.gte(.capella)) {
                 try ct.capella.Withdrawals.hashTreeRoot(allocator, &self.inner.withdrawals, &out.withdrawals_root);
             }

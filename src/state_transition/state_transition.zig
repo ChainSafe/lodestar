@@ -179,6 +179,11 @@ pub const TransitionOpts = struct {
     transfer_cache: bool = true,
     block_external_data: BlockExternalData = .{},
     source: ProcessBlockSource = .block,
+    /// Root of the block's execution payload transactions, when the caller already computed it from the same
+    /// block. Skips merkleizing the transactions. The caller must check the post-state root against the block's
+    /// state root, here with `verify_state_root` or itself: the root reaches the post-state through
+    /// latest_block_header and latest_execution_payload_header, so a wrong root fails that check.
+    transactions_root: ?[32]u8 = null,
 };
 
 pub const StateTransitionResult = struct {
@@ -227,13 +232,16 @@ pub fn stateTransition(
     const post_epoch_cache = post_cached_state.epoch_cache;
     const post_state = post_cached_state.state;
 
-    // Verify proposer signature only
+    // Verify proposer signature only. It hashes the block, so keep the transactions root it computes
+    // for processBlock.
+    var transactions_root = opts.transactions_root;
     if (opts.verify_proposer and !try verifyProposerSignature(
         allocator,
         io,
         config,
         post_epoch_cache,
         signed_block,
+        &transactions_root,
     )) {
         return error.InvalidBlockSignature;
     }
@@ -262,7 +270,11 @@ pub fn stateTransition(
                             bt,
                             block.castToFork(bt, f),
                             opts.block_external_data,
-                            .{ .verify_signature = opts.verify_signatures, .diagnostics = opts.diagnostics },
+                            .{
+                                .verify_signature = opts.verify_signatures,
+                                .diagnostics = opts.diagnostics,
+                                .transactions_root = if (transactions_root) |*known_root| known_root else null,
+                            },
                         );
                     }
                 },

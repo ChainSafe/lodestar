@@ -12,6 +12,7 @@ const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
 const ZERO_HASH = @import("constants").ZERO_HASH;
 const getBeaconProposer = @import("../cache/get_beacon_proposer.zig").getBeaconProposer;
 
+/// `known_body_root`, when given, must be the root of `block`'s body. It is used instead of merkleizing the body.
 pub fn processBlockHeader(
     comptime fork: ForkSeq,
     allocator: Allocator,
@@ -19,6 +20,7 @@ pub fn processBlockHeader(
     state: *BeaconState(fork),
     comptime block_type: BlockType,
     block: *const BeaconBlock(block_type, fork),
+    known_body_root: ?*const [32]u8,
 ) !void {
     const slot = try state.slot();
 
@@ -47,7 +49,11 @@ pub fn processBlockHeader(
     }
 
     var body_root: [32]u8 = undefined;
-    try block.body().hashTreeRoot(allocator, &body_root);
+    if (known_body_root) |known_root| {
+        body_root = known_root.*;
+    } else {
+        try block.body().hashTreeRoot(allocator, &body_root);
+    }
     // cache current block as the new latest block
     const latest_block_header: BeaconBlockHeader = .{
         .slot = slot,

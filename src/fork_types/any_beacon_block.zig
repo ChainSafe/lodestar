@@ -19,6 +19,7 @@ const AnyAttestations = @import("./any_attestation.zig").AnyAttestations;
 const AnyAttesterSlashings = @import("./any_attester_slashing.zig").AnyAttesterSlashings;
 const BeaconBlock = @import("./beacon_block.zig").BeaconBlock;
 const BeaconBlockBody = @import("./beacon_block.zig").BeaconBlockBody;
+const ForkTypes = @import("./fork_types.zig").ForkTypes;
 
 fn deserializeSignedBlock(
     comptime SignedBlock: type,
@@ -466,6 +467,58 @@ pub const AnyBeaconBlock = union(enum) {
             .full_gloas => |block| try ct.gloas.BeaconBlock.hashTreeRoot(allocator, block, out),
             .full_heze => |block| try ct.heze.BeaconBlock.hashTreeRoot(allocator, block, out),
         }
+    }
+
+    /// Roots of the block, of its body and, for a full block whose body carries an execution payload, of
+    /// the payload's transactions.
+    pub const Roots = struct {
+        block: Root,
+        body: Root,
+        transactions: ?Root,
+    };
+
+    /// Computes the block root with one merkleization of the execution payload transactions. A full body
+    /// is hashed through its payload header, which has the same root as the payload.
+    ///
+    /// `known_transactions_root`, when given, must be the root of the block's transactions. It is used
+    /// instead of merkleizing them.
+    pub fn roots(
+        self: *const AnyBeaconBlock,
+        allocator: std.mem.Allocator,
+        known_transactions_root: ?*const Root,
+    ) !Roots {
+        var result: Roots = .{ .block = undefined, .body = undefined, .transactions = null };
+        switch (self.forkSeq()) {
+            inline else => |f| {
+                if (comptime f.gte(.bellatrix) and f.lt(.gloas)) {
+                    if (self.blockType() == .full) {
+                        const body = self.castToFork(.full, f).body();
+                        var payload_header = ForkTypes(f).ExecutionPayloadHeader.default_value;
+                        try body.executionPayload().createExecutionPayloadHeader(
+                            allocator,
+                            known_transactions_root,
+                            &payload_header,
+                        );
+                        defer ForkTypes(f).ExecutionPayloadHeader.deinit(allocator, &payload_header);
+                        try body.hashTreeRootFromPayloadHeader(allocator, &payload_header, &result.body);
+                        result.transactions = payload_header.transactions_root;
+                    } else {
+                        try self.castToFork(.blinded, f).body().hashTreeRoot(allocator, &result.body);
+                    }
+                } else {
+                    try self.castToFork(.full, f).body().hashTreeRoot(allocator, &result.body);
+                }
+            },
+        }
+        const header: ct.phase0.BeaconBlockHeader.Type = .{
+            .slot = self.slot(),
+            .proposer_index = self.proposerIndex(),
+            .parent_root = self.parentRoot().*,
+            .state_root = self.stateRoot().*,
+            .body_root = result.body,
+        };
+        try ct.phase0.BeaconBlockHeader.hashTreeRoot(&header, &result.block);
+        return result;
     }
 
     pub fn slot(self: *const AnyBeaconBlock) Slot {

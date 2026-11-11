@@ -13,6 +13,7 @@ import {BlockProcessOpts} from "../options.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
 import {IBlockInput} from "./blockInput/index.js";
 import {ImportBlockOpts} from "./types.js";
+import {getSeededTransactionsRoot} from "./utils/blockRoots.js";
 
 /**
  * Verifies 1 or more blocks are fully valid running the full state transition; from a linear sequence of blocks.
@@ -50,7 +51,8 @@ export async function verifyBlocksStateTransitionOnly(
     let postState: IBeaconStateView;
     try {
       postState = preState.stateTransition(
-        {block, ssz: serializedCache.get(block)},
+        // The post-state root is checked against the block below, as required to pass transactionsRoot
+        {block, ssz: serializedCache.get(block), transactionsRoot: getSeededTransactionsRoot(block)},
         {
           // NOTE: Assume valid for now while sending payload to execution engine in parallel
           // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid

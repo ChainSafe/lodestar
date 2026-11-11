@@ -17,9 +17,10 @@ const st = @import("state_transition");
 /// - `executionPayloadStatus`: "valid" | "invalid" | "preMerge"
 /// - `dataAvailabilityStatus`: "Available" | "PreData" | "OutOfRange" | "NotRequired"
 /// - `source`: "block" | "regen" | "get_historical_state"
+/// - `transactionsRoot`: Uint8Array of 32 bytes, see `TransitionOpts.transactions_root`
 ///
 /// Throws `error.InvalidExecutionPayloadStatus`, `error.InvalidDataAvailabilityStatus`,
-/// or `error.InvalidProcessBlockSource` for unknown enum strings.
+/// or `error.InvalidProcessBlockSource` for unknown enum strings, and `error.InvalidTransactionsRootLength`.
 ///
 /// TODO(bing): rename `dontTransferCache` → `transferCache` to drop the double negation.
 pub fn parseOptions(options: ?js.Value) !st.TransitionOpts {
@@ -80,6 +81,12 @@ pub fn parseOptions(options: ?js.Value) !st.TransitionOpts {
                         .get_historical_state
                     else
                         return error.InvalidProcessBlockSource;
+            }
+            const transactions_root = try raw.getNamedProperty("transactionsRoot");
+            if (try transactions_root.typeof() != .undefined) {
+                const info = try transactions_root.getTypedarrayInfo();
+                if (info.data.len != 32) return error.InvalidTransactionsRootLength;
+                transition_opts.transactions_root = info.data[0..32].*;
             }
         }
     }

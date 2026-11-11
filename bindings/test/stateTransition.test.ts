@@ -170,6 +170,50 @@ describe("serialized state transition", () => {
     }
   });
 
+  it("uses a given transactions root instead of merkleizing the transactions", () => {
+    const value = createStfState();
+    value.latestExecutionPayloadHeader.blockHash.fill(1);
+    const native = bindings.BeaconStateView.createFromBytes(ssz.fulu.BeaconState.serialize(value), config);
+    const views = [native];
+    try {
+      const slot = native.slot + 1;
+      const advanced = native.processSlots(slot);
+      views.push(advanced);
+      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      block.message.proposerIndex = advanced.getBeaconProposer(slot);
+      block.message.parentRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(advanced.latestBlockHeader);
+      const payload = block.message.body.executionPayload;
+      payload.parentHash.fill(1);
+      payload.blockHash.fill(2);
+      payload.timestamp = slot * (stfConfig.SECONDS_PER_SLOT ?? 12);
+      payload.transactions = ssz.bellatrix.Transactions.fromJson(["0x010203"]);
+      const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
+      const options = {
+        dataAvailabilityStatus: "Available" as const,
+        executionPayloadStatus: "valid" as const,
+        verifyProposer: false,
+        verifySignatures: false,
+        verifyStateRoot: false,
+      };
+      const transition = (transactionsRoot?: Uint8Array): Uint8Array => {
+        const post = native.stateTransition(blockBytes, false, {...options, transactionsRoot});
+        views.push(post);
+        return post.hashTreeRoot();
+      };
+
+      const expected = transition();
+      expect(transition(ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions))).toEqual(expected);
+      // The root is trusted, so a wrong one reaches the post-state. Callers must check the post-state root
+      expect(transition(new Uint8Array(32))).not.toEqual(expected);
+      expect(() => transition(new Uint8Array(31))).toThrowError(
+        expect.objectContaining({code: "InvalidTransactionsRootLength"})
+      );
+    } finally {
+      for (const view of views) view.release();
+    }
+  });
+
   describe.each([
     {SECONDS_PER_SLOT: undefined, SLOT_DURATION_MS: 6000, name: "milliseconds only"},
     {SECONDS_PER_SLOT: 12, SLOT_DURATION_MS: 6000, name: "milliseconds with stale legacy seconds"},

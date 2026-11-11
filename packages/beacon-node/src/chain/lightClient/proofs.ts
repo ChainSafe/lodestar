@@ -9,12 +9,13 @@ import {
   ForkName,
   ForkPostBellatrix,
   ForkPostGloas,
+  ForkPreGloas,
   NEXT_SYNC_COMMITTEE_GINDEX_GLOAS,
   isForkPostElectra,
   isForkPostGloas,
 } from "@lodestar/params";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {BeaconBlockBody, SSZTypesFor, ssz} from "@lodestar/types";
+import {BeaconBlockBody, BlindedBeaconBlockBody, SSZTypesFor, ssz} from "@lodestar/types";
 import {SyncCommitteeWitness} from "./types.js";
 
 export function getSyncCommitteesWitness(fork: ForkName, state: BeaconStateAllForks): SyncCommitteeWitness {
@@ -111,11 +112,17 @@ export function getFinalizedRootProof(state: CachedBeaconStateAllForks): Uint8Ar
   return new Tree(state.node).getSingleProof(BigInt(finalizedRootGindex));
 }
 
+/**
+ * Proof of the execution payload in a block body. The body is given with the payload header in place of the
+ * payload: it has the same root and the same branch, and building its tree does not merkleize the transactions.
+ */
 export function getBlockBodyExecutionHeaderProof(
-  fork: ForkPostBellatrix,
-  body: BeaconBlockBody<ForkPostBellatrix>
+  fork: ForkPostBellatrix & ForkPreGloas,
+  blindedBody: BlindedBeaconBlockBody<ForkPostBellatrix & ForkPreGloas>
 ): Uint8Array[] {
-  const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkPostBellatrix, "BeaconBlockBody">).toView(body);
+  const bodyView = (
+    ssz[fork].BlindedBeaconBlockBody as SSZTypesFor<ForkPostBellatrix & ForkPreGloas, "BlindedBeaconBlockBody">
+  ).toView(blindedBody);
   return new Tree(bodyView.node).getSingleProof(BigInt(BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX));
 }
 

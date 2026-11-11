@@ -35,6 +35,10 @@
       "types": "./src/shuffle.d.ts",
       "import": "./src/shuffle.js"
     },
+    "./block-roots": {
+      "types": "./src/block-roots.d.ts",
+      "import": "./src/block-roots.js"
+    },
     "./execution-proof-verifier": {
       "types": "./src/execution-proof-verifier.d.ts",
       "import": "./src/execution-proof-verifier.js"

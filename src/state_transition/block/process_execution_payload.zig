@@ -11,6 +11,8 @@ const BeaconConfig = config.BeaconConfig;
 const isMergeTransitionComplete = @import("../utils/execution.zig").isMergeTransitionComplete;
 const getRandaoMix = @import("../utils/seed.zig").getRandaoMix;
 
+/// `known_payload_header`, when given, must be the header of `body`'s execution payload. It is stored instead of
+/// deriving the header from the payload.
 pub fn processExecutionPayload(
     comptime fork: ForkSeq,
     allocator: Allocator,
@@ -20,6 +22,7 @@ pub fn processExecutionPayload(
     comptime block_type: BlockType,
     body: *const BeaconBlockBody(block_type, fork),
     external_data: BlockExternalData,
+    known_payload_header: ?*const ForkTypes(fork).ExecutionPayloadHeader.Type,
 ) !void {
     const parent_hash, const prev_randao, const timestamp = switch (block_type) {
         .full => .{
@@ -77,9 +80,13 @@ pub fn processExecutionPayload(
         return error.InvalidExecutionPayload;
     }
 
+    if (known_payload_header) |known_header| {
+        return state.setLatestExecutionPayloadHeader(known_header);
+    }
+
     var payload_header = ForkTypes(fork).ExecutionPayloadHeader.default_value;
     switch (block_type) {
-        .full => try body.executionPayload().createExecutionPayloadHeader(allocator, &payload_header),
+        .full => try body.executionPayload().createExecutionPayloadHeader(allocator, null, &payload_header),
         .blinded => {
             errdefer ForkTypes(fork).ExecutionPayloadHeader.deinit(allocator, &payload_header);
 

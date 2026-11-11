@@ -63,6 +63,12 @@ export type BlockSTFInput = {
    * implementations serialize `block` when omitted.
    */
   ssz?: Uint8Array;
+  /**
+   * Root of the block's execution payload transactions, if already computed from this block. Native
+   * implementations skip merkleizing the transactions. The caller must verify the post-state root against the
+   * block's state root, a wrong value yields a wrong post-state.
+   */
+  transactionsRoot?: Uint8Array;
 };
 
 /** State root computation result. Includes data derived from the post-state. */
@@ -376,7 +382,7 @@ export type IBeaconStateViewNative = Omit<
   stateTransition(
     signedBlockBytes: Uint8Array,
     isBlinded: boolean,
-    options?: StateTransitionOpts
+    options?: StateTransitionOpts & {transactionsRoot?: Uint8Array}
   ): IBeaconStateViewNative;
   processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}): IBeaconStateViewNative;
   withParentPayloadApplied(executionRequestsBytes: Uint8Array): IBeaconStateViewNative;
