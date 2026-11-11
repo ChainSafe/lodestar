@@ -1,11 +1,11 @@
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {
-  AncestorStatus,
-  ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
+  InvalidBlockCode,
   NotReorgedReason,
+  ProtoBlock,
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
@@ -43,7 +43,8 @@ import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
-import {ChainEvent, ReorgEventData} from "../emitter.js";
+import {ChainEvent} from "../emitter.js";
+import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
@@ -94,8 +95,8 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {blockInput, postState, parentBlockSlot, dataAvailabilityStatus, indexedAttestations} = fullyVerifiedBlock;
-  let {executionStatus} = fullyVerifiedBlock;
+  const {blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus, indexedAttestations} =
+    fullyVerifiedBlock;
   const block = blockInput.getBlock();
   const source = blockInput.getBlockSource();
   const {slot: blockSlot} = block.message;
@@ -131,34 +132,29 @@ export async function importBlock(
 
   // Should compute checkpoint balances before forkchoice.onBlock
   this.checkpointBalancesCache.processState(blockRootHex, postState);
-  if (isGloasBeaconBlock(block.message)) {
-    // A gloas block has no payload of its own, it inherits the status of the payload it builds on,
-    // i.e. the parent variant matching the bid's parent block hash. The parent's default (PENDING)
-    // variant does not reflect a SYNCING parent payload, and onBlock would then mark that payload VALID.
-    const parentRootHex = toRootHex(block.message.parentRoot);
-    const parentBlockHashHex = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
-    const parentBlock = this.forkChoice.getBlockHexAndBlockHash(parentRootHex, parentBlockHashHex);
-    if (parentBlock === null) {
-      throw Error(
-        `Parent block not found in forkChoice, parentRoot=${parentRootHex} parentBlockHash=${parentBlockHashHex}`
-      );
-    }
-    if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
-      throw Error(`Parent block has invalid execution status, parentRoot=${parentRootHex}`);
-    }
-    executionStatus = parentBlock.executionStatus;
-  }
-
   const importDelayMs = this.clock.msFromSlot(blockSlot);
-  const blockSummary = this.forkChoice.onBlock(
-    block.message,
-    postState,
-    receiveDelayMs,
-    importDelayMs,
-    currentSlot,
-    executionStatus,
-    dataAvailabilityStatus
-  );
+  let blockSummary: ProtoBlock;
+  try {
+    blockSummary = this.forkChoice.onBlock(
+      block.message,
+      postState,
+      receiveDelayMs,
+      importDelayMs,
+      currentSlot,
+      executionStatus,
+      dataAvailabilityStatus
+    );
+  } catch (e) {
+    // The parent can be invalidated by a forkchoiceUpdated verdict after verifyBlocksSanityChecks passed
+    if (
+      e instanceof ForkChoiceError &&
+      e.type.code === ForkChoiceErrorCode.INVALID_BLOCK &&
+      e.type.err.code === InvalidBlockCode.PARENT_EXECUTION_INVALID
+    ) {
+      throw new BlockError(block, {code: BlockErrorCode.PARENT_EXECUTION_INVALID, parentRoot: e.type.err.root});
+    }
+    throw e;
+  }
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
@@ -322,18 +318,10 @@ export async function importBlock(
   }
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
-    // Set head state as strong reference
-    this.regen.updateHeadState(newHead, postState);
+    this.onHeadChanged(oldHead, newHead, postState);
 
     const delaySec = this.clock.secFromSlot(newHead.slot);
-    this.logger.verbose("New chain head", {
-      slot: newHead.slot,
-      root: newHead.blockRoot,
-      delaySec,
-    });
-
     if (this.metrics) {
-      this.metrics.headSlot.set(newHead.slot);
       // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
       const headFork = this.config.getForkName(newHead.slot);
@@ -344,32 +332,6 @@ export async function importBlock(
           this.metrics.importBlock.setHeadAfterCutoff.inc();
         }
       }
-    }
-
-    this.onNewHead(newHead);
-
-    this.metrics?.forkChoice.changedHead.inc();
-
-    const ancestorResult = this.forkChoice.getCommonAncestorDepth(oldHead, newHead);
-    if (ancestorResult.code === AncestorStatus.CommonAncestor) {
-      // CommonAncestor = chain reorg, old head and new head not direct descendants
-
-      const forkChoiceReorgEventData: ReorgEventData = {
-        depth: ancestorResult.depth,
-        epoch: computeEpochAtSlot(newHead.slot),
-        slot: newHead.slot,
-        newHeadBlock: newHead.blockRoot,
-        oldHeadBlock: oldHead.blockRoot,
-        newHeadState: newHead.stateRoot,
-        oldHeadState: oldHead.stateRoot,
-        executionOptimistic: isOptimisticBlock(newHead),
-      };
-
-      this.emitter.emit(routes.events.EventType.chainReorg, forkChoiceReorgEventData);
-      this.logger.verbose("Chain reorg", forkChoiceReorgEventData);
-
-      this.metrics?.forkChoice.reorg.inc();
-      this.metrics?.forkChoice.reorgDistance.observe(ancestorResult.depth);
     }
 
     // Lightclient server support (only after altair)
@@ -470,7 +432,13 @@ export async function importBlock(
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine
-        .notifyForkchoiceUpdate(this.config.getForkName(fcuHead.slot), headBlockHash, safeBlockHash, finalizedBlockHash)
+        .notifyForkchoiceUpdate(
+          this.config.getForkName(fcuHead.slot),
+          fcuHead.blockRoot,
+          headBlockHash,
+          safeBlockHash,
+          finalizedBlockHash
+        )
         .catch((e) => {
           if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
             this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
