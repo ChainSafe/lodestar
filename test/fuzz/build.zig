@@ -8,7 +8,7 @@ pub fn build(b: *std.Build) void {
     const lodestar_z = b.dependency("lodestar_z", .{
         .target = target,
         .optimize = optimize,
-        .@"build_options.verify_invariants" = true,
+        .@"build_options.expensive_safety_checks" = true,
     });
 
     const dep_blst = b.dependency("blst", .{

@@ -71,9 +71,9 @@
                 .default = "mainnet",
                 .description = "Consensus preset: \"mainnet\", \"minimal\" or \"gnosis\".",
             },
-            .verify_invariants = .{
+            .expensive_safety_checks = .{
                 .type = .bool,
-                .description = "Enable costly invariant assertions (optional; defaults to true only in Debug builds).",
+                .description = "Enable costly safety checks (optional; defaults to true only in Debug builds).",
             },
         },
         .bls_options = .{
