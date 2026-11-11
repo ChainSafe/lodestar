@@ -202,6 +202,129 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
             self.cached_leaf = .{ .position = position, .node = replacement };
         }
 
+        /// Reads and writes by index, resolving each chunked leaf once. Borrows the view, which
+        /// must outlive it. Until `deinit`, do not commit, hash, resize, `clearCache`, clone with
+        /// `transfer_cache`, or write the view another way. `get` and `set` assert that the
+        /// view's root is unchanged, which catches only a commit, best effort since node ids are
+        /// reused.
+        pub const Editor = if (use_chunked_leaf) struct {
+            view: *Self,
+            view_root: Node.Id,
+            len: usize,
+            leaves: []Leaf,
+
+            const Leaf = union(enum) {
+                unresolved,
+                readonly: *align(64) const [ChunkedLeaf.K][32]u8,
+                writable: *align(64) [ChunkedLeaf.K][32]u8,
+            };
+
+            const zero_chunks: [ChunkedLeaf.K][32]u8 align(64) = @splat(@splat(0));
+
+            // Every subtree from the first folded one holds a multiple of K chunks, so their
+            // chunked leaves form one evenly spaced sequence. Earlier chunks go through the view.
+            const first_folded_chunk = blk: {
+                var subtree_index: usize = 0;
+                while (foldedDepth(subtree_index) == 0) : (subtree_index += 1) {}
+                break :blk progressive.subtreeStartChunk(subtree_index);
+            };
+
+            pub fn deinit(self: *Editor) void {
+                self.view.allocator.free(self.leaves);
+                self.* = undefined;
+            }
+
+            pub fn get(self: *Editor, index: usize) !Element {
+                std.debug.assert(self.view.state.root == self.view_root);
+                if (index >= self.len) return error.IndexOutOfBounds;
+                const chunk_index = index / items_per_chunk;
+                if (chunk_index < first_folded_chunk) return self.view.get(index);
+                const folded_chunk = chunk_index - first_folded_chunk;
+                const leaf_index = folded_chunk / ChunkedLeaf.K;
+                const chunks = switch (self.leaves[leaf_index]) {
+                    .unresolved => try self.resolve(leaf_index),
+                    .readonly => |readonly| readonly,
+                    .writable => |writable| writable,
+                };
+                var value: Element = undefined;
+                ST.Element.tree.toValuePackedFromBytes(
+                    &chunks[folded_chunk % ChunkedLeaf.K],
+                    index % items_per_chunk,
+                    &value,
+                );
+                return value;
+            }
+
+            pub fn set(self: *Editor, index: usize, value: Element) !void {
+                std.debug.assert(self.view.state.root == self.view_root);
+                if (index >= self.len) return error.IndexOutOfBounds;
+                const chunk_index = index / items_per_chunk;
+                if (chunk_index < first_folded_chunk) return self.view.set(index, value);
+                const folded_chunk = chunk_index - first_folded_chunk;
+                const leaf_index = folded_chunk / ChunkedLeaf.K;
+                const chunks = switch (self.leaves[leaf_index]) {
+                    .unresolved, .readonly => try self.stage(leaf_index),
+                    .writable => |writable| writable,
+                };
+                ST.Element.tree.fromValuePackedIntoChunk(
+                    &chunks[folded_chunk % ChunkedLeaf.K],
+                    index % items_per_chunk,
+                    &value,
+                );
+            }
+
+            fn resolve(self: *Editor, leaf_index: usize) !*align(64) const [ChunkedLeaf.K][32]u8 {
+                const pool = self.view.state.pool;
+                const node = try self.view.getLeaf(leafPosition(leaf_index));
+                const chunks = if (node.getState(pool).isZero())
+                    &zero_chunks
+                else
+                    try node.getChunkedLeafChunks(pool);
+                self.leaves[leaf_index] = .{ .readonly = chunks };
+                return chunks;
+            }
+
+            fn stage(self: *Editor, leaf_index: usize) !*align(64) [ChunkedLeaf.K][32]u8 {
+                const position = leafPosition(leaf_index);
+                const state = &self.view.state;
+                // Growth can address a new subtree before commit installs its zero scaffold.
+                try state.children_nodes.put(
+                    self.view.allocator,
+                    position.gindex,
+                    try self.view.getLeaf(position),
+                );
+                const valid_chunks: u16 = @intCast(@min(
+                    ChunkedLeaf.K,
+                    chunkCount(self.len) - position.first_chunk,
+                ));
+                const chunks = try state.stageChunkedLeaf(position.gindex, valid_chunks);
+                // Staging replaces the leaf's node, which the view may have cached.
+                self.view.cached_leaf = null;
+                self.leaves[leaf_index] = .{ .writable = chunks };
+                return chunks;
+            }
+
+            fn leafPosition(leaf_index: usize) Position {
+                return Position.init(first_folded_chunk + leaf_index * ChunkedLeaf.K);
+            }
+        } else @compileError("ProgressiveListBasicTreeView.Editor requires a chunked-leaf list");
+
+        /// Returns an editor over the current length. The caller must `deinit` it.
+        pub fn editor(self: *Self) !Editor {
+            const folded_chunks = chunkCount(self._len) -| Editor.first_folded_chunk;
+            const leaves = try self.allocator.alloc(
+                Editor.Leaf,
+                (folded_chunks + ChunkedLeaf.K - 1) / ChunkedLeaf.K,
+            );
+            @memset(leaves, .unresolved);
+            return .{
+                .view = self,
+                .view_root = self.state.root,
+                .len = self._len,
+                .leaves = leaves,
+            };
+        }
+
         pub fn push(self: *Self, value: Element) !void {
             if (self._len == max_length) return error.LengthOverLimit;
             const index = self._len;
