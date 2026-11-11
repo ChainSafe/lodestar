@@ -124,6 +124,7 @@ pub fn lowest(self: *const FreeSlotBitmap) u32 {
 
 /// Marks `slot` free. The slot must be in use.
 pub fn insert(self: *FreeSlotBitmap, slot: u32) void {
+        std.debug.assert(slot < self.capacity)
     var index: usize = slot;
     std.debug.assert(self.levels[0][index / 64] & bit(index) == 0);
     for (self.levels[0..self.level_count]) |level_words| {
