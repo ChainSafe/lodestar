@@ -40,8 +40,12 @@ const NodeFlags = packed struct(u8) {
     viable: bool = false,
     has_children: bool = false,
     any_viable_child: bool = false,
+    /// Set only when the boost applies, so `weight` adds the score without asking again.
     on_boost_chain: bool = false,
-    _: u3 = 0,
+    /// On `pending` nodes: spec `get_checkpoint_block(store, root, finalized.epoch)` is
+    /// the finalized root.
+    finalized_descendant: bool = false,
+    _: u2 = 0,
 };
 
 pub const ViableHead = struct {
@@ -58,11 +62,6 @@ pub const Cache = struct {
     /// Per node: the worst engine verdict on the payloads the node stands on.
     execution: std.ArrayList(ExecutionStatus) = .empty,
     best_child: std.ArrayList(u32) = .empty,
-    /// Per block: `store.finalized_checkpoint.root == get_checkpoint_block(store, root, finalized.epoch)`.
-    finalized_ok: std.ArrayList(bool) = .empty,
-    finalized_ancestor: std.ArrayList(BlockIndex) = .empty,
-    apply_proposer_boost: bool = false,
-    proposer_score: u64 = 0,
     head: ForkChoiceNode = .{ .block = 0, .payload_status = .pending },
 
     pub const empty: Cache = .{};
@@ -72,8 +71,6 @@ pub const Cache = struct {
         self.flags.deinit(allocator);
         self.execution.deinit(allocator);
         self.best_child.deinit(allocator);
-        self.finalized_ok.deinit(allocator);
-        self.finalized_ancestor.deinit(allocator);
         self.* = .empty;
     }
 };
@@ -100,8 +97,6 @@ fn compute(store: *Store) !void {
     try cache.flags.resize(allocator, node_count);
     try cache.execution.resize(allocator, node_count);
     try cache.best_child.resize(allocator, node_count);
-    try cache.finalized_ok.resize(allocator, n);
-    try cache.finalized_ancestor.resize(allocator, n);
     try store.votes.update(allocator, node_count);
     @memcpy(cache.weight.items, store.votes.vote_weight.items);
     @memset(cache.flags.items, .{});
@@ -138,10 +133,11 @@ fn compute(store: *Store) !void {
         exec[empty] = if (gloas) base else with_own;
         exec[full] = with_own;
 
-        // Spec `get_checkpoint_block(store, root, store.finalized_checkpoint.epoch)`.
-        const ancestor = if (slots[i] <= finalized_slot or parent == NO_BLOCK) index else cache.finalized_ancestor.items[parent];
-        cache.finalized_ancestor.items[i] = ancestor;
-        cache.finalized_ok.items[i] = finalized_at_genesis or ancestor == finalized_index;
+        // The checkpoint block of a block past the finalized slot is its parent's.
+        flags[pending].finalized_descendant = if (slots[i] <= finalized_slot or parent == NO_BLOCK)
+            index == finalized_index
+        else
+            flags[nodeId(Store.pendingNode(parent))].finalized_descendant;
 
         if (exec[pending] == .invalid) continue;
         flags[pending].exists = true;
@@ -158,7 +154,8 @@ fn compute(store: *Store) !void {
         const index: BlockIndex = @intCast(b);
         const pending = nodeId(Store.pendingNode(index));
         if (!flags[pending].exists) continue;
-        const leaf_viable = leafViable(store, index, current_epoch, cache.finalized_ok.items[b]);
+        const finalized_ok = finalized_at_genesis or flags[pending].finalized_descendant;
+        const leaf_viable = leafViable(store, index, current_epoch, finalized_ok);
         if (forks[b].gte(.gloas)) {
             var any_viable = false;
             for ([_]PayloadStatus{ .empty, .full }) |status| {
@@ -188,12 +185,11 @@ fn compute(store: *Store) !void {
 
     // Spec `get_weight` proposer boost: `is_ancestor(proposer_boost_node, node)` holds
     // exactly on the path from the boosted block's `pending` node to the root.
-    cache.apply_proposer_boost = try shouldApplyProposerBoost(store);
-    cache.proposer_score = store.proposerScore();
-    if (cache.apply_proposer_boost and exec[nodeId(Store.pendingNode(store.blockIndex(store.proposer_boost_root).?))] == .invalid) {
-        cache.apply_proposer_boost = false;
+    var apply_proposer_boost = try shouldApplyProposerBoost(store);
+    if (apply_proposer_boost and exec[nodeId(Store.pendingNode(store.blockIndex(store.proposer_boost_root).?))] == .invalid) {
+        apply_proposer_boost = false;
     }
-    if (cache.apply_proposer_boost) {
+    if (apply_proposer_boost) {
         var node = Store.pendingNode(store.blockIndex(store.proposer_boost_root).?);
         while (true) {
             flags[nodeId(node)].on_boost_chain = true;
@@ -285,7 +281,7 @@ pub fn weight(store: *const Store, node: ForkChoiceNode) u64 {
     const cache = &store.head_cache;
     const id = nodeId(node);
     var total = cache.weight.items[id];
-    if (cache.apply_proposer_boost and cache.flags.items[id].on_boost_chain) total += cache.proposer_score;
+    if (cache.flags.items[id].on_boost_chain) total += store.proposerScore();
     return total;
 }
 
