@@ -583,7 +583,7 @@ jobs:
           path: test/spec
       - name: Run ssz_static spec tests
         run: |
-          zig build test:ssz_static_spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=ReleaseSafe
+          zig build test:ssz_static_spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=ReleaseSafe -Dbuild_options.expensive_safety_checks=true
 
   zig-spec-tests:
     name: Zig spec tests (${{ matrix.preset }}, ${{ matrix.runner }})
@@ -631,7 +631,7 @@ jobs:
           path: test/spec
       - name: Run spec tests - ${{ matrix.preset }} (${{ matrix.runner }})
         run: |
-          zig build test:spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=${{ matrix.optimize }} -Dspec_tests.filters=${{ matrix.runner }}
+          zig build test:spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=${{ matrix.optimize }} -Dbuild_options.expensive_safety_checks=true -Dspec_tests.filters=${{ matrix.runner }}
 
   zig-build-fuzz:
     name: Zig fuzz build
