@@ -449,8 +449,8 @@ export class AggregatedAttestationPool {
           const score = consolidation.totalNewSeenEffectiveBalance * consolidation.weight;
 
           consolidations.set(consolidation, score);
-          // Stop accumulating attestations there are enough that may have good scoring
-          if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {
+          // bound the max consolidation candidates, does not likely happen on mainnet through
+          if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 4) {
             stopReason = ScannedSlotsTerminationReason.MaxConsolidationReached;
             break slot;
           }
