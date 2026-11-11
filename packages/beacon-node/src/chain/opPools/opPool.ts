@@ -35,7 +35,13 @@ import {Metrics} from "../../metrics/metrics.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {IBlsVerifier} from "../bls/interface.js";
 import {BlockType} from "../interface.js";
-import {IPqVerifier, PqVerifier, verifyAttesterSlashingSignatures} from "../pq/index.js";
+import {
+  IPqVerifier,
+  PqVerifier,
+  getProposerSlashingLeafIndices,
+  verifyAttesterSlashingSignatures,
+  verifySignatureSetsAtLeaves,
+} from "../pq/index.js";
 import {BlockProductionStep} from "../produceBlock/produceBlockBody.js";
 import {
   getAttesterSlashingSignatureDomains,
@@ -127,7 +133,12 @@ export class OpPool {
       }
       const verifiedDomain = getProposerSlashingSignatureDomain(this.config, currentSlot, proposerSlashing);
       if (
-        !(await bls.verifySignatureSets(getProposerSlashingSignatureSets(this.config, currentSlot, proposerSlashing)))
+        !(await verifySignatureSetsAtLeaves(
+          {bls, pq},
+          state.forkName,
+          getProposerSlashingSignatureSets(this.config, currentSlot, proposerSlashing),
+          getProposerSlashingLeafIndices(proposerSlashing)
+        ))
       ) {
         continue;
       }
@@ -468,10 +479,9 @@ export class OpPool {
    * to opPool once gossipsub seen cache TTL passes.
    */
   private pruneBlsToExecutionChanges(headBlock: SignedBeaconBlock, headState: IBeaconStateView): void {
+    // A pq body has no BLS to execution changes
     const recentBlsToExecutionChanges =
-      this.config.getForkSeq(headBlock.message.slot) >= ForkSeq.capella
-        ? (headBlock as capella.SignedBeaconBlock).message.body.blsToExecutionChanges
-        : [];
+      (headBlock as capella.SignedBeaconBlock).message.body.blsToExecutionChanges ?? [];
 
     const recentBlsToExecutionChangeIndexes = new Set(
       recentBlsToExecutionChanges.map((blsToExecutionChange) => blsToExecutionChange.message.validatorIndex)

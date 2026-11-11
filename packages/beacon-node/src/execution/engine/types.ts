@@ -11,6 +11,7 @@ import {
   ForkName,
   ForkPostElectra,
   ForkSeq,
+  PREREGISTRATION_REQUEST_TYPE,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
 import {
@@ -23,6 +24,7 @@ import {
   capella,
   deneb,
   gloas,
+  pq,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -588,6 +590,15 @@ export function serializeExecutionRequestsToBytes(fork: ForkName, executionReque
     }
   }
 
+  if (fork === ForkName.pq) {
+    const {preregistrations} = executionRequests as pq.ExecutionRequests;
+    if (preregistrations.length !== 0) {
+      result.push(
+        serializePrefixedRequests(ssz.pq.PreregistrationRequests, preregistrations, PREREGISTRATION_REQUEST_TYPE)
+      );
+    }
+  }
+
   return result;
 }
 
@@ -600,6 +611,10 @@ export function deserializeExecutionRequestsFromBytes(fork: ForkName, serialized
     ForkSeq[fork] >= ForkSeq.gloas
       ? {deposits: [], withdrawals: [], consolidations: [], builderDeposits: [], builderExits: []}
       : {deposits: [], withdrawals: [], consolidations: []};
+
+  if (fork === ForkName.pq) {
+    (result as pq.ExecutionRequests).preregistrations = [];
+  }
 
   let prevRequestType: ExecutionRequestType | undefined;
 
@@ -653,6 +668,13 @@ export function deserializeExecutionRequestsFromBytes(fork: ForkName, serialized
           throw Error(`Builder exit request is not supported pre-gloas fork=${fork}`);
         }
         (result as gloas.ExecutionRequests).builderExits = ssz.gloas.BuilderExitRequests.deserialize(requests);
+        break;
+      }
+      case PREREGISTRATION_REQUEST_TYPE: {
+        if (fork !== ForkName.pq) {
+          throw Error(`Preregistration request is not supported at fork=${fork}`);
+        }
+        (result as pq.ExecutionRequests).preregistrations = ssz.pq.PreregistrationRequests.deserialize(requests);
         break;
       }
     }

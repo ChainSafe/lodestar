@@ -264,6 +264,10 @@ describe("web3signer signature test", () => {
 });
 
 class SlashingProtectionDisabled implements ISlashingProtection {
+  async checkAndInsertXmssLeaf(): Promise<void> {
+    //
+  }
+
   async checkAndInsertBlockProposal(): Promise<void> {
     //
   }

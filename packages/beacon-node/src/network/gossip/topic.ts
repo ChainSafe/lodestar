@@ -139,13 +139,15 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.bls_to_execution_change:
       return ssz.capella.SignedBLSToExecutionChange;
     case GossipType.execution_payload:
-      return ssz.gloas.SignedExecutionPayloadEnvelope;
+      return isForkPostGloas(fork)
+        ? sszTypesFor(fork).SignedExecutionPayloadEnvelope
+        : ssz.gloas.SignedExecutionPayloadEnvelope;
     case GossipType.payload_attestation_message:
-      return ssz.gloas.PayloadAttestationMessage;
+      return isForkPostGloas(fork) ? sszTypesFor(fork).PayloadAttestationMessage : ssz.gloas.PayloadAttestationMessage;
     case GossipType.execution_payload_bid:
       return isForkPostGloas(fork) ? sszTypesFor(fork).SignedExecutionPayloadBid : ssz.gloas.SignedExecutionPayloadBid;
     case GossipType.proposer_preferences:
-      return ssz.gloas.SignedProposerPreferences;
+      return isForkPostGloas(fork) ? sszTypesFor(fork).SignedProposerPreferences : ssz.gloas.SignedProposerPreferences;
     case GossipType.inclusion_list:
       return ssz.heze.SignedInclusionList;
   }

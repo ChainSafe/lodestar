@@ -1,6 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {BUCKET_LENGTH, BinaryRepository, Db, DbBatch, encodeKey as encodeDbKey} from "@lodestar/db";
-import {Slot, gloas, ssz} from "@lodestar/types";
+import {XMSS_SIGNATURE_SIZE} from "@lodestar/params";
+import {Slot, gloas, pq, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
@@ -16,14 +17,28 @@ export type ArchivedEnvelope =
   | {headerEnvelope: gloas.SignedExecutionPayloadHeaderEnvelope; envelopeBytes?: undefined}
   | {headerEnvelope?: undefined; envelopeBytes: Uint8Array};
 
+/** The fixed part of a signed header envelope with a BLS signature: the message's offset, then the signature */
+const BLS_SIGNED_HEADER_ENVELOPE_FIXED_SIZE = 4 + 96;
+
 export function decodeArchivedEnvelope(bytes: Uint8Array): ArchivedEnvelope {
-  return bytes[0] === HEADER_ENVELOPE_PREFIX
-    ? {headerEnvelope: ssz.gloas.SignedExecutionPayloadHeaderEnvelope.deserialize(bytes.subarray(1))}
-    : {envelopeBytes: bytes};
+  if (bytes[0] !== HEADER_ENVELOPE_PREFIX) {
+    return {envelopeBytes: bytes};
+  }
+  const value = bytes.subarray(1);
+  // The message's offset is past the signature, so it says which scheme signed
+  const messageOffset = new DataView(value.buffer, value.byteOffset, 4).getUint32(0, true);
+  const type =
+    messageOffset === BLS_SIGNED_HEADER_ENVELOPE_FIXED_SIZE
+      ? ssz.gloas.SignedExecutionPayloadHeaderEnvelope
+      : ssz.pq.SignedExecutionPayloadHeaderEnvelope;
+  return {headerEnvelope: type.deserialize(value)};
 }
 
 export function encodeArchivedHeaderEnvelope(headerEnvelope: gloas.SignedExecutionPayloadHeaderEnvelope): Uint8Array {
-  const value = ssz.gloas.SignedExecutionPayloadHeaderEnvelope.serialize(headerEnvelope);
+  const value =
+    headerEnvelope.signature.length === XMSS_SIGNATURE_SIZE
+      ? ssz.pq.SignedExecutionPayloadHeaderEnvelope.serialize(headerEnvelope as pq.SignedExecutionPayloadHeaderEnvelope)
+      : ssz.gloas.SignedExecutionPayloadHeaderEnvelope.serialize(headerEnvelope);
   const out = new Uint8Array(1 + value.length);
   out[0] = HEADER_ENVELOPE_PREFIX;
   out.set(value, 1);

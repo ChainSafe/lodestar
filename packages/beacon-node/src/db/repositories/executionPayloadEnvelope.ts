@@ -1,6 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
+import {getGloasMessageTypes} from "@lodestar/state-transition";
 import {Root, gloas, ssz} from "@lodestar/types";
+import {getSlotFromExecutionPayloadEnvelopeSerialized} from "../../util/sszBytes.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 type BlockRoot = Root;
@@ -22,5 +24,17 @@ export class ExecutionPayloadEnvelopeRepository extends Repository<BlockRoot, gl
    */
   getId(value: gloas.SignedExecutionPayloadEnvelope): BlockRoot {
     return value.message.beaconBlockRoot;
+  }
+
+  encodeValue(value: gloas.SignedExecutionPayloadEnvelope): Uint8Array {
+    return getGloasMessageTypes(this.config, value.message.payload.slotNumber).SignedExecutionPayloadEnvelope.serialize(
+      value
+    );
+  }
+
+  decodeValue(data: Uint8Array): gloas.SignedExecutionPayloadEnvelope {
+    const slot = getSlotFromExecutionPayloadEnvelopeSerialized(data);
+    if (slot === null) throw Error("Stored execution payload envelope is too short");
+    return getGloasMessageTypes(this.config, slot).SignedExecutionPayloadEnvelope.deserialize(data);
   }
 }

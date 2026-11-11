@@ -13,7 +13,7 @@ import {
   isForkPostElectra,
   isForkPostGloas,
 } from "@lodestar/params";
-import {computeTimeAtSlot, signedBlockToSignedHeader} from "@lodestar/state-transition";
+import {computeTimeAtSlot, getGloasMessageTypes, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
   Attestation,
   Root,
@@ -1304,7 +1304,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
           if (e.action === GossipAction.REJECT) {
             chain.persistInvalidSszValue(
-              ssz.gloas.SignedExecutionPayloadEnvelope,
+              getGloasMessageTypes(config, slot).SignedExecutionPayloadEnvelope,
               signedEnvelope,
               `gossip_reject_slot_${slot}`
             );
@@ -1427,7 +1427,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           const nextSlotProposer = chain.getHeadState().getBeaconProposer(payloadAttestationMessage.data.slot + 1);
           const isNextSlotProposer = chain.beaconProposerCache.has(nextSlotProposer);
 
-          if (isNextSlotProposer) {
+          // A pq block carries no payload attestations: they reach fork choice only
+          if (isNextSlotProposer && config.getForkName(payloadAttestationMessage.data.slot) !== ForkName.pq) {
             try {
               const insertOutcome = chain.payloadAttestationPool.add(
                 payloadAttestationMessage,

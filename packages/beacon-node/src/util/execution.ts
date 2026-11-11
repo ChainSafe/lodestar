@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostFulu, ForkPreFulu} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {DataColumnSidecar, SignedBeaconBlock, Slot, deneb, gloas, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
+import {DataColumnSidecar, SignedBeaconBlock, Slot, deneb, gloas, isGloasDataColumnSidecar} from "@lodestar/types";
 import {Logger, fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
@@ -24,6 +24,7 @@ import {
   getGloasDataColumnSidecars,
 } from "./dataColumns.js";
 import {signedHeaderEnvelopeToFull} from "./headerEnvelope.js";
+import {signedEnvelopeTypeOf} from "./pq.js";
 
 export enum DataColumnEngineResult {
   PreFulu = "pre_fulu",
@@ -345,7 +346,10 @@ async function* reconstructBatch(
         `archived envelope range unservable from slot=${entry.slot}`
       );
     }
-    yield {slot: entry.slot, envelopeBytes: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result)};
+    yield {
+      slot: entry.slot,
+      envelopeBytes: signedEnvelopeTypeOf(result).serialize(result),
+    };
   }
 }
 

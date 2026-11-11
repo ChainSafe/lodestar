@@ -10,9 +10,10 @@ import {
   ForkPostCapella,
   ForkSeq,
   SLOTS_PER_EPOCH,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {ExecutionPayload, RootHex, bellatrix, deneb, gloas, ssz} from "@lodestar/types";
+import {ExecutionPayload, RootHex, bellatrix, deneb, gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {INTEROP_BLOCK_HASH} from "../../node/utils/interop/state.js";
@@ -395,7 +396,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       executionPayload.transactions = SerializedList.fromArray(transactions);
 
       if (ForkSeq[fork] >= ForkSeq.capella) {
-        (executionPayload as ExecutionPayload<ForkPostCapella>).withdrawals = ssz.capella.Withdrawals.defaultValue();
+        (executionPayload as ExecutionPayload<ForkPostCapella>).withdrawals = payloadAttributes.withdrawals ?? [];
       }
 
       if (ForkSeq[fork] >= ForkSeq.gloas && payloadAttributes.slotNumber != null) {
@@ -411,8 +412,8 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
         }),
         executionRequests: serializeExecutionRequests(
           fork,
-          ForkSeq[fork] >= ForkSeq.gloas
-            ? ssz.gloas.ExecutionRequests.defaultValue()
+          isForkPostGloas(fork)
+            ? sszTypesFor(fork).ExecutionRequests.defaultValue()
             : ssz.electra.ExecutionRequests.defaultValue()
         ),
       });

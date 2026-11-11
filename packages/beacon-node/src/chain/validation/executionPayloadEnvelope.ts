@@ -1,13 +1,17 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
+import {LEAF_OFFSET_EXECUTION_PAYLOAD_ENVELOPE} from "@lodestar/params";
 import {
   computeStartSlotAtEpoch,
+  computeXmssLeafIndex,
   getExecutionPayloadEnvelopeSignatureSet,
+  getGloasMessageTypes,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {gloas, ssz} from "@lodestar/types";
+import {gloas} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
+import {verifySignatureSetsAtLeaves} from "../pq/index.js";
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateApiExecutionPayloadEnvelope(
@@ -112,7 +116,9 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `hash_tree_root(envelope.execution_requests) == bid.execution_requests_root`
-  const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+  const requestsRoot = getGloasMessageTypes(chain.config, payload.slotNumber).ExecutionRequests.hashTreeRoot(
+    envelope.executionRequests
+  );
   if (!byteArrayEquals(requestsRoot, payloadInput.getBid().executionRequestsRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
@@ -146,7 +152,15 @@ async function validateExecutionPayloadEnvelope(
     payloadInput.proposerIndex
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
+  if (
+    !(await verifySignatureSetsAtLeaves(
+      chain,
+      chain.config.getForkName(payload.slotNumber),
+      [signatureSet],
+      [computeXmssLeafIndex(payload.slotNumber, LEAF_OFFSET_EXECUTION_PAYLOAD_ENVELOPE)],
+      {verifyOnMainThread: true}
+    ))
+  ) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
       slot: payload.slotNumber,

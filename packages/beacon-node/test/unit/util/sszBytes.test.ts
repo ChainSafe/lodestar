@@ -357,6 +357,15 @@ describe("signedBeaconBlock SSZ serialized picking", () => {
     });
   }
 
+  it("reads past a leanXMSS signature", () => {
+    const signedBeaconBlock = ssz.pq.SignedBeaconBlock.defaultValue();
+    signedBeaconBlock.message.slot = 1_000_000;
+    signedBeaconBlock.message.parentRoot = Buffer.alloc(32, 0xbb);
+    const bytes = ssz.pq.SignedBeaconBlock.serialize(signedBeaconBlock);
+    expect(getSlotFromSignedBeaconBlockSerialized(bytes)).toBe(1_000_000);
+    expect(getParentRootFromSignedBeaconBlockSerialized(bytes)).toBe(toRootHex(signedBeaconBlock.message.parentRoot));
+  });
+
   it("getSlotFromSignedBeaconBlockSerialized - invalid data", () => {
     const invalidSlotDataSizes = [0, 50, 104];
     for (const size of invalidSlotDataSizes) {
@@ -372,7 +381,7 @@ describe("signedBeaconBlock SSZ serialized picking", () => {
 });
 
 describe("getParentBlockHashFromGloasSignedBeaconBlockSerialized", () => {
-  for (const fork of [ForkName.gloas, ForkName.heze] as const) {
+  for (const fork of [ForkName.gloas, ForkName.pq, ForkName.heze] as const) {
     it(`extracts parent block hash from a ${fork} signed beacon block`, () => {
       const signedBeaconBlockType = sszTypesFor(fork).SignedBeaconBlock;
       const signedBeaconBlock = signedBeaconBlockType.defaultValue();
@@ -389,6 +398,7 @@ describe("getParentBlockHashFromGloasSignedBeaconBlockSerialized", () => {
   it("returns null for invalid data", () => {
     for (const [fork, sizes] of [
       [ForkName.gloas, [0, 200, 571]],
+      [ForkName.pq, [0, 200, 3643]],
       [ForkName.heze, [0, 200, 495]],
     ] as const) {
       for (const size of sizes) {
@@ -580,16 +590,19 @@ describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {
     {slot: 4_294_967_295, blockRoot: "0x" + "ff".repeat(32)}, // max uint32
   ];
 
-  for (const {slot, blockRoot} of testCases) {
-    it(`slot=${slot}`, () => {
-      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      envelope.message.payload.slotNumber = slot;
-      envelope.message.beaconBlockRoot = fromHex(blockRoot);
-      const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+  for (const fork of [ForkName.gloas, ForkName.pq] as const) {
+    for (const {slot, blockRoot} of testCases) {
+      it(`${fork} slot=${slot}`, () => {
+        const type = ssz[fork].SignedExecutionPayloadEnvelope as typeof ssz.gloas.SignedExecutionPayloadEnvelope;
+        const envelope = type.defaultValue();
+        envelope.message.payload.slotNumber = slot;
+        envelope.message.beaconBlockRoot = fromHex(blockRoot);
+        const bytes = type.serialize(envelope);
 
-      expect(getSlotFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(slot);
-      expect(getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(blockRoot);
-    });
+        expect(getSlotFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(slot);
+        expect(getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(blockRoot);
+      });
+    }
   }
 
   it("getSlotFromExecutionPayloadEnvelopeSerialized - invalid data", () => {

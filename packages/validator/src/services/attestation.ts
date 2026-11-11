@@ -1,7 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
-import {IClock, computeEpochAtSlot} from "@lodestar/state-transition";
+import {IClock, computeEpochAtSlot, isPqAggregator} from "@lodestar/state-transition";
 import {SignedAggregateAndProof, SingleAttestation, Slot, phase0, ssz} from "@lodestar/types";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
@@ -212,6 +212,21 @@ export class AttestationService {
     duties: AttDutyAndProof[]
   ): Promise<void> {
     const logCtx = {slot: attestation.slot, index: committeeIndex};
+
+    if (fork === ForkName.pq) {
+      // Selection mixes in the head state's finalized root, as the beacon node checks it
+      const {finalized} = (await this.api.beacon.getStateFinalityCheckpoints({stateId: "head"})).value();
+      duties = duties.filter(
+        ({duty, selectionProof}) =>
+          selectionProof !== null &&
+          isPqAggregator(
+            duty.committeeLength,
+            duty.validatorIndex,
+            ssz.pq.VRFProof.deserialize(selectionProof),
+            finalized.root
+          )
+      );
+    }
 
     // No validator is aggregator, skip
     if (duties.every(({selectionProof}) => selectionProof === null)) {

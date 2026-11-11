@@ -1,14 +1,17 @@
 import {BeaconConfig} from "@lodestar/config";
 import {XMSS_SIGNED_SIZE} from "@lodestar/native/leanvm";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
-import {ForkBls, ForkName, XMSS_SIGNATURE_SIZE} from "@lodestar/params";
+import {ForkBls, ForkName, LEAF_OFFSET_BEACON_PROPOSER, XMSS_SIGNATURE_SIZE} from "@lodestar/params";
 import {
+  ISignatureSet,
+  SignatureSetType,
+  computeXmssLeafIndex,
   getAttestationClaims,
   getAttestationDataSigningRoot,
   getAttesterSlashingSignatureSets,
   getIndexedAttestationProofSet,
 } from "@lodestar/state-transition";
-import {AttesterSlashing, RootHex, SingleAttestation, Slot, ValidatorIndex, pq} from "@lodestar/types";
+import {AttesterSlashing, RootHex, SingleAttestation, Slot, ValidatorIndex, phase0, pq} from "@lodestar/types";
 import {IBlsVerifier} from "../bls/index.js";
 import {VerifySignatureOpts} from "../bls/interface.js";
 import {PqAttestationPool} from "../opPools/pqAttestationPool.js";
@@ -23,6 +26,42 @@ export * from "./verifier.js";
  */
 export function getXmssPubkey(index: ValidatorIndex): pq.XMSSPubkey {
   return pubkeyCache.getPubkeyBytesOrThrow(index).subarray(16);
+}
+
+/**
+ * Verifies signatures that before pq were BLS and from pq are leanXMSS, each at the leaf of
+ * `leafIndices` that the spec assigns its message.
+ */
+export async function verifySignatureSetsAtLeaves(
+  verifiers: {bls: IBlsVerifier; pq: IPqVerifier},
+  fork: ForkName,
+  sets: ISignatureSet[],
+  leafIndices: number[],
+  opts?: VerifySignatureOpts
+): Promise<boolean> {
+  if (fork !== ForkName.pq) {
+    return verifiers.bls.verifySignatureSets(sets, opts);
+  }
+  return verifiers.pq.verifySignatureSets(
+    sets.map((set, i) => {
+      if (set.type === SignatureSetType.aggregate) {
+        throw Error("pq has no aggregate signatures");
+      }
+      return {
+        pubkey: set.type === SignatureSetType.indexed ? getXmssPubkey(set.index) : set.pubkey,
+        leafIndex: leafIndices[i],
+        signingRoot: set.signingRoot,
+        signature: set.signature,
+      };
+    })
+  );
+}
+
+/** The leaves at which the two headers of a proposer slashing were signed */
+export function getProposerSlashingLeafIndices(proposerSlashing: phase0.ProposerSlashing): number[] {
+  return [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].map((signedHeader) =>
+    computeXmssLeafIndex(Number(signedHeader.message.slot), LEAF_OFFSET_BEACON_PROPOSER)
+  );
 }
 
 /** From pq a single attestation carries a leanXMSS signature */

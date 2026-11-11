@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {GENESIS_SLOT} from "@lodestar/params";
-import {IBeaconStateView, IBeaconStateViewGloas} from "@lodestar/state-transition";
+import {IBeaconStateView, IBeaconStateViewGloas, toApiPubkey} from "@lodestar/state-transition";
 import {
   BLSPubkey,
   BuilderIndex,
@@ -110,7 +110,7 @@ export function toValidatorResponse(
     index,
     status: getValidatorStatus(validator, currentEpoch),
     balance,
-    validator,
+    validator: {...validator, pubkey: toApiPubkey(validator.pubkey)},
   };
 }
 

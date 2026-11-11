@@ -1,10 +1,18 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {ForkName, MIN_SEED_LOOKAHEAD, isForkPostBellatrix, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
+import {
+  ForkName,
+  LEAF_OFFSET_BEACON_PROPOSER,
+  MIN_SEED_LOOKAHEAD,
+  isForkPostBellatrix,
+  isForkPostDeneb,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
+  computeXmssLeafIndex,
   getBlockProposerSignatureSet,
   isExecutionBlockBodyType,
   isStatePostBellatrix,
@@ -14,6 +22,7 @@ import {RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock, ssz} from 
 import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
+import {verifySignatureSetsAtLeaves} from "../pq/index.js";
 import {RegenCaller} from "../regen/index.js";
 
 export type GossipBlockValidationResult = {
@@ -323,7 +332,15 @@ export async function verifyBlockProposerSignature(
 
   const signatureSet = getBlockProposerSignatureSet(chain.config, signedBlock);
   // Don't batch so verification is not delayed
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: opts.verifyOnMainThread ?? true}))) {
+  if (
+    !(await verifySignatureSetsAtLeaves(
+      chain,
+      chain.config.getForkName(blockSlot),
+      [signatureSet],
+      [computeXmssLeafIndex(blockSlot, LEAF_OFFSET_BEACON_PROPOSER)],
+      {verifyOnMainThread: opts.verifyOnMainThread ?? true}
+    ))
+  ) {
     throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
       slot: blockSlot,

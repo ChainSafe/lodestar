@@ -500,11 +500,12 @@ export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
  *   state_root: Root
  *   body: BeaconBlockBody
  * ```
- * From byte: `4 + 96 + 8 + 8 = 116`
- * To byte: `116 + 32 = 148`
+ * The message starts where its offset, the first four bytes, says: past the signature, whose
+ * size depends on the fork. The parent root is 16 bytes into the message.
  */
 export function getParentRootFromSignedBlock(bytes: Uint8Array): Uint8Array {
-  return bytes.slice(116, 148);
+  const parentRootStart = new DataView(bytes.buffer, bytes.byteOffset, 4).getUint32(0, true) + 8 + 8;
+  return bytes.slice(parentRootStart, parentRootStart + 32);
 }
 
 /**

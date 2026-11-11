@@ -15,6 +15,7 @@ export * from "./epoch.js";
 export * from "./epochShuffling.js";
 export * from "./execution.js";
 export * from "./finality.js";
+export * from "./fulu.js";
 export * from "./genesis.js";
 export * from "./gloas.js";
 export * from "./inclusionListCommittee.js";

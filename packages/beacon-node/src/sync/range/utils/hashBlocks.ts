@@ -1,8 +1,9 @@
 import {digest} from "@chainsafe/as-sha256";
-import {RootHex, Slot, ssz} from "@lodestar/types";
+import {RootHex, Slot} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "../../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {signedEnvelopeTypeOf} from "../../../util/pq.js";
 
 const ROOT_SIZE = 32;
 const SIGNATURE_SIZE = 96;
@@ -45,18 +46,28 @@ export function hashBlocks(blocks: IBlockInput[], payloadEnvelopes: Map<Slot, Pa
   for (const block of blocks) {
     buf.set(fromHex(block.blockRootHex), offset);
     offset += ROOT_SIZE;
-    buf.set(block.getBlock().signature, offset);
+    setSignature(buf, block.getBlock().signature, offset);
     offset += SIGNATURE_SIZE;
   }
 
   for (const [, envelope] of envelopes) {
     const signedEnvelope = envelope.getPayloadEnvelope();
     // envelope's root is cached thanks to cachePermanentRootStruct, so this avoids re-hashing
-    buf.set(ssz.gloas.ExecutionPayloadEnvelope.hashTreeRoot(signedEnvelope.message), offset);
+    buf.set(signedEnvelopeTypeOf(signedEnvelope).fields.message.hashTreeRoot(signedEnvelope.message), offset);
     offset += ROOT_SIZE;
-    buf.set(signedEnvelope.signature, offset);
+    setSignature(buf, signedEnvelope.signature, offset);
     offset += SIGNATURE_SIZE;
   }
 
   return toRootHex(digest(buf));
+}
+
+/** A leanXMSS signature is longer than an entry's signature field, so its digest stands for it */
+function setSignature(buf: Buffer, signature: Uint8Array, offset: number): void {
+  if (signature.length === SIGNATURE_SIZE) {
+    buf.set(signature, offset);
+  } else {
+    buf.set(digest(signature), offset);
+    buf.fill(0, offset + ROOT_SIZE, offset + SIGNATURE_SIZE);
+  }
 }

@@ -5,6 +5,10 @@ import {ISlashingProtection} from "../../src/index.js";
  * Mock slashing protection that always accepts all messages
  */
 export class SlashingProtectionMock implements ISlashingProtection {
+  async checkAndInsertXmssLeaf(): Promise<void> {
+    //
+  }
+
   async checkAndInsertBlockProposal(): Promise<void> {
     //
   }

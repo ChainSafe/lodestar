@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, ForkSeq, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {
   IClock,
   computeEpochAtSlot,
@@ -267,6 +267,10 @@ export class SyncCommitteeDutiesService {
   private async pollSyncCommitteesForEpoch(epoch: Epoch, indexArr: ValidatorIndex[]): Promise<void> {
     // Don't fetch duties for periods before genesis. However, should fetch period 0 duties at period -1
     if (epoch < 0) {
+      return;
+    }
+    // pq has no sync committees
+    if (this.config.getForkSeqAtEpoch(epoch) === ForkSeq.pq) {
       return;
     }
 

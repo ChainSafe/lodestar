@@ -24,6 +24,7 @@ import {
 import {
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
+  IBeaconStateViewAltair,
   type IBeaconStateViewBellatrix,
   computeEpochAtSlot,
   computeTimeAtSlot,
@@ -58,6 +59,7 @@ import {
   fulu,
   gloas,
   heze,
+  pq,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -1120,6 +1122,8 @@ export function getPooledProposerPreferences(
  * reach fork choice from gossip only. The common body builder leaves the first two behind.
  */
 function toPqBody(body: Partial<gloas.BeaconBlockBody>): void {
+  // The validator client sends its VRF proof for the slot where a RANDAO reveal went
+  (body as Partial<pq.BeaconBlockBody>).randaoReveal = ssz.pq.VRFProof.deserialize(body.randaoReveal as Uint8Array);
   delete body.syncAggregate;
   delete body.blsToExecutionChanges;
   delete body.payloadAttestations;
@@ -1159,17 +1163,31 @@ export async function produceCommonBlockBody<T extends BlockType>(
   let attestations: Attestation[];
   if (fork === ForkName.pq) {
     const blockEpoch = computeEpochAtSlot(slot);
-    const packed = await this.pqAttestationPool.getAttestationsForBlock(slot, (data) => {
-      const justified =
-        data.target.epoch === blockEpoch
-          ? currentState.currentJustifiedCheckpoint
-          : data.target.epoch === blockEpoch - 1
-            ? currentState.previousJustifiedCheckpoint
-            : null;
-      return (
-        justified !== null && data.source.epoch === justified.epoch && byteArrayEquals(data.source.root, justified.root)
-      );
-    });
+    const packed = await this.pqAttestationPool.getAttestationsForBlock(
+      slot,
+      (data) => {
+        const justified =
+          data.target.epoch === blockEpoch
+            ? currentState.currentJustifiedCheckpoint
+            : data.target.epoch === blockEpoch - 1
+              ? currentState.previousJustifiedCheckpoint
+              : null;
+        return (
+          justified !== null &&
+          data.source.epoch === justified.epoch &&
+          byteArrayEquals(data.source.root, justified.root)
+        );
+      },
+      (data, committeeIndex) => {
+        const committee = currentState.getBeaconCommittee(data.slot, committeeIndex);
+        const stateAltair = currentState as IBeaconStateViewAltair;
+        const participation =
+          data.target.epoch === blockEpoch
+            ? stateAltair.currentEpochParticipation
+            : stateAltair.previousEpochParticipation;
+        return (position) => participation[committee[position]] !== 0;
+      }
+    );
     attestations = packed.attestations;
     proof = packed.proof;
   } else {
@@ -1187,7 +1205,10 @@ export async function produceCommonBlockBody<T extends BlockType>(
   const endSyncAggregate = stepsMetrics?.startTimer();
   const parentBlockRoot = fromHex(parentBlock.blockRoot);
   const previousSlot = slot - 1;
-  const syncAggregate = this.syncContributionAndProofPool.getAggregate(previousSlot, parentBlockRoot);
+  const syncAggregate =
+    fork === ForkName.pq
+      ? ssz.altair.SyncAggregate.defaultValue()
+      : this.syncContributionAndProofPool.getAggregate(previousSlot, parentBlockRoot);
   this.metrics?.production.producedSyncAggregateParticipants.observe(
     syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
   );

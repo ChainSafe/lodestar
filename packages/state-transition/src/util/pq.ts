@@ -1,7 +1,9 @@
 import {digest} from "@chainsafe/as-sha256";
+import {ChainForkConfig} from "@lodestar/config";
 import {verifyXmssSignature} from "@lodestar/native/leanvm";
 import {
   DOMAIN_SELECTION_PROOF,
+  ForkName,
   TARGET_AGGREGATORS_PER_COMMITTEE_PQ,
   VRF_TREE_DEPTH,
   XMSS_ATTESTATION_LEAVES,
@@ -9,7 +11,7 @@ import {
   XMSS_RESERVED_LEAVES,
   XMSS_SIGNATURE_SIZE,
 } from "@lodestar/params";
-import {Epoch, Slot, pq} from "@lodestar/types";
+import {Epoch, Slot, pq, ssz} from "@lodestar/types";
 
 const XMSS_REQUEST_PREFIX_SIZE = 16;
 const LEGACY_XMSS_PUBKEY_DOMAIN = 0x00;
@@ -58,6 +60,14 @@ export function toRequestPubkey(pubkey: pq.XMSSPubkey): Uint8Array {
   const out = new Uint8Array(XMSS_REQUEST_PREFIX_SIZE + pubkey.length);
   out.set(pubkey, XMSS_REQUEST_PREFIX_SIZE);
   return out;
+}
+
+/**
+ * How the beacon API names a validator's public key. Its public key fields are 48 bytes, so a
+ * leanXMSS public key goes in the form requests use.
+ */
+export function toApiPubkey(pubkey: Uint8Array): Uint8Array {
+  return pubkey.length === XMSS_REQUEST_PREFIX_SIZE + 32 ? pubkey : toRequestPubkey(pubkey);
 }
 
 /** The leanXMSS public key a request's `pubkey` names, without regard for legacy requests */
@@ -122,4 +132,21 @@ export function isPqAggregator(
   input.set(finalizedRoot, 44);
   const selection = digest(input);
   return new DataView(selection.buffer, selection.byteOffset, 8).getBigUint64(0, true) % BigInt(modulo) === 0n;
+}
+
+type GloasMessageTypes = Pick<
+  typeof ssz.gloas,
+  | "ExecutionPayloadEnvelope"
+  | "SignedExecutionPayloadEnvelope"
+  | "ExecutionRequests"
+  | "SignedProposerPreferences"
+  | "PayloadAttestationMessage"
+>;
+
+/**
+ * The types of the messages Gloas introduced, at `slot`. Each had one type until pq, whose own
+ * differ by their signature and, for an envelope, by its execution requests.
+ */
+export function getGloasMessageTypes(config: ChainForkConfig, slot: Slot): GloasMessageTypes {
+  return (config.getForkName(slot) === ForkName.pq ? ssz.pq : ssz.gloas) as GloasMessageTypes;
 }

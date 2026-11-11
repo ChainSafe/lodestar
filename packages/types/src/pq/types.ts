@@ -29,6 +29,7 @@ export type ExecutionRequests = ValueOf<typeof ssz.ExecutionRequests>;
 export type NewPayloadRequest = ValueOf<typeof ssz.NewPayloadRequest>;
 export type ExecutionPayloadEnvelope = ValueOf<typeof ssz.ExecutionPayloadEnvelope>;
 export type SignedExecutionPayloadEnvelope = ValueOf<typeof ssz.SignedExecutionPayloadEnvelope>;
+export type SignedExecutionPayloadHeaderEnvelope = ValueOf<typeof ssz.SignedExecutionPayloadHeaderEnvelope>;
 export type SignedExecutionPayloadEnvelopeContents = ValueOf<typeof ssz.SignedExecutionPayloadEnvelopeContents>;
 export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;
 export type BeaconBlock = ValueOf<typeof ssz.BeaconBlock>;

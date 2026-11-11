@@ -124,11 +124,14 @@ export class PqAttestationPool {
    * The attestations for a block at `blockSlot` and the proof of all their signatures.
    *
    * `isIncludable` says whether the state accepts an attestation's data: its target epoch and
-   * source checkpoint.
+   * source checkpoint. `isOnChain` says, for a committee of an attestation's data, whether the
+   * attester at a position in it already has an attestation for the target epoch in the state:
+   * a committee that adds no attester is left out, as proving it again buys nothing.
    */
   async getAttestationsForBlock(
     blockSlot: Slot,
-    isIncludable: (data: phase0.AttestationData) => boolean
+    isIncludable: (data: phase0.AttestationData) => boolean,
+    isOnChain: (data: phase0.AttestationData, committeeIndex: CommitteeIndex) => (position: number) => boolean
   ): Promise<PqBlockAttestations> {
     const attestations: pq.Attestation[] = [];
     const children: XmssAggregate[] = [];
@@ -150,17 +153,18 @@ export class PqAttestationPool {
         for (const committeeIndex of Array.from(byCommittee.keys()).sort((a, b) => a - b)) {
           const committee = byCommittee.get(committeeIndex) as CommitteeAttestations;
           const best = bestAggregate(committee);
-          if (best !== null && best.aggregationBits.getTrueBitIndexes().length >= committee.signed.size) {
+          // No aggregate may have reached this node, or none as large as its single attestations
+          const useAggregate =
+            best !== null && best.aggregationBits.getTrueBitIndexes().length >= committee.signed.size;
+          const committeeBitsArr = useAggregate ? best.aggregationBits : signedBits(committee);
+          if (committeeBitsArr.getTrueBitIndexes().every(isOnChain(data, committeeIndex))) continue;
+
+          if (useAggregate) {
             children.push(best.aggregate);
-            bits.push(...best.aggregationBits.toBoolArray());
-          } else if (committee.signed.size > 0) {
-            // No aggregate reached this node, or none as large: prove the single attestations
-            const committeeSigned = Array.from(committee.signed.values());
-            signed.push(...committeeSigned);
-            bits.push(...signedBits(committee).toBoolArray());
           } else {
-            continue;
+            signed.push(...committee.signed.values());
           }
+          bits.push(...committeeBitsArr.toBoolArray());
           committeeBits.set(committeeIndex, true);
         }
         if (bits.length === 0) continue;

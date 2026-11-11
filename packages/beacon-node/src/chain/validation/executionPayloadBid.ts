@@ -1,7 +1,8 @@
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {PAYLOAD_BUILDER_VERSION, isForkPostHeze} from "@lodestar/params";
+import {LEAF_OFFSET_EXECUTION_PAYLOAD_BID, PAYLOAD_BUILDER_VERSION, isForkPostHeze} from "@lodestar/params";
 import {
   computeEpochAtSlot,
+  computeXmssLeafIndex,
   createSingleSignatureSetFromComponents,
   getExecutionPayloadBidSigningRoot,
   isActiveBuilder,
@@ -14,6 +15,7 @@ import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
+import {verifySignatureSetsAtLeaves} from "../pq/index.js";
 import {RegenCaller} from "../regen/index.js";
 
 /**
@@ -418,7 +420,14 @@ async function validateExecutionPayloadBid(
     signedExecutionPayloadBid.signature
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+  if (
+    !(await verifySignatureSetsAtLeaves(
+      chain,
+      chain.config.getForkName(bid.slot),
+      [signatureSet],
+      [computeXmssLeafIndex(bid.slot, LEAF_OFFSET_EXECUTION_PAYLOAD_BID)]
+    ))
+  ) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE,
       builderIndex: bid.builderIndex,

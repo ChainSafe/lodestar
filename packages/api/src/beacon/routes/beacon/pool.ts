@@ -76,6 +76,13 @@ type SignedBLSToExecutionChangeList = ValueOf<typeof SignedBLSToExecutionChangeL
 type SyncCommitteeMessageList = ValueOf<typeof SyncCommitteeMessageListType>;
 type PayloadAttestationList = ValueOf<typeof PayloadAttestationListType>;
 type PayloadAttestationMessageList = ValueOf<typeof PayloadAttestationMessageListType>;
+const PayloadAttestationMessageListPqType = ArrayOf(ssz.pq.PayloadAttestationMessage, PTC_SIZE);
+
+function payloadAttestationMessageListType(fork: ForkName): Type<PayloadAttestationMessageList> {
+  return (
+    fork === ForkName.pq ? PayloadAttestationMessageListPqType : PayloadAttestationMessageListType
+  ) as Type<PayloadAttestationMessageList>;
+}
 
 export type Endpoints = {
   /**
@@ -452,21 +459,27 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/pool/payload_attestations",
       method: "POST",
       req: {
-        writeReqJson: ({payloadAttestationMessages}) => ({
-          body: PayloadAttestationMessageListType.toJson(payloadAttestationMessages),
-          headers: {[MetaHeader.Version]: ForkName.gloas},
-        }),
-        parseReqJson: ({body, headers}) => {
-          toForkName(fromHeaders(headers, MetaHeader.Version));
-          return {payloadAttestationMessages: PayloadAttestationMessageListType.fromJson(body)};
+        writeReqJson: ({payloadAttestationMessages}) => {
+          const fork = config.getForkName(payloadAttestationMessages[0]?.data.slot ?? 0);
+          return {
+            body: payloadAttestationMessageListType(fork).toJson(payloadAttestationMessages),
+            headers: {[MetaHeader.Version]: fork},
+          };
         },
-        writeReqSsz: ({payloadAttestationMessages}) => ({
-          body: PayloadAttestationMessageListType.serialize(payloadAttestationMessages),
-          headers: {[MetaHeader.Version]: ForkName.gloas},
-        }),
+        parseReqJson: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {payloadAttestationMessages: payloadAttestationMessageListType(fork).fromJson(body)};
+        },
+        writeReqSsz: ({payloadAttestationMessages}) => {
+          const fork = config.getForkName(payloadAttestationMessages[0]?.data.slot ?? 0);
+          return {
+            body: payloadAttestationMessageListType(fork).serialize(payloadAttestationMessages),
+            headers: {[MetaHeader.Version]: fork},
+          };
+        },
         parseReqSsz: ({body, headers}) => {
-          toForkName(fromHeaders(headers, MetaHeader.Version));
-          return {payloadAttestationMessages: PayloadAttestationMessageListType.deserialize(body)};
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {payloadAttestationMessages: payloadAttestationMessageListType(fork).deserialize(body)};
         },
         schema: {
           body: Schema.ObjectArray,

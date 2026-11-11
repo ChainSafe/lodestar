@@ -29,6 +29,8 @@ import {
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
+  getGloasMessageTypes,
+  toRequestPubkey,
 } from "@lodestar/state-transition";
 import {
   AggregateAndProof,
@@ -730,7 +732,11 @@ export class ValidatorStore {
 
     const signingSlot = envelope.payload.slotNumber;
     const domain = this.config.getDomain(signingSlot, DOMAIN_BEACON_BUILDER);
-    const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
+    const signingRoot = computeSigningRoot(
+      getGloasMessageTypes(this.config, envelope.payload.slotNumber).ExecutionPayloadEnvelope,
+      envelope,
+      domain
+    );
 
     logger?.debug("Signing execution payload envelope", {
       slot: signingSlot,
@@ -1218,10 +1224,13 @@ export class ValidatorStore {
       case SignerType.Xmss: {
         const timer = this.metrics?.localSignTime.startTimer();
         const target = getXmssSigningTarget(signableMessage, signingSlot);
-        const signature =
-          "vrfSlot" in target
-            ? signer.signer.vrfProof(target.vrfSlot)
-            : await signer.signer.sign(signingRoot, target.leafIndex);
+        let signature: Uint8Array;
+        if ("vrfSlot" in target) {
+          signature = signer.signer.vrfProof(target.vrfSlot);
+        } else {
+          await this.slashingProtection.checkAndInsertXmssLeaf(fromHex(pubkeyHex), target.leafIndex, signingRoot);
+          signature = await signer.signer.sign(signingRoot, target.leafIndex);
+        }
         timer?.();
         return signature;
       }
@@ -1303,7 +1312,8 @@ function getSignerPubkeyHex(signer: Signer): PubkeyHex {
       return toPubkeyHex(signer.secretKey.toPublicKey().toBytes());
 
     case SignerType.Xmss:
-      return toPubkeyHex(signer.signer.publicKey);
+      // The beacon API names a pq validator by its public key in the form requests use
+      return toPubkeyHex(toRequestPubkey(signer.signer.publicKey));
 
     case SignerType.Remote:
       if (!isValidatePubkeyHex(signer.pubkey)) {

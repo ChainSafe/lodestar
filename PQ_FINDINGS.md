@@ -17,6 +17,11 @@ Measurements are from one machine, an AMD Threadripper 1950X (16 cores, 32 threa
 9. **Linear scans in the hot path.** `get_stored_preregistration_index` scans up to `PREREGISTRATIONS_LIMIT` (524,288) records for every deposit request, of which a payload holds up to 8,192, and `is_pending_validator` scans every pending deposit for every preregistration request. A client needs an index the spec's state does not provide.
 10. **Three of the branch's own tests fail.** `make test fork=pq preset=minimal` ends with 3 failures, all in `phase0/fast_confirmation/test_is_one_confirmed.py`.
 11. **No real-signature vectors.** The generated vectors run with XMSS switched off: stub signatures, every proof accepted. They exercise the state logic and nothing of the cryptography, and there are no SSZ static vectors for the new containers. Lodestar has no such switch, so it runs them with signature checks skipped, as a caller that verified them beforehand would. Five vectors cannot run that way: they store a preregistration, whose signature block processing must always check because its validity decides the post-state.
+12. **Aggregator selection cannot be known ahead.** `is_aggregator` mixes in the finalized root of the head state, so a validator learns whether it aggregates only at the slot. It cannot tell the node at duty time to keep its subnet for aggregation: the validator client here marks every duty as a possible aggregator and decides at the aggregation deadline. An aggregator and a verifier whose head states finalize at different moments disagree, and the gossip rule is REJECT, which penalizes an honest peer.
+13. **There is no genesis for a PQ chain.** `upgrade_to_pq` and the test helper are the only ways to a PQ state. A network that starts at PQ needs a specified genesis: validators with leanXMSS keys and VRF roots, the previous fork version, and the genesis bid.
+14. **The beacon API has no PQ forms.** Its public key fields are 48 bytes, its validator has no `vrf_root`, and `randao_reveal` is a 96-byte signature. Here the API names a PQ validator by the 48-byte form requests use (16 zero bytes, then the key), drops `vrf_root`, and carries the 1,024-byte VRF proof where the RANDAO reveal and the selection proof went. Proposer preferences and payload attestation messages change size with their signature and need a version to decode.
+15. **The engine API has no encoding for preregistration requests.** The spec gives `PREREGISTRATION_REQUEST_TYPE`, and the requests list of `engine_newPayload` and `engine_getPayload` is the natural place. Here it is request type `0x07` after the builder exit requests.
+16. **A proposer proves before it proposes.** The block's proof covers every attestation in it, so the proposer merges the proofs of its picks, or proves raw signatures no aggregate covered, between the previous slot's attestations and its own deadline. Nothing in the timing of a slot allows for it.
 
 ## Implementation difficulties
 
@@ -25,6 +30,10 @@ Measurements are from one machine, an AMD Threadripper 1950X (16 cores, 32 threa
 3. **A signature only the state transition can check.** A preregistration with an invalid signature is ignored, not rejected, so its check cannot move to a verifier outside the state transition: the post-state depends on it. Every other PQ signature and the attestation proof can be verified beforehand and skipped during block processing.
 4. **leanVM allocates through its own global allocator.** The Rust library is linked into every binary that imports the state transition, and its allocator symbols come from the `leanvm` Zig module, which must therefore be analyzed in each of them.
 5. **One aggregation at a time.** leanVM must not run two `aggregate` calls at once in a process, and signing shares its thread pool. A node that aggregates for several committees and then merges as proposer queues behind itself.
+6. **Fixed offsets into serialized messages.** Gossip and the database read a slot or a root out of serialized bytes at offsets that assume a 96-byte signature: signed blocks, envelopes, bids, the envelope archive. Each now reads the message's offset, which sits past the signature and so says how long it is.
+7. **Types that were one per fork family.** Envelopes, proposer preferences and payload attestation messages had one SSZ type from Gloas on. PQ's differ by the signature, and the envelope by its execution requests too, so every use needs the slot or the fork: gossip topics, req/resp, the database, the API.
+8. **Leaf reuse outlives a restart.** What each leaf signed is kept in the validator database beside slashing protection. Attestation and block leaves are already covered by slashing protection, which refuses a second vote for a target epoch and a second block for a slot. Aggregates, payload attestations, envelopes and proposer preferences are not.
+9. **Payload attestations have no pool.** A PQ block carries none, so they reach fork choice from gossip and the BLS aggregation pool is skipped.
 
 ## Measurements
 
@@ -51,3 +60,15 @@ Aggregation at `log_inv_rate = 2`:
 Merging two aggregates into one takes about 0.65 s whatever their size, more than proving 64 signatures from scratch.
 
 Memory: about 2 MiB per loaded key, and 2 MiB more once it has signed. A VRF tree keeps 10 MiB, of which 2 MiB is needed between proofs.
+
+On the devnet below (8 validators, one per committee, minimal preset, node and validator client on this machine) a block was published a median of 0.58 s into its slot and at most 1.6 s, over 68 blocks. That includes proving the block's attestations.
+
+## Running a devnet
+
+```sh
+pnpm build
+./lodestar dev --genesisValidators 8 --startValidators 0..7 --reset \
+  --params.GLOAS_FORK_EPOCH 0 --params.PQ_FORK_EPOCH 0
+```
+
+`dev` uses the minimal preset and a mock execution engine. For more nodes give each the same `--genesisValidators` and `--genesisTime`, its own `--startValidators` range, `--dataDir` and ports, and the first node's ENR as `--bootnodes` with `--network.connectToDiscv5Bootnodes`, as `docs/pages/contribution/advanced-topics/setting-up-a-testnet.md` describes. With `PQ_FORK_EPOCH` 0 it builds a PQ genesis state (`initDevStatePq`) whose validators are the interop leanXMSS keys the validator client derives from each index. Interop VRF trees hold secrets for the first 2^20 slots only. Every signature and every proof is real: there is no switch to turn verification off.

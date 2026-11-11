@@ -14,6 +14,11 @@ export interface ISlashingProtection {
   checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void>;
 
   /**
+   * Check that a leanXMSS key signs nothing else at a leaf, and if so, record what it signs there
+   */
+  checkAndInsertXmssLeaf(pubKey: BLSPubkey, leafIndex: number, signingRoot: Root): Promise<void>;
+
+  /**
    * Check whether a validator as identified by `pubKey` has attested in the specified `epoch`
    */
   hasAttestedInEpoch(pubKey: BLSPubkey, epoch: Epoch): Promise<boolean>;

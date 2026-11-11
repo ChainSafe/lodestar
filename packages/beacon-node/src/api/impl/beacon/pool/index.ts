@@ -2,13 +2,14 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {
   ForkBls,
+  ForkName,
   ForkPostElectra,
   ForkPreElectra,
   SYNC_COMMITTEE_SUBNET_SIZE,
   isForkPostElectra,
   isForkPostGloas,
 } from "@lodestar/params";
-import {isStatePostAltair} from "@lodestar/state-transition";
+import {getGloasMessageTypes, isStatePostAltair} from "@lodestar/state-transition";
 import {AttesterSlashing, Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
@@ -269,12 +270,15 @@ export function getBeaconPoolApi({
             const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
             metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
 
-            const insertOutcome = chain.payloadAttestationPool.add(
-              payloadAttestationMessage,
-              attDataRootHex,
-              validatorCommitteeIndices
-            );
-            metrics?.opPool.payloadAttestationPool.apiInsertOutcome.inc({insertOutcome});
+            // A pq block carries no payload attestations: they reach fork choice only
+            if (chain.config.getForkName(slot) !== ForkName.pq) {
+              const insertOutcome = chain.payloadAttestationPool.add(
+                payloadAttestationMessage,
+                attDataRootHex,
+                validatorCommitteeIndices
+              );
+              metrics?.opPool.payloadAttestationPool.apiInsertOutcome.inc({insertOutcome});
+            }
 
             chain.forkChoice.notifyPtcMessages(
               toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
@@ -309,7 +313,7 @@ export function getBeaconPoolApi({
             logger.verbose(`Error on submitPayloadAttestationMessages [${i}]`, logCtx, e as Error);
             if (e instanceof PayloadAttestationError && e.action === GossipAction.REJECT) {
               chain.persistInvalidSszValue(
-                ssz.gloas.PayloadAttestationMessage,
+                getGloasMessageTypes(chain.config, payloadAttestationMessage.data.slot).PayloadAttestationMessage,
                 payloadAttestationMessage,
                 "api_reject"
               );

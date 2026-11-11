@@ -21,6 +21,7 @@ import {
 import {ISlashingProtection} from "./interface.js";
 import {DistanceStoreRepository, MinMaxSurround} from "./minMaxSurround/index.js";
 import {SlashingProtectionAttestation, SlashingProtectionBlock} from "./types.js";
+import {XmssLeafService} from "./xmssLeaf/index.js";
 
 export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestation/index.js";
 export {InvalidBlockError, InvalidBlockErrorCode} from "./block/index.js";
@@ -34,6 +35,7 @@ export type {ISlashingProtection, InterchangeFormatVersion, SlashingProtectionAt
 export class SlashingProtection implements ISlashingProtection {
   private blockService: SlashingProtectionBlockService;
   private attestationService: SlashingProtectionAttestationService;
+  private xmssLeafService: XmssLeafService;
   private readonly importing = new Map<PubkeyHex, Promise<void>>();
   private lastImport: Promise<void> | null = null;
 
@@ -50,6 +52,7 @@ export class SlashingProtection implements ISlashingProtection {
       attestationLowerBoundRepository,
       minMaxSurround
     );
+    this.xmssLeafService = new XmssLeafService(db);
   }
 
   async checkAndInsertBlockProposal(pubKey: BLSPubkey, block: SlashingProtectionBlock): Promise<void> {
@@ -74,6 +77,10 @@ export class SlashingProtection implements ISlashingProtection {
       }
     }
     await this.attestationService.checkAndInsertAttestation(pubKey, attestation);
+  }
+
+  async checkAndInsertXmssLeaf(pubKey: BLSPubkey, leafIndex: number, signingRoot: Root): Promise<void> {
+    await this.xmssLeafService.checkAndInsert(pubKey, leafIndex, signingRoot);
   }
 
   async hasAttestedInEpoch(pubKey: BLSPubkey, epoch: Epoch): Promise<boolean> {

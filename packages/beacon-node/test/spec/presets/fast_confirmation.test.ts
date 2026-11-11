@@ -455,7 +455,7 @@ const fastConfirmationTest =
                     blockState as IBeaconStateViewGloas,
                     envelope,
                     blockState.latestBlockHeader.proposerIndex,
-                    chain.bls
+                    chain
                   );
                   if (!sigValid) throw Error("Invalid execution payload envelope signature");
                 }

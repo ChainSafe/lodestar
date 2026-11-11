@@ -13,7 +13,6 @@ import {
 } from "@lodestar/params";
 import {computeXmssAttestationLeafIndex, computeXmssLeafIndex} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
 import {SignableMessage, SignableMessageType} from "../util/externalSignerClient.js";
 
 /** What a pq validator answers a signing request with: a leaf to sign at, or its VRF proof for a slot */
@@ -63,12 +62,6 @@ export function getXmssSigningTarget(signableMessage: SignableMessage, signingSl
  * each range, each stay in their tree.
  */
 export class XmssSigner {
-  /**
-   * The message each leaf signed. Signing a second message at a leaf exposes the leaf's one-time
-   * key, so it is refused. Held in memory only: a restart forgets it.
-   */
-  private readonly signedAtLeaf = new Map<number, string>();
-
   private constructor(
     readonly publicKey: Uint8Array,
     private readonly attestationKey: XmssSecretKey,
@@ -98,14 +91,11 @@ export class XmssSigner {
     return this.vrfTree.proof(slot);
   }
 
+  /**
+   * A leaf must sign one message only: a second exposes its one-time key. The caller keeps the
+   * record of what each leaf signed.
+   */
   async sign(signingRoot: Uint8Array, leafIndex: number): Promise<Uint8Array> {
-    const rootHex = toRootHex(signingRoot);
-    const signed = this.signedAtLeaf.get(leafIndex);
-    if (signed !== undefined && signed !== rootHex) {
-      throw Error(`Refusing to sign a second message at leaf ${leafIndex}`);
-    }
-    this.signedAtLeaf.set(leafIndex, rootHex);
-
     const key = leafIndex < XMSS_RESERVED_LEAVES + XMSS_ATTESTATION_LEAVES ? this.attestationKey : this.slotKey;
     return key.sign(signingRoot, leafIndex);
   }

@@ -12,6 +12,8 @@ export enum Bucket {
   slashingProtectionMaxSpanDistance = 24,
   // allForks_pendingBlock = 25, // Root -> SignedBeaconBlock // DEPRECATED on v0.30.0
 
+  xmssLeafSigningRoot = 29, // pubkey + leaf index -> signing root
+
   validator_metaData = 41,
 }
 

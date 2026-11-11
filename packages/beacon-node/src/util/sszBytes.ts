@@ -452,23 +452,20 @@ const SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK = VARIABLE_FIELD_OFFSET + SIGNA
 const PARENT_ROOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + SLOT_SIZE + 8;
 
 export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot | null {
-  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK + SLOT_SIZE) {
+  const offset = signatureSizeDelta(data) + SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK;
+  if (data.length < offset + SLOT_SIZE) {
     return null;
   }
 
-  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK);
+  return getSlotFromOffset(data, offset);
 }
 
 export function getParentRootFromSignedBeaconBlockSerialized(data: Uint8Array): RootHex | null {
-  if (data.length < PARENT_ROOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK + ROOT_SIZE) {
+  const offset = signatureSizeDelta(data) + PARENT_ROOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK;
+  if (data.length < offset + ROOT_SIZE) {
     return null;
   }
-  blockRootBuf.set(
-    data.subarray(
-      PARENT_ROOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK,
-      PARENT_ROOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK + ROOT_SIZE
-    )
-  );
+  blockRootBuf.set(data.subarray(offset, offset + ROOT_SIZE));
   return `0x${blockRootBuf.toString("hex")}`;
 }
 
@@ -501,14 +498,26 @@ const HEZE_SIGNED_BID_OFFSET_POINTER_IN_BODY = GLOAS_SIGNED_BID_OFFSET_POINTER_I
 // Within SignedExecutionPayloadBid, parentBlockHash is at byte 100 (msg_offset:4 + sig:96)
 const PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE; // = 100
 
+// A pq body opens with a VRF proof where the RANDAO reveal was and has no sync aggregate and no
+// BLS to execution changes: randaoReveal + eth1Data(72) + graffiti(32) + five list offsets
+const PQ_SIGNED_BID_OFFSET_POINTER_IN_BODY = (VRF_TREE_DEPTH + 1) * ROOT_SIZE + 72 + 32 + 5 * VARIABLE_FIELD_OFFSET;
+
 // CAUTION: update offsets if BeaconBlockBody fixed fields change after Heze
 export function getParentBlockHashFromGloasSignedBeaconBlockSerialized(
   data: Uint8Array,
   fork: ForkPostGloas
 ): RootHex | null {
+  const isPq = fork === ForkName.pq;
+  // Both the block's and the bid's signatures are longer from pq
+  const signatureDelta = isPq ? XMSS_SIGNATURE_SIZE - SIGNATURE_SIZE : 0;
+  const bodyStart = GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK + signatureDelta;
   const bidOffsetPointer =
-    GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK +
-    (isForkPostHeze(fork) ? HEZE_SIGNED_BID_OFFSET_POINTER_IN_BODY : GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY);
+    bodyStart +
+    (isPq
+      ? PQ_SIGNED_BID_OFFSET_POINTER_IN_BODY
+      : isForkPostHeze(fork)
+        ? HEZE_SIGNED_BID_OFFSET_POINTER_IN_BODY
+        : GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY);
   if (data.length < bidOffsetPointer + VARIABLE_FIELD_OFFSET) {
     return null;
   }
@@ -519,8 +528,7 @@ export function getParentBlockHashFromGloasSignedBeaconBlockSerialized(
       (data[bidOffsetPointer + 3] << 24)) >>>
     0;
 
-  const parentBlockHashStart =
-    GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK + bidOffset + PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID;
+  const parentBlockHashStart = bodyStart + bidOffset + PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID + signatureDelta;
 
   if (data.length < parentBlockHashStart + ROOT_SIZE) {
     return null;
@@ -664,25 +672,36 @@ const ENVELOPE_START_IN_SIGNED =
 const SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
   ENVELOPE_START_IN_SIGNED + EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE + SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD; // 100 + 80 + 532 = 712
 
+/**
+ * A container of a variable-size message then a signature starts with the message's offset, which
+ * is past the signature. That says which scheme signed, and so how far every offset into the
+ * message moves: nothing before pq, and by the size difference of a leanXMSS signature from pq.
+ * Infinite for any other offset, so that no length check passes.
+ */
+function signatureSizeDelta(data: Uint8Array): number {
+  if (data.length < VARIABLE_FIELD_OFFSET) return Number.POSITIVE_INFINITY;
+  const messageOffset = (data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24)) >>> 0;
+  if (messageOffset === VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE) return 0;
+  if (messageOffset === VARIABLE_FIELD_OFFSET + XMSS_SIGNATURE_SIZE) return XMSS_SIGNATURE_SIZE - SIGNATURE_SIZE;
+  return Number.POSITIVE_INFINITY;
+}
+
 export function getSlotFromExecutionPayloadEnvelopeSerialized(data: Uint8Array): Slot | null {
-  if (data.length < SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + SLOT_SIZE) {
+  const offset = signatureSizeDelta(data) + SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE;
+  if (data.length < offset + SLOT_SIZE) {
     return null;
   }
 
-  return getSlotFromOffset(data, SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE);
+  return getSlotFromOffset(data, offset);
 }
 
 export function getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(data: Uint8Array): RootHex | null {
-  if (data.length < BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + ROOT_SIZE) {
+  const offset = signatureSizeDelta(data) + BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE;
+  if (data.length < offset + ROOT_SIZE) {
     return null;
   }
 
-  blockRootBuf.set(
-    data.subarray(
-      BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE,
-      BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + ROOT_SIZE
-    )
-  );
+  blockRootBuf.set(data.subarray(offset, offset + ROOT_SIZE));
   return "0x" + blockRootBuf.toString("hex");
 }
 
@@ -782,35 +801,28 @@ const SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET =
   VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + 32 + 32 + 32 + 32 + 20 + 8 + 8; // 264
 
 export function getSlotFromSignedExecutionPayloadBidSerialized(data: Uint8Array): Slot | null {
-  if (data.length < SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET + SLOT_SIZE) {
+  const offset = signatureSizeDelta(data) + SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET;
+  if (data.length < offset + SLOT_SIZE) {
     return null;
   }
-  return getSlotFromOffset(data, SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET);
+  return getSlotFromOffset(data, offset);
 }
 
 export function getParentBlockHashFromSignedExecutionPayloadBidSerialized(data: Uint8Array): RootHex | null {
-  if (data.length < SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET + ROOT_SIZE) {
+  const offset = signatureSizeDelta(data) + SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET;
+  if (data.length < offset + ROOT_SIZE) {
     return null;
   }
-  blockRootBuf.set(
-    data.subarray(
-      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET,
-      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET + ROOT_SIZE
-    )
-  );
+  blockRootBuf.set(data.subarray(offset, offset + ROOT_SIZE));
   return `0x${blockRootBuf.toString("hex")}`;
 }
 
 export function getParentBlockRootFromSignedExecutionPayloadBidSerialized(data: Uint8Array): RootHex | null {
-  if (data.length < SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_ROOT_OFFSET + ROOT_SIZE) {
+  const offset = signatureSizeDelta(data) + SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_ROOT_OFFSET;
+  if (data.length < offset + ROOT_SIZE) {
     return null;
   }
-  blockRootBuf.set(
-    data.subarray(
-      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_ROOT_OFFSET,
-      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_ROOT_OFFSET + ROOT_SIZE
-    )
-  );
+  blockRootBuf.set(data.subarray(offset, offset + ROOT_SIZE));
   return `0x${blockRootBuf.toString("hex")}`;
 }
 

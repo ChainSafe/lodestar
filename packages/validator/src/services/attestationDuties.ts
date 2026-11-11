@@ -6,7 +6,7 @@ import {
   isAggregatorFromCommitteeLength,
   isStartSlotOfEpoch,
 } from "@lodestar/state-transition";
-import {BLSSignature, Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {BLSSignature, Epoch, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
@@ -440,6 +440,12 @@ export class AttestationDutiesService {
       // Before subscribing to beacon committee subnets, aggregators are determined by exchanging
       // partial for combined selection proofs retrieved from distributed validator middleware client.
       return {duty, selectionProof: null, partialSelectionProof: selectionProof};
+    }
+
+    // From pq, whether a validator aggregates depends on the finalized root at the time it
+    // aggregates, so every duty keeps its proof and `AttestationService` decides then
+    if (selectionProof.length === ssz.pq.VRFProof.fixedSize) {
+      return {duty, selectionProof};
     }
 
     const isAggregator = isAggregatorFromCommitteeLength(duty.committeeLength, selectionProof);

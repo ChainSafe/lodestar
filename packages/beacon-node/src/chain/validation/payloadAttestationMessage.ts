@@ -1,5 +1,7 @@
+import {LEAF_OFFSET_PTC_ATTESTER} from "@lodestar/params";
 import {
   computeEpochAtSlot,
+  computeXmssLeafIndex,
   createIndexedSignatureSetFromComponents,
   getPayloadAttestationDataSigningRoot,
   isStatePostGloas,
@@ -8,6 +10,7 @@ import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {GossipAction, PayloadAttestationError, PayloadAttestationErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
+import {verifySignatureSetsAtLeaves} from "../pq/index.js";
 
 export type PayloadAttestationValidationResult = {
   attDataRootHex: RootHex;
@@ -125,7 +128,15 @@ async function validatePayloadAttestationMessage(
     payloadAttestationMessage.signature
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
+  if (
+    !(await verifySignatureSetsAtLeaves(
+      chain,
+      chain.config.getForkName(data.slot),
+      [signatureSet],
+      [computeXmssLeafIndex(data.slot, LEAF_OFFSET_PTC_ATTESTER)],
+      {batchable: true, priority: prioritizeBls}
+    ))
+  ) {
     throw new PayloadAttestationError(GossipAction.REJECT, {
       code: PayloadAttestationErrorCode.INVALID_SIGNATURE,
     });

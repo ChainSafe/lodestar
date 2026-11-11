@@ -15,6 +15,7 @@ import {
   isStatePostElectra,
   isStatePostFulu,
   isStatePostGloas,
+  toApiPubkey,
 } from "@lodestar/state-transition";
 import {
   BuilderIndex,
@@ -232,7 +233,7 @@ export function getBeaconStateApi({
           if (resp.valid) {
             const index = resp.validatorIndex;
             const {pubkey, activationEpoch} = state.getValidator(index);
-            validatorIdentities.push({index, pubkey, activationEpoch});
+            validatorIdentities.push({index, pubkey: toApiPubkey(pubkey), activationEpoch});
           }
         }
       } else {
@@ -240,7 +241,7 @@ export function getBeaconStateApi({
         validatorIdentities = new Array(validatorsArr.length) as routes.beacon.ValidatorIdentities;
         for (let i = 0; i < validatorsArr.length; i++) {
           const {pubkey, activationEpoch} = validatorsArr[i];
-          validatorIdentities[i] = {index: i, pubkey, activationEpoch};
+          validatorIdentities[i] = {index: i, pubkey: toApiPubkey(pubkey), activationEpoch};
         }
       }
 

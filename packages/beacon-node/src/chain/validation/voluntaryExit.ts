@@ -1,3 +1,4 @@
+import {RESERVED_LEAF_VOLUNTARY_EXIT} from "@lodestar/params";
 import {VoluntaryExitValidity, getVoluntaryExitSignatureSet} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {
@@ -7,6 +8,7 @@ import {
   voluntaryExitValidityToErrorCode,
 } from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
+import {verifySignatureSetsAtLeaves} from "../pq/index.js";
 import {RegenCaller} from "../regen/index.js";
 
 export type ApiVoluntaryExitResult = {status: "published"} | {status: "deferred"; validity: VoluntaryExitValidity};
@@ -60,7 +62,12 @@ export async function validateApiVoluntaryExit(
   }
 
   const signatureSet = getVoluntaryExitSignatureSet(chain.config, state, voluntaryExit);
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
+  if (
+    !(await verifySignatureSetsAtLeaves(chain, state.forkName, [signatureSet], [RESERVED_LEAF_VOLUNTARY_EXIT], {
+      batchable: true,
+      priority: prioritizeBls,
+    }))
+  ) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
       code: VoluntaryExitErrorCode.INVALID_SIGNATURE,
     });
@@ -113,7 +120,12 @@ async function validateVoluntaryExit(
   }
 
   const signatureSet = getVoluntaryExitSignatureSet(chain.config, state, voluntaryExit);
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
+  if (
+    !(await verifySignatureSetsAtLeaves(chain, state.forkName, [signatureSet], [RESERVED_LEAF_VOLUNTARY_EXIT], {
+      batchable: true,
+      priority: prioritizeBls,
+    }))
+  ) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
       code: VoluntaryExitErrorCode.INVALID_SIGNATURE,
     });

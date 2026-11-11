@@ -236,7 +236,7 @@ export async function importExecutionPayload(
           blockState,
           signedEnvelope,
           payloadInput.proposerIndex,
-          this.bls
+          this
         ),
   ]);
   this.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});

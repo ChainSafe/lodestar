@@ -1,8 +1,16 @@
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {GENESIS_EPOCH, GENESIS_SLOT, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
+import {
+  GENESIS_EPOCH,
+  GENESIS_SLOT,
+  LEAF_OFFSET_PROPOSER_PREFERENCES,
+  MIN_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  computeXmssLeafIndex,
   createIndexedSignatureSetFromComponents,
   getProposerPreferencesSigningRoot,
 } from "@lodestar/state-transition";
@@ -10,6 +18,7 @@ import {Epoch, Slot, ValidatorIndex, gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {GossipAction, ProposerPreferencesError, ProposerPreferencesErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
+import {verifySignatureSetsAtLeaves} from "../pq/index.js";
 
 /**
  * Validates a gossiped `SignedProposerPreferences` per
@@ -145,7 +154,15 @@ export async function validateGossipProposerPreferences(
     signedProposerPreferences.signature
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
+  if (
+    !(await verifySignatureSetsAtLeaves(
+      chain,
+      chain.config.getForkName(proposalSlot),
+      [signatureSet],
+      [computeXmssLeafIndex(proposalSlot, LEAF_OFFSET_PROPOSER_PREFERENCES)],
+      {batchable: true}
+    ))
+  ) {
     throw new ProposerPreferencesError(GossipAction.REJECT, {
       code: ProposerPreferencesErrorCode.INVALID_SIGNATURE,
       proposalSlot,

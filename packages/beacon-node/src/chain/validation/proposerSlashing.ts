@@ -3,6 +3,7 @@ import {Domain, phase0} from "@lodestar/types";
 import {GossipAction, ProposerSlashingError, ProposerSlashingErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {getProposerSlashingSignatureDomain} from "../opPools/utils.js";
+import {getProposerSlashingLeafIndices, verifySignatureSetsAtLeaves} from "../pq/index.js";
 
 export async function validateApiProposerSlashing(
   chain: IBeaconChain,
@@ -48,7 +49,15 @@ async function validateProposerSlashing(
 
   const signatureSets = getProposerSlashingSignatureSets(chain.config, state.slot, proposerSlashing);
   const verifiedDomain = getProposerSlashingSignatureDomain(chain.config, state.slot, proposerSlashing);
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
+  if (
+    !(await verifySignatureSetsAtLeaves(
+      chain,
+      state.forkName,
+      signatureSets,
+      getProposerSlashingLeafIndices(proposerSlashing),
+      {batchable: true, priority: prioritizeBls}
+    ))
+  ) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID_SIGNATURE,
     });

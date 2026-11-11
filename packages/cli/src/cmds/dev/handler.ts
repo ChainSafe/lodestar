@@ -2,6 +2,7 @@ import fs from "node:fs";
 import {rm} from "node:fs/promises";
 import {nodeUtils} from "@lodestar/beacon-node";
 import {fromHex, toHex} from "@lodestar/utils";
+import {interopXmssSigner} from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {mkdir, onGracefulShutdown} from "../../util/index.js";
@@ -62,7 +63,10 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
     const genesisTime = args.genesisTime ?? Math.floor(Date.now() / 1000) + 5;
     const eth1BlockHash = fromHex(args.genesisEth1Hash ?? toHex(Buffer.alloc(32, 0x0b)));
 
-    const state = nodeUtils.initDevState(config, validatorCount, {genesisTime, eth1BlockHash});
+    const state =
+      config.PQ_FORK_EPOCH === 0
+        ? nodeUtils.initDevStatePq(config, await interopPqValidators(validatorCount), {genesisTime, eth1BlockHash})
+        : nodeUtils.initDevState(config, validatorCount, {genesisTime, eth1BlockHash});
 
     args.genesisStateFile = "genesis.ssz";
     fs.writeFileSync(args.genesisStateFile, state.serialize());
@@ -85,4 +89,15 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
     // - keymanager server
     await validatorHandler(args);
   }
+}
+
+/** The registry entries of the validators that `interopXmssSigner` gives the validator client */
+async function interopPqValidators(count: number): Promise<nodeUtils.PqGenesisValidator[]> {
+  const validators: nodeUtils.PqGenesisValidator[] = [];
+  // One at a time: generating a key already uses every core
+  for (let index = 0; index < count; index++) {
+    const signer = await interopXmssSigner(index);
+    validators.push({pubkey: signer.publicKey, vrfRoot: signer.vrfRoot});
+  }
+  return validators;
 }

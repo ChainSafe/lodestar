@@ -285,6 +285,16 @@ export const SignedProposerPreferencesListType = ArrayOf(
   ssz.gloas.SignedProposerPreferences,
   (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH
 );
+const SignedProposerPreferencesListPqType = ArrayOf(
+  ssz.pq.SignedProposerPreferences,
+  (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH
+);
+
+function signedProposerPreferencesListType(fork: ForkName): Type<SignedProposerPreferencesList> {
+  return (
+    fork === ForkName.pq ? SignedProposerPreferencesListPqType : SignedProposerPreferencesListType
+  ) as Type<SignedProposerPreferencesList>;
+}
 export const InclusionListDutyType = new ContainerType(
   {
     /** The validator's public key, uniquely identifying them */
@@ -1219,7 +1229,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: {
-        data: ssz.gloas.ExecutionPayloadEnvelope,
+        data: WithVersion((fork) => getPostGloasForkTypes(fork).ExecutionPayloadEnvelope),
         meta: VersionCodec,
       },
     },
@@ -1472,21 +1482,27 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/validator/proposer_preferences",
       method: "POST",
       req: {
-        writeReqJson: ({signedProposerPreferences}) => ({
-          body: SignedProposerPreferencesListType.toJson(signedProposerPreferences),
-          headers: {[MetaHeader.Version]: config.getForkName(signedProposerPreferences[0]?.message.proposalSlot ?? 0)},
-        }),
-        parseReqJson: ({body, headers}) => {
-          toForkName(fromHeaders(headers, MetaHeader.Version));
-          return {signedProposerPreferences: SignedProposerPreferencesListType.fromJson(body)};
+        writeReqJson: ({signedProposerPreferences}) => {
+          const fork = config.getForkName(signedProposerPreferences[0]?.message.proposalSlot ?? 0);
+          return {
+            body: signedProposerPreferencesListType(fork).toJson(signedProposerPreferences),
+            headers: {[MetaHeader.Version]: fork},
+          };
         },
-        writeReqSsz: ({signedProposerPreferences}) => ({
-          body: SignedProposerPreferencesListType.serialize(signedProposerPreferences),
-          headers: {[MetaHeader.Version]: config.getForkName(signedProposerPreferences[0]?.message.proposalSlot ?? 0)},
-        }),
+        parseReqJson: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {signedProposerPreferences: signedProposerPreferencesListType(fork).fromJson(body)};
+        },
+        writeReqSsz: ({signedProposerPreferences}) => {
+          const fork = config.getForkName(signedProposerPreferences[0]?.message.proposalSlot ?? 0);
+          return {
+            body: signedProposerPreferencesListType(fork).serialize(signedProposerPreferences),
+            headers: {[MetaHeader.Version]: fork},
+          };
+        },
         parseReqSsz: ({body, headers}) => {
-          toForkName(fromHeaders(headers, MetaHeader.Version));
-          return {signedProposerPreferences: SignedProposerPreferencesListType.deserialize(body)};
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {signedProposerPreferences: signedProposerPreferencesListType(fork).deserialize(body)};
         },
         schema: {
           body: Schema.ObjectArray,

@@ -1,12 +1,16 @@
 import {BeaconConfig} from "@lodestar/config";
+import {LEAF_OFFSET_EXECUTION_PAYLOAD_ENVELOPE} from "@lodestar/params";
 import {
   type IBeaconStateViewGloas,
   computeTimeAtSlot,
+  computeXmssLeafIndex,
   getExecutionPayloadEnvelopeSignatureSet,
+  getGloasMessageTypes,
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {IBlsVerifier} from "../bls/index.js";
+import {IPqVerifier, verifySignatureSetsAtLeaves} from "../pq/index.js";
 
 export type VerifyExecutionPayloadEnvelopeOpts = {
   verifyExecutionRequestsRoot?: boolean;
@@ -71,7 +75,9 @@ export function verifyExecutionPayloadEnvelope(
   // Verify execution_requests_root matches bid commitment.
   // Can be skipped if already verified during gossip validation.
   if (verifyExecutionRequestsRoot) {
-    const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+    const requestsRoot = getGloasMessageTypes(config, payload.slotNumber).ExecutionRequests.hashTreeRoot(
+      envelope.executionRequests
+    );
     if (!byteArrayEquals(requestsRoot, bid.executionRequestsRoot)) {
       throw new Error(
         `Execution requests root mismatch envelope=${toRootHex(requestsRoot)} bid=${toRootHex(bid.executionRequestsRoot)}`
@@ -120,8 +126,14 @@ export async function verifyExecutionPayloadEnvelopeSignature(
   state: IBeaconStateViewGloas,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
   proposerIndex: number,
-  bls: IBlsVerifier
+  verifiers: {bls: IBlsVerifier; pq: IPqVerifier}
 ): Promise<boolean> {
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(config, state, signedEnvelope, proposerIndex);
-  return bls.verifySignatureSets([signatureSet]);
+  const slot = signedEnvelope.message.payload.slotNumber;
+  return verifySignatureSetsAtLeaves(
+    verifiers,
+    config.getForkName(slot),
+    [signatureSet],
+    [computeXmssLeafIndex(slot, LEAF_OFFSET_EXECUTION_PAYLOAD_ENVELOPE)]
+  );
 }

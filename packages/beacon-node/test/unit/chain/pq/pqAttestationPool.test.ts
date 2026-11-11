@@ -72,10 +72,19 @@ describe("PqAttestationPool", () => {
       pool.addAggregate(1, data, dataRootHex, aggregationBits, aggregate.proof, Buffer.concat([claims[3], claims[2]]))
     ).toBe(InsertOutcome.Aggregated);
 
-    const excluded = await pool.getAttestationsForBlock(data.slot + 1, () => false);
+    const none = () => () => false;
+    const excluded = await pool.getAttestationsForBlock(data.slot + 1, () => false, none);
     expect(excluded).toEqual({attestations: [], proof: new Uint8Array(0)});
 
-    const {attestations, proof} = await pool.getAttestationsForBlock(data.slot + 1, () => true);
+    // Committee 1's attesters are on chain already, so only committee 0 is worth a block's space
+    const onlyNew = await pool.getAttestationsForBlock(
+      data.slot + 1,
+      () => true,
+      (_data, committeeIndex) => () => committeeIndex === 1
+    );
+    expect(onlyNew.attestations[0].committeeBits.getTrueBitIndexes()).toEqual([0]);
+
+    const {attestations, proof} = await pool.getAttestationsForBlock(data.slot + 1, () => true, none);
     expect(attestations.length).toBe(1);
     expect(attestations[0].committeeBits.getTrueBitIndexes()).toEqual([0, 1]);
     expect(attestations[0].aggregationBits.toBoolArray()).toEqual([true, true, true, true]);

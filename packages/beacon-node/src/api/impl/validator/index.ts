@@ -32,6 +32,7 @@ import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   getCurrentSlot,
+  getGloasMessageTypes,
   getInclusionListCommittee,
   isStatePostAltair,
   isStatePostGloas,
@@ -1293,11 +1294,15 @@ export function getValidatorApi(
       if (bestResult === null || bestResult.status !== "fulfilled") {
         const engineReason = engineResult.status === "rejected" ? engineResult.reason : engineResult.status;
         const bidReason = bidBlockResult.status === "rejected" ? bidBlockResult.reason : bidBlockResult.status;
-        logger.error("Block production failed", {
-          ...logCtx,
-          engineReason: String(engineReason),
-          bidReason: String(bidReason),
-        });
+        logger.error(
+          "Block production failed",
+          {
+            ...logCtx,
+            engineReason: String(engineReason),
+            bidReason: String(bidReason),
+          },
+          engineReason instanceof Error ? engineReason : undefined
+        );
         throw Error(`Block production failed: engine=${String(engineReason)} builder=${String(bidReason)}`);
       }
 
@@ -2204,7 +2209,11 @@ export function getValidatorApi(
             failures.push({index: i, message: (e as Error).message});
             logger.verbose(`Error on submitProposerPreferences [${i}]`, logCtx, e as Error);
             if (e instanceof ProposerPreferencesError && e.action === GossipAction.REJECT) {
-              chain.persistInvalidSszValue(ssz.gloas.SignedProposerPreferences, signed, "api_reject");
+              chain.persistInvalidSszValue(
+                getGloasMessageTypes(config, signed.message.proposalSlot).SignedProposerPreferences,
+                signed,
+                "api_reject"
+              );
             }
           }
         })

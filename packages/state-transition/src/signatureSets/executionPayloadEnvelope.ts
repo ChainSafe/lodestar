@@ -1,8 +1,9 @@
 import {BeaconConfig} from "@lodestar/config";
 import {BUILDER_INDEX_SELF_BUILD, DOMAIN_BEACON_BUILDER} from "@lodestar/params";
-import {ValidatorIndex, gloas, ssz} from "@lodestar/types";
+import {ValidatorIndex, gloas} from "@lodestar/types";
 import {IBeaconStateView, isStatePostGloas} from "../stateView/interface.js";
 import {computeSigningRoot} from "../util/index.js";
+import {getGloasMessageTypes} from "../util/pq.js";
 import {
   type ISignatureSet,
   createIndexedSignatureSetFromComponents,
@@ -15,7 +16,11 @@ export function getExecutionPayloadEnvelopeSigningRoot(
 ): Uint8Array {
   const domain = config.getDomain(envelope.payload.slotNumber, DOMAIN_BEACON_BUILDER);
 
-  return computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
+  return computeSigningRoot(
+    getGloasMessageTypes(config, envelope.payload.slotNumber).ExecutionPayloadEnvelope,
+    envelope,
+    domain
+  );
 }
 
 export function getExecutionPayloadEnvelopeSignatureSet(

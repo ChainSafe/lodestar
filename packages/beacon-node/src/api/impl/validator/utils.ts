@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
-import {IBeaconStateView, computeSlotsSinceEpochStart} from "@lodestar/state-transition";
+import {IBeaconStateView, computeSlotsSinceEpochStart, toApiPubkey} from "@lodestar/state-transition";
 import {BLSPubkey, CommitteeIndex, ProducedBlockSource, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {BlockSelectionResult, BuilderBlockSelectionReason, EngineBlockSelectionReason} from "./index.js";
@@ -36,7 +36,7 @@ export function getPubkeysForIndices(state: IBeaconStateView, indexes: Validator
 
     // NOTE: This could be optimized further by traversing the tree optimally with .getNodes()
     const validator = state.getValidator(index);
-    pubkeys.push(validator.pubkey);
+    pubkeys.push(toApiPubkey(validator.pubkey));
   }
 
   return pubkeys;
