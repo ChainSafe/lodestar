@@ -1247,8 +1247,9 @@ pub const Store = struct {
         return self.blocks.items(.parent_payload_status)[proposer_block] == .full;
     }
 
-    /// Spec `should_build_on_full`.
+    /// Spec `should_build_on_full`; a pre-Gloas head carries its own payload.
     pub fn shouldBuildOnFull(self: *const Store, head: ForkChoiceNode, slot: Slot) bool {
+        if (self.blocks.items(.fork)[head.block].lt(.gloas)) return true;
         std.debug.assert(head.payload_status != .pending);
         if (self.blockSlot(head.block) + 1 != slot) return head.payload_status == .full;
         if (head.payload_status == .empty) return false;

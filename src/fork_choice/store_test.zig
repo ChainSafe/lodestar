@@ -790,7 +790,7 @@ test "payload decisions: a Heze payload failing its inclusion list loses its own
     try testing.expectEqual(fullOf(&store, 0x20), try store.getHead());
 }
 
-test "payload decisions: before Heze a delivered payload satisfies its inclusion list" {
+test "payload decisions: before Heze a delivered payload satisfies, and a pre-Gloas head builds on full" {
     const allocator = testing.allocator;
     const config_mod = @import("config");
     const chain_config = config_mod.mainnet.chain_config.merge(.{
@@ -806,6 +806,8 @@ test "payload decisions: before Heze a delivered payload satisfies its inclusion
     var store = try Store.initFromSummary(allocator, &config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .fulu }), Provider.stateProvider());
     defer store.deinit();
     const slot = preset.SLOTS_PER_EPOCH;
+    try testing.expect(store.shouldBuildOnFull(pendingOf(&store, 1), slot));
+
     try store.onTick(store.timing.timeAtSlotMs(slot));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = slot, .fork = .gloas, .bid_parent = 1 }));
     const block = store.blockIndex(tagRoot(0x20)).?;
