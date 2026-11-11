@@ -243,6 +243,12 @@ type SearchUnknownRootTarget =
  * Such that enough work is processed to fill either one of the queue.
  */
 export class NetworkProcessor {
+  private stopped = false;
+  /**
+   * Replaced by dropAllJobs(). Loops that yield while re-queueing awaiting messages compare it after each yield
+   * and stop, so no message is queued after a drop.
+   */
+  private jobGeneration = Symbol();
   private readonly chain: IBeaconChain;
   private readonly core: INetworkCore;
   private readonly events: NetworkEventBus;
@@ -334,16 +340,27 @@ export class NetworkProcessor {
   }
 
   async stop(): Promise<void> {
+    if (this.stopped) return;
+    this.stopped = true;
     this.events.off(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage);
     this.chain.emitter.off(routes.events.EventType.block, this.onBlockProcessed);
     this.chain.emitter.off(routes.events.EventType.executionPayload, this.onPayloadEnvelopeProcessed);
-    this.chain.emitter.off(ClockEvent.slot, this.onClockSlot);
+    this.chain.clock.off(ClockEvent.slot, this.onClockSlot);
+    this.dropAllJobs();
   }
 
   dropAllJobs(): void {
+    this.jobGeneration = Symbol();
     for (const topic of executeGossipWorkOrder) {
       this.gossipQueues[topic].clear();
     }
+    this.awaitingMessagesByBlockRoot.clear();
+    this.awaitingBlockMessageCount = 0;
+    this.awaitingMessagesByPayloadBlockRoot.clear();
+    this.awaitingPayloadMessageCount = 0;
+    this.searchedRootsBySlot.clear();
+    this.bufferedRootsBySlot.clear();
+    this.fatalPeers.clear();
   }
 
   dumpGossipQueue(topic: GossipType): PendingGossipsubMessage[] {
@@ -363,7 +380,7 @@ export class NetworkProcessor {
    * prefer them as by-root download candidates.
    */
   searchUnknownBlock({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
-    if (this.chain.seenBlock(root)) {
+    if (this.stopped || this.chain.seenBlock(root)) {
       return;
     }
     const entry = this.searchedRootsBySlot.getOrDefault(slot).getOrDefault(root);
@@ -397,7 +414,7 @@ export class NetworkProcessor {
     peer?: PeerIdStr,
     slotIsPayloadSlot = false
   ): void {
-    if (this.chain.seenPayloadEnvelope(root)) {
+    if (this.stopped || this.chain.seenPayloadEnvelope(root)) {
       return;
     }
     const entry = this.searchedRootsBySlot.getOrDefault(slot).getOrDefault(root);
@@ -800,6 +817,7 @@ export class NetworkProcessor {
       this.awaitingBlockMessageCount -= total;
     }
 
+    const generation = this.jobGeneration;
     const nowSec = Date.now() / 1000;
     let count = 0;
     // TODO: we can group attestations to process in batches but since we have the SeenAttestationDatas
@@ -818,6 +836,7 @@ export class NetworkProcessor {
         if (count === MAX_AWAITING_GOSSIP_OBJECTS_PER_TICK) {
           count = 0;
           await sleep(AWAITING_GOSSIP_OBJECTS_YIELD_EVERY_MS);
+          if (generation !== this.jobGeneration) return;
         }
       }
     }
@@ -842,6 +861,7 @@ export class NetworkProcessor {
       this.awaitingPayloadMessageCount -= total;
     }
 
+    const generation = this.jobGeneration;
     const nowSec = Date.now() / 1000;
     let count = 0;
     for (const messages of messagesByTopic.values()) {
@@ -857,6 +877,7 @@ export class NetworkProcessor {
         if (count === MAX_AWAITING_GOSSIP_OBJECTS_PER_TICK) {
           count = 0;
           await sleep(AWAITING_GOSSIP_OBJECTS_YIELD_EVERY_MS);
+          if (generation !== this.jobGeneration) return;
         }
       }
     }
@@ -936,6 +957,7 @@ export class NetworkProcessor {
   };
 
   private executeWork(): void {
+    if (this.stopped) return;
     // TODO: Maybe de-bounce by timing the last time executeWork was run
 
     this.metrics?.networkProcessor.executeWorkCalls.inc();

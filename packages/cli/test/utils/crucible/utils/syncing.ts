@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {kzg} from "@lodestar/beacon-node/util";
-import {ForkPostDeneb, ForkPreGloas, isForkPostFulu} from "@lodestar/params";
+import {ForkPostDeneb, ForkPreGloas, isForkPostDeneb} from "@lodestar/params";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
 import {BeaconClient, ExecutionClient, NodePair} from "../interfaces.js";
@@ -116,8 +116,11 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
   const currentHeadRoot = toHex(
     env.forkConfig.getForkTypes(currentHead.message.slot).BeaconBlock.hashTreeRoot(currentHead.message)
   );
-  // Pre-fulu blobs are no longer persisted, and sims still run pre-fulu heads
-  const currentBlobs = isForkPostFulu(env.forkConfig.getForkName(currentHead.message.slot))
+  const headFork = env.forkConfig.getForkName(currentHead.message.slot);
+  const headHasBlobs =
+    isForkPostDeneb(headFork) &&
+    (currentHead as SignedBeaconBlock<ForkPostDeneb & ForkPreGloas>).message.body.blobKzgCommitments.length > 0;
+  const currentBlobs = headHasBlobs
     ? (await env.nodes[0].beacon.api.beacon.getBlobs({blockId: currentHead.message.slot})).value()
     : [];
 

@@ -18,8 +18,10 @@ import {
   ClientCode,
   ClientVersion,
   ExecutionPayloadStatus,
+  ForkchoiceUpdatedResult,
   PayloadAttributes,
   PayloadId,
+  PayloadStatusResult,
   VersionedHashes,
 } from "./interface.js";
 import {JsonRpcHttpClientEventEmitter, ReqOpts} from "./jsonRpcHttpClient.js";
@@ -55,7 +57,7 @@ import {
   PayloadStatusSsz,
   executionForkName,
 } from "./sszTypes.js";
-import {ForkchoiceUpdatedResult, GetPayloadResult, IEngineTransport, PayloadStatusResult} from "./transport.js";
+import {GetPayloadResult, IEngineTransport} from "./transport.js";
 import {EngineTransportMetrics} from "./transportMetrics.js";
 import {
   ExecutionPayloadBodyV2,

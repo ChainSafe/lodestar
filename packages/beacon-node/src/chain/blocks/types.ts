@@ -80,7 +80,10 @@ export type FullyVerifiedBlock = {
   parentBlockSlot: Slot;
   proposerBalanceDelta: number;
   dataAvailabilityStatus: DataAvailabilityStatus;
-  /** Pre-computed indexed attestations from signature verification to avoid duplicate work */
+  /**
+   * Pre-computed indexed attestations from signature verification to avoid duplicate work.
+   * Their `attestingIndices` are in committee order, not sorted, so they are not spec-valid `IndexedAttestation`s.
+   */
   indexedAttestations: IndexedAttestation[];
   /** Seen timestamp seconds */
   seenTimestampSec: number;

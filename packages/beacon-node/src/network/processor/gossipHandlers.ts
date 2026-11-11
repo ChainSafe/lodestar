@@ -62,7 +62,10 @@ import {
   validateGossipGloasDataColumnSidecar,
 } from "../../chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadBid} from "../../chain/validation/executionPayloadBid.js";
-import {validateGossipExecutionPayloadEnvelope} from "../../chain/validation/executionPayloadEnvelope.js";
+import {
+  validateGossipExecutionPayloadEnvelope,
+  validateGossipExecutionPayloadEnvelopeSerialized,
+} from "../../chain/validation/executionPayloadEnvelope.js";
 import {InclusionListValidationResult, validateGossipInclusionList} from "../../chain/validation/inclusionList.js";
 import {
   AggregateAndProofValidationResult,
@@ -1134,6 +1137,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
       const {serializedData} = gossipData;
+      validateGossipExecutionPayloadEnvelopeSerialized(chain, serializedData);
       const signedEnvelope = sszDeserialize(topic, serializedData);
       const envelope = signedEnvelope.message;
 
@@ -1186,18 +1190,22 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         });
       }
 
+      // Add the envelope in the same tick as validation, otherwise a by-root download that completes
+      // before the next event loop sees no envelope, validates it again and adds it first
+      if (!payloadInput.hasPayloadEnvelope()) {
+        chain.serializedCache.set(signedEnvelope, serializedData);
+
+        payloadInput.addPayloadEnvelope({
+          envelope: signedEnvelope,
+          source: PayloadEnvelopeInputSource.gossip,
+          seenTimestampSec,
+          peerIdStr,
+        });
+      }
+
       // Handler - deferred to next event loop so the validation result propagates first
       callInNextEventLoop(() => {
         try {
-          chain.serializedCache.set(signedEnvelope, serializedData);
-
-          payloadInput.addPayloadEnvelope({
-            envelope: signedEnvelope,
-            source: PayloadEnvelopeInputSource.gossip,
-            seenTimestampSec,
-            peerIdStr,
-          });
-
           scheduleIncompletePayloadEnvelope(payloadInput, peerIdStr);
 
           chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
@@ -1207,7 +1215,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             blockRoot: blockRootHex,
           });
 
-          chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
+          // Signature is verified above only for this envelope, one added by another source is verified at import
+          const validSignature = payloadInput.getPayloadEnvelope() === signedEnvelope;
+          chain.processExecutionPayload(payloadInput, {validSignature}).catch((e) => {
             // Adjust verbosity based on error type
             let logLevel: LogLevel;
 
@@ -1225,11 +1235,17 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
                   // Errors might indicate an issue with our node or the connected EL client
                   logLevel = LogLevel.error;
                   break;
-                // INVALID_SIGNATURE should not happen, signature is verified during gossip validation
+                case PayloadErrorCode.BLOCK_EXECUTION_INVALID:
+                  logLevel = LogLevel.warn;
+                  break;
+                // INVALID_SIGNATURE only happens for an envelope added by another source
                 case PayloadErrorCode.INVALID_SIGNATURE:
                 case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
                 case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
-                  core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+                  // Penalize only when the stored envelope is the one this peer sent, not one added by another source
+                  if (validSignature) {
+                    core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+                  }
                   // The builder may have signed another envelope that is valid, keeping this one would make
                   // by-root and range sync reuse it and never import the payload
                   chain.seenPayloadEnvelopeInputCache.removeInvalid(payloadInput);
@@ -1502,6 +1518,32 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
               }
             } catch (e) {
               logger.debug("Error adding gossip unaggregated attestation to pool", {subnet}, e as Error);
+            }
+
+            // Collected only for vote slots that an upcoming block of a connected validator can include
+            if (isForkPostElectra(fork) && chain.proposerTracker.shouldCollect(indexedAttestation.data.slot)) {
+              try {
+                const insertOutcome = chain.singleAttestationPool.add(
+                  attestation as SingleAttestation<ForkPostElectra>,
+                  attDataRootHex,
+                  validatorCommitteeIndex,
+                  committeeSize
+                );
+                metrics?.opPool.singleAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+              } catch (e) {
+                logger.debug(
+                  "Error adding gossip single attestation to pool",
+                  {
+                    slot: indexedAttestation.data.slot,
+                    committeeIndex,
+                    validatorCommitteeIndex,
+                    validatorIndex: (attestation as SingleAttestation<ForkPostElectra>).attesterIndex,
+                    subnet,
+                    attDataRoot: attDataRootHex,
+                  },
+                  e as Error
+                );
+              }
             }
 
             // Separate boundary: a pool insertion error above must not skip the fork-choice vote

@@ -5827,7 +5827,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Time elapsed between block received and execution payload verification",
+      "description": "Time from gossip block arrival until both the state transition and all block signature verifications are complete, excluding execution payload verification",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -5848,6 +5848,181 @@
         "w": 12,
         "x": 0,
         "y": 271
+      },
+      "id": 587,
+      "options": {
+        "calculate": false,
+        "calculation": {
+          "yBuckets": {
+            "scale": {
+              "type": "linear"
+            }
+          }
+        },
+        "cellGap": 1,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-orange",
+          "mode": "scheme",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "Magma",
+          "steps": 64
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-9
+        },
+        "legend": {
+          "show": true
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "mode": "single",
+          "showColorScale": false,
+          "yHistogram": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "reverse": false,
+          "unit": "s"
+        }
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_block_received_to_consensus_verified_seconds_bucket[$rate_interval])",
+          "format": "heatmap",
+          "instant": false,
+          "legendFormat": "{{le}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Block recv to consensus verified delay",
+      "type": "heatmap"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Time from gossip block arrival until both the state transition and all block signature verifications are complete, excluding execution payload verification",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 271
+      },
+      "id": 588,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_block_received_to_consensus_verified_seconds_sum[$rate_interval]) / rate(lodestar_gossip_block_received_to_consensus_verified_seconds_count[$rate_interval])",
+          "format": "heatmap",
+          "instant": false,
+          "legendFormat": "time",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Avg block recv to consensus verified delay",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Time elapsed between block received and execution payload verification",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 279
       },
       "id": 561,
       "options": {
@@ -5936,7 +6111,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 271
+        "y": 279
       },
       "id": 548,
       "options": {
@@ -6052,7 +6227,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 279
+        "y": 287
       },
       "id": 547,
       "options": {
@@ -6138,7 +6313,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 279
+        "y": 287
       },
       "id": 562,
       "options": {
@@ -6197,7 +6372,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 287
+        "y": 295
       },
       "id": 563,
       "options": {
@@ -6286,7 +6461,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 287
+        "y": 295
       },
       "id": 550,
       "options": {
@@ -6402,7 +6577,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 295
+        "y": 303
       },
       "id": 549,
       "options": {
@@ -6488,7 +6663,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 295
+        "y": 303
       },
       "id": 564,
       "options": {
@@ -6547,7 +6722,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 303
+        "y": 311
       },
       "id": 565,
       "options": {
@@ -6629,7 +6804,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 303
+        "y": 311
       },
       "id": 552,
       "options": {
@@ -6738,7 +6913,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 311
+        "y": 319
       },
       "id": 551,
       "options": {
@@ -6824,7 +6999,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 311
+        "y": 319
       },
       "id": 566,
       "options": {
