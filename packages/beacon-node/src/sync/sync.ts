@@ -1,5 +1,5 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {computeStartSlotAtEpoch, isStatePostGloas} from "@lodestar/state-transition";
 import {Slot, Status} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
@@ -12,6 +12,7 @@ import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/i
 import {ClockEvent} from "../util/clock.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {PeerIdStr} from "../util/peerId.js";
+import {BackfillSync} from "./backfill/index.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
 import {IBeaconSync, SyncChainDebugState, SyncModules, SyncState, SyncingStatus, syncStateMetric} from "./interface.js";
 import {SyncOptions} from "./options.js";
@@ -29,6 +30,7 @@ export class BeaconSync implements IBeaconSync {
 
   private readonly rangeSync: RangeSync;
   private readonly unknownBlockSync: BlockInputSync;
+  private readonly backfillSync: BackfillSync | null = null;
 
   /** For metrics only */
   private readonly peerSyncType = new Map<string, PeerSyncType>();
@@ -78,6 +80,20 @@ export class BeaconSync implements IBeaconSync {
       this.chain.clock.on(ClockEvent.slot, initiateEpochCheckForSync);
     }
 
+    if (opts.backfill) {
+      this.backfillSync = new BackfillSync({
+        ...modules,
+        isSynced: () => this.isSynced(),
+        getBuilder: (builderIndex) => {
+          const state = chain.getHeadState();
+          return isStatePostGloas(state) && builderIndex < state.getBuildersLength()
+            ? state.getBuilder(builderIndex)
+            : null;
+        },
+      });
+      this.backfillSync.start();
+    }
+
     if (metrics) {
       metrics.syncStatus.addCollect(() => this.scrapeMetrics(metrics));
     }
@@ -94,6 +110,7 @@ export class BeaconSync implements IBeaconSync {
     this.chain.clock.off(ClockEvent.epoch, this.onClockEpoch);
     this.rangeSync.close();
     this.unknownBlockSync.close();
+    this.backfillSync?.close();
   }
 
   getSyncStatus(): SyncingStatus {
