@@ -1,4 +1,4 @@
-import {BeaconStateView} from "@lodestar/state-transition";
+import {BeaconStateView, CachedBeaconStatePhase0} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 
 export class TestBeaconStateView extends BeaconStateView {
@@ -7,6 +7,6 @@ export class TestBeaconStateView extends BeaconStateView {
       throw new Error(`Validator index ${index} out of bounds`);
     }
 
-    this.cachedState.validators.set(index, ssz.phase0.Validator.toViewDU(validator));
+    (this.cachedState as CachedBeaconStatePhase0).validators.set(index, ssz.phase0.Validator.toViewDU(validator));
   }
 }

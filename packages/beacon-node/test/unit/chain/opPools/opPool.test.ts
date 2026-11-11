@@ -5,6 +5,8 @@ import {SecretKey} from "@lodestar/native/blst";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {
+  BeaconStateAllForks,
+  BeaconStatePq,
   BeaconStateView,
   ISignatureSet,
   assertValidAttesterSlashing,
@@ -13,7 +15,7 @@ import {
   getAttesterSlashingSignatureSets,
   getProposerSlashingSignatureSets,
 } from "@lodestar/state-transition";
-import {phase0, ssz} from "@lodestar/types";
+import {electra, phase0, ssz} from "@lodestar/types";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
 import {BlockType} from "../../../../src/chain/interface.js";
 import {OpPool} from "../../../../src/chain/opPools/opPool.js";
@@ -22,6 +24,8 @@ import {validateGossipProposerSlashing} from "../../../../src/chain/validation/p
 import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
 import {generateState} from "../../../utils/state.js";
+
+type BeaconStateAllForksBls = Exclude<BeaconStateAllForks, BeaconStatePq>;
 
 const config = createBeaconConfig(
   {
@@ -63,7 +67,7 @@ function makeState(
   beaconConfig = config,
   validatorOverrides: Partial<phase0.Validator> = {}
 ): BeaconStateView {
-  const state = beaconConfig.getForkTypes(slot).BeaconState.defaultViewDU();
+  const state = beaconConfig.getForkTypes(slot).BeaconState.defaultViewDU() as BeaconStateAllForksBls;
   state.slot = slot;
   const validators = generateState({}, config, true).validators.getAllReadonlyValues();
   validators[0] = {...validators[0], ...validatorOverrides};
@@ -466,7 +470,9 @@ describe("persisted slashings", () => {
         expect(proposerSlashings).toHaveLength(1);
         expect(attesterSlashings).toHaveLength(1);
         expect(ssz.phase0.ProposerSlashing.equals(proposerSlashings[0], validProposer)).toBe(true);
-        expect(ssz.electra.AttesterSlashing.equals(attesterSlashings[0], validAttester)).toBe(true);
+        expect(
+          ssz.electra.AttesterSlashing.equals(attesterSlashings[0] as electra.AttesterSlashing, validAttester)
+        ).toBe(true);
         expect(verify).not.toHaveBeenCalled();
         expect(() =>
           assertValidProposerSlashing(config, after.slot, proposerSlashings[0], after.getValidator(0))

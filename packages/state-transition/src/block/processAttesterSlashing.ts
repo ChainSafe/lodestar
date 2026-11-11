@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkBls, ForkSeq} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {AttesterSlashing, Slot} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {getAttesterSlashableIndices, isSlashableAttestationData, isSlashableValidator} from "../util/index.js";

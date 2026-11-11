@@ -9,7 +9,9 @@ export const inclusionDelayAssertion: Assertion<"inclusionDelay", number> = {
   match: everySlotMatcher,
   async capture(input) {
     return avg(
-      Array.from(input.block.message.body.attestations).map((att) => input.block.message.slot - att.data.slot)
+      Array.from<{data: {slot: number}}>(input.block.message.body.attestations).map(
+        (att) => input.block.message.slot - att.data.slot
+      )
     );
   },
 

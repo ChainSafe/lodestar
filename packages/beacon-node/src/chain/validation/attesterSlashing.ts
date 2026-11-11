@@ -1,7 +1,6 @@
 import {
   assertValidAttesterSlashing,
   getAttesterSlashableIndices,
-  getAttesterSlashingSignatureSets,
   isSlashableValidator,
 } from "@lodestar/state-transition";
 import {AttesterSlashing, Domain} from "@lodestar/types";

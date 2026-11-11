@@ -1,7 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
-  ForkBls,
   ForkSeq,
   MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,

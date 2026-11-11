@@ -1,4 +1,4 @@
-import {ForkBls, ForkPreHeze, ForkSeq} from "@lodestar/params";
+import {ForkPreHeze, ForkSeq} from "@lodestar/params";
 import {BeaconBlockBody, Slot, capella, electra, gloas} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {

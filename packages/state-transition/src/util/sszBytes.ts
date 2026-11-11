@@ -26,6 +26,21 @@ const VALIDATOR_EXIT_EPOCH_OFFSET = VALIDATOR_ACTIVATION_EPOCH_OFFSET + UINT64_S
 export const VALIDATOR_BYTES_SIZE = VALIDATOR_EXIT_EPOCH_OFFSET + UINT64_SIZE + UINT64_SIZE;
 
 /**
+ * From pq a validator has a 32-byte leanXMSS public key followed by a 32-byte VRF root, so every
+ * later field sits `PQ_VALIDATOR_SHIFT` bytes further and the record is that much longer.
+ */
+const PQ_PUBKEY_SIZE = 32;
+const PQ_VALIDATOR_SHIFT = PQ_PUBKEY_SIZE + ROOT_SIZE - PUBKEY_SIZE;
+
+function isPqStateType(stateType: SSZTypesFor<ForkAll, "BeaconState">): boolean {
+  return (stateType as unknown) === ssz.pq.BeaconState;
+}
+
+function validatorBytesSize(stateType: SSZTypesFor<ForkAll, "BeaconState">): number {
+  return VALIDATOR_BYTES_SIZE + (isPqStateType(stateType) ? PQ_VALIDATOR_SHIFT : 0);
+}
+
+/**
  * ```
  * class BeaconState(Container):
  *   genesis_time: uint64 [fixed - 8 bytes]
@@ -89,7 +104,8 @@ export function scanActiveValidatorsFromStateBytes(
   };
   let activeValidatorCount = 0;
   let totalActiveBalanceIncrements = 0;
-  for (let offset = range.start; offset < range.end; offset += VALIDATOR_BYTES_SIZE) {
+  const shift = isPqStateType(stateType) ? PQ_VALIDATOR_SHIFT : 0;
+  for (let offset = range.start + shift; offset < range.end; offset += VALIDATOR_BYTES_SIZE + shift) {
     const activationEpoch = ssz.EpochInf.value_deserializeFromBytes(
       data,
       offset + VALIDATOR_ACTIVATION_EPOCH_OFFSET,
@@ -114,9 +130,10 @@ export function scanActiveValidatorsFromStateBytes(
 }
 
 export function getValidatorCountFromStateBytes(config: ChainForkConfig, stateBytes: Uint8Array): number | null {
-  const range = getValidatorsRangeFromStateBytes(stateBytes, getStateTypeFromBytes(config, stateBytes));
+  const stateType = getStateTypeFromBytes(config, stateBytes);
+  const range = getValidatorsRangeFromStateBytes(stateBytes, stateType);
   // A non-null range always holds a whole number of validator records, so the division is exact
-  return range === null ? null : (range.end - range.start) / VALIDATOR_BYTES_SIZE;
+  return range === null ? null : (range.end - range.start) / validatorBytesSize(stateType);
 }
 
 /** Returns a view into `stateBytes`, or null if the index is not in the registry. */
@@ -125,15 +142,16 @@ export function getValidatorPubkeyFromStateBytes(
   stateBytes: Uint8Array,
   index: number
 ): Uint8Array | null {
-  const range = getValidatorsRangeFromStateBytes(stateBytes, getStateTypeFromBytes(config, stateBytes));
+  const stateType = getStateTypeFromBytes(config, stateBytes);
+  const range = getValidatorsRangeFromStateBytes(stateBytes, stateType);
   if (range === null) {
     return null;
   }
-  const start = range.start + index * VALIDATOR_BYTES_SIZE;
+  const start = range.start + index * validatorBytesSize(stateType);
   if (index < 0 || start >= range.end) {
     return null;
   }
-  return stateBytes.subarray(start, start + PUBKEY_SIZE);
+  return stateBytes.subarray(start, start + (isPqStateType(stateType) ? PQ_PUBKEY_SIZE : PUBKEY_SIZE));
 }
 
 function getValidatorsRangeFromStateBytes(
@@ -152,7 +170,7 @@ function getValidatorsRangeFromStateBytes(
   if (!range || range.start < 0 || range.end > stateBytes.length || range.end < range.start) {
     return null;
   }
-  if ((range.end - range.start) % VALIDATOR_BYTES_SIZE !== 0) {
+  if ((range.end - range.start) % validatorBytesSize(stateType) !== 0) {
     return null;
   }
   return range;

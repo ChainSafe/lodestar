@@ -5,6 +5,7 @@ import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
+  ForkBls,
   ForkName,
   ForkPostAltair,
   ForkSeq,
@@ -29,7 +30,7 @@ const validatorCount = 16;
 const TIMELY_ALL_FLAGS = 0b111;
 
 type StateOpts = {
-  fork: ForkPostAltair;
+  fork: ForkPostAltair & ForkBls;
   /** Epoch whose end slot the state is at, the transition out of it pays the previous epoch */
   epoch: number;
   /** Validators with index below this count attest with all flags, the rest miss every flag */

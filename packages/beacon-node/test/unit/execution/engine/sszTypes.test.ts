@@ -100,6 +100,7 @@ describe("execution / engine / sszTypes", () => {
       electra: "prague",
       fulu: "osaka",
       gloas: "amsterdam",
+      pq: "amsterdam",
       heze: null,
     });
   });

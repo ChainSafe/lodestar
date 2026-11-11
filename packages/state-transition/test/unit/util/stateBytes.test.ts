@@ -1,8 +1,8 @@
 import {afterEach, assert, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH, forkAll, isForkPostHeze} from "@lodestar/params";
-import {ssz, sszTypesFor} from "@lodestar/types";
-import {BeaconStatePreHeze} from "../../../src/types.js";
+import {ForkName, SLOTS_PER_EPOCH, forkAll, isForkPostHeze} from "@lodestar/params";
+import {phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {BeaconStateAllForks, BeaconStatePhase0, BeaconStatePq, BeaconStatePreHeze} from "../../../src/types.js";
 import {
   getValidatorCountFromStateBytes,
   getValidatorPubkeyFromStateBytes,
@@ -14,6 +14,22 @@ import {
   computeWeakSubjectivitySummaryFromStateBytes,
   isWithinWeakSubjectivityPeriodFromSummary,
 } from "../../../src/util/weakSubjectivity.js";
+
+type ValidatorFields = Partial<
+  Pick<phase0.Validator, "activationEpoch" | "exitEpoch" | "effectiveBalance" | "slashed">
+>;
+
+function pushValidator(fork: ForkName, state: BeaconStateAllForks, fields: ValidatorFields = {}): void {
+  if (fork === ForkName.pq) {
+    (state as BeaconStatePq).validators.push(
+      ssz.pq.Validator.toViewDU({...ssz.pq.Validator.defaultValue(), ...fields})
+    );
+  } else {
+    (state as BeaconStatePhase0).validators.push(
+      ssz.phase0.Validator.toViewDU({...ssz.phase0.Validator.defaultValue(), ...fields})
+    );
+  }
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -39,15 +55,7 @@ describe("scanActiveValidatorsFromStateBytes", () => {
       [0, 3, 8_000_000_000, false],
       [3, 3, 50_000_000_000, false],
     ] as const) {
-      state.validators.push(
-        ssz.phase0.Validator.toViewDU({
-          ...ssz.phase0.Validator.defaultValue(),
-          activationEpoch,
-          exitEpoch,
-          effectiveBalance,
-          slashed,
-        })
-      );
+      pushValidator(fork, state, {activationEpoch, exitEpoch, effectiveBalance, slashed});
       state.balances.push(999_000_000_000);
     }
     const bytes = state.serialize();
@@ -108,7 +116,7 @@ describe("scanActiveValidatorsFromStateBytes", () => {
   it.each(forkAll)("returns null for malformed registry ranges in %s", (fork) => {
     const stateType = ssz[fork].BeaconState;
     const state = stateType.defaultViewDU();
-    state.validators.push(ssz.phase0.Validator.defaultViewDU());
+    pushValidator(fork, state);
     state.balances.push(32_000_000_000);
     const bytes = state.serialize();
     const fieldOffsets: Record<string, number> = {};
@@ -163,14 +171,7 @@ describe("state bytes weak subjectivity", () => {
       [0, 4, 33_000_000_000],
       [Infinity, Infinity, 32_000_000_000],
     ]) {
-      state.validators.push(
-        ssz.phase0.Validator.toViewDU({
-          ...ssz.phase0.Validator.defaultValue(),
-          activationEpoch,
-          exitEpoch,
-          effectiveBalance,
-        })
-      );
+      pushValidator(fork, state, {activationEpoch, exitEpoch, effectiveBalance});
     }
     const bytes = state.serialize();
     const backing = Buffer.alloc(bytes.length + 17);

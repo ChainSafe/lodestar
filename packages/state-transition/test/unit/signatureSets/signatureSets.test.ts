@@ -7,12 +7,13 @@ import {SecretKey} from "@lodestar/native/blst";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   FAR_FUTURE_EPOCH,
+  ForkBls,
   MAX_EFFECTIVE_BALANCE,
   PTC_SIZE,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {BLSSignature, ValidatorIndex, capella, gloas, phase0, ssz} from "@lodestar/types";
+import {BLSSignature, IndexedAttestation, ValidatorIndex, capella, gloas, phase0, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY, ZERO_HASH} from "../../../src/constants/index.js";
 import {BeaconStateView} from "../../../src/index.js";
 import {getBlockSignatureSets, getPayloadAttestationDataSigningRoot} from "../../../src/signatureSets/index.js";
@@ -116,8 +117,8 @@ describe("signatureSets", () => {
 
     const state = generateCachedState(config, {validators});
     const fork = state.config.getForkSeq(signedBlock.message.slot);
-    const indexedAttestations = signedBlock.message.body.attestations.map((attestation) =>
-      state.epochCtx.getIndexedAttestation(fork, attestation)
+    const indexedAttestations = signedBlock.message.body.attestations.map(
+      (attestation) => state.epochCtx.getIndexedAttestation(fork, attestation) as IndexedAttestation<ForkBls>
     );
 
     const signatureSets = getBlockSignatureSets(

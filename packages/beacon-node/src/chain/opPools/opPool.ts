@@ -15,7 +15,6 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
-  getAttesterSlashingSignatureSets,
   getProposerSlashingSignatureSets,
 } from "@lodestar/state-transition";
 import {

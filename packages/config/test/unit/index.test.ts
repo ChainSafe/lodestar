@@ -24,7 +24,8 @@ describe("forks", () => {
   it("correct prev data", () => {
     for (let i = 1; i < config.forksAscendingEpochOrder.length; i++) {
       const fork = config.forksAscendingEpochOrder[i];
-      const prevFork = config.forksAscendingEpochOrder[i - 1];
+      // heze builds on gloas, not on pq, which sits between them
+      const prevFork = fork.name === ForkName.heze ? config.forks.gloas : config.forksAscendingEpochOrder[i - 1];
       expect(toHexString(fork.prevVersion)).toBe(toHexString(prevFork.version));
       expect(fork.prevForkName).toBe(prevFork.name);
     }

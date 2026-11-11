@@ -3,7 +3,7 @@ import {getClient, routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {genesisData} from "@lodestar/config/networks";
-import {ACTIVE_PRESET, ForkSeq, PresetName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkBls, ForkSeq, PresetName} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -111,7 +111,7 @@ describe("web3signer signature test", () => {
         return;
       }
 
-      const aggregateAndProof = sszTypesFor(fork.name).AggregateAndProof.defaultValue();
+      const aggregateAndProof = sszTypesFor(fork.name as ForkBls).AggregateAndProof.defaultValue();
       const slot = computeStartSlotAtEpoch(fork.epoch);
       aggregateAndProof.aggregate.data.slot = slot;
       aggregateAndProof.aggregate.data.index = duty.committeeIndex;

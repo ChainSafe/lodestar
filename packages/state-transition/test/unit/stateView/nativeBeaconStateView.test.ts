@@ -47,6 +47,8 @@ describe("NativeBeaconStateView", () => {
       state.inactivityScores = state.validators.map(() => 0);
       state.previousEpochParticipation = state.validators.map(() => 0);
       state.currentEpochParticipation = state.validators.map(() => 0);
+    }
+    if ("currentSyncCommittee" in state) {
       state.currentSyncCommittee.pubkeys.fill(state.validators[0].pubkey);
       state.nextSyncCommittee.pubkeys.fill(state.validators[0].pubkey);
     }

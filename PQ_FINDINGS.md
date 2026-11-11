@@ -28,25 +28,25 @@ Measurements are from one machine, an AMD Threadripper 1950X (16 cores, 32 threa
 
 ## Measurements
 
-| Operation | Time |
-| --- | --- |
-| leanXMSS key generation | 0.39 s |
-| First signature in a bottom tree | 0.42 s |
-| Later signatures in that tree, mean of 64 | 20 ms |
-| Signature verification | 0.07 ms |
-| VRF tree, depth 31 | 14.5 s |
-| VRF proof after a subtree rebuild | 10 ms |
+| Operation                                 | Time    |
+| ----------------------------------------- | ------- |
+| leanXMSS key generation                   | 0.39 s  |
+| First signature in a bottom tree          | 0.42 s  |
+| Later signatures in that tree, mean of 64 | 20 ms   |
+| Signature verification                    | 0.07 ms |
+| VRF tree, depth 31                        | 14.5 s  |
+| VRF proof after a subtree rebuild         | 10 ms   |
 
 Signing grinds a randomizer, so single signatures vary widely around the mean. On one thread key generation takes 5.1 s and a warm signature 0.28 s on average.
 
 Aggregation at `log_inv_rate = 2`:
 
-| Signatures | Prove | Proof size | Verify |
-| --- | --- | --- | --- |
-| 16 | 0.26 s | 189,840 bytes | 23 ms |
-| 64 | 0.32 s | 206,736 bytes | 20 ms |
-| 256 | 0.81 s | 226,616 bytes | 21 ms |
-| 1024 | 2.8 s | 243,272 bytes | 22 ms |
+| Signatures | Prove  | Proof size    | Verify |
+| ---------- | ------ | ------------- | ------ |
+| 16         | 0.26 s | 189,840 bytes | 23 ms  |
+| 64         | 0.32 s | 206,736 bytes | 20 ms  |
+| 256        | 0.81 s | 226,616 bytes | 21 ms  |
+| 1024       | 2.8 s  | 243,272 bytes | 22 ms  |
 
 Merging two aggregates into one takes about 0.65 s whatever their size, more than proving 64 signatures from scratch.
 

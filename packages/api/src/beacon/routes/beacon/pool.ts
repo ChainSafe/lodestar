@@ -1,6 +1,6 @@
 import {ProgressiveListCompositeType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkPostElectra, ForkPreElectra, PTC_SIZE, isForkPostElectra} from "@lodestar/params";
+import {ForkName, PTC_SIZE, isForkPostElectra} from "@lodestar/params";
 import {
   ArrayOf,
   AttesterSlashing,
@@ -8,7 +8,6 @@ import {
   SingleAttestation,
   Slot,
   capella,
-  electra,
   phase0,
   ssz,
 } from "@lodestar/types";

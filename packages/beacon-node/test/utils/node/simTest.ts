@@ -1,3 +1,4 @@
+import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -8,7 +9,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
-import {BeaconBlock, Epoch, Slot} from "@lodestar/types";
+import {BeaconBlock, Epoch, Slot, phase0} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Logger, mapValues, toRootHex} from "@lodestar/utils";
 import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
@@ -97,14 +98,16 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
 }
 
 function sumAttestationBits(block: BeaconBlock): number {
-  return Array.from(block.body.attestations).reduce(
+  return Array.from<{aggregationBits: BitArray}>(block.body.attestations).reduce(
     (total, att) => total + att.aggregationBits.getTrueBitIndexes().length,
     0
   );
 }
 
 function avgInclusionDelay(block: BeaconBlock): number {
-  const inclDelay = Array.from(block.body.attestations).map((att) => block.slot - att.data.slot);
+  const inclDelay = Array.from<{data: phase0.AttestationData}>(block.body.attestations).map(
+    (att) => block.slot - att.data.slot
+  );
   return avg(inclDelay);
 }
 

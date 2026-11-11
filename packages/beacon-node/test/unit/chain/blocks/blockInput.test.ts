@@ -35,6 +35,8 @@ const slots: Record<ForkPostCapella, number> = {
   electra: computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH),
   fulu: computeStartSlotAtEpoch(FULU_FORK_EPOCH),
   gloas: computeStartSlotAtEpoch(GLOAS_FORK_EPOCH),
+  // Not scheduled in these tests
+  pq: Infinity,
   heze: computeStartSlotAtEpoch(HEZE_FORK_EPOCH),
 };
 

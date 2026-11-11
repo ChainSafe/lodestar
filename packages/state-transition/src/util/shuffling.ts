@@ -1,11 +1,4 @@
-import {
-  ForkBls,
-  ForkName,
-  ForkSeq,
-  INCLUSION_LIST_COMMITTEE_SIZE,
-  SLOTS_PER_EPOCH,
-  isForkPostFulu,
-} from "@lodestar/params";
+import {ForkName, ForkSeq, INCLUSION_LIST_COMMITTEE_SIZE, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
 import {
   Attestation,
   CommitteeIndex,

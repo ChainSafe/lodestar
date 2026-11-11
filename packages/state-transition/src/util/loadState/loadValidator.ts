@@ -61,7 +61,8 @@ export function getEffectiveBalancesFromStateBytes(
   const validatorsFieldIndex = stateFields.indexOf("validators");
   const validatorsRange = stateFieldRanges[validatorsFieldIndex];
   const validatorsBytes = stateBytes.subarray(validatorsRange.start, validatorsRange.end);
-  const validatorSize = ssz.phase0.Validator.fixedSize as number;
+  const validatorType = (stateType as unknown) === ssz.pq.BeaconState ? ssz.pq.Validator : ssz.phase0.Validator;
+  const validatorSize = validatorType.fixedSize as number;
 
   const effectiveBalances: number[] = [];
 
@@ -70,7 +71,7 @@ export function getEffectiveBalancesFromStateBytes(
     if (validatorBytes.byteLength === 0) {
       throw Error(`Validator index ${index} out of range`);
     }
-    const validator = ssz.phase0.Validator.deserialize(validatorBytes);
+    const validator = validatorType.deserialize(validatorBytes);
     effectiveBalances.push(validator.effectiveBalance);
   }
 

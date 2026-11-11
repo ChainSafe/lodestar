@@ -3,7 +3,7 @@ import {createChainForkConfig} from "@lodestar/config";
 import {mainnetChainConfig} from "@lodestar/config/networks";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {BeaconStateAllForks, BeaconStateAltair} from "../../../src/types.js";
+import {BeaconStateAltair} from "../../../src/types.js";
 import {loadState, loadStateAndValidators} from "../../../src/util/loadState/loadState.js";
 
 describe("loadStateAndValidators", () => {
@@ -19,7 +19,7 @@ describe("loadStateAndValidators", () => {
 
   for (const {name, slot} of testCases) {
     it(`fork: ${name}, slot: ${slot}`, () => {
-      const state = config.getForkTypes(slot).BeaconState.defaultViewDU();
+      const state = config.getForkTypes(slot).BeaconState.defaultViewDU() as BeaconStateAltair;
       state.slot = slot;
       for (let i = 0; i < numValidator; i++) {
         const validator = ssz.phase0.Validator.defaultViewDU();
@@ -125,7 +125,7 @@ describe("loadState across the gloas fork boundary", () => {
   const preGloasSlot = (gloasForkEpoch - 1) * SLOTS_PER_EPOCH;
   const postGloasSlot = gloasForkEpoch * SLOTS_PER_EPOCH;
 
-  function buildState(slot: number, validatorCount: number): BeaconStateAllForks {
+  function buildState(slot: number, validatorCount: number): BeaconStateAltair {
     const state = config.getForkTypes(slot).BeaconState.defaultViewDU() as BeaconStateAltair;
     state.slot = slot;
     for (let i = 0; i < validatorCount; i++) {

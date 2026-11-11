@@ -5,6 +5,7 @@ import {chainConfig as chainConfigDefault} from "@lodestar/config/default";
 import {SecretKey, Signature, aggregateSignatures, fastAggregateVerify} from "@lodestar/native/blst";
 import {
   FAR_FUTURE_EPOCH,
+  ForkBls,
   ForkName,
   ForkPostElectra,
   MAX_ATTESTATIONS_ELECTRA,
@@ -243,7 +244,7 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
           for (const index of notSeenValidators) {
             aggregationBits.set(index, false);
           }
-          const attestationi: Attestation<ForkPostElectra> = {
+          const attestationi: Attestation<ForkPostElectra & ForkBls> = {
             ...attestation,
             aggregationBits,
             committeeBits,
