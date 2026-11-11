@@ -12,6 +12,7 @@ const ValidatorIndex = types.primitive.ValidatorIndex.Type;
 const CommitteeIndex = types.primitive.CommitteeIndex.Type;
 const BeaconConfig = @import("config").BeaconConfig;
 const PubkeyCache = @import("./pubkey_cache.zig").PubkeyCache;
+const BuilderDepositSignatureCacheRc = @import("builder_deposit_signature_cache.zig").BuilderDepositSignatureCacheRc;
 const EpochShuffling = @import("../utils//epoch_shuffling.zig").EpochShuffling;
 const EpochShufflingRc = @import("../utils/epoch_shuffling.zig").EpochShufflingRc;
 const EffectiveBalanceIncrementsRc = @import("./effective_balance_increments.zig").EffectiveBalanceIncrementsRc;
@@ -48,6 +49,7 @@ const ForkTypes = @import("fork_types").ForkTypes;
 pub const EpochCacheImmutableData = struct {
     config: *const BeaconConfig,
     pubkey_cache: *PubkeyCache,
+    builder_deposit_signature_cache: ?*BuilderDepositSignatureCacheRc = null,
 };
 
 pub const EpochCacheOpts = struct {
@@ -67,6 +69,8 @@ pub const EpochCache = struct {
 
     /// Application-wide pubkey cache; EpochCache does not own it.
     pubkey_cache: *PubkeyCache,
+
+    builder_deposit_signature_cache: *BuilderDepositSignatureCacheRc,
 
     proposers: [preset.SLOTS_PER_EPOCH]ValidatorIndex,
 
@@ -437,10 +441,19 @@ pub const EpochCache = struct {
         const epoch_cache_ptr = try allocator.create(EpochCache);
         errdefer allocator.destroy(epoch_cache_ptr);
 
+        const builder_deposit_signature_cache = if (immutable_data.builder_deposit_signature_cache) |cache|
+            cache.ref()
+        else
+            try BuilderDepositSignatureCacheRc.create(allocator, .{
+                .hash_context = pubkey_cache.hashContext(),
+                .validity_context = .{ .pubkey_context = pubkey_cache.hashContext() },
+            });
+
         epoch_cache_ptr.* = .{
             .allocator = allocator,
             .config = config,
             .pubkey_cache = pubkey_cache,
+            .builder_deposit_signature_cache = builder_deposit_signature_cache,
             .proposers = proposers,
             // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
             .proposers_prev_epoch = null,
@@ -473,6 +486,7 @@ pub const EpochCache = struct {
     }
 
     pub fn deinit(self: *EpochCache) void {
+        self.builder_deposit_signature_cache.unref();
         // EpochCache does not own the application-wide pubkey cache.
 
         // unref the epoch shufflings
@@ -497,6 +511,7 @@ pub const EpochCache = struct {
             .config = self.config,
             // Common append-only structures shared with all states, no need to clone
             .pubkey_cache = self.pubkey_cache,
+            .builder_deposit_signature_cache = self.builder_deposit_signature_cache.ref(),
             // Immutable data
             .proposers = self.proposers,
             .proposers_prev_epoch = self.proposers_prev_epoch,

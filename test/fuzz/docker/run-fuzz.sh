@@ -1,5 +1,5 @@
 #!/bin/sh
-# Entrypoint of the lodestar-z fuzzing image (Dockerfile.fuzz).
+# Entrypoint of the Lodestar fuzzing image (Dockerfile.fuzz).
 #
 # Runs one AFL++ campaign for $FUZZ_TARGET and fulfils this project's side of
 # the ChainSafe fuzz platform's container contract:

@@ -27,6 +27,7 @@ pub fn ProgressiveByteListType(comptime _opts: TypeOpts) type {
         pub const min_size = Bytes.min_size;
         pub const max_size = Bytes.max_size;
         pub const default_value = Bytes.default_value;
+        pub const init = Bytes.init;
         pub const default_root = Bytes.default_root;
 
         pub const equals = Bytes.equals;
