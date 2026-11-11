@@ -46,6 +46,7 @@ import type {BeaconChain} from "../chain.js";
 import {ChainEvent} from "../emitter.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
+import {IncludedAttesters} from "../opPools/singleAttestationPool.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
@@ -172,6 +173,9 @@ export async function importBlock(
   // Only process attestations of blocks with relevant attestations for the fork-choice:
   // If current epoch is N, and block is epoch X, block may include attestations for epoch X or X - 1.
   // The latest block that is useful is at epoch N - 1 which may include attestations for epoch N - 1 or N - 2.
+  // the pool is empty outside the slots before a local block proposal, nothing to prune then
+  const pruneSingleAttestations = fork >= ForkSeq.electra && !this.singleAttestationPool.isEmpty();
+  const includedAttesters: IncludedAttesters[] = [];
   if (importsBlockAttestations(opts, blockEpoch, currentEpoch)) {
     const attestations = block.message.body.attestations;
     const rootCache = new RootCache(postState);
@@ -186,6 +190,14 @@ export async function importBlock(
         const {target, beaconBlockRoot} = attestation.data;
 
         const attDataRoot = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
+        // the block includes these attesters even if fork choice below rejects the vote
+        if (pruneSingleAttestations) {
+          includedAttesters.push({
+            slot: attestation.data.slot,
+            attDataRootHex: attDataRoot,
+            attestingIndices: indexedAttestation.attestingIndices,
+          });
+        }
         addAttestation.call(
           this,
           postState,
@@ -314,6 +326,14 @@ export async function importBlock(
       if (newHeadParent) {
         this.seenPayloadEnvelopeInputCache.pruneBelowParent(newHeadParent);
       }
+    });
+  }
+
+  // only a block that becomes head prunes, not a side-branch import
+  if (pruneSingleAttestations && newHead.blockRoot === blockRootHex) {
+    callInNextEventLoop(() => {
+      const deleted = this.singleAttestationPool.onHead(blockRootHex, newHead.parentRoot, includedAttesters);
+      this.metrics?.opPool.singleAttestationPool.deletedByBlock.inc(deleted);
     });
   }
 

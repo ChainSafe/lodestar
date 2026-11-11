@@ -61,6 +61,11 @@ export enum ChainEvent {
    */
   publishProposerSlashing = "publishProposerSlashing",
   /**
+   * New block proposal slots of validators connected to this node, the network subscribes to all attestation
+   * subnets before them, see `slotsToSubscribeBeforeProposalDuty`
+   */
+  localProposalSlots = "localProposalSlots",
+  /**
    * Trigger an update of status so reqresp by peers have current earliestAvailableSlot
    */
   updateStatus = "updateStatus",
@@ -126,6 +131,8 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.publishBlobSidecars]: (sidecars: deneb.BlobSidecar[]) => void;
 
   [ChainEvent.publishProposerSlashing]: (proposerSlashing: phase0.ProposerSlashing) => void;
+
+  [ChainEvent.localProposalSlots]: (proposalSlots: Slot[]) => void;
 
   [ChainEvent.updateStatus]: () => void;
 

@@ -21,6 +21,7 @@ import {
   type ForkPostGloas,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
+  isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
 import {
@@ -34,6 +35,7 @@ import {
   isStatePostAltair,
   isStatePostElectra,
   isStatePostGloas,
+  proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -106,6 +108,7 @@ import {
   OpPool,
   PayloadAttestationPool,
   ProposerPreferencesPool,
+  SingleAttestationPool,
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
@@ -114,6 +117,7 @@ import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
+import {ProposerTracker} from "./proposerTracker.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {
@@ -196,6 +200,13 @@ export class BeaconChain implements IBeaconChain {
   // Ops pool
   readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
+  readonly singleAttestationPool: SingleAttestationPool;
+  readonly proposerTracker: ProposerTracker;
+  /**
+   * Head state epoch and decision root of its next epoch proposers when local proposals were last refreshed. The root
+   * alone is not enough: a reorg onto a branch without blocks in a whole epoch keeps the root but moves the epoch
+   */
+  private localProposalsKey: string | null = null;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
@@ -332,6 +343,8 @@ export class BeaconChain implements IBeaconChain {
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
     this.attestationPool = new AttestationPool(config, clock, this.opts?.preaggregateSlotDistance, metrics);
     this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics, logger);
+    this.singleAttestationPool = new SingleAttestationPool(metrics);
+    this.proposerTracker = new ProposerTracker(this.opts.singleAttestationIgnoreProposalDuty ?? false, metrics);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, this.opts?.preaggregateSlotDistance);
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
@@ -1888,6 +1901,8 @@ export class BeaconChain implements IBeaconChain {
 
     this.attestationPool.prune(slot);
     this.aggregatedAttestationPool.prune(slot);
+    this.proposerTracker.prune(slot);
+    this.singleAttestationPool.prune(this.proposerTracker);
     this.syncCommitteeMessagePool.prune(slot);
     this.seenSyncCommitteeMessages.prune(slot);
     this.payloadAttestationPool.prune(slot);
@@ -1914,6 +1929,55 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
+  /**
+   * Track upcoming proposals of validators connected to this node, so that SingleAttestationPool only collects and
+   * the network only subscribes to all attestation subnets before them. Proposals only change when the decision block
+   * of next epoch proposers changes (the head enters a new epoch or reorgs that block) or a new validator connects,
+   * set localProposalsKey to null before calling for the latter.
+   * Never throws, it runs during block import.
+   */
+  private refreshLocalProposals(): void {
+    const clockSlot = this.clock.currentSlot;
+    try {
+      const headState = this.getHeadState();
+      const headFork = this.config.getForkName(headState.slot);
+      // post-fulu, the head state knows proposers of its epoch and the next one thanks to the proposer lookahead,
+      // a pre-fulu state only predicts next epoch proposers
+      if (!isForkPostFulu(headFork) || headState.epoch < computeEpochAtSlot(clockSlot) - 1) {
+        return;
+      }
+
+      const decisionRoot = proposerShufflingDecisionRoot(headFork, headState, headState.epoch + 1);
+      if (decisionRoot === null) {
+        return;
+      }
+      const localProposalsKey = `${headState.epoch}_${toRootHex(decisionRoot)}`;
+      if (localProposalsKey === this.localProposalsKey) {
+        return;
+      }
+      this.localProposalsKey = localProposalsKey;
+
+      const startSlot = computeStartSlotAtEpoch(headState.epoch);
+      const newProposalSlots: Slot[] = [];
+      for (const [i, proposerIndex] of [...headState.currentProposers, ...headState.nextProposers].entries()) {
+        const proposalSlot = startSlot + i;
+        if (
+          proposalSlot >= clockSlot &&
+          this.beaconProposerCache.has(proposerIndex) &&
+          this.proposerTracker.addProposal(proposalSlot)
+        ) {
+          newProposalSlots.push(proposalSlot);
+        }
+      }
+
+      if (newProposalSlots.length > 0) {
+        this.emitter.emit(ChainEvent.localProposalSlots, newProposalSlots);
+      }
+    } catch (e) {
+      this.logger.debug("Error refreshing local proposals", {slot: clockSlot}, e as Error);
+    }
+  }
+
   private onClockEpoch(epoch: Epoch): void {
     this.metrics?.clockEpoch.set(epoch);
 
@@ -1928,6 +1992,8 @@ export class BeaconChain implements IBeaconChain {
   protected onNewHead(head: ProtoBlock): void {
     this.syncContributionAndProofPool.prune(head.slot);
     this.seenContributionAndProof.prune(head.slot);
+
+    this.refreshLocalProposals();
   }
 
   private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex): void {
@@ -1996,6 +2062,9 @@ export class BeaconChain implements IBeaconChain {
 
     // Only update validator custody if we discovered new validators
     if (newValidatorCount > previousValidatorCount) {
+      // new validators may propose in the current or next epoch, a failed attempt leaves null so the next head retries
+      this.localProposalsKey = null;
+      this.refreshLocalProposals();
       const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
       await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
     }
@@ -2011,6 +2080,9 @@ export class BeaconChain implements IBeaconChain {
 
     // Only update validator custody if we discovered new validators
     if (hasNewValidators) {
+      // new validators may propose in the current or next epoch, a failed attempt leaves null so the next head retries
+      this.localProposalsKey = null;
+      this.refreshLocalProposals();
       const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
       await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
     }

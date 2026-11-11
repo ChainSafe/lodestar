@@ -1662,6 +1662,32 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
               logger.debug("Error adding gossip unaggregated attestation to pool", {subnet}, e as Error);
             }
 
+            // Collected only for vote slots that an upcoming block of a connected validator can include
+            if (isForkPostElectra(fork) && chain.proposerTracker.shouldCollect(indexedAttestation.data.slot)) {
+              try {
+                const insertOutcome = chain.singleAttestationPool.add(
+                  attestation as SingleAttestation<ForkPostElectra>,
+                  attDataRootHex,
+                  validatorCommitteeIndex,
+                  committeeSize
+                );
+                metrics?.opPool.singleAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+              } catch (e) {
+                logger.debug(
+                  "Error adding gossip single attestation to pool",
+                  {
+                    slot: indexedAttestation.data.slot,
+                    committeeIndex,
+                    validatorCommitteeIndex,
+                    validatorIndex: (attestation as SingleAttestation<ForkPostElectra>).attesterIndex,
+                    subnet,
+                    attDataRoot: attDataRootHex,
+                  },
+                  e as Error
+                );
+              }
+            }
+
             // Separate boundary: a pool insertion error above must not skip the fork-choice vote
             if (!options.dontSendGossipAttestationsToForkchoice) {
               try {

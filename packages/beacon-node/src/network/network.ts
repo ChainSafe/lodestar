@@ -19,6 +19,7 @@ import {
   SignedAggregateAndProof,
   SignedBeaconBlock,
   SingleAttestation,
+  Slot,
   SlotRootHex,
   SubnetID,
   altair,
@@ -153,6 +154,7 @@ export class Network implements INetwork {
     this.chain.emitter.on(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
     this.chain.emitter.on(ChainEvent.publishProposerSlashing, this.onPublishProposerSlashing);
     this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
+    this.chain.emitter.on(ChainEvent.localProposalSlots, this.onLocalProposalSlots);
   }
 
   static async init({
@@ -258,6 +260,7 @@ export class Network implements INetwork {
     this.chain.emitter.off(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
     this.chain.emitter.off(ChainEvent.publishProposerSlashing, this.onPublishProposerSlashing);
     this.chain.emitter.off(ChainEvent.updateStatus, this.onUpdateStatus);
+    this.chain.emitter.off(ChainEvent.localProposalSlots, this.onLocalProposalSlots);
     this.connectedPeersSyncMeta.clear();
     this.subscribedToCoreTopics = false;
     const results = await Promise.allSettled([this.networkProcessor.stop(), this.core.close()]);
@@ -284,6 +287,13 @@ export class Network implements INetwork {
 
     return this.core.prepareBeaconCommitteeSubnets(subscriptions);
   }
+
+  /** The core subscribes to all attestation subnets before these proposals, see `slotsToSubscribeBeforeProposalDuty` */
+  private onLocalProposalSlots = (proposalSlots: Slot[]): void => {
+    this.core.addLocalProposalSlots(proposalSlots).catch((e) => {
+      this.logger.debug("Error adding local proposal slots", {slots: proposalSlots.join(",")}, e as Error);
+    });
+  };
 
   async prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     return this.core.prepareSyncCommitteeSubnets(subscriptions);
