@@ -1854,11 +1854,6 @@ export function createLodestarMetrics(
           help: "Total number of duplicate blocks that pass validation and attempt to be cached but are known",
           labelNames: ["source"],
         }),
-        duplicateBlobCount: register.counter<{source: BlockInputSource}>({
-          name: "lodestar_seen_block_input_cache_duplicate_blob_total",
-          help: "Total number of duplicate blobs that pass validation and attempt to be cached but are known",
-          labelNames: ["source"],
-        }),
         duplicateColumnCount: register.counter<{source: BlockInputSource}>({
           name: "lodestar_seen_block_input_cache_duplicate_column_total",
           help: "Total number of duplicate columns that pass validation and attempt to be cached but are known",
@@ -1867,10 +1862,6 @@ export function createLodestarMetrics(
         createdByBlock: register.counter({
           name: "lodestar_seen_block_input_cache_items_created_by_block_total",
           help: "Number of BlockInputs created via a block being seen first",
-        }),
-        createdByBlob: register.counter({
-          name: "lodestar_seen_block_input_cache_items_created_by_blob_total",
-          help: "Number of BlockInputs created via a blob being seen first",
         }),
         createdByColumn: register.counter({
           name: "lodestar_seen_block_input_cache_items_created_by_column_total",
