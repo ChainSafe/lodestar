@@ -46,6 +46,7 @@ import type {BeaconChain} from "../chain.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS} from "../reprocess.js";
+import {observeBlockBecomeHead} from "../slotTimingMetrics.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
 import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
@@ -334,16 +335,7 @@ export async function importBlock(
 
     if (this.metrics) {
       this.metrics.headSlot.set(newHead.slot);
-      // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
-      // We want to track recent blocks coming from gossip, unknown block sync, and API.
-      const headFork = this.config.getForkName(newHead.slot);
-      if (delaySec < (SLOTS_PER_EPOCH * this.config.getSlotDurationMs(headFork)) / 1000) {
-        this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
-        const cutOffSec = this.config.getAttestationDueMs(this.config.getForkName(blockSlot)) / 1000;
-        if (delaySec > cutOffSec) {
-          this.metrics.importBlock.setHeadAfterCutoff.inc();
-        }
-      }
+      observeBlockBecomeHead(this.metrics, this.config, newHead.slot, delaySec);
     }
 
     this.onNewHead(newHead);

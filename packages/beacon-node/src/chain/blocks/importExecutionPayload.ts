@@ -20,6 +20,7 @@ import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
+import {observePayloadImport} from "../slotTimingMetrics.js";
 import {PayloadEnvelopeInputSource} from "./payloadEnvelopeInput/index.js";
 import {ImportPayloadOpts} from "./types.js";
 import {
@@ -351,10 +352,15 @@ export async function importExecutionPayload(
 
   // 8. Record metrics for payload envelope and column sources
   const delaySec = this.clock.secFromSlot(slot);
-  this.metrics?.importPayload.elapsedTimeTillImported.observe(
-    {source: payloadInput.getPayloadEnvelopeSource().source},
-    delaySec
-  );
+  if (this.metrics) {
+    observePayloadImport(this.metrics, this.config, {
+      slot,
+      currentSlot: this.clock.currentSlot,
+      delaySec,
+      source: payloadInput.getPayloadEnvelopeSource().source,
+      status: execResult.status,
+    });
+  }
   for (const {source} of payloadInput.getSampledColumnsWithSource()) {
     this.metrics?.importPayload.columnsBySource.inc({source});
   }

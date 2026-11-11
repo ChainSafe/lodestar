@@ -37,6 +37,7 @@ import {
   prepareExecutionPayload,
 } from "./produceBlock/produceBlockBody.js";
 import {RegenCaller} from "./regen/index.js";
+import {getSlotPosition} from "./slotTimingMetrics.js";
 
 // TODO GLOAS: re-evaluate this timing
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 - 0.6667 * 12 = 4`). */
@@ -318,6 +319,30 @@ export class PrepareNextSlotScheduler {
           RegenCaller.precomputeEpoch
         );
         this.computeStateHashTreeRoot(preparedState, isEpochTransition);
+      }
+
+      // msFromSlot is negative while prepareSlot is still in the future. The margin is a fraction of
+      // the scheduling slot, which is the one the preparation window was sized from.
+      const leadMarginSlotFraction =
+        -this.chain.clock.msFromSlot(prepareSlot) / this.config.getSlotDurationMs(currentFork);
+      this.metrics?.slotTiming.prepareNextSlotLeadMargin.observe(
+        {slot_position: getSlotPosition(clockSlot)},
+        leadMarginSlotFraction
+      );
+      if (leadMarginSlotFraction < 0) {
+        this.metrics?.slotTiming.deadlineMissed.inc({task: "prepare_next_slot"});
+      }
+      // Epoch-end preparation shares the slot with the PTC duty of the scheduling slot. A completion
+      // past that due point only places it after a reference time: an awaited EL call gets here too.
+      if (isEpochTransition && isForkPostGloas(currentFork)) {
+        this.metrics?.slotTiming.prepareNextSlotPtcEligibleCompletions.inc();
+        const payloadAttestationDueMs = this.config.getSlotComponentDurationMs(
+          currentFork,
+          this.config.PAYLOAD_ATTESTATION_DUE_BPS
+        );
+        if (this.chain.clock.msFromSlot(clockSlot) > payloadAttestationDueMs) {
+          this.metrics?.slotTiming.deadlineMissed.inc({task: "prepare_next_slot_completion"});
+        }
       }
 
       // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot

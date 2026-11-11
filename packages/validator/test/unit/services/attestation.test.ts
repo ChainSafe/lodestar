@@ -15,6 +15,7 @@ import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {ClockMock} from "../../utils/clock.js";
 import {loggerVc} from "../../utils/logger.js";
+import {createFakeMetrics} from "../../utils/metrics.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../utils/types.js";
 
 vi.mock("../../../src/services/validatorStore.js");
@@ -164,4 +165,63 @@ describe("AttestationService", () => {
       });
     });
   }
+
+  describe("slot fraction margins", () => {
+    it("divides the due offset by the duty slot's duration", async () => {
+      // Heze at 10s: ATTESTATION_DUE_BPS_GLOAS=2500 is 2.5s, produce runs at 1s into the slot
+      const slot = 0;
+      const clock = new ClockMock();
+      clock.secFromSlot = () => 1;
+      clock.msFromSlot = () => 1000;
+      clock.getSlotDurationMs = () => 10000;
+      const config = createChainForkConfig({
+        ...defaultConfig,
+        ...gloasConfig,
+        HEZE_FORK_EPOCH: 0,
+        SLOT_DURATION_MS_HEZE: 10000,
+      });
+      const metrics = createFakeMetrics();
+      const attestationService = new AttestationService(
+        loggerVc,
+        api,
+        clock,
+        validatorStore,
+        emitter,
+        chainHeadTracker,
+        syncingStatusTracker,
+        metrics,
+        config,
+        {}
+      );
+
+      const singleAttestation = ssz.electra.SingleAttestation.defaultValue();
+      singleAttestation.data.index = 1;
+      const duties: AttDutyAndProof[] = [
+        {
+          duty: {
+            slot,
+            committeeIndex: 6,
+            committeeLength: 120,
+            committeesAtSlot: 120,
+            validatorCommitteeIndex: 1,
+            validatorIndex: 0,
+            pubkey: pubkeys[0],
+          },
+          selectionProof: null,
+        },
+      ];
+      vi.spyOn(attestationService["dutiesService"], "getDutiesAtSlot").mockImplementation(() => duties);
+      api.validator.produceAttestationData.mockResolvedValue(mockApiResponse({data: singleAttestation.data}));
+      api.beacon.submitPoolAttestationsV2.mockResolvedValue(mockApiResponse({}));
+      validatorStore.signAttestation.mockResolvedValue(singleAttestation);
+
+      await clock.tickSlotFns(slot, controller.signal);
+
+      expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledOnce();
+      expect(metrics.attesterStepCallProduceAttestation.observe).toHaveBeenCalledWith(1 - 2.5);
+      expect(metrics.attesterProduceMarginSlotFraction.observe).toHaveBeenCalledWith((1 - 2.5) / 10);
+      expect(metrics.attesterStepCallPublishAttestation.observe).toHaveBeenCalledWith(1 - 2.5);
+      expect(metrics.attesterPublishMarginSlotFraction.observe).toHaveBeenCalledWith((1 - 2.5) / 10);
+    });
+  });
 });
