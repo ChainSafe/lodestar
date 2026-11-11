@@ -884,6 +884,31 @@ test "optimistic sync: Gloas empty links skip the parent's own payload" {
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(fullOf(&store, 0x21)));
 }
 
+test "get_ancestor: a Gloas walk takes each link's payload status from the child" {
+    const allocator = testing.allocator;
+    const config_mod = @import("config");
+    const chain_config = config_mod.mainnet.chain_config.merge(.{
+        .ALTAIR_FORK_EPOCH = 0,
+        .BELLATRIX_FORK_EPOCH = 0,
+        .CAPELLA_FORK_EPOCH = 0,
+        .DENEB_FORK_EPOCH = 0,
+        .ELECTRA_FORK_EPOCH = 0,
+        .FULU_FORK_EPOCH = 0,
+        .GLOAS_FORK_EPOCH = 0,
+    });
+    const config = config_mod.BeaconConfig.init(chain_config, config_mod.mainnet.genesis_validators_root);
+    var store = try Store.initFromSummary(allocator, &config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .gloas }), Provider.stateProvider());
+    defer store.deinit();
+    try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
+    try store.onTick(store.timing.timeAtSlotMs(8));
+    // 0x20 builds on the anchor's payload, 0x21 on 0x20 without 0x20's payload.
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x21, .parent = 0x20, .slot = 2, .fork = .gloas, .bid_parent = 1 }));
+
+    try testing.expectEqual(store_mod.ForkChoiceNode{ .block = store.blockIndex(tagRoot(0x20)).?, .payload_status = .empty }, store.getAncestor(pendingOf(&store, 0x21), 1));
+    try testing.expectEqual(fullOf(&store, 1), store.getAncestor(pendingOf(&store, 0x21), 0));
+}
+
 test "optimistic sync: a valid import and a valid envelope validate the payloads below them" {
     const allocator = testing.allocator;
     const config = &@import("config").mainnet.config;

@@ -526,7 +526,8 @@ pub const Store = struct {
         while (slots[current.block] > slot) {
             const parent = parents[current.block];
             if (parent == NO_BLOCK) break;
-            current = .{ .block = parent, .payload_status = parent_statuses[current.block] };
+            const parent_status = parent_statuses[current.block];
+            current = .{ .block = parent, .payload_status = parent_status };
         }
         return current;
     }
