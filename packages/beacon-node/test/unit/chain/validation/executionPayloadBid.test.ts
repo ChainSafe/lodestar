@@ -85,13 +85,13 @@ describe("validateGossipExecutionPayloadBid", () => {
     expect(await validateGossipExecutionPayloadBid(chain, signedBid)).toEqual({proposerIndex});
     expect(chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
     expect(
-      chain.seenExecutionPayloadBids.getCount(
+      chain.seenExecutionPayloadBids.get(
         signedBid.message.slot,
         signedBid.message.builderIndex,
         toRootHex(parentBlockHash),
         toRootHex(parentBlockRoot)
       )
-    ).toBe(1);
+    ).toEqual({count: 1, limit: 1});
   });
 
   it("rejects a bid whose block hash equals its parent block hash", async () => {
@@ -124,6 +124,8 @@ describe("validateGossipExecutionPayloadBid", () => {
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED, bidLimit: 2},
     });
+    // the bid past the limit is dropped before state regen
+    expect(chain.regen.getBlockSlotState).toHaveBeenCalledTimes(2);
   });
 
   it("ignores a bid from a builder with less than 1 ETH of balance", async () => {

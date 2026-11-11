@@ -166,6 +166,26 @@ async function validateExecutionPayloadBid(
     });
   }
 
+  // [IGNORE] The builder has not reached its bid limit, checked against the limit of its last valid bid.
+  // Bids for the same slot and parent root are validated against the same state, so bids past the
+  // limit can be dropped before state regeneration and the other expensive validation steps.
+  const seenBids = chain.seenExecutionPayloadBids.get(
+    bid.slot,
+    bid.builderIndex,
+    bidParentBlockHash,
+    bidParentBlockRoot
+  );
+  if (seenBids !== undefined && seenBids.count >= seenBids.limit) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+      parentBlockRoot: bidParentBlockRoot,
+      parentBlockHash: bidParentBlockHash,
+      bidLimit: seenBids.limit,
+    });
+  }
+
   // [IGNORE] this bid is the highest value bid seen for the tuple
   // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
   // As a DoS prevention measure, the bid must also exceed the current highest bid by a minimum
@@ -358,8 +378,8 @@ async function validateExecutionPayloadBid(
   // `get_builder_bid_limit(state, bid.builder_index)`.
   const bidLimit = Math.floor(builder.balance / ETH_TO_GWEI);
   if (
-    chain.seenExecutionPayloadBids.getCount(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot) >=
-    bidLimit
+    (chain.seenExecutionPayloadBids.get(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)?.count ??
+      0) >= bidLimit
   ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED,
@@ -434,8 +454,8 @@ async function validateExecutionPayloadBid(
   // Repeat the bid limit check after the awaited signature verification to prevent concurrent bids
   // for the same builder and tuple from all passing validation.
   if (
-    chain.seenExecutionPayloadBids.getCount(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot) >=
-    bidLimit
+    (chain.seenExecutionPayloadBids.get(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)?.count ??
+      0) >= bidLimit
   ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED,
@@ -448,7 +468,7 @@ async function validateExecutionPayloadBid(
   }
 
   // Valid
-  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot);
+  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot, bidLimit);
 
   return {proposerIndex: proposerPreferences.message.validatorIndex};
 }
