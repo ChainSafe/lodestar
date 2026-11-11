@@ -579,6 +579,7 @@ const OptimisticBlock = struct {
     fork: @import("config").ForkSeq = .electra,
     bid_parent: u8 = 0,
     status: ExecutionStatus = .syncing,
+    payload: ?u8 = null,
 };
 
 fn optimisticSummary(block: OptimisticBlock) store_mod.BlockSummary {
@@ -594,7 +595,7 @@ fn optimisticSummary(block: OptimisticBlock) store_mod.BlockSummary {
         .finalized_checkpoint = genesis,
         .unrealized_justified_checkpoint = genesis,
         .unrealized_finalized_checkpoint = genesis,
-        .payload_block_hash = if (block.status == .pre_merge) ZERO else tagHash(block.tag),
+        .payload_block_hash = if (block.status == .pre_merge) ZERO else tagHash(block.payload orelse block.tag),
         .bid_parent_block_hash = tagHash(block.bid_parent),
         .execution_status = block.status,
     };
@@ -722,6 +723,40 @@ test "optimistic sync: valid walks down to the merge boundary, invalid removes t
     try store.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), null);
     try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(pendingOf(&store, 0x30)));
     try testing.expectEqual(pendingOf(&store, 0x30), try store.getHead());
+}
+
+test "optimistic sync: invalidating a payload invalidates every block carrying it" {
+    const allocator = testing.allocator;
+    const config = &@import("config").mainnet.config;
+    const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge });
+    // 0x30 and 0x31 equivocate at slot 2 with the same payload; 0x40 builds on 0x31.
+    const blocks = [_]OptimisticBlock{
+        .{ .tag = 0x20, .parent = 1, .slot = 1 },
+        .{ .tag = 0x30, .parent = 0x20, .slot = 2 },
+        .{ .tag = 0x31, .parent = 0x20, .slot = 2, .payload = 0x30 },
+        .{ .tag = 0x40, .parent = 0x31, .slot = 3 },
+    };
+
+    var store = try Store.initFromSummary(allocator, config, 0, anchor, Provider.stateProvider());
+    defer store.deinit();
+    try store.onTick(store.timing.timeAtSlotMs(8));
+    for (blocks) |block| try store.onBlockSummary(optimisticSummary(block));
+    try testing.expectEqual(pendingOf(&store, 0x40), try store.getHead());
+
+    try store.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), tagHash(0x20));
+    try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x30)));
+    try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x31)));
+    try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x40)));
+    try testing.expectEqual(pendingOf(&store, 0x20), try store.getHead());
+
+    // A validated copy of the payload rejects the verdict without touching the other copy.
+    var conflicted = try Store.initFromSummary(allocator, config, 0, anchor, Provider.stateProvider());
+    defer conflicted.deinit();
+    try conflicted.onTick(conflicted.timing.timeAtSlotMs(8));
+    for (blocks[0..3]) |block| try conflicted.onBlockSummary(optimisticSummary(block));
+    try conflicted.onPayloadValid(tagHash(0x30));
+    try testing.expectError(error.PayloadValidToInvalid, conflicted.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), tagHash(0x20)));
+    try testing.expectEqual(ExecutionStatus.syncing, try conflicted.executionStatus(pendingOf(&conflicted, 0x30)));
 }
 
 test "optimistic sync: a zero latest valid hash invalidates through the merge block" {
