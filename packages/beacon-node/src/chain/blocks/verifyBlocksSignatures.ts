@@ -52,7 +52,7 @@ export async function verifyBlocksSignatures(
           getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
             skipProposerSignature: opts.validProposerSignature,
             attestationShufflings: attestationShufflingsByBlock[i],
-           }),
+          }),
           // Prioritize block verification over attestations, since
           // attestations already buffer up to `MAX_BUFFER_WAIT_MS`
           {priority: true}

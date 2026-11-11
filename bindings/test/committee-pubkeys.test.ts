@@ -116,6 +116,17 @@ describe("committee pubkeys", () => {
     );
   });
 
+  it("does not detect same-count participant indices from another committee", async () => {
+    const id = await compute();
+    const set = committeeSet(id, 5, [0], () => true);
+    const swapped = {...set, indices: committee(5, 1)};
+    // Cached path only compares participant counts
+    expect(verifySignatureSets([swapped])).toBe(true);
+    expect(releaseCommitteePubkeys(id)).toBe(true);
+    // Fallback aggregates the supplied indices, so the signature no longer matches
+    expect(verifySignatureSets([swapped])).toBe(false);
+  });
+
   it("throws for aggregation bits that do not cover the committees", async () => {
     const id = await compute();
     const set = committeeSet(id, 2, [0, 1], () => true);

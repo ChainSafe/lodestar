@@ -34,7 +34,8 @@ export type SingleSignatureSet = {
 /**
  * An attestation over whole committees of one slot, verified with the committee pubkeys from
  * `computeCommitteePubkeys()`. Its aggregation bits are concatenated in `committeeIndices` order. `indices` lists the
- * participants and is aggregated instead when the entry is not cached. Throws if the two disagree.
+ * participants and is aggregated instead when the entry is not cached. Only the participant count is checked, so
+ * callers must derive `indices` and the aggregation bits from the same attestation.
  */
 export type CommitteeSignatureSet = {
   type: typeof BLS_VERIFIER_SET_TYPE.committee;
