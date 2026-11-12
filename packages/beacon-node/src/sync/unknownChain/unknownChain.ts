@@ -3,10 +3,9 @@ import {ChainForkConfig} from "@lodestar/config";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, Status} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils";
 import {ChainEvent, IBeaconChain} from "../../chain/index.js";
-import {Network, NetworkEvent, PeerAction} from "../../network/index.js";
+import {INetwork, NetworkEvent, PeerAction} from "../../network/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {shuffle} from "../../util/shuffle.js";
@@ -28,7 +27,7 @@ import {UnknownChainSyncMetrics} from "./metrics.js";
 export type UnknownChainSyncInit = {
   config: ChainForkConfig;
   chain: IBeaconChain;
-  network: Network;
+  network: INetwork;
   processLinkedChain: (chain: LinkedBackwardsChain) => void;
   metrics?: UnknownChainSyncMetrics;
 };
@@ -47,7 +46,7 @@ export class UnknownChainSync {
 
   private config: ChainForkConfig;
   private chain: IBeaconChain;
-  private network: Network;
+  private network: INetwork;
   private processLinkedChain: (chain: LinkedBackwardsChain) => void;
   private processQueue: JobItemQueue<[BackwardsChain], void>;
   private controller: AbortController;
@@ -145,7 +144,7 @@ export class UnknownChainSync {
       ) {
         // If the newly processed block is an ancestor in the chain, the chain is now linked
         linkChain(chain);
-        this.processQueue.push(chain);
+        void this.processQueue.push(chain);
       }
     }
   };
@@ -220,7 +219,7 @@ export class UnknownChainSync {
         lastUpdate: Date.now(),
       };
       this.backwardsChains.set(blockRoot, newChain);
-      this.processQueue.push(newChain);
+      void this.processQueue.push(newChain);
     }
   };
 
@@ -255,7 +254,7 @@ export class UnknownChainSync {
       };
 
       this.backwardsChains.set(headRootHex, newChain);
-      this.processQueue.push(newChain);
+      void this.processQueue.push(newChain);
 
       this.addHeader(header);
       this.newEarliestKnownAncestor(newChain as UnknownAncestorBackwardsChain, header);
@@ -331,7 +330,7 @@ export class UnknownChainSync {
         }
         if (chain.state === ChainState.UnknownAncestor) {
           chain.earliestKnownAncestor = root;
-          this.processQueue.push(chain);
+          void this.processQueue.push(chain);
         }
       }
     }
@@ -376,7 +375,7 @@ export class UnknownChainSync {
         return;
       }
 
-      const block = resp.data.message;
+      const block = resp.message;
       const blockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
       const blockRootHex = toHex(blockRoot);
 
@@ -450,7 +449,7 @@ export class UnknownChainSync {
           linkChain(otherChain as UnknownAncestorBackwardsChain);
         }
 
-        this.processQueue.push(otherChain);
+        void this.processQueue.push(otherChain);
       }
     }
   }
@@ -495,7 +494,7 @@ export class UnknownChainSync {
 
       const result = advanceChain(chain, header);
 
-      this.processQueue.push(chain);
+      void this.processQueue.push(chain);
       chain.downloadState = DownloadState.Idle;
 
       if (result !== ChainAdvanceResult.Advanced) {

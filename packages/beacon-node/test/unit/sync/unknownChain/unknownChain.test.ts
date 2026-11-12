@@ -1,9 +1,9 @@
+import {MockedFunction, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ChainForkConfig} from "@lodestar/config";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {RootHex, Status} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-import {MockedFunction, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {Network, PeerAction} from "../../../../src/network/index.js";
 import {
@@ -419,11 +419,9 @@ describe("sync / unknownChain / unknownChain", () => {
     it("should fetch head root for UnknownHead chain", async () => {
       const chain = createUnknownHeadChain("0x1234");
       const mockBlock = {
-        data: {
-          message: {
-            slot: 100,
-            parentRoot: fromHex("0x4567"),
-          },
+        message: {
+          slot: 100,
+          parentRoot: fromHex("0x4567"),
         },
       };
       mockNetwork.sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([mockBlock]);
@@ -447,11 +445,9 @@ describe("sync / unknownChain / unknownChain", () => {
       const header = createHeader(100, "0x1234", "0x4567");
       const chain = createUnknownAncestorChain(header);
       const mockBlock = {
-        data: {
-          message: {
-            slot: 99,
-            parentRoot: fromHex("0x7890"),
-          },
+        message: {
+          slot: 99,
+          parentRoot: fromHex("0x7890"),
         },
       };
       mockNetwork.sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([mockBlock]);
@@ -489,11 +485,9 @@ describe("sync / unknownChain / unknownChain", () => {
     it("should handle incorrect block response", async () => {
       const chain = createUnknownHeadChain("0x1234");
       const mockBlock = {
-        data: {
-          message: {
-            slot: 100,
-            parentRoot: fromHex("0x4567"),
-          },
+        message: {
+          slot: 100,
+          parentRoot: fromHex("0x4567"),
         },
       };
       mockNetwork.sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([mockBlock]);
@@ -647,11 +641,9 @@ describe("sync / unknownChain / unknownChain", () => {
       unknownChainSync.backwardsChains.set("0x1234", chain);
 
       const mockBlock = {
-        data: {
-          message: {
-            slot: 100,
-            parentRoot: fromHex("0x4567"),
-          },
+        message: {
+          slot: 100,
+          parentRoot: fromHex("0x4567"),
         },
       };
       mockNetwork.sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([mockBlock]);
@@ -686,11 +678,9 @@ describe("sync / unknownChain / unknownChain", () => {
       unknownChainSync.backwardsChains.set("0x1234", chain);
 
       const mockBlock = {
-        data: {
-          message: {
-            slot: 100,
-            parentRoot: fromHex("0x4567"),
-          },
+        message: {
+          slot: 100,
+          parentRoot: fromHex("0x4567"),
         },
       };
 
@@ -711,11 +701,9 @@ describe("sync / unknownChain / unknownChain", () => {
       unknownChainSync.backwardsChains.set("0x1234", chain);
 
       const mockBlock = {
-        data: {
-          message: {
-            slot: 100,
-            parentRoot: fromHex("0x4567"),
-          },
+        message: {
+          slot: 100,
+          parentRoot: fromHex("0x4567"),
         },
       };
       mockNetwork.sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([mockBlock]);
@@ -798,11 +786,9 @@ describe("sync / unknownChain / unknownChain", () => {
 
       // Simulate fetching the head block
       const mockBlock = {
-        data: {
-          message: {
-            slot: 100,
-            parentRoot: fromHex("0x4567"),
-          },
+        message: {
+          slot: 100,
+          parentRoot: fromHex("0x4567"),
         },
       };
       mockNetwork.sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([mockBlock]);
