@@ -17,30 +17,33 @@ const pubkeys = @import("./pubkeys.zig");
 const allocator = std.heap.c_allocator;
 const MAX_AGGREGATES = preset.SLOTS_PER_EPOCH * preset.MAX_COMMITTEES_PER_SLOT;
 
+/// Budget four shufflings for each of four retained epochs, including in-flight work.
+/// This is a shared budget, not a per-epoch limit. At capacity, verification falls back
+/// to participant aggregation.
 pub const MAX_ENTRIES = 16;
 
-const SlotState = enum { free, computing, ready };
+const EntryState = enum { free, computing, ready };
 
-// Workers exclusively own computing slots. The locked transition to ready publishes
-// their entry and aggregate storage; readers and clear only access ready slots.
-const Slot = struct {
-    state: SlotState = .free,
+// Workers exclusively own entries being computed. The locked transition to ready
+// publishes their data; readers and clear only access ready entries.
+const CacheEntry = struct {
+    state: EntryState = .free,
     id: u32 = 0,
-    entry: ?CommitteePubkeys = null,
+    committeePubkeys: ?CommitteePubkeys = null,
     storage: [MAX_AGGREGATES]bls.AggregatePublicKey = undefined,
 };
 
 const State = struct {
     lock: std.Io.RwLock = .init,
-    slots: [MAX_ENTRIES]Slot = [_]Slot{.{}} ** MAX_ENTRIES,
+    entries: [MAX_ENTRIES]CacheEntry = [_]CacheEntry{.{}} ** MAX_ENTRIES,
     next_id: u32 = 1,
 
     fn reserve(self: *State, io: std.Io) !usize {
         try self.lock.lock(io);
         defer self.lock.unlock(io);
-        for (&self.slots, 0..) |*slot, i| {
-            if (slot.state == .free) {
-                slot.state = .computing;
+        for (&self.entries, 0..) |*entry, i| {
+            if (entry.state == .free) {
+                entry.state = .computing;
                 return i;
             }
         }
@@ -50,18 +53,18 @@ const State = struct {
     fn unreserve(self: *State, io: std.Io, index: usize) void {
         self.lock.lockUncancelable(io);
         defer self.lock.unlock(io);
-        const slot = &self.slots[index];
-        if (slot.entry) |*entry| entry.deinit();
-        slot.entry = null;
-        slot.id = 0;
-        slot.state = .free;
+        const entry = &self.entries[index];
+        if (entry.committeePubkeys) |*committeePubkeys| committeePubkeys.deinit();
+        entry.committeePubkeys = null;
+        entry.id = 0;
+        entry.state = .free;
     }
 
     fn publish(self: *State, io: std.Io, index: usize) !u32 {
         self.lock.lockUncancelable(io);
         defer self.lock.unlock(io);
-        const slot = &self.slots[index];
-        std.debug.assert(slot.state == .computing);
+        const entry = &self.entries[index];
+        std.debug.assert(entry.state == .computing);
         var id = self.next_id;
         var attempts: usize = 0;
         while (id == 0 or self.hasId(id)) : (attempts += 1) {
@@ -69,14 +72,14 @@ const State = struct {
             id = if (id == std.math.maxInt(u32)) 1 else id + 1;
         }
         self.next_id = if (id == std.math.maxInt(u32)) 1 else id + 1;
-        slot.id = id;
-        slot.state = .ready;
+        entry.id = id;
+        entry.state = .ready;
         return id;
     }
 
     fn hasId(self: *const State, id: u32) bool {
-        for (&self.slots) |*slot| {
-            if (slot.state == .ready and slot.id == id) return true;
+        for (&self.entries) |*entry| {
+            if (entry.state == .ready and entry.id == id) return true;
         }
         return false;
     }
@@ -84,12 +87,12 @@ const State = struct {
     fn remove(self: *State, io: std.Io, id: u32) !bool {
         try self.lock.lock(io);
         defer self.lock.unlock(io);
-        for (&self.slots) |*slot| {
-            if (slot.state == .ready and slot.id == id) {
-                slot.entry.?.deinit();
-                slot.entry = null;
-                slot.id = 0;
-                slot.state = .free;
+        for (&self.entries) |*entry| {
+            if (entry.state == .ready and entry.id == id) {
+                entry.committeePubkeys.?.deinit();
+                entry.committeePubkeys = null;
+                entry.id = 0;
+                entry.state = .free;
                 return true;
             }
         }
@@ -108,9 +111,9 @@ const State = struct {
     ) !?state_transition.CommitteeParticipants {
         self.lock.lockSharedUncancelable(io);
         defer self.lock.unlockShared(io);
-        for (&self.slots) |*slot| {
-            if (slot.state == .ready and slot.id == id) {
-                return try slot.entry.?.aggregateParticipants(io, pubkey_cache, slot_in_epoch, committee_indices, bits, bit_len);
+        for (&self.entries) |*entry| {
+            if (entry.state == .ready and entry.id == id) {
+                return try entry.committeePubkeys.?.aggregateParticipants(io, pubkey_cache, slot_in_epoch, committee_indices, bits, bit_len);
             }
         }
         return null;
@@ -119,20 +122,20 @@ const State = struct {
     pub fn clear(self: *State, io: std.Io) void {
         self.lock.lockUncancelable(io);
         defer self.lock.unlock(io);
-        for (&self.slots) |*slot| {
-            if (slot.state == .ready) {
-                slot.entry.?.deinit();
-                slot.entry = null;
-                slot.id = 0;
-                slot.state = .free;
+        for (&self.entries) |*entry| {
+            if (entry.state == .ready) {
+                entry.committeePubkeys.?.deinit();
+                entry.committeePubkeys = null;
+                entry.id = 0;
+                entry.state = .free;
             }
         }
     }
 
     /// All compute tasks and readers must have stopped before this call.
     pub fn deinit(self: *State) void {
-        for (&self.slots) |*slot| {
-            if (slot.entry) |*entry| entry.deinit();
+        for (&self.entries) |*entry| {
+            if (entry.committeePubkeys) |*committeePubkeys| committeePubkeys.deinit();
         }
         self.* = .{};
     }
@@ -144,29 +147,29 @@ const ComputeTask = struct {
     io: std.Io,
     shuffling: ?[]u32,
     committees_per_slot: u32,
-    slot: usize,
+    entryIndex: usize,
     reserved: bool = true,
 
     pub fn compute(self: *ComputeTask) !void {
-        state.slots[self.slot].entry = try CommitteePubkeys.init(
+        state.entries[self.entryIndex].committeePubkeys = try CommitteePubkeys.init(
             allocator,
             self.io,
             &pubkeys.state.cache,
             self.shuffling.?,
             self.committees_per_slot,
-            state.slots[self.slot].storage[0..],
+            state.entries[self.entryIndex].storage[0..],
         );
         self.shuffling = null;
     }
 
     pub fn resolve(self: *ComputeTask, _: napi.Env) !js.Number {
-        const id = try state.publish(self.io, self.slot);
+        const id = try state.publish(self.io, self.entryIndex);
         self.reserved = false;
         return js.Number.from(id);
     }
 
     pub fn deinit(self: *ComputeTask) void {
-        if (self.reserved) state.unreserve(self.io, self.slot);
+        if (self.reserved) state.unreserve(self.io, self.entryIndex);
         if (self.shuffling) |shuffling| allocator.free(shuffling);
     }
 };
@@ -181,8 +184,8 @@ pub fn compute(shuffling: js.Uint32Array, committees_per_slot: js.Number) !js.Va
     const io = js.io();
     const count = try committees_per_slot.toU32Exact();
 
-    const slot = try state.reserve(io);
-    errdefer state.unreserve(io, slot);
+    const entryIndex = try state.reserve(io);
+    errdefer state.unreserve(io, entryIndex);
     const owned = try allocator.dupe(u32, try shuffling.toSlice());
     errdefer allocator.free(owned);
 
@@ -190,7 +193,7 @@ pub fn compute(shuffling: js.Uint32Array, committees_per_slot: js.Number) !js.Va
         .io = io,
         .shuffling = owned,
         .committees_per_slot = count,
-        .slot = slot,
+        .entryIndex = entryIndex,
     }, "committeePubkeys.compute");
 }
 
@@ -205,6 +208,6 @@ pub fn size() !js.Number {
     state.lock.lockSharedUncancelable(io);
     defer state.lock.unlockShared(io);
     var count: usize = 0;
-    for (&state.slots) |*slot| count += @intFromBool(slot.state == .ready);
+    for (&state.entries) |*entry| count += @intFromBool(entry.state == .ready);
     return js.Number.from(count);
 }
