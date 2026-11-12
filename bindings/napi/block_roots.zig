@@ -10,11 +10,6 @@ const AnySignedBeaconBlock = fork_types.AnySignedBeaconBlock;
 var gpa: std.heap.DebugAllocator(.{}) = .init;
 const allocator = if (builtin.mode == .Debug) gpa.allocator() else std.heap.c_allocator;
 
-/// Preset used to compile the block SSZ types.
-pub fn getPresetBase() !js.String {
-    return js.String.from(@import("preset").active_preset.name());
-}
-
 /// The caller must use the compiled preset without custom SSZ limits.
 /// Returns `block_root ++ body_root` (64 bytes) for a full signed block of fork `fork_seq`. Forks whose
 /// block body carries an execution payload append the payload's `transactions_root` (96 bytes).

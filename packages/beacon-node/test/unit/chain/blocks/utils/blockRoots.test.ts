@@ -1,69 +1,43 @@
-import {beforeEach, describe, expect, it, vi} from "vitest";
-import {symbolCachedPermanentRoot} from "@chainsafe/ssz";
-import {getPresetBase, signedBlockRoots} from "@lodestar/native/block-roots";
-import {ForkName, ForkSeq, PresetName} from "@lodestar/params";
+import {describe, expect, it, vi} from "vitest";
+import {signedBlockRoots} from "@lodestar/native/block-roots";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {computeBlockRoots, getSeededTransactionsRoot} from "../../../../../src/chain/blocks/utils/blockRoots.js";
 
 vi.mock("@lodestar/native/block-roots", () => ({
-  getPresetBase: vi.fn(),
   signedBlockRoots: vi.fn(),
 }));
 
-beforeEach(() => {
-  vi.resetModules();
-  vi.doUnmock("@lodestar/params");
-  vi.doUnmock("@lodestar/params/setPreset");
-});
-
-describe.each(Object.values(PresetName))("block roots with native %s preset", (nativePreset) => {
-  it.each(Object.values(PresetName))("only seeds a matching %s runtime preset", async (runtimePreset) => {
-    vi.mocked(getPresetBase).mockReturnValue(nativePreset);
-    vi.doMock("@lodestar/params", async (importOriginal) => ({
-      ...(await importOriginal<typeof import("@lodestar/params")>()),
-      ACTIVE_PRESET: runtimePreset,
-    }));
-    const {computeBlockRoots, getSeededTransactionsRoot} = await import(
-      "../../../../../src/chain/blocks/utils/blockRoots.js"
-    );
+describe("block roots", () => {
+  it("seeds block, body and transactions roots from the native result", () => {
     const block = ssz.fulu.SignedBeaconBlock.defaultValue();
     const bytes = ssz.fulu.SignedBeaconBlock.serialize(block);
-    const roots = new Uint8Array(96).fill(1);
+    const roots = Uint8Array.from({length: 96}, (_, i) => i);
     vi.mocked(signedBlockRoots).mockReturnValue(roots);
 
     computeBlockRoots(ForkName.fulu, block, bytes);
 
-    if (nativePreset === runtimePreset) {
-      expect(signedBlockRoots).toHaveBeenCalledExactlyOnceWith(ForkSeq.fulu, bytes);
-      expect(ssz.fulu.BeaconBlock.hashTreeRoot(block.message)).toEqual(roots.subarray(0, 32));
-      expect(ssz.fulu.BeaconBlockBody.hashTreeRoot(block.message.body)).toEqual(roots.subarray(32, 64));
-      expect(getSeededTransactionsRoot(block)).toEqual(roots.subarray(64));
-    } else {
-      expect(signedBlockRoots).not.toHaveBeenCalled();
-      expect(Reflect.get(block.message, symbolCachedPermanentRoot)).toBeUndefined();
-      expect(Reflect.get(block.message.body, symbolCachedPermanentRoot)).toBeUndefined();
-      expect(getSeededTransactionsRoot(block)).toBeUndefined();
-      expect(ssz.fulu.BeaconBlock.hashTreeRoot(block.message)).toEqual(
-        ssz.fulu.BeaconBlock.hashTreeRoot(ssz.fulu.BeaconBlock.defaultValue())
-      );
-    }
+    expect(signedBlockRoots).toHaveBeenCalledExactlyOnceWith(ForkSeq.fulu, bytes);
+    expect(ssz.fulu.BeaconBlock.hashTreeRoot(block.message)).toEqual(roots.subarray(0, 32));
+    expect(ssz.fulu.BeaconBlockBody.hashTreeRoot(block.message.body)).toEqual(roots.subarray(32, 64));
+    expect(getSeededTransactionsRoot(block)).toEqual(roots.subarray(64));
   });
-});
 
-it("does not seed native roots when the runtime preset has custom overrides", async () => {
-  vi.mocked(getPresetBase).mockReturnValue(PresetName.mainnet);
-  vi.doMock("@lodestar/params/setPreset", async (importOriginal) => ({
-    ...(await importOriginal<typeof import("@lodestar/params/setPreset")>()),
-    userOverrides: {MAX_WITHDRAWALS_PER_PAYLOAD: 8},
-  }));
-  const {computeBlockRoots, getSeededTransactionsRoot} = await import(
-    "../../../../../src/chain/blocks/utils/blockRoots.js"
-  );
-  const block = ssz.capella.SignedBeaconBlock.defaultValue();
+  it("seeds roots for a block without an execution payload", () => {
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+    const bytes = ssz.phase0.SignedBeaconBlock.serialize(block);
+    const roots = Uint8Array.from({length: 64}, (_, i) => i);
+    vi.mocked(signedBlockRoots).mockReturnValue(roots);
 
-  computeBlockRoots(ForkName.capella, block, ssz.capella.SignedBeaconBlock.serialize(block));
+    computeBlockRoots(ForkName.phase0, block, bytes);
 
-  expect(signedBlockRoots).not.toHaveBeenCalled();
-  expect(Reflect.get(block.message, symbolCachedPermanentRoot)).toBeUndefined();
-  expect(Reflect.get(block.message.body, symbolCachedPermanentRoot)).toBeUndefined();
-  expect(getSeededTransactionsRoot(block)).toBeUndefined();
+    expect(signedBlockRoots).toHaveBeenCalledExactlyOnceWith(ForkSeq.phase0, bytes);
+    expect(ssz.phase0.BeaconBlock.hashTreeRoot(block.message)).toEqual(roots.subarray(0, 32));
+    expect(ssz.phase0.BeaconBlockBody.hashTreeRoot(block.message.body)).toEqual(roots.subarray(32, 64));
+    expect(getSeededTransactionsRoot(block)).toBeUndefined();
+  });
+
+  it("has no transactions root for a block that was not computed", () => {
+    expect(getSeededTransactionsRoot(ssz.fulu.SignedBeaconBlock.defaultValue())).toBeUndefined();
+  });
 });

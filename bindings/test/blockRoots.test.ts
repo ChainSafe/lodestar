@@ -1,13 +1,9 @@
-import {ACTIVE_PRESET, ForkSeq} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
-import {getPresetBase, signedBlockRoots} from "../src/block-roots.js";
+import {signedBlockRoots} from "../src/block-roots.js";
 
 describe("block roots", () => {
-  it("reports the compiled preset", () => {
-    expect(getPresetBase()).toBe(ACTIVE_PRESET);
-  });
-
   it("matches JS SSZ roots for the compiled preset", () => {
     const block = ssz.fulu.SignedBeaconBlock.defaultValue();
     const roots = signedBlockRoots(ForkSeq.fulu, ssz.fulu.SignedBeaconBlock.serialize(block));
