@@ -47,7 +47,7 @@ pub fn getProposerHead(store: *Store, head: ForkChoiceNode, slot: Slot) !ForkCho
 /// `get_proposer_head` with the first condition that keeps the head. Where the spec
 /// asserts the proposer boost has worn off, this reports it as a reason like the others.
 pub fn decide(store: *Store, head: ForkChoiceNode, slot: Slot) !Decision {
-    try head_mod.ensureComputed(store);
+    const computed = try head_mod.ensureComputed(store);
     const slots = store.blocks.items(.slot);
     const parent = store.blocks.items(.parent)[head.block];
     if (parent == NO_BLOCK) return error.UnknownParent;
@@ -55,7 +55,7 @@ pub fn decide(store: *Store, head: ForkChoiceNode, slot: Slot) !Decision {
 
     const current_time_ok = slots[head.block] + 1 == slot;
     const boost_worn_off = !std.mem.eql(u8, &store.proposer_boost_root, &store.blockRoot(head.block));
-    if (current_time_ok and boost_worn_off and isProposerEquivocation(store, head.block) and try head_mod.isHeadWeak(store, head.block)) {
+    if (current_time_ok and boost_worn_off and isProposerEquivocation(store, head.block) and try computed.isHeadWeak(head.block)) {
         return .{ .reorg = parent_node };
     }
 
@@ -67,8 +67,8 @@ pub fn decide(store: *Store, head: ForkChoiceNode, slot: Slot) !Decision {
     if (!isProposingOnTime(store)) return .{ .keep = .not_proposing_on_time };
     if (!current_time_ok) return .{ .keep = .not_proposing_next_slot };
     if (!boost_worn_off) return .{ .keep = .proposer_boost_not_worn_off };
-    if (!try head_mod.isHeadWeak(store, head.block)) return .{ .keep = .head_not_weak };
-    if (!head_mod.isParentStrong(store, head.block)) return .{ .keep = .parent_not_strong };
+    if (!try computed.isHeadWeak(head.block)) return .{ .keep = .head_not_weak };
+    if (!computed.isParentStrong(head.block)) return .{ .keep = .parent_not_strong };
     return .{ .reorg = parent_node };
 }
 

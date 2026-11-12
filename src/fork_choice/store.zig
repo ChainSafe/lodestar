@@ -698,9 +698,10 @@ pub const Store = struct {
         try checkExecutionStatus(&summary);
         const parent = self.blockIndex(summary.parent_root).?;
 
-        const head = try self.getHead();
+        const computed = try head_mod.ensureComputed(self);
+        const head = computed.head();
         const parent_node: ForkChoiceNode = .{ .block = parent, .payload_status = self.parentPayloadStatus(&summary, parent) };
-        if (head_mod.execution(self, parent_node) == .invalid) return error.ParentPayloadInvalid;
+        if (computed.execution(parent_node) == .invalid) return error.ParentPayloadInvalid;
 
         const index: BlockIndex = @intCast(self.blocks.len);
         try self.appendBlock(.{
@@ -1097,10 +1098,9 @@ pub const Store = struct {
         self.head_cache.dirty = true;
     }
 
-    /// The worst engine verdict on the payloads `node` stands on, valid after `getHead`.
+    /// The worst engine verdict on the payloads `node` stands on.
     pub fn executionStatus(self: *Store, node: ForkChoiceNode) !ExecutionStatus {
-        try head_mod.ensureComputed(self);
-        return head_mod.execution(self, node);
+        return (try head_mod.ensureComputed(self)).execution(node);
     }
 
     /// Spec `is_optimistic`: some payload below `node` is still `NOT_VALIDATED`.
@@ -1180,7 +1180,7 @@ pub const Store = struct {
     pub fn prune(self: *Store) !usize {
         const finalized = self.blockIndex(self.finalized_checkpoint.root) orelse return error.UnknownBlock;
         if (finalized == 0) return 0;
-        try head_mod.ensureComputed(self);
+        const computed = try head_mod.ensureComputed(self);
         const n = self.blocks.len;
         const remap = try self.allocator.alloc(BlockIndex, n);
         defer self.allocator.free(remap);
@@ -1192,11 +1192,11 @@ pub const Store = struct {
             remap[i] = if (keep) kept else NO_BLOCK;
             if (keep) kept += 1;
         }
-        self.votes.remap(remap, kept);
         if (parents[finalized] != NO_BLOCK) {
             const hung_from: ForkChoiceNode = .{ .block = parents[finalized], .payload_status = self.blocks.items(.parent_payload_status)[finalized] };
-            self.root_base_status = head_mod.execution(self, hung_from);
+            self.root_base_status = computed.execution(hung_from);
         }
+        self.votes.remap(remap, kept);
         for (0..n) |i| {
             const target = remap[i];
             if (target == NO_BLOCK) continue;
@@ -1219,20 +1219,17 @@ pub const Store = struct {
 
     /// Spec `get_head`. Results are cached until the next store mutation.
     pub fn getHead(self: *Store) !ForkChoiceNode {
-        try head_mod.ensureComputed(self);
-        return self.head_cache.head;
+        return (try head_mod.ensureComputed(self)).head();
     }
 
-    /// Spec `get_weight` for a node, valid after `getHead`.
+    /// Spec `get_weight` for a node.
     pub fn getWeight(self: *Store, node: ForkChoiceNode) !u64 {
-        try head_mod.ensureComputed(self);
-        return head_mod.weight(self, node);
+        return (try head_mod.ensureComputed(self)).weight(node);
     }
 
     /// Leaves of the filtered node tree with their weights (spec test `viable_for_head_roots_and_weights`).
     pub fn viableHeads(self: *Store, allocator: Allocator) ![]head_mod.ViableHead {
-        try head_mod.ensureComputed(self);
-        return head_mod.viableHeads(self, allocator);
+        return (try head_mod.ensureComputed(self)).viableHeads(allocator);
     }
 };
 

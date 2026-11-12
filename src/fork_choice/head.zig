@@ -79,9 +79,98 @@ pub const Cache = struct {
     }
 };
 
-pub fn ensureComputed(store: *Store) !void {
-    if (!store.head_cache.dirty) return;
-    try compute(store);
+/// The head and node scores `compute` derived, valid until the next store write.
+pub const View = struct {
+    store: *const Store,
+    nodes: std.MultiArrayList(Node).Slice,
+
+    /// Spec `get_head`.
+    pub fn head(self: View) ForkChoiceNode {
+        return self.store.head_cache.head;
+    }
+
+    /// Spec `get_weight`.
+    pub fn weight(self: View, node: ForkChoiceNode) u64 {
+        if (self.store.isPreviousSlotPayloadDecision(node)) return 0;
+        const id = self.index(node);
+        var total = self.nodes.items(.weight)[id];
+        if (self.nodes.items(.flags)[id].on_boost_chain) total += self.store.proposerScore();
+        return total;
+    }
+
+    /// Spec `get_attestation_score`.
+    pub fn attestationScore(self: View, node: ForkChoiceNode) u64 {
+        return self.nodes.items(.weight)[self.index(node)];
+    }
+
+    /// The worst engine verdict on the payloads `node` stands on.
+    pub fn execution(self: View, node: ForkChoiceNode) ExecutionStatus {
+        return self.nodes.items(.execution)[self.index(node)];
+    }
+
+    fn index(self: View, node: ForkChoiceNode) NodeId {
+        // A view held across a store write that added or dropped blocks is stale, and the next
+        // recompute may free its columns.
+        std.debug.assert(self.nodes.len == self.store.blocks.len * NODES_PER_BLOCK);
+        return nodeId(node);
+    }
+
+    /// Spec `is_head_weak`.
+    pub fn isHeadWeak(self: View, block: BlockIndex) !bool {
+        const store = self.store;
+        const reorg_threshold = store.committeeFraction(store.config.chain.REORG_HEAD_WEIGHT_THRESHOLD);
+        var head_weight = self.attestationScore(Store.pendingNode(block));
+        if (store.votes.equivocating_indices.count() > 0) {
+            var members: std.ArrayList(store_mod.ValidatorIndex) = .empty;
+            defer members.deinit(store.allocator);
+            try store.provider.slotCommitteeMembers(store.allocator, store.blockRoot(block), store.blockSlot(block), &members);
+            const increments = store.justified_balances.effective_balance_increments;
+            for (members.items) |member| {
+                if (!store.isEquivocating(member)) continue;
+                if (member >= increments.len) continue;
+                head_weight += @as(u64, increments[member]) * preset.EFFECTIVE_BALANCE_INCREMENT;
+            }
+        }
+        return head_weight < reorg_threshold;
+    }
+
+    /// Spec `is_parent_strong`.
+    pub fn isParentStrong(self: View, block: BlockIndex) bool {
+        const parent_threshold = self.store.committeeFraction(self.store.config.chain.REORG_PARENT_WEIGHT_THRESHOLD);
+        const parent = self.store.blocks.items(.parent)[block];
+        return self.attestationScore(Store.pendingNode(parent)) > parent_threshold;
+    }
+
+    /// Leaves of the filtered node tree below the justified root. The root itself is a
+    /// leaf when none of its children is viable, whether or not it passes the filter.
+    pub fn viableHeads(self: View, allocator: Allocator) ![]ViableHead {
+        const store = self.store;
+        var out: std.ArrayList(ViableHead) = .empty;
+        errdefer out.deinit(allocator);
+        const n = store.blocks.len;
+        const justified = store.blockIndex(store.justified_checkpoint.root) orelse return error.UnknownBlock;
+        const parents = store.blocks.items(.parent);
+        const in_subtree = try allocator.alloc(bool, n);
+        defer allocator.free(in_subtree);
+        for (0..n) |i| {
+            in_subtree[i] = i == justified or (parents[i] != NO_BLOCK and in_subtree[parents[i]]);
+        }
+        const roots = store.blocks.items(.root);
+        for (self.nodes.items(.flags), 0..) |flag, id| {
+            const node = nodeAt(@intCast(id));
+            if (!in_subtree[node.block]) continue;
+            if (!flag.exists or flag.any_viable_child) continue;
+            const is_root = node.block == justified and node.payload_status == .pending;
+            if (!is_root and !flag.viable) continue;
+            try out.append(allocator, .{ .root = roots[node.block], .payload_status = node.payload_status, .weight = self.weight(node) });
+        }
+        return out.toOwnedSlice(allocator);
+    }
+};
+
+pub fn ensureComputed(store: *Store) !View {
+    if (store.head_cache.dirty) try compute(store);
+    return .{ .store = store, .nodes = store.head_cache.nodes.slice() };
 }
 
 fn compute(store: *Store) !void {
@@ -178,9 +267,11 @@ fn compute(store: *Store) !void {
         if (flags[pending].viable) flags[parent_node].any_viable_child = true;
     }
 
+    // The attestation scores are final from here on.
+    const computed: View = .{ .store = store, .nodes = nodes };
     // Spec `get_weight` proposer boost: `is_ancestor(proposer_boost_node, node)` holds
     // exactly on the path from the boosted block's `pending` node to the root.
-    var apply_proposer_boost = try shouldApplyProposerBoost(store);
+    var apply_proposer_boost = try shouldApplyProposerBoost(computed);
     if (apply_proposer_boost and exec[nodeId(Store.pendingNode(store.blockIndex(store.proposer_boost_root).?))] == .invalid) {
         apply_proposer_boost = false;
     }
@@ -200,13 +291,13 @@ fn compute(store: *Store) !void {
         const index: BlockIndex = @intCast(i);
         const pending: ForkChoiceNode = Store.pendingNode(index);
         if (parents[i] != NO_BLOCK and flags[nodeId(pending)].viable) {
-            try offerChild(store, nodeId(.{ .block = parents[i], .payload_status = parent_statuses[i] }), pending);
+            try offerChild(computed, best_child, nodeId(.{ .block = parents[i], .payload_status = parent_statuses[i] }), pending);
         }
         if (forks[i].gte(.gloas)) {
             for ([_]PayloadStatus{ .empty, .full }) |status| {
                 const child: ForkChoiceNode = .{ .block = index, .payload_status = status };
                 const id = nodeId(child);
-                if (flags[id].exists and flags[id].viable) try offerChild(store, nodeId(pending), child);
+                if (flags[id].exists and flags[id].viable) try offerChild(computed, best_child, nodeId(pending), child);
             }
         }
     }
@@ -249,17 +340,17 @@ fn leafViable(store: *const Store, block: BlockIndex, current_epoch: Epoch, fina
     return correct_justified and finalized_ok;
 }
 
-fn offerChild(store: *Store, parent_id: NodeId, child: ForkChoiceNode) !void {
-    const best_child = store.head_cache.nodes.items(.best_child);
+fn offerChild(computed: View, best_child: []NodeId, parent_id: NodeId, child: ForkChoiceNode) !void {
     const current = best_child[parent_id];
-    if (current == NO_NODE or try childGreater(store, child, nodeAt(current))) {
+    if (current == NO_NODE or try childGreater(computed, child, nodeAt(current))) {
         best_child[parent_id] = nodeId(child);
     }
 }
 
-fn childGreater(store: *Store, a: ForkChoiceNode, b: ForkChoiceNode) !bool {
-    const weight_a = weight(store, a);
-    const weight_b = weight(store, b);
+fn childGreater(computed: View, a: ForkChoiceNode, b: ForkChoiceNode) !bool {
+    const store = computed.store;
+    const weight_a = computed.weight(a);
+    const weight_b = computed.weight(b);
     if (weight_a != weight_b) return weight_a > weight_b;
     const roots = store.blocks.items(.root);
     switch (std.mem.order(u8, &roots[a.block], &roots[b.block])) {
@@ -268,26 +359,6 @@ fn childGreater(store: *Store, a: ForkChoiceNode, b: ForkChoiceNode) !bool {
         .eq => {},
     }
     return try payloadStatusTiebreaker(store, a) > try payloadStatusTiebreaker(store, b);
-}
-
-/// Spec `get_weight`, valid after `ensureComputed`.
-pub fn weight(store: *const Store, node: ForkChoiceNode) u64 {
-    if (store.isPreviousSlotPayloadDecision(node)) return 0;
-    const nodes = store.head_cache.nodes.slice();
-    const id = nodeId(node);
-    var total = nodes.items(.weight)[id];
-    if (nodes.items(.flags)[id].on_boost_chain) total += store.proposerScore();
-    return total;
-}
-
-/// Spec `get_attestation_score`, valid after `ensureComputed`.
-pub fn attestationScore(store: *const Store, node: ForkChoiceNode) u64 {
-    return store.head_cache.nodes.items(.weight)[nodeId(node)];
-}
-
-/// The worst engine verdict on the payloads `node` stands on, valid after `ensureComputed`.
-pub fn execution(store: *const Store, node: ForkChoiceNode) ExecutionStatus {
-    return store.head_cache.nodes.items(.execution)[nodeId(node)];
 }
 
 /// Spec `get_payload_status_tiebreaker`, plus consensus-specs#5769: during its own slot a
@@ -307,7 +378,8 @@ fn payloadStatusTiebreaker(store: *const Store, node: ForkChoiceNode) !u8 {
 }
 
 /// Spec `should_apply_proposer_boost`; pre-Gloas the boost applies whenever it is set.
-fn shouldApplyProposerBoost(store: *Store) !bool {
+fn shouldApplyProposerBoost(computed: View) !bool {
+    const store = computed.store;
     const boosted = store.blockIndex(store.proposer_boost_root) orelse return false;
     if (!store.isGloas()) return true;
     const parents = store.blocks.items(.parent);
@@ -316,7 +388,7 @@ fn shouldApplyProposerBoost(store: *Store) !bool {
     if (parent == NO_BLOCK) return true;
     const slot = slots[boosted];
     if (slots[parent] + 1 < slot) return true;
-    if (!try isHeadWeak(store, parent)) return true;
+    if (!try computed.isHeadWeak(parent)) return true;
     const proposers = store.blocks.items(.proposer_index);
     const timely = store.blocks.items(.timely);
     for (0..store.blocks.len) |i| {
@@ -324,56 +396,4 @@ fn shouldApplyProposerBoost(store: *Store) !bool {
         if (timely[i][store_mod.PTC_TIMELINESS_INDEX] and proposers[i] == proposers[parent] and slots[i] + 1 == slot) return false;
     }
     return true;
-}
-
-/// Spec `is_head_weak`, valid after the attestation scores of `compute` are in place.
-pub fn isHeadWeak(store: *Store, block: BlockIndex) !bool {
-    const reorg_threshold = store.committeeFraction(store.config.chain.REORG_HEAD_WEIGHT_THRESHOLD);
-    var head_weight = attestationScore(store, Store.pendingNode(block));
-    if (store.votes.equivocating_indices.count() > 0) {
-        var members: std.ArrayList(store_mod.ValidatorIndex) = .empty;
-        defer members.deinit(store.allocator);
-        try store.provider.slotCommitteeMembers(store.allocator, store.blockRoot(block), store.blockSlot(block), &members);
-        const increments = store.justified_balances.effective_balance_increments;
-        for (members.items) |member| {
-            if (!store.isEquivocating(member)) continue;
-            if (member >= increments.len) continue;
-            head_weight += @as(u64, increments[member]) * preset.EFFECTIVE_BALANCE_INCREMENT;
-        }
-    }
-    return head_weight < reorg_threshold;
-}
-
-/// Spec `is_parent_strong`.
-pub fn isParentStrong(store: *Store, block: BlockIndex) bool {
-    const parent_threshold = store.committeeFraction(store.config.chain.REORG_PARENT_WEIGHT_THRESHOLD);
-    const parent = store.blocks.items(.parent)[block];
-    const parent_weight = attestationScore(store, Store.pendingNode(parent));
-    return parent_weight > parent_threshold;
-}
-
-/// Leaves of the filtered node tree below the justified root. The root itself is a
-/// leaf when none of its children is viable, whether or not it passes the filter.
-pub fn viableHeads(store: *Store, allocator: Allocator) ![]ViableHead {
-    var out: std.ArrayList(ViableHead) = .empty;
-    errdefer out.deinit(allocator);
-    const n = store.blocks.len;
-    const justified = store.blockIndex(store.justified_checkpoint.root) orelse return error.UnknownBlock;
-    const parents = store.blocks.items(.parent);
-    const in_subtree = try allocator.alloc(bool, n);
-    defer allocator.free(in_subtree);
-    for (0..n) |i| {
-        in_subtree[i] = i == justified or (parents[i] != NO_BLOCK and in_subtree[parents[i]]);
-    }
-    const flags = store.head_cache.nodes.items(.flags);
-    const roots = store.blocks.items(.root);
-    for (flags, 0..) |flag, id| {
-        const node = nodeAt(@intCast(id));
-        if (!in_subtree[node.block]) continue;
-        if (!flag.exists or flag.any_viable_child) continue;
-        const is_root = node.block == justified and node.payload_status == .pending;
-        if (!is_root and !flag.viable) continue;
-        try out.append(allocator, .{ .root = roots[node.block], .payload_status = node.payload_status, .weight = weight(store, node) });
-    }
-    return out.toOwnedSlice(allocator);
 }
