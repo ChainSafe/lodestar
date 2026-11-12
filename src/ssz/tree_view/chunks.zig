@@ -138,6 +138,8 @@ pub fn BasicPackedChunks(
             len: usize,
             leaves: []Leaf,
 
+            /// The editor's handle on one chunked leaf node (K chunks), not a single-chunk Merkle
+            /// leaf: not looked up yet, borrowed for reads, or staged in the view and writable.
             const Leaf = union(enum) {
                 unresolved,
                 readonly: *align(64) const [ChunkedLeaf.K][32]u8,
