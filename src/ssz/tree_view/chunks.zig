@@ -9,6 +9,7 @@ const Node = pmt.Node;
 const Gindex = pmt.Gindex;
 
 const isFixedType = @import("../type/type_kind.zig").isFixedType;
+const canMemcpySsz = @import("../type/type_kind.zig").canMemcpySsz;
 const progressive = @import("../type/progressive.zig");
 
 const tree_view_root = @import("root.zig");
@@ -298,30 +299,36 @@ pub fn BasicPackedChunks(
 
             var item_idx: usize = 0;
             outer: for (chunked_leaf_ids) |sid| {
+                const items_in_chunked_leaf = @min(ChunkedLeaf.K * items_per_chunk, len - item_idx);
                 // ChunkedLeaf boundary may be a zero sentinel for sparsely-filled
                 // trees (e.g. an empty list grown via push, or chunked_leaf slots
                 // beyond the materialized range). A zero subtree is
                 // semantically all-zero chunks; emit zero values without
                 // touching the (non-existent) chunked_leaf payload.
                 if (self.state.pool.nodes.items(.state)[@intFromEnum(sid)].kind() == .zero) {
-                    const items_in_chunked_leaf = @min(ChunkedLeaf.K * items_per_chunk, len - item_idx);
                     @memset(values[item_idx..][0..items_in_chunked_leaf], std.mem.zeroes(Element));
                     item_idx += items_in_chunked_leaf;
                     if (item_idx >= len) break :outer;
                     continue;
                 }
                 const chunks_ptr = try sid.getChunkedLeafChunks(self.state.pool);
-                for (0..ChunkedLeaf.K) |intra_chunk| {
-                    if (item_idx >= len) break :outer;
-                    const items_in_chunk = @min(items_per_chunk, len - item_idx);
-                    for (0..items_in_chunk) |i| {
-                        ST.Element.tree.toValuePackedFromBytes(
-                            &chunks_ptr[intra_chunk],
-                            item_idx + i,
-                            &values[item_idx + i],
-                        );
+                if (comptime canMemcpySsz(ST.Element)) {
+                    const bytes = std.mem.sliceAsBytes(values[item_idx..][0..items_in_chunked_leaf]);
+                    @memcpy(bytes, std.mem.asBytes(chunks_ptr)[0..bytes.len]);
+                    item_idx += items_in_chunked_leaf;
+                } else {
+                    for (0..ChunkedLeaf.K) |intra_chunk| {
+                        if (item_idx >= len) break :outer;
+                        const items_in_chunk = @min(items_per_chunk, len - item_idx);
+                        for (0..items_in_chunk) |i| {
+                            ST.Element.tree.toValuePackedFromBytes(
+                                &chunks_ptr[intra_chunk],
+                                item_idx + i,
+                                &values[item_idx + i],
+                            );
+                        }
+                        item_idx += items_in_chunk;
                     }
-                    item_idx += items_in_chunk;
                 }
             }
             return values;

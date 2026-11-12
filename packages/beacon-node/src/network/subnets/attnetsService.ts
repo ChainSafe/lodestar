@@ -20,6 +20,7 @@ const gossipType = GossipType.beacon_attestation;
 export enum SubnetSource {
   committee = "committee",
   longLived = "long_lived",
+  beforeProposal = "before_proposal",
 }
 
 // map of subnet to time to form stable mesh as seconds, null if not yet formed
@@ -40,7 +41,7 @@ export class AttnetsService implements IAttnetsService {
   /** Committee subnets - PeerManager must find peers for those */
   private committeeSubnets = new SubnetMap();
   /**
-   * All currently subscribed short-lived subnets, for attestation aggregation
+   * All currently subscribed short-lived subnets, for attestation aggregation and before local block proposals
    * This class will tell gossip to subscribe and un-subscribe
    * If a value exists for `SubscriptionId` it means that gossip subscription is active in network.gossip
    */
@@ -52,6 +53,11 @@ export class AttnetsService implements IAttnetsService {
    * Used to determine if we should process an attestation.
    */
   private aggregatorSlotSubnet = new MapDef<Slot, AggregatorDutyInfo>(() => new Map());
+  /**
+   * Block proposal slots of validators connected to this node.
+   * Used to subscribe to all subnets `slotsToSubscribeBeforeProposalDuty` slots before, see onSlot
+   */
+  private localProposalSlots = new Set<Slot>();
 
   constructor(
     private readonly config: BeaconConfig,
@@ -120,6 +126,22 @@ export class AttnetsService implements IAttnetsService {
   }
 
   /**
+   * Called from the main thread with upcoming block proposal slots of connected validators.
+   * Tracked here, the subscription happens in onSlot like aggregator duties, or right away for a proposal learned
+   * after its subscription slot (node restart, newly connected validator)
+   */
+  addLocalProposalSlots(slots: Slot[]): void {
+    const clockSlot = this.clock.currentSlot;
+    for (const proposalSlot of slots) {
+      this.localProposalSlots.add(proposalSlot);
+      // not from the slot before the proposal, its votes are published before a mesh could form
+      if (proposalSlot - this.opts.slotsToSubscribeBeforeProposalDuty <= clockSlot && clockSlot < proposalSlot - 1) {
+        this.subscribeAllSubnetsUntilProposal(proposalSlot);
+      }
+    }
+  }
+
+  /**
    * Check if a subscription is still active before handling a gossip object
    */
   shouldProcess(subnet: SubnetID, slot: Slot): boolean {
@@ -158,7 +180,8 @@ export class AttnetsService implements IAttnetsService {
 
   /**
    * Run per slot.
-   * - Subscribe to gossip subnets 2 slots in advance
+   * - Subscribe to gossip subnets 2 slots in advance of aggregator duties
+   * - Subscribe to all subnets `slotsToSubscribeBeforeProposalDuty` slots in advance of local block proposals
    * - Unsubscribe from expired subnets
    * - Track time to stable mesh if not yet formed
    */
@@ -186,18 +209,75 @@ export class AttnetsService implements IAttnetsService {
         this.trackTimeToStableMesh(clockSlot, dutiedSlot, dutiedInfo);
       }
 
+      // Must run before unsubscribeExpiredCommitteeSubnets so that a subnet whose subscription expires in this slot
+      // gets its ttl extended instead of being unsubscribed and subscribed again
+      this.subscribeAllSubnetsBeforeProposal(clockSlot);
+
       this.unsubscribeExpiredCommitteeSubnets(clockSlot);
       this.pruneExpiredAggregator(clockSlot);
+      this.pruneExpiredLocalProposals(clockSlot);
     } catch (e) {
       this.logger.error("Error on AttnetsService.onSlot", {slot: clockSlot}, e as Error);
     }
   };
 
   private onHalfSlot = (clockSlot: Slot): void => {
-    for (const [dutiedSlot, dutiedInfo] of this.aggregatorSlotSubnet.entries()) {
-      this.trackTimeToStableMesh(clockSlot, dutiedSlot, dutiedInfo);
+    try {
+      for (const [dutiedSlot, dutiedInfo] of this.aggregatorSlotSubnet.entries()) {
+        this.trackTimeToStableMesh(clockSlot, dutiedSlot, dutiedInfo);
+      }
+
+      this.unsubscribeAllSubnetsBeforeProposal(clockSlot);
+    } catch (e) {
+      this.logger.error("Error on AttnetsService.onHalfSlot", {slot: clockSlot}, e as Error);
     }
   };
+
+  /**
+   * Subscribe to all subnets `slotsToSubscribeBeforeProposalDuty` slots before a block proposal of a connected
+   * validator, so that single attestations of those slots can be packed into the block. The subscription expires in
+   * the slot before the proposal, see unsubscribeAllSubnetsBeforeProposal
+   */
+  private subscribeAllSubnetsBeforeProposal(clockSlot: Slot): void {
+    for (const proposalSlot of this.localProposalSlots) {
+      if (proposalSlot === clockSlot + this.opts.slotsToSubscribeBeforeProposalDuty) {
+        this.subscribeAllSubnetsUntilProposal(proposalSlot);
+      }
+    }
+  }
+
+  private subscribeAllSubnetsUntilProposal(proposalSlot: Slot): void {
+    if (this.opts.slotsToSubscribeBeforeProposalDuty === 0 || this.opts.subscribeAllSubnets) {
+      return;
+    }
+
+    const subnets = Array.from({length: ATTESTATION_SUBNET_COUNT}, (_, subnet) => subnet);
+    // Same as aggregator duties: trigger gossip subscription first, then register the subscriptions.
+    // Do not add to committeeSubnets: it drives peer discovery, we only use the peers we already have
+    this.subscribeToSubnets(subnets, SubnetSource.beforeProposal);
+    for (const subnet of subnets) {
+      this.shortLivedSubscriptions.request({subnet, toSlot: proposalSlot - 1});
+    }
+  }
+
+  /**
+   * Unsubscribe from subnets of subscribeAllSubnetsBeforeProposal at half of the slot before the proposal instead of
+   * the proposal slot start, so the proposal slot does not carry their traffic. Single attestations are published at
+   * 1/3 of the slot so they have arrived by then.
+   * Short-lived subscriptions are either aggregator duties or these, an aggregator duty ends in its dutied slot and is
+   * kept here (aggregates are due later), it expires at the next slot start in onSlot as before. So only subnets of
+   * subscribeAllSubnetsBeforeProposal are unsubscribed here.
+   */
+  private unsubscribeAllSubnetsBeforeProposal(clockSlot: Slot): void {
+    const aggregatorSubnets = this.aggregatorSlotSubnet.get(clockSlot);
+    const expiring = this.shortLivedSubscriptions.getExpired(
+      clockSlot + 1,
+      (subnet) => aggregatorSubnets?.has(subnet) === true
+    );
+    if (expiring.length > 0) {
+      this.unsubscribeSubnets(expiring, clockSlot + 1, SubnetSource.beforeProposal);
+    }
+  }
 
   /**
    * Track time to form stable mesh if not yet formed
@@ -291,8 +371,8 @@ export class AttnetsService implements IAttnetsService {
   }
 
   /**
-   * Unsubscribe to a committee subnet from subscribedCommitteeSubnets.
-   * If a random subnet is present, we do not unsubscribe from it.
+   * Unsubscribe from short-lived subnets whose subscription expired.
+   * If a long-lived subnet is present, we do not unsubscribe from it.
    */
   private unsubscribeExpiredCommitteeSubnets(slot: Slot): void {
     const expired = this.shortLivedSubscriptions.getExpired(slot);
@@ -309,6 +389,14 @@ export class AttnetsService implements IAttnetsService {
     for (const dutiedSlot of this.aggregatorSlotSubnet.keys()) {
       if (currentSlot > dutiedSlot) {
         this.aggregatorSlotSubnet.delete(dutiedSlot);
+      }
+    }
+  }
+
+  private pruneExpiredLocalProposals(currentSlot: Slot): void {
+    for (const proposalSlot of this.localProposalSlots) {
+      if (currentSlot > proposalSlot) {
+        this.localProposalSlots.delete(proposalSlot);
       }
     }
   }

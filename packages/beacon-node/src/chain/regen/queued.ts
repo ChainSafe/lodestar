@@ -154,18 +154,20 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.checkpointStateCache.add(cp, item);
   }
 
-  updateHeadState(newHead: ProtoBlock, maybeHeadState: IBeaconStateView): void {
+  updateHeadState(newHead: ProtoBlock, maybeHeadState?: IBeaconStateView): void {
     const {stateRoot: newHeadStateRoot, blockRoot: newHeadBlockRoot, slot: newHeadSlot} = newHead;
-    const maybeHeadStateRoot = toRootHex(maybeHeadState.hashTreeRoot());
+    const maybeHeadStateRoot = maybeHeadState ? toRootHex(maybeHeadState.hashTreeRoot()) : undefined;
     const logCtx = {
       newHeadSlot,
       newHeadBlockRoot,
       newHeadStateRoot,
-      maybeHeadSlot: maybeHeadState.slot,
+      maybeHeadSlot: maybeHeadState?.slot,
       maybeHeadStateRoot,
     };
     const headState =
-      newHeadStateRoot === maybeHeadStateRoot ? maybeHeadState : this.blockStateCache.get(newHeadStateRoot);
+      maybeHeadState && newHeadStateRoot === maybeHeadStateRoot
+        ? maybeHeadState
+        : this.blockStateCache.get(newHeadStateRoot);
 
     if (headState) {
       this.blockStateCache.setHeadState(headState);
