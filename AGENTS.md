@@ -82,6 +82,7 @@ All commands use `pnpm` as the package manager.
 
 ```bash
 # Install dependencies
+npm install -g corepack # Node.js 26 no longer bundles it
 corepack enable
 pnpm install
 

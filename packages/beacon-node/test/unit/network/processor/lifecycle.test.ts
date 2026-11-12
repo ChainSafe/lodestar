@@ -80,7 +80,6 @@ function fixture() {
   const batch = vi.fn<BatchGossipHandlerFn>(async (items) => items.map(() => null));
   const handlers: GossipHandlers = {
     beacon_block: single,
-    blob_sidecar: single,
     data_column_sidecar: single,
     beacon_aggregate_and_proof: single,
     beacon_attestation: batch,

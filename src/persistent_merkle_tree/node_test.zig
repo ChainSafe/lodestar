@@ -118,8 +118,6 @@ test "Node.State predicates" {
     try std.testing.expect(!free_state.isLeaf());
     try std.testing.expect(!free_state.isZero());
     try std.testing.expect(!free_state.isBranch());
-    // Free slots expose the next-free link via `state.nextFree()`.
-    _ = free_state.nextFree();
 }
 
 test "chunked_leaf getRoot recomputes without touching the pool allocator" {
@@ -167,13 +165,11 @@ test "Pool" {
     try std.testing.expect(leaf2_id.getState(p).isFree());
     try std.testing.expect(branch3_id.getState(p).isFree());
 
-    // check if the free list is correct
-    const next_free: Node.Id = pool.next_free_node;
-    try std.testing.expectEqual(leaf2_id, next_free);
-    try std.testing.expectEqual(branch3_id, next_free.getState(p).nextFree());
-    try std.testing.expectEqual(leaf1_id, next_free.getState(p).nextFree().getState(p).nextFree());
-    try std.testing.expectEqual(branch1_id, next_free.getState(p).nextFree().getState(p).nextFree().getState(p).nextFree());
-    try std.testing.expectEqual(branch2_id, next_free.getState(p).nextFree().getState(p).nextFree().getState(p).nextFree().getState(p).nextFree());
+    // released slots are handed out lowest first, whatever order they were released in
+    for ([_]Node.Id{ leaf1_id, leaf2_id, branch1_id, branch2_id, branch3_id }) |expected| {
+        try std.testing.expectEqual(expected, pool.next_free_node);
+        try std.testing.expectEqual(expected, try pool.createLeafFromUint(0));
+    }
 }
 
 test "Pool - fixed capacity exhausts, reuses slots, and keeps columns stable" {
@@ -231,7 +227,7 @@ test "Pool - live occupancy counts shared nodes and chunked payloads once" {
 
 test "Pool - invalid capacity fails before allocation" {
     for ([_]u32{
-        Node.State.next_free_mask - max_depth + 1,
+        Node.Pool.max_capacity - max_depth + 1,
         std.math.maxInt(u32),
     }) |invalid_capacity| {
         var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
@@ -542,13 +538,6 @@ test "Node.State - refcount overflow saturates at rc_mask without corrupting kin
     var near_max = Node.State.initInUse(.branch, Node.State.rc_mask - 1);
     try std.testing.expectEqual(Node.State.rc_mask, try near_max.incRefCount());
     try std.testing.expectEqual(Node.NodeKind.branch, near_max.kind());
-}
-
-test "Node.State - free-list link round-trips at the 31-bit boundary" {
-    const max_link: Node.Id = @enumFromInt(Node.State.next_free_mask);
-    const fs = Node.State.initFree(max_link);
-    try std.testing.expect(fs.isFree());
-    try std.testing.expectEqual(max_link, fs.nextFree());
 }
 
 const TestCase = struct {

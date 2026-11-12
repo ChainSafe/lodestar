@@ -15,8 +15,10 @@ import {
   AggregatedAttestationPool,
   InclusionListStore,
   OpPool,
+  SingleAttestationPool,
   SyncContributionAndProofPool,
 } from "../../src/chain/opPools/index.js";
+import {ProposerTracker} from "../../src/chain/proposerTracker.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {SeenExecutionPayloadBids} from "../../src/chain/seenCache/seenExecutionPayloadBids.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
@@ -189,6 +191,8 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       opPool: new OpPool(config as BeaconConfig),
       inclusionListStore: new InclusionListStore(config as BeaconConfig),
       aggregatedAttestationPool: new AggregatedAttestationPool(config as BeaconConfig),
+      singleAttestationPool: new SingleAttestationPool(),
+      proposerTracker: new ProposerTracker(),
       syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
       payloadAttestationPool: {
         add: vi.fn(),

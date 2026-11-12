@@ -1127,11 +1127,13 @@ export async function produceCommonBlockBody<T extends BlockType>(
     this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
 
   const endAttestations = stepsMetrics?.startTimer();
+  // TODO: extract to a separate BeaconChain method to coordinate the 2 op-pools
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
     fork,
     this.forkChoice,
     this.shufflingCache,
-    currentState
+    currentState,
+    this.singleAttestationPool
   );
   endAttestations?.({
     step: BlockProductionStep.attestations,

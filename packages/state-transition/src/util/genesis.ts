@@ -8,9 +8,10 @@ import {
   GENESIS_EPOCH,
   GENESIS_SLOT,
   MAX_EFFECTIVE_BALANCE,
+  MIN_SEED_LOOKAHEAD,
   UNSET_DEPOSIT_REQUESTS_START_INDEX,
 } from "@lodestar/params";
-import {Bytes32, Root, TimeSeconds, phase0, ssz} from "@lodestar/types";
+import {Bytes32, Root, TimeSeconds, ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {applyDeposit, processDeposit} from "../block/processDeposit.js";
 import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
@@ -26,6 +27,7 @@ import {
 import {newFilledArray} from "./array.js";
 import {getTemporaryBlockHeader} from "./blockRoot.js";
 import {computeEpochAtSlot} from "./epoch.js";
+import {computeProposerIndices} from "./seed.js";
 import {getNextSyncCommittee} from "./syncCommittee.js";
 import {getActiveValidatorIndices, getMaxEffectiveBalance} from "./validator.js";
 
@@ -352,6 +354,12 @@ export function initializeBeaconStateFromEth1(
       // Fulu retires the legacy bridge after the genesis deposits.
       stateFulu.depositRequestsStartIndex = BigInt(stateFulu.eth1DepositIndex);
     }
+    const proposerLookahead: ValidatorIndex[] = [];
+    for (let epoch = GENESIS_EPOCH; epoch <= GENESIS_EPOCH + MIN_SEED_LOOKAHEAD; epoch++) {
+      const activeIndices = getActiveValidatorIndices(state, epoch);
+      proposerLookahead.push(...computeProposerIndices(fork, state, {activeIndices}, epoch));
+    }
+    stateFulu.proposerLookahead = ssz.fulu.ProposerLookahead.toViewDU(proposerLookahead);
   }
 
   if (fork >= ForkSeq.gloas) {
