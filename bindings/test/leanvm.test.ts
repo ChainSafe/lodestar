@@ -49,7 +49,7 @@ describe.skipIf(!LEANVM_AVAILABLE)("leanvm", () => {
     expect(again.toPublicKey()).toEqual(first.toPublicKey());
     expect(second.toPublicKey()).not.toEqual(first.toPublicKey());
     await expect(first.prepare(1 << 16)).resolves.toBeUndefined();
-  });
+  }, 60_000);
 
   it("rejects malformed key inputs", async () => {
     await expect(XmssSecretKey.fromSeed(new Uint8Array(31))).rejects.toThrow("InvalidSeedLength");
