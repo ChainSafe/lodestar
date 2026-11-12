@@ -3059,7 +3059,7 @@ packages:
     resolution: {integrity: sha512-HNrg9CM/Z4ZWB6RuExhuC6FPmLipiShKVMnT9JlQvfhwR47JatWLChA6mtZqVHqypE6p/z6ofcjbyWpM7YLxPQ==}
 
   '@xray/probe@file:.xray/probe-0.1.0.tgz':
-    resolution: {integrity: sha512-CB1ljWtZ4+0oHYcIcJ/PmeJ+Ghmbg0qC37/3LkPMtoSa7bGMNA+jZU5RMJUe9JHAtSJRkocUT70cDp5oWKt6jA==}
+    resolution: {integrity: sha512-CB1ljWtZ4+0oHYcIcJ/PmeJ+Ghmbg0qC37/3LkPMtoSa7bGMNA+jZU5RMJUe9JHAtSJRkocUT70cDp5oWKt6jA==, tarball: file:.xray/probe-0.1.0.tgz}
     version: 0.1.0
     engines: {node: '>=22'}
     peerDependencies:
