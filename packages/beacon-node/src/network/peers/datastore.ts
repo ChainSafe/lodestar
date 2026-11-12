@@ -8,28 +8,31 @@ type MemoryItem = {
   data: Uint8Array;
 };
 
+// biome-ignore lint/suspicious/noExplicitAny: used below (copied from upstream)
+type AwaitGenerator<T, TReturn = any, TNext = any> = Generator<T, TReturn, TNext> | AsyncGenerator<T, TReturn, TNext>;
+
 /**
  * Before libp2p 0.35, peerstore stays in memory and periodically write to db after n dirty items
  * This has a memory issue because all peer data stays in memory and loaded at startup time
  * This is written for libp2p >=0.35, we maintain the same mechanism but with bounded data structure
  * This datastore includes a memory datastore and fallback to db datastore
- * Use an in-memory datastore with last accessed time and _maxMemoryItems, on start it's empty (lazy load)
+ * Use an in-memory datastore with last accessed time and maxMemoryItems, on start it's empty (lazy load)
  * - get: Search in-memory datastore first, if not found search from db.
  *     - If found from db, add back to the in-memory datastore
  *     - Update lastAccessedMs
- * - put: move oldest items from memory to db if there are more than _maxMemoryItems items in memory
- *     -  update memory datastore, only update db datastore if there are at least _threshold dirty items
+ * - put: move oldest items from memory to db if there are more than maxMemoryItems items in memory
+ *     -  update memory datastore, only update db datastore if there are at least threshold dirty items
  *     -  Update lastAccessedMs
  */
 export class Eth2PeerDataStore extends BaseDatastore {
-  private _dbDatastore: LevelDatastore;
-  private _memoryDatastore: Map<string, MemoryItem>;
+  private dbDatastore: LevelDatastore;
+  private memoryDatastore: Map<string, MemoryItem>;
   /** Same to PersistentPeerStore of the old libp2p implementation */
-  private _dirtyItems = new Set<string>();
+  private dirtyItems = new Set<string>();
   /** If there are more dirty items than threshold, commit data to db */
-  private _threshold: number;
+  private threshold: number;
   /** If there are more memory items than this, prune oldest ones from memory and move to db */
-  private _maxMemoryItems: number;
+  private maxMemoryItems: number;
 
   constructor(
     dbDatastore: LevelDatastore | string,
@@ -44,18 +47,18 @@ export class Eth2PeerDataStore extends BaseDatastore {
       throw Error(`Threshold ${threshold} should be at most maxMemoryItems ${maxMemoryItems}`);
     }
 
-    this._dbDatastore = typeof dbDatastore === "string" ? new LevelDatastore(dbDatastore) : dbDatastore;
-    this._memoryDatastore = new Map();
-    this._threshold = threshold;
-    this._maxMemoryItems = maxMemoryItems;
+    this.dbDatastore = typeof dbDatastore === "string" ? new LevelDatastore(dbDatastore) : dbDatastore;
+    this.memoryDatastore = new Map();
+    this.threshold = threshold;
+    this.maxMemoryItems = maxMemoryItems;
   }
 
   async open(): Promise<void> {
-    return this._dbDatastore.open();
+    return this.dbDatastore.open();
   }
 
   async close(): Promise<void> {
-    return this._dbDatastore.close();
+    return this.dbDatastore.close();
   }
 
   async put(key: Key, val: Uint8Array, _options?: AbortOptions): Promise<Key> {
@@ -64,23 +67,23 @@ export class Eth2PeerDataStore extends BaseDatastore {
 
   /**
    * Same interface to put with "fromDb" option, if this item is updated back from db
-   * Move oldest items from memory data store to db if it's over this._maxMemoryItems
+   * Move oldest items from memory data store to db if it's over this.maxMemoryItems
    */
   async _put(key: Key, val: Uint8Array, fromDb = false): Promise<Key> {
-    while (this._memoryDatastore.size >= this._maxMemoryItems) {
+    while (this.memoryDatastore.size >= this.maxMemoryItems) {
       // it's likely this is called only 1 time
       await this.pruneMemoryDatastore();
     }
 
     const keyStr = key.toString();
-    const memoryItem = this._memoryDatastore.get(keyStr);
+    const memoryItem = this.memoryDatastore.get(keyStr);
     if (memoryItem) {
       // update existing
       memoryItem.lastAccessedMs = Date.now();
       memoryItem.data = val;
     } else {
       // new
-      this._memoryDatastore.set(keyStr, {data: val, lastAccessedMs: Date.now()});
+      this.memoryDatastore.set(keyStr, {data: val, lastAccessedMs: Date.now()});
     }
 
     if (!fromDb) await this._addDirtyItem(keyStr);
@@ -93,25 +96,25 @@ export class Eth2PeerDataStore extends BaseDatastore {
    * This throws error if not found
    * see https://github.com/ipfs/js-datastore-level/blob/38f44058dd6be858e757a1c90b8edb31590ec0bc/src/index.js#L102
    */
-  async get(key: Key): Promise<Uint8Array> {
+  async get(key: Key, options?: AbortOptions): Promise<Uint8Array> {
     const keyStr = key.toString();
-    const memoryItem = this._memoryDatastore.get(keyStr);
+    const memoryItem = this.memoryDatastore.get(keyStr);
     if (memoryItem) {
       memoryItem.lastAccessedMs = Date.now();
       return memoryItem.data;
     }
 
     // this throws error if not found
-    const dbValue = await this._dbDatastore.get(key);
-    // don't call this._memoryDatastore.set directly
+    const dbValue = await this.dbDatastore.get(key, options);
+    // don't call this.memoryDatastore.set directly
     // we want to get through prune() logic with fromDb as true
     await this._put(key, dbValue, true);
     return dbValue;
   }
 
-  async has(key: Key): Promise<boolean> {
+  async has(key: Key, options?: AbortOptions): Promise<boolean> {
     try {
-      await this.get(key);
+      await this.get(key, options);
     } catch (err) {
       // this is the same to how js-datastore-level handles notFound error
       // https://github.com/ipfs/js-datastore-level/blob/38f44058dd6be858e757a1c90b8edb31590ec0bc/src/index.js#L121
@@ -121,31 +124,31 @@ export class Eth2PeerDataStore extends BaseDatastore {
     return true;
   }
 
-  async delete(key: Key): Promise<void> {
-    this._memoryDatastore.delete(key.toString());
-    await this._dbDatastore.delete(key);
+  async delete(key: Key, options?: AbortOptions): Promise<void> {
+    this.memoryDatastore.delete(key.toString());
+    await this.dbDatastore.delete(key, options);
   }
 
-  async *_all(q: Query): AsyncIterable<Pair> {
-    for (const [key, value] of this._memoryDatastore.entries()) {
+  async *_all(q: Query, options?: AbortOptions): AwaitGenerator<Pair> {
+    for (const [key, value] of this.memoryDatastore.entries()) {
       yield {
         key: new Key(key),
         value: value.data,
       };
     }
-    yield* this._dbDatastore.query(q);
+    yield* this.dbDatastore.query(q, options);
   }
 
-  async *_allKeys(q: KeyQuery): AsyncIterable<Key> {
-    for (const key of this._memoryDatastore.keys()) {
+  async *_allKeys(q: KeyQuery, options?: AbortOptions): AwaitGenerator<Key> {
+    for (const key of this.memoryDatastore.keys()) {
       yield new Key(key);
     }
-    yield* this._dbDatastore.queryKeys(q);
+    yield* this.dbDatastore.queryKeys(q, options);
   }
 
   private async _addDirtyItem(keyStr: string): Promise<void> {
-    this._dirtyItems.add(keyStr);
-    if (this._dirtyItems.size >= this._threshold) {
+    this.dirtyItems.add(keyStr);
+    if (this.dirtyItems.size >= this.threshold) {
       try {
         await this._commitData();
       } catch (_e) {}
@@ -153,15 +156,15 @@ export class Eth2PeerDataStore extends BaseDatastore {
   }
 
   private async _commitData(): Promise<void> {
-    const batch = this._dbDatastore.batch();
-    for (const keyStr of this._dirtyItems) {
-      const memoryItem = this._memoryDatastore.get(keyStr);
+    const batch = this.dbDatastore.batch();
+    for (const keyStr of this.dirtyItems) {
+      const memoryItem = this.memoryDatastore.get(keyStr);
       if (memoryItem) {
         batch.put(new Key(keyStr), memoryItem.data);
       }
     }
     await batch.commit();
-    this._dirtyItems.clear();
+    this.dirtyItems.clear();
   }
 
   /**
@@ -172,7 +175,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     let oldestKey: string | undefined = undefined;
     let oldestValue: Uint8Array | undefined = undefined;
 
-    for (const [key, value] of this._memoryDatastore) {
+    for (const [key, value] of this.memoryDatastore) {
       if (value.lastAccessedMs < oldestAccessedMs) {
         oldestAccessedMs = value.lastAccessedMs;
         oldestKey = key;
@@ -181,8 +184,8 @@ export class Eth2PeerDataStore extends BaseDatastore {
     }
 
     if (oldestKey && oldestValue) {
-      await this._dbDatastore.put(new Key(oldestKey), oldestValue);
-      this._memoryDatastore.delete(oldestKey);
+      await this.dbDatastore.put(new Key(oldestKey), oldestValue);
+      this.memoryDatastore.delete(oldestKey);
     }
   }
 }

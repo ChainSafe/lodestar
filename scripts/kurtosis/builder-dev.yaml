@@ -1,0 +1,48 @@
+participants:
+  # Beacon node and execution client of the builder, the builder runs on the host
+  - el_type: geth
+    el_image: ethpandaops/geth:glamsterdam-devnet-8
+    cl_type: lodestar
+    cl_image: local/lodestar:builder-dev
+    cl_log_level: debug
+    cl_extra_params:
+      - --emitPayloadAttributes
+    validator_count: 0
+  # Validators, they receive the bids and payloads of the builder over gossip
+  - el_type: geth
+    el_image: ethpandaops/geth:glamsterdam-devnet-8
+    cl_type: lodestar
+    cl_image: local/lodestar:builder-dev
+    vc_image: local/lodestar:builder-dev
+    cl_log_level: debug
+    vc_log_level: debug
+    vc_extra_params:
+      - --builder.selection=builderalways
+      - --graffiti=builder-dev
+    supernode: true
+    validator_count: 64
+
+network_params:
+  preset: minimal
+  seconds_per_slot: 6
+  gloas_fork_epoch: 0
+  withdrawal_type: "0x01"
+  # Registers a builder in the genesis state, active once the first epoch is finalized
+  builder_count: 1
+
+additional_services:
+  - dora
+  - prometheus
+
+dora_params:
+  image: ethpandaops/dora:master-latest
+
+port_publisher:
+  cl:
+    enabled: true
+    public_port_start: 37000
+  el:
+    enabled: true
+    public_port_start: 38000
+  additional_services:
+    enabled: true

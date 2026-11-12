@@ -1,7 +1,7 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
-import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {byteArrayEquals} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/index.js";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateGloas} from "../types.js";
 
 export {upgradeStateToAltair} from "./upgradeStateToAltair.js";
 export {upgradeStateToBellatrix} from "./upgradeStateToBellatrix.js";
@@ -10,11 +10,12 @@ export {upgradeStateToDeneb} from "./upgradeStateToDeneb.js";
 export {upgradeStateToElectra} from "./upgradeStateToElectra.js";
 export {upgradeStateToFulu} from "./upgradeStateToFulu.js";
 export {upgradeStateToGloas} from "./upgradeStateToGloas.js";
+export {upgradeStateToHeze} from "./upgradeStateToHeze.js";
 
 /**
  * Dial state to next slot. Common for all forks
  */
-export function processSlot(state: CachedBeaconStateAllForks): void {
+export function processSlot(fork: ForkSeq, state: CachedBeaconStateAllForks): void {
   // Cache state root
   // Note: .hashTreeRoot() automatically commits() pending changes
   const previousStateRoot = state.hashTreeRoot();
@@ -29,4 +30,12 @@ export function processSlot(state: CachedBeaconStateAllForks): void {
   // Note: .hashTreeRoot() automatically commits() pending changes
   const previousBlockRoot = state.latestBlockHeader.hashTreeRoot();
   state.blockRoots.set(state.slot % SLOTS_PER_HISTORICAL_ROOT, previousBlockRoot);
+
+  if (fork >= ForkSeq.gloas) {
+    // Unset the next payload availability
+    (state as CachedBeaconStateGloas).executionPayloadAvailability.set(
+      (state.slot + 1) % SLOTS_PER_HISTORICAL_ROOT,
+      false
+    );
+  }
 }

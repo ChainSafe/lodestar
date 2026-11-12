@@ -42,15 +42,17 @@
       "name": "Test Current File",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/node_modules/.bin/vitest",
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
       "args": [
         "--run",
         "${file}",
-        "-t",
         "${input:testName}",
         "--pool",
         "forks",
-        "--poolOptions.forks.singleFork"
+        "--maxWorkers",
+        "1",
+        "--isolate",
+        "true"
       ],
       "cwd": "${workspaceFolder}/${input:packageName}",
       "console": "integratedTerminal",
@@ -73,10 +75,17 @@
     {
       "id": "testName",
       "type": "command",
-      "command": "extension.commandvariable.promptStringRemember",
+      "command": "extension.commandvariable.transform",
       "args": {
-        "key": "testName",
-        "description": "Enter the test name to run, leave empty to run all"
+        "text": "${promptStringRemember:name}",
+        "promptStringRemember": {
+          "name": {
+            "key": "testName",
+            "description": "Enter the test name to run, leave empty to run all"
+          }
+        },
+        "find": "^(.+)$",
+        "replace": "-t=$1"
       }
     }
   ]

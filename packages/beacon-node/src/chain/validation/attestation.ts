@@ -10,16 +10,17 @@ import {
   ForkSeq,
   SLOTS_PER_EPOCH,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
-  EpochCacheError,
-  EpochCacheErrorCode,
   EpochShuffling,
-  SingleSignatureSet,
+  IndexedSignatureSet,
+  ShufflingError,
+  ShufflingErrorCode,
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
-  createSingleSignatureSetFromComponents,
+  createIndexedSignatureSetFromComponents,
 } from "@lodestar/state-transition";
 import {
   CommitteeIndex,
@@ -36,7 +37,6 @@ import {
   ssz,
 } from "@lodestar/types";
 import {assert, toRootHex} from "@lodestar/utils";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {sszDeserializeSingleAttestation} from "../../network/gossip/topic.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {
@@ -69,7 +69,7 @@ export type AttestationValidationResult = {
   subnet: SubnetID;
   attDataRootHex: RootHex;
   committeeIndex: CommitteeIndex;
-  committeeValidatorIndex: number;
+  validatorCommitteeIndex: number;
   committeeSize: number;
 };
 
@@ -90,7 +90,7 @@ export type GossipAttestation = {
 };
 
 export type Step0Result = AttestationValidationResult & {
-  signatureSet: SingleSignatureSet;
+  signatureSet: IndexedSignatureSet;
   validatorIndex: number;
 };
 
@@ -125,7 +125,7 @@ export async function validateGossipAttestationsSameAttData(
   // step1: verify signatures of all valid attestations
   // map new index to index in resultOrErrors
   const newIndexToOldIndex = new Map<number, number>();
-  const signatureSets: SingleSignatureSet[] = [];
+  const signatureSets: IndexedSignatureSet[] = [];
   let newIndex = 0;
   const step0Results: Step0Result[] = [];
   for (const [i, resultOrError] of step0ResultOrErrors.entries()) {
@@ -142,10 +142,7 @@ export async function validateGossipAttestationsSameAttData(
   const batchableBls = signatureSets.length >= chain.opts.minSameMessageSignatureSetsToBatch;
   if (batchableBls) {
     // all signature sets should have same signing root since we filtered in network processor
-    signatureValids = await chain.bls.verifySignatureSetsSameMessage(
-      signatureSets.map((set) => ({publicKey: set.pubkey, signature: set.signature})),
-      signatureSets[0].signingRoot
-    );
+    signatureValids = await chain.bls.verifySignatureSetsSameMessage(signatureSets, signatureSets[0].signingRoot);
   } else {
     // don't want to block the main thread if there are too few signatures
     signatureValids = await Promise.all(
@@ -183,7 +180,7 @@ export async function validateGossipAttestationsSameAttData(
       chain.seenAttesters.add(targetEpoch, validatorIndex);
     } else {
       step0ResultOrErrors[oldIndex] = {
-        err: new AttestationError(GossipAction.IGNORE, {
+        err: new AttestationError(GossipAction.REJECT, {
           code: AttestationErrorCode.INVALID_SIGNATURE,
         }),
       };
@@ -225,7 +222,7 @@ export async function validateApiAttestation(
       code: AttestationErrorCode.INVALID_SIGNATURE,
     });
   } catch (err) {
-    if (err instanceof EpochCacheError && err.type.code === EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE) {
+    if (err instanceof ShufflingError && err.type.code === ShufflingErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE) {
       throw new AttestationError(GossipAction.IGNORE, {
         code: AttestationErrorCode.BAD_TARGET_EPOCH,
       });
@@ -294,9 +291,48 @@ async function validateAttestationNoSignatureCheck(
       // api or first time validation of a gossip attestation
       committeeIndex = attestationOrCache.attestation.committeeIndex;
 
-      // [REJECT] attestation.data.index == 0
-      if (attData.index !== 0) {
-        throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX});
+      if (isForkPostGloas(fork)) {
+        // [REJECT] `attestation.data.index < 2`.
+        if (attData.index >= 2) {
+          throw new AttestationError(GossipAction.REJECT, {
+            code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE,
+            attDataIndex: attData.index,
+          });
+        }
+
+        // [REJECT] `attestation.data.index == 0` if `block.slot == attestation.data.slot`.
+        const block = chain.forkChoice.getBlockDefaultStatus(attData.beaconBlockRoot);
+
+        // block being null will be handled by `verifyHeadBlockAndTargetRoot`
+        if (block !== null && block.slot === attSlot && attData.index !== 0) {
+          throw new AttestationError(GossipAction.REJECT, {
+            code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT,
+          });
+        }
+
+        // [REJECT] If `attestation.data.index == 1` (payload present for a past block),
+        //   the execution payload for `block` passes validation.
+        // [IGNORE] When `attestation.data.index == 1` (payload present for a past block),
+        //   the execution payload for `block` has been fully imported, including its data -- i.e.
+        //   `is_payload_verified(store, attestation.data.beacon_block_root)` returns `True`
+        //   (a client MAY queue attestations for processing until the payload is imported and
+        //   SHOULD request the payload envelope via `ExecutionPayloadEnvelopesByRoot` using
+        //   `attestation.data.beacon_block_root`).
+        if (
+          block !== null &&
+          attData.index === 1 &&
+          !chain.forkChoice.hasPayloadHexUnsafe(toRootHex(attData.beaconBlockRoot))
+        ) {
+          throw new AttestationError(GossipAction.IGNORE, {
+            code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
+            beaconBlockRoot: toRootHex(attData.beaconBlockRoot),
+          });
+        }
+      } else {
+        // [REJECT] attestation.data.index == 0
+        if (attData.index !== 0) {
+          throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX});
+        }
       }
     } else {
       // phase0 attestation
@@ -335,7 +371,7 @@ async function validateAttestationNoSignatureCheck(
   }
 
   let aggregationBits: BitArray | null = null;
-  let committeeValidatorIndex: number | null = null;
+  let validatorCommitteeIndex: number | null = null;
   if (!isForkPostElectra(fork)) {
     // [REJECT] The attestation is unaggregated -- that is, it has exactly one participating validator
     // (len([bit for bit in attestation.aggregation_bits if bit]) == 1, i.e. exactly 1 bit is set).
@@ -355,7 +391,7 @@ async function validateAttestationNoSignatureCheck(
         code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET,
       });
     }
-    committeeValidatorIndex = bitIndex;
+    validatorCommitteeIndex = bitIndex;
   }
 
   let committeeValidatorIndices: Uint32Array;
@@ -404,7 +440,7 @@ async function validateAttestationNoSignatureCheck(
 
     // [REJECT] The committee index is within the expected range
     // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
-    committeeValidatorIndices = getCommitteeIndices(shuffling, attSlot, committeeIndex);
+    committeeValidatorIndices = getCommitteeValidatorIndices(shuffling, attSlot, committeeIndex);
     getSigningRoot = () => getAttestationDataSigningRoot(chain.config, attData);
     expectedSubnet = computeSubnetForSlot(shuffling, attSlot, committeeIndex);
   }
@@ -414,9 +450,9 @@ async function validateAttestationNoSignatureCheck(
   if (!isForkPostElectra(fork)) {
     // The validity of aggregation bits are already checked above
     assert.notNull(aggregationBits);
-    assert.notNull(committeeValidatorIndex);
+    assert.notNull(validatorCommitteeIndex);
 
-    validatorIndex = committeeValidatorIndices[committeeValidatorIndex];
+    validatorIndex = committeeValidatorIndices[validatorCommitteeIndex];
     // [REJECT] The number of aggregation bits matches the committee size
     // -- i.e. len(attestation.aggregation_bits) == len(get_beacon_committee(state, data.slot, data.index)).
     // > TODO: Is this necessary? Lighthouse does not do this check.
@@ -441,8 +477,8 @@ async function validateAttestationNoSignatureCheck(
     // [REJECT] The attester is a member of the committee -- i.e.
     // `attestation.attester_index in get_beacon_committee(state, attestation.data.slot, index)`.
     // Position of the validator in its committee
-    committeeValidatorIndex = committeeValidatorIndices.indexOf(validatorIndex);
-    if (committeeValidatorIndex === -1) {
+    validatorCommitteeIndex = committeeValidatorIndices.indexOf(validatorIndex);
+    if (validatorCommitteeIndex === -1) {
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE,
       });
@@ -478,7 +514,7 @@ async function validateAttestationNoSignatureCheck(
 
   // [REJECT] The signature of attestation is valid.
   const attestingIndices = [validatorIndex];
-  let signatureSet: SingleSignatureSet;
+  let signatureSet: IndexedSignatureSet;
   let attDataRootHex: RootHex;
   const signature = attestationOrCache.attestation
     ? attestationOrCache.attestation.signature
@@ -493,18 +529,14 @@ async function validateAttestationNoSignatureCheck(
 
   if (attestationOrCache.cache) {
     // there could be up to 6% of cpu time to compute signing root if we don't clone the signature set
-    signatureSet = createSingleSignatureSetFromComponents(
-      chain.index2pubkey[validatorIndex],
+    signatureSet = createIndexedSignatureSetFromComponents(
+      validatorIndex,
       attestationOrCache.cache.signingRoot,
       signature
     );
     attDataRootHex = attestationOrCache.cache.attDataRootHex;
   } else {
-    signatureSet = createSingleSignatureSetFromComponents(
-      chain.index2pubkey[validatorIndex],
-      getSigningRoot(),
-      signature
-    );
+    signatureSet = createIndexedSignatureSetFromComponents(validatorIndex, getSigningRoot(), signature);
 
     // add cached attestation data before verifying signature
     attDataRootHex = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
@@ -557,7 +589,7 @@ async function validateAttestationNoSignatureCheck(
     signatureSet,
     validatorIndex,
     committeeIndex,
-    committeeValidatorIndex,
+    validatorCommitteeIndex,
     committeeSize: committeeValidatorIndices.length,
   };
 }
@@ -570,8 +602,8 @@ async function validateAttestationNoSignatureCheck(
  * Note: We do not queue future attestations for later processing
  */
 export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, attestationSlot: Slot): void {
-  // slot with future tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
-  const latestPermissibleSlot = chain.clock.slotWithFutureTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC);
+  // slot with future tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY
+  const latestPermissibleSlot = chain.clock.slotWithFutureTolerance(chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000);
   if (attestationSlot > latestPermissibleSlot) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.FUTURE_SLOT,
@@ -585,10 +617,14 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
   //
   // see: https://github.com/ethereum/consensus-specs/pull/3360
   if (ForkSeq[fork] < ForkSeq.deneb) {
+    const currentSlot = chain.clock.currentSlot;
+    const withinPastDisparity = currentSlot > 0 && chain.clock.isCurrentSlotGivenGossipDisparity(currentSlot - 1);
     const earliestPermissibleSlot = Math.max(
-      // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
-      // ATTESTATION_PROPAGATION_SLOT_RANGE = SLOTS_PER_EPOCH
-      chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC) - SLOTS_PER_EPOCH,
+      // Pre-Deneb propagation is time-bounded: an attestation remains valid at the exact old
+      // boundary `compute_time_at_slot(slot + range + 1) + MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+      // Model that boundary by extending the lower slot bound by one additional slot only while
+      // the clock still considers the previous slot current given gossip disparity.
+      currentSlot - chain.config.ATTESTATION_PROPAGATION_SLOT_RANGE - (withinPastDisparity ? 1 : 0),
       0
     );
 
@@ -614,7 +650,7 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
 
     // lower bound for previous epoch is same as epoch of earliestPermissibleSlot
     const currentEpochWithPastTolerance = computeEpochAtSlot(
-      chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC)
+      chain.clock.slotWithPastTolerance(chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000)
     );
 
     const earliestPermissiblePreviousEpoch = Math.max(currentEpochWithPastTolerance - 1, 0);
@@ -737,7 +773,7 @@ export function getAttestationDataSigningRoot(config: BeaconConfig, data: phase0
 function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): ProtoBlock {
   // TODO (LH): Enforce a maximum skip distance for unaggregated attestations.
 
-  const headBlock = chain.forkChoice.getBlock(beaconBlockRoot);
+  const headBlock = chain.forkChoice.getBlockDefaultStatus(beaconBlockRoot);
   if (headBlock === null) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT,
@@ -797,10 +833,10 @@ function verifyAttestationTargetRoot(headBlock: ProtoBlock, targetRoot: Root, at
 }
 
 /**
- * Get a list of indices of validators in the given committee
+ * Get a list of validator indices in the given committee
  * attestationIndex - Index of the committee in shuffling.committees
  */
-export function getCommitteeIndices(
+export function getCommitteeValidatorIndices(
   shuffling: EpochShuffling,
   attestationSlot: Slot,
   attestationIndex: number

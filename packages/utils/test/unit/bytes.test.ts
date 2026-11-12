@@ -3,6 +3,7 @@ import {
   bytesToInt,
   formatBytes,
   fromHex,
+  fromHexInto,
   intToBytes,
   toHex,
   toHexString,
@@ -35,7 +36,7 @@ describe("intToBytes", () => {
     const type = typeof input;
     const length = input[1];
     it(`should correctly serialize ${type} to bytes length ${length}`, () => {
-      expect(intToBytes(input[0], input[1])).toEqual(output);
+      expect(toHex(intToBytes(input[0], input[1]))).toEqual(toHex(output));
     });
   }
 });
@@ -108,14 +109,24 @@ describe("toPubkeyHex", () => {
   }
 });
 
-describe("fromHex", () => {
+describe("fromHex and fromHexInto", () => {
   const testCases: {input: string; output: Buffer | Uint8Array}[] = [
     {
       input: "0x48656c6c6f2c20576f726c6421",
       output: new Uint8Array([72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33]),
     },
     {
+      // same but with upper case
+      input: "0x48656C6C6F2C20576F726C6421",
+      output: new Uint8Array([72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33]),
+    },
+    {
       input: "48656c6c6f2c20576f726c6421",
+      output: new Uint8Array([72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33]),
+    },
+    {
+      // same but with upper case
+      input: "48656C6C6F2C20576F726C6421",
       output: new Uint8Array([72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33]),
     },
     {input: "0x", output: new Uint8Array([])},
@@ -126,6 +137,28 @@ describe("fromHex", () => {
       expect(fromHex(input)).toEqual(output);
     });
   }
+
+  for (const {input, output} of testCases) {
+    it(`should convert hex string ${input} into provided buffer`, () => {
+      const buffer = new Uint8Array(output.length);
+      fromHexInto(input, buffer);
+      expect(toHex(buffer)).toBe(toHex(output));
+    });
+  }
+
+  it.each(["0xzzzz", "0x0011zz2233", "0xgg", "0x00-1", "zzzz"])(
+    "should reject hex string %s with invalid characters",
+    (input) => {
+      expect(() => fromHex(input)).toThrow();
+      const buffer = new Uint8Array(input.replace(/^0x/, "").length / 2);
+      expect(() => fromHexInto(input, buffer)).toThrow();
+    }
+  );
+
+  it("should reject hex string with a length not matching the buffer", () => {
+    expect(() => fromHexInto("0x0011", new Uint8Array(1))).toThrow();
+    expect(() => fromHexInto("0x0011", new Uint8Array(3))).toThrow();
+  });
 });
 
 describe("toHexString", () => {

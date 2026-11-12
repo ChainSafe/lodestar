@@ -31,11 +31,16 @@ docker-compose.yml
 
 # Tests
 packages/**/test
+bindings/test
+packages/*/spec-tests*
 packages/**/lib
 
 # Tests artifacts
 .__testdb
 packages/*/spec-tests
+packages/*/spec-tests-ssz
+packages/*/spec-tests-bls
+packages/*/spec-tests-comptests
 packages/*/benchmark_data
 packages/beacon-node/test-logs/
 packages/cli/test-logs/
@@ -61,11 +66,23 @@ docs/site
 **/.nyc_output
 **/coverage
 **/node_modules
-**/test
 **/lib
 **/.tmp
 **/dist
 *.log
 **/*.log
+**/*.tsbuildinfo
 .idea
 .tmp
+# Zig build and fixture caches
+.zig-cache
+zig-pkg
+zig-out
+bindings/zig-out
+bindings/artifacts
+fixtures
+test/spec/spec_tests
+test/spec/test_case
+test/spec/ssz/generic_tests.zig
+test/spec/ssz/static_tests.zig
+test/spec/bls/spec_tests.zig

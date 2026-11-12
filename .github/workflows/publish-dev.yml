@@ -5,41 +5,54 @@ concurrency:
   group: cd-publish-dev
 
 on:
-  push:
-    branches:
-      - unstable
+  workflow_call:
+
+permissions:
+  contents: write # Required for OIDC
+  id-token: write # Required to create a Github release
+  pull-requests: write # Required to add tags to pull requests
+  attestations: write # Required by docker.yml reusable workflow
+  artifact-metadata: write # Required by docker.yml reusable workflow
 
 jobs:
   npm:
     name: Publish to NPM Registry
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    # To support npm provenance we must use github-hosted runners
+    runs-on: ubuntu-latest
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+
+      - name: Install pnpm before setup node
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: 26
           registry-url: "https://registry.npmjs.org"
           check-latest: true
-          cache: yarn
+          cache: pnpm
+      # Required to build the @lodestar/native workspace package
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: cache-deps
         with:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
+            bindings/node_modules
+          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/pnpm-lock.yaml', '**/package.json') }}
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile && yarn build
+        run: pnpm install --frozen-lockfile && pnpm build
       - name: Build
-        run: yarn build
+        run: pnpm build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
       - name: Get version
@@ -49,6 +62,7 @@ jobs:
           NEXT_VERSION=$(npx --yes semver --increment minor $PACKAGE_VERSION)
           export VERSION=${NEXT_VERSION}-dev.${GITHUB_SHA:0:10}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "short_sha=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
           echo PACKAGE_VERSION $PACKAGE_VERSION GITHUB_SHA $GITHUB_SHA VERSION $VERSION
 
       - name: Change and commit version
@@ -57,10 +71,10 @@ jobs:
         # This "temp" commit doesn't change the actually release commit which is captured above.
         # git-data is also correct, since it's generated at build time, before `lerna version` run.
         run: |
-          node_modules/.bin/lerna version ${{ steps.version.outputs.version }} \
+          pnpm lerna version ${{ steps.version.outputs.version }} \
+          --yes \
           --force-publish \
           --exact \
-          --yes \
           --no-git-tag-version
 
           git config user.name 'temp'
@@ -92,58 +106,20 @@ jobs:
         #
         # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
         run: |
-          node_modules/.bin/lerna publish from-package \
-          --yes \
-          --no-verify-access \
+          pnpm run release:publish \
           --dist-tag next \
           --no-git-reset \
           --force-publish \
           --exact
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     outputs:
       version: ${{ steps.version.outputs.version }}
+      short_sha: ${{ steps.version.outputs.short_sha }}
 
   docker:
     name: Publish to Docker Hub
-    runs-on: buildjet-4vcpu-ubuntu-2204
     needs: npm
-    steps:
-      - uses: actions/checkout@v4
-      # https://github.com/docker/setup-qemu-action
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      # https://github.com/docker/setup-buildx-action
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push lodestar
-        run: >
-          docker buildx build . --push
-          --tag chainsafe/lodestar:next
-          --platform linux/amd64,linux/arm64
-          --build-arg COMMIT=$(git rev-parse HEAD)
-
-      - run: docker run chainsafe/lodestar:next --help
-      # Display history to know byte size of each layer
-      # Image is available only because of the previous `docker run` command
-      - run: docker image history chainsafe/lodestar:next
-
-      - name: Build and push custom Grafana
-        run: >
-          docker buildx build ./docker/grafana/ --push
-          --file ./docker/grafana/Dockerfile
-          --build-context dashboards=./dashboards
-          --tag chainsafe/lodestar-grafana:next
-          --platform linux/amd64,linux/arm64
-
-      - name: Build and push custom Prometheus
-        run: >
-          docker buildx build ./docker/prometheus/ --push
-          --file ./docker/prometheus/Dockerfile
-          --tag chainsafe/lodestar-prometheus:next
-          --platform linux/amd64,linux/arm64
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: next
+      extra-tags: next-${{ needs.npm.outputs.short_sha }}
+    secrets: inherit

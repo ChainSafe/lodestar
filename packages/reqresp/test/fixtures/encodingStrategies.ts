@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
+import {encode as varintEncode} from "uint8-varint";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {encode as varintEncode} from "uint8-varint";
 import {SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/errors.js";
 import {ResponseOutgoing, TypeSizes} from "../../src/types.js";
 import {
@@ -71,7 +71,16 @@ export const encodingStrategiesDecodingErrorCases: {
     id: "if it read more than maxEncodedLen",
     type: ssz.phase0.Ping,
     error: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
-    chunks: [Buffer.from(varintEncode(ssz.phase0.Ping.minSize)), Buffer.alloc(100)],
+    chunks: [
+      Buffer.from(varintEncode(ssz.phase0.Ping.minSize)),
+      Buffer.concat([
+        // snappy stream identifier frame
+        Buffer.from([0xff, 0x06, 0x00, 0x00]),
+        Buffer.from("sNaPpY"),
+        // many empty skippable frames to force maxEncodedLen overflow
+        ...new Array(32).fill(Buffer.from([0x80, 0x00, 0x00, 0x00])),
+      ]),
+    ],
   },
   {
     id: "if failed ssz snappy input malformed",

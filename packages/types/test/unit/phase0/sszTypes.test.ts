@@ -1,5 +1,5 @@
-import {ContainerType} from "@chainsafe/ssz";
 import {describe, expect, it} from "vitest";
+import {ContainerType} from "@chainsafe/ssz";
 import {ssz} from "../../../src/index.js";
 import {ValidatorType} from "../../../src/phase0/validator.js";
 
@@ -27,5 +27,17 @@ describe("Validator ssz types", () => {
       const serialized2 = ssz.phase0.Validator.serialize(validator);
       expect(serialized).toEqual(serialized2);
     }
+  });
+});
+
+describe("Eth1Data ssz type", () => {
+  it("preserves depositCount values above Number.MAX_SAFE_INTEGER", () => {
+    const bytes = ssz.phase0.Eth1Data.serialize(ssz.phase0.Eth1Data.defaultValue());
+    bytes.set([0x01, 0, 0, 0, 0, 0, 0x20, 0], 32);
+
+    const eth1Data = ssz.phase0.Eth1Data.deserialize(bytes);
+
+    expect(eth1Data.depositCount).toBe(9007199254740993n);
+    expect(ssz.phase0.Eth1Data.serialize(eth1Data)).toEqual(bytes);
   });
 });

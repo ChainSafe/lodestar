@@ -1,15 +1,17 @@
 import path from "node:path";
 import workerThreads from "node:worker_threads";
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
-import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {privateKeyToProtobuf} from "@libp2p/crypto/keys";
-import {PrivateKey} from "@libp2p/interface";
+import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
+import type {PublishOpts} from "@libp2p/gossipsub/types";
+import type {PrivateKey} from "@libp2p/interface";
+import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
-import {Status} from "@lodestar/types";
+import {Slot, Status} from "@lodestar/types";
+import {withTimeout} from "@lodestar/utils";
+import {GoodByeReasonCode} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {PeerIdStr, peerIdFromString} from "../../util/peerId.js";
@@ -58,6 +60,10 @@ type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
 
 const NETWORK_WORKER_EXIT_TIMEOUT_MS = 1000;
 const NETWORK_WORKER_EXIT_RETRY_COUNT = 3;
+/** `getApi().close()` is an unbounded RPC into the worker and runs before `BeaconNode.close()`
+ * archives chain state to disk, so it is bounded here. Set well above the ~2-4s a close takes on
+ * mainnet, tripping it leaves libp2p half torn down */
+const NETWORK_CORE_CLOSE_TIMEOUT_MS = 5000;
 
 /**
  * NetworkCore implementation using a Worker thread
@@ -73,7 +79,7 @@ export class WorkerNetworkCore implements INetworkCore {
     // Handles ReqResp response from worker and calls async generator in main thread
     this.reqRespBridgeRespHandler = new AsyncIterableBridgeHandler(
       getReqRespBridgeRespEvents(this.reqRespBridgeEventBus),
-      (data) => modules.getReqRespHandler(data.method)(data.req, peerIdFromString(data.peerId))
+      (data) => modules.getReqRespHandler(data.method)(data.req, peerIdFromString(data.peerId), data.peerClient)
     );
 
     wireEventsOnMainThread<NetworkEventData>(
@@ -130,7 +136,7 @@ export class WorkerNetworkCore implements INetworkCore {
       loggerOpts: modules.logger.toOpts(),
     };
 
-    const worker = new Worker(path.join(workerDir, "networkCoreWorker.js"), {
+    const workerOpts: ConstructorParameters<typeof Worker>[1] = {
       workerData,
       /**
        * maxYoungGenerationSizeMb defaults to 152mb through the cli option defaults.
@@ -144,9 +150,11 @@ export class WorkerNetworkCore implements INetworkCore {
        * necessary
        */
       resourceLimits: {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb},
-    } as ConstructorParameters<typeof Worker>[1]);
+    };
 
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    const worker = new Worker(path.join(workerDir, "networkCoreWorker.js"), workerOpts);
+
+    // biome-ignore lint/suspicious/noExplicitAny: Don't know any specific interface for the spawn
     const networkThreadApi = (await spawn<any>(worker, {
       // A Lodestar Node may do very expensive task at start blocking the event loop and causing
       // the initialization to timeout. The number below is big enough to almost disable the timeout
@@ -163,15 +171,25 @@ export class WorkerNetworkCore implements INetworkCore {
 
   async close(): Promise<void> {
     this.modules.logger.debug("closing network core running in network worker");
-    await this.getApi().close();
+    try {
+      await withTimeout(async () => this.getApi().close(), NETWORK_CORE_CLOSE_TIMEOUT_MS);
+    } catch (e) {
+      this.modules.logger.debug("Error closing network core", {}, e as Error);
+    }
     this.modules.logger.debug("terminating network worker");
-    await terminateWorkerThread({
+    const terminated = await terminateWorkerThread({
       worker: this.getApi(),
       retryCount: NETWORK_WORKER_EXIT_RETRY_COUNT,
       retryMs: NETWORK_WORKER_EXIT_TIMEOUT_MS,
       logger: this.modules.logger,
     });
-    this.modules.logger.debug("terminated network worker");
+    if (terminated) {
+      this.modules.logger.debug("terminated network worker");
+    } else {
+      // Nothing more to do, `process.exit()` joins the thread regardless so the process still waits
+      // on it. What matters is returning, so the caller can archive state and close the db
+      this.modules.logger.debug("Network worker did not terminate in time, continuing shutdown without it");
+    }
   }
 
   async test(): Promise<void> {
@@ -188,6 +206,9 @@ export class WorkerNetworkCore implements INetworkCore {
   reStatusPeers(peers: PeerIdStr[]): Promise<void> {
     return this.getApi().reStatusPeers(peers);
   }
+  goodbyeAndDisconnect(peer: PeerIdStr, reason: GoodByeReasonCode): Promise<void> {
+    return this.getApi().goodbyeAndDisconnect(peer, reason);
+  }
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
     return this.getApi().reportPeer(peer, action, actionName);
   }
@@ -198,6 +219,9 @@ export class WorkerNetworkCore implements INetworkCore {
   }
   prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     return this.getApi().prepareSyncCommitteeSubnets(subscriptions);
+  }
+  addLocalProposalSlots(slots: Slot[]): Promise<void> {
+    return this.getApi().addLocalProposalSlots(slots);
   }
   subscribeGossipCoreTopics(): Promise<void> {
     return this.getApi().subscribeGossipCoreTopics();
@@ -240,6 +264,15 @@ export class WorkerNetworkCore implements INetworkCore {
   }
   disconnectPeer(peer: PeerIdStr): Promise<void> {
     return this.getApi().disconnectPeer(peer);
+  }
+  addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null> {
+    return this.getApi().addDirectPeer(peer);
+  }
+  removeDirectPeer(peerId: PeerIdStr): Promise<boolean> {
+    return this.getApi().removeDirectPeer(peerId);
+  }
+  getDirectPeers(): Promise<string[]> {
+    return this.getApi().getDirectPeers();
   }
   dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]> {
     return this.getApi().dumpPeers();

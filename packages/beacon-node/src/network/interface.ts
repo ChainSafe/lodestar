@@ -1,5 +1,5 @@
-import {Identify} from "@libp2p/identify";
-import {
+import type {Identify} from "@libp2p/identify";
+import type {
   ComponentLogger,
   ConnectionGater,
   ConnectionProtector,
@@ -15,8 +15,11 @@ import {
   Upgrader,
 } from "@libp2p/interface";
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
+import type {Datastore} from "interface-datastore";
+import type {Libp2p as ILibp2p} from "libp2p";
 import {
   AttesterSlashing,
+  DataColumnSidecar,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   SignedAggregateAndProof,
@@ -25,18 +28,22 @@ import {
   Slot,
   SlotRootHex,
   SubnetID,
-  WithBytes,
   altair,
   capella,
-  deneb,
   fulu,
+  gloas,
+  heze,
   phase0,
 } from "@lodestar/types";
-import type {Datastore} from "interface-datastore";
-import {Libp2p as ILibp2p} from "libp2p";
+import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
+import {GoodByeReasonCode} from "../constants/index.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
-import {BlobSidecarsByRootRequest} from "../util/types.js";
+import {
+  BeaconBlocksByRootRequest,
+  DataColumnSidecarsByRootRequest,
+  ExecutionPayloadEnvelopesByRootRequest,
+} from "../util/types.js";
 import {INetworkCorePublic} from "./core/types.js";
 import {INetworkEventBus} from "./events.js";
 import {GossipType} from "./gossip/interface.js";
@@ -66,33 +73,37 @@ export interface INetwork extends INetworkCorePublic {
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;
   shouldAggregate(subnet: SubnetID, slot: Slot): boolean;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
-  searchUnknownSlotRoot(slotRoot: SlotRootHex, peer?: PeerIdStr): void;
+  goodbyeAndDisconnect(peer: PeerIdStr, reason: GoodByeReasonCode): Promise<void>;
+  searchUnknownBlock(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void;
+  searchUnknownEnvelope(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void;
   // ReqResp
-  sendBeaconBlocksByRange(
-    peerId: PeerIdStr,
-    request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<WithBytes<SignedBeaconBlock>[]>;
-  sendBeaconBlocksByRoot(
-    peerId: PeerIdStr,
-    request: phase0.BeaconBlocksByRootRequest
-  ): Promise<WithBytes<SignedBeaconBlock>[]>;
-  sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
-  sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
+  sendBeaconBlocksByRange(peerId: PeerIdStr, request: phase0.BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]>;
+  sendBeaconBlocksByRoot(peerId: PeerIdStr, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]>;
+  sendBeaconBlocksByHead(peerId: PeerIdStr, request: fulu.BeaconBlocksByHeadRequest): Promise<SignedBeaconBlock[]>;
   sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
     request: fulu.DataColumnSidecarsByRangeRequest
-  ): Promise<fulu.DataColumnSidecar[]>;
+  ): Promise<DataColumnSidecar[]>;
   sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
-    request: fulu.DataColumnSidecarsByRootRequest
-  ): Promise<fulu.DataColumnSidecar[]>;
+    request: DataColumnSidecarsByRootRequest
+  ): Promise<DataColumnSidecar[]>;
+  sendExecutionPayloadEnvelopesByRange(
+    peerId: PeerIdStr,
+    request: gloas.ExecutionPayloadEnvelopesByRangeRequest
+  ): Promise<gloas.SignedExecutionPayloadEnvelope[]>;
+  sendExecutionPayloadEnvelopesByRoot(
+    peerId: PeerIdStr,
+    request: ExecutionPayloadEnvelopesByRootRequest
+  ): Promise<gloas.SignedExecutionPayloadEnvelope[]>;
 
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
-  publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number>;
-  publishDataColumnSidecar(dataColumnSideCar: fulu.DataColumnSidecar): Promise<number>;
+  publishDataColumnSidecar(
+    dataColumnSideCar: DataColumnSidecar
+  ): Promise<{sentPeers: number; alreadyPublished: boolean}>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;
   publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number>;
   publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number>;
@@ -101,6 +112,11 @@ export interface INetwork extends INetworkCorePublic {
   publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<number>;
   publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number>;
   publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number>;
+  publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number>;
+  publishSignedExecutionPayloadBid(signedBid: gloas.SignedExecutionPayloadBid): Promise<number>;
+  publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number>;
+  publishProposerPreferences(signedProposerPreferences: gloas.SignedProposerPreferences): Promise<number>;
+  publishInclusionList(signedInclusionList: heze.SignedInclusionList): Promise<number>;
 
   // Debug
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;

@@ -1,5 +1,7 @@
 import path from "node:path";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
+import {createChainForkConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
+import {ACTIVE_PRESET, ForkName, ForkSeq, isForkPostGloas} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -7,16 +9,18 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateElectra,
+  CachedBeaconStateGloas,
+  CachedBeaconStatePreHeze,
   ExecutionPayloadStatus,
+  IndexedBuilderState,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
-import {AttesterSlashing, altair, bellatrix, capella, electra, phase0, ssz, sszTypesFor} from "@lodestar/types";
-
+import {AttesterSlashing, altair, bellatrix, capella, electra, gloas, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {getConfig} from "../../utils/config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {loadSpecTestConfig} from "../utils/loadSpecTestConfig.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {BaseSpecTest, RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 
@@ -38,7 +42,12 @@ const syncAggregate: BlockProcessFn<CachedBeaconStateAllForks> = (
 const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = {
   attestation: (state, testCase: {attestation: phase0.Attestation}) => {
     const fork = state.config.getForkSeq(state.slot);
-    blockFns.processAttestations(fork, state, [testCase.attestation]);
+    blockFns.processAttestations(
+      fork,
+      state,
+      [testCase.attestation],
+      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).latestBlockHeader.slot : null
+    );
   },
 
   attester_slashing: (state, testCase: BaseSpecTest & {attester_slashing: AttesterSlashing}) => {
@@ -52,7 +61,7 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
 
   deposit: (state, testCase: {deposit: phase0.Deposit}) => {
     const fork = state.config.getForkSeq(state.slot);
-    blockFns.processDeposit(fork, state, testCase.deposit);
+    blockFns.processDeposit(fork, state as CachedBeaconStatePreHeze, testCase.deposit);
   },
 
   proposer_slashing: (state, testCase: {proposer_slashing: phase0.ProposerSlashing}) => {
@@ -68,7 +77,18 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processVoluntaryExit(fork, state, testCase.voluntary_exit);
   },
 
-  execution_payload: (state, testCase: {body: bellatrix.BeaconBlockBody; execution: {execution_valid: boolean}}) => {
+  voluntary_exit_churn: (state, testCase: {voluntary_exit: phase0.SignedVoluntaryExit}) => {
+    const fork = state.config.getForkSeq(state.slot);
+    blockFns.processVoluntaryExit(fork, state, testCase.voluntary_exit);
+  },
+
+  execution_payload: (
+    state,
+    testCase: {
+      body: bellatrix.BeaconBlockBody;
+      execution: {execution_valid: boolean};
+    }
+  ) => {
     const fork = state.config.getForkSeq(state.slot);
     blockFns.processExecutionPayload(fork, state as CachedBeaconStateBellatrix, testCase.body, {
       executionPayloadStatus: testCase.execution.execution_valid
@@ -92,15 +112,42 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   },
 
   deposit_request: (state, testCase: {deposit_request: electra.DepositRequest}) => {
-    blockFns.processDepositRequest(state as CachedBeaconStateElectra, testCase.deposit_request);
+    const fork = state.config.getForkSeq(state.slot);
+    blockFns.processDepositRequest(fork, state as CachedBeaconStateElectra, testCase.deposit_request);
   },
 
   consolidation_request: (state, testCase: {consolidation_request: electra.ConsolidationRequest}) => {
     blockFns.processConsolidationRequest(state as CachedBeaconStateElectra, testCase.consolidation_request);
   },
+
+  execution_payload_bid: (state, testCase: {execution_payload_bid: gloas.SignedExecutionPayloadBid}) => {
+    blockFns.processExecutionPayloadBid(state as CachedBeaconStateGloas, testCase.execution_payload_bid);
+  },
+
+  parent_execution_payload: (state, testCase: {block: gloas.BeaconBlock}) => {
+    blockFns.processParentExecutionPayload(state as CachedBeaconStateGloas, testCase.block);
+  },
+
+  payload_attestation: (state, testCase: {payload_attestation: gloas.PayloadAttestation}) => {
+    blockFns.processPayloadAttestation(state as CachedBeaconStateGloas, testCase.payload_attestation);
+  },
+
+  builder_deposit_request: (state, testCase: {builder_deposit_request: gloas.BuilderDepositRequest}) => {
+    blockFns.processBuilderDepositRequest(
+      new IndexedBuilderState(state as CachedBeaconStateGloas),
+      testCase.builder_deposit_request
+    );
+  },
+
+  builder_exit_request: (state, testCase: {builder_exit_request: gloas.BuilderExitRequest}) => {
+    blockFns.processBuilderExitRequest(
+      new IndexedBuilderState(state as CachedBeaconStateGloas),
+      testCase.builder_exit_request
+    );
+  },
 };
 
-export type BlockProcessFn<T extends CachedBeaconStateAllForks> = (state: T, testCase: any) => void;
+export type BlockProcessFn<T extends CachedBeaconStateAllForks> = (state: T, testCase: any) => T | void;
 
 export type OperationsTestCase = {
   meta?: {bls_setting?: bigint};
@@ -109,6 +156,8 @@ export type OperationsTestCase = {
   execution: {execution_valid: boolean};
 };
 
+const specTestDir = path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET);
+
 const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork, testName) => {
   const operationFn = operationFns[testName];
   if (operationFn === undefined) {
@@ -116,12 +165,21 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
   }
 
   return {
-    testFunction: (testcase) => {
+    testFunction: (testcase, directoryName, testCaseName) => {
       const state = testcase.pre.clone();
       const epoch = (state.fork as phase0.Fork).epoch;
-      const cachedState = createCachedBeaconStateTest(state, getConfig(fork, epoch));
+      const config = createChainForkConfig({
+        ...getConfig(fork),
+        ...loadSpecTestConfig(path.join(specTestDir, directoryName, testCaseName)),
+        [`${fork.toUpperCase()}_FORK_EPOCH`]: epoch,
+      });
+      const cachedState = createCachedBeaconStateTest(state, config);
 
-      operationFn(cachedState, testcase);
+      const postState = operationFn(cachedState, testcase);
+      if (postState !== undefined) {
+        postState.commit();
+        return postState;
+      }
       state.commit();
       return state;
     },
@@ -150,8 +208,17 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         withdrawal_request: ssz.electra.WithdrawalRequest,
         deposit_request: ssz.electra.DepositRequest,
         consolidation_request: ssz.electra.ConsolidationRequest,
+        payload_attestation: ssz.gloas.PayloadAttestation,
+        execution_payload_bid: isForkPostGloas(fork)
+          ? sszTypesFor(fork).SignedExecutionPayloadBid
+          : ssz.gloas.SignedExecutionPayloadBid,
+        builder_deposit_request: ssz.gloas.BuilderDepositRequest,
+        builder_exit_request: ssz.gloas.BuilderExitRequest,
       },
       shouldError: (testCase) => testCase.post === undefined,
+      // Only an ssz list limit violation is an expected input error, anything else is a decode bug
+      shouldErrorOnInput: (error: Error, inputNames: Set<string>) =>
+        !inputNames.has("post") && /over limit/.test(error.message),
       getExpected: (testCase) => testCase.post,
       expectFunc: (_testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
@@ -161,6 +228,6 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
   };
 };
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+specTestIterator(specTestDir, {
   operations: {type: RunnerType.default, fn: operations},
 });

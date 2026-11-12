@@ -12,7 +12,7 @@ import {GenericServerTestCases} from "../../utils/genericServerTest.js";
 const pubkeyRand = "0x84105a985058fc8740a48bf1ede9d223ef09e8c6b1735ba0a55cf4a9ff2ff92376b778798365e488dab07a652eb04576";
 const ethaddressRand = "0xabcf8e0d4e9587369b2301d0790347320302cc09";
 const graffitiRandUtf8 = "636861696e736166652f6c6f64657374";
-const gasLimitRand = 45_000_000;
+const gasLimitRand = 60_000_000;
 const builderBoostFactorRand = BigInt(100);
 
 export const testData: GenericServerTestCases<Endpoints> = {
@@ -109,6 +109,44 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: undefined,
   },
   deleteBuilderBoostFactor: {
+    args: {pubkey: pubkeyRand},
+    res: undefined,
+  },
+  getBuilderConfig: {
+    args: {pubkey: pubkeyRand},
+    res: {
+      data: {
+        minBid: 0n,
+        builderBoostFactor: 100n,
+        builders: [
+          {
+            url: "https://builder.example.com",
+            authData: "0x68747470733a2f2f6275696c6465722e6578616d706c652e636f6d",
+            builderPubkeys: [pubkeyRand],
+            maxExecutionPayment: 0n,
+            minBid: 0n,
+            builderBoostFactor: 100n,
+          },
+        ],
+      },
+    },
+  },
+  setBuilderConfig: {
+    args: {
+      pubkey: pubkeyRand,
+      builderConfig: {
+        minBid: 0n,
+        builders: [
+          {url: "https://builder.example.com", maxExecutionPayment: 0n},
+          {url: "https://builder.example.com", authData: "0x0123", builderBoostFactor: 200n},
+          {url: "https://builder-b.example.com", builderPubkeys: [pubkeyRand], minBid: 1n},
+          {url: "https://builder-c.example.com"},
+        ],
+      },
+    },
+    res: undefined,
+  },
+  deleteBuilderConfig: {
     args: {pubkey: pubkeyRand},
     res: undefined,
   },

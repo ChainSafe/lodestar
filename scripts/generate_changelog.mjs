@@ -34,7 +34,12 @@ const knownAuthors = {
   "nflaig@protonmail.com": "nflaig",
   "nazarhussain@gmail.com": "nazarhussain",
   "me@matthewkeil.com": "matthewkeil",
+  "github@mail.matthewkeil.com": "matthewkeil",
   "17676176+ensi321@users.noreply.github.com": "ensi321",
+  "258435968+lodekeeper@users.noreply.github.com": "lodekeeper",
+  "markolazic01@gmail.com": "markolazic01",
+  "56925051+Alleysira@users.noreply.github.com": "Alleysira",
+  "spiralladder@fastmail.com": "spiral-ladder",
 };
 
 const fromTag = process.argv[2];
@@ -147,7 +152,7 @@ fs.writeFileSync(outpath, changelog);
  * @returns {string}
  */
 function shell(cmd) {
-  return execSync(cmd, {encoding: "utf8"}).trim();
+  return execSync(cmd, {encoding: "utf8", maxBuffer: 10 * 1024 * 1024}).trim();
 }
 
 /**

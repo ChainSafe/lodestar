@@ -1,6 +1,6 @@
-import {Logger} from "@lodestar/utils";
 import {ClassicLevel} from "classic-level";
-import {DatabaseController, DatabaseOptions, DbReqOpts, FilterOptions, KeyValue} from "./interface.js";
+import {Logger} from "@lodestar/utils";
+import {DatabaseController, DatabaseOptions, DbBatch, DbReqOpts, FilterOptions, KeyValue} from "./interface.js";
 import {LevelDbControllerMetrics} from "./metrics.js";
 
 enum Status {
@@ -103,6 +103,18 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     }
   }
 
+  /**
+   * Return the multiple items in the order of the given keys
+   * Will return `null` for the keys which does not exists
+   *
+   * https://github.com/Level/abstract-level?tab=readme-ov-file#dbgetmanykeys-options
+   */
+  async getMany(keys: Uint8Array[], opts?: DbReqOpts): Promise<(Uint8Array | undefined)[]> {
+    this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+    this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
+    return await this.db.getMany(keys);
+  }
+
   put(key: Uint8Array, value: Uint8Array, opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
@@ -129,6 +141,13 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
 
     return this.db.batch(keys.map((key) => ({type: "del", key: key})));
+  }
+
+  batch(batch: DbBatch<Uint8Array, Uint8Array>, opts?: DbReqOpts): Promise<void> {
+    this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+    this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, batch.length);
+
+    return this.db.batch(batch);
   }
 
   keysStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
@@ -177,9 +196,9 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
 
   /** Capture metrics for db.iterator, db.keys, db.values .all() calls */
   private async metricsAll<T>(promise: Promise<T[]>, bucket: string): Promise<T[]> {
-    this.metrics?.dbWriteReq.inc({bucket}, 1);
+    this.metrics?.dbReadReq.inc({bucket}, 1);
     const items = await promise;
-    this.metrics?.dbWriteItems.inc({bucket}, items.length);
+    this.metrics?.dbReadItems.inc({bucket}, items.length);
     return items;
   }
 
@@ -189,7 +208,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     getValue: (item: T) => K,
     bucket: string
   ): AsyncIterable<K> {
-    this.metrics?.dbWriteReq.inc({bucket}, 1);
+    this.metrics?.dbReadReq.inc({bucket}, 1);
 
     let itemsRead = 0;
 
@@ -200,7 +219,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
       yield getValue(item);
     }
 
-    this.metrics?.dbWriteItems.inc({bucket}, itemsRead);
+    this.metrics?.dbReadItems.inc({bucket}, itemsRead);
   }
 
   /** Start interval to capture metric for db size */

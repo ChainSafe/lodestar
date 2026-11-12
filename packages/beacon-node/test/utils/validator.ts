@@ -1,4 +1,5 @@
 import {fromHexString} from "@chainsafe/ssz";
+import {interopSecretKey} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH} from "../../src/constants/index.js";
 
@@ -33,6 +34,13 @@ export function generateValidator(opts: Partial<phase0.Validator> = {}): phase0.
  * @param opts
  * @returns {Validator[]}
  */
-export function generateValidators(n: number, opts?: Partial<phase0.Validator>): phase0.Validator[] {
-  return Array.from({length: n}, () => generateValidator(opts));
+export function generateValidators(n: number, opts?: Partial<phase0.Validator>, startIndex = 0): phase0.Validator[] {
+  return Array.from({length: n}, (_, i) =>
+    generateValidator({
+      ...opts,
+      pubkey: interopSecretKey(startIndex + i)
+        .toPublicKey()
+        .toBytes(),
+    })
+  );
 }

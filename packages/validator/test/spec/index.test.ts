@@ -1,6 +1,6 @@
-import {LevelDbController} from "@lodestar/db";
-import {rimraf} from "rimraf";
+import fs from "node:fs";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {
   InvalidAttestationError,
   InvalidBlockError,
@@ -12,7 +12,7 @@ import {testLogger} from "../utils/logger.js";
 
 describe("slashing-protection custom tests", () => {
   const dbLocation = "./.__testdb_2";
-  const pubkey = Buffer.alloc(96, 1);
+  const pubkey = Buffer.alloc(48, 1);
   let db: LevelDbController;
 
   beforeAll(async () => {
@@ -22,7 +22,7 @@ describe("slashing-protection custom tests", () => {
   afterAll(async () => {
     await db.clear();
     await db.close();
-    rimraf.sync(dbLocation);
+    fs.rmSync(dbLocation, {recursive: true, force: true});
   });
 
   it("Should reject same block", async () => {

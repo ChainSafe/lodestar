@@ -1,11 +1,11 @@
 import path from "node:path";
+import {describe, it, onTestFinished, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {execCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {retry, sleep} from "@lodestar/utils";
-import {describe, it, onTestFinished, vi} from "vitest";
 import {testFilesDir} from "../utils.js";
 
 describe("bLSToExecutionChange cmd", () => {
@@ -24,7 +24,7 @@ describe("bLSToExecutionChange cmd", () => {
         "--rest",
         `--rest.port=${restPort}`,
         // Speed up test to make genesis happen faster
-        "--params.SECONDS_PER_SLOT=2",
+        "--params.SLOT_DURATION_MS=2000",
       ],
       {pipeStdioToParent: true, logPrefix: "dev"}
     );

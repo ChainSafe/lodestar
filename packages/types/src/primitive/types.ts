@@ -27,6 +27,7 @@ export type Epoch = UintNumInf64;
 export type SyncPeriod = UintNum64;
 export type CommitteeIndex = UintNum64;
 export type SubcommitteeIndex = UintNum64;
+export type BuilderIndex = UintNumInf64;
 export type ValidatorIndex = UintNum64;
 export type WithdrawalIndex = UintNum64;
 export type BlobIndex = UintNum64;
@@ -46,6 +47,8 @@ export type ExecutionAddress = Bytes20;
 
 /** Common non-spec type to represent roots as strings */
 export type RootHex = string;
+/** Common non-spec type to represent pubkeys as strings */
+export type PubkeyHex = string;
 /** Non-spec type to signal time is represented in seconds */
 export type TimeSeconds = number;
 export type ColumnIndex = UintNum64;

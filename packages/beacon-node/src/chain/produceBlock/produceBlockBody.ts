@@ -1,23 +1,35 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {
+  IForkChoice,
+  ProtoBlock,
+  getFinalizedExecutionBlockHash,
+  getSafeExecutionBlockHash,
+} from "@lodestar/fork-choice";
+import {
+  BUILDER_INDEX_SELF_BUILD,
   ForkName,
   ForkPostBellatrix,
+  ForkPostCapella,
   ForkPostDeneb,
   ForkPostFulu,
+  ForkPostGloas,
+  ForkPreGloas,
   ForkSeq,
   isForkPostAltair,
   isForkPostBellatrix,
+  isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateBellatrix,
-  CachedBeaconStateCapella,
-  CachedBeaconStateExecutions,
+  G2_POINT_AT_INFINITY,
+  IBeaconStateView,
+  type IBeaconStateViewBellatrix,
+  computeEpochAtSlot,
   computeTimeAtSlot,
-  getCurrentEpoch,
-  getExpectedWithdrawals,
-  getRandaoMix,
-  isMergeTransitionComplete,
+  getExpectedGasLimit,
+  isStatePostBellatrix,
+  isStatePostCapella,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {
   BLSPubkey,
@@ -37,28 +49,38 @@ import {
   ValidatorIndex,
   Wei,
   altair,
+  bellatrix,
   capella,
   deneb,
   electra,
   fulu,
+  gloas,
+  heze,
   ssz,
-  sszTypesFor,
 } from "@lodestar/types";
-import {Logger, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
-import {IEth1ForBlockProduction} from "../../eth1/index.js";
-import {numToQuantity} from "../../eth1/provider/utils.js";
 import {
-  IExecutionBuilder,
-  IExecutionEngine,
-  PayloadAttributes,
-  PayloadId,
-  getExpectedGasLimit,
-} from "../../execution/index.js";
+  GWEI_TO_WEI,
+  Logger,
+  byteArrayEquals,
+  fromHex,
+  prettyGweiToEth,
+  prettyWeiToEth,
+  sleep,
+  toHex,
+  toPubkeyHex,
+  toRootHex,
+} from "@lodestar/utils";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {numToQuantity} from "../../execution/engine/utils.js";
+import {IExecutionBuilder, PayloadAttributes, PayloadId} from "../../execution/index.js";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
+import {BeaconProposerCache} from "../beaconProposerCache.js";
 import type {BeaconChain} from "../chain.js";
+import {ForkChoiceExecutionEngine} from "../forkChoiceExecutionEngine.js";
 import {CommonBlockBody} from "../interface.js";
+import {InclusionListStore, ProposerPreferencesPool} from "../opPools/index.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
@@ -80,7 +102,6 @@ export enum BlockProductionStep {
   voluntaryExits = "voluntaryExits",
   blsToExecutionChanges = "blsToExecutionChanges",
   attestations = "attestations",
-  eth1DataAndDeposits = "eth1DataAndDeposits",
   syncAggregate = "syncAggregate",
   executionPayload = "executionPayload",
 }
@@ -89,9 +110,12 @@ export type BlockAttributes = {
   randaoReveal: BLSSignature;
   graffiti: Bytes32;
   slot: Slot;
-  parentBlockRoot: Root;
-  parentSlot: Slot;
+  parentBlock: ProtoBlock;
   feeRecipient?: string;
+  /** Verify that a locally produced execution payload uses `feeRecipient`. */
+  strictFeeRecipientCheck?: boolean;
+  /** When provided, build block with this builder bid instead of a self-build bid */
+  builderBid?: gloas.SignedExecutionPayloadBid;
 };
 
 export enum BlockType {
@@ -103,6 +127,15 @@ export type AssembledBodyType<T extends BlockType> = T extends BlockType.Full
   : BlindedBeaconBlockBody;
 export type AssembledBlockType<T extends BlockType> = T extends BlockType.Full ? BeaconBlock : BlindedBeaconBlock;
 
+export type ProduceFullGloas = {
+  type: BlockType.Full;
+  fork: ForkPostGloas;
+  executionPayload: ExecutionPayload<ForkPostGloas>;
+  executionRequests: gloas.ExecutionRequests;
+  blobsBundle: BlobsBundle<ForkPostGloas>;
+  cells: fulu.Cell[][];
+  parentBlockRoot: Root;
+};
 export type ProduceFullFulu = {
   type: BlockType.Full;
   fork: ForkPostFulu;
@@ -135,21 +168,43 @@ export type ProduceBlinded = {
 
 /** The result of local block production, everything that's not the block itself */
 export type ProduceResult =
+  | ProduceFullGloas
   | ProduceFullFulu
   | ProduceFullDeneb
   | ProduceFullBellatrix
   | ProduceFullPhase0
   | ProduceBlinded;
 
+/**
+ * Drop voluntary exits that `parent_execution_requests` have invalidated (e.g. a withdrawal
+ * request initiating an exit on the same validator). Op pool selected against the unapplied
+ * state, so re-validate against the post-apply state to avoid producing an invalid block.
+ *
+ * `getStateAfterParentPayload` is a thunk so the post-apply state is only materialized when
+ * actually needed (i.e. when extending the parent payload and there are exits to filter).
+ */
+function maybeFilterInvalidatedVoluntaryExits(
+  commonBlockBody: CommonBlockBody,
+  isExtendingPayload: boolean,
+  getStateAfterParentPayload: () => IBeaconStateViewBellatrix
+): CommonBlockBody["voluntaryExits"] {
+  if (!isExtendingPayload || commonBlockBody.voluntaryExits.length === 0) {
+    return commonBlockBody.voluntaryExits;
+  }
+  const state = getStateAfterParentPayload();
+  return commonBlockBody.voluntaryExits.filter((signedVoluntaryExit) =>
+    state.isValidVoluntaryExit(signedVoluntaryExit, false)
+  );
+}
+
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
-  currentState: CachedBeaconStateAllForks,
+  currentState: IBeaconStateView,
   blockAttr: BlockAttributes & {
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
-    // TODO: make `commonBlockBodyPromise` required and remove calls to `produceCommonBlockBody` below
-    commonBlockBodyPromise?: Promise<CommonBlockBody>;
+    commonBlockBodyPromise: Promise<CommonBlockBody>;
   }
 ): Promise<{
   body: AssembledBodyType<T>;
@@ -160,17 +215,20 @@ export async function produceBlockBody<T extends BlockType>(
   const {
     slot: blockSlot,
     feeRecipient: requestedFeeRecipient,
-    parentBlockRoot,
+    strictFeeRecipientCheck,
+    parentBlock,
     proposerIndex,
     proposerPubKey,
     commonBlockBodyPromise,
+    builderBid,
   } = blockAttr;
   let executionPayloadValue: Wei;
   let blockBody: AssembledBodyType<T>;
+  const parentBlockRoot = fromHex(parentBlock.blockRoot);
   // even though shouldOverrideBuilder is relevant for the engine response, for simplicity of typing
   // we just return it undefined for the builder which anyway doesn't get consumed downstream
   let shouldOverrideBuilder: boolean | undefined;
-  const fork = currentState.config.getForkName(blockSlot);
+  const fork = this.config.getForkName(blockSlot);
   const produceResult = {
     type: blockType,
     fork,
@@ -183,16 +241,228 @@ export async function produceBlockBody<T extends BlockType>(
   };
   this.logger.verbose("Producing beacon block body", logMeta);
 
-  if (isForkPostBellatrix(fork)) {
-    const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-    const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
-    const feeRecipientType = requestedFeeRecipient
-      ? "requested"
-      : this.beaconProposerCache.get(proposerIndex)
-        ? "cached"
-        : "default";
+  if (builderBid !== undefined) {
+    if (!isStatePostGloas(currentState)) {
+      throw new Error("Expected Gloas state for builder bid block production");
+    }
 
+    const isExtendingPayload = byteArrayEquals(
+      builderBid.message.parentBlockHash,
+      currentState.latestExecutionPayloadBid.blockHash
+    );
+    const parentExecutionRequests = isExtendingPayload
+      ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
+      : ssz.gloas.ExecutionRequests.defaultValue();
+    executionPayloadValue = (BigInt(builderBid.message.value) + builderBid.message.executionPayment) * GWEI_TO_WEI;
+
+    const commonBlockBody = await commonBlockBodyPromise;
+    const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
+    gloasBody.signedExecutionPayloadBid = builderBid;
+    gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
+      parentBlock.blockRoot,
+      blockSlot - 1
+    );
+    gloasBody.parentExecutionRequests = parentExecutionRequests;
+    gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(commonBlockBody, isExtendingPayload, () =>
+      currentState.withParentPayloadApplied(parentExecutionRequests)
+    );
+    blockBody = gloasBody as AssembledBodyType<T>;
+
+    this.logger.verbose("Produced block with builder bid", {
+      slot: blockSlot,
+      builderIndex: builderBid.message.builderIndex,
+      bidValue: prettyGweiToEth(builderBid.message.value),
+      parentBlockHash: toRootHex(builderBid.message.parentBlockHash),
+      parentBlockRoot: toRootHex(builderBid.message.parentBlockRoot),
+      blockHash: toRootHex(builderBid.message.blockHash),
+      isExtendingPayload,
+    });
+  } else if (isForkPostGloas(fork)) {
+    if (!isStatePostGloas(currentState)) {
+      throw new Error("Expected Gloas state for Gloas block production");
+    }
+
+    // TODO GLOAS: support non self-building here, the block type differentiation between
+    // full and blinded no longer makes sense in gloas, it might be a good idea to move
+    // this into a completely separate function and have pre/post gloas more separated
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
+    const {feeRecipient, feeRecipientType} = getProposerFeeRecipient(
+      requestedFeeRecipient,
+      getPooledProposerPreferences(this, blockSlot, parentBlock.blockRoot),
+      this.beaconProposerCache,
+      proposerIndex
+    );
+    Object.assign(logMeta, {feeRecipientType, feeRecipient});
+
+    const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
+
+    // Get execution payload from EL
+    let parentBlockHash: Bytes32;
+    let parentExecutionRequests: gloas.ExecutionRequests;
+    // Apply parent payload once here as it's reused by EL prep and voluntary exit filtering below
+    let stateAfterParentPayload: IBeaconStateViewBellatrix = currentState;
+    // Spec: should_build_on_full(store, head, slot). `parentBlock` is the proposer's head
+    // (set by chain.getProposerHead(slot)). Returns false when the PTC majority signalled
+    // the blob data is not available or the payload was not timely, forcing a build on EMPTY (reorg).
+    const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock, blockSlot);
+    if (isBuildingOnFull) {
+      parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
+      parentExecutionRequests = await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot);
+      stateAfterParentPayload = currentState.withParentPayloadApplied(parentExecutionRequests);
+    } else {
+      parentBlockHash = currentState.latestExecutionPayloadBid.parentBlockHash;
+      parentExecutionRequests = ssz.gloas.ExecutionRequests.defaultValue();
+    }
+    const prepareRes = await prepareExecutionPayload(
+      this,
+      this.logger,
+      fork,
+      parentBlockRoot,
+      parentBlockHash,
+      safeBlockHash,
+      finalizedBlockHash ?? ZERO_HASH_HEX,
+      stateAfterParentPayload,
+      feeRecipient
+    );
+
+    const {prepType, payloadId} = prepareRes;
+    Object.assign(logMeta, {executionPayloadPrepType: prepType});
+
+    this.logger.verbose("Prepared execution payload from engine", {
+      slot: blockSlot,
+      parentBlockRoot: toRootHex(parentBlockRoot),
+      parentBlockHash: toRootHex(parentBlockHash),
+      feeRecipient,
+      prepType,
+      payloadId,
+      isBuildingOnFull,
+    });
+
+    if (prepType !== PayloadPreparationType.Cached) {
+      await sleep(PAYLOAD_GENERATION_TIME_MS);
+    }
+
+    this.logger.verbose("Fetching execution payload from engine", {slot: blockSlot, payloadId});
+    const payloadRes = await this.executionEngine.getPayload(fork, payloadId);
+
+    endExecutionPayload?.({step: BlockProductionStep.executionPayload});
+
+    const {executionPayload, blobsBundle, executionRequests} = payloadRes;
+    executionPayloadValue = payloadRes.executionPayloadValue;
+    shouldOverrideBuilder = payloadRes.shouldOverrideBuilder;
+
+    if (
+      strictFeeRecipientCheck &&
+      requestedFeeRecipient &&
+      !byteArrayEquals(executionPayload.feeRecipient, fromHex(requestedFeeRecipient))
+    ) {
+      throw Error(
+        `Invalid feeRecipient set in engine payload expected=${requestedFeeRecipient} actual=${toHex(executionPayload.feeRecipient)}`
+      );
+    }
+
+    if (blobsBundle === undefined) {
+      throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
+    }
+    if (executionRequests === undefined) {
+      throw Error(`Missing executionRequests response from getPayload at fork=${fork}`);
+    }
+
+    const cells = blobsBundle.blobs.map((blob) => kzg.computeCells(blob));
+    if (this.opts.sanityCheckExecutionEngineBlobs) {
+      await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
+    }
+
+    // Create self-build execution payload bid
+    const bid: gloas.ExecutionPayloadBid = {
+      parentBlockHash,
+      parentBlockRoot,
+      blockHash: executionPayload.blockHash,
+      prevRandao: currentState.getRandaoMix(currentState.epoch),
+      feeRecipient: executionPayload.feeRecipient,
+      gasLimit: BigInt(executionPayload.gasLimit),
+      builderIndex: BUILDER_INDEX_SELF_BUILD,
+      slot: blockSlot,
+      value: 0,
+      executionPayment: 0n,
+      blobKzgCommitments: blobsBundle.commitments,
+      executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests as gloas.ExecutionRequests),
+    };
+    if (ForkSeq[fork] >= ForkSeq.heze) {
+      // Built from the full view (only_timely=False), a superset of the receiver's timely-only
+      // is_inclusion_list_bits_inclusive check
+      const inclusionListSlot = blockSlot - 1;
+      (bid as heze.ExecutionPayloadBid).inclusionListBits = this.inclusionListStore.getInclusionListBits(
+        inclusionListSlot,
+        getShufflingDependentRoot(
+          this.forkChoice,
+          computeEpochAtSlot(inclusionListSlot),
+          computeEpochAtSlot(parentBlock.slot),
+          parentBlock
+        ),
+        false
+      );
+    }
+    const signedBid: gloas.SignedExecutionPayloadBid = {
+      message: bid,
+      signature: G2_POINT_AT_INFINITY,
+    };
+
+    const commonBlockBody = await commonBlockBodyPromise;
+    const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
+    gloasBody.signedExecutionPayloadBid = signedBid;
+    gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
+      parentBlock.blockRoot,
+      blockSlot - 1
+    );
+    gloasBody.parentExecutionRequests = parentExecutionRequests;
+    gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(
+      commonBlockBody,
+      isBuildingOnFull,
+      () => stateAfterParentPayload
+    );
+    blockBody = gloasBody as AssembledBodyType<T>;
+
+    // Store execution payload data required to construct execution payload envelope later
+    const gloasResult = produceResult as ProduceFullGloas;
+    gloasResult.executionPayload = executionPayload as ExecutionPayload<ForkPostGloas>;
+    gloasResult.executionRequests = executionRequests as gloas.ExecutionRequests;
+    gloasResult.blobsBundle = blobsBundle;
+    gloasResult.cells = cells;
+    gloasResult.parentBlockRoot = fromHex(parentBlock.blockRoot);
+
+    const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
+    this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
+    this.logger.verbose("Produced block with self-build bid", {
+      slot: blockSlot,
+      executionPayloadValue: prettyWeiToEth(executionPayloadValue),
+      prepType,
+      payloadId,
+      fetchedTime,
+      executionBlockHash: toRootHex(executionPayload.blockHash),
+      blobs: blobsBundle.commitments.length,
+      gasLimit: executionPayload.gasLimit,
+    });
+
+    Object.assign(logMeta, {
+      transactions: executionPayload.transactions.length,
+      blobs: blobsBundle.commitments.length,
+      shouldOverrideBuilder,
+    });
+  } else if (isForkPostBellatrix(fork)) {
+    if (!isStatePostBellatrix(currentState)) {
+      throw new Error("Expected Bellatrix state for execution block production");
+    }
+
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
+    const {feeRecipient, feeRecipientType} = getProposerFeeRecipient(
+      requestedFeeRecipient,
+      null,
+      this.beaconProposerCache,
+      proposerIndex
+    );
     Object.assign(logMeta, {feeRecipientType, feeRecipient});
 
     if (blockType === BlockType.Blinded) {
@@ -210,9 +480,10 @@ export async function produceBlockBody<T extends BlockType>(
             this.logger,
             fork,
             parentBlockRoot,
+            currentState.latestExecutionPayloadHeader.blockHash,
             safeBlockHash,
             finalizedBlockHash ?? ZERO_HASH_HEX,
-            currentState as CachedBeaconStateBellatrix,
+            currentState,
             executionBuilder.issueLocalFcUWithFeeRecipient
           );
         }
@@ -224,12 +495,7 @@ export async function produceBlockBody<T extends BlockType>(
           slot: blockSlot,
           proposerPubKey: toHex(proposerPubKey),
         });
-        const headerRes = await prepareExecutionPayloadHeader(
-          this,
-          fork,
-          currentState as CachedBeaconStateBellatrix,
-          proposerPubKey
-        );
+        const headerRes = await prepareExecutionPayloadHeader(this, fork, currentState, proposerPubKey);
 
         endExecutionPayloadHeader?.({
           step: BlockProductionStep.executionPayload,
@@ -238,10 +504,7 @@ export async function produceBlockBody<T extends BlockType>(
         return headerRes;
       })();
 
-      const [builderRes, commonBlockBody] = await Promise.all([
-        builderPromise,
-        commonBlockBodyPromise ?? produceCommonBlockBody.call(this, blockType, currentState, blockAttr),
-      ]);
+      const [builderRes, commonBlockBody] = await Promise.all([builderPromise, commonBlockBodyPromise]);
       blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
 
       (blockBody as BlindedBeaconBlockBody).executionPayloadHeader = builderRes.header;
@@ -252,7 +515,7 @@ export async function produceBlockBody<T extends BlockType>(
       this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
       this.logger.verbose("Fetched execution payload header from builder", {
         slot: blockSlot,
-        executionPayloadValue,
+        executionPayloadValue: prettyWeiToEth(executionPayloadValue),
         prepType,
         fetchedTime,
       });
@@ -267,7 +530,7 @@ export async function produceBlockBody<T extends BlockType>(
         });
       } else {
         const headerGasLimit = builderRes.header.gasLimit;
-        const parentGasLimit = (currentState as CachedBeaconStateBellatrix).latestExecutionPayloadHeader.gasLimit;
+        const parentGasLimit = currentState.latestExecutionPayloadHeader.gasLimit;
         const expectedGasLimit = getExpectedGasLimit(parentGasLimit, targetGasLimit);
 
         const lowerBound = Math.min(parentGasLimit, expectedGasLimit);
@@ -290,27 +553,23 @@ export async function produceBlockBody<T extends BlockType>(
         }
       }
 
-      if (ForkSeq[fork] >= ForkSeq.deneb) {
-        const {blobKzgCommitments} = builderRes;
-        if (blobKzgCommitments === undefined) {
-          throw Error(`Invalid builder getHeader response for fork=${fork}, missing blobKzgCommitments`);
-        }
-
-        (blockBody as deneb.BlindedBeaconBlockBody).blobKzgCommitments = blobKzgCommitments;
-        Object.assign(logMeta, {blobs: blobKzgCommitments.length});
+      const {blobKzgCommitments, executionRequests} = builderRes;
+      if (blobKzgCommitments === undefined) {
+        throw Error(`Invalid builder getHeader response for fork=${fork}, missing blobKzgCommitments`);
       }
 
-      if (ForkSeq[fork] >= ForkSeq.electra) {
-        const {executionRequests} = builderRes;
-        if (executionRequests === undefined) {
-          throw Error(`Invalid builder getHeader response for fork=${fork}, missing executionRequests`);
-        }
-        (blockBody as electra.BlindedBeaconBlockBody).executionRequests = executionRequests;
+      (blockBody as BlindedBeaconBlockBody<ForkName.fulu>).blobKzgCommitments = blobKzgCommitments;
+      Object.assign(logMeta, {blobs: blobKzgCommitments.length});
+
+      if (executionRequests === undefined) {
+        throw Error(`Invalid builder getHeader response for fork=${fork}, missing executionRequests`);
       }
+      (blockBody as BlindedBeaconBlockBody<ForkName.fulu>).executionRequests = executionRequests;
     }
 
     // blockType === BlockType.Full
     else {
+      // enginePromise only supports pre-gloas
       const enginePromise = (async () => {
         const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
 
@@ -319,25 +578,18 @@ export async function produceBlockBody<T extends BlockType>(
           parentBlockRoot: toRootHex(parentBlockRoot),
           feeRecipient,
         });
-        // https://github.com/ethereum/consensus-specs/blob/dev/specs/deneb/validator.md#constructing-the-beaconblockbody
+        // https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/deneb/validator.md#constructing-the-beaconblockbody
         const prepareRes = await prepareExecutionPayload(
           this,
           this.logger,
           fork,
           parentBlockRoot,
+          currentState.latestExecutionPayloadHeader.blockHash,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
-          currentState as CachedBeaconStateExecutions,
+          currentState,
           feeRecipient
         );
-
-        if (prepareRes.isPremerge) {
-          return {
-            ...prepareRes,
-            executionPayload: sszTypesFor(fork).ExecutionPayload.defaultValue(),
-            executionPayloadValue: BigInt(0),
-          };
-        }
 
         const {prepType, payloadId} = prepareRes;
         Object.assign(logMeta, {executionPayloadPrepType: prepType});
@@ -360,44 +612,18 @@ export async function produceBlockBody<T extends BlockType>(
 
         return {...prepareRes, ...payloadRes};
       })().catch((e) => {
-        // catch payload fetch here, because there is still a recovery path possible if we
-        // are pre-merge. We don't care the same for builder segment as the execution block
-        // will takeover if the builder flow was activated and errors
         this.metrics?.blockPayload.payloadFetchErrors.inc();
-
-        if (!isMergeTransitionComplete(currentState as CachedBeaconStateBellatrix)) {
-          this.logger?.warn(
-            "Fetch payload from the execution failed, however since we are still pre-merge proceeding with an empty one.",
-            {},
-            e as Error
-          );
-          // ok we don't have an execution payload here, so we can assign an empty one
-          // if pre-merge
-          return {
-            isPremerge: true as const,
-            executionPayload: sszTypesFor(fork).ExecutionPayload.defaultValue(),
-            executionPayloadValue: BigInt(0),
-          };
-        }
-        // since merge transition is complete, we need a valid payload even if with an
-        // empty (transactions) one. defaultValue isn't gonna cut it!
         throw e;
       });
 
-      const [engineRes, commonBlockBody] = await Promise.all([
-        enginePromise,
-        commonBlockBodyPromise ?? produceCommonBlockBody.call(this, blockType, currentState, blockAttr),
-      ]);
+      const [engineRes, commonBlockBody] = await Promise.all([enginePromise, commonBlockBodyPromise]);
       blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
 
-      if (engineRes.isPremerge) {
-        (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload = engineRes.executionPayload;
-        executionPayloadValue = engineRes.executionPayloadValue;
-      } else {
+      {
         const {prepType, payloadId, executionPayload, blobsBundle, executionRequests} = engineRes;
         shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
 
-        (blockBody as BeaconBlockBody<ForkPostBellatrix>).executionPayload = executionPayload;
+        (blockBody as BeaconBlockBody<ForkPostBellatrix & ForkPreGloas>).executionPayload = executionPayload;
         (produceResult as ProduceFullBellatrix).executionPayload = executionPayload;
         executionPayloadValue = engineRes.executionPayloadValue;
         Object.assign(logMeta, {transactions: executionPayload.transactions.length, shouldOverrideBuilder});
@@ -406,7 +632,7 @@ export async function produceBlockBody<T extends BlockType>(
         this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
         this.logger.verbose("Fetched execution payload from engine", {
           slot: blockSlot,
-          executionPayloadValue,
+          executionPayloadValue: prettyWeiToEth(executionPayloadValue),
           prepType,
           payloadId,
           fetchedTime,
@@ -423,9 +649,16 @@ export async function produceBlockBody<T extends BlockType>(
           // NOTE: Even though the fulu.BlobsBundle type is superficially the same as deneb.BlobsBundle, it is NOT.
           // In fulu, proofs are _cell_ proofs, vs in deneb they are _blob_ proofs.
 
+          const timer = this?.metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
           const cells = blobsBundle.blobs.map((blob) => kzg.computeCells(blob));
+          timer?.();
           if (this.opts.sanityCheckExecutionEngineBlobs) {
-            await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
+            const validationTimer = this.metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
+            try {
+              await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
+            } finally {
+              validationTimer?.();
+            }
           }
 
           (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
@@ -457,18 +690,16 @@ export async function produceBlockBody<T extends BlockType>(
       }
     }
   } else {
-    const commonBlockBody = await (commonBlockBodyPromise ??
-      produceCommonBlockBody.call(this, blockType, currentState, blockAttr));
+    const commonBlockBody = await commonBlockBodyPromise;
     blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<T>;
     executionPayloadValue = BigInt(0);
   }
 
-  const {graffiti, attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
+  const {graffiti, attestations, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
 
   Object.assign(logMeta, {
     graffiti: fromGraffitiBytes(graffiti),
     attestations: attestations.length,
-    deposits: deposits.length,
     voluntaryExits: voluntaryExits.length,
     attesterSlashings: attesterSlashings.length,
     proposerSlashings: proposerSlashings.length,
@@ -481,8 +712,14 @@ export async function produceBlockBody<T extends BlockType>(
     });
   }
 
-  if (ForkSeq[fork] >= ForkSeq.capella) {
-    const {blsToExecutionChanges, executionPayload} = blockBody as capella.BeaconBlockBody;
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {blsToExecutionChanges, payloadAttestations} = blockBody as BeaconBlockBody<ForkPostGloas>;
+    Object.assign(logMeta, {
+      blsToExecutionChanges: blsToExecutionChanges.length,
+      payloadAttestations: payloadAttestations.length,
+    });
+  } else if (ForkSeq[fork] >= ForkSeq.capella) {
+    const {blsToExecutionChanges, executionPayload} = blockBody as BeaconBlockBody<ForkPostCapella & ForkPreGloas>;
     Object.assign(logMeta, {
       blsToExecutionChanges: blsToExecutionChanges.length,
     });
@@ -495,49 +732,60 @@ export async function produceBlockBody<T extends BlockType>(
     }
   }
 
-  Object.assign(logMeta, {executionPayloadValue});
+  Object.assign(logMeta, {executionPayloadValue: prettyWeiToEth(executionPayloadValue)});
   this.logger.verbose("Produced beacon block body", logMeta);
 
   return {body: blockBody as AssembledBodyType<T>, produceResult, executionPayloadValue, shouldOverrideBuilder};
 }
 
 /**
- * Produce ExecutionPayload for pre-merge, merge, and post-merge.
- *
- * Expects `eth1MergeBlockFinder` to be actively searching for blocks well in advance to being called.
- *
- * @returns PayloadId = pow block found, null = pow NOT found
+ * Produce ExecutionPayload for post-merge.
  */
 export async function prepareExecutionPayload(
   chain: {
-    eth1: IEth1ForBlockProduction;
-    executionEngine: IExecutionEngine;
+    executionEngine: ForkChoiceExecutionEngine;
     config: ChainForkConfig;
+    forkChoice: IForkChoice;
+    proposerPreferencesPool: ProposerPreferencesPool;
+    inclusionListStore: InclusionListStore;
   },
   logger: Logger,
   fork: ForkPostBellatrix,
   parentBlockRoot: Root,
+  parentBlockHash: Bytes32,
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
-  state: CachedBeaconStateExecutions,
-  suggestedFeeRecipient: string
-): Promise<{isPremerge: true} | {isPremerge: false; prepType: PayloadPreparationType; payloadId: PayloadId}> {
-  const parentHashRes = await getExecutionPayloadParentHash(chain, state);
-  if (parentHashRes.isPremerge) {
-    // Return null only if the execution is pre-merge
-    return {isPremerge: true};
+  /**
+   * Post-gloas, when extending a full parent, callers must apply
+   * parent execution payload first (see `withParentPayloadApplied`).
+   */
+  state: IBeaconStateViewBellatrix,
+  suggestedFeeRecipient: string,
+  /** Attributes already computed for the same state and fee recipient, e.g. for the SSE event */
+  payloadAttributes?: PayloadAttributes
+): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
+  const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
+  const prevRandao = state.getRandaoMix(state.epoch);
+
+  // Post-heze the inclusion lists are part of the cache key, so a list set that changed since the
+  // payload was prepared triggers a new forkchoiceUpdated instead of reusing a payload built without them
+  let attributes = payloadAttributes;
+  if (attributes === undefined && ForkSeq[fork] >= ForkSeq.heze) {
+    attributes = preparePayloadAttributes(fork, chain, {
+      prepareState: state,
+      prepareSlot: state.slot,
+      parentBlockRoot,
+      parentBlockHash,
+      feeRecipient: suggestedFeeRecipient,
+    });
   }
 
-  const {parentHash} = parentHashRes;
-  const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
-  const prevRandao = getRandaoMix(state, state.epochCtx.epoch);
-
   const payloadIdCached = chain.executionEngine.payloadIdCache.get({
-    headBlockHash: toRootHex(parentHash),
-    finalizedBlockHash,
+    headBlockHash: toRootHex(parentBlockHash),
     timestamp: numToQuantity(timestamp),
     prevRandao: toHex(prevRandao),
     suggestedFeeRecipient,
+    inclusionListTransactions: attributes?.inclusionListTransactions,
   });
 
   // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
@@ -558,19 +806,20 @@ export async function prepareExecutionPayload(
       prepType = PayloadPreparationType.Fresh;
     }
 
-    const attributes: PayloadAttributes = preparePayloadAttributes(fork, chain, {
-      prepareState: state,
-      prepareSlot: state.slot,
-      parentBlockRoot,
-      feeRecipient: suggestedFeeRecipient,
-    });
-
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
-      toRootHex(parentHash),
+      toRootHex(parentBlockRoot),
+      toRootHex(parentBlockHash),
       safeBlockHash,
       finalizedBlockHash,
-      attributes
+      attributes ??
+        preparePayloadAttributes(fork, chain, {
+          prepareState: state,
+          prepareSlot: state.slot,
+          parentBlockRoot,
+          parentBlockHash,
+          feeRecipient: suggestedFeeRecipient,
+        })
     );
     logger.verbose("Prepared payload id from execution engine", {payloadId});
   }
@@ -584,17 +833,16 @@ export async function prepareExecutionPayload(
   // We are only returning payloadId here because prepareExecutionPayload is also called from
   // prepareNextSlot, which is an advance call to execution engine to start building payload
   // Actual payload isn't produced till getPayload is called.
-  return {isPremerge: false, payloadId, prepType};
+  return {payloadId, prepType};
 }
 
 async function prepareExecutionPayloadHeader(
   chain: {
-    eth1: IEth1ForBlockProduction;
     executionBuilder?: IExecutionBuilder;
     config: ChainForkConfig;
   },
   fork: ForkPostBellatrix,
-  state: CachedBeaconStateBellatrix,
+  state: IBeaconStateViewBellatrix,
   proposerPubKey: BLSPubkey
 ): Promise<{
   header: ExecutionPayloadHeader;
@@ -606,147 +854,263 @@ async function prepareExecutionPayloadHeader(
     throw Error("executionBuilder required");
   }
 
-  const parentHashRes = await getExecutionPayloadParentHash(chain, state);
-  if (parentHashRes.isPremerge) {
-    throw Error("External builder disabled pre-merge");
-  }
-
-  const {parentHash} = parentHashRes;
+  const parentHash = state.latestExecutionPayloadHeader.blockHash;
   return chain.executionBuilder.getHeader(fork, state.slot, parentHash, proposerPubKey);
 }
 
-export async function getExecutionPayloadParentHash(
-  chain: {
-    eth1: IEth1ForBlockProduction;
-    config: ChainForkConfig;
-  },
-  state: CachedBeaconStateExecutions
-): Promise<{isPremerge: true} | {isPremerge: false; parentHash: Root}> {
-  // Use different POW block hash parent for block production based on merge status.
-  // Returned value of null == using an empty ExecutionPayload value
-  if (isMergeTransitionComplete(state)) {
-    // Post-merge, normal payload
-    return {isPremerge: false, parentHash: state.latestExecutionPayloadHeader.blockHash};
-  }
-
-  if (
-    !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
-    getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-  ) {
-    throw new Error(
-      `InvalidMergeTBH epoch: expected >= ${
-        chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-      }, actual: ${getCurrentEpoch(state)}`
-    );
-  }
-
-  const terminalPowBlockHash = await chain.eth1.getTerminalPowBlock();
-  if (terminalPowBlockHash === null) {
-    // Pre-merge, no prepare payload call is needed
-    return {isPremerge: true};
-  }
-  // Signify merge via producing on top of the last PoW block
-  return {isPremerge: false, parentHash: terminalPowBlockHash};
-}
-
-export async function getPayloadAttributesForSSE(
+export function getPayloadAttributesForSSE(
   fork: ForkPostBellatrix,
   chain: {
-    eth1: IEth1ForBlockProduction;
     config: ChainForkConfig;
+    forkChoice: IForkChoice;
+    proposerPreferencesPool: ProposerPreferencesPool;
+    inclusionListStore: InclusionListStore;
   },
   {
     prepareState,
     prepareSlot,
     parentBlockRoot,
+    parentBlockHash,
+    safeBlockHash,
+    finalizedBlockHash,
     feeRecipient,
-  }: {prepareState: CachedBeaconStateExecutions; prepareSlot: Slot; parentBlockRoot: Root; feeRecipient: string}
-): Promise<SSEPayloadAttributes> {
-  const parentHashRes = await getExecutionPayloadParentHash(chain, prepareState);
+  }: {
+    /**
+     * Post-gloas, when extending a full parent, callers must apply
+     * parent execution payload first (see `withParentPayloadApplied`).
+     */
+    prepareState: IBeaconStateViewBellatrix;
+    prepareSlot: Slot;
+    parentBlockRoot: Root;
+    parentBlockHash: Bytes32;
+    safeBlockHash: RootHex;
+    finalizedBlockHash: RootHex;
+    feeRecipient: string;
+  }
+): SSEPayloadAttributes {
+  const payloadAttributes = preparePayloadAttributes(fork, chain, {
+    prepareState,
+    prepareSlot,
+    parentBlockRoot,
+    parentBlockHash,
+    feeRecipient,
+  });
 
-  if (!parentHashRes.isPremerge) {
-    const {parentHash} = parentHashRes;
-    const payloadAttributes = preparePayloadAttributes(fork, chain, {
-      prepareState,
-      prepareSlot,
-      parentBlockRoot,
-      feeRecipient,
-    });
+  const ssePayloadAttributes = {
+    proposerIndex: prepareState.getBeaconProposer(prepareSlot),
+    proposalSlot: prepareSlot,
+    parentBlockRoot,
+    parentBlockHash,
+    payloadAttributes,
+  } as SSEPayloadAttributes;
 
-    const ssePayloadAttributes: SSEPayloadAttributes = {
-      proposerIndex: prepareState.epochCtx.getBeaconProposer(prepareSlot),
-      proposalSlot: prepareSlot,
-      parentBlockNumber: prepareState.latestExecutionPayloadHeader.blockNumber,
-      parentBlockRoot,
-      parentBlockHash: parentHash,
-      payloadAttributes,
-    };
-    return ssePayloadAttributes;
+  if (isForkPostGloas(fork)) {
+    (ssePayloadAttributes as gloas.SSEPayloadAttributes).safeBlockHash = fromHex(safeBlockHash);
+    (ssePayloadAttributes as gloas.SSEPayloadAttributes).finalizedBlockHash = fromHex(finalizedBlockHash);
+  } else {
+    // Removed in Gloas, builders can get the block number from the EL via the block hash if required
+    (ssePayloadAttributes as bellatrix.SSEPayloadAttributes).parentBlockNumber = prepareState.payloadBlockNumber;
   }
 
-  throw Error("The execution is still pre-merge");
+  return ssePayloadAttributes;
 }
 
 function preparePayloadAttributes(
   fork: ForkPostBellatrix,
   chain: {
     config: ChainForkConfig;
+    forkChoice: IForkChoice;
+    proposerPreferencesPool: ProposerPreferencesPool;
+    inclusionListStore: InclusionListStore;
   },
   {
     prepareState,
     prepareSlot,
     parentBlockRoot,
+    parentBlockHash,
     feeRecipient,
   }: {
-    prepareState: CachedBeaconStateExecutions;
+    /**
+     * Post-gloas, when extending a full parent, callers must apply
+     * parent execution payload first (see `withParentPayloadApplied`).
+     */
+    prepareState: IBeaconStateViewBellatrix;
     prepareSlot: Slot;
     parentBlockRoot: Root;
+    parentBlockHash: Bytes32;
     feeRecipient: string;
   }
 ): SSEPayloadAttributes["payloadAttributes"] {
   const timestamp = computeTimeAtSlot(chain.config, prepareSlot, prepareState.genesisTime);
-  const prevRandao = getRandaoMix(prepareState, prepareState.epochCtx.epoch);
-  const payloadAttributes = {
+  const prevRandao = prepareState.getRandaoMix(prepareState.epoch);
+  if (!isStatePostCapella(prepareState)) {
+    throw new Error("Expected Capella state for withdrawals");
+  }
+
+  let withdrawals: capella.Withdrawal[];
+  if (isStatePostGloas(prepareState)) {
+    const isExtendingPayload = byteArrayEquals(parentBlockHash, prepareState.latestExecutionPayloadBid.blockHash);
+    if (isExtendingPayload) {
+      // applyParentExecutionPayload sets latestBlockHash = parentBid.blockHash, so a mismatch
+      // here means the caller did not apply parent payload to prepareState
+      if (!byteArrayEquals(prepareState.latestBlockHash, prepareState.latestExecutionPayloadBid.blockHash)) {
+        throw new Error("Expected state with parent execution payload applied for withdrawals");
+      }
+      withdrawals = prepareState.getExpectedWithdrawals().expectedWithdrawals;
+    } else {
+      // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
+      // already deducted from CL balances but never credited on the EL (the envelope
+      // was not delivered). The next payload must carry those same withdrawals to
+      // restore CL/EL consistency, otherwise validators permanently lose that balance.
+      withdrawals = prepareState.payloadExpectedWithdrawals;
+    }
+  } else {
+    withdrawals = prepareState.getExpectedWithdrawals().expectedWithdrawals;
+  }
+
+  const payloadAttributes: deneb.SSEPayloadAttributes["payloadAttributes"] = {
     timestamp,
     prevRandao,
     suggestedFeeRecipient: feeRecipient,
+    withdrawals,
+    parentBeaconBlockRoot: parentBlockRoot,
   };
 
-  if (ForkSeq[fork] >= ForkSeq.capella) {
-    // withdrawals logic is now fork aware as it changes on electra fork post capella
-    (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
-      ForkSeq[fork],
-      prepareState as CachedBeaconStateCapella
-    ).withdrawals;
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    if (!isStatePostGloas(prepareState)) {
+      throw new Error("Expected Gloas state for Gloas payload attributes");
+    }
+    (payloadAttributes as gloas.SSEPayloadAttributes["payloadAttributes"]).slotNumber = prepareSlot;
+    (payloadAttributes as gloas.SSEPayloadAttributes["payloadAttributes"]).targetGasLimit = getProposerTargetGasLimit(
+      chain,
+      prepareSlot,
+      parentBlockRoot,
+      parentBlockHash
+    );
   }
 
-  if (ForkSeq[fork] >= ForkSeq.deneb) {
-    (payloadAttributes as deneb.SSEPayloadAttributes["payloadAttributes"]).parentBeaconBlockRoot = parentBlockRoot;
+  if (ForkSeq[fork] >= ForkSeq.heze) {
+    // Built from the full view including untimely lists (only_timely=False in prepare_execution_payload),
+    // a superset of the timely-only set every validator enforces
+    const parentBlockRootHex = toRootHex(parentBlockRoot);
+    const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, toRootHex(parentBlockHash));
+    if (parentBlock === null) {
+      throw new Error(
+        `Parent block not in fork choice for Heze payload attributes parentBlockRoot=${parentBlockRootHex} parentBlockHash=${toRootHex(parentBlockHash)}`
+      );
+    }
+    const inclusionListSlot = prepareSlot - 1;
+    (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions =
+      chain.inclusionListStore.getInclusionListTransactions(
+        inclusionListSlot,
+        getShufflingDependentRoot(
+          chain.forkChoice,
+          computeEpochAtSlot(inclusionListSlot),
+          computeEpochAtSlot(parentBlock.slot),
+          parentBlock
+        ),
+        false
+      );
   }
 
   return payloadAttributes;
 }
 
+/**
+ * Resolve the proposer's preferred (target) gas limit for the Gloas `PayloadAttributesV4`
+ * `targetGasLimit` field (consensus-specs#5235, execution-apis#796).
+ *
+ * Sourced from the `SignedProposerPreferences` the proposer's VC submitted to the pool. When no
+ * matching preferences are pooled, target the parent payload's gas limit so the gas limit stays
+ * unchanged (`is_gas_limit_target_compatible` then requires `gas_limit == parent_gas_limit`).
+ *
+ * The parent payload's gas_limit is read from fork choice — the variant matching
+ * `(parentBlockRoot, parentBlockHash)` carries the correct value for both FULL parents
+ * (FULL.executionPayloadGasLimit = delivered payload's gas_limit) and EMPTY parents
+ * (EMPTY.executionPayloadGasLimit = inherited grandparent's gas_limit).
+ */
+function getProposerTargetGasLimit(
+  chain: {forkChoice: IForkChoice; proposerPreferencesPool: ProposerPreferencesPool},
+  prepareSlot: Slot,
+  parentBlockRoot: Root,
+  parentBlockHash: Bytes32
+): bigint {
+  const parentBlockRootHex = toRootHex(parentBlockRoot);
+  const preferences = getPooledProposerPreferences(chain, prepareSlot, parentBlockRootHex);
+  if (preferences !== null) {
+    return preferences.targetGasLimit;
+  }
+
+  const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, toRootHex(parentBlockHash));
+  if (parentPayloadVariant === null || parentPayloadVariant.executionPayloadBlockHash === null) {
+    throw new Error(
+      `Cannot resolve parent payload gas_limit for proposer targetGasLimit fallback parentBlockRoot=${parentBlockRootHex} parentBlockHash=${toRootHex(parentBlockHash)}`
+    );
+  }
+  return BigInt(parentPayloadVariant.executionPayloadGasLimit);
+}
+
+/** The proposer's request wins over its signed preferences, which win over its registered proposer data */
+function getProposerFeeRecipient(
+  requestedFeeRecipient: string | undefined,
+  pooledPreferences: gloas.ProposerPreferences | null,
+  beaconProposerCache: BeaconProposerCache,
+  proposerIndex: ValidatorIndex
+): {feeRecipient: string; feeRecipientType: "requested" | "preferences" | "cached" | "default"} {
+  if (requestedFeeRecipient !== undefined) {
+    return {feeRecipient: requestedFeeRecipient, feeRecipientType: "requested"};
+  }
+  if (pooledPreferences !== null) {
+    return {feeRecipient: toHex(pooledPreferences.feeRecipient), feeRecipientType: "preferences"};
+  }
+  const cachedFeeRecipient = beaconProposerCache.get(proposerIndex);
+  if (cachedFeeRecipient !== undefined) {
+    return {feeRecipient: cachedFeeRecipient, feeRecipientType: "cached"};
+  }
+  return {feeRecipient: beaconProposerCache.getOrDefault(proposerIndex), feeRecipientType: "default"};
+}
+
+/**
+ * The preferences the proposer of `slot` signed for the branch of `parentBlockRoot`, the same
+ * `(slot, dependent_root)` lookup as gossip bid validation. Null if none are pooled.
+ */
+export function getPooledProposerPreferences(
+  chain: {forkChoice: IForkChoice; proposerPreferencesPool: ProposerPreferencesPool},
+  slot: Slot,
+  parentBlockRootHex: RootHex
+): gloas.ProposerPreferences | null {
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
+  if (parentBlock === null) {
+    return null;
+  }
+
+  let dependentRootHex: RootHex;
+  try {
+    dependentRootHex = getShufflingDependentRoot(
+      chain.forkChoice,
+      computeEpochAtSlot(slot),
+      computeEpochAtSlot(parentBlock.slot),
+      parentBlock
+    );
+  } catch {
+    return null;
+  }
+
+  return chain.proposerPreferencesPool.get(slot, dependentRootHex)?.message ?? null;
+}
+
 export async function produceCommonBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
-  currentState: CachedBeaconStateAllForks,
-  {
-    randaoReveal,
-    graffiti,
-    slot,
-    parentSlot,
-    parentBlockRoot,
-  }: BlockAttributes & {
-    parentSlot: Slot;
-  }
+  currentState: IBeaconStateView,
+  {randaoReveal, graffiti, slot, parentBlock}: BlockAttributes
 ): Promise<CommonBlockBody> {
   const stepsMetrics =
     blockType === BlockType.Full
       ? this.metrics?.executionBlockProductionTimeSteps
       : this.metrics?.builderBlockProductionTimeSteps;
 
-  const fork = currentState.config.getForkName(slot);
+  const fork = this.config.getForkName(slot);
 
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
@@ -763,43 +1127,45 @@ export async function produceCommonBlockBody<T extends BlockType>(
     this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
 
   const endAttestations = stepsMetrics?.startTimer();
-  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(fork, this.forkChoice, currentState);
+  // TODO: extract to a separate BeaconChain method to coordinate the 2 op-pools
+  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
+    fork,
+    this.forkChoice,
+    this.shufflingCache,
+    currentState,
+    this.singleAttestationPool
+  );
   endAttestations?.({
     step: BlockProductionStep.attestations,
   });
 
-  const endEth1DataAndDeposits = stepsMetrics?.startTimer();
-  const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
-  endEth1DataAndDeposits?.({
-    step: BlockProductionStep.eth1DataAndDeposits,
-  });
-
-  const blockBody: Omit<CommonBlockBody, "blsToExecutionChanges" | "syncAggregate"> = {
-    randaoReveal,
-    graffiti,
-    eth1Data,
-    proposerSlashings,
-    attesterSlashings,
-    attestations,
-    deposits,
-    voluntaryExits,
-  };
-
-  if (ForkSeq[fork] >= ForkSeq.capella) {
-    (blockBody as CommonBlockBody).blsToExecutionChanges = blsToExecutionChanges;
-  }
-
   const endSyncAggregate = stepsMetrics?.startTimer();
-  if (ForkSeq[fork] >= ForkSeq.altair) {
-    const syncAggregate = this.syncContributionAndProofPool.getAggregate(parentSlot, parentBlockRoot);
-    this.metrics?.production.producedSyncAggregateParticipants.observe(
-      syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
-    );
-    (blockBody as CommonBlockBody).syncAggregate = syncAggregate;
-  }
+  const parentBlockRoot = fromHex(parentBlock.blockRoot);
+  const previousSlot = slot - 1;
+  const syncAggregate = this.syncContributionAndProofPool.getAggregate(previousSlot, parentBlockRoot);
+  this.metrics?.production.producedSyncAggregateParticipants.observe(
+    syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
+  );
   endSyncAggregate?.({
     step: BlockProductionStep.syncAggregate,
   });
 
-  return blockBody as CommonBlockBody;
+  // Live proposal production is supported from Fulu onward.
+  const commonBlockBody: CommonBlockBody = {
+    randaoReveal,
+    graffiti,
+    proposerSlashings: this.opts.disableProposerSlashings === true ? [] : proposerSlashings,
+    attesterSlashings,
+    attestations,
+    voluntaryExits,
+    blsToExecutionChanges,
+    syncAggregate,
+  };
+
+  if (!isForkPostHeze(fork)) {
+    commonBlockBody.eth1Data = currentState.eth1Data;
+    commonBlockBody.deposits = [];
+  }
+
+  return commonBlockBody;
 }

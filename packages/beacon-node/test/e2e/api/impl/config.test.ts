@@ -1,24 +1,24 @@
+import {describe, it} from "vitest";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName, activePreset} from "@lodestar/params";
 import {fetch} from "@lodestar/utils";
-import {describe, it} from "vitest";
 import {specConstants} from "../../../../src/api/impl/config/constants.js";
-import {ethereumConsensusSpecsTests} from "../../../spec/specTestVersioning.js";
+// biome-ignore lint/correctness/useImportExtensions: false positive, the import resolves through a symlink to a .json file
+import specTestVersion from "../../../spec-tests-version.json" with {type: "json"};
 
 const CONSTANT_NAMES_SKIP_LIST = new Set([
   // This constant is an array, so it's skipped due to not being just a string.
   // This constant can also be derived from existing constants so it's not critical.
   // PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT]
   "PARTICIPATION_FLAG_WEIGHTS",
-  // TODO Fulu: remove skipped constant
-  "MAX_BLOBS_PER_BLOCK_FULU",
-  "VALIDATOR_CUSTODY_REQUIREMENT",
-  "BALANCE_PER_ADDITIONAL_CUSTODY_GROUP",
+  "PAYLOAD_STATUS_VALID",
+  "PAYLOAD_STATUS_INVALIDATED",
+  "PAYLOAD_STATUS_NOT_VALIDATED",
 ]);
 
 describe("api / impl / config", () => {
   it("Ensure all constants are exposed", async () => {
-    const constantNames = await downloadRemoteConstants(ethereumConsensusSpecsTests.specVersion);
+    const constantNames = await downloadRemoteConstants(specTestVersion.ethereumConsensusSpecsTests.specVersion);
 
     const constantsInCode = new Set([
       // Constants for API only
@@ -50,7 +50,7 @@ async function downloadRemoteConstants(commit: string): Promise<string[]> {
 
   for (const forkName of Object.values(ForkName)) {
     // If some future fork does not specify one of this docs, refactor to fetch some docs only on some forks
-    for (const docName of ["beacon-chain.md", "validator.md"]) {
+    for (const docName of ["beacon-chain.md", "validator.md", "p2p-interface.md"]) {
       downloadedSpecs.push(
         fetch(`https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/specs/${forkName}/${docName}`).then(
           (res) => res.text()

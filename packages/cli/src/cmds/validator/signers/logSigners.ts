@@ -69,7 +69,7 @@ export function warnOrExitNoSigners(args: IValidatorCliArgs, logger: Pick<Logger
       "No local keystores or remote keys found with current args, expecting to be added via keymanager or fetched from external signer later"
     );
   } else {
-    if (args["externalSigner.url"]) {
+    if (args["externalSigner.urls"]) {
       throw new YargsError(
         "No remote keys found with current args, start with --externalSigner.fetch to automatically fetch from external signer"
       );

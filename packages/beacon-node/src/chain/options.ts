@@ -1,4 +1,3 @@
-import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {DEFAULT_ARCHIVE_MODE} from "./archiveStore/constants.js";
 import {ArchiveMode, ArchiveStoreOpts} from "./archiveStore/interface.js";
@@ -6,8 +5,11 @@ import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
 import {ShufflingCacheOpts} from "./shufflingCache.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
-import {PersistentCheckpointStateCacheOpts} from "./stateCache/persistentCheckpointsCache.js";
-import {DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY} from "./stateCache/persistentCheckpointsCache.js";
+import {
+  DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
+  DEFAULT_MAX_CP_STATE_ON_DISK,
+  PersistentCheckpointStateCacheOpts,
+} from "./stateCache/persistentCheckpointsCache.js";
 import {ValidatorMonitorOpts} from "./validatorMonitor.js";
 
 export {ArchiveMode, DEFAULT_ARCHIVE_MODE};
@@ -26,27 +28,32 @@ export type IChainOptions = BlockProcessOpts &
     blsVerifyAllMultiThread?: boolean;
     blacklistedBlocks?: string[];
     persistProducedBlocks?: boolean;
+    persistProducedPayloadEnvelopes?: boolean;
+    /** Archive finalized Gloas payload envelopes as headers (bodies reconstructed from the EL on read) */
+    dedupePayloads?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
     persistOrphanedBlocks?: boolean;
     persistOrphanedBlocksDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
     suggestedFeeRecipient: string;
+    graffitiAppend?: boolean;
     maxSkipSlots?: number;
+    /** Do not produce proposer slashings from observed equivocations and do not include proposer slashings in produced blocks */
+    disableProposerSlashings?: boolean;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
-    /** Max number of produced blobs by local validators to cache */
-    maxCachedBlobSidecars?: number;
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */
     maxCachedProducedRoots?: number;
-    /** Subscribe to and custody all data column sidecar subnets */
-    supernode?: boolean;
     initialCustodyGroupCount?: number;
-    broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
     archiveDateEpochs?: number;
-    nHistoricalStates?: boolean;
     nHistoricalStatesFileDataStore?: boolean;
+    nativeStateTransition?: boolean;
+    /** Builder circuit breaker fault inspection window in slots */
+    faultInspectionWindow?: number;
+    /** Canonical EMPTY blocks allowed per `faultInspectionWindow` observed blocks */
+    allowedFaults?: number;
   };
 
 export type BlockProcessOpts = {
@@ -55,14 +62,6 @@ export type BlockProcessOpts = {
    * Will double processing times. Use only for debugging purposes.
    */
   disableBlsBatchVerify?: boolean;
-  /**
-   * Override SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY
-   */
-  safeSlotsToImportOptimistically?: number;
-  /**
-   * Assert progressive balances the same to EpochTransitionCache
-   */
-  assertCorrectProgressiveBalances?: boolean;
   /** Used for fork_choice spec tests */
   disableOnBlockError?: boolean;
   /** Used for fork_choice spec tests */
@@ -82,8 +81,6 @@ export type BlockProcessOpts = {
   verifyOnly?: boolean;
   /** Used to specify to skip execution payload validation */
   skipVerifyExecutionPayload?: boolean;
-  /** Used to specify to skip block signatures validation */
-  skipVerifyBlockSignatures?: boolean;
 };
 
 export type PoolOpts = {
@@ -91,6 +88,11 @@ export type PoolOpts = {
    * Only preaggregate attestation/sync committee message since clockSlot - preaggregateSlotDistance
    */
   preaggregateSlotDistance?: number;
+  /**
+   * Dev only: collect single attestations of every vote slot a block at the clock slot can include regardless of
+   * proposal duties, so that any produced block can pack them. Combine with `subscribeAllSubnets`
+   */
+  singleAttestationIgnoreProposalDuty?: boolean;
 };
 
 export type SeenCacheOpts = {
@@ -107,30 +109,31 @@ export const defaultChainOptions: IChainOptions = {
   disableBlsBatchVerify: false,
   proposerBoost: true,
   proposerBoostReorg: true,
+  dedupePayloads: true,
   computeUnrealized: true,
-  safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
+  fastConfirmation: false,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
+  graffitiAppend: true,
   serveHistoricalState: false,
-  assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,
   archiveMode: DEFAULT_ARCHIVE_MODE,
   pruneHistory: false,
   emitPayloadAttributes: false,
-  supernode: false,
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,
-  broadcastValidationStrictness: "warn",
+  disableProposerSlashings: false,
   // should be less than or equal to MIN_SIGNATURE_SETS_TO_BATCH_VERIFY
   // batching too much may block the I/O thread so if useWorker=false, suggest this value to be 32
   // since this batch attestation work is designed to work with useWorker=true, make this the lowest value
   minSameMessageSignatureSetsToBatch: 2,
-  nHistoricalStates: true,
   // as of Feb 2025, this option turned out to be very useful:
   //   - it allows to share a persisted checkpoint state to other nodes
   //   - users can prune the persisted checkpoint state files manually to save disc space
   //   - it helps debug easier when network is unfinalized
   nHistoricalStatesFileDataStore: true,
+  nativeStateTransition: false,
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
+  maxCPStateEpochsOnDisk: DEFAULT_MAX_CP_STATE_ON_DISK,
 };

@@ -1,17 +1,53 @@
-import {ENR} from "@chainsafe/enr";
-import {noise} from "@chainsafe/libp2p-noise";
+import {getCiphers} from "node:crypto";
 import {bootstrap} from "@libp2p/bootstrap";
 import {identify} from "@libp2p/identify";
-import {PrivateKey} from "@libp2p/interface";
+import type {Address, PrivateKey} from "@libp2p/interface";
 import {mdns} from "@libp2p/mdns";
 import {mplex} from "@libp2p/mplex";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {tcp} from "@libp2p/tcp";
-import {createLibp2p} from "libp2p";
+import {loopbackAddressLast, publicAddressesFirst, reliableTransportsFirst} from "@libp2p/utils";
+import type {Multiaddr} from "@multiformats/multiaddr";
+import {Libp2pInit, createLibp2p} from "libp2p";
 import {Registry} from "prom-client";
+import {ENR} from "@chainsafe/enr";
+import {noise} from "@chainsafe/libp2p-noise";
+import {asCrypto, defaultCrypto} from "@chainsafe/libp2p-noise/crypto";
+import {quic} from "@chainsafe/libp2p-quic";
 import {Libp2p, LodestarComponents} from "../interface.js";
 import {NetworkOptions, defaultNetworkOptions} from "../options.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
+
+const noiseCrypto = getCiphers().includes("chacha20-poly1305")
+  ? defaultCrypto
+  : {
+      ...defaultCrypto,
+      chaCha20Poly1305Encrypt: asCrypto.chaCha20Poly1305Encrypt,
+      chaCha20Poly1305Decrypt: asCrypto.chaCha20Poly1305Decrypt,
+    };
+
+function quicAddressesFirst(a: Multiaddr, b: Multiaddr): -1 | 0 | 1 {
+  const aQuic = a.getComponents().some((c) => c.name === "quic-v1");
+  const bQuic = b.getComponents().some((c) => c.name === "quic-v1");
+  if (aQuic === bQuic) return 0;
+  return aQuic ? -1 : 1;
+}
+
+/**
+ * Custom sorter for libp2p's `addressSorter`.
+ *
+ * Prefers QUIC > TCP addresses before dialing, per p2p spec.
+ *
+ * Spec: https://github.com/ethereum/consensus-specs/blob/f21dac06e99743b1e98bb80297897b96520c942b/specs/phase0/p2p-interface.md#transport
+ */
+export function quicFirstAddressSorter(a: Address, b: Address): -1 | 0 | 1 {
+  return (
+    loopbackAddressLast(a.multiaddr, b.multiaddr) ||
+    publicAddressesFirst(a.multiaddr, b.multiaddr) ||
+    quicAddressesFirst(a.multiaddr, b.multiaddr) ||
+    reliableTransportsFirst(a.multiaddr, b.multiaddr)
+  );
+}
 
 export type NodeJsLibp2pOpts = {
   peerStoreDir?: string;
@@ -20,11 +56,14 @@ export type NodeJsLibp2pOpts = {
   metricsRegistry?: Registry;
 };
 
-export async function getDiscv5Multiaddrs(bootEnrs: string[]): Promise<string[]> {
+export async function getDiscv5Multiaddrs(bootEnrs: string[], quicEnabled?: boolean): Promise<string[]> {
   const bootMultiaddrs = [];
   for (const enrStr of bootEnrs) {
     const enr = ENR.decodeTxt(enrStr);
-    const multiaddrWithPeerId = (await enr.getFullMultiaddr("tcp"))?.toString();
+    // Prefer QUIC over TCP when available
+    const quicMultiaddr = quicEnabled ? (await enr.getFullMultiaddr("quic"))?.toString() : undefined;
+    const tcpMultiaddr = (await enr.getFullMultiaddr("tcp"))?.toString();
+    const multiaddrWithPeerId = quicMultiaddr ?? tcpMultiaddr;
     if (multiaddrWithPeerId) {
       bootMultiaddrs.push(multiaddrWithPeerId);
     }
@@ -38,6 +77,9 @@ export async function createNodeJsLibp2p(
   nodeJsLibp2pOpts: NodeJsLibp2pOpts = {}
 ): Promise<Libp2p> {
   const localMultiaddrs = networkOpts.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
+  const disconnectThreshold = networkOpts.disconnectThreshold ?? defaultNetworkOptions.disconnectThreshold;
+  const tcpEnabled = networkOpts.tcp ?? defaultNetworkOptions.tcp;
+  const quicEnabled = networkOpts.quic ?? defaultNetworkOptions.quic;
   const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
 
   let datastore: undefined | Eth2PeerDataStore = undefined;
@@ -51,7 +93,9 @@ export async function createNodeJsLibp2p(
     const bootMultiaddrs = [
       ...(networkOpts.bootMultiaddrs ?? defaultNetworkOptions.bootMultiaddrs ?? []),
       // Append discv5.bootEnrs to bootMultiaddrs if requested
-      ...(networkOpts.connectToDiscv5Bootnodes ? await getDiscv5Multiaddrs(networkOpts.discv5?.bootEnrs ?? []) : []),
+      ...(networkOpts.connectToDiscv5Bootnodes
+        ? await getDiscv5Multiaddrs(networkOpts.discv5?.bootEnrs ?? [], quicEnabled)
+        : []),
     ];
 
     if ((bootMultiaddrs.length ?? 0) > 0) {
@@ -62,17 +106,11 @@ export async function createNodeJsLibp2p(
       peerDiscovery.push(mdns());
     }
   }
-
-  return createLibp2p({
-    privateKey,
-    addresses: {
-      listen: localMultiaddrs,
-      announce: [],
-    },
-    connectionEncrypters: [noise()],
-    // Reject connections when the server's connection count gets high
-    transports: [
+  const transports: Libp2pInit["transports"] = [];
+  if (tcpEnabled) {
+    transports.unshift(
       tcp({
+        // Reject connections when the server's connection count gets high
         maxConnections: networkOpts.maxPeers,
         // socket option: the maximum length of the queue of pending connections
         // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#serverlisten
@@ -82,9 +120,49 @@ export async function createNodeJsLibp2p(
           closeAbove: networkOpts.maxPeers ?? Infinity,
           listenBelow: networkOpts.maxPeers ?? Infinity,
         },
-      }),
-    ],
-    streamMuxers: [mplex({maxInboundStreams: 256, disconnectThreshold: networkOpts.disconnectThreshold})],
+      })
+    );
+  }
+  if (quicEnabled) {
+    const quicMultiaddrs = localMultiaddrs.filter((ma) => ma.includes("/quic-v1"));
+    const hasIpv4Quic = quicMultiaddrs.some((ma) => ma.includes("/ip4/"));
+    const hasIpv6Quic = quicMultiaddrs.some((ma) => ma.includes("/ip6/"));
+    // Only add QUIC transport if at least one QUIC listen address is configured,
+    // otherwise the transport constructor will throw
+    if (hasIpv4Quic || hasIpv6Quic) {
+      transports.unshift(
+        quic({
+          handshakeTimeout: 5_000,
+          maxIdleTimeout: 10_000,
+          keepAliveInterval: 5_000,
+          maxConcurrentStreamLimit: 256,
+          maxStreamData: 10_000_000,
+          maxConnectionData: 15_000_000,
+          ipv4: hasIpv4Quic,
+          ipv6: hasIpv6Quic,
+        })
+      );
+    }
+  }
+
+  return createLibp2p({
+    privateKey,
+    nodeInfo: {
+      name: "lodestar",
+      version: networkOpts.version ?? "unknown",
+      userAgent: networkOpts.private
+        ? ""
+        : networkOpts.advertiseVersion && networkOpts.version
+          ? `lodestar/${networkOpts.version}`
+          : "lodestar",
+    },
+    addresses: {
+      listen: localMultiaddrs,
+      announce: [],
+    },
+    connectionEncrypters: [noise({crypto: noiseCrypto})],
+    transports,
+    streamMuxers: [mplex({disconnectThreshold})],
     peerDiscovery,
     metrics: nodeJsLibp2pOpts.metrics
       ? prometheusMetrics({
@@ -101,6 +179,8 @@ export async function createNodeJsLibp2p(
       // the maximum number of pending connections libp2p will accept before it starts rejecting incoming connections.
       // make it the same to backlog option above
       maxIncomingPendingConnections: 5,
+      // Prefer dialing QUIC > TCP for a peer address if QUIC is enabled
+      addressSorter: quicEnabled ? quicFirstAddressSorter : undefined,
     },
     // rely on lodestar's peer manager to ping peers
     connectionMonitor: {
@@ -115,7 +195,6 @@ export async function createNodeJsLibp2p(
     datastore,
     services: {
       identify: identify({
-        agentVersion: networkOpts.private ? "" : networkOpts.version ? `lodestar/${networkOpts.version}` : "lodestar",
         runOnConnectionOpen: false,
       }),
       // individual components are specified because the components object is a Proxy

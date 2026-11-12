@@ -21,7 +21,7 @@ export async function getRandPeerSyncMeta(peerId?: string): Promise<PeerSyncMeta
   return {
     peerId: peerId ?? (await getRandPeerIdStr()),
     client: "PEER_CLIENT",
-    custodyGroups: [],
+    custodyColumns: [],
     earliestAvailableSlot: 0,
   };
 }

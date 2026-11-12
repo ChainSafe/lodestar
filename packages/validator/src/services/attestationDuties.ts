@@ -1,11 +1,16 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, isAggregatorFromCommitteeLength, isStartSlotOfEpoch} from "@lodestar/state-transition";
+import {
+  IClock,
+  computeEpochAtSlot,
+  isAggregatorFromCommitteeLength,
+  isStartSlotOfEpoch,
+} from "@lodestar/state-transition";
 import {BLSSignature, Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
-import {IClock, LoggerVc, batchItems} from "../util/index.js";
+import {LoggerVc, batchItems} from "../util/index.js";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -134,6 +139,7 @@ export class AttestationDutiesService {
       return;
     }
 
+    // TODO GLOAS: re-evaluate this timing
     // during the 1 / 3 of epoch, last block of epoch may come
     await sleep(this.clock.msToSlot(slot + 1 / 3), signal);
 
@@ -203,6 +209,17 @@ export class AttestationDutiesService {
     for (const epoch of [currentEpoch, nextEpoch]) {
       const epochDuties = this.dutiesByIndexByEpoch.get(epoch)?.dutiesByIndex;
       if (epochDuties) {
+        if (this.opts?.distributedAggregationSelection) {
+          // Validator in distributed cluster only has a key share, not the full private key.
+          // The partial selection proofs must be exchanged for combined selection proofs by
+          // calling submitBeaconCommitteeSelections on the distributed validator middleware client.
+          // This is required to correctly determine if validator is aggregator and to produce
+          // a AggregateAndProof that can be threshold aggregated by the middleware client.
+          await this.runDistributedAggregationSelectionTasks(Array.from(epochDuties.values()), epoch).catch((e) =>
+            this.logger.debug("Error on attestation aggregation selection", {epoch}, e)
+          );
+        }
+
         for (const {duty, selectionProof} of epochDuties.values()) {
           if (indexSet.has(duty.validatorIndex)) {
             beaconCommitteeSubscriptions.push({
@@ -218,16 +235,7 @@ export class AttestationDutiesService {
     }
 
     // If there are any subscriptions, push them out to the beacon node.
-    if (beaconCommitteeSubscriptions.length > 0) {
-      const subscriptionsBatches = batchItems(beaconCommitteeSubscriptions, {batchSize: SUBSCRIPTIONS_PER_REQUEST});
-      const responses = await Promise.all(
-        subscriptionsBatches.map((subscriptions) => this.api.validator.prepareBeaconCommitteeSubnet({subscriptions}))
-      );
-
-      for (const res of responses) {
-        res.assertOk();
-      }
-    }
+    await this.subscribeToBeaconCommitteeSubnets(beaconCommitteeSubscriptions);
   }
 
   /**
@@ -256,8 +264,15 @@ export class AttestationDutiesService {
     if (!priorDependentRoot || dependentRootChanged) {
       const dutiesByIndex = new Map<ValidatorIndex, AttDutyAndProof>();
       for (const duty of relevantDuties) {
-        const dutyAndProof = await this.getDutyAndProof(duty);
-        dutiesByIndex.set(duty.validatorIndex, dutyAndProof);
+        try {
+          dutiesByIndex.set(duty.validatorIndex, await this.getDutyAndProof(duty));
+        } catch (e) {
+          this.logger.error(
+            "Error signing attestation selection proof",
+            {epoch, validatorIndex: duty.validatorIndex},
+            e as Error
+          );
+        }
       }
       this.dutiesByIndexByEpoch.set(epoch, {dependentRoot, dutiesByIndex});
 
@@ -272,20 +287,25 @@ export class AttestationDutiesService {
     } else {
       const existingDuties = dutiesAtEpoch.dutiesByIndex;
       const existingDutiesCount = existingDuties.size;
-      const discoveredNewDuties = relevantDuties.length > existingDutiesCount;
-
-      if (discoveredNewDuties) {
-        for (const duty of relevantDuties) {
-          if (!existingDuties.has(duty.validatorIndex)) {
-            const dutyAndProof = await this.getDutyAndProof(duty);
-            existingDuties.set(duty.validatorIndex, dutyAndProof);
+      for (const duty of relevantDuties) {
+        if (!existingDuties.has(duty.validatorIndex)) {
+          try {
+            existingDuties.set(duty.validatorIndex, await this.getDutyAndProof(duty));
+          } catch (e) {
+            this.logger.error(
+              "Error signing attestation selection proof",
+              {epoch, validatorIndex: duty.validatorIndex},
+              e as Error
+            );
           }
         }
+      }
 
+      if (existingDuties.size > existingDutiesCount) {
         this.logger.debug("Discovered new attester duties", {
           epoch,
           dependentRoot,
-          count: relevantDuties.length - existingDutiesCount,
+          count: existingDuties.size - existingDutiesCount,
         });
       }
     }
@@ -370,6 +390,45 @@ export class AttestationDutiesService {
       .catch((e: Error) => {
         this.logger.error("Failed to redownload attester duties when reorg happens", logContext, e);
       });
+
+    const beaconCommitteeSubscriptions: routes.validator.BeaconCommitteeSubscription[] = [];
+    const epochDuties = this.dutiesByIndexByEpoch.get(dutyEpoch)?.dutiesByIndex;
+
+    if (epochDuties) {
+      if (this.opts?.distributedAggregationSelection) {
+        await this.runDistributedAggregationSelectionTasks(Array.from(epochDuties.values()), dutyEpoch).catch((e) =>
+          this.logger.debug("Error on attestation aggregation selection after duties reorg", logContext, e)
+        );
+      }
+
+      for (const {duty, selectionProof} of epochDuties.values()) {
+        beaconCommitteeSubscriptions.push({
+          validatorIndex: duty.validatorIndex,
+          committeesAtSlot: duty.committeesAtSlot,
+          committeeIndex: duty.committeeIndex,
+          slot: duty.slot,
+          isAggregator: selectionProof !== null,
+        });
+      }
+    }
+
+    // Previous subscriptions are no longer valid and need to be updated
+    await this.subscribeToBeaconCommitteeSubnets(beaconCommitteeSubscriptions);
+  }
+
+  private async subscribeToBeaconCommitteeSubnets(
+    beaconCommitteeSubscriptions: routes.validator.BeaconCommitteeSubscription[]
+  ): Promise<void> {
+    if (beaconCommitteeSubscriptions.length > 0) {
+      const subscriptionsBatches = batchItems(beaconCommitteeSubscriptions, {batchSize: SUBSCRIPTIONS_PER_REQUEST});
+      const responses = await Promise.all(
+        subscriptionsBatches.map((subscriptions) => this.api.validator.prepareBeaconCommitteeSubnet({subscriptions}))
+      );
+
+      for (const res of responses) {
+        res.assertOk();
+      }
+    }
   }
 
   private async getDutyAndProof(duty: routes.validator.AttesterDuty): Promise<AttDutyAndProof> {
@@ -378,8 +437,8 @@ export class AttestationDutiesService {
     if (this.opts?.distributedAggregationSelection) {
       // Validator in distributed cluster only has a key share, not the full private key.
       // Passing a partial selection proof to `is_aggregator` would produce incorrect result.
-      // AttestationService will exchange partial for combined selection proofs retrieved from
-      // distributed validator middleware client and determine aggregators at beginning of every slot.
+      // Before subscribing to beacon committee subnets, aggregators are determined by exchanging
+      // partial for combined selection proofs retrieved from distributed validator middleware client.
       return {duty, selectionProof: null, partialSelectionProof: selectionProof};
     }
 
@@ -399,6 +458,66 @@ export class AttestationDutiesService {
         if (epoch + HISTORICAL_DUTIES_EPOCHS < currentEpoch) {
           byEpochMap.delete(epoch);
         }
+      }
+    }
+  }
+
+  /**
+   * Performs additional attestation aggregation tasks required if validator is part of distributed cluster
+   *
+   * 1. Exchange partial for combined selection proofs
+   * 2. Determine validators that should aggregate attestations
+   * 3. Mutate duty objects to set selection proofs for aggregators
+   */
+  private async runDistributedAggregationSelectionTasks(duties: AttDutyAndProof[], epoch: Epoch): Promise<void> {
+    if (duties.length === 0) {
+      return;
+    }
+
+    const partialSelections: routes.validator.BeaconCommitteeSelection[] = duties.map(
+      ({duty, partialSelectionProof}) => ({
+        validatorIndex: duty.validatorIndex,
+        slot: duty.slot,
+        selectionProof: partialSelectionProof as BLSSignature,
+      })
+    );
+
+    this.logger.debug("Submitting partial beacon committee selection proofs", {epoch, count: partialSelections.length});
+
+    const res = await this.api.validator.submitBeaconCommitteeSelections({selections: partialSelections});
+
+    const combinedSelections = new Map<ValidatorIndex, routes.validator.BeaconCommitteeSelection>();
+    for (const selection of res.value()) {
+      combinedSelections.set(selection.validatorIndex, selection);
+    }
+    this.logger.debug("Received combined beacon committee selection proofs", {epoch, count: combinedSelections.size});
+
+    for (const dutyAndProof of duties) {
+      const {slot, validatorIndex, committeeIndex, committeeLength} = dutyAndProof.duty;
+      const logCtxValidator = {slot, index: committeeIndex, validatorIndex};
+
+      const combinedSelection = combinedSelections.get(validatorIndex);
+
+      if (!combinedSelection) {
+        this.logger.debug("Did not receive combined beacon committee selection proof", logCtxValidator);
+        continue;
+      }
+
+      if (combinedSelection.slot !== slot) {
+        this.logger.debug("Received combined beacon committee selection proof for different slot", {
+          expected: slot,
+          actual: combinedSelection.slot,
+          index: committeeIndex,
+          validatorIndex,
+        });
+        continue;
+      }
+
+      const isAggregator = isAggregatorFromCommitteeLength(committeeLength, combinedSelection.selectionProof);
+
+      if (isAggregator) {
+        // Update selection proof by mutating duty object
+        dutyAndProof.selectionProof = combinedSelection.selectionProof;
       }
     }
   }

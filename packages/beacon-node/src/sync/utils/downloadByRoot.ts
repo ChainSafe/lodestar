@@ -1,0 +1,428 @@
+import {routes} from "@lodestar/api";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkPostFulu, ForkPostGloas, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
+import {ColumnIndex, SignedBeaconBlock, Slot, fulu} from "@lodestar/types";
+import {LodestarError, byteArrayEquals, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
+import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
+import {ChainEventEmitter} from "../../chain/emitter.js";
+import {IBeaconChain} from "../../chain/interface.js";
+import {validateFuluBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
+import {INetwork} from "../../network/interface.js";
+import {PeerSyncMeta} from "../../network/peers/peersData.js";
+import {prettyPrintPeerIdStr} from "../../network/util.js";
+import {getBlobKzgCommitments} from "../../util/dataColumns.js";
+import {PeerIdStr} from "../../util/peerId.js";
+import {WarnResult} from "../../util/wrapError.js";
+import {
+  BlockInputSyncCacheItem,
+  PendingBlockInput,
+  PendingBlockInputStatus,
+  getBlockInputSyncCacheItemRootHex,
+  isPendingBlockInput,
+} from "../types.js";
+
+export type FetchByRootCoreProps = {
+  config: ChainForkConfig;
+  chain: IBeaconChain | null; // null for testing purposes
+  network: INetwork;
+  peerMeta: PeerSyncMeta;
+};
+export type FetchByRootProps = FetchByRootCoreProps & {
+  cacheItem: BlockInputSyncCacheItem;
+  blockRoot: Uint8Array;
+};
+export type FetchByRootAndValidateBlockProps = Omit<FetchByRootCoreProps, "peerMeta"> & {
+  peerIdStr: PeerIdStr;
+  blockRoot: Uint8Array;
+};
+export type FetchByRootAndValidateColumnsProps = FetchByRootCoreProps & {
+  blockRoot: Uint8Array;
+  forkName: ForkPostFulu;
+  block: SignedBeaconBlock<ForkPostFulu>;
+  missing: ColumnIndex[];
+};
+export type FetchByRootResponses = {
+  block: SignedBeaconBlock;
+  columnSidecars?: fulu.DataColumnSidecar[];
+};
+
+export type DownloadByRootProps = FetchByRootCoreProps & {
+  cacheItem: BlockInputSyncCacheItem;
+  chain: IBeaconChain;
+  emitter: ChainEventEmitter;
+};
+
+export async function downloadByRoot({
+  config,
+  chain,
+  network,
+  emitter,
+  peerMeta,
+  cacheItem,
+}: DownloadByRootProps): Promise<WarnResult<PendingBlockInput, DownloadByRootError>> {
+  const rootHex = getBlockInputSyncCacheItemRootHex(cacheItem);
+  const blockRoot = fromHex(rootHex);
+  const {peerId: peerIdStr} = peerMeta;
+
+  const {
+    result: {block, columnSidecars},
+    warnings,
+  } = await fetchByRoot({
+    config,
+    chain,
+    network,
+    cacheItem,
+    blockRoot,
+    peerMeta,
+  });
+
+  let blockInput: IBlockInput;
+  if (isPendingBlockInput(cacheItem)) {
+    blockInput = cacheItem.blockInput;
+    if (!blockInput.hasBlock()) {
+      blockInput.addBlock({
+        block,
+        blockRootHex: rootHex,
+        source: BlockInputSource.byRoot,
+        seenTimestampSec: Date.now() / 1000,
+        peerIdStr,
+      });
+    }
+  } else {
+    blockInput = chain.seenBlockInputCache.getByBlock({
+      block,
+      peerIdStr,
+      blockRootHex: rootHex,
+      seenTimestampSec: Date.now() / 1000,
+      source: BlockInputSource.byRoot,
+    });
+  }
+
+  if (isForkPostGloas(blockInput.forkName)) {
+    chain.seenPayloadEnvelopeInputCache.add({
+      blockRootHex: rootHex,
+      block: blockInput.getBlock() as SignedBeaconBlock<ForkPostGloas>,
+      forkName: blockInput.forkName,
+      sampledColumns: chain.custodyConfig.sampledColumns,
+      custodyColumns: chain.custodyConfig.custodyColumns,
+      seenTimestampSec: Date.now() / 1000,
+      source: PayloadEnvelopeInputSource.byRoot,
+    });
+  }
+
+  const hasAllDataPreDownload = blockInput.hasBlockAndAllData();
+
+  if (isBlockInputColumns(blockInput) && !hasAllDataPreDownload) {
+    // columnSidecars could be undefined if gossip resulted in full block+columns so we don't download any
+    if (!columnSidecars) {
+      throw new DownloadByRootError({
+        code: DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE,
+        blockRoot: rootHex,
+        peer: peerIdStr,
+      });
+    }
+    for (const columnSidecar of columnSidecars) {
+      if (blockInput.hasColumn(columnSidecar.index)) {
+        // the same DataColumnSidecar may be added by gossip while waiting for fetchByRoot
+        // TODO(fulu): add metric here to track this
+        continue;
+      }
+
+      blockInput.addColumn({
+        columnSidecar,
+        blockRootHex: rootHex,
+        seenTimestampSec: Date.now() / 1000,
+        source: BlockInputSource.byRoot,
+        peerIdStr,
+      });
+
+      if (emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+        emitter.emit(routes.events.EventType.dataColumnSidecar, {
+          blockRoot: rootHex,
+          slot: blockInput.slot,
+          index: columnSidecar.index,
+          kzgCommitments: columnSidecar.kzgCommitments.map(toHex),
+        });
+      }
+    }
+  }
+
+  let status: PendingBlockInputStatus;
+  let timeSyncedSec: number | undefined;
+  if (blockInput.hasBlockAndAllData()) {
+    status = PendingBlockInputStatus.downloaded;
+    timeSyncedSec = Date.now() / 1000;
+  } else {
+    status = PendingBlockInputStatus.pending;
+  }
+
+  return {
+    result: {
+      status,
+      blockInput,
+      timeSyncedSec,
+      timeAddedSec: cacheItem.timeAddedSec,
+      peerIdStrings: cacheItem.peerIdStrings,
+    },
+    warnings,
+  };
+}
+
+export async function fetchByRoot({
+  config,
+  chain,
+  network,
+  peerMeta,
+  blockRoot,
+  cacheItem,
+}: FetchByRootProps): Promise<WarnResult<FetchByRootResponses, DownloadByRootError>> {
+  let block: SignedBeaconBlock;
+  let columnSidecarResult: WarnResult<fulu.DataColumnSidecar[], DownloadByRootError> | undefined;
+  const {peerId: peerIdStr} = peerMeta;
+
+  if (isPendingBlockInput(cacheItem)) {
+    if (cacheItem.blockInput.hasBlock()) {
+      block = cacheItem.blockInput.getBlock();
+    } else {
+      block = await fetchAndValidateBlock({
+        config,
+        network,
+        peerIdStr,
+        blockRoot,
+      });
+    }
+
+    const forkName = config.getForkName(block.message.slot);
+    if (!cacheItem.blockInput.hasAllData() && isBlockInputColumns(cacheItem.blockInput)) {
+      columnSidecarResult = await fetchAndValidateColumns({
+        config,
+        chain,
+        network,
+        peerMeta,
+        forkName: forkName as ForkPostFulu,
+        block: block as SignedBeaconBlock<ForkPostFulu>,
+        blockRoot,
+        missing: cacheItem.blockInput.getMissingSampledColumnMeta().missing,
+      });
+    }
+  } else {
+    block = await fetchAndValidateBlock({
+      config,
+      network,
+      peerIdStr,
+      blockRoot,
+    });
+    const forkName = config.getForkName(block.message.slot);
+    if (isForkPostGloas(forkName)) {
+      // Post-gloas block sync only needs the block body. Payload columns stay on the
+      // payload/envelope path and are queued independently in the network processor.
+    } else if (isForkPostFulu(forkName)) {
+      columnSidecarResult = await fetchAndValidateColumns({
+        config,
+        chain,
+        network,
+        peerMeta,
+        forkName,
+        blockRoot,
+        block: block as SignedBeaconBlock<ForkPostFulu>,
+        missing: network.custodyConfig.sampledColumns,
+      });
+    }
+  }
+
+  return {
+    result: {
+      block,
+      columnSidecars: columnSidecarResult?.result,
+    },
+    warnings: columnSidecarResult?.warnings ?? null,
+  };
+}
+
+export async function fetchAndValidateBlock({
+  config,
+  network,
+  peerIdStr,
+  blockRoot,
+}: Omit<FetchByRootAndValidateBlockProps, "chain">): Promise<SignedBeaconBlock> {
+  const response = await network.sendBeaconBlocksByRoot(peerIdStr, [blockRoot]);
+  const block = response.at(0);
+  if (!block) {
+    throw new DownloadByRootError({
+      code: DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE,
+      peer: prettyPrintPeerIdStr(peerIdStr),
+      blockRoot: toRootHex(blockRoot),
+    });
+  }
+  const receivedRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+  if (!byteArrayEquals(receivedRoot, blockRoot)) {
+    throw new DownloadByRootError(
+      {
+        code: DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT,
+        peer: prettyPrintPeerIdStr(peerIdStr),
+        requestedBlockRoot: toRootHex(blockRoot),
+        receivedBlockRoot: toRootHex(receivedRoot),
+      },
+      "block does not match requested root"
+    );
+  }
+  return block;
+}
+
+export async function fetchAndValidateColumns({
+  chain,
+  network,
+  peerMeta,
+  forkName,
+  block,
+  blockRoot,
+  missing,
+}: FetchByRootAndValidateColumnsProps): Promise<WarnResult<fulu.DataColumnSidecar[], DownloadByRootError>> {
+  const {peerId: peerIdStr} = peerMeta;
+  const slot = block.message.slot;
+  const blobCount = getBlobKzgCommitments(forkName, block).length;
+  if (blobCount === 0) {
+    return {result: [], warnings: null};
+  }
+
+  const blockRootHex = toRootHex(blockRoot);
+  const peerColumns = new Set(peerMeta.custodyColumns ?? []);
+  const requestedColumns = missing.filter((c) => peerColumns.has(c));
+  // TODO GLOAS: Extend by root column sync to support gloas.DataColumnSidecar and
+  // validate against block bid commitments instead of the fulu signed header shape
+  const columnSidecars = (await network.sendDataColumnSidecarsByRoot(peerIdStr, [
+    {blockRoot, columns: requestedColumns},
+  ])) as fulu.DataColumnSidecar[];
+
+  const warnings: DownloadByRootError[] = [];
+
+  // it's not acceptable if no sidecar is returned with >0 blobCount
+  if (columnSidecars.length === 0) {
+    throw new DownloadByRootError({
+      code: DownloadByRootErrorCode.NO_SIDECAR_RECEIVED,
+      peer: prettyPrintPeerIdStr(peerIdStr),
+      slot,
+      blockRoot: blockRootHex,
+    });
+  }
+
+  // it's ok if only some sidecars are returned, we will try to get the rest from other peers
+  const requestedColumnsSet = new Set(requestedColumns);
+  const returnedColumns = columnSidecars.map((c) => c.index);
+  const returnedColumnsSet = new Set(returnedColumns);
+  const missingIndices = requestedColumns.filter((c) => !returnedColumnsSet.has(c));
+  if (missingIndices.length > 0) {
+    warnings.push(
+      new DownloadByRootError(
+        {
+          code: DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED,
+          peer: prettyPrintPeerIdStr(peerIdStr),
+          slot,
+          blockRoot: blockRootHex,
+          missingIndices: prettyPrintIndices(missingIndices),
+        },
+        "Did not receive all of the requested columnSidecars"
+      )
+    );
+  }
+
+  // check extra returned columnSidecar
+  const extraIndices = returnedColumns.filter((c) => !requestedColumnsSet.has(c));
+  if (extraIndices.length > 0) {
+    warnings.push(
+      new DownloadByRootError(
+        {
+          code: DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED,
+          peer: prettyPrintPeerIdStr(peerIdStr),
+          slot,
+          blockRoot: blockRootHex,
+          invalidIndices: prettyPrintIndices(extraIndices),
+        },
+        "Received columnSidecars that were not requested"
+      )
+    );
+  }
+
+  // TODO GLOAS: Swap to fork-aware column validation once post-gloas by-root sync is implemented
+  await validateFuluBlockDataColumnSidecars(chain, slot, blockRoot, blobCount, columnSidecars, chain?.metrics?.peerDas);
+
+  return {result: columnSidecars, warnings: warnings.length > 0 ? warnings : null};
+}
+
+// TODO(fulu) not in use, remove?
+export async function fetchColumnsByRoot({
+  network,
+  peerMeta,
+  blockRoot,
+  missing,
+}: Pick<FetchByRootAndValidateColumnsProps, "network" | "peerMeta" | "blockRoot" | "missing">): Promise<
+  fulu.DataColumnSidecar[]
+> {
+  return (await network.sendDataColumnSidecarsByRoot(peerMeta.peerId, [
+    {blockRoot, columns: missing},
+  ])) as fulu.DataColumnSidecar[];
+}
+
+export enum DownloadByRootErrorCode {
+  MISMATCH_BLOCK_ROOT = "DOWNLOAD_BY_ROOT_ERROR_MISMATCH_BLOCK_ROOT",
+  EXTRA_SIDECAR_RECEIVED = "DOWNLOAD_BY_ROOT_ERROR_EXTRA_SIDECAR_RECEIVED",
+  NO_SIDECAR_RECEIVED = "DOWNLOAD_BY_ROOT_ERROR_NO_SIDECAR_RECEIVED",
+  NOT_ENOUGH_SIDECARS_RECEIVED = "DOWNLOAD_BY_ROOT_ERROR_NOT_ENOUGH_SIDECARS_RECEIVED",
+  INVALID_INCLUSION_PROOF = "DOWNLOAD_BY_ROOT_ERROR_INVALID_INCLUSION_PROOF",
+  INVALID_KZG_PROOF = "DOWNLOAD_BY_ROOT_ERROR_INVALID_KZG_PROOF",
+  MISSING_BLOCK_RESPONSE = "DOWNLOAD_BY_ROOT_ERROR_MISSING_BLOCK_RESPONSE",
+  MISSING_COLUMN_RESPONSE = "DOWNLOAD_BY_ROOT_ERROR_MISSING_COLUMN_RESPONSE",
+  Z = "DOWNLOAD_BY_ROOT_ERROR_Z",
+}
+export type DownloadByRootErrorType =
+  | {
+      code: DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT;
+      peer: string;
+      requestedBlockRoot: string;
+      receivedBlockRoot: string;
+    }
+  | {
+      code: DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED;
+      peer: string;
+      slot: Slot;
+      blockRoot: string;
+      invalidIndices: string;
+    }
+  | {
+      code: DownloadByRootErrorCode.NO_SIDECAR_RECEIVED;
+      peer: string;
+      slot: Slot;
+      blockRoot: string;
+    }
+  | {
+      code: DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED;
+      peer: string;
+      slot: Slot;
+      blockRoot: string;
+      missingIndices: string;
+    }
+  | {
+      code: DownloadByRootErrorCode.INVALID_INCLUSION_PROOF;
+      peer: string;
+      blockRoot: string;
+      sidecarIndex: number;
+    }
+  | {
+      code: DownloadByRootErrorCode.INVALID_KZG_PROOF;
+      peer: string;
+      blockRoot: string;
+    }
+  | {
+      code: DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE;
+      peer: string;
+      blockRoot: string;
+    }
+  | {
+      code: DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE;
+      peer: string;
+      blockRoot: string;
+    };
+
+export class DownloadByRootError extends LodestarError<DownloadByRootErrorType> {}

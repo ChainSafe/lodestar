@@ -1,6 +1,6 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkPreBellatrix, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPostGloas, ForkSeq, isForkPostDeneb} from "@lodestar/params";
 import {blindedOrFullBlockToHeader, computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AggregateAndProof,
@@ -11,7 +11,8 @@ import {
   RootHex,
   Slot,
   altair,
-  capella,
+  gloas,
+  heze,
   phase0,
   ssz,
   sszTypesFor,
@@ -33,7 +34,11 @@ export enum SignableMessageType {
   SYNC_COMMITTEE_SELECTION_PROOF = "SYNC_COMMITTEE_SELECTION_PROOF",
   SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF = "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
   VALIDATOR_REGISTRATION = "VALIDATOR_REGISTRATION",
-  BLS_TO_EXECUTION_CHANGE = "BLS_TO_EXECUTION_CHANGE",
+  EXECUTION_PAYLOAD_ENVELOPE = "EXECUTION_PAYLOAD_ENVELOPE",
+  PAYLOAD_ATTESTATION_MESSAGE = "PAYLOAD_ATTESTATION_MESSAGE",
+  PROPOSER_PREFERENCES = "PROPOSER_PREFERENCES",
+  BUILDER_REQUEST_AUTH = "BUILDER_REQUEST_AUTH",
+  INCLUSION_LIST = "INCLUSION_LIST",
 }
 
 const AggregationSlotType = new ContainerType({
@@ -75,7 +80,7 @@ export type SignableMessage =
   | {type: SignableMessageType.AGGREGATE_AND_PROOF; data: phase0.AggregateAndProof}
   | {type: SignableMessageType.AGGREGATE_AND_PROOF_V2; data: AggregateAndProof}
   | {type: SignableMessageType.ATTESTATION; data: phase0.AttestationData}
-  | {type: SignableMessageType.BLOCK_V2; data: BeaconBlock<ForkPreBellatrix> | BlindedBeaconBlock}
+  | {type: SignableMessageType.BLOCK_V2; data: BeaconBlock | BlindedBeaconBlock}
   | {type: SignableMessageType.DEPOSIT; data: ValueOf<typeof DepositType>}
   | {type: SignableMessageType.RANDAO_REVEAL; data: {epoch: Epoch}}
   | {type: SignableMessageType.VOLUNTARY_EXIT; data: phase0.VoluntaryExit}
@@ -83,7 +88,11 @@ export type SignableMessage =
   | {type: SignableMessageType.SYNC_COMMITTEE_SELECTION_PROOF; data: ValueOf<typeof SyncAggregatorSelectionDataType>}
   | {type: SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF; data: altair.ContributionAndProof}
   | {type: SignableMessageType.VALIDATOR_REGISTRATION; data: ValidatorRegistrationV1}
-  | {type: SignableMessageType.BLS_TO_EXECUTION_CHANGE; data: capella.BLSToExecutionChange};
+  | {type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE; data: gloas.ExecutionPayloadEnvelope}
+  | {type: SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE; data: gloas.PayloadAttestationData}
+  | {type: SignableMessageType.PROPOSER_PREFERENCES; data: gloas.ProposerPreferences}
+  | {type: SignableMessageType.BUILDER_REQUEST_AUTH; data: gloas.BuilderRequestAuth}
+  | {type: SignableMessageType.INCLUSION_LIST; data: heze.InclusionList};
 
 const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.AGGREGATION_SLOT]: true,
@@ -98,7 +107,11 @@ const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.SYNC_COMMITTEE_SELECTION_PROOF]: true,
   [SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF]: true,
   [SignableMessageType.VALIDATOR_REGISTRATION]: false,
-  [SignableMessageType.BLS_TO_EXECUTION_CHANGE]: true,
+  [SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE]: true,
+  [SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE]: true,
+  [SignableMessageType.PROPOSER_PREFERENCES]: true,
+  [SignableMessageType.BUILDER_REQUEST_AUTH]: false,
+  [SignableMessageType.INCLUSION_LIST]: true,
 };
 
 type Web3SignerSerializedRequest = {
@@ -147,12 +160,12 @@ export async function externalSignerPostSignature(
   requestObj.signingRoot = toRootHex(signingRoot);
 
   if (requiresForkInfo[signableMessage.type]) {
-    const forkInfo = config.getForkInfo(signingSlot);
+    const forkInfo = getForkInfoForSigning(config, signingSlot, signableMessage.type);
     requestObj.fork_info = {
       fork: {
         previous_version: toHex(forkInfo.prevVersion),
         current_version: toHex(forkInfo.version),
-        epoch: String(computeEpochAtSlot(signingSlot)),
+        epoch: String(forkInfo.epoch),
       },
       genesis_validators_root: toRootHex(config.genesisValidatorsRoot),
     };
@@ -271,7 +284,72 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
     case SignableMessageType.VALIDATOR_REGISTRATION:
       return {validator_registration: ssz.bellatrix.ValidatorRegistrationV1.toJson(payload.data)};
 
-    case SignableMessageType.BLS_TO_EXECUTION_CHANGE:
-      return {BLS_TO_EXECUTION_CHANGE: ssz.capella.BLSToExecutionChange.toJson(payload.data)};
+    case SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE: {
+      const slot = payload.data.payload.slotNumber;
+      return {
+        execution_payload_envelope: {
+          version: config.getForkName(slot).toUpperCase(),
+          data: config.getForkTypes<ForkPostGloas>(slot).ExecutionPayloadEnvelope.toJson(payload.data),
+        },
+      };
+    }
+
+    case SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE: {
+      const slot = payload.data.slot;
+      return {
+        payload_attestation_message: {
+          version: config.getForkName(slot).toUpperCase(),
+          data: config.getForkTypes<ForkPostGloas>(slot).PayloadAttestationData.toJson(payload.data),
+        },
+      };
+    }
+
+    case SignableMessageType.PROPOSER_PREFERENCES: {
+      const slot = payload.data.proposalSlot;
+      return {
+        proposer_preferences: {
+          version: config.getForkName(slot).toUpperCase(),
+          data: config.getForkTypes<ForkPostGloas>(slot).ProposerPreferences.toJson(payload.data),
+        },
+      };
+    }
+
+    case SignableMessageType.BUILDER_REQUEST_AUTH: {
+      const slot = payload.data.slot;
+      return {
+        builder_request_auth: {
+          version: config.getForkName(slot).toUpperCase(),
+          data: config.getForkTypes<ForkPostGloas>(slot).BuilderRequestAuth.toJson(payload.data),
+        },
+      };
+    }
+
+    case SignableMessageType.INCLUSION_LIST:
+      return {inclusion_list: ssz.heze.InclusionList.toJson(payload.data)};
   }
+}
+
+function getForkInfoForSigning(
+  config: BeaconConfig,
+  signingSlot: Slot,
+  messageType: SignableMessageType
+): {version: Uint8Array; prevVersion: Uint8Array; epoch: number} {
+  const forkInfo = config.getForkInfo(signingSlot);
+
+  if (messageType === SignableMessageType.VOLUNTARY_EXIT && isForkPostDeneb(forkInfo.name)) {
+    // Always uses Capella fork post-Deneb (EIP-7044)
+    const capellaFork = config.forks[ForkName.capella];
+    return {
+      version: capellaFork.version,
+      prevVersion: capellaFork.prevVersion,
+      epoch: capellaFork.epoch,
+    };
+  }
+
+  // Use the fork at the signing slot by default
+  return {
+    version: forkInfo.version,
+    prevVersion: forkInfo.prevVersion,
+    epoch: computeEpochAtSlot(signingSlot),
+  };
 }

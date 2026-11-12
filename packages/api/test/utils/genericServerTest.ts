@@ -1,6 +1,6 @@
-import {ChainForkConfig} from "@lodestar/config";
 import {FastifyInstance} from "fastify";
 import {MockInstance, afterAll, beforeAll, describe, expect, it} from "vitest";
+import {ChainForkConfig} from "@lodestar/config";
 import {ApiClientMethods, ApiRequestInit, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
 import {Endpoint} from "../../src/utils/index.js";
 import {ApplicationMethods, ApplicationResponse, FastifyRoutes} from "../../src/utils/server/index.js";

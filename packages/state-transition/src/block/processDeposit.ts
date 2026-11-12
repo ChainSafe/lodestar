@@ -1,7 +1,10 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
-import {BLSPubkey, Bytes32, UintNum64, electra, phase0, ssz} from "@lodestar/types";
-import {verifyMerkleBranch} from "@lodestar/utils";
-
+import {BeaconConfig} from "@lodestar/config";
+import {
+  BLS_VERIFIER_MAX_BATCH_SIZE,
+  BLS_VERIFIER_SET_TYPE,
+  type BlsSignatureSet,
+  verifySignatureSets,
+} from "@lodestar/native/bls-verifier";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   DOMAIN_DEPOSIT,
@@ -11,11 +14,23 @@ import {
   GENESIS_SLOT,
   MAX_EFFECTIVE_BALANCE,
 } from "@lodestar/params";
-
-import {BeaconConfig} from "@lodestar/config";
+import {BLSPubkey, Bytes32, UintNum64, electra, phase0, ssz} from "@lodestar/types";
+import {verifyMerkleBranch} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/index.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateElectra} from "../types.js";
-import {computeDomain, computeSigningRoot, getMaxEffectiveBalance, increaseBalance} from "../util/index.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  CachedBeaconStateElectra,
+  CachedBeaconStatePreHeze,
+} from "../types.js";
+import {
+  computeDomain,
+  computeSigningRoot,
+  createSingleSignatureSetFromComponents,
+  getMaxEffectiveBalance,
+  increaseBalance,
+  verifySignatureSet,
+} from "../util/index.js";
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances
@@ -23,7 +38,7 @@ import {computeDomain, computeSigningRoot, getMaxEffectiveBalance, increaseBalan
  *
  * PERF: Work depends on number of Deposit per block. On regular networks the average is 0 / block.
  */
-export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, deposit: phase0.Deposit): void {
+export function processDeposit(fork: ForkSeq, state: CachedBeaconStatePreHeze, deposit: phase0.Deposit): void {
   // verify the merkle branch
   if (
     !verifyMerkleBranch(
@@ -140,6 +155,10 @@ export function addValidatorToRegistry(
   state.balances.push(amount);
 }
 
+/**
+ * Verify a single deposit signature (proof of possession). See {@link verifyDepositSignatures} for
+ * the batch equivalent — the two MUST stay consistent (same domain, signing root, and checks).
+ */
 export function isValidDepositSignature(
   config: BeaconConfig,
   pubkey: Uint8Array,
@@ -157,12 +176,58 @@ export function isValidDepositSignature(
   const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
   const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
   try {
-    // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
-    const publicKey = PublicKey.fromBytes(pubkey, true);
-    const signature = Signature.fromBytes(depositSignature, true);
-
-    return verify(signingRoot, publicKey, signature);
+    return verifySignatureSet(createSingleSignatureSetFromComponents(pubkey, signingRoot, depositSignature));
   } catch (_e) {
     return false; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
   }
+}
+
+/**
+ * Batch equivalent of {@link isValidDepositSignature} — verify many deposit signatures at once.
+ * MUST stay consistent with `isValidDepositSignature`: same fork-agnostic deposit domain, same
+ * `DepositMessage` signing root, same group + infinity checks. Tries a single aggregate verify and,
+ * on failure, falls back to verifying each deposit individually so the valid deposits in a batch
+ * containing an invalid one are still identified. Returns a boolean per input deposit; `slot` is not
+ * part of the signature check.
+ *
+ * Used by the pre-Gloas builder-deposit pre-verify scanner (see `preVerifyBuilderDeposits.ts`).
+ */
+export function verifyDepositSignatures(config: BeaconConfig, deposits: electra.PendingDeposit[]): boolean[] {
+  const results = new Array<boolean>(deposits.length).fill(false);
+  // fork-agnostic domain since deposits are valid across forks, matching isValidDepositSignature
+  const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+
+  const signatureSets: BlsSignatureSet[] = deposits.map(({pubkey, withdrawalCredentials, amount, signature}) => ({
+    type: BLS_VERIFIER_SET_TYPE.single,
+    pubkey,
+    message: computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain),
+    signature,
+  }));
+
+  for (let chunkStart = 0; chunkStart < signatureSets.length; chunkStart += BLS_VERIFIER_MAX_BATCH_SIZE) {
+    const chunk = signatureSets.slice(chunkStart, chunkStart + BLS_VERIFIER_MAX_BATCH_SIZE);
+    let chunkValid: boolean;
+    try {
+      chunkValid = verifySignatureSets(chunk);
+    } catch (_) {
+      chunkValid = false;
+    }
+
+    if (chunkValid) {
+      results.fill(true, chunkStart, chunkStart + chunk.length);
+      continue;
+    }
+
+    for (let i = 0; i < chunk.length; i++) {
+      try {
+        if (verifySignatureSets([chunk[i]])) {
+          results[chunkStart + i] = true;
+        }
+      } catch (_) {
+        // Invalid point or malformed bytes leave this deposit false.
+      }
+    }
+  }
+
+  return results;
 }

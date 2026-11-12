@@ -20,6 +20,7 @@ import {
 } from "@lodestar/types";
 import {toPrintableUrl} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {DEFAULT_BUILDER_BID_DEADLINE_MS} from "./apiClient.js";
 import {ValidatorRegistration, ValidatorRegistrationCache} from "./cache.js";
 import {IExecutionBuilder} from "./interface.js";
 
@@ -29,6 +30,8 @@ export type ExecutionBuilderHttpOpts = {
   timeout?: number;
   faultInspectionWindow?: number;
   allowedFaults?: number;
+  /** Post-gloas only, time builders are given to provide a bid once block production starts, in milliseconds */
+  bidDeadline?: number;
 
   // Only required for merge-mock runs, no need to expose it to cli
   issueLocalFcUWithFeeRecipient?: string;
@@ -40,6 +43,7 @@ export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
   enabled: false,
   url: "http://localhost:8661",
   timeout: 12000,
+  bidDeadline: DEFAULT_BUILDER_BID_DEADLINE_MS,
 };
 
 export enum BuilderStatus {
@@ -68,6 +72,33 @@ export class NoBidReceived extends Error {
   constructor() {
     super("No bid received");
   }
+}
+
+/**
+ * Default circuit breaker parameters:
+ *
+ * SLOTS_PER_EPOCH <= FAULT_INSPECTION_WINDOW < 2 * SLOTS_PER_EPOCH (randomized at initialization)
+ * ALLOWED_FAULTS: FAULT_INSPECTION_WINDOW // 4
+ *
+ * e.g. on mainnet SLOTS_PER_EPOCH is 32, so FAULT_INSPECTION_WINDOW is between 32 and 63,
+ * and a window of 40 results in ALLOWED_FAULTS = 10.
+ *
+ * The randomized default window keeps the exact slots under inspection unpredictable per node,
+ * so a builder cannot tell when past faults age out of a given proposer's window and time
+ * withholding around trip or recovery points. Explicitly configured windows are clamped to at
+ * least SLOTS_PER_EPOCH, and configured allowedFaults is capped at the default ~25% budget.
+ */
+export function getFaultInspectionParams(opts: {faultInspectionWindow?: number; allowedFaults?: number}): {
+  faultInspectionWindow: number;
+  allowedFaults: number;
+} {
+  const faultInspectionWindow = Math.max(
+    opts.faultInspectionWindow ?? SLOTS_PER_EPOCH + Math.floor(Math.random() * SLOTS_PER_EPOCH),
+    SLOTS_PER_EPOCH
+  );
+  // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/4
+  const allowedFaults = Math.min(opts.allowedFaults ?? Infinity, Math.floor(faultInspectionWindow / 4));
+  return {faultInspectionWindow, allowedFaults};
 }
 
 /**
@@ -122,23 +153,9 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     this.registrations = new ValidatorRegistrationCache();
     this.issueLocalFcUWithFeeRecipient = opts.issueLocalFcUWithFeeRecipient;
 
-    /**
-     * Beacon clients select randomized values from the following ranges when initializing
-     * the circuit breaker (so at boot time and once for each unique boot).
-     *
-     * ALLOWED_FAULTS: between 1 and SLOTS_PER_EPOCH // 4
-     * FAULT_INSPECTION_WINDOW: between SLOTS_PER_EPOCH and 2 * SLOTS_PER_EPOCH
-     *
-     */
-    this.faultInspectionWindow = Math.max(
-      opts.faultInspectionWindow ?? SLOTS_PER_EPOCH + Math.floor(Math.random() * SLOTS_PER_EPOCH),
-      SLOTS_PER_EPOCH
-    );
-    // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/4
-    this.allowedFaults = Math.min(
-      opts.allowedFaults ?? Math.floor(this.faultInspectionWindow / 4),
-      Math.floor(this.faultInspectionWindow / 4)
-    );
+    const {faultInspectionWindow, allowedFaults} = getFaultInspectionParams(opts);
+    this.faultInspectionWindow = faultInspectionWindow;
+    this.allowedFaults = allowedFaults;
   }
 
   updateStatus(status: BuilderStatus): void {

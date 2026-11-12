@@ -59,14 +59,14 @@ export async function runCliCommand<T>(
 export function execCliCommand(
   command: string,
   args: string[],
-  opts?: ExecChildProcessOptions & {runWith?: "node" | "ts-node"}
+  opts?: ExecChildProcessOptions & {runWith?: "node" | "tsx"}
 ): Promise<string> {
   const commandPrefixed = nodeJsBinaryPath;
 
   const argsPrefixed =
-    opts?.runWith === "ts-node"
-      ? // node --loader ts-node/esm cli.ts
-        ["--loader", "ts-node/esm", repoRootPath(command), ...args]
+    opts?.runWith === "tsx"
+      ? // node --import tsx cli.ts
+        ["--import", "tsx", repoRootPath(command), ...args]
       : // node cli.js
         [repoRootPath(command), ...args];
 
@@ -84,14 +84,14 @@ export function execCliCommand(
 export async function spawnCliCommand(
   command: string,
   args: string[],
-  opts?: SpawnChildProcessOptions & {runWith?: "node" | "ts-node"}
+  opts?: SpawnChildProcessOptions & {runWith?: "node" | "tsx"}
 ): Promise<childProcess.ChildProcessWithoutNullStreams> {
   const commandPrefixed = nodeJsBinaryPath;
 
   const argsPrefixed =
-    opts?.runWith === "ts-node"
-      ? // node --loader ts-node/esm cli.ts
-        ["--loader", "ts-node/esm", repoRootPath(command), ...args]
+    opts?.runWith === "tsx"
+      ? // node --import tsx cli.ts
+        ["--import", "tsx", repoRootPath(command), ...args]
       : // node cli.js
         [repoRootPath(command), ...args];
 

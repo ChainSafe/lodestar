@@ -1,5 +1,5 @@
-import {fromHex as b, toHex} from "@lodestar/utils";
 import {describe, expect, it} from "vitest";
+import {fromHex as b, toHex} from "@lodestar/utils";
 import {computeForkDigest, createCachedGenesis, createChainForkConfig} from "../../src/index.js";
 
 // Test cases copied from https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.2/tests/core/pyspec/eth2spec/test/fulu/validator/test_compute_fork_digest.py

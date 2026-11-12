@@ -1,18 +1,18 @@
 import {
-  CachedBeaconStateAllForks,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
+  IBeaconStateView,
   StateHashTreeRootSource,
-  stateTransition,
 } from "@lodestar/state-transition";
-import {ErrorAborted, Logger} from "@lodestar/utils";
+import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
-import {byteArrayEquals} from "../../util/bytes.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
-import {BlockInput, ImportBlockOpts} from "./types.js";
+import {IBlockInput} from "./blockInput/index.js";
+import {ImportBlockOpts} from "./types.js";
 
 /**
  * Verifies 1 or more blocks are fully valid running the full state transition; from a linear sequence of blocks.
@@ -23,44 +23,55 @@ import {BlockInput, ImportBlockOpts} from "./types.js";
  *   - Check state root matches
  */
 export async function verifyBlocksStateTransitionOnly(
-  preState0: CachedBeaconStateAllForks,
-  blocks: BlockInput[],
+  preState0: IBeaconStateView,
+  blocks: IBlockInput[],
   dataAvailabilityStatuses: DataAvailabilityStatus[],
+  serializedCache: SerializedCache,
   logger: Logger,
   metrics: Metrics | null,
   validatorMonitor: ValidatorMonitor | null,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
-): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]; verifyStateTime: number}> {
-  const postStates: CachedBeaconStateAllForks[] = [];
+): Promise<{postStates: IBeaconStateView[]; proposerBalanceDeltas: number[]; verifyStateTime: number}> {
+  const postStates: IBeaconStateView[] = [];
   const proposerBalanceDeltas: number[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
-    const {block} = blocks[i];
+    const blockInput = blocks[i];
+    const block = blockInput.getBlock();
     const preState = i === 0 ? preState0 : postStates[i - 1];
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
     const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
-    const postState = stateTransition(
-      preState,
-      block,
-      {
-        // NOTE: Assume valid for now while sending payload to execution engine in parallel
-        // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
-        executionPayloadStatus: ExecutionPayloadStatus.valid,
-        dataAvailabilityStatus,
-        // false because it's verified below with better error typing
-        verifyStateRoot: false,
-        // if block is trusted don't verify proposer or op signature
-        verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
-        verifySignatures: !useBlsBatchVerify && !validSignatures,
-      },
-      {metrics, validatorMonitor}
-    );
+    let postState: IBeaconStateView;
+    try {
+      postState = preState.stateTransition(
+        {block, ssz: serializedCache.get(block)},
+        {
+          // NOTE: Assume valid for now while sending payload to execution engine in parallel
+          // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
+          executionPayloadStatus: ExecutionPayloadStatus.valid,
+          dataAvailabilityStatus,
+          // false because it's verified below with better error typing
+          verifyStateRoot: false,
+          // if block is trusted don't verify proposer or op signature
+          verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
+          verifySignatures: !useBlsBatchVerify && !validSignatures,
+          dontTransferCache: false,
+        },
+        {metrics: metrics?.stateTransition, validatorMonitor}
+      );
+    } catch (e) {
+      throw new BlockError(block, {
+        code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR,
+        blockRoot: blocks[i].blockRootHex,
+        error: e as Error,
+      });
+    }
 
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
       source: StateHashTreeRootSource.blockTransition,
@@ -83,7 +94,7 @@ export async function verifyBlocksStateTransitionOnly(
 
     // For metric block profitability
     const proposerIndex = block.message.proposerIndex;
-    proposerBalanceDeltas[i] = postState.balances.get(proposerIndex) - preState.balances.get(proposerIndex);
+    proposerBalanceDeltas[i] = postState.getBalance(proposerIndex) - preState.getBalance(proposerIndex);
 
     // If blocks are invalid in execution the main promise could resolve before this loop ends.
     // In that case stop processing blocks and return early.
@@ -99,7 +110,7 @@ export async function verifyBlocksStateTransitionOnly(
 
   const verifyStateTime = Date.now();
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
-    const slot = blocks[0].block.message.slot;
+    const slot = blocks[0].getBlock().message.slot;
     const recvToValidation = verifyStateTime / 1000 - opts.seenTimestampSec;
     const validationTime = recvToValidation - recvToValLatency;
 

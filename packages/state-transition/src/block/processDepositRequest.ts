@@ -1,19 +1,24 @@
-import {UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
+import {ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {electra, ssz} from "@lodestar/types";
+import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 
-import {CachedBeaconStateElectra} from "../types.js";
+export function processDepositRequest(
+  fork: ForkSeq,
+  state: CachedBeaconStateElectra | CachedBeaconStateGloas,
+  depositRequest: electra.DepositRequest
+): void {
+  const {pubkey, withdrawalCredentials, amount, signature} = depositRequest;
 
-export function processDepositRequest(state: CachedBeaconStateElectra, depositRequest: electra.DepositRequest): void {
-  if (state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
+  if (fork === ForkSeq.electra && state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
     state.depositRequestsStartIndex = depositRequest.index;
   }
 
-  // Create pending deposit
+  // Add validator deposits to the queue
   const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
-    pubkey: depositRequest.pubkey,
-    withdrawalCredentials: depositRequest.withdrawalCredentials,
-    amount: depositRequest.amount,
-    signature: depositRequest.signature,
+    pubkey,
+    withdrawalCredentials,
+    amount,
+    signature,
     slot: state.slot,
   });
   state.pendingDeposits.push(pendingDeposit);

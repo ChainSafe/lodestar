@@ -2,8 +2,7 @@ import {ContainerType, ListBasicType, UintNumberType, ValueOf} from "@chainsafe/
 import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ContextBytesType, DialOnlyProtocol, Encoding, Protocol, ProtocolHandler} from "../../src/types.js";
-import {getEmptyHandler} from "./messages.js";
-import {beaconConfig} from "./messages.js";
+import {beaconConfig, getEmptyHandler} from "./messages.js";
 
 const NumToStrReq = new ContainerType(
   {

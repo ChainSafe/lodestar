@@ -6,9 +6,10 @@ export interface CliExample {
   description?: string;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+// biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
 export interface CliOptionDefinition<T = any> extends Options {
-  example?: Omit<CliExample, "title">;
+  // Option examples are a description block only (e.g. an rc config snippet); no command line
+  example?: Omit<CliExample, "title" | "command">;
   // Ensure `type` property matches type of `T`
   type: T extends string
     ? "string"
@@ -28,7 +29,7 @@ export type CliCommandOptions<OwnArgs> = Required<{
       CliOptionDefinition<OwnArgs[K]> & (Required<Pick<Options, "default">> | {demandOption: true});
 }>;
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+// biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
 export interface CliCommand<OwnArgs = Record<never, never>, ParentArgs = Record<never, never>, R = any> {
   command: string;
   describe: string;
@@ -41,7 +42,7 @@ export interface CliCommand<OwnArgs = Record<never, never>, ParentArgs = Record<
   options?: CliCommandOptions<OwnArgs>;
   // 1st arg: any = free own sub command options
   // 2nd arg: subcommand parent options is = to this command options + parent options
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
   subcommands?: CliCommand<any, OwnArgs & ParentArgs>[];
   handler?: (args: OwnArgs & ParentArgs) => Promise<R>;
 }
@@ -52,7 +53,7 @@ export interface CliCommand<OwnArgs = Record<never, never>, ParentArgs = Record<
  * @param cliCommand
  */
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+// biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
 export function registerCommandToYargs(yargs: Argv, cliCommand: CliCommand<any, any>): void {
   yargs.command({
     command: cliCommand.command,

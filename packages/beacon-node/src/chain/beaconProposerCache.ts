@@ -1,22 +1,36 @@
 import {routes} from "@lodestar/api";
 import {Epoch} from "@lodestar/types";
-import {MapDef} from "@lodestar/utils";
 
 const PROPOSER_PRESERVE_EPOCHS = 2;
 
 export type ProposerPreparationData = routes.validator.ProposerPreparationData;
 
 export class BeaconProposerCache {
-  private readonly feeRecipientByValidatorIndex: MapDef<number, {epoch: Epoch; feeRecipient: string}>;
-  constructor(opts: {suggestedFeeRecipient: string}) {
-    this.feeRecipientByValidatorIndex = new MapDef(() => ({
-      epoch: 0,
-      feeRecipient: opts.suggestedFeeRecipient,
-    }));
+  private readonly feeRecipientByValidatorIndex: Map<number, {epoch: Epoch; feeRecipient?: string}>;
+  constructor(readonly opts: {suggestedFeeRecipient: string}) {
+    this.feeRecipientByValidatorIndex = new Map();
   }
 
   add(epoch: Epoch, {validatorIndex, feeRecipient}: ProposerPreparationData): void {
     this.feeRecipientByValidatorIndex.set(validatorIndex, {epoch, feeRecipient});
+  }
+
+  /**
+   * Track a validator that uses this node for duties, keeping the fee recipient it may have
+   * registered. Returns true if the validator was not tracked before.
+   */
+  track(epoch: Epoch, validatorIndex: number): boolean {
+    const entry = this.feeRecipientByValidatorIndex.get(validatorIndex);
+    if (entry !== undefined) {
+      entry.epoch = epoch;
+      return false;
+    }
+    this.feeRecipientByValidatorIndex.set(validatorIndex, {epoch});
+    return true;
+  }
+
+  has(validatorIndex: number): boolean {
+    return this.feeRecipientByValidatorIndex.has(validatorIndex);
   }
 
   prune(epoch: Epoch): void {
@@ -30,7 +44,7 @@ export class BeaconProposerCache {
   }
 
   getOrDefault(proposerIndex: number): string {
-    return this.feeRecipientByValidatorIndex.getOrDefault(proposerIndex).feeRecipient;
+    return this.feeRecipientByValidatorIndex.get(proposerIndex)?.feeRecipient ?? this.opts.suggestedFeeRecipient;
   }
 
   get(proposerIndex: number): string | undefined {

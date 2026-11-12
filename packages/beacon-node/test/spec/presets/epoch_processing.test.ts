@@ -1,21 +1,23 @@
 import path from "node:path";
+import {expect} from "vitest";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
+  CachedBeaconStatePreHeze,
   EpochTransitionCache,
   beforeProcessEpoch,
 } from "@lodestar/state-transition";
 import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
-import {expect} from "vitest";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {getConfig} from "../../utils/config.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {createSpecTestMetrics, expectNoProgressiveBalancesMismatches} from "../utils/progressiveBalances.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
@@ -26,7 +28,7 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
     const fork = state.config.getForkSeq(state.slot);
     epochFns.processEffectiveBalanceUpdates(fork, state, epochTransitionCache);
   },
-  eth1_data_reset: epochFns.processEth1DataReset,
+  eth1_data_reset: (state, cache) => epochFns.processEth1DataReset(state as CachedBeaconStatePreHeze, cache),
   historical_roots_update: epochFns.processHistoricalRootsUpdate,
   inactivity_updates: epochFns.processInactivityUpdates as EpochTransitionFn,
   justification_and_finalization: epochFns.processJustificationAndFinalization,
@@ -46,15 +48,20 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
   },
   historical_summaries_update: epochFns.processHistoricalSummariesUpdate as EpochTransitionFn,
   pending_deposits: epochFns.processPendingDeposits as EpochTransitionFn,
+  pending_deposits_churn: epochFns.processPendingDeposits as EpochTransitionFn,
   pending_consolidations: epochFns.processPendingConsolidations as EpochTransitionFn,
   proposer_lookahead: (state, epochTransitionCache) => {
     const fork = state.config.getForkSeq(state.slot);
     epochFns.processProposerLookahead(fork, state as CachedBeaconStateFulu, epochTransitionCache);
   },
+  ptc_window: (state, epochTransitionCache) => {
+    epochFns.processPtcWindow(state as CachedBeaconStateGloas, epochTransitionCache);
+  },
+  builder_pending_payments: epochFns.processBuilderPendingPayments as EpochTransitionFn,
 };
 
 /**
- * https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/epoch_processing/README.md
  */
 type EpochTransitionCacheingTestCase = {
   meta?: {bls_setting?: bigint};
@@ -78,19 +85,22 @@ const epochProcessing =
     }
 
     return {
-      testFunction: (testcase) => {
+      testFunction: async (testcase, _directoryName, testCaseName) => {
         const stateTB = testcase.pre.clone();
         const state = createCachedBeaconStateTest(stateTB, config);
+        const {metrics, register} = createSpecTestMetrics();
 
-        const epochTransitionCache = beforeProcessEpoch(state, {assertCorrectProgressiveBalances});
+        const epochTransitionCache = beforeProcessEpoch(state, metrics);
 
         if (testcase.post === undefined) {
           // If post.ssz_snappy is not value, the sub-transition processing is aborted
-          // https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md#postssz_snappy
+          // https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/epoch_processing/README.md#postssz_snappy
           expect(() => epochTransitionFn(state, epochTransitionCache)).toThrow();
         } else {
           epochTransitionFn(state, epochTransitionCache);
         }
+
+        await expectNoProgressiveBalancesMismatches(register, testCaseName);
 
         state.commit();
 

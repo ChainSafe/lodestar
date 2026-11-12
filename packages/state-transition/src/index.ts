@@ -1,75 +1,97 @@
-export * from "./stateTransition.js";
+export {type BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
+export {IndexedBuilderState} from "./block/indexedBuilderState.js";
+export {getAttestationParticipationStatus, processAttestationsAltair} from "./block/processAttestationsAltair.js";
+export {assertValidAttesterSlashing} from "./block/processAttesterSlashing.js";
+export {isValidBlsToExecutionChange} from "./block/processBlsToExecutionChange.js";
+// BeaconChain, to prepare new blocks
+export {becomesNewEth1Data} from "./block/processEth1Data.js";
+export {assertValidProposerSlashing} from "./block/processProposerSlashing.js";
+// BeaconChain validation
+export {
+  VoluntaryExitValidity,
+  getVoluntaryExitValidity,
+  isValidVoluntaryExit,
+} from "./block/processVoluntaryExit.js";
+// Withdrawals for new blocks
+export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
+export {BlockProcessStep, ProcessOperationsStep, ProposerRewardType} from "./block/types.js";
+export {
+  type EffectiveBalanceIncrements,
+  getEffectiveBalanceIncrementsWithLen,
+  getEffectiveBalanceIncrementsZeroed,
+} from "./cache/effectiveBalanceIncrements.js";
+export {
+  EpochCache,
+  type EpochCacheImmutableData,
+  createEmptyEpochCacheImmutableData,
+} from "./cache/epochCache.js";
+export {type EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
+// Main state caches
+export {
+  type BeaconStateCache,
+  createCachedBeaconState,
+  isCachedBeaconState,
+  isStateBalancesNodesPopulated,
+  isStateValidatorsNodesPopulated,
+  loadCachedBeaconState,
+} from "./cache/stateCache.js";
+export {type SyncCommitteeCache, SyncCommitteeCacheEmpty} from "./cache/syncCommitteeCache.js";
 export * from "./constants/index.js";
-export * from "./util/index.js";
-export * from "./signatureSets/index.js";
 export type {EpochTransitionStep} from "./epoch/index.js";
 export {type BeaconStateTransitionMetrics, getMetrics} from "./metrics.js";
-
+export * from "./rewards/index.js";
+export * from "./signatureSets/index.js";
+export * from "./stateTransition.js";
+export {BeaconStateView} from "./stateView/beaconStateView.js";
+export {
+  type BlockSTFInput,
+  type ComputeNewStateRootResult,
+  type IBeaconStateView,
+  type IBeaconStateViewAltair,
+  type IBeaconStateViewBellatrix,
+  type IBeaconStateViewCapella,
+  type IBeaconStateViewDeneb,
+  type IBeaconStateViewElectra,
+  type IBeaconStateViewFulu,
+  type IBeaconStateViewGloas,
+  type IBeaconStateViewHeze,
+  type IBeaconStateViewNative,
+  isStatePostAltair,
+  isStatePostBellatrix,
+  isStatePostCapella,
+  isStatePostDeneb,
+  isStatePostElectra,
+  isStatePostFulu,
+  isStatePostGloas,
+  isStatePostHeze,
+} from "./stateView/interface.js";
+export {NativeBeaconStateView} from "./stateView/nativeBeaconStateView.js";
+export {createBeaconStateView, createBeaconStateViewForHistoricalRegen} from "./stateView/stateViewFactory.js";
 export type {
-  CachedBeaconStatePhase0,
-  CachedBeaconStateAltair,
-  CachedBeaconStateBellatrix,
-  CachedBeaconStateCapella,
-  CachedBeaconStateDeneb,
-  CachedBeaconStateElectra,
-  CachedBeaconStateFulu,
-  CachedBeaconStateAllForks,
-  CachedBeaconStateExecutions,
-  // Non-cached states
-  BeaconStatePhase0,
+  BeaconStateAllForks,
   BeaconStateAltair,
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateDeneb,
   BeaconStateElectra,
-  BeaconStateFulu,
-  BeaconStateAllForks,
   BeaconStateExecutions,
+  BeaconStateFulu,
+  BeaconStateGloas,
+  BeaconStateHeze,
+  // Non-cached states
+  BeaconStatePhase0,
+  BeaconStatePreHeze,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  CachedBeaconStateBellatrix,
+  CachedBeaconStateCapella,
+  CachedBeaconStateDeneb,
+  CachedBeaconStateElectra,
+  CachedBeaconStateExecutions,
+  CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
+  CachedBeaconStateHeze,
+  CachedBeaconStatePhase0,
+  CachedBeaconStatePreHeze,
 } from "./types.js";
-
-// Main state caches
-export {
-  createCachedBeaconState,
-  loadCachedBeaconState,
-  type BeaconStateCache,
-  isCachedBeaconState,
-  isStateBalancesNodesPopulated,
-  isStateValidatorsNodesPopulated,
-} from "./cache/stateCache.js";
-export {
-  EpochCache,
-  type EpochCacheImmutableData,
-  createEmptyEpochCacheImmutableData,
-  EpochCacheError,
-  EpochCacheErrorCode,
-} from "./cache/epochCache.js";
-export {type EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
-
-// Aux data-structures
-export {type Index2PubkeyCache} from "./cache/pubkeyCache.js";
-
-export {
-  type EffectiveBalanceIncrements,
-  getEffectiveBalanceIncrementsZeroed,
-  getEffectiveBalanceIncrementsWithLen,
-} from "./cache/effectiveBalanceIncrements.js";
-
-// BeaconChain validation
-export {isValidVoluntaryExit} from "./block/processVoluntaryExit.js";
-export {isValidBlsToExecutionChange} from "./block/processBlsToExecutionChange.js";
-export {assertValidProposerSlashing} from "./block/processProposerSlashing.js";
-export {assertValidAttesterSlashing} from "./block/processAttesterSlashing.js";
-export {
-  ExecutionPayloadStatus,
-  DataAvailabilityStatus,
-  type BlockExternalData,
-} from "./block/externalData.js";
-
-// BeaconChain, to prepare new blocks
-export {becomesNewEth1Data} from "./block/processEth1Data.js";
-// Withdrawals for new blocks
-export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
-
-export {getAttestationParticipationStatus, processAttestationsAltair} from "./block/processAttestationsAltair.js";
-
-export {ProposerRewardType} from "./block/types.js";
+export * from "./util/index.js";

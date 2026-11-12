@@ -1,13 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
-import {ENR, SignableENR} from "@chainsafe/enr";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {multiaddr} from "@multiformats/multiaddr";
+import {describe, expect, it} from "vitest";
+import {ENR, SignableENR} from "@chainsafe/enr";
 import {chainConfigToJson} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {LogLevel} from "@lodestar/utils";
-import {multiaddr} from "@multiformats/multiaddr";
-import {describe, expect, it} from "vitest";
 import {beaconHandlerInit} from "../../../src/cmds/beacon/handler.js";
 import {initPrivateKeyAndEnr, isLocalMultiAddr} from "../../../src/cmds/beacon/initPeerIdAndEnr.js";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
@@ -18,6 +18,35 @@ import {testFilesDir, testLogger} from "../../utils.js";
 describe("cmds / beacon / args handler", () => {
   // Make tests faster skipping a network call
   process.env.SKIP_FETCH_NETWORK_BOOTNODES = "true";
+
+  it.each([
+    ["mainnet", false],
+    ["gnosis", true],
+    [undefined, false],
+    ["sepolia", true],
+    ["hoodi", true],
+    ["plataberget", true],
+    ["chiado", true],
+    ["ephemery", true],
+    ["dev", true],
+  ] as const)("sets Identify version disclosure for %s to %s", async (network, expected) => {
+    // Keep the process-wide test preset while exercising the network-name policy.
+    const paramsFile = path.join(testFilesDir, "identify_preset.yaml");
+    fs.writeFileSync(paramsFile, JSON.stringify({PRESET_BASE: chainConfig.PRESET_BASE}));
+    const {options, version} = await runBeaconHandlerInit({network, paramsFile, discv5: false});
+    expect(options.network.advertiseVersion).toBe(expected);
+    expect(options.network.version).toBe(version);
+    expect(options.api.version).toBe(version);
+    expect(options.executionBuilder.userAgent).toBe(`Lodestar/${version}`);
+  });
+
+  it.each(["mainnet", "hoodi", "dev"] as const)("keeps private mode on %s", async (network) => {
+    const {options} = await runBeaconHandlerInit({network, discv5: false, private: true});
+    expect(options.network.private).toBe(true);
+    expect(options.api.private).toBe(true);
+    expect(options.network.version).toBeUndefined();
+    expect(options.network.advertiseVersion).not.toBe(true);
+  });
 
   it("Merge bootnodes from file and CLI arg", async () => {
     const enr1 =
@@ -78,15 +107,6 @@ describe("cmds / beacon / args handler", () => {
     expect(privateKey.equals(prevPk)).toBe(true);
   });
 
-  it("Set known deposit contract", async () => {
-    const {options} = await runBeaconHandlerInit({
-      network: "mainnet",
-    });
-
-    // Okay to hardcode, since this value will never change
-    expect(options.eth1.depositContractDeployBlock).toBe(11052984);
-  });
-
   it("Apply custom network name from config file", async () => {
     const networkName = "test-network";
     const config = {...chainConfig};
@@ -95,12 +115,39 @@ describe("cmds / beacon / args handler", () => {
     const paramsFile = path.join(testFilesDir, "custom_config.yaml");
     fs.writeFileSync(paramsFile, JSON.stringify(chainConfigToJson(config)));
 
-    const {network} = await runBeaconHandlerInit({
+    const {network, options} = await runBeaconHandlerInit({
       paramsFile,
     });
 
     // Okay to hardcode, since this value will never change
     expect(network).toBe(networkName);
+    expect(options.network.advertiseVersion).toBe(true);
+  });
+
+  it("accepts native Gloas and rejects a scheduled unsupported Heze fork", async () => {
+    const paramsFile = path.join(testFilesDir, "gloas_config.yaml");
+    fs.writeFileSync(paramsFile, JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100})));
+
+    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).resolves.toBeDefined();
+    fs.writeFileSync(
+      paramsFile,
+      JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100, HEZE_FORK_EPOCH: 200}))
+    );
+    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).rejects.toThrow(
+      "--chain.nativeStateTransition does not support Heze"
+    );
+    await expect(runBeaconHandlerInit({paramsFile})).resolves.toBeDefined();
+    await expect(runBeaconHandlerInit({"chain.nativeStateTransition": true})).resolves.toBeDefined();
+  });
+
+  it("resolves the data column directory independently of the database directory", async () => {
+    const customDbDir = path.join(testFilesDir, "custom-db");
+    const defaultResult = await runBeaconHandlerInit({dbDir: customDbDir});
+    expect(defaultResult.beaconPaths.dataColumnDir).toBe(path.join(testFilesDir, "data_columns"));
+
+    const customDataColumnDir = path.join(testFilesDir, "custom-columns");
+    const customResult = await runBeaconHandlerInit({dataColumnDir: customDataColumnDir});
+    expect(customResult.beaconPaths.dataColumnDir).toBe(customDataColumnDir);
   });
 });
 

@@ -1,9 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
-import {ForkName} from "@lodestar/params";
+import {beforeEach, describe, it} from "vitest";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
-import {describe, it} from "vitest";
+import {nativeStateTransition} from "./stateTransition.js";
 import {RunnerType, TestRunner} from "./types.js";
+
+let nativeStateTransitionPromise: Promise<typeof import("@lodestar/native/state-transition")> | null = null;
+
+async function resetNativeStateTransition(): Promise<void> {
+  nativeStateTransitionPromise ??= import("@lodestar/native/state-transition");
+  const nativeStateTransition = await nativeStateTransitionPromise;
+  nativeStateTransition.deinitReusedEpochTransitionCache();
+}
 
 const ARTIFACT_FILENAMES = new Set([
   // MacOS artifacts
@@ -15,6 +25,7 @@ const ARTIFACT_FILENAMES = new Set([
 
 export interface SkipOpts {
   skippedTestSuites?: RegExp[];
+  /** Matched against `<fork>/<runner>/<handler>/<suite>/<testCase>` */
   skippedTests?: RegExp[];
   skippedForks?: string[];
   skippedRunners?: string[];
@@ -30,9 +41,11 @@ export interface SkipOpts {
 const coveredTestRunners = [
   "light_client",
   "epoch_processing",
+  "fast_confirmation",
   "finality",
   "fork",
   "fork_choice",
+  "fork_choice_compliance",
   "sync",
   "fork",
   "genesis",
@@ -59,19 +72,41 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip7594", "eip7732", "eip7805"],
-  // TODO: capella
-  // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
-  // Skip them for now to enable subsequently
+  skippedForks: [],
   skippedTestSuites: [
-    /^capella\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
-    /^deneb\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
-    /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
-    /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
+    // Merge transition tests are skipped because we no longer support performing the merge transition.
+    // All networks have already completed the merge, so this code path is no longer needed.
+    /^bellatrix\/fork_choice\/on_merge_block\/.*/,
     /^.+\/light_client\/data_collection\/.*/,
+    // The gossip harness still lacks coverage for parent validation and voluntary-exit anchors.
+    /^.+\/networking\/gossip_beacon_block\/.*$/,
+    /^.+\/networking\/gossip_voluntary_exit\/.*$/,
+    // Deneb+ epoch-boundary attestations and Electra+ single attestations need harness updates.
+    /^(deneb|electra|fulu|gloas|heze)\/networking\/gossip_beacon_(attestation|aggregate_and_proof)\/.*$/,
+    // Ignore the partial data column container additions for now. Unskip them when
+    // cell level DAS is ready
+    /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
+    /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
+    /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
+    /^heze\/fork_choice_compliance\/.*/,
   ],
-  skippedTests: [],
+  skippedTests: [
+    // deneb..electra fork_choice/on_block negative vectors whose only invalid property is the blob data.
+    // Legacy blob sidecars are not tracked for these forks, so the runner does not load the blobs and the
+    // block imports successfully. See https://github.com/ChainSafe/lodestar/issues/9956
+    /^(deneb|electra)\/fork_choice\/on_block\/pyspec_tests\/invalid_(incorrect_proof|data_unavailable|wrong_blobs_length|wrong_proofs_length)$/,
+  ],
   skippedRunners: [],
+  // Gossip handlers not implemented in the spec runner.
+  skippedHandlers: [
+    "gossip_blob_sidecar",
+    "gossip_data_column_sidecar",
+    "gossip_partial_data_column_sidecar",
+    "gossip_execution_payload_bid",
+    "gossip_execution_payload_envelope",
+    "gossip_payload_attestation_message",
+    "gossip_proposer_preferences",
+  ],
 };
 
 /**
@@ -94,11 +129,10 @@ export const defaultSkipOpts: SkipOpts = {
  *       / config  / fork   / test runner      / test handler / test suite   / test case
  *
  * tests / general / phase0 / bls              / aggregate    / small        / aggregate_na_signatures/data.yaml
- * tests / general / phase0 / ssz_generic      / basic_vector / valid        / vec_bool_1_max/meta.yaml
  * tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
  * tests / mainnet / altair / fork             / fork         / pyspec_tests / altair_fork_random_0/meta.yaml
  * ```
- * Ref: https://github.com/ethereum/consensus-specs/tree/dev/tests/formats#test-structure
+ * Ref: https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/README.md#test-structure
  */
 export function specTestIterator(
   configDirpath: string,
@@ -106,13 +140,15 @@ export function specTestIterator(
   opts: SkipOpts = defaultSkipOpts
 ): void {
   for (const forkStr of readdirSyncSpec(configDirpath)) {
+    const fork = forkStr as ForkName;
     if (
       opts?.skippedForks?.includes(forkStr) ||
+      // lodestar-z supports state transition through Gloas.
+      (nativeStateTransition && ForkSeq[fork] > ForkSeq.gloas) ||
       (process.env.SPEC_FILTER_FORK && forkStr !== process.env.SPEC_FILTER_FORK)
     ) {
       continue;
     }
-    const fork = forkStr as ForkName;
 
     const forkDirpath = path.join(configDirpath, forkStr);
     for (const testRunnerName of readdirSyncSpec(forkDirpath)) {
@@ -152,6 +188,7 @@ export function specTestIterator(
             // Specific logic for ssz_static since it has one extra level of directories
             if (testRunner.type === RunnerType.custom) {
               describe(testId, () => {
+                beforeEach(() => pubkeyCache.reset());
                 testRunner.fn(fork, testHandler, testSuite, testSuiteDirpath);
               });
             }
@@ -159,12 +196,29 @@ export function specTestIterator(
             // Generic testRunner
             else {
               const {testFunction, options} = testRunner.fn(fork, testHandler, testSuite);
-              if (opts.skippedTests && options.shouldSkip === undefined) {
-                options.shouldSkip = (_testCase: any, name: string, _index: number): boolean => {
-                  return opts?.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false;
+              if (opts.skippedTests) {
+                // Compose with any runner-local shouldSkip — overwriting it would silently
+                // disable SkipOpts.skippedTests for runners that define their own (fork_choice).
+                const runnerShouldSkip = options.shouldSkip;
+                options.shouldSkip = (testCase: any, name: string, index: number): boolean => {
+                  return (
+                    (runnerShouldSkip?.(testCase, name, index) ?? false) ||
+                    (opts.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false)
+                  );
                 };
               }
-              describeDirectorySpecTest(testId, testSuiteDirpath, testFunction, options);
+              describeDirectorySpecTest(
+                testId,
+                testSuiteDirpath,
+                async (testCase, directoryName, testCaseName) => {
+                  if (nativeStateTransition) {
+                    await resetNativeStateTransition();
+                  }
+                  pubkeyCache.reset();
+                  return testFunction(testCase, directoryName, testCaseName);
+                },
+                options
+              );
             }
           }
         }

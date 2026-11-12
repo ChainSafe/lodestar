@@ -9,7 +9,7 @@ type Metadata = fulu.Metadata & {custodyGroups: CustodyIndex[]; samplingGroups: 
 export type PeerSyncMeta = {
   peerId: PeerIdStr;
   client: string;
-  custodyGroups: CustodyIndex[];
+  custodyColumns: CustodyIndex[];
   earliestAvailableSlot?: Slot;
 };
 

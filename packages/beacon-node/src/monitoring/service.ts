@@ -1,5 +1,5 @@
-import {ErrorAborted, Histogram, Logger, TimeoutError, fetch} from "@lodestar/utils";
 import {Registry} from "prom-client";
+import {ErrorAborted, Histogram, Logger, TimeoutError, fetch} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../metrics/index.js";
 import {createClientStats} from "./clientStats.js";
 import {MonitoringOptions, defaultMonitoringOptions} from "./options.js";
@@ -89,9 +89,9 @@ export class MonitoringService {
   }
 
   /**
-   * Stop sending client stats
+   * Stop sending client stats and wait for any pending request to complete
    */
-  close(): void {
+  async close(): Promise<void> {
     if (this.status === Status.Closed) return;
     this.status = Status.Closed;
 
@@ -101,8 +101,9 @@ export class MonitoringService {
     if (this.monitoringInterval) {
       clearTimeout(this.monitoringInterval);
     }
-    if (this.pendingRequest) {
+    if (this.pendingRequest !== undefined) {
       this.fetchAbortController?.abort(FetchAbortReason.Close);
+      await this.pendingRequest;
     }
   }
 

@@ -27,7 +27,6 @@ export function parseBeaconNodeArgs(args: BeaconNodeArgs): RecursivePartial<IBea
     api: api.parseArgs(args),
     chain: chain.parseArgs(args),
     // db: {},
-    eth1: eth1.parseArgs(args),
     executionEngine: execution.parseArgs(args),
     executionBuilder: builder.parseArgs(args),
     metrics: metrics.parseArgs(args),

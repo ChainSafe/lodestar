@@ -1,11 +1,5 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {
-  CachedBeaconStateAllForks,
-  EffectiveBalanceIncrements,
-  computeStartSlotAtEpoch,
-  getBlockRootAtSlot,
-  getEffectiveBalanceIncrementsZeroInactive,
-} from "@lodestar/state-transition";
+import {EffectiveBalanceIncrements, IBeaconStateView, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 
@@ -29,11 +23,11 @@ export class CheckpointBalancesCache {
    * `state.current_epoch`. If there is not already some entry for the given block root, then
    * add the effective balances from the `state` to the cache.
    */
-  processState(blockRootHex: RootHex, state: CachedBeaconStateAllForks): void {
-    const epoch = state.epochCtx.epoch;
+  processState(blockRootHex: RootHex, state: IBeaconStateView): void {
+    const epoch = state.epoch;
     const epochBoundarySlot = computeStartSlotAtEpoch(epoch);
     const epochBoundaryRoot =
-      epochBoundarySlot === state.slot ? blockRootHex : toRootHex(getBlockRootAtSlot(state, epochBoundarySlot));
+      epochBoundarySlot === state.slot ? blockRootHex : toRootHex(state.getBlockRootAtSlot(epochBoundarySlot));
 
     const index = this.items.findIndex((item) => item.epoch === epoch && item.rootHex === epochBoundaryRoot);
     if (index === -1) {
@@ -41,7 +35,7 @@ export class CheckpointBalancesCache {
         this.items.shift();
       }
       // expect to reach this once per epoch
-      this.items.push({epoch, rootHex: epochBoundaryRoot, balances: getEffectiveBalanceIncrementsZeroInactive(state)});
+      this.items.push({epoch, rootHex: epochBoundaryRoot, balances: state.getEffectiveBalanceIncrementsZeroInactive()});
     }
   }
 

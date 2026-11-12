@@ -15,16 +15,22 @@ export interface NetworkOptions
     Omit<Eth2GossipsubOpts, "disableLightClientServer"> {
   localMultiaddrs: string[];
   bootMultiaddrs?: string[];
+  /**
+   * Direct peers for GossipSub - these peers maintain permanent mesh connections without GRAFT/PRUNE.
+   * Format: multiaddr strings with peer ID, e.g., "/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAmKLhW7..."
+   * Both peers must configure each other as direct peers for the feature to work properly.
+   */
+  directPeers?: string[];
   subscribeAllSubnets?: boolean;
   mdns?: boolean;
   connectToDiscv5Bootnodes?: boolean;
   version?: string;
+  /** Include the version in libp2p Identify. Private mode takes precedence. */
+  advertiseVersion?: boolean;
   private?: boolean;
   useWorker?: boolean;
   maxYoungGenerationSizeMb?: number;
   disableLightClientServer?: boolean;
-  supernode?: boolean;
-
   /**
    * During E2E tests observe a lot of following `missing stream`:
    *
@@ -43,12 +49,20 @@ export interface NetworkOptions
    * We need to increase this only for the testing purpose
    */
   disconnectThreshold?: number;
+  quic?: boolean;
+  tcp?: boolean;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
-  maxPeers: 110, // Allow some room above targetPeers for new inbound peers
-  targetPeers: 100,
-  localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
+  maxPeers: 210, // Allow some room above targetPeers for new inbound peers
+  targetPeers: 200,
+  // In CLI usage this is typically overridden; when unset it serves as a fallback default (e.g. programmatic usage/tests)
+  localMultiaddrs: [
+    "/ip4/0.0.0.0/udp/9001/quic-v1",
+    "/ip6/::/udp/9001/quic-v1",
+    "/ip4/0.0.0.0/tcp/9000",
+    "/ip6/::/tcp/9000",
+  ],
   bootMultiaddrs: [],
   /** disabled by default */
   discv5: null,
@@ -60,11 +74,18 @@ export const defaultNetworkOptions: NetworkOptions = {
   maxYoungGenerationSizeMb: 152,
   // subscribe 2 slots before aggregator dutied slot to get stable mesh peers as monitored on goerli
   slotsToSubscribeBeforeAggregatorDuty: 2,
+  // up to the max number of attestations per block
+  slotsToSubscribeBeforeProposalDuty: 8,
   // This will enable the light client server by default
   disableLightClientServer: false,
+  quic: true,
+  tcp: true,
   // specific option for fulu
   //   - this is the same to TARGET_SUBNET_PEERS
   //   - for fusaka-devnets, we have 25-30 peers per subnet
   //   - for public testnets or mainnet, average number of peers per group is SAMPLES_PER_SLOT * targetPeers / NUMBER_OF_CUSTODY_GROUPS = 6.25 so this should not be an issue
   targetGroupPeers: 6,
+  // Keep this high enough for normal req/resp bursts on stable connections.
+  // libp2p-mplex default (5) is too low and can cause frequent connection resets.
+  disconnectThreshold: 50,
 };

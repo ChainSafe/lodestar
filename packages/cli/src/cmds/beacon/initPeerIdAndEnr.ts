@@ -1,14 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {SignableENR} from "@chainsafe/enr";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import type {PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
-import {Logger} from "@lodestar/utils";
 import {Multiaddr} from "@multiformats/multiaddr";
+import {SignableENR} from "@chainsafe/enr";
+import {defaultOptions} from "@lodestar/beacon-node";
+import {Logger} from "@lodestar/utils";
 import {exportToJSON, readPrivateKey} from "../../config/index.js";
-import {parseListenArgs} from "../../options/beaconNodeOptions/network.js";
+import {hasGlobalIPv6Address, parseListenArgs} from "../../options/beaconNodeOptions/network.js";
 import {writeFile600Perm} from "../../util/file.js";
 import {BeaconArgs} from "./options.js";
 
@@ -18,26 +19,18 @@ import {BeaconArgs} from "./options.js";
 export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
   if (!multiaddr) return false;
 
-  const protoNames = multiaddr.protoNames();
-  if (protoNames.length !== 2 && protoNames[1] !== "udp") {
+  const components = multiaddr.getComponents();
+  if (components.length !== 2 && components[1].name !== "udp") {
     throw new Error("Invalid udp multiaddr");
   }
 
   const interfaces = os.networkInterfaces();
-  const tuples = multiaddr.tuples();
-  const family = tuples[0][0];
-  const isIPv4: boolean = family === 4;
-  const ip = tuples[0][1];
+  const family = components[0].name === "ip4" ? 4 : 6;
+  const ipStr = components[0].value;
 
-  if (!ip) {
+  if (!ipStr) {
     return false;
   }
-
-  const ipStr = isIPv4
-    ? Array.from(ip).join(".")
-    : Array.from(Uint16Array.from(ip))
-        .map((n) => n.toString(16))
-        .join(":");
 
   for (const networkInterfaces of Object.values(interfaces)) {
     for (const networkInterface of networkInterfaces || []) {
@@ -57,7 +50,7 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
 /**
  * Only update the enr if the value has changed
  */
-function maybeUpdateEnr<T extends "ip" | "tcp" | "udp" | "ip6" | "tcp6" | "udp6">(
+function maybeUpdateEnr<T extends "ip" | "tcp" | "udp" | "quic" | "ip6" | "tcp6" | "udp6" | "quic6">(
   enr: SignableENR,
   key: T,
   value: SignableENR[T] | undefined
@@ -74,14 +67,27 @@ export function overwriteEnrWithCliArgs(
   opts?: {newEnr?: boolean; bootnode?: boolean}
 ): void {
   const preSeq = enr.seq;
-  const {port, discoveryPort, port6, discoveryPort6} = parseListenArgs(args);
+  const {port, discoveryPort, quicPort, listenAddress6, port6, discoveryPort6, quicPort6} = parseListenArgs(args);
+  const tcp = args.tcp ?? defaultOptions.network.tcp;
+  const quic = args.quic ?? defaultOptions.network.quic;
+  const ipv6Keys = ["ip6", "udp6", "tcp6", "quic6"] as const;
+  const advertiseIp6 = listenAddress6 !== undefined || ipv6Keys.some((key) => args[`enr.${key}`] !== undefined);
+  if (!advertiseIp6 && ipv6Keys.some((key) => enr.kvs.has(key))) {
+    for (const key of ipv6Keys) {
+      enr.delete(key);
+    }
+    logger.warn("Cleared IPv6 fields from ENR because no IPv6 listener is configured");
+  }
+
   maybeUpdateEnr(enr, "ip", args["enr.ip"] ?? enr.ip);
   maybeUpdateEnr(enr, "ip6", args["enr.ip6"] ?? enr.ip6);
   maybeUpdateEnr(enr, "udp", args["enr.udp"] ?? discoveryPort ?? enr.udp);
   maybeUpdateEnr(enr, "udp6", args["enr.udp6"] ?? discoveryPort6 ?? enr.udp6);
   if (!opts?.bootnode) {
-    maybeUpdateEnr(enr, "tcp", args["enr.tcp"] ?? port ?? enr.tcp);
-    maybeUpdateEnr(enr, "tcp6", args["enr.tcp6"] ?? port6 ?? enr.tcp6);
+    maybeUpdateEnr(enr, "tcp", tcp ? (args["enr.tcp"] ?? port ?? enr.tcp) : undefined);
+    maybeUpdateEnr(enr, "tcp6", tcp ? (args["enr.tcp6"] ?? port6 ?? enr.tcp6) : undefined);
+    maybeUpdateEnr(enr, "quic", quic ? (args["enr.quic"] ?? quicPort ?? enr.quic) : undefined);
+    maybeUpdateEnr(enr, "quic6", quic ? (args["enr.quic6"] ?? quicPort6 ?? enr.quic6) : undefined);
   }
 
   function testMultiaddrForLocal(mu: Multiaddr, ip4: boolean): void {
@@ -92,17 +98,19 @@ export function overwriteEnrWithCliArgs(
       }
     } else {
       if (!isLocal) {
-        logger.warn(
-          `Configured ENR ${ip4 ? "IPv4" : "IPv6"} address is not local, clearing ENR ${ip4 ? "ip" : "ip6"} and ${
-            ip4 ? "udp" : "udp6"
-          }. Set the --nat flag to prevent this`
-        );
+        logger.warn("Clearing non-local ENR address and ports. Set --nat to allow non-local addresses", {
+          ipVersion: ip4 ? 4 : 6,
+        });
         if (ip4) {
           enr.delete("ip");
           enr.delete("udp");
+          enr.delete("tcp");
+          enr.delete("quic");
         } else {
           enr.delete("ip6");
           enr.delete("udp6");
+          enr.delete("tcp6");
+          enr.delete("quic6");
         }
       }
     }
@@ -142,6 +150,12 @@ export async function initPrivateKeyAndEnr(
 ): Promise<{privateKey: PrivateKey; enr: SignableENR}> {
   const {persistNetworkIdentity} = args;
 
+  if (!args.listenAddress && !args.listenAddress6 && !hasGlobalIPv6Address()) {
+    logger.warn(
+      "Not listening on IPv6: no global IPv6 address found. Set --listenAddress for IPv4 only or --listenAddress6 to enable IPv6 explicitly"
+    );
+  }
+
   const newPrivateKeyAndENR = async (): Promise<{privateKey: PrivateKey; enr: SignableENR}> => {
     const privateKey = await generateKeyPair("secp256k1");
     const enr = SignableENR.createFromPrivateKey(privateKey);
@@ -158,8 +172,12 @@ export async function initPrivateKeyAndEnr(
     // attempt to read stored private key
     try {
       privateKey = readPrivateKey(peerIdFile);
-    } catch (_e) {
-      logger.warn("Unable to read peerIdFile, creating a new peer id");
+    } catch (e) {
+      if ((e as {code: string}).code === "ENOENT") {
+        logger.debug("peerIdFile not found, creating a new peer id", {peerIdFile});
+      } else {
+        logger.warn("Unable to read peerIdFile, creating a new peer id", {peerIdFile}, e as Error);
+      }
       return {...(await newPrivateKeyAndENR()), newEnr: true};
     }
     // attempt to read stored enr

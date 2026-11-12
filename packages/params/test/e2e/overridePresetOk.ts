@@ -5,6 +5,7 @@ import assert from "node:assert";
 
 // 1. Import from @lodestar/params/setPreset only
 import {PresetName, setActivePreset} from "../../src/setPreset.js";
+
 setActivePreset(PresetName.minimal, {SLOTS_PER_EPOCH: 2});
 
 // 2. Import from any other @lodestar/params paths

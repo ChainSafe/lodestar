@@ -1,6 +1,9 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 
-describe("bytes utils", () => {
+/**
+ * Enable this if you want to compare performance of Buffer vs Uint8Array operations. Not lodestar code so skipped by default.
+ */
+describe.skip("bytes utils", () => {
   const roots: Uint8Array[] = [];
   let buffers: Buffer[] = [];
   const count = 32;

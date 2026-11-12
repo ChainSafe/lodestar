@@ -1,6 +1,5 @@
 import {DbReqOpts, encodeKey} from "@lodestar/db";
-import {Root, UintNum64} from "@lodestar/types";
-import {ssz} from "@lodestar/types";
+import {Root, UintNum64, ssz} from "@lodestar/types";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {LodestarValidatorDatabaseController} from "../types.js";
 

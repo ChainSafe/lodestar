@@ -1,7 +1,7 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {Epoch} from "@lodestar/types";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "../../../src/index.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../../../src/testUtils/util.js";
 
 // Current implementation scales very well with number of requested validators
 // Benchmark data from Wed Jun 30 2021 - Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz

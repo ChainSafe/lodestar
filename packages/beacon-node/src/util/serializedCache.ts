@@ -4,7 +4,7 @@
  * This is a thin wrapper around WeakMap
  */
 export class SerializedCache {
-  map: WeakMap<object, Uint8Array> = new WeakMap();
+  private map: WeakMap<object, Uint8Array> = new WeakMap();
 
   get(obj: object): Uint8Array | undefined {
     return this.map.get(obj);
@@ -14,7 +14,14 @@ export class SerializedCache {
     this.map.set(obj, serialized);
   }
 
-  clear(): void {
-    this.map = new WeakMap();
+  /**
+   * Delete cached serialized entries for the provided object references.
+   * Must only be called after all DB writes that read from this cache for these objects have completed,
+   * otherwise cached serialized bytes will be unavailable and data will be re-serialized unnecessarily.
+   */
+  delete(objs: object[]): void {
+    for (const obj of objs) {
+      this.map.delete(obj);
+    }
   }
 }

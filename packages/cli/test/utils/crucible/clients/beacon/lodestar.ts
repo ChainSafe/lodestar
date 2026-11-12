@@ -2,8 +2,7 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
-import {LogLevel} from "@lodestar/utils";
-import {fetch} from "@lodestar/utils";
+import {LogLevel, fetch} from "@lodestar/utils";
 import {BeaconArgs} from "../../../../../src/cmds/beacon/options.js";
 import {GlobalArgs} from "../../../../../src/options/globalOptions.js";
 import {LODESTAR_BINARY_PATH} from "../../constants.js";
@@ -58,11 +57,9 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
   } as unknown as BeaconArgs & GlobalArgs;
 
   if (engineMock) {
-    rcConfig.eth1 = false;
     rcConfig["execution.engineMock"] = true;
     rcConfig["execution.urls"] = [];
   } else {
-    rcConfig.eth1 = true;
     rcConfig["execution.engineMock"] = false;
     rcConfig["execution.urls"] = [...engineUrls];
   }

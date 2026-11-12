@@ -1,5 +1,5 @@
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {describe} from "vitest";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {getClient} from "../../../../src/beacon/client/proof.js";
 import {Endpoints} from "../../../../src/beacon/routes/proof.js";
 import {getRoutes} from "../../../../src/beacon/server/proof.js";

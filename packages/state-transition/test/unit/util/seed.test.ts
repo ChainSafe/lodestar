@@ -1,20 +1,23 @@
 import crypto from "node:crypto";
 import {describe, expect, it} from "vitest";
-
+import {digest} from "@chainsafe/as-sha256";
 import {toHexString} from "@chainsafe/ssz";
-import {ForkSeq, GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {DOMAIN_PTC_ATTESTER, ForkSeq, GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {bytesToInt} from "@lodestar/utils";
+import {generateState} from "../../../src/testUtils/state.js";
 import {
+  computeEpochShuffling,
+  computePayloadTimelinessCommitteeForSlot,
+  computePayloadTimelinessCommitteeIndices,
+  computePayloadTimelinessCommitteesForEpoch,
   computeProposerIndex,
-  computeShuffledIndex,
-  getComputeShuffledIndexFn,
   getNextSyncCommitteeIndices,
   getRandaoMix,
+  getSeed,
+  naiveComputePayloadTimelinessCommitteeIndices,
   naiveComputeProposerIndex,
   naiveGetNextSyncCommitteeIndices,
 } from "../../../src/util/index.js";
-
-import {bytesToInt} from "@lodestar/utils";
-import {generateState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
 describe("getRandaoMix", () => {
@@ -58,18 +61,6 @@ describe("computeProposerIndex", () => {
   }
 });
 
-describe("computeShuffledIndex", () => {
-  const seed = crypto.randomBytes(32);
-  const vc = 1000;
-  const shuffledIndexFn = getComputeShuffledIndexFn(vc, seed);
-  it("should be the same to the naive version", () => {
-    for (let i = 0; i < vc; i++) {
-      const expectedIndex = computeShuffledIndex(i, vc, seed);
-      expect(shuffledIndexFn(i)).toBe(expectedIndex);
-    }
-  });
-});
-
 describe("electra getNextSyncCommitteeIndices", () => {
   const vc = 1000;
   const validators = generateValidators(vc);
@@ -92,6 +83,55 @@ describe("electra getNextSyncCommitteeIndices", () => {
       expect(result).toEqual(new Uint32Array(expected));
     });
   }
+});
+
+describe("computePayloadTimelinessCommitteeIndices", () => {
+  const seed = crypto.randomBytes(32);
+  const vc = 1000;
+  const indices = new Uint32Array(Array.from({length: vc}, (_, i) => i));
+  const effectiveBalanceIncrements = new Uint16Array(vc);
+  for (let i = 0; i < vc; i++) {
+    effectiveBalanceIncrements[i] = 32 + 32 * (i % 64);
+  }
+
+  it("should be the same to the naive version", () => {
+    const expected = naiveComputePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, indices, seed);
+    const result = computePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, indices, seed);
+    expect(result).toEqual(new Uint32Array(expected));
+  });
+
+  it("should compute an epoch with the same per-slot results", () => {
+    const epochValidatorCount = 16_384;
+    const epochIndices = Uint32Array.from({length: epochValidatorCount}, (_, i) => i);
+    const epochEffectiveBalanceIncrements = new Uint16Array(epochValidatorCount).fill(32);
+    const state = generateState();
+    const epoch = 1;
+    const shuffling = computeEpochShuffling(state, epochIndices, epoch);
+    const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
+    const slotSeedInput = new Uint8Array(epochSeed.length + 8);
+    slotSeedInput.set(epochSeed);
+    const slotSeedView = new DataView(slotSeedInput.buffer);
+    const expected = new Array<Uint32Array>(SLOTS_PER_EPOCH);
+    for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+      slotSeedView.setUint32(epochSeed.length, epoch * SLOTS_PER_EPOCH + i, true);
+      slotSeedView.setUint32(epochSeed.length + 4, 0, true);
+      expected[i] = computePayloadTimelinessCommitteeForSlot(
+        digest(slotSeedInput),
+        shuffling.committees[i],
+        epochEffectiveBalanceIncrements
+      );
+    }
+
+    expect(
+      computePayloadTimelinessCommitteesForEpoch(
+        state,
+        epoch,
+        shuffling.committees,
+        shuffling.shuffling,
+        epochEffectiveBalanceIncrements
+      )
+    ).toEqual(expected);
+  });
 });
 
 describe("number from 2 bytes bytesToInt", () => {

@@ -1,15 +1,25 @@
 import {EventEmitter} from "node:events";
-import {BeaconConfig} from "@lodestar/config";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, Status, fulu} from "@lodestar/types";
-import {Logger, toRootHex} from "@lodestar/utils";
 import {StrictEventEmitter} from "strict-event-emitter-types";
+import {BeaconConfig} from "@lodestar/config";
+import {IBeaconStateViewGloas, computeStartSlotAtEpoch, isStatePostGloas} from "@lodestar/state-transition";
+import {Epoch, Status, fulu, ssz} from "@lodestar/types";
+import {Logger, byteArrayEquals, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
+import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
+import {assertLinearChainSegment} from "../../chain/blocks/utils/chainSegment.js";
+import {BlockError} from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {INetwork} from "../../network/index.js";
-import {beaconBlocksMaybeBlobsByRange} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
 import {PeerIdStr} from "../../util/peerId.js";
+import {
+  DownloadByRangeError,
+  DownloadByRangeErrorCode,
+  ParentPayload,
+  cacheByRangeResponses,
+  downloadByRange,
+} from "../utils/downloadByRange.js";
 import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
 import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";
 import {updateChains} from "./utils/index.js";
@@ -97,6 +107,16 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
     if (metrics) {
       metrics.syncStatus.addCollect(() => this.scrapeMetrics(metrics));
+      metrics.syncRange.headSyncPeers.addCollect(() => {
+        // Gauges retain their last set value, so a removed chain would keep reporting stale
+        // per-column peer counts (finalizedSyncPeers especially, as it is rarely recreated once
+        // synced)
+        metrics.syncRange.headSyncPeers.reset();
+        metrics.syncRange.finalizedSyncPeers.reset();
+        for (const syncChain of this.chains.values()) {
+          syncChain.scrapeMetrics(metrics);
+        }
+      });
     }
   }
 
@@ -113,13 +133,14 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
    */
   addPeer(peerId: PeerIdStr, localStatus: Status, peerStatus: Status): void {
     // Compute if we should do a Finalized or Head sync with this peer
-    const {syncType, startEpoch, target} = getRangeSyncTarget(localStatus, peerStatus, this.chain.forkChoice);
+    const {syncType, startEpoch, target} = getRangeSyncTarget(localStatus, peerStatus, this.chain);
     this.logger.debug("Sync peer joined", {
       peer: peerId,
       syncType,
       startEpoch,
       targetSlot: target.slot,
       targetRoot: toRootHex(target.root),
+      localHeadSlot: localStatus.headSlot,
       earliestAvailableSlot: (peerStatus as fulu.Status).earliestAvailableSlot ?? Infinity,
     });
 
@@ -170,7 +191,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   }
 
   /** Convenience method for `SyncChain` */
-  private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks, syncType) => {
+  private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks, payloadEnvelopes, syncType) => {
     // Not trusted, verify signatures
     const flags: ImportBlockOpts = {
       // Only skip importing attestations for finalized sync. For head sync attestation are valuable.
@@ -186,37 +207,152 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       // when this runs, syncing is the most important thing and gossip is not likely to run
       // so we can utilize worker threads to verify signatures
       blsVerifyOnMainThread: false,
-      // we want to be safe to only persist blocks after verifying it to avoid any attacks that may cause our DB
-      // to grow too much
-      eagerPersistBlock: false,
     };
 
-    if (this.opts?.disableProcessAsChainSegment) {
-      // Should only be used for debugging or testing
-      for (const block of blocks) await this.chain.processBlock(block, flags);
-    } else {
-      await this.chain.processChainSegment(blocks, flags);
+    try {
+      if (this.opts?.disableProcessAsChainSegment) {
+        // Should only be used for debugging or testing
+        for (const block of blocks) {
+          await this.chain.processBlock(block, flags);
+          const payloadEnvelope = payloadEnvelopes?.get(block.slot);
+          if (payloadEnvelope?.hasPayloadEnvelope()) {
+            await this.chain.processExecutionPayload(payloadEnvelope);
+          }
+        }
+      } else {
+        const {orphaned, skipped} = await this.chain.processChainSegment(blocks, payloadEnvelopes, flags);
+        // We log orphaned payloads to work with different clients
+        // in the future, consider applying penalties in certain conditions
+        // make sure the payload source was from range sync in that case
+        for (const {slot, payloadEnvelopeInput} of orphaned) {
+          const {peerIdStr, source} = payloadEnvelopeInput.getPayloadEnvelopeSource();
+          let client = "unknown";
+          if (peerIdStr !== undefined) {
+            try {
+              client = this.getConnectedPeerSyncMeta(peerIdStr).client;
+            } catch {
+              // peer disconnected since serving the envelope, keep "unknown"
+            }
+          }
+          this.logger.debug("Orphaned payload envelope in range sync batch", {
+            slot,
+            root: payloadEnvelopeInput.blockRootHex,
+            peer: peerIdStr ?? "unknown",
+            source,
+            client,
+            skipped,
+          });
+        }
+      }
+    } catch (e) {
+      if (
+        e instanceof PayloadError &&
+        (e.type.code === PayloadErrorCode.INVALID_SIGNATURE ||
+          e.type.code === PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR ||
+          e.type.code === PayloadErrorCode.EXECUTION_ENGINE_INVALID)
+      ) {
+        const {payloadInput} = e;
+        const {peerIdStr, source} = payloadInput.getPayloadEnvelopeSource();
+        let client = "unknown";
+        if (peerIdStr !== undefined) {
+          try {
+            client = this.getConnectedPeerSyncMeta(peerIdStr).client;
+          } catch {
+            // peer disconnected since serving the envelope, keep "unknown"
+          }
+        }
+        this.logger.debug("Removing invalid payload envelope in range sync batch", {
+          slot: payloadInput.slot,
+          root: payloadInput.blockRootHex,
+          peer: peerIdStr ?? "unknown",
+          source,
+          client,
+          code: e.type.code,
+        });
+        // The batch is downloaded again, it would otherwise reuse the cached envelope and fail the same way
+        this.chain.seenPayloadEnvelopeInputCache.removeInvalid(payloadInput);
+      }
+      throw e;
     }
   };
 
-  /** Convenience method for `SyncChain` */
-  private downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (
-    peer,
-    request,
-    partialDownload,
-    syncType: RangeSyncType
-  ) => {
-    return beaconBlocksMaybeBlobsByRange(
-      this.config,
-      this.network,
-      peer,
-      request,
-      this.chain.clock.currentEpoch,
-      partialDownload,
-      syncType,
-      this.metrics,
-      this.logger
-    );
+  private downloadByRange: SyncChainFns["downloadByRange"] = async (peer, batch) => {
+    const batchBlocks = batch.getBlocks();
+    const requests = batch.getRequestsForPeer(peer);
+    const parentPayload = requests.parentPayloadRequest ? batch.getParentPayload() : undefined;
+    const {result, warnings} = await downloadByRange({
+      config: this.config,
+      network: this.network,
+      logger: this.logger,
+      peerIdStr: peer.peerId,
+      batchBlocks,
+      parentPayload,
+      peerDasMetrics: this.chain.metrics?.peerDas,
+      ...requests,
+    });
+    const {responses, payloadEnvelopes: downloadedPayloadEnvelopes} = result;
+    const {blocks, payloadEnvelopes} = cacheByRangeResponses({
+      cache: this.chain.seenBlockInputCache,
+      seenPayloadEnvelopeInputCache: this.chain.seenPayloadEnvelopeInputCache,
+      peerIdStr: peer.peerId,
+      responses,
+      batchBlocks,
+      downloadedPayloadEnvelopes,
+      existingPayloadEnvelopes: batch.getPayloadEnvelopes(),
+      parentPayload,
+      custodyConfig: this.chain.custodyConfig,
+      seenTimestampSec: Date.now() / 1000,
+    });
+
+    const segmentBlocks = blocks.filter((b) => b.hasBlock()).sort((a, b) => a.slot - b.slot);
+    const envelopeSlots = payloadEnvelopes
+      ? Array.from(payloadEnvelopes.entries())
+          .filter(([, pi]) => pi.hasPayloadEnvelope())
+          .map(([slot]) => slot)
+          .sort((a, b) => a - b)
+      : [];
+    this.logger.verbose("downloadByRange batch ready", {
+      peer: peer.peerId,
+      blockSlots: prettyPrintIndices(segmentBlocks.map((b) => b.slot)),
+      envelopeSlots: prettyPrintIndices(envelopeSlots),
+      ...batch.getMetadata(),
+    });
+
+    if (segmentBlocks.length > 1) {
+      try {
+        assertLinearChainSegment(this.config, segmentBlocks, payloadEnvelopes, null);
+      } catch (err) {
+        if (err instanceof BlockError) {
+          this.logger.debug(
+            "downloadByRange segment validation failed",
+            {
+              peer: peer.peerId,
+              reason: err.type.code,
+              slot: err.signedBlock.message.slot,
+              detail: JSON.stringify(err.type),
+              ...batch.getMetadata(),
+            },
+            err
+          );
+          // with this error, the peer will be penalized inside SyncChain
+          throw new DownloadByRangeError({
+            code: DownloadByRangeErrorCode.INVALID_CHAIN_SEGMENT,
+            slot: err.signedBlock.message.slot,
+            reason: err.type.code,
+          });
+        }
+
+        throw err;
+      }
+    }
+
+    return {result: {blocks, payloadEnvelopes}, warnings};
+  };
+
+  private pruneBlockInputs: SyncChainFns["pruneBlockInputs"] = (blocks: IBlockInput[]) => {
+    for (const block of blocks) {
+      this.chain.seenBlockInputCache.prune(block.blockRootHex);
+    }
   };
 
   /** Convenience method for `SyncChain` */
@@ -241,18 +377,47 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private addPeerOrCreateChain(startEpoch: Epoch, target: ChainTarget, peer: PeerIdStr, syncType: RangeSyncType): void {
     let syncChain = this.chains.get(syncType);
     if (!syncChain) {
+      // The first block of the first batch may build on the head's FULL variant before its payload is imported,
+      // the batch then downloads the head's payload as dangling parent and validates it against the bid
+      const headState = this.chain.getHeadState();
+      let parentPayload: ParentPayload | undefined;
+      if (isStatePostGloas(headState) && headState.latestBlockHeader.slot > 0) {
+        const header = ssz.phase0.BeaconBlockHeader.clone(headState.latestBlockHeader);
+        if (byteArrayEquals(header.stateRoot, ssz.Root.defaultValue())) {
+          header.stateRoot = headState.hashTreeRoot();
+        }
+        const headRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
+        const headSlot = headState.latestBlockHeader.slot;
+        parentPayload = {
+          blockRoot: headRoot,
+          blockRootHex: toRootHex(headRoot),
+          slot: headSlot,
+          proposerIndex: headState.latestBlockHeader.proposerIndex,
+          forkName: this.config.getForkName(headSlot),
+          bid: (headState as IBeaconStateViewGloas).latestExecutionPayloadBid,
+        };
+      }
+
       syncChain = new SyncChain(
         startEpoch,
         target,
         syncType,
         {
           processChainSegment: this.processChainSegment,
-          downloadBeaconBlocksByRange: this.downloadBeaconBlocksByRange,
+          downloadByRange: this.downloadByRange,
           reportPeer: this.reportPeer,
           getConnectedPeerSyncMeta: this.getConnectedPeerSyncMeta,
+          pruneBlockInputs: this.pruneBlockInputs,
           onEnd: this.onSyncChainEnd,
         },
-        {config: this.config, logger: this.logger, custodyConfig: this.chain.custodyConfig, metrics: this.metrics}
+        {
+          config: this.config,
+          clock: this.chain.clock,
+          logger: this.logger,
+          custodyConfig: this.chain.custodyConfig,
+          metrics: this.metrics,
+        },
+        parentPayload
       );
       this.chains.set(syncType, syncChain);
 

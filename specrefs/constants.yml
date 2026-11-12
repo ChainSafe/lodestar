@@ -1,0 +1,680 @@
+- name: ATTESTATION_TIMELINESS_INDEX#gloas
+  sources: []
+  spec: |
+    <spec constant_var="ATTESTATION_TIMELINESS_INDEX" fork="gloas" hash="7b99e379">
+    ATTESTATION_TIMELINESS_INDEX: Uint64 = 0
+    </spec>
+
+- name: BASE_REWARDS_PER_EPOCH#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BASE_REWARDS_PER_EPOCH =
+  spec: |
+    <spec constant_var="BASE_REWARDS_PER_EPOCH" fork="phase0" hash="a1ff205c">
+    BASE_REWARDS_PER_EPOCH: Uint64 = 4
+    </spec>
+
+- name: BASIS_POINTS#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BASIS_POINTS =
+  spec: |
+    <spec constant_var="BASIS_POINTS" fork="phase0" hash="b1cae846">
+    BASIS_POINTS: Uint64 = 10000
+    </spec>
+
+- name: BLS_WITHDRAWAL_PREFIX#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BLS_WITHDRAWAL_PREFIX =
+  spec: |
+    <spec constant_var="BLS_WITHDRAWAL_PREFIX" fork="phase0" hash="7c9a33eb">
+    BLS_WITHDRAWAL_PREFIX: Bytes1 = "0x00"
+    </spec>
+
+- name: BUILDER_DEPOSIT_REQUEST_TYPE#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BUILDER_DEPOSIT_REQUEST_TYPE =
+  spec: |
+    <spec constant_var="BUILDER_DEPOSIT_REQUEST_TYPE" fork="gloas" hash="5120ab9a">
+    BUILDER_DEPOSIT_REQUEST_TYPE: Bytes1 = "0x03"
+    </spec>
+
+- name: BUILDER_EXIT_REQUEST_TYPE#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BUILDER_EXIT_REQUEST_TYPE =
+  spec: |
+    <spec constant_var="BUILDER_EXIT_REQUEST_TYPE" fork="gloas" hash="56bfbe0d">
+    BUILDER_EXIT_REQUEST_TYPE: Bytes1 = "0x04"
+    </spec>
+
+- name: BUILDER_INDEX_FLAG#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BUILDER_INDEX_FLAG =
+  spec: |
+    <spec constant_var="BUILDER_INDEX_FLAG" fork="gloas" hash="c8f0a318">
+    BUILDER_INDEX_FLAG: Uint64 = 2**40
+    </spec>
+
+- name: BUILDER_INDEX_SELF_BUILD#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BUILDER_INDEX_SELF_BUILD =
+  spec: |
+    <spec constant_var="BUILDER_INDEX_SELF_BUILD" fork="gloas" hash="622fd1b5">
+    BUILDER_INDEX_SELF_BUILD: BuilderIndex = UINT64_MAX
+    </spec>
+
+- name: BUILDER_PAYMENT_THRESHOLD_DENOMINATOR#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BUILDER_PAYMENT_THRESHOLD_DENOMINATOR =
+  spec: |
+    <spec constant_var="BUILDER_PAYMENT_THRESHOLD_DENOMINATOR" fork="gloas" hash="db4e9377">
+    BUILDER_PAYMENT_THRESHOLD_DENOMINATOR: Uint64 = 10
+    </spec>
+
+- name: BUILDER_PAYMENT_THRESHOLD_NUMERATOR#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BUILDER_PAYMENT_THRESHOLD_NUMERATOR =
+  spec: |
+    <spec constant_var="BUILDER_PAYMENT_THRESHOLD_NUMERATOR" fork="gloas" hash="da1a0f54">
+    BUILDER_PAYMENT_THRESHOLD_NUMERATOR: Uint64 = 6
+    </spec>
+
+- name: BUILDER_WITHDRAWAL_PREFIX#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BUILDER_WITHDRAWAL_PREFIX =
+  spec: |
+    <spec constant_var="BUILDER_WITHDRAWAL_PREFIX" fork="gloas" hash="0449a031">
+    BUILDER_WITHDRAWAL_PREFIX: Bytes1 = "0xB0"
+    </spec>
+
+- name: BYTES_PER_FIELD_ELEMENT#deneb
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BYTES_PER_FIELD_ELEMENT =
+  spec: |
+    <spec constant_var="BYTES_PER_FIELD_ELEMENT" fork="deneb" hash="096a1b57">
+    BYTES_PER_FIELD_ELEMENT: Uint64 = 32
+    </spec>
+
+- name: COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR#phase0
+  sources:
+    - file: packages/fork-choice/src/forkChoice/fastConfirmation/utils.ts
+      search: const COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR =
+  spec: |
+    <spec constant_var="COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR" fork="phase0" hash="0e734eab">
+    COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR: Uint64 = 5
+    </spec>
+
+- name: COMPOUNDING_WITHDRAWAL_PREFIX#electra
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const COMPOUNDING_WITHDRAWAL_PREFIX =
+  spec: |
+    <spec constant_var="COMPOUNDING_WITHDRAWAL_PREFIX" fork="electra" hash="cb4a6802">
+    COMPOUNDING_WITHDRAWAL_PREFIX: Bytes1 = "0x02"
+    </spec>
+
+- name: CONSOLIDATION_REQUEST_TYPE#electra
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const CONSOLIDATION_REQUEST_TYPE =
+  spec: |
+    <spec constant_var="CONSOLIDATION_REQUEST_TYPE" fork="electra" hash="6acee2fa">
+    CONSOLIDATION_REQUEST_TYPE: Bytes1 = "0x02"
+    </spec>
+
+- name: DEPOSIT_CONTRACT_TREE_DEPTH#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DEPOSIT_CONTRACT_TREE_DEPTH =
+  spec: |
+    <spec constant_var="DEPOSIT_CONTRACT_TREE_DEPTH" fork="phase0" hash="3e8a5b9a">
+    DEPOSIT_CONTRACT_TREE_DEPTH: Uint64 = 2**5
+    </spec>
+
+- name: DEPOSIT_REQUEST_TYPE#electra
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DEPOSIT_REQUEST_TYPE =
+  spec: |
+    <spec constant_var="DEPOSIT_REQUEST_TYPE" fork="electra" hash="d0bac3c7">
+    DEPOSIT_REQUEST_TYPE: Bytes1 = "0x00"
+    </spec>
+
+- name: DOMAIN_AGGREGATE_AND_PROOF#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_AGGREGATE_AND_PROOF =
+  spec: |
+    <spec constant_var="DOMAIN_AGGREGATE_AND_PROOF" fork="phase0" hash="a1abe2c8">
+    DOMAIN_AGGREGATE_AND_PROOF: DomainType = "0x06000000"
+    </spec>
+
+- name: DOMAIN_APPLICATION_MASK#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_APPLICATION_MASK =
+  spec: |
+    <spec constant_var="DOMAIN_APPLICATION_MASK" fork="phase0" hash="8830e4b8">
+    DOMAIN_APPLICATION_MASK: DomainType = "0x00000001"
+    </spec>
+
+- name: DOMAIN_BEACON_ATTESTER#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_BEACON_ATTESTER =
+  spec: |
+    <spec constant_var="DOMAIN_BEACON_ATTESTER" fork="phase0" hash="3a157d4b">
+    DOMAIN_BEACON_ATTESTER: DomainType = "0x01000000"
+    </spec>
+
+- name: DOMAIN_BEACON_BUILDER#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_BEACON_BUILDER =
+  spec: |
+    <spec constant_var="DOMAIN_BEACON_BUILDER" fork="gloas" hash="fd984f32">
+    DOMAIN_BEACON_BUILDER: DomainType = "0x0B000000"
+    </spec>
+
+- name: DOMAIN_BEACON_PROPOSER#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_BEACON_PROPOSER =
+  spec: |
+    <spec constant_var="DOMAIN_BEACON_PROPOSER" fork="phase0" hash="173d9685">
+    DOMAIN_BEACON_PROPOSER: DomainType = "0x00000000"
+    </spec>
+
+- name: DOMAIN_BLS_TO_EXECUTION_CHANGE#capella
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_BLS_TO_EXECUTION_CHANGE =
+  spec: |
+    <spec constant_var="DOMAIN_BLS_TO_EXECUTION_CHANGE" fork="capella" hash="732725f5">
+    DOMAIN_BLS_TO_EXECUTION_CHANGE: DomainType = "0x0A000000"
+    </spec>
+
+- name: DOMAIN_BUILDER_DEPOSIT#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_BUILDER_DEPOSIT =
+  spec: |
+    <spec constant_var="DOMAIN_BUILDER_DEPOSIT" fork="gloas" hash="90ae3101">
+    DOMAIN_BUILDER_DEPOSIT: DomainType = "0x0E000000"
+    </spec>
+
+- name: DOMAIN_CONTRIBUTION_AND_PROOF#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_CONTRIBUTION_AND_PROOF =
+  spec: |
+    <spec constant_var="DOMAIN_CONTRIBUTION_AND_PROOF" fork="altair" hash="6a832022">
+    DOMAIN_CONTRIBUTION_AND_PROOF: DomainType = "0x09000000"
+    </spec>
+
+- name: DOMAIN_DEPOSIT#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_DEPOSIT =
+  spec: |
+    <spec constant_var="DOMAIN_DEPOSIT" fork="phase0" hash="062bb506">
+    DOMAIN_DEPOSIT: DomainType = "0x03000000"
+    </spec>
+
+- name: DOMAIN_INCLUSION_LIST_COMMITTEE#heze
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_INCLUSION_LIST_COMMITTEE =
+  spec: |
+    <spec constant_var="DOMAIN_INCLUSION_LIST_COMMITTEE" fork="heze" hash="8346e582">
+    DOMAIN_INCLUSION_LIST_COMMITTEE: DomainType = "0x10000000"
+    </spec>
+
+- name: DOMAIN_PROPOSER_PREFERENCES#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_PROPOSER_PREFERENCES =
+  spec: |
+    <spec constant_var="DOMAIN_PROPOSER_PREFERENCES" fork="gloas" hash="d0123101">
+    DOMAIN_PROPOSER_PREFERENCES: DomainType = "0x0D000000"
+    </spec>
+
+- name: DOMAIN_PTC_ATTESTER#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_PTC_ATTESTER =
+  spec: |
+    <spec constant_var="DOMAIN_PTC_ATTESTER" fork="gloas" hash="1aa341b3">
+    DOMAIN_PTC_ATTESTER: DomainType = "0x0C000000"
+    </spec>
+
+- name: DOMAIN_RANDAO#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_RANDAO =
+  spec: |
+    <spec constant_var="DOMAIN_RANDAO" fork="phase0" hash="eb3afc67">
+    DOMAIN_RANDAO: DomainType = "0x02000000"
+    </spec>
+
+- name: DOMAIN_SELECTION_PROOF#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_SELECTION_PROOF =
+  spec: |
+    <spec constant_var="DOMAIN_SELECTION_PROOF" fork="phase0" hash="644604a3">
+    DOMAIN_SELECTION_PROOF: DomainType = "0x05000000"
+    </spec>
+
+- name: DOMAIN_SYNC_COMMITTEE#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_SYNC_COMMITTEE =
+  spec: |
+    <spec constant_var="DOMAIN_SYNC_COMMITTEE" fork="altair" hash="55668865">
+    DOMAIN_SYNC_COMMITTEE: DomainType = "0x07000000"
+    </spec>
+
+- name: DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF =
+  spec: |
+    <spec constant_var="DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF" fork="altair" hash="a04f6722">
+    DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF: DomainType = "0x08000000"
+    </spec>
+
+- name: DOMAIN_VOLUNTARY_EXIT#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_VOLUNTARY_EXIT =
+  spec: |
+    <spec constant_var="DOMAIN_VOLUNTARY_EXIT" fork="phase0" hash="7ec64e17">
+    DOMAIN_VOLUNTARY_EXIT: DomainType = "0x04000000"
+    </spec>
+
+- name: EMPTY_BLOCK_HASH#bellatrix
+  sources:
+    - file: packages/beacon-node/src/api/impl/config/constants.ts
+      search: "EMPTY_BLOCK_HASH:"
+  spec: |
+    <spec constant_var="EMPTY_BLOCK_HASH" fork="bellatrix" hash="23cdf402">
+    EMPTY_BLOCK_HASH: Hash32 =
+    </spec>
+
+- name: ENDIANNESS#phase0
+  sources:
+    - file: packages/beacon-node/src/api/impl/config/constants.ts
+      search: "ENDIANNESS:"
+  spec: |
+    <spec constant_var="ENDIANNESS" fork="phase0" hash="bd3143ef">
+    ENDIANNESS = "little"
+    </spec>
+
+- name: ETH1_ADDRESS_WITHDRAWAL_PREFIX#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const ETH1_ADDRESS_WITHDRAWAL_PREFIX =
+  spec: |
+    <spec constant_var="ETH1_ADDRESS_WITHDRAWAL_PREFIX" fork="phase0" hash="c8123ce5">
+    ETH1_ADDRESS_WITHDRAWAL_PREFIX: Bytes1 = "0x01"
+    </spec>
+
+- name: ETH_TO_GWEI#phase0
+  sources:
+    - file: packages/state-transition/src/util/weakSubjectivity.ts
+      search: export const ETH_TO_GWEI =
+  spec: |
+    <spec constant_var="ETH_TO_GWEI" fork="phase0" hash="a9c1d610">
+    ETH_TO_GWEI: Uint64 = 10**9
+    </spec>
+
+- name: FAR_FUTURE_EPOCH#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const FAR_FUTURE_EPOCH =
+  spec: |
+    <spec constant_var="FAR_FUTURE_EPOCH" fork="phase0" hash="b11f052e">
+    FAR_FUTURE_EPOCH: Epoch = 2**64 - 1
+    </spec>
+
+- name: FULL_EXIT_REQUEST_AMOUNT#electra
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const FULL_EXIT_REQUEST_AMOUNT =
+  spec: |
+    <spec constant_var="FULL_EXIT_REQUEST_AMOUNT" fork="electra" hash="d177bb89">
+    FULL_EXIT_REQUEST_AMOUNT: Gwei = 0
+    </spec>
+
+- name: G2_POINT_AT_INFINITY#altair
+  sources:
+    - file: packages/state-transition/src/constants/constants.ts
+      search: export const G2_POINT_AT_INFINITY =
+  spec: |
+    <spec constant_var="G2_POINT_AT_INFINITY" fork="altair" hash="3820970f">
+    G2_POINT_AT_INFINITY: BLSSignature = b"\xc0" + b"\x00" * 95
+    </spec>
+
+- name: GENESIS_EPOCH#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const GENESIS_EPOCH =
+  spec: |
+    <spec constant_var="GENESIS_EPOCH" fork="phase0" hash="56876077">
+    GENESIS_EPOCH: Epoch = 0
+    </spec>
+
+- name: GENESIS_SLOT#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const GENESIS_SLOT =
+  spec: |
+    <spec constant_var="GENESIS_SLOT" fork="phase0" hash="2d6f8884">
+    GENESIS_SLOT: Slot = 0
+    </spec>
+
+- name: JUSTIFICATION_BITS_LENGTH#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const JUSTIFICATION_BITS_LENGTH =
+  spec: |
+    <spec constant_var="JUSTIFICATION_BITS_LENGTH" fork="phase0" hash="fe924a00">
+    JUSTIFICATION_BITS_LENGTH: Uint64 = 4
+    </spec>
+
+- name: MAX_CONCURRENT_REQUESTS#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const MAX_CONCURRENT_REQUESTS =
+  spec: |
+    <spec constant_var="MAX_CONCURRENT_REQUESTS" fork="phase0" hash="7c6a01b0">
+    MAX_CONCURRENT_REQUESTS: Uint64 = 2
+    </spec>
+
+- name: MAX_REQUEST_LIGHT_CLIENT_UPDATES#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const MAX_REQUEST_LIGHT_CLIENT_UPDATES =
+  spec: |
+    <spec constant_var="MAX_REQUEST_LIGHT_CLIENT_UPDATES" fork="altair" hash="4fc19d9c">
+    MAX_REQUEST_LIGHT_CLIENT_UPDATES: Uint64 = 2**7
+    </spec>
+
+- name: NODE_ID_BITS#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const NODE_ID_BITS =
+  spec: |
+    <spec constant_var="NODE_ID_BITS" fork="phase0" hash="8197d7fc">
+    NODE_ID_BITS: Uint64 = 256
+    </spec>
+
+- name: NUM_BLOCK_TIMELINESS_DEADLINES#gloas
+  sources: []
+  spec: |
+    <spec constant_var="NUM_BLOCK_TIMELINESS_DEADLINES" fork="gloas" hash="f820cf58">
+    NUM_BLOCK_TIMELINESS_DEADLINES: Uint64 = 2
+    </spec>
+
+- name: PARTICIPATION_FLAG_WEIGHTS#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const PARTICIPATION_FLAG_WEIGHTS =
+  spec: |
+    <spec constant_var="PARTICIPATION_FLAG_WEIGHTS" fork="altair" hash="0068cac2">
+    PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT]
+    </spec>
+
+- name: PAYLOAD_BUILDER_VERSION#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const PAYLOAD_BUILDER_VERSION =
+  spec: |
+    <spec constant_var="PAYLOAD_BUILDER_VERSION" fork="gloas" hash="70d3d5ec">
+    PAYLOAD_BUILDER_VERSION: Uint8 = 0
+    </spec>
+
+- name: PAYLOAD_STATUS_EMPTY#gloas
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: EMPTY =
+  spec: |
+    <spec constant_var="PAYLOAD_STATUS_EMPTY" fork="gloas" hash="84265c9b">
+    PAYLOAD_STATUS_EMPTY: PayloadStatus = 0
+    </spec>
+
+- name: PAYLOAD_STATUS_FULL#gloas
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: FULL =
+  spec: |
+    <spec constant_var="PAYLOAD_STATUS_FULL" fork="gloas" hash="357ae377">
+    PAYLOAD_STATUS_FULL: PayloadStatus = 1
+    </spec>
+
+- name: PAYLOAD_STATUS_INVALIDATED#bellatrix
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: Invalid =
+  spec: |
+    <spec constant_var="PAYLOAD_STATUS_INVALIDATED" fork="bellatrix" hash="573428af">
+    PAYLOAD_STATUS_INVALIDATED: PayloadValidationStatus = 1
+    </spec>
+
+- name: PAYLOAD_STATUS_NOT_VALIDATED#bellatrix
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: Syncing =
+  spec: |
+    <spec constant_var="PAYLOAD_STATUS_NOT_VALIDATED" fork="bellatrix" hash="d15db48c">
+    PAYLOAD_STATUS_NOT_VALIDATED: PayloadValidationStatus = 2
+    </spec>
+
+- name: PAYLOAD_STATUS_PENDING#gloas
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: PENDING =
+  spec: |
+    <spec constant_var="PAYLOAD_STATUS_PENDING" fork="gloas" hash="6a0d6cbf">
+    PAYLOAD_STATUS_PENDING: PayloadStatus = 2
+    </spec>
+
+- name: PAYLOAD_STATUS_VALID#bellatrix
+  sources:
+    - file: packages/fork-choice/src/protoArray/interface.ts
+      search: Valid =
+  spec: |
+    <spec constant_var="PAYLOAD_STATUS_VALID" fork="bellatrix" hash="1e190907">
+    PAYLOAD_STATUS_VALID: PayloadValidationStatus = 0
+    </spec>
+
+- name: PROPOSER_WEIGHT#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const PROPOSER_WEIGHT =
+  spec: |
+    <spec constant_var="PROPOSER_WEIGHT" fork="altair" hash="285814bb">
+    PROPOSER_WEIGHT: Uint64 = 8
+    </spec>
+
+- name: PTC_TIMELINESS_INDEX#gloas
+  sources: []
+  spec: |
+    <spec constant_var="PTC_TIMELINESS_INDEX" fork="gloas" hash="73fb7372">
+    PTC_TIMELINESS_INDEX: Uint64 = 1
+    </spec>
+
+- name: SAFETY_DECAY#phase0
+  sources:
+    - file: packages/state-transition/src/util/weakSubjectivity.ts
+      search: const SAFETY_DECAY =
+  spec: |
+    <spec constant_var="SAFETY_DECAY" fork="phase0" hash="a14d04b9">
+    SAFETY_DECAY: Uint64 = 10
+    </spec>
+
+- name: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY#bellatrix
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY =
+  spec: |
+    <spec constant_var="SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY" fork="bellatrix" hash="ea89f23b">
+    SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY: Slot = 128
+    </spec>
+
+- name: SYNC_COMMITTEE_SUBNET_COUNT#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const SYNC_COMMITTEE_SUBNET_COUNT =
+  spec: |
+    <spec constant_var="SYNC_COMMITTEE_SUBNET_COUNT" fork="altair" hash="28eeefc6">
+    SYNC_COMMITTEE_SUBNET_COUNT: Uint64 = 2**2
+    </spec>
+
+- name: SYNC_REWARD_WEIGHT#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const SYNC_REWARD_WEIGHT =
+  spec: |
+    <spec constant_var="SYNC_REWARD_WEIGHT" fork="altair" hash="4e877b1b">
+    SYNC_REWARD_WEIGHT: Uint64 = 2
+    </spec>
+
+- name: TARGET_AGGREGATORS_PER_COMMITTEE#phase0
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const TARGET_AGGREGATORS_PER_COMMITTEE =
+  spec: |
+    <spec constant_var="TARGET_AGGREGATORS_PER_COMMITTEE" fork="phase0" hash="a1e0ac44">
+    TARGET_AGGREGATORS_PER_COMMITTEE: Uint64 = 2**4
+    </spec>
+
+- name: TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE =
+  spec: |
+    <spec constant_var="TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE" fork="altair" hash="342d32fe">
+    TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE: Uint64 = 2**4
+    </spec>
+
+- name: TIMELY_HEAD_FLAG_INDEX#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const TIMELY_HEAD_FLAG_INDEX =
+  spec: |
+    <spec constant_var="TIMELY_HEAD_FLAG_INDEX" fork="altair" hash="2f0404ec">
+    TIMELY_HEAD_FLAG_INDEX: Uint64 = 2
+    </spec>
+
+- name: TIMELY_HEAD_WEIGHT#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const TIMELY_HEAD_WEIGHT =
+  spec: |
+    <spec constant_var="TIMELY_HEAD_WEIGHT" fork="altair" hash="5dbf2ae7">
+    TIMELY_HEAD_WEIGHT: Uint64 = 14
+    </spec>
+
+- name: TIMELY_SOURCE_FLAG_INDEX#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const TIMELY_SOURCE_FLAG_INDEX =
+  spec: |
+    <spec constant_var="TIMELY_SOURCE_FLAG_INDEX" fork="altair" hash="67dc0832">
+    TIMELY_SOURCE_FLAG_INDEX: Uint64 = 0
+    </spec>
+
+- name: TIMELY_SOURCE_WEIGHT#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const TIMELY_SOURCE_WEIGHT =
+  spec: |
+    <spec constant_var="TIMELY_SOURCE_WEIGHT" fork="altair" hash="0fa0a586">
+    TIMELY_SOURCE_WEIGHT: Uint64 = 14
+    </spec>
+
+- name: TIMELY_TARGET_FLAG_INDEX#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const TIMELY_TARGET_FLAG_INDEX =
+  spec: |
+    <spec constant_var="TIMELY_TARGET_FLAG_INDEX" fork="altair" hash="4955ac70">
+    TIMELY_TARGET_FLAG_INDEX: Uint64 = 1
+    </spec>
+
+- name: TIMELY_TARGET_WEIGHT#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const TIMELY_TARGET_WEIGHT =
+  spec: |
+    <spec constant_var="TIMELY_TARGET_WEIGHT" fork="altair" hash="1c8b9efd">
+    TIMELY_TARGET_WEIGHT: Uint64 = 26
+    </spec>
+
+- name: UINT256_MAX#fulu
+  sources: []
+  spec: |
+    <spec constant_var="UINT256_MAX" fork="fulu" hash="a6028f55">
+    UINT256_MAX: Uint256 = 2**256 - 1
+    </spec>
+
+- name: UINT64_MAX#phase0
+  sources: []
+  spec: |
+    <spec constant_var="UINT64_MAX" fork="phase0" hash="1138f03a">
+    UINT64_MAX: Uint64 = 2**64 - 1
+    </spec>
+
+- name: UINT64_MAX_SQRT#phase0
+  sources: []
+  spec: |
+    <spec constant_var="UINT64_MAX_SQRT" fork="phase0" hash="6481b982">
+    UINT64_MAX_SQRT: Uint64 = 4294967295
+    </spec>
+
+- name: UNSET_DEPOSIT_REQUESTS_START_INDEX#electra
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const UNSET_DEPOSIT_REQUESTS_START_INDEX =
+  spec: |
+    <spec constant_var="UNSET_DEPOSIT_REQUESTS_START_INDEX" fork="electra" hash="8365c845">
+    UNSET_DEPOSIT_REQUESTS_START_INDEX: Uint64 = 2**64 - 1
+    </spec>
+
+- name: VERSIONED_HASH_VERSION_KZG#deneb
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const VERSIONED_HASH_VERSION_KZG =
+  spec: |
+    <spec constant_var="VERSIONED_HASH_VERSION_KZG" fork="deneb" hash="21d86f8b">
+    VERSIONED_HASH_VERSION_KZG: Bytes1 = "0x01"
+    </spec>
+
+- name: WEIGHT_DENOMINATOR#altair
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const WEIGHT_DENOMINATOR =
+  spec: |
+    <spec constant_var="WEIGHT_DENOMINATOR" fork="altair" hash="2515d882">
+    WEIGHT_DENOMINATOR: Uint64 = 64
+    </spec>
+
+- name: WITHDRAWAL_REQUEST_TYPE#electra
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const WITHDRAWAL_REQUEST_TYPE =
+  spec: |
+    <spec constant_var="WITHDRAWAL_REQUEST_TYPE" fork="electra" hash="8f2dd062">
+    WITHDRAWAL_REQUEST_TYPE: Bytes1 = "0x01"
+    </spec>

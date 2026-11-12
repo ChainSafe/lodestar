@@ -1,8 +1,8 @@
 import {IncomingMessage} from "node:http";
-import {BooleanType, ContainerType, UintNumberType, ValueOf} from "@chainsafe/ssz";
-import {ErrorAborted, TimeoutError, toBase64} from "@lodestar/utils";
 import {RouteOptions, fastify} from "fastify";
 import {afterEach, describe, expect, it, vi} from "vitest";
+import {BooleanType, ContainerType, UintNumberType, ValueOf} from "@chainsafe/ssz";
+import {ErrorAborted, TimeoutError, toBase64} from "@lodestar/utils";
 import {WireFormat} from "../../../src/index.js";
 import {addSszContentTypeParser} from "../../../src/server/index.js";
 import {HttpClient, RouteDefinitionExtra} from "../../../src/utils/client/index.js";
@@ -297,6 +297,8 @@ describe("httpClient json client", () => {
       method: "POST",
       handler: async (req) => {
         expect(req.headers[HttpHeader.ContentType]).toBe(MediaType.ssz);
+        expect(req.headers["content-length"]).toBe(String(container.serialize(payload).byteLength));
+        expect(req.headers["transfer-encoding"]).toBeUndefined();
         expect(req.body).toBeInstanceOf(Uint8Array);
         expect(container.deserialize(req.body as Uint8Array)).toEqual(payload);
       },
@@ -417,6 +419,27 @@ describe("httpClient json client", () => {
     const httpClient = new HttpClient({baseUrl, globalInit: {signal: controller.signal}});
 
     setTimeout(() => controller.abort(), 10);
+
+    try {
+      await httpClient.request(testDefinition, {});
+      return Promise.reject(Error("did not throw"));
+    } catch (e) {
+      if (!(e instanceof ErrorAborted)) throw Error(`Not an ErrorAborted: ${(e as Error).message}`);
+    }
+  });
+
+  it("should abort immediately when the signal is already aborted", async () => {
+    const {baseUrl} = await getServer({
+      ...testRoute,
+      handler: async () => new Promise((r) => setTimeout(r, 1000)),
+    });
+
+    const controller = new AbortController();
+    controller.abort();
+    const httpClient = new HttpClient({
+      baseUrl,
+      globalInit: {signal: controller.signal, timeoutMs: 5000},
+    });
 
     try {
       await httpClient.request(testDefinition, {});

@@ -1,13 +1,14 @@
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {getClient} from "@lodestar/api";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-import {afterEach, describe, expect, it, vi} from "vitest";
+import {toRootHex} from "@lodestar/utils";
 import {BeaconNode} from "../../../../src/index.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
-import {LogLevel, TestLoggerOpts, testLogger} from "../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../utils/node/beacon.js";
 
 describe("api / impl / validator", () => {
@@ -15,23 +16,35 @@ describe("api / impl / validator", () => {
 
   describe("getLiveness endpoint", () => {
     let bn: BeaconNode | undefined;
-    const SECONDS_PER_SLOT = 2;
-    const ALTAIR_FORK_EPOCH = 0;
-    const validatorCount = 8;
     const restPort = 9596;
-    const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH"> = {
-      SECONDS_PER_SLOT: SECONDS_PER_SLOT,
-      ALTAIR_FORK_EPOCH: ALTAIR_FORK_EPOCH,
+    const validatorCount = 8;
+    const ELECTRA_FORK_EPOCH = 0;
+    const FULU_FORK_EPOCH = 1;
+    const SLOT_DURATION_MS = 2000;
+    const testParams: Partial<ChainConfig> = {
+      SLOT_DURATION_MS,
+      ALTAIR_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+      BELLATRIX_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+      CAPELLA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+      DENEB_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+      ELECTRA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+      FULU_FORK_EPOCH: FULU_FORK_EPOCH,
+      BLOB_SCHEDULE: [
+        {
+          EPOCH: 1,
+          MAX_BLOBS_PER_BLOCK: 3,
+        },
+      ],
     };
     const genesisSlotsDelay = 5;
-    const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * testParams.SECONDS_PER_SLOT * 1000;
+    const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * SLOT_DURATION_MS;
 
     afterEach(async () => {
       if (bn) await bn.close();
     });
 
     it("Should return validator indices that are live", async () => {
-      const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+      const chainConfig: ChainConfig = {...chainConfigDef, ...testParams};
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
       const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
@@ -49,12 +62,12 @@ describe("api / impl / validator", () => {
       });
 
       // live indices at epoch of consideration, epoch 0
-      bn.chain.seenBlockProposers.add(0, 1);
+      bn.chain.seenBlockProposers.add(0, 1, toRootHex(Buffer.alloc(32)));
       bn.chain.seenBlockAttesters.add(0, 2);
       bn.chain.seenAttesters.add(0, 3);
       bn.chain.seenAggregators.add(0, 4);
       // live indices at other epochs, epoch 10
-      bn.chain.seenBlockProposers.add(10, 1000);
+      bn.chain.seenBlockProposers.add(10, 1000, toRootHex(Buffer.alloc(32)));
       bn.chain.seenAttesters.add(10, 2000);
       bn.chain.seenAggregators.add(10, 3000);
 
@@ -72,7 +85,7 @@ describe("api / impl / validator", () => {
     });
 
     it("Should return only for previous, current and next epoch", async () => {
-      const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+      const chainConfig: ChainConfig = {...chainConfigDef, ...testParams};
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
       const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
@@ -93,7 +106,7 @@ describe("api / impl / validator", () => {
       await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 1
       await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 2
 
-      bn.chain.seenBlockProposers.add(bn.chain.clock.currentEpoch, 1);
+      bn.chain.seenBlockProposers.add(bn.chain.clock.currentEpoch, 1, toRootHex(Buffer.alloc(32)));
 
       const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
 

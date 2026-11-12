@@ -1,7 +1,7 @@
 import {BeaconPreset} from "../types.js";
 
 // Mainnet preset
-// https://github.com/ethereum/consensus-specs/tree/dev/presets/mainnet
+// https://github.com/ethereum/consensus-specs/tree/master/presets/mainnet
 
 export const mainnetPreset: BeaconPreset = {
   // Misc
@@ -141,4 +141,22 @@ export const mainnetPreset: BeaconPreset = {
   FIELD_ELEMENTS_PER_CELL: 64,
   FIELD_ELEMENTS_PER_EXT_BLOB: 8192,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: 4,
+
+  // GLOAS
+  PTC_SIZE: 512,
+  MAX_PAYLOAD_ATTESTATIONS: 4,
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD: 64, // 2**6
+  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD: 16, // 2**4
+  MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: 16384, // 2**14
+
+  // Type-specific SSZ bounds
+  // ---------------------------------------------------------------
+  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE: 16829,
+  MAX_ATTESTER_SLASHING_SIZE: 2097616,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: 196932,
+
+  // HEZE
+  INCLUSION_LIST_COMMITTEE_SIZE: 16, // 2**4
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: 196934,
+  MAX_SIGNED_INCLUSION_LIST_SIZE: 41112,
 };

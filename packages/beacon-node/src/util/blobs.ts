@@ -1,6 +1,5 @@
 import {digest as sha256Digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {ChainForkConfig} from "@lodestar/config";
 import {
   BYTES_PER_CELL,
   BYTES_PER_FIELD_ELEMENT,
@@ -12,8 +11,16 @@ import {
   NUMBER_OF_COLUMNS,
   VERSIONED_HASH_VERSION_KZG,
 } from "@lodestar/params";
-import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {BeaconBlockBody, SSZTypesFor, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
+import {
+  BeaconBlockBody,
+  DataColumnSidecar,
+  SSZTypesFor,
+  deneb,
+  fulu,
+  gloas,
+  isGloasDataColumnSidecar,
+  ssz,
+} from "@lodestar/types";
 import {kzg} from "./kzg.js";
 
 type VersionHash = Uint8Array;
@@ -25,7 +32,7 @@ export function kzgCommitmentToVersionedHash(kzgCommitment: deneb.KZGCommitment)
   return hash;
 }
 
-export function computeInclusionProof(
+export function computePreFuluKzgCommitmentsInclusionProof(
   fork: ForkName,
   body: BeaconBlockBody,
   index: number
@@ -36,39 +43,12 @@ export function computeInclusionProof(
 }
 
 /**
- * SPEC FUNCTION get_blob_sidecars
- * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/deneb/validator.md#sidecar
- */
-export function getBlobSidecars(
-  config: ChainForkConfig,
-  signedBlock: SignedBeaconBlock,
-  blobs: deneb.Blobs,
-  proofs: deneb.KZGProofs
-): deneb.BlobSidecars {
-  const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
-  if (blobKzgCommitments === undefined) {
-    throw Error("Invalid block with missing blobKzgCommitments for computeBlobSidecars");
-  }
-
-  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
-  const fork = config.getForkName(signedBlockHeader.message.slot);
-
-  return blobKzgCommitments.map((kzgCommitment, index) => {
-    const blob = blobs[index];
-    const kzgProof = proofs[index];
-    const kzgCommitmentInclusionProof = computeInclusionProof(fork, signedBlock.message.body, index);
-
-    return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
-  });
-}
-
-/**
  * If the node obtains 50%+ of all the columns, it SHOULD reconstruct the full data matrix via the recover_matrix helper
  * See https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#recover_matrix
  */
-export async function recoverDataColumnSidecars(
-  partialSidecars: Map<number, fulu.DataColumnSidecar>
-): Promise<fulu.DataColumnSidecars | null> {
+export async function dataColumnMatrixRecovery(
+  partialSidecars: Map<number, DataColumnSidecar>
+): Promise<DataColumnSidecar[] | null> {
   const columnCount = partialSidecars.size;
   if (columnCount < NUMBER_OF_COLUMNS / 2) {
     // We don't have enough columns to recover
@@ -80,12 +60,15 @@ export async function recoverDataColumnSidecars(
     return Array.from(partialSidecars.values());
   }
 
-  const firstDataColumn = partialSidecars.values().next().value;
+  // Sort data columns by index in ascending order before passing for kzg operations
+  const partialSidecarsSorted = Array.from(partialSidecars.values()).sort((a, b) => a.index - b.index);
+
+  const firstDataColumn = partialSidecarsSorted[0];
   if (firstDataColumn == null) {
     // should not happen because we check the size of the cache before this
     throw new Error("No data column found in cache to recover from");
   }
-  const blobCount = firstDataColumn.kzgCommitments.length;
+  const blobCount = firstDataColumn.column.length;
 
   const fullColumns: Array<Uint8Array[]> = Array.from(
     {length: NUMBER_OF_COLUMNS},
@@ -97,8 +80,8 @@ export async function recoverDataColumnSidecars(
     blobProofs.map((_, blobIndex) => {
       const cellIndices: number[] = [];
       const cells: Uint8Array[] = [];
-      for (const [columnIndex, dataColumn] of partialSidecars.entries()) {
-        cellIndices.push(columnIndex);
+      for (const dataColumn of partialSidecarsSorted) {
+        cellIndices.push(dataColumn.index);
         cells.push(dataColumn.column[blobIndex]);
       }
       // recovered cells and proofs are of the same row/blob, their length should be NUMBER_OF_COLUMNS
@@ -114,7 +97,7 @@ export async function recoverDataColumnSidecars(
     }
   }
 
-  const result: fulu.DataColumnSidecars = new Array(NUMBER_OF_COLUMNS);
+  const result: DataColumnSidecar[] = new Array(NUMBER_OF_COLUMNS);
 
   for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
     let sidecar = partialSidecars.get(columnIndex);
@@ -124,14 +107,24 @@ export async function recoverDataColumnSidecars(
       continue;
     }
 
-    sidecar = {
-      index: columnIndex,
-      column: fullColumns[columnIndex],
-      kzgCommitments: firstDataColumn.kzgCommitments,
-      kzgProofs: Array.from({length: blobCount}, (_, rowIndex) => blobProofs[rowIndex][columnIndex]),
-      signedBlockHeader: firstDataColumn.signedBlockHeader,
-      kzgCommitmentsInclusionProof: firstDataColumn.kzgCommitmentsInclusionProof,
-    };
+    if (isGloasDataColumnSidecar(firstDataColumn)) {
+      sidecar = {
+        index: columnIndex,
+        column: fullColumns[columnIndex],
+        kzgProofs: Array.from({length: blobCount}, (_, rowIndex) => blobProofs[rowIndex][columnIndex]),
+        slot: firstDataColumn.slot,
+        beaconBlockRoot: firstDataColumn.beaconBlockRoot,
+      } satisfies gloas.DataColumnSidecar;
+    } else {
+      sidecar = {
+        index: columnIndex,
+        column: fullColumns[columnIndex],
+        kzgCommitments: firstDataColumn.kzgCommitments,
+        kzgProofs: Array.from({length: blobCount}, (_, rowIndex) => blobProofs[rowIndex][columnIndex]),
+        signedBlockHeader: firstDataColumn.signedBlockHeader,
+        kzgCommitmentsInclusionProof: firstDataColumn.kzgCommitmentsInclusionProof,
+      } satisfies fulu.DataColumnSidecar;
+    }
     result[columnIndex] = sidecar;
   }
 
@@ -142,39 +135,83 @@ export async function recoverDataColumnSidecars(
  * Reconstruct blobs from a set of data columns, at least 50%+ of all the columns
  * must be provided to allow to reconstruct the full data matrix
  */
-export async function reconstructBlobs(sidecars: fulu.DataColumnSidecars): Promise<deneb.Blobs> {
+export async function reconstructBlobs(sidecars: DataColumnSidecar[], indices?: number[]): Promise<deneb.Blobs> {
   if (sidecars.length < NUMBER_OF_COLUMNS / 2) {
     throw Error(
       `Expected at least ${NUMBER_OF_COLUMNS / 2} data columns to reconstruct blobs, received ${sidecars.length}`
     );
   }
+  const blobCount = sidecars[0].column.length;
 
-  let fullSidecars: fulu.DataColumnSidecars;
-
-  if (sidecars.length === NUMBER_OF_COLUMNS) {
-    // Full columns, no need to recover
-    fullSidecars = sidecars;
-  } else {
-    const sidecarsByIndex = new Map<number, fulu.DataColumnSidecar>(sidecars.map((sc) => [sc.index, sc]));
-    const recoveredSidecars = await recoverDataColumnSidecars(sidecarsByIndex);
-    if (recoveredSidecars === null) {
-      // Should not happen because we check the column count above
-      throw Error("Failed to reconstruct the full data matrix");
+  for (const index of indices ?? []) {
+    if (index < 0 || index >= blobCount) {
+      throw Error(`Invalid blob index ${index}, must be between 0 and ${blobCount - 1}`);
     }
-    fullSidecars = recoveredSidecars;
+  }
+  const indicesToReconstruct = indices ?? Array.from({length: blobCount}, (_, i) => i);
+
+  const recoveredCells = await recoverBlobCells(sidecars, indicesToReconstruct);
+  if (recoveredCells === null) {
+    // Should not happen because we check the column count above
+    throw Error("Failed to recover cells to reconstruct blobs");
   }
 
-  const blobCount = fullSidecars[0].column.length;
-  const blobs: deneb.Blobs = new Array(blobCount);
+  const blobs: deneb.Blobs = new Array(indicesToReconstruct.length);
 
-  const ordered = fullSidecars.slice().sort((a, b) => a.index - b.index);
-  for (let row = 0; row < blobCount; row++) {
-    // 128 cells that make up one "extended blob" row
-    const cells = ordered.map((col) => col.column[row]);
-    blobs[row] = cellsToBlob(cells);
+  for (let i = 0; i < indicesToReconstruct.length; i++) {
+    const blobIndex = indicesToReconstruct[i];
+    const cells = recoveredCells.get(blobIndex);
+    if (!cells) {
+      throw Error(`Failed to get recovered cells for blob index ${blobIndex}`);
+    }
+    blobs[i] = cellsToBlob(cells);
   }
 
   return blobs;
+}
+
+/**
+ * Recover cells for specific blob indices from a set of data columns
+ */
+async function recoverBlobCells(
+  partialSidecars: DataColumnSidecar[],
+  blobIndices: number[]
+): Promise<Map<number, fulu.Cell[]> | null> {
+  const columnCount = partialSidecars.length;
+  if (columnCount < NUMBER_OF_COLUMNS / 2) {
+    // We don't have enough columns to recover
+    return null;
+  }
+
+  const recoveredCells = new Map<number, fulu.Cell[]>();
+  // Sort data columns by index in ascending order
+  const partialSidecarsSorted = partialSidecars.slice().sort((a, b) => a.index - b.index);
+
+  if (columnCount === NUMBER_OF_COLUMNS) {
+    // Full columns, no need to recover
+    for (const blobIndex of blobIndices) {
+      // 128 cells that make up one "extended blob" row
+      const cells = partialSidecarsSorted.map((col) => col.column[blobIndex]);
+      recoveredCells.set(blobIndex, cells);
+    }
+    return recoveredCells;
+  }
+
+  await Promise.all(
+    blobIndices.map(async (blobIndex) => {
+      const cellIndices: number[] = [];
+      const cells: fulu.Cell[] = [];
+      for (const dataColumn of partialSidecarsSorted) {
+        cellIndices.push(dataColumn.index);
+        cells.push(dataColumn.column[blobIndex]);
+      }
+      // Recover cells for this specific blob row
+      const recovered = await kzg.asyncRecoverCellsAndKzgProofs(cellIndices, cells);
+      recoveredCells.set(blobIndex, recovered.cells);
+    })
+  );
+
+  return recoveredCells;
 }
 
 /**

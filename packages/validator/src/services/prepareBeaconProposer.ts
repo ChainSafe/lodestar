@@ -1,10 +1,10 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {IClock} from "@lodestar/state-transition";
 import {Epoch, bellatrix} from "@lodestar/types";
-
 import {Metrics} from "../metrics.js";
-import {IClock, LoggerVc, batchItems} from "../util/index.js";
+import {LoggerVc, batchItems} from "../util/index.js";
 import {ValidatorStore} from "./validatorStore.js";
 
 const REGISTRATION_CHUNK_SIZE = 512;
@@ -14,7 +14,8 @@ const REGISTRATION_CHUNK_SIZE = 512;
  * the engine for building execution payload with transactions.
  *
  * This needs to be done every epoch because the BN will cache it at most for
- * two epochs.
+ * two epochs. From gloas the beacon node takes the fee recipient from the signed
+ * proposer preferences and the validators using it from the committee subscriptions.
  */
 export function pollPrepareBeaconProposer(
   config: BeaconConfig,
@@ -27,6 +28,9 @@ export function pollPrepareBeaconProposer(
   async function prepareBeaconProposer(epoch: Epoch): Promise<void> {
     // Before bellatrix we don't need to update this data on bn/builder
     if (epoch < config.BELLATRIX_FORK_EPOCH - 1) return;
+
+    // Proposer data is pre-gloas only, replaced by proposer preferences and committee subscriptions
+    if (config.getForkSeq(epoch * SLOTS_PER_EPOCH) >= ForkSeq.gloas) return;
 
     // prepareBeaconProposer is not as time sensitive as attesting.
     // Poll indices first, then call api.validator.prepareBeaconProposer once
@@ -80,6 +84,9 @@ export function pollBuilderValidatorRegistration(
     if (epoch < config.BELLATRIX_FORK_EPOCH - 1) return;
     const slot = epoch * SLOTS_PER_EPOCH;
 
+    // Validator registrations are pre-gloas only, replaced by builder preferences
+    if (config.getForkSeq(slot) >= ForkSeq.gloas) return;
+
     // registerValidator is not as time sensitive as attesting.
     // Poll indices first, then call api.validator.registerValidator once
     await validatorStore.pollValidatorIndices().catch((e: Error) => {
@@ -91,7 +98,7 @@ export function pollBuilderValidatorRegistration(
       .filter(
         (pubkeyHex): pubkeyHex is string =>
           pubkeyHex !== undefined &&
-          validatorStore.getBuilderSelectionParams(pubkeyHex).selection !==
+          validatorStore.getBuilderSelectionParams(pubkeyHex, slot).selection !==
             routes.validator.BuilderSelection.ExecutionOnly
       );
 
@@ -103,7 +110,7 @@ export function pollBuilderValidatorRegistration(
           const registrations = await Promise.all(
             pubkeyHexes.map((pubkeyHex): Promise<bellatrix.SignedValidatorRegistrationV1> => {
               const feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
-              const gasLimit = validatorStore.getGasLimit(pubkeyHex);
+              const gasLimit = validatorStore.getGasLimit(pubkeyHex, slot, logger);
               return validatorStore.getValidatorRegistration(pubkeyHex, {feeRecipient, gasLimit}, slot);
             })
           );

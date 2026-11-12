@@ -1,15 +1,14 @@
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqresp";
+import {RequestError, RequestErrorCode, RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
-import {arrToSource} from "../../unit/network/reqresp/utils.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {connect, getPeerIdOf, onPeerConnect} from "../../utils/network.js";
 import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
@@ -78,7 +77,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
   it("should send/receive signed blocks", async () => {
     const req: phase0.BeaconBlocksByRangeRequest = {startSlot: 0, step: 1, count: 2};
-    const blocks: phase0.SignedBeaconBlock[] = [];
+    const blocks: SignedBeaconBlock[] = [];
     for (let slot = req.startSlot; slot < req.count; slot++) {
       const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue();
       block.message.slot = slot;
@@ -102,7 +101,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     expect(returnedBlocks).toHaveLength(req.count);
 
     for (const [i, returnedBlock] of returnedBlocks.entries()) {
-      expect(ssz.phase0.SignedBeaconBlock.equals(returnedBlock.data, blocks[i])).toBe(true);
+      expect(config.getForkTypes(returnedBlock.message.slot).SignedBeaconBlock.equals(returnedBlock, blocks[i])).toBe(
+        true
+      );
     }
   });
 
@@ -186,7 +187,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       (method) =>
         async function* onRequest() {
           if (method === ReqRespMethod.LightClientUpdatesByRange) {
-            yield* arrToSource(lightClientUpdates);
+            yield* lightClientUpdates;
           }
         }
     );
@@ -242,29 +243,28 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("should trigger TTFB_TIMEOUT error if first response is delayed", async () => {
-    const ttfbTimeoutMs = 250;
+  it("should trigger a RESP_TIMEOUT error if first response is delayed", async () => {
+    const respTimeoutMs = 250;
 
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
             // Wait for too long before sending first response chunk
-            await sleep(ttfbTimeoutMs * 10, controller.signal);
+            await sleep(respTimeoutMs * 10, controller.signal);
             yield wrapBlockAsEncodedPayload(config, config.getForkTypes(0).SignedBeaconBlock.defaultValue());
           }
         },
-      {ttfbTimeoutMs}
+      {respTimeoutMs}
     );
 
     await expectRejectedWithLodestarError(
       netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 1}),
-      new RequestError({code: RequestErrorCode.TTFB_TIMEOUT})
+      new RequestError({code: RequestErrorCode.RESP_TIMEOUT})
     );
   });
 
-  it("should trigger a RESP_TIMEOUT error if first byte is on time but later delayed", async () => {
-    const ttfbTimeoutMs = 250;
+  it("should trigger a RESP_TIMEOUT error if later response is delayed", async () => {
     const respTimeoutMs = 300;
 
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
@@ -277,7 +277,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
             yield getEmptyEncodedPayloadSignedBeaconBlock(config);
           }
         },
-      {ttfbTimeoutMs, respTimeoutMs}
+      {respTimeoutMs}
     );
 
     await expectRejectedWithLodestarError(
@@ -286,44 +286,44 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("should trigger TTFB_TIMEOUT error if respTimeoutMs and ttfbTimeoutMs is the same", async () => {
-    const ttfbTimeoutMs = 250;
-    const respTimeoutMs = 250;
+  it("should detect a rate-limit response and back off the peer", async () => {
+    // Simulates a Lighthouse/Grandine-style rate limit response (status 139)
+    const rateLimitMessage = "Rate limited. There are already 2 active requests with the same protocol";
 
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         // biome-ignore lint/correctness/useYield: No need for yield in test context
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
-            await sleep(100000000, controller.signal);
+            throw new ResponseError(RespStatus.RATE_LIMITED, rateLimitMessage);
           }
-        },
-      {respTimeoutMs, ttfbTimeoutMs}
+        }
     );
 
-    await expectRejectedWithLodestarError(
-      netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 2}),
-      new RequestError({code: RequestErrorCode.TTFB_TIMEOUT})
+    // First request: responder sends RATE_LIMITED → detected as RESP_RATE_LIMITED
+    await expectRejectedWithRateLimitError(
+      netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 1}),
+      RequestErrorCode.RESP_RATE_LIMITED
+    );
+
+    // Second request: SelfRateLimiter has the peer in backoff → blocked before sending
+    await expectRejectedWithRateLimitError(
+      netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 1}),
+      RequestErrorCode.REQUEST_SELF_RATE_LIMITED
     );
   });
+}
 
-  it("should trigger a RESP_TIMEOUT error if first byte is on time but sleep infinite", async () => {
-    const [netA, _, _0, peerIdB] = await createAndConnectPeers(
-      (method) =>
-        async function* onRequest() {
-          if (method === ReqRespMethod.BeaconBlocksByRange) {
-            yield getEmptyEncodedPayloadSignedBeaconBlock(config);
-            await sleep(100000000, controller.signal);
-          }
-        },
-      {respTimeoutMs: 250, ttfbTimeoutMs: 250}
-    );
-
-    await expectRejectedWithLodestarError(
-      netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 2}),
-      new RequestError({code: RequestErrorCode.RESP_TIMEOUT})
-    );
-  });
+async function expectRejectedWithRateLimitError(promise: Promise<unknown>, code: RequestErrorCode): Promise<void> {
+  try {
+    const value = await promise;
+    throw Error(`Expected promise to reject but returned value: \n\n\t${JSON.stringify(value, null, 2)}`);
+  } catch (e) {
+    expect(e).toBeInstanceOf(RequestError);
+    const type = (e as RequestError).type as {code: RequestErrorCode; rateLimitedUntilMs?: number};
+    expect(type.code).toBe(code);
+    expect(type.rateLimitedUntilMs).toEqual(expect.any(Number));
+  }
 }
 
 function getEmptyEncodedPayloadSignedBeaconBlock(config: ChainForkConfig): ResponseOutgoing {

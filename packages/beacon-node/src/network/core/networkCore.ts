@@ -1,15 +1,16 @@
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
-import {Connection, PrivateKey} from "@libp2p/interface";
+import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
+import type {PublishOpts} from "@libp2p/gossipsub/types";
+import type {Connection, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {multiaddr} from "@multiformats/multiaddr";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {isForkPostFulu} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Epoch, Status, fulu, sszTypesFor} from "@lodestar/types";
-import {multiaddr} from "@multiformats/multiaddr";
+import {Epoch, Slot, Status, fulu, sszTypesFor} from "@lodestar/types";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
+import {GoodByeReasonCode} from "../../constants/index.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
@@ -69,6 +70,15 @@ export type BaseNetworkInit = {
   initialStatus: Status;
   initialCustodyGroupCount: number;
 };
+
+/** Counts of what is still keeping this thread's event loop alive, e.g. `TCPWrap=3,Timeout=1` */
+function formatActiveResources(): string {
+  const counts = new Map<string, number>();
+  for (const resource of process.getActiveResourcesInfo()) {
+    counts.set(resource, (counts.get(resource) ?? 0) + 1);
+  }
+  return Array.from(counts, ([name, count]) => `${name}=${count}`).join(",");
+}
 
 /**
  * This class is meant to work both:
@@ -156,7 +166,6 @@ export class NetworkCore implements INetworkCore {
 
     // Bind discv5's ENR to local metadata
     // resolve circular dependency by setting `discv5` variable after the peer manager is instantiated
-    // biome-ignore lint/style/useConst: <explanation>
     let discv5: Discv5Worker | undefined;
     const onMetadataSetValue = function onMetadataSetValue(key: string, value: Uint8Array): void {
       discv5?.setEnrValue(key, value).catch((e) => logger.error("error on setEnrValue", {key}, e));
@@ -290,7 +299,10 @@ export class NetworkCore implements INetworkCore {
     this.attnetsService.close();
     this.syncnetsService.close();
     await this.libp2p.stop();
-    this.logger.debug("network lib2p closed");
+    // Diagnostic for the shutdown hang, this thread can spin in `Environment::CleanupHandles()` on
+    // a handle that never closes and `Worker.terminate()` then never resolves. Diffing this list
+    // between a clean and a stuck shutdown should narrow down which handle it is
+    this.logger.debug("network lib2p closed", {activeResources: formatActiveResources()});
 
     this.closed = true;
   }
@@ -321,12 +333,21 @@ export class NetworkCore implements INetworkCore {
     this.peerManager.reStatusPeers(peers);
   }
 
+  async goodbyeAndDisconnect(peer: PeerIdStr, reason: GoodByeReasonCode): Promise<void> {
+    await this.peerManager.goodbyeAndDisconnect(peerIdFromString(peer), reason);
+  }
+
   /**
    * Request att subnets up `toSlot`. Network will ensure to mantain some peers for each
    */
   async prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     this.attnetsService.addCommitteeSubscriptions(subscriptions);
     if (subscriptions.length > 0) this.peerManager.onCommitteeSubscriptions();
+  }
+
+  async addLocalProposalSlots(slots: Slot[]): Promise<void> {
+    // no peerManager.onCommitteeSubscriptions(): the extra subscription relies on connected peers, no discovery
+    this.attnetsService.addLocalProposalSlots(slots);
   }
 
   async prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
@@ -455,6 +476,18 @@ export class NetworkCore implements INetworkCore {
     await this.libp2p.hangUp(peerIdFromString(peerIdStr));
   }
 
+  async addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null> {
+    return this.gossip.addDirectPeer(peer);
+  }
+
+  async removeDirectPeer(peerIdStr: PeerIdStr): Promise<boolean> {
+    return this.gossip.removeDirectPeer(peerIdStr);
+  }
+
+  async getDirectPeers(): Promise<string[]> {
+    return this.gossip.getDirectPeers();
+  }
+
   private _dumpPeer(peerIdStr: string, connections: Connection[]): routes.lodestar.LodestarNodePeer {
     const peerData = this.peersData.connectedPeers.get(peerIdStr);
     const fork = this.config.getForkName(this.clock.currentSlot);
@@ -554,7 +587,11 @@ export class NetworkCore implements INetworkCore {
           // On fork boundary transition
           if (epoch === nextBoundaryEpoch) {
             // updateEth2Field() MUST be called with clock epoch, onEpoch event is emitted in response to clock events
-            this.metadata.updateEth2Field(epoch);
+            const {forkDigest} = this.metadata.updateEth2Field(epoch);
+            // Update local status to reflect the new fork digest, otherwise we will disconnect peers that re-status us
+            // right after the fork transition due to incompatible forks as our fork digest is stale since we only
+            // update it once we import a new head or when emitting update status event.
+            this.statusCache.update({...this.statusCache.get(), forkDigest});
             this.reqResp.registerProtocolsAtBoundary(nextBoundary);
           }
 

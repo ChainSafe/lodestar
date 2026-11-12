@@ -2,7 +2,7 @@ import {Node} from "@chainsafe/persistent-merkle-tree";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
-import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
+import {BeaconStatePreHeze, CachedBeaconStatePreHeze} from "../types.js";
 
 /**
  * Store vote counts for every eth-execution block that has votes; if any eth-execution block wins majority support within a 1024-slot
@@ -12,7 +12,7 @@ import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
  * - Best case: Vote is already decided, zero work. See becomesNewEth1Data conditions
  * - Worst case: 1023 votes and no majority vote yet.
  */
-export function processEth1Data(state: CachedBeaconStateAllForks, eth1Data: phase0.Eth1Data): void {
+export function processEth1Data(state: CachedBeaconStatePreHeze, eth1Data: phase0.Eth1Data): void {
   // Convert to view first to hash once and compare hashes
   const eth1DataView = ssz.phase0.Eth1Data.toViewDU(eth1Data);
 
@@ -28,7 +28,7 @@ export function processEth1Data(state: CachedBeaconStateAllForks, eth1Data: phas
  * result in a change to `state.eth1Data`.
  */
 export function becomesNewEth1Data(
-  state: BeaconStateAllForks,
+  state: BeaconStatePreHeze,
   newEth1Data: CompositeViewDU<typeof ssz.phase0.Eth1Data>
 ): boolean {
   const SLOTS_PER_ETH1_VOTING_PERIOD = EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH;

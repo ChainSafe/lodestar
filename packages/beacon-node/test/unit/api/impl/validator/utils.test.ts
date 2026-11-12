@@ -1,8 +1,13 @@
-import {toHexString} from "@chainsafe/ssz";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {BLSPubkey, ValidatorIndex, ssz} from "@lodestar/types";
 import {beforeAll, describe, expect, it} from "vitest";
-import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
+import {toHexString} from "@chainsafe/ssz";
+import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {BeaconStateAllForks, BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
+import {BLSPubkey, ProducedBlockSource, ValidatorIndex, ssz} from "@lodestar/types";
+import {
+  getPubkeysForIndices,
+  selectBlockProductionSourceByBoostFactor,
+} from "../../../../../src/api/impl/validator/utils.js";
 
 describe("api / impl / validator / utils", () => {
   const vc = 32;
@@ -20,10 +25,29 @@ describe("api / impl / validator / utils", () => {
       pubkeys.push(pubkey);
       validators.push(ssz.phase0.Validator.toViewDU({...validator, pubkey}));
     }
+    state.commit();
   });
 
   it("getPubkeysForIndices", () => {
-    const pubkeysRes = getPubkeysForIndices(state.validators, indexes);
+    const cachedState = createCachedBeaconState(
+      state,
+      {
+        config: createBeaconConfig(defaultChainConfig, state.genesisValidatorsRoot),
+        pubkeyCache,
+      },
+      {skipSyncPubkeys: true}
+    );
+    const pubkeysRes = getPubkeysForIndices(new BeaconStateView(cachedState), indexes);
     expect(pubkeysRes.map(toHexString)).toEqual(pubkeys.map(toHexString));
+  });
+
+  it("compares boosted values without truncating", () => {
+    expect(
+      selectBlockProductionSourceByBoostFactor({
+        engineExecutionPayloadValue: 1n,
+        builderExecutionPayloadValue: 1n,
+        builderBoostFactor: 150n,
+      }).source
+    ).toBe(ProducedBlockSource.builder);
   });
 });

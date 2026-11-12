@@ -1,9 +1,12 @@
-import {toHexString} from "@chainsafe/ssz";
-import {config} from "@lodestar/config/default";
-import {ssz} from "@lodestar/types";
 import {describe, expect, it} from "vitest";
+import {toHexString} from "@chainsafe/ssz";
+import {createChainForkConfig} from "@lodestar/config";
+import {config} from "@lodestar/config/default";
+import {BeaconStateFulu} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
 import {interopDeposits} from "../../../src/node/utils/interop/deposits.js";
 import {initDevState} from "../../../src/node/utils/state.js";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 
 describe("interop / initDevState", () => {
   it("Create interop deposits", () => {
@@ -59,7 +62,7 @@ describe("interop / initDevState", () => {
 
   it("Create correct genesisState", () => {
     const validatorCount = 8;
-    const {state} = initDevState(config, validatorCount, {
+    const state = initDevState(config, validatorCount, {
       genesisTime: 1644000000,
       eth1BlockHash: Buffer.alloc(32, 0xaa),
       eth1Timestamp: 1644000000,
@@ -68,5 +71,28 @@ describe("interop / initDevState", () => {
     expect(toHexString(state.hashTreeRoot())).toBe(
       "0x3ef3bda2cee48ebdbb6f7a478046631bad3b5eeda3543e55d9dd39da230425bb"
     );
+  });
+
+  it("Initializes the proposer lookahead for a fulu genesis", () => {
+    const validatorCount = 64;
+    const opts = {genesisTime: 1644000000, eth1BlockHash: Buffer.alloc(32, 0xaa), eth1Timestamp: 1644000000};
+    const electraChainConfig = {
+      ...config,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+    };
+    const electraConfig = createChainForkConfig(electraChainConfig);
+    const fuluConfig = createChainForkConfig({...electraChainConfig, FULU_FORK_EPOCH: 0});
+
+    const {epochCtx} = createCachedBeaconStateTest(initDevState(electraConfig, validatorCount, opts), electraConfig);
+    const fuluState = initDevState(fuluConfig, validatorCount, opts) as BeaconStateFulu;
+
+    expect(Array.from(fuluState.proposerLookahead.getAll())).toEqual([
+      ...epochCtx.getBeaconProposers(),
+      ...epochCtx.getBeaconProposersNextEpoch(),
+    ]);
   });
 });

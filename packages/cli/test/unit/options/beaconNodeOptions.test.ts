@@ -1,15 +1,21 @@
-import fs from "node:fs";
+import os from "node:os";
+import {describe, expect, it} from "vitest";
 import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
-import {describe, expect, it} from "vitest";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
-import {getTestdirPath} from "../../utils.js";
+import {
+  NetworkArgs,
+  hasGlobalIPv6Address,
+  parseListenArgs,
+  parseArgs as parseNetworkArgs,
+} from "../../../src/options/beaconNodeOptions/network.js";
 
 describe("options / beaconNodeOptions", () => {
   it("Should parse BeaconNodeArgs", () => {
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
       "api.maxGindicesInProof": 1000,
+      "api.disableBidValidation": true,
       "rest.namespace": [],
       "rest.cors": "*",
       rest: true,
@@ -23,36 +29,30 @@ describe("options / beaconNodeOptions", () => {
       "chain.blsVerifyAllMainThread": true,
       "chain.disableBlsBatchVerify": true,
       "chain.persistProducedBlocks": true,
+      "chain.persistProducedPayloadEnvelopes": true,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoost": false,
       "chain.proposerBoostReorg": false,
+      "chain.dedupePayloads": false,
       "chain.disableImportExecutionFcU": false,
       "chain.preaggregateSlotDistance": 1,
+      "chain.singleAttestationIgnoreProposalDuty": true,
       "chain.attDataCacheSlotDistance": 2,
       "chain.computeUnrealized": true,
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
-      "safe-slots-to-import-optimistically": 256,
+      "chain.disableProposerSlashings": true,
       "chain.archiveStateEpochFrequency": 1024,
       "chain.minSameMessageSignatureSetsToBatch": 32,
       "chain.maxShufflingCacheEpochs": 100,
       "chain.archiveDataEpochs": 10000,
-      "chain.nHistoricalStates": true,
       "chain.nHistoricalStatesFileDataStore": true,
       "chain.maxBlockStates": 100,
       "chain.maxCPStateEpochsInMemory": 100,
+      "chain.maxCPStateEpochsOnDisk": 1000,
       "chain.archiveMode": ArchiveMode.Frequency,
       emitPayloadAttributes: false,
-
-      eth1: true,
-      "eth1.providerUrl": "http://my.node:8545",
-      "eth1.providerUrls": ["http://my.node:8545"],
-      "eth1.depositContractDeployBlock": 1625314,
-      "eth1.disableEth1DepositDataTracker": true,
-      "eth1.unsafeAllowDepositDataOverwrite": false,
-      "eth1.forcedEth1DataVote":
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      graffitiAppend: false,
 
       "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
@@ -62,6 +62,7 @@ describe("options / beaconNodeOptions", () => {
       builder: false,
       "builder.url": "http://localhost:8661",
       "builder.timeout": 12000,
+      "builder.bidDeadline": 500,
       "builder.faultInspectionWindow": 32,
       "builder.allowedFaults": 8,
 
@@ -79,12 +80,14 @@ describe("options / beaconNodeOptions", () => {
       listenAddress: "127.0.0.1",
       port: 9001,
       discoveryPort: 9002,
+      quicPort: 9003,
       bootnodes: [
         "enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA",
       ],
       targetPeers: 25,
       subscribeAllSubnets: true,
       slotsToSubscribeBeforeAggregatorDuty: 1,
+      slotsToSubscribeBeforeProposalDuty: 4,
       disablePeerScoring: true,
       mdns: false,
       "network.maxPeers": 30,
@@ -105,16 +108,17 @@ describe("options / beaconNodeOptions", () => {
       "network.useWorker": true,
       "network.maxYoungGenerationSizeMb": 152,
       "network.targetGroupPeers": 12,
+      directPeers: ["/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAkuWPWqF4W3aw9oo5Yw79v5muzBaaGTGKMmuqjPfEyfkwu"],
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
-      "sync.backfillBatchSize": 64,
       "sync.disableRangeSync": false,
     } as BeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       api: {
         maxGindicesInProof: 1000,
+        disableBidValidation: true,
         rest: {
           api: [],
           cors: "*",
@@ -131,36 +135,33 @@ describe("options / beaconNodeOptions", () => {
         blsVerifyAllMainThread: true,
         disableBlsBatchVerify: true,
         persistProducedBlocks: true,
+        persistProducedPayloadEnvelopes: true,
         persistInvalidSszObjects: true,
         proposerBoost: false,
         proposerBoostReorg: false,
+        dedupePayloads: false,
         disableImportExecutionFcU: false,
         preaggregateSlotDistance: 1,
+        singleAttestationIgnoreProposalDuty: true,
         attDataCacheSlotDistance: 2,
         computeUnrealized: true,
-        safeSlotsToImportOptimistically: 256,
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
+        disableProposerSlashings: true,
         archiveStateEpochFrequency: 1024,
         emitPayloadAttributes: false,
         minSameMessageSignatureSetsToBatch: 32,
         maxShufflingCacheEpochs: 100,
         archiveDataEpochs: 10000,
         archiveMode: ArchiveMode.Frequency,
-        nHistoricalStates: true,
+        graffitiAppend: false,
         nHistoricalStatesFileDataStore: true,
+        nativeStateTransition: false,
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
-      },
-      eth1: {
-        enabled: true,
-        providerUrls: ["http://my.node:8545"],
-        depositContractDeployBlock: 1625314,
-        disableEth1DepositDataTracker: true,
-        unsafeAllowDepositDataOverwrite: false,
-        forcedEth1DataVote:
-          "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        maxCPStateEpochsOnDisk: 1000,
+        faultInspectionWindow: 32,
+        allowedFaults: 8,
       },
       executionEngine: {
         urls: ["http://localhost:8551"],
@@ -172,6 +173,7 @@ describe("options / beaconNodeOptions", () => {
         enabled: false,
         url: "http://localhost:8661",
         timeout: 12000,
+        bidDeadline: 500,
         faultInspectionWindow: 32,
         allowedFaults: 8,
       },
@@ -199,9 +201,10 @@ describe("options / beaconNodeOptions", () => {
         },
         maxPeers: 30,
         targetPeers: 25,
-        localMultiaddrs: ["/ip4/127.0.0.1/tcp/9001"],
+        localMultiaddrs: ["/ip4/127.0.0.1/udp/9003/quic-v1", "/ip4/127.0.0.1/tcp/9001"],
         subscribeAllSubnets: true,
         slotsToSubscribeBeforeAggregatorDuty: 1,
+        slotsToSubscribeBeforeProposalDuty: 4,
         disablePeerScoring: true,
         connectToDiscv5Bootnodes: true,
         discv5FirstQueryDelayMs: 1000,
@@ -212,17 +215,19 @@ describe("options / beaconNodeOptions", () => {
         gossipsubDHigh: 6,
         gossipsubAwaitHandler: true,
         mdns: false,
+        quic: true,
         rateLimitMultiplier: 1,
         maxGossipTopicConcurrency: 64,
         useWorker: true,
         maxYoungGenerationSizeMb: 152,
         targetGroupPeers: 12,
+        tcp: true,
+        directPeers: ["/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAkuWPWqF4W3aw9oo5Yw79v5muzBaaGTGKMmuqjPfEyfkwu"],
       },
       sync: {
         isSingleNode: true,
         slotImportTolerance: 32,
         disableProcessAsChainSegment: true,
-        backfillBatchSize: 64,
         disableRangeSync: false,
       },
     };
@@ -230,28 +235,182 @@ describe("options / beaconNodeOptions", () => {
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
     expect(options).toEqual(expectedOptions);
   });
+});
 
-  it("Should use execution endpoint & jwt for eth1", () => {
-    const jwtSecretFile = getTestdirPath("./jwtsecret");
-    const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
-    fs.writeFileSync(jwtSecretFile, jwtSecretHex, {encoding: "utf8"});
+describe("options / network / tcp and quic flags", () => {
+  it("should include both tcp and quic multiaddrs by default", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000} as NetworkArgs);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/udp/9001/quic-v1");
+  });
 
-    // Cast to match the expected fully defined type
-    const beaconNodeArgsPartial = {
-      eth1: true,
-      "execution.urls": ["http://my.node:8551"],
-      jwtSecret: jwtSecretFile,
-    } as BeaconNodeArgs;
+  it("should include both tcp and quic multiaddrs when quic is explicitly true", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, quic: true} as NetworkArgs);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/udp/9001/quic-v1");
+  });
 
-    const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
-      eth1: {
-        enabled: true,
-        providerUrls: ["http://my.node:8551"],
-        jwtSecretHex,
-      },
+  it("should exclude tcp multiaddrs when tcp is false", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, tcp: false, quic: true} as NetworkArgs);
+    const tcpAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/tcp/"));
+    expect(tcpAddrs).toHaveLength(0);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/udp/9001/quic-v1");
+    expect(result.tcp).toBe(false);
+  });
+
+  it("should exclude quic multiaddrs when quic is false", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, quic: false} as NetworkArgs);
+    const quicAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/quic"));
+    expect(quicAddrs).toHaveLength(0);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");
+    expect(result.quic).toBe(false);
+  });
+
+  it("should not validate derived quicPort when quic is false", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 65535, quic: false} as NetworkArgs);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/65535");
+    expect(result.localMultiaddrs).not.toContain("/ip4/0.0.0.0/udp/65536/quic-v1");
+  });
+
+  it("should not validate explicit quicPort when quic is false", () => {
+    const result = parseNetworkArgs({
+      listenAddress: "0.0.0.0",
+      port: 9000,
+      quic: false,
+      quicPort: 65536,
+    } as NetworkArgs);
+    expect(result.quic).toBe(false);
+  });
+
+  it("should exclude ipv6 tcp multiaddrs when tcp is false", () => {
+    const result = parseNetworkArgs({
+      listenAddress: "0.0.0.0",
+      listenAddress6: "::",
+      port: 9000,
+      tcp: false,
+      quic: true,
+    } as NetworkArgs);
+    const tcpAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/tcp/"));
+    expect(tcpAddrs).toHaveLength(0);
+    // quic for both ipv4 and ipv6 should still be present
+    const quicAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/quic"));
+    expect(quicAddrs).toHaveLength(2);
+  });
+
+  it("should pass tcp through to network options", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, tcp: false, quic: true} as NetworkArgs);
+    expect(result.tcp).toBe(false);
+  });
+
+  it("should throw when both TCP and QUIC are disabled", () => {
+    expect(() =>
+      parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, tcp: false, quic: false} as NetworkArgs)
+    ).toThrow("Cannot disable both TCP and QUIC transports");
+  });
+
+  it("should throw when discoveryPort and quicPort collide", () => {
+    expect(() =>
+      parseNetworkArgs({
+        listenAddress: "0.0.0.0",
+        port: 9000,
+        discoveryPort: 9001,
+        quicPort: 9001,
+        quic: true,
+      } as NetworkArgs)
+    ).toThrow(/discoveryPort and quicPort must not collide/);
+  });
+
+  it("should not throw on port collision when quic is false", () => {
+    const result = parseNetworkArgs({
+      listenAddress: "0.0.0.0",
+      port: 9000,
+      discoveryPort: 9001,
+      quicPort: 9001,
+      quic: false,
+    } as NetworkArgs);
+    expect(result.quic).toBe(false);
+  });
+
+  it("should throw when discoveryPort6 and quicPort6 collide", () => {
+    expect(() =>
+      parseNetworkArgs({
+        listenAddress6: "::",
+        port6: 9000,
+        discoveryPort6: 9001,
+        quicPort6: 9001,
+        quic: true,
+      } as NetworkArgs)
+    ).toThrow(/discoveryPort6 and quicPort6 must not collide/);
+  });
+});
+
+describe("options / network / listen address defaults", () => {
+  it("should bind IPv4 and IPv6 by default when the host has a global IPv6 address", () => {
+    const result = parseListenArgs({} as NetworkArgs, true);
+    expect(result.listenAddress).toBe("0.0.0.0");
+    expect(result.listenAddress6).toBe("::");
+    expect(result.port6).toBe(9000);
+  });
+
+  it("should bind IPv4 only by default when the host has no global IPv6 address", () => {
+    const result = parseListenArgs({} as NetworkArgs, false);
+    expect(result.listenAddress).toBe("0.0.0.0");
+    expect(result.listenAddress6).toBeUndefined();
+    expect(result.port6).toBeUndefined();
+    expect(result.discoveryPort6).toBeUndefined();
+  });
+
+  it("should bind IPv6 when listenAddress6 is set explicitly without a global IPv6 address", () => {
+    const result = parseListenArgs({listenAddress6: "::"} as NetworkArgs, false);
+    expect(result.listenAddress6).toBe("::");
+    expect(result.listenAddress).toBeUndefined();
+  });
+
+  it("should not bind IPv6 when listenAddress is set explicitly", () => {
+    const result = parseListenArgs({listenAddress: "0.0.0.0"} as NetworkArgs, true);
+    expect(result.listenAddress6).toBeUndefined();
+  });
+});
+
+describe("options / network / hasGlobalIPv6Address", () => {
+  const iface = (address: string, family: "IPv4" | "IPv6", internal = false): os.NetworkInterfaceInfo =>
+    ({address, family, internal, netmask: "", mac: "", cidr: null, scopeid: 0}) as os.NetworkInterfaceInfo;
+
+  it("should be false with only loopback, link-local and unique local IPv6 addresses", () => {
+    const interfaces = {
+      lo: [iface("127.0.0.1", "IPv4", true), iface("::1", "IPv6", true)],
+      eth0: [iface("172.18.0.3", "IPv4"), iface("fe80::42:acff:fe12:3", "IPv6"), iface("fd00::3", "IPv6")],
     };
+    expect(hasGlobalIPv6Address(interfaces)).toBe(false);
+  });
 
-    const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
-    expect(options.eth1).toEqual(expectedOptions.eth1);
+  it("should be false with no IPv6 address", () => {
+    expect(hasGlobalIPv6Address({eth0: [iface("172.18.0.3", "IPv4")]})).toBe(false);
+  });
+
+  it("should be false with only special-purpose addresses", () => {
+    const interfaces = {
+      eth0: [
+        iface("2001:db8::1", "IPv6"),
+        iface("3fff::1", "IPv6"),
+        iface("2001:2::1", "IPv6"),
+        iface("2001::1", "IPv6"),
+        iface("2001:0:1234::1", "IPv6"),
+        iface("2002:c000:201::1", "IPv6"),
+        iface("fec0::1", "IPv6"),
+        iface("::ffff:10.0.0.1", "IPv6"),
+        iface("100::1", "IPv6"),
+        iface("64:ff9b::a00:1", "IPv6"),
+      ],
+    };
+    expect(hasGlobalIPv6Address(interfaces)).toBe(false);
+  });
+
+  it("should be true with a global unicast IPv6 address", () => {
+    const interfaces = {
+      eth0: [iface("172.18.0.3", "IPv4"), iface("fe80::1", "IPv6"), iface("2a01:4ff:f4:3c4a::1", "IPv6")],
+    };
+    expect(hasGlobalIPv6Address(interfaces)).toBe(true);
+    expect(hasGlobalIPv6Address({eth0: [iface("2003::1", "IPv6")]})).toBe(true);
   });
 });

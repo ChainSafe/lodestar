@@ -25,10 +25,29 @@ export function loadState(
 ): MigrateStateOutput {
   // casting only to make typescript happy
   const stateType = getStateTypeFromBytes(config, stateBytes) as typeof ssz.capella.BeaconState;
+  const fork = getForkFromStateBytes(config, stateBytes);
+  const seedFork = config.getForkSeq(seedState.slot);
+
   const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
   const fieldRanges = stateType.getFieldRanges(dataView, 0, stateBytes.length);
   const allFields = Object.keys(stateType.fields);
   const validatorsFieldIndex = allFields.indexOf("validators");
+  const validatorsRange = fieldRanges[validatorsFieldIndex];
+  const newValidatorsBytes = stateBytes.subarray(validatorsRange.start, validatorsRange.end);
+
+  // EIP-7688 replaces List with ProgressiveList for validators and inactivityScores at gloas,
+  // changing the merkle tree shape. Seed nodes cannot be reused when one state is pre-gloas
+  // and the other post-gloas.
+  const crossesGloasFork =
+    (fork >= ForkSeq.gloas && seedFork < ForkSeq.gloas) || (fork < ForkSeq.gloas && seedFork >= ForkSeq.gloas);
+  if (crossesGloasFork) {
+    const migratedState = stateType.deserializeToViewDU(stateBytes) as BeaconStateAllForks;
+    // modified validators must still be reported so that the pubkey cache is refreshed for
+    // any index that differs from the seed state, which may not be an ancestor of this state
+    const modifiedValidators = findModifiedAndAppendedValidators(seedState, newValidatorsBytes, seedValidatorsBytes);
+    return {state: migratedState, modifiedValidators};
+  }
+
   // start with default view has the same performance to start with seed state
   // and it is not fork dependent
   const migratedState = deserializeContainerIgnoreFields(
@@ -39,19 +58,10 @@ export function loadState(
   ) as BeaconStateAllForks;
 
   // validators are rarely changed
-  const validatorsRange = fieldRanges[validatorsFieldIndex];
-  const modifiedValidators = loadValidators(
-    migratedState,
-    seedState,
-    stateBytes.subarray(validatorsRange.start, validatorsRange.end),
-    seedValidatorsBytes
-  );
+  const modifiedValidators = loadValidators(migratedState, seedState, newValidatorsBytes, seedValidatorsBytes);
 
   // inactivityScores are rarely changed
   // this saves ~500ms of hashTreeRoot() time of state
-  const fork = getForkFromStateBytes(config, stateBytes);
-  const seedFork = config.getForkSeq(seedState.slot);
-
   if (fork >= ForkSeq.altair && seedFork >= ForkSeq.altair) {
     const inactivityScoresIndex = allFields.indexOf("inactivityScores");
     const inactivityScoresRange = fieldRanges[inactivityScoresIndex];
@@ -110,8 +120,8 @@ function loadInactivityScores(
   seedState: BeaconStateAltair,
   inactivityScoresBytes: Uint8Array
 ): void {
-  // migratedState starts with the same inactivityScores to seed state
-  migratedState.inactivityScores = seedState.inactivityScores.clone();
+  // true = do not transfer cache
+  migratedState.inactivityScores = seedState.inactivityScores.clone(true);
   const oldValidator = migratedState.inactivityScores.length;
   // UintNum64 = 8 bytes
   const newValidator = inactivityScoresBytes.length / 8;
@@ -141,7 +151,9 @@ function loadInactivityScores(
     }
   } else {
     if (newValidator - 1 < 0) {
-      migratedState.inactivityScores = ssz.altair.InactivityScores.defaultViewDU();
+      // use the state's own field type, the list shape differs between altair (List) and gloas (ProgressiveList)
+      const inactivityScoresType = (migratedState.type as typeof ssz.altair.BeaconState).fields.inactivityScores;
+      migratedState.inactivityScores = inactivityScoresType.defaultViewDU();
     } else {
       migratedState.inactivityScores = migratedState.inactivityScores.sliceTo(newValidator - 1);
     }
@@ -177,6 +189,33 @@ function loadInactivityScores(
  * @param migratedState state to be migrated, the validators are loaded to this state
  * @returns modified validator indices
  */
+/**
+ * Find indices of validators whose serialized bytes differ from the seed state, plus indices
+ * appended past the seed state's validator count. Unlike loadValidators() this only diffs
+ * bytes and does not share the seed state's tree.
+ */
+function findModifiedAndAppendedValidators(
+  seedState: BeaconStateAllForks,
+  newValidatorsBytes: Uint8Array,
+  seedStateValidatorsBytes?: Uint8Array
+): number[] {
+  const seedValidatorCount = seedState.validators.length;
+  const newValidatorCount = Math.floor(newValidatorsBytes.length / VALIDATOR_BYTES_SIZE);
+  const minValidatorCount = Math.min(seedValidatorCount, newValidatorCount);
+  const seedValidatorsBytes = seedStateValidatorsBytes ?? seedState.validators.serialize();
+  const modifiedValidators: number[] = [];
+  findModifiedValidators(
+    seedValidatorsBytes.subarray(0, minValidatorCount * VALIDATOR_BYTES_SIZE),
+    newValidatorsBytes.subarray(0, minValidatorCount * VALIDATOR_BYTES_SIZE),
+    modifiedValidators
+  );
+
+  for (let validatorIndex = seedValidatorCount; validatorIndex < newValidatorCount; validatorIndex++) {
+    modifiedValidators.push(validatorIndex);
+  }
+  return modifiedValidators;
+}
+
 function loadValidators(
   migratedState: BeaconStateAllForks,
   seedState: BeaconStateAllForks,
@@ -187,8 +226,8 @@ function loadValidators(
   const newValidatorCount = Math.floor(newValidatorsBytes.length / VALIDATOR_BYTES_SIZE);
   const isMoreValidator = newValidatorCount >= seedValidatorCount;
   const minValidatorCount = Math.min(seedValidatorCount, newValidatorCount);
-  // migrated state starts with the same validators to seed state
-  migratedState.validators = seedState.validators.clone();
+  // true = do not transfer cache
+  migratedState.validators = seedState.validators.clone(true);
   // 80% of validators serialization time comes from memory allocation
   // seedStateValidatorsBytes is an optimization at beacon-node side to avoid memory allocation here
   const seedValidatorsBytes = seedStateValidatorsBytes ?? seedState.validators.serialize();

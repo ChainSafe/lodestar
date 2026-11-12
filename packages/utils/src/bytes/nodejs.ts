@@ -57,5 +57,62 @@ export function fromHex(hex: string): Uint8Array {
   }
 
   const b = Buffer.from(hex, "hex");
+
+  if (b.length !== hex.length / 2) {
+    throw new Error("hex string contains invalid characters");
+  }
+
   return new Uint8Array(b.buffer, b.byteOffset, b.length);
 }
+
+export function fromHexInto(hex: string, buffer: Uint8Array): void {
+  if (hex.startsWith("0x")) {
+    hex = hex.slice(2);
+  }
+
+  if (hex.length !== buffer.length * 2) {
+    throw new Error(`hex string length ${hex.length} must be exactly double the buffer length ${buffer.length}`);
+  }
+
+  const bytesWritten = Buffer.from(buffer.buffer, buffer.byteOffset, buffer.length).write(hex, "hex");
+  if (bytesWritten !== buffer.length) {
+    throw new Error("hex string contains invalid characters");
+  }
+}
+
+/**
+ * Compare two byte arrays for equality using the most performant method based on size.
+ *
+ * Node v24.13.0 benchmark results:
+ * - 32 bytes:   Loop 14.7 ns/op vs Buffer.compare 49.7 ns/op (Loop 3.4x faster)
+ * - 48 bytes:   Loop 36 ns/op vs Buffer.compare 56 ns/op (Loop 1.5x faster)
+ * - 96 bytes:   Loop 130 ns/op vs Buffer.compare 50 ns/op (Buffer 2.6x faster)
+ * - 1024 bytes: Loop 940 ns/op vs Buffer.compare 55 ns/op (Buffer 17x faster)
+ *
+ * Uses loop for small arrays (<=48 bytes) where V8 JIT is more efficient,
+ * and Buffer.compare for larger arrays where native code wins.
+ */
+export function byteArrayEquals(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  // For small arrays (<=48 bytes: roots, pubkeys), loop is faster due to V8 JIT optimizations
+  if (a.length <= 48) {
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+  // For larger arrays, Buffer.compare uses native code and is significantly faster
+  return Buffer.compare(a, b) === 0;
+}
+
+export {
+  bigIntToBytes,
+  bitCount,
+  bytesToBigInt,
+  bytesToInt,
+  intToBytes,
+  toHexString,
+  xor,
+} from "./browser.js";

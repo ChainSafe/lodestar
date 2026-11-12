@@ -1,8 +1,7 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig, SpecJson} from "@lodestar/config";
-import {ssz} from "@lodestar/types";
+import {ArrayOf, ssz} from "@lodestar/types";
 import {
-  ArrayOf,
   EmptyArgs,
   EmptyMeta,
   EmptyMetaCodec,

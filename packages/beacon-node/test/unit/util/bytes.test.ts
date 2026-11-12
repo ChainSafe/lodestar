@@ -1,7 +1,6 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {describe, expect, it} from "vitest";
-
-import {byteArrayEquals} from "../../../src/util/bytes.js";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@lodestar/utils";
 
 /** Reference implementation of byteArrayConcat */
 function byteArrayConcat(bytesArr: Uint8Array[]): Uint8Array {

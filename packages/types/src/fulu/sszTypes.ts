@@ -12,12 +12,10 @@ import {
   FIELD_ELEMENTS_PER_EXT_BLOB,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
-  MAX_REQUEST_BLOCKS_DENEB,
   MIN_SEED_LOOKAHEAD,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
@@ -90,11 +88,6 @@ export const DataColumnsByRootIdentifier = new ContainerType(
   {typeName: "DataColumnsByRootIdentifier", jsonCase: "eth2"}
 );
 
-export const DataColumnSidecarsByRootRequest = new ListCompositeType(
-  DataColumnsByRootIdentifier,
-  MAX_REQUEST_BLOCKS_DENEB
-);
-
 export const DataColumnSidecarsByRangeRequest = new ContainerType(
   {
     startSlot: Slot,
@@ -102,6 +95,14 @@ export const DataColumnSidecarsByRangeRequest = new ContainerType(
     columns: new ListBasicType(ColumnIndex, NUMBER_OF_COLUMNS),
   },
   {typeName: "DataColumnSidecarsByRangeRequest", jsonCase: "eth2"}
+);
+
+export const BeaconBlocksByHeadRequest = new ContainerType(
+  {
+    beaconRoot: Root,
+    count: UintNum64,
+  },
+  {typeName: "BeaconBlocksByHeadRequest", jsonCase: "eth2"}
 );
 
 // Explicit aliases for a few common types
@@ -116,6 +117,14 @@ export const BlobsBundle = new ContainerType(
     blobs: denebSsz.Blobs,
   },
   {typeName: "BlobsBundle", jsonCase: "eth2"}
+);
+
+export const ExecutionPayloadAndBlobsBundle = new ContainerType(
+  {
+    executionPayload: electraSsz.ExecutionPayload,
+    blobsBundle: BlobsBundle,
+  },
+  {typeName: "ExecutionPayloadAndBlobsBundle", jsonCase: "eth2"}
 );
 
 export const BeaconState = new ContainerType(

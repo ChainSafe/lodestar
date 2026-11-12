@@ -1,10 +1,11 @@
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
+import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
+import type {PublishOpts} from "@libp2p/gossipsub/types";
 import {routes} from "@lodestar/api";
 import {SpecJson} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Status} from "@lodestar/types";
+import {Slot, Status} from "@lodestar/types";
+import {GoodByeReasonCode} from "../../constants/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
@@ -30,6 +31,12 @@ export interface INetworkCorePublic {
   // Debug
   connectToPeer(peer: PeerIdStr, multiaddr: MultiaddrStr[]): Promise<void>;
   disconnectPeer(peer: PeerIdStr): Promise<void>;
+
+  // Direct peers management
+  addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null>;
+  removeDirectPeer(peerId: PeerIdStr): Promise<boolean>;
+  getDirectPeers(): Promise<string[]>;
+
   dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]>;
   dumpPeer(peerIdStr: PeerIdStr): Promise<routes.lodestar.LodestarNodePeer | undefined>;
   dumpPeerScoreStats(): Promise<PeerScoreStats>;
@@ -47,6 +54,7 @@ export interface INetworkCore extends INetworkCorePublic {
   // Sync method
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
+  goodbyeAndDisconnect(peer: PeerIdStr, reason: GoodByeReasonCode): Promise<void>;
 
   // TODO: Duplicated methods with INetwork interface
   getConnectedPeers(): Promise<PeerIdStr[]>;
@@ -54,6 +62,8 @@ export interface INetworkCore extends INetworkCorePublic {
 
   /** Chain must push status updates to the network core */
   updateStatus(status: Status): Promise<void>;
+  /** Block proposal slots of connected validators, used to subscribe to all attestation subnets before them */
+  addLocalProposalSlots(slots: Slot[]): Promise<void>;
 
   setTargetGroupCount(count: number): Promise<void>;
   /** Opens stream to handle ReqResp outgoing request */
@@ -93,7 +103,7 @@ export type NetworkWorkerData = {
  */
 export type NetworkWorkerApi = INetworkCorePublic & {
   // To satisfy the constraint of `ModuleThread` type
-  // biome-ignore lint/suspicious/noExplicitAny:
+  // biome-ignore lint/suspicious/noExplicitAny: Explicitly needed the `any` type here
   [string: string]: (...args: any[]) => Promise<any> | any;
   // Async method through worker boundary
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void>;
@@ -103,6 +113,7 @@ export type NetworkWorkerApi = INetworkCorePublic & {
   getConnectedPeers(): Promise<PeerIdStr[]>;
   getConnectedPeerCount(): Promise<number>;
   updateStatus(status: Status): Promise<void>;
+  addLocalProposalSlots(slots: Slot[]): Promise<void>;
 
   setTargetGroupCount(count: number): Promise<void>;
 

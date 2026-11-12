@@ -1,28 +1,31 @@
 export {EpochCache} from "./cache/epochCache.js";
 export type {EpochTransitionCache} from "./cache/epochTransitionCache.js";
-
 export type {
   CachedBeaconStateAllForks,
-  CachedBeaconStateExecutions,
-  CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
   CachedBeaconStateElectra,
+  CachedBeaconStateExecutions,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStateHeze,
+  CachedBeaconStatePhase0,
+  CachedBeaconStatePreHeze,
 } from "./cache/stateCache.js";
-
 export type {
   BeaconStateAllForks,
-  BeaconStateExecutions,
-  BeaconStatePhase0,
   BeaconStateAltair,
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateDeneb,
   BeaconStateElectra,
+  BeaconStateExecutions,
   BeaconStateFulu,
   BeaconStateGloas,
+  BeaconStateHeze,
+  BeaconStatePhase0,
+  BeaconStatePreHeze,
+  ShufflingGetter,
 } from "./cache/types.js";

@@ -1,5 +1,9 @@
 # Install Options
 
+Lodestar requires Node.js **24.22.1 or a newer 24.x release**, or **26.13.0 or a newer 26.x release**. Use the latest release of your chosen LTS line to receive security updates and bug fixes.
+
+For source installations, upgrade the Node.js runtime used by the service and restart Lodestar. Docker images and standalone binaries include their own runtime, so update those artifacts and restart to receive runtime updates. When building Docker images locally, use `docker build --pull` to refresh the base image.
+
 ## Binaries
 
 Binaries can be downloaded from the Lodestar [release page](https://github.com/ChainSafe/lodestar/releases/latest) under the `Assets` section.
@@ -42,10 +46,12 @@ Docker is the recommended setup for Lodestar. Use our [Lodestar Quickstart scrip
 
 ### Prerequisites
 
-Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the LTS version (currently v22) of [NodeJS](https://nodejs.org/en/).
+Make sure to have [pnpm installed](https://pnpm.io/). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the latest 24.x (at least 24.22.1) or 26.x (at least 26.13.0) release of [Node.js](https://nodejs.org/en/).
+
+Building from source also requires [Zig 0.16.0](https://ziglang.org/download/) to compile the native bindings.
 
 :::info
-NodeJS versions older than the current LTS are not supported by Lodestar. We recommend running the latest Node LTS.
+Lodestar supports Node.js 24.22.1 and newer releases within the 24.x LTS line, and Node.js 26.13.0 and newer releases within the 26.x LTS line.
 It is important to make sure the NodeJS version is not changed after reboot by setting a default `nvm alias default <version> && nvm use default`.
 :::
 
@@ -72,7 +78,7 @@ cd lodestar
 Install across all packages. Lodestar follows a [monorepo](https://github.com/lerna/lerna) structure, so all commands below must be run in the project root.
 
 ```bash
-yarn install
+pnpm install
 ```
 
 ### Build source code
@@ -80,7 +86,7 @@ yarn install
 Build across all packages.
 
 ```bash
-yarn run build
+pnpm run build
 ```
 
 ### Lodestar CLI
@@ -97,7 +103,7 @@ See [Command Line Reference](./../beacon-management/beacon-cli.md) for further i
 
 **ModuleNotFoundError: No module named 'distutils'**
 
-If you stump upon this issue while running Yarn, it's because Python 3.12 had removed `distutils` package. That package is required for node build tool. You can install it with following command.
+If you stump upon this issue while running `pnpm install`, it's because Python 3.12 had removed `distutils` package. That package is required for node build tool. You can install it with following command.
 
 ```bash
 pip3 install setuptools --force-reinstall --user

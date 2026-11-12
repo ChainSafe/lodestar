@@ -2,28 +2,28 @@ import {ChainConfig} from "./chainConfig/index.js";
 import {chiadoChainConfig} from "./chainConfig/networks/chiado.js";
 import {ephemeryChainConfig} from "./chainConfig/networks/ephemery.js";
 import {gnosisChainConfig} from "./chainConfig/networks/gnosis.js";
-import {holeskyChainConfig} from "./chainConfig/networks/holesky.js";
 import {hoodiChainConfig} from "./chainConfig/networks/hoodi.js";
 import {mainnetChainConfig} from "./chainConfig/networks/mainnet.js";
+import {platabergetChainConfig} from "./chainConfig/networks/plataberget.js";
 import {sepoliaChainConfig} from "./chainConfig/networks/sepolia.js";
 
 export {
-  mainnetChainConfig,
-  gnosisChainConfig,
-  sepoliaChainConfig,
-  holeskyChainConfig,
-  hoodiChainConfig,
   chiadoChainConfig,
   ephemeryChainConfig,
+  gnosisChainConfig,
+  hoodiChainConfig,
+  mainnetChainConfig,
+  platabergetChainConfig,
+  sepoliaChainConfig,
 };
 
-export type NetworkName = "mainnet" | "gnosis" | "sepolia" | "holesky" | "hoodi" | "chiado" | "ephemery";
+export type NetworkName = "mainnet" | "gnosis" | "sepolia" | "hoodi" | "plataberget" | "chiado" | "ephemery";
 export const networksChainConfig: Record<NetworkName, ChainConfig> = {
   mainnet: mainnetChainConfig,
   gnosis: gnosisChainConfig,
   sepolia: sepoliaChainConfig,
-  holesky: holeskyChainConfig,
   hoodi: hoodiChainConfig,
+  plataberget: platabergetChainConfig,
   chiado: chiadoChainConfig,
   ephemery: ephemeryChainConfig,
 };
@@ -46,13 +46,13 @@ export const genesisData: Record<NetworkName, GenesisData> = {
     genesisTime: 1655733600,
     genesisValidatorsRoot: "0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078",
   },
-  holesky: {
-    genesisTime: 1695902400,
-    genesisValidatorsRoot: "0x9143aa7c615a7f7115e2b6aac319c03529df8242ae705fba9df39b79c59fa8b1",
-  },
   hoodi: {
     genesisTime: 1742213400,
     genesisValidatorsRoot: "0x212f13fc4df078b6cb7db228f1c8307566dcecf900867401a92023d7ba99cb5f",
+  },
+  plataberget: {
+    genesisTime: 1786622400,
+    genesisValidatorsRoot: "0xbb4a1a9e3f7f4e10edcd734e4acc3b5ffd4f830efe0af2748fa458cfee5d2658",
   },
   chiado: {
     genesisTime: 1665396300,

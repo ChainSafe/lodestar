@@ -1,11 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import {getKeystoresStr} from "@lodestar/test-utils";
-import {rimraf} from "rimraf";
 import {beforeAll, describe, it, vi} from "vitest";
-import {testFilesDir} from "../utils.js";
+import {getKeystoresStr} from "@lodestar/test-utils";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
+import {testFilesDir} from "../utils.js";
 
 describe("import from fs same cmd as validate", () => {
   vi.setConfig({testTimeout: 30_000});
@@ -15,8 +14,8 @@ describe("import from fs same cmd as validate", () => {
   const passphraseFilepath = path.join(importFromDir, "password.text");
 
   beforeAll(async () => {
-    rimraf.sync(dataDir);
-    rimraf.sync(importFromDir);
+    fs.rmSync(dataDir, {recursive: true, force: true});
+    fs.rmSync(importFromDir, {recursive: true, force: true});
 
     // Produce and encrypt keystores
     const keystoresStr = await getKeystoresStr(passphrase, secretKeys);

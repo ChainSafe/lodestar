@@ -1,5 +1,8 @@
-import {BitArray} from "@chainsafe/ssz";
+import {describe, expect, it} from "vitest";
+import {BitArray, SerializedList} from "@chainsafe/ssz";
+import {createChainForkConfig} from "@lodestar/config";
 import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {
   CommitteeIndex,
   Epoch,
@@ -9,13 +12,14 @@ import {
   ValidatorIndex,
   deneb,
   electra,
+  gloas,
   isElectraSingleAttestation,
   phase0,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
-import {describe, expect, it} from "vitest";
+import {kzg} from "../../../src/util/kzg.js";
 import {
   getAggregationBitsFromAttestationSerialized,
   getAttDataFromAttestationSerialized,
@@ -23,19 +27,37 @@ import {
   getAttDataFromSignedAggregateAndProofPhase0,
   getAttDataFromSingleAttestationSerialized,
   getAttesterIndexFromSingleAttestationSerialized,
+  getBeaconBlockRootFromDataColumnSidecarSerialized,
+  getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
+  getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized,
   getBlockRootFromAttestationSerialized,
+  getBlockRootFromPayloadAttestationMessageSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getBlockRootFromSingleAttestationSerialized,
   getCommitteeBitsFromSignedAggregateAndProofElectra,
   getCommitteeIndexFromSingleAttestationSerialized,
+  getDataIndexFromSignedAggregateAndProofSerialized,
+  getDataIndexFromSingleAttestationSerialized,
+  getLastProcessedSlotFromBeaconStateSerialized,
+  getParentBlockHashFromGloasSignedBeaconBlockSerialized,
+  getParentBlockHashFromSignedExecutionPayloadBidSerialized,
+  getParentBlockRootFromSignedExecutionPayloadBidSerialized,
+  getParentRootFromSignedBeaconBlockSerialized,
+  getPayloadPresentFromPayloadAttestationMessageSerialized,
   getSignatureFromAttestationSerialized,
   getSignatureFromSingleAttestationSerialized,
   getSlotFromAttestationSerialized,
-  getSlotFromBlobSidecarSerialized,
+  getSlotFromBeaconStateSerialized,
+  getSlotFromDataColumnSidecarSerialized,
+  getSlotFromExecutionPayloadEnvelopeSerialized,
+  getSlotFromPayloadAttestationMessageSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromSignedBeaconBlockSerialized,
+  getSlotFromSignedExecutionPayloadBidSerialized,
   getSlotFromSingleAttestationSerialized,
+  getTransactionCountFromExecutionPayloadEnvelopeSerialized,
 } from "../../../src/util/sszBytes.js";
+import {generateRandomBlob} from "../../utils/kzg.js";
 
 describe("SinlgeAttestation SSZ serialized picking", () => {
   const testCases: SingleAttestation[] = [
@@ -71,6 +93,7 @@ describe("SinlgeAttestation SSZ serialized picking", () => {
         expect(getCommitteeIndexFromSingleAttestationSerialized(ForkName.electra, bytes)).toEqual(
           attestation.committeeIndex
         );
+        expect(getDataIndexFromSingleAttestationSerialized(ForkName.electra, bytes)).toEqual(attestation.data.index);
         expect(getAttesterIndexFromSingleAttestationSerialized(bytes)).toEqual(attestation.attesterIndex);
         expect(getBlockRootFromSingleAttestationSerialized(bytes)).toEqual(toRootHex(attestation.data.beaconBlockRoot));
         // base64, not hex
@@ -83,6 +106,7 @@ describe("SinlgeAttestation SSZ serialized picking", () => {
         expect(getCommitteeIndexFromSingleAttestationSerialized(ForkName.phase0, bytes)).toEqual(
           attestation.data.index
         );
+        expect(getDataIndexFromSingleAttestationSerialized(ForkName.phase0, bytes)).toEqual(attestation.data.index);
         expect(getBlockRootFromAttestationSerialized(bytes)).toBe(toRootHex(attestation.data.beaconBlockRoot));
         expect(getAggregationBitsFromAttestationSerialized(bytes)?.toBoolArray()).toEqual(
           attestation.aggregationBits.toBoolArray()
@@ -144,6 +168,13 @@ describe("SinlgeAttestation SSZ serialized picking", () => {
     const invalidCommitteeIndexDataSizes = [0, 4, 11];
     for (const size of invalidCommitteeIndexDataSizes) {
       expect(getCommitteeIndexFromSingleAttestationSerialized(ForkName.electra, Buffer.alloc(size))).toBeNull();
+    }
+  });
+
+  it("getDataIndexFromSingleAttestationSerialized - invalid data", () => {
+    const invalidDataIndexSizes = [0, 4, 11];
+    for (const size of invalidDataIndexSizes) {
+      expect(getDataIndexFromSingleAttestationSerialized(ForkName.electra, Buffer.alloc(size))).toBeNull();
     }
   });
 
@@ -283,6 +314,38 @@ describe("electra SignedAggregateAndProof SSZ serialized picking", () => {
   });
 });
 
+describe("getDataIndexFromSignedAggregateAndProofSerialized", () => {
+  it("phase0 - extracts data.index from aggregate", () => {
+    const agg = phase0SignedAggregateAndProofFromValues(
+      4_000_000,
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      200_00,
+      "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffffffffffffffffffffff"
+    );
+    agg.message.aggregate.data.index = 3;
+    const bytes = ssz.phase0.SignedAggregateAndProof.serialize(agg);
+    expect(getDataIndexFromSignedAggregateAndProofSerialized(bytes)).toBe(3);
+  });
+
+  it("electra - extracts data.index from aggregate", () => {
+    const agg = electraSignedAggregateAndProofFromValues(
+      4_000_000,
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      200_00,
+      "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffffffffffffffffffffff"
+    );
+    agg.message.aggregate.data.index = 7;
+    const bytes = ssz.electra.SignedAggregateAndProof.serialize(agg);
+    expect(getDataIndexFromSignedAggregateAndProofSerialized(bytes)).toBe(7);
+  });
+
+  it("invalid data returns null", () => {
+    for (const size of [0, 4, 219]) {
+      expect(getDataIndexFromSignedAggregateAndProofSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+});
+
 describe("signedBeaconBlock SSZ serialized picking", () => {
   const testCases = [ssz.phase0.SignedBeaconBlock.defaultValue(), signedBeaconBlockFromValues(1_000_000)];
 
@@ -290,6 +353,7 @@ describe("signedBeaconBlock SSZ serialized picking", () => {
     const bytes = ssz.phase0.SignedBeaconBlock.serialize(signedBeaconBlock);
     it(`signedBeaconBlock ${i}`, () => {
       expect(getSlotFromSignedBeaconBlockSerialized(bytes)).toBe(signedBeaconBlock.message.slot);
+      expect(getParentRootFromSignedBeaconBlockSerialized(bytes)).toBe(toRootHex(signedBeaconBlock.message.parentRoot));
     });
   }
 
@@ -299,22 +363,121 @@ describe("signedBeaconBlock SSZ serialized picking", () => {
       expect(getSlotFromSignedBeaconBlockSerialized(Buffer.alloc(size))).toBeNull();
     }
   });
+
+  it("getParentRootFromSignedBeaconBlockSerialized - invalid data", () => {
+    for (const size of [0, 100, 147]) {
+      expect(getParentRootFromSignedBeaconBlockSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
 });
 
-describe("BlobSidecar SSZ serialized picking", () => {
-  const testCases = [ssz.deneb.BlobSidecar.defaultValue(), blobSidecarFromValues(1_000_000)];
+describe("getParentBlockHashFromGloasSignedBeaconBlockSerialized", () => {
+  for (const fork of [ForkName.gloas, ForkName.heze] as const) {
+    it(`extracts parent block hash from a ${fork} signed beacon block`, () => {
+      const signedBeaconBlockType = sszTypesFor(fork).SignedBeaconBlock;
+      const signedBeaconBlock = signedBeaconBlockType.defaultValue();
+      signedBeaconBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash = Buffer.alloc(32, 0xaa);
+      signedBeaconBlock.message.body.voluntaryExits.push(ssz.phase0.SignedVoluntaryExit.defaultValue());
+      const bytes = signedBeaconBlockType.serialize(signedBeaconBlock);
 
-  for (const [i, blobSidecar] of testCases.entries()) {
-    const bytes = ssz.deneb.BlobSidecar.serialize(blobSidecar);
-    it(`blobSidecar ${i}`, () => {
-      expect(getSlotFromBlobSidecarSerialized(bytes)).toBe(blobSidecar.signedBlockHeader.message.slot);
+      expect(getParentBlockHashFromGloasSignedBeaconBlockSerialized(bytes, fork)).toBe(
+        toHex(signedBeaconBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+      );
     });
   }
 
-  it("blobSidecar - invalid data", () => {
-    const invalidSlotDataSizes = [0, 20, 38];
+  it("returns null for invalid data", () => {
+    for (const [fork, sizes] of [
+      [ForkName.gloas, [0, 200, 571]],
+      [ForkName.heze, [0, 200, 495]],
+    ] as const) {
+      for (const size of sizes) {
+        expect(
+          getParentBlockHashFromGloasSignedBeaconBlockSerialized(Buffer.alloc(size), fork),
+          `${fork} ${size}`
+        ).toBeNull();
+      }
+    }
+  });
+});
+
+describe("getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized", () => {
+  const config = createChainForkConfig({
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 5,
+    ELECTRA_FORK_EPOCH: 10,
+    FULU_FORK_EPOCH: 15,
+    GLOAS_FORK_EPOCH: 20,
+  });
+
+  it("should return 0 blob count pre deneb", async () => {
+    const slot = 1;
+    const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue();
+    block.message.slot = slot;
+    const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(block);
+
+    const blobsCount = getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(config, blockBytes);
+
+    expect(blobsCount).toBe(0);
+  });
+
+  it("should return blob count post deneb for empty blobs", async () => {
+    const slot = computeStartSlotAtEpoch(5);
+    const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue() as deneb.SignedBeaconBlock;
+    block.message.slot = slot;
+    block.message.body.blobKzgCommitments = [];
+    const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(block);
+
+    const blobsCount = getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(config, blockBytes);
+
+    expect(blobsCount).toBe(0);
+  });
+
+  it("should return blob count post deneb with blobs", async () => {
+    const slot = computeStartSlotAtEpoch(5);
+    const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue() as deneb.SignedBeaconBlock;
+    const blobs = [generateRandomBlob(), generateRandomBlob(), generateRandomBlob()];
+    const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
+    block.message.body.blobKzgCommitments = kzgCommitments;
+    block.message.slot = slot;
+    const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(block);
+
+    const blobsCount = getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(config, blockBytes);
+
+    expect(blobsCount).toBe(blobs.length);
+  });
+});
+
+describe("BeaconState ssz serialized picking", () => {
+  it("getLastProcessedSlotFromBeaconStateSerialized", () => {
+    const slot = 1_000_000;
+    const state = ssz.phase0.BeaconState.defaultValue();
+    state.latestBlockHeader.slot = slot;
+    const bytes = ssz.phase0.BeaconState.serialize(state);
+    expect(getLastProcessedSlotFromBeaconStateSerialized(bytes)).toBe(slot);
+  });
+
+  it("getLastProcessedSlotFromBeaconStateSerialized - invalid data", () => {
+    const invalidSlotDataSizes = [0, 50, 60];
     for (const size of invalidSlotDataSizes) {
-      expect(getSlotFromBlobSidecarSerialized(Buffer.alloc(size))).toBeNull();
+      expect(getLastProcessedSlotFromBeaconStateSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+
+  it("getSlotFromBeaconStateSerialized", () => {
+    const slot = 1_000_000;
+    const state = ssz.phase0.BeaconState.defaultValue();
+    state.slot = slot;
+    const bytes = ssz.phase0.BeaconState.serialize(state);
+    expect(getSlotFromBeaconStateSerialized(bytes)).toBe(slot);
+  });
+
+  it("getSlotFromBeaconStateSerialized - invalid data", () => {
+    const invalidSlotDataSizes = [0, 20, 39];
+    for (const size of invalidSlotDataSizes) {
+      expect(getSlotFromBeaconStateSerialized(Buffer.alloc(size))).toBeNull();
     }
   });
 });
@@ -386,8 +549,239 @@ function signedBeaconBlockFromValues(slot: Slot): phase0.SignedBeaconBlock {
   return signedBeaconBlock;
 }
 
-function blobSidecarFromValues(slot: Slot): deneb.BlobSidecar {
-  const blobSidecar = ssz.deneb.BlobSidecar.defaultValue();
-  blobSidecar.signedBlockHeader.message.slot = slot;
-  return blobSidecar;
+describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {
+  const testCases: {slot: Slot; blockRoot: RootHex}[] = [
+    {slot: 0, blockRoot: "0x" + "00".repeat(32)},
+    {slot: 1_000_000, blockRoot: "0x" + "aa".repeat(32)},
+    {slot: 4_294_967_295, blockRoot: "0x" + "ff".repeat(32)}, // max uint32
+  ];
+
+  for (const {slot, blockRoot} of testCases) {
+    it(`slot=${slot}`, () => {
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.message.payload.slotNumber = slot;
+      envelope.message.beaconBlockRoot = fromHex(blockRoot);
+      const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+
+      expect(getSlotFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(slot);
+      expect(getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(blockRoot);
+    });
+  }
+
+  it("getSlotFromExecutionPayloadEnvelopeSerialized - invalid data", () => {
+    // slotNumber is at offset 712 within the serialized payload (alpha.6: parentBeaconBlockRoot
+    // shifted the envelope fixed portion to 80), need at least 720 bytes
+    const invalidSizes = [0, 50, 100, 719];
+    for (const size of invalidSizes) {
+      expect(getSlotFromExecutionPayloadEnvelopeSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+
+  it("getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized - invalid data", () => {
+    // Block root is at offset 116, need at least 148 bytes
+    const invalidSizes = [0, 50, 100, 147];
+    for (const size of invalidSizes) {
+      expect(getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+
+  for (const count of [0, 1, 3, 1000]) {
+    it(`getTransactionCountFromExecutionPayloadEnvelopeSerialized - ${count} transactions`, () => {
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.message.payload.extraData = new Uint8Array(5);
+      envelope.message.payload.transactions = SerializedList.fromArray(
+        Array.from({length: count}, (_, i) => new Uint8Array(i + 1))
+      );
+      const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+
+      expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(count);
+    });
+  }
+
+  it("getTransactionCountFromExecutionPayloadEnvelopeSerialized - invalid data", () => {
+    // withdrawals offset is at offset 688, need at least 692 bytes
+    const invalidSizes = [0, 100, 691];
+    for (const size of invalidSizes) {
+      expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(Buffer.alloc(size))).toBeNull();
+    }
+
+    const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+    envelope.message.payload.transactions = SerializedList.fromArray([new Uint8Array(1), new Uint8Array(1)]);
+    const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const transactionsOffset = view.getUint32(684, true);
+    const transactionsStart = 180 + transactionsOffset;
+
+    const firstOffsetNotAligned = Uint8Array.from(bytes);
+    new DataView(firstOffsetNotAligned.buffer).setUint32(transactionsStart, 6, true);
+    expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(firstOffsetNotAligned)).toBeNull();
+
+    const firstOffsetPastList = Uint8Array.from(bytes);
+    new DataView(firstOffsetPastList.buffer).setUint32(transactionsStart, 400, true);
+    expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(firstOffsetPastList)).toBeNull();
+
+    const transactionsAfterWithdrawals = Uint8Array.from(bytes);
+    new DataView(transactionsAfterWithdrawals.buffer).setUint32(684, transactionsOffset + 100, true);
+    expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(transactionsAfterWithdrawals)).toBeNull();
+  });
+});
+
+describe("DataColumnSidecar SSZ serialized picking (fork-aware)", () => {
+  describe("Fulu (pre-Gloas)", () => {
+    const testCases: {slot: Slot}[] = [{slot: 0}, {slot: 500_000}, {slot: 4_294_967_295}];
+
+    for (const {slot} of testCases) {
+      it(`slot=${slot}`, () => {
+        const sidecar = ssz.fulu.DataColumnSidecar.defaultValue();
+        sidecar.signedBlockHeader.message.slot = slot;
+        const bytes = ssz.fulu.DataColumnSidecar.serialize(sidecar);
+
+        expect(getSlotFromDataColumnSidecarSerialized(bytes, ForkName.fulu)).toBe(slot);
+      });
+    }
+
+    it("getSlotFromDataColumnSidecarSerialized - invalid data", () => {
+      // Slot is at offset 20 for pre-Gloas, need at least 28 bytes
+      const invalidSizes = [0, 10, 27];
+      for (const size of invalidSizes) {
+        expect(getSlotFromDataColumnSidecarSerialized(Buffer.alloc(size), ForkName.fulu)).toBeNull();
+      }
+    });
+  });
+
+  describe("Gloas", () => {
+    const testCases: {slot: Slot; blockRoot: RootHex}[] = [
+      {slot: 0, blockRoot: "0x" + "00".repeat(32)},
+      {slot: 600_000, blockRoot: "0x" + "bb".repeat(32)},
+      {slot: 4_294_967_295, blockRoot: "0x" + "ff".repeat(32)},
+    ];
+
+    for (const {slot, blockRoot} of testCases) {
+      it(`slot=${slot}`, () => {
+        const sidecar = ssz.gloas.DataColumnSidecar.defaultValue();
+        sidecar.slot = slot;
+        sidecar.beaconBlockRoot = fromHex(blockRoot);
+        const bytes = ssz.gloas.DataColumnSidecar.serialize(sidecar);
+
+        expect(getSlotFromDataColumnSidecarSerialized(bytes, ForkName.gloas)).toBe(slot);
+        expect(getBeaconBlockRootFromDataColumnSidecarSerialized(bytes)).toBe(blockRoot);
+      });
+    }
+
+    it("getSlotFromDataColumnSidecarSerialized - invalid data", () => {
+      // Slot is at offset 16 for Gloas, need at least 24 bytes
+      const invalidSizes = [0, 10, 23];
+      for (const size of invalidSizes) {
+        expect(getSlotFromDataColumnSidecarSerialized(Buffer.alloc(size), ForkName.gloas)).toBeNull();
+      }
+    });
+
+    it("getBeaconBlockRootFromDataColumnSidecarSerialized - invalid data", () => {
+      // Block root is at offset 24 for Gloas, need at least 56 bytes
+      const invalidSizes = [0, 20, 55];
+      for (const size of invalidSizes) {
+        expect(getBeaconBlockRootFromDataColumnSidecarSerialized(Buffer.alloc(size))).toBeNull();
+      }
+    });
+  });
+});
+
+describe("PayloadAttestationMessage SSZ serialized picking", () => {
+  const testCases = [
+    ssz.gloas.PayloadAttestationMessage.defaultValue(),
+    payloadAttestationMessageFromValues(1_000_000, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+  ];
+
+  for (const [i, msg] of testCases.entries()) {
+    it(`payloadAttestationMessage ${i}`, () => {
+      const bytes = ssz.gloas.PayloadAttestationMessage.serialize(msg);
+
+      expect(getSlotFromPayloadAttestationMessageSerialized(bytes)).toBe(msg.data.slot);
+      expect(getBlockRootFromPayloadAttestationMessageSerialized(bytes)).toBe(toRootHex(msg.data.beaconBlockRoot));
+      expect(getPayloadPresentFromPayloadAttestationMessageSerialized(bytes)).toBe(msg.data.payloadPresent);
+    });
+  }
+
+  it("getPayloadPresentFromPayloadAttestationMessageSerialized - true/false", () => {
+    const msg = ssz.gloas.PayloadAttestationMessage.defaultValue();
+    msg.data.payloadPresent = true;
+    expect(
+      getPayloadPresentFromPayloadAttestationMessageSerialized(ssz.gloas.PayloadAttestationMessage.serialize(msg))
+    ).toBe(true);
+    msg.data.payloadPresent = false;
+    expect(
+      getPayloadPresentFromPayloadAttestationMessageSerialized(ssz.gloas.PayloadAttestationMessage.serialize(msg))
+    ).toBe(false);
+  });
+
+  it("getSlotFromPayloadAttestationMessageSerialized - invalid data", () => {
+    const invalidSlotDataSizes = [0, 20, 47];
+    for (const size of invalidSlotDataSizes) {
+      expect(getSlotFromPayloadAttestationMessageSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+
+  it("getBlockRootFromPayloadAttestationMessageSerialized - invalid data", () => {
+    const invalidBlockRootDataSizes = [0, 4, 39];
+    for (const size of invalidBlockRootDataSizes) {
+      expect(getBlockRootFromPayloadAttestationMessageSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+
+  it("getPayloadPresentFromPayloadAttestationMessageSerialized - invalid data", () => {
+    for (const size of [0, 20, 47]) {
+      expect(getPayloadPresentFromPayloadAttestationMessageSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+});
+
+describe("SignedExecutionPayloadBid SSZ serialized picking", () => {
+  const testCases = [
+    ssz.gloas.SignedExecutionPayloadBid.defaultValue(),
+    signedExecutionPayloadBidFromValues(1_000_000),
+  ];
+
+  for (const [i, bid] of testCases.entries()) {
+    it(`signedExecutionPayloadBid ${i}`, () => {
+      const bytes = ssz.gloas.SignedExecutionPayloadBid.serialize(bid);
+
+      expect(getSlotFromSignedExecutionPayloadBidSerialized(bytes)).toBe(bid.message.slot);
+      expect(getParentBlockHashFromSignedExecutionPayloadBidSerialized(bytes)).toBe(toHex(bid.message.parentBlockHash));
+      expect(getParentBlockRootFromSignedExecutionPayloadBidSerialized(bytes)).toBe(toHex(bid.message.parentBlockRoot));
+    });
+  }
+
+  it("getSlotFromSignedExecutionPayloadBidSerialized - invalid data", () => {
+    const invalidSlotDataSizes = [0, 100, 271];
+    for (const size of invalidSlotDataSizes) {
+      expect(getSlotFromSignedExecutionPayloadBidSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+
+  it("getParentBlockHashFromSignedExecutionPayloadBidSerialized - invalid data", () => {
+    for (const size of [0, 99, 131]) {
+      expect(getParentBlockHashFromSignedExecutionPayloadBidSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+
+  it("getParentBlockRootFromSignedExecutionPayloadBidSerialized - invalid data", () => {
+    for (const size of [0, 99, 163]) {
+      expect(getParentBlockRootFromSignedExecutionPayloadBidSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+});
+
+function payloadAttestationMessageFromValues(slot: Slot, blockRoot: RootHex): gloas.PayloadAttestationMessage {
+  const msg = ssz.gloas.PayloadAttestationMessage.defaultValue();
+  msg.data.slot = slot;
+  msg.data.beaconBlockRoot = fromHex(blockRoot);
+  return msg;
+}
+
+function signedExecutionPayloadBidFromValues(slot: Slot): gloas.SignedExecutionPayloadBid {
+  const bid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+  bid.message.slot = slot;
+  bid.message.parentBlockHash = Buffer.alloc(32, 0xaa);
+  bid.message.parentBlockRoot = Buffer.alloc(32, 0xbb);
+  return bid;
 }

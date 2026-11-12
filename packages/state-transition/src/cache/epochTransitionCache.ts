@@ -1,13 +1,6 @@
-import {
-  EPOCHS_PER_SLASHINGS_VECTOR,
-  FAR_FUTURE_EPOCH,
-  ForkSeq,
-  MIN_ACTIVATION_BALANCE,
-  SLOTS_PER_HISTORICAL_ROOT,
-} from "@lodestar/params";
-import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
-import {intDiv, toRootHex} from "@lodestar/utils";
-
+import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
+import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {intDiv} from "@lodestar/utils";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
 import {
   CachedBeaconStateAllForks,
@@ -15,6 +8,7 @@ import {
   CachedBeaconStatePhase0,
   hasCompoundingWithdrawalCredential,
 } from "../index.js";
+import type {BeaconStateTransitionMetrics} from "../metrics.js";
 import {computeBaseRewardPerIncrement} from "../util/altair.js";
 import {
   FLAG_CURR_HEAD_ATTESTER,
@@ -27,17 +21,7 @@ import {
   FLAG_UNSLASHED,
   hasMarkers,
 } from "../util/attesterStatus.js";
-
-export type EpochTransitionCacheOpts = {
-  /**
-   * Assert progressive balances the same to EpochTransitionCache
-   */
-  assertCorrectProgressiveBalances?: boolean;
-  /**
-   * Do not queue shuffling calculation async. Forces sync JIT calculation in afterProcessEpoch
-   */
-  asyncShufflingCalculation?: boolean;
-};
+import {EpochShuffling} from "../util/epochShuffling.js";
 
 /**
  * EpochTransitionCache is the parent object of:
@@ -163,9 +147,16 @@ export interface EpochTransitionCache {
   nextShufflingActiveIndices: Uint32Array;
 
   /**
-   * Shuffling decision root that gets set on the EpochCache in afterProcessEpoch
+   * Pre-computed shuffling for epoch N+2, populated by processProposerLookahead (Fulu+).
+   * Used by afterProcessEpoch to avoid recomputing the same shuffling.
    */
-  nextShufflingDecisionRoot: RootHex;
+  nextShuffling: EpochShuffling | null;
+
+  /**
+   * Pre-computed PTC for epoch N + MIN_SEED_LOOKAHEAD + 1, populated by processPtcWindow (Gloas+).
+   * Used by finalProcessEpoch to shift PTC arrays in epoch cache without reading from state.
+   */
+  nextEpochPayloadTimelinessCommittees: Uint32Array[] | null;
 
   /**
    * Altair specific, this is total active balances for the next epoch.
@@ -179,12 +170,6 @@ export interface EpochTransitionCache {
    * | afterEpochTransitionCache                | read it                            |
    */
   nextEpochTotalActiveBalanceByIncrement: number;
-
-  /**
-   * Compute the shuffling sync or async.  Defaults to synchronous.  Need to pass `true` with the
-   * `EpochTransitionCacheOpts`
-   */
-  asyncShufflingCalculation: boolean;
 
   /**
    * Track by validator index if it's active in the prev epoch.
@@ -229,7 +214,7 @@ const currentEpochParticipation = new Array<number>();
 
 export function beforeProcessEpoch(
   state: CachedBeaconStateAllForks,
-  opts?: EpochTransitionCacheOpts
+  metrics?: Pick<BeaconStateTransitionMetrics, "progressiveBalancesMismatches"> | null
 ): EpochTransitionCache {
   const {config, epochCtx} = state;
   const forkSeq = config.getForkSeq(state.slot);
@@ -380,12 +365,7 @@ export function beforeProcessEpoch(
     }
   });
 
-  // Trigger async build of shuffling for epoch after next (nextShuffling post epoch transition)
-  const epochAfterNext = state.epochCtx.nextEpoch + 1;
-  // cannot call calculateShufflingDecisionRoot here because spec prevent getting current slot
-  // as a decision block.  we are part way through the transition though and this was added in
-  // process slot beforeProcessEpoch happens so it available and valid
-  const nextShufflingDecisionRoot = toRootHex(state.blockRoots.get(state.slot % SLOTS_PER_HISTORICAL_ROOT));
+  // Prepare shuffling data for epoch after next (nextShuffling post epoch transition)
   const nextShufflingActiveIndices = new Uint32Array(nextEpochShufflingActiveIndicesLength);
   if (nextEpochShufflingActiveIndicesLength > nextEpochShufflingActiveValidatorIndices.length) {
     throw new Error(
@@ -397,11 +377,6 @@ export function beforeProcessEpoch(
     nextShufflingActiveIndices[i] = nextEpochShufflingActiveValidatorIndices[i];
   }
 
-  const asyncShufflingCalculation = opts?.asyncShufflingCalculation ?? false;
-  if (asyncShufflingCalculation) {
-    state.epochCtx.shufflingCache?.build(epochAfterNext, nextShufflingDecisionRoot, state, nextShufflingActiveIndices);
-  }
-
   if (totalActiveStakeByIncrement < 1) {
     totalActiveStakeByIncrement = 1;
   } else if (totalActiveStakeByIncrement >= Number.MAX_SAFE_INTEGER) {
@@ -409,7 +384,8 @@ export function beforeProcessEpoch(
   }
 
   // SPEC: function getBaseRewardPerIncrement()
-  const baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveStakeByIncrement);
+  // Flag deltas pay for the previous epoch, so they are priced at its slot duration
+  const baseRewardPerIncrement = computeBaseRewardPerIncrement(config, prevEpoch, totalActiveStakeByIncrement);
 
   // To optimize process_registry_updates():
   // order by sequence of activationEligibilityEpoch setting and then index
@@ -488,17 +464,16 @@ export function beforeProcessEpoch(
     }
   }
 
-  if (opts?.assertCorrectProgressiveBalances && forkSeq >= ForkSeq.altair) {
-    // TODO: describe issue. Compute progressive target balances
-    if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
-      throw Error(
-        `currentTargetUnslashedBalanceIncrements is wrong, expect ${currTargetUnslStake} got ${epochCtx.currentTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
-      );
+  if (forkSeq >= ForkSeq.altair) {
+    const currentTargetMismatch = epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake;
+    const previousTargetMismatch = epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake;
+    if (currentTargetMismatch) {
+      metrics?.progressiveBalancesMismatches?.inc({target: "current"});
+      epochCtx.currentTargetUnslashedBalanceIncrements = currTargetUnslStake;
     }
-    if (epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake) {
-      throw Error(
-        `previousTargetUnslashedBalanceIncrements is wrong, expect ${prevTargetUnslStake} got ${epochCtx.previousTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
-      );
+    if (previousTargetMismatch) {
+      metrics?.progressiveBalancesMismatches?.inc({target: "previous"});
+      epochCtx.previousTargetUnslashedBalanceIncrements = prevTargetUnslStake;
     }
   }
 
@@ -525,9 +500,9 @@ export function beforeProcessEpoch(
     indicesEligibleForActivationQueue,
     indicesEligibleForActivation: indicesEligibleForActivation.map(({validatorIndex}) => validatorIndex),
     indicesToEject,
-    nextShufflingDecisionRoot,
     nextShufflingActiveIndices,
-    asyncShufflingCalculation,
+    nextShuffling: null,
+    nextEpochPayloadTimelinessCommittees: null,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
     isActivePrevEpoch,

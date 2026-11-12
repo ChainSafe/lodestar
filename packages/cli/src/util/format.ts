@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/blst";
+import {PublicKey} from "@lodestar/native/blst";
 import {fromHex} from "@lodestar/utils";
 
 /**

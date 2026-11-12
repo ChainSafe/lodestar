@@ -1,5 +1,11 @@
-import {CachedBeaconStateAllForks, getBlockSignatureSets} from "@lodestar/state-transition";
-import {SignedBeaconBlock} from "@lodestar/types";
+import {BeaconConfig} from "@lodestar/config";
+import {
+  IBeaconStateView,
+  SyncCommitteeCacheEmpty,
+  getBlockSignatureSets,
+  isStatePostAltair,
+} from "@lodestar/state-transition";
+import {IndexedAttestation, SignedBeaconBlock} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -15,20 +21,24 @@ import {ImportBlockOpts} from "./types.js";
  * Since all data is known in advance all signatures are verified at once in parallel.
  */
 export async function verifyBlocksSignatures(
+  config: BeaconConfig,
   bls: IBlsVerifier,
   logger: Logger,
   metrics: Metrics | null,
-  preState0: CachedBeaconStateAllForks,
+  preState0: IBeaconStateView,
   blocks: SignedBeaconBlock[],
+  indexedAttestationsByBlock: IndexedAttestation[][],
   opts: ImportBlockOpts
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
+  const currentSyncCommitteeIndexed = isStatePostAltair(preState0)
+    ? preState0.currentSyncCommitteeIndexed
+    : new SyncCommitteeCacheEmpty();
 
-  // Verifies signatures after running state transition, so all SyncCommittee signed roots are known at this point.
-  // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().
-  // NOTE: If in the future multiple blocks signatures are verified at once, all blocks must be in the same epoch
-  // so the attester and proposer shufflings are correct.
+  // Runs concurrently with the state transition. Signature sets are built from preState0, which
+  // verifyBlocksInEpoch() guarantees is in the same epoch as every block, so the proposer and attester shufflings
+  // and the sync committee are the ones the blocks were signed under.
   for (const [i, block] of blocks.entries()) {
     // Use [i] to make clear that the index has to be correct to blame the right block below on BlockError()
     isValidPromises[i] = opts.validSignatures
@@ -37,9 +47,12 @@ export async function verifyBlocksSignatures(
       : //
         // Verify signatures per block to track which block is invalid
         bls.verifySignatureSets(
-          getBlockSignatureSets(preState0, block, {
+          getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
             skipProposerSignature: opts.validProposerSignature,
-          })
+          }),
+          // Prioritize block verification over attestations, since
+          // attestations already buffer up to `MAX_BUFFER_WAIT_MS`
+          {priority: true}
         );
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks

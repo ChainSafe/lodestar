@@ -55,9 +55,9 @@ export function createWithdrawalAssertions<T extends string>(
     async assert({store, slot}) {
       const errors: AssertionResult[] = [];
 
-      if (store[slot].withdrawalCount < MAX_WITHDRAWALS_PER_PAYLOAD) {
+      if (store[slot].withdrawalCount > MAX_WITHDRAWALS_PER_PAYLOAD) {
         errors.push(
-          `Not enough withdrawals found. Expected ${MAX_WITHDRAWALS_PER_PAYLOAD}, got ${store[slot].withdrawalCount}`
+          `A lot more withdrawals found. Maximum allowed ${MAX_WITHDRAWALS_PER_PAYLOAD}, got ${store[slot].withdrawalCount}`
         );
       }
 

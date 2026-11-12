@@ -1,7 +1,9 @@
-import {SecretKey} from "@chainsafe/blst";
-import {toHexString} from "@chainsafe/ssz";
-import {altair} from "@lodestar/types";
 import {MockedObject, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+import {toHexString} from "@chainsafe/ssz";
+import {config} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/native/blst";
+import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
+import {altair} from "@lodestar/types";
 import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools/index.js";
 import {Clock} from "../../../../src/util/clock.js";
 
@@ -29,7 +31,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", () => {
 
   beforeEach(() => {
     clockStub = vi.mocked(new Clock({} as any));
-    cache = new SyncCommitteeMessagePool(clockStub, cutOffTime);
+    cache = new SyncCommitteeMessagePool(config, clockStub, cutOffTime);
     cache.add(subcommitteeIndex, syncCommittee, indexInSubcommittee);
   });
 
@@ -39,7 +41,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", () => {
   });
 
   it("should propagate SyncCommitteeContribution", () => {
-    clockStub.secFromSlot.mockReturnValue(0);
+    clockStub.msFromSlot.mockReturnValue(0);
     let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).not.toBeNull();
     const newSecretKey = SecretKey.fromBytes(Buffer.alloc(32, 2));
@@ -64,5 +66,17 @@ describe("chain / opPools / SyncCommitteeMessagePool", () => {
         expect(aggregationBits.get(index)).toBe(newIndices.includes(index));
       }
     }
+  });
+
+  it("returns null when the contribution signature is the point at infinity", () => {
+    clockStub.msFromSlot.mockReturnValue(0);
+    const infinityBlockRoot = Buffer.alloc(32, 9);
+    cache.add(
+      subcommitteeIndex,
+      {slot, beaconBlockRoot: infinityBlockRoot, validatorIndex: 3000, signature: G2_POINT_AT_INFINITY},
+      indexInSubcommittee
+    );
+
+    expect(cache.getContribution(subcommitteeIndex, slot, infinityBlockRoot)).toBeNull();
   });
 });

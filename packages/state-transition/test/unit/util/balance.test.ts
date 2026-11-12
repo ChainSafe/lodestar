@@ -1,13 +1,10 @@
-import {config as minimalConfig} from "@lodestar/config/default";
 import {describe, expect, it} from "vitest";
-
+import {config as minimalConfig} from "@lodestar/config/default";
 import {EFFECTIVE_BALANCE_INCREMENT} from "@lodestar/params";
 import {ValidatorIndex} from "@lodestar/types";
-
 import {getEffectiveBalanceIncrementsZeroInactive, getEffectiveBalanceIncrementsZeroed} from "../../../src/index.js";
+import {generateCachedState, generateState} from "../../../src/testUtils/state.js";
 import {decreaseBalance, getTotalBalance, increaseBalance, isActiveValidator} from "../../../src/util/index.js";
-
-import {generateCachedState, generateState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
 describe("getTotalBalance", () => {
@@ -83,9 +80,9 @@ describe("getEffectiveBalanceIncrementsZeroInactive", () => {
         // not active
         ...generateValidators(3, {activation: Infinity, exit: Infinity, balance: 32e9}),
         // active
-        ...generateValidators(4, {activation: 0, exit: Infinity, balance: 32e9}),
+        ...generateValidators(4, {activation: 0, exit: Infinity, balance: 32e9}, 3),
         // not active
-        ...generateValidators(5, {activation: Infinity, exit: Infinity, balance: 32e9}),
+        ...generateValidators(5, {activation: Infinity, exit: Infinity, balance: 32e9}, 7),
       ],
     });
     const justifiedEpoch = justifiedState.epochCtx.currentShuffling.epoch;

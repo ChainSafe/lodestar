@@ -1,30 +1,57 @@
+import {PeerId} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
-import {GENESIS_SLOT, MAX_REQUEST_BLOCKS, MAX_REQUEST_BLOCKS_DENEB, isForkPostDeneb} from "@lodestar/params";
+import {GENESIS_SLOT, isForkPostDeneb} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {deneb, phase0} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {phase0} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {prettyPrintPeerId} from "../../util.js";
 
 // TODO: Unit test
 
 export async function* onBeaconBlocksByRange(
   request: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
-  db: IBeaconDb
+  db: IBeaconDb,
+  peerId: PeerId,
+  peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
   const {startSlot, count} = validateBeaconBlocksByRangeRequest(chain.config, request);
   const endSlot = startSlot + count;
 
   const finalized = db.blockArchive;
-  const unfinalized = db.block;
-  const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  // in the case of initializing from a non-finalized state, we don't have the finalized block so this api does not work
+  // chain.forkChoice.getFinalizeBlock().slot
+  const finalizedSlot = chain.forkChoice.getFinalizedCheckpointSlot();
+  // Blocks are migrated to blockArchive at finalization (including the finalized block itself),
+  // so the archive loop serves up to AND INCLUDING finalizedSlot and the headChain loop
+  // starts above it to avoid duplicate yields. See archiveBlocks.ts for the migration logic.
+  const archiveMaxSlot = finalizedSlot;
+
+  // endSlot is exclusive, so highest served slot is endSlot - 1.
+  // Throw only when the entire requested range is below earliestAvailableSlot.
+  if (endSlot - 1 < chain.earliestAvailableSlot) {
+    chain.logger.verbose("Peer requested range before earliestAvailableSlot for BeaconBlocksByRange", {
+      peer: prettyPrintPeerId(peerId),
+      client: peerClient,
+      startSlot,
+      count,
+      earliestAvailableSlot: chain.earliestAvailableSlot,
+    });
+    throw new ResponseError(
+      RespStatus.RESOURCE_UNAVAILABLE,
+      `Requested range is before earliestAvailableSlot startSlot=${startSlot} count=${count} earliestAvailableSlot=${chain.earliestAvailableSlot}`
+    );
+  }
 
   // Finalized range of blocks
-  if (startSlot <= finalizedSlot) {
+  if (startSlot <= archiveMaxSlot) {
     // Chain of blobs won't change
-    for await (const {key, value} of finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
+    for await (const {key, value} of finalized.binaryEntriesStream({
+      gte: startSlot,
+      lt: Math.min(endSlot, archiveMaxSlot + 1),
+    })) {
       yield {
         data: value,
         boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(finalized.decodeKey(key))),
@@ -33,31 +60,35 @@ export async function* onBeaconBlocksByRange(
   }
 
   // Non-finalized range of blocks
-  if (endSlot > finalizedSlot) {
-    const headRoot = chain.forkChoice.getHeadRoot();
+  if (endSlot > archiveMaxSlot) {
+    const headBlock = chain.forkChoice.getHead();
+    const headRoot = headBlock.blockRoot;
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
-    // getAllAncestorBlocks response includes the head node, so it's the full chain.
+    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
+    // `getAllAncestorBlocks` includes both the head and the previous-finalized boundary.
 
     // Iterate head chain with ascending block numbers
     for (let i = headChain.length - 1; i >= 0; i--) {
       const block = headChain[i];
 
-      // Must include only blocks in the range requested
-      if (block.slot >= startSlot && block.slot < endSlot) {
+      // Must include only blocks in the range requested, and skip anything the archive loop
+      // above already served via the block.slot > archiveMaxSlot filter.
+      if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
         // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
         // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
-        const blockBytes = await unfinalized.getBinary(fromHex(block.blockRoot));
+        const blockBytes = await chain.getSerializedBlockByRoot(block.blockRoot);
         if (!blockBytes) {
-          // Handle the same to onBeaconBlocksByRange
-          throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
+          throw new ResponseError(
+            RespStatus.SERVER_ERROR,
+            `No block for root ${block.blockRoot} slot ${block.slot}, startSlot=${startSlot} endSlot=${endSlot} finalizedSlot=${finalizedSlot}`
+          );
         }
 
         yield {
-          data: blockBytes,
+          data: blockBytes.block,
           boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
         };
       }
@@ -73,23 +104,25 @@ export async function* onBeaconBlocksByRange(
 export function validateBeaconBlocksByRangeRequest(
   config: BeaconConfig,
   request: phase0.BeaconBlocksByRangeRequest
-): deneb.BlobSidecarsByRangeRequest {
+): Pick<phase0.BeaconBlocksByRangeRequest, "startSlot" | "count"> {
   const {startSlot} = request;
   let {count} = request;
 
   if (count < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
   }
-  // TODO: validate against MIN_EPOCHS_FOR_BLOCK_REQUESTS
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
+  // The phase0 req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
+  // Archival nodes may still serve older retained blocks to allow genesis sync.
+
   // step > 1 is deprecated, see https://github.com/ethereum/consensus-specs/pull/2856
 
   const maxRequestBlocks = isForkPostDeneb(config.getForkName(startSlot))
-    ? MAX_REQUEST_BLOCKS_DENEB
-    : MAX_REQUEST_BLOCKS;
+    ? config.MAX_REQUEST_BLOCKS_DENEB
+    : config.MAX_REQUEST_BLOCKS;
 
   if (count > maxRequestBlocks) {
     count = maxRequestBlocks;

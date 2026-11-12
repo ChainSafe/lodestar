@@ -1,9 +1,9 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
+import yaml from "js-yaml";
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
 import {fetch} from "@lodestar/utils";
-import yaml from "js-yaml";
 import {BeaconClient, BeaconNodeGenerator, LighthouseAPI, RunnerType} from "../../interfaces.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
 import {getNodePorts} from "../../utils/ports.js";

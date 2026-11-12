@@ -1,35 +1,50 @@
-export {ProtoArray} from "./protoArray/protoArray.js";
-export type {
-  ProtoBlock,
-  ProtoNode,
-  MaybeValidExecutionStatus,
-  BlockExtraMeta,
-  LVHValidResponse,
-  LVHInvalidResponse,
-} from "./protoArray/interface.js";
-export {ExecutionStatus} from "./protoArray/interface.js";
-
-export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt, assertValidTerminalPowBlock} from "./forkChoice/forkChoice.js";
 export {
-  type IForkChoice,
-  type PowBlockHex,
-  EpochDifference,
-  type AncestorResult,
-  AncestorStatus,
-  type ForkChoiceMetrics,
-  NotReorgedReason,
-} from "./forkChoice/interface.js";
-export {
-  ForkChoiceStore,
-  type IForkChoiceStore,
-  type CheckpointWithHex,
-  type JustifiedBalancesGetter,
-} from "./forkChoice/store.js";
-export {
+  ForkChoiceError,
+  ForkChoiceErrorCode,
   type InvalidAttestation,
   InvalidAttestationCode,
   type InvalidBlock,
   InvalidBlockCode,
-  ForkChoiceError,
-  ForkChoiceErrorCode,
 } from "./forkChoice/errors.js";
+export {
+  type FastConfirmationBalanceSource,
+  type FastConfirmationContext,
+  type FastConfirmationMetrics,
+  type FastConfirmationResult,
+  FastConfirmationRule,
+  type ForkChoiceStateGetter,
+  type IFastConfirmationRule,
+  type IFastConfirmationStore,
+  getFastConfirmationMetrics,
+} from "./forkChoice/fastConfirmation/fastConfirmationRule.js";
+export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt} from "./forkChoice/forkChoice.js";
+export {
+  type AncestorResult,
+  AncestorStatus,
+  type CheckpointWithBalance,
+  type CheckpointWithTotalBalance,
+  EpochDifference,
+  type IForkChoice,
+  NotReorgedReason,
+  type PtcQuorumEvent,
+} from "./forkChoice/interface.js";
+export * from "./forkChoice/safeBlocks.js";
+export {
+  type CheckpointWithHex,
+  ForkChoiceStore,
+  type IForkChoiceStore,
+  type JustifiedBalancesGetter,
+} from "./forkChoice/store.js";
+export {type ForkChoiceMetrics, getForkChoiceMetrics} from "./metrics.js";
+export type {
+  BlockExecutionStatus,
+  BlockExtraMeta,
+  LVHInvalidResponse,
+  LVHValidResponse,
+  PayloadExecutionStatus,
+  ProtoBlock,
+  ProtoNode,
+  PtcQuorum,
+} from "./protoArray/interface.js";
+export {ExecutionStatus, PayloadStatus, getPtcVerdict, isGloasBlock} from "./protoArray/interface.js";
+export {ProtoArray} from "./protoArray/protoArray.js";

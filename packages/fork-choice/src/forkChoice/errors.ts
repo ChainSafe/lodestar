@@ -6,13 +6,15 @@ export enum InvalidBlockCode {
   FUTURE_SLOT = "FUTURE_SLOT",
   FINALIZED_SLOT = "FINALIZED_SLOT",
   NOT_FINALIZED_DESCENDANT = "NOT_FINALIZED_DESCENDANT",
+  PARENT_EXECUTION_INVALID = "PARENT_EXECUTION_INVALID",
 }
 
 export type InvalidBlock =
-  | {code: InvalidBlockCode.UNKNOWN_PARENT; root: RootHex}
+  | {code: InvalidBlockCode.UNKNOWN_PARENT; root: RootHex; hash: RootHex | null}
   | {code: InvalidBlockCode.FUTURE_SLOT; currentSlot: Slot; blockSlot: Slot}
   | {code: InvalidBlockCode.FINALIZED_SLOT; finalizedSlot: Slot; blockSlot: Slot}
-  | {code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT; finalizedRoot: RootHex; blockAncestor?: RootHex};
+  | {code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT; finalizedRoot: RootHex; blockAncestor?: RootHex}
+  | {code: InvalidBlockCode.PARENT_EXECUTION_INVALID; root: RootHex; hash: RootHex | null};
 
 export enum InvalidAttestationCode {
   /**
@@ -53,6 +55,14 @@ export enum InvalidAttestationCode {
    * Delay consideration in the fork choice until their slot is in the past.
    */
   FUTURE_SLOT = "FUTURE_SLOT",
+  /**
+   * The attestation data index is invalid for a Gloas block (must be 0 or 1).
+   */
+  INVALID_DATA_INDEX = "INVALID_DATA_INDEX",
+  /**
+   * The attestation votes for a full payload (index=1) but the payload status is not known.
+   */
+  UNKNOWN_PAYLOAD_STATUS = "UNKNOWN_PAYLOAD_STATUS",
 }
 
 export type InvalidAttestation =
@@ -64,7 +74,9 @@ export type InvalidAttestation =
   | {code: InvalidAttestationCode.PAST_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
   | {code: InvalidAttestationCode.INVALID_TARGET; attestation: RootHex; local: RootHex}
   | {code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK; block: Slot; attestation: Slot}
-  | {code: InvalidAttestationCode.FUTURE_SLOT; attestationSlot: Slot; latestPermissibleSlot: Slot};
+  | {code: InvalidAttestationCode.FUTURE_SLOT; attestationSlot: Slot; latestPermissibleSlot: Slot}
+  | {code: InvalidAttestationCode.INVALID_DATA_INDEX; index: number}
+  | {code: InvalidAttestationCode.UNKNOWN_PAYLOAD_STATUS; beaconBlockRoot: RootHex};
 
 export enum ForkChoiceErrorCode {
   INVALID_ATTESTATION = "FORKCHOICE_ERROR_INVALID_ATTESTATION",
@@ -79,6 +91,7 @@ export enum ForkChoiceErrorCode {
   FORK_CHOICE_STORE_ERROR = "FORKCHOICE_ERROR_FORK_CHOICE_STORE_ERROR",
   UNABLE_TO_SET_JUSTIFIED_CHECKPOINT = "FORKCHOICE_ERROR_UNABLE_TO_SET_JUSTIFIED_CHECKPOINT",
   AFTER_BLOCK_FAILED = "FORKCHOICE_ERROR_AFTER_BLOCK_FAILED",
+  MISSING_EXECUTION_PAYLOAD_BLOCK_HASH = "FORKCHOICE_ERROR_MISSING_EXECUTION_PAYLOAD_BLOCK_HASH",
 }
 
 export type ForkChoiceErrorType =
@@ -93,6 +106,7 @@ export type ForkChoiceErrorType =
   | {code: ForkChoiceErrorCode.ATTEMPT_TO_REVERT_JUSTIFICATION; store: Slot; state: Slot}
   | {code: ForkChoiceErrorCode.FORK_CHOICE_STORE_ERROR; error: Error}
   | {code: ForkChoiceErrorCode.UNABLE_TO_SET_JUSTIFIED_CHECKPOINT; error: Error}
-  | {code: ForkChoiceErrorCode.AFTER_BLOCK_FAILED; error: Error};
+  | {code: ForkChoiceErrorCode.AFTER_BLOCK_FAILED; error: Error}
+  | {code: ForkChoiceErrorCode.MISSING_EXECUTION_PAYLOAD_BLOCK_HASH; root: RootHex; slot: Slot};
 
 export class ForkChoiceError extends LodestarError<ForkChoiceErrorType> {}

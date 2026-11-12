@@ -1,15 +1,9 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import {fetch} from "@lodestar/utils";
 import {Web3} from "web3";
-import {
-  EL_GENESIS_ACCOUNT,
-  EL_GENESIS_PASSWORD,
-  EL_GENESIS_SECRET_KEY,
-  SHARED_JWT_SECRET,
-  SIM_ENV_NETWORK_ID,
-} from "../../constants.js";
-import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../../interfaces.js";
+import {fetch} from "@lodestar/utils";
+import {EL_GENESIS_PASSWORD, EL_GENESIS_SECRET_KEY, SHARED_JWT_SECRET, SIM_ENV_NETWORK_ID} from "../../constants.js";
+import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../../interfaces.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
 import {getNodePorts} from "../../utils/ports.js";
 import {registerWeb3JsPlugins} from "../../web3js/plugins/index.js";
@@ -19,7 +13,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
     throw new Error("GETH_BINARY_DIR or GETH_DOCKER_IMAGE must be provided");
   }
 
-  const {id, mode, ttd, address, mining, clientOptions, nodeIndex} = opts;
+  const {id, ttd, address, clientOptions, nodeIndex} = opts;
   const ports = getNodePorts(nodeIndex);
 
   const isDocker = !!process.env.GETH_DOCKER_IMAGE;
@@ -132,9 +126,6 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         "--nodiscover",
         "--datadir",
         rootDirMounted,
-        "--allow-insecure-unlock",
-        "--unlock",
-        EL_GENESIS_ACCOUNT,
         "--password",
         passwordPathMounted,
         "--syncmode",
@@ -144,8 +135,6 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         // Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail
         "--verbosity",
         "5",
-        ...(mining ? ["--mine", "--miner.etherbase", EL_GENESIS_ACCOUNT] : []),
-        ...(mode === ExecutionStartMode.PreMerge ? ["--nodiscover"] : []),
         ...clientOptions,
       ],
       env: {},

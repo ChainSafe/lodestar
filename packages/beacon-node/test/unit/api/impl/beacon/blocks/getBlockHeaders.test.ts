@@ -1,9 +1,10 @@
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {when} from "vitest-when";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {when} from "vitest-when";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateProtoBlock, generateSignedBlockAtSlot} from "../../../../../utils/typeGenerator.js";
 
@@ -14,9 +15,8 @@ describe("api - beacon - getBlockHeaders", () => {
 
   beforeEach(() => {
     modules = getApiTestModules();
-    api = getBeaconBlockApi(modules);
+    api = getBeaconBlockApi(defaultApiOptions, modules);
 
-    vi.spyOn(modules.db.block, "get");
     vi.spyOn(modules.db.blockArchive, "getByParentRoot");
   });
 
@@ -42,7 +42,11 @@ describe("api - beacon - getBlockHeaders", () => {
 
     const blockFromDb3 = ssz.phase0.SignedBeaconBlock.defaultValue();
     blockFromDb3.message.slot = 3;
-    modules.db.block.get.mockResolvedValue(blockFromDb3);
+    modules.chain.getBlockByRoot.mockResolvedValue({
+      block: blockFromDb3,
+      executionOptimistic: false,
+      finalized: false,
+    });
 
     modules.db.blockArchive.get.mockResolvedValue(null);
     const {data: blockHeaders} = (await api.getBlockHeaders({})) as {data: routes.beacon.BlockHeaderResponse[]};
@@ -52,7 +56,7 @@ describe("api - beacon - getBlockHeaders", () => {
     expect(modules.forkChoice.getHead).toHaveBeenCalledTimes(1);
     expect(modules.chain.getCanonicalBlockAtSlot).toHaveBeenCalledTimes(1);
     expect(modules.forkChoice.getBlockSummariesAtSlot).toHaveBeenCalledTimes(1);
-    expect(modules.db.block.get).toHaveBeenCalledTimes(1);
+    expect(modules.chain.getBlockByRoot).toHaveBeenCalledTimes(1);
   });
 
   it("future slot", async () => {
@@ -90,8 +94,16 @@ describe("api - beacon - getBlockHeaders", () => {
     when(modules.forkChoice.getCanonicalBlockAtSlot)
       .calledWith(2)
       .thenReturn(generateProtoBlock({blockRoot: toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(canonical.message))}));
-    modules.db.block.get.mockResolvedValue(generateSignedBlockAtSlot(1));
-    modules.db.block.get.mockResolvedValue(generateSignedBlockAtSlot(2));
+    modules.chain.getBlockByRoot.mockResolvedValueOnce({
+      block: generateSignedBlockAtSlot(1),
+      executionOptimistic: false,
+      finalized: false,
+    });
+    modules.chain.getBlockByRoot.mockResolvedValueOnce({
+      block: generateSignedBlockAtSlot(2),
+      executionOptimistic: false,
+      finalized: false,
+    });
     const {data: blockHeaders} = (await api.getBlockHeaders({parentRoot})) as {
       data: routes.beacon.BlockHeaderResponse[];
     };
@@ -103,7 +115,11 @@ describe("api - beacon - getBlockHeaders", () => {
     modules.db.blockArchive.getByParentRoot.mockResolvedValue(null);
     modules.forkChoice.getBlockSummariesByParentRoot.mockReturnValue([generateProtoBlock({slot: 1})]);
     when(modules.forkChoice.getCanonicalBlockAtSlot).calledWith(1).thenReturn(generateProtoBlock());
-    modules.db.block.get.mockResolvedValue(generateSignedBlockAtSlot(1));
+    modules.chain.getBlockByRoot.mockResolvedValue({
+      block: generateSignedBlockAtSlot(1),
+      executionOptimistic: false,
+      finalized: false,
+    });
     const {data: blockHeaders} = await api.getBlockHeaders({parentRoot});
 
     expect(blockHeaders.length).toBe(1);
@@ -127,8 +143,16 @@ describe("api - beacon - getBlockHeaders", () => {
     when(modules.forkChoice.getCanonicalBlockAtSlot)
       .calledWith(2)
       .thenReturn(generateProtoBlock({blockRoot: toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(canonical.message))}));
-    modules.db.block.get.mockResolvedValueOnce(generateSignedBlockAtSlot(1));
-    modules.db.block.get.mockResolvedValueOnce(generateSignedBlockAtSlot(2));
+    modules.chain.getBlockByRoot.mockResolvedValueOnce({
+      block: generateSignedBlockAtSlot(1),
+      executionOptimistic: false,
+      finalized: false,
+    });
+    modules.chain.getBlockByRoot.mockResolvedValueOnce({
+      block: generateSignedBlockAtSlot(2),
+      executionOptimistic: false,
+      finalized: false,
+    });
     const {data: blockHeaders} = await api.getBlockHeaders({
       parentRoot: toHexString(Buffer.alloc(32, 1)),
       slot: 1,

@@ -1,5 +1,5 @@
 import {ssz} from "@lodestar/types";
-import {Endpoints, NodePeer} from "../../../../src/beacon/routes/node.js";
+import {ClientCode, Endpoints, NodePeer} from "../../../../src/beacon/routes/node.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const peerIdStr = "peerId";
@@ -46,6 +46,25 @@ export const testData: GenericServerTestCases<Endpoints> = {
   getNodeVersion: {
     args: undefined,
     res: {data: {version: "Lodestar/v0.20.0"}},
+  },
+  getNodeVersionV2: {
+    args: undefined,
+    res: {
+      data: {
+        beaconNode: {
+          code: ClientCode.LS,
+          name: "Lodestar",
+          version: "v1.38.0",
+          commit: "0xdbd94781",
+        },
+        executionClient: {
+          code: ClientCode.NM,
+          name: "Nethermind",
+          version: "v1.35.8",
+          commit: "0xc066aee2",
+        },
+      },
+    },
   },
   getSyncingStatus: {
     args: undefined,

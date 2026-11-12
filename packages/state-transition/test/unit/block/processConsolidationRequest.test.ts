@@ -1,5 +1,6 @@
+import {describe, expect, it} from "vitest";
 import {digest} from "@chainsafe/as-sha256";
-import bls from "@chainsafe/blst";
+import {SecretKey} from "@lodestar/native/blst";
 import {
   BLS_WITHDRAWAL_PREFIX,
   COMPOUNDING_WITHDRAWAL_PREFIX,
@@ -7,9 +8,8 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
-import {generateCachedElectraState} from "../../../../beacon-node/test/utils/state.js";
 import {processConsolidationRequest} from "../../../src/block/processConsolidationRequest.js";
+import {generateCachedElectraState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
 describe("processConsolidationRequest", () => {
@@ -28,7 +28,7 @@ describe("processConsolidationRequest", () => {
     for (let i = 0; i < vc; i++) {
       const buffer = Buffer.alloc(32, 0);
       buffer.writeInt16BE(i + 1, 30); // Offset to ensure the SK is less than the order
-      const sk = bls.SecretKey.fromBytes(buffer);
+      const sk = SecretKey.fromBytes(buffer);
       validators[i].pubkey = sk.toPublicKey().toBytes();
     }
 

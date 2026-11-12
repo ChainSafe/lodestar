@@ -1,5 +1,6 @@
-import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {BeaconConfig} from "@lodestar/config";
+import {phase0, ssz} from "@lodestar/types";
+import {IBeaconStateView} from "../stateView/interface.js";
 import {
   ISignatureSet,
   SignatureSetType,
@@ -9,36 +10,28 @@ import {
 } from "../util/index.js";
 
 export function verifyVoluntaryExitSignature(
-  state: CachedBeaconStateAllForks,
+  config: BeaconConfig,
+  state: IBeaconStateView,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): boolean {
-  return verifySignatureSet(getVoluntaryExitSignatureSet(state, signedVoluntaryExit));
+  return verifySignatureSet(getVoluntaryExitSignatureSet(config, state, signedVoluntaryExit));
 }
 
 /**
  * Extract signatures to allow validating all block signatures at once
  */
 export function getVoluntaryExitSignatureSet(
-  state: CachedBeaconStateAllForks,
+  config: BeaconConfig,
+  state: IBeaconStateView,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
-  const {epochCtx} = state;
-  const slot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
-  const domain = state.config.getDomainForVoluntaryExit(state.slot, slot);
+  const messageSlot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
+  const domain = config.getDomainForVoluntaryExit(state.slot, messageSlot);
 
   return {
-    type: SignatureSetType.single,
-    pubkey: epochCtx.index2pubkey[signedVoluntaryExit.message.validatorIndex],
+    type: SignatureSetType.indexed,
+    index: signedVoluntaryExit.message.validatorIndex,
     signingRoot: computeSigningRoot(ssz.phase0.VoluntaryExit, signedVoluntaryExit.message, domain),
     signature: signedVoluntaryExit.signature,
   };
-}
-
-export function getVoluntaryExitsSignatureSets(
-  state: CachedBeaconStateAllForks,
-  signedBlock: SignedBeaconBlock
-): ISignatureSet[] {
-  return signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
-    getVoluntaryExitSignatureSet(state, voluntaryExit)
-  );
 }

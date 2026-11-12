@@ -1,6 +1,6 @@
-import {getV4Crypto} from "@chainsafe/enr";
 import type {PeerId, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {getV4Crypto} from "@chainsafe/enr";
 import {ForkBoundary} from "@lodestar/config";
 import {Bytes32, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
@@ -25,6 +25,8 @@ export type SubnetsService = {
 
 export interface IAttnetsService extends SubnetsService {
   shouldProcess(subnet: SubnetID, slot: Slot): boolean;
+  /** Block proposal slots of validators connected to this node, see `slotsToSubscribeBeforeProposalDuty` */
+  addLocalProposalSlots(slots: Slot[]): void;
 }
 
 export type RandBetweenFn = (min: number, max: number) => number;
@@ -33,6 +35,11 @@ export type ShuffleFn = <T>(arr: T[]) => T[];
 export type SubnetsServiceOpts = {
   subscribeAllSubnets?: boolean;
   slotsToSubscribeBeforeAggregatorDuty: number;
+  /**
+   * Subscribe to all attestation subnets this many slots before a block proposal of a connected validator, so that
+   * its single attestations can be packed into the block. In `[0, SLOTS_PER_EPOCH]`, 0 disables
+   */
+  slotsToSubscribeBeforeProposalDuty: number;
 };
 
 export type SubnetsServiceTestOpts = {

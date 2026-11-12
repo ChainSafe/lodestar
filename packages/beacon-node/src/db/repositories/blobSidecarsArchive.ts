@@ -12,7 +12,7 @@ import {BlobSidecarsWrapper, blobSidecarsWrapperSsz} from "./blobSidecars.js";
  */
 export class BlobSidecarsArchiveRepository extends Repository<Slot, BlobSidecarsWrapper> {
   constructor(config: ChainForkConfig, db: Db) {
-    const bucket = Bucket.allForks_blobSidecarsArchive;
+    const bucket = Bucket.deneb_blobSidecarsArchive;
     super(config, db, bucket, blobSidecarsWrapperSsz, getBucketNameByValue(bucket));
   }
 

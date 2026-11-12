@@ -1,4 +1,13 @@
-import {ForkAll, ForkName, ForkPostAltair, ForkPostBellatrix, ForkPostDeneb, ForkPostElectra} from "@lodestar/params";
+import {
+  ForkAll,
+  ForkName,
+  ForkPostAltair,
+  ForkPostBellatrix,
+  ForkPostDeneb,
+  ForkPostElectra,
+  ForkPostFulu,
+  ForkPostGloas,
+} from "@lodestar/params";
 import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
@@ -6,18 +15,21 @@ import {ts as deneb} from "./deneb/index.js";
 import {ts as electra} from "./electra/index.js";
 import {ts as fulu} from "./fulu/index.js";
 import {ts as gloas} from "./gloas/index.js";
+import {ts as heze} from "./heze/index.js";
 import {ts as phase0} from "./phase0/index.js";
 import {Slot} from "./primitive/types.js";
 
-export * from "./primitive/types.js";
-export {ts as phase0} from "./phase0/index.js";
 export {ts as altair} from "./altair/index.js";
 export {ts as bellatrix} from "./bellatrix/index.js";
 export {ts as capella} from "./capella/index.js";
 export {ts as deneb} from "./deneb/index.js";
+export {ts as eip8025} from "./eip8025/index.js";
 export {ts as electra} from "./electra/index.js";
 export {ts as fulu} from "./fulu/index.js";
 export {ts as gloas} from "./gloas/index.js";
+export {ts as heze} from "./heze/index.js";
+export {ts as phase0} from "./phase0/index.js";
+export * from "./primitive/types.js";
 
 /** Common non-spec type to represent roots as strings */
 export type RootHex = string;
@@ -42,6 +54,7 @@ export type WithOptionalBytes<T> = {
 
 export type SlotRootHex = {slot: Slot; root: RootHex};
 export type SlotOptionalRoot = {slot: Slot; root?: RootHex};
+export type RootOptionalSlot = {root: RootHex; slot?: Slot};
 
 type TypesByFork = {
   [ForkName.phase0]: {
@@ -109,6 +122,7 @@ type TypesByFork = {
     BlindedBeaconBlockBody: bellatrix.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: bellatrix.SignedBlindedBeaconBlock;
     ExecutionPayload: bellatrix.ExecutionPayload;
+    NewPayloadRequest: bellatrix.NewPayloadRequest;
     ExecutionPayloadHeader: bellatrix.ExecutionPayloadHeader;
     BuilderBid: bellatrix.BuilderBid;
     SignedBuilderBid: bellatrix.SignedBuilderBid;
@@ -144,6 +158,7 @@ type TypesByFork = {
     BlindedBeaconBlockBody: capella.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: capella.SignedBlindedBeaconBlock;
     ExecutionPayload: capella.ExecutionPayload;
+    NewPayloadRequest: capella.NewPayloadRequest;
     ExecutionPayloadHeader: capella.ExecutionPayloadHeader;
     BuilderBid: capella.BuilderBid;
     SignedBuilderBid: capella.SignedBuilderBid;
@@ -179,6 +194,7 @@ type TypesByFork = {
     BlindedBeaconBlockBody: deneb.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: deneb.SignedBlindedBeaconBlock;
     ExecutionPayload: deneb.ExecutionPayload;
+    NewPayloadRequest: deneb.NewPayloadRequest;
     ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
     BuilderBid: deneb.BuilderBid;
     SignedBuilderBid: deneb.SignedBuilderBid;
@@ -216,6 +232,7 @@ type TypesByFork = {
     BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
     ExecutionPayload: deneb.ExecutionPayload;
+    NewPayloadRequest: electra.NewPayloadRequest;
     ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
@@ -254,13 +271,14 @@ type TypesByFork = {
     BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
     ExecutionPayload: deneb.ExecutionPayload;
+    NewPayloadRequest: electra.NewPayloadRequest;
     ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
     SSEPayloadAttributes: electra.SSEPayloadAttributes;
     BlockContents: fulu.BlockContents;
     SignedBlockContents: fulu.SignedBlockContents;
-    ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
+    ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: fulu.BlobsBundle;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
@@ -272,44 +290,92 @@ type TypesByFork = {
     AggregateAndProof: electra.AggregateAndProof;
     SignedAggregateAndProof: electra.SignedAggregateAndProof;
     ExecutionRequests: electra.ExecutionRequests;
+    DataColumnSidecar: fulu.DataColumnSidecar;
+    DataColumnSidecars: fulu.DataColumnSidecars;
   };
   [ForkName.gloas]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
     SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
     BeaconBlock: gloas.BeaconBlock;
-    BeaconBlockBody: electra.BeaconBlockBody;
+    BeaconBlockBody: gloas.BeaconBlockBody;
     BeaconState: gloas.BeaconState;
     SignedBeaconBlock: gloas.SignedBeaconBlock;
     Metadata: fulu.Metadata;
     Status: fulu.Status;
-    LightClientHeader: deneb.LightClientHeader;
-    LightClientBootstrap: electra.LightClientBootstrap;
-    LightClientUpdate: electra.LightClientUpdate;
-    LightClientFinalityUpdate: electra.LightClientFinalityUpdate;
-    LightClientOptimisticUpdate: electra.LightClientOptimisticUpdate;
-    LightClientStore: electra.LightClientStore;
+    LightClientHeader: gloas.LightClientHeader;
+    LightClientBootstrap: gloas.LightClientBootstrap;
+    LightClientUpdate: gloas.LightClientUpdate;
+    LightClientFinalityUpdate: gloas.LightClientFinalityUpdate;
+    LightClientOptimisticUpdate: gloas.LightClientOptimisticUpdate;
+    LightClientStore: gloas.LightClientStore;
     BlindedBeaconBlock: electra.BlindedBeaconBlock;
     BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
-    ExecutionPayload: deneb.ExecutionPayload;
+    ExecutionPayload: gloas.ExecutionPayload;
+    NewPayloadRequest: gloas.NewPayloadRequest;
     ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
-    SSEPayloadAttributes: electra.SSEPayloadAttributes;
-    BlockContents: fulu.BlockContents;
-    SignedBlockContents: fulu.SignedBlockContents;
-    ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
+    SSEPayloadAttributes: gloas.SSEPayloadAttributes;
+    BlockContents: gloas.BlockContents;
+    SignedBlockContents: gloas.SignedBlockContents;
+    ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: fulu.BlobsBundle;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
     SingleAttestation: electra.SingleAttestation;
-    Attestation: electra.Attestation;
-    IndexedAttestation: electra.IndexedAttestation;
-    IndexedAttestationBigint: electra.IndexedAttestationBigint;
-    AttesterSlashing: electra.AttesterSlashing;
-    AggregateAndProof: electra.AggregateAndProof;
-    SignedAggregateAndProof: electra.SignedAggregateAndProof;
-    ExecutionRequests: electra.ExecutionRequests;
+    Attestation: gloas.Attestation;
+    IndexedAttestation: gloas.IndexedAttestation;
+    IndexedAttestationBigint: gloas.IndexedAttestationBigint;
+    AttesterSlashing: gloas.AttesterSlashing;
+    AggregateAndProof: gloas.AggregateAndProof;
+    SignedAggregateAndProof: gloas.SignedAggregateAndProof;
+    ExecutionRequests: gloas.ExecutionRequests;
+    ExecutionPayloadBid: gloas.ExecutionPayloadBid;
+    DataColumnSidecar: gloas.DataColumnSidecar;
+    DataColumnSidecars: gloas.DataColumnSidecars;
+  };
+  [ForkName.heze]: {
+    BeaconBlockHeader: phase0.BeaconBlockHeader;
+    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
+    BeaconBlock: heze.BeaconBlock;
+    BeaconBlockBody: heze.BeaconBlockBody;
+    BeaconState: heze.BeaconState;
+    SignedBeaconBlock: heze.SignedBeaconBlock;
+    Metadata: fulu.Metadata;
+    Status: fulu.Status;
+    LightClientHeader: gloas.LightClientHeader;
+    LightClientBootstrap: gloas.LightClientBootstrap;
+    LightClientUpdate: gloas.LightClientUpdate;
+    LightClientFinalityUpdate: gloas.LightClientFinalityUpdate;
+    LightClientOptimisticUpdate: gloas.LightClientOptimisticUpdate;
+    LightClientStore: gloas.LightClientStore;
+    BlindedBeaconBlock: electra.BlindedBeaconBlock;
+    BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
+    SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
+    ExecutionPayload: gloas.ExecutionPayload;
+    NewPayloadRequest: gloas.NewPayloadRequest;
+    ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
+    BuilderBid: electra.BuilderBid;
+    SignedBuilderBid: electra.SignedBuilderBid;
+    SSEPayloadAttributes: heze.SSEPayloadAttributes;
+    BlockContents: heze.BlockContents;
+    SignedBlockContents: heze.SignedBlockContents;
+    ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;
+    BlobsBundle: fulu.BlobsBundle;
+    SyncCommittee: altair.SyncCommittee;
+    SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: electra.SingleAttestation;
+    Attestation: gloas.Attestation;
+    IndexedAttestation: gloas.IndexedAttestation;
+    IndexedAttestationBigint: gloas.IndexedAttestationBigint;
+    AttesterSlashing: gloas.AttesterSlashing;
+    AggregateAndProof: gloas.AggregateAndProof;
+    SignedAggregateAndProof: gloas.SignedAggregateAndProof;
+    ExecutionRequests: gloas.ExecutionRequests;
+    ExecutionPayloadBid: heze.ExecutionPayloadBid;
+    DataColumnSidecar: gloas.DataColumnSidecar;
+    DataColumnSidecars: gloas.DataColumnSidecars;
   };
 };
 
@@ -336,6 +402,7 @@ export type SignedBlockContents<F extends ForkAll = ForkAll> = TypesByFork[F]["S
 export type SignedOrUnsignedBlockContents<F extends ForkAll = ForkAll> = BlockContents<F> | SignedBlockContents<F>;
 
 export type ExecutionPayload<F extends ForkPostBellatrix = ForkPostBellatrix> = TypesByFork[F]["ExecutionPayload"];
+export type NewPayloadRequest<F extends ForkPostBellatrix = ForkPostBellatrix> = TypesByFork[F]["NewPayloadRequest"];
 export type ExecutionPayloadHeader<F extends ForkPostBellatrix = ForkPostBellatrix> =
   TypesByFork[F]["ExecutionPayloadHeader"];
 export type ExecutionRequests<F extends ForkPostElectra = ForkPostElectra> = TypesByFork[F]["ExecutionRequests"];
@@ -343,6 +410,9 @@ export type ExecutionRequests<F extends ForkPostElectra = ForkPostElectra> = Typ
 export type ExecutionPayloadAndBlobsBundle<F extends ForkPostDeneb = ForkPostDeneb> =
   TypesByFork[F]["ExecutionPayloadAndBlobsBundle"];
 export type BlobsBundle<F extends ForkPostDeneb = ForkPostDeneb> = TypesByFork[F]["BlobsBundle"];
+
+export type DataColumnSidecar<F extends ForkPostFulu = ForkPostFulu> = TypesByFork[F]["DataColumnSidecar"];
+export type DataColumnSidecars<F extends ForkPostFulu = ForkPostFulu> = TypesByFork[F]["DataColumnSidecars"];
 
 export type LightClientHeader<F extends ForkPostAltair = ForkPostAltair> = TypesByFork[F]["LightClientHeader"];
 export type LightClientBootstrap<F extends ForkPostAltair = ForkPostAltair> = TypesByFork[F]["LightClientBootstrap"];
@@ -372,3 +442,4 @@ export type IndexedAttestationBigint<F extends ForkName = ForkAll> = TypesByFork
 export type AttesterSlashing<F extends ForkName = ForkAll> = TypesByFork[F]["AttesterSlashing"];
 export type AggregateAndProof<F extends ForkName = ForkAll> = TypesByFork[F]["AggregateAndProof"];
 export type SignedAggregateAndProof<F extends ForkName = ForkAll> = TypesByFork[F]["SignedAggregateAndProof"];
+export type ExecutionPayloadBid<F extends ForkPostGloas = ForkPostGloas> = TypesByFork[F]["ExecutionPayloadBid"];

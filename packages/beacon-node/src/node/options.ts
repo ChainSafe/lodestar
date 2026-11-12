@@ -1,31 +1,42 @@
+import {BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS} from "../api/impl/validator/index.js";
 import {ApiOptions, defaultApiOptions} from "../api/options.js";
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IChainOptions, defaultChainOptions} from "../chain/options.js";
 import {ValidatorMonitorOpts, defaultValidatorMonitorOpts} from "../chain/validatorMonitor.js";
 import {DatabaseOptions, defaultDbOptions} from "../db/options.js";
-import {Eth1Options, defaultEth1Options} from "../eth1/options.js";
+import {BUILDER_BID_LAG_BUFFER_MS} from "../execution/builder/apiClient.js";
 import {
+  EngineApiMode,
   ExecutionBuilderOpts,
   ExecutionEngineOpts,
   defaultExecutionBuilderHttpOpts,
   defaultExecutionBuilderOpts,
   defaultExecutionEngineHttpOpts,
   defaultExecutionEngineOpts,
+  engineApiModes,
 } from "../execution/index.js";
 import {MetricsOptions, defaultMetricsOptions} from "../metrics/options.js";
 import {MonitoringOptions, defaultMonitoringOptions} from "../monitoring/options.js";
 import {NetworkOptions, defaultNetworkOptions} from "../network/options.js";
 import {SyncOptions, defaultSyncOptions} from "../sync/options.js";
+
 // Re-export so the CLI doesn't need to depend on lodestar-api
 export {allNamespaces} from "../api/rest/index.js";
-
-// Re-export to use as default values in CLI args
-export {defaultExecutionEngineHttpOpts, defaultExecutionBuilderHttpOpts, ArchiveMode, DEFAULT_ARCHIVE_MODE};
+export type {EngineApiMode};
+// Re-export to use as default values and for validation in CLI args
+export {
+  ArchiveMode,
+  BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS,
+  BUILDER_BID_LAG_BUFFER_MS,
+  DEFAULT_ARCHIVE_MODE,
+  defaultExecutionBuilderHttpOpts,
+  defaultExecutionEngineHttpOpts,
+  engineApiModes,
+};
 
 export interface IBeaconNodeOptions {
   api: ApiOptions;
   chain: IChainOptions;
   db: DatabaseOptions;
-  eth1: Eth1Options;
   executionEngine: ExecutionEngineOpts;
   executionBuilder: ExecutionBuilderOpts;
   metrics: MetricsOptions;
@@ -39,7 +50,6 @@ export const defaultOptions: IBeaconNodeOptions = {
   api: defaultApiOptions,
   chain: defaultChainOptions,
   db: defaultDbOptions,
-  eth1: defaultEth1Options,
   executionEngine: defaultExecutionEngineOpts,
   executionBuilder: defaultExecutionBuilderOpts,
   metrics: defaultMetricsOptions,

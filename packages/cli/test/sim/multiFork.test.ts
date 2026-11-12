@@ -2,7 +2,6 @@ import path from "node:path";
 import {createAccountBalanceAssertion} from "../utils/crucible/assertions/accountBalanceAssertion.js";
 import {createExecutionHeadAssertion} from "../utils/crucible/assertions/executionHeadAssertion.js";
 import {createForkAssertion} from "../utils/crucible/assertions/forkAssertion.js";
-import {mergeAssertion} from "../utils/crucible/assertions/mergeAssertion.js";
 import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
 import {createWithdrawalAssertions} from "../utils/crucible/assertions/withdrawalsAssertion.js";
 import {BeaconClient, ExecutionClient, Match, ValidatorClient} from "../utils/crucible/interfaces.js";
@@ -11,11 +10,13 @@ import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 import {assertCheckpointSync, assertRangeSync, assertUnknownBlockSync} from "../utils/crucible/utils/syncing.js";
 
-const altairForkEpoch = 2;
-const bellatrixForkEpoch = 4;
-const capellaForkEpoch = 6;
-const denebForkEpoch = 8;
-const runTillEpoch = 10;
+const altairForkEpoch = 0;
+const bellatrixForkEpoch = 0;
+const capellaForkEpoch = 0;
+const denebForkEpoch = 0;
+const electraForkEpoch = 0;
+const fuluForkEpoch = 0;
+const runTillEpoch = 4;
 const syncWaitEpoch = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
@@ -23,8 +24,14 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
   DENEB_FORK_EPOCH: denebForkEpoch,
+  ELECTRA_FORK_EPOCH: electraForkEpoch,
+  FULU_FORK_EPOCH: fuluForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
+  additionalSlotsForTTD: 0,
   initialNodes: 5,
+  // Multifork spins up 3 additional geth+CL pairs sequentially for sync assertions,
+  // which adds significant docker startup overhead beyond the chain time budget
+  graceExtraTimeFraction: 0.6,
 });
 
 const env = await Simulation.initWithDefaults(
@@ -65,7 +72,7 @@ const env = await Simulation.initWithDefaults(
           },
         },
       },
-      execution: ExecutionClient.Geth,
+      execution: ExecutionClient.Nethermind,
       keysCount: 32,
       remote: true,
     },
@@ -81,7 +88,7 @@ const env = await Simulation.initWithDefaults(
           },
         },
       },
-      execution: ExecutionClient.Geth,
+      execution: ExecutionClient.Nethermind,
       keysCount: 32,
     },
     {
@@ -97,7 +104,7 @@ const env = await Simulation.initWithDefaults(
           },
         },
       },
-      execution: ExecutionClient.Geth,
+      execution: ExecutionClient.Nethermind,
       keysCount: 32,
     },
     {id: "node-5", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},
@@ -111,22 +118,11 @@ env.tracker.register({
   },
 });
 
-env.tracker.register({
-  ...mergeAssertion,
-  match: ({slot}) => {
-    // Check at the end of bellatrix fork, merge should happen by then
-    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) ? Match.Assert | Match.Remove : Match.None;
-  },
-});
-
 env.tracker.register(
   createAccountBalanceAssertion({
     address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    sendTransactionsAtSlot: [
-      env.clock.getFirstSlotOfEpoch(altairForkEpoch) + 4,
-      env.clock.getFirstSlotOfEpoch(bellatrixForkEpoch) + 4,
-    ],
-    validateTotalBalanceAt: [env.clock.getFirstSlotOfEpoch(bellatrixForkEpoch + 1) + 4],
+    sendTransactionsAtSlot: [env.clock.getFirstSlotOfEpoch(1) + 4, env.clock.getFirstSlotOfEpoch(2) + 4],
+    validateTotalBalanceAt: [env.clock.getFirstSlotOfEpoch(3) + 4],
     targetNode: env.nodes[0],
   })
 );

@@ -20,9 +20,9 @@ describe("paths / global", () => {
     },
     {
       id: "Network paths",
-      args: {network: "holesky"},
+      args: {network: "hoodi"},
       globalPaths: {
-        dataDir: "/my-root-dir/lodestar/holesky",
+        dataDir: "/my-root-dir/lodestar/hoodi",
       },
     },
     {

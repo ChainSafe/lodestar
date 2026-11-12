@@ -1,6 +1,6 @@
-import {LogLevel, Logger} from "@lodestar/utils";
 import winston from "winston";
 import Transport from "winston-transport";
+import {LogLevel, Logger} from "@lodestar/utils";
 import {LEVEL, MESSAGE, TimestampFormat, WinstonLogInfo} from "./interface.js";
 import {createWinstonLogger} from "./winston.js";
 
@@ -20,7 +20,7 @@ export type BrowserLoggerOpts = {
    * timestampFormat = {
    *   format: TimestampFormatCode.EpochSlot,
    *   genesisTime: args.logFormatGenesisTime,
-   *   secondsPerSlot: config.SECONDS_PER_SLOT,
+   *   secondsPerSlot: config.SLOT_DURATION_MS / 1000,
    *   slotsPerEpoch: SLOTS_PER_EPOCH,
    * }
    * ```

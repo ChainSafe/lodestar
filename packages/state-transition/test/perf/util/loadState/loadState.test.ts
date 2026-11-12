@@ -1,41 +1,19 @@
-import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
-import {PublicKey} from "@chainsafe/blst";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {Index2PubkeyCache} from "../../../../src/cache/pubkeyCache.js";
+import {bench, describe} from "@chainsafe/benchmark";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
+import {ensureInteropPubkeyCache} from "../../../../src/testUtils/interopPubkeyCache.js";
+import {generatePerfTestCachedStateAltair} from "../../../../src/testUtils/util.js";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
-import {generatePerfTestCachedStateAltair} from "../../util.js";
 
 /**
  * This benchmark shows a stable performance from 2s to 3s on a Mac M1. And it does not really depend on the seed validators,
  * only the modified and new validators
- *
- * - On mainnet, as of Oct 2023, there are ~1M validators
- *
- *    ✔ migrate state 1000000 validators, 24 modified, 0 new               0.4475463 ops/s    2.234406  s/op        -          3 runs   62.1 s
- *    ✔ migrate state 1000000 validators, 1700 modified, 1000 new          0.3663298 ops/s    2.729781  s/op        -         21 runs   62.1 s
- *    ✔ migrate state 1000000 validators, 3400 modified, 2000 new          0.3413125 ops/s    2.929866  s/op        -         19 runs   60.9 s
-
- * - On holesky, there are ~1.5M validators
- *    ✔ migrate state 1500000 validators, 24 modified, 0 new               0.4278145 ops/s    2.337461  s/op        -         24 runs   61.1 s
- *    ✔ migrate state 1500000 validators, 1700 modified, 1000 new          0.3642085 ops/s    2.745680  s/op        -         20 runs   60.1 s
- *    ✔ migrate state 1500000 validators, 3400 modified, 2000 new          0.3344296 ops/s    2.990166  s/op        -         19 runs   62.4 s
  */
 describe("loadState", () => {
-  setBenchOpts({
-    minMs: 60_000,
-  });
-
   const testCases: {seedValidators: number; numModifiedValidators: number; numNewValidators: number}[] = [
-    // this 1_000_000 is similar to mainnet state as of Oct 2023
-    // similar to migrating from state 7335296 to state 7335360 on mainnet, this is 2 epochs difference
-    {seedValidators: 1_000_000, numModifiedValidators: 24, numNewValidators: 0},
-    {seedValidators: 1_000_000, numModifiedValidators: 1700, numNewValidators: 1000},
-    // similar to migrating from state 7327776 to state 7335360 on mainnet, this is 237 epochs difference ~ 1 day
-    {seedValidators: 1_000_000, numModifiedValidators: 3400, numNewValidators: 2000},
-    // same tests on holesky with 1_500_000 validators
-    {seedValidators: 1_500_000, numModifiedValidators: 24, numNewValidators: 0},
-    {seedValidators: 1_500_000, numModifiedValidators: 1700, numNewValidators: 1000},
+    // enable these tests if you want to see performance with different seed validators
+    // {seedValidators: 1_500_000, numModifiedValidators: 24, numNewValidators: 0},
+    // {seedValidators: 1_500_000, numModifiedValidators: 1700, numNewValidators: 1000},
     {seedValidators: 1_500_000, numModifiedValidators: 3400, numNewValidators: 2000},
   ];
   for (const {seedValidators, numModifiedValidators, numNewValidators} of testCases) {
@@ -43,6 +21,13 @@ describe("loadState", () => {
       id: `migrate state ${seedValidators} validators, ${numModifiedValidators} modified, ${numNewValidators} new`,
       before: () => {
         const seedState = generatePerfTestCachedStateAltair({vc: seedValidators, goBackOneSlot: false});
+        ensureInteropPubkeyCache(seedValidators + numNewValidators);
+        // Only read the appended keys directly from the pubkey cache. Requesting the full
+        // `seedValidators + numNewValidators` set would materialize a second ~seedValidators-sized
+        // array (the seed set is already cached at `seedValidators`) and spike peak memory.
+        const newPubkeys = Array.from({length: numNewValidators}, (_, i) =>
+          pubkeyCache.getPubkeyBytesOrThrow(seedValidators + i)
+        );
         // cache all HashObjects
         seedState.hashTreeRoot();
         const newState = seedState.clone();
@@ -54,7 +39,10 @@ describe("loadState", () => {
         }
 
         for (let i = 0; i < numNewValidators; i++) {
-          newState.validators.push(seedState.validators.get(0).clone());
+          // New validators must have distinct pubkeys for lodestar-z's process-wide pubkey cache.
+          const validator = seedState.validators.get(0).clone();
+          validator.pubkey = newPubkeys[i];
+          newState.validators.push(validator);
           newState.inactivityScores.push(seedState.inactivityScores.get(0));
           newState.balances.push(seedState.balances.get(0));
         }
@@ -70,23 +58,19 @@ describe("loadState", () => {
         migratedState.hashTreeRoot();
         // Get the validators sub tree once for all the loop
         const validators = migratedState.validators;
-        const pubkey2index = new PubkeyIndexMap();
-        const index2pubkey: Index2PubkeyCache = [];
         for (const validatorIndex of modifiedValidators) {
           const validator = validators.getReadonly(validatorIndex);
           const pubkey = validator.pubkey;
-          pubkey2index.set(pubkey, validatorIndex);
-          index2pubkey[validatorIndex] = PublicKey.fromBytes(pubkey);
+          pubkeyCache.append(validatorIndex, pubkey);
         }
+        const shufflingGetter = () => seedState.epochCtx.currentShuffling;
         createCachedBeaconState(
           migratedState,
           {
             config: seedState.config,
-            pubkey2index,
-            index2pubkey,
-            shufflingCache: seedState.epochCtx.shufflingCache,
+            pubkeyCache,
           },
-          {skipSyncPubkeys: true, skipSyncCommitteeCache: true}
+          {skipSyncPubkeys: true, skipSyncCommitteeCache: true, shufflingGetter}
         );
       },
     });

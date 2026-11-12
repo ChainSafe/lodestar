@@ -41,6 +41,6 @@ interface CustomAsymmetricMatchers<R = unknown> extends CustomMatchers<R> {
 }
 
 declare module "vitest" {
-    interface Assertion<T = any> extends CustomMatchers<T> {}
+  interface Assertion<T = any> extends CustomMatchers<T> {}
   interface AsymmetricMatchersContaining extends CustomAsymmetricMatchers {}
 }

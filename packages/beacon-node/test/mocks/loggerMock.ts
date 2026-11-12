@@ -1,5 +1,5 @@
-import {Logger} from "@lodestar/logger";
 import {Mocked, vi} from "vitest";
+import {Logger} from "@lodestar/logger";
 
 export type MockedLogger = Mocked<Logger>;
 

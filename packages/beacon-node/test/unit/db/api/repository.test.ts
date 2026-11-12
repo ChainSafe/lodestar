@@ -1,17 +1,17 @@
+import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ContainerType} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {Db, LevelDbController, Repository} from "@lodestar/db";
+import {Db, Repository} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {Bytes32, ssz} from "@lodestar/types";
-import all from "it-all";
-import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {Bucket} from "../../../../src/db/buckets.js";
 
-vi.mock("@lodestar/db", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@lodestar/db")>();
+vi.mock("@lodestar/db/controller/level", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@lodestar/db/controller/level")>();
 
   return {
     ...mod,
-    LevelDbController: vi.spyOn(mod, "LevelDbController").mockImplementation(() => {
+    LevelDbController: vi.spyOn(mod, "LevelDbController").mockImplementation(function MockedLevelDbController() {
       return {
         get: vi.fn(),
         put: vi.fn(),
@@ -20,7 +20,8 @@ vi.mock("@lodestar/db", async (importOriginal) => {
         valuesStream: vi.fn(),
         batchDelete: vi.fn(),
         batchPut: vi.fn(),
-      } as unknown as LevelDbController;
+        batch: vi.fn(),
+      };
     }),
   };
 });
@@ -37,7 +38,7 @@ const TestSSZType = new ContainerType({
 
 class TestRepository extends Repository<string, TestType> {
   constructor(db: Db) {
-    super(config, db, Bucket.phase0_depositEvent, TestSSZType, "phase0_depositEvent");
+    super(config, db, Bucket.phase0_exit, TestSSZType, "phase0_exit");
   }
 }
 
@@ -143,7 +144,7 @@ describe("database repository", () => {
     }
 
     controller.valuesStream.mockReturnValue(sample());
-    const result = await all(repository.valuesStream());
+    const result = await Array.fromAsync(repository.valuesStream());
     expect(result.length).toBe(2);
   });
 });

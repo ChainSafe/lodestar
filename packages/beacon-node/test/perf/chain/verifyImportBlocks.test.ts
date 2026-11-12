@@ -1,20 +1,23 @@
-import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {generateKeyPair} from "@libp2p/crypto/keys";
+import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
-import {LevelDbController} from "@lodestar/db";
-import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {sleep} from "@lodestar/utils";
+import {LevelDbController} from "@lodestar/db/controller/level";
+import {testLogger} from "@lodestar/logger/test-utils";
+import {ForkPreDeneb, SLOTS_PER_EPOCH, isForkPostDeneb} from "@lodestar/params";
+import {BeaconStateView} from "@lodestar/state-transition";
+import {rangeSyncTest} from "@lodestar/state-transition/test-utils";
+import {SignedBeaconBlock} from "@lodestar/types";
+import {sleep, toHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
-import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
-import {beforeValue} from "../../../../state-transition/test/utils/beforeValueBenchmark.js";
-import {getNetworkCachedBlock, getNetworkCachedState} from "../../../../state-transition/test/utils/testFileCache.js";
-import {AttestationImportOpt, BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
+import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
+import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {BeaconChain} from "../../../src/chain/index.js";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
-import {testLogger} from "../../utils/logger.js";
+import {beforeValue} from "../../utils/beforeValueBenchmark.js";
+import {getNetworkCachedBlock, getNetworkCachedState} from "../../utils/networkCachedStateAndBlock.js";
 
 // Define this params in `packages/state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
@@ -39,7 +42,10 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       throw Error("startSlot must be the first slot in the epoch");
     }
 
-    db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
+    db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}), {
+      dataColumnDir: ".tmpdb-data-columns",
+      logger,
+    });
   });
 
   afterAll(async () => {
@@ -52,7 +58,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       Promise.all(
         // Start at next slot, since the parent of current state's header is not known
         linspace(startSlot + 1, endSlot).map(async (slot) =>
-          getNetworkCachedBlock(network, slot, timeoutInfura).catch((e: unknown) => {
+          getNetworkCachedBlock(network, slot).catch((e: unknown) => {
             (e as Error).message = `slot ${slot} - ${(e as Error).message}`;
             throw e;
           })
@@ -62,7 +68,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
   );
 
   const stateOg = beforeValue(async () => {
-    const state = await getNetworkCachedState(network, startSlot, timeoutInfura);
+    const state = await getNetworkCachedState(network, startSlot);
     state.hashTreeRoot();
     return state;
   }, timeoutInfura);
@@ -80,7 +86,6 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           proposerBoost: true,
           proposerBoostReorg: true,
           computeUnrealized: false,
-          safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
           disableArchiveOnCheckpoint: true,
           suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
           skipCreateStateCacheIfAvailable: true,
@@ -91,6 +96,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
         {
           privateKey: await generateKeyPair("secp256k1"),
           config: state.config,
+          pubkeyCache: state.epochCtx.pubkeyCache,
           db,
           dataDir: ".",
           dbName: ".",
@@ -98,8 +104,9 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           processShutdownCallback: () => {},
           metrics: null,
           validatorMonitor: null,
-          anchorState: state,
-          eth1: new Eth1ForBlockProductionDisabled(),
+          anchorState: new BeaconStateView(state),
+          isAnchorStateFinalized: true,
+          earliestAvailableSlot: state.slot,
           executionEngine: new ExecutionEngineDisabled(),
         }
       );
@@ -110,9 +117,25 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       return chain;
     },
     fn: async (chain) => {
-      const blocksImport = blocks.value.map((block) => getBlockInput.preData(chain.config, block, BlockSource.byRange));
+      const blocksImport = blocks.value.map((block) => {
+        const blockRootHex = toHex(
+          chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
+        );
+        const forkName = chain.config.getForkName(block.message.slot);
+        if (isForkPostDeneb(forkName)) {
+          throw Error("This pre-Deneb range sync benchmark does not support data sidecars");
+        }
+        return BlockInputPreData.createFromBlock({
+          block: block as SignedBeaconBlock<ForkPreDeneb>,
+          blockRootHex,
+          forkName,
+          daOutOfRange: true,
+          source: BlockInputSource.byRange,
+          seenTimestampSec: Math.floor(Date.now() / 1000),
+        });
+      });
 
-      await chain.processChainSegment(blocksImport, {
+      await chain.processChainSegment(blocksImport, null, {
         // Only skip importing attestations for finalized sync. For head sync attestation are valuable.
         // Importing attestations also triggers a head update, see https://github.com/ChainSafe/lodestar/issues/3804
         // TODO: Review if this is okay, can we prevent some attacks by importing attestations?

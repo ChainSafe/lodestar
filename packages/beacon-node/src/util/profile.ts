@@ -1,13 +1,21 @@
+import fs from "node:fs";
+import path from "node:path";
 import {sleep} from "@lodestar/utils";
 
+export enum ProfileThread {
+  MAIN = "main",
+  NETWORK = "network",
+  DISC5 = "discv5",
+}
+
 /**
- * Take 10m profile of the current thread without promise tracking.
+ * Take `durationMs` profile of the current thread and return the persisted file path.
  */
-export async function profileNodeJS(durationMs: number): Promise<string> {
+export async function profileThread(thread: ProfileThread, durationMs: number, dirpath: string): Promise<string> {
   const inspector = await import("node:inspector");
 
   // due to some typing issues, not able to use promisify here
-  return new Promise<string>((resolve, reject) => {
+  const profile = await new Promise<string>((resolve, reject) => {
     // Start the inspector and connect to it
     const session = new inspector.Session();
     session.connect();
@@ -29,6 +37,10 @@ export async function profileNodeJS(durationMs: number): Promise<string> {
       });
     });
   });
+
+  const filePath = path.join(dirpath, `${thread}_thread_${new Date().toISOString()}.cpuprofile`);
+  fs.writeFileSync(filePath, profile);
+  return filePath;
 }
 
 /**

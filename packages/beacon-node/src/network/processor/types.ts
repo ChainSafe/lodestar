@@ -1,4 +1,4 @@
-import {Message} from "@libp2p/interface";
+import type {Message} from "@libp2p/gossipsub";
 import {ForkName} from "@lodestar/params";
 import {Slot, SlotOptionalRoot} from "@lodestar/types";
 import {PeerIdStr} from "../../util/peerId.js";
@@ -11,10 +11,12 @@ export type GossipAttestationsWork = {
 export type PendingGossipsubMessage = {
   topic: GossipTopic;
   msg: Message;
-  // only available for beacon_attestation and aggregate_and_proof
+  // set for every topic with a slot, held messages expire by it
   msgSlot?: Slot;
   msgId: string;
   propagationSource: PeerIdStr;
+  clientAgent: string;
+  clientVersion: string;
   seenTimestampSec: number;
   startProcessUnixSec: number | null;
   // specific properties for IndexedGossipQueueMinSize, for beacon_attestation topic only

@@ -1,5 +1,5 @@
 import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
-import {fromOptionalHexString, numToString, toOptionalHexString} from "../../utils.js";
+import {fromOptionalHexString, numToString, stringToNum, toOptionalHexString} from "../../utils.js";
 import {InterchangeLodestar} from "../types.js";
 
 /**
@@ -112,12 +112,12 @@ export function parseInterchangeCompleteV4(interchange: InterchangeCompleteV4): 
     data: interchange.data.map((validator) => ({
       pubkey: fromHex(validator.pubkey),
       signedBlocks: validator.signed_blocks.map((block) => ({
-        slot: parseInt(block.slot, 10),
+        slot: stringToNum(block.slot),
         signingRoot: fromOptionalHexString(block.signing_root),
       })),
       signedAttestations: validator.signed_attestations.map((att) => ({
-        sourceEpoch: parseInt(att.source_epoch, 10),
-        targetEpoch: parseInt(att.target_epoch, 10),
+        sourceEpoch: stringToNum(att.source_epoch),
+        targetEpoch: stringToNum(att.target_epoch),
         signingRoot: fromOptionalHexString(att.signing_root),
       })),
     })),

@@ -2,7 +2,7 @@ import {HeadersExtra, HttpHeader, parseContentTypeHeader} from "../headers.js";
 import {HttpStatusCode} from "../httpStatusCode.js";
 import {Endpoint} from "../types.js";
 import {WireFormat, getWireFormat} from "../wireFormat.js";
-import {ApiError} from "./error.js";
+import {ApiError, ApiFailure} from "./error.js";
 import {RouteDefinitionExtra} from "./request.js";
 
 export type RawBody =
@@ -90,7 +90,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
           const metaJson = this.definition.resp.transform
             ? this.definition.resp.transform.fromResponse(rawBody.value).meta
             : rawBody.value;
-          this._meta = this.definition.resp.meta.fromJson(metaJson);
+          this._meta = this.definition.resp.meta.fromJson(metaJson, new HeadersExtra(this.headers));
           break;
         }
         case WireFormat.ssz:
@@ -162,7 +162,8 @@ export class ApiResponse<E extends Endpoint> extends Response {
       return null;
     }
 
-    return new ApiError(this.getErrorMessage(), this.status, this.definition.operationId);
+    const {message, failures} = this.parseErrorBody();
+    return new ApiError(message, this.status, this.definition.operationId, failures);
   }
 
   async errorBody(): Promise<string> {
@@ -187,19 +188,22 @@ export class ApiResponse<E extends Endpoint> extends Response {
     return this._errorBody;
   }
 
-  private getErrorMessage(): string {
+  private parseErrorBody(): {message: string; failures?: ApiFailure[]} {
     const errBody = this.resolvedErrorBody();
     try {
-      const errJson = JSON.parse(errBody) as {message?: string; failures?: {message: string}[]};
+      const errJson = JSON.parse(errBody) as {message?: string; failures?: ApiFailure[]};
       if (errJson.message) {
-        if (errJson.failures) {
-          return `${errJson.message}\n` + errJson.failures.map((e) => e.message).join("\n");
+        if (Array.isArray(errJson.failures)) {
+          return {
+            message: `${errJson.message}\n` + errJson.failures.map((e) => e.message).join("\n"),
+            failures: errJson.failures,
+          };
         }
-        return errJson.message;
+        return {message: errJson.message};
       }
-      return errBody;
+      return {message: errBody};
     } catch (_e) {
-      return errBody || this.statusText;
+      return {message: errBody || this.statusText};
     }
   }
 }

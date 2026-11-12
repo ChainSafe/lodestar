@@ -1,11 +1,13 @@
-import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ChainForkConfig} from "@lodestar/config";
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
-import {bigIntToBytes, fromHex} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
-
-import {validateDataColumnsSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
+import {SerializedList} from "@chainsafe/ssz";
+import {ChainForkConfig, createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {fulu, gloas, ssz} from "@lodestar/types";
+import {bigIntToBytes, fromHex} from "@lodestar/utils";
+import {
+  validateFuluBlockDataColumnSidecars,
+  validateGloasBlockDataColumnSidecars,
+} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {
   CustodyConfig,
   getDataColumnSidecarsFromBlock,
@@ -165,7 +167,10 @@ describe("data column sidecars", () => {
     const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
 
     for (const kzgCommitment of kzgCommitments) {
-      signedBeaconBlock.message.body.executionPayload.transactions.push(transactionForKzgCommitment(kzgCommitment));
+      signedBeaconBlock.message.body.executionPayload.transactions = SerializedList.fromArray([
+        ...signedBeaconBlock.message.body.executionPayload.transactions,
+        transactionForKzgCommitment(kzgCommitment),
+      ]);
       signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
     }
     const blockRoot = ssz.fulu.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
@@ -175,7 +180,55 @@ describe("data column sidecars", () => {
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
     await expect(
-      validateDataColumnsSidecars(slot, blockRoot, kzgCommitments, columnSidecars, null)
+      validateFuluBlockDataColumnSidecars(
+        null,
+        slot,
+        blockRoot,
+        kzgCommitments.length,
+        columnSidecars as fulu.DataColumnSidecar[]
+      )
+    ).resolves.toBeUndefined();
+  });
+
+  it("validateGloasDataColumnsSidecars", async () => {
+    const chainConfig = createChainForkConfig({
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    });
+    const genesisValidatorsRoot = Buffer.alloc(32, 0xbb);
+    const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
+
+    const blobs = [generateRandomBlob(), generateRandomBlob()];
+    const blockKzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
+    const cellsAndProofs = blobs.map((blob) => kzg.computeCellsAndKzgProofs(blob));
+
+    const signedBeaconBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+    signedBeaconBlock.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = blockKzgCommitments;
+
+    const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
+    const columnSidecars = getDataColumnSidecarsFromBlock(
+      config,
+      signedBeaconBlock,
+      cellsAndProofs
+    ) as gloas.DataColumnSidecar[];
+
+    expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
+    expect(columnSidecars[0].column.length).toEqual(blockKzgCommitments.length);
+    expect(columnSidecars[0].slot).toEqual(signedBeaconBlock.message.slot);
+    expect(columnSidecars[0].beaconBlockRoot).toEqual(blockRoot);
+
+    await expect(
+      validateGloasBlockDataColumnSidecars(
+        signedBeaconBlock.message.slot,
+        blockRoot,
+        blockKzgCommitments,
+        columnSidecars
+      )
     ).resolves.toBeUndefined();
   });
 
@@ -202,7 +255,10 @@ describe("data column sidecars", () => {
     const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
 
     for (const kzgCommitment of kzgCommitments) {
-      signedBeaconBlock.message.body.executionPayload.transactions.push(transactionForKzgCommitment(kzgCommitment));
+      signedBeaconBlock.message.body.executionPayload.transactions = SerializedList.fromArray([
+        ...signedBeaconBlock.message.body.executionPayload.transactions,
+        transactionForKzgCommitment(kzgCommitment),
+      ]);
       signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
     }
     const blockRoot = ssz.fulu.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
@@ -211,8 +267,41 @@ describe("data column sidecars", () => {
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
-    await expect(validateDataColumnsSidecars(slot, blockRoot, [], columnSidecars, null)).rejects.toThrow(
-      `Invalid data column sidecar slot=${slot}`
-    );
+    await expect(
+      validateFuluBlockDataColumnSidecars(chain, slot, blockRoot, 0, columnSidecars as fulu.DataColumnSidecar[])
+    ).rejects.toThrow("Block has no blob commitments but data column sidecars were provided");
+  });
+
+  it("fail for no blob commitments in validateGloasDataColumnsSidecars", async () => {
+    const chainConfig = createChainForkConfig({
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    });
+    const genesisValidatorsRoot = Buffer.alloc(32, 0xbb);
+    const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
+
+    const blobs = [generateRandomBlob(), generateRandomBlob()];
+    const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
+    const cellsAndProofs = blobs.map((blob) => kzg.computeCellsAndKzgProofs(blob));
+
+    const signedBeaconBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+    signedBeaconBlock.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = kzgCommitments;
+
+    const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
+    const columnSidecars = getDataColumnSidecarsFromBlock(config, signedBeaconBlock, cellsAndProofs);
+
+    await expect(
+      validateGloasBlockDataColumnSidecars(
+        signedBeaconBlock.message.slot,
+        blockRoot,
+        [],
+        columnSidecars as gloas.DataColumnSidecar[]
+      )
+    ).rejects.toThrow("Block has no blob commitments but data column sidecars were provided");
   });
 });

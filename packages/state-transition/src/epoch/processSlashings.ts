@@ -5,7 +5,6 @@ import {
   PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR,
   PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX,
 } from "@lodestar/params";
-
 import {BeaconStateAllForks, CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
 import {decreaseBalance} from "../util/index.js";
 
@@ -51,8 +50,9 @@ export function processSlashings(
   );
   const increment = EFFECTIVE_BALANCE_INCREMENT;
 
-  const penaltyPerEffectiveBalanceIncrement = Math.floor(
-    (adjustedTotalSlashingBalanceByIncrement * increment) / totalBalanceByIncrement
+  // numerator can exceed Number.MAX_SAFE_INTEGER, where float division may round up to the next integer
+  const penaltyPerEffectiveBalanceIncrement = Number(
+    (BigInt(adjustedTotalSlashingBalanceByIncrement) * BigInt(increment)) / BigInt(totalBalanceByIncrement)
   );
   const penalties: number[] = [];
 

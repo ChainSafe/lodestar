@@ -1,8 +1,7 @@
 import worker from "node:worker_threads";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {Transfer, expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
-import {LevelDbController} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {BeaconDb} from "../../../db/index.js";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../../metrics/index.js";
@@ -26,7 +25,10 @@ logger.info("Historical state worker started");
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
 
-const db = new BeaconDb(config, await LevelDbController.create({name: workerData.dbLocation}, {logger}));
+const db = new BeaconDb(config, await LevelDbController.create({name: workerData.dbLocation}, {logger}), {
+  dataColumnDir: workerData.dataColumnDir,
+  logger,
+});
 
 const abortController = new AbortController();
 
@@ -34,7 +36,6 @@ const abortController = new AbortController();
 const metricsRegister = workerData.metricsEnabled ? new RegistryMetricCreator() : null;
 let historicalStateRegenMetrics: HistoricalStateRegenMetrics | undefined;
 let queueMetrics: QueueMetrics | undefined;
-
 if (metricsRegister) {
   const closeMetrics = collectNodeJSMetrics(metricsRegister, "lodestar_historical_state_worker_");
   abortController.signal.addEventListener("abort", closeMetrics, {once: true});
@@ -52,8 +53,6 @@ const queue = new JobFnQueue(
   queueMetrics
 );
 
-const pubkey2index = new PubkeyIndexMap();
-
 const api: HistoricalStateWorkerApi = {
   async close() {
     abortController.abort();
@@ -65,7 +64,7 @@ const api: HistoricalStateWorkerApi = {
     historicalStateRegenMetrics?.regenRequestCount.inc();
 
     const stateBytes = await queue.push<Uint8Array>(() =>
-      getHistoricalState(slot, config, db, pubkey2index, historicalStateRegenMetrics)
+      getHistoricalState(slot, config, db, workerData.nativeStateTransition, historicalStateRegenMetrics)
     );
     const result = Transfer(stateBytes, [stateBytes.buffer]) as unknown as Uint8Array;
 

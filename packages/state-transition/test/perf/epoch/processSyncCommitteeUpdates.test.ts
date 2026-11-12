@@ -1,8 +1,8 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, ForkSeq} from "@lodestar/params";
 import {processSyncCommitteeUpdates} from "../../../src/epoch/processSyncCommitteeUpdates.js";
+import {generatePerfTestCachedStateAltair, numValidators} from "../../../src/testUtils/util.js";
 import {StateAltair} from "../types.js";
-import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";
 
 // PERF: Cost = once per epoch compute committee, proportional to $VALIDATOR_COUNT
 

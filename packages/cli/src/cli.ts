@@ -1,7 +1,7 @@
-import {registerCommandToYargs} from "@lodestar/utils";
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
-import yargs from "yargs";
+import yargs, {Argv} from "yargs";
 import {hideBin} from "yargs/helpers";
+import {registerCommandToYargs} from "@lodestar/utils";
 import {cmds} from "./cmds/index.js";
 import {globalOptions, rcConfigOption} from "./options/index.js";
 import {getVersionData} from "./util/version.js";
@@ -22,7 +22,7 @@ export const yarg = yargs((hideBin as (args: string[]) => string[])(process.argv
  * Common factory for running the CLI and running integration tests
  * The CLI must actually be executed in a different script
  */
-export function getLodestarCli(): yargs.Argv {
+export function getLodestarCli(): Argv {
   const lodestar = yarg
     .env("LODESTAR")
     .parserConfiguration({

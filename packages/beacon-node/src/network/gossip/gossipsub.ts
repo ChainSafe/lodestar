@@ -1,25 +1,39 @@
-import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
-import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
-import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
-import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
-import {BeaconConfig} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {
+  type GossipSub,
+  type GossipSubEvents,
+  type PublishResult,
+  StrictNoSign,
+  type TopicValidatorResult,
+  gossipsub,
+} from "@libp2p/gossipsub";
+import type {MetricsRegister, TopicLabel, TopicStrToLabel} from "@libp2p/gossipsub/metrics";
+import type {PeerScoreParams, PeerScoreStatsDump} from "@libp2p/gossipsub/score";
+import type {AddrInfo, PublishOpts, TopicStr} from "@libp2p/gossipsub/types";
+import type {PeerId} from "@libp2p/interface";
+import {peerIdFromString} from "@libp2p/peer-id";
+import {type Multiaddr, multiaddr} from "@multiformats/multiaddr";
+import {ENR} from "@chainsafe/enr";
+import {routes} from "@lodestar/api";
+import {BeaconConfig, ChainConfig, ForkBoundary} from "@lodestar/config";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SUBNET_COUNT,
+} from "@lodestar/params";
+import {getSlotDurations} from "@lodestar/state-transition";
 import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
-
-import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
 import {Libp2p} from "../interface.js";
+import {NetworkConfig} from "../networkConfig.js";
 import {ClientKind} from "../peers/client.js";
 import {PeersData} from "../peers/peersData.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
 import {GossipTopic, GossipType} from "./interface.js";
 import {Eth2GossipsubMetrics, createEth2GossipsubMetrics} from "./metrics.js";
-import {GossipTopicCache, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
-
-import {NetworkConfig} from "../networkConfig.js";
 import {
   GOSSIP_D,
   GOSSIP_D_HIGH,
@@ -27,11 +41,28 @@ import {
   computeGossipPeerScoreParams,
   gossipScoreThresholds,
 } from "./scoringParameters.js";
+import {GossipTopicCache, getAllowedTopics, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
 
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 
 const MAX_OUTBOUND_BUFFER_SIZE = 2 ** 24; // 16MB
+
+/**
+ * Snappy worst-case compressed length for a payload of `n` bytes
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.0/specs/phase0/p2p-interface.md#max_compressed_len
+ */
+function maxCompressedLen(n: number): number {
+  return 32 + n + Math.floor(n / 6);
+}
+
+/**
+ * Max size of an inbound gossipsub RPC frame, including all bundled messages and control
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.0/specs/phase0/p2p-interface.md#max_message_size
+ */
+function getMaxInboundDataLength(config: Pick<ChainConfig, "MAX_PAYLOAD_SIZE">): number {
+  return Math.max(maxCompressedLen(config.MAX_PAYLOAD_SIZE) + 1024, 1024 * 1024);
+}
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -58,6 +89,33 @@ export type Eth2GossipsubOpts = {
   disableFloodPublish?: boolean;
   skipParamsLog?: boolean;
   disableLightClientServer?: boolean;
+  /**
+   * Direct peers for GossipSub - these peers maintain permanent mesh connections without GRAFT/PRUNE.
+   * Supports multiaddr strings with peer ID (e.g., "/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAmKLhW7...")
+   * or ENR strings (e.g., "enr:-IS4QHCYrYZbAKWCBRlAy5zzaDZXJBGkcnh4MHcBFZntXNFrdvJjX04jRzjzCBOo...")
+   */
+  directPeers?: string[];
+};
+
+export type ForkBoundaryLabel = string;
+
+// Many of the internal properties we need are not available on the public interface,
+// so we create an extended type here to avoid excessive type assertions throughout the codebase.
+// Mind that any updates to the gossipsub package may require updates to this type.
+type GossipSubInternal = GossipSub & {
+  mesh: Map<string, Set<string>>;
+  peers: Map<string, PeerId>;
+  score: {score: (peerIdStr: string) => number};
+  direct: Set<string>;
+  topics: Map<string, Set<string>>;
+  streamsOutbound: ReadonlyMap<string, unknown>;
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+  publish: (topic: TopicStr, data: Uint8Array, opts?: PublishOpts) => Promise<PublishResult>;
+  getMeshPeers: (topic: TopicStr) => string[];
+  dumpPeerScoreStats: () => PeerScoreStatsDump;
+  getScore: (peerIdStr: string) => number;
+  reportMessageValidationResult: (msgId: string, propagationSource: string, acceptance: TopicValidatorResult) => void;
 };
 
 /**
@@ -73,12 +131,14 @@ export type Eth2GossipsubOpts = {
  *
  * See https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
  */
-export class Eth2Gossipsub extends GossipSub {
+export class Eth2Gossipsub {
   readonly scoreParams: Partial<PeerScoreParams>;
   private readonly config: BeaconConfig;
   private readonly logger: Logger;
   private readonly peersData: PeersData;
   private readonly events: NetworkEventBus;
+  private readonly libp2p: Libp2p;
+  private readonly gossipsub: GossipSubInternal;
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
@@ -90,22 +150,32 @@ export class Eth2Gossipsub extends GossipSub {
     const gossipTopicCache = new GossipTopicCache(config);
 
     const scoreParams = computeGossipPeerScoreParams({config, eth2Context: modules.eth2Context});
+    let metrics: Eth2GossipsubMetrics | null = null;
+    if (metricsRegister) {
+      metrics = createEth2GossipsubMetrics(metricsRegister);
+    }
+
+    // Parse direct peers from multiaddr strings to AddrInfo objects
+    const directPeers = parseDirectPeers(opts.directPeers ?? [], logger);
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
-    super(modules.libp2p.services.components, {
-      globalSignaturePolicy: SignaturePolicy.StrictNoSign,
+    const gossipsubInstance = gossipsub({
+      globalSignaturePolicy: StrictNoSign,
       allowPublishToZeroTopicPeers: allowPublishToZeroPeers,
+      allowedTopics: getAllowedTopics(networkConfig),
       D: gossipsubD ?? GOSSIP_D,
       Dlo: gossipsubDLow ?? GOSSIP_D_LOW,
       Dhi: gossipsubDHigh ?? GOSSIP_D_HIGH,
       Dlazy: 6,
+      directPeers,
       heartbeatInterval: GOSSIPSUB_HEARTBEAT_INTERVAL,
       fanoutTTL: 60 * 1000,
       mcacheLength: 6,
       mcacheGossip: 3,
       // this should be in ms
-      seenTTL: config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 2 * 1000,
+      // use the largest configured slot duration so the TTL stays conservative across duration changes
+      seenTTL: Math.max(...getSlotDurations(config).map(([, slotDurationMs]) => slotDurationMs)) * SLOTS_PER_EPOCH * 2,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
       // For a single stream, await processing each RPC before processing the next
@@ -117,15 +187,7 @@ export class Eth2Gossipsub extends GossipSub {
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
       msgIdToStrFn: msgIdToStrFn,
-      // Use the bellatrix max size if the merge is configured. pre-merge using this size
-      // could only be an issue on outgoing payloads, its highly unlikely we will send out
-      // a chunk bigger than GOSSIP_MAX_SIZE pre merge even on mainnet network.
-      //
-      // TODO: figure out a way to dynamically transition to the size
-      dataTransform: new DataTransformSnappy(
-        gossipTopicCache,
-        Number.isFinite(config.BELLATRIX_FORK_EPOCH) ? GOSSIP_MAX_SIZE_BELLATRIX : GOSSIP_MAX_SIZE
-      ),
+      dataTransform: new DataTransformSnappy(gossipTopicCache, metrics),
       metricsRegister: metricsRegister as MetricsRegister | null,
       metricsTopicStrToLabel: metricsRegister
         ? getMetricsTopicStrToLabel(networkConfig, {disableLightClientServer: opts.disableLightClientServer ?? false})
@@ -133,6 +195,7 @@ export class Eth2Gossipsub extends GossipSub {
       asyncValidation: true,
 
       maxOutboundBufferSize: MAX_OUTBOUND_BUFFER_SIZE,
+      maxInboundDataLength: getMaxInboundDataLength(config),
       // serialize message once and send to all peers when publishing
       batchPublish: true,
       // if this is false, only publish to mesh peers. If there is not enough GOSSIP_D mesh peers,
@@ -141,21 +204,22 @@ export class Eth2Gossipsub extends GossipSub {
       // Only send IDONTWANT messages if the message size is larger than this
       // This should be large enough to not send IDONTWANT for "small" messages
       // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
-      idontwantMinDataSize: 16829,
-    });
+      idontwantMinDataSize: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
+    })(modules.libp2p.services.components) as GossipSubInternal;
+
+    if (metrics) {
+      metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics, networkConfig));
+    }
+    this.gossipsub = gossipsubInstance;
     this.scoreParams = scoreParams;
     this.config = config;
     this.logger = logger;
     this.peersData = peersData;
     this.events = events;
+    this.libp2p = modules.libp2p;
     this.gossipTopicCache = gossipTopicCache;
 
-    if (metricsRegister) {
-      const metrics = createEth2GossipsubMetrics(metricsRegister);
-      metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics));
-    }
-
-    this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
+    this.gossipsub.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
     this.events.on(NetworkEvent.gossipMessageValidationResult, this.onValidationResult.bind(this));
 
     // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
@@ -163,6 +227,48 @@ export class Eth2Gossipsub extends GossipSub {
     if (!opts.skipParamsLog) {
       this.logger.debug("Gossipsub score params", {params: JSON.stringify(scoreParams)});
     }
+  }
+
+  async start(): Promise<void> {
+    await this.gossipsub.start();
+  }
+
+  async stop(): Promise<void> {
+    await this.gossipsub.stop();
+  }
+
+  get mesh(): Map<string, Set<string>> {
+    return this.gossipsub.mesh;
+  }
+
+  getTopics(): TopicStr[] {
+    return this.gossipsub.getTopics();
+  }
+
+  getMeshPeers(topic: TopicStr): string[] {
+    return this.gossipsub.getMeshPeers(topic);
+  }
+
+  getSubscribersWithOutboundStream(topic: GossipTopic): Set<string> {
+    const topicStr = stringifyGossipTopic(this.config, topic);
+    const peers = new Set<string>();
+    for (const peer of this.gossipsub.getSubscribers(topicStr)) {
+      const id = peer.toString();
+      if (this.gossipsub.streamsOutbound.has(id)) peers.add(id);
+    }
+    return peers;
+  }
+
+  publish(topic: TopicStr, data: Uint8Array, opts?: PublishOpts): Promise<PublishResult> {
+    return this.gossipsub.publish(topic, data, opts);
+  }
+
+  dumpPeerScoreStats(): PeerScoreStatsDump {
+    return this.gossipsub.dumpPeerScoreStats();
+  }
+
+  getScore(peerIdStr: string): number {
+    return this.gossipsub.getScore(peerIdStr);
   }
 
   /**
@@ -174,7 +280,7 @@ export class Eth2Gossipsub extends GossipSub {
     this.gossipTopicCache.setTopic(topicStr, topic);
 
     this.logger.verbose("Subscribe to gossipsub topic", {topic: topicStr});
-    this.subscribe(topicStr);
+    this.gossipsub.subscribe(topicStr);
   }
 
   /**
@@ -183,15 +289,14 @@ export class Eth2Gossipsub extends GossipSub {
   unsubscribeTopic(topic: GossipTopic): void {
     const topicStr = stringifyGossipTopic(this.config, topic);
     this.logger.verbose("Unsubscribe to gossipsub topic", {topic: topicStr});
-    this.unsubscribe(topicStr);
+    this.gossipsub.unsubscribe(topicStr);
   }
 
-  private onScrapeLodestarMetrics(metrics: Eth2GossipsubMetrics): void {
-    const mesh = this.mesh;
-    // biome-ignore lint/complexity/useLiteralKeys: `topics` is a private attribute
-    const topics = this["topics"] as Map<string, Set<string>>;
-    const peers = this.peers;
-    const score = this.score;
+  private onScrapeLodestarMetrics(metrics: Eth2GossipsubMetrics, networkConfig: NetworkConfig): void {
+    const mesh = this.gossipsub.mesh;
+    const topics = this.gossipsub.topics;
+    const peers = this.gossipsub.peers;
+    const score = this.gossipsub.score;
     const meshPeersByClient = new Map<string, number>();
     const meshPeerIdStrs = new Set<string>();
 
@@ -200,10 +305,10 @@ export class Eth2Gossipsub extends GossipSub {
       {peersMap: topics, metricsGossip: metrics.gossipTopic, type: "topics"},
     ]) {
       // Pre-aggregate results by fork so we can fill the remaining metrics with 0
-      const peersByTypeByFork = new Map2d<ForkName, GossipType, number>();
-      // TODO: This shouldnt be by fork, but by boundary
-      const peersByBeaconAttSubnetByFork = new Map2dArr<ForkName, number>();
-      const peersByBeaconSyncSubnetByFork = new Map2dArr<ForkName, number>();
+      const peersByTypeByBoundary = new Map2d<ForkBoundaryLabel, GossipType, number>();
+      const peersByBeaconAttSubnetByBoundary = new Map2dArr<ForkBoundaryLabel, number>();
+      const peersByBeaconSyncSubnetByBoundary = new Map2dArr<ForkBoundaryLabel, number>();
+      const peersByDataColumnSubnetByBoundary = new Map2dArr<ForkBoundaryLabel, number>();
 
       // loop through all mesh entries, count each set size
       for (const [topicString, peers] of peersMap) {
@@ -214,13 +319,15 @@ export class Eth2Gossipsub extends GossipSub {
         // for example in prater: /eth2/82f4a72b/optimistic_light_client_update_v0/ssz_snappy
         const topic = this.gossipTopicCache.getKnownTopic(topicString);
         if (topic !== undefined) {
-          const {fork} = topic.boundary;
+          const boundary = getForkBoundaryLabel(topic.boundary);
           if (topic.type === GossipType.beacon_attestation) {
-            peersByBeaconAttSubnetByFork.set(fork, topic.subnet, peers.size);
+            peersByBeaconAttSubnetByBoundary.set(boundary, topic.subnet, peers.size);
           } else if (topic.type === GossipType.sync_committee) {
-            peersByBeaconSyncSubnetByFork.set(fork, topic.subnet, peers.size);
+            peersByBeaconSyncSubnetByBoundary.set(boundary, topic.subnet, peers.size);
+          } else if (topic.type === GossipType.data_column_sidecar) {
+            peersByDataColumnSubnetByBoundary.set(boundary, topic.subnet, peers.size);
           } else {
-            peersByTypeByFork.set(fork, topic.type, peers.size);
+            peersByTypeByBoundary.set(boundary, topic.type, peers.size);
           }
         }
 
@@ -237,23 +344,28 @@ export class Eth2Gossipsub extends GossipSub {
 
       // beacon attestation mesh gets counted separately so we can track mesh peers by subnet
       // zero out all gossip type & subnet choices, so the dashboard will register them
-      for (const [fork, peersByType] of peersByTypeByFork.map) {
+      for (const [boundary, peersByType] of peersByTypeByBoundary.map) {
         for (const type of Object.values(GossipType)) {
-          metricsGossip.peersByType.set({fork, type}, peersByType.get(type) ?? 0);
+          metricsGossip.peersByType.set({boundary, type}, peersByType.get(type) ?? 0);
         }
       }
-      for (const [fork, peersByBeaconAttSubnet] of peersByBeaconAttSubnetByFork.map) {
+      for (const [boundary, peersByBeaconAttSubnet] of peersByBeaconAttSubnetByBoundary.map) {
         for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
           metricsGossip.peersByBeaconAttestationSubnet.set(
-            {fork, subnet: attSubnetLabel(subnet)},
+            {boundary, subnet: attSubnetLabel(subnet)},
             peersByBeaconAttSubnet[subnet] ?? 0
           );
         }
       }
-      for (const [fork, peersByBeaconSyncSubnet] of peersByBeaconSyncSubnetByFork.map) {
+      for (const [boundary, peersByBeaconSyncSubnet] of peersByBeaconSyncSubnetByBoundary.map) {
         for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
           // SYNC_COMMITTEE_SUBNET_COUNT is < 9, no need to prepend a 0 to the label
-          metricsGossip.peersBySyncCommitteeSubnet.set({fork, subnet}, peersByBeaconSyncSubnet[subnet] ?? 0);
+          metricsGossip.peersBySyncCommitteeSubnet.set({boundary, subnet}, peersByBeaconSyncSubnet[subnet] ?? 0);
+        }
+      }
+      for (const [boundary, peersByDataColumnSubnet] of peersByDataColumnSubnetByBoundary.map) {
+        for (const subnet of networkConfig.custodyConfig.sampleGroups) {
+          metricsGossip.peersByDataColumnSubnet.set({boundary, subnet}, peersByDataColumnSubnet[subnet] ?? 0);
         }
       }
     }
@@ -289,7 +401,7 @@ export class Eth2Gossipsub extends GossipSub {
     metrics.gossipPeer.score.set(gossipScores);
   }
 
-  private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {
+  private onGossipsubMessage(event: GossipSubEvents["gossipsub:message"]): void {
     const {propagationSource, msgId, msg} = event.detail;
 
     // Also validates that the topicStr is known
@@ -297,6 +409,10 @@ export class Eth2Gossipsub extends GossipSub {
 
     // Get seenTimestamp before adding the message to the queue or add async delays
     const seenTimestampSec = Date.now() / 1000;
+
+    const peerIdStr = propagationSource.toString();
+    const clientAgent = this.peersData.getPeerKind(peerIdStr) ?? "Unknown";
+    const clientVersion = this.peersData.getAgentVersion(peerIdStr);
 
     // Use setTimeout to yield to the macro queue
     // Without this we'll have huge event loop lag
@@ -307,7 +423,9 @@ export class Eth2Gossipsub extends GossipSub {
         msg,
         msgId,
         // Hot path, use cached .toString() version
-        propagationSource: propagationSource.toString(),
+        propagationSource: peerIdStr,
+        clientVersion,
+        clientAgent,
         seenTimestampSec,
         startProcessUnixSec: null,
       });
@@ -319,8 +437,66 @@ export class Eth2Gossipsub extends GossipSub {
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
     callInNextEventLoop(() => {
-      this.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
+      this.gossipsub.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
     });
+  }
+
+  /**
+   * Add a peer as a direct peer at runtime. Accepts multiaddr with peer ID or ENR string.
+   * Direct peers maintain permanent mesh connections without GRAFT/PRUNE negotiation.
+   */
+  async addDirectPeer(peerStr: routes.lodestar.DirectPeer): Promise<string | null> {
+    const parsed = parseDirectPeers([peerStr], this.logger);
+    if (parsed.length === 0) {
+      return null;
+    }
+
+    const {id: peerId, addrs} = parsed[0];
+    const peerIdStr = peerId.toString();
+
+    // Prevent adding self as a direct peer
+    if (peerId.equals(this.libp2p.peerId)) {
+      this.logger.warn("Cannot add self as a direct peer", {peerId: peerIdStr});
+      return null;
+    }
+
+    // Direct peers need addresses to connect - reject if none provided
+    if (addrs.length === 0) {
+      this.logger.warn("Cannot add direct peer without addresses", {peerId: peerIdStr});
+      return null;
+    }
+
+    // Add addresses to peer store first so we can connect
+    try {
+      await this.libp2p.peerStore.merge(peerId, {multiaddrs: addrs});
+    } catch (e) {
+      this.logger.warn("Failed to add direct peer addresses to peer store", {peerId: peerIdStr}, e as Error);
+      return null;
+    }
+
+    // Add to direct peers set only after addresses are stored
+    this.gossipsub.direct.add(peerIdStr);
+
+    this.logger.info("Added direct peer via API", {peerId: peerIdStr});
+    return peerIdStr;
+  }
+
+  /**
+   * Remove a peer from direct peers.
+   */
+  removeDirectPeer(peerIdStr: string): boolean {
+    const removed = this.gossipsub.direct.delete(peerIdStr);
+    if (removed) {
+      this.logger.info("Removed direct peer via API", {peerId: peerIdStr});
+    }
+    return removed;
+  }
+
+  /**
+   * Get list of current direct peer IDs.
+   */
+  getDirectPeers(): string[] {
+    return Array.from(this.gossipsub.direct);
   }
 }
 
@@ -361,4 +537,95 @@ function getMetricsTopicStrToLabel(
   }
 
   return metricsTopicStrToLabel;
+}
+
+// Topics of the same ForkBoundary should have the same ForkBoundary object
+// we don't want to create a new string for every topic
+const boundaryLabelMap = new Map<ForkBoundary, ForkBoundaryLabel>();
+function getForkBoundaryLabel(boundary: ForkBoundary): ForkBoundaryLabel {
+  let label = boundaryLabelMap.get(boundary);
+  if (label === undefined) {
+    label = `${boundary.fork}_${boundary.epoch}`;
+    boundaryLabelMap.set(boundary, label);
+  }
+
+  return label;
+}
+
+/**
+ * Parse direct peer strings into AddrInfo objects for GossipSub.
+ * Direct peers maintain permanent mesh connections without GRAFT/PRUNE negotiation.
+ *
+ * Supported formats:
+ * - Multiaddr with peer ID: `/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAmKLhW7...`
+ * - ENR: `enr:-IS4QHCYrYZbAKWCBRlAy5zzaDZXJBGkcnh4MHcBFZntXNFrdvJjX04jRzjzCBOo...`
+ *
+ * For multiaddrs, the string must contain a /p2p/ component with the peer ID.
+ * For ENRs, the TCP multiaddr and peer ID are extracted from the encoded record.
+ */
+export function parseDirectPeers(directPeerStrs: routes.lodestar.DirectPeer[], logger: Logger): AddrInfo[] {
+  const directPeers: AddrInfo[] = [];
+
+  for (const peerStr of directPeerStrs) {
+    // Check if this is an ENR (starts with "enr:")
+    if (peerStr.startsWith("enr:")) {
+      try {
+        const enr = ENR.decodeTxt(peerStr);
+        const peerId = enr.peerId;
+
+        // Get all available transport multiaddrs from ENR
+        const addrs = [enr.getLocationMultiaddr("quic"), enr.getLocationMultiaddr("tcp")].filter(
+          (a): a is Multiaddr => a != null
+        );
+        if (addrs.length === 0) {
+          logger.warn("ENR does not contain any transport multiaddr", {enr: peerStr});
+          continue;
+        }
+
+        directPeers.push({
+          id: peerId,
+          addrs,
+        });
+
+        logger.info("Added direct peer from ENR", {
+          peerId: peerId.toString(),
+          addrs: addrs.map((a) => a.toString()).join(", "),
+        });
+      } catch (e) {
+        logger.warn("Failed to parse direct peer ENR", {enr: peerStr}, e as Error);
+      }
+    } else {
+      // Parse as multiaddr
+      try {
+        const ma = multiaddr(peerStr);
+
+        const peerIdComponent = ma.getComponents().findLast((component) => component.name === "p2p");
+        const peerIdStr = peerIdComponent?.value;
+        if (!peerIdStr) {
+          logger.warn("Direct peer multiaddr must contain /p2p/ component with peer ID", {multiaddr: peerStr});
+          continue;
+        }
+
+        try {
+          const peerId = peerIdFromString(peerIdStr);
+
+          // Get the address without the /p2p/ component
+          const addr = ma.decapsulate("/p2p/" + peerIdStr);
+
+          directPeers.push({
+            id: peerId,
+            addrs: [addr],
+          });
+
+          logger.info("Added direct peer", {peerId: peerIdStr, addr: addr.toString()});
+        } catch (e) {
+          logger.warn("Invalid peer ID in direct peer multiaddr", {multiaddr: peerStr, peerId: peerIdStr}, e as Error);
+        }
+      } catch (e) {
+        logger.warn("Failed to parse direct peer multiaddr", {multiaddr: peerStr}, e as Error);
+      }
+    }
+  }
+
+  return directPeers;
 }

@@ -1,4 +1,5 @@
 import {CompositeTypeAny, CompositeViewDU, ContainerType, Type} from "@chainsafe/ssz";
+
 type BytesRange = {start: number; end: number};
 
 /**

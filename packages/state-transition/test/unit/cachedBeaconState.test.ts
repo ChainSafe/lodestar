@@ -1,17 +1,26 @@
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {fromHexString} from "@chainsafe/ssz";
-import {createBeaconConfig} from "@lodestar/config";
-import {config as defaultConfig} from "@lodestar/config/default";
-import {ssz} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
 import {describe, expect, it, vi} from "vitest";
+import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {config as defaultConfig} from "@lodestar/config/default";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {
+  EPOCHS_PER_SLASHINGS_VECTOR,
+  FAR_FUTURE_EPOCH,
+  ForkSeq,
+  MIN_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
+import {Epoch, RootHex, ssz} from "@lodestar/types";
+import {toHexString} from "@lodestar/utils";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
+import {interopPubkeysCached} from "../../src/testUtils/interop.js";
+import {createCachedBeaconStateTest} from "../../src/testUtils/state.js";
+import {computeActivationExitEpoch} from "../../src/util/epoch.js";
+import {EpochShuffling, calculateShufflingDecisionRoot} from "../../src/util/epochShuffling.js";
+import {computeProposerIndices} from "../../src/util/seed.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
-import {interopPubkeysCached} from "../utils/interop.js";
-import {createCachedBeaconStateTest} from "../utils/state.js";
 
 describe("CachedBeaconState", () => {
-  vi.setConfig({testTimeout: 20_000, hookTimeout: 20_000});
+  vi.setConfig({testTimeout: 30_000, hookTimeout: 30_000});
 
   it("Clone and mutate", () => {
     const stateView = ssz.altair.BeaconState.defaultViewDU();
@@ -34,14 +43,9 @@ describe("CachedBeaconState", () => {
     const stateView = ssz.altair.BeaconState.defaultViewDU();
     const state1 = createCachedBeaconStateTest(stateView);
 
-    const pubkey1 = fromHexString(
-      "0x84105a985058fc8740a48bf1ede9d223ef09e8c6b1735ba0a55cf4a9ff2ff92376b778798365e488dab07a652eb04576"
-    );
-    const index1 = 123;
-    const pubkey2 = fromHexString(
-      "0xa41726266b1d83ef609d759ba7796d54cfe549154e01e4730a3378309bc81a7638140d7e184b33593c072595f23f032d"
-    );
-    const index2 = 456;
+    const index1 = pubkeyCache.size;
+    const index2 = index1 + 1;
+    const [pubkey1, pubkey2] = interopPubkeysCached(index2 + 1).slice(index1);
 
     state1.epochCtx.addPubkey(index1, pubkey1);
 
@@ -79,6 +83,83 @@ describe("CachedBeaconState", () => {
     expect(toHexString(cp1.serialize())).toBe(toHexString(cp2.serialize()));
   });
 
+  it("reconstructs Gloas next proposers from the state lookahead", () => {
+    const chainConfig = createChainForkConfig({
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    });
+    const state = ssz.gloas.BeaconState.defaultViewDU();
+    const currentEpoch = 2;
+    state.slot = currentEpoch * SLOTS_PER_EPOCH;
+
+    const unslashedValidatorCount = SLOTS_PER_EPOCH;
+    const slashedExitEpoch = computeActivationExitEpoch(currentEpoch);
+    const slashedWithdrawableEpoch = currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR;
+    // Keep the slashed validators active through the lookahead so the Gloas filter must exclude them.
+    for (let i = 0; i < 2 * unslashedValidatorCount; i++) {
+      const validator = ssz.phase0.Validator.defaultViewDU();
+      validator.pubkey = Buffer.alloc(48, i + 1);
+      validator.effectiveBalance = 32e9;
+      validator.activationEligibilityEpoch = 0;
+      validator.activationEpoch = 0;
+      validator.slashed = i >= unslashedValidatorCount;
+      validator.exitEpoch = validator.slashed ? slashedExitEpoch : FAR_FUTURE_EPOCH;
+      validator.withdrawableEpoch = validator.slashed ? slashedWithdrawableEpoch : FAR_FUTURE_EPOCH;
+      state.validators.push(validator);
+      state.balances.push(32e9);
+      state.previousEpochParticipation.push(0);
+      state.currentEpochParticipation.push(0);
+      state.inactivityScores.push(0);
+    }
+    state.commit();
+
+    const config = createBeaconConfig(chainConfig, state.genesisValidatorsRoot);
+    const seedCachedState = createCachedBeaconState(
+      state,
+      {config, pubkeyCache},
+      {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
+    );
+    const unslashedActiveIndices = Uint32Array.from({length: unslashedValidatorCount}, (_, index) => index);
+    const proposerLookahead: number[] = [];
+    for (let epochOffset = 0; epochOffset <= MIN_SEED_LOOKAHEAD; epochOffset++) {
+      proposerLookahead.push(
+        ...computeProposerIndices(
+          ForkSeq.gloas,
+          seedCachedState,
+          {activeIndices: unslashedActiveIndices},
+          currentEpoch + epochOffset
+        )
+      );
+    }
+    expect(new Set(proposerLookahead).size).toBeGreaterThan(1);
+    state.proposerLookahead = ssz.fulu.ProposerLookahead.toViewDU(proposerLookahead);
+    state.commit();
+
+    const cachedState = createCachedBeaconState(
+      state,
+      {config, pubkeyCache},
+      {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
+    );
+
+    const expectedNextProposers = proposerLookahead.slice(SLOTS_PER_EPOCH, 2 * SLOTS_PER_EPOCH);
+    const nextProposers = cachedState.epochCtx.getBeaconProposersNextEpoch();
+    expect(nextProposers).toEqual(expectedNextProposers);
+    expect(nextProposers.every((index) => !state.validators.getReadonly(index).slashed)).toBe(true);
+
+    const loadedState = loadCachedBeaconState(cachedState, state.serialize(), {
+      skipSyncCommitteeCache: true,
+      skipSyncPubkeys: true,
+    });
+    const loadedNextProposers = loadedState.epochCtx.getBeaconProposersNextEpoch();
+    expect(loadedNextProposers).toEqual(expectedNextProposers);
+    expect(loadedNextProposers.every((index) => !loadedState.validators.getReadonly(index).slashed)).toBe(true);
+  });
+
   describe("loadCachedBeaconState", () => {
     vi.setConfig({testTimeout: 25_000, hookTimeout: 25_000});
 
@@ -87,12 +168,12 @@ describe("CachedBeaconState", () => {
 
     const stateView = newStateWithValidators(numValidator);
     const config = createBeaconConfig(defaultConfig, stateView.genesisValidatorsRoot);
+    pubkeyCache.reset();
     const seedState = createCachedBeaconState(
       stateView,
       {
         config,
-        pubkey2index: new PubkeyIndexMap(),
-        index2pubkey: [],
+        pubkeyCache,
       },
       {skipSyncCommitteeCache: true}
     );
@@ -159,8 +240,33 @@ describe("CachedBeaconState", () => {
 
         // confirm loadState() result
         const stateBytes = state.serialize();
+        const shufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex): EpochShuffling | null => {
+          if (
+            shufflingEpoch === seedState.epochCtx.epoch - 1 &&
+            dependentRoot === calculateShufflingDecisionRoot(config, seedState, shufflingEpoch)
+          ) {
+            return seedState.epochCtx.previousShuffling;
+          }
+
+          if (
+            shufflingEpoch === seedState.epochCtx.epoch &&
+            dependentRoot === calculateShufflingDecisionRoot(config, seedState, shufflingEpoch)
+          ) {
+            return seedState.epochCtx.currentShuffling;
+          }
+
+          if (
+            shufflingEpoch === seedState.epochCtx.epoch + 1 &&
+            dependentRoot === calculateShufflingDecisionRoot(config, seedState, shufflingEpoch)
+          ) {
+            return seedState.epochCtx.nextShuffling;
+          }
+
+          return null;
+        };
         const newCachedState = loadCachedBeaconState(seedState, stateBytes, {
           skipSyncCommitteeCache: true,
+          shufflingGetter,
         });
         const newStateBytes = newCachedState.serialize();
         expect(newStateBytes).toEqual(stateBytes);
@@ -169,11 +275,9 @@ describe("CachedBeaconState", () => {
           state,
           {
             config,
-            pubkey2index: new PubkeyIndexMap(),
-            index2pubkey: [],
-            shufflingCache: seedState.epochCtx.shufflingCache,
+            pubkeyCache,
           },
-          {skipSyncCommitteeCache: true}
+          {skipSyncCommitteeCache: true, shufflingGetter}
         );
         // validatorCountDelta < 0 is unrealistic and shuffling computation results in a different result
         if (validatorCountDelta >= 0) {
@@ -182,8 +286,8 @@ describe("CachedBeaconState", () => {
 
         // confirm loadCachedBeaconState() result
         for (let i = 0; i < newCachedState.validators.length; i++) {
-          expect(newCachedState.epochCtx.pubkey2index.get(newCachedState.validators.get(i).pubkey)).toBe(i);
-          expect(newCachedState.epochCtx.index2pubkey[i].toBytes()).toEqual(pubkeys[i]);
+          expect(newCachedState.epochCtx.getValidatorIndex(newCachedState.validators.get(i).pubkey)).toBe(i);
+          expect(newCachedState.epochCtx.pubkeyCache.get(i)?.toBytes()).toEqual(pubkeys[i]);
         }
       });
     }

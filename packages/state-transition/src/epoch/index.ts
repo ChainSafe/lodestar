@@ -12,9 +12,12 @@ import {
   CachedBeaconStateCapella,
   CachedBeaconStateElectra,
   CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
+  CachedBeaconStatePreHeze,
   EpochTransitionCache,
 } from "../types.js";
+import {processBuilderPendingPayments} from "./processBuilderPendingPayments.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
 import {processHistoricalRootsUpdate} from "./processHistoricalRootsUpdate.js";
@@ -26,6 +29,7 @@ import {processParticipationRecordUpdates} from "./processParticipationRecordUpd
 import {processPendingConsolidations} from "./processPendingConsolidations.js";
 import {processPendingDeposits} from "./processPendingDeposits.js";
 import {processProposerLookahead} from "./processProposerLookahead.js";
+import {processPtcWindow} from "./processPtcWindow.js";
 import {processRandaoMixesReset} from "./processRandaoMixesReset.js";
 import {processRegistryUpdates} from "./processRegistryUpdates.js";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
@@ -33,29 +37,31 @@ import {processSlashings} from "./processSlashings.js";
 import {processSlashingsReset} from "./processSlashingsReset.js";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates.js";
 
+export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
 // For spec tests
 export {getRewardsAndPenalties} from "./processRewardsAndPenalties.js";
 export {
-  processJustificationAndFinalization,
-  processInactivityUpdates,
-  processRewardsAndPenalties,
-  processRegistryUpdates,
-  processSlashings,
-  processEth1DataReset,
+  processBuilderPendingPayments,
   processEffectiveBalanceUpdates,
-  processSlashingsReset,
-  processRandaoMixesReset,
+  processEth1DataReset,
   processHistoricalRootsUpdate,
-  processParticipationRecordUpdates,
-  processParticipationFlagUpdates,
-  processSyncCommitteeUpdates,
   processHistoricalSummariesUpdate,
-  processPendingDeposits,
+  processInactivityUpdates,
+  processJustificationAndFinalization,
+  processParticipationFlagUpdates,
+  processParticipationRecordUpdates,
   processPendingConsolidations,
+  processPendingDeposits,
   processProposerLookahead,
+  processPtcWindow,
+  processRandaoMixesReset,
+  processRegistryUpdates,
+  processRewardsAndPenalties,
+  processSlashings,
+  processSlashingsReset,
+  processSyncCommitteeUpdates,
 };
 
-export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
 const maxValidatorsPerStateSlashing = SLOTS_PER_EPOCH * MAX_ATTESTER_SLASHINGS * MAX_VALIDATORS_PER_COMMITTEE;
 const maxSafeValidators = Math.floor(Number.MAX_SAFE_INTEGER / MAX_EFFECTIVE_BALANCE);
 
@@ -77,6 +83,8 @@ export enum EpochTransitionStep {
   processPendingDeposits = "processPendingDeposits",
   processPendingConsolidations = "processPendingConsolidations",
   processProposerLookahead = "processProposerLookahead",
+  processPtcWindow = "processPtcWindow",
+  processBuilderPendingPayments = "processBuilderPendingPayments",
 }
 
 export function processEpoch(
@@ -132,7 +140,9 @@ export function processEpoch(
     timer?.();
   }
 
-  processEth1DataReset(state, cache);
+  if (fork < ForkSeq.heze) {
+    processEth1DataReset(state as CachedBeaconStatePreHeze, cache);
+  }
 
   if (fork >= ForkSeq.electra) {
     const stateElectra = state as CachedBeaconStateElectra;
@@ -151,6 +161,14 @@ export function processEpoch(
       processPendingConsolidations(stateElectra, cache);
       timer?.();
     }
+  }
+
+  if (fork >= ForkSeq.gloas) {
+    const timer = metrics?.epochTransitionStepTime.startTimer({
+      step: EpochTransitionStep.processBuilderPendingPayments,
+    });
+    processBuilderPendingPayments(state as CachedBeaconStateGloas);
+    timer?.();
   }
 
   {
@@ -196,6 +214,12 @@ export function processEpoch(
       step: EpochTransitionStep.processProposerLookahead,
     });
     processProposerLookahead(fork, state as CachedBeaconStateFulu, cache);
+    timer?.();
+  }
+
+  if (fork >= ForkSeq.gloas) {
+    const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processPtcWindow});
+    processPtcWindow(state as CachedBeaconStateGloas, cache);
     timer?.();
   }
 }

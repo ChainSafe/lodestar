@@ -1,5 +1,5 @@
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {describe} from "vitest";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {getClient} from "../../../../src/beacon/client/beacon.js";
 import {Endpoints} from "../../../../src/beacon/routes/beacon/index.js";
 import {getRoutes} from "../../../../src/beacon/server/beacon.js";
@@ -8,7 +8,7 @@ import {testData} from "../testData/beacon.js";
 
 describe("beacon / beacon", () => {
   runGenericServerTest<Endpoints>(
-    createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0}),
+    createChainForkConfig({...defaultChainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 1}),
     getClient,
     getRoutes,
     testData

@@ -1,5 +1,5 @@
+import type {MessageStreamDirection, PeerId} from "@libp2p/interface";
 import {BitArray} from "@chainsafe/ssz";
-import {Direction, PeerId} from "@libp2p/interface";
 import {ChainConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {CustodyIndex, Status, SubnetID, altair, phase0} from "@lodestar/types";
@@ -7,6 +7,7 @@ import {MapDef} from "@lodestar/utils";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
 import {NetworkCoreMetrics} from "../../core/metrics.js";
+import {SubnetType} from "../../metadata.js";
 import {RequestedSubnet} from "./subnetMap.js";
 
 /** Target number of peers we'd like to have connected to a given long-lived subnet */
@@ -47,6 +48,8 @@ const attnetsZero = BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT);
 const syncnetsZero = BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT);
 
 type SubnetDiscvQuery = {subnet: SubnetID; toSlot: number; maxPeersToDiscover: number};
+
+export type RequestedSubnetWithPeerCount = RequestedSubnet & {peerCount: number};
 
 /**
  * A map of das custody group index to maxPeersToDiscover
@@ -95,7 +98,7 @@ function computeStatusScore(ours: Status, theirs: Status | null, opts: Prioritiz
 
 type PeerInfo = {
   id: PeerId;
-  direction: Direction | null;
+  direction: MessageStreamDirection | null;
   statusScore: StatusScore;
   attnets: phase0.AttestationSubnets;
   syncnets: altair.SyncSubnets;
@@ -137,15 +140,15 @@ export enum ExcessPeerDisconnectReason {
 export function prioritizePeers(
   connectedPeersInfo: {
     id: PeerId;
-    direction: Direction | null;
+    direction: MessageStreamDirection | null;
     status: Status | null;
     attnets: phase0.AttestationSubnets | null;
     syncnets: altair.SyncSubnets | null;
     samplingGroups: CustodyIndex[] | null;
     score: number;
   }[],
-  activeAttnets: RequestedSubnet[],
-  activeSyncnets: RequestedSubnet[],
+  activeAttnets: RequestedSubnetWithPeerCount[],
+  activeSyncnets: RequestedSubnetWithPeerCount[],
   samplingGroups: CustodyIndex[] | undefined,
   opts: PrioritizePeersOpts,
   config: ChainConfig,
@@ -189,6 +192,18 @@ export function prioritizePeers(
 
   const connectedPeerCount = connectedPeers.length;
 
+  // Track the outbound peers invariant (we keep at least OUTBOUND_PEERS_RATIO outbound peers).
+  // Report 0 when there are no peers so the gauge doesn't go stale at its last value.
+  if (metrics) {
+    let outboundPeerCount = 0;
+    for (const peer of connectedPeers) {
+      if (peer.direction === "outbound") {
+        outboundPeerCount++;
+      }
+    }
+    metrics.peerManager.outboundPeersRatio.set(connectedPeerCount > 0 ? outboundPeerCount / connectedPeerCount : 0);
+  }
+
   if (connectedPeerCount < targetPeers) {
     // Need more peers.
     // Instead of attempting to connect the exact amount necessary this will overshoot a little since the success
@@ -218,8 +233,8 @@ export function prioritizePeers(
  */
 function requestSubnetPeers(
   connectedPeers: PeerInfo[],
-  activeAttnets: RequestedSubnet[],
-  activeSyncnets: RequestedSubnet[],
+  activeAttnets: RequestedSubnetWithPeerCount[],
+  activeSyncnets: RequestedSubnetWithPeerCount[],
   ourSamplingGroups: CustodyIndex[] | undefined,
   opts: PrioritizePeersOpts,
   config: ChainConfig,
@@ -239,52 +254,44 @@ function requestSubnetPeers(
 
   // attnets, do we need queries for more peers
   if (activeAttnets.length > 0) {
-    /** Map of peers per subnet, peer may be in multiple arrays */
-    const peersPerSubnet = new Map<number, number>();
-
     for (const peer of connectedPeers) {
       const trueBitIndices = peer.attnetsTrueBitIndices;
       let dutyCount = 0;
       for (const {subnet} of activeAttnets) {
         if (trueBitIndices.includes(subnet)) {
           dutyCount += 1;
-          peersPerSubnet.set(subnet, 1 + (peersPerSubnet.get(subnet) ?? 0));
         }
       }
       dutiesByPeer.set(peer, dutyCount);
     }
 
-    for (const {subnet, toSlot} of activeAttnets) {
-      const peersInSubnet = peersPerSubnet.get(subnet) ?? 0;
-      if (peersInSubnet < targetSubnetPeers) {
+    for (const {subnet, toSlot, peerCount} of activeAttnets) {
+      metrics?.peerManager.peersPerActiveSubnet.observe({type: SubnetType.attnets}, peerCount);
+      if (peerCount < targetSubnetPeers) {
         // We need more peers
-        attnetQueries.push({subnet, toSlot, maxPeersToDiscover: targetSubnetPeers - peersInSubnet});
+        attnetQueries.push({subnet, toSlot, maxPeersToDiscover: targetSubnetPeers - peerCount});
       }
     }
   }
 
   // syncnets, do we need queries for more peers
   if (activeSyncnets.length > 0) {
-    /** Map of peers per subnet, peer may be in multiple arrays */
-    const peersPerSubnet = new Map<number, number>();
-
     for (const peer of connectedPeers) {
       const trueBitIndices = peer.syncnetsTrueBitIndices;
       let dutyCount = dutiesByPeer.get(peer) ?? 0;
       for (const {subnet} of activeSyncnets) {
         if (trueBitIndices.includes(subnet)) {
           dutyCount += 1;
-          peersPerSubnet.set(subnet, 1 + (peersPerSubnet.get(subnet) ?? 0));
         }
       }
       dutiesByPeer.set(peer, dutyCount);
     }
 
-    for (const {subnet, toSlot} of activeSyncnets) {
-      const peersInSubnet = peersPerSubnet.get(subnet) ?? 0;
-      if (peersInSubnet < targetSubnetPeers) {
+    for (const {subnet, toSlot, peerCount} of activeSyncnets) {
+      metrics?.peerManager.peersPerActiveSubnet.observe({type: SubnetType.syncnets}, peerCount);
+      if (peerCount < targetSubnetPeers) {
         // We need more peers
-        syncnetQueries.push({subnet, toSlot, maxPeersToDiscover: targetSubnetPeers - peersInSubnet});
+        syncnetQueries.push({subnet, toSlot, maxPeersToDiscover: targetSubnetPeers - peerCount});
       }
     }
   }

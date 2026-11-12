@@ -1,15 +1,17 @@
+import {beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {
   EpochDifference,
   ExecutionStatus,
   ForkChoice,
+  ForkChoiceStore,
   IForkChoiceStore,
+  PayloadStatus,
   ProtoArray,
   ProtoBlock,
 } from "../../../src/index.js";
@@ -23,6 +25,7 @@ describe("Forkchoice", () => {
   const finalizedRoot = getBlockRoot(genesisSlot);
   const parentRoot = toHex(Buffer.alloc(32, 0xff));
   let protoArr: ProtoArray;
+  const validatorCount = 100;
 
   beforeEach(() => {
     protoArr = ProtoArray.initialize(
@@ -40,6 +43,14 @@ describe("Forkchoice", () => {
         executionPayloadBlockHash: null,
         executionStatus: ExecutionStatus.PreMerge,
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+        // Pre-Gloas block fields (required to avoid being treated as Gloas)
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
+        timeliness: false,
+        importedTimely: false,
+        ptcTimeliness: false,
+        proposerIndex: 0,
       } as Omit<ProtoBlock, "targetRoot">,
       genesisSlot
     );
@@ -48,18 +59,56 @@ describe("Forkchoice", () => {
   const fcStore: IForkChoiceStore = {
     currentSlot: genesisSlot + 1,
     justified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(finalizedRoot),
+        rootHex: finalizedRoot,
+      },
       balances: new Uint16Array([32]),
       totalBalance: 32,
     },
     unrealizedJustified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(finalizedRoot),
+        rootHex: finalizedRoot,
+      },
       balances: new Uint16Array([32]),
     },
-    finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
-    unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+    finalizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+      rootHex: finalizedRoot,
+    },
+    unrealizedFinalizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+      rootHex: finalizedRoot,
+    },
     justifiedBalancesGetter: () => new Uint16Array([32]),
     equivocatingIndices: new Set(),
+    confirmedRoot: finalizedRoot,
+    previousEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+      rootHex: finalizedRoot,
+    },
+    currentEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+      rootHex: finalizedRoot,
+    },
+    previousEpochGreatestUnrealizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+      rootHex: finalizedRoot,
+    },
+    previousEpochObservedJustifiedBalances: new Uint16Array([32]),
+    currentEpochObservedJustifiedBalances: new Uint16Array([32]),
+    previousEpochGreatestUnrealizedBalances: new Uint16Array([32]),
+    previousSlotHead: finalizedRoot,
+    currentSlotHead: finalizedRoot,
+    stateGetter: () => null,
   };
 
   const getParentBlockRoot = (slot: number, skippedSlots: number[] = []): RootHex => {
@@ -102,7 +151,13 @@ describe("Forkchoice", () => {
       executionStatus: ExecutionStatus.PreMerge,
 
       timeliness: false,
+      importedTimely: false,
+      ptcTimeliness: false,
+      proposerIndex: 0,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
     };
   };
 
@@ -110,23 +165,57 @@ describe("Forkchoice", () => {
     for (let slot = genesisSlot + 1; slot <= tillSlot; slot++) {
       if (!skippedSlots.includes(slot)) {
         const block = getBlock(slot, skippedSlots);
-        protoArr.onBlock(block, block.slot);
+        protoArr.onBlock(block, block.slot, null);
       }
     }
   };
 
+  it("initializes fast confirmation checkpoints from finalized checkpoint", () => {
+    const justifiedRoot = getBlockRoot(genesisSlot + 1);
+    const finalizedCheckpoint = {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+    };
+    const justifiedCheckpoint = {
+      epoch: genesisEpoch + 1,
+      root: fromHexString(justifiedRoot),
+    };
+
+    const store = new ForkChoiceStore(
+      (genesisSlot + 1) as Slot,
+      justifiedCheckpoint,
+      finalizedCheckpoint,
+      new Uint16Array([32]),
+      () => new Uint16Array([32]),
+      () => null
+    );
+
+    expect(store.previousEpochObservedJustifiedCheckpoint.rootHex).toBe(finalizedRoot);
+    expect(store.currentEpochObservedJustifiedCheckpoint.rootHex).toBe(finalizedRoot);
+    expect(store.previousEpochGreatestUnrealizedCheckpoint.rootHex).toBe(finalizedRoot);
+    expect(store.confirmedRoot).toBe(finalizedRoot);
+  });
+
   it("getAllAncestorBlocks", () => {
     // Add block that is a finalized descendant.
     const block = getBlock(genesisSlot + 1);
-    protoArr.onBlock(block, block.slot);
-    const forkchoice = new ForkChoice(config, fcStore, protoArr);
-    const summaries = forkchoice.getAllAncestorBlocks(getBlockRoot(genesisSlot + 1));
-    // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
-    expect(summaries).toHaveLength(1);
-    expect(summaries[0]).toEqual({...block, bestChild: undefined, bestDescendant: undefined, parent: 0, weight: 0});
+    protoArr.onBlock(block, block.slot, null);
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
+    const summaries = forkchoice.getAllAncestorBlocks(getBlockRoot(genesisSlot + 1), PayloadStatus.FULL);
+    // Raw ancestor walk includes both the start and the previous-finalized boundary (genesis).
+    expect(summaries).toHaveLength(2);
+    expect(summaries[0]).toEqual({
+      ...block,
+      bestChild: undefined,
+      bestDescendant: undefined,
+      parent: 0,
+      weight: 0n,
+      attestationScore: 0n,
+      payloadStatus: 2, // Pre-Gloas blocks always have PAYLOAD_STATUS_FULL
+    });
   });
 
-  it("getAllAncestorAndNonAncestorBlocks equals getAllAncestorBlocks + getAllNonAncestorBlocks", () => {
+  it("getAllAncestorAndNonAncestorBlocks returns the raw walk (boundary included) + nonAncestors", () => {
     // Create a simple chain: 0 -> 1 -> 2 -> 3
     populateProtoArray(genesisSlot + 3);
 
@@ -135,24 +224,24 @@ describe("Forkchoice", () => {
       ...getBlock(genesisSlot + 10),
       parentRoot: finalizedRoot, // Connect directly to genesis
     };
-    protoArr.onBlock(forkBlock, forkBlock.slot);
+    protoArr.onBlock(forkBlock, forkBlock.slot, null);
 
-    const forkchoice = new ForkChoice(config, fcStore, protoArr);
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
 
-    // Test with a block from the canonical chain
+    // Both `getAllAncestorBlocks` and the combined walker's `ancestors` include the previous
+    // finalized boundary as the last element.
     const canonicalBlockRoot = getBlockRoot(genesisSlot + 3);
-    const canonicalAncestorBlocks = forkchoice.getAllAncestorBlocks(canonicalBlockRoot);
-    const canonicalNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(canonicalBlockRoot);
-    const canonicalCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(canonicalBlockRoot);
+    const canonicalAncestorBlocks = forkchoice.getAllAncestorBlocks(canonicalBlockRoot, PayloadStatus.FULL);
+    const canonicalNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(canonicalBlockRoot, PayloadStatus.FULL);
+    const canonicalCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(canonicalBlockRoot, PayloadStatus.FULL);
 
     expect(canonicalCombined.ancestors).toEqual(canonicalAncestorBlocks);
     expect(canonicalCombined.nonAncestors).toEqual(canonicalNonAncestorBlocks);
 
-    // Test with a block from the fork chain
     const forkBlockRoot = getBlockRoot(genesisSlot + 10);
-    const forkAncestorBlocks = forkchoice.getAllAncestorBlocks(forkBlockRoot);
-    const forkNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(forkBlockRoot);
-    const forkCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(forkBlockRoot);
+    const forkAncestorBlocks = forkchoice.getAllAncestorBlocks(forkBlockRoot, PayloadStatus.FULL);
+    const forkNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(forkBlockRoot, PayloadStatus.FULL);
+    const forkCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(forkBlockRoot, PayloadStatus.FULL);
 
     expect(forkCombined.ancestors).toEqual(forkAncestorBlocks);
     expect(forkCombined.nonAncestors).toEqual(forkNonAncestorBlocks);
@@ -189,10 +278,10 @@ describe("Forkchoice", () => {
   for (const {atSlot, pivotSlot, epoch, skipped} of dependentRootTestCases) {
     it(`getDependentRoot epoch ${epoch} atSlot ${atSlot} skipped ${JSON.stringify(skipped)}`, () => {
       populateProtoArray(atSlot, skipped);
-      const forkchoice = new ForkChoice(config, fcStore, protoArr);
+      const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
 
       const blockRoot = getBlockRoot(atSlot);
-      const block = forkchoice.getBlockHex(blockRoot);
+      const block = forkchoice.getBlockHexDefaultStatus(blockRoot);
       if (!block) throw Error(`No block for blockRoot ${blockRoot}`);
 
       const expectedDependentRoot = getBlockRoot(pivotSlot);

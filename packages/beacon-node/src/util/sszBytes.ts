@@ -1,19 +1,25 @@
 import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {
-  BYTES_PER_FIELD_ELEMENT,
-  FIELD_ELEMENTS_PER_BLOB,
+  BYTES_PER_CELL,
   ForkName,
+  ForkPostDeneb,
+  ForkPostGloas,
   ForkSeq,
   MAX_COMMITTEES_PER_SLOT,
   isForkPostElectra,
+  isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
-import {BLSSignature, CommitteeIndex, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {BLSSignature, CommitteeIndex, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
 
 export type BlockRootHex = RootHex;
 // pre-electra, AttestationData is used to cache attestations
 export type AttDataBase64 = string;
 // electra, CommitteeBits
 export type CommitteeBitsBase64 = string;
+/** `attestation.data.index` from gossip-serialized attestations / aggregates */
+export type AttDataIndex = number;
 
 // pre-electra
 // class Attestation(Container):
@@ -44,16 +50,19 @@ export type CommitteeBitsBase64 = string;
 
 const VARIABLE_FIELD_OFFSET = 4;
 const ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = VARIABLE_FIELD_OFFSET + 8 + 8;
-const ROOT_SIZE = 32;
+export const ROOT_SIZE = 32;
 const SLOT_SIZE = 8;
 const COMMITTEE_INDEX_SIZE = 8;
 const ATTESTATION_DATA_SIZE = 128;
 // MAX_COMMITTEES_PER_SLOT is in bit, need to convert to byte
 const COMMITTEE_BITS_SIZE = Math.max(Math.ceil(MAX_COMMITTEES_PER_SLOT / 8), 1);
 const SIGNATURE_SIZE = 96;
+// SyncAggregate is a fixed-size container, so minSize is its serialized size
+const SYNC_AGGREGATE_SIZE = ssz.altair.SyncAggregate.minSize;
 const SINGLE_ATTESTATION_ATTDATA_OFFSET = 8 + 8;
 const SINGLE_ATTESTATION_SLOT_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET;
 const SINGLE_ATTESTATION_COMMITTEE_INDEX_OFFSET = 0;
+const SINGLE_ATTESTATION_DATA_INDEX_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET + 8;
 const SINGLE_ATTESTATION_ATTESTER_INDEX_OFFSET = 8;
 const SINGLE_ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET + 8 + 8;
 const SINGLE_ATTESTATION_SIGNATURE_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET + ATTESTATION_DATA_SIZE;
@@ -177,7 +186,7 @@ export function getSlotFromSingleAttestationSerialized(data: Uint8Array): Slot |
 
 /**
  * Extract committee index from SingleAttestation serialized bytes.
- * Return null if data is not long enough to extract slot.
+ * Return null if data is not long enough to extract the committee index.
  */
 export function getCommitteeIndexFromSingleAttestationSerialized(
   fork: ForkName,
@@ -189,6 +198,29 @@ export function getCommitteeIndexFromSingleAttestationSerialized(
     }
 
     return getIndexFromOffset(data, SINGLE_ATTESTATION_COMMITTEE_INDEX_OFFSET);
+  }
+
+  if (data.length < VARIABLE_FIELD_OFFSET + SLOT_SIZE + COMMITTEE_INDEX_SIZE) {
+    return null;
+  }
+
+  return getIndexFromOffset(data, VARIABLE_FIELD_OFFSET + SLOT_SIZE);
+}
+
+/**
+ * Extract data index from SingleAttestation serialized bytes.
+ * Post-gloas, `data.index` field is repurposed:
+ *   - 0 - payload was not available (or attestation is same-slot, where availability is not yet known)
+ *   - 1 - payload was available
+ * Return null if data is not long enough to extract the index.
+ */
+export function getDataIndexFromSingleAttestationSerialized(fork: ForkName, data: Uint8Array): AttDataIndex | null {
+  if (isForkPostElectra(fork)) {
+    if (data.length !== SINGLE_ATTESTATION_SIZE) {
+      return null;
+    }
+
+    return getIndexFromOffset(data, SINGLE_ATTESTATION_DATA_INDEX_OFFSET);
   }
 
   if (data.length < VARIABLE_FIELD_OFFSET + SLOT_SIZE + COMMITTEE_INDEX_SIZE) {
@@ -266,6 +298,7 @@ export function getSignatureFromSingleAttestationSerialized(data: Uint8Array): B
 const AGGREGATE_AND_PROOF_OFFSET = 4 + 96;
 const AGGREGATE_OFFSET = AGGREGATE_AND_PROOF_OFFSET + 8 + 4 + 96;
 const SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET = AGGREGATE_OFFSET + VARIABLE_FIELD_OFFSET;
+const SIGNED_AGGREGATE_AND_PROOF_ATTESTATION_DATA_INDEX_OFFSET = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + SLOT_SIZE;
 const SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + 8 + 8;
 
 /**
@@ -298,6 +331,19 @@ export function getBlockRootFromSignedAggregateAndProofSerialized(data: Uint8Arr
     )
   );
   return "0x" + blockRootBuf.toString("hex");
+}
+
+/**
+ * Extract data index from signed aggregate and proof serialized bytes.
+ * Return null if data is not long enough to extract the index.
+ * This works for both phase0 + electra (index is in attestation data at the same offset).
+ */
+export function getDataIndexFromSignedAggregateAndProofSerialized(data: Uint8Array): AttDataIndex | null {
+  if (data.length < SIGNED_AGGREGATE_AND_PROOF_ATTESTATION_DATA_INDEX_OFFSET + COMMITTEE_INDEX_SIZE) {
+    return null;
+  }
+
+  return getIndexFromOffset(data, SIGNED_AGGREGATE_AND_PROOF_ATTESTATION_DATA_INDEX_OFFSET);
 }
 
 /**
@@ -366,6 +412,8 @@ export function getAttDataFromSignedAggregateAndProofPhase0(data: Uint8Array): A
  * ```
  */
 const SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE;
+// proposer_index is ValidatorIndex = uint64 = 8 bytes
+const PARENT_ROOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + SLOT_SIZE + 8;
 
 export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot | null {
   if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK + SLOT_SIZE) {
@@ -375,44 +423,379 @@ export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot |
   return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK);
 }
 
-/**
- * class BlobSidecar(Container):
- *  index: BlobIndex [fixed - 8 bytes ],
- *  blob: Blob, BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB
- *  kzgCommitment: Bytes48,
- *  kzgProof: Bytes48,
- *  signedBlockHeader:
- *    slot: 8 bytes
- */
-
-const SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR = 8 + BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB + 48 + 48;
-
-export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null {
-  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR + SLOT_SIZE) {
+export function getParentRootFromSignedBeaconBlockSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < PARENT_ROOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK + ROOT_SIZE) {
     return null;
   }
-
-  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR);
+  blockRootBuf.set(
+    data.subarray(
+      PARENT_ROOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK,
+      PARENT_ROOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK + ROOT_SIZE
+    )
+  );
+  return `0x${blockRootBuf.toString("hex")}`;
 }
 
 /**
- * {
-    index: ColumnIndex [ fixed - 8 bytes],
-    column: DataColumn BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL * <some non fixed length>,
-    kzgCommitments: denebSsz.BlobKzgCommitments,
-    kzgProofs: denebSsz.KZGProofs,
-    signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader,
-    kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof,
-  }
+ * Extract parentBlockHash from a GLOAS SignedBeaconBlock by navigating the SSZ offset pointer
+ * to the embedded SignedExecutionPayloadBid.
+ *
+ * Layout (bytes from start of SignedBeaconBlock):
+ *   [0..4)    message offset
+ *   [4..100)  signature (96 B)
+ *   [100..184) BeaconBlock fixed section: slot(8)+proposer_index(8)+parent_root(32)+state_root(32)+body_offset(4)
+ *   [184..)   BeaconBlockBody
+ *
+ * BeaconBlockBody (GLOAS) fixed section before signedExecutionPayloadBid offset pointer:
+ *   randaoReveal(96) + eth1Data(72) + graffiti(32)
+ *   + proposerSlashings(4) + attesterSlashings(4) + attestations(4) + deposits(4) + voluntaryExits(4)
+ *   + syncAggregate(SyncAggregate.minSize) + blsToExecutionChanges(4) = 384 bytes (mainnet preset)
+ *
+ * Heze body: randaoReveal(96) + graffiti(32) + proposerSlashings(4) + attesterSlashings(4) + attestations(4) + voluntaryExits(4) + syncAggregate(SyncAggregate.minSize) + blsToExecutionChanges(4) = 308 bytes (mainnet preset)
+ *
+ * The 4-byte pointer at byte 568 (= 184+384) for Gloas and 492 (= 184+308) for Heze (mainnet preset) gives the offset of SignedExecutionPayloadBid
+ * within BeaconBlockBody. parentBlockHash is at that bid's byte 100 (after offset+sig).
  */
+// BeaconBlock body starts after: msg_offset(4) + sig(96) + slot(8) + proposer_index(8) + parent_root(32) + state_root(32) + body_offset_ptr(4)
+const GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK =
+  VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + SLOT_SIZE + 8 + ROOT_SIZE + ROOT_SIZE + VARIABLE_FIELD_OFFSET; // = 184
+const GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY = 96 + 72 + 32 + 4 + 4 + 4 + 4 + 4 + SYNC_AGGREGATE_SIZE + 4; // = 384 at mainnet preset
+// Heze removes eth1Data (72 B) and the deposits offset (4 B) from the body fixed section
+const HEZE_SIGNED_BID_OFFSET_POINTER_IN_BODY = GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY - 72 - VARIABLE_FIELD_OFFSET; // = 308
+// Within SignedExecutionPayloadBid, parentBlockHash is at byte 100 (msg_offset:4 + sig:96)
+const PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE; // = 100
 
-const SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR = 20;
-export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot | null {
-  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR + SLOT_SIZE) {
+// CAUTION: update offsets if BeaconBlockBody fixed fields change after Heze
+export function getParentBlockHashFromGloasSignedBeaconBlockSerialized(
+  data: Uint8Array,
+  fork: ForkPostGloas
+): RootHex | null {
+  const bidOffsetPointer =
+    GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK +
+    (isForkPostHeze(fork) ? HEZE_SIGNED_BID_OFFSET_POINTER_IN_BODY : GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY);
+  if (data.length < bidOffsetPointer + VARIABLE_FIELD_OFFSET) {
+    return null;
+  }
+  const bidOffset =
+    (data[bidOffsetPointer] |
+      (data[bidOffsetPointer + 1] << 8) |
+      (data[bidOffsetPointer + 2] << 16) |
+      (data[bidOffsetPointer + 3] << 24)) >>>
+    0;
+
+  const parentBlockHashStart =
+    GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK + bidOffset + PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID;
+
+  if (data.length < parentBlockHashStart + ROOT_SIZE) {
     return null;
   }
 
-  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR);
+  blockRootBuf.set(data.subarray(parentBlockHashStart, parentBlockHashStart + ROOT_SIZE));
+  return `0x${blockRootBuf.toString("hex")}`;
+}
+
+/**
+ * Pre-Gloas DataColumnSidecar:
+ * {
+ *   index: ColumnIndex [fixed - 8 bytes],
+ *   column: DataColumn (offset - 4 bytes),
+ *   kzgCommitments: (offset - 4 bytes),
+ *   kzgProofs: (offset - 4 bytes),
+ *   signedBlockHeader: (offset - 4 bytes) -> slot at variable offset after fixed header
+ *   kzgCommitmentsInclusionProof: (offset - 4 bytes),
+ * }
+ * Post-Gloas DataColumnSidecar:
+ * {
+ *   index: ColumnIndex [8 bytes],
+ *   column: DataColumn (offset - 4 bytes),
+ *   kzgProofs: (offset - 4 bytes),
+ *   slot: Slot [8 bytes] - at offset 16,
+ *   beaconBlockRoot: Root [32 bytes] - at offset 24,
+ * }
+ */
+const SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_PRE_GLOAS = 20;
+const SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_POST_GLOAS = 16;
+const BEACON_BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR = 24;
+
+export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array, fork: ForkName): Slot | null {
+  const offset = isForkPostGloas(fork)
+    ? SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_POST_GLOAS
+    : SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_PRE_GLOAS;
+
+  if (data.length < offset + SLOT_SIZE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, offset);
+}
+
+export function getBeaconBlockRootFromDataColumnSidecarSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < BEACON_BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR + ROOT_SIZE) {
+    return null;
+  }
+
+  blockRootBuf.set(
+    data.subarray(
+      BEACON_BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR,
+      BEACON_BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR + ROOT_SIZE
+    )
+  );
+  return "0x" + blockRootBuf.toString("hex");
+}
+
+// beaconBlockRoot is the last fixed field in the Gloas layout
+const DATA_COLUMN_SIDECAR_GLOAS_FIXED_SIZE = BEACON_BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR + ROOT_SIZE; // 56 bytes
+const KZG_PROOF_SIZE = 48; // Bytes48
+const DATA_COLUMN_SIDECAR_GLOAS_PER_BLOB_SIZE = BYTES_PER_CELL + KZG_PROOF_SIZE; // 2048 + 48 = 2096 bytes
+
+/**
+ * Gloas sidecar size bound uses the largest blob limit across the entire schedule, including future entries.
+ * https://github.com/ethereum/consensus-specs/pull/5613
+ */
+export function computeMaxGloasDataColumnSidecarSize(config: ChainForkConfig): number {
+  const maxBlobs = config.BLOB_SCHEDULE.reduce(
+    (max, entry) => Math.max(max, entry.MAX_BLOBS_PER_BLOCK),
+    config.MAX_BLOBS_PER_BLOCK_ELECTRA
+  );
+  return DATA_COLUMN_SIDECAR_GLOAS_FIXED_SIZE + maxBlobs * DATA_COLUMN_SIDECAR_GLOAS_PER_BLOB_SIZE;
+}
+
+/**
+ * SignedExecutionPayloadEnvelope SSZ Layout:
+ * ├─ 4 bytes: message offset (points to byte 100)
+ * ├─ 96 bytes: signature
+ * └─ ExecutionPayloadEnvelope (starts at byte 100):
+ *    ├─ 4 bytes: payload offset
+ *    ├─ 4 bytes: executionRequests offset
+ *    ├─ 8 bytes: builderIndex          (offset 108-115)
+ *    ├─ 32 bytes: beaconBlockRoot      (offset 116-147)
+ *    ├─ 32 bytes: parentBeaconBlockRoot (offset 148-179) — new in Gloas alpha.6 (consensus-specs#5152)
+ *    └─ variable: payload data (starts at envelope + 80)
+ *       └─ ExecutionPayload fixed portion includes slotNumber at offset 532
+ */
+const SIGNED_EXECUTION_PAYLOAD_ENVELOPE_MESSAGE_OFFSET = 4;
+const SIGNED_EXECUTION_PAYLOAD_ENVELOPE_SIGNATURE_SIZE = 96;
+const EXECUTION_PAYLOAD_ENVELOPE_PAYLOAD_OFFSET = 4;
+const EXECUTION_PAYLOAD_ENVELOPE_REQUESTS_OFFSET = 4;
+const EXECUTION_PAYLOAD_ENVELOPE_BUILDER_INDEX_SIZE = 8;
+
+const BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
+  SIGNED_EXECUTION_PAYLOAD_ENVELOPE_MESSAGE_OFFSET +
+  SIGNED_EXECUTION_PAYLOAD_ENVELOPE_SIGNATURE_SIZE +
+  EXECUTION_PAYLOAD_ENVELOPE_PAYLOAD_OFFSET +
+  EXECUTION_PAYLOAD_ENVELOPE_REQUESTS_OFFSET +
+  EXECUTION_PAYLOAD_ENVELOPE_BUILDER_INDEX_SIZE; // 116
+
+// Envelope fixed portion: payload_offset(4) + requests_offset(4) + builderIndex(8) + beaconBlockRoot(32) + parentBeaconBlockRoot(32) = 80
+const EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE =
+  EXECUTION_PAYLOAD_ENVELOPE_PAYLOAD_OFFSET +
+  EXECUTION_PAYLOAD_ENVELOPE_REQUESTS_OFFSET +
+  EXECUTION_PAYLOAD_ENVELOPE_BUILDER_INDEX_SIZE +
+  ROOT_SIZE +
+  ROOT_SIZE; // 80
+
+// slotNumber offset within ExecutionPayload fixed portion:
+// parentHash(32) + feeRecipient(20) + stateRoot(32) + receiptsRoot(32) + logsBloom(256) +
+// prevRandao(32) + blockNumber(8) + gasLimit(8) + gasUsed(8) + timestamp(8) +
+// extraData_offset(4) + baseFeePerGas(32) + blockHash(32) + transactions_offset(4) +
+// withdrawals_offset(4) + blobGasUsed(8) + excessBlobGas(8) + blockAccessList_offset(4) = 532
+const SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD = 532;
+
+// Payload data starts right after the envelope's fixed portion
+const ENVELOPE_START_IN_SIGNED =
+  SIGNED_EXECUTION_PAYLOAD_ENVELOPE_MESSAGE_OFFSET + SIGNED_EXECUTION_PAYLOAD_ENVELOPE_SIGNATURE_SIZE; // 100
+
+const SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
+  ENVELOPE_START_IN_SIGNED + EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE + SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD; // 100 + 80 + 532 = 712
+
+export function getSlotFromExecutionPayloadEnvelopeSerialized(data: Uint8Array): Slot | null {
+  if (data.length < SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + SLOT_SIZE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE);
+}
+
+export function getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + ROOT_SIZE) {
+    return null;
+  }
+
+  blockRootBuf.set(
+    data.subarray(
+      BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE,
+      BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + ROOT_SIZE
+    )
+  );
+  return "0x" + blockRootBuf.toString("hex");
+}
+
+// transactions offset within ExecutionPayload fixed portion, see SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD:
+// everything up to and including blockHash(32) = 504, followed by withdrawals_offset(4)
+const PAYLOAD_START_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
+  ENVELOPE_START_IN_SIGNED + EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE; // 180
+const TRANSACTIONS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
+  PAYLOAD_START_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + 504; // 684
+const WITHDRAWALS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
+  TRANSACTIONS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + 4; // 688
+
+/**
+ * Transaction count of the payload, read from the SSZ offsets without deserializing the envelope.
+ * Returns null on malformed offsets, deserialization reports the exact error.
+ */
+export function getTransactionCountFromExecutionPayloadEnvelopeSerialized(data: Uint8Array): number | null {
+  if (data.length < WITHDRAWALS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + 4) {
+    return null;
+  }
+
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const transactionsOffset = view.getUint32(TRANSACTIONS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE, true);
+  const withdrawalsOffset = view.getUint32(WITHDRAWALS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE, true);
+  if (transactionsOffset > withdrawalsOffset) {
+    return null;
+  }
+  if (transactionsOffset === withdrawalsOffset) {
+    return 0;
+  }
+
+  const transactionsStart = PAYLOAD_START_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + transactionsOffset;
+  if (transactionsStart + 4 > data.length) {
+    return null;
+  }
+  // first offset of a non-empty list is the size of its offset table, 4 bytes per element
+  const firstTransactionOffset = view.getUint32(transactionsStart, true);
+  if (firstTransactionOffset % 4 !== 0 || firstTransactionOffset > withdrawalsOffset - transactionsOffset) {
+    return null;
+  }
+  return firstTransactionOffset / 4;
+}
+
+/**
+ * BeaconState of all forks (up until Electra, check with new forks)
+ * class BeaconState(Container):
+ *   genesis_time: uint64                    - 8 bytes
+ *   genesis_validators_root: Root           - 32 bytes
+ *   slot: Slot                              - 8 bytes
+ *   fork: Fork                              - 16 bytes
+ *   latest_block_header: BeaconBlockHeader  - fixed size
+ *     slot: Slot                            - 8 bytes
+ *
+ */
+
+const BLOCK_HEADER_SLOT_BYTES_POSITION_IN_BEACON_STATE = 8 + 32 + 8 + 16;
+export function getLastProcessedSlotFromBeaconStateSerialized(data: Uint8Array): Slot | null {
+  if (data.length < BLOCK_HEADER_SLOT_BYTES_POSITION_IN_BEACON_STATE + SLOT_SIZE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, BLOCK_HEADER_SLOT_BYTES_POSITION_IN_BEACON_STATE);
+}
+
+const SLOT_BYTES_POSITION_IN_BEACON_STATE = 8 + 32;
+export function getSlotFromBeaconStateSerialized(data: Uint8Array): Slot | null {
+  if (data.length < SLOT_BYTES_POSITION_IN_BEACON_STATE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_BEACON_STATE);
+}
+
+/**
+ * PayloadAttestationMessage: {
+ *   validatorIndex: ValidatorIndex (8 bytes)
+ *   data: PayloadAttestationData {
+ *     beaconBlockRoot: Root (32 bytes)  ← offset 8
+ *     slot: Slot (8 bytes)              ← offset 40
+ *     payloadPresent: Boolean (1 byte)
+ *     blobDataAvailable: Boolean (1 byte)
+ *   }
+ *   signature: BLSSignature (96 bytes)
+ * }
+ * Fully fixed-size container, no offset table.
+ */
+const PAYLOAD_ATTESTATION_MESSAGE_BEACON_BLOCK_ROOT_OFFSET = 8;
+const PAYLOAD_ATTESTATION_MESSAGE_SLOT_OFFSET = 8 + ROOT_SIZE; // 40
+const PAYLOAD_ATTESTATION_MESSAGE_PAYLOAD_PRESENT_OFFSET = PAYLOAD_ATTESTATION_MESSAGE_SLOT_OFFSET + SLOT_SIZE; // 48
+
+export function getSlotFromPayloadAttestationMessageSerialized(data: Uint8Array): Slot | null {
+  if (data.length < PAYLOAD_ATTESTATION_MESSAGE_SLOT_OFFSET + SLOT_SIZE) {
+    return null;
+  }
+  return getSlotFromOffset(data, PAYLOAD_ATTESTATION_MESSAGE_SLOT_OFFSET);
+}
+
+export function getPayloadPresentFromPayloadAttestationMessageSerialized(data: Uint8Array): boolean | null {
+  if (data.length < PAYLOAD_ATTESTATION_MESSAGE_PAYLOAD_PRESENT_OFFSET + 1) {
+    return null;
+  }
+  return data[PAYLOAD_ATTESTATION_MESSAGE_PAYLOAD_PRESENT_OFFSET] !== 0;
+}
+
+export function getBlockRootFromPayloadAttestationMessageSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < PAYLOAD_ATTESTATION_MESSAGE_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE) {
+    return null;
+  }
+  blockRootBuf.set(
+    data.subarray(
+      PAYLOAD_ATTESTATION_MESSAGE_BEACON_BLOCK_ROOT_OFFSET,
+      PAYLOAD_ATTESTATION_MESSAGE_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE
+    )
+  );
+  return `0x${blockRootBuf.toString("hex")}`;
+}
+
+/**
+ * SignedExecutionPayloadBid: {message: ExecutionPayloadBid (variable), signature: BLSSignature (96 bytes)}
+ *   Fixed part: 4-byte offset + 96-byte signature = 100 bytes
+ *   message data starts at byte 100
+ *
+ * ExecutionPayloadBid fixed fields (in order):
+ *   parentBlockHash: Bytes32      (32 bytes)
+ *   parentBlockRoot: Root         (32 bytes)
+ *   blockHash: Bytes32            (32 bytes)
+ *   prevRandao: Bytes32           (32 bytes)
+ *   feeRecipient: ExecutionAddress(20 bytes)
+ *   gasLimit: UintBn64            (8 bytes)
+ *   builderIndex: BuilderIndex    (8 bytes)
+ *   slot: Slot                    (8 bytes)  ← absolute offset 264
+ */
+const SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE; // 100
+const SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_ROOT_OFFSET =
+  SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET + ROOT_SIZE; // 132
+const SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET =
+  VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + 32 + 32 + 32 + 32 + 20 + 8 + 8; // 264
+
+export function getSlotFromSignedExecutionPayloadBidSerialized(data: Uint8Array): Slot | null {
+  if (data.length < SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET + SLOT_SIZE) {
+    return null;
+  }
+  return getSlotFromOffset(data, SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET);
+}
+
+export function getParentBlockHashFromSignedExecutionPayloadBidSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET + ROOT_SIZE) {
+    return null;
+  }
+  blockRootBuf.set(
+    data.subarray(
+      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET,
+      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET + ROOT_SIZE
+    )
+  );
+  return `0x${blockRootBuf.toString("hex")}`;
+}
+
+export function getParentBlockRootFromSignedExecutionPayloadBidSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_ROOT_OFFSET + ROOT_SIZE) {
+    return null;
+  }
+  blockRootBuf.set(
+    data.subarray(
+      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_ROOT_OFFSET,
+      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_ROOT_OFFSET + ROOT_SIZE
+    )
+  );
+  return `0x${blockRootBuf.toString("hex")}`;
 }
 
 /**
@@ -420,7 +803,7 @@ export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot |
  *
  * If the high bytes are not zero, return null
  */
-function getSlotFromOffset(data: Uint8Array, offset: number): Slot | null {
+export function getSlotFromOffset(data: Uint8Array, offset: number): Slot | null {
   return checkSlotHighBytes(data, offset) ? getSlotFromOffsetTrusted(data, offset) : null;
 }
 
@@ -440,4 +823,80 @@ function getSlotFromOffsetTrusted(data: Uint8Array, offset: number): Slot {
 
 function checkSlotHighBytes(data: Uint8Array, offset: number): boolean {
   return (data[offset + 4] | data[offset + 5] | data[offset + 6] | data[offset + 7]) === 0;
+}
+
+export function getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(
+  config: ChainForkConfig,
+  blockBytes: Uint8Array
+): number {
+  const slot = getSlotFromSignedBeaconBlockSerialized(blockBytes);
+  if (slot === null) throw new Error("Can not parse the slot from block bytes");
+
+  if (config.getForkSeq(slot) < ForkSeq.deneb) return 0;
+  const forkName = config.getForkName(slot);
+
+  if (isForkPostGloas(forkName)) {
+    // Gloas stores commitments under signedExecutionPayloadBid.message.blobKzgCommitments.
+    // Navigate the offset chain: SignedBeaconBlock → message → body → signedExecutionPayloadBid → message → blobKzgCommitments
+    const {SignedBeaconBlock: GloasSignedBlock, BeaconBlock: GloasBlock, BeaconBlockBody: GloasBody} = ssz[forkName];
+    const {SignedExecutionPayloadBid, ExecutionPayloadBid} = ssz[forkName];
+    const commitmentSize = ssz.deneb.KZGCommitment.fixedSize;
+
+    const view = new DataView(blockBytes.buffer, blockBytes.byteOffset, blockBytes.byteLength);
+
+    const signedBlockRanges = GloasSignedBlock.getFieldRanges(view, 0, blockBytes.length);
+    const messageIdx = Object.keys(GloasSignedBlock.fields).indexOf("message");
+    const messageRange = signedBlockRanges[messageIdx];
+
+    const blockRanges = GloasBlock.getFieldRanges(view, messageRange.start, messageRange.end);
+    const bodyIdx = Object.keys(GloasBlock.fields).indexOf("body");
+    const bodyRange = blockRanges[bodyIdx];
+    const bodyStart = messageRange.start + bodyRange.start;
+    const bodyEnd = messageRange.start + bodyRange.end;
+
+    const bodyRanges = GloasBody.getFieldRanges(view, bodyStart, bodyEnd);
+    const bidIdx = Object.keys(GloasBody.fields).indexOf("signedExecutionPayloadBid");
+    const bidRange = bodyRanges[bidIdx];
+    const bidStart = bodyStart + bidRange.start;
+    const bidEnd = bodyStart + bidRange.end;
+
+    const bidRanges = SignedExecutionPayloadBid.getFieldRanges(view, bidStart, bidEnd);
+    const bidMsgIdx = Object.keys(SignedExecutionPayloadBid.fields).indexOf("message");
+    const bidMsgRange = bidRanges[bidMsgIdx];
+    const bidMsgStart = bidStart + bidMsgRange.start;
+    const bidMsgEnd = bidStart + bidMsgRange.end;
+
+    const execBidRanges = ExecutionPayloadBid.getFieldRanges(view, bidMsgStart, bidMsgEnd);
+    const commitmentsIdx = Object.keys(ExecutionPayloadBid.fields).indexOf("blobKzgCommitments");
+    const commitmentsRange = execBidRanges[commitmentsIdx];
+
+    const start = bidMsgStart + commitmentsRange.start;
+    const end = bidMsgStart + commitmentsRange.end;
+    return Math.round((Math.min(end, blockBytes.byteLength) - start) / commitmentSize);
+  }
+
+  const {SignedBeaconBlock, BeaconBlock, BeaconBlockBody, KZGCommitment} = ssz[forkName as ForkPostDeneb];
+
+  const view = new DataView(blockBytes.buffer, blockBytes.byteOffset, blockBytes.byteLength);
+  const singedBlockFieldRanges = SignedBeaconBlock.getFieldRanges(view, 0, blockBytes.length);
+  const messageIndex = Object.keys(SignedBeaconBlock.fields).indexOf("message");
+  const messageRange = singedBlockFieldRanges[messageIndex];
+
+  const blockFieldRanges = BeaconBlock.getFieldRanges(view, messageRange.start, messageRange.end);
+  const bodyIndex = Object.keys(BeaconBlock.fields).indexOf("body");
+  const bodyRange = blockFieldRanges[bodyIndex];
+
+  const bodyFieldRanges = BeaconBlockBody.getFieldRanges(
+    view,
+    messageRange.start + bodyRange.start,
+    messageRange.end + bodyRange.end
+  );
+  const kzgCommitmentsIndex = Object.keys(BeaconBlockBody.fields).indexOf("blobKzgCommitments");
+  const kzgCommitmentsRange = bodyFieldRanges[kzgCommitmentsIndex];
+  const commitmentSize = KZGCommitment.fixedSize;
+
+  const end = messageRange.end + bodyRange.end + kzgCommitmentsRange.end;
+  const start = messageRange.start + bodyRange.start + kzgCommitmentsRange.start;
+
+  return Math.round((Math.min(end, blockBytes.byteLength) - start) / commitmentSize);
 }

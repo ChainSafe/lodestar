@@ -11,6 +11,8 @@ export interface Gauge<Labels extends LabelsGeneric = NoLabels> {
   set: NoLabels extends Labels ? (value: number) => void : (labels: Labels, value: number) => void;
 
   collect?(): void;
+
+  reset(): void;
 }
 
 export interface GaugeExtra<Labels extends LabelsGeneric = NoLabels> extends Omit<Gauge<Labels>, "collect"> {
@@ -70,4 +72,22 @@ export interface MetricsRegisterExtra extends MetricsRegister {
 export interface MetricsRegisterCustom extends MetricsRegisterExtra {
   avgMinMax<Labels extends LabelsGeneric = NoLabels>(config: AvgMinMaxConfig<Labels>): AvgMinMax<Labels>;
   static<Labels extends LabelsGeneric = NoLabels>(config: StaticConfig<Labels>): void;
+}
+
+export type EndTimer = () => number;
+
+export function withObservedDuration<T>(endTimer: EndTimer | undefined, fn: () => T): T {
+  try {
+    return fn();
+  } finally {
+    endTimer?.();
+  }
+}
+
+export async function withObservedDurationAsync<T>(endTimer: EndTimer | undefined, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } finally {
+    endTimer?.();
+  }
 }

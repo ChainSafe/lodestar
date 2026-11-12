@@ -1,8 +1,9 @@
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, ForkPostAltair, isForkPostAltair} from "@lodestar/params";
+import {ForkName, ForkPostAltair, ForkPostFulu, isForkPostAltair, isForkPostFulu} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
 import {
+  DataColumnSidecar,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -12,13 +13,21 @@ import {
   SignedBeaconBlock,
   Status,
   altair,
-  deneb,
   fulu,
+  gloas,
+  heze,
   phase0,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {BlobSidecarsByRootRequest, BlobSidecarsByRootRequestType} from "../../util/types.js";
+import {
+  BeaconBlocksByRootRequest,
+  BeaconBlocksByRootRequestType,
+  DataColumnSidecarsByRootRequest,
+  DataColumnSidecarsByRootRequestType,
+  ExecutionPayloadEnvelopesByRootRequest,
+  ExecutionPayloadEnvelopesByRootRequestType,
+} from "../../util/types.js";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
 
@@ -31,14 +40,16 @@ export enum ReqRespMethod {
   Metadata = "metadata",
   BeaconBlocksByRange = "beacon_blocks_by_range",
   BeaconBlocksByRoot = "beacon_blocks_by_root",
-  BlobSidecarsByRange = "blob_sidecars_by_range",
-  BlobSidecarsByRoot = "blob_sidecars_by_root",
+  BeaconBlocksByHead = "beacon_blocks_by_head",
   DataColumnSidecarsByRange = "data_column_sidecars_by_range",
   DataColumnSidecarsByRoot = "data_column_sidecars_by_root",
+  ExecutionPayloadEnvelopesByRoot = "execution_payload_envelopes_by_root",
+  ExecutionPayloadEnvelopesByRange = "execution_payload_envelopes_by_range",
   LightClientBootstrap = "light_client_bootstrap",
   LightClientUpdatesByRange = "light_client_updates_by_range",
   LightClientFinalityUpdate = "light_client_finality_update",
   LightClientOptimisticUpdate = "light_client_optimistic_update",
+  InclusionListsByIndices = "inclusion_lists_by_indices",
 }
 
 // To typesafe events to network
@@ -48,15 +59,17 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.Ping]: phase0.Ping;
   [ReqRespMethod.Metadata]: null;
   [ReqRespMethod.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
-  [ReqRespMethod.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
-  [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecarsByRangeRequest;
-  [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequest;
+  [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequest;
+  [ReqRespMethod.BeaconBlocksByHead]: fulu.BeaconBlocksByHeadRequest;
   [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecarsByRangeRequest;
-  [ReqRespMethod.DataColumnSidecarsByRoot]: fulu.DataColumnSidecarsByRootRequest;
+  [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequest;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: ExecutionPayloadEnvelopesByRootRequest;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: gloas.ExecutionPayloadEnvelopesByRangeRequest;
   [ReqRespMethod.LightClientBootstrap]: Root;
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
   [ReqRespMethod.LightClientFinalityUpdate]: null;
   [ReqRespMethod.LightClientOptimisticUpdate]: null;
+  [ReqRespMethod.InclusionListsByIndices]: heze.InclusionListsByIndicesRequest;
 };
 
 type ResponseBodyByMethod = {
@@ -67,15 +80,17 @@ type ResponseBodyByMethod = {
   // Do not matter
   [ReqRespMethod.BeaconBlocksByRange]: SignedBeaconBlock;
   [ReqRespMethod.BeaconBlocksByRoot]: SignedBeaconBlock;
-  [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecar;
-  [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecar;
-  [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecar;
-  [ReqRespMethod.DataColumnSidecarsByRoot]: fulu.DataColumnSidecar;
+  [ReqRespMethod.BeaconBlocksByHead]: SignedBeaconBlock;
+  [ReqRespMethod.DataColumnSidecarsByRange]: DataColumnSidecar;
+  [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecar;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: gloas.SignedExecutionPayloadEnvelope;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: gloas.SignedExecutionPayloadEnvelope;
 
   [ReqRespMethod.LightClientBootstrap]: LightClientBootstrap;
   [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
   [ReqRespMethod.LightClientFinalityUpdate]: LightClientFinalityUpdate;
   [ReqRespMethod.LightClientOptimisticUpdate]: LightClientOptimisticUpdate;
+  [ReqRespMethod.InclusionListsByIndices]: heze.SignedInclusionList;
 };
 
 /** Request SSZ type for each method and ForkName */
@@ -93,16 +108,18 @@ export const requestSszTypeByMethod: (
   [ReqRespMethod.Metadata]: null,
 
   [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
-  [ReqRespMethod.BeaconBlocksByRoot]: ssz.phase0.BeaconBlocksByRootRequest,
-  [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
-  [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(fork, config),
+  [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequestType(fork, config),
+  [ReqRespMethod.BeaconBlocksByHead]: ssz.fulu.BeaconBlocksByHeadRequest,
   [ReqRespMethod.DataColumnSidecarsByRange]: ssz.fulu.DataColumnSidecarsByRangeRequest,
-  [ReqRespMethod.DataColumnSidecarsByRoot]: ssz.fulu.DataColumnSidecarsByRootRequest,
+  [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequestType(config),
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: ExecutionPayloadEnvelopesByRootRequestType(config),
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: ssz.gloas.ExecutionPayloadEnvelopesByRangeRequest,
 
   [ReqRespMethod.LightClientBootstrap]: ssz.Root,
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
   [ReqRespMethod.LightClientFinalityUpdate]: null,
   [ReqRespMethod.LightClientOptimisticUpdate]: null,
+  [ReqRespMethod.InclusionListsByIndices]: ssz.heze.InclusionListsByIndicesRequest,
 });
 
 export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>;
@@ -123,15 +140,17 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
     version === Version.V1 ? ssz.phase0.Metadata : version === Version.V2 ? ssz.altair.Metadata : ssz.fulu.Metadata,
   [ReqRespMethod.BeaconBlocksByRange]: blocksResponseType,
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
-  [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
-  [ReqRespMethod.BlobSidecarsByRoot]: () => ssz.deneb.BlobSidecar,
+  [ReqRespMethod.BeaconBlocksByHead]: (fork) => ssz[fork].SignedBeaconBlock,
   [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientBootstrap,
   [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientUpdate,
   [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientFinalityUpdate,
-  [ReqRespMethod.DataColumnSidecarsByRange]: () => ssz.fulu.DataColumnSidecar,
-  [ReqRespMethod.DataColumnSidecarsByRoot]: () => ssz.fulu.DataColumnSidecar,
+  [ReqRespMethod.DataColumnSidecarsByRange]: (fork) => sszTypesFor(onlyPostFuluFork(fork)).DataColumnSidecar,
+  [ReqRespMethod.DataColumnSidecarsByRoot]: (fork) => sszTypesFor(onlyPostFuluFork(fork)).DataColumnSidecar,
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
+  [ReqRespMethod.InclusionListsByIndices]: () => ssz.heze.SignedInclusionList,
 };
 
 function onlyPostAltairFork(fork: ForkName): ForkPostAltair {
@@ -139,6 +158,13 @@ function onlyPostAltairFork(fork: ForkName): ForkPostAltair {
     return fork;
   }
   throw Error(`Not a post-altair fork ${fork}`);
+}
+
+function onlyPostFuluFork(fork: ForkName): ForkPostFulu {
+  if (isForkPostFulu(fork)) {
+    return fork;
+  }
+  throw Error(`Not a post-fulu fork ${fork}`);
 }
 
 export type RequestTypedContainer = {
@@ -162,6 +188,7 @@ export type IncomingRequestArgs = {
   method: ReqRespMethod;
   req: ReqRespRequest;
   peerId: string;
+  peerClient: string;
 };
 
 export type GetReqRespHandlerFn = (method: ReqRespMethod) => ProtocolHandler;

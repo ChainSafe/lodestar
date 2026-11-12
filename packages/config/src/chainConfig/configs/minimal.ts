@@ -3,7 +3,7 @@ import {fromHex as b} from "@lodestar/utils";
 import {ChainConfig} from "../types.js";
 
 // Minimal config
-// https://github.com/ethereum/consensus-specs/blob/dev/configs/minimal.yaml
+// https://github.com/ethereum/consensus-specs/blob/master/configs/minimal.yaml
 
 export const chainConfig: ChainConfig = {
   // Extends the minimal preset
@@ -53,19 +53,55 @@ export const chainConfig: ChainConfig = {
   // GLOAS
   GLOAS_FORK_VERSION: b("0x07000001"),
   GLOAS_FORK_EPOCH: Infinity,
+  // HEZE
+  HEZE_FORK_VERSION: b("0x08000001"),
+  HEZE_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
-  // [customized] Faster for testing purposes
+  // [customized] Faster for testing purposes (DEPRECATED)
   SECONDS_PER_SLOT: 6,
+  // [customized] 6000 milliseconds, 6 seconds
+  SLOT_DURATION_MS: 6000,
+  // [customized] 6000 milliseconds, 6 seconds
+  SLOT_DURATION_MS_HEZE: 6000,
   // 14 (estimate from Eth1 mainnet)
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256,
+  // [customized] 2**1 (= 2) epochs
+  MIN_BUILDER_WITHDRAWABILITY_DELAY: 2,
   // [customized] higher frequency of committee turnover and faster time to acceptable voluntary exit
   SHARD_COMMITTEE_PERIOD: 64,
   // [customized] process deposits more quickly, but insecure
   ETH1_FOLLOW_DISTANCE: 16,
+  // 67% of `SLOT_DURATION_MS`
+  INCLUSION_LIST_DUE_BPS: 6667,
+  // 1667 basis points, ~17% of SLOT_DURATION_MS
+  PROPOSER_REORG_CUTOFF_BPS: 1667,
+  // 3333 basis points, ~33% of SLOT_DURATION_MS
+  ATTESTATION_DUE_BPS: 3333,
+  // 6667 basis points, ~67% of SLOT_DURATION_MS
+  AGGREGATE_DUE_BPS: 6667,
+
+  // Altair
+  // 3333 basis points, ~33% of SLOT_DURATION_MS
+  SYNC_MESSAGE_DUE_BPS: 3333,
+  // 6667 basis points, ~67% of SLOT_DURATION_MS
+  CONTRIBUTION_DUE_BPS: 6667,
+
+  // 25% of SLOT_DURATION_MS
+  ATTESTATION_DUE_BPS_GLOAS: 2500,
+  // 50% of SLOT_DURATION_MS
+  AGGREGATE_DUE_BPS_GLOAS: 5000,
+  // 25% of SLOT_DURATION_MS
+  SYNC_MESSAGE_DUE_BPS_GLOAS: 2500,
+  // 50% of SLOT_DURATION_MS
+  CONTRIBUTION_DUE_BPS_GLOAS: 5000,
+  // 75% of SLOT_DURATION_MS
+  PAYLOAD_ATTESTATION_DUE_BPS: 7500,
+  // 50% of SLOT_DURATION_MS
+  PAYLOAD_DUE_BPS: 5000,
 
   // Validator cycle
   // ---------------------------------------------------------------
@@ -100,10 +136,26 @@ export const chainConfig: ChainConfig = {
 
   // Networking
   // ---------------------------------------------------------------
-  // [customized] `MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2` (= 272)
+  // 10 * 2**20 (= 10,485,760) bytes, 10 MiB
+  MAX_PAYLOAD_SIZE: 10485760,
+  // 2**10 (= 1,024) blocks
+  MAX_REQUEST_BLOCKS: 1024,
+  // 2**8 (= 256) epochs
+  EPOCHS_PER_SUBNET_SUBSCRIPTION: 256,
+  // [customized] MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2 (= 272) epochs
   MIN_EPOCHS_FOR_BLOCK_REQUESTS: 272,
+  // 2**5 (= 32) slots
+  ATTESTATION_PROPAGATION_SLOT_RANGE: 32,
+  // 500ms
+  MAXIMUM_GOSSIP_CLOCK_DISPARITY: 500,
+  MESSAGE_DOMAIN_INVALID_SNAPPY: b("0x00000000"),
+  MESSAGE_DOMAIN_VALID_SNAPPY: b("0x01000000"),
+  // 2 subnets per node
+  SUBNETS_PER_NODE: 2,
 
   // Deneb
+  // 2**7 (= 128)
+  MAX_REQUEST_BLOCKS_DENEB: 128,
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
   BLOB_SIDECAR_SUBNET_COUNT: 6,
@@ -121,6 +173,14 @@ export const chainConfig: ChainConfig = {
   // MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK_ELECTRA
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 1152,
 
+  // Gloas (EIP-8061)
+  // [customized] 2**4 (= 16)
+  CHURN_LIMIT_QUOTIENT_GLOAS: 16,
+  // [customized] 2**5 (= 32)
+  CONSOLIDATION_CHURN_LIMIT_QUOTIENT: 32,
+  // [customized] 2**7 * 10**9 (= 128,000,000,000)
+  MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS: 128000000000,
+
   // Fulu
   NUMBER_OF_CUSTODY_GROUPS: 128,
   DATA_COLUMN_SIDECAR_SUBNET_COUNT: 128,
@@ -131,8 +191,32 @@ export const chainConfig: ChainConfig = {
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000,
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096,
+  // [customized] 2**12 * 8 * 6,000 (= 196,608,000) milliseconds, ~2.3 days
+  MIN_BLOB_DATA_RETENTION_MS: 196608000,
+
+  // Gloas
+  // 2**7 (= 128) payloads
+  MAX_REQUEST_PAYLOADS: 128,
+  // `2**12` (= 4096 gas)
+  MIN_TRANSACTION_GAS: 4096,
 
   // Blob Scheduling
   // ---------------------------------------------------------------
   BLOB_SCHEDULE: [],
+
+  // Gas Limit Scheduling
+  // ---------------------------------------------------------------
+  GAS_LIMIT_SCHEDULE: [],
+
+  // HEZE
+  // 2**4 (= 16)
+  MAX_REQUEST_INCLUSION_LIST: 16,
+  // 1 slots
+  MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: 1,
+  // 2**13 (=8192)
+  MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST: 8192,
+
+  // Fast Confirmation Rule
+  // ---------------------------------------------------------------
+  CONFIRMATION_BYZANTINE_THRESHOLD: 25,
 };

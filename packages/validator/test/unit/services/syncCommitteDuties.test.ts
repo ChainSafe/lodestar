@@ -1,12 +1,12 @@
-import {SecretKey} from "@chainsafe/blst";
+import {toBufferBE} from "@vekexasia/bigint-buffer2";
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+import {when} from "vitest-when";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/native/blst";
 import {ssz} from "@lodestar/types";
-import {toBufferBE} from "bigint-buffer";
-import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {when} from "vitest-when";
 import {
   SyncCommitteeDutiesService,
   SyncDutyAndProofs,
@@ -195,6 +195,39 @@ describe("SyncCommitteeDutiesService", () => {
     } as typeof dutiesByIndexByPeriodObj);
   });
 
+  it("Should keep duties of other validators if a selection proof fails", async () => {
+    const slot = 1;
+    const duties: routes.validator.SyncDuty[] = [0, 1].map((i) => ({
+      pubkey: pubkeys[i],
+      validatorIndex: indices[i],
+      validatorSyncCommitteeIndices: [7],
+    }));
+    api.validator.getSyncCommitteeDuties.mockResolvedValue(
+      mockApiResponse({data: duties, meta: {executionOptimistic: false}})
+    );
+    api.validator.prepareSyncCommitteeSubnets.mockResolvedValue(mockApiResponse({}));
+    vi.spyOn(validatorStore, "signSyncCommitteeSelectionProof").mockImplementation(async (pubkey) => {
+      if (pubkey === toHexString(pubkeys[0])) throw Error("Remote signer error");
+      return new Uint8Array(96);
+    });
+
+    const clock = new ClockMock();
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+    const dutiesService = new SyncCommitteeDutiesService(
+      altair0Config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      syncingStatusTracker,
+      null
+    );
+
+    await clock.tickEpochFns(0, controller.signal);
+
+    expect((await dutiesService.getDutiesAtSlot(slot)).map(({duty}) => duty)).toEqual([toSyncDutySubnet(duties[1])]);
+  });
+
   it("Should remove signer from sync committee duties", async () => {
     // Reply with some duties
     const duty1: routes.validator.SyncDuty = {
@@ -339,6 +372,79 @@ describe("SyncCommitteeDutiesService", () => {
     ]);
 
     expect(api.validator.prepareSyncCommitteeSubnets).toHaveBeenCalledOnce();
+  });
+
+  it("Should fetch duties with distributed aggregation selection", async () => {
+    // Reply with some duties
+    const slot = 1;
+    const duty: routes.validator.SyncDuty = {
+      pubkey: pubkeys[0],
+      validatorIndex: indices[0],
+      validatorSyncCommitteeIndices: [7],
+    };
+    api.validator.getSyncCommitteeDuties.mockResolvedValue(
+      mockApiResponse({data: [duty], meta: {executionOptimistic: false}})
+    );
+
+    // Accept all subscriptions
+    api.validator.prepareSyncCommitteeSubnets.mockResolvedValue(mockApiResponse({}));
+
+    // Mock distributed validator middleware client selections endpoint
+    // and return a selection proof that passes `is_sync_committee_aggregator` test
+    const aggregatorSelectionProof = Buffer.alloc(1, 0x19);
+    api.validator.submitSyncCommitteeSelections.mockResolvedValue(
+      mockApiResponse({
+        data: [{validatorIndex: indices[0], slot, subcommitteeIndex: 0, selectionProof: aggregatorSelectionProof}],
+      })
+    );
+
+    // Clock will call runDutiesTasks() immediately
+    const clock = new ClockMock();
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+    const dutiesService = new SyncCommitteeDutiesService(
+      altair0Config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      syncingStatusTracker,
+      null,
+      {distributedAggregationSelection: true}
+    );
+
+    // Trigger clock onSlot for slot 0 to fetch duties
+    await clock.tickEpochFns(0, controller.signal);
+
+    // Validator index should be persisted
+    expect(validatorStore.getAllLocalIndices()).toEqual(indices);
+
+    // Get duties for the slot
+    const duties = await dutiesService.getDutiesAtSlot(slot);
+
+    // Verify duties are returned with partial selection proofs
+    expect(duties.length).toBe(1);
+    expect(duties[0].duty.validatorIndex).toBe(indices[0]);
+    expect(duties[0].selectionProofs[0].partialSelectionProof).toBeDefined();
+
+    // Wait for the async DVT task to complete and verify API was called
+    await vi.waitFor(() => {
+      expect(api.validator.submitSyncCommitteeSelections).toHaveBeenCalledOnce();
+    });
+
+    // Must submit partial sync committee selection proof based on duty
+    expect(api.validator.submitSyncCommitteeSelections).toHaveBeenCalledWith(
+      {
+        selections: [
+          expect.objectContaining({
+            validatorIndex: duty.validatorIndex,
+            slot,
+            subcommitteeIndex: 0,
+          }),
+        ],
+      },
+      expect.any(Object)
+    );
+    expect(duties[0].selectionProofs[0].selectionProof).toBe(aggregatorSelectionProof);
   });
 });
 

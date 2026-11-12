@@ -18,10 +18,10 @@ const {UintNum64, Slot, Root, BLSSignature, UintBn64, UintBn256, Bytes32, Bytes4
   primitiveSsz;
 
 // Polynomial commitments
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/polynomial-commitments.md
+// https://github.com/ethereum/consensus-specs/blob/v1.3.0-rc.2/specs/eip4844/polynomial-commitments.md
 
 // Custom types
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/polynomial-commitments.md#custom-types
+// https://github.com/ethereum/consensus-specs/blob/v1.3.0-rc.2/specs/eip4844/polynomial-commitments.md#custom-types
 export const G1Point = Bytes48;
 export const G2Point = Bytes96;
 export const BLSFieldElement = Bytes32;
@@ -31,7 +31,7 @@ export const KZGProof = Bytes48;
 // Beacon chain
 
 // Custom types
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#custom-types
+// https://github.com/ethereum/consensus-specs/blob/v1.3.0-rc.2/specs/eip4844/beacon-chain.md#custom-types
 
 export const Blob = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
 export const Blobs = new ListCompositeType(Blob, MAX_BLOB_COMMITMENTS_PER_BLOCK);
@@ -39,6 +39,7 @@ export const BlindedBlob = Bytes32;
 export const BlindedBlobs = new ListCompositeType(BlindedBlob, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 
 export const VersionedHash = Bytes32;
+export const VersionedHashes = new ListCompositeType(VersionedHash, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 export const KZGProofs = new ListCompositeType(KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 
@@ -62,7 +63,7 @@ export const BlobIdentifier = new ContainerType(
 );
 
 // Beacon Chain types
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#containers
+// https://github.com/ethereum/consensus-specs/blob/v1.3.0-rc.2/specs/eip4844/beacon-chain.md#containers
 
 export const ExecutionPayload = new ContainerType(
   {
@@ -80,6 +81,15 @@ export const ExecutionPayloadHeader = new ContainerType(
     excessBlobGas: UintBn64, // New in DENEB
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
+);
+
+export const NewPayloadRequest = new ContainerType(
+  {
+    executionPayload: ExecutionPayload,
+    versionedHashes: VersionedHashes,
+    parentBeaconBlockRoot: Root,
+  },
+  {typeName: "NewPayloadRequest", jsonCase: "eth2"}
 );
 
 // We have to preserve Fields ordering while changing the type of ExecutionPayload

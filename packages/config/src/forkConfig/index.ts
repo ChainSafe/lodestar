@@ -1,4 +1,5 @@
 import {
+  BASIS_POINTS,
   ForkAll,
   ForkName,
   ForkPostAltair,
@@ -10,7 +11,8 @@ import {
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostDeneb,
-  isForkPostElectra,
+  isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
@@ -84,16 +86,25 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     prevVersion: config.FULU_FORK_VERSION,
     prevForkName: ForkName.fulu,
   };
+  const heze: ForkInfo = {
+    name: ForkName.heze,
+    seq: ForkSeq.heze,
+    epoch: config.HEZE_FORK_EPOCH,
+    version: config.HEZE_FORK_VERSION,
+    prevVersion: config.GLOAS_FORK_VERSION,
+    prevForkName: ForkName.gloas,
+  };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella, deneb, electra, fulu, gloas};
+  const forks = {phase0, altair, bellatrix, capella, deneb, electra, fulu, gloas, heze};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);
   const forksDescendingEpochOrder = Object.values(forks).reverse();
 
   const blobScheduleDescendingEpochOrder = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
+  const gasLimitScheduleDescendingEpochOrder = [...config.GAS_LIMIT_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
 
   const forkBoundariesAscendingEpochOrder: ForkBoundary[] = [
     // Normal hard-forks (phase0, altair, etc.)
@@ -200,8 +211,61 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
 
       return {epoch: config.ELECTRA_FORK_EPOCH, maxBlobsPerBlock: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
     },
-    getMaxRequestBlobSidecars(fork: ForkName): number {
-      return isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS;
+    getScheduledGasLimit(epoch: Epoch): number | undefined {
+      if (epoch < config.GLOAS_FORK_EPOCH) {
+        return undefined;
+      }
+
+      // Find the latest applicable value from gas limit schedule
+      for (const entry of gasLimitScheduleDescendingEpochOrder) {
+        if (epoch >= entry.EPOCH) {
+          return entry.GAS_LIMIT;
+        }
+      }
+
+      return undefined;
+    },
+    getAttestationDueMs(fork: ForkName): number {
+      if (isForkPostGloas(fork)) {
+        return this.getSlotComponentDurationMs(fork, config.ATTESTATION_DUE_BPS_GLOAS);
+      }
+      return this.getSlotComponentDurationMs(fork, config.ATTESTATION_DUE_BPS);
+    },
+    getAggregateDueMs(fork: ForkName): number {
+      if (isForkPostGloas(fork)) {
+        return this.getSlotComponentDurationMs(fork, config.AGGREGATE_DUE_BPS_GLOAS);
+      }
+      return this.getSlotComponentDurationMs(fork, config.AGGREGATE_DUE_BPS);
+    },
+    getSyncMessageDueMs(fork: ForkName): number {
+      if (isForkPostGloas(fork)) {
+        return this.getSlotComponentDurationMs(fork, config.SYNC_MESSAGE_DUE_BPS_GLOAS);
+      }
+      return this.getSlotComponentDurationMs(fork, config.SYNC_MESSAGE_DUE_BPS);
+    },
+    getSyncContributionDueMs(fork: ForkName): number {
+      if (isForkPostGloas(fork)) {
+        return this.getSlotComponentDurationMs(fork, config.CONTRIBUTION_DUE_BPS_GLOAS);
+      }
+      return this.getSlotComponentDurationMs(fork, config.CONTRIBUTION_DUE_BPS);
+    },
+    getProposerReorgCutoffMs(fork: ForkName): number {
+      return this.getSlotComponentDurationMs(fork, config.PROPOSER_REORG_CUTOFF_BPS);
+    },
+    getPayloadDueMs(fork: ForkName): number {
+      return this.getSlotComponentDurationMs(fork, config.PAYLOAD_DUE_BPS);
+    },
+
+    getInclusionListDueMs(fork: ForkName): number {
+      return this.getSlotComponentDurationMs(fork, config.INCLUSION_LIST_DUE_BPS);
+    },
+
+    getSlotDurationMs(fork: ForkName): number {
+      return isForkPostHeze(fork) ? config.SLOT_DURATION_MS_HEZE : config.SLOT_DURATION_MS;
+    },
+
+    getSlotComponentDurationMs(fork: ForkName, basisPoints: number): number {
+      return Math.round((basisPoints * this.getSlotDurationMs(fork)) / BASIS_POINTS);
     },
   };
 }

@@ -1,5 +1,5 @@
-import {fetch} from "@lodestar/utils";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {fetch} from "@lodestar/utils";
 import {HttpClient, RouteDefinitionExtra} from "../../../src/utils/client/index.js";
 import {AnyEndpoint, EmptyRequestCodec, EmptyResponseCodec} from "../../../src/utils/codecs.js";
 import {compileRouteUrlFormatter} from "../../../src/utils/urlFormat.js";

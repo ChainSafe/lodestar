@@ -1,14 +1,13 @@
-import {PublicKey} from "@chainsafe/blst";
 import {ChainForkConfig} from "@lodestar/config";
+import {PublicKey} from "@lodestar/native/blst";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHex, toPrintableUrl} from "@lodestar/utils";
-
 import {externalSignerGetKeys} from "../util/externalSignerClient.js";
 import {LoggerVc} from "../util/index.js";
 import {SignerType, ValidatorStore} from "./validatorStore.js";
 
 export type ExternalSignerOptions = {
-  url?: string;
+  urls?: string[];
   fetch?: boolean;
   fetchInterval?: number;
 };
@@ -26,14 +25,14 @@ export function pollExternalSignerPubkeys(
   opts?: ExternalSignerOptions
 ): void {
   const externalSigner = opts ?? {};
+  const externalSignerUrls = externalSigner.urls ?? [];
 
-  if (!externalSigner.url || !externalSigner.fetch) {
+  if (externalSignerUrls.length === 0 || !externalSigner.fetch) {
     return; // Disabled
   }
 
-  async function fetchExternalSignerPubkeys(): Promise<void> {
+  async function syncSignerPubkeys(externalSignerUrl: string): Promise<void> {
     // External signer URL is already validated earlier
-    const externalSignerUrl = externalSigner.url as string;
     const printableUrl = toPrintableUrl(externalSignerUrl);
 
     try {
@@ -65,11 +64,19 @@ export function pollExternalSignerPubkeys(
     }
   }
 
+  async function fetchExternalSignerPubkeys(): Promise<void> {
+    const promises: Promise<void>[] = [];
+    for (const url of externalSignerUrls) {
+      promises.push(syncSignerPubkeys(url));
+    }
+    await Promise.all(promises);
+  }
+
   const interval = setInterval(
     fetchExternalSignerPubkeys,
     externalSigner.fetchInterval ??
       // Once per epoch by default
-      SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000
+      SLOTS_PER_EPOCH * config.SLOT_DURATION_MS
   );
   signal.addEventListener("abort", () => clearInterval(interval), {once: true});
 }

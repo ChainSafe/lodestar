@@ -74,9 +74,16 @@ export type ExecutionOptimisticAndDependentRootMeta = ValueOf<typeof ExecutionOp
 
 export enum MetaHeader {
   Version = "Eth-Consensus-Version",
+  BlobDataIncluded = "Eth-Blob-Data-Included",
   ConsensusBlockValue = "Eth-Consensus-Block-Value",
   ExecutionPayloadBlinded = "Eth-Execution-Payload-Blinded",
+  ExecutionPayloadIncluded = "Eth-Execution-Payload-Included",
   ExecutionPayloadValue = "Eth-Execution-Payload-Value",
+
+  /* Builder API headers */
+  BuilderUrl = "Eth-Builder-Url",
+  DateMilliseconds = "Date-Milliseconds",
+  TimeoutMs = "X-Timeout-Ms",
 
   /* Lodestar-specific (non-standardized) headers */
   Finalized = "Eth-Consensus-Finalized",

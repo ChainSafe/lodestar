@@ -1,11 +1,12 @@
-import {ApiClient, routes} from "@lodestar/api";
+import {ApiClient} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {computeEpochAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
-import {BLSSignature, CommitteeIndex, Root, Slot, altair} from "@lodestar/types";
+import {ForkName, isForkPostAltair} from "@lodestar/params";
+import {IClock} from "@lodestar/state-transition";
+import {CommitteeIndex, Root, Slot, altair} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
-import {IClock, LoggerVc} from "../util/index.js";
+import {LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
 import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties.js";
@@ -58,44 +59,56 @@ export class SyncCommitteeService {
   }
 
   private runSyncCommitteeTasks = async (slot: Slot, signal: AbortSignal): Promise<void> => {
+    const fork = this.config.getForkName(slot);
+
     try {
       // Before altair fork no need to check duties
-      if (computeEpochAtSlot(slot) < this.config.ALTAIR_FORK_EPOCH) {
+      if (!isForkPostAltair(fork)) {
         return;
       }
 
-      // Fetch info first so a potential delay is absorbed by the sleep() below
+      // An optimistic validator MUST NOT participate in sync committees, since it has not
+      // fully verified the execution payload of the head block it would sign over.
+      // https://github.com/ethereum/consensus-specs/blob/v1.6.1/sync/optimistic.md#participating-in-sync-committees
+      if (this.syncingStatusTracker.isNodeOptimistic() === true) {
+        this.logger.debug("Skipping sync committee duties while node is optimistic", {slot});
+        return;
+      }
+
+      // Fetch info first so a potential delay is absorbed by the sleep() below.
+      // This signs selection proofs, so keep it after the optimistic-node gate above.
       const dutiesAtSlot = await this.dutiesService.getDutiesAtSlot(slot);
       if (dutiesAtSlot.length === 0) {
         return;
       }
 
-      if (this.opts?.distributedAggregationSelection) {
-        // Validator in distributed cluster only has a key share, not the full private key.
-        // The partial selection proofs must be exchanged for combined selection proofs by
-        // calling submitSyncCommitteeSelections on the distributed validator middleware client.
-        // This will run in parallel to other sync committee tasks but must be finished before starting
-        // sync committee contributions as it is required to correctly determine if validator is aggregator
-        // and to produce a ContributionAndProof that can be threshold aggregated by the middleware client.
-        this.runDistributedAggregationSelectionTasks(dutiesAtSlot, slot, signal).catch((e) =>
-          this.logger.error("Error on sync committee aggregation selection", {slot}, e)
-        );
+      // unlike Attestation, SyncCommitteeSignature could be published asap
+      // especially with lodestar, it's very busy at ATTESTATION_DUE_BPS of the slot
+      // see https://github.com/ChainSafe/lodestar/issues/4608
+      const syncMessageDueMs = this.config.getSyncMessageDueMs(fork);
+      await Promise.race([
+        sleep(syncMessageDueMs - this.clock.msFromSlot(slot), signal),
+        this.emitter.waitForBlockSlot(slot),
+      ]);
+      this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSlot(slot) - syncMessageDueMs / 1000);
+
+      const head = await this.getHeadForSyncCommitteeMessage(slot);
+      if (head.executionOptimistic) {
+        this.logger.debug("Skipping sync committee duties while head is optimistic", {slot});
+        return;
       }
 
-      // unlike Attestation, SyncCommitteeSignature could be published asap
-      // especially with lodestar, it's very busy at 1/3 of slot
-      // see https://github.com/ChainSafe/lodestar/issues/4608
-      await Promise.race([sleep(this.clock.msToSlot(slot + 1 / 3), signal), this.emitter.waitForBlockSlot(slot)]);
-      this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSlot(slot + 1 / 3));
-
-      // Step 1. Download, sign and publish an `SyncCommitteeMessage` for each validator.
+      // Step 1. Sign and publish a `SyncCommitteeMessage` for each validator.
       //         Differs from AttestationService, `SyncCommitteeMessage` are equal for all
-      const beaconBlockRoot = await this.produceAndPublishSyncCommittees(slot, dutiesAtSlot);
+      const beaconBlockRoot = await this.produceAndPublishSyncCommittees(fork, slot, head.root, dutiesAtSlot);
 
       // Step 2. If an attestation was produced, make an aggregate.
-      // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
-      await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
-      this.metrics?.syncCommitteeStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+      // First, wait until the `CONTRIBUTION_DUE_BPS` of the slot
+      const syncContributionDueMs = this.config.getSyncContributionDueMs(fork);
+      await sleep(syncContributionDueMs - this.clock.msFromSlot(slot), signal);
+      this.metrics?.syncCommitteeStepCallProduceAggregate.observe(
+        this.clock.secFromSlot(slot) - syncContributionDueMs / 1000
+      );
 
       // await for all so if the Beacon node is overloaded it auto-throttles
       // TODO: This approach is conservative to reduce the node's load, review
@@ -105,9 +118,11 @@ export class SyncCommitteeService {
           if (duties.length === 0) return;
           // Then download, sign and publish a `SignedAggregateAndProof` for each
           // validator that is elected to aggregate for this `slot` and `subcommitteeIndex`.
-          await this.produceAndPublishAggregates(slot, subcommitteeIndex, beaconBlockRoot, duties).catch((e: Error) => {
-            this.logger.error("Error on SyncCommitteeContribution", {slot, index: subcommitteeIndex}, e);
-          });
+          await this.produceAndPublishAggregates(fork, slot, subcommitteeIndex, beaconBlockRoot, duties).catch(
+            (e: Error) => {
+              this.logger.error("Error on SyncCommitteeContribution", {slot, index: subcommitteeIndex}, e);
+            }
+          );
         })
       );
     } catch (e) {
@@ -124,7 +139,12 @@ export class SyncCommitteeService {
    * Only one `SyncCommittee` is downloaded from the BN. It is then signed by each
    * validator and the list of individually-signed `SyncCommittee` objects is returned to the BN.
    */
-  private async produceAndPublishSyncCommittees(slot: Slot, duties: SyncDutyAndProofs[]): Promise<Root> {
+  private async produceAndPublishSyncCommittees(
+    fork: ForkName,
+    slot: Slot,
+    blockRoot: Root,
+    duties: SyncDutyAndProofs[]
+  ): Promise<Root> {
     const logCtx = {slot};
 
     // /eth/v1/beacon/blocks/:blockId/root -> at slot -1
@@ -132,10 +152,6 @@ export class SyncCommitteeService {
     // Produce one attestation data per slot and subcommitteeIndex
     // Spec: the validator should prepare a SyncCommitteeMessage for the previous slot (slot - 1)
     // as soon as they have determined the head block of slot - 1
-
-    const blockRoot: Uint8Array =
-      this.chainHeaderTracker.getCurrentChainHead(slot) ??
-      (await this.api.beacon.getBlockRoot({blockId: "head"})).value().root;
 
     const signatures: altair.SyncCommitteeMessage[] = [];
 
@@ -156,14 +172,15 @@ export class SyncCommitteeService {
     // by default we want to submit SyncCommitteeSignature asap after we receive block
     // provide a delay option just in case any client implementation validate the existence of block in
     // SyncCommitteeSignature gossip validation.
-    const msToOneThirdSlot = this.clock.msToSlot(slot + 1 / 3);
-    const afterBlockDelayMs = 1000 * this.clock.secondsPerSlot * (this.opts?.scAfterBlockDelaySlotFraction ?? 0);
-    const toDelayMs = Math.min(msToOneThirdSlot, afterBlockDelayMs);
+    const syncMessageDueMs = this.config.getSyncMessageDueMs(fork);
+    const msToCutoffTime = syncMessageDueMs - this.clock.msFromSlot(slot);
+    const afterBlockDelayMs = this.clock.getSlotDurationMs(slot) * (this.opts?.scAfterBlockDelaySlotFraction ?? 0);
+    const toDelayMs = Math.min(msToCutoffTime, afterBlockDelayMs);
     if (toDelayMs > 0) {
       await sleep(toDelayMs);
     }
 
-    this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.secFromSlot(slot + 1 / 3));
+    this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.secFromSlot(slot) - syncMessageDueMs / 1000);
 
     if (signatures.length > 0) {
       try {
@@ -178,6 +195,16 @@ export class SyncCommitteeService {
     return blockRoot;
   }
 
+  private async getHeadForSyncCommitteeMessage(slot: Slot): Promise<{root: Root; executionOptimistic: boolean}> {
+    const cachedHead = this.chainHeaderTracker.getCurrentChainHeadData(slot);
+    if (cachedHead) {
+      return cachedHead;
+    }
+
+    const res = await this.api.beacon.getBlockRoot({blockId: "head"});
+    return {root: res.value().root, executionOptimistic: res.meta().executionOptimistic};
+  }
+
   /**
    * Performs the second step of the attesting process: downloading an aggregated `SyncCommittee`,
    * converting it into a `SignedAggregateAndProof` and returning it to the BN.
@@ -189,6 +216,7 @@ export class SyncCommitteeService {
    * returned to the BN.
    */
   private async produceAndPublishAggregates(
+    fork: ForkName,
     slot: Slot,
     subcommitteeIndex: CommitteeIndex,
     beaconBlockRoot: Root,
@@ -223,7 +251,9 @@ export class SyncCommitteeService {
       })
     );
 
-    this.metrics?.syncCommitteeStepCallPublishAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+    this.metrics?.syncCommitteeStepCallPublishAggregate.observe(
+      this.clock.secFromSlot(slot) - this.config.getSyncContributionDueMs(fork) / 1000
+    );
 
     if (signedContributions.length > 0) {
       try {
@@ -234,83 +264,6 @@ export class SyncCommitteeService {
         this.metrics?.publishedSyncCommitteeContribution.inc(signedContributions.length);
       } catch (e) {
         this.logger.error("Error publishing SyncCommitteeContribution", logCtx, e as Error);
-      }
-    }
-  }
-
-  /**
-   * Performs additional sync committee contribution tasks required if validator is part of distributed cluster
-   *
-   * 1. Exchange partial for combined selection proofs
-   * 2. Determine validators that should produce sync committee contribution
-   * 3. Mutate duty objects to set selection proofs for aggregators
-   *
-   * See https://docs.google.com/document/d/1q9jOTPcYQa-3L8luRvQJ-M0eegtba4Nmon3dpO79TMk/mobilebasic
-   */
-  private async runDistributedAggregationSelectionTasks(
-    duties: SyncDutyAndProofs[],
-    slot: number,
-    signal: AbortSignal
-  ): Promise<void> {
-    const partialSelections: routes.validator.SyncCommitteeSelection[] = [];
-
-    for (const {duty, selectionProofs} of duties) {
-      const validatorSelections: routes.validator.SyncCommitteeSelection[] = selectionProofs.map(
-        ({subcommitteeIndex, partialSelectionProof}) => ({
-          validatorIndex: duty.validatorIndex,
-          slot,
-          subcommitteeIndex,
-          selectionProof: partialSelectionProof as BLSSignature,
-        })
-      );
-      partialSelections.push(...validatorSelections);
-    }
-
-    this.logger.debug("Submitting partial sync committee selection proofs", {slot, count: partialSelections.length});
-
-    const res = await Promise.race([
-      this.api.validator.submitSyncCommitteeSelections({selections: partialSelections}),
-      // Exit sync committee contributions flow if there is no response after 2/3 of slot.
-      // This is in contrast to attestations aggregations flow which is already exited at 1/3 of the slot
-      // because for sync committee is not required to resubscribe to subnets as beacon node will assume
-      // validator always aggregates. This allows us to wait until we have to produce sync committee contributions.
-      // Note that the sync committee contributions flow is not explicitly exited but rather will be skipped
-      // due to the fact that calculation of `is_sync_committee_aggregator` in SyncCommitteeDutiesService is not done
-      // and selectionProof is set to null, meaning no validator will be considered an aggregator.
-      sleep(this.clock.msToSlot(slot + 2 / 3), signal),
-    ]);
-
-    if (!res) {
-      throw new Error("Failed to receive combined selection proofs before 2/3 of slot");
-    }
-
-    const combinedSelections = res.value();
-    this.logger.debug("Received combined sync committee selection proofs", {slot, count: combinedSelections.length});
-
-    for (const dutyAndProofs of duties) {
-      const {validatorIndex, subnets} = dutyAndProofs.duty;
-
-      for (const subnet of subnets) {
-        const logCtxValidator = {slot, index: subnet, validatorIndex};
-
-        const combinedSelection = combinedSelections.find(
-          (s) => s.validatorIndex === validatorIndex && s.slot === slot && s.subcommitteeIndex === subnet
-        );
-
-        if (!combinedSelection) {
-          this.logger.warn("Did not receive combined sync committee selection proof", logCtxValidator);
-          continue;
-        }
-
-        const isAggregator = isSyncCommitteeAggregator(combinedSelection.selectionProof);
-
-        if (isAggregator) {
-          const selectionProofObject = dutyAndProofs.selectionProofs.find((p) => p.subcommitteeIndex === subnet);
-          if (selectionProofObject) {
-            // Update selection proof by mutating proof objects in duty object
-            selectionProofObject.selectionProof = combinedSelection.selectionProof;
-          }
-        }
       }
     }
   }

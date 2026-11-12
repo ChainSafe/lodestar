@@ -1,6 +1,6 @@
 import v8 from "node:v8";
-import {RequestError, RequestErrorCode, RespStatus, ResponseError} from "@lodestar/reqresp";
 import {describe, expect, it} from "vitest";
+import {RequestError, RequestErrorCode, RespStatus, ResponseError} from "@lodestar/reqresp";
 import {fromThreadBoundaryError, toThreadBoundaryError} from "../../../src/util/error.js";
 
 function structuredClone<T>(value: T): T {
@@ -9,7 +9,7 @@ function structuredClone<T>(value: T): T {
 
 describe("ThreadBoundaryError", () => {
   it("should clone RequestError through thread boundary", () => {
-    const requestError = new RequestError({code: RequestErrorCode.TTFB_TIMEOUT});
+    const requestError = new RequestError({code: RequestErrorCode.RESP_TIMEOUT});
     const threadBoundaryError = toThreadBoundaryError(requestError);
     const clonedError = structuredClone(threadBoundaryError);
     expect(clonedError.error).toBeNull();

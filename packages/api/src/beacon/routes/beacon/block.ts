@@ -1,13 +1,14 @@
 import {ContainerType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
-  ForkName,
   ForkPostDeneb,
+  ForkPostGloas,
   ForkPreBellatrix,
   ForkPreDeneb,
-  ForkPreElectra,
+  ForkPreGloas,
   isForkPostBellatrix,
   isForkPostDeneb,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
   BeaconBlockBody,
@@ -17,11 +18,13 @@ import {
   SignedBlockContents,
   Slot,
   deneb,
+  gloas,
+  isSignedExecutionPayloadEnvelopeContents,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData, WithVersion} from "../../../utils/codecs.js";
-import {getPostBellatrixForkTypes, toForkName} from "../../../utils/fork.js";
+import {getPostBellatrixForkTypes, getPostGloasForkTypes, toForkName} from "../../../utils/fork.js";
 import {fromHeaders} from "../../../utils/headers.js";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {
@@ -31,6 +34,7 @@ import {
   ExecutionOptimisticFinalizedAndVersionMeta,
   MetaHeader,
 } from "../../../utils/metadata.js";
+import {toBoolean} from "../../../utils/serdes.js";
 import {WireFormat} from "../../../utils/wireFormat.js";
 
 export const BlockHeaderResponseType = new ContainerType({
@@ -58,14 +62,6 @@ export type BlockArgs = {
 };
 
 export enum BroadcastValidation {
-  /**
-  NOTE: The value `none` is not part of the spec. 
-
-  In case a node is configured only with the unknownBlockSync, it needs to know the unknown parent blocks on the network 
-  to initiate the syncing process. Such cases can be covered only if we publish blocks and make sure no gossip validation 
-  is performed on those. But this behavior is not the default.
-  */
-  none = "none",
   gossip = "gossip",
   consensus = "consensus",
   consensusAndEquivocation = "consensus_and_equivocation",
@@ -94,18 +90,6 @@ export type Endpoints = {
     {params: {block_id: string}},
     SignedBlindedBeaconBlock | SignedBeaconBlock<ForkPreBellatrix>,
     ExecutionOptimisticFinalizedAndVersionMeta
-  >;
-
-  /**
-   * Get block attestations
-   * Retrieves attestation included in requested block.
-   */
-  getBlockAttestations: Endpoint<
-    "GET",
-    BlockArgs,
-    {params: {block_id: string}},
-    BeaconBlockBody<ForkPreElectra>["attestations"],
-    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -167,21 +151,23 @@ export type Endpoints = {
    *
    * Returns if the block was validated successfully and has been broadcast. It has also been integrated into the beacon node's database.
    */
-  publishBlock: Endpoint<
-    "POST",
-    {signedBlockContents: SignedBlockContents},
-    {body: unknown; headers: {[MetaHeader.Version]: string}},
-    EmptyResponseData,
-    EmptyMeta
-  >;
-
   publishBlockV2: Endpoint<
     "POST",
     {
       signedBlockContents: SignedBlockContents;
       broadcastValidation?: BroadcastValidation;
+      /**
+       * The url of the winning builder as returned by `produceBlockV4`. The beacon node forwards
+       * the signed block to this builder so it can help disseminate the block and learn that
+       * its bid won without waiting for gossip.
+       */
+      builderUrl?: string;
     },
-    {body: unknown; headers: {[MetaHeader.Version]: string}; query: {broadcast_validation?: string}},
+    {
+      body: unknown;
+      headers: {[MetaHeader.Version]: string; [MetaHeader.BuilderUrl]?: string};
+      query: {broadcast_validation?: string};
+    },
     EmptyResponseData,
     EmptyMeta
   >;
@@ -190,14 +176,6 @@ export type Endpoints = {
    * Publish a signed blinded block by submitting it to the mev relay and patching in the block
    * transactions beacon node gets in response.
    */
-  publishBlindedBlock: Endpoint<
-    "POST",
-    {signedBlindedBlock: SignedBlindedBeaconBlock},
-    {body: unknown; headers: {[MetaHeader.Version]: string}},
-    EmptyResponseData,
-    EmptyMeta
-  >;
-
   publishBlindedBlockV2: Endpoint<
     "POST",
     {
@@ -207,6 +185,59 @@ export type Endpoints = {
     {body: unknown; headers: {[MetaHeader.Version]: string}; query: {broadcast_validation?: string}},
     EmptyResponseData,
     EmptyMeta
+  >;
+
+  /**
+   * Publish signed execution payload envelope.
+   * Instructs the beacon node to broadcast a signed execution payload envelope to the network,
+   * to be gossiped for payload validation. A success response (20x) indicates that the envelope
+   * passed gossip validation and was successfully broadcast onto the network.
+   *
+   * The request body is either a `SignedExecutionPayloadEnvelopeContents` (envelope with blobs
+   * and KZG proofs, stateless flow) or a `SignedExecutionPayloadEnvelope` (stateful flow,
+   * the beacon node attaches blobs and KZG proofs from its block production cache).
+   */
+  publishExecutionPayloadEnvelope: Endpoint<
+    "POST",
+    {
+      signedEnvelopeOrContents: gloas.SignedExecutionPayloadEnvelopeContents | gloas.SignedExecutionPayloadEnvelope;
+      broadcastValidation?: BroadcastValidation;
+    },
+    {
+      body: unknown;
+      headers: {[MetaHeader.Version]: string; [MetaHeader.BlobDataIncluded]: string};
+      query: {broadcast_validation?: string};
+    },
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Publish signed execution payload bid.
+   * Instructs the beacon node to broadcast a signed execution payload bid to the network,
+   * to be gossiped for potential inclusion in block building. The beacon node SHOULD run gossip
+   * validation on the bid before broadcasting it, but MAY skip validation for bids submitted by a
+   * locally configured builder to reduce publishing latency. A success response (20x) indicates
+   * that the bid was successfully broadcast onto the network.
+   */
+  publishExecutionPayloadBid: Endpoint<
+    "POST",
+    {signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Get signed execution payload envelope.
+   * Retrieves signed execution payload envelope for a given block id.
+   */
+  getSignedExecutionPayloadEnvelope: Endpoint<
+    "GET",
+    BlockArgs,
+    {params: {block_id: string}},
+    gloas.SignedExecutionPayloadEnvelope,
+    ExecutionOptimisticFinalizedAndVersionMeta
   >;
 
   /**
@@ -235,18 +266,18 @@ export type Endpoints = {
     "GET",
     BlockArgs & {
       /**
-       * Array of indices for blobs to request for in the specified block.
+       * Array of versioned hashes for blobs to request for in the specified block.
        * Returns all blobs in the block if not specified.
        */
-      indices?: number[];
+      versionedHashes?: string[];
     },
-    {params: {block_id: string}; query: {indices?: number[]}},
+    {params: {block_id: string}; query: {versioned_hashes?: string[]}},
     deneb.Blobs,
     ExecutionOptimisticAndFinalizedMeta
   >;
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+// biome-ignore lint/suspicious/noExplicitAny: Return type has to match multiple routes and we only care about request type here
 const blockIdOnlyReq: RequestCodec<Endpoint<"GET", {blockId: BlockId}, {params: {block_id: string}}, any, any>> = {
   writeReq: ({blockId}) => ({params: {block_id: blockId.toString()}}),
   parseReq: ({params}) => ({blockId: params.block_id}),
@@ -260,7 +291,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: blockIdOnlyReq,
       resp: {
-        data: WithVersion((fork) => ssz[fork].SignedBeaconBlock),
+        data: WithVersion((fork) => sszTypesFor(fork).SignedBeaconBlock),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
@@ -273,15 +304,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           isForkPostBellatrix(fork) ? ssz[fork].SignedBlindedBeaconBlock : ssz[fork].SignedBeaconBlock
         ),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
-      },
-    },
-    getBlockAttestations: {
-      url: "/eth/v1/beacon/blocks/{block_id}/attestations",
-      method: "GET",
-      req: blockIdOnlyReq,
-      resp: {
-        data: ssz.phase0.BeaconBlockBody.fields.attestations,
-        meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
     getBlockAttestationsV2: {
@@ -324,95 +346,25 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
-    publishBlock: {
-      url: "/eth/v1/beacon/blocks",
-      method: "POST",
-      req: {
-        writeReqJson: ({signedBlockContents}) => {
-          const slot = signedBlockContents.signedBlock.message.slot;
-          const fork = config.getForkName(slot);
-
-          return {
-            body: isForkPostDeneb(fork)
-              ? sszTypesFor(fork).SignedBlockContents.toJson(signedBlockContents as SignedBlockContents<ForkPostDeneb>)
-              : sszTypesFor(fork).SignedBeaconBlock.toJson(
-                  signedBlockContents.signedBlock as SignedBeaconBlock<ForkPreDeneb>
-                ),
-            headers: {
-              [MetaHeader.Version]: config.getForkName(slot),
-            },
-          };
-        },
-        parseReqJson: ({body, headers}) => {
-          let forkName: ForkName;
-          // As per spec, version header is optional for JSON requests
-          const versionHeader = fromHeaders(headers, MetaHeader.Version, false);
-          if (versionHeader !== undefined) {
-            forkName = toForkName(versionHeader);
-          } else {
-            // Determine fork from slot in JSON payload
-            forkName = config.getForkName(
-              (body as {signed_block: unknown}).signed_block !== undefined
-                ? (body as {signed_block: SignedBeaconBlock}).signed_block.message.slot
-                : (body as SignedBeaconBlock).message.slot
-            );
-          }
-          return {
-            signedBlockContents: isForkPostDeneb(forkName)
-              ? sszTypesFor(forkName).SignedBlockContents.fromJson(body)
-              : {signedBlock: ssz[forkName].SignedBeaconBlock.fromJson(body)},
-          };
-        },
-        writeReqSsz: ({signedBlockContents}) => {
-          const slot = signedBlockContents.signedBlock.message.slot;
-          const fork = config.getForkName(slot);
-
-          return {
-            body: isForkPostDeneb(fork)
-              ? sszTypesFor(fork).SignedBlockContents.serialize(
-                  signedBlockContents as SignedBlockContents<ForkPostDeneb>
-                )
-              : sszTypesFor(fork).SignedBeaconBlock.serialize(
-                  signedBlockContents.signedBlock as SignedBeaconBlock<ForkPreDeneb>
-                ),
-            headers: {
-              [MetaHeader.Version]: config.getForkName(slot),
-            },
-          };
-        },
-        parseReqSsz: ({body, headers}) => {
-          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
-          return {
-            signedBlockContents: isForkPostDeneb(forkName)
-              ? sszTypesFor(forkName).SignedBlockContents.deserialize(body)
-              : {signedBlock: ssz[forkName].SignedBeaconBlock.deserialize(body)},
-          };
-        },
-        schema: {
-          body: Schema.Object,
-          headers: {[MetaHeader.Version]: Schema.String},
-        },
-      },
-      resp: EmptyResponseCodec,
-      init: {
-        requestWireFormat: WireFormat.ssz,
-      },
-    },
     publishBlockV2: {
       url: "/eth/v2/beacon/blocks",
       method: "POST",
       req: {
-        writeReqJson: ({signedBlockContents, broadcastValidation}) => {
+        writeReqJson: ({signedBlockContents, broadcastValidation, builderUrl}) => {
           const slot = signedBlockContents.signedBlock.message.slot;
           const fork = config.getForkName(slot);
           return {
-            body: isForkPostDeneb(fork)
-              ? sszTypesFor(fork).SignedBlockContents.toJson(signedBlockContents as SignedBlockContents<ForkPostDeneb>)
-              : sszTypesFor(fork).SignedBeaconBlock.toJson(
-                  signedBlockContents.signedBlock as SignedBeaconBlock<ForkPreDeneb>
-                ),
+            body:
+              isForkPostDeneb(fork) && !isForkPostGloas(fork)
+                ? sszTypesFor(fork).SignedBlockContents.toJson(
+                    signedBlockContents as SignedBlockContents<ForkPostDeneb & ForkPreGloas>
+                  )
+                : sszTypesFor(fork).SignedBeaconBlock.toJson(
+                    signedBlockContents.signedBlock as SignedBeaconBlock<ForkPreDeneb | ForkPostGloas>
+                  ),
             headers: {
               [MetaHeader.Version]: fork,
+              ...(builderUrl !== undefined ? {[MetaHeader.BuilderUrl]: builderUrl} : {}),
             },
             query: {broadcast_validation: broadcastValidation},
           };
@@ -420,26 +372,32 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqJson: ({body, headers, query}) => {
           const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlockContents: isForkPostDeneb(forkName)
-              ? sszTypesFor(forkName).SignedBlockContents.fromJson(body)
-              : {signedBlock: ssz[forkName].SignedBeaconBlock.fromJson(body)},
+            signedBlockContents:
+              isForkPostDeneb(forkName) && !isForkPostGloas(forkName)
+                ? sszTypesFor(forkName).SignedBlockContents.fromJson(body)
+                : ({signedBlock: sszTypesFor(forkName).SignedBeaconBlock.fromJson(body)} as SignedBlockContents<
+                    ForkPreDeneb | ForkPostGloas
+                  >),
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
+            builderUrl: fromHeaders(headers, MetaHeader.BuilderUrl, false),
           };
         },
-        writeReqSsz: ({signedBlockContents, broadcastValidation}) => {
+        writeReqSsz: ({signedBlockContents, broadcastValidation, builderUrl}) => {
           const slot = signedBlockContents.signedBlock.message.slot;
           const fork = config.getForkName(slot);
 
           return {
-            body: isForkPostDeneb(fork)
-              ? sszTypesFor(fork).SignedBlockContents.serialize(
-                  signedBlockContents as SignedBlockContents<ForkPostDeneb>
-                )
-              : sszTypesFor(fork).SignedBeaconBlock.serialize(
-                  signedBlockContents.signedBlock as SignedBeaconBlock<ForkPreDeneb>
-                ),
+            body:
+              isForkPostDeneb(fork) && !isForkPostGloas(fork)
+                ? sszTypesFor(fork).SignedBlockContents.serialize(
+                    signedBlockContents as SignedBlockContents<ForkPostDeneb & ForkPreGloas>
+                  )
+                : sszTypesFor(fork).SignedBeaconBlock.serialize(
+                    signedBlockContents.signedBlock as SignedBeaconBlock<ForkPreDeneb | ForkPostGloas>
+                  ),
             headers: {
               [MetaHeader.Version]: fork,
+              ...(builderUrl !== undefined ? {[MetaHeader.BuilderUrl]: builderUrl} : {}),
             },
             query: {broadcast_validation: broadcastValidation},
           };
@@ -447,69 +405,20 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqSsz: ({body, headers, query}) => {
           const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlockContents: isForkPostDeneb(forkName)
-              ? sszTypesFor(forkName).SignedBlockContents.deserialize(body)
-              : {signedBlock: ssz[forkName].SignedBeaconBlock.deserialize(body)},
+            signedBlockContents:
+              isForkPostDeneb(forkName) && !isForkPostGloas(forkName)
+                ? sszTypesFor(forkName).SignedBlockContents.deserialize(body)
+                : ({signedBlock: sszTypesFor(forkName).SignedBeaconBlock.deserialize(body)} as SignedBlockContents<
+                    ForkPreDeneb | ForkPostGloas
+                  >),
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
+            builderUrl: fromHeaders(headers, MetaHeader.BuilderUrl, false),
           };
         },
         schema: {
           body: Schema.Object,
           query: {broadcast_validation: Schema.String},
-          headers: {[MetaHeader.Version]: Schema.String},
-        },
-      },
-      resp: EmptyResponseCodec,
-      init: {
-        requestWireFormat: WireFormat.ssz,
-      },
-    },
-    publishBlindedBlock: {
-      url: "/eth/v1/beacon/blinded_blocks",
-      method: "POST",
-      req: {
-        writeReqJson: ({signedBlindedBlock}) => {
-          const fork = config.getForkName(signedBlindedBlock.message.slot);
-          return {
-            body: getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.toJson(signedBlindedBlock),
-            headers: {
-              [MetaHeader.Version]: fork,
-            },
-          };
-        },
-        parseReqJson: ({body, headers}) => {
-          let fork: ForkName;
-          // As per spec, version header is optional for JSON requests
-          const versionHeader = fromHeaders(headers, MetaHeader.Version, false);
-          if (versionHeader !== undefined) {
-            fork = toForkName(versionHeader);
-          } else {
-            // Determine fork from slot in JSON payload
-            fork = config.getForkName((body as SignedBlindedBeaconBlock).message.slot);
-          }
-
-          return {
-            signedBlindedBlock: getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.fromJson(body),
-          };
-        },
-        writeReqSsz: ({signedBlindedBlock}) => {
-          const fork = config.getForkName(signedBlindedBlock.message.slot);
-          return {
-            body: getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.serialize(signedBlindedBlock),
-            headers: {
-              [MetaHeader.Version]: fork,
-            },
-          };
-        },
-        parseReqSsz: ({body, headers}) => {
-          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
-          return {
-            signedBlindedBlock: getPostBellatrixForkTypes(fork).SignedBlindedBeaconBlock.deserialize(body),
-          };
-        },
-        schema: {
-          body: Schema.Object,
-          headers: {[MetaHeader.Version]: Schema.String},
+          headers: {[MetaHeader.Version]: Schema.String, [MetaHeader.BuilderUrl]: Schema.String},
         },
       },
       resp: EmptyResponseCodec,
@@ -566,6 +475,128 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         requestWireFormat: WireFormat.ssz,
       },
     },
+    publishExecutionPayloadEnvelope: {
+      url: "/eth/v1/beacon/execution_payload_envelopes",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedEnvelopeOrContents, broadcastValidation}) => {
+          const blobDataIncluded = isSignedExecutionPayloadEnvelopeContents(signedEnvelopeOrContents);
+          const fork = config.getForkName(
+            (blobDataIncluded ? signedEnvelopeOrContents.signedExecutionPayloadEnvelope : signedEnvelopeOrContents)
+              .message.payload.slotNumber
+          );
+          return {
+            body: blobDataIncluded
+              ? getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelopeContents.toJson(signedEnvelopeOrContents)
+              : getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelope.toJson(signedEnvelopeOrContents),
+            headers: {
+              [MetaHeader.Version]: fork,
+              [MetaHeader.BlobDataIncluded]: blobDataIncluded.toString(),
+            },
+            query: {broadcast_validation: broadcastValidation},
+          };
+        },
+        parseReqJson: ({body, headers, query}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          const blobDataIncluded = toBoolean(fromHeaders(headers, MetaHeader.BlobDataIncluded));
+          return {
+            signedEnvelopeOrContents: blobDataIncluded
+              ? getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelopeContents.fromJson(body)
+              : getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelope.fromJson(body),
+            broadcastValidation: query.broadcast_validation as BroadcastValidation,
+          };
+        },
+        writeReqSsz: ({signedEnvelopeOrContents, broadcastValidation}) => {
+          const blobDataIncluded = isSignedExecutionPayloadEnvelopeContents(signedEnvelopeOrContents);
+          const fork = config.getForkName(
+            (blobDataIncluded ? signedEnvelopeOrContents.signedExecutionPayloadEnvelope : signedEnvelopeOrContents)
+              .message.payload.slotNumber
+          );
+          return {
+            body: blobDataIncluded
+              ? getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelopeContents.serialize(signedEnvelopeOrContents)
+              : getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelope.serialize(signedEnvelopeOrContents),
+            headers: {
+              [MetaHeader.Version]: fork,
+              [MetaHeader.BlobDataIncluded]: blobDataIncluded.toString(),
+            },
+            query: {broadcast_validation: broadcastValidation},
+          };
+        },
+        parseReqSsz: ({body, headers, query}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          const blobDataIncluded = toBoolean(fromHeaders(headers, MetaHeader.BlobDataIncluded));
+          return {
+            signedEnvelopeOrContents: blobDataIncluded
+              ? getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelopeContents.deserialize(body)
+              : getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelope.deserialize(body),
+            broadcastValidation: query.broadcast_validation as BroadcastValidation,
+          };
+        },
+        schema: {
+          body: Schema.Object,
+          query: {broadcast_validation: Schema.String},
+          headers: {[MetaHeader.Version]: Schema.String, [MetaHeader.BlobDataIncluded]: Schema.String},
+        },
+      },
+      resp: EmptyResponseCodec,
+      init: {
+        requestWireFormat: WireFormat.ssz,
+      },
+    },
+    publishExecutionPayloadBid: {
+      url: "/eth/v1/beacon/execution_payload_bids",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedExecutionPayloadBid}) => {
+          const fork = config.getForkName(signedExecutionPayloadBid.message.slot);
+          return {
+            body: getPostGloasForkTypes(fork).SignedExecutionPayloadBid.toJson(signedExecutionPayloadBid),
+            headers: {
+              [MetaHeader.Version]: fork,
+            },
+          };
+        },
+        parseReqJson: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            signedExecutionPayloadBid: getPostGloasForkTypes(fork).SignedExecutionPayloadBid.fromJson(body),
+          };
+        },
+        writeReqSsz: ({signedExecutionPayloadBid}) => {
+          const fork = config.getForkName(signedExecutionPayloadBid.message.slot);
+          return {
+            body: getPostGloasForkTypes(fork).SignedExecutionPayloadBid.serialize(signedExecutionPayloadBid),
+            headers: {
+              [MetaHeader.Version]: fork,
+            },
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            signedExecutionPayloadBid: getPostGloasForkTypes(fork).SignedExecutionPayloadBid.deserialize(body),
+          };
+        },
+        schema: {
+          body: Schema.Object,
+          headers: {[MetaHeader.Version]: Schema.String},
+        },
+      },
+      resp: EmptyResponseCodec,
+      init: {
+        requestWireFormat: WireFormat.ssz,
+      },
+    },
+    getSignedExecutionPayloadEnvelope: {
+      url: "/eth/v1/beacon/execution_payload_envelopes/{block_id}",
+      method: "GET",
+      req: blockIdOnlyReq,
+      resp: {
+        data: WithVersion((fork) => getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelope),
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
+      },
+    },
     getBlobSidecars: {
       url: "/eth/v1/beacon/blob_sidecars/{block_id}",
       method: "GET",
@@ -583,9 +614,15 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/blobs/{block_id}",
       method: "GET",
       req: {
-        writeReq: ({blockId, indices}) => ({params: {block_id: blockId.toString()}, query: {indices}}),
-        parseReq: ({params, query}) => ({blockId: params.block_id, indices: query.indices}),
-        schema: {params: {block_id: Schema.StringRequired}, query: {indices: Schema.UintArray}},
+        writeReq: ({blockId, versionedHashes}) => ({
+          params: {block_id: blockId.toString()},
+          query: {versioned_hashes: versionedHashes},
+        }),
+        parseReq: ({params, query}) => ({
+          blockId: params.block_id,
+          versionedHashes: query.versioned_hashes?.map((hash) => hash.toLowerCase()),
+        }),
+        schema: {params: {block_id: Schema.StringRequired}, query: {versioned_hashes: Schema.StringArray}},
       },
       resp: {
         data: ssz.deneb.Blobs,

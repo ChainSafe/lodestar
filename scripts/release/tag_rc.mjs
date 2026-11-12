@@ -22,7 +22,7 @@ usage(`
 Publish a Lodestar release candidate.
 
 Usage:
-  yarn release:tag-rc <version> [commit]
+  pnpm release:tag-rc <version> [commit]
 
 See https://github.com/ChainSafe/lodestar/blob/unstable/RELEASE.md#1-create-release-candidate
 `);
@@ -82,7 +82,8 @@ if (!(await confirm(`Do you want to publish ${tagName} at commit ${commit}?`))) 
   process.exit(1);
 }
 
-// Tag commit as `v1.1.0-rc.0` with an annotated tag, push new tag only
+// Tag commit as `v1.1.0-rc.0` with a signed annotated tag, verify locally, push new tag only
 shell(`git checkout ${commit}`);
-shell(`git tag -am "${tagName}" ${tagName}`);
+shell(`git tag -s -a -m "${tagName}" ${tagName}`);
+shell(`git tag -v ${tagName}`);
 shell(`git push ${GIT_REPO_URL} ${tagName}`);

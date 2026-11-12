@@ -111,6 +111,11 @@ export function createFastifyHandler<E extends Endpoint>(
       resp.statusCode = response.status;
     }
 
+    // A 204 No Content response has no body
+    if (resp.statusCode === 204) {
+      return;
+    }
+
     switch (responseWireFormat) {
       case WireFormat.json: {
         const metaHeaders = definition.resp.meta.toHeadersObject(response?.meta);

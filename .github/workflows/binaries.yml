@@ -22,40 +22,38 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             arch: amd64
-          - os: lodestar-arm64-runner
+            zig-target: x86_64-linux-gnu
+          - os: warp-ubuntu-latest-arm64-4x
             platform: linux
             arch: arm64
+            zig-target: aarch64-linux-gnu
     runs-on: ${{matrix.os}}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install arm64 specifics
         if: matrix.arch == 'arm64'
         run: |-
-          # Install missing yarn
-          # See https://github.com/github-early-access/arm-runners-beta/issues/5
-          curl -fsSL --create-dirs -o $HOME/bin/yarn \
-          https://github.com/yarnpkg/yarn/releases/download/v1.22.22/yarn-1.22.22.js
-          chmod +x $HOME/bin/yarn
-          echo "$HOME/bin" >> $GITHUB_PATH
           # Install missing build-essential
           sudo apt-get update
           sudo apt-get install -y build-essential python3
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 22
+          node: 26
+      # The host build links against the runner's glibc. An explicit target uses the same glibc floor as the npm packages.
+      - name: Rebuild native bindings for an explicit target
+        run: zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=mainnet -Dtarget=${{ matrix.zig-target }} --prefix bindings/zig-out
       - run: |
           mkdir -p dist
-          yarn global add @chainsafe/caxa@3.0.6
-          npx caxa -m "Unpacking Lodestar binary, please wait..." -e "dashboards/**" -e "docs/**" -D -p "yarn install --frozen-lockfile --production" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "{{caxa}}/node_modules/.bin/lodestar"
+          pnpm exec caxa -m "Unpacking Lodestar binary, please wait..." -e "dashboards/**" -e "docs/**" -e ".zig-cache/**" -e "zig-pkg/**" -e "bindings/artifacts/**" -D -p "pnpm clean:nm && pnpm install --frozen-lockfile --prod" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "--max-semi-space-size=64" "{{caxa}}/packages/cli/bin/lodestar.js"
           tar -czf "dist/lodestar-${{ inputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz" "lodestar"
       - name: Upload binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: binaries-${{ matrix.os }}
           path: dist/
           if-no-files-found: error
       - name: Sanity check binary
-        uses: actions/github-script@v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             exec.exec('./lodestar dev');

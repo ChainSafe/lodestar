@@ -1,10 +1,10 @@
 **Motivation**
 
-<!-- Why is this PR exists? What are the goals of the pull request? -->
+<!-- Why does this PR exist? What are the goals of the pull request? -->
 
 **Description**
 
-<!-- A clear and concise general description of the changes of this PR commits -->
+<!-- A clear and concise general description of the changes of this pull request. -->
 
 <!-- If applicable, add screenshots to help explain your solution -->
 
@@ -12,11 +12,8 @@
 
 Closes #issue_number
 
-**Steps to test or reproduce**
+**AI Assistance Disclosure**
 
-<!--Steps to reproduce the behavior:
-```sh
-git checkout <feature_branch>
-lodestar beacon --new-flag option1
-```
--->
+- [ ] External Contributors: I have read the [contributor guidelines](https://github.com/ChainSafe/lodestar/blob/unstable/CONTRIBUTING.md#ai-assistance-notice) and disclosed my usage of AI below.
+
+<!-- Insert any AI assistance disclosure here -->

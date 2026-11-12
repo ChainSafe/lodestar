@@ -1,11 +1,11 @@
-import {SecretKey} from "@chainsafe/blst";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
 import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
-import {ForkName} from "@lodestar/params";
+import {SecretKey} from "@lodestar/native/blst";
+import {ForkSeq} from "@lodestar/params";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {AttestationService, AttestationServiceOpts} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
@@ -40,7 +40,6 @@ describe("AttestationService", () => {
     const secretKeys = Array.from({length: 1}, (_, i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
 
-    // vi.mock does not automock all objects in Bun runtime, so we have to explicitly spy on needed methods
     vi.spyOn(validatorStore, "votingPubkeys");
     vi.spyOn(validatorStore, "hasVotingPubkey");
     vi.spyOn(validatorStore, "hasSomeValidators");
@@ -59,21 +58,22 @@ describe("AttestationService", () => {
   });
 
   const electraConfig: Partial<ChainConfig> = {ELECTRA_FORK_EPOCH: 0};
+  const gloasConfig: Partial<ChainConfig> = {GLOAS_FORK_EPOCH: 0};
 
   const testContexts: [string, AttestationServiceOpts, Partial<ChainConfig>][] = [
     ["With default configuration", {}, {}],
     ["With default configuration post-electra", {}, electraConfig],
-    ["With attestation grouping disabled", {disableAttestationGrouping: true}, {}],
-    ["With attestation grouping disabled post-electra", {disableAttestationGrouping: true}, electraConfig],
-    ["With distributed aggregation selection enabled", {distributedAggregationSelection: true}, {}],
+    ["With default configuration post-gloas", {}, gloasConfig],
   ];
 
   for (const [title, opts, chainConfig] of testContexts) {
     describe(title, () => {
       it("Should produce, sign, and publish an attestation + aggregate", async () => {
+        const slot = 0;
         const clock = new ClockMock();
         const config = createChainForkConfig({...defaultConfig, ...chainConfig});
-        const isPostElectra = chainConfig.ELECTRA_FORK_EPOCH === 0;
+        const isPostElectra = config.getForkSeq(slot) >= ForkSeq.electra;
+        const isPostGloas = config.getForkSeq(slot) >= ForkSeq.gloas;
         const attestationService = new AttestationService(
           loggerVc,
           api,
@@ -90,6 +90,9 @@ describe("AttestationService", () => {
         const singleAttestation = isPostElectra
           ? ssz.electra.SingleAttestation.defaultValue()
           : ssz.phase0.Attestation.defaultValue();
+        if (isPostGloas) {
+          singleAttestation.data.index = 1;
+        }
         const aggregatedAttestation = isPostElectra
           ? ssz.electra.Attestation.defaultValue()
           : ssz.phase0.Attestation.defaultValue();
@@ -99,16 +102,15 @@ describe("AttestationService", () => {
         const duties: AttDutyAndProof[] = [
           {
             duty: {
-              slot: 0,
-              committeeIndex: singleAttestation.data.index,
+              slot,
+              committeeIndex: 6,
               committeeLength: 120,
               committeesAtSlot: 120,
               validatorCommitteeIndex: 1,
               validatorIndex: 0,
               pubkey: pubkeys[0],
             },
-            selectionProof: opts.distributedAggregationSelection ? null : ZERO_HASH,
-            partialSelectionProof: opts.distributedAggregationSelection ? ZERO_HASH : undefined,
+            selectionProof: ZERO_HASH,
           },
         ];
 
@@ -126,49 +128,17 @@ describe("AttestationService", () => {
         // Mock beacon's attestation and aggregates endpoints
         api.validator.produceAttestationData.mockResolvedValue(mockApiResponse({data: singleAttestation.data}));
         api.validator.getAggregatedAttestationV2.mockResolvedValue(
-          mockApiResponse({data: aggregatedAttestation, meta: {version: ForkName.electra}})
+          mockApiResponse({data: aggregatedAttestation, meta: {version: config.getForkName(slot)}})
         );
         api.beacon.submitPoolAttestationsV2.mockResolvedValue(mockApiResponse({}));
         api.validator.publishAggregateAndProofsV2.mockResolvedValue(mockApiResponse({}));
-
-        if (opts.distributedAggregationSelection) {
-          // Mock distributed validator middleware client selections endpoint
-          // and return a selection proof that passes `is_aggregator` test
-          api.validator.submitBeaconCommitteeSelections.mockResolvedValue(
-            mockApiResponse({data: [{validatorIndex: 0, slot: 0, selectionProof: Buffer.alloc(1, 0x10)}]})
-          );
-          // Accept all subscriptions
-          api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
-        }
 
         // Mock signing service
         validatorStore.signAttestation.mockResolvedValue(singleAttestation);
         validatorStore.signAggregateAndProof.mockResolvedValue(aggregateAndProof);
 
         // Trigger clock onSlot for slot 0
-        await clock.tickSlotFns(0, controller.signal);
-
-        if (opts.distributedAggregationSelection) {
-          // Must submit partial beacon committee selection proof based on duty
-          const selection: routes.validator.BeaconCommitteeSelection = {
-            validatorIndex: 0,
-            slot: 0,
-            selectionProof: ZERO_HASH,
-          };
-          expect(api.validator.submitBeaconCommitteeSelections).toHaveBeenCalledOnce();
-          expect(api.validator.submitBeaconCommitteeSelections).toHaveBeenCalledWith({selections: [selection]});
-
-          // Must resubscribe validator as aggregator on beacon committee subnet
-          const subscription: routes.validator.BeaconCommitteeSubscription = {
-            validatorIndex: 0,
-            committeeIndex: 0,
-            committeesAtSlot: 120,
-            slot: 0,
-            isAggregator: true,
-          };
-          expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledOnce();
-          expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledWith({subscriptions: [subscription]});
-        }
+        await clock.tickSlotFns(slot, controller.signal);
 
         // Must submit the attestation received through produceAttestationData()
         expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledOnce();
@@ -179,6 +149,18 @@ describe("AttestationService", () => {
         expect(api.validator.publishAggregateAndProofsV2).toHaveBeenCalledWith({
           signedAggregateAndProofs: [aggregateAndProof],
         });
+
+        const expectedIndex = isPostGloas
+          ? singleAttestation.data.index
+          : isPostElectra
+            ? 0
+            : duties[0].duty.committeeIndex;
+
+        expect(validatorStore.signAttestation).toHaveBeenCalledWith(
+          duties[0].duty,
+          expect.objectContaining({index: expectedIndex}),
+          computeEpochAtSlot(slot)
+        );
       });
     });
   }

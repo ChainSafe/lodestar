@@ -1,24 +1,25 @@
-import {SignableENR} from "@chainsafe/enr";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
-import {createBeaconConfig} from "@lodestar/config";
-import {config} from "@lodestar/config/default";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
 import {multiaddr} from "@multiformats/multiaddr";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {SignableENR} from "@chainsafe/enr";
+import {createBeaconConfig} from "@lodestar/config";
+import {config} from "@lodestar/config/default";
+import {testLogger} from "@lodestar/logger/test-utils";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
 import {Network, NetworkInitModules, getReqRespHandlers} from "../../../src/network/index.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../../src/network/options.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {memoOnce} from "../../utils/cache.js";
-import {testLogger} from "../../utils/logger.js";
 import {createNetworkModules, onPeerConnect} from "../../utils/network.js";
 import {generateState, zeroProtoBlock} from "../../utils/state.js";
 
 let port = 9000;
-const mu = "/ip4/127.0.0.1/tcp/0";
+const tcpMu = "/ip4/127.0.0.1/tcp/0";
+const quicMu = "/ip4/127.0.0.1/udp/0/quic-v1";
 
 // https://github.com/ChainSafe/lodestar/issues/5967
 describe.skip("mdns", () => {
@@ -97,7 +98,10 @@ describe.skip("mdns", () => {
 
     const network = await Network.init({
       ...modules,
-      ...(await createNetworkModules(mu, privateKey, {...opts, mdns: true})),
+      ...(await createNetworkModules([quicMu, tcpMu], privateKey, {
+        ...opts,
+        mdns: true,
+      })),
       logger,
     });
 

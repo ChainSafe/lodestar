@@ -1,18 +1,18 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {testLogger} from "@lodestar/logger/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconChain} from "../../src/chain/chain.js";
-import {Eth1ForBlockProductionDisabled} from "../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../src/execution/index.js";
 import {ArchiveMode} from "../../src/index.js";
 import {GossipHandlers, Network, NetworkInitModules, getReqRespHandlers} from "../../src/network/index.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../src/network/options.js";
 import {GetReqRespHandlerFn} from "../../src/network/reqresp/types.js";
 import {getMockedBeaconDb} from "../mocks/mockedBeaconDb.js";
-import {createCachedBeaconStateTest} from "./cachedBeaconState.js";
 import {ClockStatic} from "./clock.js";
-import {testLogger} from "./logger.js";
 import {generateState} from "./state.js";
 
 export type NetworkForTestOpts = {
@@ -39,16 +39,25 @@ export async function getNetworkForTest(
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
       },
     },
-    config
+    config,
+    true
   );
 
   const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
+  pubkeyCache.syncPubkeys(state.validators.getAllReadonlyValues());
+  const cachedState = createCachedBeaconState(
+    state,
+    {
+      config: beaconConfig,
+      pubkeyCache,
+    },
+    {skipSyncPubkeys: true}
+  );
   const db = getMockedBeaconDb();
   const privateKey = await generateKeyPair("secp256k1");
 
   const chain = new BeaconChain(
     {
-      safeSlotsToImportOptimistically: 0,
       archiveStateEpochFrequency: 0,
       suggestedFeeRecipient: "",
       blsVerifyAllMainThread: true,
@@ -62,18 +71,24 @@ export async function getNetworkForTest(
     {
       privateKey,
       config: beaconConfig,
+      pubkeyCache,
       db,
       dataDir: ".",
+      dataColumnDir: "data_columns",
       dbName: ".",
       logger,
       processShutdownCallback: () => {},
       // set genesis time so that we are at ALTAIR_FORK_EPOCH
       // mock timer does not work on worker thread
-      clock: new ClockStatic(startSlot, Math.floor(Date.now() / 1000) - startSlot * beaconConfig.SECONDS_PER_SLOT),
+      clock: new ClockStatic(
+        startSlot,
+        Math.floor(Date.now() / 1000) - startSlot * (beaconConfig.SLOT_DURATION_MS / 1000)
+      ),
       metrics: null,
       validatorMonitor: null,
-      anchorState: createCachedBeaconStateTest(state, beaconConfig),
-      eth1: new Eth1ForBlockProductionDisabled(),
+      anchorState: new BeaconStateView(cachedState),
+      isAnchorStateFinalized: true,
+      earliestAvailableSlot: cachedState.slot,
       executionEngine: new ExecutionEngineDisabled(),
     }
   );
@@ -95,7 +110,7 @@ export async function getNetworkForTest(
       maxPeers: 10,
       targetPeers: 1,
       bootMultiaddrs: [],
-      localMultiaddrs: ["/ip4/0.0.0.0/tcp/0"],
+      localMultiaddrs: ["/ip4/0.0.0.0/udp/0/quic-v1", "/ip4/0.0.0.0/tcp/0"],
       discv5FirstQueryDelayMs: 0,
       discv5: null,
       skipParamsLog: true,

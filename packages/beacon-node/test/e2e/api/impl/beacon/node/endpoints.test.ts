@@ -1,11 +1,11 @@
+import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {ApiClient, getClient} from "@lodestar/api/beacon";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
 import {sleep} from "@lodestar/utils";
-import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
 import {BeaconNode} from "../../../../../../src/node/nodejs.js";
-import {LogLevel, testLogger} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../../utils/node/validator.js";
 
@@ -69,6 +69,10 @@ describe("beacon node api", () => {
           ...chainConfigDef,
           ALTAIR_FORK_EPOCH: 0,
           BELLATRIX_FORK_EPOCH: 0,
+          CAPELLA_FORK_EPOCH: 0,
+          DENEB_FORK_EPOCH: 0,
+          ELECTRA_FORK_EPOCH: 0,
+          FULU_FORK_EPOCH: 0,
         },
         options: {
           sync: {isSingleNode: true},
@@ -96,7 +100,7 @@ describe("beacon node api", () => {
       });
 
       // Give node sometime to communicate with EL
-      await sleep(chainConfigDef.SECONDS_PER_SLOT * 2 * 1000);
+      await sleep(chainConfigDef.SLOT_DURATION_MS * 2);
 
       const res = await clientElOffline.node.getSyncingStatus();
 
@@ -132,7 +136,7 @@ describe("beacon node api", () => {
       });
       clientSyncing = getClient({baseUrl: `http://127.0.0.1:${portSyncing}`}, {config});
       // Must at least wait for one slot else node considers itself synced pre/at genesis
-      await sleep(chainConfigDef.SECONDS_PER_SLOT * 1000);
+      await sleep(chainConfigDef.SLOT_DURATION_MS);
     });
 
     afterAll(async () => {

@@ -5,11 +5,20 @@ import {EpochSlotOpts} from "../interface.js";
  */
 export function formatEpochSlotTime(opts: EpochSlotOpts, now = Date.now()): string {
   const nowSec = now / 1000;
-  const secSinceGenesis = nowSec - opts.genesisTime;
-  const epoch = Math.floor(secSinceGenesis / (opts.slotsPerEpoch * opts.secondsPerSlot));
-  const epochStartSec = opts.genesisTime + epoch * opts.slotsPerEpoch * opts.secondsPerSlot;
-  const secSinceStartEpoch = nowSec - epochStartSec;
-  const slotIndex = Math.floor(secSinceStartEpoch / opts.secondsPerSlot);
-  const slotSec = secSinceStartEpoch % opts.secondsPerSlot;
+  let eraStartSlot = 0;
+  let eraStartSec = opts.genesisTime;
+  let secondsPerSlot = opts.secondsPerSlot;
+  for (const [forkEpoch, forkSecondsPerSlot] of opts.slotDurations ?? []) {
+    const forkSlot = forkEpoch * opts.slotsPerEpoch;
+    const forkSec = eraStartSec + (forkSlot - eraStartSlot) * secondsPerSlot;
+    if (nowSec < forkSec) break;
+    eraStartSlot = forkSlot;
+    eraStartSec = forkSec;
+    secondsPerSlot = forkSecondsPerSlot;
+  }
+  const slot = eraStartSlot + Math.floor((nowSec - eraStartSec) / secondsPerSlot);
+  const epoch = Math.floor(slot / opts.slotsPerEpoch);
+  const slotIndex = slot - epoch * opts.slotsPerEpoch;
+  const slotSec = nowSec - (eraStartSec + (slot - eraStartSlot) * secondsPerSlot);
   return `Eph ${epoch}/${slotIndex} ${slotSec.toFixed(3)}`;
 }

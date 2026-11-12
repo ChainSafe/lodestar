@@ -1,26 +1,67 @@
+import net from "node:net";
+import os from "node:os";
+import {multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CliCommandOptions} from "@lodestar/utils";
-import {multiaddr} from "@multiformats/multiaddr";
 import {YargsError} from "../../util/index.js";
 
 export const defaultListenAddress = "0.0.0.0";
+export const defaultListenAddress6 = "::";
 export const defaultP2pPort = 9000;
+export const defaultQuicPort = 9001;
+
+/** IANA allocates global unicast addresses from 2000::/3 only */
+const globalUnicastIPv6 = new net.BlockList();
+globalUnicastIPv6.addSubnet("2000::", 3, "ipv6");
+
+/** Special-purpose blocks excluded from automatic IPv6 listening (IANA IPv6 Special-Purpose Address Registry) */
+const specialPurposeIPv6 = new net.BlockList();
+specialPurposeIPv6.addSubnet("2001::", 23, "ipv6"); // IETF protocol assignments, includes Teredo
+specialPurposeIPv6.addSubnet("2001:db8::", 32, "ipv6"); // documentation
+specialPurposeIPv6.addSubnet("2002::", 16, "ipv6"); // 6to4
+specialPurposeIPv6.addSubnet("3fff::", 20, "ipv6"); // documentation
+
+/**
+ * discv5 contacts dual-stack peers over IPv6 whenever an IPv6 socket is bound, so binding "::"
+ * on a host without IPv6 connectivity makes every dual-stack bootnode unreachable.
+ * Only bind IPv6 by default if the host has a global unicast IPv6 address.
+ */
+export function hasGlobalIPv6Address(interfaces = os.networkInterfaces()): boolean {
+  for (const addrs of Object.values(interfaces)) {
+    for (const addr of addrs ?? []) {
+      // node 18 returned family as a number, see isLocalMultiAddr
+      if (!String(addr.family).endsWith("6") || addr.internal) continue;
+      const ip = addr.address;
+      if (net.isIPv6(ip) && globalUnicastIPv6.check(ip, "ipv6") && !specialPurposeIPv6.check(ip, "ipv6")) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 export type NetworkArgs = {
   discv5?: boolean;
   listenAddress?: string;
   port?: number;
   discoveryPort?: number;
+  quicPort?: number;
   listenAddress6?: string;
   port6?: number;
   discoveryPort6?: number;
+  quicPort6?: number;
   bootnodes?: string[];
   targetPeers?: number;
   subscribeAllSubnets?: boolean;
   slotsToSubscribeBeforeAggregatorDuty?: number;
+  slotsToSubscribeBeforeProposalDuty?: number;
   disablePeerScoring?: boolean;
+  quic?: boolean;
+  tcp?: boolean;
   mdns?: boolean;
+  directPeers?: string[];
   "network.maxPeers"?: number;
   "network.connectToDiscv5Bootnodes"?: boolean;
   "network.discv5FirstQueryDelayMs"?: number;
@@ -57,48 +98,99 @@ function validateMultiaddrArg<T extends Record<string, string | undefined>>(args
   }
 }
 
-export function parseListenArgs(args: NetworkArgs) {
+export function parseListenArgs(args: NetworkArgs, ipv6Available = hasGlobalIPv6Address()) {
   // If listenAddress is explicitly set, use it
   // If listenAddress6 is not set, use defaultListenAddress
   const listenAddress = args.listenAddress ?? (args.listenAddress6 ? undefined : defaultListenAddress);
   const port = listenAddress ? (args.port ?? defaultP2pPort) : undefined;
-  const discoveryPort = listenAddress ? (args.discoveryPort ?? args.port ?? defaultP2pPort) : undefined;
+  const discoveryPort = listenAddress ? (args.discoveryPort ?? port) : undefined;
+  const quicPort = listenAddress ? (args.quicPort ?? (port !== undefined ? port + 1 : defaultQuicPort)) : undefined;
 
-  // Only use listenAddress6 if it is explicitly set
-  const listenAddress6 = args.listenAddress6;
-  const port6 = listenAddress6 ? (args.port6 ?? defaultP2pPort) : undefined;
-  const discoveryPort6 = listenAddress6 ? (args.discoveryPort6 ?? args.port6 ?? defaultP2pPort) : undefined;
+  // If listenAddress6 is explicitly set, use it
+  // If listenAddress is not set, use defaultListenAddress6 when the host has a global IPv6 address
+  const listenAddress6 =
+    args.listenAddress6 ?? (!args.listenAddress && ipv6Available ? defaultListenAddress6 : undefined);
+  const port6 = listenAddress6 ? (args.port6 ?? args.port ?? defaultP2pPort) : undefined;
+  const discoveryPort6 = listenAddress6 ? (args.discoveryPort6 ?? port6) : undefined;
+  const quicPort6 = listenAddress6
+    ? (args.quicPort6 ?? (port6 !== undefined ? port6 + 1 : defaultQuicPort))
+    : undefined;
 
-  return {listenAddress, port, discoveryPort, listenAddress6, port6, discoveryPort6};
+  return {listenAddress, port, discoveryPort, quicPort, listenAddress6, port6, discoveryPort6, quicPort6};
 }
 
 export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
-  const {listenAddress, port, discoveryPort, listenAddress6, port6, discoveryPort6} = parseListenArgs(args);
+  const {listenAddress, port, discoveryPort, quicPort, listenAddress6, port6, discoveryPort6, quicPort6} =
+    parseListenArgs(args);
+  const quic = args.quic ?? defaultOptions.network.quic;
+  const tcp = args.tcp ?? defaultOptions.network.tcp;
+
+  if (!quic && !tcp) {
+    throw new YargsError("Cannot disable both TCP and QUIC transports");
+  }
+
+  const slotsToSubscribeBeforeProposalDuty =
+    args.slotsToSubscribeBeforeProposalDuty ?? defaultOptions.network.slotsToSubscribeBeforeProposalDuty;
+  if (
+    !Number.isInteger(slotsToSubscribeBeforeProposalDuty) ||
+    slotsToSubscribeBeforeProposalDuty < 0 ||
+    // proposers are only known one epoch ahead (fulu proposer lookahead)
+    slotsToSubscribeBeforeProposalDuty > SLOTS_PER_EPOCH
+  ) {
+    throw new YargsError(
+      `slotsToSubscribeBeforeProposalDuty must be an integer in [0, ${SLOTS_PER_EPOCH}], got ${slotsToSubscribeBeforeProposalDuty}`
+    );
+  }
+
   // validate ip, ip6, ports
   const muArgs = {
     listenAddress: listenAddress ? `/ip4/${listenAddress}` : undefined,
     port: listenAddress ? `/tcp/${port}` : undefined,
     discoveryPort: listenAddress ? `/udp/${discoveryPort}` : undefined,
+    quicPort: listenAddress ? `/udp/${quicPort}/quic-v1` : undefined,
     listenAddress6: listenAddress6 ? `/ip6/${listenAddress6}` : undefined,
     port6: listenAddress6 ? `/tcp/${port6}` : undefined,
     discoveryPort6: listenAddress6 ? `/udp/${discoveryPort6}` : undefined,
+    quicPort6: listenAddress6 ? `/udp/${quicPort6}/quic-v1` : undefined,
   };
 
-  for (const key of [
+  const keysToValidate: (keyof typeof muArgs)[] = [
     "listenAddress",
     "port",
     "discoveryPort",
     "listenAddress6",
     "port6",
     "discoveryPort6",
-  ] as (keyof typeof muArgs)[]) {
+  ];
+
+  if (quic) {
+    keysToValidate.push("quicPort");
+    keysToValidate.push("quicPort6");
+  }
+
+  for (const key of keysToValidate) {
     validateMultiaddrArg(muArgs, key);
   }
 
+  if (quic) {
+    if (discoveryPort !== undefined && quicPort !== undefined && discoveryPort === quicPort) {
+      throw new YargsError(
+        `discoveryPort and quicPort must not collide, both are UDP. Got discoveryPort=${discoveryPort} quicPort=${quicPort}`
+      );
+    }
+    if (discoveryPort6 !== undefined && quicPort6 !== undefined && discoveryPort6 === quicPort6) {
+      throw new YargsError(
+        `discoveryPort6 and quicPort6 must not collide, both are UDP. Got discoveryPort6=${discoveryPort6} quicPort6=${quicPort6}`
+      );
+    }
+  }
+
   const bindMu = listenAddress ? `${muArgs.listenAddress}${muArgs.discoveryPort}` : undefined;
-  const localMu = listenAddress ? `${muArgs.listenAddress}${muArgs.port}` : undefined;
+  const localMu = listenAddress && tcp ? `${muArgs.listenAddress}${muArgs.port}` : undefined;
+  const quicMu = listenAddress && quic ? `${muArgs.listenAddress}${muArgs.quicPort}` : undefined;
   const bindMu6 = listenAddress6 ? `${muArgs.listenAddress6}${muArgs.discoveryPort6}` : undefined;
-  const localMu6 = listenAddress6 ? `${muArgs.listenAddress6}${muArgs.port6}` : undefined;
+  const localMu6 = listenAddress6 && tcp ? `${muArgs.listenAddress6}${muArgs.port6}` : undefined;
+  const quicMu6 = listenAddress6 && quic ? `${muArgs.listenAddress6}${muArgs.quicPort6}` : undefined;
 
   const targetPeers = args.targetPeers;
   const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
@@ -128,17 +220,20 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
             ip6: bindMu6,
           },
           bootEnrs,
-          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+          // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
           enr: undefined as any,
         }
       : null,
     maxPeers: maxPeers ?? defaultOptions.network.maxPeers,
     targetPeers: targetPeers ?? defaultOptions.network.targetPeers,
-    localMultiaddrs: [localMu, localMu6].filter(Boolean) as string[],
+    localMultiaddrs: [quicMu, quicMu6, localMu, localMu6].filter(Boolean) as string[],
     subscribeAllSubnets: args.subscribeAllSubnets,
     slotsToSubscribeBeforeAggregatorDuty:
       args.slotsToSubscribeBeforeAggregatorDuty ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
+    slotsToSubscribeBeforeProposalDuty,
     disablePeerScoring: args.disablePeerScoring,
+    quic,
+    tcp,
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
     dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
@@ -154,6 +249,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     useWorker: args["network.useWorker"],
     maxYoungGenerationSizeMb: args["network.maxYoungGenerationSizeMb"],
     targetGroupPeers: args["network.targetGroupPeers"] ?? defaultOptions.network.targetGroupPeers,
+    directPeers: args.directPeers,
   };
 }
 
@@ -184,13 +280,21 @@ export const options: CliCommandOptions<NetworkArgs> = {
   discoveryPort: {
     description: "The UDP port that discovery will listen on. Defaults to `port`",
     type: "number",
-    defaultDescription: "`port`",
+    defaultDescription: "port",
+    group: "network",
+  },
+
+  quicPort: {
+    description: "The UDP port that QUIC will listen on. Defaults to `port` + 1",
+    type: "number",
+    defaultDescription: "port + 1",
     group: "network",
   },
 
   listenAddress6: {
     type: "string",
     description: "The IPv6 address to listen for p2p UDP and TCP connections",
+    defaultDescription: `${defaultListenAddress6} if the host has a global IPv6 address`,
     group: "network",
   },
 
@@ -205,7 +309,14 @@ export const options: CliCommandOptions<NetworkArgs> = {
   discoveryPort6: {
     description: "The UDP port that discovery will listen on. Defaults to `port6`",
     type: "number",
-    defaultDescription: "`port6`",
+    defaultDescription: "port6",
+    group: "network",
+  },
+
+  quicPort6: {
+    description: "The UDP port that QUIC will listen on. Defaults to `port6` + 1",
+    type: "number",
+    defaultDescription: "port6 + 1",
     group: "network",
   },
 
@@ -242,10 +353,34 @@ export const options: CliCommandOptions<NetworkArgs> = {
     group: "network",
   },
 
+  slotsToSubscribeBeforeProposalDuty: {
+    hidden: true,
+    type: "number",
+    description:
+      "Number of slots before a block proposal of a connected validator to subscribe to all attestation subnets, to pack their single attestations into the block. 0 disables",
+    defaultDescription: String(defaultOptions.network.slotsToSubscribeBeforeProposalDuty),
+    group: "network",
+  },
+
   disablePeerScoring: {
     type: "boolean",
     description: "Disable peer scoring, used for testing on devnets",
     defaultDescription: String(defaultOptions.network.disablePeerScoring === true),
+    group: "network",
+  },
+
+  quic: {
+    type: "boolean",
+    description: "Enable QUIC transport",
+    defaultDescription: String(defaultOptions.network.quic),
+    group: "network",
+  },
+
+  tcp: {
+    hidden: true,
+    type: "boolean",
+    description: "Enable TCP transport",
+    defaultDescription: String(defaultOptions.network.tcp),
     group: "network",
   },
 
@@ -254,6 +389,22 @@ export const options: CliCommandOptions<NetworkArgs> = {
     description: "Enable mdns local peer discovery",
     defaultDescription: String(defaultOptions.network.mdns === true),
     group: "network",
+  },
+
+  directPeers: {
+    type: "array",
+    description:
+      "Direct peers for GossipSub mesh. These peers maintain permanent connections without GRAFT/PRUNE. " +
+      "Supports multiaddr with peer ID (e.g., `/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAmKLhW7...`) " +
+      "or ENR (e.g., `enr:-IS4QHCYrYZbAKWCBRlAy5zzaDZXJBGkcnh4MHcBFZntXNFrdvJjX04jRzjzCBOo...`). " +
+      "Both peers must configure each other as direct peers for the feature to work properly.",
+    defaultDescription: "[]",
+    group: "network",
+    coerce: (args: string[] | undefined) =>
+      (args ?? [])
+        .flatMap((item) => item.split(","))
+        .map((s) => s.trim())
+        .filter(Boolean),
   },
 
   "network.maxPeers": {

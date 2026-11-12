@@ -1,7 +1,7 @@
 import EventEmitter from "node:events";
+import {Mocked, vi} from "vitest";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
-import {Mocked, vi} from "vitest";
 import {IClock} from "../../src/util/clock.js";
 
 /**
@@ -9,6 +9,7 @@ import {IClock} from "../../src/util/clock.js";
  */
 export class ClockStopped extends EventEmitter implements IClock {
   genesisTime = 0;
+  private msIntoSlot = 0;
 
   constructor(private slot: Slot) {
     super();
@@ -57,10 +58,22 @@ export class ClockStopped extends EventEmitter implements IClock {
     return 0;
   }
 
+  /**
+   * Return milliseconds from a slot to either toMs or now.
+   */
+  msFromSlot(): number {
+    return this.msIntoSlot;
+  }
+
   // MOCK Methods
 
   setSlot(slot: Slot): void {
     this.slot = slot;
+  }
+
+  /** Position the stopped clock within the current slot (default 0 = slot start) */
+  setMsIntoSlot(ms: number): void {
+    this.msIntoSlot = ms;
   }
 }
 
@@ -72,9 +85,13 @@ export function getMockedClock(): Mocked<IClock> {
     get currentEpoch() {
       return 0;
     },
-    currentSlotWithGossipDisparity: undefined,
+    currentSlotWithGossipDisparity: vi.fn(),
     isCurrentSlotGivenGossipDisparity: vi.fn(),
     slotWithPastTolerance: vi.fn(),
     secFromSlot: vi.fn(),
+    msFromSlot: vi.fn(),
+    // consumers may subscribe to ClockEvent.slot / ClockEvent.epoch
+    on: vi.fn(),
+    off: vi.fn(),
   } as unknown as Mocked<IClock>;
 }

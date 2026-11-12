@@ -1,7 +1,6 @@
-import {UpdateHeadOpt} from "@lodestar/fork-choice";
-import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ProducedBlockSource} from "@lodestar/types";
 import {BlockSelectionResult} from "../../api/impl/validator/index.js";
+import {InclusionListSource} from "../../chain/blocks/types.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
@@ -73,68 +72,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
 
     // Non-spec'ed
 
-    forkChoice: {
-      findHead: register.histogram<{caller: string}>({
-        name: "beacon_fork_choice_find_head_seconds",
-        help: "Time taken to find head in seconds",
-        buckets: [0.1, 1, 10],
-        labelNames: ["caller"],
-      }),
-      requests: register.gauge({
-        name: "beacon_fork_choice_requests_total",
-        help: "Count of occasions where fork choice has tried to find a head",
-      }),
-      errors: register.gauge<{entrypoint: UpdateHeadOpt}>({
-        name: "beacon_fork_choice_errors_total",
-        help: "Count of occasions where fork choice has returned an error when trying to find a head",
-        labelNames: ["entrypoint"],
-      }),
-      changedHead: register.gauge({
-        name: "beacon_fork_choice_changed_head_total",
-        help: "Count of occasions fork choice has found a new head",
-      }),
-      reorg: register.gauge({
-        name: "beacon_fork_choice_reorg_total",
-        help: "Count of occasions fork choice has switched to a different chain",
-      }),
-      reorgDistance: register.histogram({
-        name: "beacon_fork_choice_reorg_distance",
-        help: "Histogram of re-org distance",
-        // We need high resolution in the low range, since re-orgs are a rare but critical event.
-        // Add buckets up to 100 to capture high depth re-orgs. Above 100 things are going really bad.
-        buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
-      }),
-      votes: register.gauge({
-        name: "beacon_fork_choice_votes_count",
-        help: "Current count of votes in fork choice data structures",
-      }),
-      queuedAttestations: register.gauge({
-        name: "beacon_fork_choice_queued_attestations_count",
-        help: "Count of queued_attestations in fork choice per slot",
-      }),
-      validatedAttestationDatas: register.gauge({
-        name: "beacon_fork_choice_validated_attestation_datas_count",
-        help: "Current count of validatedAttestationDatas in fork choice data structures",
-      }),
-      balancesLength: register.gauge({
-        name: "beacon_fork_choice_balances_length",
-        help: "Current length of balances in fork choice data structures",
-      }),
-      nodes: register.gauge({
-        name: "beacon_fork_choice_nodes_count",
-        help: "Current count of nodes in fork choice data structures",
-      }),
-      indices: register.gauge({
-        name: "beacon_fork_choice_indices_count",
-        help: "Current count of indices in fork choice data structures",
-      }),
-      notReorgedReason: register.counter<{reason: NotReorgedReason}>({
-        name: "beacon_fork_choice_not_reorged_reason_total",
-        help: "Reason why the current head is not re-orged out",
-        labelNames: ["reason"],
-      }),
-    },
-
     parentBlockDistance: register.histogram({
       name: "beacon_imported_block_parent_distance",
       help: "Histogram of distance to parent block of valid imported blocks",
@@ -202,11 +139,35 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Count of cached produced results",
     }),
 
+    builderCircuitBreaker: {
+      active: register.gauge({
+        name: "beacon_builder_circuit_breaker_active",
+        help: "Whether the builder circuit breaker is active (1) causing builder bids to be ignored",
+      }),
+      canonicalBlocks: register.gauge({
+        name: "beacon_builder_circuit_breaker_canonical_blocks",
+        help: "Count of canonical FULL and EMPTY blocks in the fault inspection window",
+      }),
+      fullBlocks: register.gauge({
+        name: "beacon_builder_circuit_breaker_full_blocks",
+        help: "Count of canonical FULL blocks in the fault inspection window",
+      }),
+      emptyBlocks: register.gauge({
+        name: "beacon_builder_circuit_breaker_empty_blocks",
+        help: "Count of canonical EMPTY blocks in the fault inspection window",
+      }),
+    },
+
     blockPayload: {
       payloadAdvancePrepTime: register.histogram({
         name: "beacon_block_payload_prepare_time",
         help: "Time for preparing payload in advance",
         buckets: [0.1, 1, 3, 5, 10],
+      }),
+      executionPayloadEnvelopeProcessingTime: register.histogram({
+        name: "beacon_block_payload_envelope_processing_seconds",
+        help: "Time to process execution payload envelope during block production",
+        buckets: [0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1],
       }),
       payloadFetchedTime: register.histogram<{prepType: PayloadPreparationType}>({
         name: "beacon_block_payload_fetched_time",
@@ -222,6 +183,23 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       payloadFetchErrors: register.gauge({
         name: "beacon_block_payload_errors_total",
         help: "Count of errors while fetching payloads",
+      }),
+    },
+
+    payloadEnvelopeReconstruction: {
+      envelopes: register.counter<{result: "success" | "unavailable" | "mismatch"}>({
+        name: "beacon_payload_envelope_reconstruction_envelopes_total",
+        help: "Archived header envelopes rebuilt from EL bodies, by outcome",
+        labelNames: ["result"],
+      }),
+      mismatchByField: register.counter<{field: "transactions" | "withdrawals" | "blockAccessList"}>({
+        name: "beacon_payload_envelope_reconstruction_mismatch_total",
+        help: "Body root mismatches, by which body differed from the stored root",
+        labelNames: ["field"],
+      }),
+      engineErrors: register.counter({
+        name: "beacon_payload_envelope_reconstruction_engine_errors_total",
+        help: "engine_getPayloadBodiesByHashV2 round-trips that failed while rebuilding envelopes",
       }),
     },
 
@@ -257,26 +235,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_datapromise_blockinput_blobs_notfound_in_getblobs_cache_total",
         help: "Count of blobs that were newly seen and hence in not getblobs cache",
       }),
-      dataPromiseBlobsEngineGetBlobsApiRequests: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_queried_in_getblobs_api_total",
-        help: "Total number of blobs requested to the getblobs api",
-      }),
-      dataPromiseBlobsEngineGetBlobsApiNotNull: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_responded_nonnull_in_getblobs_api_total",
-        help: "Count of successful engine API responses that were not null",
-      }),
-      dataPromiseBlobsEngineGetBlobsApiNull: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_responded_null_in_getblobs_api_total",
-        help: "Count of engine API responses that were null",
-      }),
-      dataPromiseBlobsEngineApiGetBlobsErroredNull: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_errored_as_null_in_getblobs_api_total",
-        help: "Number of responses marked null due to errors in getblobs api",
-      }),
-      dataPromiseBlobsEngineApiGetBlobsUseful: register.gauge({
-        name: "beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total",
-        help: "Count of successful non null engine API responses that were found useful",
-      }),
+
       dataPromiseBlobsFinallyQueriedFromNetwork: register.gauge({
         name: "beacon_datapromise_blockinput_blobs_finally_queried_from_network_total",
         help: "Number of blob requests finally sent to the network",
@@ -351,10 +310,15 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
     },
 
+    // TODO(fulu): check if these and metrics in lodestar.ts for dataColumns should/can be combined or organized together
     peerDas: {
       dataColumnSidecarProcessingRequests: register.counter({
         name: "beacon_data_column_sidecar_processing_requests_total",
         help: "Number of data column sidecars submitted for processing",
+      }),
+      dataColumnSidecarProcessingSkip: register.counter({
+        name: "beacon_data_column_sidecar_processing_skip_total",
+        help: "Number of data column sidecars with processing skipped for gossip",
       }),
       dataColumnSidecarProcessingSuccesses: register.counter({
         name: "beacon_data_column_sidecar_processing_successes_total",
@@ -375,10 +339,22 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Time taken to verify data_column sidecar inclusion proof",
         buckets: [0.002, 0.004, 0.006, 0.008, 0.01, 0.05, 1, 2],
       }),
+      // single verification
+      dataColumnSidecarKzgProofsVerificationTime: register.histogram({
+        name: "beacon_data_column_sidecar_kzg_proofs_verification_seconds",
+        help: "Time taken to verify single data_column sidecar kzg proofs",
+        buckets: [0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.2, 0.5, 1],
+      }),
+      // batch verification
       kzgVerificationDataColumnBatchTime: register.histogram({
         name: "beacon_kzg_verification_data_column_batch_seconds",
         help: "Runtime of batched data column kzg verification",
         buckets: [0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 5],
+      }),
+      getBlobsV2PreAllocationTime: register.histogram({
+        name: "beacon_engine_getBlobsV2_buffer_preallocation_duration_seconds",
+        help: "Runtime for pre-allocating buffers to use during getBlobsV2 calls",
+        buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1],
       }),
       getBlobsV2Requests: register.counter({
         name: "beacon_engine_getBlobsV2_requests_total",
@@ -393,9 +369,13 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Duration of engine_getBlobsV2 requests",
         buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
       }),
-      targetCustodyGroupCount: register.gauge({
-        name: "beacon_target_custody_group_count",
+      custodyGroupCount: register.gauge({
+        name: "beacon_custody_groups",
         help: "Total number of custody groups within a node",
+      }),
+      custodyGroupsBackfilled: register.gauge({
+        name: "beacon_custody_groups_backfilled",
+        help: "Total number of custody groups backfilled by a node",
       }),
       reconstructedColumns: register.counter({
         name: "beacon_data_availability_reconstructed_columns_total",
@@ -422,6 +402,42 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     weakHeadDetected: register.gauge({
       name: "beacon_weak_head_detected_total",
       help: "Detected current head block is weak. May reorg it out when proposing next slot. See proposer boost reorg for more",
+    }),
+
+    // HEZE:EIP-7805
+    inclusionListsReceived: register.counter<{source: InclusionListSource}>({
+      name: "beacon_inclusion_lists_received_total",
+      help: "Total number of received inclusion lists",
+      labelNames: ["source"],
+    }),
+    inclusionListsValid: register.counter<{source: InclusionListSource}>({
+      name: "beacon_inclusion_lists_valid_total",
+      help: "Total number of valid inclusion lists",
+      labelNames: ["source"],
+    }),
+    inclusionListsValidSize: register.counter({
+      name: "beacon_inclusion_lists_valid_size_bytes_total",
+      help: "Total size of valid inclusion lists in bytes",
+    }),
+    inclusionListTransactionsReceived: register.counter<{source: InclusionListSource}>({
+      name: "beacon_inclusion_list_transactions_received_total",
+      help: "Total number of transactions in received inclusion lists",
+      labelNames: ["source"],
+    }),
+    inclusionListsPublished: register.counter({
+      name: "beacon_inclusion_lists_published_total",
+      help: "Total number of published inclusion lists",
+    }),
+    inclusionListsValidationTime: register.histogram<{source: InclusionListSource}>({
+      name: "beacon_inclusion_lists_validation_time_seconds",
+      help: "Time taken to validate inclusion lists",
+      buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5],
+      labelNames: ["source"],
+    }),
+    inclusionListArrivalTime: register.histogram({
+      name: "beacon_inclusion_lists_arrival_time_seconds",
+      help: "Inclusion list arrival time since the beginning of slot",
+      buckets: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
     }),
   };
 }

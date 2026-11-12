@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {expect} from "vitest";
+import {DeeplyAllowMatchers, expect} from "vitest";
 import {apiTokenFileName} from "../../src/cmds/validator/keymanager/server.js";
 import {recursiveLookup} from "../../src/util/index.js";
 
@@ -23,7 +23,11 @@ export function expectDeepEquals<T>(a: T, b: T, message: string): void {
 /**
  * Similar to `expectDeepEquals` but only checks presence of all elements in array, irrespective of their order.
  */
-export function expectDeepEqualsUnordered<T>(a: T[], b: T[], message: string): void {
+export function expectDeepEqualsUnordered<T>(
+  a: DeeplyAllowMatchers<T>[],
+  b: DeeplyAllowMatchers<T>[],
+  message: string
+): void {
   expect(a).toEqualWithMessage(expect.arrayContaining(b), message);
   expect(b).toEqualWithMessage(expect.arrayContaining(a), message);
   expect(a).toHaveLength(b.length);

@@ -1,16 +1,12 @@
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
+import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {
-  BeaconStateAllForks,
-  CachedBeaconStateAllForks,
-  EpochShuffling,
-  Index2PubkeyCache,
-} from "@lodestar/state-transition";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
+import {EpochShuffling, IBeaconStateView} from "@lodestar/state-transition";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
+  DataColumnSidecar,
   Epoch,
   Root,
   RootHex,
@@ -22,50 +18,69 @@ import {
   Wei,
   altair,
   capella,
+  deneb,
+  gloas,
   phase0,
+  rewards,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {IEth1ForBlockProduction} from "../eth1/index.js";
-import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
+import {BuilderApiClient} from "../execution/builder/apiClient.js";
+import {IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
+import {ReconstructMissPolicy} from "../util/execution.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
-import {BlockInput, ImportBlockOpts} from "./blocks/types.js";
+import {IBlockInput} from "./blocks/blockInput/index.js";
+import {ImportBlockOpts, ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
+import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
+import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
+import {ForkChoiceExecutionEngine} from "./forkChoiceExecutionEngine.js";
+import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
-import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
+import {
+  AttestationPool,
+  DeferredVoluntaryExitPool,
+  ExecutionPayloadBidPool,
+  InclusionListStore,
+  OpPool,
+  PayloadAttestationPool,
+  ProposerPreferencesPool,
+  SingleAttestationPool,
+  SyncCommitteeMessagePool,
+  SyncContributionAndProofPool,
+} from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
+import {ProposerTracker} from "./proposerTracker.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
-import {AttestationsRewards} from "./rewards/attestationsRewards.js";
-import {BlockRewards} from "./rewards/blockRewards.js";
-import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 import {
   SeenAggregators,
   SeenAttesters,
   SeenBlockProposers,
   SeenContributionAndProof,
+  SeenExecutionPayloadBids,
+  SeenPayloadAttesters,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
-import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
-import {SeenBlockInputCache} from "./seenCache/seenBlockInput.js";
+import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
+import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPayloadEnvelopeInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
-export {BlockType, type AssembledBlockType};
-export {type ProposerPreparationData};
+export {type AssembledBlockType, BlockType, type ProposerPreparationData};
 export type BlockHash = RootHex;
 
 export type StateGetOpts = {
@@ -85,9 +100,11 @@ export enum FindHeadFnName {
 export interface IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
-  readonly eth1: IEth1ForBlockProduction;
-  readonly executionEngine: IExecutionEngine;
+  earliestAvailableSlot: Slot;
+  readonly executionEngine: ForkChoiceExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
+  readonly builderCircuitBreaker: BuilderCircuitBreaker;
+  readonly builderApiClient: BuilderApiClient;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;
@@ -106,27 +123,35 @@ export interface IBeaconChain {
   readonly regen: IStateRegenerator;
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
-  readonly pubkey2index: PubkeyIndexMap;
-  readonly index2pubkey: Index2PubkeyCache;
+  readonly pubkeyCache: PubkeyCache;
   readonly archiveStore: IArchiveStore;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
+  readonly singleAttestationPool: SingleAttestationPool;
+  readonly proposerTracker: ProposerTracker;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool: SyncContributionAndProofPool;
+  readonly executionPayloadBidPool: ExecutionPayloadBidPool;
+  readonly payloadAttestationPool: PayloadAttestationPool;
+  readonly proposerPreferencesPool: ProposerPreferencesPool;
+  readonly inclusionListStore: InclusionListStore;
   readonly opPool: OpPool;
+  readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
 
   // Gossip seen cache
   readonly seenAttesters: SeenAttesters;
   readonly seenAggregators: SeenAggregators;
+  readonly seenPayloadAttesters: SeenPayloadAttesters;
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
+  readonly seenExecutionPayloadBids: SeenExecutionPayloadBids;
   readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
-  readonly seenBlockInputCache: SeenBlockInputCache;
-  readonly seenGossipBlockInput: SeenGossipBlockInput;
+  readonly seenBlockInputCache: SeenBlockInput;
+  readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 
@@ -140,6 +165,9 @@ export interface IBeaconChain {
   // Cache for serialized objects
   readonly serializedCache: SerializedCache;
 
+  readonly getBlobsTracker: GetBlobsTracker;
+  readonly columnReconstructionTracker: ColumnReconstructionTracker;
+
   readonly opts: IChainOptions;
 
   /** Start the processing of chain and load state from disk and related actions */
@@ -148,6 +176,8 @@ export interface IBeaconChain {
   close(): Promise<void>;
   /** Chain has seen the specified block root or not. The block may not be processed yet, use forkchoice.hasBlock to check it  */
   seenBlock(blockRoot: RootHex): boolean;
+  /** Chain has seen a SignedExecutionPayloadEnvelope for this block root (via seenCache or fork choice FULL variant) */
+  seenPayloadEnvelope(blockRoot: RootHex): boolean;
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   loadFromDisk(): Promise<void>;
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
@@ -155,9 +185,9 @@ export interface IBeaconChain {
 
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean;
 
-  getHeadState(): CachedBeaconStateAllForks;
-  getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
-  getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
+  getHeadState(): IBeaconStateView;
+  getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<IBeaconStateView>;
+  getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<IBeaconStateView>;
 
   getHistoricalStateBySlot(
     slot: Slot
@@ -167,20 +197,22 @@ export interface IBeaconChain {
   getStateBySlot(
     slot: Slot,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
+  ): Promise<{state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null>;
   /** Returns a local state by state root */
   getStateByStateRoot(
     stateRoot: RootHex,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
+  ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
+  /** Return serialized bytes of a persisted checkpoint state */
+  getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null>;
   /** Returns a cached state by checkpoint */
   getStateByCheckpoint(
     checkpoint: CheckpointWithHex
-  ): {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null;
+  ): {state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null;
   /** Return state bytes by checkpoint */
   getStateOrBytesByCheckpoint(
     checkpoint: CheckpointWithHex
-  ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
+  ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
 
   /**
    * Since we can have multiple parallel chains,
@@ -193,34 +225,67 @@ export interface IBeaconChain {
   /**
    * Get local block by root, does not fetch from the network
    */
+  getSerializedBlockByRoot(
+    root: RootHex
+  ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null>;
+  /**
+   * Get local block by root, does not fetch from the network
+   */
   getBlockByRoot(
     root: RootHex
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
+  getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
+  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]>;
+  getSerializedDataColumnSidecars(
+    blockSlot: Slot,
+    blockRootHex: string,
+    indices: number[]
+  ): Promise<(Uint8Array | undefined)[]>;
+  getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
+  getSerializedExecutionPayloadEnvelopes(
+    requests: {blockSlot: Slot; blockRootHex: RootHex}[],
+    onMiss?: ReconstructMissPolicy
+  ): Promise<(Uint8Array | null)[]>;
+  getExecutionPayloadEnvelope(
+    blockSlot: Slot,
+    blockRootHex: string
+  ): Promise<gloas.SignedExecutionPayloadEnvelope | null>;
+  getParentExecutionRequests(parentBlockSlot: Slot, parentBlockRootHex: RootHex): Promise<gloas.ExecutionRequests>;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }>;
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise?: Promise<CommonBlockBody>}): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
     block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
   }>;
 
   /** Process a block until complete */
-  processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;
+  processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void>;
+  processChainSegment(
+    blocks: IBlockInput[],
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
+    opts?: ImportBlockOpts
+  ): Promise<ProcessBlocksResult>;
+
+  /** Process execution payload envelope: verify, import to fork choice, and persist to DB */
+  processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void>;
+
+  /** Produce and publish a proposer slashing from an observed equivocation. Does not throw, only logs errors */
+  processProposerEquivocation(blockSlot: Slot, proposerIndex: ValidatorIndex): void;
 
   getStatus(): Status;
 
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
 
-  /** When proposerBoostReorg is enabled, this is called at slot n-1 to predict the head block to build on if we are proposing at slot n */
-  predictProposerHead(slot: Slot): ProtoBlock;
+  /** When proposerBoostReorg is enabled, predict (as of the current slot) the head block a proposer would build on next slot */
+  predictProposerHead(): ProtoBlock;
 
   /** When proposerBoostReorg is enabled and we are proposing a block, this is called to determine which head block to build on */
   getProposerHead(slot: Slot): ProtoBlock;
@@ -228,17 +293,18 @@ export interface IBeaconChain {
   waitForBlock(slot: Slot, root: RootHex): Promise<boolean>;
 
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
+  /** Track validators that use this node for duties, e.g. by subscribing to attestation subnets */
+  updateAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<void>;
 
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void;
+  persistExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): void;
   persistInvalidStateRoot(
-    preState: CachedBeaconStateAllForks,
-    postState: CachedBeaconStateAllForks,
+    preState: IBeaconStateView,
+    postState: IBeaconStateView,
     block: SignedBeaconBlock
   ): Promise<void>;
-  persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
-  persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
-  /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
-  persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void;
+  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void;
+  persistInvalidSszBytes(type: string, sszBytes: Uint8Array, rootHex: RootHex, suffix?: string): void;
   regenStateForAttestationVerification(
     attEpoch: Epoch,
     shufflingDependentRoot: RootHex,
@@ -250,15 +316,15 @@ export interface IBeaconChain {
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
 
-  getBlockRewards(blockRef: BeaconBlock | BlindedBeaconBlock): Promise<BlockRewards>;
+  getBlockRewards(blockRef: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards>;
   getAttestationsRewards(
     epoch: Epoch,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean; finalized: boolean}>;
+  ): Promise<{rewards: rewards.AttestationsRewards; executionOptimistic: boolean; finalized: boolean}>;
   getSyncCommitteeRewards(
     blockRef: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<SyncCommitteeRewards>;
+  ): Promise<rewards.SyncCommitteeRewards>;
 }
 
 export type SSZObjectType =
@@ -270,6 +336,7 @@ export type SSZObjectType =
   | "syncCommittee"
   | "contributionAndProof";
 
-export type CommonBlockBody = phase0.BeaconBlockBody &
+export type CommonBlockBody = Omit<phase0.BeaconBlockBody, "eth1Data" | "deposits"> &
+  Partial<Pick<phase0.BeaconBlockBody, "eth1Data" | "deposits">> &
   Pick<capella.BeaconBlockBody, "blsToExecutionChanges"> &
   Pick<altair.BeaconBlockBody, "syncAggregate">;

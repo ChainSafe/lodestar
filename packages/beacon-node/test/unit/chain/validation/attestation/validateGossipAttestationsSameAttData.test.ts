@@ -1,8 +1,9 @@
-import {PublicKey, SecretKey} from "@chainsafe/blst";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {PublicKey, SecretKey} from "@lodestar/native/blst";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {SignatureSetType} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {BlsSingleThreadVerifier} from "../../../../../src/chain/bls/singleThread.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";
@@ -56,6 +57,11 @@ describe("validateGossipAttestationsSameAttData", () => {
     return keypair;
   }
 
+  // Build pubkeyCache for test
+  for (let i = 0; i < 10; i++) {
+    pubkeyCache.append(i, getKeypair(i).publicKey.toBytes());
+  }
+
   let chain: IBeaconChain;
   const signingRoot = Buffer.alloc(32, 1);
 
@@ -63,6 +69,7 @@ describe("validateGossipAttestationsSameAttData", () => {
     chain = {
       bls: new BlsSingleThreadVerifier({metrics: null}),
       seenAttesters: new SeenAttesters(),
+      pubkeyCache,
       opts: {
         minSameMessageSignatureSetsToBatch: 2,
       } as IBeaconChain["opts"],
@@ -78,17 +85,19 @@ describe("validateGossipAttestationsSameAttData", () => {
     it(`test case ${testCaseIndex}`, async () => {
       const phase0Results: Promise<Step0Result>[] = [];
       for (const [i, isValid] of phase0Result.entries()) {
+        // Create an indexed signature set
+        let signature = getKeypair(i).secretKey.sign(signingRoot).toBytes();
+        if (isValid && !phase1Result[i]) {
+          // invalid signature - sign with a different key
+          signature = getKeypair(2023).secretKey.sign(signingRoot).toBytes();
+        }
         const signatureSet = {
-          type: SignatureSetType.single,
-          pubkey: getKeypair(i).publicKey,
+          type: SignatureSetType.indexed as const,
+          index: i,
           signingRoot,
-          signature: getKeypair(i).secretKey.sign(signingRoot).toBytes(),
+          signature,
         };
         if (isValid) {
-          if (!phase1Result[i]) {
-            // invalid signature
-            signatureSet.signature = getKeypair(2023).secretKey.sign(signingRoot).toBytes();
-          }
           phase0Results.push(
             Promise.resolve({
               attestation: ssz.phase0.Attestation.defaultValue(),

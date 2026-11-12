@@ -1,18 +1,124 @@
-import {isFetchError} from "@lodestar/utils";
-import {isErrorAborted} from "@lodestar/utils";
-import {IJson, RpcPayload} from "../../eth1/interface.js";
+import {bigIntToBytes, bytesToBigInt, fromHex, fromHexInto, isErrorAborted, isFetchError, toHex} from "@lodestar/utils";
+import {isQueueErrorAborted} from "../../util/queue/errors.js";
+import {ExecutionEngineState, ExecutionPayloadStatus} from "./interface.js";
 import {
   ErrorJsonRpcResponse,
   HttpRpcError,
   IJsonRpcHttpClient,
   JsonRpcHttpClientEvent,
   JsonRpcHttpClientEventEmitter,
-} from "../../eth1/provider/jsonRpcHttpClient.js";
-import {isQueueErrorAborted} from "../../util/queue/errors.js";
-import {ExecutionEngineState, ExecutionPayloadStatus} from "./interface.js";
+} from "./jsonRpcHttpClient.js";
+import {EngineRestError, EngineRestResponseError} from "./restHttpClient.js";
+
+/** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
+export type QUANTITY = string;
+/** DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
+export type DATA = string;
+
+export const rootHexRegex = /^0x[a-fA-F0-9]{64}$/;
+
+export type IJson = string | number | boolean | undefined | IJson[] | {[key: string]: IJson};
+
+export interface RpcPayload<P = IJson[]> {
+  method: string;
+  params: P;
+}
+
+/**
+ * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
+ *
+ * When encoding QUANTITIES (integers, numbers): encode as hex, prefix with “0x”, the most compact representation (slight exception: zero should be represented as “0x0”). Examples:
+ * - 0x41 (65 in decimal)
+ * - 0x400 (1024 in decimal)
+ * - WRONG: 0x (should always have at least one digit - zero is “0x0”)
+ * - WRONG: 0x0400 (no leading zeroes allowed)
+ * - WRONG: ff (must be prefixed 0x)
+ */
+export function numToQuantity(num: number | bigint): QUANTITY {
+  return "0x" + num.toString(16);
+}
+
+/**
+ * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
+ */
+export function quantityToNum(hex: QUANTITY, id = ""): number {
+  const num = parseInt(hex, 16);
+  if (Number.isNaN(num) || num < 0) throw Error(`Invalid hex decimal ${id} '${hex}'`);
+  return num;
+}
+
+/**
+ * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API.
+ * Typesafe fn to convert hex string to bigint. The BigInt constructor param is any
+ */
+export function quantityToBigint(hex: QUANTITY, id = ""): bigint {
+  try {
+    return BigInt(hex);
+  } catch (e) {
+    throw Error(`Invalid hex bigint ${id} '${hex}': ${(e as Error).message}`);
+  }
+}
+
+/**
+ * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API.
+ */
+export function quantityToBytes(hex: QUANTITY): Uint8Array {
+  const bn = quantityToBigint(hex);
+  return bigIntToBytes(bn, 32, "le");
+}
+
+/**
+ * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API.
+ * Compress a 32 ByteVector into a QUANTITY
+ */
+export function bytesToQuantity(bytes: Uint8Array): QUANTITY {
+  const bn = bytesToBigInt(bytes, "le");
+  return numToQuantity(bn);
+}
+
+/**
+ * DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
+ *
+ * When encoding UNFORMATTED DATA (byte arrays, account addresses, hashes, bytecode arrays): encode as hex, prefix with
+ * “0x”, two hex digits per byte. Examples:
+ *
+ * - 0x41 (size 1, “A”)
+ * - 0x004200 (size 3, “\0B\0”)
+ * - 0x (size 0, “”)
+ * - WRONG: 0xf0f0f (must be even number of digits)
+ * - WRONG: 004200 (must be prefixed 0x)
+ */
+export function bytesToData(bytes: Uint8Array): DATA {
+  return toHex(bytes);
+}
+
+/**
+ * DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
+ */
+export function dataToBytes(hex: DATA, fixedLength: number | null): Uint8Array {
+  try {
+    const bytes = fromHex(hex);
+    if (fixedLength != null && bytes.length !== fixedLength) {
+      throw Error(`Wrong data length ${bytes.length} expected ${fixedLength}`);
+    }
+    return bytes;
+  } catch (e) {
+    (e as Error).message = `Invalid hex string: ${(e as Error).message}`;
+    throw e;
+  }
+}
+
+/**
+ * Convert DATA into a preallocated buffer
+ * fromHexInto will throw if buffer's length is not the same as the decoded hex length
+ */
+export function dataIntoBytes(hex: DATA, buffer: Uint8Array): Uint8Array {
+  fromHexInto(hex, buffer);
+  return buffer;
+}
 
 export type JsonRpcBackend = {
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
   readonly handlers: Record<string, (...args: any[]) => any>;
 };
 
@@ -27,7 +133,7 @@ export class ExecutionEngineMockJsonRpcClient implements IJsonRpcHttpClient {
       if (handler === undefined) {
         throw Error(`Unknown method ${payload.method}`);
       }
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
       return handler(...(payload.params as any[])) as R;
     }, payload);
   }
@@ -63,13 +169,15 @@ function getExecutionEngineStateForPayloadStatus(payloadStatus: ExecutionPayload
       return ExecutionEngineState.SYNCED;
 
     case ExecutionPayloadStatus.ELERROR:
-    case ExecutionPayloadStatus.INVALID:
     case ExecutionPayloadStatus.SYNCING:
-    case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
       return ExecutionEngineState.SYNCING;
 
     case ExecutionPayloadStatus.UNAVAILABLE:
       return ExecutionEngineState.OFFLINE;
+
+    case ExecutionPayloadStatus.INVALID:
+    case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
+      return ExecutionEngineState.ONLINE;
 
     default:
       // In case we can't determine the state, we assume it stays in old state
@@ -86,12 +194,21 @@ function getExecutionEngineStateForPayloadError(
     return oldState;
   }
 
+  if (payloadError instanceof EngineRestError && (payloadError.status === 401 || payloadError.status === 403)) {
+    return ExecutionEngineState.AUTH_FAILED;
+  }
+
   // Originally this case was handled with {status: ExecutePayloadStatus.ELERROR}
-  if (payloadError instanceof HttpRpcError || payloadError instanceof ErrorJsonRpcResponse) {
+  if (
+    payloadError instanceof HttpRpcError ||
+    payloadError instanceof ErrorJsonRpcResponse ||
+    payloadError instanceof EngineRestError ||
+    payloadError instanceof EngineRestResponseError
+  ) {
     return ExecutionEngineState.SYNCING;
   }
 
-  if (payloadError && isFetchError(payloadError) && HTTP_FATAL_ERROR_CODES.includes(payloadError.code)) {
+  if (isFetchError(payloadError) && HTTP_FATAL_ERROR_CODES.includes(payloadError.code)) {
     return ExecutionEngineState.OFFLINE;
   }
 

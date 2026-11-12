@@ -1,28 +1,39 @@
 import {setMaxListeners} from "node:events";
-import {Registry} from "prom-client";
-
-import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {PrivateKey} from "@libp2p/interface";
+import {Registry} from "prom-client";
+import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {phase0} from "@lodestar/types";
-import {sleep} from "@lodestar/utils";
+import {
+  init as initNativeMetrics,
+  registerLocalValidator as registerNativeLocalValidator,
+  scrapeMetrics as scrapeNativeMetrics,
+  unregisterLocalValidator as unregisterNativeLocalValidator,
+} from "@lodestar/native/metrics";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
+import {ZERO_HASH_HEX} from "@lodestar/params";
+import {
+  IBeaconStateView,
+  computeStartSlotAtEpoch,
+  isStatePostBellatrix,
+  isStatePostGloas,
+} from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
+import {defer, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-
 import {BeaconRestApiServer, getApi} from "../api/index.js";
+import {getDataColumnSidecarsMinEpoch} from "../chain/archiveStore/utils/archiveBlocks.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
 import {IBeaconDb} from "../db/index.js";
-import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
 import {HttpMetricsServer, Metrics, createMetrics, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
 import {Network, getReqRespHandlers} from "../network/index.js";
-import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {Clock} from "../util/clock.js";
+import {startDeferredVoluntaryExitPublisher} from "./deferredVoluntaryExitPublisher.js";
 import {runNodeNotifier} from "./notifier.js";
 import {IBeaconNodeOptions} from "./options.js";
 
@@ -38,7 +49,6 @@ export type BeaconNodeModules = {
   chain: IBeaconChain;
   api: BeaconApiMethods;
   sync: IBeaconSync;
-  backfillSync: BackfillSync | null;
   metricsServer: HttpMetricsServer | null;
   monitoring: MonitoringService | null;
   restApi?: BeaconRestApiServer;
@@ -48,14 +58,17 @@ export type BeaconNodeModules = {
 export type BeaconNodeInitModules = {
   opts: IBeaconNodeOptions;
   config: BeaconConfig;
+  pubkeyCache: PubkeyCache;
   db: IBeaconDb;
   logger: LoggerNode;
   processShutdownCallback: ProcessShutdownCallback;
   privateKey: PrivateKey;
   dataDir: string;
+  dataColumnDir: string;
   peerStoreDir?: string;
-  anchorState: BeaconStateAllForks;
-  wsCheckpoint?: phase0.Checkpoint;
+  anchorState: IBeaconStateView;
+  isAnchorStateFinalized: boolean;
+  earliestAvailableSlot: Slot;
   metricsRegistries?: Registry[];
 };
 
@@ -67,9 +80,7 @@ export enum BeaconNodeStatus {
 
 enum LoggerModule {
   api = "api",
-  backfill = "backfill",
   chain = "chain",
-  eth1 = "eth1",
   execution = "execution",
   metrics = "metrics",
   monitoring = "monitoring",
@@ -103,10 +114,10 @@ export class BeaconNode {
   api: BeaconApiMethods;
   restApi?: BeaconRestApiServer;
   sync: IBeaconSync;
-  backfillSync: BackfillSync | null;
 
   status: BeaconNodeStatus;
   private controller?: AbortController;
+  private closePromise: Promise<void> | undefined;
 
   constructor({
     opts,
@@ -121,7 +132,6 @@ export class BeaconNode {
     api,
     restApi,
     sync,
-    backfillSync,
     controller,
   }: BeaconNodeModules) {
     this.opts = opts;
@@ -136,7 +146,6 @@ export class BeaconNode {
     this.restApi = restApi;
     this.network = network;
     this.sync = sync;
-    this.backfillSync = backfillSync;
     this.controller = controller;
 
     this.status = BeaconNodeStatus.started;
@@ -149,14 +158,17 @@ export class BeaconNode {
   static async init<T extends BeaconNode = BeaconNode>({
     opts,
     config,
+    pubkeyCache,
     db,
     logger,
     processShutdownCallback,
     privateKey,
     dataDir,
+    dataColumnDir,
     peerStoreDir,
     anchorState,
-    wsCheckpoint,
+    isAnchorStateFinalized,
+    earliestAvailableSlot,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
     if (hasher.name !== "hashtree") {
@@ -175,10 +187,16 @@ export class BeaconNode {
       // monitoring relies on metrics data
       opts.monitoring.endpoint
     ) {
-      metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries);
+      if (opts.chain.nativeStateTransition) {
+        initNativeMetrics();
+      }
+
+      metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries, {
+        includeStateTransitionMetrics: !opts.chain.nativeStateTransition,
+      });
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
-      db.setMetrics(metrics.db);
+      db.setMetrics(metrics.db, metrics.flatFileStore);
       signal.addEventListener("abort", metrics.close, {once: true});
     }
 
@@ -189,15 +207,45 @@ export class BeaconNode {
             config,
             anchorState.genesisTime,
             logger.child({module: LoggerModule.vmon}),
-            opts.validatorMonitor
+            opts.validatorMonitor,
+            opts.chain.nativeStateTransition
+              ? {
+                  registerLocalValidator: registerNativeLocalValidator,
+                  unregisterLocalValidator: unregisterNativeLocalValidator,
+                }
+              : null
           )
         : null;
 
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
 
+    // Before any lookup into the legacy column buckets, which can be slow until compacted
+    const columnsMinEpoch =
+      opts.chain.archiveDataEpochs === Infinity
+        ? null
+        : getDataColumnSidecarsMinEpoch(config, clock.currentEpoch, opts.chain.archiveDataEpochs);
+    await db.compactLegacyDataColumns(
+      columnsMinEpoch !== null && columnsMinEpoch >= config.FULU_FORK_EPOCH
+        ? computeStartSlotAtEpoch(columnsMinEpoch)
+        : 0
+    );
+
+    await db.init();
+
     // Prune hot db repos
     // TODO: Should this call be awaited?
     await db.pruneHotDb();
+
+    // Delete deprecated eth1 data to free up disk space for users
+    logger.debug("Deleting deprecated eth1 data from database");
+    const startTime = Date.now();
+    db.deleteDeprecatedEth1Data()
+      .then(() => {
+        logger.debug("Deleted deprecated eth1 data", {durationMs: Date.now() - startTime});
+      })
+      .catch((e) => {
+        logger.error("Failed to delete deprecated eth1 data", {}, e);
+      });
 
     const monitoring = opts.monitoring.endpoint
       ? new MonitoringService(
@@ -207,11 +255,30 @@ export class BeaconNode {
         )
       : null;
 
+    let executionEngineOpts = opts.executionEngine;
+    if (opts.executionEngine.mode === "mock") {
+      const latestEth1BlockHash =
+        isStatePostBellatrix(anchorState) && anchorState.isExecutionStateType
+          ? isStatePostGloas(anchorState)
+            ? toRootHex(anchorState.latestBlockHash)
+            : toRootHex(anchorState.latestExecutionPayloadHeader.blockHash)
+          : undefined;
+      executionEngineOpts = {
+        ...opts.executionEngine,
+        genesisBlockHash: ZERO_HASH_HEX,
+        eth1BlockHash: opts.executionEngine.eth1BlockHash ?? latestEth1BlockHash,
+        genesisTime: anchorState.genesisTime,
+        config,
+      };
+    }
+
     const chain = new BeaconChain(opts.chain, {
       privateKey,
       config,
       clock,
+      pubkeyCache,
       dataDir,
+      dataColumnDir,
       db,
       dbName: opts.db.name,
       logger: logger.child({module: LoggerModule.chain}),
@@ -219,14 +286,9 @@ export class BeaconNode {
       metrics,
       validatorMonitor,
       anchorState,
-      eth1: initializeEth1ForBlockProduction(opts.eth1, {
-        config,
-        db,
-        metrics,
-        logger: logger.child({module: LoggerModule.eth1}),
-        signal,
-      }),
-      executionEngine: initializeExecutionEngine(opts.executionEngine, {
+      isAnchorStateFinalized,
+      earliestAvailableSlot,
+      executionEngine: initializeExecutionEngine(executionEngineOpts, {
         metrics,
         signal,
         logger: logger.child({module: LoggerModule.execution}),
@@ -234,6 +296,12 @@ export class BeaconNode {
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
         : undefined,
+      builderApiClientOpts: {
+        timeout: opts.executionBuilder.timeout,
+        bidDeadline: opts.executionBuilder.bidDeadline,
+        // Sent with all builder api requests, unless the node runs in private mode
+        userAgent: opts.executionBuilder.userAgent,
+      },
     });
 
     // Load persisted data from disk to in-memory caches
@@ -259,24 +327,8 @@ export class BeaconNode {
       chain,
       metrics,
       network,
-      wsCheckpoint,
       logger: logger.child({module: LoggerModule.sync}),
     });
-
-    const backfillSync =
-      opts.sync.backfillBatchSize > 0
-        ? await BackfillSync.init(opts.sync, {
-            config,
-            db,
-            chain,
-            metrics,
-            network,
-            wsCheckpoint,
-            anchorState,
-            logger: logger.child({module: LoggerModule.backfill}),
-            signal,
-          })
-        : null;
 
     const api = getApi(opts.api, {
       config,
@@ -292,7 +344,17 @@ export class BeaconNode {
     const metricsServer = opts.metrics.enabled
       ? await getHttpMetricsServer(opts.metrics, {
           register: (metrics as Metrics).register,
-          getOtherMetrics: async () => Promise.all([network.scrapeMetrics(), chain.archiveStore.scrapeMetrics()]),
+          getOtherMetrics: async () => {
+            const otherMetrics = await Promise.all([network.scrapeMetrics(), chain.archiveStore.scrapeMetrics()]);
+            if (opts.chain.nativeStateTransition) {
+              try {
+                otherMetrics.push(scrapeNativeMetrics());
+              } catch (e) {
+                logger.warn("Failed to scrape native state-transition metrics", {}, e as Error);
+              }
+            }
+            return otherMetrics;
+          },
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : null;
@@ -310,6 +372,8 @@ export class BeaconNode {
 
     void runNodeNotifier({network, chain, sync, config, logger, signal});
 
+    startDeferredVoluntaryExitPublisher({chain, network, logger, signal});
+
     return new BeaconNode({
       opts,
       config,
@@ -323,7 +387,6 @@ export class BeaconNode {
       api,
       restApi,
       sync,
-      backfillSync,
       controller,
     }) as T;
   }
@@ -331,21 +394,40 @@ export class BeaconNode {
   /**
    * Stop beacon node and its sub-components.
    */
-  async close(): Promise<void> {
-    if (this.status === BeaconNodeStatus.started) {
-      this.status = BeaconNodeStatus.closing;
-      this.sync.close();
-      this.backfillSync?.close();
-      if (this.restApi) await this.restApi.close();
-      await this.network.close();
-      if (this.metricsServer) await this.metricsServer.close();
-      if (this.monitoring) this.monitoring.close();
-      await this.chain.persistToDisk();
-      await this.chain.close();
-      if (this.controller) this.controller.abort();
-      await sleep(DELAY_BEFORE_CLOSING_DB_MS);
-      await this.db.close();
-      this.status = BeaconNodeStatus.closed;
+  close(): Promise<void> {
+    if (this.closePromise !== undefined) return this.closePromise;
+    const completion = defer<void>();
+    this.closePromise = completion.promise;
+    this.status = BeaconNodeStatus.closing;
+    void this.closeInternal().then(completion.resolve, completion.reject);
+    return this.closePromise;
+  }
+
+  private async closeInternal(): Promise<void> {
+    const errors: unknown[] = [];
+    for (const cleanup of [
+      () => this.sync.close(),
+      () => this.restApi?.close(),
+      () => this.network.close(),
+      () => this.metricsServer?.close(),
+      () => this.monitoring?.close(),
+      () => this.chain.persistToDisk(),
+      () => this.chain.close(),
+      // Abort signal last: close() calls above clear intervals/timeouts so no new
+      // operations get scheduled. If we aborted first, a still-pending interval could
+      // fire and schedule a new operation after abort, leaving it stuck and delaying shutdown.
+      () => this.controller?.abort(),
+      () => sleep(DELAY_BEFORE_CLOSING_DB_MS),
+      () => this.db.close(),
+    ]) {
+      try {
+        await cleanup();
+      } catch (error) {
+        errors.push(error);
+      }
     }
+    this.status = BeaconNodeStatus.closed;
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) throw new AggregateError(errors, "Beacon node cleanup failed");
   }
 }

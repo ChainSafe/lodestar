@@ -1,28 +1,44 @@
-import {fromHexString} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
-import {EventData, EventType} from "@lodestar/api/lib/beacon/routes/events.js";
-import {ChainConfig} from "@lodestar/config";
-import {config} from "@lodestar/config/default";
-import {TimestampFormatCode} from "@lodestar/logger";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {phase0} from "@lodestar/types";
 import {afterEach, describe, it, vi} from "vitest";
-import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
+import {routes} from "@lodestar/api";
+import {ChainConfig} from "@lodestar/config";
+import {TimestampFormatCode} from "@lodestar/logger";
+import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {gloas} from "@lodestar/types";
+import {BlockInputNoData} from "../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/index.js";
+import {ChainEvent} from "../../../src/chain/emitter.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
-import {ChainEvent} from "../../../src/chain/index.js";
-import {NetworkEvent} from "../../../src/network/index.js";
+import {INTEROP_BLOCK_HASH} from "../../../src/node/utils/interop/state.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
-import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 
-describe("sync / unknown block sync", () => {
-  vi.setConfig({testTimeout: 40_000});
+describe("sync / unknown block sync thru gloas", () => {
+  vi.setConfig({testTimeout: 90_000});
 
   const validatorCount = 8;
-  const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
-    SECONDS_PER_SLOT: 2,
+  const ELECTRA_FORK_EPOCH = 0;
+  const FULU_FORK_EPOCH = 0;
+  const GLOAS_FORK_EPOCH = 1;
+  const SLOT_DURATION_MS = 2000;
+  const testParams: Partial<ChainConfig> = {
+    SLOT_DURATION_MS,
+    ALTAIR_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    BELLATRIX_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    CAPELLA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    DENEB_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    ELECTRA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    FULU_FORK_EPOCH: FULU_FORK_EPOCH,
+    GLOAS_FORK_EPOCH: GLOAS_FORK_EPOCH,
+    BLOB_SCHEDULE: [
+      {
+        EPOCH: GLOAS_FORK_EPOCH,
+        MAX_BLOBS_PER_BLOCK: 3,
+      },
+    ],
   };
 
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
@@ -33,34 +49,53 @@ describe("sync / unknown block sync", () => {
     }
   });
 
-  const testCases: {id: string; event: NetworkEvent}[] = [
+  const testCases: {id: string; event: ChainEvent; expectsPayloadImport: boolean}[] = [
     {
       id: "should do an unknown block parent sync from another BN",
-      event: NetworkEvent.unknownBlockParent,
+      event: ChainEvent.blockUnknownParent,
+      expectsPayloadImport: false,
     },
     {
       id: "should do an unknown block sync from another BN",
-      event: NetworkEvent.unknownBlock,
+      event: ChainEvent.unknownBlockRoot,
+      expectsPayloadImport: false,
+    },
+    {
+      id: "should do an incompleteBlockInput sync from another BN",
+      event: ChainEvent.incompleteBlockInput,
+      expectsPayloadImport: false,
+    },
+    {
+      id: "should do an unknownEnvelopeBlockRoot sync from another BN",
+      event: ChainEvent.unknownEnvelopeBlockRoot,
+      expectsPayloadImport: true,
+    },
+    {
+      id: "should do an incompletePayloadEnvelope sync from another BN",
+      event: ChainEvent.incompletePayloadEnvelope,
+      expectsPayloadImport: true,
     },
   ];
 
-  for (const {id, event} of testCases) {
+  for (const {id, event, expectsPayloadImport} of testCases) {
     it(id, async () => {
       // the node needs time to transpile/initialize bls worker threads
       const genesisSlotsDelay = 4;
-      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * (SLOT_DURATION_MS / 1000);
       const testLoggerOpts: TestLoggerOpts = {
         level: LogLevel.info,
         timestampFormat: {
           format: TimestampFormatCode.EpochSlot,
           genesisTime,
           slotsPerEpoch: SLOTS_PER_EPOCH,
-          secondsPerSlot: testParams.SECONDS_PER_SLOT,
+          secondsPerSlot: SLOT_DURATION_MS / 1000,
         },
       };
 
       const loggerNodeA = testLogger("UnknownSync-Node-A", testLoggerOpts);
       const loggerNodeB = testLogger("UnknownSync-Node-B", testLoggerOpts);
+      const gloasStartSlot = GLOAS_FORK_EPOCH * SLOTS_PER_EPOCH;
+      const targetSlot = gloasStartSlot + 1;
 
       const bn = await getDevBeaconNode({
         params: testParams,
@@ -72,7 +107,12 @@ describe("sync / unknown block sync", () => {
         validatorCount,
         genesisTime,
         logger: loggerNodeA,
+        eth1BlockHash: Uint8Array.from(INTEROP_BLOCK_HASH),
       });
+
+      const waitForTargetPayloadOnNodeA = waitForEvent<
+        routes.events.EventData[routes.events.EventType.executionPayload]
+      >(bn.chain.emitter, routes.events.EventType.executionPayload, 240000, ({slot}) => slot === targetSlot);
 
       const {validators} = await getAndInitDevValidators({
         node: bn,
@@ -84,13 +124,13 @@ describe("sync / unknown block sync", () => {
         testLoggerOpts,
       });
 
-      afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close())));
+      afterEachCallbacks.push(() => bn.close().catch(() => {}));
+      // Cleanup callbacks run LIFO: close validators before Node A so a late
+      // proposal tick cannot call into a closing beacon node.
+      afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close().catch(() => {}))));
 
-      // stop bn after validators
-      afterEachCallbacks.push(() => bn.close());
-
-      await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.checkpoint, 240000);
-      loggerNodeA.info("Node A emitted checkpoint event");
+      const payloadEvent = await waitForTargetPayloadOnNodeA;
+      loggerNodeA.info("Node A selected gloas payload target", {slot: payloadEvent.slot, root: payloadEvent.blockRoot});
 
       const bn2 = await getDevBeaconNode({
         params: testParams,
@@ -102,18 +142,27 @@ describe("sync / unknown block sync", () => {
         validatorCount,
         genesisTime,
         logger: loggerNodeB,
+        eth1BlockHash: Uint8Array.from(INTEROP_BLOCK_HASH),
       });
 
-      afterEachCallbacks.push(() => bn2.close());
+      afterEachCallbacks.push(() => bn2.close().catch(() => {}));
 
-      const headSummary = bn.chain.forkChoice.getHead();
-      const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
-      if (!head) throw Error("First beacon node has no head block");
-      const waitForSynced = waitForEvent<EventData[EventType.head]>(
+      const headSlot = payloadEvent.slot;
+      const headRootHex = payloadEvent.blockRoot;
+      const headResult = await bn.chain.getBlockByRoot(headRootHex);
+      if (headResult === null) {
+        throw Error("Node A is missing the selected gloas head block");
+      }
+      const head = headResult.block as gloas.SignedBeaconBlock;
+      if (head.message.body.signedExecutionPayloadBid.message.blobKzgCommitments.length === 0) {
+        throw Error(`Expected gloas test target at slot=${targetSlot} to have blob commitments`);
+      }
+
+      const waitForSynced = waitForEvent<routes.events.EventData[routes.events.EventType.head]>(
         bn2.chain.emitter,
         routes.events.EventType.head,
         100000,
-        ({block}) => block === headSummary.blockRoot
+        ({block}) => block === headRootHex
       );
 
       const connected = Promise.all([onPeerConnect(bn2.network), onPeerConnect(bn.network)]);
@@ -121,34 +170,120 @@ describe("sync / unknown block sync", () => {
       await connected;
       loggerNodeA.info("Node A connected to Node B");
 
-      const headInput = getBlockInput.preData(config, head, BlockSource.gossip);
+      const sourcePeerId = bn.network.peerId.toString();
+      const headInput = BlockInputNoData.createFromBlock({
+        block: head,
+        blockRootHex: headRootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Math.floor(Date.now() / 1000),
+        forkName: bn.chain.config.getForkName(headSlot),
+        daOutOfRange: false,
+      });
+      if (event === ChainEvent.blockUnknownParent || event === ChainEvent.incompleteBlockInput) {
+        // This test injects a BlockInput directly into Node B, bypassing the gossip handler
+        // that normally seeds PayloadEnvelopeInput for Gloas blocks before unknown sync sees it.
+        bn2.chain.seenPayloadEnvelopeInputCache.add({
+          blockRootHex: headRootHex,
+          block: head,
+          forkName: headInput.forkName,
+          sampledColumns: bn2.chain.custodyConfig.sampledColumns,
+          custodyColumns: bn2.chain.custodyConfig.custodyColumns,
+          seenTimestampSec: headInput.getTimeComplete(),
+          source: PayloadEnvelopeInputSource.gossip,
+        });
+      }
+      const waitForPayloadImported = expectsPayloadImport
+        ? waitForEvent<routes.events.EventData[routes.events.EventType.executionPayload]>(
+            bn2.chain.emitter,
+            routes.events.EventType.executionPayload,
+            100000,
+            ({blockRoot}) => blockRoot === headRootHex
+          )
+        : undefined;
 
       switch (event) {
-        case NetworkEvent.unknownBlockParent:
+        case ChainEvent.blockUnknownParent:
           await bn2.chain.processBlock(headInput).catch((e) => {
-            if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+            loggerNodeB.info("Error processing block", {slot: headInput.slot, code: e.type.code});
+            if (
+              e instanceof BlockError &&
+              (e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
+                e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
+            ) {
               // Expected
-              bn2.network.events.emit(NetworkEvent.unknownBlockParent, {
+              bn2.chain.emitter.emit(ChainEvent.blockUnknownParent, {
                 blockInput: headInput,
-                peer: bn2.network.peerId.toString(),
+                peer: sourcePeerId,
+                source: BlockInputSource.gossip,
               });
             } else {
               throw e;
             }
           });
           break;
-        case NetworkEvent.unknownBlock:
-          bn2.network.events.emit(NetworkEvent.unknownBlock, {
-            rootHex: headSummary.blockRoot,
-            peer: bn2.network.peerId.toString(),
+        case ChainEvent.unknownBlockRoot:
+          bn2.chain.emitter.emit(ChainEvent.unknownBlockRoot, {
+            rootHex: headRootHex,
+            peer: sourcePeerId,
+            source: BlockInputSource.gossip,
           });
           break;
+        case ChainEvent.incompleteBlockInput:
+          bn2.chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+            blockInput: headInput,
+            peer: sourcePeerId,
+            source: BlockInputSource.gossip,
+          });
+          break;
+        case ChainEvent.unknownEnvelopeBlockRoot:
+          bn2.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+            rootHex: headRootHex,
+            peer: sourcePeerId,
+            source: BlockInputSource.gossip,
+          });
+          break;
+        case ChainEvent.incompletePayloadEnvelope: {
+          // get the chain started with an unknownBlockRoot
+          bn2.chain.emitter.emit(ChainEvent.unknownBlockRoot, {
+            rootHex: headRootHex,
+            peer: sourcePeerId,
+            source: BlockInputSource.gossip,
+          });
+          break;
+        }
         default:
           throw Error("Unknown event type");
       }
 
-      // Wait for NODE-A head to be processed in NODE-B without range sync
+      // Wait for the block root to be processed in node B. The unknown-block-sync flow imports
+      // parent payloads as needed to satisfy sanity checks but does not fetch the head block's
+      // own payload envelope (which would normally arrive via gossip on a live network).
       await waitForSynced;
+
+      switch (event) {
+        case ChainEvent.incompletePayloadEnvelope: {
+          // After it syncs, retrieve the PayloadEnvelopeInput created during block import
+          // and emit incompletePayloadEnvelope to exercise the sync handler.
+          const payloadInput = bn2.chain.seenPayloadEnvelopeInputCache.get(headRootHex);
+          if (!payloadInput) {
+            throw Error(`Expected PayloadEnvelopeInput for ${headRootHex} after block sync`);
+          }
+          bn2.chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
+            payloadInput,
+            peer: sourcePeerId,
+            source: BlockInputSource.gossip,
+          });
+          break;
+        }
+        default:
+          break;
+      }
+
+      // for incompletePayloadEnvelope the trigger is in the second switch above
+      // so we have to assert payload import at the end
+      if (waitForPayloadImported !== undefined) {
+        await waitForPayloadImported;
+      }
     });
   }
 });

@@ -1,7 +1,7 @@
+import {describe, expect, it} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
 import {
   BlocksByRangeError,
   BlocksByRangeErrorCode,
@@ -79,7 +79,7 @@ describe("beacon-node / network / reqresp / utils / collectSequentialBlocksInRan
     });
   }
 
-  async function* arrToSource(arr: SignedBeaconBlock[]): AsyncGenerator<ResponseIncoming> {
+  async function* arrToSource(arr: SignedBeaconBlock<ForkName.phase0>[]): AsyncGenerator<ResponseIncoming> {
     for (const item of arr) {
       yield {data: ssz.phase0.SignedBeaconBlock.serialize(item), fork: ForkName.phase0, protocolVersion: 1};
     }

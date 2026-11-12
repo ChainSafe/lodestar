@@ -4,21 +4,24 @@ import {LogArgs, logOptions} from "../../options/logOptions.js";
 import {BeaconPaths, defaultBeaconPaths} from "./paths.js";
 
 type BeaconExtraArgs = {
-  forceGenesis?: boolean;
   genesisStateFile?: string;
   configFile?: string;
   bootnodesFile?: string;
   checkpointSyncUrl?: string;
   checkpointState?: string;
+  unsafeCheckpointState?: string;
+  lastPersistedCheckpointState?: boolean;
   wssCheckpoint?: string;
   forceCheckpointSync?: boolean;
   ignoreWeakSubjectivityCheck?: boolean;
   beaconDir?: string;
   dbDir?: string;
+  dataColumnDir?: string;
   persistInvalidSszObjectsDir?: string;
   persistInvalidSszObjectsRetentionHours?: number;
   persistOrphanedBlocksDir?: string;
   peerStoreDir?: string;
+  pubkeysFile?: string;
   persistNetworkIdentity?: boolean;
   private?: boolean;
   validatorMonitorLogs?: boolean;
@@ -27,12 +30,6 @@ type BeaconExtraArgs = {
 };
 
 export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
-  forceGenesis: {
-    description: "Force beacon to create genesis without file",
-    type: "boolean",
-    hidden: true,
-  },
-
   genesisStateFile: {
     description: "Path or URL to download a genesis state file in ssz-encoded format",
     type: "string",
@@ -58,8 +55,22 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   checkpointState: {
-    description: "Set a checkpoint state to start syncing from",
+    description: "File path or url to finalized checkpoint state to start syncing from",
     type: "string",
+    group: "weak subjectivity",
+  },
+
+  unsafeCheckpointState: {
+    hidden: true,
+    description: "File path or url to unfinalized checkpoint state to start syncing from",
+    type: "string",
+    group: "weak subjectivity",
+  },
+
+  lastPersistedCheckpointState: {
+    hidden: true,
+    description: "Use the last safe persisted checkpoint state to start syncing from",
+    type: "boolean",
     group: "weak subjectivity",
   },
 
@@ -98,6 +109,12 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     type: "string",
   },
 
+  dataColumnDir: {
+    description: "Data column flat file directory",
+    defaultDescription: defaultBeaconPaths.dataColumnDir,
+    type: "string",
+  },
+
   persistInvalidSszObjectsDir: {
     description: "Enable and specify a directory to persist invalid ssz objects",
     defaultDescription: defaultBeaconPaths.persistInvalidSszObjectsDir,
@@ -125,6 +142,13 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     type: "string",
   },
 
+  pubkeysFile: {
+    hidden: true,
+    description: "Pubkey cache file, loaded on startup and saved on graceful shutdown",
+    defaultDescription: defaultBeaconPaths.pubkeysFile,
+    type: "string",
+  },
+
   persistNetworkIdentity: {
     description:
       "Whether to reuse the same peer-id across restarts. Validator custody requires custody group count to persist relative to a given ENR. Setting to false will reset ENR and validator custody requirements on restarts.",
@@ -134,7 +158,7 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
 
   private: {
     description:
-      "Do not send implementation details over p2p identify protocol and in builder, execution engine and eth1 requests",
+      "Do not send implementation details over p2p identify protocol, and in builder and execution engine requests",
     type: "boolean",
   },
 
@@ -158,10 +182,12 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
 type ENRArgs = {
   "enr.ip"?: string;
   "enr.tcp"?: number;
-  "enr.ip6"?: string;
   "enr.udp"?: number;
+  "enr.quic"?: number;
+  "enr.ip6"?: string;
   "enr.tcp6"?: number;
   "enr.udp6"?: number;
+  "enr.quic6"?: number;
   nat?: boolean;
 };
 
@@ -181,6 +207,11 @@ const enrOptions: CliCommandOptions<ENRArgs> = {
     type: "number",
     group: "enr",
   },
+  "enr.quic": {
+    description: "Override ENR QUIC entry",
+    type: "number",
+    group: "enr",
+  },
   "enr.ip6": {
     description: "Override ENR IPv6 entry",
     type: "string",
@@ -193,6 +224,11 @@ const enrOptions: CliCommandOptions<ENRArgs> = {
   },
   "enr.udp6": {
     description: "Override ENR (IPv6-specific) UDP entry",
+    type: "number",
+    group: "enr",
+  },
+  "enr.quic6": {
+    description: "Override ENR (IPv6-specific) QUIC entry",
     type: "number",
     group: "enr",
   },

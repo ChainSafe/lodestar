@@ -1,8 +1,9 @@
+import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getEventsApi} from "../../../../../src/api/impl/events/index.js";
 import {BeaconChain, ChainEventEmitter, HeadEventData} from "../../../../../src/chain/index.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/constants.js";
@@ -12,13 +13,13 @@ vi.mock("../../../../../src/chain/index.js", async (importActual) => {
 
   return {
     ...mod,
-    BeaconChain: vi.spyOn(mod, "BeaconChain").mockImplementation(() => {
+    BeaconChain: vi.spyOn(mod, "BeaconChain").mockImplementation(function MockedBeaconChain() {
       return {
         emitter: new ChainEventEmitter(),
         forkChoice: {
           getHead: vi.fn(),
         },
-      } as unknown as BeaconChain;
+      };
     }),
   };
 });
@@ -33,7 +34,7 @@ describe("Events api impl", () => {
     beforeEach(() => {
       chainStub = vi.mocked(new BeaconChain({} as any, {} as any), {partial: true, deep: false});
       chainEventEmmitter = chainStub.emitter;
-      api = getEventsApi({config, chain: chainStub});
+      api = getEventsApi({config, chain: chainStub, logger: testLogger()});
       controller = new AbortController();
     });
 
@@ -70,6 +71,21 @@ describe("Events api impl", () => {
       expect(events).toHaveLength(1);
       expect(events[0].type).toBe(routes.events.EventType.head);
       expect(events[0].message).not.toBeNull();
+    });
+
+    it("should not propagate an error thrown while sending an event", async () => {
+      const error = new Error("failed to send event");
+      void api.eventstream({
+        topics: [routes.events.EventType.head],
+        signal: controller.signal,
+        onEvent: () => {
+          throw error;
+        },
+      });
+
+      // `chainEventEmmitter` emits synchronously, a throwing subscriber must not surface the error
+      // to the emitting code, e.g. a gossip handler
+      expect(() => chainEventEmmitter.emit(routes.events.EventType.head, headEventData)).not.toThrow();
     });
 
     it("should emit data_column_sidecar event", async () => {

@@ -1,5 +1,3 @@
-import all from "it-all";
-import {pipe} from "it-pipe";
 import {describe, it} from "vitest";
 import {Protocol} from "../../../src/types.js";
 import {responseEncodersTestCases} from "../../fixtures/encoders.js";
@@ -11,10 +9,9 @@ describe("encoders / responseEncode", () => {
     it.each(responseEncodersTestCases.filter((f) => !f.skipEncoding))(
       "$id",
       async ({protocol, responseChunks, chunks}) => {
-        const encodedChunks = await pipe(responseEncode(responseChunks, protocol as Protocol), all);
-
+        const encodedChunks = await Array.fromAsync(responseEncode(responseChunks, protocol as Protocol));
         expectEqualByteChunks(
-          encodedChunks as Uint8Array[],
+          encodedChunks,
           chunks.map((c) => c.subarray())
         );
       }

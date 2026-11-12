@@ -19,4 +19,7 @@ export const gnosisPreset: BeaconPreset = {
   // capella
   MAX_WITHDRAWALS_PER_PAYLOAD: 8,
   MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: 8192,
+
+  // electra
+  MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP: 6,
 };

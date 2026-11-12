@@ -1,6 +1,6 @@
-import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {loadState} from "../util/loadState/loadState.js";
+import {isViewDUNodesPopulated} from "../util/ssz.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
 import {RewardCache, createEmptyRewardCache} from "./rewardCache.js";
 import {
@@ -13,10 +13,13 @@ import {
   BeaconStateExecutions,
   BeaconStateFulu,
   BeaconStateGloas,
+  BeaconStateHeze,
   BeaconStatePhase0,
+  BeaconStatePreHeze,
 } from "./types.js";
 
 export type BeaconStateCache = {
+  /** @deprecated should not access config outside of state-transition package */
   config: BeaconConfig;
   epochCtx: EpochCache;
   /** Count of clones created from this BeaconStateCache instance. readonly to prevent accidental usage downstream */
@@ -136,9 +139,11 @@ export type CachedBeaconStateDeneb = CachedBeaconState<BeaconStateDeneb>;
 export type CachedBeaconStateElectra = CachedBeaconState<BeaconStateElectra>;
 export type CachedBeaconStateFulu = CachedBeaconState<BeaconStateFulu>;
 export type CachedBeaconStateGloas = CachedBeaconState<BeaconStateGloas>;
+export type CachedBeaconStateHeze = CachedBeaconState<BeaconStateHeze>;
 
 export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;
 export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecutions>;
+export type CachedBeaconStatePreHeze = CachedBeaconState<BeaconStatePreHeze>;
 /**
  * Create CachedBeaconState computing a new EpochCache instance
  * TODO ELECTRA: rename this to createFinalizedCachedBeaconState() as it's intended for finalized state only
@@ -167,7 +172,7 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
  * Check loadState() api for more details
  * // TODO: rename to loadUnfinalizedCachedBeaconState() due to ELECTRA
  */
-export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
+export function loadCachedBeaconState<T extends CachedBeaconStateAllForks>(
   cachedSeedState: T,
   stateBytes: Uint8Array,
   opts?: EpochCacheOpts,
@@ -179,23 +184,19 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
     stateBytes,
     seedValidatorsBytes
   );
-  const {pubkey2index, index2pubkey, shufflingCache} = cachedSeedState.epochCtx;
+  const {pubkeyCache} = cachedSeedState.epochCtx;
   // Get the validators sub tree once for all the loop
   const validators = migratedState.validators;
   for (const validatorIndex of modifiedValidators) {
     const validator = validators.getReadonly(validatorIndex);
-    const pubkey = validator.pubkey;
-    pubkey2index.set(pubkey, validatorIndex);
-    index2pubkey[validatorIndex] = PublicKey.fromBytes(pubkey);
+    pubkeyCache.append(validatorIndex, validator.pubkey);
   }
 
   return createCachedBeaconState(
     migratedState,
     {
       config: cachedSeedState.config,
-      pubkey2index,
-      index2pubkey,
-      shufflingCache,
+      pubkeyCache,
     },
     {...(opts ?? {}), ...{skipSyncPubkeys: true}}
   ) as T;
@@ -258,11 +259,9 @@ export function isCachedBeaconState<T extends BeaconStateAllForks>(
 // This cache is populated during epoch transition, and should be preserved for performance.
 // If the cache is missing too often, means that our clone strategy is not working well.
 export function isStateValidatorsNodesPopulated(state: CachedBeaconStateAllForks): boolean {
-  // biome-ignore lint/complexity/useLiteralKeys: It is a private attribute
-  return state.validators["nodesPopulated"] === true;
+  return isViewDUNodesPopulated(state.validators);
 }
 
 export function isStateBalancesNodesPopulated(state: CachedBeaconStateAllForks): boolean {
-  // biome-ignore lint/complexity/useLiteralKeys: It is a private attribute
-  return state.balances["nodesPopulated"] === true;
+  return isViewDUNodesPopulated(state.balances);
 }

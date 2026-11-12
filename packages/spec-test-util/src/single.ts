@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import {loadYaml} from "@lodestar/utils";
-import {uncompress} from "snappyjs";
 import {describe, expect, it, vi} from "vitest";
+import snappyWasm from "@chainsafe/snappy-wasm";
+import {loadYaml} from "@lodestar/utils";
 
 export enum InputType {
   SSZ = "ssz",
@@ -66,6 +66,9 @@ export interface SpecTestOptions<TestCase extends {meta?: any}, Result> {
 
   shouldError?: (testCase: TestCase) => boolean;
 
+  /** Determine whether an input deserialization error is expected from the error and the files present in the test case. */
+  shouldErrorOnInput?: (error: Error, inputNames: Set<string>, name: string, index: number) => boolean;
+
   shouldSkip?: (testCase: TestCase, name: string, index: number) => boolean;
 
   expectFunc?: (testCase: TestCase, expected: any, actual: any) => void;
@@ -87,7 +90,7 @@ const defaultOptions: SpecTestOptions<any, any> = {
 export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>(
   name: string,
   testCaseDirectoryPath: string,
-  testFunction: (testCase: TestCase, directoryName: string) => Result | Promise<Result>,
+  testFunction: (testCase: TestCase, directoryName: string, testCaseName: string) => Result | Promise<Result>,
   options: Partial<SpecTestOptions<TestCase, Result>>
 ): void {
   options = {...defaultOptions, ...options};
@@ -115,7 +118,21 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
           ? loadYaml(fs.readFileSync(metaFilePath, "utf8"))
           : undefined;
 
-        let testCase = loadInputFiles(testSubDirPath, options, meta);
+        let testCase: TestCase;
+        try {
+          testCase = loadInputFiles(testSubDirPath, options, meta);
+        } catch (e) {
+          const inputNames = new Set(
+            fs
+              .readdirSync(testSubDirPath)
+              .filter((file) => !isDirectory(path.join(testSubDirPath, file)))
+              .map((file) => path.parse(file).name)
+          );
+          if (options.shouldErrorOnInput?.(e as Error, inputNames, testName, 0)) {
+            return;
+          }
+          throw e;
+        }
         if (options.mapToTestCase) testCase = options.mapToTestCase(testCase);
         if (options.shouldSkip?.(testCase, testName, 0)) {
           context.skip();
@@ -124,12 +141,13 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
 
         if (options.shouldError?.(testCase)) {
           try {
-            await testFunction(testCase, name);
+            await testFunction(testCase, name, testSubDirname);
           } catch (_e) {
             return;
           }
+          expect.unreachable("Expected test function to throw");
         } else {
-          const result = await testFunction(testCase, name);
+          const result = await testFunction(testCase, name, testSubDirname);
           if (!options.getExpected) throw Error("getExpected is not defined");
           if (!options.expectFunc) throw Error("expectFunc is not defined");
           const expected = options.getExpected(testCase);
@@ -174,7 +192,7 @@ function loadInputFiles<TestCase extends {meta?: any}, Result>(
         testCase[`${inputName}_raw`] = fs.readFileSync(file);
         break;
       case InputType.SSZ_SNAPPY:
-        testCase[`${inputName}_raw`] = uncompress(fs.readFileSync(file));
+        testCase[`${inputName}_raw`] = snappyWasm.decompress(fs.readFileSync(file));
         break;
     }
     if (!options.inputProcessing) throw Error("inputProcessing is not defined");
@@ -214,9 +232,9 @@ function deserializeInputFile<TestCase extends {meta?: any}, Result>(
   if (inputType === InputType.SSZ || inputType === InputType.SSZ_SNAPPY) {
     const sszTypes = options.getSszTypes ? options.getSszTypes(meta) : options.sszTypes;
     if (!sszTypes) throw Error("sszTypes is not defined");
-    let data = fs.readFileSync(file);
+    let data: Uint8Array = fs.readFileSync(file);
     if (inputType === InputType.SSZ_SNAPPY) {
-      data = uncompress(data);
+      data = snappyWasm.decompress(data);
     }
 
     let sszType: SszTypeGeneric | undefined;

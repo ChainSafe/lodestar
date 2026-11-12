@@ -1,9 +1,9 @@
+import {describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {MAX_DEPOSITS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
+import {createCachedBeaconStateTest} from "../../../src/testUtils/state.js";
 import {getEth1DepositCount} from "../../../src/util/deposit.js";
-import {createCachedBeaconStateTest} from "../../utils/state.js";
 
 describe("getEth1DepositCount", () => {
   it("Pre Electra", () => {
@@ -14,7 +14,7 @@ describe("getEth1DepositCount", () => {
       throw Error("Not a pre-Electra state");
     }
 
-    preElectraState.eth1Data.depositCount = 123;
+    preElectraState.eth1Data.depositCount = 123n;
 
     // 1. Should get less than MAX_DEPOSIT
     preElectraState.eth1DepositIndex = 120;
@@ -23,6 +23,11 @@ describe("getEth1DepositCount", () => {
     // 2. Should get MAX_DEPOSIT
     preElectraState.eth1DepositIndex = 100;
     expect(getEth1DepositCount(preElectraState)).toBe(MAX_DEPOSITS);
+
+    // 3. Must not round before subtraction
+    preElectraState.eth1Data.depositCount = 9007199254740993n;
+    preElectraState.eth1DepositIndex = 9007199254740992;
+    expect(getEth1DepositCount(preElectraState)).toBe(1);
   });
   it("Post Electra with eth1 deposit", () => {
     const stateView = ssz.electra.BeaconState.defaultViewDU();
@@ -43,7 +48,7 @@ describe("getEth1DepositCount", () => {
     }
 
     postElectraState.depositRequestsStartIndex = 1000n;
-    postElectraState.eth1Data.depositCount = 995;
+    postElectraState.eth1Data.depositCount = 995n;
 
     // 1. Should get less than MAX_DEPOSIT
     postElectraState.eth1DepositIndex = 990;
@@ -56,6 +61,12 @@ describe("getEth1DepositCount", () => {
     // 3. Should be 0
     postElectraState.eth1DepositIndex = 1000;
     expect(getEth1DepositCount(postElectraState)).toBe(0);
+
+    // 4. Must not round before subtraction
+    postElectraState.depositRequestsStartIndex = 9007199254740993n;
+    postElectraState.eth1Data.depositCount = 9007199254740993n;
+    postElectraState.eth1DepositIndex = 9007199254740992;
+    expect(getEth1DepositCount(postElectraState)).toBe(1);
   });
   it("Post Electra without eth1 deposit", () => {
     const stateView = ssz.electra.BeaconState.defaultViewDU();
@@ -76,7 +87,7 @@ describe("getEth1DepositCount", () => {
     }
 
     postElectraState.depositRequestsStartIndex = 1000n;
-    postElectraState.eth1Data.depositCount = 1005;
+    postElectraState.eth1Data.depositCount = 1005n;
 
     // Before eth1DepositIndex reaching the start index
     // 1. Should get less than MAX_DEPOSIT

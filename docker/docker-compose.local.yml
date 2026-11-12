@@ -1,6 +1,7 @@
 version: "3.4"
 
-# TODO: How to use?
+# Local monitoring setup with Prometheus and Grafana
+# See docs/pages/run/logging-and-metrics/prometheus-grafana.md for detailed usage instructions
 
 services:
   prometheus:

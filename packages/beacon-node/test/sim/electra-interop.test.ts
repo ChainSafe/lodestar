@@ -1,34 +1,31 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import {afterAll, afterEach, describe, it, vi} from "vitest";
-
+import {SerializedList} from "@chainsafe/ssz";
+import {ChainConfig} from "@lodestar/config";
+import {TimestampFormatCode} from "@lodestar/logger";
+import {TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, SLOTS_PER_EPOCH, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
+import {BeaconStateView, CachedBeaconStateElectra} from "@lodestar/state-transition";
 import {Epoch, Slot, electra} from "@lodestar/types";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
-
-import {ChainConfig} from "@lodestar/config";
-import {TimestampFormatCode} from "@lodestar/logger";
-import {CachedBeaconStateElectra} from "@lodestar/state-transition";
-import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
-import {initializeExecutionEngine} from "../../src/execution/index.js";
-
-import {bytesToData} from "../../lib/eth1/provider/utils.js";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
-import {dataToBytes} from "../../src/eth1/provider/utils.js";
 import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
+import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
+import {bytesToData, dataToBytes} from "../../src/execution/engine/utils.js";
+import {initializeExecutionEngine} from "../../src/execution/index.js";
 import {BeaconNode} from "../../src/index.js";
 import {ClockEvent} from "../../src/util/clock.js";
-import {TestLoggerOpts, testLogger} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
-import {ELClient, ELStartMode, runEL, sendRawTransactionBig} from "../utils/runEl.js";
+import {ELClient, runEL, sendRawTransactionBig} from "../utils/runEl.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// DEV_RUN=true EL_BINARY_DIR=ethpandaops/ethereumjs:master-0e06ddf EL_SCRIPT_DIR=ethereumjsdocker yarn vitest run test/sim/electra-interop.test.ts
+// DEV_RUN=true EL_BINARY_DIR=ethpandaops/ethereumjs:master-0e06ddf EL_SCRIPT_DIR=ethereumjsdocker pnpm vitest run test/sim/electra-interop.test.ts
 // ```
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
@@ -70,7 +67,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
 
   it("Send and get payloads with depositRequests to/from EL", async () => {
     const {elClient, tearDownCallBack} = await runEL(
-      {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "electra.tmpl"},
+      {...elSetupConfig, genesisTemplate: "electra.tmpl"},
       {...elRunOptions, ttd: BigInt(0)},
       controller.signal
     );
@@ -94,7 +91,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
       withdrawals: [],
       parentBeaconBlockRoot: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
     };
-    const payloadId = await executionEngine.notifyForkchoiceUpdate(
+    const {payloadId} = await executionEngine.notifyForkchoiceUpdate(
       ForkName.electra,
       genesisBlockHash,
       //use finalizedBlockHash as safeBlockHash
@@ -156,13 +153,13 @@ describe("executionEngine / ExecutionEngineHttp", () => {
         256
       ),
       prevRandao: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
-      gasLimit: 45000000,
+      gasLimit: 60000000,
       gasUsed: 84714,
       timestamp: 16,
       extraData: dataToBytes("0x", 0),
       baseFeePerGas: 7n,
       excessBlobGas: 0n,
-      transactions: [dataToBytes(depositTransactionA, null)],
+      transactions: SerializedList.fromArray([dataToBytes(depositTransactionA, null)]),
       withdrawals: [],
       depositRequests: [depositRequestA],
       blockNumber: 1,
@@ -190,7 +187,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
       parentBeaconBlockRoot: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
     };
 
-    const payloadId2 = await executionEngine.notifyForkchoiceUpdate(
+    const {payloadId: payloadId2} = await executionEngine.notifyForkchoiceUpdate(
       ForkName.electra,
       newPayloadBlockHash,
       //use finalizedBlockHash as safeBlockHash
@@ -211,7 +208,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
       throw Error(`Number of transactions mismatched. Expected: 1, actual: ${payload.transactions.length}`);
     }
 
-    const actualTransaction = bytesToData(payload.transactions[0]);
+    const actualTransaction = bytesToData(payload.transactions.get(0));
 
     if (actualTransaction !== depositTransactionB) {
       throw Error(`Transaction mismatched. Expected: ${depositTransactionB}, actual: ${actualTransaction}`);
@@ -235,7 +232,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
   it.skip("Post-merge, run for a few blocks", async () => {
     console.log("\n\nPost-merge, run for a few blocks\n\n");
     const {elClient, tearDownCallBack} = await runEL(
-      {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "electra.tmpl"},
+      {...elSetupConfig, genesisTemplate: "electra.tmpl"},
       {...elRunOptions, ttd: BigInt(0)},
       controller.signal
     );
@@ -262,12 +259,12 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     electraEpoch: Epoch;
     testName: string;
   }): Promise<void> {
-    const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
+    const {genesisBlockHash, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
 
-    const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
-      SECONDS_PER_SLOT: 2,
+    const testParams: Pick<ChainConfig, "SLOT_DURATION_MS"> = {
+      SLOT_DURATION_MS: 2000,
     };
 
     // Just enough to have a checkpoint finalized
@@ -280,13 +277,11 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     const genesisSlotsDelay = 8;
 
     const timeout =
-      ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
-      testParams.SECONDS_PER_SLOT *
-      1000;
+      ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) * testParams.SLOT_DURATION_MS;
 
     vi.setConfig({testTimeout: timeout + 2 * timeoutSetupMargin});
 
-    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * (testParams.SLOT_DURATION_MS / 1000);
 
     const testLoggerOpts: TestLoggerOpts = {
       level: LogLevel.info,
@@ -298,7 +293,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
         slotsPerEpoch: SLOTS_PER_EPOCH,
-        secondsPerSlot: testParams.SECONDS_PER_SLOT,
+        secondsPerSlot: testParams.SLOT_DURATION_MS / 1000,
       },
     };
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
@@ -311,14 +306,11 @@ describe("executionEngine / ExecutionEngineHttp", () => {
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: electraEpoch,
-        TERMINAL_TOTAL_DIFFICULTY: ttd,
       },
       options: {
         api: {rest: {enabled: true} as BeaconRestApiServerOpts},
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true, discv5: null},
-        // Now eth deposit/merge tracker methods directly available on engine endpoints
-        eth1: {enabled: false, providerUrls: [engineRpcUrl], jwtSecretHex},
         executionEngine: {urls: [engineRpcUrl], jwtSecretHex},
         chain: {suggestedFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
       },
@@ -368,12 +360,12 @@ describe("executionEngine / ExecutionEngineHttp", () => {
 
     await waitForSlot(bn, 5);
     // Expect new validator to be in unfinalized cache, in state.validators and not in finalized cache
-    let headState = bn.chain.getHeadState();
-    let epochCtx = headState.epochCtx;
-    if (headState.validators.length !== 33 || headState.balances.length !== 33) {
+    let headState = bn.chain.getHeadState() as BeaconStateView;
+    let epochCtx = headState.cachedState.epochCtx;
+    if (headState.validatorCount !== 33 || headState.getAllBalances().length !== 33) {
       throw Error("New validator is not reflected in the beacon state at slot 5");
     }
-    if (epochCtx.index2pubkey.length !== 33 || epochCtx.pubkey2index.size !== 33) {
+    if (epochCtx.pubkeyCache.size !== 33) {
       throw Error("Pubkey cache is not updated");
     }
 
@@ -394,22 +386,25 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     await sleep(500);
 
     // Check if new validator is in finalized cache
-    headState = bn.chain.getHeadState() as CachedBeaconStateElectra;
-    epochCtx = headState.epochCtx;
+    headState = bn.chain.getHeadState() as BeaconStateView;
+    epochCtx = headState.cachedState.epochCtx;
 
-    if (headState.validators.length !== 33 || headState.balances.length !== 33) {
+    if (headState.validatorCount !== 33 || headState.getAllBalances().length !== 33) {
       throw Error("New validator is not reflected in the beacon state.");
     }
-    if (epochCtx.index2pubkey.length !== 33 || epochCtx.pubkey2index.size !== 33) {
+    if (epochCtx.pubkeyCache.size !== 33) {
       throw Error("New validator is not in pubkey cache");
     }
 
-    if (headState.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
+    if (
+      (headState.cachedState as CachedBeaconStateElectra).depositRequestsStartIndex ===
+      UNSET_DEPOSIT_REQUESTS_START_INDEX
+    ) {
       throw Error("state.depositRequestsStartIndex is not set upon processing new deposit receipt");
     }
 
     // wait for 1 slot to print current epoch stats
-    await sleep(1 * bn.config.SECONDS_PER_SLOT * 1000);
+    await sleep(1 * bn.config.SLOT_DURATION_MS);
     stopInfoTracker();
     console.log("\n\nDone\n\n");
   }

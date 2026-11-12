@@ -1,7 +1,7 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import {fetch} from "@lodestar/utils";
 import {Web3} from "web3";
+import {fetch} from "@lodestar/utils";
 import {SHARED_JWT_SECRET} from "../../constants.js";
 import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../../interfaces.js";
 import {getNethermindChainSpec} from "../../utils/executionGenesis.js";
@@ -16,7 +16,6 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
 
   const {
     id,
-    mode,
     ttd,
     address,
     mining,
@@ -25,6 +24,8 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     cliqueSealingPeriod,
     shanghaiTime,
     cancunTime,
+    pragueTime,
+    osakaTime,
     genesisTime,
   } = opts;
   const ports = getNodePorts(nodeIndex);
@@ -58,11 +59,13 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
       await writeFile(
         chainSpecPath,
         JSON.stringify(
-          getNethermindChainSpec(mode, {
+          getNethermindChainSpec({
             ttd,
             cliqueSealingPeriod,
             shanghaiTime,
             cancunTime,
+            pragueTime,
+            osakaTime,
             genesisTime,
             clientOptions: [],
           })

@@ -20,7 +20,6 @@ import {
   MAX_ATTESTER_SLASHINGS,
   MAX_DEPOSITS,
   MAX_PROPOSER_SLASHINGS,
-  MAX_REQUEST_BLOCKS,
   MAX_VALIDATORS_PER_COMMITTEE,
   MAX_VOLUNTARY_EXITS,
   SLOTS_PER_EPOCH,
@@ -147,7 +146,8 @@ export const DepositEvent = new ContainerType(
 export const Eth1Data = new ContainerType(
   {
     depositRoot: Root,
-    depositCount: UintNum64,
+    // Proposer can set any value, must cover the full uint64 range
+    depositCount: UintBn64,
     blockHash: Bytes32,
   },
   {typeName: "Eth1Data", jsonCase: "eth2"}
@@ -501,8 +501,6 @@ export const BeaconBlocksByRangeRequest = new ContainerType(
   },
   {typeName: "BeaconBlocksByRangeRequest", jsonCase: "eth2"}
 );
-
-export const BeaconBlocksByRootRequest = new ListCompositeType(Root, MAX_REQUEST_BLOCKS);
 
 // Api types
 // =========

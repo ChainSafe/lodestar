@@ -1,4 +1,3 @@
-import all from "it-all";
 import {describe, expect, it} from "vitest";
 import {ItTrigger} from "../../../src/util/itTrigger.js";
 
@@ -10,7 +9,7 @@ describe("util / itTrigger", () => {
     itTrigger.trigger();
     itTrigger.end();
 
-    const res = await all(itTrigger);
+    const res = await Array.fromAsync(itTrigger);
     expect(res).toHaveLength(0);
   });
 
@@ -27,7 +26,7 @@ describe("util / itTrigger", () => {
       }, 5);
     }, 5);
 
-    const res = await all(itTrigger);
+    const res = await Array.fromAsync(itTrigger);
     expect(res).toHaveLength(2);
   });
 
@@ -43,7 +42,7 @@ describe("util / itTrigger", () => {
       }, 5);
     }, 5);
 
-    await expect(all(itTrigger)).rejects.toThrow(testError);
+    await expect(Array.fromAsync(itTrigger)).rejects.toThrow(testError);
   });
 
   it("ItTrigger as a single thread processor", async () => {

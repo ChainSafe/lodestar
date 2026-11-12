@@ -12,7 +12,7 @@ export async function* onLightClientOptimisticUpdate(chain: IBeaconChain): Async
     throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "No latest optimistic update available");
   }
 
-  const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(update.signatureSlot));
+  const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(update.attestedHeader.beacon.slot));
   const type = responseSszTypeByMethod[ReqRespMethod.LightClientOptimisticUpdate](boundary.fork, 0);
   yield {
     data: type.serialize(update),

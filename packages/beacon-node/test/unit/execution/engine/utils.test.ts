@@ -1,6 +1,6 @@
-import {ErrorAborted, FetchError} from "@lodestar/utils";
 import {describe, expect, it} from "vitest";
-import {ErrorJsonRpcResponse, HttpRpcError} from "../../../../src/eth1/provider/jsonRpcHttpClient.js";
+import {ErrorAborted, FetchError, TimeoutError} from "@lodestar/utils";
+import {ErrorJsonRpcResponse, HttpRpcError} from "../../../../src/execution/engine/jsonRpcHttpClient.js";
 import {
   HTTP_CONNECTION_ERROR_CODES,
   HTTP_FATAL_ERROR_CODES,
@@ -44,10 +44,10 @@ describe("execution / engine / utils", () => {
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
       ],
       [ExecutionPayloadStatus.INVALID]: [
-        [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCING],
-        [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCING],
-        [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCING],
-        [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCING],
+        [ExecutionEngineState.ONLINE, ExecutionEngineState.ONLINE],
+        [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.ONLINE],
+        [ExecutionEngineState.OFFLINE, ExecutionEngineState.ONLINE],
+        [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
       ],
       [ExecutionPayloadStatus.SYNCING]: [
@@ -58,10 +58,10 @@ describe("execution / engine / utils", () => {
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
       ],
       [ExecutionPayloadStatus.INVALID_BLOCK_HASH]: [
-        [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCING],
-        [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCING],
-        [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCING],
-        [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCING],
+        [ExecutionEngineState.ONLINE, ExecutionEngineState.ONLINE],
+        [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.ONLINE],
+        [ExecutionEngineState.OFFLINE, ExecutionEngineState.ONLINE],
+        [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
       ],
       [ExecutionPayloadStatus.UNAVAILABLE]: [
@@ -82,6 +82,17 @@ describe("execution / engine / utils", () => {
 
     type ErrorTestCase = [string, Error, [oldState: ExecutionEngineState, newState: ExecutionEngineState][]];
     const testCasesError: ErrorTestCase[] = [
+      [
+        "request timeout",
+        new TimeoutError("request"),
+        [
+          [ExecutionEngineState.ONLINE, ExecutionEngineState.ONLINE],
+          [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.AUTH_FAILED],
+          [ExecutionEngineState.OFFLINE, ExecutionEngineState.OFFLINE],
+          [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCED],
+          [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
+        ],
+      ],
       [
         "abort error",
         new ErrorAborted(),

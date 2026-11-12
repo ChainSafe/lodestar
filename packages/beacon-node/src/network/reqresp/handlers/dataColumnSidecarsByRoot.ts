@@ -1,88 +1,98 @@
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {fulu, ssz} from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
+import {PeerId} from "@libp2p/interface";
+import {ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEpochAtSlot, getBlobDataRetentionStartEpoch} from "@lodestar/state-transition";
+import {ColumnIndex} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {DataColumnSidecarsByRootRequest} from "../../../util/types.js";
+import {prettyPrintPeerId} from "../../util.js";
 import {
-  COLUMN_SIZE_IN_WRAPPER_INDEX,
-  CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
-  DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX,
-  NUM_COLUMNS_IN_WRAPPER_INDEX,
-} from "../../../db/repositories/dataColumnSidecars.js";
+  handleColumnSidecarUnavailability,
+  validateRequestedDataColumns,
+} from "../utils/dataColumnResponseValidation.js";
 
 export async function* onDataColumnSidecarsByRoot(
-  requestBody: fulu.DataColumnSidecarsByRootRequest,
+  requestBody: DataColumnSidecarsByRootRequest,
   chain: IBeaconChain,
-  db: IBeaconDb
+  db: IBeaconDb,
+  peerId: PeerId,
+  peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
-  // SPEC: minimum_request_epoch = max(finalized_epoch, current_epoch - MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, FULU_FORK_EPOCH)
-  const finalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
+  // SPEC: minimum_request_epoch = max(compute_blob_data_retention_start_epoch(current_epoch), FULU_FORK_EPOCH)
   const currentEpoch = chain.clock.currentEpoch;
   const minimumRequestEpoch = Math.max(
-    finalizedEpoch,
-    currentEpoch - chain.config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS,
+    getBlobDataRetentionStartEpoch(chain.config, currentEpoch),
     chain.config.FULU_FORK_EPOCH
   );
 
   for (const dataColumnsByRootIdentifier of requestBody) {
-    const {blockRoot, columns} = dataColumnsByRootIdentifier;
-    const blockRootHex = toHex(blockRoot);
-    const block = chain.forkChoice.getBlockHex(blockRootHex);
-
-    // NOTE: Only support non-finalized blocks.
-    // SPEC: Clients MUST support requesting sidecars since minimum_request_epoch.
-    // If any root in the request content references a block earlier than minimum_request_epoch, peers MAY respond with
-    // error code 3: ResourceUnavailable or not include the data column sidecar in the response.
-    // https://github.com/ethereum/consensus-specs/blob/1937aff86b41b5171a9bc3972515986f1bbbf303/specs/fulu/p2p-interface.md#datacolumnsidecarsbyroot-v1
-    if (!block || computeEpochAtSlot(block.slot) < minimumRequestEpoch) {
+    const {blockRoot, columns: requestedColumns} = dataColumnsByRootIdentifier;
+    const availableColumns = validateRequestedDataColumns(chain, requestedColumns);
+    if (availableColumns.length === 0) {
       continue;
     }
 
-    const dataColumnSidecarsBytesWrapped = await db.dataColumnSidecars.getBinary(fromHex(block.blockRoot));
-    if (!dataColumnSidecarsBytesWrapped) {
-      // Handle the same to onBeaconBlocksByRange
-      throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
+    const blockRootHex = toRootHex(blockRoot);
+    const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+    // If the block is not in fork choice, it may be finalized. Attempt to find its slot in block archive
+    const slot = block ? block.slot : await db.blockArchive.getSlotByRoot(blockRoot);
+
+    if (slot === null) {
+      // We haven't seen the block
+      continue;
     }
 
-    const retrivedColumnsLen = ssz.Uint8.deserialize(
-      dataColumnSidecarsBytesWrapped.slice(NUM_COLUMNS_IN_WRAPPER_INDEX, COLUMN_SIZE_IN_WRAPPER_INDEX)
-    );
-    const retrievedColumnsSizeBytes = dataColumnSidecarsBytesWrapped.slice(
-      COLUMN_SIZE_IN_WRAPPER_INDEX,
-      CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX
-    );
-    const columnsSize = ssz.UintNum64.deserialize(retrievedColumnsSizeBytes);
-    const dataColumnSidecarsBytes = dataColumnSidecarsBytesWrapped.slice(
-      DATA_COLUMN_SIDECARS_IN_WRAPPER_INDEX + 4 * retrivedColumnsLen
-    );
+    if (slot < chain.earliestAvailableSlot) {
+      chain.logger.verbose("Peer did not respect earliestAvailableSlot for DataColumnSidecarsByRoot", {
+        peer: prettyPrintPeerId(peerId),
+        client: peerClient,
+      });
+      continue;
+    }
 
-    const dataColumnsIndex = dataColumnSidecarsBytesWrapped.slice(
-      CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX,
-      CUSTODY_COLUMNS_IN_IN_WRAPPER_INDEX + NUMBER_OF_COLUMNS
-    );
+    const requestedEpoch = computeEpochAtSlot(slot);
 
-    for (const index of columns) {
-      const dataIndex = (dataColumnsIndex[index] ?? 0) - 1;
-      if (dataIndex < 0) {
-        throw new ResponseError(RespStatus.SERVER_ERROR, `dataColumnSidecar index=${index} not custodied`);
+    // SPEC: Clients MUST support requesting sidecars since minimum_request_epoch.
+    // If any root in the request content references a block earlier than minimum_request_epoch, peers MAY respond with
+    // error code 3: ResourceUnavailable or not include the data column sidecar in the response.
+    // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.5/specs/fulu/p2p-interface.md#datacolumnsidecarsbyroot-v1
+    if (requestedEpoch < minimumRequestEpoch) {
+      continue;
+    }
+
+    const dataColumns = await chain.getSerializedDataColumnSidecars(slot, blockRootHex, availableColumns);
+
+    const unavailableColumnIndices: ColumnIndex[] = [];
+    for (let i = 0; i < dataColumns.length; i++) {
+      const dataColumnBytes = dataColumns[i];
+      if (dataColumnBytes) {
+        yield {
+          data: dataColumnBytes,
+          boundary: chain.config.getForkBoundaryAtEpoch(requestedEpoch),
+        };
       }
 
-      const dataColumnSidecarBytes = dataColumnSidecarsBytes.slice(
-        dataIndex * columnsSize,
-        (dataIndex + 1) * columnsSize
-      );
-      if (dataColumnSidecarBytes.length !== columnsSize) {
-        throw Error(
-          `Inconsistent state, dataColumnSidecar blockRoot=${blockRootHex} index=${index} dataColumnSidecarBytes=${dataColumnSidecarBytes.length} expected=${columnsSize}`
-        );
+      // TODO: Check blobs for that block and respond resource_unavailable
+      // After we have consensus from other teams on the specs
+      else {
+        unavailableColumnIndices.push(availableColumns[i]);
       }
+    }
 
-      yield {
-        data: dataColumnSidecarBytes,
-        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
-      };
+    if (unavailableColumnIndices.length) {
+      const finalized = !block || (await db.blockArchive.getSlotByRoot(blockRoot)) === slot;
+      await handleColumnSidecarUnavailability({
+        chain,
+        db,
+        metrics: chain.metrics,
+        slot,
+        blockRoot,
+        finalized,
+        unavailableColumnIndices,
+        requestedColumns,
+        availableColumns,
+      });
     }
   }
 }

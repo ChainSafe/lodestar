@@ -1,6 +1,6 @@
-import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {describe, expect, it} from "vitest";
-import {ExecutionStatus, ProtoArray} from "../../../src/index.js";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
+import {ExecutionStatus, PayloadStatus, ProtoArray} from "../../../src/index.js";
 
 describe("getCommonAncestor", () => {
   const blocks: {slot: number; root: string; parent: string}[] = [
@@ -42,9 +42,15 @@ describe("getCommonAncestor", () => {
       unrealizedFinalizedRoot: "-",
 
       timeliness: false,
+      importedTimely: false,
+      ptcTimeliness: false,
+      proposerIndex: 0,
 
       ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
     },
     0
   );
@@ -68,18 +74,29 @@ describe("getCommonAncestor", () => {
         unrealizedFinalizedRoot: "-",
 
         timeliness: false,
+        importedTimely: false,
+        ptcTimeliness: false,
+        proposerIndex: 0,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
       },
-      block.slot
+      block.slot,
+      null
     );
   }
 
   for (const {nodeA, nodeB, ancestor} of testCases) {
     it(`${nodeA} & ${nodeB} -> ${ancestor}`, () => {
-      // biome-ignore lint/style/noNonNullAssertion: <explanation>
-      const ancestorNode = fc.getCommonAncestor(fc.getNode(nodeA)!, fc.getNode(nodeB)!);
+      const defaultStatusA = fc.getDefaultVariant(nodeA);
+      const defaultStatusB = fc.getDefaultVariant(nodeB);
+      const nodeAResult = defaultStatusA !== undefined ? fc.getNode(nodeA, defaultStatusA) : undefined;
+      const nodeBResult = defaultStatusB !== undefined ? fc.getNode(nodeB, defaultStatusB) : undefined;
+      // biome-ignore lint/style/noNonNullAssertion: We know the node can not be null here
+      const ancestorNode = fc.getCommonAncestor(nodeAResult!, nodeBResult!);
       if (ancestor) {
         expect(ancestorNode?.blockRoot).toBe(ancestor);
       } else {
@@ -91,8 +108,8 @@ describe("getCommonAncestor", () => {
   const lastSlot = blocks.reverse()[0].slot;
   const deltas = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
-    deltas,
-    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34},
+    attestationDeltas: deltas,
+    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34_000_000_000n},
     justifiedEpoch: 0,
     justifiedRoot: "-",
     finalizedEpoch: 0,
@@ -103,8 +120,8 @@ describe("getCommonAncestor", () => {
 
   const deltasNew = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
-    deltas: deltasNew,
-    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34},
+    attestationDeltas: deltasNew,
+    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34_000_000_000n},
     justifiedEpoch: 0,
     justifiedRoot: "-",
     finalizedEpoch: 0,

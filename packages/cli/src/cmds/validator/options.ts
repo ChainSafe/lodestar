@@ -1,8 +1,9 @@
 import {WireFormat, defaultInit} from "@lodestar/api";
 import {CliCommandOptions} from "@lodestar/utils";
 import {defaultOptions} from "@lodestar/validator";
+import {coerceCors, enabledAllBashFriendly} from "../../options/beaconNodeOptions/api.js";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
-import {ensure0xPrefix} from "../../util/index.js";
+import {ensure0xPrefix, parseRange} from "../../util/index.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
 import {defaultAccountPaths, defaultValidatorPaths} from "./paths.js";
 
@@ -38,7 +39,6 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     graffiti?: string;
     afterBlockDelaySlotFraction?: number;
     scAfterBlockDelaySlotFraction?: number;
-    disableAttestationGrouping?: boolean;
     suggestedFeeRecipient?: string;
     proposerSettingsFile?: string;
     strictFeeRecipientCheck?: boolean;
@@ -48,11 +48,16 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     builder?: boolean;
     "builder.selection"?: string;
     "builder.boostFactor"?: string;
+    "builder.minBid"?: string;
+    "builder.urls"?: string[];
+    "builder.maxExecutionPayment"?: string;
+    allowDangerousTrustedPayments?: boolean;
 
     /** @deprecated */
     useProduceBlockV3?: boolean;
     broadcastValidation?: string;
     blindedLocal?: boolean;
+    payloadLocal?: boolean;
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
@@ -60,17 +65,20 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     "http.requestWireFormat"?: string;
     "http.responseWireFormat"?: string;
+    "http.requestTimeout"?: number;
 
-    "externalSigner.url"?: string;
+    "clock.skipSlots"?: boolean;
+
+    "externalSigner.urls"?: string[];
     "externalSigner.pubkeys"?: string[];
     "externalSigner.fetch"?: boolean;
     "externalSigner.fetchInterval"?: number;
 
     distributed?: boolean;
 
-    interopIndexes?: string;
+    interopIndexes?: number[];
     fromMnemonic?: string;
-    mnemonicIndexes?: string;
+    mnemonicIndexes?: number[];
 
     metrics?: boolean;
     "metrics.port"?: number;
@@ -129,9 +137,10 @@ export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
   },
   "keymanager.cors": {
     type: "string",
-    description: "Configures the Access-Control-Allow-Origin CORS header for key manager API",
+    description: `Configures the Access-Control-Allow-Origin CORS header for key manager API. Use '${enabledAllBashFriendly}' to allow all origins`,
     defaultDescription: keymanagerRestApiServerOptsDefault.cors,
     group: "keymanager",
+    coerce: coerceCors,
   },
   "keymanager.headerLimit": {
     hidden: true,
@@ -213,22 +222,15 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   afterBlockDelaySlotFraction: {
     hidden: true,
     description:
-      "Delay before publishing attestations if block comes early, as a fraction of SECONDS_PER_SLOT (value is from 0 inclusive to 1 exclusive)",
+      "Delay before publishing attestations if block comes early, as a fraction of SLOT_DURATION_MS (value is from 0 inclusive to 1 exclusive)",
     type: "number",
   },
 
   scAfterBlockDelaySlotFraction: {
     hidden: true,
     description:
-      "Delay before publishing SyncCommitteeSignature if block comes early, as a fraction of SECONDS_PER_SLOT (value is from 0 inclusive to 1 exclusive)",
+      "Delay before publishing SyncCommitteeSignature if block comes early, as a fraction of SLOT_DURATION_MS (value is from 0 inclusive to 1 exclusive)",
     type: "number",
-  },
-
-  disableAttestationGrouping: {
-    hidden: true,
-    description:
-      "Disables attestation service grouping optimization, attestation tasks will be executed per committee instead of just once for all committees.",
-    type: "boolean",
   },
 
   proposerSettingsFile: {
@@ -250,8 +252,9 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   },
 
   defaultGasLimit: {
-    description: "Suggested gas limit to the engine/builder for building execution payloads. Only used post merge.",
-    defaultDescription: `${defaultOptions.defaultGasLimit}`,
+    description:
+      "Override the gas limit preference sent to the engine/builder. If unset, the network GAS_LIMIT_SCHEDULE is evaluated for each duty epoch from Gloas, with the current default used before Gloas or its first entry.",
+    defaultDescription: `GAS_LIMIT_SCHEDULE from Gloas (current default: ${defaultOptions.defaultGasLimit})`,
     type: "number",
   },
 
@@ -264,7 +267,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "builder.selection": {
     type: "string",
     description:
-      "Builder block selection strategy `default`, `maxprofit`, `builderalways`, `builderonly`, `executionalways`, or `executiononly`",
+      "Builder block selection strategy `default`, `maxprofit`, `builderalways`, `executionalways`, or `executiononly`",
     defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
   },
@@ -274,6 +277,38 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     description:
       "Percentage multiplier the block producing beacon node must apply to boost (>100) or dampen (<100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`",
     defaultDescription: `${defaultOptions.builderBoostFactor}`,
+    group: "builder",
+  },
+
+  "builder.minBid": {
+    type: "string",
+    description:
+      "Minimum counted total payment in Gwei accepted from a builder bid. The total is the bid value plus its execution payment up to the configured cap. Only used post-Gloas",
+    defaultDescription: `${defaultOptions.builderMinBid}`,
+    group: "builder",
+  },
+
+  "builder.urls": {
+    description:
+      "URL(s) of external builders to request execution payload bids from. Auth data agreed with a builder may be appended as a hex fragment, e.g. https://builder.example.com#0x0123, otherwise the hostname of the URL is used. Only used post-Gloas",
+    type: "array",
+    string: true,
+    coerce: (urls: string[]): string[] => urls.flatMap((url) => url.split(",")),
+    group: "builder",
+  },
+
+  "builder.maxExecutionPayment": {
+    type: "string",
+    description:
+      "Maximum execution layer payment in Gwei counted toward a builder bid. A value of 0 means only trustless payments via the builder's staked collateral count toward the bid. Values above 0 require `--allowDangerousTrustedPayments`. Only used post-Gloas",
+    defaultDescription: `${defaultOptions.builderMaxExecutionPayment}`,
+    group: "builder",
+  },
+
+  allowDangerousTrustedPayments: {
+    type: "boolean",
+    description:
+      "Allow configuring a builder max execution payment above 0. Trusted execution layer payments are only backed by the builder's promise to pay, not by its staked collateral, a builder that fails to pay cannot be penalized in protocol",
     group: "builder",
   },
 
@@ -293,6 +328,13 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "boolean",
     description: "Request fetching local block in blinded format for produceBlockV3",
     defaultDescription: `${defaultOptions.blindedLocal}`,
+  },
+
+  payloadLocal: {
+    type: "boolean",
+    description:
+      "Request keeping the execution payload (envelope and blobs) local to the beacon node during post-Gloas block production. Reduces bandwidth but the envelope must be published via the same beacon node that produced the block",
+    defaultDescription: "true if a single beacon node is configured, otherwise false",
   },
 
   importKeystores: {
@@ -337,33 +379,52 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     group: "http",
   },
 
+  "http.requestTimeout": {
+    type: "number",
+    description: "Timeout in milliseconds for HTTP requests to the beacon node",
+    group: "http",
+  },
+
+  "clock.skipSlots": {
+    hidden: true,
+    description: "Skip slots when tasks take more than one slot to run",
+    type: "boolean",
+  },
+
   // External signer
 
-  "externalSigner.url": {
-    description: "URL to connect to an external signing server",
-    type: "string",
+  "externalSigner.urls": {
+    alias: "externalSigner.url",
+    description: "URL(s) to connect to external signing server(s)",
+    type: "array",
+    string: true,
+    // Support backward compatibility: allow string in config files, convert to array
+    coerce: (urls: string | string[]): string[] => {
+      if (typeof urls === "string") {
+        return [urls];
+      }
+      return urls;
+    },
     group: "externalSigner",
   },
 
   "externalSigner.pubkeys": {
-    implies: ["externalSigner.url"],
+    implies: ["externalSigner.urls"],
     description:
       "List of validator public keys used by an external signer. May also provide a single string of comma-separated public keys",
     type: "array",
     string: true, // Ensures the pubkey string is not automatically converted to numbers
     coerce: (pubkeys: string[]): string[] =>
       // Parse ["0x11,0x22"] to ["0x11", "0x22"]
-      pubkeys
-        .flatMap((item) => item.split(","))
-        .map(ensure0xPrefix),
+      pubkeys.flatMap((item) => item.split(",")).map(ensure0xPrefix),
     group: "externalSigner",
   },
 
   "externalSigner.fetch": {
-    implies: ["externalSigner.url"],
+    implies: ["externalSigner.urls"],
     conflicts: ["externalSigner.pubkeys"],
     description:
-      "Fetch the list of public keys to validate from an external signer. Cannot be used in combination with `--externalSigner.pubkeys`",
+      "Fetch the list of public keys to validate from external signer(s). Cannot be used in combination with `--externalSigner.pubkeys`",
     type: "boolean",
     group: "externalSigner",
   },
@@ -371,7 +432,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "externalSigner.fetchInterval": {
     implies: ["externalSigner.fetch"],
     description:
-      "Interval in milliseconds between fetching the list of public keys from external signer, once per epoch by default",
+      "Interval in milliseconds between fetching the list of public keys from external signer(s), once per epoch by default",
     type: "number",
     group: "externalSigner",
   },
@@ -451,8 +512,11 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   interopIndexes: {
     hidden: true,
-    description: "Range (inclusive) of interop key indexes to validate with: 0..16",
-    type: "string",
+    description: "Range(s) (inclusive) of interop key indexes to validate with: 0..16",
+    type: "array",
+    coerce: (indexes: string[]): number[] =>
+      // Parse ["11..13,15..17"] to ["11..13", "15..17"]
+      indexes.flatMap((item) => item.split(",")).flatMap(parseRange),
   },
 
   fromMnemonic: {
@@ -463,7 +527,10 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   mnemonicIndexes: {
     hidden: true,
-    description: "UNSAFE. Range (inclusive) of mnemonic key indexes to validate with: 0..16",
-    type: "string",
+    description: "UNSAFE. Range(s) (inclusive) of mnemonic key indexes to validate with: 0..16",
+    type: "array",
+    coerce: (indexes: string[]): number[] =>
+      // Parse ["11..13,15..17"] to ["11..13", "15..17"]
+      indexes.flatMap((item) => item.split(",")).flatMap(parseRange),
   },
 };

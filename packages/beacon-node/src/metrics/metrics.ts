@@ -1,5 +1,6 @@
-import {BeaconStateTransitionMetrics, getMetrics} from "@lodestar/state-transition";
 import {Metric, Registry} from "prom-client";
+import {ForkChoiceMetrics, getForkChoiceMetrics} from "@lodestar/fork-choice";
+import {BeaconStateTransitionMetrics, getMetrics} from "@lodestar/state-transition";
 import {BeaconMetrics, createBeaconMetrics} from "./metrics/beacon.js";
 import {LodestarMetrics, createLodestarMetrics} from "./metrics/lodestar.js";
 import {collectNodeJSMetrics} from "./nodeJsMetrics.js";
@@ -7,20 +8,47 @@ import {MetricsOptions} from "./options.js";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
 
 export type Metrics = BeaconMetrics &
-  BeaconStateTransitionMetrics &
-  LodestarMetrics & {register: RegistryMetricCreator; close: () => void};
+  ForkChoiceMetrics &
+  LodestarMetrics & {
+    /** Null when we use native state transition metrics instead */
+    stateTransition: BeaconStateTransitionMetrics | null;
+    register: RegistryMetricCreator;
+    close: () => void;
+  };
 
-export function createMetrics(opts: MetricsOptions, genesisTime: number, externalRegistries: Registry[] = []): Metrics {
+export type CreateMetricsOptions = {
+  /*
+   * Toggle inclusion of state transition metrics.
+   *
+   * False when native state transition is used, so we
+   * can grab metrics from the native implementation instead.
+   * */
+  includeStateTransitionMetrics?: boolean;
+  collectNodeMetrics?: boolean;
+};
+
+export function createMetrics(
+  opts: MetricsOptions,
+  genesisTime: number,
+  externalRegistries: Registry[] = [],
+  createOpts: CreateMetricsOptions = {}
+): Metrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
+  const forkChoice = getForkChoiceMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, genesisTime);
-  const stateTransition = getMetrics(register);
+  const stateTransition = createOpts.includeStateTransitionMetrics === false ? null : getMetrics(register);
 
-  process.on("unhandledRejection", (_error) => {
+  const onUnhandledRejection = (_error: unknown): void => {
     lodestar.unhandledPromiseRejections.inc();
-  });
+  };
+  process.on("unhandledRejection", onUnhandledRejection);
 
-  const close = collectNodeJSMetrics(register);
+  const nodeJsMetricsClose = createOpts.collectNodeMetrics === false ? (): void => {} : collectNodeJSMetrics(register);
+  const close = (): void => {
+    process.removeListener("unhandledRejection", onUnhandledRejection);
+    nodeJsMetricsClose();
+  };
 
   // Merge external registries
   for (const externalRegister of externalRegistries) {
@@ -31,8 +59,9 @@ export function createMetrics(opts: MetricsOptions, genesisTime: number, externa
 
   return {
     ...beacon,
+    ...forkChoice,
     ...lodestar,
-    ...stateTransition,
+    stateTransition,
     register,
     close,
   };

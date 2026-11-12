@@ -8,7 +8,7 @@ import {JobQueueOpts, QueueMetrics, QueueType, defaultQueueOpts} from "./options
  * Supports a single itemProcessor, for arbitrary functions use the JobFnQueue
  */
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+// biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
 export class JobItemQueue<Args extends any[], R> {
   private readonly opts: Required<JobQueueOpts>;
   /**
@@ -24,6 +24,8 @@ export class JobItemQueue<Args extends any[], R> {
   private readonly metrics?: QueueMetrics;
   private runningJobs = 0;
   private lastYield = 0;
+  /** Resolvers waiting for space in the queue */
+  private spaceWaiters: (() => void)[] = [];
 
   constructor(
     private readonly itemProcessor: (...args: Args) => Promise<R>,
@@ -67,8 +69,52 @@ export class JobItemQueue<Args extends any[], R> {
       if (this.jobs.length === 1 && this.opts.noYieldIfOneItem) {
         void this.runJob();
       } else if (this.runningJobs < this.opts.maxConcurrency) {
-        callInNextEventLoop(this.runJob);
+        callInNextEventLoop(() => void this.runJob());
       }
+    });
+  }
+
+  /**
+   * Returns a promise that resolves when there is space in the queue.
+   * If the queue already has space, resolves immediately (noop).
+   * Use this to apply backpressure when the caller should wait rather than
+   * have push() throw QUEUE_MAX_LENGTH.
+   */
+  async waitForSpace(): Promise<void> {
+    if (this.opts.signal.aborted) {
+      throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
+    }
+
+    if (this.jobs.length < this.opts.maxLength) {
+      return;
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      let settled = false;
+
+      const onAbort = (): void => {
+        if (settled) return;
+        settled = true;
+        const index = this.spaceWaiters.indexOf(wrappedResolve);
+        if (index >= 0) {
+          this.spaceWaiters.splice(index, 1);
+        }
+        reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
+      };
+
+      const wrappedResolve = (): void => {
+        if (settled) return;
+        settled = true;
+        this.opts.signal.removeEventListener("abort", onAbort);
+        resolve();
+      };
+
+      this.spaceWaiters.push(wrappedResolve);
+      this.opts.signal.addEventListener("abort", onAbort, {once: true});
+
+      // Re-check after attaching listener to close the race window where
+      // signal.abort() fires between the initial check and addEventListener
+      if (this.opts.signal.aborted) onAbort();
     });
   }
 
@@ -78,6 +124,7 @@ export class JobItemQueue<Args extends any[], R> {
 
   dropAllJobs = (): void => {
     this.jobs.clear();
+    this.notifySpaceWaiters();
   };
 
   private runJob = async (): Promise<void> => {
@@ -115,9 +162,24 @@ export class JobItemQueue<Args extends any[], R> {
 
     this.runningJobs = Math.max(0, this.runningJobs - 1);
 
+    // Notify any waiters that space is available
+    this.notifySpaceWaiters();
+
     // Potentially run a new job
     void this.runJob();
   };
+
+  private notifySpaceWaiters(): void {
+    // Compute available slots once to avoid thundering herd: resolved waiters
+    // won't push() until the next microtask, so jobs.length doesn't change
+    // inside this loop. Without the cap we'd wake ALL waiters on a single slot.
+    let available = this.opts.maxLength - this.jobs.length;
+    while (available > 0 && this.spaceWaiters.length > 0) {
+      const resolve = this.spaceWaiters.shift();
+      if (resolve) resolve();
+      available--;
+    }
+  }
 
   private abortAllJobs = (): void => {
     while (this.jobs.length > 0) {

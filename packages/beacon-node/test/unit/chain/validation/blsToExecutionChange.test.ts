@@ -1,7 +1,8 @@
+import {afterEach, beforeEach, describe, it, vi} from "vitest";
 import {digest} from "@chainsafe/as-sha256";
-import {SecretKey} from "@chainsafe/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/native/blst";
 import {
   BLS_WITHDRAWAL_PREFIX,
   DOMAIN_BLS_TO_EXECUTION_CHANGE,
@@ -10,9 +11,8 @@ import {
   ForkName,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {computeSigningRoot} from "@lodestar/state-transition";
+import {BeaconStateView, computeSigningRoot} from "@lodestar/state-transition";
 import {capella, ssz} from "@lodestar/types";
-import {afterEach, beforeEach, describe, it, vi} from "vitest";
 import {BlsToExecutionChangeErrorCode} from "../../../../src/chain/errors/blsToExecutionChangeError.js";
 import {validateGossipBlsToExecutionChange} from "../../../../src/chain/validation/blsToExecutionChange.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
@@ -69,7 +69,7 @@ describe("validate bls to execution change", () => {
   // Generate the state
   const _state = generateState(stateEmpty, defaultConfig);
   const config = createBeaconConfig(defaultConfig, _state.genesisValidatorsRoot);
-  const state = createCachedBeaconStateTest(_state, config);
+  const state = new BeaconStateView(createCachedBeaconStateTest(_state, config));
 
   // Gen a valid blsToExecutionChange for first val
   const blsToExecutionChange = {
@@ -83,7 +83,7 @@ describe("validate bls to execution change", () => {
   const signedBlsToExecChange = {message: blsToExecutionChange, signature: wsk.sign(signingRoot).toBytes()};
 
   beforeEach(() => {
-    chainStub = getMockedBeaconChain();
+    chainStub = getMockedBeaconChain({config});
     opPool = chainStub.opPool;
     vi.spyOn(chainStub, "getHeadState").mockReturnValue(state);
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch");

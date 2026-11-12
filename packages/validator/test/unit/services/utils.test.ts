@@ -1,5 +1,5 @@
-import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {beforeAll, describe, expect, it} from "vitest";
+import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {syncCommitteeIndicesToSubnets} from "../../../src/services/utils.js";
 
 describe("services / utils / syncCommitteeIndicesToSubnets", () => {

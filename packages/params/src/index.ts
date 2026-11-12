@@ -5,9 +5,9 @@ import {mainnetPreset} from "./presets/mainnet.js";
 import {minimalPreset} from "./presets/minimal.js";
 import {userOverrides, userSelectedPreset} from "./setPreset.js";
 
-export type {BeaconPreset} from "./types.js";
 export * from "./forkName.js";
 export {presetToJson} from "./json.js";
+export type {BeaconPreset} from "./types.js";
 export {PresetName};
 
 const presets = {
@@ -114,6 +114,19 @@ export const {
   FIELD_ELEMENTS_PER_CELL,
   FIELD_ELEMENTS_PER_EXT_BLOB,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
+
+  PTC_SIZE,
+  MAX_PAYLOAD_ATTESTATIONS,
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDERS_PER_WITHDRAWALS_SWEEP,
+  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
+  MAX_ATTESTER_SLASHING_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
+
+  INCLUSION_LIST_COMMITTEE_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
+  MAX_SIGNED_INCLUSION_LIST_SIZE,
 } = activePreset;
 
 ////////////
@@ -135,9 +148,13 @@ export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 
 // Withdrawal prefixes
 // Since the prefixes are just 1 byte, we define and use them as number
-export const BLS_WITHDRAWAL_PREFIX = 0;
-export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 1;
-export const COMPOUNDING_WITHDRAWAL_PREFIX = 2;
+export const BLS_WITHDRAWAL_PREFIX = 0x00;
+export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 0x01;
+export const COMPOUNDING_WITHDRAWAL_PREFIX = 0x02;
+export const BUILDER_WITHDRAWAL_PREFIX = 0xb0;
+
+// Builder version
+export const PAYLOAD_BUILDER_VERSION = 0;
 
 // Domain types
 
@@ -152,6 +169,11 @@ export const DOMAIN_SYNC_COMMITTEE = Uint8Array.from([7, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0]);
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
+export const DOMAIN_BEACON_BUILDER = Uint8Array.from([11, 0, 0, 0]);
+export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
+export const DOMAIN_PROPOSER_PREFERENCES = Uint8Array.from([13, 0, 0, 0]);
+export const DOMAIN_BUILDER_DEPOSIT = Uint8Array.from([14, 0, 0, 0]);
+export const DOMAIN_INCLUSION_LIST_COMMITTEE = Uint8Array.from([16, 0, 0, 0]);
 
 // Application specific domains
 
@@ -163,6 +185,7 @@ export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
  */
 export const DOMAIN_APPLICATION_MASK = Uint8Array.from([0, 0, 0, 1]);
 export const DOMAIN_APPLICATION_BUILDER = Uint8Array.from([0, 0, 0, 1]);
+export const DOMAIN_BUILDER_REQUEST_AUTH = Uint8Array.from([11, 0, 0, 1]);
 
 // Participation flag indices
 
@@ -186,23 +209,23 @@ export const PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_W
 // phase0 validator
 
 export const TARGET_AGGREGATORS_PER_COMMITTEE = 16;
-export const RANDOM_SUBNETS_PER_VALIDATOR = 1;
-export const EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION = 256;
+
+// phase0 networking
+
+export const NODE_ID_BITS = 256;
+export const MAX_CONCURRENT_REQUESTS = 2;
+
 /** Rationale: https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#why-are-there-attestation_subnet_count-attestation-subnets */
 export const ATTESTATION_SUBNET_COUNT = 64;
-export const SUBNETS_PER_NODE = 2;
-export const NODE_ID_BITS = 256;
-export const ATTESTATION_SUBNET_PREFIX_BITS = Math.log2(ATTESTATION_SUBNET_COUNT);
-export const EPOCHS_PER_SUBNET_SUBSCRIPTION = 256;
+export const ATTESTATION_SUBNET_EXTRA_BITS = 0;
+export const ATTESTATION_SUBNET_PREFIX_BITS =
+  Math.ceil(Math.log2(ATTESTATION_SUBNET_COUNT)) + ATTESTATION_SUBNET_EXTRA_BITS;
 
 // altair validator
 
 export const TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE = 16;
 export const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 export const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
-
-export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
-export const MAX_REQUEST_BLOCKS_DENEB = 2 ** 7; // 128
 
 // Lightclient pre-computed
 /**
@@ -235,6 +258,33 @@ export const BLOCK_BODY_EXECUTION_PAYLOAD_INDEX = 9;
 
 /**
  * ```ts
+ * types.ssz.capella.BeaconBlockBody.getPathInfo(['executionPayload', 'blockHash']).gindex
+ * ```
+ */
+export const EXECUTION_BLOCK_HASH_GINDEX = 412;
+export const EXECUTION_BLOCK_HASH_DEPTH = 8;
+export const EXECUTION_BLOCK_HASH_INDEX = 156;
+
+/**
+ * ```ts
+ * types.ssz.deneb.BeaconBlockBody.getPathInfo(['executionPayload', 'blockHash']).gindex
+ * ```
+ */
+export const EXECUTION_BLOCK_HASH_GINDEX_DENEB = 812;
+export const EXECUTION_BLOCK_HASH_DEPTH_DENEB = 9;
+export const EXECUTION_BLOCK_HASH_INDEX_DENEB = 300;
+
+/**
+ * ```ts
+ * types.ssz.gloas.BeaconBlockBody.getPathInfo(['signedExecutionPayloadBid', 'message', 'parentBlockHash']).gindex
+ * ```
+ */
+export const EXECUTION_BLOCK_HASH_GINDEX_GLOAS = 2856;
+export const EXECUTION_BLOCK_HASH_DEPTH_GLOAS = 11;
+export const EXECUTION_BLOCK_HASH_INDEX_GLOAS = 808;
+
+/**
+ * ```ts
  * config.types.altair.BeaconState.getPathGindex(["currentSyncCommittee"])
  * ```
  */
@@ -264,9 +314,12 @@ export const MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES = 128;
 
 /**
  * Optimistic sync
+ * @deprecated All networks have completed the merge transition, blocks are always safe to import optimistically.
  */
 export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
+/** @deprecated */
 export const INTERVALS_PER_SLOT = 3;
+export const BASIS_POINTS = 10000;
 
 // EIP-4844: Crypto const
 export const BYTES_PER_FIELD_ELEMENT = 32;
@@ -274,11 +327,11 @@ export const BLOB_TX_TYPE = 0x03;
 export const VERSIONED_HASH_VERSION_KZG = 0x01;
 
 // ssz.deneb.BeaconBlockBody.getPathInfo(['blobKzgCommitments',0]).gindex
-export const KZG_COMMITMENT_GINDEX0 = ACTIVE_PRESET === PresetName.minimal ? 1728 : 221184;
+export const KZG_COMMITMENT_GINDEX0 = 221184;
 export const KZG_COMMITMENT_SUBTREE_INDEX0 = KZG_COMMITMENT_GINDEX0 - 2 ** KZG_COMMITMENT_INCLUSION_PROOF_DEPTH;
 
 // ssz.deneb.BlobSidecars.elementType.fixedSize
-export const BLOBSIDECAR_FIXED_SIZE = ACTIVE_PRESET === PresetName.minimal ? 131704 : 131928;
+export const BLOB_SIDECAR_FIXED_SIZE = 131928;
 
 // Electra Misc
 export const UNSET_DEPOSIT_REQUESTS_START_INDEX = 2n ** 64n - 1n;
@@ -301,3 +354,32 @@ export const BYTES_PER_CELL = FIELD_ELEMENTS_PER_CELL * BYTES_PER_FIELD_ELEMENT;
 // ssz.fulu.BeaconBlockBody.getPathInfo(['blobKzgCommitments']).gindex
 export const KZG_COMMITMENTS_GINDEX = 27;
 export const KZG_COMMITMENTS_SUBTREE_INDEX = KZG_COMMITMENTS_GINDEX - 2 ** KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH;
+
+// Gloas Misc
+export const FINALIZED_ROOT_GINDEX_GLOAS = 735;
+export const FINALIZED_ROOT_DEPTH_GLOAS = 9;
+export const FINALIZED_ROOT_INDEX_GLOAS = 223;
+export const CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS = 2945;
+export const CURRENT_SYNC_COMMITTEE_DEPTH_GLOAS = 11;
+export const CURRENT_SYNC_COMMITTEE_INDEX_GLOAS = 897;
+export const NEXT_SYNC_COMMITTEE_GINDEX_GLOAS = 2946;
+export const NEXT_SYNC_COMMITTEE_DEPTH_GLOAS = 11;
+export const NEXT_SYNC_COMMITTEE_INDEX_GLOAS = 898;
+export const BUILDER_INDEX_FLAG = 2 ** 40;
+export const BUILDER_INDEX_SELF_BUILD = Infinity;
+export const BUILDER_PAYMENT_THRESHOLD_NUMERATOR = 6;
+export const BUILDER_PAYMENT_THRESHOLD_DENOMINATOR = 10;
+export const BUILDER_DEPOSIT_REQUEST_TYPE = 0x03;
+export const BUILDER_EXIT_REQUEST_TYPE = 0x04;
+
+// Gloas builder specs
+export const MAX_BUILDER_AUTH_DATA_SIZE = 4096;
+export const MAX_BUILDER_ENTRIES = 64;
+export const MAX_BUILDER_URL_SIZE = 2048;
+export const MAX_BUILDER_PUBKEYS = 64;
+export const MAX_EXECUTION_PAYMENT = 2n ** 64n - 1n;
+
+// EIP-8025 execution proofs
+export const MAX_PROOF_SIZE = 4194304;
+export const STATELESS_INPUT_SCHEMA_ID = 0x1501;
+export const MAX_SIGNED_EXECUTION_PROOF_ENVELOPE_SIZE = 4194449;

@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import {expect, it, vi} from "vitest";
 import {Type} from "@chainsafe/ssz";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
-import {expect, it, vi} from "vitest";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {replaceUintTypeWithUintBigintType} from "../utils/replaceUintTypeWithUintBigintType.js";
 import {runValidSszTest} from "../utils/runValidSszTest.js";
@@ -19,7 +19,7 @@ import {RunnerType} from "../utils/types.js";
 //       | serialized.ssz_snappy
 //       | value.yaml
 //
-// Docs: https://github.com/ethereum/consensus-specs/blob/master/tests/formats/ssz_static/core.md
+// Docs: https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/ssz_static/core.md
 
 type Types = Record<string, Type<any>>;
 
@@ -31,19 +31,20 @@ type Types = Record<string, Type<any>>;
 //
 
 const sszStatic =
-  (skippedFork: string, skippedTypes?: string[]) =>
+  (skippedFork?: string, skippedTypes?: string[]) =>
   (fork: ForkName, typeName: string, _testSuite: string, testSuiteDirpath: string): void => {
     if (fork === skippedFork) {
       return;
     }
 
-    // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+    // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts
     if (skippedTypes?.includes(typeName)) {
       return;
     }
 
     const sszType =
       (sszTypesFor(fork) as Types)[typeName] ||
+      (ssz.gloas as Types)[typeName] ||
       (ssz.fulu as Types)[typeName] ||
       (ssz.electra as Types)[typeName] ||
       (ssz.deneb as Types)[typeName] ||
@@ -64,7 +65,7 @@ const sszStatic =
     const sszTypeNoUint = replaceUintTypeWithUintBigintType(sszType);
 
     for (const testCase of fs.readdirSync(testSuiteDirpath)) {
-      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts
       it(testCase, () => {
         // Mainnet must deal with big full states and hash each one multiple times
         if (ACTIVE_PRESET === "mainnet") {
@@ -80,7 +81,6 @@ const sszStatic =
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
   ssz_static: {
     type: RunnerType.custom,
-    // starting from v1.5.0-beta.3, there is "eip7441" fork in ssz_static tests but we ignore them
-    fn: sszStatic("eip7441"),
+    fn: sszStatic(),
   },
 });

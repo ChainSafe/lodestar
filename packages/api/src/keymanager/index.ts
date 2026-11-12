@@ -5,22 +5,29 @@ import * as keymanager from "./client.js";
 
 // NOTE: Don't export server here so it's not bundled to all consumers
 
-export {ImportStatus, DeletionStatus, ImportRemoteKeyStatus, DeleteRemoteKeyStatus} from "./routes.js";
 export type {
-  ResponseStatus,
-  SignerDefinition,
-  RemoteSignerDefinition,
-  KeystoreStr,
-  SlashingProtectionData,
-  PubkeyHex,
+  BuilderBoostFactorData,
+  BuilderConfigData,
+  BuilderEntryConfig,
   Endpoints,
   FeeRecipientData,
-  GraffitiData,
   GasLimitData,
-  BuilderBoostFactorData,
+  GraffitiData,
+  KeystoreStr,
   ProposerConfigResponse,
+  PubkeyHex,
+  RemoteSignerDefinition,
+  ResponseStatus,
+  SignerDefinition,
+  SlashingProtectionData,
 } from "./routes.js";
-
+export {
+  DeleteRemoteKeyStatus,
+  DeletionStatus,
+  ImportRemoteKeyStatus,
+  ImportStatus,
+  builderConfigDataFromJson,
+} from "./routes.js";
 export type {ApiClient};
 
 type ClientModules = HttpClientModules & {

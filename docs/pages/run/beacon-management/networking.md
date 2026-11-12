@@ -10,18 +10,23 @@ Some of the important Lodestar flags related to networking are:
 - [`--listenAddress`](./beacon-cli#--listenaddress)
 - [`--port`](./beacon-cli#--port)
 - [`--discoveryPort`](./beacon-cli#--discoveryport)
+- [`--quicPort`](./beacon-cli#--quicport)
 - [`--listenAddress6`](./beacon-cli#--listenaddress6)
 - [`--port6`](./beacon-cli#--port6)
 - [`--discoveryPort6`](./beacon-cli#--discoveryport6)
+- [`--quicPort6`](./beacon-cli#--quicport6)
+- [`--quic`](./beacon-cli#--quic)
 - [`--bootnodes`](./beacon-cli#--bootnodes)
 - [`--subscribeAllSubnets`](./beacon-cli#--subscribeallsubnets)
 - [`--disablePeerScoring`](./beacon-cli#--disablepeerscoring)
 - [`--enr.ip`](./beacon-cli#--enrip)
 - [`--enr.tcp`](./beacon-cli#--enrtcp)
 - [`--enr.udp`](./beacon-cli#--enrudp)
+- [`--enr.quic`](./beacon-cli#--enrquic)
 - [`--enr.ip6`](./beacon-cli#--enrip6)
 - [`--enr.tcp6`](./beacon-cli#--enrtcp6)
 - [`--enr.udp6`](./beacon-cli#--enrudp6)
+- [`--enr.quic6`](./beacon-cli#--enrquic6)
 - [`--nat`](./beacon-cli#--nat)
 - [`--private`](./beacon-cli#--private)
 
@@ -41,10 +46,16 @@ The primary purpose of ENRs is to facilitate node discovery and connectivity in 
 
 Note that bootnodes are announced via ENR.
 
-Lodestar prints out its own ENR on startup, the logs will show something similar to the following
+Lodestar prints out its own ENR on startup, the logs will show something similar to the following for IPv4 nodes:
 
 ```txt
 info: discv5 worker started peerId=16Uiu...t9LQ3, initialENR=enr:-Iu4QGE...WRwgiMo, bindAddr4=/ip4/0.0.0.0/udp/9000
+```
+
+Or similar to the following for IPv6 dual-stack nodes (when enabled):
+
+```txt
+info: discv5 worker started peerId=16Uiu...t9LQ3, initialENR=enr:-Iu4QGE...WRwgiMo, bindAddr4=/ip4/0.0.0.0/udp/9000, bindAddr6=/ip6/::/udp/9000
 ```
 
 Alternatively, the ENR can also be retrieved from the beacon node API by querying the [getNetworkIdentity](https://ethereum.github.io/beacon-APIs/#/Node/getNetworkIdentity) endpoint.
@@ -73,6 +84,28 @@ Libp2p is a modular and extensible network stack that serves as the data transpo
 
 Libp2p operates at the lower levels of the OSI model, particularly at the Transport and Network layers. Libp2p supports both TCP and UDP protocols for establishing connections and data transmission. Combined with libp2p's modular design it can integrate with various networking technologies to facilitating both routing and addressing.
 
+### QUIC Transport
+
+Lodestar supports [QUIC](https://datatracker.ietf.org/doc/html/rfc9000) as a transport alongside TCP. QUIC is a UDP-based transport that provides built-in encryption (TLS 1.3), multiplexed streams, and faster connection establishment compared to TCP. QUIC is enabled by default and Lodestar will prefer QUIC when dialing peers that advertise QUIC support. The node's ENR automatically includes QUIC port information so other nodes can discover and connect via QUIC. The ENR fields can be overridden with `--enr.quic` and `--enr.quic6`.
+
+## Port Configuration
+
+Lodestar uses three ports for P2P networking:
+
+| Port              | Protocol | Default                 | Purpose                   |
+| ----------------- | -------- | ----------------------- | ------------------------- |
+| `--port`          | TCP      | 9000                    | TCP transport for libp2p  |
+| `--discoveryPort` | UDP      | 9000 (same as `--port`) | discv5 peer discovery     |
+| `--quicPort`      | UDP      | 9001 (`--port` + 1)     | QUIC transport for libp2p |
+
+Note that `--discoveryPort` and `--quicPort` are both UDP but must use different ports. Lodestar will error on startup if they collide.
+
+For IPv6 dual-stack, equivalent flags are available: `--port6`, `--discoveryPort6`, and `--quicPort6`.
+
+By default, Lodestar listens on IPv4 and also on IPv6 when the host has a global IPv6 address. Use either `--listenAddress` for IPv4 only or `--listenAddress6` for IPv6 only.
+
+IPv6 ENR fields are cleared when no IPv6 listener is configured so peers don't try to connect over IPv6. This cleanup is skipped if any of `--enr.ip6`, `--enr.udp6`, `--enr.tcp6`, or `--enr.quic6` is set. Use `--nat` when advertising a non-local address.
+
 ## Firewall Management
 
 If your setup is behind a firewall there are a few ports that will need to be opened to allow for P2P discovery and communication. There are also some ports that need to be protected to prevent unwanted access or DDOS attacks on your node.
@@ -80,8 +113,8 @@ If your setup is behind a firewall there are a few ports that will need to be op
 Ports that must be opened:
 
 - 30303/TCP+UDP - Execution layer P2P communication port
-- 9000/TCP+UDP - Beacon node IPv4 P2P communication port
-- 9090/TCP+UDP - Beacon node IPv6 P2P communication port
+- 9000/TCP+UDP - Beacon node P2P communication (TCP transport + discv5 discovery)
+- 9001/UDP - Beacon node QUIC transport
 
 Ports that must be protected:
 

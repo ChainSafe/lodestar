@@ -1,8 +1,7 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {routes} from "@lodestar/api";
 import {describe, expect, it} from "vitest";
-
+import {routes} from "@lodestar/api";
 import {parseProposerConfig} from "../../../src/util/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -14,7 +13,7 @@ const testValue = {
       strictFeeRecipientCheck: true,
       feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       builder: {
-        gasLimit: 45000000,
+        gasLimit: 60000000,
         selection: undefined,
         boostFactor: undefined,
       },
@@ -26,7 +25,11 @@ const testValue = {
       builder: {
         gasLimit: 35000000,
         selection: routes.validator.BuilderSelection.BuilderAlways,
-        boostFactor: 18446744073709551616n,
+        boostFactor: 18446744073709551615n,
+        builders: [
+          {url: "https://builder-a.example.com", minBid: 1000n},
+          {url: "https://builder-a.example.com", authData: "0x0123", builderBoostFactor: 200n},
+        ],
       },
     },
   },
@@ -35,7 +38,7 @@ const testValue = {
     strictFeeRecipientCheck: true,
     feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
     builder: {
-      gasLimit: 45000000,
+      gasLimit: 60000000,
       selection: routes.validator.BuilderSelection.MaxProfit,
       boostFactor: BigInt(50),
     },
@@ -51,5 +54,11 @@ describe("validator / valid Proposer", () => {
 describe("validator / invalid Proposer", () => {
   it("should throw error", () => {
     expect(() => parseProposerConfig(path.join(__dirname, "./proposerConfigs/invalidData.yaml"))).toThrow();
+  });
+
+  it("should throw on duplicate builder entries", () => {
+    expect(() => parseProposerConfig(path.join(__dirname, "./proposerConfigs/duplicateBuilders.yaml"))).toThrow(
+      /Duplicate builder entry/
+    );
   });
 });

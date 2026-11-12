@@ -1,6 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
+import {BlockError, BlockErrorCode} from "../../../chain/errors/index.js";
 import {BATCH_SLOT_OFFSET, EPOCHS_PER_BATCH} from "../../constants.js";
 import {Batch, BatchStatus} from "../batch.js";
 
@@ -116,4 +117,47 @@ export function isSyncChainDone(batches: Batch[], lastEpochWithProcessBlocks: Ep
   }
 
   return batchStartEpochIsAfterSlot(lastEpochWithProcessBlocks, targetSlot);
+}
+
+/**
+ * Where a batch processing error should be attributed.
+ */
+export enum ProcessingFaultKind {
+  /** This batch's own blocks are bad or incomplete, so redownload this batch. */
+  CurrentBatch = "CurrentBatch",
+  /** This batch is valid, but a previous batch did not deliver the parent. */
+  PreviousBatch = "PreviousBatch",
+  /** The fault could be in this batch or a previous batch, so hedge both ways. */
+  Ambiguous = "Ambiguous",
+}
+
+/**
+ * Classify a processChainSegment error for a batch so range sync only redownloads
+ * the batch or batches that could actually be at fault.
+ * Note that range sync is supposed to only handle linear chain, for forky condition we'll handle it via backward sync
+ * in BlockInputSync or the upcoming/TODO beacon_blocks_by_head req/resp.
+ */
+export function classifyProcessingFault(err: Error, batch: Batch, prevBatch: Batch | undefined): ProcessingFaultKind {
+  if (!(err instanceof BlockError)) {
+    return ProcessingFaultKind.CurrentBatch;
+  }
+
+  const {code} = err.type;
+  if (code !== BlockErrorCode.PARENT_BLOCK_UNKNOWN && code !== BlockErrorCode.PARENT_PAYLOAD_UNKNOWN) {
+    return ProcessingFaultKind.CurrentBatch;
+  }
+
+  const firstErrorSlot = err.signedBlock.message.slot;
+  if (firstErrorSlot === batch.startSlot) {
+    // note that range sync is for linear chain, so this is clearly an issue of the previous batch
+    return prevBatch === undefined ? ProcessingFaultKind.CurrentBatch : ProcessingFaultKind.PreviousBatch;
+  }
+
+  const prevTailSlot = batch.startSlot - 1;
+  const prevHasFullTail =
+    code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
+      ? (prevBatch?.getPayloadEnvelopes()?.get(prevTailSlot)?.hasPayloadEnvelope() ?? false)
+      : (prevBatch?.getBlocks().some((b) => b.slot === prevTailSlot) ?? false);
+
+  return prevHasFullTail ? ProcessingFaultKind.CurrentBatch : ProcessingFaultKind.Ambiguous;
 }

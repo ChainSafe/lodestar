@@ -1,16 +1,13 @@
-import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {capella, ssz} from "@lodestar/types";
-
-import {CachedBeaconStateAllForks} from "../types.js";
-import {ISignatureSet, SignatureSetType, computeSigningRoot, verifySignatureSet} from "../util/index.js";
+import {SignatureSetType, SingleSignatureSet, computeSigningRoot, verifySignatureSet} from "../util/index.js";
 
 export function verifyBlsToExecutionChangeSignature(
-  state: CachedBeaconStateAllForks,
+  config: BeaconConfig,
   signedBLSToExecutionChange: capella.SignedBLSToExecutionChange
 ): boolean {
-  return verifySignatureSet(getBlsToExecutionChangeSignatureSet(state.config, signedBLSToExecutionChange));
+  return verifySignatureSet(getBlsToExecutionChangeSignatureSet(config, signedBLSToExecutionChange));
 }
 
 /**
@@ -19,7 +16,7 @@ export function verifyBlsToExecutionChangeSignature(
 export function getBlsToExecutionChangeSignatureSet(
   config: BeaconConfig,
   signedBLSToExecutionChange: capella.SignedBLSToExecutionChange
-): ISignatureSet {
+): SingleSignatureSet {
   // signatureFork for signing domain is fixed
   const signatureFork = ForkName.phase0;
   const domain = config.getDomainAtFork(signatureFork, DOMAIN_BLS_TO_EXECUTION_CHANGE);
@@ -28,7 +25,7 @@ export function getBlsToExecutionChangeSignatureSet(
     type: SignatureSetType.single,
     // The withdrawal pubkey is the same as signedBLSToExecutionChange's fromBlsPubkey as it should
     // be validated against the withdrawal credentials digest
-    pubkey: PublicKey.fromBytes(signedBLSToExecutionChange.message.fromBlsPubkey, true),
+    pubkey: signedBLSToExecutionChange.message.fromBlsPubkey,
     signingRoot: computeSigningRoot(ssz.capella.BLSToExecutionChange, signedBLSToExecutionChange.message, domain),
     signature: signedBLSToExecutionChange.signature,
   };
@@ -37,7 +34,7 @@ export function getBlsToExecutionChangeSignatureSet(
 export function getBlsToExecutionChangeSignatureSets(
   config: BeaconConfig,
   signedBlock: capella.SignedBeaconBlock
-): ISignatureSet[] {
+): SingleSignatureSet[] {
   return signedBlock.message.body.blsToExecutionChanges.map((blsToExecutionChange) =>
     getBlsToExecutionChangeSignatureSet(config, blsToExecutionChange)
   );

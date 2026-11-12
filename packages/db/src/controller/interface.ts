@@ -28,6 +28,9 @@ export interface KeyValue<K, V> {
   value: V;
 }
 
+export type DbBatchOperation<K, V> = {type: "del"; key: K} | {type: "put"; key: K; value: V};
+export type DbBatch<K, V> = DbBatchOperation<K, V>[];
+
 export interface DatabaseController<K, V> {
   // service start / stop
 
@@ -39,6 +42,8 @@ export interface DatabaseController<K, V> {
   // Core API
 
   get(key: K, opts?: DbReqOpts): Promise<V | null>;
+  getMany(key: K[], opts?: DbReqOpts): Promise<(V | undefined)[]>;
+
   put(key: K, value: V, opts?: DbReqOpts): Promise<void>;
   delete(key: K, opts?: DbReqOpts): Promise<void>;
 
@@ -46,6 +51,10 @@ export interface DatabaseController<K, V> {
 
   batchPut(items: KeyValue<K, V>[], opts?: DbReqOpts): Promise<void>;
   batchDelete(keys: K[], opts?: DbReqOpts): Promise<void>;
+  batch(batch: DbBatch<K, V>, opts?: DbReqOpts): Promise<void>;
+
+  compactRange(start: K, end: K): Promise<void>;
+  approximateSize(start: K, end: K): Promise<number>;
 
   // Iterate over entries
 

@@ -1,12 +1,11 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
-import {Attestation, Epoch, phase0} from "@lodestar/types";
-import {intSqrt} from "@lodestar/utils";
-
+import {BitArray} from "@chainsafe/ssz";
 import {
+  EFFECTIVE_BALANCE_INCREMENT,
   ForkSeq,
   MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
   TIMELY_HEAD_FLAG_INDEX,
   TIMELY_HEAD_WEIGHT,
   TIMELY_SOURCE_FLAG_INDEX,
@@ -15,9 +14,13 @@ import {
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
+import {Attestation, Epoch, Slot, phase0} from "@lodestar/types";
+import {byteArrayEquals, intSqrt} from "@lodestar/utils";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
-import {CachedBeaconStateAltair} from "../types.js";
+import {BeaconStateView} from "../stateView/beaconStateView.js";
+import {CachedBeaconStateAltair, CachedBeaconStateGloas} from "../types.js";
+import {isAttestationSameSlotRootCache} from "../util/gloas.js";
 import {increaseBalance, verifySignatureSet} from "../util/index.js";
 import {RootCache} from "../util/rootCache.js";
 import {checkpointToStr, isTimelyTarget, validateAttestation} from "./processAttestationPhase0.js";
@@ -32,21 +35,25 @@ const SLOTS_PER_EPOCH_SQRT = intSqrt(SLOTS_PER_EPOCH);
 
 export function processAttestationsAltair(
   fork: ForkSeq,
-  state: CachedBeaconStateAltair,
+  state: CachedBeaconStateAltair | CachedBeaconStateGloas,
   attestations: Attestation[],
+  parentSlot: Slot | null,
   verifySignature = true,
   metrics?: BeaconStateTransitionMetrics | null
 ): void {
   const {epochCtx} = state;
   const {effectiveBalanceIncrements} = epochCtx;
   const stateSlot = state.slot;
-  const rootCache = new RootCache(state);
+  const rootCache = new RootCache(new BeaconStateView(state));
   const currentEpoch = epochCtx.epoch;
 
   // Process all attestations first and then increase the balance of the proposer once
   let proposerReward = 0;
   let newSeenAttesters = 0;
   let newSeenAttestersEffectiveBalance = 0;
+
+  const builderWeightMap: Map<number, number> = new Map();
+
   for (const attestation of attestations) {
     const data = attestation.data;
 
@@ -59,7 +66,7 @@ export function processAttestationsAltair(
     // TODO: Why should we verify an indexed attestation that we just created? If it's just for the signature
     // we can verify only that and nothing else.
     if (verifySignature) {
-      const sigSet = getAttestationWithIndicesSignatureSet(state, attestation, attestingIndices);
+      const sigSet = getAttestationWithIndicesSignatureSet(state.config, state.slot, attestation, attestingIndices);
       if (!verifySignatureSet(sigSet)) {
         throw new Error("Attestation signature is not valid");
       }
@@ -67,13 +74,17 @@ export function processAttestationsAltair(
 
     const inCurrentEpoch = data.target.epoch === currentEpoch;
     const epochParticipation = inCurrentEpoch ? state.currentEpochParticipation : state.previousEpochParticipation;
+    // Count how much additional weight added to current or previous epoch's builder pending payment (in ETH increment)
+    let paymentWeightToAdd = 0;
 
-    const flagsAttestation = getAttestationParticipationStatus(
+    const {flags: flagsAttestation, isSameSlotAttestation} = getAttestationParticipationStatus(
       fork,
       data,
       stateSlot - data.slot,
       epochCtx.epoch,
-      rootCache
+      rootCache,
+      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).executionPayloadAvailability : null,
+      parentSlot
     );
 
     // For each participant, update their participation
@@ -122,12 +133,38 @@ export function processAttestationsAltair(
           }
         }
       }
+
+      if (fork >= ForkSeq.gloas && isSameSlotAttestation && flags === 0 && flagsNewSet !== 0) {
+        paymentWeightToAdd += effectiveBalanceIncrements[validatorIndex];
+      }
     }
 
     // Do the discrete math inside the loop to ensure a deterministic result
     const totalIncrements = totalBalanceIncrementsWithWeight;
-    const proposerRewardNumerator = totalIncrements * state.epochCtx.baseRewardPerIncrement;
+    // The proposer reward is priced at the attestation's target epoch
+    const proposerRewardNumerator =
+      totalIncrements *
+      (inCurrentEpoch ? state.epochCtx.baseRewardPerIncrement : state.epochCtx.baseRewardPerIncrementPrevEpoch);
     proposerReward += Math.floor(proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR);
+
+    if (fork >= ForkSeq.gloas) {
+      const builderPendingPaymentIndex = inCurrentEpoch
+        ? SLOTS_PER_EPOCH + (data.slot % SLOTS_PER_EPOCH)
+        : data.slot % SLOTS_PER_EPOCH;
+
+      const existingWeight =
+        builderWeightMap.get(builderPendingPaymentIndex) ??
+        (state as CachedBeaconStateGloas).builderPendingPayments.get(builderPendingPaymentIndex).weight;
+      const updatedWeight = existingWeight + paymentWeightToAdd * EFFECTIVE_BALANCE_INCREMENT;
+      builderWeightMap.set(builderPendingPaymentIndex, updatedWeight);
+    }
+  }
+
+  for (const [index, weight] of builderWeightMap) {
+    const payment = (state as CachedBeaconStateGloas).builderPendingPayments.get(index);
+    if (payment.withdrawal.amount > 0) {
+      payment.weight = weight;
+    }
   }
 
   metrics?.newSeenAttestersPerBlock.set(newSeenAttesters);
@@ -146,8 +183,10 @@ export function getAttestationParticipationStatus(
   data: phase0.AttestationData,
   inclusionDelay: number,
   currentEpoch: Epoch,
-  rootCache: RootCache
-): number {
+  rootCache: RootCache,
+  executionPayloadAvailability: BitArray | null,
+  parentSlot: Slot | null
+): {flags: number; isSameSlotAttestation: boolean} {
   const justifiedCheckpoint =
     data.target.epoch === currentEpoch ? rootCache.currentJustifiedCheckpoint : rootCache.previousJustifiedCheckpoint;
 
@@ -169,15 +208,46 @@ export function getAttestationParticipationStatus(
   const isMatchingTarget = byteArrayEquals(data.target.root, rootCache.getBlockRoot(data.target.epoch));
 
   // a timely head is only be set if the target is _also_ matching
-  const isMatchingHead =
+  // In gloas, this is called `head_root_matches`
+  let isMatchingHead =
     isMatchingTarget && byteArrayEquals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot));
+
+  let isSameSlotAttestation = false;
+
+  if (fork >= ForkSeq.gloas) {
+    let isMatchingPayload = false;
+    isSameSlotAttestation = isAttestationSameSlotRootCache(rootCache, data);
+
+    if (isSameSlotAttestation) {
+      if (data.index !== 0) {
+        throw new Error("Attesting same slot must indicate empty payload");
+      }
+      isMatchingPayload = true;
+    } else {
+      if (executionPayloadAvailability === null) {
+        throw new Error("Must supply executionPayloadAvailability post-gloas");
+      }
+      if (parentSlot === null) {
+        throw new Error("Must supply parentSlot post-gloas");
+      }
+
+      if (data.index !== 0 && data.index !== 1) {
+        throw new Error(`data index must be 0 or 1 index=${data.index}`);
+      }
+
+      isMatchingPayload =
+        Boolean(data.index) === executionPayloadAvailability.get(parentSlot % SLOTS_PER_HISTORICAL_ROOT);
+    }
+
+    isMatchingHead = isMatchingHead && isMatchingPayload;
+  }
 
   let flags = 0;
   if (isMatchingSource && inclusionDelay <= SLOTS_PER_EPOCH_SQRT) flags |= TIMELY_SOURCE;
   if (isMatchingTarget && isTimelyTarget(fork, inclusionDelay)) flags |= TIMELY_TARGET;
   if (isMatchingHead && inclusionDelay === MIN_ATTESTATION_INCLUSION_DELAY) flags |= TIMELY_HEAD;
 
-  return flags;
+  return {flags, isSameSlotAttestation};
 }
 
 export function checkpointValueEquals(cp1: phase0.Checkpoint, cp2: phase0.Checkpoint): boolean {

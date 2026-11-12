@@ -1,8 +1,8 @@
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {afterEach, describe, expect, it, vi} from "vitest";
 import {GossipHandlerParamGeneric, GossipHandlers, GossipType} from "../../../src/network/gossip/index.js";
 import {Network} from "../../../src/network/index.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
@@ -234,7 +234,8 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     }
 
     const lightClientOptimisticUpdate = ssz.capella.LightClientOptimisticUpdate.defaultValue();
-    lightClientOptimisticUpdate.signatureSlot = START_SLOT;
+    lightClientOptimisticUpdate.attestedHeader.beacon.slot = START_SLOT;
+    lightClientOptimisticUpdate.signatureSlot = START_SLOT + 1;
     await netA.publishLightClientOptimisticUpdate(lightClientOptimisticUpdate);
 
     const optimisticUpdate = await onLightClientOptimisticUpdatePromise;
@@ -273,7 +274,8 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     }
 
     const lightClientFinalityUpdate = ssz.capella.LightClientFinalityUpdate.defaultValue();
-    lightClientFinalityUpdate.signatureSlot = START_SLOT;
+    lightClientFinalityUpdate.attestedHeader.beacon.slot = START_SLOT;
+    lightClientFinalityUpdate.signatureSlot = START_SLOT + 1;
     await netA.publishLightClientFinalityUpdate(lightClientFinalityUpdate);
 
     const optimisticUpdate = await onLightClientFinalityUpdatePromise;

@@ -7,7 +7,7 @@ import {
   collectNodeJSMetrics,
   getHttpMetricsServer,
 } from "@lodestar/beacon-node";
-import {LevelDbController} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {
   ProcessShutdownCallback,
@@ -15,13 +15,26 @@ import {
   Validator,
   ValidatorProposerConfig,
   defaultOptions,
+  getMetrics,
 } from "@lodestar/validator";
-import {getMetrics} from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
-import {YargsError, cleanOldLogFiles, mkdir, parseLoggerArgs} from "../../util/index.js";
-import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
-import {parseBuilderBoostFactor, parseBuilderSelection} from "../../util/proposerConfig.js";
+import {
+  YargsError,
+  cleanOldLogFiles,
+  mkdir,
+  onGracefulShutdown,
+  parseFeeRecipient,
+  parseLoggerArgs,
+  parseProposerConfig,
+} from "../../util/index.js";
+import {
+  parseBuilderBoostFactor,
+  parseBuilderGweiAmount,
+  parseBuilderMinBid,
+  parseBuilderSelection,
+  parseBuilderUrls,
+} from "../../util/proposerConfig.js";
 import {getVersionData} from "../../util/version.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
 import {IPersistedKeysBackend} from "./keymanager/interface.js";
@@ -64,7 +77,16 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   const onGracefulShutdownCbs: (() => Promise<void> | void)[] = [];
   onGracefulShutdown(async () => {
-    for (const cb of onGracefulShutdownCbs) await cb();
+    let exitCode = 0;
+    try {
+      for (const cb of onGracefulShutdownCbs) await cb();
+      logger.debug("Validator client closed");
+    } catch (e) {
+      logger.warn("Error closing validator client", {}, e as Error);
+      exitCode = 1;
+    }
+    // Explicitly exit process due to potential active handles (e.g. EventSource / in-flight HTTP via DVT middleware)
+    process.exit(exitCode);
   }, logger.info.bind(logger));
 
   // Callback for validator to request forced exit, in case of doppelganger detection
@@ -157,6 +179,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
         globalInit: {
           requestWireFormat: parseWireFormat(args, "http.requestWireFormat"),
           responseWireFormat: parseWireFormat(args, "http.responseWireFormat"),
+          timeoutMs: args["http.requestTimeout"],
           headers: {"User-Agent": `Lodestar/${version}`},
         },
       },
@@ -167,15 +190,21 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       doppelgangerProtection,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
       scAfterBlockDelaySlotFraction: args.scAfterBlockDelaySlotFraction,
-      disableAttestationGrouping: args.disableAttestationGrouping,
       valProposerConfig,
       distributed: args.distributed,
       broadcastValidation: parseBroadcastValidation(args.broadcastValidation),
       blindedLocal: args.blindedLocal,
+      payloadLocal: args.payloadLocal,
       externalSigner: {
-        url: args["externalSigner.url"],
+        urls: args["externalSigner.urls"],
         fetch: args["externalSigner.fetch"],
         fetchInterval: args["externalSigner.fetchInterval"],
+      },
+      clock: {
+        // We don't wanna skip slots if slot processing takes longer than slot duration
+        // in a distributed setup as delays might get caused by hanging HTTP requests
+        // due to DVT middleware not reaching the signature threshold
+        skipSlots: args["clock.skipSlots"] ?? !args.distributed,
       },
     },
     metrics
@@ -198,7 +227,8 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       validator,
       persistedKeysBackend,
       abortController.signal,
-      proposerConfigWriteDisabled
+      proposerConfigWriteDisabled,
+      args.allowDangerousTrustedPayments
     );
     const keymanagerServer = new KeymanagerRestApiServer(
       {
@@ -236,6 +266,9 @@ function getProposerConfigFromArgs(
         args["builder.selection"] ?? (args.builder ? defaultOptions.builderAliasSelection : undefined)
       ),
       boostFactor: parseBuilderBoostFactor(args["builder.boostFactor"]),
+      minBid: parseBuilderMinBid(args["builder.minBid"]),
+      maxExecutionPayment: parseBuilderGweiAmount(args["builder.maxExecutionPayment"]),
+      builders: parseBuilderUrls(args["builder.urls"]),
     },
   };
 
@@ -259,6 +292,34 @@ function getProposerConfigFromArgs(
       valProposerConfig = {defaultConfig} as ValidatorProposerConfig;
     }
   }
+
+  // Trusted execution payments are only backed by the builder's promise to pay, require an
+  // explicit opt-in before any configuration source can set a max execution payment above 0
+  if (args.allowDangerousTrustedPayments !== true) {
+    const configs = [valProposerConfig.defaultConfig, ...Object.values(valProposerConfig.proposerConfig ?? {})];
+    const hasTrustedPayment = configs.some(
+      (config) =>
+        (config.builder?.maxExecutionPayment ?? 0n) > 0n ||
+        (config.builder?.builders ?? []).some((entry) => (entry.maxExecutionPayment ?? 0n) > 0n)
+    );
+    if (hasTrustedPayment) {
+      throw new YargsError(
+        "Configuring a builder max execution payment above 0 requires --allowDangerousTrustedPayments"
+      );
+    }
+  }
+
+  const configs = [valProposerConfig.defaultConfig, ...Object.values(valProposerConfig.proposerConfig ?? {})];
+  if (
+    configs.some(
+      (config) =>
+        config.builder?.selection === routes.validator.BuilderSelection.ExecutionOnly &&
+        (config.builder.builders ?? []).length > 0
+    )
+  ) {
+    throw new YargsError("Builder selection executiononly can not be combined with builders");
+  }
+
   return valProposerConfig;
 }
 

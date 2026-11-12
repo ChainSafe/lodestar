@@ -1,7 +1,6 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-
 import {getDefinitions} from "../../../src/builder/routes.js";
 import {runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
@@ -23,5 +22,12 @@ const openApiFile: OpenApiFile = {
 
 const definitions = getDefinitions(createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0}));
 
+const ignoredOperations = [
+  // TODO: remove once a builder-specs release includes the gloas endpoints (builder-specs#165)
+  "getExecutionPayloadBid",
+  "submitSignedBeaconBlock",
+  "submitBuilderPreferences",
+];
+
 const openApiJson = await fetchOpenApiSpec(openApiFile);
-runTestCheckAgainstSpec(openApiJson, definitions, testData);
+runTestCheckAgainstSpec(openApiJson, definitions, testData, ignoredOperations);

@@ -1,6 +1,37 @@
 import {beforeAll, describe, expect, it} from "vitest";
+import {ForkName} from "@lodestar/params";
 import {chainConfig} from "../../src/default.js";
-import {ChainConfig, createForkConfig} from "../../src/index.js";
+import {ChainConfig, createChainConfig, createForkConfig} from "../../src/index.js";
+
+describe("createChainConfig", () => {
+  it("rejects gas limit schedule entries before Gloas", () => {
+    expect(() =>
+      createChainConfig({
+        GLOAS_FORK_EPOCH: 10,
+        GAS_LIMIT_SCHEDULE: [{EPOCH: 9, GAS_LIMIT: 60_000_000}],
+      })
+    ).toThrow("must be greater than or equal to GLOAS_FORK_EPOCH 10");
+  });
+});
+
+describe("getSlotComponentDurationMs", () => {
+  it.each([
+    {slotDurationMs: 12_000, basisPoints: 3333, expected: 4000},
+    {slotDurationMs: 12_000, basisPoints: 6667, expected: 8000},
+    {slotDurationMs: 12_000, basisPoints: 1667, expected: 2000},
+    {slotDurationMs: 12_000, basisPoints: 2500, expected: 3000},
+    {slotDurationMs: 6_000, basisPoints: 3333, expected: 2000},
+    {slotDurationMs: 6_000, basisPoints: 6667, expected: 4000},
+    // every mainnet basis-point value is exact at a 10 s slot
+    {slotDurationMs: 10_000, basisPoints: 3333, expected: 3333},
+    {slotDurationMs: 10_000, basisPoints: 1667, expected: 1667},
+    {slotDurationMs: 10_000, basisPoints: 2500, expected: 2500},
+  ])("$basisPoints bps of a $slotDurationMs ms slot is $expected ms", ({slotDurationMs, basisPoints, expected}) => {
+    const config = createForkConfig({...chainConfig, SLOT_DURATION_MS: slotDurationMs});
+
+    expect(config.getSlotComponentDurationMs(ForkName.phase0, basisPoints)).toBe(expected);
+  });
+});
 
 describe("getMaxBlobsPerBlock", () => {
   let defaultConfig: ChainConfig;
@@ -80,5 +111,46 @@ describe("getMaxBlobsPerBlock", () => {
       ],
     });
     expect(config.getMaxBlobsPerBlock(0)).toEqual(defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA);
+  });
+});
+
+describe("getScheduledGasLimit", () => {
+  it("returns undefined before Gloas even when a schedule entry is active", () => {
+    const config = createForkConfig({
+      ...chainConfig,
+      GLOAS_FORK_EPOCH: 10,
+      GAS_LIMIT_SCHEDULE: [{EPOCH: 0, GAS_LIMIT: 60_000_000}],
+    });
+
+    expect(config.getScheduledGasLimit(9)).toBeUndefined();
+    expect(config.getScheduledGasLimit(10)).toBe(60_000_000);
+  });
+
+  it("returns undefined when no schedule entry is active post-Gloas", () => {
+    const config = createForkConfig({
+      ...chainConfig,
+      GLOAS_FORK_EPOCH: 10,
+      GAS_LIMIT_SCHEDULE: [{EPOCH: 20, GAS_LIMIT: 60_000_000}],
+    });
+
+    expect(config.getScheduledGasLimit(19)).toBeUndefined();
+  });
+
+  it("selects the latest active entry regardless of input order", () => {
+    const config = createForkConfig({
+      ...chainConfig,
+      GLOAS_FORK_EPOCH: 10,
+      GAS_LIMIT_SCHEDULE: [
+        {EPOCH: 20, GAS_LIMIT: 75_000_000},
+        {EPOCH: 10, GAS_LIMIT: 60_000_000},
+        {EPOCH: 30, GAS_LIMIT: 90_000_000},
+      ],
+    });
+
+    expect(config.getScheduledGasLimit(10)).toBe(60_000_000);
+    expect(config.getScheduledGasLimit(19)).toBe(60_000_000);
+    expect(config.getScheduledGasLimit(20)).toBe(75_000_000);
+    expect(config.getScheduledGasLimit(30)).toBe(90_000_000);
+    expect(config.getScheduledGasLimit(100)).toBe(90_000_000);
   });
 });

@@ -11,7 +11,7 @@ export type TestRunnerFn<TestCase extends {meta?: any}, Result> = (
   testHandler: string,
   testSuite: string
 ) => {
-  testFunction: (testCase: TestCase, directoryName: string) => Result | Promise<Result>;
+  testFunction: (testCase: TestCase, directoryName: string, testCaseName: string) => Result | Promise<Result>;
   options: Partial<SpecTestOptions<TestCase, Result>>;
 };
 

@@ -1,5 +1,6 @@
 import {digest} from "@chainsafe/as-sha256";
 import {Tree, toGindex} from "@chainsafe/persistent-merkle-tree";
+import {ByteVectorType, CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {
   BLS_WITHDRAWAL_PREFIX,
@@ -9,7 +10,8 @@ import {
 } from "@lodestar/params";
 import {ZERO_HASH, computeDomain, computeSigningRoot, interopSecretKeys} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
+
+export type DepositTree = CompositeViewDU<ListCompositeType<ByteVectorType>>;
 
 /**
  * Compute and return deposit data from other validators.
