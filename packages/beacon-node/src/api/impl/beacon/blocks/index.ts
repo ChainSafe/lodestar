@@ -249,7 +249,7 @@ export function getBeaconBlockApi(
               "api_reject_parent_unknown",
               blockRoot
             );
-            dropRejectedBlock();
+            // Entry stays because it was handed to unknown-parent sync.
             throw new BlockError(signedBlock, {
               code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
               parentRoot: toRootHex(signedBlock.message.parentRoot),
