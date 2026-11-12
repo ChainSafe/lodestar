@@ -22,12 +22,15 @@ pub fn processRewardsAndPenalties(
         return;
     }
 
-    const rewards = cache.rewards;
+    const rewards = cache.validator_scratch;
     const penalties = cache.penalties;
     try getRewardsAndPenalties(fork, config, epoch_cache, state, cache, rewards, penalties);
 
-    const balances = try state.balancesSlice(cache.allocator);
-    errdefer cache.allocator.free(balances);
+    var balances_view = try state.balances();
+    try balances_view.commit();
+    var new_balances: std.ArrayList(u64) = .initBuffer(cache.balances_buffer);
+    const balances = new_balances.addManyAsSliceAssumeCapacity(try balances_view.length());
+    _ = try balances_view.getAllInto(balances);
 
     for (rewards, penalties, balances) |reward, penalty, *balance| {
         balance.* = (try std.math.add(u64, balance.*, reward)) -| penalty;
@@ -39,19 +42,15 @@ pub fn processRewardsAndPenalties(
         }
     }
 
-    // Populate cache.balances for reuse by the validator monitor and
-    // more importantly processEffectiveBalanceUpdates() doesn't need to
-    // get from tree view state which has to commit.
-    var new_balances: std.ArrayList(u64) = .fromOwnedSlice(balances);
     try state.setBalances(&new_balances);
     // setBalances rebuilds every balances leaf. Hashing them here in parallel takes that work off
     // the single-threaded state-root walk.
-    const balances_view = try state.balances();
+    balances_view = try state.balances();
     try balances_view.hashChunkedLeaves(io);
 
-    if (cache.balances) |*old_balances| {
-        old_balances.deinit(cache.allocator);
-    }
+    // Populate cache.balances for reuse by the validator monitor and
+    // more importantly processEffectiveBalanceUpdates() doesn't need to
+    // get from tree view state which has to commit.
     cache.balances = new_balances;
 }
 

@@ -119,8 +119,6 @@ test "Node.State predicates" {
     try std.testing.expect(!free_state.isLeaf());
     try std.testing.expect(!free_state.isZero());
     try std.testing.expect(!free_state.isBranch());
-    // Free slots expose the next-free link via `state.nextFree()`.
-    _ = free_state.nextFree();
 }
 
 test "chunked_leaf getRoot recomputes without touching the pool allocator" {
@@ -168,13 +166,11 @@ test "Pool" {
     try std.testing.expect(leaf2_id.getState(p).isFree());
     try std.testing.expect(branch3_id.getState(p).isFree());
 
-    // check if the free list is correct
-    const next_free: Node.Id = pool.next_free_node;
-    try std.testing.expectEqual(leaf2_id, next_free);
-    try std.testing.expectEqual(branch3_id, next_free.getState(p).nextFree());
-    try std.testing.expectEqual(leaf1_id, next_free.getState(p).nextFree().getState(p).nextFree());
-    try std.testing.expectEqual(branch1_id, next_free.getState(p).nextFree().getState(p).nextFree().getState(p).nextFree());
-    try std.testing.expectEqual(branch2_id, next_free.getState(p).nextFree().getState(p).nextFree().getState(p).nextFree().getState(p).nextFree());
+    // released slots are handed out lowest first, whatever order they were released in
+    for ([_]Node.Id{ leaf1_id, leaf2_id, branch1_id, branch2_id, branch3_id }) |expected| {
+        try std.testing.expectEqual(expected, pool.next_free_node);
+        try std.testing.expectEqual(expected, try pool.createLeafFromUint(0));
+    }
 }
 
 test "Pool - fixed capacity exhausts, reuses slots, and keeps columns stable" {
@@ -232,7 +228,7 @@ test "Pool - live occupancy counts shared nodes and chunked payloads once" {
 
 test "Pool - invalid capacity fails before allocation" {
     for ([_]u32{
-        Node.State.next_free_mask - max_depth + 1,
+        Node.Pool.max_capacity - max_depth + 1,
         std.math.maxInt(u32),
     }) |invalid_capacity| {
         var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
@@ -543,13 +539,6 @@ test "Node.State - refcount overflow saturates at rc_mask without corrupting kin
     var near_max = Node.State.initInUse(.branch, Node.State.rc_mask - 1);
     try std.testing.expectEqual(Node.State.rc_mask, try near_max.incRefCount());
     try std.testing.expectEqual(Node.NodeKind.branch, near_max.kind());
-}
-
-test "Node.State - free-list link round-trips at the 31-bit boundary" {
-    const max_link: Node.Id = @enumFromInt(Node.State.next_free_mask);
-    const fs = Node.State.initFree(max_link);
-    try std.testing.expect(fs.isFree());
-    try std.testing.expectEqual(max_link, fs.nextFree());
 }
 
 const TestCase = struct {
@@ -1001,6 +990,55 @@ test "memory_safety: createChunkedLeafEmpty should not consume slots or leak pay
     defer pool.unref(leaf);
 
     try std.testing.expectError(error.PoolExhausted, pool.createChunkedLeafEmpty(1));
+    try std.testing.expectEqual(failing.allocated_bytes, failing.freed_bytes);
+}
+
+test "createChunkedLeafFromBytes should zero the tail and set len" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 4 });
+    defer pool.deinit();
+
+    var bytes: [ChunkedLeaf.K * 32]u8 = undefined;
+    for (&bytes, 0..) |*byte, i| byte.* = @as(u8, @intCast(i % 255)) + 1;
+
+    for ([_]usize{ 0, 1, 33, bytes.len }) |len| {
+        const valid_chunks: u16 = @intCast((len + 31) / 32);
+        const node = try pool.createChunkedLeafFromBytes(bytes[0..len]);
+        defer pool.unref(node);
+
+        const chunk_bytes = std.mem.asBytes(try node.getChunkedLeafChunks(&pool));
+        try std.testing.expectEqualSlices(u8, bytes[0..len], chunk_bytes[0..len]);
+        try std.testing.expect(std.mem.allEqual(u8, chunk_bytes[len..], 0));
+        try std.testing.expectEqual(valid_chunks, try node.getChunkedLeafLen(&pool));
+    }
+}
+
+test "memory_safety: createChunkedLeafFromBytes should not consume slots or leak payloads on allocation failure" {
+    var failing = std.testing.FailingAllocator.init(
+        std.testing.allocator,
+        .{ .fail_index = 0 },
+    );
+    var pool = try Node.Pool.init(.{
+        .page_allocator = std.testing.allocator,
+        .allocator = failing.allocator(),
+        .pool_size = 1,
+    });
+    defer pool.deinit();
+
+    const bytes: [33]u8 = @splat(1);
+
+    // The first call fails before it can take a Pool slot.
+    const baseline = pool.getNodesInUse();
+    try std.testing.expectError(error.OutOfMemory, pool.createChunkedLeafFromBytes(&bytes));
+    try std.testing.expectEqual(baseline, pool.getNodesInUse());
+
+    // With the only slot occupied, the next call allocates its payload and then fails to attach
+    // it. The payload must be freed on the way out.
+    failing.fail_index = std.math.maxInt(usize);
+    const leaf = try pool.createLeafFromUint(1);
+    defer pool.unref(leaf);
+
+    try std.testing.expectError(error.PoolExhausted, pool.createChunkedLeafFromBytes(&bytes));
     try std.testing.expectEqual(failing.allocated_bytes, failing.freed_bytes);
 }
 

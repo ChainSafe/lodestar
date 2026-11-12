@@ -47,10 +47,10 @@ pub fn TestCase(comptime target_fork: ForkSeq) type {
 
         pub fn execute(allocator: Allocator, dir: std.Io.Dir) !void {
             const pool_size = if (active_preset == .mainnet) 10_000_000 else 1_000_000;
-            var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = pool_size });
-            defer pool.deinit();
+            const pool = try test_case.acquirePool(allocator, pool_size);
+            defer test_case.releasePool();
 
-            var tc = try Self.init(allocator, &pool, dir);
+            var tc = try Self.init(allocator, pool, dir);
             defer {
                 tc.deinit();
                 state_transition.deinitReusedEpochTransitionCache();

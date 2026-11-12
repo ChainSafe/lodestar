@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import {rimraf} from "rimraf";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {pruneOldFilesInDir} from "../../../src/util/index.js";
 import {testFilesDir} from "../../utils.js";
@@ -18,7 +17,7 @@ describe("pruneOldFilesInDir", () => {
   });
 
   afterEach(() => {
-    rimraf.sync(dataDir);
+    fs.rmSync(dataDir, {recursive: true, force: true});
   });
 
   it("should delete old files", () => {

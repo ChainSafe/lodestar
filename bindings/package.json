@@ -52,7 +52,7 @@
     "build:release": "pnpm clean && pnpm build",
     "clean": "rm -rf zig-out",
     "check-build": "node -e \"import('./src/index.js')\"",
-    "prepublishOnly": "node -e \"throw new Error('Publish native platform packages through pnpm release:publish')\""
+    "prepack": "zapi prepublish --main-only"
   },
   "keywords": [],
   "author": "ChainSafe Systems",
@@ -75,7 +75,7 @@
     ]
   },
   "dependencies": {
-    "@chainsafe/zapi": "4.2.0"
+    "@chainsafe/zapi": "4.3.0"
   },
   "devDependencies": {
     "@chainsafe/benchmark": "2.1.0",

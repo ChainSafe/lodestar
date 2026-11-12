@@ -1,4 +1,4 @@
-import {rimraf} from "rimraf";
+import fs from "node:fs";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {
@@ -22,7 +22,7 @@ describe("slashing-protection custom tests", () => {
   afterAll(async () => {
     await db.clear();
     await db.close();
-    rimraf.sync(dbLocation);
+    fs.rmSync(dbLocation, {recursive: true, force: true});
   });
 
   it("Should reject same block", async () => {

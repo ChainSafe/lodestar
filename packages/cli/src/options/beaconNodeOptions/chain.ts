@@ -23,6 +23,7 @@ export type ChainArgs = {
   "chain.proposerBoostReorg"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
   "chain.preaggregateSlotDistance"?: number;
+  "chain.singleAttestationIgnoreProposalDuty"?: boolean;
   "chain.attDataCacheSlotDistance"?: number;
   "chain.computeUnrealized"?: boolean;
   "chain.fastConfirmation"?: boolean;
@@ -65,6 +66,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     proposerBoostReorg: args["chain.proposerBoostReorg"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
+    singleAttestationIgnoreProposalDuty: args["chain.singleAttestationIgnoreProposalDuty"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
     fastConfirmation: args["chain.fastConfirmation"],
@@ -227,6 +229,15 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "number",
     description: "Only preaggregate attestations or sync committee message since clockSlot - preaggregateSlotDistance",
+    group: "chain",
+  },
+
+  "chain.singleAttestationIgnoreProposalDuty": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "collect single attestations of every vote slot a block at the current slot can include regardless of block proposal duties, could be used with --subscribeAllSubnets",
+    defaultDescription: "false",
     group: "chain",
   },
 

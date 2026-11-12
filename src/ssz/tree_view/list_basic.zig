@@ -345,20 +345,12 @@ pub fn ListBasicTreeView(comptime ST: type) type {
                 std.debug.assert(boundary_kind == .chunked_leaf);
 
                 // The boundary chunked_leaf straddles the cut. Build a
-                // trimmed copy: copy chunks 0 through chunked_leaf_offset, zero the
-                // unused tail bytes of chunk chunked_leaf_offset, and leave the
-                // chunks after it zero. Install it, then truncate the rest.
-                var trimmed_boundary: ?Node.Id = try pool.createChunkedLeafEmpty(chunked_leaf_offset + 1);
+                // trimmed copy that keeps its bytes up to the cut and is zero
+                // after it. Install it, then truncate the rest.
+                const old_chunks = try boundary.getChunkedLeafChunks(pool);
+                const keep_len = @as(usize, chunked_leaf_offset) * BYTES_PER_CHUNK + keep_bytes;
+                var trimmed_boundary: ?Node.Id = try pool.createChunkedLeafFromBytes(std.mem.asBytes(old_chunks)[0..keep_len]);
                 defer if (trimmed_boundary) |id| pool.unref(id);
-
-                {
-                    const old_chunks = try boundary.getChunkedLeafChunks(pool);
-                    const new_leaf = try trimmed_boundary.?.getChunkedLeafPtr(pool);
-                    @memcpy(new_leaf.chunks[0 .. chunked_leaf_offset + 1], old_chunks[0 .. chunked_leaf_offset + 1]);
-                    if (keep_bytes < BYTES_PER_CHUNK) {
-                        @memset(new_leaf.chunks[chunked_leaf_offset][keep_bytes..], 0);
-                    }
-                }
 
                 const updated = try Node.Id.setNodeAtDepth(
                     self.chunks.state.root,

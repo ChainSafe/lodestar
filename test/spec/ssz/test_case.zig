@@ -7,6 +7,32 @@ const Node = @import("persistent_merkle_tree").Node;
 
 const Allocator = std.mem.Allocator;
 
+// Cases share one pool: allocating a pool per case dominated runtime, since safe builds fill the
+// whole node buffer on every allocation and free.
+var shared_pool: ?Node.Pool = null;
+var shared_pool_idle_nodes: usize = 0;
+
+fn acquirePool(allocator: Allocator) !*Node.Pool {
+    if (shared_pool == null) {
+        shared_pool = try Node.Pool.init(.{
+            .page_allocator = std.heap.page_allocator,
+            .allocator = allocator,
+            .pool_size = 1_000_000,
+        });
+        shared_pool_idle_nodes = shared_pool.?.nodes_in_use;
+    }
+    return &shared_pool.?;
+}
+
+/// Drops the pool when a case leaves nodes behind, so every case starts from an empty pool.
+fn releasePool() void {
+    if (shared_pool) |*pool| {
+        if (pool.nodes_in_use == shared_pool_idle_nodes) return;
+        pool.deinit();
+        shared_pool = null;
+    }
+}
+
 pub fn parseYaml(comptime ST: type, allocator: Allocator, y: yaml.Yaml, out: *ST.Type) !void {
     if (comptime ssz.isBitVectorType(ST)) {
         const bytes_buf = try allocator.alloc(u8, ST.byte_length + 2);
@@ -292,62 +318,62 @@ pub fn validTestCase(comptime ST: type, gpa: Allocator, path: std.Io.Dir, meta_f
     try Hasher.hash(&hash_scratch, value_expected, &root_actual);
     try std.testing.expectEqualSlices(u8, &root_expected, &root_actual);
 
-    var pool = try Node.Pool.init(.{ .page_allocator = gpa, .allocator = gpa, .pool_size = 1_000_000 });
-    defer pool.deinit();
+    const pool = try acquirePool(gpa);
+    defer releasePool();
 
     // test conversion between tree and value
     {
-        const node = try ST.tree.fromValue(&pool, value_expected);
+        const node = try ST.tree.fromValue(pool, value_expected);
         defer pool.unref(node);
 
-        try std.testing.expectEqualSlices(u8, &root_expected, node.getRoot(&pool));
+        try std.testing.expectEqualSlices(u8, &root_expected, node.getRoot(pool));
 
         const value_from_tree = try allocator.create(ST.Type);
         value_from_tree.* = if (comptime ST.kind == .compatible_union) undefined else ST.default_value;
 
         if (comptime ssz.isFixedType(ST)) {
-            try ST.tree.toValue(node, &pool, value_from_tree);
+            try ST.tree.toValue(node, pool, value_from_tree);
         } else {
-            try ST.tree.toValue(allocator, node, &pool, value_from_tree);
+            try ST.tree.toValue(allocator, node, pool, value_from_tree);
         }
         try std.testing.expect(ST.equals(value_expected, value_from_tree));
     }
 
     // test conversion between tree and serialized
     {
-        const node = try ST.tree.deserializeFromBytes(&pool, serialized_expected);
+        const node = try ST.tree.deserializeFromBytes(pool, serialized_expected);
         defer pool.unref(node);
 
-        try std.testing.expectEqualSlices(u8, &root_expected, node.getRoot(&pool));
+        try std.testing.expectEqualSlices(u8, &root_expected, node.getRoot(pool));
 
-        const serialized_size = if (comptime ssz.isFixedType(ST)) ST.fixed_size else try ST.tree.serializedSize(node, &pool);
+        const serialized_size = if (comptime ssz.isFixedType(ST)) ST.fixed_size else try ST.tree.serializedSize(node, pool);
         const serialized_from_tree = try allocator.alloc(u8, serialized_size);
         defer allocator.free(serialized_from_tree);
-        _ = try ST.tree.serializeIntoBytes(node, &pool, serialized_from_tree);
+        _ = try ST.tree.serializeIntoBytes(node, pool, serialized_from_tree);
         try std.testing.expectEqualSlices(u8, serialized_expected, serialized_from_tree);
     }
 
     // test the chunked-leaf tree layout
     if (comptime ChunkedLayout(ST)) |Chunked| {
-        const from_value = try Chunked.tree.fromValue(&pool, value_expected);
+        const from_value = try Chunked.tree.fromValue(pool, value_expected);
         defer pool.unref(from_value);
 
-        try std.testing.expectEqualSlices(u8, &root_expected, from_value.getRoot(&pool));
+        try std.testing.expectEqualSlices(u8, &root_expected, from_value.getRoot(pool));
 
         const value_from_tree = try allocator.create(Chunked.Type);
         value_from_tree.* = Chunked.default_value;
-        try Chunked.tree.toValue(allocator, from_value, &pool, value_from_tree);
+        try Chunked.tree.toValue(allocator, from_value, pool, value_from_tree);
         try std.testing.expect(Chunked.equals(value_expected, value_from_tree));
 
-        const from_bytes = try Chunked.tree.deserializeFromBytes(&pool, serialized_expected);
+        const from_bytes = try Chunked.tree.deserializeFromBytes(pool, serialized_expected);
         defer pool.unref(from_bytes);
 
-        try std.testing.expectEqualSlices(u8, &root_expected, from_bytes.getRoot(&pool));
+        try std.testing.expectEqualSlices(u8, &root_expected, from_bytes.getRoot(pool));
 
-        const serialized_size = try Chunked.tree.serializedSize(from_bytes, &pool);
+        const serialized_size = try Chunked.tree.serializedSize(from_bytes, pool);
         const serialized_from_tree = try allocator.alloc(u8, serialized_size);
         defer allocator.free(serialized_from_tree);
-        _ = try Chunked.tree.serializeIntoBytes(from_bytes, &pool, serialized_from_tree);
+        _ = try Chunked.tree.serializeIntoBytes(from_bytes, pool, serialized_from_tree);
         try std.testing.expectEqualSlices(u8, serialized_expected, serialized_from_tree);
     }
 }
@@ -381,18 +407,14 @@ pub fn invalidTestCase(comptime ST: type, gpa: Allocator, path: std.Io.Dir) !voi
 
     try std.testing.expectError(error.InvalidSSZ, deserialize(ST, allocator, serialized_expected, &value_actual));
 
-    var pool = try Node.Pool.init(.{
-        .page_allocator = gpa,
-        .allocator = gpa,
-        .pool_size = 1_000_000,
-    });
-    defer pool.deinit();
+    const pool = try acquirePool(gpa);
+    defer releasePool();
 
-    try std.testing.expectError(error.InvalidSSZ, deserializeTree(ST, &pool, serialized_expected));
+    try std.testing.expectError(error.InvalidSSZ, deserializeTree(ST, pool, serialized_expected));
     if (comptime ChunkedLayout(ST)) |Chunked| {
         try std.testing.expectError(
             error.InvalidSSZ,
-            deserializeTree(Chunked, &pool, serialized_expected),
+            deserializeTree(Chunked, pool, serialized_expected),
         );
     }
 }

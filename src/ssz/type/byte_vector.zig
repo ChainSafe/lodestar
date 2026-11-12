@@ -33,6 +33,7 @@ pub fn ByteVectorType(comptime _length: comptime_int) type {
         pub const chunk_depth: Depth = maxChunksToDepth(chunk_count);
 
         pub const default_value: Type = [_]Element.Type{Element.default_value} ** length;
+        pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = getZeroHash(chunk_depth).*;
 
