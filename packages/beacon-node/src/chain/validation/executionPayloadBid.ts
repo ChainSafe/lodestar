@@ -179,6 +179,20 @@ async function validateExecutionPayloadBid(
     });
   }
 
+  // [IGNORE] this bid is the highest value bid seen for the tuple
+  // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
+  // As a DoS prevention measure, the bid must also exceed the current highest bid by a minimum
+  // increment, see https://github.com/ethereum/consensus-specs/pull/4831. This prevents spam
+  // from builders submitting numerous bids with minimal value increments.
+  const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, bidParentBlockHash, bidParentBlockRoot);
+  if (bestBid !== null && bid.value < getMinBidValue(bestBid.signedBid.message.value)) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
+      bidValue: bid.value,
+      currentHighestBid: bestBid.signedBid.message.value,
+    });
+  }
+
   // [IGNORE] `bid.parent_block_root` is the hash tree root of a known beacon block in fork choice.
   // Moved earlier than the spec ordering so we can derive the proposer dependent root for the
   // proposer-preferences lookup below from a known fork-choice block.
@@ -352,19 +366,6 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [IGNORE] this bid is the highest value bid seen for the tuple
-  // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
-  // As a DoS prevention measure, the bid must also exceed the current highest bid by a minimum
-  // increment, see https://github.com/ethereum/consensus-specs/pull/4831. This prevents spam
-  // from builders submitting numerous bids with minimal value increments.
-  const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, bidParentBlockHash, bidParentBlockRoot);
-  if (bestBid !== null && bid.value < getMinBidValue(bestBid.signedBid.message.value)) {
-    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
-      bidValue: bid.value,
-      currentHighestBid: bestBid.signedBid.message.value,
-    });
-  }
   // [IGNORE] `bid.value` is less or equal than the builder's excess balance --
   // i.e. `can_builder_cover_bid(state, builder_index, amount)` returns `True`.
   if (!state.canBuilderCoverBid(bid.builderIndex, bid.value)) {

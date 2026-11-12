@@ -4,7 +4,7 @@ import {routes} from "@lodestar/api";
 import {SpecJson} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Status} from "@lodestar/types";
+import {Slot, Status} from "@lodestar/types";
 import {GoodByeReasonCode} from "../../constants/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {NetworkOptions} from "../options.js";
@@ -62,6 +62,8 @@ export interface INetworkCore extends INetworkCorePublic {
 
   /** Chain must push status updates to the network core */
   updateStatus(status: Status): Promise<void>;
+  /** Block proposal slots of connected validators, used to subscribe to all attestation subnets before them */
+  addLocalProposalSlots(slots: Slot[]): Promise<void>;
 
   setTargetGroupCount(count: number): Promise<void>;
   /** Opens stream to handle ReqResp outgoing request */
@@ -111,6 +113,7 @@ export type NetworkWorkerApi = INetworkCorePublic & {
   getConnectedPeers(): Promise<PeerIdStr[]>;
   getConnectedPeerCount(): Promise<number>;
   updateStatus(status: Status): Promise<void>;
+  addLocalProposalSlots(slots: Slot[]): Promise<void>;
 
   setTargetGroupCount(count: number): Promise<void>;
 

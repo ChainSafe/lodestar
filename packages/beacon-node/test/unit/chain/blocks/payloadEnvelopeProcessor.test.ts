@@ -1,10 +1,23 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {processExecutionPayload} from "../../../../src/chain/blocks/importExecutionPayload.js";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
+import {importExecutionPayload} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeProcessor} from "../../../../src/chain/blocks/payloadEnvelopeProcessor.js";
+import {verifyPayloadsDataAvailability} from "../../../../src/chain/blocks/verifyPayloadsDataAvailability.js";
 import type {BeaconChain} from "../../../../src/chain/chain.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/seenCache/seenPayloadEnvelopeInput.js";
 
 vi.mock("../../../../src/chain/blocks/importExecutionPayload.js");
+vi.mock("../../../../src/chain/blocks/verifyPayloadsDataAvailability.js");
+
+async function waitUntil(condition: () => boolean): Promise<void> {
+  for (let i = 0; i < 10 && !condition(); i++) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+}
+
+function dataAvailable(status = DataAvailabilityStatus.Available): ReturnType<typeof verifyPayloadsDataAvailability> {
+  return Promise.resolve({dataAvailabilityStatuses: [status], availableTime: 0});
+}
 
 describe("chain / blocks / PayloadEnvelopeProcessor", () => {
   let processor: PayloadEnvelopeProcessor;
@@ -13,9 +26,10 @@ describe("chain / blocks / PayloadEnvelopeProcessor", () => {
 
   beforeEach(() => {
     abortController = new AbortController();
-    processor = new PayloadEnvelopeProcessor({} as BeaconChain, null, abortController.signal);
-    // processExecutionPayload is mocked, the input is only used as an identity key
+    processor = new PayloadEnvelopeProcessor({config: {}} as BeaconChain, null, abortController.signal);
+    // importExecutionPayload and the DA wait are mocked, the input is only used as an identity key
     payloadInput = {} as PayloadEnvelopeInput;
+    vi.mocked(verifyPayloadsDataAvailability).mockImplementation(() => dataAvailable());
   });
 
   afterEach(() => {
@@ -25,7 +39,7 @@ describe("chain / blocks / PayloadEnvelopeProcessor", () => {
 
   it("should run the import once for duplicate calls and resolve all callers on completion", async () => {
     let resolveImport: () => void = () => {};
-    vi.mocked(processExecutionPayload).mockReturnValue(
+    vi.mocked(importExecutionPayload).mockReturnValue(
       new Promise((resolve) => {
         resolveImport = resolve;
       })
@@ -45,18 +59,18 @@ describe("chain / blocks / PayloadEnvelopeProcessor", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(firstResolved).toBe(false);
     expect(secondResolved).toBe(false);
-    expect(processExecutionPayload).toHaveBeenCalledTimes(1);
+    expect(importExecutionPayload).toHaveBeenCalledTimes(1);
 
     resolveImport();
     await Promise.all([first, second]);
     expect(firstResolved).toBe(true);
     expect(secondResolved).toBe(true);
-    expect(processExecutionPayload).toHaveBeenCalledTimes(1);
+    expect(importExecutionPayload).toHaveBeenCalledTimes(1);
   });
 
   it("should propagate import failure to deduped callers", async () => {
     let rejectImport: (e: Error) => void = () => {};
-    vi.mocked(processExecutionPayload).mockReturnValue(
+    vi.mocked(importExecutionPayload).mockReturnValue(
       new Promise((_resolve, reject) => {
         rejectImport = reject;
       })
@@ -65,27 +79,122 @@ describe("chain / blocks / PayloadEnvelopeProcessor", () => {
     const first = processor.processPayloadEnvelopeJob(payloadInput);
     const second = processor.processPayloadEnvelopeJob(payloadInput);
 
+    await new Promise((resolve) => setTimeout(resolve, 0));
     rejectImport(new Error("IMPORT_FAILED"));
     await expect(first).rejects.toThrow("IMPORT_FAILED");
     await expect(second).rejects.toThrow("IMPORT_FAILED");
-    expect(processExecutionPayload).toHaveBeenCalledTimes(1);
+    expect(importExecutionPayload).toHaveBeenCalledTimes(1);
   });
 
   it("should retry the import after a failed attempt", async () => {
-    vi.mocked(processExecutionPayload).mockRejectedValueOnce(new Error("IMPORT_FAILED"));
-    vi.mocked(processExecutionPayload).mockResolvedValueOnce(undefined);
+    vi.mocked(importExecutionPayload).mockRejectedValueOnce(new Error("IMPORT_FAILED"));
+    vi.mocked(importExecutionPayload).mockResolvedValueOnce(undefined);
 
     await expect(processor.processPayloadEnvelopeJob(payloadInput)).rejects.toThrow("IMPORT_FAILED");
 
     await processor.processPayloadEnvelopeJob(payloadInput);
-    expect(processExecutionPayload).toHaveBeenCalledTimes(2);
+    expect(importExecutionPayload).toHaveBeenCalledTimes(2);
   });
 
   it("should not re-run the import after success", async () => {
-    vi.mocked(processExecutionPayload).mockResolvedValue(undefined);
+    vi.mocked(importExecutionPayload).mockResolvedValue(undefined);
 
     await processor.processPayloadEnvelopeJob(payloadInput);
     await processor.processPayloadEnvelopeJob(payloadInput);
-    expect(processExecutionPayload).toHaveBeenCalledTimes(1);
+    expect(importExecutionPayload).toHaveBeenCalledTimes(1);
+  });
+
+  it("should pass the data availability status to the import", async () => {
+    vi.mocked(verifyPayloadsDataAvailability).mockImplementation(() =>
+      dataAvailable(DataAvailabilityStatus.NotRequired)
+    );
+    vi.mocked(importExecutionPayload).mockResolvedValue(undefined);
+
+    await processor.processPayloadEnvelopeJob(payloadInput, {validSignature: true});
+    expect(importExecutionPayload).toHaveBeenCalledWith(payloadInput, DataAvailabilityStatus.NotRequired, {
+      validSignature: true,
+    });
+  });
+
+  it("should not hold a later payload behind one still waiting for its data", async () => {
+    const stuckInput = {} as PayloadEnvelopeInput;
+    let resolveStuckData: () => void = () => {};
+    vi.mocked(verifyPayloadsDataAvailability).mockImplementation((_config, [input]) => {
+      if (input === stuckInput) {
+        return new Promise((resolve) => {
+          resolveStuckData = () =>
+            resolve({dataAvailabilityStatuses: [DataAvailabilityStatus.Available], availableTime: 0});
+        });
+      }
+      return dataAvailable();
+    });
+    vi.mocked(importExecutionPayload).mockResolvedValue(undefined);
+
+    let stuckResolved = false;
+    const stuck = processor.processPayloadEnvelopeJob(stuckInput).then(() => {
+      stuckResolved = true;
+    });
+
+    await processor.processPayloadEnvelopeJob(payloadInput);
+    expect(importExecutionPayload).toHaveBeenCalledTimes(1);
+    expect(importExecutionPayload).toHaveBeenLastCalledWith(payloadInput, DataAvailabilityStatus.Available, {});
+    expect(stuckResolved).toBe(false);
+
+    resolveStuckData();
+    await stuck;
+    expect(importExecutionPayload).toHaveBeenCalledTimes(2);
+    expect(importExecutionPayload).toHaveBeenLastCalledWith(stuckInput, DataAvailabilityStatus.Available, {});
+  });
+
+  it("should apply backpressure when several payloads become available in the same turn", async () => {
+    const releaseImports: (() => void)[] = [];
+    vi.mocked(importExecutionPayload).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseImports.push(resolve);
+        })
+    );
+
+    // one import running and 15 queued leaves a single free slot
+    const queued = Array.from({length: 16}, () => processor.processPayloadEnvelopeJob({} as PayloadEnvelopeInput));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(releaseImports).toHaveLength(1);
+
+    const resolveData: (() => void)[] = [];
+    vi.mocked(verifyPayloadsDataAvailability).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveData.push(() =>
+            resolve({dataAvailabilityStatuses: [DataAvailabilityStatus.Available], availableTime: 0})
+          );
+        })
+    );
+    const burst = [
+      processor.processPayloadEnvelopeJob({} as PayloadEnvelopeInput),
+      processor.processPayloadEnvelopeJob({} as PayloadEnvelopeInput),
+    ];
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(resolveData).toHaveLength(2);
+    for (const resolve of resolveData) resolve();
+
+    const all = Promise.all([...queued, ...burst]);
+    for (let i = 0; i < 18; i++) {
+      await waitUntil(() => releaseImports.length > i);
+      expect(releaseImports.length, `import ${i} did not start`).toBeGreaterThan(i);
+      releaseImports[i]();
+    }
+    await all;
+    expect(importExecutionPayload).toHaveBeenCalledTimes(18);
+  });
+
+  it("should surface a data availability failure without running the import", async () => {
+    vi.mocked(verifyPayloadsDataAvailability).mockRejectedValueOnce(new Error("DATA_UNAVAILABLE"));
+    vi.mocked(importExecutionPayload).mockResolvedValue(undefined);
+
+    await expect(processor.processPayloadEnvelopeJob(payloadInput)).rejects.toThrow("DATA_UNAVAILABLE");
+    expect(importExecutionPayload).not.toHaveBeenCalled();
+
+    await processor.processPayloadEnvelopeJob(payloadInput);
+    expect(importExecutionPayload).toHaveBeenCalledTimes(1);
   });
 });

@@ -32,6 +32,7 @@ pub fn BitVectorType(comptime _length: comptime_int) type {
         pub const chunk_depth: u8 = maxChunksToDepth(chunk_count);
 
         pub const default_value: Type = Type.empty;
+        pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = getZeroHash(chunk_depth).*;
 

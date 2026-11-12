@@ -1,4 +1,4 @@
-import {rimraf} from "rimraf";
+import fs from "node:fs";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
@@ -24,7 +24,7 @@ describe("block archive repository", () => {
   });
   afterEach(async () => {
     await db.close();
-    rimraf.sync(testDir);
+    fs.rmSync(testDir, {recursive: true, force: true});
   });
 
   it("should retrieve blocks in order", async () => {

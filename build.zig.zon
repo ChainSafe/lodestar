@@ -75,6 +75,10 @@
                 .default = "mainnet",
                 .description = "Consensus preset: \"mainnet\", \"minimal\" or \"gnosis\".",
             },
+            .expensive_safety_checks = .{
+                .type = .bool,
+                .description = "Enable costly safety checks (optional; defaults to true only in Debug builds).",
+            },
         },
         .bls_options = .{
             .thread_count = .{
@@ -255,10 +259,6 @@
             .root_source_file = "src/era/root.zig",
             .imports = .{ .consensus_types, .config, .fork_types, .preset, .state_transition, .snappy, .persistent_merkle_tree },
         },
-        .fork_choice = .{
-            .root_source_file = "src/fork_choice/root.zig",
-            .imports = .{ .consensus_types, .config, .preset, .state_transition, .fork_types, .hex, .constants, .metrics, .time },
-        },
         .beacon_node = .{
             .root_source_file = "src/beacon_node/root.zig",
             .imports = .{ .consensus_types, .state_transition, .persistent_merkle_tree, .testing_allocators, .metrics, .hex, .time },
@@ -354,7 +354,7 @@
         .bench_merkle_node = .{
             .root_module = .{
                 .root_source_file = "src/persistent_merkle_tree/node_bench.zig",
-                .imports = .{ .hashing, .zbench },
+                .imports = .{ .build_options, .hashing, .zbench },
             },
         },
         .bench_hashing = .{
@@ -387,24 +387,6 @@
             .root_module = .{
                 .root_source_file = "bench/state_transition/locality_decay.zig",
                 .imports = .{ .state_transition, .fork_types, .consensus_types, .config, .persistent_merkle_tree, .time },
-            },
-        },
-        .bench_fork_choice_compute_deltas = .{
-            .root_module = .{
-                .root_source_file = "bench/fork_choice/compute_deltas.zig",
-                .imports = .{ .fork_choice, .state_transition, .config, .constants, .zbench },
-            },
-        },
-        .bench_fork_choice_on_attestation = .{
-            .root_module = .{
-                .root_source_file = "bench/fork_choice/on_attestation.zig",
-                .imports = .{ .fork_choice, .fork_types, .consensus_types, .state_transition, .config, .constants, .zbench },
-            },
-        },
-        .bench_fork_choice_update_head = .{
-            .root_module = .{
-                .root_source_file = "bench/fork_choice/update_head.zig",
-                .imports = .{ .fork_choice, .state_transition, .config, .constants, .zbench },
             },
         },
     },
@@ -456,7 +438,6 @@
         .swap_or_not_shuffle = .{ .root_module = .swap_or_not_shuffle },
         .state_transition = .{ .root_module = .state_transition },
         .era = .{ .root_module = .era },
-        .fork_choice = .{ .root_module = .fork_choice },
         .clock = .{ .root_module = .clock },
         .beacon_node = .{ .root_module = .beacon_node },
         .ere_verifier = .{ .root_module = .ere_verifier },
