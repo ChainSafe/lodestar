@@ -1,4 +1,4 @@
-import {aggregateSerializedPublicKeys} from "@chainsafe/lodestar-z/blst";
+import {aggregateSerializedPublicKeys} from "@lodestar/native/blst";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {CachedBeaconStateAltair} from "../types.js";

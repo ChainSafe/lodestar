@@ -1,4 +1,4 @@
-import {verifySignatureSetsSameMessage} from "@chainsafe/lodestar-z/bls-verifier";
+import {verifySignatureSetsSameMessage} from "@lodestar/native/bls-verifier";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier, SameMessageSignatureSet} from "./interface.js";

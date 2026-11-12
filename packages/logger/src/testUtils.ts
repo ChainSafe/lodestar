@@ -1,6 +1,7 @@
 import {LogLevel} from "@lodestar/utils";
 import {getEnvLogLevel} from "./env.js";
 import {LoggerNode, LoggerNodeOpts, getNodeLogger} from "./node.js";
+
 export {LogLevel};
 
 export type TestLoggerOpts = LoggerNodeOpts;

@@ -21,10 +21,10 @@ describe("plataberget network", () => {
 });
 
 describe("ephemery network", () => {
-  // ephemery-genesis values.env base iteration (164)
+  // ephemery-genesis values.env base iteration (165)
   const RESET_INTERVAL_SECONDS = 2419200;
-  const baseMinGenesisTime = 1790276400;
-  const baseDepositChainId = 39438164;
+  const baseMinGenesisTime = 1792695600;
+  const baseDepositChainId = 39438165;
 
   it("derives the base iteration values as whole-second integers", () => {
     const config = getEphemeryChainConfig(baseMinGenesisTime * 1000);
@@ -38,6 +38,18 @@ describe("ephemery network", () => {
     expect(Number.isInteger(config.DEPOSIT_NETWORK_ID)).toBe(true);
     expect(Number.isInteger(config.MIN_GENESIS_TIME)).toBe(true);
     expect(config.MIN_GENESIS_TIME).toBeLessThan(1e11);
+  });
+
+  it.each([0, 1, 5])("starts iteration 165 + %i at Gloas with 15 blobs per block", (iteration) => {
+    const config = getEphemeryChainConfig((baseMinGenesisTime + iteration * RESET_INTERVAL_SECONDS) * 1000);
+    const forkConfig = createForkConfig(config);
+
+    expect(config.MIN_GENESIS_TIME + config.GENESIS_DELAY).toBe(1792696200 + iteration * RESET_INTERVAL_SECONDS);
+    expect(forkConfig.getForkName(0)).toBe(ForkName.gloas);
+    expect(forkConfig.getForkInfoAtEpoch(0).version).toEqual(Uint8Array.from([0x80, 0x00, 0x10, 0x1b]));
+    expect(forkConfig.getMaxBlobsPerBlock(0)).toBe(15);
+    expect(forkConfig.getMaxBlobsPerBlock(2048)).toBe(15);
+    expect(forkConfig.getMaxBlobsPerBlock(4096)).toBe(15);
   });
 
   it("is identical for every process within an iteration, independent of start time", () => {

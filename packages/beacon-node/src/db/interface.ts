@@ -68,6 +68,8 @@ export interface IBeaconDb {
   readonly lastLegacyArchiveSlot: Slot | null;
   init(): Promise<void>;
 
+  compactLegacyDataColumns(prunedBeforeSlot: Slot, minSizeBytes?: number): Promise<void>;
+
   pruneHotDb(): Promise<void>;
 
   deleteDeprecatedEth1Data(): Promise<void>;

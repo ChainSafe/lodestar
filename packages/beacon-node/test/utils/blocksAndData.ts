@@ -1,8 +1,8 @@
 import {randomBytes} from "node:crypto";
 import {BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT} from "@crate-crypto/node-eth-kzg";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {Signature} from "@chainsafe/lodestar-z/blst";
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {ChainForkConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {Signature} from "@lodestar/native/blst";
 import {
   ForkPostCapella,
   ForkPostDeneb,
@@ -21,7 +21,7 @@ import {BeaconBlockBody, SignedBeaconBlock, Slot, deneb, fulu, gloas, ssz, sszTy
 import {toRootHex} from "@lodestar/utils";
 import {VersionedHashes} from "../../src/execution/index.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/index.js";
-import {getBlobSidecars, kzgCommitmentToVersionedHash} from "../../src/util/blobs.js";
+import {computePreFuluKzgCommitmentsInclusionProof, kzgCommitmentToVersionedHash} from "../../src/util/blobs.js";
 import {Clock} from "../../src/util/clock.js";
 import {
   CustodyConfig,
@@ -69,13 +69,13 @@ export const slots: Record<ForkPostCapella, number> = {
 
 /**
  * Value used in c-kzg
- * https://github.com/matthewkeil/c-kzg-4844/blob/cc7c4e90669efc777a92b375574036a64f8ae9ae/bindings/node.js/test/kzg.test.ts#L42
+ * https://github.com/matthewkeil/c-kzg-4844/blob/cc7c4e90669efc777a92b375574036a64f8ae9ae/packages/native/node.js/test/kzg.test.ts#L42
  */
 const MAX_TOP_BYTE = 114;
 
 /**
  * Generates a random blob of the correct length for the KZG library
- * https://github.com/matthewkeil/c-kzg-4844/blob/cc7c4e90669efc777a92b375574036a64f8ae9ae/bindings/node.js/test/kzg.test.ts#L87
+ * https://github.com/matthewkeil/c-kzg-4844/blob/cc7c4e90669efc777a92b375574036a64f8ae9ae/packages/native/node.js/test/kzg.test.ts#L87
  */
 export function generateRandomBlob(): Uint8Array {
   return new Uint8Array(
@@ -137,6 +137,26 @@ function generateRoots<F extends ForkPostCapella>(
     blockRoot,
     rootHex,
   };
+}
+
+function getBlobSidecars(
+  config: ChainForkConfig,
+  signedBlock: SignedBeaconBlock,
+  blobs: deneb.Blobs,
+  proofs: deneb.KZGProofs
+): deneb.BlobSidecars {
+  const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
+  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
+  const fork = config.getForkName(signedBlockHeader.message.slot);
+
+  return blobKzgCommitments.map((kzgCommitment, index) => ({
+    index,
+    blob: blobs[index],
+    kzgCommitment,
+    kzgProof: proofs[index],
+    signedBlockHeader,
+    kzgCommitmentInclusionProof: computePreFuluKzgCommitmentsInclusionProof(fork, signedBlock.message.body, index),
+  }));
 }
 
 function generateBlobSidecars(

@@ -3,6 +3,7 @@ import {describe, expect, it, vi} from "vitest";
 import {BeaconPreset, ForkName} from "../../src/index.js";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
 import {minimalPreset} from "../../src/presets/minimal.js";
+// biome-ignore lint/correctness/useImportExtensions: false positive, the import resolves through a symlink to a .json file
 import specTests from "../spec-tests-version.json" with {type: "json"};
 import {loadConfigYaml} from "../yaml.js";
 

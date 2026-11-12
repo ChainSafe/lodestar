@@ -169,13 +169,15 @@ function getExecutionEngineStateForPayloadStatus(payloadStatus: ExecutionPayload
       return ExecutionEngineState.SYNCED;
 
     case ExecutionPayloadStatus.ELERROR:
-    case ExecutionPayloadStatus.INVALID:
     case ExecutionPayloadStatus.SYNCING:
-    case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
       return ExecutionEngineState.SYNCING;
 
     case ExecutionPayloadStatus.UNAVAILABLE:
       return ExecutionEngineState.OFFLINE;
+
+    case ExecutionPayloadStatus.INVALID:
+    case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
+      return ExecutionEngineState.ONLINE;
 
     default:
       // In case we can't determine the state, we assume it stays in old state

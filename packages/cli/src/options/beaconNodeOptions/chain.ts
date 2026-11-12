@@ -23,13 +23,13 @@ export type ChainArgs = {
   "chain.proposerBoostReorg"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
   "chain.preaggregateSlotDistance"?: number;
+  "chain.singleAttestationIgnoreProposalDuty"?: boolean;
   "chain.attDataCacheSlotDistance"?: number;
   "chain.computeUnrealized"?: boolean;
   "chain.fastConfirmation"?: boolean;
   "chain.maxSkipSlots"?: number;
   "chain.disableProposerSlashings"?: boolean;
   emitPayloadAttributes?: boolean;
-  broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
   "chain.archiveStateEpochFrequency": number;
@@ -66,13 +66,13 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     proposerBoostReorg: args["chain.proposerBoostReorg"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
+    singleAttestationIgnoreProposalDuty: args["chain.singleAttestationIgnoreProposalDuty"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
     fastConfirmation: args["chain.fastConfirmation"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     disableProposerSlashings: args["chain.disableProposerSlashings"],
     emitPayloadAttributes: args.emitPayloadAttributes,
-    broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
@@ -232,6 +232,15 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
+  "chain.singleAttestationIgnoreProposalDuty": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "collect single attestations of every vote slot a block at the current slot can include regardless of block proposal duties, could be used with --subscribeAllSubnets",
+    defaultDescription: "false",
+    group: "chain",
+  },
+
   "chain.attDataCacheSlotDistance": {
     hidden: true,
     type: "number",
@@ -284,15 +293,6 @@ Will double processing times. Use only for debugging purposes.",
     default: defaultOptions.chain.archiveMode,
     type: "string",
     group: "chain",
-  },
-
-  broadcastValidationStrictness: {
-    // TODO: hide the option till validations fully implemented
-    hidden: true,
-    description:
-      "'warn' or 'error' - options to either throw error or to log warning when broadcast validation can't be performed",
-    type: "string",
-    default: "warn",
   },
 
   "chain.minSameMessageSignatureSetsToBatch": {

@@ -22,7 +22,7 @@ DOCKERFILE="${DOCKERFILE:-Dockerfile.dev}"
 
 # build using dockerfile
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
-  docker build -f "$DOCKERFILE" -t "$LODESTAR_IMAGE" . --build-arg COMMIT="$(git rev-parse HEAD)"
+  docker build --pull -f "$DOCKERFILE" -t "$LODESTAR_IMAGE" . --build-arg COMMIT="$(git rev-parse HEAD)"
 fi
 
 # start devnet, we want to use latest ethereum-package

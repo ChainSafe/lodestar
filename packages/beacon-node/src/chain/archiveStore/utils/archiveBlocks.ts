@@ -57,6 +57,17 @@ async function persistOrphanedBlock(
 }
 
 /**
+ * Oldest epoch for which data column sidecars are kept
+ */
+export function getDataColumnSidecarsMinEpoch(
+  config: ChainForkConfig,
+  currentEpoch: Epoch,
+  archiveDataEpochs?: number
+): Epoch {
+  return Math.min(getBlobDataRetentionStartEpoch(config, currentEpoch), currentEpoch - (archiveDataEpochs ?? 0));
+}
+
+/**
  * Archives finalized blocks from active bucket to archive bucket.
  *
  * Only archive blocks on the same chain to the finalized checkpoint.
@@ -260,10 +271,7 @@ export async function archiveBlocks(
   // Keep only `[min(compute_blob_data_retention_start_epoch(current_epoch), current_epoch - archiveDataEpochs)]`
   if (finalizedPostFulu) {
     if (archiveDataEpochs !== Infinity) {
-      const dataColumnSidecarsMinEpoch = Math.min(
-        getBlobDataRetentionStartEpoch(config, currentEpoch),
-        currentEpoch - (archiveDataEpochs ?? 0)
-      );
+      const dataColumnSidecarsMinEpoch = getDataColumnSidecarsMinEpoch(config, currentEpoch, archiveDataEpochs);
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
         const columnsPruneSlot = computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch);
         const prunedColumnSlots = await db.dataColumns.pruneBefore(columnsPruneSlot);

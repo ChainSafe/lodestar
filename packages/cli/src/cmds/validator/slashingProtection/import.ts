@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import {readFile} from "node:fs/promises";
 import path from "node:path";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {CliCommand} from "@lodestar/utils";
@@ -61,7 +61,7 @@ export const importCmd: CliCommand<ImportArgs, ISlashingProtectionArgs & Account
         (await metadata.getGenesisValidatorsRoot()) ?? (await getGenesisValidatorsRoot(args));
 
       logger.verbose("Reading slashing protection data", {file});
-      const interchangeStr = await fs.promises.readFile(file, "utf8");
+      const interchangeStr = await readFile(file, "utf8");
       const interchangeJson = JSON.parse(interchangeStr) as Interchange;
 
       await slashingProtection.importInterchange(interchangeJson, genesisValidatorsRoot, logger);

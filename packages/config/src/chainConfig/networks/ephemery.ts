@@ -3,8 +3,9 @@ import {chainConfig as mainnet} from "../configs/mainnet.js";
 import {ChainConfig} from "../types.js";
 
 // Ephemery is a periodically-resetting testnet (EIP-6916). These values track the
-// current iteration in ephemery-genesis values.env, pinned to iteration 164:
-// https://github.com/ephemery-testnet/ephemery-genesis/blob/a4b5a2ee5c1c40e378edc92f2ccd9938cf9207d0/values.env
+// current iteration in ephemery-genesis values.env, pinned to iteration 165:
+// https://github.com/ephemery-testnet/ephemery-genesis/blob/382421b4cb53abe2ad6a105bbbce4d2111a0edd0/values.env
+// Gloas configuration: https://github.com/ephemery-testnet/ephemery-genesis/pull/75
 const baseChainConfig: ChainConfig = {
   ...mainnet,
 
@@ -13,7 +14,7 @@ const baseChainConfig: ChainConfig = {
   // Genesis
   // ---------------------------------------------------------------
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 64,
-  MIN_GENESIS_TIME: 1790276400,
+  MIN_GENESIS_TIME: 1792695600,
   GENESIS_FORK_VERSION: b("0x1000101b"),
   GENESIS_DELAY: 600,
 
@@ -40,24 +41,24 @@ const baseChainConfig: ChainConfig = {
   FULU_FORK_EPOCH: 0,
   // Gloas
   GLOAS_FORK_VERSION: b("0x8000101b"),
-  GLOAS_FORK_EPOCH: Infinity,
+  GLOAS_FORK_EPOCH: 0,
+  // Heze
+  HEZE_FORK_VERSION: b("0x9000101b"),
 
   // Deposit contract
   // ---------------------------------------------------------------
-  DEPOSIT_CHAIN_ID: 39438164,
-  DEPOSIT_NETWORK_ID: 39438164,
+  DEPOSIT_CHAIN_ID: 39438165,
+  DEPOSIT_NETWORK_ID: 39438165,
 
+  SECONDS_PER_ETH1_BLOCK: 12,
   ETH1_FOLLOW_DISTANCE: 12,
+  EJECTION_BALANCE: 30000000000,
 
   // Blob Scheduling
   // ---------------------------------------------------------------
   BLOB_SCHEDULE: [
     {
-      EPOCH: 2048,
-      MAX_BLOBS_PER_BLOCK: 12,
-    },
-    {
-      EPOCH: 4096,
+      EPOCH: 0,
       MAX_BLOBS_PER_BLOCK: 15,
     },
   ],

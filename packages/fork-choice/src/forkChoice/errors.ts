@@ -6,13 +6,15 @@ export enum InvalidBlockCode {
   FUTURE_SLOT = "FUTURE_SLOT",
   FINALIZED_SLOT = "FINALIZED_SLOT",
   NOT_FINALIZED_DESCENDANT = "NOT_FINALIZED_DESCENDANT",
+  PARENT_EXECUTION_INVALID = "PARENT_EXECUTION_INVALID",
 }
 
 export type InvalidBlock =
   | {code: InvalidBlockCode.UNKNOWN_PARENT; root: RootHex; hash: RootHex | null}
   | {code: InvalidBlockCode.FUTURE_SLOT; currentSlot: Slot; blockSlot: Slot}
   | {code: InvalidBlockCode.FINALIZED_SLOT; finalizedSlot: Slot; blockSlot: Slot}
-  | {code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT; finalizedRoot: RootHex; blockAncestor?: RootHex};
+  | {code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT; finalizedRoot: RootHex; blockAncestor?: RootHex}
+  | {code: InvalidBlockCode.PARENT_EXECUTION_INVALID; root: RootHex; hash: RootHex | null};
 
 export enum InvalidAttestationCode {
   /**

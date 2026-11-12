@@ -57,6 +57,7 @@ describe("AttnetsService", () => {
     metadata = new MetadataController({}, {networkConfig, logger, onSetValue: () => null});
     service = new AttnetsService(config, clock, gossipStub, metadata, logger, null, nodeId, {
       slotsToSubscribeBeforeAggregatorDuty: 2,
+      slotsToSubscribeBeforeProposalDuty: 0,
     });
   });
 
@@ -173,5 +174,95 @@ describe("AttnetsService", () => {
     // then should not subscribe after the expiration
     vi.advanceTimersByTime(config.SLOT_DURATION_MS * (subscription.slot + 1));
     expect(gossipStub.unsubscribeTopic).not.toHaveBeenCalled();
+  });
+
+  describe("before a local block proposal", () => {
+    const slotsToSubscribeBeforeProposalDuty = 4;
+    const proposalSlot = 100;
+    const halfSlotMs = config.SLOT_DURATION_MS / 2;
+
+    beforeEach(() => {
+      service.close();
+      vi.clearAllMocks();
+      service = new AttnetsService(config, clock, gossipStub, metadata, logger, null, nodeId, {
+        slotsToSubscribeBeforeAggregatorDuty: 2,
+        slotsToSubscribeBeforeProposalDuty,
+      });
+    });
+
+    function getSubnets(calls: unknown[][]): SubnetID[] {
+      return calls.map((call) => (call[0] as {subnet: SubnetID}).subnet);
+    }
+
+    it("subscribes to all subnets N slots before and unsubscribes at half of the slot before", () => {
+      const longLivedSubnets = getSubnets(gossipStub.subscribeTopic.mock.calls);
+      expect(longLivedSubnets.length).toBe(config.SUBNETS_PER_NODE);
+      service.addLocalProposalSlots([proposalSlot]);
+
+      vi.advanceTimersByTime(config.SLOT_DURATION_MS * (proposalSlot - slotsToSubscribeBeforeProposalDuty - 1));
+      expect(gossipStub.subscribeTopic).toBeCalledTimes(config.SUBNETS_PER_NODE);
+
+      // all other subnets are subscribed N slots before the proposal, without discovery
+      vi.advanceTimersByTime(config.SLOT_DURATION_MS);
+      expect(gossipStub.subscribeTopic).toBeCalledTimes(ATTESTATION_SUBNET_COUNT);
+      expect(service.getActiveSubnets().length).toBe(config.SUBNETS_PER_NODE);
+
+      // still subscribed at the start of the slot before the proposal
+      vi.advanceTimersByTime(config.SLOT_DURATION_MS * (slotsToSubscribeBeforeProposalDuty - 1));
+      expect(gossipStub.unsubscribeTopic).not.toHaveBeenCalled();
+
+      // unsubscribed at half of the slot before the proposal, except long-lived subnets
+      vi.advanceTimersByTime(halfSlotMs);
+      expect(gossipStub.unsubscribeTopic).toBeCalledTimes(ATTESTATION_SUBNET_COUNT - config.SUBNETS_PER_NODE);
+      const unsubscribedSubnets = getSubnets(gossipStub.unsubscribeTopic.mock.calls);
+      for (const subnet of longLivedSubnets) {
+        expect(unsubscribedSubnets).not.toContain(subnet);
+      }
+    });
+
+    it("keeps a subnet with an aggregator duty in the slot before the proposal until the next slot", () => {
+      const aggregatorSubnet = 63;
+      expect(getSubnets(gossipStub.subscribeTopic.mock.calls)).not.toContain(aggregatorSubnet);
+      service.addLocalProposalSlots([proposalSlot]);
+      service.addCommitteeSubscriptions([
+        {validatorIndex: 2023, subnet: aggregatorSubnet, slot: proposalSlot - 1, isAggregator: true},
+      ]);
+
+      vi.advanceTimersByTime(config.SLOT_DURATION_MS * (proposalSlot - 1) + halfSlotMs);
+      expect(getSubnets(gossipStub.unsubscribeTopic.mock.calls)).not.toContain(aggregatorSubnet);
+
+      vi.advanceTimersByTime(halfSlotMs);
+      expect(getSubnets(gossipStub.unsubscribeTopic.mock.calls)).toContain(aggregatorSubnet);
+    });
+
+    it("keeps subnets subscribed when a later proposal window overlaps", () => {
+      service.addLocalProposalSlots([proposalSlot, proposalSlot + 2]);
+
+      vi.advanceTimersByTime(config.SLOT_DURATION_MS * (proposalSlot - 1) + halfSlotMs);
+      expect(gossipStub.unsubscribeTopic).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(config.SLOT_DURATION_MS * 2);
+      expect(gossipStub.unsubscribeTopic).toBeCalledTimes(ATTESTATION_SUBNET_COUNT - config.SUBNETS_PER_NODE);
+      // subscribed only once
+      expect(gossipStub.subscribeTopic).toBeCalledTimes(ATTESTATION_SUBNET_COUNT);
+    });
+
+    it("subscribes right away to a proposal learned inside its window", () => {
+      vi.advanceTimersByTime(config.SLOT_DURATION_MS * (proposalSlot - 3));
+      expect(gossipStub.subscribeTopic).toBeCalledTimes(config.SUBNETS_PER_NODE);
+
+      service.addLocalProposalSlots([proposalSlot]);
+      expect(gossipStub.subscribeTopic).toBeCalledTimes(ATTESTATION_SUBNET_COUNT);
+
+      // same expiry as a proposal known in time
+      vi.advanceTimersByTime(config.SLOT_DURATION_MS * 2 + halfSlotMs);
+      expect(gossipStub.unsubscribeTopic).toBeCalledTimes(ATTESTATION_SUBNET_COUNT - config.SUBNETS_PER_NODE);
+    });
+
+    it("does not subscribe to a proposal learned in the slot before it", () => {
+      vi.advanceTimersByTime(config.SLOT_DURATION_MS * (proposalSlot - 1));
+      service.addLocalProposalSlots([proposalSlot]);
+      expect(gossipStub.subscribeTopic).toBeCalledTimes(config.SUBNETS_PER_NODE);
+    });
   });
 });

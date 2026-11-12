@@ -1,23 +1,29 @@
 import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
+import {hasher} from "@chainsafe/persistent-merkle-tree";
+import {BeaconApiMethods} from "@lodestar/api/beacon/server";
+import {BeaconConfig} from "@lodestar/config";
+import type {LoggerNode} from "@lodestar/logger/node";
 import {
   init as initNativeMetrics,
   registerLocalValidator as registerNativeLocalValidator,
   scrapeMetrics as scrapeNativeMetrics,
   unregisterLocalValidator as unregisterNativeLocalValidator,
-} from "@chainsafe/lodestar-z/metrics";
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {hasher} from "@chainsafe/persistent-merkle-tree";
-import {BeaconApiMethods} from "@lodestar/api/beacon/server";
-import {BeaconConfig} from "@lodestar/config";
-import type {LoggerNode} from "@lodestar/logger/node";
+} from "@lodestar/native/metrics";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {ZERO_HASH_HEX} from "@lodestar/params";
-import {IBeaconStateView, isStatePostBellatrix, isStatePostGloas} from "@lodestar/state-transition";
+import {
+  IBeaconStateView,
+  computeStartSlotAtEpoch,
+  isStatePostBellatrix,
+  isStatePostGloas,
+} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
-import {sleep, toRootHex} from "@lodestar/utils";
+import {defer, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
+import {getDataColumnSidecarsMinEpoch} from "../chain/archiveStore/utils/archiveBlocks.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
 import {IBeaconDb} from "../db/index.js";
@@ -111,6 +117,7 @@ export class BeaconNode {
 
   status: BeaconNodeStatus;
   private controller?: AbortController;
+  private closePromise: Promise<void> | undefined;
 
   constructor({
     opts,
@@ -212,6 +219,17 @@ export class BeaconNode {
 
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
 
+    // Before any lookup into the legacy column buckets, which can be slow until compacted
+    const columnsMinEpoch =
+      opts.chain.archiveDataEpochs === Infinity
+        ? null
+        : getDataColumnSidecarsMinEpoch(config, clock.currentEpoch, opts.chain.archiveDataEpochs);
+    await db.compactLegacyDataColumns(
+      columnsMinEpoch !== null && columnsMinEpoch >= config.FULU_FORK_EPOCH
+        ? computeStartSlotAtEpoch(columnsMinEpoch)
+        : 0
+    );
+
     await db.init();
 
     // Prune hot db repos
@@ -280,6 +298,7 @@ export class BeaconNode {
         : undefined,
       builderApiClientOpts: {
         timeout: opts.executionBuilder.timeout,
+        bidDeadline: opts.executionBuilder.bidDeadline,
         // Sent with all builder api requests, unless the node runs in private mode
         userAgent: opts.executionBuilder.userAgent,
       },
@@ -375,23 +394,40 @@ export class BeaconNode {
   /**
    * Stop beacon node and its sub-components.
    */
-  async close(): Promise<void> {
-    if (this.status === BeaconNodeStatus.started) {
-      this.status = BeaconNodeStatus.closing;
-      this.sync.close();
-      if (this.restApi) await this.restApi.close();
-      await this.network.close();
-      if (this.metricsServer) await this.metricsServer.close();
-      if (this.monitoring) await this.monitoring.close();
-      await this.chain.persistToDisk();
-      await this.chain.close();
+  close(): Promise<void> {
+    if (this.closePromise !== undefined) return this.closePromise;
+    const completion = defer<void>();
+    this.closePromise = completion.promise;
+    this.status = BeaconNodeStatus.closing;
+    void this.closeInternal().then(completion.resolve, completion.reject);
+    return this.closePromise;
+  }
+
+  private async closeInternal(): Promise<void> {
+    const errors: unknown[] = [];
+    for (const cleanup of [
+      () => this.sync.close(),
+      () => this.restApi?.close(),
+      () => this.network.close(),
+      () => this.metricsServer?.close(),
+      () => this.monitoring?.close(),
+      () => this.chain.persistToDisk(),
+      () => this.chain.close(),
       // Abort signal last: close() calls above clear intervals/timeouts so no new
       // operations get scheduled. If we aborted first, a still-pending interval could
       // fire and schedule a new operation after abort, leaving it stuck and delaying shutdown.
-      if (this.controller) this.controller.abort();
-      await sleep(DELAY_BEFORE_CLOSING_DB_MS);
-      await this.db.close();
-      this.status = BeaconNodeStatus.closed;
+      () => this.controller?.abort(),
+      () => sleep(DELAY_BEFORE_CLOSING_DB_MS),
+      () => this.db.close(),
+    ]) {
+      try {
+        await cleanup();
+      } catch (error) {
+        errors.push(error);
+      }
     }
+    this.status = BeaconNodeStatus.closed;
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) throw new AggregateError(errors, "Beacon node cleanup failed");
   }
 }

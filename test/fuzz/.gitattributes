@@ -1,0 +1,15 @@
+# Hand-written seed corpus: binary files, track as-is
+corpus/ssz_basic-initial/** binary
+corpus/ssz_bitlist-initial/** binary
+corpus/ssz_bitvector-initial/** binary
+corpus/ssz_bytelist-initial/** binary
+corpus/ssz_containers-initial/** binary
+corpus/ssz_lists-initial/** binary
+
+# Generated/minimized corpora: binary, mark as generated
+corpus/ssz_basic-cmin/** binary linguist-generated=true
+corpus/ssz_bitlist-cmin/** binary linguist-generated=true
+corpus/ssz_bitvector-cmin/** binary linguist-generated=true
+corpus/ssz_bytelist-cmin/** binary linguist-generated=true
+corpus/ssz_containers-cmin/** binary linguist-generated=true
+corpus/ssz_lists-cmin/** binary linguist-generated=true
