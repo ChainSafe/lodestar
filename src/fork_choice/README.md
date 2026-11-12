@@ -12,7 +12,8 @@ and what is still missing. It stays here while the rewrite is under review;
 | File                               | Contents                                                                           | Spec functions                                                                                                                                                                                                                                                                                  |
 | ---------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `store.zig`                        | `Store`: the spec `Store` minus beacon states, every handler, optimistic sync      | `get_forkchoice_store`, `on_tick`, `on_block`, `on_attestation`, `on_attester_slashing`, `on_payload_attestation_message`, `on_execution_payload_envelope`, `get_ancestor`, `get_checkpoint_block`, `update_checkpoints`, `should_extend_payload`, `payload_timeliness`, `should_build_on_full` |
-| `head.zig`                         | Head computation as array passes, persistent vote totals                           | `get_weight`, `filter_node_tree`, `get_head`, `get_supported_node`, `should_apply_proposer_boost`, `is_head_weak`, `is_parent_strong`                                                                                                                                                           |
+| `head.zig`                         | Head computation as array passes                                                   | `get_weight`, `filter_node_tree`, `get_head`, `get_supported_node`, `should_apply_proposer_boost`, `is_head_weak`, `is_parent_strong`                                                                                                                                                           |
+| `votes.zig`                        | Latest and queued messages, equivocators, persistent per-node vote totals          | `update_latest_messages`, `get_attestation_score` (per node, before the tree sum)                                                                                                                                                                                                               |
 | `proposer_head.zig`                | Proposer reorg helpers                                                             | `get_proposer_head` and its predicates                                                                                                                                                                                                                                                          |
 | `vote_targets.zig`                 | Interned vote targets: the distinct latest messages and the node each counts on    | `get_supported_node` (cached per target)                                                                                                                                                                                                                                                        |
 | `store_test.zig`                   | Unit tests on a real two-branch chain                                              |                                                                                                                                                                                                                                                                                                 |
@@ -33,10 +34,11 @@ recursing or keeping child lists. Columns hold what the spec reads from a block 
 its post-state: slot, parent, proposer, realized and unrealized checkpoints,
 timeliness bits, Gloas bid hashes, payload flags.
 
-Latest messages are a dense array indexed by validator holding 4-byte ids into
-`vote_targets.zig`, a table of the distinct `LatestMessage`s. Hundreds of thousands
-of validators vote alike, so an epoch adds a few hundred entries; each entry also
-caches the node it counts on (`get_supported_node`). Queued votes, those whose slot
+`votes.zig` owns everything about votes. Latest messages are a dense array indexed
+by validator holding 4-byte ids into `vote_targets.zig`, a table of the distinct
+`LatestMessage`s. Hundreds of thousands of validators vote alike, so an epoch adds a
+few hundred entries; each entry also caches the node it counts on
+(`get_supported_node`). Queued votes, those whose slot
 is not yet past, are a second id array of the same shape: the first vote of a slot
 wins, as applying them in order at the next slot would, a vote for a later slot
 replaces an earlier one, and a bitset of the validators with a queued vote lets each
@@ -47,11 +49,11 @@ Equivocators are a bitset. Justified balances arrive through
 a `StateProvider` callback when the justified checkpoint changes and are kept as raw
 effective-balance increments plus an active-and-unslashed bitset.
 
-Only the vote accounting is carried between calls: the per-node vote totals, the
-target each validator's vote is counted on, and a bitset with a count of the
-validators whose vote or weight changed since the last call. Weights, viability and
-best children live in scratch arrays that every `getHead` rebuilds from those totals;
-a `dirty` flag on the cache makes repeated reads free.
+Only the vote accounting is carried between calls, in `Votes`: the per-node vote
+totals, the target each validator's vote is counted on, and a bitset with a count of
+the validators whose vote or weight changed since the last call. Weights, viability
+and best children live in the scratch arrays of `head.Cache`, which every `getHead`
+rebuilds from those totals; a `dirty` flag on the cache makes repeated reads free.
 
 ### Head computation
 
@@ -59,8 +61,8 @@ The spec's `get_weight` scans every latest message per node and `filter_node_tre
 recurses. `head.zig` produces every node's weight and viability at once:
 
 1. Forward pass: the finalized-checkpoint ancestor of every block, via its parent.
-2. Vote totals: each latest message of an active, unslashed, non-equivocating
-   validator counts its balance on `get_supported_node`. The totals persist; a run
+2. Vote totals (`Votes.update`): each latest message of an active, unslashed,
+   non-equivocating validator counts its balance on `get_supported_node`. The totals persist; a run
    moves only the votes of validators whose message changed or who equivocated since
    the last run, and a run with no changes skips the bitset entirely. New justified
    balances move only the weights that changed, and `prune` renumbers the counted
