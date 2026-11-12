@@ -17,7 +17,7 @@ services:
     # This limit is bit tight for a Mainnet node, it is recommended to raise the limit
     # since memory may spike during certain network conditions.
     environment:
-      NODE_OPTIONS: --max-old-space-size=8192
+      NODE_OPTIONS: --max-old-space-size=8192 --max-semi-space-size=64
 
   prometheus:
     build: docker/prometheus
