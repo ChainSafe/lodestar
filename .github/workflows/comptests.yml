@@ -38,3 +38,43 @@ jobs:
       - name: Fork-choice compliance tests
         run: pnpm test:comptest
         working-directory: packages/beacon-node
+
+  zig-comptests:
+    name: Zig fork-choice compliance tests
+    if: ${{ github.event_name != 'schedule' || github.repository == 'ChainSafe/lodestar' }}
+    runs-on: ubuntu-latest
+    # About 25 min on a laptop in ReleaseSafe; the archive ships the minimal preset only.
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          cache-key: ubuntu-latest
+      - name: Read spec test cache key
+        id: spec-test-version
+        run: |
+          version=$(zig build spec-test-version)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      # Cache only the archive; extracted, the vectors take about 4.6 GB.
+      - name: Restore compliance vectors cache
+        id: comptests-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: test/spec/spec_tests/*/comptests.tar.gz
+          key: zig-comptest-data-${{ steps.spec-test-version.outputs.version }}
+      # The other spec vectors are not needed: the writer writes no cases for runners
+      # whose vectors are missing.
+      - name: Download compliance vectors
+        run: zig build run:download_spec_tests -- comptests
+      - name: Save compliance vectors cache
+        if: steps.comptests-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: test/spec/spec_tests/*/comptests.tar.gz
+          key: zig-comptest-data-${{ steps.spec-test-version.outputs.version }}
+      - name: Write spec tests
+        run: zig build run:write_spec_tests
+      - name: Fork-choice compliance tests
+        run: zig build test:spec_tests -Dpreset=minimal -Doptimize=ReleaseSafe -Dspec_tests.filters=fork_choice_compliance

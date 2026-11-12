@@ -610,6 +610,8 @@ jobs:
           - fork
           - finality
           - merkle_proof
+          - sync_tests
+          - fast_confirmation
         include:
           - preset: minimal
             optimize: Debug
