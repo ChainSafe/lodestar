@@ -1024,23 +1024,16 @@ export class ProtoArray {
    * LVH node. INVALID invalidates the node identified by `invalidateFromBlockRoot/Hash` and its ancestors up to
    * the LVH node (exclusive), then every descendant. Returns whether any status changed.
    *
-   * A null or unknown LVH means the engine only vouches for the queried payload being invalid: the queried node and
-   * the nodes that inherit that payload (gloas PENDING and EMPTY variants) are invalidated, nothing above them.
+   * A verdict never contradicts what fork choice already holds: a node the engine already resolved is never flipped
+   * and an INVALID never crosses the justified node. The LVH is unusable when it is null, not an ancestor of the from
+   * node, or the walk to it meets such a node.
    *
-   * `strict` keeps the consensus failure semantics for verdicts about a payload the engine just processed: a VALID
-   * or PreMerge node on the invalidated chain poisons the tree. Verdicts from forkchoiceUpdated or about an ancestor
-   * chain are applied with `strict: false`: a node the engine already validated is never invalidated and the justified
-   * node is never crossed. If the walk to the LVH meets either, the LVH is treated as unknown.
-   *
-   * An unknown LVH only says something about the judged payload. With `LVHInvalidJudged.FromBlock` that is the from
-   * node, which is invalidated alone. With `LVHInvalidJudged.ChildPayload` the judged payload is not in the tree and
-   * the from node is its parent, so the verdict is dropped.
+   * An unusable LVH leaves only the claim about the judged payload. With `LVHInvalidJudged.FromBlock` that is the from
+   * node: it and the nodes that inherit its payload (gloas PENDING and EMPTY variants) are invalidated, nothing above
+   * them. With `LVHInvalidJudged.ChildPayload` the judged payload is not in the tree and the from node is its parent,
+   * so the verdict is dropped.
    */
-  validateLatestHash(
-    execResponse: LVHExecResponse,
-    currentSlot: Slot,
-    {strict = true}: {strict?: boolean} = {}
-  ): boolean {
+  validateLatestHash(execResponse: LVHExecResponse, currentSlot: Slot): boolean {
     // Look reverse because its highly likely node with latestValidExecHash is towards the
     // the leaves of the forkchoice
     //
@@ -1076,19 +1069,17 @@ export class ProtoArray {
       if (executionStatus === ExecutionStatus.Valid || executionStatus === ExecutionStatus.PreMerge) {
         return false;
       }
-      if (!strict) {
-        // The walk up flips every Syncing ancestor, a lenient verdict must not contradict an invalidated one
-        let nodeIndex: number | undefined = latestValidHashIndex;
-        while (nodeIndex !== undefined) {
-          const node: ProtoNode = this.nodes[nodeIndex];
-          if (node.executionStatus === ExecutionStatus.Valid || node.executionStatus === ExecutionStatus.PreMerge) {
-            break;
-          }
-          if (node.executionStatus === ExecutionStatus.Invalid) {
-            return false;
-          }
-          nodeIndex = node.parent;
+      // The walk up flips every Syncing ancestor, it must not contradict an invalidated one
+      let nodeIndex: number | undefined = latestValidHashIndex;
+      while (nodeIndex !== undefined) {
+        const node: ProtoNode = this.nodes[nodeIndex];
+        if (node.executionStatus === ExecutionStatus.Valid || node.executionStatus === ExecutionStatus.PreMerge) {
+          break;
         }
+        if (node.executionStatus === ExecutionStatus.Invalid) {
+          return false;
+        }
+        nodeIndex = node.parent;
       }
       this.propagateValidExecutionStatusByIndex(latestValidHashIndex);
       return true;
@@ -1114,48 +1105,42 @@ export class ProtoArray {
         `Unable to find invalidateFromBlockRoot=${invalidateFromBlockRoot} invalidateFromBlockHash=${invalidateFromBlockHash} in forkChoice`
       );
     }
-    if (!strict && this.nodes[invalidateFromIndex].executionStatus !== ExecutionStatus.Syncing) {
+    if (this.nodes[invalidateFromIndex].executionStatus !== ExecutionStatus.Syncing) {
       return false;
     }
 
     let latestValidHashIndex =
       latestValidExecHash !== null ? this.getNodeIndexFromLVH(latestValidExecHash, invalidateFromIndex) : null;
     if (latestValidHashIndex === null) {
-      if (strict) {
-        // A strict verdict never guesses, the from node may be the valid parent of the rejected payload
-        throw Error(`Unable to find latestValidExecHash=${latestValidExecHash} in the forkchoice`);
-      }
       if (judged === LVHInvalidJudged.ChildPayload) {
         return false;
       }
       latestValidHashIndex = this.getUnknownLVHIndex(invalidateFromIndex);
     }
 
-    if (!strict) {
-      // Never invalidate the justified block, the EMPTY variant sharing its chain, or anything at or below it in
-      // the tree. The justified block's own payload (FULL variant) is not part of the checkpoint
-      const justifiedIndex = this.getDefaultNodeIndex(this.justifiedRoot) ?? -1;
-      let nodeIndex: number | undefined = invalidateFromIndex;
-      while (nodeIndex !== undefined && nodeIndex > latestValidHashIndex) {
-        const node: ProtoNode = this.nodes[nodeIndex];
-        const conflict = node.executionStatus !== ExecutionStatus.Syncing;
-        const justified =
-          nodeIndex <= justifiedIndex ||
-          (node.blockRoot === this.justifiedRoot && node.payloadStatus === PayloadStatus.EMPTY);
-        if (conflict || justified) {
-          if (judged === LVHInvalidJudged.FromBlock) {
-            // The LVH is unusable: fall back to the unknown LVH bound, but never cross this node
-            latestValidHashIndex = Math.max(nodeIndex, this.getUnknownLVHIndex(invalidateFromIndex));
-          } else if (conflict) {
-            return false;
-          } else {
-            // The LVH is below the justified node, it still covers everything above it
-            latestValidHashIndex = nodeIndex;
-          }
-          break;
+    // Never invalidate the justified block, the EMPTY variant sharing its chain, or anything at or below it in
+    // the tree. The justified block's own payload (FULL variant) is not part of the checkpoint
+    const justifiedIndex = this.getDefaultNodeIndex(this.justifiedRoot) ?? -1;
+    let nodeIndex: number | undefined = invalidateFromIndex;
+    while (nodeIndex !== undefined && nodeIndex > latestValidHashIndex) {
+      const node: ProtoNode = this.nodes[nodeIndex];
+      const conflict = node.executionStatus !== ExecutionStatus.Syncing;
+      const justified =
+        nodeIndex <= justifiedIndex ||
+        (node.blockRoot === this.justifiedRoot && node.payloadStatus === PayloadStatus.EMPTY);
+      if (conflict || justified) {
+        if (judged === LVHInvalidJudged.FromBlock) {
+          // The LVH is unusable: fall back to the unknown LVH bound, but never cross this node
+          latestValidHashIndex = Math.max(nodeIndex, this.getUnknownLVHIndex(invalidateFromIndex));
+        } else if (conflict) {
+          return false;
+        } else {
+          // The LVH is below the justified node, it still covers everything above it
+          latestValidHashIndex = nodeIndex;
         }
-        nodeIndex = node.parent;
+        break;
       }
+      nodeIndex = node.parent;
     }
 
     if (invalidateFromIndex <= latestValidHashIndex) {

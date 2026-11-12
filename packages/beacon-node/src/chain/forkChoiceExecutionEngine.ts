@@ -135,7 +135,7 @@ export class ForkChoiceExecutionEngine {
       fromBlockHash: lvh.invalidateFromBlockHash,
       latestValidHash: lvh.latestValidExecHash ?? "null",
     };
-    const applied = this.forkChoice.validateLatestHash(lvh, {strict: source === ExecutionInvalidSource.blockSegment});
+    const applied = this.forkChoice.validateLatestHash(lvh);
     if (!applied) {
       this.logger.warn("Execution engine INVALID verdict not applied to fork choice", logCtx);
       return;
@@ -179,10 +179,11 @@ export class ForkChoiceExecutionEngine {
           ExecutionInvalidSource.forkchoiceUpdated
         );
       } else if (status === ExecutionPayloadStatus.VALID && executionStatus === ExecutionStatus.Syncing) {
-        this.forkChoice.validateLatestHash(
-          {executionStatus: ExecutionStatus.Valid, latestValidExecHash: headBlockHash, blockRoot: headBlockRoot},
-          {strict: false}
-        );
+        this.forkChoice.validateLatestHash({
+          executionStatus: ExecutionStatus.Valid,
+          latestValidExecHash: headBlockHash,
+          blockRoot: headBlockRoot,
+        });
       }
     } catch (e) {
       this.logger.error("Error applying forkchoice update result", {headBlockRoot, headBlockHash, status}, e as Error);

@@ -809,8 +809,7 @@ describe("Gloas Fork Choice", () => {
           invalidateFromBlockHash: "0xa1",
           judged: LVHInvalidJudged.FromBlock,
         },
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
       expect(applied).toBe(true);
       expect(payloadStatus("0x0b", PayloadStatus.EMPTY)).toBe(ExecutionStatus.Invalid);
@@ -839,8 +838,7 @@ describe("Gloas Fork Choice", () => {
           invalidateFromBlockHash: "0xb1",
           judged: LVHInvalidJudged.FromBlock,
         },
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
       expect(applied).toBe(true);
       expect(payloadStatus("0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
@@ -878,8 +876,7 @@ describe("Gloas Fork Choice", () => {
           invalidateFromBlockHash: "0xb1",
           judged: LVHInvalidJudged.FromBlock,
         },
-        gloasForkSlot + 2,
-        {strict: false}
+        gloasForkSlot + 2
       );
       expect(applied).toBe(true);
       expect(payloadStatus("0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
@@ -940,8 +937,7 @@ describe("Gloas Fork Choice", () => {
       const protoArray = setup();
       const applied = protoArray.validateLatestHash(
         {executionStatus: ExecutionStatus.Valid, latestValidExecHash: "0xa1", blockRoot: "0x0b"},
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
       expect(applied).toBe(true);
       expect(status(protoArray, "0x0a", PayloadStatus.FULL)).toBe(ExecutionStatus.Valid);
@@ -970,11 +966,10 @@ describe("Gloas Fork Choice", () => {
         invalidateFromBlockHash: "0xb1",
         judged: LVHInvalidJudged.FromBlock,
       };
-      expect(protoArray.validateLatestHash(lvh, gloasForkSlot + 1, {strict: false})).toBe(true);
+      expect(protoArray.validateLatestHash(lvh, gloasForkSlot + 1)).toBe(true);
       const applied = protoArray.validateLatestHash(
         {executionStatus: ExecutionStatus.Valid, latestValidExecHash: "0xb1", blockRoot: "0x0b"},
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
       expect(applied).toBe(false);
       expect(protoArray.lvhError).toBeUndefined();
@@ -1001,8 +996,7 @@ describe("Gloas Fork Choice", () => {
           invalidateFromBlockHash: "0xa1",
           judged: LVHInvalidJudged.FromBlock,
         },
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
       expect(applied).toBe(true);
       expect(status(protoArray, "0x0a", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
@@ -1035,8 +1029,7 @@ describe("Gloas Fork Choice", () => {
           invalidateFromBlockHash: "0xb1",
           judged: LVHInvalidJudged.ChildPayload,
         },
-        gloasForkSlot + 2,
-        {strict: false}
+        gloasForkSlot + 2
       );
       expect(unknown).toBe(false);
       expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Syncing);
@@ -1050,8 +1043,7 @@ describe("Gloas Fork Choice", () => {
           invalidateFromBlockHash: "0xb1",
           judged: LVHInvalidJudged.ChildPayload,
         },
-        gloasForkSlot + 2,
-        {strict: false}
+        gloasForkSlot + 2
       );
       expect(known).toBe(true);
       expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
@@ -1073,8 +1065,7 @@ describe("Gloas Fork Choice", () => {
       );
       protoArray.validateLatestHash(
         {executionStatus: ExecutionStatus.Valid, latestValidExecHash: "0xa1", blockRoot: "0x0a"},
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
       // LVH above A's payload would invalidate the validated A payload, the verdict is dropped whole
       const applied = protoArray.validateLatestHash(
@@ -1085,8 +1076,7 @@ describe("Gloas Fork Choice", () => {
           invalidateFromBlockHash: "0xb1",
           judged: LVHInvalidJudged.ChildPayload,
         },
-        gloasForkSlot + 2,
-        {strict: false}
+        gloasForkSlot + 2
       );
       expect(applied).toBe(false);
       expect(protoArray.lvhError).toBeUndefined();
@@ -1115,8 +1105,7 @@ describe("Gloas Fork Choice", () => {
           invalidateFromBlockHash: "0xb1",
           judged: LVHInvalidJudged.ChildPayload,
         },
-        gloasForkSlot + 2,
-        {strict: false}
+        gloasForkSlot + 2
       );
       expect(applied).toBe(true);
       expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
@@ -1134,8 +1123,7 @@ describe("Gloas Fork Choice", () => {
           invalidateFromBlockHash: "0xa1",
           judged: LVHInvalidJudged.FromBlock,
         },
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
       expect(fromEmpty).toBe(false);
       expect(status(protoArray, "0x0b", PayloadStatus.EMPTY)).toBe(ExecutionStatus.Syncing);
@@ -1159,8 +1147,7 @@ describe("Gloas Fork Choice", () => {
           invalidateFromBlockHash: "0xb1",
           judged: LVHInvalidJudged.FromBlock,
         },
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
       expect(fromFull).toBe(true);
       expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
