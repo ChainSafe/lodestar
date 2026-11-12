@@ -397,13 +397,9 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
                 break :blk try pool.createLeaf(&bytes);
             } else if (boundary.getState(pool).isZero()) boundary else blk: {
                 const intra_chunk = (chunk_index - progressive.subtreeStartChunk(subtree_index)) % ChunkedLeaf.K;
-                const trimmed_leaf = try pool.createChunkedLeafEmpty(@intCast(intra_chunk + 1));
-                errdefer pool.unref(trimmed_leaf);
                 const old_chunks = try boundary.getChunkedLeafChunks(pool);
-                const storage = try trimmed_leaf.getChunkedLeafPtr(pool);
-                @memcpy(storage.chunks[0 .. intra_chunk + 1], old_chunks[0 .. intra_chunk + 1]);
-                @memset(storage.chunks[intra_chunk][keep_bytes..], 0);
-                break :blk trimmed_leaf;
+                const keep_len = intra_chunk * 32 + keep_bytes;
+                break :blk try pool.createChunkedLeafFromBytes(std.mem.asBytes(old_chunks)[0..keep_len]);
             };
             try pool.ref(leaf);
             defer pool.unref(leaf);

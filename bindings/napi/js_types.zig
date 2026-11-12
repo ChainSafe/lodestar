@@ -66,6 +66,17 @@ pub const ProposerRewards = js.Object(struct {
     slashing: js.Number,
 });
 
+pub const PreVerifyBuilderDepositsResult = js.Object(struct {
+    validBuilderSignaturesCount: js.Number,
+    invalidBuilderSignaturesCount: js.Number,
+    validValidatorSignaturesCount: js.Number,
+    invalidValidatorSignaturesCount: js.Number,
+    scannedPendingDeposits: js.Number,
+    totalCachedDeposits: js.Number,
+    totalBuilderPubkeys: js.Number,
+    pendingDepositsCount: js.Number,
+});
+
 pub const SyncCommitteeReward = js.Object(struct {
     validatorIndex: js.Number,
     reward: js.Number,

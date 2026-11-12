@@ -38,6 +38,10 @@ pub fn ListCompositeTreeView(comptime ST: type) type {
 
         pub const SszType = ST;
         pub const Element = *ST.Element.TreeView;
+        pub const ValueWithRoot = struct {
+            value: ST.Element.Type,
+            root: [32]u8,
+        };
 
         const Self = @This();
 
@@ -145,6 +149,18 @@ pub fn ListCompositeTreeView(comptime ST: type) type {
             return self.chunks.getValue(allocator, index, out);
         }
 
+        /// Returns a fixed-size element and its root, including pending element changes.
+        pub fn getValueWithRoot(self: *Self, index: usize) !ValueWithRoot {
+            if (comptime !isFixedType(ST.Element)) @compileError("getValueWithRoot requires a fixed-size element type");
+            const element = try self.getReadonly(index);
+            var value: ST.Element.Type = undefined;
+            try element.toValue(undefined, &value);
+            return .{
+                .value = value,
+                .root = element.getRoot().getRoot(self.chunks.state.pool).*,
+            };
+        }
+
         pub fn setValue(self: *Self, index: usize, value: *const ST.Element.Type) !void {
             const list_length = try self.length();
             if (index >= list_length) return error.IndexOutOfBounds;
@@ -211,6 +227,8 @@ pub fn ListCompositeTreeView(comptime ST: type) type {
         }
 
         pub const ReadonlyIterator = struct {
+            pub const ValueWithRoot = Self.ValueWithRoot;
+
             tree_view: *const Self,
             depth_iterator: Node.DepthIterator,
             elem_index: usize,
@@ -252,6 +270,18 @@ pub fn ListCompositeTreeView(comptime ST: type) type {
                 return value;
             }
 
+            pub fn nextValueWithRoot(self: *ReadonlyIterator) !Self.ValueWithRoot {
+                if (comptime !isFixedType(ST.Element)) @compileError("nextValueWithRoot requires a fixed-size element type");
+                const node = try self.depth_iterator.next();
+                var value: ST.Element.Type = undefined;
+                try ST.Element.tree.toValue(node, self.tree_view.chunks.state.pool, &value);
+                self.elem_index += 1;
+                return .{
+                    .value = value,
+                    .root = node.getRoot(self.tree_view.chunks.state.pool).*,
+                };
+            }
+
             /// Inner function to get the next element as an SSZ value type.
             ///
             /// Requires an allocator for `toValue`.
@@ -259,10 +289,7 @@ pub fn ListCompositeTreeView(comptime ST: type) type {
                 const node = try self.depth_iterator.next();
                 // Variable-size elements: toValue reads `out` (it resizes embedded ArrayLists),
                 // so initialize it before the call.
-                var value: ST.Element.Type = if (comptime @hasDecl(ST.Element, "default_value"))
-                    ST.Element.default_value
-                else
-                    std.mem.zeroes(ST.Element.Type);
+                var value = ST.Element.init;
                 errdefer if (comptime @hasDecl(ST.Element, "deinit")) {
                     ST.Element.deinit(allocator, &value);
                 };

@@ -13,7 +13,6 @@ import {
   SignedBeaconBlock,
   Status,
   altair,
-  deneb,
   fulu,
   gloas,
   heze,
@@ -24,8 +23,6 @@ import {
 import {
   BeaconBlocksByRootRequest,
   BeaconBlocksByRootRequestType,
-  BlobSidecarsByRootRequest,
-  BlobSidecarsByRootRequestType,
   DataColumnSidecarsByRootRequest,
   DataColumnSidecarsByRootRequestType,
   ExecutionPayloadEnvelopesByRootRequest,
@@ -44,8 +41,6 @@ export enum ReqRespMethod {
   BeaconBlocksByRange = "beacon_blocks_by_range",
   BeaconBlocksByRoot = "beacon_blocks_by_root",
   BeaconBlocksByHead = "beacon_blocks_by_head",
-  BlobSidecarsByRange = "blob_sidecars_by_range",
-  BlobSidecarsByRoot = "blob_sidecars_by_root",
   DataColumnSidecarsByRange = "data_column_sidecars_by_range",
   DataColumnSidecarsByRoot = "data_column_sidecars_by_root",
   ExecutionPayloadEnvelopesByRoot = "execution_payload_envelopes_by_root",
@@ -66,8 +61,6 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
   [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequest;
   [ReqRespMethod.BeaconBlocksByHead]: fulu.BeaconBlocksByHeadRequest;
-  [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecarsByRangeRequest;
-  [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequest;
   [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecarsByRangeRequest;
   [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequest;
   [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: ExecutionPayloadEnvelopesByRootRequest;
@@ -88,8 +81,6 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.BeaconBlocksByRange]: SignedBeaconBlock;
   [ReqRespMethod.BeaconBlocksByRoot]: SignedBeaconBlock;
   [ReqRespMethod.BeaconBlocksByHead]: SignedBeaconBlock;
-  [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecar;
-  [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecar;
   [ReqRespMethod.DataColumnSidecarsByRange]: DataColumnSidecar;
   [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecar;
   [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: gloas.SignedExecutionPayloadEnvelope;
@@ -119,8 +110,6 @@ export const requestSszTypeByMethod: (
   [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
   [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequestType(fork, config),
   [ReqRespMethod.BeaconBlocksByHead]: ssz.fulu.BeaconBlocksByHeadRequest,
-  [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
-  [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(fork, config),
   [ReqRespMethod.DataColumnSidecarsByRange]: ssz.fulu.DataColumnSidecarsByRangeRequest,
   [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequestType(config),
   [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: ExecutionPayloadEnvelopesByRootRequestType(config),
@@ -152,8 +141,6 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.BeaconBlocksByRange]: blocksResponseType,
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
   [ReqRespMethod.BeaconBlocksByHead]: (fork) => ssz[fork].SignedBeaconBlock,
-  [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
-  [ReqRespMethod.BlobSidecarsByRoot]: () => ssz.deneb.BlobSidecar,
   [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientBootstrap,
   [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientUpdate,
   [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientFinalityUpdate,
