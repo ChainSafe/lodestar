@@ -441,13 +441,20 @@ pub fn attestationScore(store: *const Store, node: ForkChoiceNode) u64 {
     return store.head_cache.weight.items[nodeId(node)];
 }
 
-/// Spec `get_payload_status_tiebreaker`.
+/// Spec `get_payload_status_tiebreaker`, plus consensus-specs#5769: during its own slot a
+/// Heze payload known to fail its inclusion list ranks below its EMPTY variant.
 fn payloadStatusTiebreaker(store: *const Store, node: ForkChoiceNode) !u8 {
     if (store.isPreviousSlotPayloadDecision(node)) {
         if (node.payload_status == .empty) return 1;
         return if (try store.shouldExtendPayload(node.block)) 2 else 0;
     }
-    return @intFromEnum(node.payload_status);
+    return switch (node.payload_status) {
+        .empty => 1,
+        .full => if (store.blockSlot(node.block) == store.currentSlot() and
+            store.blocks.items(.fork)[node.block].gte(.heze) and
+            store.blocks.items(.inclusion_list_satisfaction)[node.block] == .unsatisfied) 0 else 2,
+        .pending => 3,
+    };
 }
 
 /// Spec `should_apply_proposer_boost`; pre-Gloas the boost applies whenever it is set.
