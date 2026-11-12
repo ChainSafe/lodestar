@@ -2,6 +2,7 @@ import {ModuleThread} from "@chainsafe/threads";
 import {BeaconConfig, SpecJson} from "@lodestar/config";
 import {LoggerNode, LoggerNodeOpts} from "@lodestar/logger/node";
 import {Metrics} from "../../../metrics/index.js";
+import {QueueErrorCode} from "../../../util/queue/errors.js";
 
 export type HistoricalStateRegenInitModules = {
   opts: {
@@ -35,7 +36,8 @@ export type HistoricalStateWorkerData = {
 export type HistoricalStateWorkerApi = {
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;
-  getHistoricalState(slot: number): Promise<Uint8Array | null>;
+  // Worker RPC strips custom Error fields, so queue errors cross as structured results.
+  getHistoricalState(slot: number): Promise<Uint8Array | null | {error: QueueErrorCode}>;
 };
 
 export enum RegenErrorType {

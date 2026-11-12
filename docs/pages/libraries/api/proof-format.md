@@ -196,6 +196,7 @@ The following table describes Lodestar v0 behavior, not a standardized error pol
 | Descriptor descends below a terminal SSZ chunk                | `400`          |
 | Descriptor byte limit or traversal depth exceeded             | `413`          |
 | State lookup rejected by the node's syncing guard             | `503`          |
+| Historical reconstruction queue is full or stopping           | `503`          |
 | Internal retrieval or proof-generation failure                | `500`          |
 
 Historical requests return `404` when reconstruction is disabled, no seed state
@@ -229,6 +230,12 @@ blocks can still be served. A successful response, including during syncing,
 does not establish execution validity or finality. Those properties are absent
 from the proof response and must be checked independently by the application.
 
+Historical requests also return `503` when the reconstruction queue is full or
+stopping. The worker preserves those specific queue errors across its thread
+boundary. Unexpected worker failures and database errors remain `500`; they are
+not classified by matching error messages. No retry delay is advertised because
+the server cannot predict when capacity will become available.
+
 Errors use JSON with a numeric `code` and a `message`, including when the request
 asks for an SSZ success response. Stack traces are disabled by default. A `404`
 can indicate a disabled namespace or unavailable data; it does not prove that
@@ -238,15 +245,16 @@ reconstruction cost or promise a particular request rate.
 
 The proof API tests cover the following support requirements:
 
-| Requirement                                                                               | Coverage                                                   |
-| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| Enable both routes together; reject absent data without substituting another object       | `support.test.ts`, `historical.test.ts`                    |
-| JSON/SSZ bytes, selected fork header, and unsupported encodings                           | `format.test.ts`, `support.test.ts`, `proofFormat.test.ts` |
-| Reject malformed identifiers, descriptors, and exceeded work limits before lookup         | `request.test.ts`, `support.test.ts`                       |
-| Cached states, archive replay, skipped slots, missing history, and corrupt data           | `historical.test.ts`, `historicalWorker.test.ts`           |
-| Preserve unavailable results, successful bytes, and errors across the archive worker      | `historicalWorker.test.ts`                                 |
-| Apply sync guards and preserve state ownership across concurrent cached requests          | `support.test.ts`, `proof.test.ts`                         |
-| Verify intended fields and trusted roots on both sides of the fork and during transitions | `fields.test.ts`, `proof.test.ts`, `transition.test.ts`    |
+| Requirement                                                                               | Coverage                                                                |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Enable both routes together; reject absent data without substituting another object       | `support.test.ts`, `historical.test.ts`                                 |
+| JSON/SSZ bytes, selected fork header, and unsupported encodings                           | `format.test.ts`, `support.test.ts`, `proofFormat.test.ts`              |
+| Reject malformed identifiers, descriptors, and exceeded work limits before lookup         | `request.test.ts`, `support.test.ts`                                    |
+| Cached states, archive replay, skipped slots, missing history, and corrupt data           | `historical.test.ts`, `historicalWorker.test.ts`                        |
+| Preserve unavailable results, successful bytes, and errors across the archive worker      | `historicalWorker.test.ts`                                              |
+| Distinguish full/stopping historical queues from missing history and internal failures    | `historicalQueue.test.ts`, `historicalRegen.test.ts`, `support.test.ts` |
+| Apply sync guards and preserve state ownership across concurrent cached requests          | `support.test.ts`, `proof.test.ts`                                      |
+| Verify intended fields and trusted roots on both sides of the fork and during transitions | `fields.test.ts`, `proof.test.ts`, `transition.test.ts`                 |
 
 The handler tests are in `packages/beacon-node/test/unit/api/impl/proof/`; the
 independent format checks are in `packages/api/test/unit/beacon/proofFormat.test.ts`.

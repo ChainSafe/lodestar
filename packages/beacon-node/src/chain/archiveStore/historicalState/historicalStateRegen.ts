@@ -2,6 +2,7 @@ import path from "node:path";
 import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {chainConfigToJson} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
+import {QueueError} from "../../../util/queue/errors.js";
 import {
   HistoricalStateRegenInitModules,
   HistoricalStateRegenModules,
@@ -64,6 +65,10 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
   }
 
   async getHistoricalState(slot: number): Promise<Uint8Array | null> {
-    return this.api.getHistoricalState(slot);
+    const result = await this.api.getHistoricalState(slot);
+    if (result !== null && !(result instanceof Uint8Array)) {
+      throw new QueueError({code: result.error});
+    }
+    return result;
   }
 }

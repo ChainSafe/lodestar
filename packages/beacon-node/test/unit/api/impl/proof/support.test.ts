@@ -11,6 +11,7 @@ import {getApi} from "../../../../../src/api/impl/api.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {BeaconRestApiServer} from "../../../../../src/api/rest/index.js";
 import {SyncState} from "../../../../../src/sync/index.js";
+import {QueueError, QueueErrorCode} from "../../../../../src/util/queue/errors.js";
 import {getApiTestModules} from "../../../../utils/api.js";
 import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
 import {createProofFixture, proofConfig, proofForks} from "./fixtures.js";
@@ -191,6 +192,40 @@ describe.each(backends)("proof REST support (native=%s)", (nativeStateTransition
       expect(modules.chain.getHistoricalStateBySlot).toHaveBeenCalledTimes(2);
       expect(modules.chain.getStateBySlot).not.toHaveBeenCalled();
       expect(modules.chain.getStateByStateRoot).not.toHaveBeenCalled();
+    });
+
+    it.each([QueueErrorCode.QUEUE_MAX_LENGTH, QueueErrorCode.QUEUE_ABORTED])(
+      "returns 503 for historical %s without substituting another state",
+      async (code) => {
+        const slot = state.slot - 1;
+        for (const accept of ["application/json", "application/octet-stream"]) {
+          modules.chain.getHistoricalStateBySlot.mockRejectedValueOnce(new QueueError({code}));
+          const response = await fetch(`${server.url}/eth/v0/beacon/proof/state/${slot}?format=0x80`, {
+            headers: {accept},
+          });
+          expect(response.status, accept).toBe(503);
+          expect(response.headers.get("content-type"), accept).toContain("application/json");
+          expect(await response.json(), accept).toEqual({
+            code: 503,
+            message: "Historical state reconstruction is temporarily unavailable",
+          });
+        }
+        expect(modules.chain.getHistoricalStateBySlot).toHaveBeenLastCalledWith(slot);
+        expect(modules.chain.getStateBySlot).not.toHaveBeenCalled();
+        expect(modules.chain.getStateByStateRoot).not.toHaveBeenCalled();
+        expect(modules.chain.regen.getStateSync).not.toHaveBeenCalled();
+      }
+    );
+
+    it("keeps queue-like unexpected historical errors as 500", async () => {
+      const failure = Object.assign(new Error(QueueErrorCode.QUEUE_MAX_LENGTH), {
+        type: {code: QueueErrorCode.QUEUE_MAX_LENGTH},
+      });
+      modules.chain.getHistoricalStateBySlot.mockRejectedValueOnce(failure);
+      expect(await request("state", Uint8Array.of(0x80), String(state.slot - 1))).toEqual({
+        status: 500,
+        body: {code: 500, message: QueueErrorCode.QUEUE_MAX_LENGTH},
+      });
     });
 
     it.each([SyncState.Stalled, SyncState.SyncingHead, SyncState.SyncingFinalized])(
