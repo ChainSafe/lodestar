@@ -370,6 +370,12 @@ pub fn ContainerTreeView(comptime ST: type) type {
             return self.root.getRoot(self.pool);
         }
 
+        /// `hashTreeRoot`, with lazy chunked leaves hashed in parallel on `io`.
+        pub fn hashTreeRootParallel(self: *Self, io: std.Io) !*const [32]u8 {
+            try self.commit();
+            return try self.root.getRootParallel(self.pool, io);
+        }
+
         /// Get the hash tree root of a specific field by name.
         /// For composite fields, commits the child view first if it has changes.
         pub fn getFieldRoot(self: *Self, comptime field_name: []const u8) !*const [32]u8 {
@@ -562,6 +568,12 @@ pub fn StructContainerTreeView(comptime ST: type) type {
         pub fn hashTreeRoot(self: *Self) !*const [32]u8 {
             try self.commit();
             return self.root.getRoot(self.pool);
+        }
+
+        /// `hashTreeRoot`, with lazy chunked leaves hashed in parallel on `io`.
+        pub fn hashTreeRootParallel(self: *Self, io: std.Io) !*const [32]u8 {
+            try self.commit();
+            return try self.root.getRootParallel(self.pool, io);
         }
 
         pub fn getFieldRoot(self: *Self, comptime field_name: []const u8) !*const [32]u8 {

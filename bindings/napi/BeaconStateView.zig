@@ -1415,7 +1415,7 @@ pub fn hashTreeRoot(self: *BeaconStateView) !js.Uint8Array {
     const env = js.env();
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const root = try cached_state.state.hashTreeRoot();
+    const root = try cached_state.state.hashTreeRootParallel(js.io());
     return .{ .val = try numberSliceToNapiValue(env, u8, root, .{ .typed_array = .uint8 }) };
 }
 
