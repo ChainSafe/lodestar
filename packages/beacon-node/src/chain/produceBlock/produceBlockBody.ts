@@ -72,12 +72,13 @@ import {
 } from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
-import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
+import {IExecutionBuilder, PayloadAttributes, PayloadId} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import type {BeaconChain} from "../chain.js";
+import {ForkChoiceExecutionEngine} from "../forkChoiceExecutionEngine.js";
 import {CommonBlockBody} from "../interface.js";
 import {InclusionListStore, ProposerPreferencesPool} from "../opPools/index.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
@@ -742,7 +743,7 @@ export async function produceBlockBody<T extends BlockType>(
  */
 export async function prepareExecutionPayload(
   chain: {
-    executionEngine: IExecutionEngine;
+    executionEngine: ForkChoiceExecutionEngine;
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
@@ -807,6 +808,7 @@ export async function prepareExecutionPayload(
 
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
+      toRootHex(parentBlockRoot),
       toRootHex(parentBlockHash),
       safeBlockHash,
       finalizedBlockHash,
@@ -1125,11 +1127,13 @@ export async function produceCommonBlockBody<T extends BlockType>(
     this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
 
   const endAttestations = stepsMetrics?.startTimer();
+  // TODO: extract to a separate BeaconChain method to coordinate the 2 op-pools
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
     fork,
     this.forkChoice,
     this.shufflingCache,
-    currentState
+    currentState,
+    this.singleAttestationPool
   );
   endAttestations?.({
     step: BlockProductionStep.attestations,

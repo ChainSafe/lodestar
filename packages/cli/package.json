@@ -89,7 +89,6 @@
     "inquirer": "^9.1.5",
     "js-yaml": "^4.1.0",
     "proper-lockfile": "^4.1.2",
-    "rimraf": "^4.4.1",
     "source-map-support": "^0.5.21",
     "uint8arrays": "^5.0.1",
     "yargs": "^17.7.1"

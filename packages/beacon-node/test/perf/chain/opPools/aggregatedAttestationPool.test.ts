@@ -15,6 +15,7 @@ import {
 import {generatePerfTestCachedStateElectra} from "@lodestar/state-transition/test-utils";
 import {electra, ssz} from "@lodestar/types";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
+import {SingleAttestationPool} from "../../../../src/chain/opPools/singleAttestationPool.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 
 const vc = 1_500_000;
@@ -217,7 +218,13 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
         return {state, pool, shufflingCache};
       },
       fn: ({state, pool, shufflingCache}) => {
-        pool.getAttestationsForBlock(originalState.config.getForkName(state.slot), forkchoice, shufflingCache, state);
+        pool.getAttestationsForBlock(
+          originalState.config.getForkName(state.slot),
+          forkchoice,
+          shufflingCache,
+          state,
+          new SingleAttestationPool()
+        );
       },
     });
   }
