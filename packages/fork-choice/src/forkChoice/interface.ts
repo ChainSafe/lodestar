@@ -123,7 +123,7 @@ export interface IForkChoice {
    */
   shouldOverrideForkChoiceUpdate(
     headBlock: ProtoBlock,
-    secFromSlot: number,
+    msFromSlot: number,
     currentSlot: Slot
   ): ShouldOverrideForkChoiceUpdateResult;
   /**
@@ -155,12 +155,15 @@ export interface IForkChoice {
    * ## Notes:
    *
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
+   *
+   * Throws `InvalidBlockCode.PARENT_EXECUTION_INVALID` if the parent payload chain was invalidated.
+   * `executionStatus` is ignored for a gloas block, it inherits the status of the parent variant it builds on.
    */
   onBlock(
     block: BeaconBlock,
     state: IBeaconStateView,
-    receiveDelaySec: number,
-    importDelaySec: number,
+    receiveDelayMs: number,
+    importDelayMs: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
@@ -350,14 +353,17 @@ export interface IForkChoice {
    * `CheckpointWithHex` / finalized root without a specific payload-status variant in mind.
    */
   forwardIterateDescendantsDefaultStatus(blockRoot: RootHex): IterableIterator<ProtoBlock>;
+  /** One summary per block, its default variant (FULL pre-Gloas, PENDING for Gloas) */
   getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
+  /** One summary per block, its default variant (FULL pre-Gloas, PENDING for Gloas) */
   getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
   /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */
   getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult;
   /**
-   * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
+   * Apply an execution engine verdict with a latest valid hash, see `ProtoArray.validateLatestHash`.
+   * Returns whether any execution status changed. A consensus failure is recorded in `irrecoverableError`.
    */
-  validateLatestHash(execResponse: LVHExecResponse): void;
+  validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean}): boolean;
 
   /**
    * A dependent root is the block root of the last block before the state transition that decided a specific shuffling

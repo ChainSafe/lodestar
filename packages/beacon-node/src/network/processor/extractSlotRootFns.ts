@@ -6,7 +6,6 @@ import {
   getBlockRootFromPayloadAttestationMessageSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromBeaconAttestationSerialized,
-  getSlotFromBlobSidecarSerialized,
   getSlotFromDataColumnSidecarSerialized,
   getSlotFromExecutionPayloadEnvelopeSerialized,
   getSlotFromPayloadAttestationMessageSerialized,
@@ -43,14 +42,6 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
     },
     [GossipType.beacon_block]: (data: Uint8Array): SlotOptionalRoot | null => {
       const slot = getSlotFromSignedBeaconBlockSerialized(data);
-
-      if (slot === null) {
-        return null;
-      }
-      return {slot};
-    },
-    [GossipType.blob_sidecar]: (data: Uint8Array): SlotOptionalRoot | null => {
-      const slot = getSlotFromBlobSidecarSerialized(data);
 
       if (slot === null) {
         return null;

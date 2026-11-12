@@ -333,16 +333,20 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       }
     }
 
+    // First hand work to an idle worker before returning to the caller.
+    // Deferring the post to the next macrotask would make the worker
+    // sit idle while waiting for the next synchronous work
+    else if (job.opts.priority) {
+      this.jobs.unshift(job);
+      void this.runJob();
+    }
+
     // Push job and schedule to call `runJob` in the next macro event loop cycle.
     // This is useful to allow batching job submitted from a synchronous for loop,
     // and to prevent large stacks since runJob may be called recursively.
     else {
-      if (job.opts.priority) {
-        this.jobs.unshift(job);
-      } else {
-        this.jobs.push(job);
-      }
-      callInNextEventLoop(this.runJob);
+      this.jobs.push(job);
+      callInNextEventLoop(() => void this.runJob());
     }
   }
 
@@ -377,7 +381,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     let completedJobsCount = 0;
 
     if (this.jobs.length > 0) {
-      callInNextEventLoop(this.runJob);
+      callInNextEventLoop(() => void this.runJob());
     }
 
     try {
@@ -423,7 +427,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       if (workReqs.length === 0) {
         worker.status = {code: WorkerStatusCode.idle, workerApi};
         this.workersBusy--;
-        callInNextEventLoop(this.runJob);
+        callInNextEventLoop(() => void this.runJob());
         return;
       }
 
@@ -499,7 +503,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.workersBusy--;
 
     // Potentially run a new job
-    callInNextEventLoop(this.runJob);
+    callInNextEventLoop(() => void this.runJob());
   };
 
   /**
@@ -542,7 +546,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         this.jobs.unshift(job);
       }
       this.bufferedJobs = null;
-      callInNextEventLoop(this.runJob);
+      callInNextEventLoop(() => void this.runJob());
     }
   };
 

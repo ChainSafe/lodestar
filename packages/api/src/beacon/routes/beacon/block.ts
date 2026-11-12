@@ -62,14 +62,6 @@ export type BlockArgs = {
 };
 
 export enum BroadcastValidation {
-  /**
-  NOTE: The value `none` is not part of the spec. 
-
-  In case a node is configured only with the unknownBlockSync, it needs to know the unknown parent blocks on the network 
-  to initiate the syncing process. Such cases can be covered only if we publish blocks and make sure no gossip validation 
-  is performed on those. But this behavior is not the default.
-  */
-  none = "none",
   gossip = "gossip",
   consensus = "consensus",
   consensusAndEquivocation = "consensus_and_equivocation",
@@ -223,8 +215,10 @@ export type Endpoints = {
   /**
    * Publish signed execution payload bid.
    * Instructs the beacon node to broadcast a signed execution payload bid to the network,
-   * to be gossiped for potential inclusion in block building. A success response (20x) indicates
-   * that the bid passed gossip validation and was successfully broadcast onto the network.
+   * to be gossiped for potential inclusion in block building. The beacon node SHOULD run gossip
+   * validation on the bid before broadcasting it, but MAY skip validation for bids submitted by a
+   * locally configured builder to reduce publishing latency. A success response (20x) indicates
+   * that the bid was successfully broadcast onto the network.
    */
   publishExecutionPayloadBid: Endpoint<
     "POST",

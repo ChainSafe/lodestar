@@ -89,6 +89,7 @@ describe("REST engine compatibility", () => {
     controller.abort();
     await server.close();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   function sendResponse(reply: FastifyReply, body: Uint8Array): FastifyReply {
@@ -113,11 +114,11 @@ describe("REST engine compatibility", () => {
   }
 
   it("remembers a discovery 404 for the connection", async () => {
-    const now = vi.spyOn(Date, "now").mockReturnValue(100_000);
+    vi.useFakeTimers({toFake: ["Date"], now: 100_000});
     discovery = {status: 404, body: {}};
     const engine = createEngine();
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
-    now.mockReturnValue(200_000);
+    vi.setSystemTime(200_000);
     discovery = {status: 200, body: capabilities};
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     expect(requests).toEqual(["capabilities", "engine_forkchoiceUpdatedV1", "engine_forkchoiceUpdatedV1"]);
@@ -128,11 +129,11 @@ describe("REST engine compatibility", () => {
     {name: "405", discovery: {status: 405, body: "Method Not Allowed"}},
     {name: "400", discovery: {status: 400, body: "Bad Request"}},
   ])("remembers a discovery $name from a server without the REST API", async ({discovery: response}) => {
-    const now = vi.spyOn(Date, "now").mockReturnValue(100_000);
+    vi.useFakeTimers({toFake: ["Date"], now: 100_000});
     discovery = response;
     const engine = createEngine();
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
-    now.mockReturnValue(200_000);
+    vi.setSystemTime(200_000);
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     expect(requests).toEqual(["capabilities", "engine_forkchoiceUpdatedV1", "engine_forkchoiceUpdatedV1"]);
     expectCompatibilityLogsAtDebugOnly();
@@ -193,14 +194,14 @@ describe("REST engine compatibility", () => {
   );
 
   it.each([503, 429])("reprobes after a temporary discovery failure %s without probing every call", async (status) => {
-    const now = vi.spyOn(Date, "now").mockReturnValue(100_000);
+    vi.useFakeTimers({toFake: ["Date"], now: 100_000});
     discovery = {status, body: {}};
     const engine = createEngine();
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     expect(requests).toEqual(["capabilities", "engine_forkchoiceUpdatedV1", "engine_forkchoiceUpdatedV1"]);
     discovery = {status: 200, body: capabilities};
-    now.mockReturnValue(112_001);
+    vi.setSystemTime(112_001);
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     expect(requests.slice(-2)).toEqual(["capabilities", "REST forkchoice"]);
     expect(logger.debug).toHaveBeenCalledWith(
@@ -216,18 +217,18 @@ describe("REST engine compatibility", () => {
     const engine = createEngine();
     await engine.notifyForkchoiceUpdate(ForkName.capella, hash, hash, hash);
     await engine.notifyForkchoiceUpdate(ForkName.capella, hash, hash, hash);
-    await engine.getBlobs(ForkName.deneb, []);
-    await engine.getBlobs(ForkName.deneb, []);
+    await engine.getBlobs(ForkName.fulu, []);
+    await engine.getBlobs(ForkName.fulu, []);
     expect(requests).toEqual([
       "capabilities",
       "engine_forkchoiceUpdatedV2",
       "engine_forkchoiceUpdatedV2",
-      "engine_getBlobsV1",
-      "engine_getBlobsV1",
+      "engine_getBlobsV2",
+      "engine_getBlobsV2",
     ]);
     expect(logger.debug.mock.calls.filter(([message]) => message.startsWith("Using JSON-RPC for"))).toEqual([
       ["Using JSON-RPC for a fork not advertised by the REST engine API", {fork: "capella", executionFork: "shanghai"}],
-      ["Using JSON-RPC for a blob revision not advertised by the REST engine API", {blobsRevision: "v1"}],
+      ["Using JSON-RPC for a blob revision not advertised by the REST engine API", {blobsRevision: "v2"}],
     ]);
     expectCompatibilityLogsAtDebugOnly();
   });
@@ -286,11 +287,11 @@ describe("REST engine compatibility", () => {
   it.each([null, {supported_forks: "paris"}])(
     "falls back to JSON-RPC until reconnect on malformed capabilities %j",
     async (body) => {
-      const now = vi.spyOn(Date, "now").mockReturnValue(100_000);
+      vi.useFakeTimers({toFake: ["Date"], now: 100_000});
       discovery = {status: 200, body};
       const engine = createEngine();
       await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
-      now.mockReturnValue(200_000);
+      vi.setSystemTime(200_000);
       discovery = {status: 200, body: capabilities};
       await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
       expect(requests).toEqual(["capabilities", "engine_forkchoiceUpdatedV1", "engine_forkchoiceUpdatedV1"]);

@@ -25,6 +25,8 @@ export interface NetworkOptions
   mdns?: boolean;
   connectToDiscv5Bootnodes?: boolean;
   version?: string;
+  /** Include the version in libp2p Identify. Private mode takes precedence. */
+  advertiseVersion?: boolean;
   private?: boolean;
   useWorker?: boolean;
   xrayAddress?: string;
@@ -75,6 +77,8 @@ export const defaultNetworkOptions: NetworkOptions = {
   maxYoungGenerationSizeMb: 152,
   // subscribe 2 slots before aggregator dutied slot to get stable mesh peers as monitored on goerli
   slotsToSubscribeBeforeAggregatorDuty: 2,
+  // up to the max number of attestations per block
+  slotsToSubscribeBeforeProposalDuty: 8,
   // This will enable the light client server by default
   disableLightClientServer: false,
   quic: true,

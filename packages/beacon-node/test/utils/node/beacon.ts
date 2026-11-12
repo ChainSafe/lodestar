@@ -3,7 +3,6 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
 import deepmerge from "deepmerge";
 import tmp from "tmp";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {setHasher} from "@chainsafe/persistent-merkle-tree";
 import {hasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
 import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
@@ -11,6 +10,7 @@ import {config as minimalConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode} from "@lodestar/logger/node";
 import {testLogger} from "@lodestar/logger/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {
   BeaconStateAllForks,

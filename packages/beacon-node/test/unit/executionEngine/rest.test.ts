@@ -1,6 +1,7 @@
 import {RLP} from "@ethereumjs/rlp";
 import {FastifyReply, FastifyRequest, fastify} from "fastify";
 import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/logger";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
@@ -10,7 +11,6 @@ import {PayloadAttributes} from "../../../src/execution/engine/interface.js";
 import {decodeJwtToken} from "../../../src/execution/engine/jwt.js";
 import {
   BlobsRequest,
-  BlobsV1Response,
   BlobsV2Response,
   BodiesByHashRequest,
   BodiesResponseGloas,
@@ -94,7 +94,6 @@ describe("ExecutionEngine / rest", () => {
     server.get("/engine/v1/payloads/:payloadId", async (req, reply) => sendSsz(req, reply));
     server.post("/engine/v1/bodies/hash", async (req, reply) => sendSsz(req, reply));
     server.get("/engine/v1/bodies", async (req, reply) => sendSsz(req, reply));
-    server.post("/engine/v1/blobs/v1", async (req, reply) => sendSsz(req, reply));
     server.post("/engine/v1/blobs/v2", async (req, reply) => sendSsz(req, reply));
     server.post<{Body: {method: string}}>("/", async (req) => {
       if (req.body.method === "engine_getClientVersionV1") {
@@ -142,7 +141,7 @@ describe("ExecutionEngine / rest", () => {
       const engine = createEngine();
       sszResponse.body = ForkchoiceUpdateResponse.serialize({payloadStatus: validStatus, payloadId: []});
 
-      const payloadId = await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hashHex, hashHex, hashHex);
+      const {payloadId} = await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hashHex, hashHex, hashHex);
 
       expect(payloadId).toBeNull();
       expect(lastRequest("/engine/v1/capabilities").method).toBe("GET");
@@ -262,7 +261,7 @@ describe("ExecutionEngine / rest", () => {
           1,
           1,
         ]);
-        payload.transactions = [new Uint8Array([0x03, ...transaction])];
+        payload.transactions = SerializedList.fromArray([new Uint8Array([0x03, ...transaction])]);
         const executionRequests =
           fork === ForkName.gloas
             ? ssz.gloas.ExecutionRequests.defaultValue()
@@ -279,7 +278,7 @@ describe("ExecutionEngine / rest", () => {
       jsonRpcResult = {status: "VALID", latestValidHash: null, validationError: null};
       const engine = createEngine("json-rpc");
       const payload = ssz.deneb.ExecutionPayload.defaultValue();
-      payload.transactions = [new Uint8Array([0x03, ...hash])];
+      payload.transactions = SerializedList.fromArray([new Uint8Array([0x03, ...hash])]);
 
       const res = await engine.notifyNewPayload(ForkName.deneb, payload, [new Uint8Array(32)], hash);
 
@@ -307,7 +306,7 @@ describe("ExecutionEngine / rest", () => {
         1,
         1,
       ]);
-      payload.transactions = [new Uint8Array([0x03, ...transaction])];
+      payload.transactions = SerializedList.fromArray([new Uint8Array([0x03, ...transaction])]);
       const res = await engine.notifyNewPayload(ForkName.deneb, payload, [hash], hash);
       expect(res.status).toBe("VALID");
       expect(requests.some((req) => req.url === "/engine/v1/payloads")).toBe(true);
@@ -328,7 +327,7 @@ describe("ExecutionEngine / rest", () => {
         const payload = ssz[fork].ExecutionPayload.defaultValue();
         payload.blockNumber = 42;
         payload.blockHash = hash;
-        payload.transactions = [new Uint8Array([0x02, 0xaa])];
+        payload.transactions = SerializedList.fromArray([new Uint8Array([0x02, 0xaa])]);
         const executionRequests =
           ForkSeq[fork] >= ForkSeq.gloas
             ? ssz.gloas.ExecutionRequests.defaultValue()
@@ -405,7 +404,7 @@ describe("ExecutionEngine / rest", () => {
         payloadId: [fromHex(payloadIdHex)],
       });
 
-      const payloadId = await engine.notifyForkchoiceUpdate(ForkName.deneb, hashHex, hashHex, hashHex, attributes);
+      const {payloadId} = await engine.notifyForkchoiceUpdate(ForkName.deneb, hashHex, hashHex, hashHex, attributes);
 
       expect(payloadId).toBe(payloadIdHex);
       const req = lastRequest("/engine/v1/forkchoice");
@@ -422,7 +421,6 @@ describe("ExecutionEngine / rest", () => {
       expect(
         engine.payloadIdCache.get({
           headBlockHash: hashHex,
-          finalizedBlockHash: hashHex,
           timestamp: numToQuantity(attributes.timestamp),
           prevRandao: toHex(hash),
           suggestedFeeRecipient: attributes.suggestedFeeRecipient,
@@ -501,7 +499,7 @@ describe("ExecutionEngine / rest", () => {
 
   describe("payload bodies", () => {
     const withdrawal = {index: 1, validatorIndex: 2, address: fromHex(`0x${"bb".repeat(20)}`), amount: 3n};
-    const transactions = [new Uint8Array([0x02, 0xaa]), new Uint8Array([0x03])];
+    const transactions = SerializedList.fromArray([new Uint8Array([0x02, 0xaa]), new Uint8Array([0x03])]);
 
     it("getPayloadBodiesByHashV2 marks unavailable bodies as null", async () => {
       const engine = createEngine();
@@ -509,7 +507,10 @@ describe("ExecutionEngine / rest", () => {
       sszResponse.body = BodiesResponseGloas.serialize({
         entries: [
           {available: true, body: {transactions, withdrawals: [withdrawal], blockAccessList}},
-          {available: false, body: {transactions: [], withdrawals: [], blockAccessList: new Uint8Array()}},
+          {
+            available: false,
+            body: {transactions: SerializedList.empty(), withdrawals: [], blockAccessList: new Uint8Array()},
+          },
         ],
       });
 
@@ -549,21 +550,6 @@ describe("ExecutionEngine / rest", () => {
       expect(res).toEqual([{blob, proofs}]);
       expect(res?.[0].blob.buffer).not.toBe(buffers[0].buffer);
       expect(buffers[0][0]).toBe(0);
-    });
-
-    it("returns partial results for blobs/v1", async () => {
-      const engine = createEngine();
-      sszResponse.body = BlobsV1Response.serialize({
-        entries: [
-          {available: true, contents: {blob, proof}},
-          {available: false, contents: {blob: ssz.deneb.Blob.defaultValue(), proof: new Uint8Array(48)}},
-        ],
-      });
-
-      const res = await engine.getBlobs(ForkName.deneb, [hash, hash]);
-
-      expect(res).toEqual([{blob, proof}, null]);
-      expect(lastRequest("/engine/v1/blobs/v1").method).toBe("POST");
     });
   });
 });

@@ -1,0 +1,14 @@
+# Build context for Dockerfile.fuzz (BuildKit reads <Dockerfile>.dockerignore).
+.git
+**/.zig-cache
+**/zig-out
+**/zig-pkg
+**/node_modules
+test/spec/spec_tests
+test/spec/test_case
+test/fixtures/ere
+test/fuzz/afl-out
+test/fuzz/logs
+benchmark_data
+*.ssz
+*.era

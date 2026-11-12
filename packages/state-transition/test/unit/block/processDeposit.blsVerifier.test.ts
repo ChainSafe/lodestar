@@ -1,12 +1,12 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
-import {BLS_VERIFIER_SET_TYPE, type BlsSignatureSet} from "@chainsafe/lodestar-z/bls-verifier";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {BLS_VERIFIER_SET_TYPE, type BlsSignatureSet} from "@lodestar/native/bls-verifier";
 import {ForkName} from "@lodestar/params";
 
 const verifySignatureSetsMock = vi.hoisted(() => vi.fn<(sets: BlsSignatureSet[]) => boolean>());
 
-vi.mock("@chainsafe/lodestar-z/bls-verifier", () => ({
+vi.mock("@lodestar/native/bls-verifier", () => ({
   BLS_VERIFIER_MAX_BATCH_SIZE: 256,
   BLS_VERIFIER_SET_TYPE: {indexed: 0, aggregate: 1, single: 2},
   verifySignatureSets: verifySignatureSetsMock,

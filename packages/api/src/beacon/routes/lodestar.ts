@@ -122,7 +122,7 @@ const HistoricalSummariesResponseType = new ContainerType(
   {
     slot: ssz.Slot,
     historicalSummaries: ssz.capella.HistoricalSummaries,
-    proof: ArrayOf(ssz.Bytes8),
+    proof: ArrayOf(ssz.Bytes32),
   },
   {jsonCase: "eth2"}
 );

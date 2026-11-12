@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
@@ -11,7 +12,7 @@ describe("execution engine mock payload bodies", () => {
     const payload = ssz.gloas.ExecutionPayload.defaultValue();
     payload.blockNumber = 2;
     payload.blockHash.fill(id);
-    payload.transactions = [new Uint8Array([id])];
+    payload.transactions = SerializedList.fromArray([new Uint8Array([id])]);
     payload.blockAccessList = new Uint8Array([id, id]);
     return serializeExecutionPayload(ForkName.gloas, payload);
   }

@@ -1,10 +1,10 @@
-FROM node:24-slim AS build_src
+FROM node:26-slim AS build_src
 ARG COMMIT
 WORKDIR /usr/app
 RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools curl xz-utils && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install zig toolchain
-# Required by @chainsafe/lodestar-z's `prepare` script in dev builds
+# Required to build the @lodestar/native workspace package
 ARG TARGETARCH
 ARG ZIG_VERSION=0.16.0
 RUN case "${TARGETARCH}" in \
@@ -22,11 +22,12 @@ RUN case "${TARGETARCH}" in \
 COPY . .
 
 ENV CI=true
-RUN corepack enable && corepack prepare --activate && \
+RUN npm install -g corepack@0.36.0 && corepack enable && corepack prepare --activate && \
   pnpm install --frozen-lockfile && \
   pnpm build && \
   pnpm clean:nm && \
-  pnpm install --frozen-lockfile --prod
+  pnpm install --frozen-lockfile --prod && \
+  rm -rf .zig-cache zig-pkg zig-out bindings/artifacts
 
 # To have access to the specific branch and commit used to build this source,
 # a git-data.json file is created by persisting git data at build time. Then,
@@ -36,13 +37,14 @@ RUN cd packages/cli && GIT_COMMIT=${COMMIT} pnpm write-git-data
 
 # Copy built src + node_modules to a new layer to prune unnecessary fs
 # Previous layer weights 7.25GB, while this final 488MB (as of Oct 2020)
-FROM node:24-slim
+FROM node:26-slim
 WORKDIR /usr/app
 COPY --from=build_src /usr/app .
 
 # NodeJS applications have a default memory limit of 4GB on most machines.
 # This limit is bit tight for a Mainnet node, it is recommended to raise the limit
 # since memory may spike during certain network conditions.
-ENV NODE_OPTIONS=--max-old-space-size=8192
+# Node 26 halved V8's default semi-space to 32MB, 64 keeps Node 24's young generation size.
+ENV NODE_OPTIONS="--max-old-space-size=8192 --max-semi-space-size=64"
 
 ENTRYPOINT ["node", "./packages/cli/bin/lodestar"]

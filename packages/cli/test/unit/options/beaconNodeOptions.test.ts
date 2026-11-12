@@ -15,6 +15,7 @@ describe("options / beaconNodeOptions", () => {
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
       "api.maxGindicesInProof": 1000,
+      "api.disableBidValidation": true,
       "rest.namespace": [],
       "rest.cors": "*",
       rest: true,
@@ -35,6 +36,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.dedupePayloads": false,
       "chain.disableImportExecutionFcU": false,
       "chain.preaggregateSlotDistance": 1,
+      "chain.singleAttestationIgnoreProposalDuty": true,
       "chain.attDataCacheSlotDistance": 2,
       "chain.computeUnrealized": true,
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -60,6 +62,7 @@ describe("options / beaconNodeOptions", () => {
       builder: false,
       "builder.url": "http://localhost:8661",
       "builder.timeout": 12000,
+      "builder.bidDeadline": 500,
       "builder.faultInspectionWindow": 32,
       "builder.allowedFaults": 8,
 
@@ -84,6 +87,7 @@ describe("options / beaconNodeOptions", () => {
       targetPeers: 25,
       subscribeAllSubnets: true,
       slotsToSubscribeBeforeAggregatorDuty: 1,
+      slotsToSubscribeBeforeProposalDuty: 4,
       disablePeerScoring: true,
       mdns: false,
       "network.maxPeers": 30,
@@ -114,6 +118,7 @@ describe("options / beaconNodeOptions", () => {
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       api: {
         maxGindicesInProof: 1000,
+        disableBidValidation: true,
         rest: {
           api: [],
           cors: "*",
@@ -137,6 +142,7 @@ describe("options / beaconNodeOptions", () => {
         dedupePayloads: false,
         disableImportExecutionFcU: false,
         preaggregateSlotDistance: 1,
+        singleAttestationIgnoreProposalDuty: true,
         attDataCacheSlotDistance: 2,
         computeUnrealized: true,
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -167,6 +173,7 @@ describe("options / beaconNodeOptions", () => {
         enabled: false,
         url: "http://localhost:8661",
         timeout: 12000,
+        bidDeadline: 500,
         faultInspectionWindow: 32,
         allowedFaults: 8,
       },
@@ -197,6 +204,7 @@ describe("options / beaconNodeOptions", () => {
         localMultiaddrs: ["/ip4/127.0.0.1/udp/9003/quic-v1", "/ip4/127.0.0.1/tcp/9001"],
         subscribeAllSubnets: true,
         slotsToSubscribeBeforeAggregatorDuty: 1,
+        slotsToSubscribeBeforeProposalDuty: 4,
         disablePeerScoring: true,
         connectToDiscv5Bootnodes: true,
         discv5FirstQueryDelayMs: 1000,

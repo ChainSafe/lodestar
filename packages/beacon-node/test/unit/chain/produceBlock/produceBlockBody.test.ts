@@ -1,19 +1,23 @@
 import {describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {SerializedList} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName} from "@lodestar/params";
-import {BeaconStateView, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
+import {BeaconStateView, computeTimeAtSlot, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {fromHex, toRootHex} from "@lodestar/utils";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {
   BlockType,
+  PayloadPreparationType,
   getPayloadAttributesForSSE,
+  prepareExecutionPayload,
   produceBlockBody,
   produceCommonBlockBody,
 } from "../../../../src/chain/produceBlock/produceBlockBody.js";
+import {numToQuantity} from "../../../../src/execution/engine/utils.js";
 import {PayloadIdCache} from "../../../../src/execution/index.js";
 import {getApiTestModules} from "../../../utils/api.js";
 import {generateState} from "../../../utils/state.js";
@@ -137,7 +141,8 @@ describe("Fulu engine body", () => {
       const requestedRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
       const cachedRecipient = "0xccccccccccccccccccccccccccccccccccccccbb";
       modules.chain.beaconProposerCache.getOrDefault.mockReturnValue(cachedRecipient);
-      modules.chain.executionEngine.payloadIdCache = new PayloadIdCache();
+      (modules.chain.executionEngine as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache =
+        new PayloadIdCache();
       modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
       modules.chain.executionEngine.getPayload.mockResolvedValue({
         executionPayload: ssz.fulu.ExecutionPayload.defaultValue(),
@@ -154,6 +159,7 @@ describe("Fulu engine body", () => {
       });
       expect(modules.chain.executionEngine.notifyForkchoiceUpdate).toHaveBeenCalledExactlyOnceWith(
         ForkName.fulu,
+        toRootHex(parentBlockRoot),
         toRootHex(state.latestExecutionPayloadHeader.blockHash),
         expect.any(String),
         expect.any(String),
@@ -167,6 +173,38 @@ describe("Fulu engine body", () => {
       expect(result.produceResult).toMatchObject({fork: ForkName.fulu, type: BlockType.Full, cells: []});
     });
   }
+
+  it("reuses the prepared payload id when the finalized block hash changed", async () => {
+    const {config, state, modules, chain, parentBlockRoot} = setup();
+    const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
+    const parentBlockHash = state.latestExecutionPayloadHeader.blockHash;
+    (modules.chain.executionEngine as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache =
+      new PayloadIdCache();
+    modules.chain.executionEngine.payloadIdCache.add(
+      {
+        headBlockHash: toRootHex(parentBlockHash),
+        timestamp: numToQuantity(computeTimeAtSlot(config, state.slot, state.genesisTime)),
+        prevRandao: toHex(state.getRandaoMix(state.epoch)),
+        suggestedFeeRecipient: feeRecipient,
+      },
+      "0x1234"
+    );
+
+    const result = await prepareExecutionPayload(
+      chain,
+      modules.logger,
+      ForkName.fulu,
+      parentBlockRoot,
+      parentBlockHash,
+      toRootHex(new Uint8Array(32).fill(1)),
+      toRootHex(new Uint8Array(32).fill(2)),
+      state,
+      feeRecipient
+    );
+
+    expect(result).toEqual({prepType: PayloadPreparationType.Cached, payloadId: "0x1234"});
+    expect(modules.chain.executionEngine.notifyForkchoiceUpdate).not.toHaveBeenCalled();
+  });
 });
 
 describe("Gloas engine body", () => {
@@ -191,7 +229,8 @@ describe("Gloas engine body", () => {
     preferences.message.feeRecipient = fromHex(pooledRecipient);
     preferences.message.targetGasLimit = 30_000_000n;
     vi.mocked(modules.chain.proposerPreferencesPool.get).mockReturnValue(pooled ? preferences : null);
-    modules.chain.executionEngine.payloadIdCache = new PayloadIdCache();
+    (modules.chain.executionEngine as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache =
+      new PayloadIdCache();
     modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
     const executionPayload = ssz.fulu.ExecutionPayload.defaultValue();
     executionPayload.blockHash = new Uint8Array(32).fill(9);
@@ -220,6 +259,7 @@ describe("Gloas engine body", () => {
       });
       expect(modules.chain.executionEngine.notifyForkchoiceUpdate).toHaveBeenCalledExactlyOnceWith(
         ForkName.gloas,
+        expect.any(String),
         expect.any(String),
         expect.any(String),
         expect.any(String),
@@ -313,7 +353,8 @@ describe("supported payload attributes", () => {
           expect(result).not.toHaveProperty("finalizedBlockHash");
           expect(result.payloadAttributes).not.toHaveProperty("slotNumber");
         }
-        if (fork === ForkName.heze) expect(result.payloadAttributes).toHaveProperty("inclusionListTransactions", []);
+        if (fork === ForkName.heze)
+          expect(result.payloadAttributes).toHaveProperty("inclusionListTransactions", SerializedList.empty());
       });
     }
   }

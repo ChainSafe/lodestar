@@ -13,7 +13,7 @@ export type IndexedDataColumnBytes = {index: ColumnIndex; data: Uint8Array};
 type LegacyHotDataColumnStore = Pick<DataColumnSidecarRepository, "values" | "getManyBinary" | "deleteMany">;
 type LegacyArchiveDataColumnStore = Pick<
   DataColumnSidecarArchiveRepository,
-  "values" | "getManyBinary" | "keys" | "deleteMany"
+  "values" | "getManyBinary" | "pruneBefore"
 >;
 type BlockRootIndex = Pick<BlockArchiveRepository, "getSlotByRoot">;
 
@@ -86,9 +86,7 @@ export class LegacyDataColumnStore implements IDataColumnStore {
 
   async pruneBefore(slot: Slot): Promise<Slot[]> {
     const flatFileSlots = await this.flatFiles.pruneBefore(slot);
-    const prefixedKeys = await this.legacyArchive.keys({lt: {prefix: slot, id: 0}});
-    const slots = [...new Set(prefixedKeys.map(({prefix}) => prefix))];
-    if (slots.length > 0) await this.legacyArchive.deleteMany(slots);
+    const slots = await this.legacyArchive.pruneBefore(slot);
     return [...new Set([...flatFileSlots, ...slots])].sort((a, b) => a - b);
   }
 }

@@ -43,12 +43,9 @@ export type IChainOptions = BlockProcessOpts &
     disableProposerSlashings?: boolean;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
-    /** Max number of produced blobs by local validators to cache */
-    maxCachedBlobSidecars?: number;
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */
     maxCachedProducedRoots?: number;
     initialCustodyGroupCount?: number;
-    broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
@@ -91,6 +88,11 @@ export type PoolOpts = {
    * Only preaggregate attestation/sync committee message since clockSlot - preaggregateSlotDistance
    */
   preaggregateSlotDistance?: number;
+  /**
+   * Dev only: collect single attestations of every vote slot a block at the clock slot can include regardless of
+   * proposal duties, so that any produced block can pack them. Combine with `subscribeAllSubnets`
+   */
+  singleAttestationIgnoreProposalDuty?: boolean;
 };
 
 export type SeenCacheOpts = {
@@ -121,7 +123,6 @@ export const defaultChainOptions: IChainOptions = {
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,
   disableProposerSlashings: false,
-  broadcastValidationStrictness: "warn",
   // should be less than or equal to MIN_SIGNATURE_SETS_TO_BATCH_VERIFY
   // batching too much may block the I/O thread so if useWorker=false, suggest this value to be 32
   // since this batch attestation work is designed to work with useWorker=true, make this the lowest value

@@ -76,7 +76,7 @@ When using MacOS, there are a couple of extra prerequisites that are required.
 
 ## Getting Started
 
-- :gear: Run `corepack enable` to enable [Corepack](https://nodejs.org/api/corepack.html).
+- :gear: Run `corepack enable` to enable [Corepack](https://nodejs.org/api/corepack.html). On Node.js 26, run `npm install -g corepack` first since it is no longer bundled.
 - :gear: Run `pnpm` to install dependencies.
 - :gear: Run `pnpm build` to build lib from source.
 - :package: A `lodestar` binary will be bundled in `./packages/cli/bin`.
@@ -107,6 +107,61 @@ Contributing to tests:
   - Do not pull data from external APIs like execution JSON RPC (instead run a local node).
   - Do not pull unpinned versions from DockerHub (use deterministic tag) or Github (checkout commit not branch).
   - Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.
+
+## Zig and Native Bindings
+
+Zig modules live in `src/`, and the Node.js addon, wrappers, and binding tests live in
+`bindings/`. Use Zig 0.16.0.
+Run Zig commands from the repository root. The native package uses the root pnpm
+lockfile and shared monorepo version.
+
+### Tests and Formatting
+
+Run the tests relevant to your changes, for example:
+
+```sh
+zig build test:ssz
+zig build test:ssz -Dtest:ssz.filters="my full test name"
+zig fmt --check .
+zig build test:tidy
+```
+
+A module may contain at most one `test` block. Move additional tests to a sibling
+`<module>_test.zig` file and import it from the owning module's test block.
+Use snake_case for test filenames (`Node.zig` pairs with `node_test.zig`). Keep tests
+of private internals inline; do not make declarations public solely for testing.
+The tidy check uses `git ls-files`, so stage new files before running it.
+
+For changes affecting consensus behavior, download the fixtures and generate the
+spec test sources. Do not edit generated tests directly.
+
+```sh
+zig build run:download_spec_tests
+zig build run:download_era_files
+zig build run:write_spec_tests
+zig build run:write_ssz_generic_spec_tests
+zig build run:write_ssz_static_spec_tests
+zig build run:write_bls_spec_tests
+zig build test:spec_tests -Dpreset=minimal
+zig build test:spec_tests -Dpreset=mainnet
+```
+
+The spec test version is pinned in `build.zig.zon`. To run the full Zig test suite,
+use `zig build test`.
+
+### Native Bindings
+
+Rebuild the addon before running binding tests:
+
+```sh
+pnpm --filter @lodestar/native prepare-mainnet
+pnpm --filter @lodestar/native test
+pnpm --filter @lodestar/native lint
+```
+
+Use `prepare-minimal` or `prepare-gnosis` for other presets. These scripts share an
+output directory, so do not run builds for different presets concurrently. Keep
+JavaScript wrappers and type declarations synchronized with native exports.
 
 ## Devcontainer
 

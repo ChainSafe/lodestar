@@ -1,6 +1,5 @@
 import {digest as sha256Digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {ChainForkConfig} from "@lodestar/config";
 import {
   BYTES_PER_CELL,
   BYTES_PER_FIELD_ELEMENT,
@@ -12,12 +11,10 @@ import {
   NUMBER_OF_COLUMNS,
   VERSIONED_HASH_VERSION_KZG,
 } from "@lodestar/params";
-import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
   BeaconBlockBody,
   DataColumnSidecar,
   SSZTypesFor,
-  SignedBeaconBlock,
   deneb,
   fulu,
   gloas,
@@ -43,37 +40,6 @@ export function computePreFuluKzgCommitmentsInclusionProof(
   const bodyView = (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkAll, "BeaconBlockBody">).toView(body);
   const commitmentGindex = KZG_COMMITMENT_GINDEX0 + index;
   return new Tree(bodyView.node).getSingleProof(BigInt(commitmentGindex));
-}
-
-/**
- * SPEC FUNCTION get_blob_sidecars
- * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/deneb/validator.md#sidecar
- */
-export function getBlobSidecars(
-  config: ChainForkConfig,
-  signedBlock: SignedBeaconBlock,
-  blobs: deneb.Blobs,
-  proofs: deneb.KZGProofs
-): deneb.BlobSidecars {
-  const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
-  if (blobKzgCommitments === undefined) {
-    throw Error("Invalid block with missing blobKzgCommitments for computeBlobSidecars");
-  }
-
-  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
-  const fork = config.getForkName(signedBlockHeader.message.slot);
-
-  return blobKzgCommitments.map((kzgCommitment, index) => {
-    const blob = blobs[index];
-    const kzgProof = proofs[index];
-    const kzgCommitmentInclusionProof = computePreFuluKzgCommitmentsInclusionProof(
-      fork,
-      signedBlock.message.body,
-      index
-    );
-
-    return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
-  });
 }
 
 /**

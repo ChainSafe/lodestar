@@ -51,7 +51,7 @@ describe("LodestarForkChoice", () => {
   justifiedBalances[2] = 3;
   const executionStatus = ExecutionStatus.PreMerge;
   const dataAvailabilityStatus = DataAvailabilityStatus.PreData;
-  const blockDelaySec = 0;
+  const blockDelayMs = 0;
 
   const hashBlock = (block: phase0.BeaconBlock): string => toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block));
 
@@ -104,8 +104,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         targetBlock.message,
         targetState,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -113,8 +113,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         orphanedBlock.message,
         orphanedState,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -124,8 +124,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         parentBlock.message,
         parentState,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -136,8 +136,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         childBlock.message,
         childState,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -203,8 +203,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         block08.message,
         state08,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -212,8 +212,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         block12.message,
         state12,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -221,8 +221,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         block16.message,
         state16,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -230,8 +230,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         block20.message,
         state20,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -239,8 +239,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         block24.message,
         state24,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -248,8 +248,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         block28.message,
         state28,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -263,8 +263,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         block32.message,
         state32,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -301,8 +301,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         targetBlock.message,
         targetState,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -310,8 +310,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         orphanedBlock.message,
         orphanedState,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -319,8 +319,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         parentBlock.message,
         parentState,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -328,8 +328,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         childBlock.message,
         childState,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
         dataAvailabilityStatus
@@ -364,7 +364,7 @@ describe("LodestarForkChoice", () => {
      * To simplify, go with epoch 0, 1, 2 instead of 9, 10, 11
      */
     it.skip("should not filter blocks with unrealized checkpoints = store checkpoints", () => {
-      const blockDelaySec = 0;
+      const blockDelayMs = 0;
       // C9 is the justified/finalized block
       const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
@@ -376,8 +376,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         blockW.message,
         stateW,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         blockW.message.slot,
         executionStatus,
         dataAvailabilityStatus
@@ -389,8 +389,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         blockX.message,
         stateX,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         blockX.message.slot,
         executionStatus,
         dataAvailabilityStatus
@@ -402,8 +402,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         blockY.message,
         stateY,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         blockY.message.slot,
         executionStatus,
         dataAvailabilityStatus
@@ -444,8 +444,8 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         blockZ.message,
         stateZ,
-        blockDelaySec,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         blockZ.message.slot,
         executionStatus,
         dataAvailabilityStatus
