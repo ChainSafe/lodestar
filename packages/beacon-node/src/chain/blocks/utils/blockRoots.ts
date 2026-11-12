@@ -7,7 +7,7 @@ import {SignedBeaconBlock} from "@lodestar/types";
 type ValueWithCachedRoot = {[symbolCachedPermanentRoot]?: Uint8Array};
 
 const transactionsRootByBlock = new WeakMap<SignedBeaconBlock, Uint8Array>();
-const canSeedNativeRoots = getPresetBase() === ACTIVE_PRESET && Object.keys(userOverrides ?? {}).length === 0;
+const canComputeNativeRoots = getPresetBase() === ACTIVE_PRESET && Object.keys(userOverrides ?? {}).length === 0;
 
 /**
  * Compute the roots of a block natively from its serialization and seed the SSZ root caches of `signedBlock`,
@@ -16,8 +16,8 @@ const canSeedNativeRoots = getPresetBase() === ACTIVE_PRESET && Object.keys(user
  * `serializedData` must be the serialization of `signedBlock` for `fork`.
  * If the presets differ or the runtime preset has overrides, leave root computation to JS SSZ.
  */
-export function seedBlockRoots(fork: ForkName, signedBlock: SignedBeaconBlock, serializedData: Uint8Array): void {
-  if (!canSeedNativeRoots) return;
+export function computeBlockRoots(fork: ForkName, signedBlock: SignedBeaconBlock, serializedData: Uint8Array): void {
+  if (!canComputeNativeRoots) return;
 
   const roots = signedBlockRoots(ForkSeq[fork], serializedData);
   (signedBlock.message as ValueWithCachedRoot)[symbolCachedPermanentRoot] = roots.subarray(0, 32);
@@ -27,7 +27,7 @@ export function seedBlockRoots(fork: ForkName, signedBlock: SignedBeaconBlock, s
   }
 }
 
-/** Root of the execution payload transactions of a block seeded with `seedBlockRoots` */
+/** Root of the execution payload transactions of a block seeded with `computeBlockRoots` */
 export function getSeededTransactionsRoot(signedBlock: object): Uint8Array | undefined {
   return transactionsRootByBlock.get(signedBlock as SignedBeaconBlock);
 }

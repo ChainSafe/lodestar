@@ -39,7 +39,7 @@ import {
 import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {InclusionListSource} from "../../chain/blocks/types.js";
-import {seedBlockRoots} from "../../chain/blocks/utils/blockRoots.js";
+import {computeBlockRoots} from "../../chain/blocks/utils/blockRoots.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
   AttestationError,
@@ -674,7 +674,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
 
       const signedBlock = sszDeserialize(topic, serializedData);
-      seedBlockRoots(topic.boundary.fork, signedBlock, serializedData);
+      computeBlockRoots(topic.boundary.fork, signedBlock, serializedData);
       try {
         const blockInput = await validateBeaconBlock(signedBlock, topic.boundary.fork, peerIdStr, seenTimestampSec);
         // Handler - deferred to next event loop so the validation result propagates first

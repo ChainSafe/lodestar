@@ -22,7 +22,7 @@ describe.each(Object.values(PresetName))("block roots with native %s preset", (n
       ...(await importOriginal<typeof import("@lodestar/params")>()),
       ACTIVE_PRESET: runtimePreset,
     }));
-    const {seedBlockRoots, getSeededTransactionsRoot} = await import(
+    const {computeBlockRoots, getSeededTransactionsRoot} = await import(
       "../../../../../src/chain/blocks/utils/blockRoots.js"
     );
     const block = ssz.fulu.SignedBeaconBlock.defaultValue();
@@ -30,7 +30,7 @@ describe.each(Object.values(PresetName))("block roots with native %s preset", (n
     const roots = new Uint8Array(96).fill(1);
     vi.mocked(signedBlockRoots).mockReturnValue(roots);
 
-    seedBlockRoots(ForkName.fulu, block, bytes);
+    computeBlockRoots(ForkName.fulu, block, bytes);
 
     if (nativePreset === runtimePreset) {
       expect(signedBlockRoots).toHaveBeenCalledExactlyOnceWith(ForkSeq.fulu, bytes);
@@ -55,12 +55,12 @@ it("does not seed native roots when the runtime preset has custom overrides", as
     ...(await importOriginal<typeof import("@lodestar/params/setPreset")>()),
     userOverrides: {MAX_WITHDRAWALS_PER_PAYLOAD: 8},
   }));
-  const {seedBlockRoots, getSeededTransactionsRoot} = await import(
+  const {computeBlockRoots, getSeededTransactionsRoot} = await import(
     "../../../../../src/chain/blocks/utils/blockRoots.js"
   );
   const block = ssz.capella.SignedBeaconBlock.defaultValue();
 
-  seedBlockRoots(ForkName.capella, block, ssz.capella.SignedBeaconBlock.serialize(block));
+  computeBlockRoots(ForkName.capella, block, ssz.capella.SignedBeaconBlock.serialize(block));
 
   expect(signedBlockRoots).not.toHaveBeenCalled();
   expect(Reflect.get(block.message, symbolCachedPermanentRoot)).toBeUndefined();
