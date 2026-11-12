@@ -54,6 +54,9 @@ export async function verifyBlocksSignatures(
           // attestations already buffer up to `MAX_BUFFER_WAIT_MS`
           {priority: true}
         );
+    // Handlers are attached after the loop, which yields. A rejection in between, e.g. the verifier closing,
+    // must not be unhandled. `rejectFirstInvalidResolveAllValid()` still observes it.
+    isValidPromises[i].catch(() => {});
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks
     // segments it will block the event loop for 1400 ms, which is too much. This call will allow the event loop to
