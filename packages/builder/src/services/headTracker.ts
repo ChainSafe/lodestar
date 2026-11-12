@@ -26,8 +26,8 @@ export class HeadTracker {
   }
 
   /**
-   * Dependent root of the proposer duties for `proposalSlot` on the branch of `blockRoot`. Returns null if
-   * the block was not announced as head or the proposal is more than one epoch ahead of it.
+   * Dependent root of the proposer duties for `proposalSlot` on the branch of `blockRoot`.
+   * Returns null if the block was not announced as head.
    */
   getDependentRoot(blockRoot: RootHex, proposalSlot: Slot): RootHex | null {
     const head = this.heads.get(blockRoot);
