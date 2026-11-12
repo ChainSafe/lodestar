@@ -8,11 +8,14 @@ const store_mod = @import("store.zig");
 const LatestMessage = store_mod.LatestMessage;
 const BlockIndex = store_mod.BlockIndex;
 const NO_BLOCK = store_mod.NO_BLOCK;
+const NodeId = store_mod.NodeId;
+const NO_NODE = store_mod.NO_NODE;
+const nodeId = store_mod.nodeId;
+const nodeAt = store_mod.nodeAt;
 
 pub const TargetId = u32;
 /// Id 0 means "no vote"; its entry is `LatestMessage.none`.
 pub const NO_TARGET: TargetId = 0;
-pub const NO_NODE: u32 = std.math.maxInt(u32);
 /// Below this size the table never compacts early.
 pub const MIN_COMPACT_AT: usize = 4096;
 
@@ -20,7 +23,7 @@ pub const VoteTargets = struct {
     messages: std.ArrayList(LatestMessage) = .empty,
     /// Per entry: the node the vote counts on (spec `get_supported_node`), `NO_NODE`
     /// once `prune` dropped its block.
-    nodes: std.ArrayList(u32) = .empty,
+    nodes: std.ArrayList(NodeId) = .empty,
     ids: std.AutoHashMapUnmanaged(LatestMessage, TargetId) = .empty,
     /// Compact once the table reaches this size, which keeps it small even when
     /// finality stalls and `prune` stops running.
@@ -50,7 +53,7 @@ pub const VoteTargets = struct {
     }
 
     /// `node` is where `message` counts; only used when the entry is new.
-    pub fn getOrInsert(self: *VoteTargets, allocator: Allocator, message: LatestMessage, node: u32) !TargetId {
+    pub fn getOrInsert(self: *VoteTargets, allocator: Allocator, message: LatestMessage, node: NodeId) !TargetId {
         if (self.ids.get(message)) |id| return id;
         try self.messages.ensureUnusedCapacity(allocator, 1);
         try self.nodes.ensureUnusedCapacity(allocator, 1);
@@ -70,7 +73,7 @@ pub const VoteTargets = struct {
             if (message.block != NO_BLOCK) {
                 const target = block_remap[message.block];
                 message.block = target;
-                node.* = if (target == NO_BLOCK) NO_NODE else target * 3 + node.* % 3;
+                node.* = if (target == NO_BLOCK) NO_NODE else nodeId(.{ .block = target, .payload_status = nodeAt(node.*).payload_status });
             }
             // Entries that now share a key keep their ids; new votes reuse the first.
             const entry = self.ids.getOrPutAssumeCapacity(message.*);
@@ -99,7 +102,7 @@ pub const VoteTargets = struct {
         }
         var messages = try std.ArrayList(LatestMessage).initCapacity(allocator, kept);
         errdefer messages.deinit(allocator);
-        var nodes = try std.ArrayList(u32).initCapacity(allocator, kept);
+        var nodes = try std.ArrayList(NodeId).initCapacity(allocator, kept);
         errdefer nodes.deinit(allocator);
         var map: std.AutoHashMapUnmanaged(LatestMessage, TargetId) = .empty;
         errdefer map.deinit(allocator);
