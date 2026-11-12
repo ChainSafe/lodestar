@@ -741,7 +741,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "1 - sum by (instance) (rate(lodestar_bls_thread_pool_latency_to_worker_bucket{le=\"0.02\"}[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_latency_to_worker_count[$rate_interval]))",
+          "expr": "1 - sum by (instance) (rate(lodestar_bls_thread_pool_latency_to_worker_seconds_bucket{le=\"0.02\"}[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_latency_to_worker_seconds_count[$rate_interval]))",
           "interval": "",
           "legendFormat": "to worker > 20ms",
           "refId": "to worker"
@@ -752,7 +752,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "1 - sum by (instance) (rate(lodestar_bls_thread_pool_latency_from_worker_bucket{le=\"0.02\"}[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_latency_from_worker_count[$rate_interval]))",
+          "expr": "1 - sum by (instance) (rate(lodestar_bls_thread_pool_latency_from_worker_seconds_bucket{le=\"0.02\"}[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_latency_from_worker_seconds_count[$rate_interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "from worker > 20ms",

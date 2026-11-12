@@ -37,13 +37,13 @@ test "registerValidatorStatuses records metrics" {
     defer list.deinit(allocator);
 
     const expectations = [_][]const u8{
-        "validator_monitor_prev_epoch_on_chain_source_attester_hit_total 1",
-        "validator_monitor_prev_epoch_on_chain_source_attester_miss_total 1",
-        "validator_monitor_prev_epoch_on_chain_target_attester_hit_total 1",
-        "validator_monitor_prev_epoch_on_chain_target_attester_miss_total 1",
-        "validator_monitor_prev_epoch_on_chain_head_attester_hit_total 1",
-        "validator_monitor_prev_epoch_on_chain_head_attester_miss_total 1",
-        "validator_monitor_prev_epoch_on_chain_balance 63000000000",
+        "lodestar_validator_monitor_prev_epoch_on_chain_source_attester_hit_total 1",
+        "lodestar_validator_monitor_prev_epoch_on_chain_source_attester_miss_total 1",
+        "lodestar_validator_monitor_prev_epoch_on_chain_target_attester_hit_total 1",
+        "lodestar_validator_monitor_prev_epoch_on_chain_target_attester_miss_total 1",
+        "lodestar_validator_monitor_prev_epoch_on_chain_head_attester_hit_total 1",
+        "lodestar_validator_monitor_prev_epoch_on_chain_head_attester_miss_total 1",
+        "lodestar_validator_monitor_prev_epoch_on_chain_balance 63000000000",
     };
     for (expectations) |expected| {
         std.testing.expect(std.mem.find(u8, list.items, expected) != null) catch |err| {

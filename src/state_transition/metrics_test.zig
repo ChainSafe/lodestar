@@ -46,13 +46,13 @@ test "exports the expected metric names" {
         "lodestar_stfn_gloas_onboard_builders_seconds",
         "lodestar_stfn_gloas_onboard_builders_deposits",
         "lodestar_stfn_gloas_onboard_builders_signature_checks",
-        "validator_monitor_prev_epoch_on_chain_balance",
-        "validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
-        "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
-        "validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
-        "validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
-        "validator_monitor_prev_epoch_on_chain_target_attester_hit_total",
-        "validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
+        "lodestar_validator_monitor_prev_epoch_on_chain_balance",
+        "lodestar_validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
+        "lodestar_validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
+        "lodestar_validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
+        "lodestar_validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
+        "lodestar_validator_monitor_prev_epoch_on_chain_target_attester_hit_total",
+        "lodestar_validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
     };
 
     var names: std.ArrayList([]const u8) = .empty;
