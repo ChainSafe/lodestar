@@ -3,6 +3,7 @@
 const std = @import("std");
 const expect = std.testing.expect;
 const Node = @import("persistent_merkle_tree").Node;
+const ChunkedLeaf = @import("persistent_merkle_tree").ChunkedLeaf;
 const ct = @import("consensus_types");
 const BeaconState = @import("./beacon_state.zig").BeaconState;
 const AnyBeaconState = @import("any_beacon_state.zig").AnyBeaconState;
@@ -52,6 +53,32 @@ test "electra - sanity" {
     try expect(!std.mem.eql(u8, (&[_]u8{0} ** 32)[0..], out.*[0..]));
 
     // TODO: more tests
+}
+
+test "hashTreeRootParallel should match hashTreeRoot on a state with lazy balances leaves" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
+    defer pool.deinit();
+
+    const balances_per_leaf = ChunkedLeaf.K * 4;
+    // One more full leaf than a hashing task takes, plus a partial leaf.
+    const balance_count = (Node.Id.chunked_leaf_roots_per_task + 1) * balances_per_leaf + 3;
+    var balances: ct.electra.Balances.Type = .empty;
+    defer balances.deinit(allocator);
+    try balances.resize(allocator, balance_count);
+    for (balances.items, 0..) |*balance, i| balance.* = i * 7919 + 1;
+
+    var roots: [2][32]u8 = undefined;
+    for (&roots, 0..) |*root, i| {
+        var beacon_state = try AnyBeaconState.fromValue(allocator, &pool, .electra, &ct.electra.BeaconState.default_value);
+        defer beacon_state.deinit();
+        try beacon_state.castToFork(.electra).setBalances(&balances);
+        root.* = if (i == 0)
+            (try beacon_state.hashTreeRoot()).*
+        else
+            (try beacon_state.hashTreeRootParallel(std.testing.io)).*;
+    }
+    try std.testing.expectEqualSlices(u8, &roots[0], &roots[1]);
 }
 
 test "clone - sanity" {

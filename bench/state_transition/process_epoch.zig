@@ -439,7 +439,7 @@ fn ProcessEpochBench(comptime fork: ForkSeq) type {
             ) catch unreachable;
             // hashTreeRoot, not commit: the re-merkleization runs here — the
             // real per-epoch cost (state_root is verified each epoch).
-            _ = BenchState.cloned_cached_state.state.hashTreeRoot() catch unreachable;
+            _ = BenchState.cloned_cached_state.state.hashTreeRootParallel(self.io) catch unreachable;
         }
     };
 }
@@ -625,7 +625,7 @@ fn ProcessEpochSegmentedBench(comptime fork: ForkSeq) type {
             }
 
             const state_root_start = time.start(io);
-            _ = BenchState.cloned_cached_state.state.hashTreeRoot() catch unreachable;
+            _ = BenchState.cloned_cached_state.state.hashTreeRootParallel(io) catch unreachable;
             recordSegment(.state_root, @as(u64, @intCast(time.since(io, state_root_start).nanoseconds)));
 
             recordSegment(.epoch_total, @as(u64, @intCast(time.since(io, epoch_start).nanoseconds)));

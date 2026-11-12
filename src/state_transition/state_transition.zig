@@ -67,7 +67,7 @@ pub fn processSlots(
     if (try state.slot() > slot) return error.outdatedSlot;
 
     while (try state.slot() < slot) {
-        try processSlot(cached_state.state);
+        try processSlot(io, cached_state.state);
 
         const next_slot = try state.slot() + 1;
         if (next_slot % preset.SLOTS_PER_EPOCH == 0) {
