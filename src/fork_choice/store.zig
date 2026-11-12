@@ -506,7 +506,8 @@ pub const Store = struct {
         while (slots[current.block] > slot) {
             const parent = parents[current.block];
             if (parent == NO_BLOCK) break;
-            current = .{ .block = parent, .payload_status = parent_statuses[current.block] };
+            const parent_status = parent_statuses[current.block];
+            current = .{ .block = parent, .payload_status = parent_status };
         }
         return current;
     }
@@ -994,19 +995,19 @@ pub const Store = struct {
         return .{ .store = self, .node = node };
     }
 
-    /// Optimistic sync `NOT_VALIDATED -> VALID` for the payload with `block_hash` and,
-    /// as the spec requires, every not yet validated payload below it.
+    /// Optimistic sync `NOT_VALIDATED -> VALID` for the payload with `block_hash`, in every
+    /// block carrying it, and, as the spec requires, every not yet validated payload below it.
     pub fn onPayloadValid(self: *Store, block_hash: Root) Error!void {
         const hashes = self.blocks.items(.payload_block_hash);
-        var i = self.blocks.len;
-        while (i > 0) {
-            i -= 1;
-            if (!std.mem.eql(u8, &hashes[i], &block_hash)) continue;
+        var found = false;
+        for (hashes, 0..) |*hash, i| {
+            if (!std.mem.eql(u8, hash, &block_hash)) continue;
+            found = true;
             const index: BlockIndex = @intCast(i);
             const node: ForkChoiceNode = if (self.blocks.items(.fork)[i].gte(.gloas)) .{ .block = index, .payload_status = .full } else pendingNode(index);
-            return self.markChainValid(node);
+            try self.markChainValid(node);
         }
-        return error.UnknownPayload;
+        if (!found) return error.UnknownPayload;
     }
 
     /// Marks the `.syncing` payloads from `node` down `.valid`, stopping at the first payload
@@ -1118,9 +1119,11 @@ pub const Store = struct {
         return matching > DATA_AVAILABILITY_TIMELY_THRESHOLD;
     }
 
-    /// Spec `is_payload_inclusion_list_satisfied`.
+    /// Spec `is_payload_inclusion_list_satisfied`; a payload from before Heze has no
+    /// inclusion list to satisfy.
     pub fn isPayloadInclusionListSatisfied(self: *const Store, block: BlockIndex) bool {
         if (!self.isPayloadVerified(block)) return false;
+        if (self.blocks.items(.fork)[block].lt(.heze)) return true;
         return self.blocks.items(.inclusion_list_satisfaction)[block] == .satisfied;
     }
 
@@ -1143,8 +1146,9 @@ pub const Store = struct {
         return self.blocks.items(.parent_payload_status)[proposer_block] == .full;
     }
 
-    /// Spec `should_build_on_full`.
+    /// Spec `should_build_on_full`; a pre-Gloas head carries its own payload.
     pub fn shouldBuildOnFull(self: *const Store, head: ForkChoiceNode, slot: Slot) bool {
+        if (self.blocks.items(.fork)[head.block].lt(.gloas)) return true;
         std.debug.assert(head.payload_status != .pending);
         if (self.blockSlot(head.block) + 1 != slot) return head.payload_status == .full;
         if (head.payload_status == .empty) return false;
