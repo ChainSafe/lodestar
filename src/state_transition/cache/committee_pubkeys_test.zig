@@ -1,6 +1,7 @@
 const std = @import("std");
 const types = @import("consensus_types");
 const preset = @import("preset").preset;
+const bls = @import("bls");
 const Validator = types.phase0.Validator.Type;
 const PubkeyCache = @import("pubkey_cache.zig").PubkeyCache;
 const CommitteePubkeys = @import("committee_pubkeys.zig").CommitteePubkeys;
@@ -14,6 +15,7 @@ const validator_count = preset.SLOTS_PER_EPOCH * committees_per_slot * members_p
 const Fixture = struct {
     cache: PubkeyCache,
     committees: CommitteePubkeys,
+    aggregate_storage: []bls.AggregatePublicKey,
 
     fn init() !Fixture {
         var pubkeys: [validator_count]types.primitive.BLSPubkey.Type = undefined;
@@ -36,18 +38,25 @@ const Fixture = struct {
         errdefer testing.allocator.free(shuffling);
         for (shuffling, 0..) |*index, i| index.* = @intCast(validator_count - 1 - i);
 
+        const aggregate_storage = try testing.allocator.alloc(
+            bls.AggregatePublicKey,
+            preset.SLOTS_PER_EPOCH * preset.MAX_COMMITTEES_PER_SLOT,
+        );
+        errdefer testing.allocator.free(aggregate_storage);
         const committees = try CommitteePubkeys.init(
             testing.allocator,
             testing.io,
             &cache,
             shuffling,
             committees_per_slot,
+            aggregate_storage,
         );
-        return .{ .cache = cache, .committees = committees };
+        return .{ .cache = cache, .committees = committees, .aggregate_storage = aggregate_storage };
     }
 
     fn deinit(self: *Fixture) void {
         self.committees.deinit();
+        testing.allocator.free(self.aggregate_storage);
         self.cache.deinit();
     }
 
@@ -149,17 +158,28 @@ test "aggregateParticipants rejects inconsistent input" {
     try testing.expectError(error.EmptyIndices, f.aggregateParticipants(io, cache, 0, &.{0}, &no_bits, one));
 }
 
-test "init rejects a committee count the preset does not allow" {
+test "init rejects invalid committee counts and undersized aggregate storage" {
     var cache = PubkeyCache.init(testing.allocator, testing.io);
     defer cache.deinit();
 
     const shuffling = [_]u32{};
     try testing.expectError(
-        error.InvalidCommitteesPerSlot,
-        CommitteePubkeys.init(testing.allocator, testing.io, &cache, &shuffling, 0),
+        error.AggregateStorageTooSmall,
+        CommitteePubkeys.init(testing.allocator, testing.io, &cache, &shuffling, 1, &.{}),
     );
     try testing.expectError(
         error.InvalidCommitteesPerSlot,
-        CommitteePubkeys.init(testing.allocator, testing.io, &cache, &shuffling, preset.MAX_COMMITTEES_PER_SLOT + 1),
+        CommitteePubkeys.init(testing.allocator, testing.io, &cache, &shuffling, 0, &.{}),
+    );
+    try testing.expectError(
+        error.InvalidCommitteesPerSlot,
+        CommitteePubkeys.init(
+            testing.allocator,
+            testing.io,
+            &cache,
+            &shuffling,
+            preset.MAX_COMMITTEES_PER_SLOT + 1,
+            &.{},
+        ),
     );
 }

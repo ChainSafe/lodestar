@@ -9,63 +9,94 @@ const napi = zapi.napi;
 const state_transition = @import("state_transition");
 const CommitteePubkeys = state_transition.CommitteePubkeys;
 const PubkeyCache = state_transition.PubkeyCache;
+const bls = @import("bls");
+const preset = @import("preset").preset;
 
 const pubkeys = @import("./pubkeys.zig");
 
-const allocator = std.heap.page_allocator;
+const allocator = std.heap.c_allocator;
+const MAX_SLOTS = 16;
+const MAX_AGGREGATES = preset.SLOTS_PER_EPOCH * preset.MAX_COMMITTEES_PER_SLOT;
 
-/// Bounds memory if a caller never releases. A mainnet entry holds about 4 MB.
-pub const MAX_ENTRIES = 64;
+pub const MAX_ENTRIES = MAX_SLOTS;
+
+const SlotState = enum { free, computing, ready };
+
+// Workers exclusively own computing slots. The locked transition to ready publishes
+// their entry and aggregate storage; readers and clear only access ready slots.
+const Slot = struct {
+    state: SlotState = .free,
+    id: u32 = 0,
+    entry: ?CommitteePubkeys = null,
+    storage: [MAX_AGGREGATES]bls.AggregatePublicKey = undefined,
+};
 
 const State = struct {
     lock: std.Io.RwLock = .init,
-    entries: std.AutoHashMapUnmanaged(u32, *CommitteePubkeys) = .empty,
-    /// Computations in flight, counted against `MAX_ENTRIES` so the bound holds
-    /// when they complete.
-    reserved: u32 = 0,
+    slots: [MAX_SLOTS]Slot = [_]Slot{.{}} ** MAX_SLOTS,
     next_id: u32 = 1,
 
-    fn reserve(self: *State, io: std.Io) !void {
+    fn reserve(self: *State, io: std.Io) !usize {
         try self.lock.lock(io);
         defer self.lock.unlock(io);
-
-        if (self.entries.count() + self.reserved >= MAX_ENTRIES) return error.TooManyCommitteePubkeys;
-        self.reserved += 1;
+        for (&self.slots, 0..) |*slot, i| {
+            if (slot.state == .free) {
+                slot.state = .computing;
+                return i;
+            }
+        }
+        return error.TooManyCommitteePubkeys;
     }
 
-    fn unreserve(self: *State, io: std.Io) void {
+    fn unreserve(self: *State, io: std.Io, index: usize) void {
         self.lock.lockUncancelable(io);
         defer self.lock.unlock(io);
-        self.reserved -= 1;
+        const slot = &self.slots[index];
+        if (slot.entry) |*entry| entry.deinit();
+        slot.entry = null;
+        slot.id = 0;
+        slot.state = .free;
     }
 
-    /// Consumes a reservation.
-    fn insert(self: *State, io: std.Io, entry: *CommitteePubkeys) !u32 {
+    fn publish(self: *State, io: std.Io, index: usize) !u32 {
         self.lock.lockUncancelable(io);
         defer self.lock.unlock(io);
-
-        std.debug.assert(self.reserved > 0);
-        try self.entries.ensureUnusedCapacity(allocator, 1);
-        self.reserved -= 1;
-        const id = self.next_id;
-        // 0 stays invalid. Wrapping onto a live id would take 4 billion entries.
+        const slot = &self.slots[index];
+        std.debug.assert(slot.state == .computing);
+        var id = self.next_id;
+        var attempts: usize = 0;
+        while (id == 0 or self.hasId(id)) : (attempts += 1) {
+            if (attempts == MAX_ENTRIES) return error.NoAvailableCommitteePubkeyId;
+            id = if (id == std.math.maxInt(u32)) 1 else id + 1;
+        }
         self.next_id = if (id == std.math.maxInt(u32)) 1 else id + 1;
-        self.entries.putAssumeCapacityNoClobber(id, entry);
+        slot.id = id;
+        slot.state = .ready;
         return id;
+    }
+
+    fn hasId(self: *const State, id: u32) bool {
+        for (&self.slots) |*slot| {
+            if (slot.state == .ready and slot.id == id) return true;
+        }
+        return false;
     }
 
     fn remove(self: *State, io: std.Io, id: u32) !bool {
         try self.lock.lock(io);
-        const removed = self.entries.fetchRemove(id);
-        self.lock.unlock(io);
-
-        const entry = (removed orelse return false).value;
-        entry.deinit();
-        allocator.destroy(entry);
-        return true;
+        defer self.lock.unlock(io);
+        for (&self.slots) |*slot| {
+            if (slot.state == .ready and slot.id == id) {
+                slot.entry.?.deinit();
+                slot.entry = null;
+                slot.id = 0;
+                slot.state = .free;
+                return true;
+            }
+        }
+        return false;
     }
 
-    /// Null when `id` is unknown, for example after a release.
     pub fn aggregateParticipants(
         self: *State,
         io: std.Io,
@@ -78,31 +109,32 @@ const State = struct {
     ) !?state_transition.CommitteeParticipants {
         self.lock.lockSharedUncancelable(io);
         defer self.lock.unlockShared(io);
-
-        const entry = self.entries.get(id) orelse return null;
-        return try entry.aggregateParticipants(io, pubkey_cache, slot_in_epoch, committee_indices, bits, bit_len);
+        for (&self.slots) |*slot| {
+            if (slot.state == .ready and slot.id == id) {
+                return try slot.entry.?.aggregateParticipants(io, pubkey_cache, slot_in_epoch, committee_indices, bits, bit_len);
+            }
+        }
+        return null;
     }
 
-    /// Drop every entry. In-flight computations keep their reservations.
     pub fn clear(self: *State, io: std.Io) void {
         self.lock.lockUncancelable(io);
         defer self.lock.unlock(io);
-
-        var it = self.entries.valueIterator();
-        while (it.next()) |entry| {
-            entry.*.deinit();
-            allocator.destroy(entry.*);
+        for (&self.slots) |*slot| {
+            if (slot.state == .ready) {
+                slot.entry.?.deinit();
+                slot.entry = null;
+                slot.id = 0;
+                slot.state = .free;
+            }
         }
-        self.entries.clearRetainingCapacity();
     }
 
+    /// All compute tasks and readers must have stopped before this call.
     pub fn deinit(self: *State) void {
-        var it = self.entries.valueIterator();
-        while (it.next()) |entry| {
-            entry.*.deinit();
-            allocator.destroy(entry.*);
+        for (&self.slots) |*slot| {
+            if (slot.entry) |*entry| entry.deinit();
         }
-        self.entries.deinit(allocator);
         self.* = .{};
     }
 };
@@ -113,36 +145,29 @@ const ComputeTask = struct {
     io: std.Io,
     shuffling: ?[]u32,
     committees_per_slot: u32,
-    entry: ?*CommitteePubkeys = null,
+    slot: usize,
     reserved: bool = true,
 
     pub fn compute(self: *ComputeTask) !void {
-        const entry = try allocator.create(CommitteePubkeys);
-        errdefer allocator.destroy(entry);
-        entry.* = try CommitteePubkeys.init(
+        state.slots[self.slot].entry = try CommitteePubkeys.init(
             allocator,
             self.io,
             &pubkeys.state.cache,
             self.shuffling.?,
             self.committees_per_slot,
+            state.slots[self.slot].storage[0..],
         );
         self.shuffling = null;
-        self.entry = entry;
     }
 
     pub fn resolve(self: *ComputeTask, _: napi.Env) !js.Number {
-        const id = try state.insert(self.io, self.entry.?);
-        self.entry = null;
+        const id = try state.publish(self.io, self.slot);
         self.reserved = false;
         return js.Number.from(id);
     }
 
     pub fn deinit(self: *ComputeTask) void {
-        if (self.reserved) state.unreserve(self.io);
-        if (self.entry) |entry| {
-            entry.deinit();
-            allocator.destroy(entry);
-        }
+        if (self.reserved) state.unreserve(self.io, self.slot);
         if (self.shuffling) |shuffling| allocator.free(shuffling);
     }
 };
@@ -157,8 +182,8 @@ pub fn compute(shuffling: js.Uint32Array, committees_per_slot: js.Number) !js.Va
     const io = js.io();
     const count = try committees_per_slot.toU32Exact();
 
-    try state.reserve(io);
-    errdefer state.unreserve(io);
+    const slot = try state.reserve(io);
+    errdefer state.unreserve(io, slot);
     const owned = try allocator.dupe(u32, try shuffling.toSlice());
     errdefer allocator.free(owned);
 
@@ -166,6 +191,7 @@ pub fn compute(shuffling: js.Uint32Array, committees_per_slot: js.Number) !js.Va
         .io = io,
         .shuffling = owned,
         .committees_per_slot = count,
+        .slot = slot,
     }, "committeePubkeys.compute");
 }
 
@@ -179,5 +205,7 @@ pub fn size() !js.Number {
     const io = js.io();
     state.lock.lockSharedUncancelable(io);
     defer state.lock.unlockShared(io);
-    return js.Number.from(state.entries.count());
+    var count: usize = 0;
+    for (&state.slots) |*slot| count += @intFromBool(slot.state == .ready);
+    return js.Number.from(count);
 }

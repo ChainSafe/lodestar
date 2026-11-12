@@ -24,21 +24,24 @@ pub const CommitteePubkeys = struct {
     /// One aggregate per committee, indexed by `slot * committees_per_slot + index`.
     aggregates: []bls.AggregatePublicKey,
 
-    /// Sum the pubkeys of every committee. Takes ownership of `shuffling` on
-    /// success; on error the caller still owns it.
+    /// `aggregate_storage` must remain allocated and unmoved for the lifetime
+    /// of the returned value. The value does not own that storage.
+    /// Takes ownership of `shuffling` on success; on error the caller still owns it.
     pub fn init(
         allocator: std.mem.Allocator,
         io: std.Io,
         pubkey_cache: *const PubkeyCache,
         shuffling: []const u32,
         committees_per_slot: u32,
+        aggregate_storage: []bls.AggregatePublicKey,
     ) !CommitteePubkeys {
         if (committees_per_slot == 0 or committees_per_slot > preset.MAX_COMMITTEES_PER_SLOT) {
             return error.InvalidCommitteesPerSlot;
         }
 
-        const aggregates = try allocator.alloc(bls.AggregatePublicKey, preset.SLOTS_PER_EPOCH * committees_per_slot);
-        errdefer allocator.free(aggregates);
+        const aggregate_count = preset.SLOTS_PER_EPOCH * committees_per_slot;
+        if (aggregate_storage.len < aggregate_count) return error.AggregateStorageTooSmall;
+        const aggregates = aggregate_storage[0..aggregate_count];
 
         var self: CommitteePubkeys = .{
             .allocator = allocator,
@@ -54,7 +57,6 @@ pub const CommitteePubkeys = struct {
     }
 
     pub fn deinit(self: *CommitteePubkeys) void {
-        self.allocator.free(self.aggregates);
         self.allocator.free(self.shuffling);
         self.* = undefined;
     }

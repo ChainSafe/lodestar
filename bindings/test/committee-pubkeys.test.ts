@@ -127,6 +127,16 @@ describe("committee pubkeys", () => {
     expect(verifySignatureSets([swapped])).toBe(false);
   });
 
+  it("uses a fresh id after release and falls back for the stale id", async () => {
+    const oldId = await compute();
+    const set = committeeSet(oldId, 6, [0], (bit) => bit % 2 === 0);
+    expect(releaseCommitteePubkeys(oldId)).toBe(true);
+
+    const newId = await compute();
+    expect(newId).not.toBe(oldId);
+    expect(verifySignatureSets([set])).toBe(true);
+  });
+
   it("throws for aggregation bits that do not cover the committees", async () => {
     const id = await compute();
     const set = committeeSet(id, 2, [0, 1], () => true);
@@ -153,7 +163,11 @@ describe("committee pubkeys", () => {
   });
 
   it("rejects an invalid committee count and bounds the number of entries", async () => {
+    expect(COMMITTEE_PUBKEYS_MAX_ENTRIES).toBe(16);
     await expect(computeCommitteePubkeys(shuffling, 0)).rejects.toThrow("InvalidCommitteesPerSlot");
+    const recoveredId = await compute();
+    expect(committeePubkeysCount()).toBe(1);
+    expect(releaseCommitteePubkeys(recoveredId)).toBe(true);
 
     // Computations in flight count too
     const pending = Array.from({length: COMMITTEE_PUBKEYS_MAX_ENTRIES}, () => compute());
