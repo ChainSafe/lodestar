@@ -67,7 +67,7 @@ pub const TreeViewState = struct {
         }
     }
 
-    /// Stages the leaf at `gindex` with `stageChunkedLeaf` and writes one packed value into it.
+    /// Writes one packed value into the leaf at `gindex`, staging it with `beginChunkedLeafEdit`.
     /// `valid_chunks` must preserve or grow the length. `write` must not retain the chunk pointer
     /// or access the pool.
     pub fn editChunkedLeaf(
@@ -81,7 +81,7 @@ pub const TreeViewState = struct {
         comptime write: fn (*[32]u8, usize, *const T) void,
     ) !void {
         std.debug.assert(intra_chunk < valid_chunks);
-        const chunks = try self.stageChunkedLeaf(gindex, valid_chunks);
+        const chunks = try self.beginChunkedLeafEdit(gindex, valid_chunks);
         write(&chunks[intra_chunk], index, value);
     }
 
@@ -90,7 +90,7 @@ pub const TreeViewState = struct {
     /// `clearCache`, clone with `transfer_cache`, or `setChildNode` at `gindex`, which share or
     /// drop the node. On error the view is unchanged. `valid_chunks` must preserve or grow the
     /// length.
-    pub fn stageChunkedLeaf(
+    pub fn beginChunkedLeafEdit(
         self: *TreeViewState,
         gindex: Gindex,
         valid_chunks: u16,
@@ -121,7 +121,7 @@ pub const TreeViewState = struct {
             node = replacement;
         }
 
-        return node.editChunkedLeafChunks(self.pool, valid_chunks);
+        return node.beginChunkedLeafWrite(self.pool, valid_chunks);
     }
 
     pub fn commitNodes(self: *TreeViewState) !void {

@@ -885,14 +885,14 @@ pub const Id = enum(u32) {
         comptime write: fn (*[32]u8, usize, *const T) void,
     ) Error!void {
         std.debug.assert(intra_chunk < valid_chunks);
-        const chunks = try node_id.editChunkedLeafChunks(pool, valid_chunks);
+        const chunks = try node_id.beginChunkedLeafWrite(pool, valid_chunks);
         write(&chunks[intra_chunk], index, value);
     }
 
     /// Sets the valid-chunk length, invalidates the cached root, and returns the chunks for
     /// in-place writes. Requires reference count zero; `valid_chunks` must preserve or grow the
     /// length. Finish writing before the next `getRoot`, which would cache a stale root.
-    pub fn editChunkedLeafChunks(
+    pub fn beginChunkedLeafWrite(
         node_id: Id,
         pool: *Pool,
         valid_chunks: u16,

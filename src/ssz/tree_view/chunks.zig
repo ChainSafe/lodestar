@@ -210,7 +210,7 @@ pub fn BasicPackedChunks(
             }
 
             fn stage(self: *Editor, chunked_leaf_idx: usize) !*align(64) [ChunkedLeaf.K][32]u8 {
-                const chunks = try self.state.stageChunkedLeaf(
+                const chunks = try self.state.beginChunkedLeafEdit(
                     Gindex.fromDepth(chunked_leaf_depth, chunked_leaf_idx),
                     chunkedLeafLen(self.len, chunked_leaf_idx),
                 );
