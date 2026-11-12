@@ -186,24 +186,74 @@ cost of retrieving or reconstructing a state that is not cached.
 
 The following table describes Lodestar v0 behavior, not a standardized error policy:
 
-| Condition                                                    | Current status |
-| ------------------------------------------------------------ | -------------- |
-| Invalid object identifier, missing `format`, or invalid hex  | `400`          |
-| Unsupported `Accept` media type                              | `406`          |
-| State or block lookup returns no result                      | `404`          |
-| Empty/incomplete descriptor, extra bytes, or nonzero padding | `400`          |
-| Descriptor byte limit or traversal depth exceeded            | `413`          |
-| Internal retrieval or proof-generation failure               | `500`          |
+| Condition                                                     | Current status |
+| ------------------------------------------------------------- | -------------- |
+| Invalid object identifier, missing `format`, or invalid hex   | `400`          |
+| Unsupported `Accept` media type                               | `406`          |
+| State or block lookup returns no result                       | `404`          |
+| Historical reconstruction disabled or required history absent | `404`          |
+| Empty/incomplete descriptor, extra bytes, or nonzero padding  | `400`          |
+| Descriptor descends below a terminal SSZ chunk                | `400`          |
+| Descriptor byte limit or traversal depth exceeded             | `413`          |
+| State lookup rejected by the node's syncing guard             | `503`          |
+| Internal retrieval or proof-generation failure                | `500`          |
 
-Historical reconstruction can also throw an error when disabled or when retained
-states or blocks are missing. These cases are not all mapped to `404`. Clients
-must not retry against a different state such as `head` merely to obtain a proof.
+Historical requests return `404` when reconstruction is disabled, no seed state
+is retained, a required parent block is absent, or replay cannot reach the exact
+requested slot. A skipped slot remains unavailable unless a state was saved at
+that slot. Malformed archived states, database failures, inconsistent retained
+parents, and reconstructed state-root mismatches remain errors, returning `500`.
+Clients must not retry against a different state such as `head` merely to obtain
+a proof.
+
 Descriptor validation establishes tree shape, not whether each requested node
-exists in the selected SSZ tree. Traversal below a terminal chunk still fails
-during proof generation. Mapping those errors and historical availability errors
-consistently remains separate work. Earlier versions also returned `500` for
-invalid descriptors and exceeded byte limits; these now return `400` and `413`
-respectively. Successful proof bytes and fork metadata are unchanged.
+exists in the selected SSZ tree. Proof generation rejects traversal below a
+terminal chunk with `400` for both state implementations and block proofs. Only the
+distinct invalid-traversal error is classified this way; unexpected implementation and
+retrieval failures remain `500`. Earlier versions returned `500` for invalid
+traversal, malformed descriptors, and exceeded byte limits. Successful proof bytes
+and fork metadata are unchanged.
+
+## Serving external consumers
+
+The `proof` namespace is excluded from the default REST namespaces. Adding it to
+`--rest.namespace` registers both proof endpoints; excluding it leaves both
+routes unavailable with `404`. Include the other namespaces your application
+uses when setting this option. Historical state reconstruction additionally
+requires `--serveHistoricalState` and sufficient retained state and block data.
+Enabling that option does not recover pruned data or guarantee unlimited history.
+
+While the node is too far behind, its syncing guard rejects state requests by
+explicit slot or root with `503`. Cached aliases such as `head` and available
+blocks can still be served. A successful response, including during syncing,
+does not establish execution validity or finality. Those properties are absent
+from the proof response and must be checked independently by the application.
+
+Errors use JSON with a numeric `code` and a `message`, including when the request
+asks for an SSZ success response. Stack traces are disabled by default. A `404`
+can indicate a disabled namespace or unavailable data; it does not prove that
+the selected object never existed. Retrying `503` or `500` must preserve the
+intended slot/root and trusted-root check. Proof size limits do not limit archive
+reconstruction cost or promise a particular request rate.
+
+The proof API tests cover the following support requirements:
+
+| Requirement                                                                               | Coverage                                                   |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Enable both routes together; reject absent data without substituting another object       | `support.test.ts`, `historical.test.ts`                    |
+| JSON/SSZ bytes, selected fork header, and unsupported encodings                           | `format.test.ts`, `support.test.ts`, `proofFormat.test.ts` |
+| Reject malformed identifiers, descriptors, and exceeded work limits before lookup         | `request.test.ts`, `support.test.ts`                       |
+| Cached states, archive replay, skipped slots, missing history, and corrupt data           | `historical.test.ts`, `historicalWorker.test.ts`           |
+| Preserve unavailable results, successful bytes, and errors across the archive worker      | `historicalWorker.test.ts`                                 |
+| Apply sync guards and preserve state ownership across concurrent cached requests          | `support.test.ts`, `proof.test.ts`                         |
+| Verify intended fields and trusted roots on both sides of the fork and during transitions | `fields.test.ts`, `proof.test.ts`, `transition.test.ts`    |
+
+The handler tests are in `packages/beacon-node/test/unit/api/impl/proof/`; the
+independent format checks are in `packages/api/test/unit/beacon/proofFormat.test.ts`.
+The native test mode runs the same cases against both state implementations when a
+Gloas-capable native binding is installed. Block proofs use TypeScript SSZ trees
+in either mode. These deterministic tests do not establish production capacity
+or the correctness of every downstream verifier.
 
 ## Independent reference and vectors
 

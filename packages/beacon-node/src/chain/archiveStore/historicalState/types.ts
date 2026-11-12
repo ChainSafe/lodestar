@@ -35,7 +35,7 @@ export type HistoricalStateWorkerData = {
 export type HistoricalStateWorkerApi = {
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;
-  getHistoricalState(slot: number): Promise<Uint8Array>;
+  getHistoricalState(slot: number): Promise<Uint8Array | null>;
 };
 
 export enum RegenErrorType {

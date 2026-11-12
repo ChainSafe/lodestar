@@ -706,7 +706,7 @@ export class BeaconChain implements IBeaconChain {
     slot: number
   ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
     if (!this.opts.serveHistoricalState) {
-      throw Error("Historical state regen is not enabled, set --serveHistoricalState to fetch this data");
+      return null;
     }
 
     return this.archiveStore.getHistoricalStateBySlot(slot);

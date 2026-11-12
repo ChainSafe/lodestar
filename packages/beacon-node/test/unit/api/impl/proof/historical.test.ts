@@ -8,7 +8,9 @@ import {toHex} from "@lodestar/utils";
 import {getProofApi} from "../../../../../src/api/impl/proof/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {getHistoricalState} from "../../../../../src/chain/archiveStore/historicalState/getHistoricalState.js";
+import {createHistoricalStateRegenMetrics} from "../../../../../src/chain/archiveStore/historicalState/metrics.js";
 import {RegenErrorCode} from "../../../../../src/chain/regen/errors.js";
+import {RegistryMetricCreator} from "../../../../../src/metrics/index.js";
 import {SyncState} from "../../../../../src/sync/index.js";
 import {getMockedBeaconSync} from "../../../../mocks/beaconSyncMock.js";
 import {getMockedBeaconChain} from "../../../../mocks/mockedBeaconChain.js";
@@ -36,6 +38,7 @@ describe.each(backends)("archive-backed proofs across Gloas (native=%s)", (nativ
   let archive: Awaited<ReturnType<typeof startIsolatedTmpBeaconDb>>;
   let head: stateTransition.IBeaconStateView;
   let storedBlocks: number[];
+  let metricsRegister: RegistryMetricCreator;
 
   beforeAll(async () => {
     chain = createTransitionChain(false);
@@ -57,6 +60,8 @@ describe.each(backends)("archive-backed proofs across Gloas (native=%s)", (nativ
   });
 
   beforeEach(async () => {
+    metricsRegister = new RegistryMetricCreator();
+    const metrics = createHistoricalStateRegenMetrics(metricsRegister);
     await archive.db.stateArchive.batchDelete(await archive.db.stateArchive.keys());
     await archive.db.blockArchive.batchDeleteRange(await archive.db.blockArchive.keys());
     await archive.db.stateArchive.put(chain.anchor.slot, chain.anchor);
@@ -66,16 +71,16 @@ describe.each(backends)("archive-backed proofs across Gloas (native=%s)", (nativ
     modules.forkChoice.getFinalizedBlock.mockReturnValue(generateProtoBlock({slot: transitionHeadSlot}));
     Object.defineProperty(modules.chain.clock, "currentSlot", {value: transitionHeadSlot});
     Object.defineProperty(modules.sync, "state", {value: SyncState.Synced});
-    const regen = async (slot: number) => ({
-      state: await getHistoricalState(
+    const regen = async (slot: number) => {
+      const state = await getHistoricalState(
         slot,
         createBeaconConfig(proofConfig, chain.anchor.genesisValidatorsRoot),
         archive.db,
-        native
-      ),
-      executionOptimistic: false,
-      finalized: true,
-    });
+        native,
+        metrics
+      );
+      return state === null ? null : {state, executionOptimistic: false, finalized: true};
+    };
     Object.assign(modules.chain, {
       opts: {serveHistoricalState: true},
       archiveStore: {getHistoricalStateBySlot: vi.fn(regen)},
@@ -110,7 +115,21 @@ describe.each(backends)("archive-backed proofs across Gloas (native=%s)", (nativ
 
   function expectReleased() {
     expect(ownedStates.size).toBeGreaterThan(0);
-    for (const state of ownedStates) expect(state.release).toHaveBeenCalledExactlyOnceWith();
+    for (const [index, state] of [...ownedStates].entries()) {
+      expect(state.release, `owned state ${index}`).toHaveBeenCalledExactlyOnceWith();
+    }
+  }
+
+  async function expectTimings(transition: number, serialization: number) {
+    for (const [name, count] of [
+      ["lodestar_historical_state_regen_time_seconds", 1],
+      ["lodestar_historical_state_load_nearest_state_time_seconds", 1],
+      ["lodestar_historical_state_state_transition_time_seconds", transition],
+      ["lodestar_historical_state_serialization_time_seconds", serialization],
+    ] as const) {
+      const lines = (await metricsRegister.getSingleMetricAsString(name)).split("\n");
+      expect(lines, name).toContain(`${name}_count ${count}`);
+    }
   }
 
   it.each(transitionSlots.filter((slot) => slot < transitionHeadSlot))(
@@ -130,6 +149,7 @@ describe.each(backends)("archive-backed proofs across Gloas (native=%s)", (nativ
       assert(!(blockProof.data instanceof Uint8Array));
       expect(Tree.createFromProof(blockProof.data).getNode(11n).root).toEqual(expected.hashTreeRoot());
       expectReleased();
+      await expectTimings(1, 1);
     }
   );
 
@@ -160,7 +180,7 @@ describe.each(backends)("archive-backed proofs across Gloas (native=%s)", (nativ
     Object.assign(modules.chain.opts, {serveHistoricalState: false});
     await expect(
       api.getStateProof({stateId: String(proofForkSlot), descriptor: computeDescriptor([1n])})
-    ).rejects.toThrow("--serveHistoricalState");
+    ).rejects.toMatchObject({statusCode: 404});
     expect(ownedStates.size).toBe(0);
   });
 
@@ -168,23 +188,26 @@ describe.each(backends)("archive-backed proofs across Gloas (native=%s)", (nativ
     await archive.db.stateArchive.batchDelete(await archive.db.stateArchive.keys());
     await expect(
       api.getStateProof({stateId: String(proofForkSlot), descriptor: computeDescriptor([1n])})
-    ).rejects.toThrow("No near state found");
+    ).rejects.toMatchObject({statusCode: 404});
     expect(ownedStates.size).toBe(0);
+    await expectTimings(0, 0);
   });
 
   it("rejects missing intervening blocks instead of returning a proof of another state", async () => {
     await archive.db.blockArchive.delete(proofForkSlot - 1);
     await expect(
       api.getStateProof({stateId: String(proofForkSlot + 1), descriptor: computeDescriptor([1n])})
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({statusCode: 404});
     expectReleased();
+    await expectTimings(1, 0);
   });
 
   it("does not return the preceding block's state for an unretained skipped slot", async () => {
     await expect(
       api.getStateProof({stateId: String(proofForkSlot + 2), descriptor: computeDescriptor([1n])})
-    ).rejects.toThrow(`Failed to generate historical state for slot ${proofForkSlot + 2}`);
+    ).rejects.toMatchObject({statusCode: 404});
     expectReleased();
+    await expectTimings(1, 0);
   });
 
   it("serves a skipped slot when a state was saved at that exact slot", async () => {
@@ -216,5 +239,59 @@ describe.each(backends)("archive-backed proofs across Gloas (native=%s)", (nativ
       },
     });
     expectReleased();
+    await expectTimings(1, 0);
+  });
+
+  it("propagates archive database failures instead of treating them as missing data", async () => {
+    const failure = Error("Archive database failed");
+    vi.spyOn(archive.db.stateArchive, "binaries").mockRejectedValueOnce(failure);
+    await expect(api.getStateProof({stateId: String(proofForkSlot), descriptor: computeDescriptor([1n])})).rejects.toBe(
+      failure
+    );
+    expect(ownedStates.size).toBe(0);
+    await expectTimings(0, 0);
+  });
+
+  it("propagates malformed archived state errors instead of returning 404", async () => {
+    await archive.db.stateArchive.putBinary(chain.anchor.slot, Uint8Array.of(0));
+    const error = await api
+      .getStateProof({stateId: String(proofForkSlot), descriptor: computeDescriptor([1n])})
+      .catch((error: unknown) => error);
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toHaveProperty("statusCode");
+    expect(ownedStates.size).toBe(0);
+    await expectTimings(0, 0);
+  });
+
+  it("propagates an inconsistent retained parent instead of treating it as missing", async () => {
+    const block = proofConfig.getForkTypes(proofForkSlot + 1).SignedBeaconBlock.clone(chain.blockAt(proofForkSlot + 1));
+    const parent = chain.blockAt(proofForkSlot - 1);
+    block.message.parentRoot = proofConfig.getForkTypes(parent.message.slot).BeaconBlock.hashTreeRoot(parent.message);
+    await archive.db.blockArchive.put(block.message.slot, block);
+    const error = await api
+      .getStateProof({stateId: String(block.message.slot), descriptor: computeDescriptor([1n])})
+      .catch((error: unknown) => error);
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toHaveProperty("statusCode");
+    expectReleased();
+    await expectTimings(1, 0);
+  });
+
+  it("records timing and releases the state when serialization fails", async () => {
+    const failure = Error("State serialization failed");
+    const create = vi.mocked(stateTransition.createBeaconStateViewForHistoricalRegen).getMockImplementation();
+    assert(create);
+    vi.mocked(stateTransition.createBeaconStateViewForHistoricalRegen).mockImplementationOnce((opts) => {
+      const state = create(opts);
+      vi.spyOn(state, "serialize").mockImplementationOnce(() => {
+        throw failure;
+      });
+      return state;
+    });
+    await expect(
+      api.getStateProof({stateId: String(chain.anchor.slot), descriptor: computeDescriptor([1n])})
+    ).rejects.toBe(failure);
+    expectReleased();
+    await expectTimings(1, 1);
   });
 });

@@ -14,8 +14,10 @@ Enable the `proof` namespace on the node serving requests, alongside any other
 namespaces your application needs, for example `--rest.namespace beacon,config,proof`.
 For historical state requests, enable `--serveHistoricalState` on the serving node.
 This permits reconstruction from retained states and blocks; it does not backfill
-missing history. A missing state produces an error; retrying against `head` would
-prove a different state.
+missing history. Disabled reconstruction or missing required history produces
+`404`; retrying against `head` would prove a different state. Internal failures
+remain `500`. See [Serving external consumers](./proof-format.md#serving-external-consumers)
+for namespace, syncing, and error behavior.
 
 Historical reconstruction replays retained blocks. If the requested slot was
 skipped and no state was saved at that exact slot, reconstruction fails instead

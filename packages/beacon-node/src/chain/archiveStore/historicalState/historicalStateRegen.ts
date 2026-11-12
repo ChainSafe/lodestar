@@ -63,7 +63,7 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
     this.logger.debug("Terminated historical state worker");
   }
 
-  async getHistoricalState(slot: number): Promise<Uint8Array> {
+  async getHistoricalState(slot: number): Promise<Uint8Array | null> {
     return this.api.getHistoricalState(slot);
   }
 }
