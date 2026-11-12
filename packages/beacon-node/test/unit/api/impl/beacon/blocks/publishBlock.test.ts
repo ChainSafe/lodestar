@@ -415,7 +415,7 @@ describe("api - beacon - publishBlockV2", () => {
       expect(modules.chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
     });
 
-    it("removes a block this call cached when the parent is unknown", async () => {
+    it("keeps a block this call cached when the parent is unknown", async () => {
       const {signedBlock, blockRoot} = cacheSubmittedBlock();
       modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(null);
 
@@ -427,8 +427,48 @@ describe("api - beacon - publishBlockV2", () => {
         })
       ).rejects.toThrow(BlockError);
 
-      expect(modules.chain.seenBlockInputCache.remove).toHaveBeenCalledExactlyOnceWith(blockRoot);
-      expect(modules.chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
+      expectKept(blockRoot);
+      expect(verifyBlocksInEpoch).not.toHaveBeenCalled();
+    });
+
+    it("keeps a post-gloas payload entry this call created when the parent is unknown", async () => {
+      modules = getApiTestModules({config: forkConfig});
+      Object.defineProperty(modules.chain, "blockProductionCache", {value: new Map()});
+      Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
+      Object.defineProperty(modules.chain, "custodyConfig", {value: {sampledColumns: [], custodyColumns: []}});
+      modules.network.publishBeaconBlock = vi.fn();
+      modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
+      modules.chain.seenPayloadEnvelopeInputCache.add = vi.fn();
+
+      const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+      signedBlock.message.slot = slots.gloas;
+      const blockRoot = toRootHex(
+        modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+      );
+      modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(
+        BlockInputColumns.createFromBlock({
+          forkName: ForkName.fulu,
+          block: ssz.fulu.SignedBeaconBlock.defaultValue(),
+          blockRootHex: blockRoot,
+          source: BlockInputSource.api,
+          seenTimestampSec: 0,
+          daOutOfRange: false,
+          sampledColumns: [0],
+          custodyColumns: [0],
+        })
+      );
+      modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(null);
+
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      await expect(
+        api.publishBlockV2({
+          signedBlockContents: {signedBlock},
+          broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+        })
+      ).rejects.toThrow(BlockError);
+
+      expect(modules.chain.seenPayloadEnvelopeInputCache.add).toHaveBeenCalledOnce();
+      expectKept(blockRoot);
       expect(verifyBlocksInEpoch).not.toHaveBeenCalled();
     });
 
