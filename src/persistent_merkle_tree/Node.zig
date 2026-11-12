@@ -1015,14 +1015,27 @@ pub const Id = enum(u32) {
         comptime write: fn (*[32]u8, usize, *const T) void,
     ) Error!void {
         std.debug.assert(intra_chunk < valid_chunks);
+        const chunks = try node_id.beginChunkedLeafWrite(pool, valid_chunks);
+        write(&chunks[intra_chunk], index, value);
+    }
+
+    /// Sets the valid-chunk length, invalidates the cached root, and returns the chunks for
+    /// in-place writes. Requires reference count zero; `valid_chunks` must preserve or grow the
+    /// length. Finish writing before the next `getRoot`, which would cache a stale root.
+    pub fn beginChunkedLeafWrite(
+        node_id: Id,
+        pool: *Pool,
+        valid_chunks: u16,
+    ) Error!*align(64) [ChunkedLeaf.K][32]u8 {
+        std.debug.assert(valid_chunks > 0);
         std.debug.assert(valid_chunks <= ChunkedLeaf.K);
         const storage = try node_id.getChunkedLeafPtr(pool);
         // Only this check loads `len`, past the 2 KiB of chunks; the store below doesn't stall.
         if (expensive_safety_checks) std.debug.assert(storage.len <= valid_chunks);
 
-        write(&storage.chunks[intra_chunk], index, value);
         storage.len = valid_chunks;
         pool.nodes.items(.root)[@intFromEnum(node_id)] = lazy_sentinel;
+        return &storage.chunks;
     }
 
     pub fn setChunkedLeafChunk(node_id: Id, pool: *Pool, intra_index: u16, chunk: *const [32]u8) Error!Id {
