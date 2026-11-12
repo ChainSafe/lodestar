@@ -236,7 +236,7 @@ fn ProcessBlockRootBench(comptime fork: ForkSeq, comptime opts: BenchOpts) type 
                 external_data,
                 .{ .verify_signature = opts.verify_signature },
             ) catch unreachable;
-            _ = BenchState.cloned_cached_state.state.hashTreeRoot() catch unreachable;
+            _ = BenchState.cloned_cached_state.state.hashTreeRootParallel(self.io) catch unreachable;
         }
     };
 }
@@ -421,7 +421,7 @@ fn ProcessBlockSegmentedBench(comptime fork: ForkSeq) type {
             recordSegment(.commit, @as(u64, @intCast(time.since(io, commit_start).nanoseconds)));
 
             const root_start = time.start(io);
-            _ = BenchState.cloned_cached_state.state.hashTreeRoot() catch unreachable;
+            _ = BenchState.cloned_cached_state.state.hashTreeRootParallel(io) catch unreachable;
             recordSegment(.state_root, @as(u64, @intCast(time.since(io, root_start).nanoseconds)));
 
             recordSegment(.block_total, @as(u64, @intCast(time.since(io, block_start).nanoseconds)));

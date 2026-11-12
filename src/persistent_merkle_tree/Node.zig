@@ -884,11 +884,10 @@ pub const Id = enum(u32) {
         return node_id.getRoot(pool);
     }
 
-    /// Hashes the lazy chunked leaves reachable through lazy branches of `node_id`.
-    ///
-    /// The walk caches no branch root, so it visits a lazy subtree once per parent that shares it.
-    /// It stops at the pool traversal bound or at `max_depth`; `getRoot` then hashes what is left
-    /// and reports an invalid tree.
+    // Hashes the lazy chunked leaves reachable through lazy branches of `node_id`. No branch root
+    // is cached, so a shared lazy subtree is revisited once per path. The walk stops at `getRoot`'s
+    // traversal bounds instead of panicking; `getRoot` then hashes serially what the walk did not
+    // reach, or panics on an invalid tree.
     fn computeLazyChunkedLeafRoots(node_id: Id, pool: *Pool, io: std.Io) std.Io.Cancelable!void {
         var batch: [lazy_chunked_leaves_per_batch]Id = undefined;
         var batch_len: usize = 0;
@@ -927,8 +926,8 @@ pub const Id = enum(u32) {
         try computeDistinctChunkedLeafRoots(pool, io, batch[0..batch_len]);
     }
 
-    /// `computeChunkedLeafRoots` for ids that may repeat: a lazy leaf shared by two parents is
-    /// gathered twice, and two tasks must not write one root.
+    // `computeChunkedLeafRoots` for ids that may repeat: a lazy leaf shared by two parents is
+    // gathered twice, and two tasks must not write one root.
     fn computeDistinctChunkedLeafRoots(pool: *Pool, io: std.Io, ids: []Id) std.Io.Cancelable!void {
         if (ids.len == 0) return;
         std.mem.sortUnstable(Id, ids, {}, struct {
