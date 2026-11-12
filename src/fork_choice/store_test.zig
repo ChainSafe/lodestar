@@ -979,6 +979,24 @@ test "optimistic sync: a valid envelope over an invalidated payload is rejected 
     try testing.expect(!store.blocks.items(.payload_verified)[index]);
 }
 
+test "optimistic sync: a valid payload whose twin sits on an invalidated payload writes nothing" {
+    const config = &@import("config").mainnet.config;
+    var store = try Store.initFromSummary(testing.allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
+    defer store.deinit();
+    try store.onTick(store.timing.timeAtSlotMs(8));
+    // 0x30 and 0x31 carry the same payload; 0x31 builds on 0x21, whose payload is then invalidated.
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 0x20, .slot = 2 }));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x21, .parent = 0x20, .slot = 2 }));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x31, .parent = 0x21, .slot = 3, .payload = 0x30 }));
+    try store.onPayloadInvalid(tagRoot(0x21), tagHash(0x21), tagHash(0x20));
+
+    try testing.expectError(error.PayloadInvalidToValid, store.onPayloadValid(tagHash(0x30)));
+    const statuses = store.blocks.items(.execution_status);
+    try testing.expectEqual(ExecutionStatus.syncing, statuses[store.blockIndex(tagRoot(0x20)).?]);
+    try testing.expectEqual(ExecutionStatus.syncing, statuses[store.blockIndex(tagRoot(0x30)).?]);
+}
+
 test "get_ancestor: a Gloas walk takes each link's payload status from the child" {
     const allocator = testing.allocator;
     const config_mod = @import("config");

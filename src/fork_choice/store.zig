@@ -1223,17 +1223,26 @@ pub const Store = struct {
 
     /// Optimistic sync `NOT_VALIDATED -> VALID` for the payload with `block_hash`, in every
     /// block carrying it, and, as the spec requires, every not yet validated payload below it.
+    /// Writes nothing when an `.invalid` payload stands at or below any of those blocks.
     pub fn onPayloadValid(self: *Store, block_hash: Root) Error!void {
         const hashes = self.blocks.items(.payload_block_hash);
         var found = false;
         for (hashes, 0..) |*hash, i| {
             if (!std.mem.eql(u8, hash, &block_hash)) continue;
             found = true;
-            const index: BlockIndex = @intCast(i);
-            const node: ForkChoiceNode = if (self.blocks.items(.fork)[i].gte(.gloas)) .{ .block = index, .payload_status = .full } else pendingNode(index);
-            try self.markChainValid(node);
+            _ = try self.checkChainValid(self.ownPayloadNode(@intCast(i)));
         }
         if (!found) return error.UnknownPayload;
+        for (hashes, 0..) |*hash, i| {
+            if (!std.mem.eql(u8, hash, &block_hash)) continue;
+            // Marking a chain valid writes no `.invalid`, so every check above still passes.
+            self.markChainValid(self.ownPayloadNode(@intCast(i))) catch unreachable;
+        }
+    }
+
+    /// The node standing on `block`'s own payload.
+    fn ownPayloadNode(self: *const Store, block: BlockIndex) ForkChoiceNode {
+        return if (self.blocks.items(.fork)[block].gte(.gloas)) .{ .block = block, .payload_status = .full } else pendingNode(block);
     }
 
     /// Marks the `.syncing` payloads from `node` down `.valid`, stopping at the first payload
