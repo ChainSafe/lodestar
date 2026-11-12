@@ -19,8 +19,11 @@ const FLAG_CURR_SOURCE_ATTESTER = attester_status.FLAG_CURR_SOURCE_ATTESTER;
 const FLAG_CURR_TARGET_ATTESTER = attester_status.FLAG_CURR_TARGET_ATTESTER;
 const FLAG_ELIGIBLE_ATTESTER = attester_status.FLAG_ELIGIBLE_ATTESTER;
 const FLAG_PREV_HEAD_ATTESTER = attester_status.FLAG_PREV_HEAD_ATTESTER;
+const FLAG_PREV_HEAD_ATTESTER_UNSLASHED = attester_status.FLAG_PREV_HEAD_ATTESTER_UNSLASHED;
 const FLAG_PREV_SOURCE_ATTESTER = attester_status.FLAG_PREV_SOURCE_ATTESTER;
+const FLAG_PREV_SOURCE_ATTESTER_UNSLASHED = attester_status.FLAG_PREV_SOURCE_ATTESTER_UNSLASHED;
 const FLAG_PREV_TARGET_ATTESTER = attester_status.FLAG_PREV_TARGET_ATTESTER;
+const FLAG_PREV_TARGET_ATTESTER_UNSLASHED = attester_status.FLAG_PREV_TARGET_ATTESTER_UNSLASHED;
 const FLAG_UNSLASHED = attester_status.FLAG_UNSLASHED;
 const hasMarkers = attester_status.hasMarkers;
 
@@ -84,6 +87,31 @@ const ValidatorActivation = struct {
 };
 
 const ValidatorActivationList = std.ArrayList(ValidatorActivation);
+
+/// Effective balance increments of unslashed validators, summed per attester flag.
+const UnslashedStakes = struct {
+    prev_source: u64 = 0,
+    prev_target: u64 = 0,
+    prev_head: u64 = 0,
+    curr_target: u64 = 0,
+
+    const FLAG_CURR_TARGET_UNSLASHED = FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED;
+
+    fn add(self: *UnslashedStakes, flag: u8, effective_balance_by_increment: u64) void {
+        if (hasMarkers(flag, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
+            self.prev_source += effective_balance_by_increment;
+        }
+        if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
+            self.prev_target += effective_balance_by_increment;
+        }
+        if (hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
+            self.prev_head += effective_balance_by_increment;
+        }
+        if (hasMarkers(flag, FLAG_CURR_TARGET_UNSLASHED)) {
+            self.curr_target += effective_balance_by_increment;
+        }
+    }
+};
 
 const ShufflingJob = struct {
     const Error = Allocator.Error || @import("swap_or_not_shuffle").ShufflingError;
@@ -192,10 +220,6 @@ const ReusedEpochTransitionCache = struct {
             self.allocator,
             validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH,
         );
-
-        @memset(self.is_active_prev_epoch.items, true);
-        @memset(self.is_active_current_epoch.items, true);
-        @memset(self.is_active_next_epoch.items, true);
     }
 
     pub fn deinit(self: *ReusedEpochTransitionCache) void {
@@ -374,9 +398,7 @@ pub const EpochTransitionCache = struct {
             const is_active_next: bool = activation_epoch <= next_epoch and next_epoch < exit_epoch;
             const is_active_next_2: bool = activation_epoch <= next_epoch_2 and next_epoch_2 < exit_epoch;
 
-            if (!is_active_prev) {
-                reused_cache.is_active_prev_epoch.items[i] = false;
-            }
+            reused_cache.is_active_prev_epoch.items[i] = is_active_prev;
 
             // Both active validators and slashed-but-not-yet-withdrawn validators are eligible to receive penalties.
             // This is done to prevent self-slashing from being a way to escape inactivity leaks.
@@ -391,10 +413,9 @@ pub const EpochTransitionCache = struct {
                 reused_cache.is_compounding_validator_arr.items[i] = validator.bits.compounding;
             }
 
+            reused_cache.is_active_current_epoch.items[i] = is_active_curr;
             if (is_active_curr) {
                 total_active_stake_by_increment += effective_balances_by_increments[i];
-            } else {
-                reused_cache.is_active_current_epoch.items[i] = false;
             }
 
             // To optimize process_registry_updates():
@@ -440,9 +461,7 @@ pub const EpochTransitionCache = struct {
                 try indices_to_eject.append(allocator, i);
             }
 
-            if (!is_active_next) {
-                reused_cache.is_active_next_epoch.items[i] = false;
-            }
+            reused_cache.is_active_next_epoch.items[i] = is_active_next;
 
             if (is_active_next_2) {
                 reused_cache.next_epoch_shuffling_active_validator_indices.items[next_epoch_shuffling_active_indices_length] = @intCast(i);
@@ -476,6 +495,7 @@ pub const EpochTransitionCache = struct {
         }.sort;
         std.mem.sort(ValidatorActivation, validator_activation_list.items, {}, sort_fn);
 
+        var unslashed_stakes: UnslashedStakes = .{};
         if (fork_seq == ForkSeq.phase0) {
             const fork_state = try state.tryCastToFork(.phase0);
             try reused_cache.proposer_indices.resize(reused_cache.allocator, validator_count);
@@ -531,6 +551,10 @@ pub const EpochTransitionCache = struct {
                 FLAG_CURR_TARGET_ATTESTER,
                 FLAG_CURR_HEAD_ATTESTER,
             );
+
+            for (0..validator_count) |i| {
+                unslashed_stakes.add(reused_cache.flags.items[i], effective_balances_by_increments[i]);
+            }
         } else {
             try reused_cache.previous_epoch_participation.resize(reused_cache.allocator, validator_count);
             try reused_cache.current_epoch_participation.resize(reused_cache.allocator, validator_count);
@@ -548,63 +572,28 @@ pub const EpochTransitionCache = struct {
                     (if (reused_cache.is_active_prev_epoch.items[i]) reused_cache.previous_epoch_participation.items[i] else 0) |
                     // FLAG_CURR are indexes [3,4,5], so shift by 3
                     (if (reused_cache.is_active_current_epoch.items[i]) reused_cache.current_epoch_participation.items[i] << 3 else 0);
-            }
-        }
-
-        var prev_source_unsl_stake: u64 = 0;
-        var prev_target_unsl_stake: u64 = 0;
-        var prev_head_unsl_stake: u64 = 0;
-
-        var curr_target_unsl_stake: u64 = 0;
-
-        const FLAG_PREV_SOURCE_ATTESTER_UNSLASHED = FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED;
-        const FLAG_PREV_TARGET_ATTESTER_UNSLASHED = FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED;
-        const FLAG_PREV_HEAD_ATTESTER_UNSLASHED = FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED;
-        const FLAG_CURR_TARGET_UNSLASHED = FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED;
-
-        for (0..validator_count) |i| {
-            const effective_balance_by_increment = effective_balances_by_increments[i];
-            const flag = reused_cache.flags.items[i];
-            if (hasMarkers(flag, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
-                prev_source_unsl_stake += effective_balance_by_increment;
-            }
-            if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
-                prev_target_unsl_stake += effective_balance_by_increment;
-            }
-            if (hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
-                prev_head_unsl_stake += effective_balance_by_increment;
-            }
-            if (hasMarkers(flag, FLAG_CURR_TARGET_UNSLASHED)) {
-                curr_target_unsl_stake += effective_balance_by_increment;
+                unslashed_stakes.add(reused_cache.flags.items[i], effective_balances_by_increments[i]);
             }
         }
 
         if (fork_seq.gte(.altair)) {
-            if (epoch_cache.current_target_unslashed_balance_increments != curr_target_unsl_stake) {
+            if (epoch_cache.current_target_unslashed_balance_increments != unslashed_stakes.curr_target) {
                 try metrics.state_transition.progressive_balances_mismatches.incr(.{ .target = .current });
-                epoch_cache.current_target_unslashed_balance_increments = curr_target_unsl_stake;
+                epoch_cache.current_target_unslashed_balance_increments = unslashed_stakes.curr_target;
             }
-            if (epoch_cache.previous_target_unslashed_balance_increments != prev_target_unsl_stake) {
+            if (epoch_cache.previous_target_unslashed_balance_increments != unslashed_stakes.prev_target) {
                 try metrics.state_transition.progressive_balances_mismatches.incr(.{ .target = .previous });
-                epoch_cache.previous_target_unslashed_balance_increments = prev_target_unsl_stake;
+                epoch_cache.previous_target_unslashed_balance_increments = unslashed_stakes.prev_target;
             }
         }
 
         // As per spec of `get_total_balance`:
         // EFFECTIVE_BALANCE_INCREMENT Gwei minimum to avoid divisions by zero.
         // Math safe up to ~10B ETH, afterwhich this overflows uint64.
-        if (prev_source_unsl_stake < 1) {
-            prev_source_unsl_stake = 1;
-        }
-        if (prev_target_unsl_stake < 1) {
-            prev_target_unsl_stake = 1;
-        }
-        if (prev_head_unsl_stake < 1) {
-            prev_head_unsl_stake = 1;
-        }
-        if (curr_target_unsl_stake < 1) {
-            curr_target_unsl_stake = 1;
-        }
+        unslashed_stakes.prev_source = @max(unslashed_stakes.prev_source, 1);
+        unslashed_stakes.prev_target = @max(unslashed_stakes.prev_target, 1);
+        unslashed_stakes.prev_head = @max(unslashed_stakes.prev_head, 1);
+        unslashed_stakes.curr_target = @max(unslashed_stakes.curr_target, 1);
 
         // zig specific map function similar to "indicesEligibleForActivation.map(({validatorIndex}) => validatorIndex)"
         var indices_eligible_for_activation = try std.ArrayList(ValidatorIndex).initCapacity(allocator, validator_activation_list.items.len);
@@ -622,10 +611,10 @@ pub const EpochTransitionCache = struct {
             .current_epoch = current_epoch,
             .total_active_stake_by_increment = total_active_stake_by_increment,
             .base_reward_per_increment = base_reward_per_increment,
-            .prev_epoch_unslashed_stake_source_by_increment = prev_source_unsl_stake,
-            .prev_epoch_unslashed_stake_target_by_increment = prev_target_unsl_stake,
-            .prev_epoch_unslashed_stake_head_by_increment = prev_head_unsl_stake,
-            .curr_epoch_unslashed_target_stake_by_increment = curr_target_unsl_stake,
+            .prev_epoch_unslashed_stake_source_by_increment = unslashed_stakes.prev_source,
+            .prev_epoch_unslashed_stake_target_by_increment = unslashed_stakes.prev_target,
+            .prev_epoch_unslashed_stake_head_by_increment = unslashed_stakes.prev_head,
+            .curr_epoch_unslashed_target_stake_by_increment = unslashed_stakes.curr_target,
             .indices_to_slash = indices_to_slash,
             .indices_eligible_for_activation_queue = indices_eligible_for_activation_queue,
             .indices_eligible_for_activation = indices_eligible_for_activation,

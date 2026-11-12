@@ -136,6 +136,7 @@ const libp2pWorkerApi: NetworkWorkerApi = {
 
   prepareBeaconCommitteeSubnets: (subscriptions) => core.prepareBeaconCommitteeSubnets(subscriptions),
   prepareSyncCommitteeSubnets: (subscriptions) => core.prepareSyncCommitteeSubnets(subscriptions),
+  addLocalProposalSlots: (slots) => core.addLocalProposalSlots(slots),
   reportPeer: (peer, action, actionName) => core.reportPeer(peer, action, actionName),
   reStatusPeers: (peers) => core.reStatusPeers(peers),
   goodbyeAndDisconnect: (peer, reason) => core.goodbyeAndDisconnect(peer, reason),
