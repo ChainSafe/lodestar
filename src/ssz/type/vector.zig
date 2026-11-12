@@ -56,6 +56,7 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
         const chunked_leaf_depth: u8 = if (use_chunked_leaf) chunk_depth - ChunkedLeaf.k_log2 else 0;
 
         pub const default_value: Type = [_]Element.Type{Element.default_value} ** length;
+        pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = getZeroHash(chunk_depth).*;
 
@@ -241,11 +242,8 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
                     while (byte_idx < data.len) {
                         const remaining = data.len - byte_idx;
                         const chunked_leaf_bytes = @min(remaining, bytes_per_chunked_leaf);
-                        const valid_chunks: u16 = @intCast((chunked_leaf_bytes + 31) / 32);
-                        var chunked_leaf_id_opt: ?Node.Id = try pool.createChunkedLeafEmpty(valid_chunks);
+                        var chunked_leaf_id_opt: ?Node.Id = try pool.createChunkedLeafFromBytes(data[byte_idx..][0..chunked_leaf_bytes]);
                         errdefer if (chunked_leaf_id_opt) |id| pool.unref(id);
-                        const storage = try chunked_leaf_id_opt.?.getChunkedLeafPtr(pool);
-                        @memcpy(@as([*]u8, @ptrCast(&storage.chunks))[0..chunked_leaf_bytes], data[byte_idx..][0..chunked_leaf_bytes]);
                         try it.append(chunked_leaf_id_opt.?);
                         chunked_leaf_id_opt = null;
                         byte_idx += chunked_leaf_bytes;
@@ -346,18 +344,25 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
                     while (item_idx < length) {
                         const remaining = length - item_idx;
                         const items_in_chunked_leaf = @min(remaining, items_per_chunked_leaf);
-                        const valid_chunks: u16 = @intCast((items_in_chunked_leaf + items_per_chunk - 1) / items_per_chunk);
 
-                        var chunked_leaf_id_opt: ?Node.Id = try pool.createChunkedLeafEmpty(valid_chunks);
+                        var chunked_leaf_id_opt: ?Node.Id = null;
                         errdefer if (chunked_leaf_id_opt) |id| pool.unref(id);
-                        const storage = try chunked_leaf_id_opt.?.getChunkedLeafPtr(pool);
 
-                        for (0..items_in_chunked_leaf) |k| {
-                            const chunked_leaf_chunk_idx = k / items_per_chunk;
-                            const intra_chunk = k % items_per_chunk;
-                            const dst_off = intra_chunk * Element.fixed_size;
-                            const dst_slice = storage.chunks[chunked_leaf_chunk_idx][dst_off .. dst_off + Element.fixed_size];
-                            _ = Element.serializeIntoBytes(&value[item_idx + k], dst_slice);
+                        if (comptime canMemcpySsz(Element)) {
+                            const items = value[item_idx..][0..items_in_chunked_leaf];
+                            chunked_leaf_id_opt = try pool.createChunkedLeafFromBytes(std.mem.sliceAsBytes(items));
+                        } else {
+                            const valid_chunks: u16 = @intCast((items_in_chunked_leaf + items_per_chunk - 1) / items_per_chunk);
+                            chunked_leaf_id_opt = try pool.createChunkedLeafEmpty(valid_chunks);
+                            const storage = try chunked_leaf_id_opt.?.getChunkedLeafPtr(pool);
+
+                            for (0..items_in_chunked_leaf) |k| {
+                                const chunked_leaf_chunk_idx = k / items_per_chunk;
+                                const intra_chunk = k % items_per_chunk;
+                                const dst_off = intra_chunk * Element.fixed_size;
+                                const dst_slice = storage.chunks[chunked_leaf_chunk_idx][dst_off .. dst_off + Element.fixed_size];
+                                _ = Element.serializeIntoBytes(&value[item_idx + k], dst_slice);
+                            }
                         }
 
                         try it.append(chunked_leaf_id_opt.?);
@@ -498,6 +503,7 @@ pub fn VariableVectorType(comptime ST: type, comptime _length: comptime_int) typ
         pub const chunk_depth: u8 = maxChunksToDepth(chunk_count);
 
         pub const default_value: Type = [_]Element.Type{Element.default_value} ** length;
+        pub const init: Type = [_]Element.Type{Element.init} ** length;
 
         pub const default_root: [32]u8 = blk: {
             var buf: [32]u8 = undefined;

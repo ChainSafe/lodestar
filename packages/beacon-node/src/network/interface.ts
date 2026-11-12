@@ -30,7 +30,6 @@ import {
   SubnetID,
   altair,
   capella,
-  deneb,
   fulu,
   gloas,
   heze,
@@ -42,7 +41,6 @@ import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {
   BeaconBlocksByRootRequest,
-  BlobSidecarsByRootRequest,
   DataColumnSidecarsByRootRequest,
   ExecutionPayloadEnvelopesByRootRequest,
 } from "../util/types.js";
@@ -82,8 +80,6 @@ export interface INetwork extends INetworkCorePublic {
   sendBeaconBlocksByRange(peerId: PeerIdStr, request: phase0.BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]>;
   sendBeaconBlocksByRoot(peerId: PeerIdStr, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]>;
   sendBeaconBlocksByHead(peerId: PeerIdStr, request: fulu.BeaconBlocksByHeadRequest): Promise<SignedBeaconBlock[]>;
-  sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
-  sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
   sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
     request: fulu.DataColumnSidecarsByRangeRequest
@@ -103,7 +99,6 @@ export interface INetwork extends INetworkCorePublic {
 
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
-  publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number>;
   publishDataColumnSidecar(

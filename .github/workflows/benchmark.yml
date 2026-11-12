@@ -1,39 +1,22 @@
 name: Benchmark
 
-# Actions access a common cache entry and may corrupt it.
-concurrency:
-  # If PR, cancel prev commits. head_ref = source branch name on pull_request, null if push
-  # if push, default to github.run_id so retries of the same commit do not overwrite each other
-  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true
-
 on:
-  push:
-    branches:
-      - stable
-      - unstable
-      - benchmark # For debugging
-  pull_request:
-    branches:
-      - stable
-      - unstable
+  schedule:
+    - cron: "30 1 * * *" # 1:30 am UTC
   workflow_dispatch:
 
 jobs:
   run:
     runs-on: warp-ubuntu-2204-x64-4x
-    # Skip for dependabot PRs, secrets are not made available and will fail
-    # Don't run on forks. Forks don't have access to the S3 credentials and the workflow will fail
-    if: |
-      github.actor != 'dependabot[bot]' &&
-      ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository )
+    # Forks don't have access to the S3 credentials and the workflow will fail
+    if: github.repository == 'ChainSafe/lodestar'
 
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 24
+          node: 26
       # </common-build>
 
       # Restore performance downloaded states
@@ -44,10 +27,13 @@ jobs:
           key: perf-states-${{ hashFiles('packages/state-transition/test/perf/params.ts') }}
 
       - name: Run benchmarks
-        run: pnpm benchmark
+        id: benchmarks
+        # An explicit bash shell enables pipefail, without it tee hides a failed run
+        shell: bash
+        # @chainsafe/benchmark only infers the baseline and posts comments on push and pull_request events
+        # Results are not posted as PR comments, failed benches are written to the job summary below
+        run: pnpm benchmark --compareBranch unstable --skipPostComment 2>&1 | tee "$RUNNER_TEMP/benchmark.log"
         env:
-          # To write to PRs and commits
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # benchmark options
           BENCHMARK_S3: true
           # S3 credentials
@@ -58,3 +44,39 @@ jobs:
           S3_ENDPOINT: ${{ secrets.S3_BENCH_LODESTAR_ENDPOINT }}
           # Key prefix to separate benchmark data from multiple repositories
           S3_KEY_PREFIX: ${{ github.repository }}/${{ runner.os }}
+
+      - name: Report failed benchmarks in the job summary
+        if: failure() && steps.benchmarks.outcome == 'failure'
+        # pipefail lets the gh fallbacks below take effect
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          log=$(sed -E 's/\x1b\[[0-9;]*m//g' "$RUNNER_TEMP/benchmark.log")
+          baseline=$(grep -oE 'Found previous benchmark .* at commit [0-9a-f]+' <<< "$log" | grep -oE '[0-9a-f]+$' | head -n 1 || true)
+          link_prs() { sed -E "s|\(#([0-9]+)\)|([#\1]($REPO_URL/pull/\1))|g"; }
+          {
+            echo "### Failed benchmarks"
+            echo
+            echo '```'
+            grep -E '^\s*(!|✖) ' <<< "$log" || echo "No failed benchmarks found, see the job log"
+            echo '```'
+            echo
+            if [ -z "$baseline" ]; then
+              echo "No previous benchmark found"
+            else
+              echo "### Baseline"
+              echo
+              gh api "repos/$GITHUB_REPOSITORY/commits/$baseline" \
+                --jq '"[`\(.sha[0:10])`](\(.html_url)) \(.commit.committer.date[0:10]): \(.commit.message | split("\n")[0])"' \
+                | link_prs || echo "$baseline"
+              echo
+              echo "### Commits since the baseline"
+              echo
+              # The compare API returns at most 250 commits
+              gh api "repos/$GITHUB_REPOSITORY/compare/$baseline...$GITHUB_SHA" \
+                --jq '.commits[] | "- \(.commit.message | split("\n")[0])"' \
+                | link_prs || echo "Could not list commits"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
