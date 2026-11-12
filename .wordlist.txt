@@ -9,6 +9,7 @@ BeaconNode
 Besu
 Buterin
 CLI
+CMake
 CTRL
 Casper
 Chai
@@ -125,6 +126,7 @@ api
 args
 async
 auth
+backend
 backfill
 beaconcha
 blockRoot
@@ -193,6 +195,7 @@ keypair
 keyrings
 keystore
 keystores
+libclang
 libp
 lifecycle
 lightclient
@@ -201,6 +204,7 @@ liveness
 lldb
 llnode
 lockfile
+loopback
 mainnet
 malloc
 mbps
@@ -255,6 +259,7 @@ tcp
 testnet
 testnets
 todo
+toolchain
 trustless
 typesafe
 udp
