@@ -46,6 +46,7 @@ pub fn ProgressiveBitListType(comptime opts: TypeOpts) type {
             limit / 8 + 1;
 
         pub const default_value: Type = Type.empty;
+        pub const init: Type = default_value;
         pub const default_root: [32]u8 = @import("hashing").getZeroHash(1).*;
 
         pub fn equals(a: *const Type, b: *const Type) bool {

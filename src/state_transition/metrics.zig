@@ -81,6 +81,8 @@ const ProposerRewardLabel = struct { type: ProposerRewardKind };
 const ProgressiveBalancesMismatchLabel = struct { target: ProgressiveBalancesTarget };
 
 const ProgressiveBalancesTarget = enum { current, previous };
+const BuilderDepositOutcome = enum { onboarded, topup, kept, dropped };
+const BuilderSignatureSource = enum { cache, verified };
 
 const Metrics = struct {
     epoch_transition: EpochTransition,
@@ -105,6 +107,9 @@ const Metrics = struct {
     attestations_per_block: CountGauge,
     proposer_rewards: ProposerRewardsGauge,
     progressive_balances_mismatches: ProgressiveBalancesMismatches,
+    onboard_builders: OnboardBuilders,
+    onboard_builders_deposits: BuilderDeposits,
+    onboard_builders_signature_checks: BuilderSignatureChecks,
 
     const EpochTransition = m.Histogram(f64, &.{ 0.01, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5, 1, 3 });
     const EpochTransitionCommit = m.Histogram(f64, &.{ 0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1 });
@@ -119,6 +124,9 @@ const Metrics = struct {
     const PreStateClonedCount = m.Histogram(u32, &.{ 1, 2, 5, 10, 50, 250 });
     const ProposerRewardsGauge = m.GaugeVec(u64, ProposerRewardLabel);
     const ProgressiveBalancesMismatches = m.CounterVec(u64, ProgressiveBalancesMismatchLabel);
+    const OnboardBuilders = m.Histogram(f64, &.{ 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30 });
+    const BuilderDeposits = m.GaugeVec(u64, struct { outcome: BuilderDepositOutcome });
+    const BuilderSignatureChecks = m.GaugeVec(u64, struct { source: BuilderSignatureSource });
 
     /// Deinitializes all `HistogramVec` and `GaugeVec` metrics for state transition.
     pub fn deinit(self: *Metrics) void {
@@ -129,6 +137,8 @@ const Metrics = struct {
         self.state_hash_tree_root.deinit();
         self.proposer_rewards.deinit();
         self.progressive_balances_mismatches.deinit();
+        self.onboard_builders_deposits.deinit();
+        self.onboard_builders_signature_checks.deinit();
         self.* = m.initializeNoop(Metrics);
     }
 };
@@ -211,6 +221,22 @@ pub fn init(allocator: Allocator, io: std.Io, comptime opts: m.RegistryOpts) !vo
         metric_opts,
     );
     errdefer progressive_balances_mismatches.deinit();
+    var onboard_builders_deposits = try Metrics.BuilderDeposits.init(
+        allocator,
+        io,
+        "stfn_gloas_onboard_builders_deposits",
+        .{ .help = "Pending deposits handled at the Gloas fork transition, by outcome" },
+        metric_opts,
+    );
+    errdefer onboard_builders_deposits.deinit();
+    var onboard_builders_signature_checks = try Metrics.BuilderSignatureChecks.init(
+        allocator,
+        io,
+        "stfn_gloas_onboard_builders_signature_checks",
+        .{ .help = "Deposit signature checks at the Gloas fork transition, by cache hit or inline verification" },
+        metric_opts,
+    );
+    errdefer onboard_builders_signature_checks.deinit();
 
     state_transition = .{
         .epoch_transition = Metrics.EpochTransition.init(
@@ -295,6 +321,13 @@ pub fn init(allocator: Allocator, io: std.Io, comptime opts: m.RegistryOpts) !vo
         ),
         .proposer_rewards = proposer_rewards,
         .progressive_balances_mismatches = progressive_balances_mismatches,
+        .onboard_builders = Metrics.OnboardBuilders.init(
+            "stfn_gloas_onboard_builders_seconds",
+            .{ .help = "Time spent onboarding builders at the Gloas fork transition in seconds" },
+            metric_opts,
+        ),
+        .onboard_builders_deposits = onboard_builders_deposits,
+        .onboard_builders_signature_checks = onboard_builders_signature_checks,
     };
 
     validator_monitor = .{

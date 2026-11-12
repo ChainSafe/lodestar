@@ -72,6 +72,10 @@
                 .default = "mainnet",
                 .description = "Consensus preset: \"mainnet\", \"minimal\" or \"gnosis\".",
             },
+            .expensive_safety_checks = .{
+                .type = .bool,
+                .description = "Enable costly safety checks (optional; defaults to true only in Debug builds).",
+            },
         },
         .bls_options = .{
             .thread_count = .{
@@ -346,7 +350,7 @@
         .bench_merkle_node = .{
             .root_module = .{
                 .root_source_file = "src/persistent_merkle_tree/node_bench.zig",
-                .imports = .{ .hashing, .zbench },
+                .imports = .{ .build_options, .hashing, .zbench },
             },
         },
         .bench_hashing = .{

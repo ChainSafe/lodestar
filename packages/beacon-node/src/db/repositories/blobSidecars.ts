@@ -14,7 +14,6 @@ export const blobSidecarsWrapperSsz = new ContainerType(
 );
 
 export type BlobSidecarsWrapper = ValueOf<typeof blobSidecarsWrapperSsz>;
-export const BLOB_SIDECARS_IN_WRAPPER_INDEX = 44;
 
 /**
  * blobSidecarsWrapper by block root (= hash_tree_root(SignedBeaconBlock.message))
