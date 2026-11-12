@@ -37,6 +37,7 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
     logFile: "none",
     importKeystores: keystoresDir,
     importKeystoresPassword: keystoresSecretFilePath,
+    suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
     "builder.selection": builderSelection ?? defaultOptions.builderSelection,
     blindedLocal: blindedLocal ?? defaultOptions.blindedLocal,
   } as unknown as IValidatorCliArgs & GlobalArgs;

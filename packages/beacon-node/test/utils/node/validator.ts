@@ -20,7 +20,7 @@ export async function getAndInitDevValidators({
   testLoggerOpts,
   externalSignerUrl,
   doppelgangerProtection = false,
-  valProposerConfig,
+  valProposerConfig = {defaultConfig: {feeRecipient: "0x0000000000000000000000000000000000000000"}, proposerConfig: {}},
 }: {
   node: BeaconNode;
   logPrefix: string;

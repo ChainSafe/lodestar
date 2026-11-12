@@ -246,7 +246,10 @@ describe("web3signer signature test", () => {
     const genesisValidatorsRoot = fromHex(genesisData.mainnet.genesisValidatorsRoot);
     const metrics = null;
     const doppelgangerService = null;
-    const valProposerConfig = undefined;
+    const valProposerConfig = {
+      defaultConfig: {feeRecipient: "0x0000000000000000000000000000000000000000"},
+      proposerConfig: {},
+    };
     const indicesService = new IndicesService(logger, api, metrics);
     const slashingProtection = new SlashingProtectionDisabled();
     return ValidatorStore.init(

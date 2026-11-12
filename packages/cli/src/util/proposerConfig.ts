@@ -4,14 +4,18 @@ import {routes} from "@lodestar/api";
 import {BuilderEntryConfig, builderConfigDataFromJson} from "@lodestar/api/keymanager";
 import {MAX_BUILDER_AUTH_DATA_SIZE, MAX_BUILDER_ENTRIES, MAX_BUILDER_URL_SIZE} from "@lodestar/params";
 import {fromHex, isValidAsciiHttpUrl, toAsciiHttpUrl, toHex} from "@lodestar/utils";
-import {ValidatorProposerConfig} from "@lodestar/validator";
+import {ProposerConfig, ValidatorProposerConfig} from "@lodestar/validator";
 import {parseFeeRecipient} from "./feeRecipient.js";
 import {readFile} from "./file.js";
 
 const UINT64_MAX = 2n ** 64n - 1n;
 const BUILDER_AUTH_DATA_PATTERN = new RegExp(`^0x(?:[a-fA-F0-9]{2}){1,${MAX_BUILDER_AUTH_DATA_SIZE}}$`);
 
-type ProposerConfig = ValidatorProposerConfig["defaultConfig"];
+/** Proposer configs as configured by the user, the default fee recipient is not yet known to be set */
+export type ParsedProposerConfig = {
+  proposerConfig: ValidatorProposerConfig["proposerConfig"];
+  defaultConfig: ProposerConfig;
+};
 
 type ProposerConfigFileSection = {
   graffiti?: string;
@@ -34,15 +38,12 @@ type ProposerConfigFile = {
   default_config?: ProposerConfigFileSection;
 };
 
-export function parseProposerConfig(
-  configFilePath: string,
-  defaultArgsConfig?: ProposerConfig
-): ValidatorProposerConfig {
+export function parseProposerConfig(configFilePath: string, defaultArgsConfig?: ProposerConfig): ParsedProposerConfig {
   const configFile = readFile<ProposerConfigFile>(configFilePath, ["yml", "yaml"]);
   const defaultConfigParsed = parseProposerConfigSection(configFile.default_config || {}, defaultArgsConfig);
 
   const proposerConfigFile = configFile.proposer_config || {};
-  const proposerConfigParsed: ValidatorProposerConfig["proposerConfig"] = {};
+  const proposerConfigParsed: ParsedProposerConfig["proposerConfig"] = {};
   for (const pubkeyHex of Object.keys(proposerConfigFile)) {
     proposerConfigParsed[pubkeyHex] = parseProposerConfigSection(proposerConfigFile[pubkeyHex]);
   }

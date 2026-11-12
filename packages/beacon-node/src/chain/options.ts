@@ -1,4 +1,3 @@
-import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {DEFAULT_ARCHIVE_MODE} from "./archiveStore/constants.js";
 import {ArchiveMode, ArchiveStoreOpts} from "./archiveStore/interface.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
@@ -112,7 +111,7 @@ export const defaultChainOptions: IChainOptions = {
   dedupePayloads: true,
   computeUnrealized: true,
   fastConfirmation: false,
-  suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
+  suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   graffitiAppend: true,
   serveHistoricalState: false,
   archiveStateEpochFrequency: 1024,
