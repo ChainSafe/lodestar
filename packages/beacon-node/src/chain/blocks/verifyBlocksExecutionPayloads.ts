@@ -3,6 +3,7 @@ import {
   BlockExecutionStatus,
   ExecutionStatus,
   IForkChoice,
+  LVHInvalidJudged,
   LVHInvalidResponse,
   LVHValidResponse,
   ProtoBlock,
@@ -200,8 +201,9 @@ export async function verifyBlockExecutionPayload(
       const lvhResponse = {
         executionStatus,
         latestValidExecHash: execResult.latestValidHash,
-        invalidateFromParentBlockRoot: blockInput.parentRootHex,
-        invalidateFromParentBlockHash: toRootHex(executionPayloadEnabled.parentHash),
+        invalidateFromBlockRoot: blockInput.parentRootHex,
+        invalidateFromBlockHash: toRootHex(executionPayloadEnabled.parentHash),
+        judged: LVHInvalidJudged.ChildPayload,
       };
       const execError = new BlockError(block, {
         code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
@@ -284,8 +286,9 @@ function getSegmentErrorResponse(
       invalidSegmentLVH = {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: lvhResponse.latestValidExecHash,
-        invalidateFromParentBlockRoot: parentBlock.blockRoot,
-        invalidateFromParentBlockHash: parentBlock.executionPayloadBlockHash,
+        invalidateFromBlockRoot: parentBlock.blockRoot,
+        invalidateFromBlockHash: parentBlock.executionPayloadBlockHash,
+        judged: LVHInvalidJudged.ChildPayload,
       };
     }
   }

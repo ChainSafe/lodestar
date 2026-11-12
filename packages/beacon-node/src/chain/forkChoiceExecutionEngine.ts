@@ -1,8 +1,8 @@
-import {ExecutionStatus, IForkChoice, LVHInvalidResponse} from "@lodestar/fork-choice";
+import {ExecutionStatus, IForkChoice, LVHInvalidJudged, LVHInvalidResponse} from "@lodestar/fork-choice";
 import {ForkName, ForkPostFulu} from "@lodestar/params";
 import {RootHex, bellatrix} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {Logger} from "@lodestar/utils";
+import {LogDataBasic, Logger} from "@lodestar/utils";
 import {ExecutionPayloadBodyV2} from "../execution/engine/types.js";
 import {DATA} from "../execution/engine/utils.js";
 import {
@@ -119,13 +119,20 @@ export class ForkChoiceExecutionEngine {
   }
 
   /**
-   * Apply an execution engine INVALID verdict to fork choice and move the chain head off the invalid chain
+   * Apply an execution engine INVALID verdict to fork choice and move the chain head off the invalid chain.
+   * `judgedLogCtx` identifies the judged payload in logs when it is not the from node.
    */
-  invalidateExecutionPayloads(lvh: LVHInvalidResponse, source: ExecutionInvalidSource): void {
+  invalidateExecutionPayloads(
+    lvh: LVHInvalidResponse,
+    source: ExecutionInvalidSource,
+    judgedLogCtx?: Record<string, LogDataBasic>
+  ): void {
     const logCtx = {
+      ...judgedLogCtx,
       source,
-      blockRoot: lvh.invalidateFromParentBlockRoot,
-      blockHash: lvh.invalidateFromParentBlockHash,
+      judged: lvh.judged,
+      fromBlockRoot: lvh.invalidateFromBlockRoot,
+      fromBlockHash: lvh.invalidateFromBlockHash,
       latestValidHash: lvh.latestValidExecHash ?? "null",
     };
     const applied = this.forkChoice.validateLatestHash(lvh, {strict: source === ExecutionInvalidSource.blockSegment});
@@ -165,8 +172,9 @@ export class ForkChoiceExecutionEngine {
           {
             executionStatus: ExecutionStatus.Invalid,
             latestValidExecHash: latestValidHash,
-            invalidateFromParentBlockRoot: headBlockRoot,
-            invalidateFromParentBlockHash: headBlockHash,
+            invalidateFromBlockRoot: headBlockRoot,
+            invalidateFromBlockHash: headBlockHash,
+            judged: LVHInvalidJudged.FromBlock,
           },
           ExecutionInvalidSource.forkchoiceUpdated
         );

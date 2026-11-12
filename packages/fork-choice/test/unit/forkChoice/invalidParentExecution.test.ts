@@ -9,6 +9,7 @@ import {
   ForkChoiceError,
   ForkChoiceErrorCode,
   InvalidBlockCode,
+  LVHInvalidJudged,
   PayloadStatus,
   ProtoArray,
 } from "../../../src/index.js";
@@ -88,8 +89,9 @@ function invalidateHead(forkChoice: ForkChoice, isGloas: boolean): void {
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: null,
-      invalidateFromParentBlockRoot: getBlockRoot(headSlot),
-      invalidateFromParentBlockHash: payloadHash(isGloas ? headSlot - 1 : headSlot),
+      invalidateFromBlockRoot: getBlockRoot(headSlot),
+      invalidateFromBlockHash: payloadHash(isGloas ? headSlot - 1 : headSlot),
+      judged: LVHInvalidJudged.FromBlock,
     },
     {strict: false}
   );

@@ -3,7 +3,15 @@ import {BitArray} from "@chainsafe/ssz";
 import {PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {ExecutionStatus, PayloadStatus, ProtoArray, ProtoBlock, ProtoNode, getPtcVerdict} from "../../../src/index.js";
+import {
+  ExecutionStatus,
+  LVHInvalidJudged,
+  PayloadStatus,
+  ProtoArray,
+  ProtoBlock,
+  ProtoNode,
+  getPtcVerdict,
+} from "../../../src/index.js";
 import {countNoVotes} from "../../../src/protoArray/protoArray.js";
 
 describe("Gloas Fork Choice", () => {
@@ -797,8 +805,9 @@ describe("Gloas Fork Choice", () => {
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: null,
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xa1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xa1",
+          judged: LVHInvalidJudged.FromBlock,
         },
         gloasForkSlot + 1,
         {strict: false}
@@ -826,8 +835,9 @@ describe("Gloas Fork Choice", () => {
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: null,
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xb1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xb1",
+          judged: LVHInvalidJudged.FromBlock,
         },
         gloasForkSlot + 1,
         {strict: false}
@@ -864,8 +874,9 @@ describe("Gloas Fork Choice", () => {
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: "0xa1",
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xb1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xb1",
+          judged: LVHInvalidJudged.FromBlock,
         },
         gloasForkSlot + 2,
         {strict: false}
@@ -955,8 +966,9 @@ describe("Gloas Fork Choice", () => {
       const lvh = {
         executionStatus: ExecutionStatus.Invalid as const,
         latestValidExecHash: null,
-        invalidateFromParentBlockRoot: "0x0b",
-        invalidateFromParentBlockHash: "0xb1",
+        invalidateFromBlockRoot: "0x0b",
+        invalidateFromBlockHash: "0xb1",
+        judged: LVHInvalidJudged.FromBlock,
       };
       expect(protoArray.validateLatestHash(lvh, gloasForkSlot + 1, {strict: false})).toBe(true);
       const applied = protoArray.validateLatestHash(
@@ -985,8 +997,9 @@ describe("Gloas Fork Choice", () => {
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: "0xc1",
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xa1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xa1",
+          judged: LVHInvalidJudged.FromBlock,
         },
         gloasForkSlot + 1,
         {strict: false}
@@ -1001,14 +1014,125 @@ describe("Gloas Fork Choice", () => {
       expect(status(protoArray, "0x0c", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
     });
 
+    it("a verdict about a child payload drops an unknown LVH instead of guessing", () => {
+      const protoArray = setup();
+      protoArray.onExecutionPayload(
+        "0x0b",
+        gloasForkSlot + 1,
+        "0xb1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+      // C's envelope (built on FULL(B)) is INVALID, the LVH is not on the ancestor chain
+      const unknown = protoArray.validateLatestHash(
+        {
+          executionStatus: ExecutionStatus.Invalid,
+          latestValidExecHash: "0xdead",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xb1",
+          judged: LVHInvalidJudged.ChildPayload,
+        },
+        gloasForkSlot + 2,
+        {strict: false}
+      );
+      expect(unknown).toBe(false);
+      expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Syncing);
+
+      // With the LVH at A's payload, B's payload is invalid
+      const known = protoArray.validateLatestHash(
+        {
+          executionStatus: ExecutionStatus.Invalid,
+          latestValidExecHash: "0xa1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xb1",
+          judged: LVHInvalidJudged.ChildPayload,
+        },
+        gloasForkSlot + 2,
+        {strict: false}
+      );
+      expect(known).toBe(true);
+      expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
+      expect(status(protoArray, "0x0b", PayloadStatus.EMPTY)).toBe(ExecutionStatus.Syncing);
+      expect(status(protoArray, "0x0a", PayloadStatus.FULL)).toBe(ExecutionStatus.Syncing);
+    });
+
+    it("a verdict about a child payload is dropped when the LVH conflicts with a validated ancestor", () => {
+      const protoArray = setup();
+      protoArray.onExecutionPayload(
+        "0x0b",
+        gloasForkSlot + 1,
+        "0xb1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+      protoArray.validateLatestHash(
+        {executionStatus: ExecutionStatus.Valid, latestValidExecHash: "0xa1", blockRoot: "0x0a"},
+        gloasForkSlot + 1,
+        {strict: false}
+      );
+      // LVH above A's payload would invalidate the validated A payload, the verdict is dropped whole
+      const applied = protoArray.validateLatestHash(
+        {
+          executionStatus: ExecutionStatus.Invalid,
+          latestValidExecHash: "0x0a",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xb1",
+          judged: LVHInvalidJudged.ChildPayload,
+        },
+        gloasForkSlot + 2,
+        {strict: false}
+      );
+      expect(applied).toBe(false);
+      expect(protoArray.lvhError).toBeUndefined();
+      expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Syncing);
+      expect(status(protoArray, "0x0a", PayloadStatus.FULL)).toBe(ExecutionStatus.Valid);
+    });
+
+    it("a verdict about a child payload still invalidates the justified block's own payload", () => {
+      const protoArray = setup("0x0b");
+      protoArray.onExecutionPayload(
+        "0x0b",
+        gloasForkSlot + 1,
+        "0xb1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+      // LVH above A's payload would cross the justified block, only what is above it is invalidated
+      const applied = protoArray.validateLatestHash(
+        {
+          executionStatus: ExecutionStatus.Invalid,
+          latestValidExecHash: "0x0a",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xb1",
+          judged: LVHInvalidJudged.ChildPayload,
+        },
+        gloasForkSlot + 2,
+        {strict: false}
+      );
+      expect(applied).toBe(true);
+      expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
+      expect(status(protoArray, "0x0b", PayloadStatus.PENDING)).toBe(ExecutionStatus.Syncing);
+      expect(status(protoArray, "0x0b", PayloadStatus.EMPTY)).toBe(ExecutionStatus.Syncing);
+    });
+
     it("never invalidates the EMPTY variant of the justified block but still its own payload", () => {
       const protoArray = setup("0x0b");
       const fromEmpty = protoArray.validateLatestHash(
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: null,
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xa1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xa1",
+          judged: LVHInvalidJudged.FromBlock,
         },
         gloasForkSlot + 1,
         {strict: false}
@@ -1031,8 +1155,9 @@ describe("Gloas Fork Choice", () => {
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: null,
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xb1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xb1",
+          judged: LVHInvalidJudged.FromBlock,
         },
         gloasForkSlot + 1,
         {strict: false}

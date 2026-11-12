@@ -4,6 +4,7 @@ import {
   BlockExecutionStatus,
   BlockExtraMeta,
   ExecutionStatus,
+  LVHInvalidJudged,
   PayloadStatus,
   ProtoArray,
   ProtoBlock,
@@ -171,8 +172,9 @@ describe("executionStatus / normal updates", () => {
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "2C",
-      invalidateFromParentBlockRoot: "3C",
-      invalidateFromParentBlockHash: "3C",
+      invalidateFromBlockRoot: "3C",
+      invalidateFromBlockHash: "3C",
+      judged: LVHInvalidJudged.FromBlock,
     },
     3
   );
@@ -235,8 +237,9 @@ describe("executionStatus / normal updates", () => {
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "1A",
-      invalidateFromParentBlockRoot: "3A",
-      invalidateFromParentBlockHash: "3A",
+      invalidateFromBlockRoot: "3A",
+      invalidateFromBlockHash: "3A",
+      judged: LVHInvalidJudged.FromBlock,
     },
     3
   );
@@ -283,8 +286,9 @@ describe("executionStatus / invalidate all postmerge chain", () => {
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      invalidateFromParentBlockRoot: "3B",
-      invalidateFromParentBlockHash: "3B",
+      invalidateFromBlockRoot: "3B",
+      invalidateFromBlockHash: "3B",
+      judged: LVHInvalidJudged.FromBlock,
     },
     3
   );
@@ -364,8 +368,9 @@ describe("executionStatus / poision forkchoice if we invalidate previous valid",
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          invalidateFromParentBlockRoot: "3A",
-          invalidateFromParentBlockHash: "3A",
+          invalidateFromBlockRoot: "3A",
+          invalidateFromBlockHash: "3A",
+          judged: LVHInvalidJudged.FromBlock,
         },
         3
       )
@@ -402,8 +407,9 @@ describe("executionStatus / poision forkchoice if we validate previous invalid",
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      invalidateFromParentBlockRoot: "3B",
-      invalidateFromParentBlockHash: "3B",
+      invalidateFromBlockRoot: "3B",
+      invalidateFromBlockHash: "3B",
+      judged: LVHInvalidJudged.FromBlock,
     },
     3
   );
@@ -451,8 +457,9 @@ describe("executionStatus / null LVH invalidates only the queried payload", () =
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: null,
-      invalidateFromParentBlockRoot: "3A",
-      invalidateFromParentBlockHash: "3A",
+      invalidateFromBlockRoot: "3A",
+      invalidateFromBlockHash: "3A",
+      judged: LVHInvalidJudged.FromBlock,
     },
     3,
     {strict: false}
@@ -484,8 +491,9 @@ describe("executionStatus / lenient verdicts never contradict an earlier VALID",
       {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-        invalidateFromParentBlockRoot: "1A",
-        invalidateFromParentBlockHash: "1A",
+        invalidateFromBlockRoot: "1A",
+        invalidateFromBlockHash: "1A",
+        judged: LVHInvalidJudged.FromBlock,
       },
       3,
       {strict: false}
@@ -505,8 +513,9 @@ describe("executionStatus / lenient verdicts never contradict an earlier VALID",
       {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-        invalidateFromParentBlockRoot: "3A",
-        invalidateFromParentBlockHash: "3A",
+        invalidateFromBlockRoot: "3A",
+        invalidateFromBlockHash: "3A",
+        judged: LVHInvalidJudged.FromBlock,
       },
       3,
       {strict: false}
@@ -574,8 +583,9 @@ describe("executionStatus / lenient verdicts never contradict an earlier VALID",
       {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: null,
-        invalidateFromParentBlockRoot: "3A",
-        invalidateFromParentBlockHash: "3A",
+        invalidateFromBlockRoot: "3A",
+        invalidateFromBlockHash: "3A",
+        judged: LVHInvalidJudged.FromBlock,
       },
       3,
       {strict: false}
@@ -604,8 +614,9 @@ describe("executionStatus / lenient verdicts never cross the justified node", ()
       {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: "1A",
-        invalidateFromParentBlockRoot: "3A",
-        invalidateFromParentBlockHash: "3A",
+        invalidateFromBlockRoot: "3A",
+        invalidateFromBlockHash: "3A",
+        judged: LVHInvalidJudged.FromBlock,
       },
       3,
       {strict: false}

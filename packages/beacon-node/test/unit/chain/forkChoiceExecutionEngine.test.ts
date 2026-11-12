@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from "vitest";
-import {ExecutionStatus, IForkChoice, LVHInvalidResponse, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, IForkChoice, LVHInvalidJudged, LVHInvalidResponse, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {ExecutionInvalidSource} from "../../../src/chain/forkChoice/index.js";
@@ -59,8 +59,9 @@ describe("ForkChoiceExecutionEngine", () => {
   const invalidLvh: LVHInvalidResponse = {
     executionStatus: ExecutionStatus.Invalid,
     latestValidExecHash: latestValidHash,
-    invalidateFromParentBlockRoot: headBlockRoot,
-    invalidateFromParentBlockHash: headBlockHash,
+    invalidateFromBlockRoot: headBlockRoot,
+    invalidateFromBlockHash: headBlockHash,
+    judged: LVHInvalidJudged.FromBlock,
   };
 
   describe("notifyForkchoiceUpdate", () => {
