@@ -1,19 +1,17 @@
 import {BeaconConfig} from "@lodestar/config";
-import {BUILDER_INDEX_SELF_BUILD, GENESIS_SLOT} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, DOMAIN_BEACON_PROPOSER, GENESIS_SLOT} from "@lodestar/params";
 import {
   ISignatureSet,
   computeEpochAtSlot,
   createIndexedSignatureSetFromComponents,
   createSingleSignatureSetFromComponents,
-  getBlockProposerSignatureSet,
   getExecutionPayloadEnvelopeSigningRoot,
 } from "@lodestar/state-transition";
 import {BuilderIndex, Root, SignedBeaconBlock, Slot, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {IBlsVerifier} from "../../chain/bls/index.js";
+import {ValidatedBlock} from "../utils/downloadByRange.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
-
-export type BackfillBlock = {block: SignedBeaconBlock; blockRoot: Uint8Array};
 
 /**
  * Check that `blocks` (ascending) are within `[startSlot, endSlot)` and form a chain whose last block is
@@ -28,8 +26,8 @@ export function assertLinearChainToRoot(
   expectedRoot: Root,
   startSlot: Slot,
   endSlot: Slot
-): BackfillBlock[] {
-  const verified = new Array<BackfillBlock>(blocks.length);
+): ValidatedBlock[] {
+  const verified = new Array<ValidatedBlock>(blocks.length);
   let childSlot = endSlot;
   let childParentRoot = expectedRoot;
 
@@ -72,10 +70,10 @@ export async function verifyProposerSignatures(
   config: BeaconConfig,
   bls: IBlsVerifier,
   pubkeyCount: number,
-  blocks: BackfillBlock[]
+  blocks: ValidatedBlock[]
 ): Promise<void> {
   const signatureSets: ISignatureSet[] = [];
-  for (const {block} of blocks) {
+  for (const {block, blockRoot} of blocks) {
     // The genesis block is never signed
     if (block.message.slot === GENESIS_SLOT) continue;
 
@@ -86,7 +84,10 @@ export async function verifyProposerSignatures(
         proposerIndex: block.message.proposerIndex,
       });
     }
-    signatureSets.push(getBlockProposerSignatureSet(config, block));
+    const {slot, proposerIndex} = block.message;
+    const domain = config.getDomain(slot, DOMAIN_BEACON_PROPOSER, slot);
+    const signingRoot = ssz.phase0.SigningData.hashTreeRoot({objectRoot: blockRoot, domain});
+    signatureSets.push(createIndexedSignatureSetFromComponents(proposerIndex, signingRoot, block.signature));
   }
 
   if (signatureSets.length > 0 && !(await bls.verifySignatureSets(signatureSets, {batchable: true}))) {

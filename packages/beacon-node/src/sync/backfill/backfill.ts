@@ -17,22 +17,27 @@ import {
 import {Logger, byteArrayEquals, prettyPrintIndices, sleep, toRootHex} from "@lodestar/utils";
 import {DataColumnSidecarValidationError} from "../../chain/errors/dataColumnSidecarError.js";
 import {IBeaconChain} from "../../chain/index.js";
+import {IChainOptions} from "../../chain/options.js";
 import {IBeaconDb} from "../../db/index.js";
+import {encodeArchivedHeaderEnvelope} from "../../db/repositories/index.js";
+import {IExecutionEngine} from "../../execution/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {INetwork, PeerAction} from "../../network/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig, getBlobKzgCommitments} from "../../util/dataColumns.js";
+import {isRebuildMiss, reconstructExecutionPayloadEnvelopes} from "../../util/execution.js";
+import {toSignedHeaderEnvelope} from "../../util/headerEnvelope.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {shuffle} from "../../util/shuffle.js";
 import {
   DownloadByRangeError,
+  ValidatedBlock,
   validateColumnsByRangeResponse,
   validateEnvelopesByRangeResponse,
 } from "../utils/downloadByRange.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
 import {
-  BackfillBlock,
   assertEnvelopeConsistency,
   assertLinearChainToRoot,
   getBackfillEnvelopeSignatureSet,
@@ -73,6 +78,8 @@ export type BackfillSyncModules = {
   chain: Pick<IBeaconChain, "bls" | "earliestAvailableSlot"> & {
     clock: Pick<IClock, "currentEpoch" | "currentSlot">;
     custodyConfig: Pick<CustodyConfig, "custodyColumns" | "targetCustodyGroupCount">;
+    executionEngine: Pick<IExecutionEngine, "getPayloadBodiesByHashV2">;
+    opts: Pick<IChainOptions, "dedupePayloads">;
     pubkeyCache: Pick<IBeaconChain["pubkeyCache"], "size">;
   };
   db: Pick<IBeaconDb, "blockArchive" | "dataColumns" | "earliestAvailableSlot" | "executionPayloadEnvelopeArchive">;
@@ -111,7 +118,7 @@ type BackfillCursor = {
 
 type BackfillBatch = {
   /** Ascending, never empty */
-  blocks: BackfillBlock[];
+  blocks: ValidatedBlock[];
   columns: Map<RootHex, Map<ColumnIndex, DataColumnSidecar>>;
   envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope>;
 };
@@ -200,27 +207,36 @@ export class BackfillSync {
 
     const peers = this.getPeers(startSlot);
     this.metrics?.backfillSync.peers.set(peers.length);
-    const peer = peers[0];
-    if (peer === undefined) {
+    const blockPeer = peers[0];
+    if (blockPeer === undefined) {
       this.logger.debug("No peers to backfill from", {startSlot, endSlot});
       return false;
     }
 
     let batch: BackfillBatch;
+    // Peer to hold responsible if the step in flight fails, `downloadColumns` handles its own peers
+    let requestPeer: PeerSyncMeta | null = blockPeer;
     try {
       const blocks = await this.timeStep(BackfillBatchStep.blocks, () =>
-        this.downloadBlocks(peer.peerId, cursor, startSlot, endSlot)
+        this.downloadBlocks(blockPeer.peerId, cursor, startSlot, endSlot)
       );
+      // A block found by root may be below the range the peers were selected for
+      const batchStartSlot = blocks[0].block.message.slot;
+      const dataPeers = batchStartSlot < startSlot ? this.getPeers(batchStartSlot) : peers;
       const fullPayloads = getFullPayloads(blocks, cursor.parentBlockHash);
+
+      const envelopePeer = dataPeers[0] ?? null;
+      requestPeer = envelopePeer;
       const envelopes = await this.timeStep(BackfillBatchStep.envelopes, () =>
-        this.downloadEnvelopes(peer.peerId, blocks, fullPayloads)
+        this.downloadEnvelopes(envelopePeer, blocks, fullPayloads)
       );
+      requestPeer = null;
       const columns = await this.timeStep(BackfillBatchStep.columns, () =>
-        this.downloadColumns(peers, blocks, fullPayloads)
+        this.downloadColumns(dataPeers, blocks, fullPayloads)
       );
       batch = {blocks, columns, envelopes};
     } catch (e) {
-      this.onDownloadError(peer.peerId, e as Error, {startSlot, count: endSlot - startSlot});
+      this.onDownloadError(requestPeer?.peerId ?? null, e as Error, {startSlot, count: endSlot - startSlot});
       return false;
     }
 
@@ -299,12 +315,12 @@ export class BackfillSync {
     const custodyColumns = new Set(this.chain.custodyConfig.custodyColumns);
     const peers: {meta: PeerSyncMeta; commonColumns: number}[] = [];
 
+    for (const [peerId, cooldownUntil] of this.peerCooldowns) {
+      if (cooldownUntil <= now) this.peerCooldowns.delete(peerId);
+    }
+
     for (const peerId of shuffle(this.network.getConnectedPeers())) {
-      const cooldownUntil = this.peerCooldowns.get(peerId);
-      if (cooldownUntil !== undefined) {
-        if (cooldownUntil > now) continue;
-        this.peerCooldowns.delete(peerId);
-      }
+      if (this.peerCooldowns.has(peerId)) continue;
 
       const meta = this.network.getConnectedPeerSyncMeta(peerId);
       // Status only carries earliestAvailableSlot from Fulu, before that any peer may have the range
@@ -322,7 +338,7 @@ export class BackfillSync {
     cursor: BackfillCursor,
     startSlot: Slot,
     endSlot: Slot
-  ): Promise<BackfillBlock[]> {
+  ): Promise<ValidatedBlock[]> {
     const count = endSlot - startSlot;
     let minSlot = startSlot;
     let blocks = await this.network.sendBeaconBlocksByRange(peerId, {startSlot, count, step: 1});
@@ -355,8 +371,8 @@ export class BackfillSync {
    * See https://github.com/ethereum/consensus-specs/pull/5771
    */
   private async downloadEnvelopes(
-    peerId: PeerIdStr,
-    blocks: BackfillBlock[],
+    peer: PeerSyncMeta | null,
+    blocks: ValidatedBlock[],
     fullPayloads: Set<Slot>
   ): Promise<Map<Slot, gloas.SignedExecutionPayloadEnvelope>> {
     const envelopes = new Map<Slot, gloas.SignedExecutionPayloadEnvelope>();
@@ -365,7 +381,16 @@ export class BackfillSync {
       return envelopes;
     }
 
-    const response = await this.network.sendExecutionPayloadEnvelopesByRange(peerId, getSlotRange(fullBlocks));
+    if (peer === null) {
+      const {block, blockRoot} = fullBlocks[0];
+      throw new BackfillSyncError({
+        code: BackfillSyncErrorCode.ENVELOPE_UNAVAILABLE,
+        slot: block.message.slot,
+        root: toRootHex(blockRoot),
+      });
+    }
+
+    const response = await this.network.sendExecutionPayloadEnvelopesByRange(peer.peerId, getSlotRange(fullBlocks));
     const validated = validateEnvelopesByRangeResponse(blocks, undefined, response);
 
     const signatureSets: ISignatureSet[] = [];
@@ -400,7 +425,7 @@ export class BackfillSync {
 
   private async downloadColumns(
     peers: PeerSyncMeta[],
-    blocks: BackfillBlock[],
+    blocks: ValidatedBlock[],
     fullPayloads: Set<Slot>
   ): Promise<Map<RootHex, Map<ColumnIndex, DataColumnSidecar>>> {
     const columns = new Map<RootHex, Map<ColumnIndex, DataColumnSidecar>>();
@@ -504,12 +529,7 @@ export class BackfillSync {
     }
 
     if (envelopes.size > 0) {
-      await this.db.executionPayloadEnvelopeArchive.batchPutBinary(
-        Array.from(envelopes, ([slot, envelope]) => ({
-          key: slot,
-          value: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
-        }))
-      );
+      await this.db.executionPayloadEnvelopeArchive.batchPutBinary(await this.encodeArchivedEnvelopes(envelopes));
     }
 
     await this.db.blockArchive.batchPutBinary(
@@ -552,12 +572,48 @@ export class BackfillSync {
     this.metrics?.backfillSync.executionPayloadEnvelopes.inc(envelopes.size);
   }
 
-  private onDownloadError(peerId: PeerIdStr, e: Error, {startSlot, count}: {startSlot: Slot; count: number}): void {
-    this.peerCooldowns.set(peerId, Date.now() + PEER_COOLDOWN_MS);
+  /**
+   * Same format as the archiver writes: only the header of a payload the execution client can serve the body
+   * of. It may not have the body, its own history can be still syncing or expired.
+   */
+  private async encodeArchivedEnvelopes(
+    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope>
+  ): Promise<{key: Slot; value: Uint8Array}[]> {
+    const entries = Array.from(envelopes);
+    const headerEnvelopes = this.chain.opts.dedupePayloads
+      ? entries.map(([, envelope]) => toSignedHeaderEnvelope(envelope))
+      : [];
+    const rebuilt = await reconstructExecutionPayloadEnvelopes(this.chain.executionEngine, null, headerEnvelopes).catch(
+      (e) => {
+        this.logger.debug("Error checking payload bodies of backfilled envelopes", {}, e as Error);
+        return [];
+      }
+    );
 
+    return entries.map(([slot, envelope], i) => {
+      const result = rebuilt.at(i);
+      return {
+        key: slot,
+        value:
+          result !== undefined && !isRebuildMiss(result)
+            ? encodeArchivedHeaderEnvelope(headerEnvelopes[i])
+            : ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope),
+      };
+    });
+  }
+
+  /** @param peerId null if no single peer is responsible for the failure */
+  private onDownloadError(
+    peerId: PeerIdStr | null,
+    e: Error,
+    {startSlot, count}: {startSlot: Slot; count: number}
+  ): void {
     const code = (e as BackfillSyncError | DownloadByRangeError).type?.code ?? "unknown";
     this.metrics?.backfillSync.batchErrors.inc({code});
-    this.logger.debug("Error downloading backfill batch", {startSlot, count, peer: peerId}, e);
+    this.logger.debug("Error downloading backfill batch", {startSlot, count, peer: peerId ?? undefined}, e);
+    if (peerId === null) return;
+
+    this.peerCooldowns.set(peerId, Date.now() + PEER_COOLDOWN_MS);
 
     // Not serving a range is not a fault, the peer may still be backfilling or have pruned it
     const isUnavailable =
@@ -575,7 +631,7 @@ export class BackfillSync {
   }
 }
 
-function getSlotRange(blocks: BackfillBlock[]): {startSlot: Slot; count: number} {
+function getSlotRange(blocks: ValidatedBlock[]): {startSlot: Slot; count: number} {
   const slots = blocks.map(({block}) => block.message.slot);
   const startSlot = Math.min(...slots);
   return {startSlot, count: Math.max(...slots) - startSlot + 1};
@@ -596,7 +652,7 @@ function toCursor(floor: Slot, child: SignedBeaconBlock): BackfillCursor {
  * Slots of Gloas blocks whose payload is canonical: the child block builds on it. Only those have an envelope
  * and columns to serve.
  */
-function getFullPayloads(blocks: BackfillBlock[], childParentBlockHash: Uint8Array | null): Set<Slot> {
+function getFullPayloads(blocks: ValidatedBlock[], childParentBlockHash: Uint8Array | null): Set<Slot> {
   const fullPayloads = new Set<Slot>();
   let parentBlockHash = childParentBlockHash;
   for (let i = blocks.length - 1; i >= 0; i--) {

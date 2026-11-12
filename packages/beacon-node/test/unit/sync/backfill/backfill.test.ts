@@ -22,16 +22,20 @@ import {BeaconBlockBody, SignedBeaconBlock, Slot, fulu, gloas, ssz} from "@lodes
 import {toRootHex} from "@lodestar/utils";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/index.js";
 import {BeaconDb} from "../../../../src/db/index.js";
+import {decodeArchivedEnvelope} from "../../../../src/db/repositories/index.js";
 import {INetwork, PeerAction} from "../../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../../src/network/peers/peersData.js";
 import {BackfillSync, BackfillSyncModules} from "../../../../src/sync/backfill/index.js";
 import {computePostFuluKzgCommitmentsInclusionProof} from "../../../../src/util/dataColumns.js";
+import {toSignedHeaderEnvelope} from "../../../../src/util/headerEnvelope.js";
 import {kzg} from "../../../../src/util/kzg.js";
 import {generateRandomBlob} from "../../../utils/blocksAndData.js";
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
 
 const VALIDATOR_COUNT = 16;
 const GENESIS_VALIDATORS_ROOT = Buffer.alloc(32, 0xaa);
+/** RLP encoding of an empty list */
+const BLOCK_ACCESS_LIST = Uint8Array.of(0xc0);
 
 type TestPeer = {
   blocks: SignedBeaconBlock[];
@@ -142,6 +146,7 @@ describe("sync / BackfillSync", () => {
     custodyColumns = [],
     isSynced = true,
     builders = [],
+    elPayloadHashes,
   }: {
     config: BeaconConfig;
     blocks: SignedBeaconBlock[];
@@ -151,6 +156,8 @@ describe("sync / BackfillSync", () => {
     custodyColumns?: number[];
     isSynced?: boolean;
     builders?: gloas.Builder[];
+    /** Payloads the execution client has the body of, payloads are not deduplicated if not set */
+    elPayloadHashes?: Set<string>;
   }): Promise<{
     backfill: BackfillSync;
     db: BeaconDb;
@@ -170,6 +177,19 @@ describe("sync / BackfillSync", () => {
       clock: {currentEpoch, currentSlot: currentEpoch * SLOTS_PER_EPOCH},
       custodyConfig: {custodyColumns, targetCustodyGroupCount: 4},
       earliestAvailableSlot: anchorSlot,
+      executionEngine: {
+        getPayloadBodiesByHashV2: async (blockHashes) =>
+          blockHashes.map((blockHash) =>
+            elPayloadHashes?.has(blockHash)
+              ? {
+                  transactions: ssz.bellatrix.Transactions.defaultValue(),
+                  withdrawals: [],
+                  blockAccessList: BLOCK_ACCESS_LIST,
+                }
+              : null
+          ),
+      },
+      opts: {dedupePayloads: elPayloadHashes !== undefined},
       pubkeyCache,
     };
     const network = getNetwork(config, new Map(Object.entries(peers)));
@@ -487,9 +507,12 @@ describe("sync / BackfillSync", () => {
       });
 
       expect(await backfill.backfillBatch()).toBe(false);
+      expect(await backfill.backfillBatch()).toBe(false);
 
       await expectUnchanged(db, chain, anchorSlot, [anchorSlot + 1]);
       expect(network.reportPeer).not.toHaveBeenCalled();
+      // The peer served valid blocks, it is asked again once more columns may be available
+      expect(network.sendBeaconBlocksByRange).toHaveBeenCalledTimes(2);
     });
 
     it("rejects sidecars whose header signature differs from the block", async () => {
@@ -540,7 +563,7 @@ describe("sync / BackfillSync", () => {
           : BUILDER_INDEX_SELF_BUILD;
 
     const blockHash = (slot: Slot): Uint8Array => Buffer.alloc(32, slot + 1);
-    const blocks = buildChain(config, [0, ...range(firstSlot, anchorSlot + 2)], (block, parent) => {
+    const setBid = (block: SignedBeaconBlock, parent: SignedBeaconBlock | undefined): void => {
       const bid = (block as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message;
       const slot = block.message.slot;
       bid.blockHash = blockHash(slot);
@@ -550,7 +573,8 @@ describe("sync / BackfillSync", () => {
         bid.parentBlockHash =
           parent.message.slot === emptySlot ? blockHash(emptySlot - 1) : blockHash(parent.message.slot);
       }
-    });
+    };
+    const blocks = buildChain(config, [0, ...range(firstSlot, anchorSlot + 2)], setBid);
 
     function signEnvelope(envelope: gloas.SignedExecutionPayloadEnvelope, proposerIndex: number): void {
       const secretKey =
@@ -559,10 +583,12 @@ describe("sync / BackfillSync", () => {
     }
 
     function getEnvelopes(
-      modify?: (envelope: gloas.SignedExecutionPayloadEnvelope) => void
+      modify?: (envelope: gloas.SignedExecutionPayloadEnvelope) => void,
+      chain = blocks,
+      slots = fullSlots
     ): gloas.SignedExecutionPayloadEnvelope[] {
-      return blocks
-        .filter((block) => fullSlots.includes(block.message.slot))
+      return chain
+        .filter((block) => slots.includes(block.message.slot))
         .map((block) => {
           const {slot, proposerIndex, parentRoot, body} = (block as gloas.SignedBeaconBlock).message;
           const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
@@ -620,6 +646,69 @@ describe("sync / BackfillSync", () => {
       await expectUnchanged(db, chain, anchorSlot, [anchorSlot + 1]);
       expect(await db.executionPayloadEnvelopeArchive.keys()).toEqual([]);
       expect(network.reportPeer).not.toHaveBeenCalled();
+    });
+
+    it("requests the envelope of a block found by root from a peer advertising its slot", async () => {
+      const sparseAnchorSlot = 3 * SLOTS_PER_EPOCH;
+      const sparseSlots = [0, 2, sparseAnchorSlot, sparseAnchorSlot + 1];
+      const sparseBlocks = buildChain(config, sparseSlots, setBid);
+      const envelopes = getEnvelopes(undefined, sparseBlocks, [2, sparseAnchorSlot]);
+      const {backfill, chain, network} = await setup({
+        config,
+        blocks: sparseBlocks,
+        anchorSlot: sparseAnchorSlot,
+        peers: {
+          a: {blocks: sparseBlocks, envelopes, earliestAvailableSlot: sparseAnchorSlot - 1},
+          b: {blocks: sparseBlocks, envelopes, earliestAvailableSlot: 0},
+        },
+      });
+
+      await backfillAll(backfill);
+
+      expect(chain.earliestAvailableSlot).toBe(0);
+      expect(network.sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+      const envelopePeers = network.sendExecutionPayloadEnvelopesByRange.mock.calls
+        .filter(([, {startSlot}]) => startSlot === 2)
+        .map(([peerId]) => peerId);
+      expect(envelopePeers).toEqual(["b"]);
+      expect(network.reportPeer).not.toHaveBeenCalled();
+    });
+
+    it("archives only the header of envelopes whose payload body the execution client has", async () => {
+      const envelopes = getEnvelopes((envelope) => {
+        envelope.message.payload.blockAccessList = BLOCK_ACCESS_LIST;
+        signEnvelope(envelope, envelope.message.payload.slotNumber % VALIDATOR_COUNT);
+      });
+      const elPayloadHashes = new Set(fullSlots.slice(1).map((slot) => toRootHex(blockHash(slot))));
+      const {backfill, db} = await setup({
+        config,
+        blocks,
+        anchorSlot,
+        builders,
+        elPayloadHashes,
+        peers: {a: {blocks, envelopes, earliestAvailableSlot: 0}},
+      });
+
+      await backfillAll(backfill);
+
+      expect(await db.executionPayloadEnvelopeArchive.keys()).toEqual(fullSlots);
+      for (const envelope of envelopes) {
+        const slot = envelope.message.payload.slotNumber;
+        const archivedBytes = await db.executionPayloadEnvelopeArchive.getBinary(slot);
+        if (archivedBytes === null) throw Error(`envelope of slot ${slot} not archived`);
+        const archived = decodeArchivedEnvelope(archivedBytes);
+        if (slot === fullSlots[0]) {
+          expect(archived.envelopeBytes, `full envelope of slot ${slot}`).toEqual(
+            Buffer.from(ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope))
+          );
+        } else {
+          const type = ssz.gloas.SignedExecutionPayloadHeaderEnvelope;
+          expect(
+            archived.headerEnvelope && type.equals(archived.headerEnvelope, toSignedHeaderEnvelope(envelope)),
+            `header envelope of slot ${slot}`
+          ).toBe(true);
+        }
+      }
     });
 
     const invalidEnvelopes: {
