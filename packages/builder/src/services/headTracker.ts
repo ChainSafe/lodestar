@@ -42,7 +42,7 @@ export class HeadTracker {
     if (epochDifference === 1) {
       return head.nextEpochDependentRoot;
     }
-    return null;
+    return blockRoot;
   }
 
   /** Drops heads from before the previous epoch, their dependent roots cannot cover a proposal from `currentSlot` on */

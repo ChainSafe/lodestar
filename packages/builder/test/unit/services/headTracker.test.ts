@@ -29,7 +29,7 @@ describe("HeadTracker", () => {
     expect(tracker.getDependentRoot(root(1), SLOTS_PER_EPOCH + 4)).toBe(root(10));
     expect(tracker.getDependentRoot(root(1), 2 * SLOTS_PER_EPOCH - 1)).toBe(root(10));
     expect(tracker.getDependentRoot(root(1), 2 * SLOTS_PER_EPOCH)).toBe(root(11));
-    expect(tracker.getDependentRoot(root(1), 3 * SLOTS_PER_EPOCH)).toBeNull();
+    expect(tracker.getDependentRoot(root(1), 3 * SLOTS_PER_EPOCH)).toBe(root(1));
     expect(tracker.getDependentRoot(root(2), SLOTS_PER_EPOCH + 4)).toBeNull();
   });
 
