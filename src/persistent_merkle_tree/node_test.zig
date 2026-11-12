@@ -1270,6 +1270,53 @@ test "editChunkedLeaf invalidates computed roots without allocating" {
     try std.testing.expectEqualSlices(u8, &leaf_hash, leaf.getRoot(&pool));
 }
 
+test "getRootParallel should match getRoot across batches and shared lazy leaves" {
+    const allocator = std.testing.allocator;
+    const depth: Depth = 13;
+    // More lazy leaves than one batch holds, so the walk hashes several batches.
+    const leaf_count = Node.Id.lazy_chunked_leaves_per_batch + 5;
+    var pool = try Node.Pool.init(.{
+        .page_allocator = allocator,
+        .allocator = allocator,
+        .pool_size = 8 * leaf_count,
+    });
+    defer pool.deinit();
+
+    const leaves = try allocator.alloc(Node.Id, leaf_count);
+    defer allocator.free(leaves);
+    var trees: [2]Node.Id = undefined;
+    for (&trees) |*tree| {
+        for (leaves, 0..) |*leaf, i| {
+            var chunks: [ChunkedLeaf.K][32]u8 align(64) = undefined;
+            for (&chunks, 0..) |*chunk, c| chunk.* = @splat(@as(u8, @truncate(i * 31 + c)));
+            leaf.* = try pool.createChunkedLeaf(&chunks, ChunkedLeaf.K);
+        }
+        tree.* = try Node.fillWithContents(&pool, leaves, depth);
+    }
+    defer for (trees) |tree| pool.unref(tree);
+
+    const expected = trees[0].getRoot(&pool).*;
+    try std.testing.expect(trees[1].isBranchLazy(&pool));
+    const actual = try trees[1].getRootParallel(&pool, std.testing.io);
+    try std.testing.expectEqualSlices(u8, &expected, actual);
+
+    // A lazy leaf under two parents is gathered twice and hashed once.
+    const chunks: [ChunkedLeaf.K][32]u8 align(64) = @splat(@splat(7));
+    const shared = try pool.createChunkedLeaf(&chunks, ChunkedLeaf.K);
+    const twin = try pool.createBranch(shared, shared);
+    defer pool.unref(twin);
+    const reference = try pool.createBranch(
+        try pool.createChunkedLeaf(&chunks, ChunkedLeaf.K),
+        try pool.createChunkedLeaf(&chunks, ChunkedLeaf.K),
+    );
+    defer pool.unref(reference);
+    try std.testing.expectEqualSlices(
+        u8,
+        reference.getRoot(&pool),
+        try twin.getRootParallel(&pool, std.testing.io),
+    );
+}
+
 test "memory_safety: batch node updates should restore the pool on exhaustion" {
     // Neighboring indices share prefixes of many lengths, so a batch that runs out of slots fails
     // while subtrees built for earlier indices still wait for their parents.
