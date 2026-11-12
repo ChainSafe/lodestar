@@ -32,6 +32,7 @@ pub const ChunkedLeaf = @import("ChunkedLeaf.zig");
 test {
     testing.refAllDecls(@This());
     _ = @import("ChunkedLeaf.zig");
+    _ = @import("FreeSlotBitmap.zig");
     _ = @import("gindex.zig");
     _ = @import("Node.zig");
     _ = @import("proof.zig");
