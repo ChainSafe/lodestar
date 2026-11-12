@@ -1,7 +1,7 @@
 import {Type} from "@chainsafe/ssz";
-import {RequestError, RequestErrorCode, ResponseIncoming} from "@lodestar/reqresp";
+import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {SerializedCache} from "../../../util/serializedCache.js";
-import {ResponseTypeGetter} from "../types.js";
+import {ResponseIncoming, ResponseTypeGetter} from "../types.js";
 
 /**
  * Sink for `<response_chunk>*`, from
@@ -12,11 +12,12 @@ import {ResponseTypeGetter} from "../types.js";
  */
 export async function collectExactOneTyped<T>(
   source: AsyncIterable<ResponseIncoming>,
-  typeFn: ResponseTypeGetter<T>
+  typeFn: ResponseTypeGetter<T>,
+  onInvalidResponse?: (chunk: ResponseIncoming) => void
 ): Promise<T> {
   for await (const chunk of source) {
     const type = typeFn(chunk.fork, chunk.protocolVersion);
-    const response = sszDeserializeResponse(type, chunk.data);
+    const response = sszDeserializeResponse(type, chunk, onInvalidResponse);
     return response;
   }
   throw new RequestError({code: RequestErrorCode.EMPTY_RESPONSE});
@@ -33,13 +34,14 @@ export async function collectMaxResponseTyped<T>(
   source: AsyncIterable<ResponseIncoming>,
   maxResponses: number,
   typeFn: ResponseTypeGetter<T>,
-  serializedCache?: SerializedCache
+  serializedCache?: SerializedCache,
+  onInvalidResponse?: (chunk: ResponseIncoming) => void
 ): Promise<T[]> {
   // else: zero or more responses
   const responses: T[] = [];
   for await (const chunk of source) {
     const type = typeFn(chunk.fork, chunk.protocolVersion);
-    const response = sszDeserializeResponse(type, chunk.data);
+    const response = sszDeserializeResponse(type, chunk, onInvalidResponse);
     // optionally cache the serialized response if the cache is available
     serializedCache?.set(response as object, chunk.data);
     responses.push(response);
@@ -62,13 +64,14 @@ export async function collectMaxResponseTypedWithBytes<T>(
   source: AsyncIterable<ResponseIncoming>,
   maxResponses: number,
   typeFn: ResponseTypeGetter<T>,
-  serializedCache?: SerializedCache
+  serializedCache?: SerializedCache,
+  onInvalidResponse?: (chunk: ResponseIncoming) => void
 ): Promise<T[]> {
   // else: zero or more responses
   const responses: T[] = [];
   for await (const chunk of source) {
     const type = typeFn(chunk.fork, chunk.protocolVersion);
-    const data = sszDeserializeResponse(type, chunk.data);
+    const data = sszDeserializeResponse(type, chunk, onInvalidResponse);
     responses.push(data);
     // optionally cache the serialized response if the cache is available
     serializedCache?.set(data as object, chunk.data);
@@ -81,10 +84,15 @@ export async function collectMaxResponseTypedWithBytes<T>(
 }
 
 /** Light wrapper on type to wrap deserialize errors */
-export function sszDeserializeResponse<T>(type: Type<T>, bytes: Uint8Array): T {
+export function sszDeserializeResponse<T>(
+  type: Type<T>,
+  chunk: ResponseIncoming,
+  onInvalidResponse?: (chunk: ResponseIncoming) => void
+): T {
   try {
-    return type.deserialize(bytes);
+    return type.deserialize(chunk.data);
   } catch (e) {
+    onInvalidResponse?.(chunk);
     throw new RequestError({code: RequestErrorCode.INVALID_RESPONSE_SSZ, errorMessage: (e as Error).message});
   }
 }

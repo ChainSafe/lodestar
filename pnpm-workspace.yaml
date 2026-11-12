@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - bindings
+  - test/interop
 
 linkWorkspacePackages: true
 

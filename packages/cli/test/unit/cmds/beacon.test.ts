@@ -19,6 +19,31 @@ describe("cmds / beacon / args handler", () => {
   // Make tests faster skipping a network call
   process.env.SKIP_FETCH_NETWORK_BOOTNODES = "true";
 
+  it("rejects native settings before creating node files", async () => {
+    const dataDir = path.join(testFilesDir, "invalid-native-settings");
+    await expect(
+      runBeaconHandlerInit({dataDir, "network.backend": "native", tcp: false, "network.gossipsubDLow": 7})
+    ).rejects.toThrow("gossipsubDLow=6");
+    expect(fs.existsSync(dataDir)).toBe(false);
+  });
+
+  it("accepts Gloas and rejects Heze for the native state view", async () => {
+    const paramsFile = path.join(testFilesDir, "native_fork_config.yaml");
+    fs.writeFileSync(
+      paramsFile,
+      JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100, HEZE_FORK_EPOCH: Infinity}))
+    );
+    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).resolves.toBeDefined();
+    fs.writeFileSync(
+      paramsFile,
+      JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100, HEZE_FORK_EPOCH: 200}))
+    );
+    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).rejects.toThrow(
+      "--chain.nativeStateTransition does not support Heze"
+    );
+    await expect(runBeaconHandlerInit({paramsFile})).resolves.toBeDefined();
+  });
+
   it.each([
     ["mainnet", false],
     ["gnosis", true],

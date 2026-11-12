@@ -241,3 +241,30 @@ describe("Gloas light client server", () => {
     expect(() => ssz.gloas.LightClientUpdate.serialize(update)).not.toThrow();
   });
 });
+
+it("does not leave a committee read outstanding when bootstrap loading fails", async () => {
+  const currentRoot = new Uint8Array(32).fill(1);
+  const nextRoot = new Uint8Array(32).fill(2);
+  const failure = new Error("committee read failed");
+  const get = vi.fn().mockRejectedValueOnce(failure);
+  const db = {
+    syncCommitteeWitness: {
+      get: vi.fn().mockResolvedValue({currentSyncCommitteeRoot: currentRoot, nextSyncCommitteeRoot: nextRoot}),
+    },
+    syncCommittee: {get},
+  } as unknown as IBeaconDb;
+  const server = new LightClientServer(
+    {},
+    {
+      config,
+      db,
+      clock: {} as never,
+      metrics: null,
+      emitter: {} as never,
+      logger: {debug: vi.fn(), error: vi.fn()} as never,
+      signal: new AbortController().signal,
+    }
+  );
+  await expect(server.getBootstrap(new Uint8Array(32))).rejects.toBe(failure);
+  expect(get).toHaveBeenCalledExactlyOnceWith(currentRoot);
+});

@@ -36,6 +36,29 @@ describe("sync / range / per-block processing", () => {
     vi.clearAllMocks();
   });
 
+  it("propagates a callback failure after registering a chain but before adding its peer", () => {
+    const chain = getMockedBeaconChain();
+    chain.getHeadState.mockReturnValue({forkName: ForkName.fulu} as ReturnType<typeof chain.getHeadState>);
+    const rangeSync = new RangeSync({
+      chain,
+      network: getMockedNetwork(),
+      config: chain.config,
+      logger: chain.logger,
+      metrics: null,
+    });
+    const failure = new Error("log sink failed after chain registration");
+    chain.logger.debug.mockImplementation((message) => {
+      if (message === "SyncChain added") throw failure;
+    });
+    const localStatus = ssz.fulu.Status.defaultValue();
+    expect(() => rangeSync.addPeer(validPeerIdStr, localStatus, {...localStatus, finalizedEpoch: 1})).toThrow(failure);
+    expect(SyncChain).toHaveBeenCalledOnce();
+    const registered = rangeSync["chains"].get(RangeSyncType.Finalized);
+    expect(registered).toBe(vi.mocked(SyncChain).mock.results[0].value);
+    expect(registered?.addPeer).not.toHaveBeenCalled();
+    expect(registered?.startSyncing).not.toHaveBeenCalled();
+  });
+
   it.each([
     {hasEnvelope: false, blobCount: 0},
     {hasEnvelope: false, blobCount: 1},

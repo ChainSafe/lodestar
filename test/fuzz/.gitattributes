@@ -13,3 +13,4 @@ corpus/ssz_bitvector-cmin/** binary linguist-generated=true
 corpus/ssz_bytelist-cmin/** binary linguist-generated=true
 corpus/ssz_containers-cmin/** binary linguist-generated=true
 corpus/ssz_lists-cmin/** binary linguist-generated=true
+corpus/discv5_wire-cmin/** binary linguist-generated=true

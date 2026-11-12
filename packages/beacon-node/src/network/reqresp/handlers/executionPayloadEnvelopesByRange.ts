@@ -121,6 +121,9 @@ export function validateExecutionPayloadEnvelopesByRangeRequest(
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
+  if (!Number.isSafeInteger(startSlot)) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot is not a safe integer");
+  }
 
   // The gloas req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
   // Archival nodes may still serve older retained payloads to allow genesis sync.
@@ -129,6 +132,10 @@ export function validateExecutionPayloadEnvelopesByRangeRequest(
   // distinct from the MAX_REQUEST_BLOCKS_DENEB cap used for block-by-range.
   if (count > config.MAX_REQUEST_PAYLOADS) {
     count = config.MAX_REQUEST_PAYLOADS;
+  }
+
+  if (!Number.isSafeInteger(startSlot + count)) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "range end is not a safe integer");
   }
 
   return {startSlot, count};

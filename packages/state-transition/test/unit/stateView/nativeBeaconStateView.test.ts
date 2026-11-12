@@ -129,6 +129,92 @@ describe("NativeBeaconStateView", () => {
     expect(binding.release).not.toHaveBeenCalled();
   });
 
+  it("adapts and caches Gloas fields without losing bid integers or repeated PTC positions", () => {
+    const state = ssz.gloas.BeaconState.defaultValue();
+    state.executionPayloadAvailability.set(3, true);
+    state.latestExecutionPayloadBid.gasLimit = (1n << 64n) - 1n;
+    state.latestExecutionPayloadBid.executionPayment = (1n << 63n) + 1n;
+    const getBid = vi.fn(() => state.latestExecutionPayloadBid);
+    const binding = {
+      ...state,
+      forkName: ForkName.gloas,
+      get latestExecutionPayloadBid() {
+        return getBid();
+      },
+      getBuildersLength: vi.fn(() => 1),
+      getBuilder: vi.fn(() => ssz.gloas.Builder.defaultValue()),
+      canBuilderCoverBid: vi.fn(() => true),
+      getEpochPTCs: vi.fn(() => [Uint32Array.of(0, 1, 0)]),
+      getPayloadTimelinessCommittee: vi.fn(() => Uint32Array.of(0, 1, 0)),
+      getIndicesInPayloadTimelinessCommittee: vi.fn(() => [0, 2]),
+      withParentPayloadApplied: vi.fn(() => binding),
+      pendingDepositsCount: 3,
+    } as unknown as IBeaconStateViewNative;
+    const view = new NativeBeaconStateView(config, binding);
+    expect(view.executionPayloadAvailability.get(3)).toBe(true);
+    expect(view.executionPayloadAvailability).toBe(view.executionPayloadAvailability);
+    expect(view.latestExecutionPayloadBid).toEqual(state.latestExecutionPayloadBid);
+    expect(view.latestExecutionPayloadBid).toBe(view.latestExecutionPayloadBid);
+    expect(getBid).toHaveBeenCalledOnce();
+    expect(view.latestBlockHash).toEqual(state.latestBlockHash);
+    expect(view.payloadExpectedWithdrawals).toEqual(state.payloadExpectedWithdrawals);
+    expect(view.builderPendingPayments).toEqual(state.builderPendingPayments);
+    expect(view.builderPendingWithdrawals).toEqual(state.builderPendingWithdrawals);
+    expect(view.getBuildersLength()).toBe(1);
+    expect(view.getBuilder(0)).toEqual(ssz.gloas.Builder.defaultValue());
+    expect(view.canBuilderCoverBid(0, 2)).toBe(true);
+    expect(view.getPayloadTimelinessCommittee(0)).toEqual(Uint32Array.of(0, 1, 0));
+    expect(view.getEpochPTCs(0)).toEqual([Uint32Array.of(0, 1, 0)]);
+    expect(view.getIndicesInPayloadTimelinessCommittee(0, 0)).toEqual([0, 2]);
+    const requests = ssz.gloas.ExecutionRequests.defaultValue();
+    expect(view.withParentPayloadApplied(requests)).toBeInstanceOf(NativeBeaconStateView);
+    expect(binding.withParentPayloadApplied).toHaveBeenCalledWith(ssz.gloas.ExecutionRequests.serialize(requests));
+    expect(view.preVerifyBuilderDepositsPreGloas(1, 1)).toMatchObject({
+      pendingDepositsCount: 3,
+      totalCachedDeposits: 0,
+    });
+    expect(() => view.clearPreGloasBuilderDepositCache()).not.toThrow();
+  });
+
+  it("transitions into Gloas but refuses Heze before calling the binding", () => {
+    const scheduled = createBeaconConfig(
+      {
+        ...defaultChainConfig,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 10,
+        HEZE_FORK_EPOCH: 12,
+      },
+      genesisValidatorsRoot
+    );
+    const binding = {
+      processSlots: vi.fn(() => binding),
+      stateTransition: vi.fn(() => binding),
+    } as unknown as IBeaconStateViewNative;
+    const view = new NativeBeaconStateView(scheduled, binding);
+    const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+    block.message.slot = scheduled.GLOAS_FORK_EPOCH * SLOTS_PER_EPOCH;
+    view.processSlots(block.message.slot);
+    view.stateTransition({block}, computeNewStateRootStateTransitionOpts, {});
+    expect(binding.processSlots).toHaveBeenCalledOnce();
+    expect(binding.stateTransition).toHaveBeenCalledWith(
+      ssz.gloas.SignedBeaconBlock.serialize(block),
+      false,
+      computeNewStateRootStateTransitionOpts
+    );
+    block.message.slot = scheduled.HEZE_FORK_EPOCH * SLOTS_PER_EPOCH;
+    expect(() => view.processSlots(block.message.slot)).toThrow("Native state transition does not support heze");
+    expect(() => view.stateTransition({block}, computeNewStateRootStateTransitionOpts, {})).toThrow(
+      "Native state transition does not support heze"
+    );
+    expect(binding.processSlots).toHaveBeenCalledOnce();
+    expect(binding.stateTransition).toHaveBeenCalledOnce();
+  });
+
   it("caches forwarded properties so the binding is hit once", () => {
     let forkAccessCount = 0;
     let latestBlockHeaderAccessCount = 0;

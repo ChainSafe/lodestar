@@ -112,6 +112,9 @@ jobs:
           git config user.email 'temp@github.com'
           git commit -am "${{ needs.tag.outputs.version }}"
 
+      - name: Install Rust release targets
+        run: rustup target add $(node -p 'require("./bindings/package.json").zapi.targets.join(" ")')
+
       - name: Publish to npm registry
         run: pnpm run release:publish --dist-tag rc
 

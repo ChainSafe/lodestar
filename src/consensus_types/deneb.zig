@@ -251,3 +251,20 @@ pub const SignedBeaconBlock = ssz.VariableContainerType(struct {
     message: BeaconBlock,
     signature: p.BLSSignature,
 });
+
+// Req/resp messages
+// =================
+
+pub const Status = phase0.Status;
+pub const Goodbye = phase0.Goodbye;
+pub const Ping = phase0.Ping;
+pub const BeaconBlocksByRangeRequest = phase0.BeaconBlocksByRangeRequest;
+pub const ErrorMessage = phase0.ErrorMessage;
+pub const MetaDataV2 = altair.MetaDataV2;
+
+pub const BeaconBlockRootsDeneb = ssz.FixedListType(p.Root, c.MAX_REQUEST_BLOCKS_DENEB, .{});
+
+pub const BlobSidecarsByRangeRequest = ssz.FixedContainerType(struct {
+    start_slot: p.Slot,
+    count: p.Uint64,
+});

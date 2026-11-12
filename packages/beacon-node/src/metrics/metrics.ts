@@ -3,6 +3,7 @@ import {ForkChoiceMetrics, getForkChoiceMetrics} from "@lodestar/fork-choice";
 import {BeaconStateTransitionMetrics, getMetrics} from "@lodestar/state-transition";
 import {BeaconMetrics, createBeaconMetrics} from "./metrics/beacon.js";
 import {LodestarMetrics, createLodestarMetrics} from "./metrics/lodestar.js";
+import {NetworkJsMetrics, createNetworkJsMetrics} from "./metrics/networkJs.js";
 import {collectNodeJSMetrics} from "./nodeJsMetrics.js";
 import {MetricsOptions} from "./options.js";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
@@ -12,6 +13,8 @@ export type Metrics = BeaconMetrics &
   LodestarMetrics & {
     /** Null when we use native state transition metrics instead */
     stateTransition: BeaconStateTransitionMetrics | null;
+    /** JS networking collectors; native networking exports its own scheduler metrics. */
+    networkJs: NetworkJsMetrics | null;
     register: RegistryMetricCreator;
     close: () => void;
   };
@@ -24,6 +27,8 @@ export type CreateMetricsOptions = {
    * can grab metrics from the native implementation instead.
    * */
   includeStateTransitionMetrics?: boolean;
+  /** Disable when the native network backend owns scheduling. */
+  includeNetworkJsMetrics?: boolean;
   collectNodeMetrics?: boolean;
 };
 
@@ -38,6 +43,7 @@ export function createMetrics(
   const forkChoice = getForkChoiceMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, genesisTime);
   const stateTransition = createOpts.includeStateTransitionMetrics === false ? null : getMetrics(register);
+  const networkJs = createOpts.includeNetworkJsMetrics === false ? null : createNetworkJsMetrics(register);
 
   const onUnhandledRejection = (_error: unknown): void => {
     lodestar.unhandledPromiseRejections.inc();
@@ -62,6 +68,7 @@ export function createMetrics(
     ...forkChoice,
     ...lodestar,
     stateTransition,
+    networkJs,
     register,
     close,
   };

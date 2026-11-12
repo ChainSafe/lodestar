@@ -13,6 +13,7 @@ import {
   handleColumnSidecarUnavailability,
   validateRequestedDataColumns,
 } from "../utils/dataColumnResponseValidation.js";
+import {collectHeadRange} from "./beaconBlocksByRange.js";
 
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
@@ -55,8 +56,7 @@ export async function* onDataColumnSidecarsByRange(
   // fork-choice-backed section until the following finalization, matching ExecutionPayloadEnvelopesByRange.
   const isPostGloasFinalized = chain.config.getForkSeq(finalizedSlot) >= ForkSeq.gloas;
   const archiveMaxSlot = isPostGloasFinalized ? finalizedSlot - 1 : finalizedSlot;
-  const headBlock = chain.forkChoice.getHead();
-  const headChain = chain.forkChoice.getAllAncestorBlocks(headBlock.blockRoot, headBlock.payloadStatus);
+  const headChain = collectHeadRange(chain, startSlot, endSlot, -1).reverse();
 
   for await (const block of resolveCanonicalDataColumnBlocks(
     chain,
@@ -71,6 +71,7 @@ export async function* onDataColumnSidecarsByRange(
       block.blockRoot === null
         ? await db.dataColumnSidecarArchive.getManyBinary(block.slot, availableColumns)
         : await chain.getSerializedDataColumnSidecars(block.slot, block.blockRoot, availableColumns);
+
     if (block.blockRoot === null && dataColumnSidecars.every((sidecar) => sidecar === undefined)) continue;
     const unavailableColumnIndices: ColumnIndex[] = [];
     for (let i = 0; i < dataColumnSidecars.length; i++) {
@@ -111,7 +112,7 @@ type CanonicalDataColumnBlock = {
 async function* resolveCanonicalDataColumnBlocks(
   chain: IBeaconChain,
   db: IBeaconDb,
-  headChain: ReturnType<IBeaconChain["forkChoice"]["getAllAncestorBlocks"]>,
+  headChain: ReturnType<typeof collectHeadRange>,
   startSlot: number,
   endSlot: number,
   archiveMaxSlot: number,
@@ -215,6 +216,9 @@ export function validateDataColumnSidecarsByRangeRequest(
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
+  if (!Number.isSafeInteger(startSlot)) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot is not a safe integer");
+  }
 
   // Spec: [max(compute_blob_data_retention_start_epoch(current_epoch), FULU_FORK_EPOCH), current_epoch]
   const minimumRequestEpoch = Math.max(getBlobDataRetentionStartEpoch(config, currentEpoch), config.FULU_FORK_EPOCH);
@@ -224,6 +228,10 @@ export function validateDataColumnSidecarsByRangeRequest(
 
   if (count > config.MAX_REQUEST_BLOCKS_DENEB) {
     count = config.MAX_REQUEST_BLOCKS_DENEB;
+  }
+
+  if (!Number.isSafeInteger(startSlot + count)) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "range end is not a safe integer");
   }
 
   return {startSlot, count, columns};

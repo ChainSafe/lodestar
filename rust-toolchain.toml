@@ -1,0 +1,4 @@
+# The Rust toolchain used to build quiche.
+[toolchain]
+channel = "1.91.1"
+profile = "minimal"

@@ -179,7 +179,10 @@ pub const TestCachedBeaconState = struct {
     owned_blob_schedule: []const ChainConfig.BlobScheduleEntry,
 
     pub fn init(allocator: Allocator, pool: *Node.Pool, validator_count: usize) !TestCachedBeaconState {
-        var state = try generateElectraState(allocator, pool, active_chain_config, validator_count);
+        const configured_epoch = active_chain_config.ELECTRA_FORK_EPOCH;
+        const initial_epoch = if (configured_epoch == std.math.maxInt(Epoch)) 0 else configured_epoch;
+        const chain_config = getConfig(active_chain_config, .electra, initial_epoch);
+        var state = try generateElectraState(allocator, pool, chain_config, validator_count);
         errdefer {
             state.deinit();
             allocator.destroy(state);

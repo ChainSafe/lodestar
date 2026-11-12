@@ -22,6 +22,7 @@ ARG TARGETARCH
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y --no-install-recommends afl++ llvm ca-certificates curl xz-utils \
+        git cmake libclang-18-dev libc++-18-dev libc++abi-18-dev libunwind-18-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN case "${TARGETARCH}" in \
@@ -34,16 +35,18 @@ RUN case "${TARGETARCH}" in \
     && echo "${sum}  /tmp/zig.tar.xz" | sha256sum -c - \
     && mkdir /opt/zig && tar -xJf /tmp/zig.tar.xz -C /opt/zig --strip-components=1 \
     && rm /tmp/zig.tar.xz
-ENV PATH=/opt/zig:$PATH
+RUN curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs -o /tmp/rustup-init.sh \
+    && sh /tmp/rustup-init.sh -y --profile minimal --default-toolchain none \
+    && rm /tmp/rustup-init.sh
+ENV PATH=/root/.cargo/bin:/opt/zig:$PATH
 
 WORKDIR /src
+COPY rust-toolchain.toml ./
+RUN rustup toolchain install
 COPY . .
 
-# ReleaseSafe keeps Zig's safety checks (bounds, overflow, unreachable), so
-# those bugs panic and AFL++ records them; under ReleaseFast they pass silently
-# unless they happen to segfault. Not Debug: its sanitize_c emits
-# __ubsan_handle_* calls into blst's C objects that afl-cc cannot resolve. The
-# cache mount only speeds up rebuilds; nothing in it reaches the image.
+# ReleaseSafe keeps the stateful harnesses' invariant checks enabled. The cache mount
+# only speeds up rebuilds; nothing in it reaches the image.
 #
 # -Dcpu=baseline: Zig otherwise targets the build machine's CPU, so an image
 # built on a runner with AVX-512 dies with SIGILL on hosts without it, and
@@ -59,12 +62,13 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libpython3.12t64 \
+    && apt-get install -y --no-install-recommends libpython3.12t64 libc++1-18 libc++abi1-18 libunwind-18 \
     && rm -rf /var/lib/apt/lists/*
 
 # afl-cmin (a POSIX sh + awk script) drives afl-showmap for minimize.sh.
 COPY --from=build /usr/bin/afl-fuzz /usr/bin/afl-showmap /usr/bin/afl-tmin /usr/bin/afl-whatsup /usr/bin/afl-cmin /usr/local/bin/
 COPY --from=build /out/bin/ /opt/fuzz/bin/
+COPY --from=build /out/lib/libfuzz_clock.so /opt/fuzz/lib/libfuzz_clock.so
 COPY test/fuzz/corpus/ /opt/fuzz/corpus/
 COPY test/fuzz/docker/run-fuzz.sh test/fuzz/docker/minimize.sh test/fuzz/docker/lib.sh /opt/fuzz/
 
@@ -73,6 +77,7 @@ COPY test/fuzz/docker/run-fuzz.sh test/fuzz/docker/minimize.sh test/fuzz/docker/
 # standalone -- replaying a crash -- instead of aborting with "forkserver is
 # already up". replay-crashes.sh does the same.
 ENV __AFL_DEFER_FORKSRV=1
+ENV AFL_CRASH_EXITCODE=99 AFL_PRELOAD=/opt/fuzz/lib/libfuzz_clock.so
 
 ARG REVISION=unknown
 LABEL org.opencontainers.image.source="https://github.com/ChainSafe/lodestar" \

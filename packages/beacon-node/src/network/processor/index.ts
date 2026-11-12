@@ -23,7 +23,7 @@ import {
   getPayloadPresentFromPayloadAttestationMessageSerialized,
 } from "../../util/sszBytes.js";
 import {INetworkCore} from "../core/index.js";
-import {NetworkEvent, NetworkEventBus} from "../events.js";
+import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
 import {
   GossipHandlers,
   GossipMessageInfo,
@@ -47,6 +47,7 @@ export * from "./types.js";
 
 export type NetworkProcessorModules = ValidatorFnsModules &
   ValidatorFnModules & {
+    core: INetworkCore;
     chain: IBeaconChain;
     db: IBeaconDb;
     events: NetworkEventBus;
@@ -317,19 +318,20 @@ export class NetworkProcessor {
     // TODO: Implement queues and priorization for ReqResp incoming requests
     // Listens to NetworkEvent.reqRespIncomingRequest event
 
-    if (metrics) {
-      metrics.gossipValidationQueue.length.addCollect(() => {
+    const jsMetrics = metrics?.networkJs;
+    if (jsMetrics) {
+      jsMetrics.gossipValidationQueue.length.addCollect(() => {
         for (const topic of executeGossipWorkOrder) {
-          metrics.gossipValidationQueue.length.set({topic}, this.gossipQueues[topic].length);
-          metrics.gossipValidationQueue.keySize.set({topic}, this.gossipQueues[topic].keySize);
-          metrics.gossipValidationQueue.concurrency.set({topic}, this.gossipTopicConcurrency[topic]);
+          jsMetrics.gossipValidationQueue.length.set({topic}, this.gossipQueues[topic].length);
+          jsMetrics.gossipValidationQueue.keySize.set({topic}, this.gossipQueues[topic].keySize);
+          jsMetrics.gossipValidationQueue.concurrency.set({topic}, this.gossipTopicConcurrency[topic]);
         }
-        metrics.awaitingBlockGossipMessages.countPerSlot.set(this.awaitingBlockMessageCount);
-        metrics.awaitingPayloadGossipMessages.countPerSlot.set(this.awaitingPayloadMessageCount);
+        jsMetrics.awaitingBlockGossipMessages.countPerSlot.set(this.awaitingBlockMessageCount);
+        jsMetrics.awaitingPayloadGossipMessages.countPerSlot.set(this.awaitingPayloadMessageCount);
         // specific metric for beacon_attestation topic
-        metrics.gossipValidationQueue.keyAge.reset();
+        jsMetrics.gossipValidationQueue.keyAge.reset();
         for (const ageMs of this.gossipQueues.beacon_attestation.getDataAgeMs()) {
-          metrics.gossipValidationQueue.keyAge.observe(ageMs / 1000);
+          jsMetrics.gossipValidationQueue.keyAge.observe(ageMs / 1000);
         }
       });
     }
@@ -448,7 +450,12 @@ export class NetworkProcessor {
     this.fatalPeers.set(peer, this.chain.clock.currentSlot);
   };
 
-  private onPendingGossipsubMessage = (message: PendingGossipsubMessage): void => {
+  private onPendingGossipsubMessage = (incoming: NetworkEventData[NetworkEvent.pendingGossipsubMessage]): void => {
+    const source = incoming.propagationSource;
+    const message: PendingGossipsubMessage = {
+      ...incoming,
+      reportPeer: (action, reason) => this.core.reportPeer(source, action, reason),
+    };
     const topicType = message.topic.type;
     if (this.fatalPeers.has(message.propagationSource)) {
       this.metrics?.networkProcessor.gossipValidationError.inc({topic: topicType, error: GossipErrorCode.FATAL_PEER});
@@ -472,7 +479,7 @@ export class NetworkProcessor {
       const code = GossipErrorCode.INVALID_SLOT;
       const peerAction = rejectPeerAction(topicType, code);
       this.metrics?.networkProcessor.gossipValidationReject.inc({topic: topicType});
-      this.core.reportPeer(propagationSource, peerAction, code);
+      message.reportPeer(peerAction, code);
       this.logger.debug(`Gossip validation ${topicType} rejected due to null slot`, {
         peer: propagationSource,
         clientAgent,
@@ -687,7 +694,7 @@ export class NetworkProcessor {
    * - MAX_AWAITING_MESSAGES_PER_ROOT[topic]: messages buffered per (root, topic)
    */
   private maybeAwaitBlock(root: RootHex, topicType: GossipType, slot: Slot, message: PendingGossipsubMessage): void {
-    const metric = this.metrics?.awaitingBlockGossipMessages;
+    const metric = this.metrics?.networkJs?.awaitingBlockGossipMessages;
     // global message-count cap - cheapest check first
     if (this.awaitingBlockMessageCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_limit, topic: topicType});
@@ -718,7 +725,7 @@ export class NetworkProcessor {
 
   /** Payload counterpart of maybeAwaitBlock */
   private maybeAwaitPayload(root: RootHex, topicType: GossipType, slot: Slot, message: PendingGossipsubMessage): void {
-    const metric = this.metrics?.awaitingPayloadGossipMessages;
+    const metric = this.metrics?.networkJs?.awaitingPayloadGossipMessages;
     if (this.awaitingPayloadMessageCount > MAX_QUEUED_UNKNOWN_PAYLOAD_GOSSIP_OBJECTS) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_limit, topic: topicType});
       return;
@@ -791,7 +798,7 @@ export class NetworkProcessor {
     const droppedCount = this.gossipQueues[topicType].add(message);
     if (droppedCount) {
       // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
-      this.metrics?.gossipValidationQueue.droppedJobs.inc({topic: message.topic.type}, droppedCount);
+      this.metrics?.networkJs?.gossipValidationQueue.droppedJobs.inc({topic: message.topic.type}, droppedCount);
     }
 
     // Tentatively perform work
@@ -825,11 +832,11 @@ export class NetworkProcessor {
     for (const messages of messagesByTopic.values()) {
       for (const message of messages) {
         const topicType = message.topic.type;
-        this.metrics?.awaitingBlockGossipMessages.waitSecBeforeResolve.set(
+        this.metrics?.networkJs?.awaitingBlockGossipMessages.waitSecBeforeResolve.set(
           {topic: topicType},
           nowSec - message.seenTimestampSec
         );
-        this.metrics?.awaitingBlockGossipMessages.resolve.inc({topic: topicType});
+        this.metrics?.networkJs?.awaitingBlockGossipMessages.resolve.inc({topic: topicType});
         this.pushPendingGossipsubMessageToQueue(message);
         count++;
         // don't want to block the event loop, worse case it'd wait for 16_084 / 1024 * 50ms = 800ms which is not a big deal
@@ -867,11 +874,11 @@ export class NetworkProcessor {
     for (const messages of messagesByTopic.values()) {
       for (const message of messages) {
         const topicType = message.topic.type;
-        this.metrics?.awaitingPayloadGossipMessages.waitSecBeforeResolve.set(
+        this.metrics?.networkJs?.awaitingPayloadGossipMessages.waitSecBeforeResolve.set(
           {topic: topicType},
           nowSec - message.seenTimestampSec
         );
-        this.metrics?.awaitingPayloadGossipMessages.resolve.inc({topic: topicType});
+        this.metrics?.networkJs?.awaitingPayloadGossipMessages.resolve.inc({topic: topicType});
         this.pushPendingGossipsubMessageToQueue(message);
         count++;
         if (count === MAX_AWAITING_GOSSIP_OBJECTS_PER_TICK) {
@@ -902,11 +909,11 @@ export class NetworkProcessor {
             messages.delete(message);
             this.awaitingBlockMessageCount--;
             const topicType = message.topic.type;
-            this.metrics?.awaitingBlockGossipMessages.reject.inc({
+            this.metrics?.networkJs?.awaitingBlockGossipMessages.reject.inc({
               topic: topicType,
               reason: ReprocessRejectReason.expired,
             });
-            this.metrics?.awaitingBlockGossipMessages.waitSecBeforeReject.set(
+            this.metrics?.networkJs?.awaitingBlockGossipMessages.waitSecBeforeReject.set(
               {topic: topicType, reason: ReprocessRejectReason.expired},
               nowSec - message.seenTimestampSec
             );
@@ -929,11 +936,11 @@ export class NetworkProcessor {
             messages.delete(message);
             this.awaitingPayloadMessageCount--;
             const topicType = message.topic.type;
-            this.metrics?.awaitingPayloadGossipMessages.reject.inc({
+            this.metrics?.networkJs?.awaitingPayloadGossipMessages.reject.inc({
               topic: topicType,
               reason: ReprocessRejectReason.expired,
             });
-            this.metrics?.awaitingPayloadGossipMessages.waitSecBeforeReject.set(
+            this.metrics?.networkJs?.awaitingPayloadGossipMessages.waitSecBeforeReject.set(
               {topic: topicType, reason: ReprocessRejectReason.expired},
               nowSec - message.seenTimestampSec
             );
@@ -960,7 +967,7 @@ export class NetworkProcessor {
     if (this.stopped) return;
     // TODO: Maybe de-bounce by timing the last time executeWork was run
 
-    this.metrics?.networkProcessor.executeWorkCalls.inc();
+    this.metrics?.networkJs?.networkProcessor.executeWorkCalls.inc();
     let jobsSubmitted = 0;
 
     job_loop: while (jobsSubmitted < MAX_JOBS_SUBMITTED_PER_TICK) {
@@ -971,7 +978,7 @@ export class NetworkProcessor {
         // beacon block is guaranteed to be processed immedately
         // reason !== null means cannot accept work
         if (reason !== null && !executeGossipWorkOrderObj[topic]?.bypassQueue) {
-          this.metrics?.networkProcessor.canNotAcceptWork.inc({reason});
+          this.metrics?.networkJs?.networkProcessor.canNotAcceptWork.inc({reason});
           break job_loop;
         }
         if (
@@ -1041,7 +1048,7 @@ export class NetworkProcessor {
       for (const msg of messageOrArray) {
         msg.startProcessUnixSec = nowSec;
         if (msg.queueAddedMs !== undefined) {
-          this.metrics?.gossipValidationQueue.queueTime.observe(
+          this.metrics?.networkJs?.gossipValidationQueue.queueTime.observe(
             {topic: msg.topic.type},
             nowSec - msg.queueAddedMs / 1000
           );
@@ -1050,7 +1057,7 @@ export class NetworkProcessor {
     } else {
       messageOrArray.startProcessUnixSec = nowSec;
       if (messageOrArray.queueAddedMs !== undefined) {
-        this.metrics?.gossipValidationQueue.queueTime.observe(
+        this.metrics?.networkJs?.gossipValidationQueue.queueTime.observe(
           {topic: messageOrArray.topic.type},
           nowSec - messageOrArray.queueAddedMs / 1000
         );

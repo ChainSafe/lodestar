@@ -1,5 +1,6 @@
 const std = @import("std");
 const snappy = @import("snappy").raw;
+const wire_types = @import("ssz_wire_types");
 
 const Allocator = std.mem.Allocator;
 const Dir = std.Io.Dir;
@@ -376,57 +377,154 @@ fn extractContainers(
         ) catch continue;
         var type_dir = type_dir_result;
         defer type_dir.close(io);
+        count += try extractTypeDir(
+            &type_dir,
+            corpus_dir,
+            io,
+            read_buf,
+            decompress_buf,
+            name_buf,
+            cs.sel,
+            cs.name,
+            std.math.maxInt(usize),
+        );
+    }
+    return count;
+}
 
-        // Iterate categories: ssz_random, ssz_lengthy, etc.
-        var cat_iter = type_dir.iterate();
-        while (try cat_iter.next(io)) |cat| {
-            if (cat.kind != .directory) continue;
-            if (cat.name[0] == '.') continue;
-
-            const cat_dir_result = type_dir.openDir(
+/// Writes every `<category>/<case>/serialized.ssz_snappy` under a type directory as
+/// `spec-<label>-<category>-<case>`, skipping vectors larger than `seed_max`.
+fn extractTypeDir(
+    type_dir: *Dir,
+    corpus_dir: Dir,
+    io: std.Io,
+    read_buf: []u8,
+    decompress_buf: []u8,
+    name_buf: []u8,
+    selector: u8,
+    label: []const u8,
+    seed_max: usize,
+) !u32 {
+    var count: u32 = 0;
+    var cat_iter = type_dir.iterate();
+    while (try cat_iter.next(io)) |cat| {
+        if (cat.kind != .directory) continue;
+        if (cat.name[0] == '.') continue;
+        var cat_dir = type_dir.openDir(
+            io,
+            cat.name,
+            .{ .iterate = true },
+        ) catch continue;
+        defer cat_dir.close(io);
+        var case_iter = cat_dir.iterate();
+        while (try case_iter.next(io)) |cas| {
+            if (cas.kind != .directory) continue;
+            if (cas.name[0] == '.') continue;
+            const snappy_path = try std.fmt.bufPrint(
+                name_buf,
+                "{s}/serialized.ssz_snappy",
+                .{cas.name},
+            );
+            const ssz = readSnappy(
+                cat_dir,
                 io,
-                cat.name,
-                .{ .iterate = true },
+                snappy_path,
+                read_buf,
+                decompress_buf,
             ) catch continue;
-            var cat_dir = cat_dir_result;
-            defer cat_dir.close(io);
-
-            // Iterate cases: case_0, case_1, etc.
-            var case_iter = cat_dir.iterate();
-            while (try case_iter.next(io)) |cas| {
-                if (cas.kind != .directory) continue;
-                if (cas.name[0] == '.') continue;
-
-                const snappy_path = try std.fmt.bufPrint(
-                    name_buf,
-                    "{s}/serialized.ssz_snappy",
-                    .{cas.name},
-                );
-                const ssz = readSnappy(
-                    cat_dir,
-                    io,
-                    snappy_path,
-                    read_buf,
-                    decompress_buf,
-                ) catch continue;
-                const out_name = try std.fmt.bufPrint(
-                    name_buf[snappy_path.len..],
-                    "spec-{s}-{s}-{s}",
-                    .{ cs.name, cat.name, cas.name },
-                );
-                try writeCorpus(
-                    corpus_dir,
-                    io,
-                    out_name,
-                    cs.sel,
-                    ssz,
-                );
-                count += 1;
-            }
+            if (ssz.len > seed_max) continue;
+            const out_name = try std.fmt.bufPrint(
+                name_buf[snappy_path.len..],
+                "spec-{s}-{s}-{s}",
+                .{ label, cat.name, cas.name },
+            );
+            try writeCorpus(
+                corpus_dir,
+                io,
+                out_name,
+                selector,
+                ssz,
+            );
+            count += 1;
         }
     }
-
     return count;
+}
+
+/// AFL never runs an input above its default 1 MiB ceiling, so larger vectors are skipped.
+const wire_seed_max: usize = 1024 * 1024;
+
+fn extractWireTypes(
+    mainnet_dir: ?Dir,
+    corpus_dir: Dir,
+    io: std.Io,
+    read_buf: []u8,
+    decompress_buf: []u8,
+    name_buf: []u8,
+) !u32 {
+    var count: u32 = 0;
+    inline for (wire_types.entries, 0..) |entry, index| {
+        const T = entry.T;
+        const value = &T.default_value;
+        const size = if (@hasDecl(T, "fixed_size")) T.fixed_size else T.serializedSize(value);
+        std.debug.assert(size <= decompress_buf.len);
+        std.debug.assert(T.serializeIntoBytes(value, decompress_buf[0..size]) == size);
+        const out_name = try std.fmt.bufPrint(
+            name_buf,
+            "default-{s}-{s}",
+            .{ entry.fork, entry.name },
+        );
+        try writeCorpus(corpus_dir, io, out_name, @intCast(index), decompress_buf[0..size]);
+        count += 1;
+    }
+    const base = mainnet_dir orelse return count;
+    for (wire_types.sources) |source| {
+        var label_buf: [128]u8 = undefined;
+        const label = try std.fmt.bufPrint(&label_buf, "{s}-{s}", .{ source.fork, source.name });
+        const type_path = try std.fmt.bufPrint(
+            name_buf,
+            "{s}/ssz_static/{s}",
+            .{ source.fork, source.name },
+        );
+        var type_dir = base.openDir(io, type_path, .{ .iterate = true }) catch continue;
+        defer type_dir.close(io);
+        count += try extractTypeDir(
+            &type_dir,
+            corpus_dir,
+            io,
+            read_buf,
+            decompress_buf,
+            name_buf,
+            source.selector,
+            label,
+            wire_seed_max,
+        );
+    }
+    return count;
+}
+
+const Versions = struct { consensus: []const u8, generic: []const u8 };
+
+/// test/spec/version.txt: comment lines, a blank, the consensus version, then `ssz_generic <v>`.
+fn readVersions(io: std.Io, buf: []u8) !Versions {
+    const text = Dir.cwd().readFile(io, "../../test/spec/version.txt", buf) catch {
+        std.debug.print("Cannot read test/spec/version.txt; run: zig build run:download_spec_tests\n", .{});
+        return error.MissingVersionFile;
+    };
+    var consensus: ?[]const u8 = null;
+    var lines = std.mem.splitScalar(u8, text, '\n');
+    while (lines.next()) |raw| {
+        const line = std.mem.trim(u8, raw, " \r\t");
+        if (line.len == 0 or std.mem.startsWith(u8, line, "//")) continue;
+        if (consensus == null) {
+            consensus = line;
+            continue;
+        }
+        if (std.mem.startsWith(u8, line, "ssz_generic ")) {
+            return .{ .consensus = consensus.?, .generic = line["ssz_generic ".len..] };
+        }
+    }
+    return error.MalformedVersionFile;
 }
 
 fn findPrefixSelector(
@@ -471,13 +569,26 @@ pub fn main(init: std.process.Init) !void {
     // Build system places the exe; we use CWD (test/fuzz/).
     const cwd = std.Io.Dir.cwd();
 
-    // Spec test base paths
-    const generic_path =
-        "../../test/spec/spec_tests/v1.5.0" ++
-        "/general/tests/general/phase0/ssz_generic";
-    const static_path =
-        "../../test/spec/spec_tests/v1.5.0" ++
-        "/minimal/tests/minimal/phase0/ssz_static";
+    var version_buf: [1024]u8 = undefined;
+    const versions = try readVersions(io, &version_buf);
+    var generic_path_buf: [256]u8 = undefined;
+    const generic_path = try std.fmt.bufPrint(
+        &generic_path_buf,
+        "../../test/spec/spec_tests/{s}/general/tests/general/phase0/ssz_generic",
+        .{versions.generic},
+    );
+    var static_path_buf: [256]u8 = undefined;
+    const static_path = try std.fmt.bufPrint(
+        &static_path_buf,
+        "../../test/spec/spec_tests/{s}/minimal/tests/minimal/phase0/ssz_static",
+        .{versions.consensus},
+    );
+    var mainnet_path_buf: [256]u8 = undefined;
+    const mainnet_path = try std.fmt.bufPrint(
+        &mainnet_path_buf,
+        "../../test/spec/spec_tests/{s}/mainnet/tests/mainnet",
+        .{versions.consensus},
+    );
 
     var generic_dir = cwd.openDir(
         io,
@@ -507,6 +618,14 @@ pub fn main(init: std.process.Init) !void {
     };
     defer static_dir.close(io);
 
+    var mainnet_dir: ?Dir = cwd.openDir(io, mainnet_path, .{}) catch null;
+    defer if (mainnet_dir) |*dir| dir.close(io);
+    if (mainnet_dir == null) {
+        std.debug.print(
+            "No mainnet vectors at {s}; ssz_wire_types gets default-value seeds only\n",
+            .{mainnet_path},
+        );
+    }
     std.debug.print(
         "Extracting spec test vectors as corpus seeds...\n\n",
         .{},
@@ -607,6 +726,32 @@ pub fn main(init: std.process.Init) !void {
         total += n;
     }
 
+    // ssz_wire_types: every seed here is generated, so a fresh checkout has no directory yet.
+    {
+        cwd.createDirPath(io, "corpus/ssz_wire_types-initial") catch |err| switch (err) {
+            error.PathAlreadyExists => {},
+            else => return err,
+        };
+        var dir = try cwd.openDir(
+            io,
+            "corpus/ssz_wire_types-initial",
+            .{},
+        );
+        defer dir.close(io);
+        const n = try extractWireTypes(
+            mainnet_dir,
+            dir,
+            io,
+            read_buf,
+            decompress_buf,
+            &name_buf,
+        );
+        std.debug.print(
+            "  ssz_wire_types: {} seeds\n",
+            .{n},
+        );
+        total += n;
+    }
     std.debug.print(
         "\nTotal: {} corpus files generated\n",
         .{total},

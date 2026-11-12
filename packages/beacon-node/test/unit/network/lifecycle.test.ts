@@ -1,11 +1,12 @@
 import {EventEmitter} from "node:events";
+import {setImmediate as yieldToIO} from "node:timers/promises";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {LogLevel, defer} from "@lodestar/utils";
 import {ChainEvent} from "../../../src/chain/emitter.js";
@@ -165,4 +166,53 @@ describe("network event command failures", () => {
       await network.close();
     }
   });
+});
+
+describe("network publication completion", () => {
+  it.each([
+    {firstFails: false, lastFails: false},
+    {firstFails: false, lastFails: true},
+    {firstFails: true, lastFails: false},
+    {firstFails: true, lastFails: true},
+  ])(
+    "waits for every fork publication (first fails: $firstFails, last fails: $lastFails)",
+    async ({firstFails, lastFails}) => {
+      const config = createBeaconConfig(
+        {
+          ...defaultConfig,
+          ALTAIR_FORK_EPOCH: 0,
+          BELLATRIX_FORK_EPOCH: 0,
+          CAPELLA_FORK_EPOCH: 0,
+          DENEB_FORK_EPOCH: 1,
+          ELECTRA_FORK_EPOCH: 2,
+          FULU_FORK_EPOCH: 3,
+          GLOAS_FORK_EPOCH: 4,
+          HEZE_FORK_EPOCH: 5,
+        },
+        new Uint8Array(32)
+      );
+      const {network, clock, publishGossip} = await fixture(async () => {}, config);
+      clock.setSlot(3 * SLOTS_PER_EPOCH);
+      const last = defer<number>();
+      if (firstFails) publishGossip.mockRejectedValueOnce(new Error("first fork refused"));
+      else publishGossip.mockResolvedValueOnce(3);
+      publishGossip.mockReturnValue(last.promise);
+      const finished = vi.fn();
+      const published = network.publishBlsToExecutionChange(ssz.capella.SignedBLSToExecutionChange.defaultValue());
+      void published.then(finished, finished);
+      try {
+        await yieldToIO();
+        expect(publishGossip).toHaveBeenCalledTimes(6);
+        expect(finished).not.toHaveBeenCalled();
+        if (lastFails) last.reject(new Error("second fork refused"));
+        else last.resolve(4);
+        if (firstFails && lastFails) await expect(published).rejects.toBeInstanceOf(AggregateError);
+        else await expect(published).resolves.toBe(firstFails ? 4 : 3);
+      } finally {
+        last.resolve(0);
+        await Promise.allSettled([published]);
+        await network.close();
+      }
+    }
+  );
 });

@@ -87,7 +87,7 @@ export function wireEventsOnMainThread<EventData>(
     ) {
       const [sec, nanoSec] = process.hrtime(data.posted);
       const networkWorkerLatency = sec + nanoSec / NANO_TO_SECOND_CONVERSION;
-      metrics?.networkWorkerWireEventsOnMainThreadLatency.observe(
+      metrics?.networkJs?.networkWorkerWireEventsOnMainThreadLatency.observe(
         {eventName: data.event as string},
         networkWorkerLatency
       );
