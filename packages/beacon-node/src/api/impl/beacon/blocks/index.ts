@@ -114,6 +114,8 @@ export function getBeaconBlockApi(
     }
     const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
 
+    // remove() drops this root only. prune() also deletes cached ancestors.
+    const blockInputExisted = chain.seenBlockInputCache.get(blockRoot) !== undefined;
     const blockForImport = chain.seenBlockInputCache.getByBlock({
       block: signedBlock,
       source: BlockInputSource.api,
@@ -121,7 +123,10 @@ export function getBeaconBlockApi(
       blockRootHex: blockRoot,
     });
 
+    // Stays true unless this call inserts a post-Gloas payload entry.
+    let payloadInputExisted = true;
     if (isForkPostGloas(fork)) {
+      payloadInputExisted = chain.seenPayloadEnvelopeInputCache.get(blockRoot) !== undefined;
       chain.seenPayloadEnvelopeInputCache.add({
         blockRootHex: blockRoot,
         block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
@@ -132,6 +137,15 @@ export function getBeaconBlockApi(
         source: PayloadEnvelopeInputSource.api,
       });
     }
+
+    const dropRejectedBlock = (): void => {
+      if (!blockInputExisted) {
+        chain.seenBlockInputCache.remove(blockRoot);
+      }
+      if (!payloadInputExisted) {
+        chain.seenPayloadEnvelopeInputCache.remove(blockRoot);
+      }
+    };
 
     // After gloas, data columns are not published with the block but when publishing the execution payload envelope.
     let dataColumnSidecars: fulu.DataColumnSidecar[] = [];
@@ -210,6 +224,7 @@ export function getBeaconBlockApi(
               "api_reject_gossip_failure",
               blockRoot
             );
+            dropRejectedBlock();
             throw error;
           }
         }
@@ -234,6 +249,7 @@ export function getBeaconBlockApi(
               "api_reject_parent_unknown",
               blockRoot
             );
+            dropRejectedBlock();
             throw new BlockError(signedBlock, {
               code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
               parentRoot: toRootHex(signedBlock.message.parentRoot),
@@ -255,6 +271,7 @@ export function getBeaconBlockApi(
               "api_reject_consensus_failure",
               blockRoot
             );
+            dropRejectedBlock();
             throw error;
           }
         }
@@ -285,6 +302,7 @@ export function getBeaconBlockApi(
               "api_reject_consensus_failure",
               blockRoot
             );
+            dropRejectedBlock();
             throw e;
           }
         }
@@ -292,6 +310,7 @@ export function getBeaconBlockApi(
       }
 
       default: {
+        dropRejectedBlock();
         throw new ApiError(400, `Invalid broadcast validation level ${broadcastValidation}`);
       }
     }
