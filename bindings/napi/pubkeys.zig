@@ -8,8 +8,10 @@ const PubkeyCache = state_transition.PubkeyCache;
 const pkix = state_transition.pkix;
 const Validator = @import("consensus_types").phase0.Validator.Type;
 
-/// Uses the page allocator for the process-wide cache's internal allocations.
-const allocator = std.heap.page_allocator;
+/// Backs the long-lived cache storage. `pkix.load` must use it too: `pkix.install` swaps the
+/// loaded storage, with its allocator, into the live cache.
+const cache_allocator = std.heap.page_allocator;
+const allocator = std.heap.c_allocator;
 
 const default_initial_capacity: u32 = 0;
 const max_stack_aggregate_pubkeys = 512;
@@ -22,7 +24,7 @@ const State = struct {
     pub fn init(self: *State, env: napi.Env) !void {
         if (self.initialized) return;
 
-        self.cache = try PubkeyCache.initCapacity(allocator, js.io(), default_initial_capacity);
+        self.cache = try PubkeyCache.initCapacity(cache_allocator, js.io(), default_initial_capacity);
         self.initialized = true;
         self.control_env = env.env;
     }
@@ -86,7 +88,7 @@ pub fn load(file_path: js.String, max_capacity: js.Number) !void {
     var file_reader = file.reader(io, &read_buf);
 
     var loaded_cache = try pkix.load(
-        allocator,
+        cache_allocator,
         io,
         &file_reader.interface,
         file_size,
@@ -224,7 +226,7 @@ pub fn syncPubkeys(validators: js.Array) !void {
         validator_ptrs[new_index] = &new_validators[i];
     }
 
-    try state.cache.syncPubkeys(io, validator_ptrs);
+    try state.cache.syncPubkeys(allocator, io, validator_ptrs);
 }
 
 /// JS: pubkeys.size() → number

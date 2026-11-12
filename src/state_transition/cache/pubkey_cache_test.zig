@@ -34,8 +34,8 @@ test "syncPubkeys incrementally populates both lookup directions" {
     var cache = PubkeyCache.init(testing.allocator, testing.io);
     defer cache.deinit();
 
-    try cache.syncPubkeys(testing.io, validator_ptrs[0..initial_count]);
-    try cache.syncPubkeys(testing.io, &validator_ptrs);
+    try cache.syncPubkeys(testing.allocator, testing.io, validator_ptrs[0..initial_count]);
+    try cache.syncPubkeys(testing.allocator, testing.io, &validator_ptrs);
 
     try testing.expectEqual(@as(u32, total_count), cache.count(testing.io));
     for (pubkeys, 0..) |pubkey, expected_index| {
@@ -58,9 +58,9 @@ test "syncPubkeys accepts a historical validator slice" {
 
     var cache = PubkeyCache.init(testing.allocator, testing.io);
     defer cache.deinit();
-    try cache.syncPubkeys(testing.io, &validator_ptrs);
+    try cache.syncPubkeys(testing.allocator, testing.io, &validator_ptrs);
 
-    try cache.syncPubkeys(testing.io, validator_ptrs[0..2]);
+    try cache.syncPubkeys(testing.allocator, testing.io, validator_ptrs[0..2]);
 
     try testing.expectEqual(@as(u32, validators.len), cache.count(testing.io));
     try testing.expectEqual(@as(u64, 3), cache.get(testing.io, pubkeys[3]).?);
@@ -92,7 +92,7 @@ test "syncPubkeys rejects a duplicate without publishing a partial suffix" {
 
     try testing.expectError(
         error.DuplicatePubkey,
-        cache.syncPubkeys(testing.io, &validator_ptrs),
+        cache.syncPubkeys(testing.allocator, testing.io, &validator_ptrs),
     );
     try testing.expectEqual(@as(u32, 1), cache.count(testing.io));
     try testing.expectEqual(@as(?u64, null), cache.get(testing.io, pubkeys[1]));
@@ -120,7 +120,7 @@ test "syncPubkeys rejects an invalid key without publishing across batches" {
     defer cache.deinit();
     try cache.append(testing.io, pubkeys[0], 0);
 
-    try testing.expectError(error.BadEncoding, cache.syncPubkeys(testing.io, &validator_ptrs));
+    try testing.expectError(error.BadEncoding, cache.syncPubkeys(testing.allocator, testing.io, &validator_ptrs));
     try testing.expectEqual(@as(u32, 1), cache.count(testing.io));
     try testing.expectEqual(@as(?u64, null), cache.get(testing.io, pubkeys[1]));
 }
