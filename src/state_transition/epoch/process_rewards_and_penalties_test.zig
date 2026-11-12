@@ -25,7 +25,6 @@ test "memory_safety: processRewardsAndPenalties - sanity" {
 
     try processRewardsAndPenalties(
         .electra,
-        std.testing.io,
         test_state.cached_state.config,
         test_state.cached_state.epoch_cache,
         test_state.cached_state.state.castToFork(.electra),
@@ -55,7 +54,6 @@ test "processRewardsAndPenalties maps compact slashing penalties to validator in
 
     try processRewardsAndPenalties(
         .electra,
-        std.testing.io,
         test_state.cached_state.config,
         test_state.cached_state.epoch_cache,
         state,
@@ -123,7 +121,6 @@ test "cached balances should match state after pending deposits fill the headroo
 
     try processRewardsAndPenalties(
         .electra,
-        std.testing.io,
         cached_state.config,
         cached_state.epoch_cache,
         state,

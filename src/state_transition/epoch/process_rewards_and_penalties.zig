@@ -10,7 +10,6 @@ const getRewardsAndPenaltiesAltair = @import("./get_rewards_and_penalties.zig").
 
 pub fn processRewardsAndPenalties(
     comptime fork: ForkSeq,
-    io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
     state: *BeaconState(fork),
@@ -43,10 +42,6 @@ pub fn processRewardsAndPenalties(
     }
 
     try state.setBalances(&new_balances);
-    // setBalances rebuilds every balances leaf. Hashing them here in parallel takes that work off
-    // the single-threaded state-root walk.
-    balances_view = try state.balances();
-    try balances_view.hashChunkedLeaves(io);
 
     // Populate cache.balances for reuse by the validator monitor and
     // more importantly processEffectiveBalanceUpdates() doesn't need to

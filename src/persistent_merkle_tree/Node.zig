@@ -852,16 +852,14 @@ pub const Id = enum(u32) {
         @panic("getRoot exceeded the pool traversal bound");
     }
 
-    /// Chunked leaves hashed per task by `computeChunkedLeafRoots`. A mainnet balances list
-    /// (~9k leaves) splits into ~140 tasks: enough to keep cores of unequal speed busy, few enough
-    /// that per-task scheduling cost stays negligible. Sizes from 32 to 256 measured the same on
-    /// process_epoch.
+    /// Chunked leaves hashed per task by `getRootParallel`. A mainnet balances list (~9k leaves)
+    /// splits into ~140 tasks: enough to keep cores of unequal speed busy, few enough that
+    /// per-task scheduling cost stays negligible.
     pub const chunked_leaf_roots_per_task: usize = 64;
 
-    /// Computes the uncached roots of the chunked_leaf nodes in `ids` in parallel on `io`; ids of
-    /// other kinds are ignored. Nothing may mutate `pool` until this returns, and each
-    /// chunked_leaf id may appear at most once, since two tasks writing one root would race.
-    pub fn computeChunkedLeafRoots(
+    // Computes the roots of the lazy chunked_leaf nodes in `ids` in parallel on `io`. Each id may
+    // appear at most once, since two tasks writing one root would race.
+    fn computeChunkedLeafRoots(
         pool: *Pool,
         io: std.Io,
         ids: []const Id,
@@ -890,10 +888,8 @@ pub const Id = enum(u32) {
         var scratch: [ChunkedLeaf.K / 2][32]u8 align(64) = undefined;
         for (ids) |node_id| {
             const idx = @intFromEnum(node_id);
-            const kind = states[idx].kind();
-            std.debug.assert(kind != .free);
-            if (kind != .chunked_leaf) continue;
-            if (!std.mem.eql(u8, &roots[idx], &lazy_sentinel)) continue;
+            std.debug.assert(states[idx].kind() == .chunked_leaf);
+            std.debug.assert(std.mem.eql(u8, &roots[idx], &lazy_sentinel));
 
             var hash: [32]u8 = undefined;
             chunkedLeafPtr(payloads, idx).computeRoot(&scratch, &hash);
