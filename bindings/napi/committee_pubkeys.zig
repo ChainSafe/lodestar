@@ -15,10 +15,9 @@ const preset = @import("preset").preset;
 const pubkeys = @import("./pubkeys.zig");
 
 const allocator = std.heap.c_allocator;
-const MAX_SLOTS = 16;
 const MAX_AGGREGATES = preset.SLOTS_PER_EPOCH * preset.MAX_COMMITTEES_PER_SLOT;
 
-pub const MAX_ENTRIES = MAX_SLOTS;
+pub const MAX_ENTRIES = 16;
 
 const SlotState = enum { free, computing, ready };
 
@@ -33,7 +32,7 @@ const Slot = struct {
 
 const State = struct {
     lock: std.Io.RwLock = .init,
-    slots: [MAX_SLOTS]Slot = [_]Slot{.{}} ** MAX_SLOTS,
+    slots: [MAX_ENTRIES]Slot = [_]Slot{.{}} ** MAX_ENTRIES,
     next_id: u32 = 1,
 
     fn reserve(self: *State, io: std.Io) !usize {
