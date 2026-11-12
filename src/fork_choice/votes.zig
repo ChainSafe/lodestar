@@ -15,6 +15,9 @@ const store_mod = @import("store.zig");
 const LatestMessage = store_mod.LatestMessage;
 const BlockIndex = store_mod.BlockIndex;
 const NO_BLOCK = store_mod.NO_BLOCK;
+const NodeId = store_mod.NodeId;
+const NO_NODE = store_mod.NO_NODE;
+const NODES_PER_BLOCK = store_mod.NODES_PER_BLOCK;
 const Slot = store_mod.Slot;
 const ValidatorIndex = store_mod.ValidatorIndex;
 const computeEpochAtSlot = store_mod.computeEpochAtSlot;
@@ -22,7 +25,6 @@ const vote_targets = @import("vote_targets.zig");
 const VoteTargets = vote_targets.VoteTargets;
 const TargetId = vote_targets.TargetId;
 const NO_TARGET = vote_targets.NO_TARGET;
-const NO_NODE = vote_targets.NO_NODE;
 
 /// A caller that caches results derived from `vote_weight` must invalidate them after
 /// `drain`, `slash`, `setIncrements`, `markChanged` and `remap`, and after a `record`
@@ -84,7 +86,7 @@ pub const Votes = struct {
         config: *const BeaconConfig,
         attesting_indices: []const ValidatorIndex,
         message: LatestMessage,
-        node: u32,
+        node: NodeId,
         queue: bool,
     ) !bool {
         try ensureValidatorSlots(allocator, &self.latest_votes, attesting_indices);
@@ -249,15 +251,15 @@ pub const Votes = struct {
     /// with them. `update` must have run for the block count before the prune.
     pub fn remap(self: *Votes, block_remap: []const BlockIndex, kept: usize) void {
         std.debug.assert(!self.rescan_votes);
-        std.debug.assert(self.vote_weight.items.len == block_remap.len * 3);
+        std.debug.assert(self.vote_weight.items.len == block_remap.len * NODES_PER_BLOCK);
         // Votes hold target ids, so renumbering the target table carries every vote over.
         self.vote_targets.remap(block_remap);
         const node_weight = self.vote_weight.items;
         for (block_remap, 0..) |target, block| {
             if (target == NO_BLOCK) continue;
-            std.mem.copyForwards(u64, node_weight[target * 3 ..][0..3], node_weight[block * 3 ..][0..3]);
+            std.mem.copyForwards(u64, node_weight[target * NODES_PER_BLOCK ..][0..NODES_PER_BLOCK], node_weight[block * NODES_PER_BLOCK ..][0..NODES_PER_BLOCK]);
         }
-        self.vote_weight.shrinkRetainingCapacity(kept * 3);
+        self.vote_weight.shrinkRetainingCapacity(kept * NODES_PER_BLOCK);
     }
 
     /// Brings `vote_weight` in line with the latest messages, for `node_count` nodes. Every

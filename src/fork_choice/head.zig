@@ -13,8 +13,6 @@
 //! status is the worst verdict on the payloads it stands on, derived here in one forward
 //! pass. A node derived invalid is treated as removed: no weight reaches its parent and
 //! it is never viable.
-//!
-//! Node ids are `block * 3 + payload_status`.
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -27,13 +25,16 @@ const PayloadStatus = store_mod.PayloadStatus;
 const ExecutionStatus = store_mod.ExecutionStatus;
 const BlockIndex = store_mod.BlockIndex;
 const NO_BLOCK = store_mod.NO_BLOCK;
+const NodeId = store_mod.NodeId;
+const NO_NODE = store_mod.NO_NODE;
+const NODES_PER_BLOCK = store_mod.NODES_PER_BLOCK;
+const nodeId = store_mod.nodeId;
+const nodeAt = store_mod.nodeAt;
 const LatestMessage = store_mod.LatestMessage;
 const Root = store_mod.Root;
 const Epoch = store_mod.Epoch;
 const computeEpochAtSlot = store_mod.computeEpochAtSlot;
 const computeStartSlotAtEpoch = store_mod.computeStartSlotAtEpoch;
-
-const NO_NODE: u32 = std.math.maxInt(u32);
 
 const NodeFlags = packed struct(u8) {
     exists: bool = false,
@@ -61,7 +62,7 @@ const Node = struct {
     flags: NodeFlags,
     /// The worst engine verdict on the payloads the node stands on.
     execution: ExecutionStatus,
-    best_child: u32,
+    best_child: NodeId,
 };
 
 pub const Cache = struct {
@@ -78,14 +79,6 @@ pub const Cache = struct {
     }
 };
 
-pub fn nodeId(node: ForkChoiceNode) u32 {
-    return node.block * 3 + @intFromEnum(node.payload_status);
-}
-
-fn nodeAt(id: u32) ForkChoiceNode {
-    return .{ .block = id / 3, .payload_status = @enumFromInt(id % 3) };
-}
-
 pub fn ensureComputed(store: *Store) !void {
     if (!store.head_cache.dirty) return;
     try compute(store);
@@ -95,7 +88,7 @@ fn compute(store: *Store) !void {
     const allocator = store.allocator;
     const cache = &store.head_cache;
     const n: usize = store.blocks.len;
-    const node_count = n * 3;
+    const node_count = n * NODES_PER_BLOCK;
     try cache.nodes.resize(allocator, node_count);
     try store.votes.update(allocator, node_count);
     const nodes = cache.nodes.slice();
@@ -256,7 +249,7 @@ fn leafViable(store: *const Store, block: BlockIndex, current_epoch: Epoch, fina
     return correct_justified and finalized_ok;
 }
 
-fn offerChild(store: *Store, parent_id: u32, child: ForkChoiceNode) !void {
+fn offerChild(store: *Store, parent_id: NodeId, child: ForkChoiceNode) !void {
     const best_child = store.head_cache.nodes.items(.best_child);
     const current = best_child[parent_id];
     if (current == NO_NODE or try childGreater(store, child, nodeAt(current))) {
@@ -290,6 +283,11 @@ pub fn weight(store: *const Store, node: ForkChoiceNode) u64 {
 /// Spec `get_attestation_score`, valid after `ensureComputed`.
 pub fn attestationScore(store: *const Store, node: ForkChoiceNode) u64 {
     return store.head_cache.nodes.items(.weight)[nodeId(node)];
+}
+
+/// The worst engine verdict on the payloads `node` stands on, valid after `ensureComputed`.
+pub fn execution(store: *const Store, node: ForkChoiceNode) ExecutionStatus {
+    return store.head_cache.nodes.items(.execution)[nodeId(node)];
 }
 
 /// Spec `get_payload_status_tiebreaker`, plus consensus-specs#5769: during its own slot a
