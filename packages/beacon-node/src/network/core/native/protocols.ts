@@ -15,8 +15,6 @@ const applicationProtocols = [
   {method: ReqRespMethod.BeaconBlocksByHead, version: 1},
   {method: ReqRespMethod.ExecutionPayloadEnvelopesByRange, version: 1},
   {method: ReqRespMethod.ExecutionPayloadEnvelopesByRoot, version: 1},
-  {method: ReqRespMethod.BlobSidecarsByRange, version: 1},
-  {method: ReqRespMethod.BlobSidecarsByRoot, version: 1},
   {method: ReqRespMethod.DataColumnSidecarsByRange, version: 1},
   {method: ReqRespMethod.DataColumnSidecarsByRoot, version: 1},
   {method: ReqRespMethod.LightClientBootstrap, version: 1},

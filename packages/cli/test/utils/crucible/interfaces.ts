@@ -125,6 +125,7 @@ export interface ExecutionGenesisOptions<E extends ExecutionClient = ExecutionCl
   shanghaiTime: number;
   cancunTime: number;
   pragueTime: number;
+  osakaTime: number;
   genesisTime: number;
   clientOptions: ExecutionClientsOptions[E];
 }

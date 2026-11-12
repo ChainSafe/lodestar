@@ -8,7 +8,7 @@ import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {isForkPostFulu} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Epoch, Status, fulu, sszTypesFor} from "@lodestar/types";
+import {Epoch, Slot, Status, fulu, sszTypesFor} from "@lodestar/types";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
 import {GoodByeReasonCode} from "../../constants/index.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
@@ -343,6 +343,11 @@ export class NetworkCore implements INetworkCore {
   async prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     this.attnetsService.addCommitteeSubscriptions(subscriptions);
     if (subscriptions.length > 0) this.peerManager.onCommitteeSubscriptions();
+  }
+
+  async addLocalProposalSlots(slots: Slot[]): Promise<void> {
+    // no peerManager.onCommitteeSubscriptions(): the extra subscription relies on connected peers, no discovery
+    this.attnetsService.addLocalProposalSlots(slots);
   }
 
   async prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {

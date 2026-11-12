@@ -47,10 +47,6 @@ const inline_test_allowlist = [_][]const u8{
     "src/beacon_node/chain/state_cache/block_state_cache.zig",
     // Private cgroup v1/v2 parsers: parseCpuV1, parseCpuMaxV2, translate.
     "src/cpu_count.zig",
-    // Private methods on ForkChoice: updateHead, addLatestMessage, getProposerHead.
-    "src/fork_choice/fork_choice.zig",
-    // Private method on ProtoArray: init.
-    "src/fork_choice/proto_array.zig",
     // Private frame enqueue path: Outbox.appendControl.
     "src/network/gossipsub/outbox.zig",
     // Private mesh selection helper: Overlay.shuffle.

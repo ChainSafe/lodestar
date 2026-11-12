@@ -2,12 +2,17 @@ import path from "node:path";
 import {getHeapStatistics} from "node:v8";
 import {SignableENR} from "@chainsafe/enr";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
-import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
+import {
+  BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS,
+  BUILDER_BID_LAG_BUFFER_MS,
+  BeaconDb,
+  BeaconNode,
+} from "@lodestar/beacon-node";
 import {ChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
-import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
+import {ACTIVE_PRESET, PresetName, isForkPostGloas} from "@lodestar/params";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
@@ -149,7 +154,10 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
         } catch (e) {
           // If we start from unfinalized state, we don't have checkpoint state so there is this error
           // "No state in cache for finalized checkpoint state epoch"
-          logger.warn("Error closing beacon node", {}, e as Error);
+          // The logger prints only the message and stack of an AggregateError, not its causes
+          for (const error of e instanceof AggregateError ? e.errors : [e]) {
+            logger.warn("Error closing beacon node", {}, error as Error);
+          }
           process.exitCode = 1;
         }
         savePubkeysFile(pubkeyCache, beaconPaths.pubkeysFile, logger);
@@ -243,8 +251,8 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     beaconNodeOptions.set({network: {private: true}, api: {private: true}});
   } else {
     const versionStr = `Lodestar/${version}`;
-    // Add version string for libp2p agent version
-    beaconNodeOptions.set({network: {version}});
+    const advertiseVersion = network !== "mainnet";
+    beaconNodeOptions.set({network: {version, advertiseVersion}});
     // Add User-Agent header to all builder requests
     beaconNodeOptions.set({executionBuilder: {userAgent: versionStr}});
     // Set jwt version with version string
@@ -260,6 +268,21 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     throw Error(
       `--chain.nativeStateTransition does not support Heze, which is scheduled at epoch ${config.HEZE_FORK_EPOCH}`
     );
+  }
+
+  // Bids received up to the deadline plus the lag buffer must still have a chance to win the block
+  // production race, otherwise the local block is selected at the race cutoff before any bid.
+  // Only enforced on an explicitly configured deadline, the default is used as is on short slots
+  const bidDeadline = args["builder.bidDeadline"];
+  if (bidDeadline !== undefined) {
+    for (const {name: fork, epoch} of config.forksAscendingEpochOrder) {
+      const raceCutoffMs = config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS);
+      if (isForkPostGloas(fork) && epoch !== Infinity && bidDeadline + BUILDER_BID_LAG_BUFFER_MS >= raceCutoffMs) {
+        throw Error(
+          `--builder.bidDeadline of ${bidDeadline}ms must be below ${raceCutoffMs - BUILDER_BID_LAG_BUFFER_MS}ms for fork ${fork}`
+        );
+      }
+    }
   }
 
   return {config, options, beaconPaths, network, version, commit, privateKey, logger};

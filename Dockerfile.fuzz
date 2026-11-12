@@ -5,7 +5,7 @@
 # ChainSafe fuzz platform, which provides the FUZZ_* environment and the
 # /fuzz volume. See test/fuzz/README.md, "Container image".
 #
-#   docker build -f Dockerfile.fuzz -t lodestar-z-fuzz .
+#   docker build -f Dockerfile.fuzz -t lodestar-fuzz .
 #
 # The build context must be the repository root: test/fuzz depends on the
 # root package via a relative path.
@@ -81,8 +81,8 @@ ENV AFL_CRASH_EXITCODE=99 AFL_PRELOAD=/opt/fuzz/lib/libfuzz_clock.so
 
 ARG REVISION=unknown
 LABEL org.opencontainers.image.source="https://github.com/ChainSafe/lodestar" \
-      org.opencontainers.image.title="lodestar-z-fuzz" \
-      org.opencontainers.image.description="AFL++ fuzz targets for lodestar-z" \
+      org.opencontainers.image.title="lodestar-fuzz" \
+      org.opencontainers.image.description="AFL++ fuzz targets for Lodestar" \
       org.opencontainers.image.revision="${REVISION}" \
       org.chainsafe.fuzz.minimize="/opt/fuzz/minimize.sh"
 

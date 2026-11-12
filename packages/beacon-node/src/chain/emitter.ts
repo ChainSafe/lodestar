@@ -3,7 +3,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex, PtcQuorumEvent} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
-import {DataColumnSidecar, RootHex, Slot, deneb, phase0} from "@lodestar/types";
+import {DataColumnSidecar, RootHex, Slot, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -52,15 +52,15 @@ export enum ChainEvent {
    */
   publishDataColumns = "publishDataColumns",
   /**
-   * This event signals that blobs have been fetched from the execution engine
-   * and are ready to be published.
-   */
-  publishBlobSidecars = "publishBlobSidecars",
-  /**
    * This event signals that a proposer slashing has been produced from an observed equivocation
    * and is ready to be published.
    */
   publishProposerSlashing = "publishProposerSlashing",
+  /**
+   * New block proposal slots of validators connected to this node, the network subscribes to all attestation
+   * subnets before them, see `slotsToSubscribeBeforeProposalDuty`
+   */
+  localProposalSlots = "localProposalSlots",
   /**
    * Trigger an update of status so reqresp by peers have current earliestAvailableSlot
    */
@@ -125,9 +125,9 @@ export type IChainEvents = ApiEvents & {
 
   [ChainEvent.publishDataColumns]: (sidecars: DataColumnSidecar[]) => void;
 
-  [ChainEvent.publishBlobSidecars]: (sidecars: deneb.BlobSidecar[]) => void;
-
   [ChainEvent.publishProposerSlashing]: (proposerSlashing: phase0.ProposerSlashing) => void;
+
+  [ChainEvent.localProposalSlots]: (proposalSlots: Slot[]) => void;
 
   [ChainEvent.updateStatus]: () => void;
 

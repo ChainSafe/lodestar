@@ -5,6 +5,7 @@ import {defaultTopicScoreParams} from "@libp2p/gossipsub/score";
 import {createBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_COMMITTEE_SIZE} from "@lodestar/params";
 import {kinds} from "../../src/network/core/native/config.js";
+import {GossipType} from "../../src/network/gossip/interface.js";
 import {computeGossipPeerScoreParamsByKind, gossipScoreThresholds} from "../../src/network/gossip/scoringParameters.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/interface.js";
 import {computeSubscribedSubnet} from "../../src/network/subnets/util.js";
@@ -44,7 +45,12 @@ const cases = [
       opportunistic_graft_threshold: gossipScoreThresholds.opportunisticGraftThreshold,
     },
     topics: kinds.map((kind) => {
-      const params = score.topics[kind] ?? {...defaultTopicScoreParams, topicWeight: 0, meshDeliveryStartSlot: 0};
+      // The native kinds still include blob_sidecar, which has no policy
+      const params = score.topics[kind as GossipType] ?? {
+        ...defaultTopicScoreParams,
+        topicWeight: 0,
+        meshDeliveryStartSlot: 0,
+      };
       return {
         mesh_delivery_start_slot: params.meshDeliveryStartSlot,
         params: {

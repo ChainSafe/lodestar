@@ -3,7 +3,7 @@ import {ENR} from "@chainsafe/enr";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {NativeHost, NativeNetwork, NativePeerReportContext, createNativeNetwork} from "@lodestar/native/network";
-import {Status} from "@lodestar/types";
+import {Slot, Status} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
 import {GoodByeReasonCode} from "../../../constants/index.js";
 import {PeerAction} from "../../peers/index.js";
@@ -195,6 +195,8 @@ export class NativeNetworkCore implements INetworkCore {
   prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     return this.intent.committee(subscriptions, true);
   }
+  // TODO: the native backend does not yet subscribe to all attestation subnets ahead of local proposals
+  async addLocalProposalSlots(_slots: Slot[]): Promise<void> {}
   isSubscribedToGossipCoreTopics(): boolean {
     return this.intent.isSubscribedToCoreTopics();
   }

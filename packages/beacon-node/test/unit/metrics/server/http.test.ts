@@ -26,13 +26,13 @@ describe("HttpMetricsServer", () => {
         register: metrics.register,
         logger,
         getOtherMetrics: async () => {
-          throw new Error("native scrape failed");
+          throw new Error("other metrics failed");
         },
       }
     );
     const res = await fetch(`http://127.0.0.1:${port}/metrics`);
     expect(res.status).toBe(500);
-    expect(await res.text()).toContain("native scrape failed");
+    expect(await res.text()).toContain("other metrics failed");
   });
 
   afterEach(async () => {

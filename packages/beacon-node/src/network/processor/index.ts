@@ -126,7 +126,6 @@ type WorkOpts = {
 const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.beacon_block]: {bypassQueue: true},
   [GossipType.execution_payload]: {bypassQueue: true},
-  [GossipType.blob_sidecar]: {bypassQueue: true},
   [GossipType.data_column_sidecar]: {bypassQueue: true},
   [GossipType.beacon_aggregate_and_proof]: {},
   [GossipType.voluntary_exit]: {},
@@ -246,7 +245,10 @@ type SearchUnknownRootTarget =
  */
 export class NetworkProcessor {
   private stopped = false;
-  /** Replaced when queued and awaiting work is dropped, so a reprocessing batch across a yield stops */
+  /**
+   * Replaced by dropAllJobs(). Loops that yield while re-queueing awaiting messages compare it after each yield
+   * and stop, so no message is queued after a drop.
+   */
   private jobGeneration = Symbol();
   private readonly chain: IBeaconChain;
   private readonly core: INetworkCore;

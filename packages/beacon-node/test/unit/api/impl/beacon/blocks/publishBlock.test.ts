@@ -1,26 +1,27 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {SerializedList} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
+import {ApiError} from "@lodestar/api/server";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {signedBeaconBlockToBlinded} from "@lodestar/state-transition";
-import {capella, ssz} from "@lodestar/types";
+import {computeStartSlotAtEpoch, signedBeaconBlockToBlinded} from "@lodestar/state-transition";
+import {fulu, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
-import {
-  BlockInputColumns,
-  BlockInputPreData,
-  BlockInputSource,
-} from "../../../../../../src/chain/blocks/blockInput/index.js";
+import {BlockInputColumns, BlockInputSource} from "../../../../../../src/chain/blocks/blockInput/index.js";
 import {verifyBlocksInEpoch} from "../../../../../../src/chain/blocks/verifyBlock.js";
 import {BlockError, BlockErrorCode, BlockGossipError, GossipAction} from "../../../../../../src/chain/errors/index.js";
-import {BlockType, ProduceFullBellatrix} from "../../../../../../src/chain/produceBlock/index.js";
+import {BlockType, ProduceFullFulu} from "../../../../../../src/chain/produceBlock/index.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
 import {validateGossipBlock} from "../../../../../../src/chain/validation/block.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
-import {config as forkConfig, generateBlockWithColumnSidecars} from "../../../../../utils/blocksAndData.js";
+import {
+  ELECTRA_FORK_EPOCH,
+  config as forkConfig,
+  generateBlockWithColumnSidecars,
+} from "../../../../../utils/blocksAndData.js";
 import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 
 vi.mock("../../../../../../src/chain/blocks/verifyBlock.js");
@@ -30,7 +31,18 @@ vi.mock("../../../../../../src/chain/validation/block.js", async (importOriginal
 });
 
 describe("api - beacon - publishBlockV2", () => {
-  const config = createBeaconConfig(configDef, Buffer.alloc(32, 1));
+  const config = createBeaconConfig(
+    {
+      ...configDef,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+    },
+    Buffer.alloc(32, 1)
+  );
   let modules: ApiTestModules;
 
   beforeEach(() => {
@@ -46,17 +58,19 @@ describe("api - beacon - publishBlockV2", () => {
 
   describe("broadcast_validation=gossip", () => {
     it("returns successfully for an already-known block", async () => {
-      const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
       const blockRoot = toRootHex(
         modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
       );
-      const blockInput = BlockInputPreData.createFromBlock({
-        forkName: ForkName.phase0,
+      const blockInput = BlockInputColumns.createFromBlock({
+        forkName: ForkName.fulu,
         block: signedBlock,
         blockRootHex: blockRoot,
         source: BlockInputSource.api,
         seenTimestampSec: 0,
         daOutOfRange: false,
+        sampledColumns: [0],
+        custodyColumns: [0],
       });
       modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
       vi.mocked(validateGossipBlock).mockRejectedValueOnce(
@@ -77,18 +91,20 @@ describe("api - beacon - publishBlockV2", () => {
     });
 
     it("returns successfully without publishing a block that is already imported", async () => {
-      const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
       const blockRoot = toRootHex(
         modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
       );
       modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(
-        BlockInputPreData.createFromBlock({
-          forkName: ForkName.phase0,
+        BlockInputColumns.createFromBlock({
+          forkName: ForkName.fulu,
           block: signedBlock,
           blockRootHex: blockRoot,
           source: BlockInputSource.api,
           seenTimestampSec: 0,
           daOutOfRange: false,
+          sampledColumns: [0],
+          custodyColumns: [0],
         })
       );
       modules.chain.forkChoice.hasBlockHex.mockReturnValue(true);
@@ -107,17 +123,19 @@ describe("api - beacon - publishBlockV2", () => {
     });
 
     it("returns successfully for a locally produced block imported while publishing", async () => {
-      const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
       const blockRoot = toRootHex(
         modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
       );
-      const blockInput = BlockInputPreData.createFromBlock({
-        forkName: ForkName.phase0,
+      const blockInput = BlockInputColumns.createFromBlock({
+        forkName: ForkName.fulu,
         block: signedBlock,
         blockRootHex: blockRoot,
         source: BlockInputSource.api,
         seenTimestampSec: 0,
         daOutOfRange: false,
+        sampledColumns: [0],
+        custodyColumns: [0],
       });
       modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
       // Locally produced blocks skip gossip validation, a duplicate publish can still race the import
@@ -139,17 +157,19 @@ describe("api - beacon - publishBlockV2", () => {
     });
 
     it("rejects a repeat proposal", async () => {
-      const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
       const blockRoot = toRootHex(
         modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
       );
-      const blockInput = BlockInputPreData.createFromBlock({
-        forkName: ForkName.phase0,
+      const blockInput = BlockInputColumns.createFromBlock({
+        forkName: ForkName.fulu,
         block: signedBlock,
         blockRootHex: blockRoot,
         source: BlockInputSource.api,
         seenTimestampSec: 0,
         daOutOfRange: false,
+        sampledColumns: [0],
+        custodyColumns: [0],
       });
       const error = new BlockGossipError(GossipAction.IGNORE, {
         code: BlockErrorCode.REPEAT_PROPOSAL,
@@ -180,20 +200,22 @@ describe("api - beacon - publishBlockV2", () => {
 
   describe("broadcast_validation=consensus_and_equivocation", () => {
     it("does not publish or import a non-local block that conflicts with an observed proposal", async () => {
-      const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
       signedBlock.message.slot = 1;
       signedBlock.message.proposerIndex = 2;
       const blockRoot = toRootHex(
         modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
       );
       const conflictingBlockRoot = toRootHex(Buffer.alloc(32, 1));
-      const blockInput = BlockInputPreData.createFromBlock({
-        forkName: ForkName.phase0,
+      const blockInput = BlockInputColumns.createFromBlock({
+        forkName: ForkName.fulu,
         block: signedBlock,
         blockRootHex: blockRoot,
         source: BlockInputSource.api,
         seenTimestampSec: 0,
         daOutOfRange: false,
+        sampledColumns: [0],
+        custodyColumns: [0],
       });
       modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(generateProtoBlock({slot: 0}));
       modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
@@ -222,19 +244,21 @@ describe("api - beacon - publishBlockV2", () => {
     it.each([routes.beacon.BroadcastValidation.consensus, routes.beacon.BroadcastValidation.consensusAndEquivocation])(
       "verifies the proposer signature and records the root before publishing a local block with broadcast_validation=%s",
       async (broadcastValidation) => {
-        const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+        const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
         signedBlock.message.slot = 1;
         signedBlock.message.proposerIndex = 2;
         const blockRoot = toRootHex(
           modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
         );
-        const blockInput = BlockInputPreData.createFromBlock({
-          forkName: ForkName.phase0,
+        const blockInput = BlockInputColumns.createFromBlock({
+          forkName: ForkName.fulu,
           block: signedBlock,
           blockRootHex: blockRoot,
           source: BlockInputSource.api,
           seenTimestampSec: 0,
           daOutOfRange: false,
+          sampledColumns: [0],
+          custodyColumns: [0],
         });
         vi.spyOn(modules.chain.blockProductionCache, "has").mockReturnValue(true);
         modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
@@ -258,19 +282,21 @@ describe("api - beacon - publishBlockV2", () => {
     it.each([routes.beacon.BroadcastValidation.consensus, routes.beacon.BroadcastValidation.consensusAndEquivocation])(
       "verifies all signatures for a non-local block with broadcast_validation=%s",
       async (broadcastValidation) => {
-        const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+        const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
         signedBlock.message.slot = 1;
         signedBlock.message.proposerIndex = 2;
         const blockRoot = toRootHex(
           modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
         );
-        const blockInput = BlockInputPreData.createFromBlock({
-          forkName: ForkName.phase0,
+        const blockInput = BlockInputColumns.createFromBlock({
+          forkName: ForkName.fulu,
           block: signedBlock,
           blockRootHex: blockRoot,
           source: BlockInputSource.api,
           seenTimestampSec: 0,
           daOutOfRange: false,
+          sampledColumns: [0],
+          custodyColumns: [0],
         });
         modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(generateProtoBlock({slot: 0}));
         modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
@@ -282,6 +308,22 @@ describe("api - beacon - publishBlockV2", () => {
         expect(modules.network.publishBeaconBlock).toHaveBeenCalledWith(signedBlock);
       }
     );
+  });
+
+  it("rejects a pre-fulu block", async () => {
+    const signedBlock = ssz.electra.SignedBeaconBlock.defaultValue();
+    signedBlock.message.slot = computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH);
+    modules = getApiTestModules({config: forkConfig});
+
+    const api = getBeaconBlockApi(defaultApiOptions, modules);
+    await expect(
+      api.publishBlockV2({
+        signedBlockContents: {signedBlock, blobs: [], kzgProofs: []},
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+      })
+    ).rejects.toThrow(ApiError);
+
+    expect(modules.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
   });
 
   it("tracks data column publication results", async () => {
@@ -328,7 +370,15 @@ describe("api - beacon - publishBlockV2", () => {
 
 describe("api - beacon - publish block size cap", () => {
   const config = createBeaconConfig(
-    {...configDef, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: 0},
+    {
+      ...configDef,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+    },
     Buffer.alloc(32, 1)
   );
   const limit = config.MAX_PAYLOAD_SIZE;
@@ -349,28 +399,30 @@ describe("api - beacon - publish block size cap", () => {
     modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
   });
 
-  /** A Capella block whose signed SSZ size is `size`, filled by one transaction */
-  function blockOfSize(size: number): capella.SignedBeaconBlock {
-    const signedBlock = ssz.capella.SignedBeaconBlock.defaultValue();
+  /** A Fulu block whose signed SSZ size is `size`, filled by one transaction */
+  function blockOfSize(size: number): fulu.SignedBeaconBlock {
+    const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
-    const empty = ssz.capella.SignedBeaconBlock.value_serializedSize(signedBlock);
+    const empty = ssz.fulu.SignedBeaconBlock.value_serializedSize(signedBlock);
     // A transaction adds its 4-byte offset and its bytes
     signedBlock.message.body.executionPayload.transactions = SerializedList.fromArray([
       new Uint8Array(size - empty - 4),
     ]);
-    expect(ssz.capella.SignedBeaconBlock.value_serializedSize(signedBlock)).toBe(size);
+    expect(ssz.fulu.SignedBeaconBlock.value_serializedSize(signedBlock)).toBe(size);
     return signedBlock;
   }
 
-  function importInput(signedBlock: capella.SignedBeaconBlock): BlockInputPreData {
-    const blockInput = BlockInputPreData.createFromBlock({
-      forkName: ForkName.capella,
+  function importInput(signedBlock: fulu.SignedBeaconBlock): BlockInputColumns {
+    const blockInput = BlockInputColumns.createFromBlock({
+      forkName: ForkName.fulu,
       block: signedBlock,
       // The lookup is mocked, so the root need not be the block's
       blockRootHex: toRootHex(new Uint8Array(32)),
       source: BlockInputSource.api,
       seenTimestampSec: 0,
       daOutOfRange: false,
+      sampledColumns: [0],
+      custodyColumns: [0],
     });
     modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
     return blockInput;
@@ -413,35 +465,22 @@ describe("api - beacon - publish block size cap", () => {
     importInput(signedBlock);
     const signedBlindedBlock = signedBeaconBlockToBlinded(config, signedBlock);
     const blockRoot = toRootHex(
-      ssz.capella.BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message as capella.BlindedBeaconBlock)
+      config
+        .getPostBellatrixForkTypes(signedBlock.message.slot)
+        .BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message)
     );
     modules.chain.blockProductionCache.set(blockRoot, {
       type: BlockType.Full,
-      fork: ForkName.capella,
+      fork: ForkName.fulu,
       executionPayload: signedBlock.message.body.executionPayload,
-    } as ProduceFullBellatrix);
+      blobsBundle: {commitments: [], blobs: [], proofs: []},
+      cells: [],
+    } satisfies ProduceFullFulu);
     const api = getBeaconBlockApi(defaultApiOptions, modules);
     await expectOutcome(
       api.publishBlindedBlockV2({signedBlindedBlock, broadcastValidation: routes.beacon.BroadcastValidation.gossip}),
       accepted,
       size
     );
-  });
-
-  it.each(sizes)("handles a pre-Fulu builder block %s the limit", async (_, size, accepted) => {
-    const signedBlock = blockOfSize(size);
-    importInput(signedBlock);
-    const submitBlindedBlock = vi.fn().mockResolvedValue({signedBlock});
-    Object.defineProperty(modules.chain, "executionBuilder", {value: {submitBlindedBlock}});
-    const api = getBeaconBlockApi(defaultApiOptions, modules);
-    await expectOutcome(
-      api.publishBlindedBlockV2({
-        signedBlindedBlock: signedBeaconBlockToBlinded(config, signedBlock),
-        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
-      }),
-      accepted,
-      size
-    );
-    expect(submitBlindedBlock).toHaveBeenCalledOnce();
   });
 });

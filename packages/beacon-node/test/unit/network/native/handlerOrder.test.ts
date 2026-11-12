@@ -62,6 +62,7 @@ function fixture() {
     emitter: new ChainEventEmitter(),
     forkChoice: {onAttestation: vi.fn(() => order.push("attestation handler"))},
     opPool,
+    proposerTracker: {shouldCollect: () => false},
     validatorMonitor: null,
   };
   const modules = {

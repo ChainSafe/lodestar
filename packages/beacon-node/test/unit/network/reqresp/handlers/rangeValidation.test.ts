@@ -2,7 +2,6 @@ import {describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {RespStatus} from "@lodestar/reqresp";
 import {validateBeaconBlocksByRangeRequest} from "../../../../../src/network/reqresp/handlers/beaconBlocksByRange.js";
-import {validateBlobSidecarsByRangeRequest} from "../../../../../src/network/reqresp/handlers/blobSidecarsByRange.js";
 import {validateDataColumnSidecarsByRangeRequest} from "../../../../../src/network/reqresp/handlers/dataColumnSidecarsByRange.js";
 import {validateExecutionPayloadEnvelopesByRangeRequest} from "../../../../../src/network/reqresp/handlers/executionPayloadEnvelopesByRange.js";
 
@@ -10,7 +9,6 @@ const config = createBeaconConfig({DENEB_FORK_EPOCH: 0, FULU_FORK_EPOCH: 0}, new
 const request = (startSlot: number, count: number) => ({startSlot, count, step: 1, columns: [0]});
 const validators = {
   blocks: (start: number, count: number) => validateBeaconBlocksByRangeRequest(config, request(start, count)),
-  blobs: (start: number, count: number) => validateBlobSidecarsByRangeRequest(config, 0, request(start, count)),
   columns: (start: number, count: number) => validateDataColumnSidecarsByRangeRequest(config, 0, request(start, count)),
   envelopes: (start: number, count: number) =>
     validateExecutionPayloadEnvelopesByRangeRequest(config, request(start, count)),

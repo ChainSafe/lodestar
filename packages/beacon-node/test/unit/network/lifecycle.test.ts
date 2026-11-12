@@ -98,7 +98,7 @@ describe("outer network retirement", () => {
   });
 
   it("preserves the close failure for all callers after stopping the processor", async () => {
-    const error = new Error("native join failed");
+    const error = new Error("core close failed");
     const close = vi.fn(async () => {
       throw error;
     });

@@ -4,6 +4,7 @@ import {multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {validateNetworkOptions} from "@lodestar/beacon-node/network";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CliCommandOptions} from "@lodestar/utils";
 import {YargsError} from "../../util/index.js";
 
@@ -61,6 +62,7 @@ export type NetworkArgs = {
   targetPeers?: number;
   subscribeAllSubnets?: boolean;
   slotsToSubscribeBeforeAggregatorDuty?: number;
+  slotsToSubscribeBeforeProposalDuty?: number;
   disablePeerScoring?: boolean;
   quic?: boolean;
   tcp?: boolean;
@@ -128,6 +130,19 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     parseListenArgs(args);
   const quic = args.quic ?? defaultOptions.network.quic;
   const tcp = args.tcp ?? defaultOptions.network.tcp;
+
+  const slotsToSubscribeBeforeProposalDuty =
+    args.slotsToSubscribeBeforeProposalDuty ?? defaultOptions.network.slotsToSubscribeBeforeProposalDuty;
+  if (
+    !Number.isInteger(slotsToSubscribeBeforeProposalDuty) ||
+    slotsToSubscribeBeforeProposalDuty < 0 ||
+    // proposers are only known one epoch ahead (fulu proposer lookahead)
+    slotsToSubscribeBeforeProposalDuty > SLOTS_PER_EPOCH
+  ) {
+    throw new YargsError(
+      `slotsToSubscribeBeforeProposalDuty must be an integer in [0, ${SLOTS_PER_EPOCH}], got ${slotsToSubscribeBeforeProposalDuty}`
+    );
+  }
 
   // validate ip, ip6, ports
   const muArgs = {
@@ -223,6 +238,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     subscribeAllSubnets: args.subscribeAllSubnets,
     slotsToSubscribeBeforeAggregatorDuty:
       args.slotsToSubscribeBeforeAggregatorDuty ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
+    slotsToSubscribeBeforeProposalDuty,
     disablePeerScoring: args.disablePeerScoring,
     quic,
     tcp,
@@ -391,6 +407,15 @@ export const options: CliCommandOptions<NetworkArgs> = {
     type: "number",
     description: "Number of slots before an aggregator duty to subscribe to subnets",
     defaultDescription: String(defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty),
+    group: "network",
+  },
+
+  slotsToSubscribeBeforeProposalDuty: {
+    hidden: true,
+    type: "number",
+    description:
+      "Number of slots before a block proposal of a connected validator to subscribe to all attestation subnets, to pack their single attestations into the block. 0 disables",
+    defaultDescription: String(defaultOptions.network.slotsToSubscribeBeforeProposalDuty),
     group: "network",
   },
 

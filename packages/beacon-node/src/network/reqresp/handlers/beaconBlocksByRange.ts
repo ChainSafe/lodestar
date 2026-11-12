@@ -4,7 +4,7 @@ import {ProtoBlock} from "@lodestar/fork-choice";
 import {GENESIS_SLOT, isForkPostDeneb} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {deneb, phase0} from "@lodestar/types";
+import {phase0} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.js";
@@ -98,7 +98,7 @@ export async function* onBeaconBlocksByRange(
 export function validateBeaconBlocksByRangeRequest(
   config: BeaconConfig,
   request: phase0.BeaconBlocksByRangeRequest
-): deneb.BlobSidecarsByRangeRequest {
+): Pick<phase0.BeaconBlocksByRangeRequest, "startSlot" | "count"> {
   const {startSlot} = request;
   let {count} = request;
 

@@ -105,11 +105,7 @@ export function computeGossipPeerScoreParams({
       if (type === GossipType.beacon_attestation) {
         for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++)
           topics[stringifyGossipTopic(config, {type, subnet, boundary})] = params;
-      } else if (
-        type !== GossipType.blob_sidecar &&
-        type !== GossipType.data_column_sidecar &&
-        type !== GossipType.sync_committee
-      ) {
+      } else if (type !== GossipType.data_column_sidecar && type !== GossipType.sync_committee) {
         topics[stringifyGossipTopic(config, {type, boundary})] = params;
       }
     }

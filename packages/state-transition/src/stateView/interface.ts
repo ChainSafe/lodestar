@@ -353,8 +353,6 @@ export type IBeaconStateViewNative = Omit<
   | "pendingConsolidations"
   | "pendingDeposits"
   | "pendingPartialWithdrawals"
-  | "preVerifyBuilderDepositsPreGloas"
-  | "clearPreGloasBuilderDepositCache"
   | "processSlots"
   | "proposerLookahead"
   | "stateTransition"

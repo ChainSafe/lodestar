@@ -10,7 +10,7 @@ import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {NativePeerReportContext} from "@lodestar/native/network";
 import {ResponseOutgoing} from "@lodestar/reqresp";
-import {Status} from "@lodestar/types";
+import {Slot, Status} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
 import {GoodByeReasonCode} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -225,6 +225,9 @@ export class WorkerNetworkCore implements INetworkCore {
   }
   prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     return this.getApi().prepareSyncCommitteeSubnets(subscriptions);
+  }
+  addLocalProposalSlots(slots: Slot[]): Promise<void> {
+    return this.getApi().addLocalProposalSlots(slots);
   }
   subscribeGossipCoreTopics(): Promise<void> {
     return this.getApi().subscribeGossipCoreTopics();

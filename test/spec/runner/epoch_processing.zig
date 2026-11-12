@@ -116,7 +116,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime epoch_process_fn: EpochProcessi
                 .effective_balance_updates => _ = try state_transition.processEffectiveBalanceUpdates(fork, allocator, epoch_cache, fork_state, &epoch_transition_cache),
                 .eth1_data_reset => try state_transition.processEth1DataReset(fork, fork_state, &epoch_transition_cache),
                 .historical_roots_update => try state_transition.processHistoricalRootsUpdate(fork, fork_state, &epoch_transition_cache),
-                .inactivity_updates => try state_transition.processInactivityUpdates(fork, allocator, config, epoch_cache, fork_state, &epoch_transition_cache),
+                .inactivity_updates => try state_transition.processInactivityUpdates(fork, config, epoch_cache, fork_state, &epoch_transition_cache),
                 .justification_and_finalization => try state_transition.processJustificationAndFinalization(fork, fork_state, &epoch_transition_cache),
                 .participation_flag_updates => try state_transition.processParticipationFlagUpdates(fork, fork_state),
                 .participation_record_updates => try state_transition.processParticipationRecordUpdates(fork, fork_state),

@@ -1,7 +1,7 @@
-# AFL++ Fuzzer for lodestar-z
+# AFL++ Fuzzer for Lodestar
 
 This directory contains [AFL++](https://aflplus.plus/) fuzzing harnesses
-for SSZ deserialization in lodestar-z.
+for SSZ deserialization in Lodestar.
 
 ## Fuzz Targets
 
@@ -289,7 +289,7 @@ rename the output files to replace colons with underscores before committing:
 ## Container image
 
 `Dockerfile.fuzz` (repository root) packages **every target** into one image,
-`ghcr.io/chainsafe/lodestar-z-fuzz`, for the ChainSafe fuzz platform. The
+`ghcr.io/chainsafe/lodestar-fuzz`, for the ChainSafe fuzz platform. The
 image contains the ReleaseSafe instrumented binaries, the clock shim, `afl-fuzz`,
 `afl-cmin` and the seed corpora; the
 Zig and LLVM toolchain stays in the build stage. `FUZZ_TARGET` picks the
@@ -297,41 +297,40 @@ target a container runs.
 
 ### When it is built
 
-The following describes the legacy publisher preserved in the
-[imported history](https://github.com/ChainSafe/lodestar/blob/1921c8436ad72e6360d310429830c021ffac0748/.github/workflows/fuzz-image.yml).
+Built and published by `.github/workflows/fuzz-image.yml`.
 
 | Event                                                                              | Result                                   |
 | ---------------------------------------------------------------------------------- | ---------------------------------------- |
-| Manual run on `main` (Actions → Fuzz image → Run workflow)                         | build, test, **publish** `main`          |
+| Manual run on `unstable` (Actions → Fuzz image → Run workflow)                     | build, test, **publish** `unstable`      |
 | Manual run on any other branch                                                     | build, test, **publish** `branch-<name>` |
 | Pull request touching `src/`, `pkg/`, `test/fuzz/`, `build.zig*` or the Dockerfile | build and test only                      |
 
-Publishing is manual on purpose. The fuzz platform follows the `main` tag and
-restarts every lodestar-z campaign on the new image, so publish once a useful
+Publishing is manual on purpose. The fuzz platform follows the `unstable` tag and
+restarts every campaign on the new image, so publish once a useful
 batch of changes has landed rather than on every commit. Pull requests still
 build and test, so a broken `Dockerfile.fuzz` is caught before the next publish.
 
-Each publish is tagged `main` and `sha-<short commit>`; the full commit is also
+Each publish is tagged `unstable` and `sha-<short commit>`; the full commit is also
 in the `org.opencontainers.image.revision` label. Only the newest 20 versions are
 kept.
 
 A run on another branch publishes `branch-<name>` (lowercased, other characters
-turned into `-`) instead of `main`, to try a branch on the platform before it
-merges: point a target at that tag, then back at `main` once merged. Only a run
-on `main` moves `main`.
+turned into `-`) instead of `unstable`, to try a branch on the platform before it
+merges: point a target at that tag, then back at `unstable` once merged. Only a
+run on `unstable` moves `unstable`.
 
 ### Running it on the fuzz platform
 
 One entry per target in `fuzz_jobs` (lodestar-ansible-development,
-`group_vars/fuzzer/vars.yml`), referencing the `main` tag. It never needs editing
+`group_vars/fuzzer/vars.yml`), referencing the `unstable` tag. It never needs editing
 when a new image is published. The platform's target names allow hyphens but not
 underscores, so write the harness name with hyphens; the entrypoint maps
 `ssz-basic` back to `fuzz-ssz_basic`:
 
 ```yaml
-- project: lodestar-z
+- project: lodestar
   target: ssz-basic # becomes FUZZ_TARGET
-  image: ghcr.io/chainsafe/lodestar-z-fuzz:main
+  image: ghcr.io/chainsafe/lodestar-fuzz:unstable
   cores: 1
   memory_mb: 2048
   duration: 0
@@ -339,10 +338,10 @@ underscores, so write the harness name with hyphens; the entrypoint maps
   gid: 61001
 ```
 
-When `main` moves, the platform stops each campaign (`SIGTERM`, so AFL++ saves
+When `unstable` moves, the platform stops each campaign (`SIGTERM`, so AFL++ saves
 its state) and starts it on the new image, resuming from the same corpus. To
 freeze a target on one build, for example while investigating a crash, use
-`image: ghcr.io/chainsafe/lodestar-z-fuzz@sha256:<digest>` instead; a pinned
+`image: ghcr.io/chainsafe/lodestar-fuzz@sha256:<digest>` instead; a pinned
 target is never switched. To find the commit a campaign is running:
 
 ```sh
@@ -393,15 +392,15 @@ a stopped campaign's volume:
 
 ```sh
 docker run --rm -e FUZZ_TARGET=ssz_basic -v /tmp/fuzz:/fuzz \
-  --entrypoint /opt/fuzz/minimize.sh lodestar-z-fuzz
+  --entrypoint /opt/fuzz/minimize.sh lodestar-fuzz
 ```
 
 ### Locally
 
 ```sh
-docker build -f Dockerfile.fuzz -t lodestar-z-fuzz .
+docker build -f Dockerfile.fuzz -t lodestar-fuzz .
 mkdir -p /tmp/fuzz && docker run --rm -e FUZZ_TARGET=ssz_basic \
-  -v /tmp/fuzz:/fuzz lodestar-z-fuzz
+  -v /tmp/fuzz:/fuzz lodestar-fuzz
 ```
 
 AFL++ refuses to start if `/proc/sys/kernel/core_pattern` pipes cores to a
@@ -413,7 +412,7 @@ crash reports as `SIGTRAP`:
 ```sh
 docker run --rm -i --init -e LD_PRELOAD=/opt/fuzz/lib/libfuzz_clock.so \
   --entrypoint /opt/fuzz/bin/fuzz-ssz_basic \
-  lodestar-z-fuzz < /tmp/fuzz/failures/crash-<hash>
+  lodestar-fuzz < /tmp/fuzz/failures/crash-<hash>
 ```
 
 ## Adding a New Target

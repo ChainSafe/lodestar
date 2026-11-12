@@ -76,7 +76,6 @@ function makeChain(db: BeaconDb): IBeaconChain {
     },
     getSerializedBlockByRoot: BeaconChain.prototype.getSerializedBlockByRoot,
     getSerializedDataColumnSidecars: BeaconChain.prototype.getSerializedDataColumnSidecars,
-    getSerializedBlobSidecars: BeaconChain.prototype.getSerializedBlobSidecars,
   } as unknown as IBeaconChain;
   return chain;
 }
