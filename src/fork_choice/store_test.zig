@@ -726,7 +726,7 @@ test "optimistic sync: valid walks down to the merge boundary, invalid removes t
     try testing.expectEqual(pendingOf(&store, 0x30), try store.getHead());
 }
 
-test "optimistic sync: invalidating a payload invalidates every block carrying it" {
+test "optimistic sync: a payload verdict applies to every block carrying it" {
     const allocator = testing.allocator;
     const config = &@import("config").mainnet.config;
     const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge });
@@ -750,14 +750,71 @@ test "optimistic sync: invalidating a payload invalidates every block carrying i
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x40)));
     try testing.expectEqual(pendingOf(&store, 0x20), try store.getHead());
 
-    // A validated copy of the payload rejects the verdict without touching the other copy.
-    var conflicted = try Store.initFromSummary(allocator, config, 0, anchor, Provider.stateProvider());
-    defer conflicted.deinit();
-    try conflicted.onTick(conflicted.timing.timeAtSlotMs(8));
-    for (blocks[0..3]) |block| try conflicted.onBlockSummary(optimisticSummary(block));
-    try conflicted.onPayloadValid(tagHash(0x30));
-    try testing.expectError(error.PayloadValidToInvalid, conflicted.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), tagHash(0x20)));
-    try testing.expectEqual(ExecutionStatus.syncing, try conflicted.executionStatus(pendingOf(&conflicted, 0x30)));
+    var validated = try Store.initFromSummary(allocator, config, 0, anchor, Provider.stateProvider());
+    defer validated.deinit();
+    try validated.onTick(validated.timing.timeAtSlotMs(8));
+    for (blocks) |block| try validated.onBlockSummary(optimisticSummary(block));
+    try validated.onPayloadValid(tagHash(0x30));
+    try testing.expectEqual(ExecutionStatus.valid, try validated.executionStatus(pendingOf(&validated, 0x30)));
+    try testing.expectEqual(ExecutionStatus.valid, try validated.executionStatus(pendingOf(&validated, 0x31)));
+    try testing.expectEqual(ExecutionStatus.syncing, try validated.executionStatus(pendingOf(&validated, 0x40)));
+    try testing.expectError(error.PayloadValidToInvalid, validated.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), tagHash(0x20)));
+    try testing.expectEqual(ExecutionStatus.valid, try validated.executionStatus(pendingOf(&validated, 0x31)));
+}
+
+test "payload decisions: a Heze payload failing its inclusion list loses its own slot to EMPTY" {
+    const allocator = testing.allocator;
+    const config_mod = @import("config");
+    const chain_config = config_mod.mainnet.chain_config.merge(.{
+        .ALTAIR_FORK_EPOCH = 0,
+        .BELLATRIX_FORK_EPOCH = 0,
+        .CAPELLA_FORK_EPOCH = 0,
+        .DENEB_FORK_EPOCH = 0,
+        .ELECTRA_FORK_EPOCH = 0,
+        .FULU_FORK_EPOCH = 0,
+        .GLOAS_FORK_EPOCH = 0,
+        .HEZE_FORK_EPOCH = 0,
+    });
+    const config = config_mod.BeaconConfig.init(chain_config, config_mod.mainnet.genesis_validators_root);
+    var store = try Store.initFromSummary(allocator, &config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .heze }), Provider.stateProvider());
+    defer store.deinit();
+    try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, true);
+    try store.onTick(store.timing.timeAtSlotMs(1));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .heze, .bid_parent = 1 }));
+    const block = store.blockIndex(tagRoot(0x20)).?;
+
+    try store.onExecutionPayloadEnvelope(tagRoot(0x20), .syncing, false);
+    try testing.expect(!store.isPayloadInclusionListSatisfied(block));
+    try testing.expectEqual(store_mod.ForkChoiceNode{ .block = block, .payload_status = .empty }, try store.getHead());
+
+    try testing.expect(store.recordInclusionListSatisfaction(block, true));
+    try testing.expectEqual(fullOf(&store, 0x20), try store.getHead());
+}
+
+test "payload decisions: before Heze a delivered payload satisfies, and a pre-Gloas head builds on full" {
+    const allocator = testing.allocator;
+    const config_mod = @import("config");
+    const chain_config = config_mod.mainnet.chain_config.merge(.{
+        .ALTAIR_FORK_EPOCH = 0,
+        .BELLATRIX_FORK_EPOCH = 0,
+        .CAPELLA_FORK_EPOCH = 0,
+        .DENEB_FORK_EPOCH = 0,
+        .ELECTRA_FORK_EPOCH = 0,
+        .FULU_FORK_EPOCH = 0,
+        .GLOAS_FORK_EPOCH = 1,
+    });
+    const config = config_mod.BeaconConfig.init(chain_config, config_mod.mainnet.genesis_validators_root);
+    var store = try Store.initFromSummary(allocator, &config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .fulu }), Provider.stateProvider());
+    defer store.deinit();
+    const slot = preset.SLOTS_PER_EPOCH;
+    try testing.expect(store.shouldBuildOnFull(pendingOf(&store, 1), slot));
+
+    try store.onTick(store.timing.timeAtSlotMs(slot));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = slot, .fork = .gloas, .bid_parent = 1 }));
+    const block = store.blockIndex(tagRoot(0x20)).?;
+    try testing.expect(!store.isPayloadInclusionListSatisfied(block));
+    try store.onExecutionPayloadEnvelope(tagRoot(0x20), .syncing, null);
+    try testing.expect(store.isPayloadInclusionListSatisfied(block));
 }
 
 test "optimistic sync: a zero latest valid hash invalidates through the merge block" {
@@ -826,6 +883,31 @@ test "optimistic sync: Gloas empty links skip the parent's own payload" {
     try store.onPayloadValid(tagHash(0x20));
     try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(fullOf(&store, 0x20)));
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(fullOf(&store, 0x21)));
+}
+
+test "get_ancestor: a Gloas walk takes each link's payload status from the child" {
+    const allocator = testing.allocator;
+    const config_mod = @import("config");
+    const chain_config = config_mod.mainnet.chain_config.merge(.{
+        .ALTAIR_FORK_EPOCH = 0,
+        .BELLATRIX_FORK_EPOCH = 0,
+        .CAPELLA_FORK_EPOCH = 0,
+        .DENEB_FORK_EPOCH = 0,
+        .ELECTRA_FORK_EPOCH = 0,
+        .FULU_FORK_EPOCH = 0,
+        .GLOAS_FORK_EPOCH = 0,
+    });
+    const config = config_mod.BeaconConfig.init(chain_config, config_mod.mainnet.genesis_validators_root);
+    var store = try Store.initFromSummary(allocator, &config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .gloas }), Provider.stateProvider());
+    defer store.deinit();
+    try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
+    try store.onTick(store.timing.timeAtSlotMs(8));
+    // 0x20 builds on the anchor's payload, 0x21 on 0x20 without 0x20's payload.
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x21, .parent = 0x20, .slot = 2, .fork = .gloas, .bid_parent = 1 }));
+
+    try testing.expectEqual(store_mod.ForkChoiceNode{ .block = store.blockIndex(tagRoot(0x20)).?, .payload_status = .empty }, store.getAncestor(pendingOf(&store, 0x21), 1));
+    try testing.expectEqual(fullOf(&store, 1), store.getAncestor(pendingOf(&store, 0x21), 0));
 }
 
 test "optimistic sync: a valid import and a valid envelope validate the payloads below them" {
