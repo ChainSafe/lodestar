@@ -92,6 +92,19 @@ export async function validateSyncCommitteeGossipContributionAndProof(
     });
   }
 
+  // Re-check after the await: concurrent contributions from the same aggregator all pass the checks above
+  if (chain.seenContributionAndProof.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)) {
+    throw new SyncCommitteeError(GossipAction.IGNORE, {
+      code: SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN,
+    });
+  }
+
+  if (!skipValidationKnownParticipants && chain.seenContributionAndProof.participantsKnown(contribution)) {
+    throw new SyncCommitteeError(GossipAction.IGNORE, {
+      code: SyncCommitteeErrorCode.SYNC_COMMITTEE_PARTICIPANTS_ALREADY_KNOWN,
+    });
+  }
+
   // no need to add to seenSyncCommittteeContributionCache here, gossip handler will do that
   chain.seenContributionAndProof.add(contributionAndProof, syncCommitteeParticipantIndices.length);
 
