@@ -2,6 +2,11 @@
 //!
 //! Entries are addressed by id so BLS worker threads, which cannot share JS
 //! objects with the main thread, can use them through the same native state.
+//!
+//! Mainnet aggregate storage: 16 entries * 32 slots * 64 committees * 144 bytes
+//! per projective public key = 4,718,592 bytes (4.5 MiB), excluding metadata.
+//! Each cached or in-flight shuffling also owns 4 * active_validator_count bytes
+//! of copied indices. The entry limit does not impose a fixed shuffling byte budget.
 const std = @import("std");
 const zapi = @import("zapi:zapi");
 const js = zapi.js;
