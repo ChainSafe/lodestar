@@ -160,13 +160,13 @@ describe("LegacyDataColumnStore", () => {
 
     await store.putManyBinary(key, columns);
     await store.deleteMany([key]);
-    await expect(store.pruneBefore(5)).resolves.toEqual([2, 3, 4]);
+    await expect(store.pruneBefore(5, 8)).resolves.toEqual([2, 3, 4]);
 
     expect(flatFiles.putDataColumnsBinary).toHaveBeenCalledWith(10, ROOT, columns);
     expect(flatFiles.deleteMany).toHaveBeenCalledWith([key]);
     expect(deleteHot).toHaveBeenCalledWith([fromHex(ROOT)]);
-    expect(flatFiles.pruneBefore).toHaveBeenCalledWith(5);
-    expect(pruneArchive).toHaveBeenCalledWith(5);
+    expect(flatFiles.pruneBefore).toHaveBeenCalledWith(5, 8);
+    expect(pruneArchive).toHaveBeenCalledWith(5, 8);
   });
 });
 

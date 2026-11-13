@@ -209,6 +209,23 @@ describe("archive repositories pruneBefore", () => {
       {prefix: 5, id: 1},
     ]);
   });
+
+  it("prunes at most maxSlots legacy data column slots and resumes after the last pruned slot", async () => {
+    for (const slot of [1, 2, 4, 7, 9]) {
+      for (const index of [0, 1]) {
+        await db.dataColumnSidecarArchive.put(slot, {...ssz.fulu.DataColumnSidecar.defaultValue(), index});
+      }
+    }
+
+    await expect(db.dataColumnSidecarArchive.pruneBefore(9, 2)).resolves.toEqual([1, 2]);
+    await expect(db.dataColumnSidecarArchive.pruneBefore(9, 2)).resolves.toEqual([4, 7]);
+    await expect(db.dataColumnSidecarArchive.pruneBefore(9, 2)).resolves.toEqual([]);
+
+    expect(await db.dataColumnSidecarArchive.keys()).toEqual([
+      {prefix: 9, id: 0},
+      {prefix: 9, id: 1},
+    ]);
+  });
 });
 
 describe("BeaconDb.compactLegacyDataColumns", () => {

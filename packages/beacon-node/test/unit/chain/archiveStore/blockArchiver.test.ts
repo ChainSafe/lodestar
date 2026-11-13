@@ -8,7 +8,11 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {LogLevel} from "@lodestar/utils";
-import {LateCanonicalBlockReason, archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
+import {
+  LateCanonicalBlockReason,
+  MAX_PRUNE_DATA_COLUMN_SLOTS_PER_RUN,
+  archiveBlocks,
+} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import type {Metrics} from "../../../../src/metrics/metrics.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
@@ -521,7 +525,10 @@ describe("block archiver task", () => {
       const columnsPruneSlot = computeStartSlotAtEpoch(
         currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
       );
-      expect(dbStub.dataColumns.pruneBefore).toHaveBeenCalledWith(columnsPruneSlot);
+      expect(dbStub.dataColumns.pruneBefore).toHaveBeenCalledWith(
+        columnsPruneSlot,
+        MAX_PRUNE_DATA_COLUMN_SLOTS_PER_RUN
+      );
       if (prunedSlots.length > 0) {
         expect(verbose).toHaveBeenCalledWith(
           "dataColumnSidecars prune",
