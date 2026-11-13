@@ -310,7 +310,6 @@ pub const PubkeyCache = struct {
 
     /// Populate the cache from the missing suffix of a validator list. Existing
     /// entries are trusted as the application's unforkable singleton history.
-    /// `allocator` backs per-call scratch only; cache storage stays on the cache allocator.
     pub fn syncPubkeys(
         self: *PubkeyCache,
         allocator: std.mem.Allocator,
