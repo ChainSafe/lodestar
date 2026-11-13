@@ -59,13 +59,25 @@ function runNetworkingFnTests(testHandler: string, testSuite: string, testSuiteD
   }
 }
 
+/** Matched against `<handler>/<testCase>` */
+const skippedGossipTests: RegExp[] = [
+  // Envelopes in these vectors carry a placeholder block hash, so the block hash check from
+  // consensus-specs#5770 rejects them. Unskip once the vectors are regenerated with real hashes.
+  /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__(valid.*|ignore_duplicate)$/,
+];
+
 const networking: TestRunnerCustom = (fork, testHandler, testSuite, testSuiteDirpath) => {
   if (isGossipValidationHandler(testHandler)) {
     for (const testCaseName of readdirSyncSpec(testSuiteDirpath)) {
       const testCaseDir = path.join(testSuiteDirpath, testCaseName);
-      it(testCaseName, async () => {
-        await runGossipValidationTest(fork, testHandler, testCaseDir);
-      }, 30_000);
+      const skip = skippedGossipTests.some((skippedMatch) => `${testHandler}/${testCaseName}`.match(skippedMatch));
+      it.skipIf(skip)(
+        testCaseName,
+        async () => {
+          await runGossipValidationTest(fork, testHandler, testCaseDir);
+        },
+        30_000
+      );
     }
   } else if (networkingFns[testHandler] !== undefined) {
     runNetworkingFnTests(testHandler, testSuite, testSuiteDirpath);
