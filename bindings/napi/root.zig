@@ -9,6 +9,7 @@ pub const metrics = @import("./metrics.zig");
 pub const stateTransition = @import("./stateTransition.zig");
 pub const BeaconConfig = @import("./BeaconConfig.zig");
 pub const BeaconStateView = @import("./BeaconStateView.zig");
+pub const ForkChoice = @import("./ForkChoice.zig");
 pub const blst = @import("./blst.zig");
 pub const blsVerifier = @import("./bls_verifier.zig");
 pub const pubkeys = @import("./pubkeys.zig");

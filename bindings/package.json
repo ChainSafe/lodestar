@@ -27,6 +27,10 @@
       "types": "./src/state-transition.d.ts",
       "import": "./src/state-transition.js"
     },
+    "./fork-choice": {
+      "types": "./src/fork-choice.d.ts",
+      "import": "./src/fork-choice.js"
+    },
     "./metrics": {
       "types": "./src/metrics.d.ts",
       "import": "./src/metrics.js"

@@ -13,7 +13,7 @@ import {
   processSlots,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, Slot, ValidatorIndex, phase0, ssz} from "@lodestar/types";
-import {ChainEventEmitter, initializeForkChoice} from "../../../../src/chain/index.js";
+import {ChainEventEmitter, initializeForkChoiceFromFinalizedState} from "../../../../src/chain/index.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 import {generateState} from "../../../utils/state.js";
 import {generateSignedBlockAtSlot} from "../../../utils/typeGenerator.js";
@@ -64,12 +64,11 @@ describe("LodestarForkChoice", () => {
   beforeEach(() => {
     const emitter = new ChainEventEmitter();
     const currentSlot = 16;
-    forkChoice = initializeForkChoice(
+    forkChoice = initializeForkChoiceFromFinalizedState(
       config,
       emitter,
       currentSlot,
       state,
-      true,
       {},
       (_: CheckpointWithHex) => justifiedBalances,
       () => null,
