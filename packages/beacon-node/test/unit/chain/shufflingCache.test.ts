@@ -1,9 +1,11 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
-import {releaseCommitteePubkeys} from "@lodestar/native/committee-pubkeys";
+import {computeCommitteePubkeys, releaseCommitteePubkeys} from "@lodestar/native/committee-pubkeys";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {BeaconStateView, EpochShuffling} from "@lodestar/state-transition";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {ShufflingCache, ShufflingPromiseCancelReason} from "../../../src/chain/shufflingCache.js";
+
+vi.mock("@lodestar/native/committee-pubkeys", {spy: true});
 
 describe("ShufflingCache", () => {
   const vc = 64;
@@ -70,6 +72,18 @@ describe("ShufflingCache", () => {
     // insert shuffling at a newer epoch prunes the current epoch
     shufflingCache["set"](shufflingAtEpoch(currentEpoch + 1), "0x01");
     expect(await shufflingCache.get(currentEpoch, currentDecisionRoot)).toBeNull();
+  });
+
+  it("should not compute committee pubkeys for a shuffling pruned during insertion", () => {
+    const compute = vi.mocked(computeCommitteePubkeys);
+    compute.mockClear();
+    const shuffling = shufflingAtEpoch(currentEpoch - 1);
+
+    shufflingCache["set"](shuffling, currentDecisionRoot);
+    shufflingCache["set"](shuffling, currentDecisionRoot);
+
+    expect(shufflingCache.has(shuffling.epoch, currentDecisionRoot)).toBe(false);
+    expect(compute).not.toHaveBeenCalled();
   });
 
   it("should compute committee pubkeys of a cached shuffling and release them when it is pruned", async () => {

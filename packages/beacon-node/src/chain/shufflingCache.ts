@@ -273,7 +273,9 @@ export class ShufflingCache {
     // set the shuffling
     shufflingAtEpoch.set(decisionRoot, {type: CacheItemType.shuffling, shuffling});
     this.prune();
-    this.computeCommitteePubkeys(shuffling, decisionRoot);
+    if (this.has(shuffling.epoch, decisionRoot)) {
+      this.computeCommitteePubkeys(shuffling, decisionRoot);
+    }
   }
 
   /**
