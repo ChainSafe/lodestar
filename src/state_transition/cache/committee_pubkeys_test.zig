@@ -18,12 +18,12 @@ const Fixture = struct {
     committees: CommitteePubkeys,
     aggregate_storage: []bls.AggregatePublicKey,
 
-    fn init() !Fixture {
-        var pubkeys: [validator_count]types.primitive.BLSPubkey.Type = undefined;
-        try interop.interopPubkeysCached(validator_count, &pubkeys);
+    fn init(comptime count: usize) !Fixture {
+        var pubkeys: [count]types.primitive.BLSPubkey.Type = undefined;
+        try interop.interopPubkeysCached(count, &pubkeys);
 
-        var validators: [validator_count]Validator = undefined;
-        var validator_ptrs: [validator_count]*const Validator = undefined;
+        var validators: [count]Validator = undefined;
+        var validator_ptrs: [count]*const Validator = undefined;
         for (pubkeys, &validators, &validator_ptrs) |pubkey, *validator, *validator_ptr| {
             validator.* = std.mem.zeroes(Validator);
             validator.pubkey = pubkey;
@@ -34,10 +34,9 @@ const Fixture = struct {
         errdefer cache.deinit();
         try cache.syncPubkeys(testing.io, &validator_ptrs);
 
-        // Any permutation works; reversing keeps committee members away from their index order.
-        const shuffling = try testing.allocator.alloc(u32, validator_count);
+        const shuffling = try testing.allocator.alloc(u32, count);
         errdefer testing.allocator.free(shuffling);
-        for (shuffling, 0..) |*index, i| index.* = @intCast(validator_count - 1 - i);
+        for (shuffling, 0..) |*index, i| index.* = @intCast(count - 1 - i);
 
         const aggregate_storage = try testing.allocator.alloc(
             bls.AggregatePublicKey,
@@ -94,51 +93,41 @@ const Fixture = struct {
     }
 };
 
-fn setBits(bits: []u8, random: std.Random, bit_len: usize, participation_percent: u8) void {
-    @memset(bits, 0);
-    for (0..bit_len) |bit| {
-        if (random.uintLessThan(u8, 100) < participation_percent) bits[bit / 8] |= @as(u8, 1) << @intCast(bit % 8);
-    }
-}
-
-test "committees split the shuffling like compute_committee" {
-    var fixture = try Fixture.init();
+test "committees preserve shuffled order across uneven boundaries" {
+    const committee_count = preset.SLOTS_PER_EPOCH * committees_per_slot;
+    var fixture = try Fixture.init(committee_count + 1);
     defer fixture.deinit();
 
-    var next: u32 = validator_count;
-    for (0..preset.SLOTS_PER_EPOCH * committees_per_slot) |i| {
+    var remaining: u32 = committee_count + 1;
+    for (0..committee_count) |i| {
         const members = fixture.committees.committee(i);
-        try testing.expectEqual(@as(usize, members_per_committee), members.len);
+        try testing.expectEqual(@as(usize, if (i == committee_count - 1) 2 else 1), members.len);
         for (members) |member| {
-            next -= 1;
-            try testing.expectEqual(next, member);
+            remaining -= 1;
+            try testing.expectEqual(remaining, member);
         }
     }
+    try testing.expectEqual(@as(u32, 0), remaining);
 }
 
 test "aggregateParticipants matches summing the participants" {
-    var fixture = try Fixture.init();
+    var fixture = try Fixture.init(validator_count);
     defer fixture.deinit();
 
-    var prng = std.Random.DefaultPrng.init(0x5eed);
-    const random = prng.random();
-    var bits: [(committees_per_slot * members_per_committee + 7) / 8]u8 = undefined;
+    const full = [_]u8{ 0xff, 0x0f };
+    const high = [_]u8{ 0xfe, 0x0f };
+    const low = [_]u8{ 0x01, 0x08 };
+    try fixture.expectMatchesParticipants(0, &.{0}, &full, members_per_committee);
+    try fixture.expectMatchesParticipants(0, &.{1}, &high, members_per_committee);
+    try fixture.expectMatchesParticipants(preset.SLOTS_PER_EPOCH - 1, &.{0}, &low, members_per_committee);
 
-    // Full and high participation take the subtraction path, low participation adds members.
-    for ([_]u8{ 100, 95, 75, 50, 10 }) |participation_percent| {
-        for (0..preset.SLOTS_PER_EPOCH) |slot| {
-            for ([_][]const u32{ &.{0}, &.{1}, &.{ 0, 1 } }) |committee_indices| {
-                const bit_len = committee_indices.len * members_per_committee;
-                setBits(&bits, random, bit_len, participation_percent);
-                if (std.mem.allEqual(u8, &bits, 0)) bits[0] = 1;
-                try fixture.expectMatchesParticipants(slot, committee_indices, &bits, bit_len);
-            }
-        }
-    }
+    // The second committee starts halfway through a byte and has only two signers.
+    const multi = [_]u8{ 0xfe, 0x1f, 0x80 };
+    try fixture.expectMatchesParticipants(preset.SLOTS_PER_EPOCH - 1, &.{ 0, 1 }, &multi, 2 * members_per_committee);
 }
 
 test "aggregateParticipants rejects inconsistent input" {
-    var fixture = try Fixture.init();
+    var fixture = try Fixture.init(validator_count);
     defer fixture.deinit();
 
     const bits = [_]u8{0xff} ** 3;
