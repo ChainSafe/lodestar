@@ -1,5 +1,5 @@
-import type {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {BeaconConfig} from "@lodestar/config";
+import type {PublicKey} from "@lodestar/native/blst";
 import {LightClientBootstrap, LightClientHeader, LightClientUpdate, SyncPeriod} from "@lodestar/types";
 import {computeSyncPeriodAtSlot} from "../../util/epoch.js";
 import type {LightClientUpdateSummary} from "./isBetterUpdate.js";

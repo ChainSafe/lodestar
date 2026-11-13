@@ -13,8 +13,8 @@ import {
   WHISTLEBLOWER_REWARD_QUOTIENT,
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
 } from "@lodestar/params";
-import {ValidatorIndex} from "@lodestar/types";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
+import {ValidatorIndex, ssz} from "@lodestar/types";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateGloas} from "../types.js";
 import {decreaseBalance, increaseBalance} from "../util/index.js";
 import {initiateValidatorExit} from "./initiateValidatorExit.js";
 
@@ -93,6 +93,17 @@ export function slashValidator(
       state.epochCtx.currentTargetUnslashedBalanceIncrements -= Math.floor(
         effectiveBalance / EFFECTIVE_BALANCE_INCREMENT
       );
+    }
+  }
+
+  if (fork >= ForkSeq.gloas) {
+    // Cleared on every slashing, not only proposer slashings: a proposer slashed via an attester slashing
+    // first would otherwise keep the builder paying for a block it equivocated on
+    const {builderPendingPayments} = state as CachedBeaconStateGloas;
+    for (let i = 0; i < builderPendingPayments.length; i++) {
+      if (builderPendingPayments.getReadonly(i).proposerIndex === slashedIndex) {
+        builderPendingPayments.set(i, ssz.gloas.BuilderPendingPayment.defaultViewDU());
+      }
     }
   }
 }

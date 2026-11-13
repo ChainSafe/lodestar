@@ -1,14 +1,12 @@
 /* Causing this error on usage of expect.any(Number)  */
-import {describe, expect, it} from "vitest";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {PromiseFulfilledResult, PromiseRejectedResult, wrapPromise} from "../../src/promise.js";
 
 describe("promise", () => {
   describe("wrapPromise", () => {
-    const timeoutMs = 100;
-    // TODO: Debug how promise is resolved quicker than the timeout
-    const promiseDurationMin = timeoutMs - 1;
-    // Add some margin for execution
-    const promiseDurationMax = timeoutMs + 20;
+    afterEach(() => {
+      vi.useRealTimers();
+    });
 
     it("should have initial status to pending", async () => {
       const result = wrapPromise(Promise.resolve("my value"));
@@ -43,30 +41,28 @@ describe("promise", () => {
     });
 
     it("should have correct durationMs attribute for promise which is resolved", async () => {
-      const promise = new Promise((resolve) => {
-        setTimeout(() => {
-          resolve("Resolved Value");
-        }, timeoutMs);
-      });
+      vi.useFakeTimers({now: 1000});
+      const promise = new Promise<string>((resolve) => setTimeout(() => resolve("Resolved Value"), 100));
       const result = wrapPromise(promise);
 
+      await vi.advanceTimersByTimeAsync(100);
+
       await expect(promise).resolves.toBe("Resolved Value");
-      expect((result as PromiseFulfilledResult<string>).durationMs).toBeGreaterThanOrEqual(promiseDurationMin);
-      expect((result as PromiseFulfilledResult<string>).durationMs).toBeLessThanOrEqual(promiseDurationMax);
+      expect((result as PromiseFulfilledResult<string>).durationMs).toBe(100);
     });
 
     it("should have correct durationMs attribute for promise which is rejected", async () => {
-      const promise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject("Rejected Error");
-        }, timeoutMs);
-      });
+      vi.useFakeTimers({now: 1000});
+      const promise = new Promise<string>((_, reject) => setTimeout(() => reject("Rejected Error"), 100));
       const result = wrapPromise(promise);
+      // Attach before advancing, `result.promise` rethrows and would otherwise reject unhandled
+      const rejection = expect(result.promise).rejects.toThrow("Rejected Error");
+
+      await vi.advanceTimersByTimeAsync(100);
 
       await expect(promise).rejects.toThrow("Rejected Error");
-      await expect(result.promise).rejects.toThrow("Rejected Error");
-      expect((result as PromiseRejectedResult<string>).durationMs).toBeGreaterThanOrEqual(promiseDurationMin);
-      expect((result as PromiseRejectedResult<string>).durationMs).toBeLessThanOrEqual(promiseDurationMax);
+      await rejection;
+      expect((result as PromiseRejectedResult<string>).durationMs).toBe(100);
     });
   });
 });

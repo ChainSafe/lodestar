@@ -6,13 +6,31 @@ const PROPOSER_PRESERVE_EPOCHS = 2;
 export type ProposerPreparationData = routes.validator.ProposerPreparationData;
 
 export class BeaconProposerCache {
-  private readonly feeRecipientByValidatorIndex: Map<number, {epoch: Epoch; feeRecipient: string}>;
+  private readonly feeRecipientByValidatorIndex: Map<number, {epoch: Epoch; feeRecipient?: string}>;
   constructor(readonly opts: {suggestedFeeRecipient: string}) {
     this.feeRecipientByValidatorIndex = new Map();
   }
 
   add(epoch: Epoch, {validatorIndex, feeRecipient}: ProposerPreparationData): void {
     this.feeRecipientByValidatorIndex.set(validatorIndex, {epoch, feeRecipient});
+  }
+
+  /**
+   * Track a validator that uses this node for duties, keeping the fee recipient it may have
+   * registered. Returns true if the validator was not tracked before.
+   */
+  track(epoch: Epoch, validatorIndex: number): boolean {
+    const entry = this.feeRecipientByValidatorIndex.get(validatorIndex);
+    if (entry !== undefined) {
+      entry.epoch = epoch;
+      return false;
+    }
+    this.feeRecipientByValidatorIndex.set(validatorIndex, {epoch});
+    return true;
+  }
+
+  has(validatorIndex: number): boolean {
+    return this.feeRecipientByValidatorIndex.has(validatorIndex);
   }
 
   prune(epoch: Epoch): void {

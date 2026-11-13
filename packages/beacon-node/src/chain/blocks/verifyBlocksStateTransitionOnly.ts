@@ -7,6 +7,7 @@ import {
 import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
@@ -25,6 +26,7 @@ export async function verifyBlocksStateTransitionOnly(
   preState0: IBeaconStateView,
   blocks: IBlockInput[],
   dataAvailabilityStatuses: DataAvailabilityStatus[],
+  serializedCache: SerializedCache,
   logger: Logger,
   metrics: Metrics | null,
   validatorMonitor: ValidatorMonitor | null,
@@ -37,7 +39,8 @@ export async function verifyBlocksStateTransitionOnly(
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
-    const block = blocks[i].getBlock();
+    const blockInput = blocks[i];
+    const block = blockInput.getBlock();
     const preState = i === 0 ? preState0 : postStates[i - 1];
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
@@ -47,7 +50,7 @@ export async function verifyBlocksStateTransitionOnly(
     let postState: IBeaconStateView;
     try {
       postState = preState.stateTransition(
-        block,
+        {block, ssz: serializedCache.get(block)},
         {
           // NOTE: Assume valid for now while sending payload to execution engine in parallel
           // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
@@ -60,7 +63,7 @@ export async function verifyBlocksStateTransitionOnly(
           verifySignatures: !useBlsBatchVerify && !validSignatures,
           dontTransferCache: false,
         },
-        {metrics, validatorMonitor}
+        {metrics: metrics?.stateTransition, validatorMonitor}
       );
     } catch (e) {
       throw new BlockError(block, {

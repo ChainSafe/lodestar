@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {MAX_EXECUTION_PAYMENT, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
+import {MAX_EXECUTION_PAYMENT, PAYLOAD_BUILDER_VERSION, isForkPostHeze} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
@@ -9,7 +9,7 @@ import {
   isGasLimitTargetCompatible,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {RootHex, Slot, gloas} from "@lodestar/types";
+import {RootHex, Slot, gloas, heze} from "@lodestar/types";
 import {bigIntMin, byteArrayEquals, prettyGweiToEth, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {RegenCaller} from "../../chain/regen/index.js";
@@ -41,6 +41,7 @@ export async function validateBuilderApiExecutionPayloadBid(
   }
 ): Promise<void> {
   const bid = signedExecutionPayloadBid.message;
+  const fork = chain.config.getForkName(bid.slot);
   const {slot, parentBlock, parentBlockHash, parentBlockRoot, entry, getParentExecutionRequests} = request;
 
   if (bid.slot !== slot) {
@@ -74,6 +75,26 @@ export async function validateBuilderApiExecutionPayloadBid(
         `executionPayment=${prettyGweiToEth(bid.executionPayment)}) ` +
         `is below minBid=${prettyGweiToEth(entry.minBid)}`
     );
+  }
+
+  // Same check as bid gossip (only_timely=True), not the proposer's full view from validator.md: a list released
+  // after the deadline would void every bid, and a high bid that went stale after gossip could crowd out the rest unpaid
+  if (isForkPostHeze(fork)) {
+    const {inclusionListBits} = bid as heze.ExecutionPayloadBid;
+    const inclusionListSlot = bid.slot - 1;
+    const dependentRoot = getShufflingDependentRoot(
+      chain.forkChoice,
+      computeEpochAtSlot(inclusionListSlot),
+      computeEpochAtSlot(parentBlock.slot),
+      parentBlock
+    );
+    if (!chain.inclusionListStore.isInclusionListBitsInclusive(inclusionListSlot, dependentRoot, inclusionListBits)) {
+      const expectedBits = chain.inclusionListStore.getInclusionListBits(inclusionListSlot, dependentRoot);
+      throw Error(
+        `Bid inclusionListBits=${toHex(inclusionListBits.uint8Array)} is not inclusive of ` +
+          `timely inclusion lists expected=${toHex(expectedBits.uint8Array)}`
+      );
+    }
   }
 
   const state = await chain.regen

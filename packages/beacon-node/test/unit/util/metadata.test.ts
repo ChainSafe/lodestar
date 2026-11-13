@@ -4,9 +4,10 @@ import {getLodestarClientVersion, serializeCgc} from "../../../src/util/metadata
 
 describe("util / metadata", () => {
   describe("getLodestarClientVersion", () => {
-    it("should return empty version and commit", () => {
-      const expected = {code: ClientCode.LS, name: "Lodestar", version: "", commit: ""};
+    it("should return empty version and a zero commit without git data", () => {
+      const expected = {code: ClientCode.LS, name: "Lodestar", version: "", commit: "00000000"};
       expect(getLodestarClientVersion()).toEqual(expected);
+      expect(getLodestarClientVersion({version: "", commit: ""})).toEqual(expected);
     });
     it("should return full client info", () => {
       const info = {version: "v0.36.0/80c248b", commit: "80c248bb392f512cc115d95059e22239a17bbd7d"}; // Version and long commit from readAndGetGitData()

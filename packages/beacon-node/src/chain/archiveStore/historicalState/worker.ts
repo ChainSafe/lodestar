@@ -36,7 +36,6 @@ const abortController = new AbortController();
 const metricsRegister = workerData.metricsEnabled ? new RegistryMetricCreator() : null;
 let historicalStateRegenMetrics: HistoricalStateRegenMetrics | undefined;
 let queueMetrics: QueueMetrics | undefined;
-
 if (metricsRegister) {
   const closeMetrics = collectNodeJSMetrics(metricsRegister, "lodestar_historical_state_worker_");
   abortController.signal.addEventListener("abort", closeMetrics, {once: true});
@@ -65,7 +64,7 @@ const api: HistoricalStateWorkerApi = {
     historicalStateRegenMetrics?.regenRequestCount.inc();
 
     const stateBytes = await queue.push<Uint8Array>(() =>
-      getHistoricalState(slot, config, db, workerData.nativeStateView, historicalStateRegenMetrics)
+      getHistoricalState(slot, config, db, workerData.nativeStateTransition, historicalStateRegenMetrics)
     );
     const result = Transfer(stateBytes, [stateBytes.buffer]) as unknown as Uint8Array;
 

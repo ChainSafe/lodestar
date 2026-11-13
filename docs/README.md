@@ -30,6 +30,26 @@ v1.41.0 tag      → dropdown: 1.41.0 (default) | 1.40.0 | ... | Next 🚧
 
 Local development works without any versioning files present — `docusaurus.config.ts` reads `versions.json` dynamically and falls back gracefully.
 
+### Comparing versions
+
+The **Compare versions** navbar link opens `/compare`, which diffs the public CLI options of the beacon node, validator client or builder client (from v1.46.0) between two docs versions.
+
+The CLI docs generator writes `pages/cli-options.json` next to the generated CLI references, and it is included in each version snapshot. The `version-comparison` plugin reads the snapshots at build time, so the page makes no runtime requests. Older snapshots without this file fall back to parsing their CLI reference, which omits hidden flags, aliases and some defaults.
+
+To compare released versions locally, copy `versioned_docs`, `versioned_sidebars` and `versions.json` from the `docs-versions` branch into `docs/` and don't commit them.
+
+Run the comparison tests from `docs/`:
+
+```bash
+pnpm test
+```
+
+Run the CLI documentation regression tests from the repository root:
+
+```bash
+pnpm vitest run --project unit packages/cli/test/unit/docsgen/manifest.test.ts
+```
+
 ### Manual versioning (if needed)
 
 `npx docusaurus docs:version` snapshots the current docs sources.

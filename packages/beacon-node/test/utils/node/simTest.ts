@@ -132,7 +132,7 @@ function printEpochSlotGrid<T>(map: Map<Slot, T>, _config: BeaconConfig, title: 
 function printEpochGrid(maps: Record<string, Map<Epoch, number>>, title: string): void {
   const lastEpoch = Object.values(maps).reduce((max, map) => {
     const epoch = Array.from(map.keys())[map.size - 1];
-    return epoch > max ? epoch : max;
+    return Math.max(epoch, max);
   }, 0);
   const epochGrid = linspace(0, lastEpoch).map((epoch) =>
     mapValues(maps, (_val, key) => formatValue(maps[key].get(epoch)))

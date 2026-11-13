@@ -343,19 +343,6 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_seen_block_input_cache_duplicate_blob_total[$rate_interval]) * 12",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "duplicate_blob_{{source}}",
-          "range": true,
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
           "expr": "rate(lodestar_seen_block_input_cache_duplicate_column_total[$rate_interval]) * 12",
           "hide": false,
           "instant": false,
@@ -375,19 +362,6 @@
           "legendFormat": "created_by_block",
           "range": true,
           "refId": "E"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_seen_block_input_cache_items_created_by_blob_total[$rate_interval]) * 12",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "created_by_blob",
-          "range": true,
-          "refId": "F"
         },
         {
           "datasource": {

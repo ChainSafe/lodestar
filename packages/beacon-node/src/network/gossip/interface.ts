@@ -14,8 +14,8 @@ import {
   SubnetID,
   altair,
   capella,
-  deneb,
   gloas,
+  heze,
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -26,7 +26,6 @@ import {JobItemQueue} from "../../util/queue/index.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",
-  blob_sidecar = "blob_sidecar",
   data_column_sidecar = "data_column_sidecar",
   beacon_aggregate_and_proof = "beacon_aggregate_and_proof",
   beacon_attestation = "beacon_attestation",
@@ -42,6 +41,7 @@ export enum GossipType {
   payload_attestation_message = "payload_attestation_message",
   execution_payload_bid = "execution_payload_bid",
   proposer_preferences = "proposer_preferences",
+  inclusion_list = "inclusion_list",
 }
 
 export type SequentialGossipType = Exclude<GossipType, GossipType.beacon_attestation>;
@@ -62,7 +62,6 @@ export interface IGossipTopic {
 
 export type GossipTopicTypeMap = {
   [GossipType.beacon_block]: {type: GossipType.beacon_block};
-  [GossipType.blob_sidecar]: {type: GossipType.blob_sidecar; subnet: SubnetID};
   [GossipType.data_column_sidecar]: {type: GossipType.data_column_sidecar; subnet: SubnetID};
   [GossipType.beacon_aggregate_and_proof]: {type: GossipType.beacon_aggregate_and_proof};
   [GossipType.beacon_attestation]: {type: GossipType.beacon_attestation; subnet: SubnetID};
@@ -80,6 +79,7 @@ export type GossipTopicTypeMap = {
   [GossipType.payload_attestation_message]: {type: GossipType.payload_attestation_message};
   [GossipType.execution_payload_bid]: {type: GossipType.execution_payload_bid};
   [GossipType.proposer_preferences]: {type: GossipType.proposer_preferences};
+  [GossipType.inclusion_list]: {type: GossipType.inclusion_list};
 };
 
 export type GossipTopicMap = {
@@ -97,7 +97,6 @@ export type SSZTypeOfGossipTopic<T extends GossipTopic> = T extends {type: infer
 
 export type GossipTypeMap = {
   [GossipType.beacon_block]: SignedBeaconBlock;
-  [GossipType.blob_sidecar]: deneb.BlobSidecar;
   [GossipType.beacon_aggregate_and_proof]: SignedAggregateAndProof;
   [GossipType.beacon_attestation]: SingleAttestation;
   [GossipType.data_column_sidecar]: DataColumnSidecar;
@@ -113,11 +112,11 @@ export type GossipTypeMap = {
   [GossipType.payload_attestation_message]: gloas.PayloadAttestationMessage;
   [GossipType.execution_payload_bid]: gloas.SignedExecutionPayloadBid;
   [GossipType.proposer_preferences]: gloas.SignedProposerPreferences;
+  [GossipType.inclusion_list]: heze.SignedInclusionList;
 };
 
 export type GossipFnByType = {
   [GossipType.beacon_block]: (signedBlock: SignedBeaconBlock) => Promise<void> | void;
-  [GossipType.blob_sidecar]: (blobSidecar: deneb.BlobSidecar) => Promise<void> | void;
   [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: SignedAggregateAndProof) => Promise<void> | void;
   [GossipType.beacon_attestation]: (attestation: SingleAttestation) => Promise<void> | void;
   [GossipType.data_column_sidecar]: (dataColumnSidecar: DataColumnSidecar) => Promise<void> | void;
@@ -147,6 +146,7 @@ export type GossipFnByType = {
   [GossipType.proposer_preferences]: (
     signedProposerPreferences: gloas.SignedProposerPreferences
   ) => Promise<void> | void;
+  [GossipType.inclusion_list]: (signedInclusionList: heze.SignedInclusionList) => Promise<void> | void;
 };
 
 export type GossipFn = GossipFnByType[keyof GossipFnByType];

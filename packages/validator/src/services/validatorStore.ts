@@ -1,8 +1,8 @@
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BuilderConfigData, BuilderEntryConfig} from "@lodestar/api/keymanager";
 import {BeaconConfig} from "@lodestar/config";
+import {SecretKey} from "@lodestar/native/blst";
 import {
   DOMAIN_AGGREGATE_AND_PROOF,
   DOMAIN_APPLICATION_BUILDER,
@@ -11,6 +11,7 @@ import {
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_BUILDER_REQUEST_AUTH,
   DOMAIN_CONTRIBUTION_AND_PROOF,
+  DOMAIN_INCLUSION_LIST_COMMITTEE,
   DOMAIN_PROPOSER_PREFERENCES,
   DOMAIN_PTC_ATTESTER,
   DOMAIN_RANDAO,
@@ -46,6 +47,7 @@ import {
   altair,
   bellatrix,
   gloas,
+  heze,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -359,14 +361,10 @@ export class ValidatorStore {
     }
 
     // Post-Gloas block production uses standard builder boost factor. Need to normalize the
-    // gloas-deprecated "builderonly" and "executiononly" to the gloas fallback "builderalways"
-    // and "executionalways" equivalent before deriving the boost factor.
-    if (isPostGloas) {
-      if (selection === routes.validator.BuilderSelection.BuilderOnly) {
-        selection = routes.validator.BuilderSelection.BuilderAlways;
-      } else if (selection === routes.validator.BuilderSelection.ExecutionOnly) {
-        selection = routes.validator.BuilderSelection.ExecutionAlways;
-      }
+    // gloas-deprecated "builderonly" to the gloas fallback "builderalways" equivalent before
+    // deriving the boost factor.
+    if (isPostGloas && selection === routes.validator.BuilderSelection.BuilderOnly) {
+      selection = routes.validator.BuilderSelection.BuilderAlways;
     }
 
     const boostFactor = getBuilderBoostFactor(
@@ -637,7 +635,8 @@ export class ValidatorStore {
   removeSigner(pubkeyHex: PubkeyHex): boolean {
     this.doppelgangerService?.unregisterValidator(pubkeyHex);
 
-    return this.indicesService.removeForKey(pubkeyHex) || this.validators.delete(pubkeyHex);
+    this.indicesService.removeForKey(pubkeyHex);
+    return this.validators.delete(pubkeyHex);
   }
 
   /** Return true if there is at least 1 pubkey registered */
@@ -813,6 +812,8 @@ export class ValidatorStore {
   ): Promise<SignedAggregateAndProof> {
     this.validateAttestationDuty(duty, aggregate.data);
 
+    this.assertDoppelgangerSafe(duty.pubkey);
+
     const aggregateAndProof: AggregateAndProof = {
       aggregate,
       aggregatorIndex: duty.validatorIndex,
@@ -933,8 +934,6 @@ export class ValidatorStore {
       throw Error(`Not signing proposer preferences for past slot ${duty.slot} (current ${currentSlot})`);
     }
 
-    this.assertDoppelgangerSafe(duty.pubkey);
-
     const message: gloas.ProposerPreferences = {
       dependentRoot,
       proposalSlot: duty.slot,
@@ -954,6 +953,38 @@ export class ValidatorStore {
 
     return {
       message,
+      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
+  async signInclusionList(
+    duty: routes.validator.InclusionListDuty,
+    inclusionList: heze.InclusionList
+  ): Promise<heze.SignedInclusionList> {
+    if (duty.slot !== inclusionList.slot) {
+      throw Error(
+        `Inconsistent duties during signing: duty.slot ${duty.slot} != inclusionList.slot ${inclusionList.slot}`
+      );
+    }
+    if (duty.validatorIndex !== inclusionList.validatorIndex) {
+      throw Error(
+        `Inconsistent duties during signing: duty.validatorIndex ${duty.validatorIndex} != inclusionList.validatorIndex ${inclusionList.validatorIndex}`
+      );
+    }
+
+    this.assertDoppelgangerSafe(duty.pubkey);
+
+    const signingSlot = inclusionList.slot;
+    const domain = this.config.getDomain(signingSlot, DOMAIN_INCLUSION_LIST_COMMITTEE);
+    const signingRoot = computeSigningRoot(ssz.heze.InclusionList, inclusionList, domain);
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.INCLUSION_LIST,
+      data: inclusionList,
+    };
+
+    return {
+      message: inclusionList,
       signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
     };
   }
@@ -1218,6 +1249,11 @@ export class ValidatorStore {
     }
   }
 
+  /**
+   * Required before signing a message that is slashable or that the beacon node counts as validator
+   * liveness (see `validatorSeenAtEpoch`), otherwise doppelganger detection would flag our own messages.
+   * Skip it for anything else.
+   */
   private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {
     const pubkeyHex = typeof pubKey === "string" ? pubKey : toPubkeyHex(pubKey);
     if (!this.isDoppelgangerSafe(pubkeyHex)) {

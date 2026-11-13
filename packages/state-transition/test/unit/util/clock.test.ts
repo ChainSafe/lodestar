@@ -1,5 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {BeaconConfig} from "@lodestar/config";
+import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Logger} from "@lodestar/utils";
@@ -147,7 +147,7 @@ describe("util / Clock", () => {
   });
 
   describe("getCurrentSlot", () => {
-    const testConfig = {SLOT_DURATION_MS: 12 * 1000} as BeaconConfig;
+    const testConfig = createChainForkConfig({SLOT_DURATION_MS: 12 * 1000});
     const genesisTime = Math.floor(new Date("2021-01-01").getTime() / 1000);
 
     // Tests can fail under certain time slots, overriding the system time

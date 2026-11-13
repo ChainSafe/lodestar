@@ -5,6 +5,8 @@ import {
   ProgressiveContainerType,
   ProgressiveListBasicType,
   ProgressiveListCompositeType,
+  ProgressiveSerializedListType,
+  SerializedList,
 } from "@chainsafe/ssz";
 import {
   MAX_ATTESTATIONS_ELECTRA,
@@ -47,7 +49,7 @@ describe("Gloas EIP-7688 SSZ types", () => {
     expect(ssz.gloas.IndexedPayloadAttestation).toBeInstanceOf(ProgressiveContainerType);
 
     expect(ssz.gloas.AttestingIndices).toBeInstanceOf(ProgressiveListBasicType);
-    expect(ssz.gloas.Transactions).toBeInstanceOf(ProgressiveListCompositeType);
+    expect(ssz.gloas.Transactions).toBeInstanceOf(ProgressiveSerializedListType);
     expect(ssz.gloas.Withdrawals).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.BlobKzgCommitments).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.DataColumn).toBeInstanceOf(ProgressiveListCompositeType);
@@ -135,11 +137,23 @@ describe("Gloas EIP-7688 SSZ types", () => {
     assertLimit(ssz.gloas.VoluntaryExits, MAX_VOLUNTARY_EXITS);
     assertLimit(ssz.gloas.BlsToExecutionChanges, MAX_BLS_TO_EXECUTION_CHANGES);
     assertLimit(ssz.gloas.PayloadAttestations, MAX_PAYLOAD_ATTESTATIONS);
-    assertLimit(ssz.gloas.Transactions, MAX_TRANSACTIONS_PER_PAYLOAD);
     assertLimit(ssz.gloas.BlobKzgCommitments, MAX_BLOB_COMMITMENTS_PER_BLOCK);
     assertLimit(ssz.gloas.KZGProofs, MAX_BLOB_COMMITMENTS_PER_BLOCK);
     assertLimit(ssz.gloas.DataColumn, MAX_BLOB_COMMITMENTS_PER_BLOCK);
     assertLimit(ssz.gloas.AttestingIndices, MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT);
+
+    // Transactions value is a SerializedList, not an array
+    expect(ssz.gloas.Transactions.limit).toBe(MAX_TRANSACTIONS_PER_PAYLOAD);
+    const transactions = SerializedList.fromArray(
+      Array.from({length: MAX_TRANSACTIONS_PER_PAYLOAD + 1}, () => new Uint8Array(0))
+    );
+    const transactionsLimitError = `Invalid list length ${MAX_TRANSACTIONS_PER_PAYLOAD + 1} over limit ${MAX_TRANSACTIONS_PER_PAYLOAD}`;
+    expect(() => ssz.gloas.Transactions.deserialize(ssz.gloas.Transactions.serialize(transactions))).toThrow(
+      transactionsLimitError
+    );
+    expect(() => ssz.gloas.Transactions.fromJson(ssz.gloas.Transactions.toJson(transactions))).toThrow(
+      transactionsLimitError
+    );
 
     const aggregationBitsLimit = MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT;
     expect(ssz.gloas.AggregationBits.limitBits).toBe(aggregationBitsLimit);
@@ -169,7 +183,6 @@ describe("Gloas EIP-7688 SSZ types", () => {
     const json = ssz.gloas.SignedBeaconBlock.toJson(signedBlock);
 
     expect(ssz.gloas.Deposits.maxSize).toBe(0);
-    expect(ssz.heze.BeaconBlockBody.fields.deposits).toBe(ssz.gloas.Deposits);
     expect(() => ssz.gloas.SignedBeaconBlock.deserialize(serialized)).toThrow("Invalid list length 1 over limit 0");
     expect(() => ssz.gloas.SignedBeaconBlock.deserializeToViewDU(serialized)).toThrow(
       "Invalid list length 1 over limit 0"

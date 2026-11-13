@@ -11,7 +11,7 @@ export type GossipAttestationsWork = {
 export type PendingGossipsubMessage = {
   topic: GossipTopic;
   msg: Message;
-  // only available for beacon_attestation and aggregate_and_proof
+  // set for every topic with a slot, held messages expire by it
   msgSlot?: Slot;
   msgId: string;
   propagationSource: PeerIdStr;

@@ -1,7 +1,7 @@
 import {EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {ProtoBlock} from "../../protoArray/interface.js";
+import {PayloadStatus, ProtoBlock} from "../../protoArray/interface.js";
 import {CheckpointWithHex} from "../store.js";
 
 export type FastConfirmationBalanceSource = {
@@ -128,7 +128,8 @@ export type FastConfirmationContext = {
   getBlock(root: RootHex): ProtoBlock | null;
   getAncestor(root: RootHex, slot: Slot): RootHex;
   isDescendant(ancestor: RootHex, descendant: RootHex): boolean;
-  getLatestMessage(validatorIndex: ValidatorIndex): {root: RootHex; epoch: Epoch} | null;
+  getLatestMessage(validatorIndex: ValidatorIndex): {root: RootHex; payloadStatus: PayloadStatus; epoch: Epoch} | null;
+  getParentNodePayloadStatus(blockRoot: RootHex): PayloadStatus | null;
   getUnrealizedJustified(): {checkpoint: CheckpointWithHex; balances: EffectiveBalanceIncrements};
   getFinalizedCheckpoint(): CheckpointWithHex;
   getEquivocatingIndices(): Set<ValidatorIndex>;

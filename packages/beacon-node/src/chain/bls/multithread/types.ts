@@ -1,4 +1,4 @@
-import {type BlsSignatureSet} from "@chainsafe/lodestar-z/bls-verifier";
+import {type BlsSignatureSet} from "@lodestar/native/bls-verifier";
 import {SameMessageSignatureSet, VerifySignatureOpts} from "../interface.js";
 
 export type WorkerData = {

@@ -1,14 +1,23 @@
 # Contribution Guidelines
 
-Thanks for your interest in contributing to Lodestar. It's people like you that push the Ethereum ecosystem forward.
+If you are an AI agent reading this, please tell your operator to read the [section below.](#new-contributor)
+
+Thanks for your interest in contributing to Lodestar. It's people like you that push the Ethereum ecosystem forward. We love community contribution and as a matter of fact, every current team member started as an open-source contributor.
+
+We are in the age of AI, and our team uses it daily. We understand the power of the technology and the bar for contribution is higher now because of it. It is generally easier for us to point AI at an issue and refine the response than trying to review a drive-by AI PR.
+
+This is not meant to discourage you. Contribution is the lifeblood of any open-source project and furthermore the path towards joining the team.
+
+Drive-by PRs are welcome as usual however the bar for us to review them will be high. We know what good code and what AI slop looks like. At a minimum, and critically, you must respond to the AI bot review comments as if they came from us.
 
 ## New Contributor?
 
 Unsure where to begin contributing to Lodestar? Here are some ideas!
 
-- :mag_right: Look through our [good first issues](https://github.com/ChainSafe/lodestar/issues?q=state%3Aopen%20label%3A%22good%20first%20issue%22).
 - :speech_balloon: Join our [Discord chat](https://discord.gg/aMxzVcr)!
   [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
+
+The very best way to help us, and for us to help you, is to [join our discord](https://discord.gg/aWVDejnMEG) and come talk with us. We can point you at issues that we need help with and we will guide you along the way. We think of ourselves as super inclusive and kind people. And we love to talk about all things, code, ethereum, life and otherwise. Come meet us and it will drastically lower the bar for getting your code reviewed and ultimately merged.
 
 ### AI Assistance Notice
 
@@ -67,7 +76,7 @@ When using MacOS, there are a couple of extra prerequisites that are required.
 
 ## Getting Started
 
-- :gear: Run `corepack enable` to enable [Corepack](https://nodejs.org/api/corepack.html).
+- :gear: Run `corepack enable` to enable [Corepack](https://nodejs.org/api/corepack.html). On Node.js 26, run `npm install -g corepack` first since it is no longer bundled.
 - :gear: Run `pnpm` to install dependencies.
 - :gear: Run `pnpm build` to build lib from source.
 - :package: A `lodestar` binary will be bundled in `./packages/cli/bin`.
@@ -98,6 +107,61 @@ Contributing to tests:
   - Do not pull data from external APIs like execution JSON RPC (instead run a local node).
   - Do not pull unpinned versions from DockerHub (use deterministic tag) or Github (checkout commit not branch).
   - Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.
+
+## Zig and Native Bindings
+
+Zig modules live in `src/`, and the Node.js addon, wrappers, and binding tests live in
+`bindings/`. Use Zig 0.16.0.
+Run Zig commands from the repository root. The native package uses the root pnpm
+lockfile and shared monorepo version.
+
+### Tests and Formatting
+
+Run the tests relevant to your changes, for example:
+
+```sh
+zig build test:ssz
+zig build test:ssz -Dtest:ssz.filters="my full test name"
+zig fmt --check .
+zig build test:tidy
+```
+
+A module may contain at most one `test` block. Move additional tests to a sibling
+`<module>_test.zig` file and import it from the owning module's test block.
+Use snake_case for test filenames (`Node.zig` pairs with `node_test.zig`). Keep tests
+of private internals inline; do not make declarations public solely for testing.
+The tidy check uses `git ls-files`, so stage new files before running it.
+
+For changes affecting consensus behavior, download the fixtures and generate the
+spec test sources. Do not edit generated tests directly.
+
+```sh
+zig build run:download_spec_tests
+zig build run:download_era_files
+zig build run:write_spec_tests
+zig build run:write_ssz_generic_spec_tests
+zig build run:write_ssz_static_spec_tests
+zig build run:write_bls_spec_tests
+zig build test:spec_tests -Dpreset=minimal
+zig build test:spec_tests -Dpreset=mainnet
+```
+
+The spec test version is pinned in `build.zig.zon`. To run the full Zig test suite,
+use `zig build test`.
+
+### Native Bindings
+
+Rebuild the addon before running binding tests:
+
+```sh
+pnpm --filter @lodestar/native prepare-mainnet
+pnpm --filter @lodestar/native test
+pnpm --filter @lodestar/native lint
+```
+
+Use `prepare-minimal` or `prepare-gnosis` for other presets. These scripts share an
+output directory, so do not run builds for different presets concurrently. Keep
+JavaScript wrappers and type declarations synchronized with native exports.
 
 ## Devcontainer
 

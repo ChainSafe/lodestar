@@ -49,7 +49,7 @@ export class ChainHeaderTracker {
     // We wait until the gloas fork is configured to avoid breaking
     // connections with pre-gloas beacon nodes
     if (this.config.GLOAS_FORK_EPOCH !== Infinity) {
-      topics.push(EventType.executionPayloadAvailable);
+      topics.push(EventType.executionPayloadAvailable, EventType.executionPayload);
     }
 
     this.api.events
@@ -121,6 +121,13 @@ export class ChainHeaderTracker {
         slot: event.message.slot,
         blockRoot: event.message.blockRoot,
       });
+    }
+
+    if (event.type === EventType.executionPayload) {
+      const {slot, blockRoot} = event.message;
+      this.emitter.emit(ValidatorEvent.executionPayloadImported, {slot, blockRoot});
+
+      this.logger.verbose("Found execution payload imported", {slot, blockRoot});
     }
   };
 }

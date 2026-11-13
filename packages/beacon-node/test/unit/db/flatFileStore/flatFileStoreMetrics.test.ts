@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import * as fsPromises from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
@@ -8,6 +8,10 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {FlatFileStore} from "../../../../src/db/flatFileStore/flatFileStore.js";
 import {createMetricsTest} from "../../metrics/utils.js";
 
+vi.mock("node:fs/promises", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("node:fs/promises")>()),
+}));
+
 const ROOT = "0x" + "aa".repeat(32);
 const config = createChainForkConfig({...defaultConfig, FULU_FORK_EPOCH: 0});
 const logger = testLogger("flat-file-metrics");
@@ -16,17 +20,17 @@ describe("FlatFileStore metrics", () => {
   let tmpDir: string;
 
   beforeEach(async () => {
-    tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-flatfile-metrics-"));
+    tmpDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), "lodestar-flatfile-metrics-"));
   });
 
   afterEach(async () => {
-    await fs.promises.rm(tmpDir, {recursive: true, force: true});
+    await fsPromises.rm(tmpDir, {recursive: true, force: true});
   });
 
   it.each(["constructor", "setMetrics"])("should collect indexed slot counts with %s metrics", async (source) => {
     const dataColumnDir = path.join(tmpDir, "data_columns");
-    await fs.promises.mkdir(path.join(dataColumnDir, "000000000100"), {recursive: true});
-    await fs.promises.mkdir(path.join(dataColumnDir, "000000000200"));
+    await fsPromises.mkdir(path.join(dataColumnDir, "000000000100"), {recursive: true});
+    await fsPromises.mkdir(path.join(dataColumnDir, "000000000200"));
     const metrics = createMetricsTest();
     const store = new FlatFileStore(
       dataColumnDir,
@@ -39,7 +43,7 @@ describe("FlatFileStore metrics", () => {
 
     const name = "lodestar_flat_file_store_indexed_slots";
     expect(metrics.register.getSingleMetric(name)).toBeDefined();
-    const readDirectories = vi.spyOn(fs.promises, "readdir");
+    const readDirectories = vi.spyOn(fsPromises, "readdir");
     try {
       await expect(metrics.register.getSingleMetricAsString(name)).resolves.toContain(`${name} 2`);
       expect(readDirectories).not.toHaveBeenCalled();
@@ -79,7 +83,7 @@ describe("FlatFileStore metrics", () => {
     await store.getDataColumnsBinary(100, ROOT, [0]);
 
     const readError = Object.assign(new Error("read failed"), {code: "EIO"});
-    const readSpy = vi.spyOn(fs.promises, "open").mockRejectedValueOnce(readError);
+    const readSpy = vi.spyOn(fsPromises, "open").mockRejectedValueOnce(readError);
     try {
       await expect(store.getDataColumnsBinary(100, ROOT, [0])).rejects.toMatchObject({cause: readError});
     } finally {
@@ -119,7 +123,7 @@ describe("FlatFileStore metrics", () => {
     ).resolves.toContain("lodestar_flat_file_store_startup_duration_seconds_count 1");
 
     const startupError = Object.assign(new Error("startup failed"), {code: "EIO"});
-    const readdirSpy = vi.spyOn(fs.promises, "readdir").mockRejectedValueOnce(startupError);
+    const readdirSpy = vi.spyOn(fsPromises, "readdir").mockRejectedValueOnce(startupError);
     try {
       const failedStore = new FlatFileStore(path.join(tmpDir, "data_columns"), config, logger, metrics.flatFileStore);
       await expect(failedStore.init()).rejects.toMatchObject({cause: startupError});

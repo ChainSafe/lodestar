@@ -4,6 +4,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateProtoBlock, generateSignedBlockAtSlot} from "../../../../../utils/typeGenerator.js";
 
@@ -14,7 +15,7 @@ describe("api - beacon - getBlockHeaders", () => {
 
   beforeEach(() => {
     modules = getApiTestModules();
-    api = getBeaconBlockApi(modules);
+    api = getBeaconBlockApi(defaultApiOptions, modules);
 
     vi.spyOn(modules.db.blockArchive, "getByParentRoot");
   });

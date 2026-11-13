@@ -179,21 +179,6 @@ export function initiateBuilderExit(state: CachedBeaconStateGloas, builderIndex:
 }
 
 /**
- * Find the index of a builder by their public key.
- * Returns null if not found.
- *
- * May consider builder pubkey cache if performance becomes an issue.
- */
-export function findBuilderIndexByPubkey(state: CachedBeaconStateGloas, pubkey: Uint8Array): BuilderIndex | null {
-  for (let i = 0; i < state.builders.length; i++) {
-    if (byteArrayEquals(state.builders.getReadonly(i).pubkey, pubkey)) {
-      return i;
-    }
-  }
-  return null;
-}
-
-/**
  * Use cached block roots to avoid repeated state root lookups while matching the spec's is_attestation_same_slot behavior.
  */
 export function isAttestationSameSlotRootCache(rootCache: RootCache, data: AttestationData): boolean {
@@ -249,41 +234,6 @@ export function getPtcWindowEpochCacheData(state: CachedBeaconStateGloas): {
 }
 
 /**
- * Add a new builder to the builders registry. Reuses slots from exited and fully withdrawn
- * builders when available, otherwise appends.
- *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/beacon-chain.md#new-add_builder_to_registry
- */
-export function addBuilderToRegistry(
-  state: CachedBeaconStateGloas,
-  pubkey: Uint8Array,
-  version: number,
-  executionAddress: Uint8Array,
-  amount: number,
-  slot: number
-): void {
-  const currentEpoch = computeEpochAtSlot(state.slot);
-  const depositEpoch = computeEpochAtSlot(slot);
-
-  let builderIndex = state.builders.length;
-  for (let i = 0; i < state.builders.length; i++) {
-    const builder = state.builders.getReadonly(i);
-    if (builder.withdrawableEpoch <= currentEpoch && builder.balance === 0) {
-      builderIndex = i;
-      break;
-    }
-  }
-
-  const newBuilder = createBuilderView(pubkey, version, executionAddress, amount, depositEpoch);
-
-  if (builderIndex < state.builders.length) {
-    state.builders.set(builderIndex, newBuilder);
-  } else {
-    state.builders.push(newBuilder);
-  }
-}
-
-/**
  * Append a new builder to the registry without scanning for a reusable slot.
  *
  * This is only safe to be used at the gloas fork transition.
@@ -301,10 +251,9 @@ export function appendBuilderToRegistry(
 }
 
 /**
- * Build a Builder view for registry insertion. Shared by the scan-based {@link addBuilderToRegistry}
- * and the append-only {@link appendBuilderToRegistry} so both paths produce an identical view.
+ * Build a Builder view from builder fields.
  */
-function createBuilderView(
+export function createBuilderView(
   pubkey: Uint8Array,
   version: number,
   executionAddress: Uint8Array,

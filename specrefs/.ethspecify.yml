@@ -1,4 +1,4 @@
-version: v1.7.0-beta.0
+version: v1.7.0-beta.4
 style: full
 
 specrefs:
@@ -45,7 +45,7 @@ exceptions:
     - PartialDataColumnPartsMetadata#gloas
     - PartialDataColumnSidecar#gloas
 
-    # heze (not implemented)
+    # heze (InclusionListsByIndices streams each SignedInclusionList as its own chunk; no list type)
     - SignedInclusionLists#heze
 
   dataclasses:
@@ -75,16 +75,10 @@ exceptions:
     - LatestMessage#gloas
     - Seen#gloas
 
-    # heze (not implemented)
-    - GetInclusionListResponse#heze
-    - InclusionListEntry#heze
-    - InclusionListStore#heze
-    - Store#heze
+    # heze
+    - Seen#heze
 
-  presets:
-    # TODO GLOAS: Remove these exceptions once the spec pin includes consensus-specs#5613
-    - MAX_DATA_COLUMN_SIDECAR_SIZE#gloas
-    - MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE#gloas
+  presets: []
 
   functions:
     # phase0
@@ -95,7 +89,7 @@ exceptions:
     - get_block_epoch#phase0
     - get_block_slot#phase0
     - get_eth1_vote#phase0
-    - get_filtered_block_tree#phase0
+    - get_filtered_node_tree#phase0
     - get_node_children#phase0
     - get_node_for_root#phase0
     - get_supported_node#phase0
@@ -106,6 +100,10 @@ exceptions:
     - seconds_to_milliseconds#phase0
     - store_target_checkpoint_state#phase0
     - voting_period_start_time#phase0
+
+    # optional fast confirmation restart recovery (not implemented)
+    - block_should_be_finalized#phase0
+    - get_restart_resilient_confirmed_root#phase0
 
     # altair
     - apply_light_client_update#altair
@@ -124,10 +122,17 @@ exceptions:
     - validate_merge_block#bellatrix
 
     # deneb
+    # Pre-fulu blob sidecar functions, replaced by data columns in fulu
+    - compute_subnet_for_blob_sidecar#deneb
+    - get_blob_sidecars#deneb
     - is_within_epoch#deneb
+    - validate_blob_sidecar_gossip#deneb
+    - verify_blob_sidecar_inclusion_proof#deneb
 
     # electra
+    - compute_subnet_for_blob_sidecar#electra
     - get_eth1_vote#electra
+    - validate_blob_sidecar_gossip#electra
 
     # fulu
     - verify_partial_data_column_header_inclusion_proof#fulu
@@ -135,6 +140,7 @@ exceptions:
     - validate_partial_data_column_sidecar_gossip#fulu
 
     # gloas
+    - compute_max_partial_data_column_sidecar_size#gloas
     - get_node_children#gloas
     - get_upcoming_proposal_slots#gloas
     - is_current_or_next_slot#gloas
@@ -151,26 +157,8 @@ exceptions:
     - compute_max_request_blob_sidecars#electra
     - compute_max_request_data_column_sidecars#fulu
     - compute_min_epochs_for_block_requests#phase0
-
-    # heze (not implemented)
-    - get_forkchoice_store#heze
-    - get_inclusion_list_bits#heze
-    - get_inclusion_list_committee#heze
-    - get_inclusion_list_committee_assignment#heze
-    - get_inclusion_list_due_ms#heze
-    - get_inclusion_list_signature#heze
-    - get_inclusion_list_store#heze
-    - get_inclusion_list_transactions#heze
-    - get_signed_inclusion_list#heze
-    - is_inclusion_list_bits_inclusive#heze
-    - is_payload_inclusion_list_satisfied#heze
-    - is_valid_inclusion_list_signature#heze
-    - on_execution_payload_envelope#heze
-    - on_inclusion_list#heze
-    - prepare_execution_payload#heze
-    - process_inclusion_list#heze
-    - record_payload_inclusion_list_satisfaction#heze
-    - should_extend_payload#heze
+    # The pre-Gloas retention minimum exceeds the reduced Gloas minimum.
+    - compute_min_epochs_for_block_requests#gloas
 
   custom_types:
     # phase0

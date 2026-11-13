@@ -16,10 +16,12 @@ import {
   type InvalidAttestationData,
   ScannedSlotsTerminationReason,
 } from "../../chain/opPools/aggregatedAttestationPool.js";
+import {InclusionListInsertOutcome} from "../../chain/opPools/inclusionListStore.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
 import {RejectReason} from "../../chain/seenCache/seenAttestationData.js";
+import type {ShufflingPromiseCancelReason} from "../../chain/shufflingCache.js";
 import {CacheItemType} from "../../chain/stateCache/types.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import type {FlatFileStoreOperation} from "../../db/flatFileStore/metrics.js";
@@ -180,6 +182,30 @@ export function createLodestarMetrics(
       buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
     }),
 
+    reqRespByRange: {
+      requestedSlots: register.histogram<{method: string}>({
+        name: "lodestar_reqresp_by_range_requested_slots",
+        help: "Histogram of slot count requested per served by_range request",
+        labelNames: ["method"],
+        buckets: [1, 16, 32, 64, 128],
+      }),
+      // data_column_sidecars_by_range is the only by_range request carrying columns
+      requestedColumns: register.histogram({
+        name: "lodestar_reqresp_by_range_requested_columns",
+        help: "Histogram of column count requested per served data_column_sidecars_by_range request",
+        // 128 is NUMBER_OF_COLUMNS.
+        buckets: [1, 4, 8, 32, 128],
+      }),
+      servedBytes: register.histogram<{method: string}>({
+        name: "lodestar_reqresp_by_range_served_bytes",
+        help: "Histogram of total serialized bytes served per by_range request",
+        labelNames: ["method"],
+        // min bucket is roughly a typical mainnet block is 100MB,
+        // max bucket is roughly 100 * MAX_PAYLOAD_SIZE
+        buckets: [100e3, 1e6, 10e6, 100e6, 1000e6],
+      }),
+    },
+
     regenQueue: {
       length: register.gauge({
         name: "lodestar_regen_queue_length",
@@ -302,6 +328,31 @@ export function createLodestarMetrics(
       concurrency: register.gauge({
         name: "lodestar_unfinalized_payload_envelope_writes_queue_concurrency",
         help: "Current concurrency of unfinalized payload envelope writes queue",
+      }),
+    },
+
+    columnReconstructionQueue: {
+      length: register.gauge({
+        name: "lodestar_column_reconstruction_queue_length",
+        help: "Count of total column reconstruction queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_column_reconstruction_queue_dropped_jobs_total",
+        help: "Count of total column reconstruction queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_column_reconstruction_queue_job_time_seconds",
+        help: "Time to process column reconstruction queue job in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_column_reconstruction_queue_job_wait_time_seconds",
+        help: "Time from job added to the column reconstruction queue to starting in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_column_reconstruction_queue_concurrency",
+        help: "Current concurrency of column reconstruction queue",
       }),
     },
 
@@ -593,6 +644,11 @@ export function createLodestarMetrics(
       name: "lodestar_sync_range_sync_peers",
       help: "Count of peers by sync type [FullySynced, Advanced, Behind]",
       labelNames: ["syncType"],
+    }),
+    syncPeerFinalizedCheckpointMismatch: register.counter<{reason: string}>({
+      name: "lodestar_sync_peer_finalized_checkpoint_mismatch_total",
+      help: "Total behind peers whose Status finalized checkpoint is not in our chain, by reason",
+      labelNames: ["reason"],
     }),
     syncSwitchGossipSubscriptions: register.gauge<{action: string}>({
       name: "lodestar_sync_switch_gossip_subscriptions",
@@ -957,6 +1013,11 @@ export function createLodestarMetrics(
         help: "Time elapsed between block received and fully verified state, signatures and payload",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
       }),
+      receivedToConsensusVerifiedTime: register.histogram({
+        name: "lodestar_gossip_block_received_to_consensus_verified_seconds",
+        help: "Time from gossip block arrival until both the state transition and all block signature verifications are complete, excluding execution payload verification",
+        buckets: [0.01, 0.015, 0.02, 0.025, 0.03, 0.04, 0.5, 1],
+      }),
       verifiedToBlobsAvailabiltyTime: register.histogram<{numBlobs: number}>({
         name: "lodestar_gossip_block_verified_to_blobs_availability_time",
         help: "Time elapsed between block verified and blobs became available",
@@ -992,10 +1053,6 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_blob_gossip_validate_time",
         help: "Time elapsed for blob validation",
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
-      }),
-      publishedFromEngine: register.counter({
-        name: "lodestar_gossip_blob_published_from_engine_total",
-        help: "Total number of blobs retrieved from execution engine and published to gossip",
       }),
     },
     // Gossip execution payload envelope
@@ -1118,11 +1175,6 @@ export function createLodestarMetrics(
         help: "Total number of imported blocks by source",
         labelNames: ["source"],
       }),
-      blobsBySource: register.gauge<{blobsSource: BlockInputSource}>({
-        name: "lodestar_import_blobs_by_source_total",
-        help: "Total number of imported blobs by source",
-        labelNames: ["blobsSource"],
-      }),
       notOverrideFcuReason: register.counter<{reason: NotReorgedReason}>({
         name: "lodestar_import_block_not_override_fcu_reason_total",
         help: "Reason why the fcu call is not suppressed during block import",
@@ -1152,6 +1204,31 @@ export function createLodestarMetrics(
       help: "The total result of calling notifyForkchoiceUpdate execution engine api",
       labelNames: ["result"],
     }),
+    getInclusionListV1Requests: register.counter({
+      name: "lodestar_execution_engine_get_inclusion_list_v1_requests_total",
+      help: "Total number of engine_getInclusionListV1 requests",
+    }),
+    getInclusionListV1RequestsDuration: register.histogram({
+      name: "lodestar_execution_engine_get_inclusion_list_v1_duration_seconds",
+      help: "Duration of engine_getInclusionListV1 requests",
+      buckets: [0.05, 0.1, 0.25, 0.5, 1],
+    }),
+    engineApiRequests: register.counter<{transport: string}>({
+      name: "lodestar_execution_engine_api_requests_total",
+      help: "Total engine API requests by transport",
+      labelNames: ["transport"],
+    }),
+    inclusionListStore: {
+      size: register.gauge({
+        name: "lodestar_inclusion_list_store_size",
+        help: "Current number of inclusion lists retained in the InclusionListStore",
+      }),
+      insertOutcome: register.counter<{insertOutcome: InclusionListInsertOutcome}>({
+        name: "lodestar_inclusion_list_store_insert_outcome_total",
+        help: "Total number of InclusionListStore insertions by outcome",
+        labelNames: ["insertOutcome"],
+      }),
+    },
     opPool: {
       aggregatedAttestationPool: {
         size: register.gauge({
@@ -1257,7 +1334,70 @@ export function createLodestarMetrics(
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_seen_committees_total",
             help: "Total number of committees for which all members are seen when producing packed attestations",
           }),
+          missingShufflingCommittees: register.gauge({
+            name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_missing_shuffling_committees_total",
+            help: "Total number of committees skipped due to missing shuffling when producing packed attestations",
+          }),
+          attestationValue: register.counter<{source: "aggregate" | "single"}>({
+            name: "lodestar_oppool_packed_attestation_value_total",
+            help: "Sum of new seen effective balance increments times participation flag weight of packed attestations, by source",
+            labelNames: ["source"],
+          }),
+          blockNewSeenAttesters: register.gauge({
+            name: "lodestar_oppool_packed_attestations_block_new_seen_attesters",
+            help: "Total number of new seen attesters across all packed attestations of the last produced block",
+          }),
+          singlesValueRatio: register.histogram({
+            name: "lodestar_oppool_packed_attestations_singles_value_ratio",
+            help: "Ratio of attestation value contributed by single attestations per produced block",
+            buckets: [0, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1],
+          }),
+          singlesNewSeenAttesters: register.histogram({
+            name: "lodestar_oppool_packed_attestations_singles_new_seen_attesters",
+            help: "Number of attesters newly included only thanks to single attestations per produced block",
+            buckets: [0, 1, 5, 10, 25, 50, 100, 250, 500, 1000, 1024],
+          }),
+          singlesNewSeenAttestersByInclusionDistance: register.gauge<{inclusionDistance: number}>({
+            name: "lodestar_oppool_packed_attestations_singles_new_seen_attesters_by_inclusion_distance",
+            help: "Number of attesters newly included only thanks to single attestations in the last produced block, by inclusion distance",
+            labelNames: ["inclusionDistance"],
+          }),
+          singlesNewSeenEffectiveBalance: register.histogram({
+            name: "lodestar_oppool_packed_attestations_singles_new_seen_effective_balance",
+            help: "Effective balance increments of attesters newly included only thanks to single attestations per produced block",
+            buckets: [0, 32, 160, 320, 800, 1600, 3200, 8000, 32000],
+          }),
+          singlesOnlyConsolidations: register.histogram({
+            name: "lodestar_oppool_packed_attestations_singles_only_consolidations",
+            help: "Number of packed attestations built only from single attestations per produced block",
+            buckets: [0, 1, 2, 4, 8],
+          }),
+          singlesFoldedCommittees: register.histogram({
+            name: "lodestar_oppool_packed_attestations_singles_folded_committees",
+            help: "Number of committees in packed attestations that received single attestations per produced block",
+            buckets: [0, 1, 2, 4, 8, 16, 32, 64],
+          }),
         },
+      },
+      singleAttestationPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_single_attestation_pool_size",
+          help: "Current number of single attestations in the SingleAttestationPool",
+        }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_single_attestation_pool_gossip_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a single attestation from gossip to the SingleAttestationPool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_single_attestation_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a single attestation from api to the SingleAttestationPool",
+          labelNames: ["insertOutcome"],
+        }),
+        deletedByBlock: register.counter({
+          name: "lodestar_oppool_single_attestation_pool_deleted_by_block_total",
+          help: "Total number of single attestations deleted because a canonical block includes them",
+        }),
       },
       attestationPool: {
         size: register.gauge({
@@ -1394,12 +1534,28 @@ export function createLodestarMetrics(
           help: "Total number of InsertOutcome as a result of adding an execution payload bid from gossip to the pool",
           labelNames: ["insertOutcome"],
         }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_execution_payload_bid_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an execution payload bid from api to the pool",
+          labelNames: ["insertOutcome"],
+        }),
         apiValidationTime: register.histogram({
           name: "lodestar_api_execution_payload_bid_validation_time_seconds",
           help: "Time elapsed for signed execution payload bid validation - api path",
           buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.5],
         }),
       },
+    },
+
+    proposerTracker: {
+      proposalSlots: register.gauge({
+        name: "lodestar_proposer_tracker_proposal_slots",
+        help: "Current number of upcoming block proposals of connected validators tracked by the ProposerTracker",
+      }),
+      collectableSlot: register.gauge({
+        name: "lodestar_proposer_tracker_collectable_slot",
+        help: "1 if single attestations of the clock slot are collected for an upcoming local proposal, 0 otherwise",
+      }),
     },
 
     chain: {
@@ -1590,6 +1746,19 @@ export function createLodestarMetrics(
         name: "lodestar_shuffling_cache_size",
         help: "Shuffling cache size",
       }),
+      epochs: register.gauge({
+        name: "lodestar_shuffling_cache_epochs",
+        help: "Number of epochs in shuffling cache",
+      }),
+      prunedShufflings: register.counter({
+        name: "lodestar_shuffling_cache_pruned_shufflings_total",
+        help: "Total number of shufflings pruned from shuffling cache",
+      }),
+      cancelledPromises: register.counter<{reason: ShufflingPromiseCancelReason}>({
+        name: "lodestar_shuffling_cache_cancelled_promises_total",
+        help: "Total number of shuffling promises resolved with null",
+        labelNames: ["reason"],
+      }),
       insertPromiseCount: register.gauge({
         name: "lodestar_shuffling_cache_insert_promise_count",
         help: "Total number of times insertPromise is called",
@@ -1685,11 +1854,6 @@ export function createLodestarMetrics(
           help: "Total number of duplicate blocks that pass validation and attempt to be cached but are known",
           labelNames: ["source"],
         }),
-        duplicateBlobCount: register.counter<{source: BlockInputSource}>({
-          name: "lodestar_seen_block_input_cache_duplicate_blob_total",
-          help: "Total number of duplicate blobs that pass validation and attempt to be cached but are known",
-          labelNames: ["source"],
-        }),
         duplicateColumnCount: register.counter<{source: BlockInputSource}>({
           name: "lodestar_seen_block_input_cache_duplicate_column_total",
           help: "Total number of duplicate columns that pass validation and attempt to be cached but are known",
@@ -1698,10 +1862,6 @@ export function createLodestarMetrics(
         createdByBlock: register.counter({
           name: "lodestar_seen_block_input_cache_items_created_by_block_total",
           help: "Number of BlockInputs created via a block being seen first",
-        }),
-        createdByBlob: register.counter({
-          name: "lodestar_seen_block_input_cache_items_created_by_blob_total",
-          help: "Number of BlockInputs created via a blob being seen first",
         }),
         createdByColumn: register.counter({
           name: "lodestar_seen_block_input_cache_items_created_by_column_total",
@@ -2014,10 +2174,16 @@ export function createLodestarMetrics(
       }),
       streamTime: register.histogram<{routeId: string}>({
         name: "lodestar_execution_engine_http_client_stream_time_seconds",
-        help: "ExecutionEngineHttp client - streaming time by routeId",
+        help: "ExecutionEngineHttp client - response body consumption time, including failures and excluding parsing",
         labelNames: ["routeId"],
         // Provide max resolution on problematic values around 1 second
         buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
+      responseParseTime: register.histogram<{routeId: string; encoding: "json" | "ssz"}>({
+        name: "lodestar_execution_engine_http_client_response_parse_time_seconds",
+        help: "ExecutionEngineHttp client - JSON.parse or SSZ deserialize time, including failures, excluding body reads and subsequent value conversion",
+        labelNames: ["routeId", "encoding"],
+        buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
       }),
       requestErrors: register.gauge<{routeId: string}>({
         name: "lodestar_execution_engine_http_client_request_errors_total",
@@ -2027,6 +2193,16 @@ export function createLodestarMetrics(
       retryCount: register.gauge<{routeId: string}>({
         name: "lodestar_execution_engine_http_client_request_retries_total",
         help: "ExecutionEngineHttp client - total count of request retries",
+        labelNames: ["routeId"],
+      }),
+      requestBytes: register.counter<{routeId: string}>({
+        name: "lodestar_execution_engine_http_client_request_bytes_total",
+        help: "ExecutionEngineHttp client - total bytes sent to the execution client by routeId",
+        labelNames: ["routeId"],
+      }),
+      responseBytes: register.counter<{routeId: string}>({
+        name: "lodestar_execution_engine_http_client_response_bytes_total",
+        help: "ExecutionEngineHttp client - total bytes received from the execution client by routeId",
         labelNames: ["routeId"],
       }),
       requestUsedFallbackUrl: register.gauge<{routeId: string}>({

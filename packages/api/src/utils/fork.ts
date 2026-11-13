@@ -3,10 +3,12 @@ import {
   ForkPostAltair,
   ForkPostBellatrix,
   ForkPostDeneb,
+  ForkPostElectra,
   ForkPostGloas,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostDeneb,
+  isForkPostElectra,
   isForkPostGloas,
 } from "@lodestar/params";
 import {SSZTypesFor, sszTypesFor} from "@lodestar/types";
@@ -40,6 +42,14 @@ export function getPostBellatrixForkTypes(fork: ForkName): SSZTypesFor<ForkPostB
 export function getPostDenebForkTypes(fork: ForkName): SSZTypesFor<ForkPostDeneb> {
   if (!isForkPostDeneb(fork)) {
     throw Error(`Invalid fork=${fork} for post-deneb fork types`);
+  }
+
+  return sszTypesFor(fork);
+}
+
+export function getPostElectraForkTypes(fork: ForkName): SSZTypesFor<ForkPostElectra> {
+  if (!isForkPostElectra(fork)) {
+    throw Error(`Invalid fork=${fork} for post-electra fork types`);
   }
 
   return sszTypesFor(fork);

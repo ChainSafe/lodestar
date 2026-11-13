@@ -17,7 +17,7 @@ import {kzgTestRunner} from "./kzg.js";
 // ],
 // ```
 const skipOpts: SkipOpts = {
-  skippedHandlers: ["compute_challenge", "compute_verify_cell_kzg_proof_batch_challenge"],
+  skippedHandlers: [],
   skippedTests: [],
 };
 

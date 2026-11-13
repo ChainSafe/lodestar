@@ -8,11 +8,17 @@ export {BLSToExecutionChangeRepository} from "./blsToExecutionChange.js";
 export {DataColumnSidecarRepository} from "./dataColumnSidecar.js";
 export {DataColumnSidecarArchiveRepository} from "./dataColumnSidecarArchive.js";
 export {ExecutionPayloadEnvelopeRepository} from "./executionPayloadEnvelope.js";
-export {ExecutionPayloadEnvelopeArchiveRepository} from "./executionPayloadEnvelopeArchive.js";
+export {
+  type ArchivedEnvelope,
+  ExecutionPayloadEnvelopeArchiveRepository,
+  decodeArchivedEnvelope,
+  encodeArchivedHeaderEnvelope,
+} from "./executionPayloadEnvelopeArchive.js";
 export {BestLightClientUpdateRepository} from "./lightclientBestUpdate.js";
 export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader.js";
 export {SyncCommitteeRepository} from "./lightclientSyncCommittee.js";
 export {SyncCommitteeWitnessRepository} from "./lightclientSyncCommitteeWitness.js";
+export {ProposerPreferencesRepository} from "./proposerPreferences.js";
 export {ProposerSlashingRepository} from "./proposerSlashing.js";
 export {StateArchiveRepository} from "./stateArchive.js";
 export {VoluntaryExitRepository} from "./voluntaryExit.js";

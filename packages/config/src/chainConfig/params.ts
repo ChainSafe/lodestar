@@ -153,6 +153,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // Time parameters
     SECONDS_PER_SLOT: false, // Deprecated
     SLOT_DURATION_MS: true,
+    SLOT_DURATION_MS_HEZE: hezeForkRelevant,
     SECONDS_PER_ETH1_BLOCK: false, // Legacy
     MIN_VALIDATOR_WITHDRAWABILITY_DELAY: true,
     SHARD_COMMITTEE_PERIOD: true,
@@ -196,6 +197,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MIN_EPOCHS_FOR_BLOCK_REQUESTS: false,
     MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
     MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: false,
+    MIN_BLOB_DATA_RETENTION_MS: hezeForkRelevant,
     BLOB_SIDECAR_SUBNET_COUNT: false,
     BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: false,
     DATA_COLUMN_SIDECAR_SUBNET_COUNT: false,
@@ -203,6 +205,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_REQUEST_BLOB_SIDECARS_ELECTRA: false,
     MAX_REQUEST_DATA_COLUMN_SIDECARS: false,
     MAX_REQUEST_PAYLOADS: false,
+    MIN_TRANSACTION_GAS: false,
 
     // # Phase0Preset
     /////////////////

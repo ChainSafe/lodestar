@@ -141,7 +141,10 @@ export function processAttestationsAltair(
 
     // Do the discrete math inside the loop to ensure a deterministic result
     const totalIncrements = totalBalanceIncrementsWithWeight;
-    const proposerRewardNumerator = totalIncrements * state.epochCtx.baseRewardPerIncrement;
+    // The proposer reward is priced at the attestation's target epoch
+    const proposerRewardNumerator =
+      totalIncrements *
+      (inCurrentEpoch ? state.epochCtx.baseRewardPerIncrement : state.epochCtx.baseRewardPerIncrementPrevEpoch);
     proposerReward += Math.floor(proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR);
 
     if (fork >= ForkSeq.gloas) {

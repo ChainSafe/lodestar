@@ -9,6 +9,7 @@ import {
   ProgressiveContainerType,
   ProgressiveListBasicType,
   ProgressiveListCompositeType,
+  ProgressiveSerializedListType,
   VectorBasicType,
   VectorCompositeType,
 } from "@chainsafe/ssz";
@@ -96,7 +97,7 @@ export const AttestingIndices = new ProgressiveListBasicType(ValidatorIndex, {
   limit: MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT,
 });
 export const Transaction = new ProgressiveByteListType({typeName: "Transaction", limit: MAX_BYTES_PER_TRANSACTION});
-export const Transactions = new ProgressiveListCompositeType(Transaction, {
+export const Transactions = new ProgressiveSerializedListType(Transaction, {
   typeName: "Transactions",
   limit: MAX_TRANSACTIONS_PER_PAYLOAD,
 });
@@ -316,6 +317,7 @@ export const BuilderPendingPayment = new ContainerType(
 );
 
 export const Builders = new ProgressiveListCompositeType(Builder, {typeName: "Builders"});
+export const BuilderPendingPayments = new VectorCompositeType(BuilderPendingPayment, 2 * SLOTS_PER_EPOCH);
 export const BuilderPendingWithdrawals = new ProgressiveListCompositeType(BuilderPendingWithdrawal, {
   typeName: "BuilderPendingWithdrawals",
 });
@@ -509,6 +511,44 @@ export const SignedExecutionPayloadEnvelope = new ContainerType(
   {typeName: "SignedExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
 
+/**
+ * Lodestar-internal ExecutionPayload header: transactions, withdrawals and blockAccessList replaced
+ * by their hash_tree_root at the same field positions, so it hashes to the same root as the full
+ * payload (the pre-gloas ExecutionPayloadHeader pattern). Used to archive finalized envelopes without
+ * the bodies the EL already stores. Not a spec container, never on the wire. Not exported: gloas has no
+ * ExecutionPayloadHeader of its own and `sszTypesFor(fork)` resolves the name to the pre-gloas header for
+ * gloas and later, which an export here would shadow.
+ */
+const ExecutionPayloadHeader = new ProgressiveContainerType(
+  {
+    ...electraSsz.ExecutionPayloadHeader.fields,
+    blockAccessListRoot: Root, // New in GLOAS:EIP-7928
+    slotNumber: Slot, // New in GLOAS:EIP-7843
+  },
+  activeFields(19),
+  {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
+);
+
+const {payload: _payload, ...envelopeFieldsWithoutPayload} = ExecutionPayloadEnvelope.fields;
+
+/** Same field positions as ExecutionPayloadEnvelope, so it hashes to the same root */
+export const ExecutionPayloadHeaderEnvelope = new ProgressiveContainerType(
+  {
+    payloadHeader: ExecutionPayloadHeader,
+    ...envelopeFieldsWithoutPayload,
+  },
+  activeFields(5),
+  {typeName: "ExecutionPayloadHeaderEnvelope", jsonCase: "eth2"}
+);
+
+export const SignedExecutionPayloadHeaderEnvelope = new ContainerType(
+  {
+    message: ExecutionPayloadHeaderEnvelope,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedExecutionPayloadHeaderEnvelope", jsonCase: "eth2"}
+);
+
 export const SignedExecutionPayloadEnvelopeContents = new ContainerType(
   {
     signedExecutionPayloadEnvelope: SignedExecutionPayloadEnvelope,
@@ -683,7 +723,7 @@ export const BeaconState = new ProgressiveContainerType(
     builders: Builders, // New in GLOAS:EIP7732
     nextWithdrawalBuilderIndex: BuilderIndex, // New in GLOAS:EIP7732
     executionPayloadAvailability: new BitVectorType(SLOTS_PER_HISTORICAL_ROOT), // New in GLOAS:EIP7732
-    builderPendingPayments: new VectorCompositeType(BuilderPendingPayment, 2 * SLOTS_PER_EPOCH), // New in GLOAS:EIP7732
+    builderPendingPayments: BuilderPendingPayments, // New in GLOAS:EIP7732
     builderPendingWithdrawals: BuilderPendingWithdrawals, // New in GLOAS:EIP7732
     latestExecutionPayloadBid: ExecutionPayloadBid, // New in GLOAS:EIP7732
     payloadExpectedWithdrawals: Withdrawals, // New in GLOAS:EIP7732
@@ -731,6 +771,8 @@ export const SSEPayloadAttributes = new ContainerType(
     // parentBlockNumber: UintNum64, // Removed in GLOAS:EIP7732
     parentBlockRoot: Root,
     parentBlockHash: Root,
+    safeBlockHash: Root, // New in GLOAS
+    finalizedBlockHash: Root, // New in GLOAS
     payloadAttributes: PayloadAttributes,
   },
   {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}

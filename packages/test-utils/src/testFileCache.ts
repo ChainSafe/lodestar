@@ -25,7 +25,7 @@ export function getNetworkConfig(network: NetworkName): ChainForkConfig {
 }
 
 /**
- * Download a state from Infura. Caches states in local fs by network and slot to only download once.
+ * Get a state fixture from `cacheDir`, downloading it from `TEST_FILES_BASE_URL` on first use. Cached by network and slot so it is only downloaded once.
  */
 export async function getNetworkCachedStateBytes(
   network: NetworkName,
@@ -49,7 +49,7 @@ export async function getNetworkCachedStateBytes(
 }
 
 /**
- * Download a state from Infura. Caches states in local fs by network and slot to only download once.
+ * Get a block fixture from `cacheDir`, downloading it from `TEST_FILES_BASE_URL` on first use. Cached by network and slot so it is only downloaded once.
  */
 export async function getNetworkCachedBlockBytes(
   network: NetworkName,

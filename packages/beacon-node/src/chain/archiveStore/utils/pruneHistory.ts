@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch} from "@lodestar/types";
+import {Epoch, Slot} from "@lodestar/types";
 import {Logger, prettyPrintIndices} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/interface.js";
 import {Metrics} from "../../../metrics/index.js";
@@ -18,8 +18,10 @@ export async function pruneHistory(
   metrics: Metrics | null | undefined,
   finalizedEpoch: Epoch,
   currentEpoch: Epoch,
+  statePruneFromSlot: Slot,
+  beforePrune: (blockCutoffSlot: Slot) => Promise<void>,
   maxBlockSlots = Infinity
-): Promise<void> {
+): Promise<{blockCutoffSlot: Slot; stateCutoffSlot: Slot}> {
   const blockCutoffEpoch = Math.min(
     // set by config, with underflow protection
     Math.max(currentEpoch - config.getMinEpochsForBlockRequests(currentEpoch), 0),
@@ -36,6 +38,7 @@ export async function pruneHistory(
     currentEpoch,
     finalizedEpoch,
     blockCutoffSlot,
+    statePruneFromSlot,
     stateCutoffSlot,
   });
 
@@ -43,7 +46,7 @@ export async function pruneHistory(
   const [blocks, envelopes, states] = await Promise.all([
     db.blockArchive.keys({gte: 0, lt: blockCutoffSlot}),
     db.executionPayloadEnvelopeArchive.keys({gte: 0, lt: blockCutoffSlot}),
-    db.stateArchive.keys({gte: 0, lt: stateCutoffSlot}),
+    stateCutoffSlot > statePruneFromSlot ? db.stateArchive.keys({gte: statePruneFromSlot, lt: stateCutoffSlot}) : [],
   ]);
   step0?.();
 
@@ -56,6 +59,8 @@ export async function pruneHistory(
     envelopeSlots: prettyPrintIndices(envelopes),
     stateSlots: prettyPrintIndices(states),
   });
+
+  await beforePrune(blockCutoffSlot);
 
   const step1 = metrics?.pruneHistory.pruneKeys.startTimer();
   await Promise.all([
@@ -71,4 +76,6 @@ export async function pruneHistory(
   });
 
   metrics?.pruneHistory.pruneCount.inc();
+
+  return {blockCutoffSlot, stateCutoffSlot};
 }

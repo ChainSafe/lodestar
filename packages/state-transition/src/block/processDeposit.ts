@@ -1,10 +1,10 @@
+import {BeaconConfig} from "@lodestar/config";
 import {
   BLS_VERIFIER_MAX_BATCH_SIZE,
   BLS_VERIFIER_SET_TYPE,
   type BlsSignatureSet,
   verifySignatureSets,
-} from "@chainsafe/lodestar-z/bls-verifier";
-import {BeaconConfig} from "@lodestar/config";
+} from "@lodestar/native/bls-verifier";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   DOMAIN_DEPOSIT,
@@ -17,7 +17,12 @@ import {
 import {BLSPubkey, Bytes32, UintNum64, electra, phase0, ssz} from "@lodestar/types";
 import {verifyMerkleBranch} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/index.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateElectra} from "../types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  CachedBeaconStateElectra,
+  CachedBeaconStatePreHeze,
+} from "../types.js";
 import {
   computeDomain,
   computeSigningRoot,
@@ -33,7 +38,7 @@ import {
  *
  * PERF: Work depends on number of Deposit per block. On regular networks the average is 0 / block.
  */
-export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, deposit: phase0.Deposit): void {
+export function processDeposit(fork: ForkSeq, state: CachedBeaconStatePreHeze, deposit: phase0.Deposit): void {
   // verify the merkle branch
   if (
     !verifyMerkleBranch(

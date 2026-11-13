@@ -15,7 +15,7 @@ const bellatrixForkEpoch = 0;
 const capellaForkEpoch = 0;
 const denebForkEpoch = 0;
 const electraForkEpoch = 0;
-const fuluForkEpoch = Infinity;
+const fuluForkEpoch = 0;
 const runTillEpoch = 4;
 const syncWaitEpoch = 2;
 
@@ -72,7 +72,7 @@ const env = await Simulation.initWithDefaults(
           },
         },
       },
-      execution: ExecutionClient.Geth,
+      execution: ExecutionClient.Nethermind,
       keysCount: 32,
       remote: true,
     },
@@ -88,7 +88,7 @@ const env = await Simulation.initWithDefaults(
           },
         },
       },
-      execution: ExecutionClient.Geth,
+      execution: ExecutionClient.Nethermind,
       keysCount: 32,
     },
     {
@@ -104,7 +104,7 @@ const env = await Simulation.initWithDefaults(
           },
         },
       },
-      execution: ExecutionClient.Geth,
+      execution: ExecutionClient.Nethermind,
       keysCount: 32,
     },
     {id: "node-5", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},

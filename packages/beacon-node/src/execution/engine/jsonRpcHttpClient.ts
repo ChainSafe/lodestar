@@ -2,6 +2,7 @@ import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {ErrorAborted, Gauge, Histogram, TimeoutError, fetch, isValidHttpUrl, retry} from "@lodestar/utils";
 import {JwtClaim, encodeJwtToken} from "./jwt.js";
+import {EngineTransportMetrics} from "./transportMetrics.js";
 import {IJson, RpcPayload} from "./utils.js";
 
 export enum JsonRpcHttpClientEvent {
@@ -55,7 +56,7 @@ export type ReqOpts = {
   shouldRetry?: (lastError: Error) => boolean;
 };
 
-export type JsonRpcHttpClientMetrics = {
+export type JsonRpcHttpClientMetrics = EngineTransportMetrics & {
   requestTime: Histogram<{routeId: string}>;
   streamTime: Histogram<{routeId: string}>;
   requestErrors: Gauge<{routeId: string}>;
@@ -270,25 +271,38 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         headers.Authorization = `Bearer ${token}`;
       }
 
+      const body = JSON.stringify(json);
+      // Json rpc bodies are ASCII (json syntax, 0x hex, digits) so String#length is the byte count.
+      // Buffer.byteLength would add a ~4ms scan of a 35MB getBlobsV2 body for no accuracy gain.
+      this.metrics?.requestBytes.inc({routeId}, body.length);
+
       const res = await fetch(url, {
         method: "post",
-        body: JSON.stringify(json),
+        body,
         headers,
         signal: controller.signal,
       });
 
       const streamTimer = this.metrics?.streamTime.startTimer({routeId});
-      const bodyText = await res.text();
+      let bodyText: string;
+      try {
+        bodyText = await res.text();
+      } finally {
+        streamTimer?.();
+      }
+      this.metrics?.responseBytes.inc({routeId}, bodyText.length);
       if (!res.ok) {
         // Infura errors:
         // - No project ID: Forbidden: {"jsonrpc":"2.0","id":0,"error":{"code":-32600,"message":"project ID is required","data":{"reason":"project ID not provided","see":"https://infura.io/dashboard"}}}
         throw new HttpRpcError(res.status, `${res.statusText}: ${bodyText.slice(0, maxStringLengthToPrint)}`);
       }
 
-      const bodyJson = parseJson<R>(bodyText);
-      streamTimer?.();
-
-      return bodyJson;
+      const parseTimer = this.metrics?.responseParseTime.startTimer({routeId, encoding: "json"});
+      try {
+        return parseJson<R>(bodyText);
+      } finally {
+        parseTimer?.();
+      }
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
       if (controller.signal.aborted) {

@@ -1,4 +1,4 @@
-import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkSeq,
@@ -8,13 +8,12 @@ import {
   isForkPostElectra,
   isForkPostGloas,
 } from "@lodestar/params";
-import {Epoch, Root, ssz} from "@lodestar/types";
-import {Checkpoint} from "@lodestar/types/phase0";
-import {toRootHex} from "@lodestar/utils";
+import {Epoch, Root, Slot, TimeSeconds, ssz} from "@lodestar/types";
 import {ZERO_HASH} from "../constants/constants.js";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeCheckpointEpochAtStateSlot, computeEpochAtSlot, getCurrentEpoch} from "./epoch.js";
-import {getCurrentSlot} from "./slot.js";
+import {computeSlotAtTimeMs} from "./slot.js";
+import {StateBytesMetadata, getStateTypeFromBytes, scanActiveValidatorsFromStateBytes} from "./sszBytes.js";
 import {
   getActivationChurnLimit,
   getActiveValidatorIndices,
@@ -79,12 +78,10 @@ export function computeWeakSubjectivityPeriodCachedState(
 
 /**
  * Same to computeWeakSubjectivityPeriodCachedState but for normal state
- * This is called only 1 time at app startup so it's ok to calculate totalActiveBalanceIncrements manually
  */
 export function computeWeakSubjectivityPeriod(config: ChainForkConfig, state: BeaconStateAllForks): number {
   const activeIndices = getActiveValidatorIndices(state, getCurrentEpoch(state));
   const validators = state.validators.getAllReadonlyValues();
-  const fork = config.getForkName(state.slot);
 
   let totalActiveBalanceIncrements = 0;
   for (const index of activeIndices) {
@@ -94,7 +91,23 @@ export function computeWeakSubjectivityPeriod(config: ChainForkConfig, state: Be
     totalActiveBalanceIncrements = 1;
   }
 
-  const churnLimitsGloas = getGloasChurnLimits(config, totalActiveBalanceIncrements);
+  return computeWeakSubjectivityPeriodFromActiveValidators(config, state.slot, {
+    activeValidatorCount: activeIndices.length,
+    totalActiveBalanceIncrements,
+  });
+}
+
+function computeWeakSubjectivityPeriodFromActiveValidators(
+  config: ChainForkConfig,
+  slot: Slot,
+  {
+    activeValidatorCount,
+    totalActiveBalanceIncrements,
+  }: {activeValidatorCount: number; totalActiveBalanceIncrements: number}
+): number {
+  const fork = config.getForkName(slot);
+
+  const churnLimitsGloas = getGloasChurnLimits(config, computeEpochAtSlot(slot), totalActiveBalanceIncrements);
 
   return isForkPostGloas(fork)
     ? computeWeakSubjectivityPeriodFromConstituentsGloas(
@@ -115,9 +128,9 @@ export function computeWeakSubjectivityPeriod(config: ChainForkConfig, state: Be
           config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
         )
       : computeWeakSubjectivityPeriodFromConstituentsPhase0(
-          activeIndices.length,
+          activeValidatorCount,
           totalActiveBalanceIncrements,
-          getChurnLimit(config, activeIndices.length),
+          getChurnLimit(config, activeValidatorCount),
           config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
         );
 }
@@ -189,37 +202,27 @@ export function getLatestBlockRoot(state: BeaconStateAllForks): Root {
   return ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
 }
 
-export function isWithinWeakSubjectivityPeriod(
-  config: BeaconConfig,
-  wsState: BeaconStateAllForks,
-  wsCheckpoint: Checkpoint
-): boolean {
-  try {
-    ensureWithinWeakSubjectivityPeriod(config, wsState, wsCheckpoint);
-    return true;
-  } catch (_) {
-    return false;
-  }
+export type WeakSubjectivitySummary = {checkpointEpoch: Epoch; genesisTime: number; period: number};
+
+/** The metadata must describe the supplied state bytes. */
+export function computeWeakSubjectivitySummaryFromStateBytes(
+  config: ChainForkConfig,
+  bytes: Uint8Array,
+  metadata: StateBytesMetadata
+): WeakSubjectivitySummary | null {
+  const {slot, genesisTime} = metadata;
+  const stateType = getStateTypeFromBytes(config, bytes);
+  const activeValidators = scanActiveValidatorsFromStateBytes(bytes, stateType, computeEpochAtSlot(slot));
+  if (activeValidators === null) return null;
+  const period = computeWeakSubjectivityPeriodFromActiveValidators(config, slot, activeValidators);
+  return {checkpointEpoch: computeCheckpointEpochAtStateSlot(slot), genesisTime, period};
 }
 
-export function ensureWithinWeakSubjectivityPeriod(
-  config: BeaconConfig,
-  wsState: BeaconStateAllForks,
-  wsCheckpoint: Checkpoint
-): void {
-  const wsStateEpoch = computeCheckpointEpochAtStateSlot(wsState.slot);
-  const blockRoot = getLatestBlockRoot(wsState);
-  if (!ssz.Root.equals(blockRoot, wsCheckpoint.root)) {
-    throw new Error(`Roots do not match.  expected=${toRootHex(wsCheckpoint.root)}, actual=${toRootHex(blockRoot)}`);
-  }
-  if (!ssz.Epoch.equals(wsStateEpoch, wsCheckpoint.epoch)) {
-    throw new Error(`Epochs do not match.  expected=${wsCheckpoint.epoch}, actual=${wsStateEpoch}`);
-  }
-  const wsPeriod = computeWeakSubjectivityPeriod(config, wsState);
-  const clockEpoch = computeEpochAtSlot(getCurrentSlot(config, wsState.genesisTime));
-  if (clockEpoch > wsStateEpoch + wsPeriod) {
-    throw new Error(
-      `The downloaded state with epoch ${wsStateEpoch} is not within weak subjectivity period of ${wsPeriod} from the current epoch ${clockEpoch}. Please verify your checkpoint source`
-    );
-  }
+export function isWithinWeakSubjectivityPeriodFromSummary(
+  config: ChainForkConfig,
+  summary: WeakSubjectivitySummary,
+  now: TimeSeconds = Date.now() / 1000
+): boolean {
+  const clockSlot = computeSlotAtTimeMs(config, now * 1000, summary.genesisTime * 1000);
+  return computeEpochAtSlot(clockSlot) <= summary.checkpointEpoch + summary.period;
 }

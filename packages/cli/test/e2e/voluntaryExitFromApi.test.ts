@@ -13,8 +13,9 @@ describe("voluntary exit from api", () => {
 
   it("Perform a voluntary exit", async () => {
     // Start dev node with keymanager
-    const keymanagerPort = 38012;
-    const beaconPort = 39012;
+    // Keep listener ports outside the Linux ephemeral port range to avoid outbound socket collisions.
+    const keymanagerPort = 18012;
+    const beaconPort = 19012;
 
     const devProc = await spawnCliCommand(
       "packages/cli/bin/lodestar.js",
@@ -37,7 +38,7 @@ describe("voluntary exit from api", () => {
         // Disable bearer token auth to simplify testing
         "--keymanager.auth=false",
       ],
-      {pipeStdioToParent: false, logPrefix: "dev"}
+      {pipeStdioToParent: true, logPrefix: "dev"}
     );
     onTestFinished(async () => {
       await stopChildProcess(devProc);

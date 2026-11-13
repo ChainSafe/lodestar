@@ -378,3 +378,8 @@ export const MAX_BUILDER_ENTRIES = 64;
 export const MAX_BUILDER_URL_SIZE = 2048;
 export const MAX_BUILDER_PUBKEYS = 64;
 export const MAX_EXECUTION_PAYMENT = 2n ** 64n - 1n;
+
+// EIP-8025 execution proofs
+export const MAX_PROOF_SIZE = 4194304;
+export const STATELESS_INPUT_SCHEMA_ID = 0x1501;
+export const MAX_SIGNED_EXECUTION_PROOF_ENVELOPE_SIZE = 4194449;

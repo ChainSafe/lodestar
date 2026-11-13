@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {rimraf} from "rimraf";
+import {rm} from "node:fs/promises";
 import {nodeUtils} from "@lodestar/beacon-node";
 import {fromHex, toHex} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
@@ -31,14 +31,16 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
 
   // Note: defaults to network "dev", to all paths are custom and don't conflict with networks.
   // Flag --reset cleans up the custom dirs on dev stop
-  const beaconDbDir = getBeaconPaths(args, network).dbDir;
+  const {dbDir: beaconDbDir, pubkeysFile} = getBeaconPaths(args, network);
   const validatorsDbDir = getValidatorPaths(args, network).validatorsDbDir;
 
   // Remove slashing protection db. Otherwise the validators won't be able to propose nor attest
   // until the clock reach a higher slot than the previous run of the dev command
   if (args.genesisTime === undefined) {
-    await rimraf(beaconDbDir);
-    await rimraf(validatorsDbDir);
+    await rm(beaconDbDir, {recursive: true, force: true});
+    await rm(validatorsDbDir, {recursive: true, force: true});
+    // Validators deposited in the previous run do not exist on the new chain
+    await rm(pubkeysFile, {recursive: true, force: true});
   }
 
   mkdir(beaconDbDir);
@@ -46,8 +48,8 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
 
   if (args.reset) {
     onGracefulShutdown(async () => {
-      await rimraf(beaconDbDir);
-      await rimraf(validatorsDbDir);
+      await rm(beaconDbDir, {recursive: true, force: true});
+      await rm(validatorsDbDir, {recursive: true, force: true});
     });
   }
 

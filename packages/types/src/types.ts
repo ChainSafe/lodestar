@@ -23,6 +23,7 @@ export {ts as altair} from "./altair/index.js";
 export {ts as bellatrix} from "./bellatrix/index.js";
 export {ts as capella} from "./capella/index.js";
 export {ts as deneb} from "./deneb/index.js";
+export {ts as eip8025} from "./eip8025/index.js";
 export {ts as electra} from "./electra/index.js";
 export {ts as fulu} from "./fulu/index.js";
 export {ts as gloas} from "./gloas/index.js";
@@ -317,7 +318,7 @@ type TypesByFork = {
     SignedBuilderBid: electra.SignedBuilderBid;
     SSEPayloadAttributes: gloas.SSEPayloadAttributes;
     BlockContents: gloas.BlockContents;
-    SignedBlockContents: fulu.SignedBlockContents;
+    SignedBlockContents: gloas.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: fulu.BlobsBundle;
     SyncCommittee: altair.SyncCommittee;
@@ -359,7 +360,7 @@ type TypesByFork = {
     SignedBuilderBid: electra.SignedBuilderBid;
     SSEPayloadAttributes: heze.SSEPayloadAttributes;
     BlockContents: heze.BlockContents;
-    SignedBlockContents: fulu.SignedBlockContents;
+    SignedBlockContents: heze.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: fulu.BlobsBundle;
     SyncCommittee: altair.SyncCommittee;

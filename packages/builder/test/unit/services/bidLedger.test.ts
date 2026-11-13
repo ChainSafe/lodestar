@@ -56,6 +56,20 @@ describe("BidLedger", () => {
     expect(ledger.recordWin(bid, blockRoot)).toEqual({...bid, wonBlockRoots: [blockRoot]});
   });
 
+  it("reports a win only for the exact bid identity and selecting block root", () => {
+    const ledger = new BidLedger();
+    const bid = submittedBid();
+    const blockRoot = root(6);
+    ledger.recordBid(bid);
+
+    expect(ledger.hasWon(bid, blockRoot)).toBe(false);
+    ledger.recordWin(bid, blockRoot);
+    expect(ledger.hasWon(bid, blockRoot)).toBe(true);
+    expect(ledger.hasWon(bid, root(9))).toBe(false);
+    expect(ledger.hasWon({...bid, blockHash: root(7)}, blockRoot)).toBe(false);
+    expect(ledger.hasWon({...bid, slot: bid.slot + 1}, blockRoot)).toBe(false);
+  });
+
   it("distinguishes bids with the same payload hash on different parent roots", () => {
     const ledger = new BidLedger();
     const first = submittedBid();
@@ -197,6 +211,36 @@ describe("BidLedger", () => {
 
     expect(ledger.prune(bid.slot + 3 * SLOTS_PER_EPOCH + 1)).toBe(1);
     expect(ledger.hasSubmitted(bid.slot, bid.parentBlockHash, bid.parentBlockRoot)).toBe(false);
+    expect(() => ledger.recordBid(bid)).toThrow(BidLedgerError);
+    expect(ledger.getBidsForSlot(bid.slot)).toEqual([]);
+  });
+
+  it("does not move the submission cutoff backwards", () => {
+    const ledger = new BidLedger();
+    const bid = submittedBid();
+    ledger.prune(bid.slot + 3 * SLOTS_PER_EPOCH + 1);
+    ledger.prune(0);
+
+    const error = getBidLedgerError(() => ledger.recordBid(bid));
+    expect(error.type).toEqual({code: BidLedgerErrorCode.BID_TOO_OLD, slot: bid.slot, pruneCutoffSlot: bid.slot + 1});
+    expect(ledger.recordBid({...bid, slot: bid.slot + 1}).slot).toBe(bid.slot + 1);
+  });
+
+  it("settles payments of bids won before a slot", () => {
+    const ledger = new BidLedger();
+    const settled = submittedBid();
+    const unsettled = {...submittedBid(), slot: settled.slot + 1};
+    const lost = {...submittedBid(), slot: settled.slot - 1};
+    for (const bid of [settled, unsettled, lost]) ledger.recordBid(bid);
+    ledger.recordWin(settled, root(6));
+    ledger.recordWin(unsettled, root(7));
+    expect(ledger.getUnsettledValueGwei(0)).toBe(settled.valueGwei + unsettled.valueGwei);
+
+    ledger.settlePaymentsBefore(unsettled.slot);
+
+    expect(ledger.getUnsettledValueGwei(0)).toBe(unsettled.valueGwei);
+    expect(ledger.prune(unsettled.slot + 3 * SLOTS_PER_EPOCH + 1)).toBe(2);
+    expect(ledger.getBidsForSlot(unsettled.slot)).toHaveLength(1);
   });
 
   it("prunes reveal protection even when no winning bid record exists", () => {

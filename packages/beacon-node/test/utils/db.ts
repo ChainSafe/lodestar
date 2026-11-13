@@ -1,9 +1,12 @@
 import fs from "node:fs";
+import {mkdtemp, rm} from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {FilterOptions} from "@lodestar/db";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {BeaconDb} from "../../src/index.js";
+import {BeaconDb} from "../../src/db/index.js";
 
 export const TEMP_DB_LOCATION = ".tmpdb";
 const TEMP_DATA_COLUMN_LOCATION = `${TEMP_DB_LOCATION}-data-columns`;
@@ -19,6 +22,29 @@ export async function startTmpBeaconDb(config: ChainForkConfig): Promise<BeaconD
   });
   await db.init();
   return db;
+}
+
+/**
+ * Like {@link startTmpBeaconDb} but in a fresh temp dir per call, so test files that vitest runs in
+ * parallel don't share `.tmpdb`. `close()` also removes the dir.
+ */
+export async function startIsolatedTmpBeaconDb(
+  config: ChainForkConfig,
+  prefix = "lodestar-test-db-"
+): Promise<{db: BeaconDb; close: () => Promise<void>}> {
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), prefix));
+  const logger = testLogger();
+  const db = new BeaconDb(config, await LevelDbController.create({name: path.join(tmpDir, "leveldb")}, {logger}), {
+    dataColumnDir: path.join(tmpDir, "data_columns"),
+    logger,
+  });
+  return {
+    db,
+    close: async () => {
+      await db.close();
+      await rm(tmpDir, {recursive: true, force: true});
+    },
+  };
 }
 
 /**

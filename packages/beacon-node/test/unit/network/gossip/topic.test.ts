@@ -11,6 +11,7 @@ import {
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
+  MAX_SIGNED_INCLUSION_LIST_SIZE,
   SLOTS_PER_EPOCH,
   ZERO_HASH,
 } from "@lodestar/params";
@@ -34,7 +35,7 @@ import {computeMaxGloasDataColumnSidecarSize} from "../../../../src/util/sszByte
 import {getValidPeerId} from "../../../utils/peer.js";
 
 describe("network / gossip / topic", () => {
-  const config = createBeaconConfig({...chainConfig, GLOAS_FORK_EPOCH: 700000}, ZERO_HASH);
+  const config = createBeaconConfig({...chainConfig, GLOAS_FORK_EPOCH: 700000, HEZE_FORK_EPOCH: 800000}, ZERO_HASH);
   const encoding = GossipEncoding.ssz_snappy;
   const maxDataColumnSidecarSize = computeMaxGloasDataColumnSidecarSize(config);
   const getMaxSize = (topic: Parameters<typeof getGossipSSZType>[0], cfg = config): number =>
@@ -46,17 +47,6 @@ describe("network / gossip / topic", () => {
       {
         topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH}, encoding},
         topicStr: "/eth2/f5a5fd42/beacon_block/ssz_snappy",
-      },
-    ],
-    [GossipType.blob_sidecar]: [
-      {
-        topic: {
-          type: GossipType.blob_sidecar,
-          subnet: 1,
-          boundary: {fork: ForkName.deneb, epoch: config.DENEB_FORK_EPOCH},
-          encoding,
-        },
-        topicStr: "/eth2/d6e497b8/blob_sidecar_1/ssz_snappy",
       },
     ],
     [GossipType.data_column_sidecar]: [
@@ -206,6 +196,16 @@ describe("network / gossip / topic", () => {
           encoding,
         },
         topicStr: "/eth2/a41d57bd/proposer_preferences/ssz_snappy",
+      },
+    ],
+    [GossipType.inclusion_list]: [
+      {
+        topic: {
+          type: GossipType.inclusion_list,
+          boundary: {fork: ForkName.heze, epoch: config.HEZE_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/29065f35/inclusion_list/ssz_snappy",
       },
     ],
   };
@@ -393,6 +393,13 @@ describe("network / gossip / topic", () => {
     expect(getMaxSize({type: GossipType.execution_payload_bid, boundary, encoding})).toBe(
       MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE
     );
+  });
+
+  it("should bound inclusion lists by the preset signed inclusion list size", () => {
+    const boundary = {fork: ForkName.heze, epoch: config.HEZE_FORK_EPOCH};
+
+    const topic = {type: GossipType.inclusion_list, boundary, encoding} as const;
+    expect(getGossipSSZMaxSize(topic, config, getGossipSSZType(topic))).toBe(MAX_SIGNED_INCLUSION_LIST_SIZE);
   });
 
   it("should cap Gloas progressive gossip objects at or below their theoretical SSZ max", () => {

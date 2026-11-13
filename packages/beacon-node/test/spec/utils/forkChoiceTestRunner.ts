@@ -1,20 +1,12 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {
-  ForkPostDeneb,
-  ForkPostFulu,
-  ForkPostGloas,
-  ForkPreDeneb,
-  ForkPreFulu,
-  ForkPreGloas,
-  ForkSeq,
-} from "@lodestar/params";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {ForkPostFulu, ForkPostGloas, ForkPreFulu, ForkPreGloas, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -28,7 +20,6 @@ import {
   getPayloadAttestationDataSigningRoot,
   isExecutionStateType,
   isGloasStateType,
-  signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -43,16 +34,15 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {PayloadAttestationMessage} from "@lodestar/types/gloas";
-import {bnToNum, fromHex, toHex, toRootHex} from "@lodestar/utils";
+import {bnToNum, toHex, toRootHex} from "@lodestar/utils";
 import {
-  BlockInputBlobs,
   BlockInputColumns,
   BlockInputNoData,
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/index.js";
-import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
+import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
@@ -66,7 +56,6 @@ import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
-import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blobs.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
@@ -88,13 +77,15 @@ const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
 const PAYLOAD_ATTESTATION_MESSAGE_FILE_NAME = "^(payload_attestation_message)_([0-9a-zA-Z])+$";
 
 const logger = testLogger("spec-test");
+const executionEngineLogger = testLogger("executionEngine");
+const mockedDb = getMockedBeaconDb();
 
 export const forkChoiceTestRunner =
   (opts: {onlyPredefinedResponses: boolean}): TestRunnerFn<ForkChoiceTestCase, void> =>
   (fork) => {
     return {
       testFunction: async (testcase, _directoryName, testCaseName) => {
-        const {steps, anchorState} = testcase;
+        const {steps, anchorState, anchorBlock} = testcase;
         const currentSlot = anchorState.slot;
         const config = getConfig(fork);
         // const state = createCachedBeaconStateTest(anchorState, config);
@@ -115,7 +106,7 @@ export const forkChoiceTestRunner =
         const controller = new AbortController();
         const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {
           signal: controller.signal,
-          logger: testLogger("executionEngine"),
+          logger: executionEngineLogger,
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
@@ -152,7 +143,7 @@ export const forkChoiceTestRunner =
             privateKey: await generateKeyPair("secp256k1"),
             config: beaconConfig,
             pubkeyCache,
-            db: getMockedBeaconDb(),
+            db: mockedDb,
             dataDir: ".",
             dbName: ",",
             logger,
@@ -162,6 +153,7 @@ export const forkChoiceTestRunner =
             validatorMonitor: null,
             anchorState: new BeaconStateView(cachedState),
             isAnchorStateFinalized: true,
+            earliestAvailableSlot: cachedState.slot,
             executionEngine,
             executionBuilder: undefined,
           }
@@ -169,6 +161,10 @@ export const forkChoiceTestRunner =
 
         // The handler of `ChainEvent.forkChoiceFinalized` access `db.block` and raise error if not found.
         chain.emitter.removeAllListeners(ChainEvent.forkChoiceFinalized);
+
+        const specStoreBlockRoots = new Set<RootHex>([
+          toHex(config.getForkTypes(anchorBlock.slot).BeaconBlock.hashTreeRoot(anchorBlock)),
+        ]);
 
         const stepsLen = steps.length;
         logger.debug("Fork choice test", {steps: stepsLen});
@@ -342,15 +338,7 @@ export const forkChoiceTestRunner =
 
               // Post-Deneb and pre-Fulu, `columns` should not be present. Post-Fulu `blobs` and
               // `proofs` should not be present.
-              let blobs: deneb.Blob[] | undefined;
-              let proofs: deneb.KZGProof[] | undefined;
               let columns: fulu.DataColumnSidecar[] | undefined;
-              if (step.blobs !== undefined) {
-                blobs = testcase.blobs.get(step.blobs);
-              }
-              if (step.proofs !== undefined) {
-                proofs = step.proofs.map((proof) => ssz.deneb.KZGProof.deserialize(fromHex(proof)));
-              }
               if (step.columns !== undefined) {
                 columns = [];
                 for (const columnName of step.columns) {
@@ -375,6 +363,16 @@ export const forkChoiceTestRunner =
                 parentRoot: toHexString(signedBlock.message.parentRoot),
                 isValid,
               });
+
+              if (specStoreBlockRoots.has(blockRootHex)) {
+                if (!isValid) {
+                  throw Error(`Known block marked invalid at step ${i}, root=${blockRootHex}`);
+                }
+                logger.debug(`Step ${i}/${stepsLen} skip block: already known (spec on_block returns early)`, {
+                  root: blockRootHex,
+                });
+                continue;
+              }
 
               try {
                 let blockImport;
@@ -446,59 +444,11 @@ export const forkChoiceTestRunner =
                     });
                   }
                   // getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
-                } else if (forkSeq >= ForkSeq.deneb && forkSeq < ForkSeq.fulu) {
-                  if (blobs === undefined) {
-                    // seems like some deneb tests don't have this and we are supposed to assume empty
-                    // throw Error("Missing blobs for the deneb+ block");
-                    blobs = [];
-                  }
-                  if (proofs === undefined) {
-                    // seems like some deneb tests don't have this and we are supposed to assume empty
-                    // throw Error("proofs for the deneb+ block");
-                    proofs = [];
-                  }
-                  // the kzg lib for validation of minimal setup is not yet integrated, lets just verify lengths
-                  // post integration use validateBlobsAndProofs
-                  const commitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
-                  if (blobs.length !== commitments.length || proofs.length !== commitments.length) {
-                    throw Error("Invalid blobs or proofs lengths");
-                  }
-
-                  const blobSidecars: deneb.BlobSidecars = blobs.map((blob, index) => {
-                    return {
-                      index,
-                      blob,
-                      kzgCommitment: commitments[index],
-                      kzgProof: (proofs ?? [])[index],
-                      signedBlockHeader: signedBlockToSignedHeader(config, signedBlock),
-                      kzgCommitmentInclusionProof: computePreFuluKzgCommitmentsInclusionProof(
-                        fork,
-                        signedBlock.message.body,
-                        index
-                      ),
-                    };
-                  });
-
-                  blockImport = BlockInputBlobs.createFromBlock({
-                    forkName: fork,
-                    block: signedBlock as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>,
-                    blockRootHex,
-                    source: BlockInputSource.gossip,
-                    seenTimestampSec: 0,
-                    daOutOfRange: false,
-                  });
-                  for (const blob of blobSidecars) {
-                    blockImport.addBlob({
-                      blockRootHex,
-                      blobSidecar: blob,
-                      source: BlockInputSource.gossip,
-                      seenTimestampSec: 0,
-                    });
-                  }
                 } else {
+                  // Pre-fulu blocks carry no tracked sidecar data, legacy deneb..electra blobs are not loaded
                   blockImport = BlockInputPreData.createFromBlock({
                     forkName: fork,
-                    block: signedBlock as SignedBeaconBlock<ForkPreDeneb>,
+                    block: signedBlock as SignedBeaconBlock<ForkPreFulu>,
                     blockRootHex,
                     source: BlockInputSource.gossip,
                     seenTimestampSec: 0,
@@ -508,21 +458,17 @@ export const forkChoiceTestRunner =
 
                 await chain.processBlock(blockImport, {
                   seenTimestampSec: tickTime,
-                  validBlobSidecars: BlobSidecarValidation.Full,
                   importAttestations: AttestationImportOpt.Force,
                   validSignatures: testcase.meta?.bls_setting !== BigInt(1),
-                  // A block the spec store already has is a no-op for on_block. Lodestar would reject it instead,
-                  // as already known or, once pruned by finalization, for being at or below the finalized slot.
-                  ignoreIfKnown: isValid,
-                  ignoreIfFinalized: isValid,
                 });
                 const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
                 if (protoBlock === null) {
                   throw Error(`Imported block not found in fork choice, root=${blockRootHex}`);
                 }
                 const postState = await chain.regen.getState(protoBlock.stateRoot, RegenCaller.processBlock);
-                expectValidProgressiveBalances(postState, metrics);
+                expectValidProgressiveBalances(postState, metrics.stateTransition);
                 if (!isValid) throw Error("Expect error since this is a negative test");
+                specStoreBlockRoots.add(blockRootHex);
               } catch (e) {
                 if (isValid || (e as Error).message === "Expect error since this is a negative test") {
                   throw e;
@@ -577,6 +523,9 @@ export const forkChoiceTestRunner =
                   latestValidHash: null,
                   validationError: null,
                 });
+
+                // The vectors carry no inclusion lists, so every payload satisfies the empty constraint set
+                (chain.forkChoice as ForkChoice).recordPayloadInclusionListSatisfaction(beaconBlockRoot, true);
 
                 (chain.forkChoice as ForkChoice).onExecutionPayload(
                   beaconBlockRoot,
@@ -659,7 +608,7 @@ export const forkChoiceTestRunner =
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const {proposerHead, notReorgedReason} = (chain.forkChoice as ForkChoice).getProposerHead(
                   head,
-                  tickTime % (config.SLOT_DURATION_MS / 1000),
+                  (tickTime * 1000) % config.SLOT_DURATION_MS,
                   currentSlot
                 );
                 logger.debug(`Not reorged reason ${notReorgedReason} at step ${i}`);
@@ -689,45 +638,27 @@ export const forkChoiceTestRunner =
                   }))
                   .sort(cmpViableHead);
 
-                if (isGloas) {
-                  // TODO GLOAS: Assert set equality once https://github.com/ethereum/consensus-specs/issues/5496 is
-                  // resolved. Lodestar prunes payload-status variants failing the FFG check while the spec keeps them.
-                  expect(actual.length).toBeGreaterThan(0);
-                  const expectedByKey = new Map(expected.map((e) => [`${e.root}/${e.payloadStatus}`, e]));
-                  for (const act of actual) {
-                    const exp = expectedByKey.get(`${act.root}/${act.payloadStatus}`);
-                    expect(exp !== undefined).toEqualWithMessage(
-                      true,
-                      `Viable head ${act.root} (payloadStatus ${act.payloadStatus}) not in spec's leaf set at step ${i}`
-                    );
-                    expect(act.weightGwei).toEqualWithMessage(
-                      exp?.weightGwei,
-                      `Invalid viable head weight for ${act.root} at step ${i}`
-                    );
-                  }
-                } else {
-                  // The set of viable heads is determined by justified/finalized epochs, not weight,
-                  // so identity must match exactly. Comparing the full sets (not a subset) also
-                  // rejects a degenerate empty result.
-                  expect(actual.map(({root, payloadStatus}) => ({root, payloadStatus}))).toEqualWithMessage(
-                    expected.map(({root, payloadStatus}) => ({root, payloadStatus})),
-                    `Invalid viable head roots at step ${i}`
-                  );
+                // The set of viable heads is determined by justified/finalized epochs, not weight,
+                // so identity must match exactly. Comparing the full sets (not a subset) also
+                // rejects a degenerate empty result.
+                expect(actual.map(({root, payloadStatus}) => ({root, payloadStatus}))).toEqualWithMessage(
+                  expected.map(({root, payloadStatus}) => ({root, payloadStatus})),
+                  `Invalid viable head roots at step ${i}`
+                );
 
-                  for (const [k, act] of actual.entries()) {
-                    const exp = expected[k];
-                    expect(act.weightGwei).toEqualWithMessage(
-                      exp.weightGwei,
-                      `Invalid viable head weight for ${act.root} at step ${i}`
-                    );
-                  }
+                for (const [k, act] of actual.entries()) {
+                  const exp = expected[k];
+                  expect(act.weightGwei).toEqualWithMessage(
+                    exp.weightGwei,
+                    `Invalid viable head weight for ${act.root} at step ${i}`
+                  );
                 }
               }
               if (step.checks.should_override_forkchoice_update) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
                   head,
-                  tickTime % (config.SLOT_DURATION_MS / 1000),
+                  (tickTime * 1000) % config.SLOT_DURATION_MS,
                   currentSlot
                 );
                 if (result.shouldOverrideFcu === false) {
@@ -844,21 +775,6 @@ export const forkChoiceTestRunner =
         // Gloas compliance vectors have up to ~650 steps and need the extra headroom.
         timeout: 60000,
         expectFunc: () => {},
-        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-        // EXCEPTION : this test skipped here because prefix match can't be don't for this particular test
-        // as testId for the entire directory is same : `deneb/fork_choice/on_block/pyspec_tests` and
-        // we just want to skip this one particular test because we don't have minimal kzg lib integrated
-        //
-        // This skip can be removed once a kzg lib with run-time minimal blob size setup is released and
-        // integrated
-        shouldSkip: (_testcase, name, _index) =>
-          name.includes("invalid_incorrect_proof") ||
-          // TODO GLOAS: These tests will be unskipped by https://github.com/ChainSafe/lodestar/pull/9233
-          ((name.includes("gloas") || name.includes("heze")) &&
-            (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
-              name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_current_epoch") ||
-              name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_previous_epoch") ||
-              name.includes("include_votes_another_empty_chain_without_enough_ffg_votes_current_epoch"))),
       },
     };
   };

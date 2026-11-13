@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import {SerializedList} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {
   BLOB_TX_TYPE,
@@ -22,7 +23,7 @@ import {
   BlobsBundleRpc,
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
-  ExecutionPayloadBodyRpc,
+  ExecutionPayloadBodyV2Rpc,
   ExecutionPayloadRpc,
   ExecutionRequestsRpc,
   PayloadStatus,
@@ -49,6 +50,8 @@ type ExecutionBlock = {
   blockHash: RootHex;
   timestamp: number;
   blockNumber: number;
+  /** Bodies as received via newPayload, served back by engine_getPayloadBodiesByHashV2 */
+  body: ExecutionPayloadBodyV2Rpc;
 };
 
 const TX_TYPE_EIP1559 = 2;
@@ -93,6 +96,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       blockHash: ZERO_HASH_HEX,
       timestamp: 0,
       blockNumber: 0,
+      body: {transactions: [], withdrawals: null, blockAccessList: null},
     });
 
     const eth1BlockHash = opts.eth1BlockHash ?? toRootHex(INTEROP_BLOCK_HASH);
@@ -102,6 +106,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       blockHash: eth1BlockHash,
       timestamp: 0,
       blockNumber: 1,
+      body: {transactions: [], withdrawals: null, blockAccessList: null},
     });
 
     const {config} = opts;
@@ -133,35 +138,30 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_newPayloadV3: this.notifyNewPayload.bind(this),
       engine_newPayloadV4: this.notifyNewPayload.bind(this),
       engine_newPayloadV5: this.notifyNewPayload.bind(this),
+      engine_newPayloadV6: this.notifyNewPayload.bind(this),
       engine_forkchoiceUpdatedV1: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV2: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV3: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV4: this.notifyForkchoiceUpdate.bind(this),
+      engine_forkchoiceUpdatedV5: this.notifyForkchoiceUpdate.bind(this),
       engine_getPayloadV1: this.getPayloadV1.bind(this),
       engine_getPayloadV2: this.getPayloadV5.bind(this),
       engine_getPayloadV3: this.getPayloadV5.bind(this),
       engine_getPayloadV4: this.getPayloadV5.bind(this),
       engine_getPayloadV5: this.getPayloadV5.bind(this),
       engine_getPayloadV6: this.getPayloadV5.bind(this),
-      engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
-      engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
+      engine_getPayloadBodiesByHashV2: this.getPayloadBodiesByHashV2.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
-      engine_getBlobsV1: this.getBlobs.bind(this),
       engine_getBlobsV2: this.getBlobsV2.bind(this),
+      engine_getInclusionListV1: this.getInclusionList.bind(this),
     };
   }
 
-  private getPayloadBodiesByHash(
-    _blockHex: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV1"][0]
-  ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByHashV1"] {
-    return [] as ExecutionPayloadBodyRpc[];
-  }
-
-  private getPayloadBodiesByRange(
-    _start: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][0],
-    _count: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][1]
-  ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByRangeV1"] {
-    return [] as ExecutionPayloadBodyRpc[];
+  private getPayloadBodiesByHashV2(
+    blockHashes: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV2"][0]
+  ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByHashV2"] {
+    // null for unknown blocks, as a real EL does; the genesis/eth1 seed blocks carry no body
+    return blockHashes.map((hash) => this.validBlocks.get(hash)?.body ?? null);
   }
 
   /**
@@ -227,12 +227,23 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       blockHash,
       timestamp: quantityToNum(executionPayloadRpc.timestamp),
       blockNumber: quantityToNum(executionPayloadRpc.blockNumber),
+      body: {
+        transactions: executionPayloadRpc.transactions,
+        withdrawals: executionPayloadRpc.withdrawals ?? null,
+        blockAccessList: executionPayloadRpc.blockAccessList ?? null,
+      },
     });
 
     // IF the payload has been fully validated while processing the call
     // RETURN payload status from the Payload validation process
     // If validation succeeds, the response MUST contain {status: VALID, latestValidHash: payload.blockHash}
-    return {status: ExecutionPayloadStatus.VALID, latestValidHash: blockHash, validationError: null};
+    // The mock does not check inclusion list constraints, so every payload satisfies them (PayloadStatusV2)
+    return {
+      status: ExecutionPayloadStatus.VALID,
+      latestValidHash: blockHash,
+      validationError: null,
+      inclusionListSatisfied: true,
+    };
   }
 
   /**
@@ -341,14 +352,14 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       executionPayload.gasUsed = Math.floor(0.5 * INTEROP_GAS_LIMIT);
       executionPayload.timestamp = payloadAttributes.timestamp;
       executionPayload.blockHash = crypto.randomBytes(32);
-      executionPayload.transactions = [];
+      const transactions: Uint8Array[] = [];
 
       // Between 0 and 4 transactions for all forks
       const eip1559TxCount = Math.round(4 * Math.random());
       for (let i = 0; i < eip1559TxCount; i++) {
         const tx = crypto.randomBytes(512);
         tx[0] = TX_TYPE_EIP1559;
-        executionPayload.transactions.push(tx);
+        transactions.push(tx);
       }
 
       const commitments: deneb.KZGCommitment[] = [];
@@ -362,7 +373,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
           const blob = generateRandomBlob();
           const commitment = kzg.blobToKzgCommitment(blob);
           const {proofs: cellProofs} = kzg.computeCellsAndKzgProofs(blob);
-          executionPayload.transactions.push(transactionForKzgCommitment(commitment));
+          transactions.push(transactionForKzgCommitment(commitment));
           commitments.push(commitment);
           blobs.push(blob);
           proofs.push(...cellProofs);
@@ -374,12 +385,13 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
           const blob = generateRandomBlob();
           const commitment = kzg.blobToKzgCommitment(blob);
           const proof = kzg.computeBlobKzgProof(blob, commitment);
-          executionPayload.transactions.push(transactionForKzgCommitment(commitment));
+          transactions.push(transactionForKzgCommitment(commitment));
           commitments.push(commitment);
           blobs.push(blob);
           proofs.push(proof);
         }
       }
+      executionPayload.transactions = SerializedList.fromArray(transactions);
 
       if (ForkSeq[fork] >= ForkSeq.capella) {
         (executionPayload as ExecutionPayload<ForkPostCapella>).withdrawals = ssz.capella.Withdrawals.defaultValue();
@@ -407,7 +419,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       // IF the payload is deemed VALID and the build process has begun
       // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: buildProcessId}
       return {
-        payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
+        payloadStatus: {
+          status: ExecutionPayloadStatus.VALID,
+          latestValidHash: null,
+          validationError: null,
+          inclusionListSatisfied: true,
+        },
         payloadId: String(payloadId as number),
       };
     }
@@ -416,7 +433,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     // IF the payload is deemed VALID and a build process hasn't been started
     // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: null}
     return {
-      payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
+      payloadStatus: {
+        status: ExecutionPayloadStatus.VALID,
+        latestValidHash: null,
+        validationError: null,
+        inclusionListSatisfied: true,
+      },
       payloadId: null,
     };
   }
@@ -473,16 +495,14 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     return [{code: ClientCode.XX, name: "mock", version: "", commit: ""}];
   }
 
-  private getBlobs(
-    versionedHashes: EngineApiRpcParamTypes["engine_getBlobsV1"][0]
-  ): EngineApiRpcReturnTypes["engine_getBlobsV1"] {
-    return versionedHashes.map((_vh) => null);
-  }
-
   private getBlobsV2(
     _versionedHashes: EngineApiRpcParamTypes["engine_getBlobsV2"][0]
   ): EngineApiRpcReturnTypes["engine_getBlobsV2"] {
     return null;
+  }
+
+  private getInclusionList(): EngineApiRpcReturnTypes["engine_getInclusionListV1"] {
+    return [];
   }
 
   private timestampToFork(timestamp: number): ForkPostBellatrix {

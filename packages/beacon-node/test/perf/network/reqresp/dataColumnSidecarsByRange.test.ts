@@ -7,6 +7,7 @@ import {PeerId} from "@libp2p/interface";
 import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {hasher, setHasher} from "@chainsafe/persistent-merkle-tree";
 import {hasher as hashtreeHasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
+import {SerializedList} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {PayloadStatus} from "@lodestar/fork-choice";
@@ -72,8 +73,8 @@ for (const rootSource of ["archive index", "head state"] as const) {
       for (let slot = startSlot; slot < startSlot + slotCount; slot++) {
         const block = ssz.fulu.SignedBeaconBlock.defaultValue();
         block.message.slot = slot;
-        block.message.body.executionPayload.transactions = Array.from({length: 256}, (_, index) =>
-          deterministicBytes(1024, slot, index)
+        block.message.body.executionPayload.transactions = SerializedList.fromArray(
+          Array.from({length: 256}, (_, index) => deterministicBytes(1024, slot, index))
         );
         block.message.body.blobKzgCommitments = Array.from({length: blobsPerBlock}, (_, index) =>
           deterministicBytes(48, slot, 256 + index)
@@ -201,6 +202,8 @@ for (const rootSource of ["archive index", "head state"] as const) {
       },
     });
 
+    // Range reads are bimodal on the shared runner, the same legacy bench measures ~0.2ms or ~11ms per op
+    // on unrelated commits, which no threshold can tell apart from a regression. Report only.
     for (const count of [1, slotCount]) {
       for (const columns of [1, 8, NUMBER_OF_COLUMNS]) {
         const request: fulu.DataColumnSidecarsByRangeRequest = {
@@ -211,7 +214,7 @@ for (const rootSource of ["archive index", "head state"] as const) {
         for (const backend of ["legacy", "flat files"] as const) {
           bench({
             id: `${rootSource} / ${count} slots / ${columns} columns / ${backend}`,
-            threshold: 10,
+            noThreshold: true,
             minRuns: 25,
             maxMs: 15_000,
             timeoutBench: 60_000,

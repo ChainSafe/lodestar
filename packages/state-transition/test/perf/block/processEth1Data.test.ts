@@ -2,12 +2,12 @@ import {bench, describe} from "@chainsafe/benchmark";
 import {ACTIVE_PRESET, PresetName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
 import {processEth1Data} from "../../../src/block/processEth1Data.js";
-import {CachedBeaconStateAllForks} from "../../../src/index.js";
+import {CachedBeaconStateAltair} from "../../../src/index.js";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../../../src/testUtils/util.js";
 import {getBlockAltair} from "./util.js";
 
 type StateEth1Data = {
-  state: CachedBeaconStateAllForks;
+  state: CachedBeaconStateAltair;
   eth1Data: phase0.Eth1Data;
 };
 

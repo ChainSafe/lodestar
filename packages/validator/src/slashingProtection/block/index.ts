@@ -4,6 +4,7 @@ import {SlashingProtectionBlock} from "../types.js";
 import {ZERO_ROOT, isEqualNonZeroRoot, isEqualRoot} from "../utils.js";
 import {BlockBySlotRepository} from "./blockBySlotRepository.js";
 import {InvalidBlockError, InvalidBlockErrorCode} from "./errors.js";
+
 export {BlockBySlotRepository, InvalidBlockError, InvalidBlockErrorCode};
 
 enum SafeStatus {

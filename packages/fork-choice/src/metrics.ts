@@ -19,6 +19,10 @@ export function getForkChoiceMetrics(register: MetricsRegisterExtra) {
         name: "beacon_fork_choice_requests_total",
         help: "Count of occasions where fork choice has tried to find a head",
       }),
+      unsatisfiedInclusionListBlocks: register.gauge({
+        name: "beacon_fork_choice_unsatisfied_inclusion_list_blocks_total",
+        help: "Count of payloads not extended because they did not satisfy the inclusion list constraints",
+      }),
       errors: register.gauge<{entrypoint: UpdateHeadOpt}>({
         name: "beacon_fork_choice_errors_total",
         help: "Count of occasions where fork choice has returned an error when trying to find a head",
@@ -27,6 +31,11 @@ export function getForkChoiceMetrics(register: MetricsRegisterExtra) {
       changedHead: register.gauge({
         name: "beacon_fork_choice_changed_head_total",
         help: "Count of occasions fork choice has found a new head",
+      }),
+      executionInvalidations: register.gauge<{source: string}>({
+        name: "beacon_fork_choice_execution_invalidations_total",
+        help: "Count of execution engine INVALID verdicts applied to fork choice, by verdict source",
+        labelNames: ["source"],
       }),
       reorg: register.gauge({
         name: "beacon_fork_choice_reorg_total",
@@ -67,6 +76,11 @@ export function getForkChoiceMetrics(register: MetricsRegisterExtra) {
         name: "beacon_fork_choice_not_reorged_reason_total",
         help: "Reason why the current head is not re-orged out",
         labelNames: ["reason"],
+      }),
+      ptcQuorum: register.counter<{verdict: "true" | "false"}>({
+        name: "beacon_fork_choice_ptc_quorum_total",
+        help: "Count of decided PTC verdicts, true once majorities voted present and available, false once a majority voted either against",
+        labelNames: ["verdict"],
       }),
       computeDeltas: {
         duration: register.histogram({

@@ -2,18 +2,19 @@ import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {BeaconDb} from "../../../../../../src/db/index.js";
-import {startTmpBeaconDb} from "../../../../../utils/db.js";
+import {startIsolatedTmpBeaconDb} from "../../../../../utils/db.js";
 
 describe("BlockArchiveRepository", () => {
   let db: BeaconDb;
+  let closeDb: () => Promise<void>;
   const sampleBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
 
   beforeAll(async () => {
-    db = await startTmpBeaconDb(config);
+    ({db, close: closeDb} = await startIsolatedTmpBeaconDb(config, "lodestar-block-archive-"));
   });
 
   afterAll(async () => {
-    await db.close();
+    await closeDb();
   });
 
   it("batchPutBinary should result in the same to batchPut", async () => {
@@ -42,6 +43,6 @@ describe("BlockArchiveRepository", () => {
 
     // make sure they are the same except for slot
     savedBlock2.message.slot = sampleBlock.message.slot;
-    expect(ssz.phase0.SignedBeaconBlock.equals(savedBlock1, savedBlock2)).toBe(true);
+    expect(config.getForkTypes(savedBlock1.message.slot).SignedBeaconBlock.equals(savedBlock1, savedBlock2)).toBe(true);
   });
 });

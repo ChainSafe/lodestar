@@ -1,13 +1,17 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Slot} from "@lodestar/types";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Slot, Status} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
-import {GENESIS_SLOT} from "../constants/constants.js";
+import {GENESIS_EPOCH, GENESIS_SLOT} from "../constants/constants.js";
+import {GoodByeReasonCode} from "../constants/index.js";
+import {IBeaconDb} from "../db/index.js";
 import {ExecutionEngineState} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
-import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
+import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
+import {PeerIdStr} from "../util/peerId.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
 import {IBeaconSync, SyncChainDebugState, SyncModules, SyncState, SyncingStatus, syncStateMetric} from "./interface.js";
 import {SyncOptions} from "./options.js";
@@ -19,6 +23,7 @@ export class BeaconSync implements IBeaconSync {
   private readonly logger: Logger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
+  private readonly db: IBeaconDb;
   private readonly metrics: Metrics | null;
   private readonly opts: SyncOptions;
 
@@ -28,12 +33,15 @@ export class BeaconSync implements IBeaconSync {
   /** For metrics only */
   private readonly peerSyncType = new Map<string, PeerSyncType>();
   private readonly slotImportTolerance: Slot;
+  /** The requested subscription state, set while a change is being applied */
+  private pendingGossipSubscribed: boolean | undefined;
 
   constructor(opts: SyncOptions, modules: SyncModules) {
-    const {config, chain, metrics, network, logger} = modules;
+    const {config, chain, db, metrics, network, logger} = modules;
     this.opts = opts;
     this.network = network;
     this.chain = chain;
+    this.db = db;
     this.metrics = metrics;
     this.logger = logger;
     this.rangeSync = new RangeSync(modules, opts);
@@ -83,6 +91,7 @@ export class BeaconSync implements IBeaconSync {
   }
 
   close(): void {
+    this.pendingGossipSubscribed = undefined;
     this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
     this.chain.clock.off(ClockEvent.epoch, this.onClockEpoch);
@@ -192,6 +201,11 @@ export class BeaconSync implements IBeaconSync {
    */
   private addPeer = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
     const localStatus = this.chain.getStatus();
+    // Genesis and equal finalized epochs are already checked by assertPeerRelevance in the network worker
+    if (data.status.finalizedEpoch > GENESIS_EPOCH && data.status.finalizedEpoch < localStatus.finalizedEpoch) {
+      void this.verifyPastFinalizedCheckpoint(data.peer, data.status);
+    }
+
     const syncType = getPeerSyncType(localStatus, data.status, this.chain.forkChoice, this.slotImportTolerance);
     this.logger.verbose("Peer sync type classified", {
       peer: data.peer,
@@ -217,6 +231,56 @@ export class BeaconSync implements IBeaconSync {
   };
 
   /**
+   * A behind peer's finalized checkpoint must be the canonical block in effect at the start slot of its epoch
+   */
+  async verifyPastFinalizedCheckpoint(peer: PeerIdStr, remote: Status): Promise<void> {
+    const startSlot = computeStartSlotAtEpoch(remote.finalizedEpoch);
+    const root = toRootHex(remote.finalizedRoot);
+    try {
+      let reason: string | null = null;
+      // After a finality jump, finalized blocks stay in fork choice until the archiver migrates them.
+      // Fork choice is pruned only after archiving, so a miss here means the db already has this range.
+      const canonicalBlock = this.chain.forkChoice.getCanonicalBlockClosestLteSlot(startSlot);
+      if (canonicalBlock !== null) {
+        if (canonicalBlock.blockRoot === root) return;
+        reason = "finalized_root_not_canonical";
+      } else {
+        const slot = await this.db.blockArchive.getSlotByRoot(remote.finalizedRoot);
+        if (slot !== null && slot > startSlot) {
+          reason = "finalized_root_after_epoch_start";
+        } else if (slot !== startSlot) {
+          const childSlot = await this.db.blockArchive.getSlotByParentRoot(remote.finalizedRoot);
+          if (childSlot !== null) {
+            if (childSlot <= startSlot) reason = "finalized_root_not_in_effect_at_epoch_start";
+          } else if (slot === null && startSlot > this.chain.earliestAvailableSlot) {
+            // childSlot == null too, neither the root nor a child is canonical
+            // or they are canonical and both pruned but peer's finalized epoch starts after earliestAvailableSlot
+            reason = "unknown_finalized_root";
+          }
+        }
+      }
+
+      if (reason !== null) {
+        this.logger.debug("Peer finalized checkpoint not in our chain", {
+          peer,
+          finalizedEpoch: remote.finalizedEpoch,
+          root,
+          reason,
+        });
+        this.metrics?.syncPeerFinalizedCheckpointMismatch.inc({reason});
+        this.network.reportPeer(peer, PeerAction.Fatal, "PeerFinalizedCheckpointMismatch");
+        await this.network.goodbyeAndDisconnect(peer, GoodByeReasonCode.IRRELEVANT_NETWORK);
+      }
+    } catch (e) {
+      this.logger.debug(
+        "Error verifying peer finalized checkpoint",
+        {peer, finalizedEpoch: remote.finalizedEpoch, root},
+        e as Error
+      );
+    }
+  }
+
+  /**
    * Must be called by libp2p when a peer is removed from the peer manager
    */
   private removePeer = (data: NetworkEventData[NetworkEvent.peerDisconnected]): void => {
@@ -235,17 +299,7 @@ export class BeaconSync implements IBeaconSync {
     if (state === SyncState.Synced && this.chain.clock.currentEpoch >= MIN_EPOCH_TO_START_GOSSIP) {
       this.chain.forkChoice.resumeFastConfirmation();
 
-      if (!this.network.isSubscribedToGossipCoreTopics()) {
-        this.network
-          .subscribeGossipCoreTopics()
-          .then(() => {
-            this.metrics?.syncSwitchGossipSubscriptions.inc({action: "subscribed"});
-            this.logger.info("Subscribed gossip core topics");
-          })
-          .catch((e) => {
-            this.logger.error("Error subscribing to gossip core topics", {}, e);
-          });
-      }
+      this.setGossipSubscription(true);
 
       // also start searching for unknown blocks
       if (!this.unknownBlockSync.isSubscribedToNetwork()) {
@@ -261,17 +315,8 @@ export class BeaconSync implements IBeaconSync {
         // Same debounce as gossip: transient blips keep the rule running, only a real gap pauses it
         this.chain.forkChoice.pauseFastConfirmation();
 
-        if (this.network.isSubscribedToGossipCoreTopics()) {
-          this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots`);
-          this.network
-            .unsubscribeGossipCoreTopics()
-            .then(() => {
-              this.metrics?.syncSwitchGossipSubscriptions.inc({action: "unsubscribed"});
-              this.logger.info("Un-subscribed gossip core topics");
-            })
-            .catch((e) => {
-              this.logger.error("Error unsubscribing to gossip core topics", {}, e);
-            });
+        if (this.setGossipSubscription(false)) {
+          this.logger.warn("Node sync has fallen behind", {slots: syncDiff});
         }
 
         // also stop searching for unknown blocks
@@ -282,6 +327,43 @@ export class BeaconSync implements IBeaconSync {
       }
     }
   };
+
+  private setGossipSubscription(subscribe: boolean): boolean {
+    if ((this.pendingGossipSubscribed ?? this.network.isSubscribedToGossipCoreTopics()) === subscribe) return false;
+    const applying = this.pendingGossipSubscribed !== undefined;
+    this.pendingGossipSubscribed = subscribe;
+    if (!applying) void this.applyGossipSubscription();
+    return true;
+  }
+
+  /**
+   * Applies the latest requested state one request at a time. Network skips a subscribe issued while an unsubscribe is
+   * in flight, so opposite requests must not overlap.
+   */
+  private async applyGossipSubscription(): Promise<void> {
+    for (;;) {
+      const subscribe = this.pendingGossipSubscribed;
+      if (subscribe === undefined || subscribe === this.network.isSubscribedToGossipCoreTopics()) break;
+      try {
+        await (subscribe ? this.network.subscribeGossipCoreTopics() : this.network.unsubscribeGossipCoreTopics());
+      } catch (e) {
+        this.logger.error(
+          subscribe ? "Error subscribing to gossip core topics" : "Error unsubscribing to gossip core topics",
+          {},
+          e as Error
+        );
+        // Leave a retry of the same request to the next sync state update
+        if (this.pendingGossipSubscribed === subscribe) break;
+        continue;
+      }
+      if (this.pendingGossipSubscribed === undefined || this.network.isSubscribedToGossipCoreTopics() !== subscribe) {
+        break;
+      }
+      this.metrics?.syncSwitchGossipSubscriptions.inc({action: subscribe ? "subscribed" : "unsubscribed"});
+      this.logger.info(subscribe ? "Subscribed gossip core topics" : "Un-subscribed gossip core topics");
+    }
+    this.pendingGossipSubscribed = undefined;
+  }
 
   private onClockEpoch = (): void => {
     // If a node witness the genesis event consider starting gossip

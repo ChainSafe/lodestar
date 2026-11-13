@@ -47,8 +47,9 @@ export type SeenPayloadEnvelopeInputModules = {
  * Created whenever we have a block because it needs block bid.
  * Steady state (linear chain, healthy progression): the cache holds ~2 entries — the head
  * (parent for next-slot production) and its parent (proposer-boost-reorg fallback). It can
- * transiently hold more during forks, range-sync bursts, or when `prepareNextSlot` skips
- * ticks; subsequent ticks settle it back.
+ * hold more during forks and range sync, or while an entry's payload is not FULL on the head's
+ * branch or its columns are still being gathered. Such entries are evicted on a later block
+ * import, on finalization or by the size cap.
  */
 export class SeenPayloadEnvelopeInput {
   private readonly config: ChainForkConfig;
@@ -264,18 +265,35 @@ export class SeenPayloadEnvelopeInput {
     }
   }
 
+  /**
+   * Removes a PayloadEnvelopeInput whose envelope failed import with a definitive invalid verdict. The envelope
+   * cannot be replaced in place, sync recreates the entry via `getOrReload()` or `add()` to fetch another one.
+   * No-op if the cached entry is a different object, it may already be the recreated one.
+   */
+  removeInvalid(payloadInput: PayloadEnvelopeInput): void {
+    if (this.payloadInputs.get(payloadInput.blockRootHex) === payloadInput) {
+      this.evictPayloadInput(payloadInput, "invalid");
+    }
+  }
+
   pruneBelowParent(parentBlock: ProtoBlock): void {
-    for (const block of this.forkChoice.getAllAncestorBlocks(parentBlock.blockRoot, parentBlock.payloadStatus)) {
-      // Only evict once the payload is FULL (revealed/imported) — on an EMPTY/PENDING branch we may
-      // still need to download the FULL envelope (see #9475), and evicting would make payload-by-root
-      // sync throw "Missing PayloadEnvelopeInput for known block".
-      if (block.slot < parentBlock.slot && block.payloadStatus === PayloadStatus.FULL) {
-        const input = this.payloadInputs.get(block.blockRoot);
-        // ...and don't evict while columns are still being gathered: writeDataColumnsToDb awaits the
-        // same hasComputedAllData() before persisting. Such entries are pruned by a later call.
-        if (input?.hasComputedAllData()) {
-          this.evictPayloadInput(input, "belowParent");
-        }
+    for (const input of this.payloadInputs.values()) {
+      if (
+        input.slot < parentBlock.slot &&
+        // Don't evict while columns are still being gathered: writeDataColumnsToDb awaits the same
+        // hasComputedAllData() before persisting. Such entries are pruned by a later call.
+        input.hasComputedAllData() &&
+        // Only evict once the payload is FULL (revealed/imported) on the parent's branch. On an EMPTY/PENDING
+        // branch we may still need to download the FULL envelope (see #9475), and without the entry gossip
+        // for the block is ignored until by-root sync reloads it.
+        this.forkChoice.isDescendant(
+          input.blockRootHex,
+          PayloadStatus.FULL,
+          parentBlock.blockRoot,
+          parentBlock.payloadStatus
+        )
+      ) {
+        this.evictPayloadInput(input, "belowParent");
       }
     }
   }

@@ -6,7 +6,7 @@ import {config} from "@lodestar/config/default";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";
-import {RequestedSubnet, prioritizePeers} from "../../../../../src/network/peers/utils/index.js";
+import {RequestedSubnetWithPeerCount, prioritizePeers} from "../../../../../src/network/peers/utils/index.js";
 import {getAttnets, getSyncnets} from "../../../../utils/network.js";
 
 describe("prioritizePeers", () => {
@@ -108,14 +108,24 @@ describe("prioritizePeers", () => {
           status: ssz.phase0.Status.defaultValue(),
         }));
 
-        const attnets: RequestedSubnet[] = [];
+        const attnets: RequestedSubnetWithPeerCount[] = [];
         for (let i = 0; i < requestedAttnets.count; i++) {
-          attnets.push({subnet: requestedAttnets.start + i, toSlot: 1_000_000});
+          const subnet = requestedAttnets.start + i;
+          attnets.push({
+            subnet,
+            toSlot: 1_000_000,
+            peerCount: connectedPeers.filter((peer) => peer.attnets?.get(subnet)).length,
+          });
         }
 
-        const syncnets: RequestedSubnet[] = [];
+        const syncnets: RequestedSubnetWithPeerCount[] = [];
         for (let i = 0; i < requestedSyncNets.count; i++) {
-          syncnets.push({subnet: requestedSyncNets.start + i, toSlot: 1_000_000});
+          const subnet = requestedSyncNets.start + i;
+          syncnets.push({
+            subnet,
+            toSlot: 1_000_000,
+            peerCount: connectedPeers.filter((peer) => peer.syncnets?.get(subnet)).length,
+          });
         }
         return {connectedPeers, attnets, syncnets, samplingGroups: []};
       },

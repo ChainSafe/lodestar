@@ -19,6 +19,7 @@ export const gnosisChainConfig: ChainConfig = {
   // Time parameters
   SECONDS_PER_SLOT: 5,
   SLOT_DURATION_MS: 5000,
+  SLOT_DURATION_MS_HEZE: 5000,
   SECONDS_PER_ETH1_BLOCK: 6,
   ETH1_FOLLOW_DISTANCE: 1024,
   CHURN_LIMIT_QUOTIENT: 4096,
@@ -34,6 +35,8 @@ export const gnosisChainConfig: ChainConfig = {
   // Networking
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 16384,
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 16384,
+  // 2**14 * 16 * 5,000 (= 1,310,720,000) milliseconds, ~15 days
+  MIN_BLOB_DATA_RETENTION_MS: 1310720000,
 
   // Dec 8, 2021, 13:00 UTC
   MIN_GENESIS_TIME: 1638968400,

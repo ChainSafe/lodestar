@@ -10,6 +10,7 @@ import {BlockInputSource} from "../../../../../src/chain/blocks/blockInput/types
 import {Batch, BatchStatus} from "../../../../../src/sync/range/batch.js";
 import {ChainTarget} from "../../../../../src/sync/range/chain.js";
 import {ChainPeersBalancer, PeerSyncInfo} from "../../../../../src/sync/range/utils/peerBalancer.js";
+import {ParentPayload} from "../../../../../src/sync/utils/downloadByRange.js";
 import {RangeSyncType} from "../../../../../src/sync/utils/remoteSyncType.js";
 import {CustodyConfig} from "../../../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../../../src/util/peerId.js";
@@ -287,17 +288,26 @@ describe("sync / range / peerBalancer", () => {
 
     it("should retry a successful peer when the batch request changes to parent payload", async () => {
       const config = createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
-      const latestBid = ssz.gloas.ExecutionPayloadBid.defaultValue();
-      latestBid.blockHash = Buffer.alloc(32, 0x22);
-      latestBid.blobKzgCommitments = [ssz.gloas.KZGCommitment.defaultValue()];
-      const batch0 = new Batch(1, config, clock, custodyConfig, true, latestBid, Number.MAX_SAFE_INTEGER);
+      const parentBid = ssz.gloas.ExecutionPayloadBid.defaultValue();
+      parentBid.blockHash = Buffer.alloc(32, 0x22);
+      parentBid.blobKzgCommitments = [ssz.gloas.KZGCommitment.defaultValue()];
+      const parentRoot = Buffer.alloc(32, 0x11);
+      const parentPayload: ParentPayload = {
+        blockRoot: parentRoot,
+        blockRootHex: toRootHex(parentRoot),
+        slot: computeStartSlotAtEpoch(1) - 1,
+        proposerIndex: 0,
+        forkName: ForkName.gloas,
+        bid: parentBid,
+      };
+      const batch0 = new Batch(1, config, clock, custodyConfig, true, parentPayload, Number.MAX_SAFE_INTEGER);
       const blocksRequest = batch0.requests.blocksRequest as {startSlot: number; count: number};
 
       batch0.startDownloading(peer1);
       const block = ssz.gloas.SignedBeaconBlock.defaultValue();
       block.message.slot = blocksRequest.startSlot;
-      block.message.parentRoot = Buffer.alloc(32, 0x11);
-      block.message.body.signedExecutionPayloadBid.message.parentBlockHash = latestBid.blockHash;
+      block.message.parentRoot = parentRoot;
+      block.message.body.signedExecutionPayloadBid.message.parentBlockHash = parentBid.blockHash;
       const blockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message));
       const blockInput = BlockInputNoData.createFromBlock({
         block: block as SignedBeaconBlock<typeof ForkName.gloas>,

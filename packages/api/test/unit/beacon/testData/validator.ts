@@ -1,4 +1,5 @@
-import {ForkName} from "@lodestar/params";
+import {SerializedList} from "@chainsafe/ssz";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {BuilderSelection, Endpoints} from "../../../../src/beacon/routes/validator.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
@@ -9,6 +10,12 @@ const randaoReveal = new Uint8Array(96).fill(1);
 const selectionProof = new Uint8Array(96).fill(1);
 const graffiti = "a".repeat(32);
 const feeRecipient = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const builderAuth = {
+  ...ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+  message: {data: new TextEncoder().encode("builder.example.com"), slot: 32000},
+};
+const signedProposerPreferences = ssz.gloas.SignedProposerPreferences.defaultValue();
+signedProposerPreferences.message.proposalSlot = SLOTS_PER_EPOCH;
 
 export const testData: GenericServerTestCases<Endpoints> = {
   getAttesterDuties: {
@@ -94,7 +101,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
         builders: [
           {
             url: new TextEncoder().encode("https://builder.example.com"),
-            auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+            auth: builderAuth,
             builderPubkeys: [],
             maxExecutionPayment: 0n,
             minBid: 0n,
@@ -110,6 +117,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
         consensusBlockValue: ssz.Wei.defaultValue(),
         executionPayloadValue: ssz.Wei.defaultValue(),
         executionPayloadIncluded: true,
+        builderUrl: "https://builder.example.com",
       },
     },
   },
@@ -173,7 +181,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: undefined,
   },
   submitProposerPreferences: {
-    args: {signedProposerPreferences: [ssz.gloas.SignedProposerPreferences.defaultValue()]},
+    args: {signedProposerPreferences: [signedProposerPreferences]},
     res: undefined,
   },
   submitBuilderPreferences: {
@@ -182,11 +190,33 @@ export const testData: GenericServerTestCases<Endpoints> = {
         {
           proposerPubkey: new Uint8Array(48).fill(1),
           url: new TextEncoder().encode("https://builder.example.com"),
-          auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+          auth: builderAuth,
           maxExecutionPayment: 0n,
         },
       ],
     },
+    res: undefined,
+  },
+  getInclusionListCommitteeDuties: {
+    args: {epoch: 1000, indices: [1, 2, 3]},
+    res: {
+      data: [
+        {
+          pubkey: new Uint8Array(48).fill(1),
+          validatorIndex: 2,
+          slot: 7,
+          dependentRoot: new Uint8Array(32).fill(3),
+        },
+      ],
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
+    },
+  },
+  produceInclusionList: {
+    args: {slot: 10},
+    res: {data: SerializedList.fromArray([new Uint8Array([1, 2, 3])]), meta: {version: ForkName.heze}},
+  },
+  publishInclusionList: {
+    args: {signedInclusionList: ssz.heze.SignedInclusionList.defaultValue()},
     res: undefined,
   },
 };

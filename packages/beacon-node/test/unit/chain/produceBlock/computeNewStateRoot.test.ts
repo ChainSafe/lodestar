@@ -24,7 +24,7 @@ describe("computeNewStateRoot", () => {
     });
     expect(computeNewStateRootMock).toHaveBeenCalledWith(
       {block: {message: block, signature: EMPTY_SIGNATURE}},
-      {metrics: null}
+      {metrics: undefined}
     );
   });
 });

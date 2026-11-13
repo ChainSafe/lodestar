@@ -43,6 +43,7 @@ describe("data serialization through worker boundary", () => {
   // Defining tests in this notation ensures that any event data is tested and probably safe to send
   const reqRespBridgeEventData: ReqRespBridgeEventData = {
     [ReqRespBridgeEvent.outgoingRequest]: {id: 0, callArgs: {peerId, method, versions: [1, 2], requestData: bytes}},
+    [ReqRespBridgeEvent.outgoingRequestCancel]: {id: 0},
     [ReqRespBridgeEvent.outgoingResponse]: {
       type: IteratorEventType.next,
       id: 0,
@@ -52,6 +53,7 @@ describe("data serialization through worker boundary", () => {
       id: 0,
       callArgs: {method, req: {data: bytes, version: 1}, peerId, peerClient: "Unknown"},
     },
+    [ReqRespBridgeEvent.incomingRequestCancel]: {id: 0},
     [ReqRespBridgeEvent.incomingResponse]: {
       type: IteratorEventType.next,
       id: 0,
@@ -132,6 +134,7 @@ describe("data serialization through worker boundary", () => {
     getConnectedPeers: [],
     getConnectedPeerCount: [],
     updateStatus: [statusZero],
+    addLocalProposalSlots: [[0]],
     publishGossip: ["test-topic", bytes, {allowPublishToZeroTopicPeers: true, ignoreDuplicatePublishError: true}],
     close: [],
     scrapeMetrics: [],
@@ -203,6 +206,7 @@ describe("data serialization through worker boundary", () => {
     getConnectedPeers: [peerId],
     getConnectedPeerCount: 100,
     updateStatus: null,
+    addLocalProposalSlots: null,
     publishGossip: 1,
     close: null,
     scrapeMetrics: "test-metrics",

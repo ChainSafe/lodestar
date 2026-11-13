@@ -13,9 +13,9 @@ import {
   SignedBeaconBlock,
   Status,
   altair,
-  deneb,
   fulu,
   gloas,
+  heze,
   phase0,
   ssz,
   sszTypesFor,
@@ -23,8 +23,6 @@ import {
 import {
   BeaconBlocksByRootRequest,
   BeaconBlocksByRootRequestType,
-  BlobSidecarsByRootRequest,
-  BlobSidecarsByRootRequestType,
   DataColumnSidecarsByRootRequest,
   DataColumnSidecarsByRootRequestType,
   ExecutionPayloadEnvelopesByRootRequest,
@@ -43,8 +41,6 @@ export enum ReqRespMethod {
   BeaconBlocksByRange = "beacon_blocks_by_range",
   BeaconBlocksByRoot = "beacon_blocks_by_root",
   BeaconBlocksByHead = "beacon_blocks_by_head",
-  BlobSidecarsByRange = "blob_sidecars_by_range",
-  BlobSidecarsByRoot = "blob_sidecars_by_root",
   DataColumnSidecarsByRange = "data_column_sidecars_by_range",
   DataColumnSidecarsByRoot = "data_column_sidecars_by_root",
   ExecutionPayloadEnvelopesByRoot = "execution_payload_envelopes_by_root",
@@ -53,6 +49,7 @@ export enum ReqRespMethod {
   LightClientUpdatesByRange = "light_client_updates_by_range",
   LightClientFinalityUpdate = "light_client_finality_update",
   LightClientOptimisticUpdate = "light_client_optimistic_update",
+  InclusionListsByIndices = "inclusion_lists_by_indices",
 }
 
 // To typesafe events to network
@@ -64,8 +61,6 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
   [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequest;
   [ReqRespMethod.BeaconBlocksByHead]: fulu.BeaconBlocksByHeadRequest;
-  [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecarsByRangeRequest;
-  [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequest;
   [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecarsByRangeRequest;
   [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequest;
   [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: ExecutionPayloadEnvelopesByRootRequest;
@@ -74,6 +69,7 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
   [ReqRespMethod.LightClientFinalityUpdate]: null;
   [ReqRespMethod.LightClientOptimisticUpdate]: null;
+  [ReqRespMethod.InclusionListsByIndices]: heze.InclusionListsByIndicesRequest;
 };
 
 type ResponseBodyByMethod = {
@@ -85,8 +81,6 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.BeaconBlocksByRange]: SignedBeaconBlock;
   [ReqRespMethod.BeaconBlocksByRoot]: SignedBeaconBlock;
   [ReqRespMethod.BeaconBlocksByHead]: SignedBeaconBlock;
-  [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecar;
-  [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecar;
   [ReqRespMethod.DataColumnSidecarsByRange]: DataColumnSidecar;
   [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecar;
   [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: gloas.SignedExecutionPayloadEnvelope;
@@ -96,6 +90,7 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
   [ReqRespMethod.LightClientFinalityUpdate]: LightClientFinalityUpdate;
   [ReqRespMethod.LightClientOptimisticUpdate]: LightClientOptimisticUpdate;
+  [ReqRespMethod.InclusionListsByIndices]: heze.SignedInclusionList;
 };
 
 /** Request SSZ type for each method and ForkName */
@@ -115,8 +110,6 @@ export const requestSszTypeByMethod: (
   [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
   [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequestType(fork, config),
   [ReqRespMethod.BeaconBlocksByHead]: ssz.fulu.BeaconBlocksByHeadRequest,
-  [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
-  [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(fork, config),
   [ReqRespMethod.DataColumnSidecarsByRange]: ssz.fulu.DataColumnSidecarsByRangeRequest,
   [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequestType(config),
   [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: ExecutionPayloadEnvelopesByRootRequestType(config),
@@ -126,6 +119,7 @@ export const requestSszTypeByMethod: (
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
   [ReqRespMethod.LightClientFinalityUpdate]: null,
   [ReqRespMethod.LightClientOptimisticUpdate]: null,
+  [ReqRespMethod.InclusionListsByIndices]: ssz.heze.InclusionListsByIndicesRequest,
 });
 
 export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>;
@@ -147,8 +141,6 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.BeaconBlocksByRange]: blocksResponseType,
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
   [ReqRespMethod.BeaconBlocksByHead]: (fork) => ssz[fork].SignedBeaconBlock,
-  [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
-  [ReqRespMethod.BlobSidecarsByRoot]: () => ssz.deneb.BlobSidecar,
   [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientBootstrap,
   [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientUpdate,
   [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientFinalityUpdate,
@@ -158,6 +150,7 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
+  [ReqRespMethod.InclusionListsByIndices]: () => ssz.heze.SignedInclusionList,
 };
 
 function onlyPostAltairFork(fork: ForkName): ForkPostAltair {

@@ -79,6 +79,7 @@ Metamask
 MevBoost
 ModuleNotFoundError
 Monorepo
+NAPI
 NPM
 NVM
 Nethermind
@@ -118,6 +119,7 @@ Vitalik
 Vitest
 Wagyu
 Zig
+addon
 addons
 api
 args
@@ -175,6 +177,7 @@ flamegraphs
 floodsub
 fsSL
 getNetworkIdentity
+glibc
 gloas
 gnosis
 gpg
@@ -209,6 +212,7 @@ mmeshsub
 monorepo
 multiaddr
 multifork
+musl
 namespace
 namespaced
 namespaces
@@ -271,3 +275,4 @@ xcode
 yaml
 yamux
 yml
+zapi

@@ -186,6 +186,60 @@ describe("fast confirmation rules", () => {
     expect(epochStartResult.didReset).toBe(true);
   });
 
+  it("resetIfBehindOrNotAncestorOrUnsafe skips the chain safety check once the confirmed block left the canonical chain", () => {
+    const reorgedConfirmed = makeBlock(SLOTS_PER_EPOCH - 1, ZERO_ROOT);
+    const head = makeBlock(SLOTS_PER_EPOCH - 1, ZERO_ROOT, {blockRoot: rootFromNumber(999)});
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), reorgedConfirmed, head];
+    const state = makeState(32, 32, [reorgedConfirmed.slot]);
+    // Head state is unavailable, so the chain safety check would throw if evaluated
+    const store = {
+      ...makeStore(
+        reorgedConfirmed.blockRoot,
+        ZERO_ROOT,
+        ZERO_ROOT,
+        0,
+        0,
+        reorgedConfirmed.blockRoot,
+        head.blockRoot,
+        state
+      ),
+      stateGetter: () => null,
+    };
+    const ctx = makeContext(
+      SLOTS_PER_EPOCH as Slot,
+      head.blockRoot,
+      blocks,
+      latestMessagesFor(32, reorgedConfirmed.blockRoot, 0),
+      {epoch: 0, rootHex: ZERO_ROOT},
+      state,
+      [0]
+    );
+    const snapshot = makeSnapshot(
+      SLOTS_PER_EPOCH as Slot,
+      1,
+      head.blockRoot,
+      reorgedConfirmed.blockRoot,
+      reorgedConfirmed.slot,
+      0,
+      ZERO_ROOT,
+      ZERO_ROOT,
+      0,
+      ZERO_ROOT,
+      0
+    );
+
+    const result = resetIfBehindOrNotAncestorOrUnsafe(snapshot, ctx, store, createFastConfirmationCache(), {
+      ...BASE_DECISION,
+      confirmedRoot: reorgedConfirmed.blockRoot,
+    });
+
+    expect(result).toEqual({
+      confirmedRoot: ZERO_ROOT,
+      didReset: true,
+      reason: FastConfirmationDecisionReason.ResetNotAncestor,
+    });
+  });
+
   it("advanceIfObservedJustified advances only when epoch-start preconditions hold", () => {
     const confirmed = makeBlock(SLOTS_PER_EPOCH - 2, ZERO_ROOT);
     const observed = makeBlock(SLOTS_PER_EPOCH - 1, confirmed.blockRoot);

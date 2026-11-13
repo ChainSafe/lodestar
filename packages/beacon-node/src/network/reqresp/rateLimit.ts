@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, MAX_REQUEST_LIGHT_CLIENT_UPDATES, isForkPostDeneb, isForkPostElectra} from "@lodestar/params";
+import {ForkName, MAX_REQUEST_LIGHT_CLIENT_UPDATES, isForkPostDeneb} from "@lodestar/params";
 import {InboundRateLimitQuota} from "@lodestar/reqresp";
 import {ReqRespMethod, RequestBodyByMethod, requestSszTypeByMethod} from "./types.js";
 
@@ -43,22 +43,6 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
   [ReqRespMethod.BeaconBlocksByHead]: {
     byPeer: {quota: config.MAX_REQUEST_BLOCKS_DENEB, quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.BeaconBlocksByHead, (req) => req.count),
-  },
-  [ReqRespMethod.BlobSidecarsByRange]: {
-    // Rationale: MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK
-    byPeer: {
-      quota: isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS,
-      quotaTimeMs: 10_000,
-    },
-    getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.BlobSidecarsByRange, (req) => req.count),
-  },
-  [ReqRespMethod.BlobSidecarsByRoot]: {
-    // Rationale: quota of BeaconBlocksByRoot * MAX_BLOBS_PER_BLOCK
-    byPeer: {
-      quota: isForkPostElectra(fork) ? config.MAX_REQUEST_BLOB_SIDECARS_ELECTRA : config.MAX_REQUEST_BLOB_SIDECARS,
-      quotaTimeMs: 10_000,
-    },
-    getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.BlobSidecarsByRoot, (req) => req.length),
   },
   [ReqRespMethod.DataColumnSidecarsByRange]: {
     // Rationale: MAX_REQUEST_BLOCKS_DENEB * NUMBER_OF_COLUMNS
@@ -107,12 +91,16 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
   [ReqRespMethod.LightClientFinalityUpdate]: {
     // Finality updates should not be requested more than once per epoch.
     // Allow 2 per slot and a very safe bound until there's more testing of real usage.
-    byPeer: {quota: 2, quotaTimeMs: 12_000},
+    byPeer: {quota: 2, quotaTimeMs: config.getSlotDurationMs(fork)},
+  },
+  [ReqRespMethod.InclusionListsByIndices]: {
+    // Peers only backfill what gossip missed, so a small per-slot allowance is enough
+    byPeer: {quota: 5, quotaTimeMs: config.getSlotDurationMs(fork)},
   },
   [ReqRespMethod.LightClientOptimisticUpdate]: {
     // Optimistic updates should not be requested more than once per slot.
     // Allow 2 per slot and a very safe bound until there's more testing of real usage.
-    byPeer: {quota: 2, quotaTimeMs: 12_000},
+    byPeer: {quota: 2, quotaTimeMs: config.getSlotDurationMs(fork)},
   },
 });
 

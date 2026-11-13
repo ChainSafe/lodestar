@@ -15,6 +15,7 @@ import {
   BeaconStateGloas,
   BeaconStateHeze,
   BeaconStatePhase0,
+  BeaconStatePreHeze,
 } from "./types.js";
 
 export type BeaconStateCache = {
@@ -142,6 +143,7 @@ export type CachedBeaconStateHeze = CachedBeaconState<BeaconStateHeze>;
 
 export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;
 export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecutions>;
+export type CachedBeaconStatePreHeze = CachedBeaconState<BeaconStatePreHeze>;
 /**
  * Create CachedBeaconState computing a new EpochCache instance
  * TODO ELECTRA: rename this to createFinalizedCachedBeaconState() as it's intended for finalized state only

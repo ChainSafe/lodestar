@@ -6,7 +6,8 @@ export function getLodestarClientVersion(info?: {version?: string; commit?: stri
     code: ClientCode.LS,
     name: "Lodestar",
     version: info?.version ?? "",
-    commit: info?.commit?.slice(0, 8) ?? "",
+    // engine_getClientVersionV1 defines commit as 4 bytes, so builds without git data must not send an empty one
+    commit: info?.commit ? info.commit.slice(0, 8) : "00000000",
   };
 }
 

@@ -1,6 +1,6 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Slot} from "@lodestar/types";
+import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {
   buildFastConfirmationSnapshot,
   createFastConfirmationCache,
@@ -10,15 +10,18 @@ import {runFastConfirmationRules} from "../../../src/forkChoice/fastConfirmation
 import {FastConfirmationDecisionReason} from "../../../src/forkChoice/fastConfirmation/types.js";
 import {
   adjustCommitteeWeightEstimateToEnsureSafety,
+  computeEmptySlotSupportDiscount,
   computeSafetyThreshold,
   findLatestConfirmedDescendant,
-  getBlockSupportBetweenSlots,
+  getAttestationScore,
+  getCurrentTargetScore,
   getEquivocationScore,
+  getNodeSupportBetweenSlots,
   isConfirmedChainSafe,
   isOneConfirmed,
   willCurrentTargetBeJustified,
 } from "../../../src/forkChoice/fastConfirmation/utils.js";
-import {ExecutionStatus} from "../../../src/index.js";
+import {ExecutionStatus, PayloadStatus} from "../../../src/index.js";
 import {
   ZERO_ROOT,
   latestMessagesFor,
@@ -114,16 +117,7 @@ describe("fast confirmation", () => {
     const block = makeBlock(1, ZERO_ROOT);
     const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), block];
 
-    const baseState = makeState(256, 32, [1 as Slot]);
-    let zeroInactiveCalls = 0;
-    const state = {
-      ...baseState,
-      getEffectiveBalanceIncrementsZeroInactive: () => {
-        zeroInactiveCalls++;
-        return baseState.effectiveBalanceIncrements;
-      },
-    } as typeof baseState;
-
+    const state = makeState(256, 32, [1 as Slot]);
     const store = makeStore(block.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, ZERO_ROOT, block.blockRoot, state);
     const ctx = makeContext(
       2 as Slot,
@@ -134,11 +128,12 @@ describe("fast confirmation", () => {
       state
     );
     const cache = createFastConfirmationCache();
+    const totalActiveBalanceComputations = vi.spyOn(cache.totalActiveBalanceByKey, "set");
 
     expect(willCurrentTargetBeJustified(ctx, store, cache)).toBe(true);
     expect(willCurrentTargetBeJustified(ctx, store, cache)).toBe(true);
 
-    expect(zeroInactiveCalls).toBe(1);
+    expect(totalActiveBalanceComputations).toHaveBeenCalledTimes(1);
   });
 
   it("isOneConfirmed returns true only when support exceeds the computed threshold", () => {
@@ -213,31 +208,127 @@ describe("fast confirmation", () => {
     ).toBe(false);
   });
 
-  it("getBlockSupportBetweenSlots counts validators whose latest message is exactly the target block", () => {
+  it("getNodeSupportBetweenSlots counts only votes for the requested payload variant of the root", () => {
     const parent = makeBlock(1, ZERO_ROOT);
     const child = makeBlock(2, parent.blockRoot);
     const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
     const state = makeState(4, 32, [2 as Slot]);
     const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
+    // All four validators vote for the same root, split across its three gloas nodes
     const latestMessages = new Map([
-      [0, {root: parent.blockRoot, epoch: 0}],
-      [1, {root: parent.blockRoot, epoch: 0}],
-      [2, {root: child.blockRoot, epoch: 0}],
-      [3, {root: child.blockRoot, epoch: 0}],
+      [0, {root: parent.blockRoot, epoch: 0, payloadStatus: PayloadStatus.FULL}],
+      [1, {root: parent.blockRoot, epoch: 0, payloadStatus: PayloadStatus.FULL}],
+      [2, {root: parent.blockRoot, epoch: 0, payloadStatus: PayloadStatus.EMPTY}],
+      [3, {root: parent.blockRoot, epoch: 0, payloadStatus: PayloadStatus.PENDING}],
     ]);
     const ctx = makeContext(3 as Slot, child.blockRoot, blocks, latestMessages, {epoch: 0, rootHex: ZERO_ROOT}, state);
 
-    const support = getBlockSupportBetweenSlots(
-      ctx,
-      store,
-      createFastConfirmationCache(),
-      {state, balances: state.effectiveBalanceIncrements},
-      parent.blockRoot,
-      2 as Slot,
-      2 as Slot
-    );
+    const supportFor = (payloadStatus: PayloadStatus): number =>
+      getNodeSupportBetweenSlots(
+        ctx,
+        store,
+        createFastConfirmationCache(),
+        {state, balances: state.effectiveBalanceIncrements},
+        parent.blockRoot,
+        payloadStatus,
+        2 as Slot,
+        2 as Slot
+      );
 
-    expect(support).toBe(64);
+    expect(supportFor(PayloadStatus.FULL)).toBe(64);
+    expect(supportFor(PayloadStatus.EMPTY)).toBe(32);
+    expect(supportFor(PayloadStatus.PENDING)).toBe(32);
+  });
+
+  it("getNodeSupportBetweenSlots excludes slashed and inactive validators without reading them", () => {
+    const parent = makeBlock(1, ZERO_ROOT);
+    const child = makeBlock(2, parent.blockRoot);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
+    // Validator 1 is slashed and validator 2 is inactive, both still sit in slot 2's committee
+    const state = makeState(4, 32, [2 as Slot], [1], [2]);
+    const getValidator = vi.spyOn(state, "getValidator");
+    const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
+    const latestMessages = latestMessagesFor(4, parent.blockRoot, 0);
+    const ctx = makeContext(3 as Slot, child.blockRoot, blocks, latestMessages, {epoch: 0, rootHex: ZERO_ROOT}, state);
+    const cache = createFastConfirmationCache();
+
+    const support = (): number =>
+      getNodeSupportBetweenSlots(
+        ctx,
+        store,
+        cache,
+        {state, balances: state.effectiveBalanceIncrements},
+        parent.blockRoot,
+        PayloadStatus.FULL,
+        2 as Slot,
+        2 as Slot
+      );
+
+    expect(support()).toBe(64);
+    expect(support()).toBe(64);
+    expect(getValidator).not.toHaveBeenCalled();
+  });
+
+  it("vote scans exclude slashed validators without reading them", () => {
+    const parent = makeBlock(1, ZERO_ROOT);
+    const child = makeBlock(2, parent.blockRoot);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
+    const state = makeState(4, 32, [2 as Slot], [1]);
+    const getValidator = vi.spyOn(state, "getValidator");
+    const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
+    const latestMessages = latestMessagesFor(4, child.blockRoot, 0);
+    const ctx = makeContext(3 as Slot, child.blockRoot, blocks, latestMessages, {epoch: 0, rootHex: ZERO_ROOT}, state);
+    const cache = createFastConfirmationCache();
+
+    expect(
+      getAttestationScore(ctx, cache, {state, balances: state.effectiveBalanceIncrements}, parent.blockRoot, "current")
+    ).toBe(96);
+    expect(getCurrentTargetScore(ctx, store, cache)).toBe(96);
+    expect(getValidator).not.toHaveBeenCalled();
+  });
+
+  it("computeEmptySlotSupportDiscount discounts only the parent node the block extends", () => {
+    // Block B at slot 3 extends EMPTY(P); slot 2 is empty
+    const parent = makeBlock(1, ZERO_ROOT, {payloadStatus: PayloadStatus.EMPTY});
+    const block = makeBlock(3, parent.blockRoot);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, block];
+    const state = makeState(4, 32, [2 as Slot]);
+    const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, block.blockRoot, state);
+
+    const discountFor = (votes: Map<ValidatorIndex, {root: RootHex; epoch: Epoch; payloadStatus: PayloadStatus}>) =>
+      computeEmptySlotSupportDiscount(
+        makeContext(4 as Slot, block.blockRoot, blocks, votes, {epoch: 0, rootHex: ZERO_ROOT}, state),
+        store,
+        createFastConfirmationCache(),
+        {state, balances: state.effectiveBalanceIncrements},
+        block.blockRoot
+      );
+
+    const voteFor = (payloadStatus: PayloadStatus) => ({root: parent.blockRoot, epoch: 0 as Epoch, payloadStatus});
+
+    // Votes on EMPTY(P) support the node B extends, so they are discounted
+    expect(
+      discountFor(
+        new Map([
+          [0, voteFor(PayloadStatus.EMPTY)],
+          [1, voteFor(PayloadStatus.EMPTY)],
+          [2, voteFor(PayloadStatus.FULL)],
+          [3, voteFor(PayloadStatus.PENDING)],
+        ])
+      )
+    ).toBeGreaterThan(0);
+
+    // Same root, but no vote supports EMPTY(P), so there is nothing to discount
+    expect(
+      discountFor(
+        new Map([
+          [0, voteFor(PayloadStatus.FULL)],
+          [1, voteFor(PayloadStatus.FULL)],
+          [2, voteFor(PayloadStatus.PENDING)],
+          [3, voteFor(PayloadStatus.PENDING)],
+        ])
+      )
+    ).toBe(0);
   });
 
   it("getEquivocationScore returns 0 when there are no equivocators", () => {
@@ -276,6 +367,35 @@ describe("fast confirmation", () => {
       {epoch: 0, rootHex: ZERO_ROOT},
       state,
       [1, 3]
+    );
+
+    const score = getEquivocationScore(
+      ctx,
+      store,
+      createFastConfirmationCache(),
+      {state, balances: state.effectiveBalanceIncrements},
+      2 as Slot,
+      2 as Slot
+    );
+
+    expect(score).toBe(64);
+  });
+
+  it("getEquivocationScore counts slashed equivocators but not inactive ones", () => {
+    const parent = makeBlock(1, ZERO_ROOT);
+    const child = makeBlock(2, parent.blockRoot);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
+    // Validator 1 is slashed but still active, validator 2 is inactive
+    const state = makeState(4, 32, [2 as Slot], [1], [2]);
+    const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
+    const ctx = makeContext(
+      3 as Slot,
+      child.blockRoot,
+      blocks,
+      new Map(),
+      {epoch: 0, rootHex: ZERO_ROOT},
+      state,
+      [1, 2, 3]
     );
 
     const score = getEquivocationScore(
