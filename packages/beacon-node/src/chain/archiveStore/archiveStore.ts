@@ -16,7 +16,7 @@ import {HistoricalStateRegen} from "./historicalState/historicalStateRegen.js";
 import {ArchiveMode, ArchiveStoreOpts, StateArchiveStrategy} from "./interface.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {archiveBlocks} from "./utils/archiveBlocks.js";
-import {MAX_PRUNE_BLOCK_SLOTS_ON_STARTUP, MAX_PRUNE_BLOCK_SLOTS_PER_RUN, pruneHistory} from "./utils/pruneHistory.js";
+import {MAX_PRUNE_BLOCK_SLOTS_PER_RUN, pruneHistory} from "./utils/pruneHistory.js";
 
 type ArchiveStoreModules = {
   chain: IBeaconChain;
@@ -115,7 +115,7 @@ export class ArchiveStore {
           this.chain.clock.currentEpoch,
           this.statePruneFromSlot,
           this.advanceEarliestAvailableSlot,
-          MAX_PRUNE_BLOCK_SLOTS_ON_STARTUP
+          MAX_PRUNE_BLOCK_SLOTS_PER_RUN
         ),
         () => this.logger.info("Still pruning historical data, please wait..."),
         30_000,
