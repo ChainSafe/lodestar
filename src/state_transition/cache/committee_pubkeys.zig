@@ -22,9 +22,9 @@ pub const CommitteePubkeys = struct {
     /// `compute_committee`.
     shuffling: []const u32,
     /// One aggregate per committee, indexed by `slot * committees_per_slot + index`.
-    aggregates: []bls.AggregatePublicKey,
+    aggregate_pks_slice: []bls.AggregatePublicKey,
 
-    /// `aggregate_storage` must remain allocated and unmoved for the lifetime
+    /// `aggregate_pks` must remain allocated and unmoved for the lifetime
     /// of the returned value. The value does not own that storage.
     /// Takes ownership of `shuffling` on success; on error the caller still owns it.
     pub fn init(
@@ -33,23 +33,23 @@ pub const CommitteePubkeys = struct {
         pubkey_cache: *const PubkeyCache,
         shuffling: []const u32,
         committees_per_slot: u32,
-        aggregate_storage: []bls.AggregatePublicKey,
+        aggregate_pks: []bls.AggregatePublicKey,
     ) !CommitteePubkeys {
         if (committees_per_slot == 0 or committees_per_slot > preset.MAX_COMMITTEES_PER_SLOT) {
             return error.InvalidCommitteesPerSlot;
         }
 
-        const aggregate_count = preset.SLOTS_PER_EPOCH * committees_per_slot;
-        if (aggregate_storage.len < aggregate_count) return error.AggregateStorageTooSmall;
-        const aggregates = aggregate_storage[0..aggregate_count];
+        const num_aggregates = preset.SLOTS_PER_EPOCH * committees_per_slot;
+        if (aggregate_pks.len < num_aggregates) return error.AggregateStorageTooSmall;
+        const aggregate_pks_slice = aggregate_pks[0..num_aggregates];
 
         var self: CommitteePubkeys = .{
             .allocator = allocator,
             .committees_per_slot = committees_per_slot,
             .shuffling = shuffling,
-            .aggregates = aggregates,
+            .aggregate_pks_slice = aggregate_pks_slice ,
         };
-        for (aggregates, 0..) |*aggregate, i| {
+        for (aggregate_pks_slice, 0..) |*aggregate, i| {
             aggregate.* = .{};
             try pubkey_cache.sumIndices(io, self.committee(i), aggregate);
         }
@@ -63,7 +63,7 @@ pub const CommitteePubkeys = struct {
 
     /// Members of the committee at `slot * committees_per_slot + index`.
     pub fn committee(self: *const CommitteePubkeys, global_index: usize) []const u32 {
-        const count: u64 = self.aggregates.len;
+        const count: u64 = self.aggregate_pks_slice.len;
         std.debug.assert(global_index < count);
         const len: u64 = self.shuffling.len;
         const start: usize = @intCast(len * global_index / count);
@@ -104,7 +104,7 @@ pub const CommitteePubkeys = struct {
             if (present > 0 and absent + 2 < present) {
                 var absent_sum: bls.AggregatePublicKey = .{};
                 try pubkey_cache.sumMembersByBit(io, members, bits, bit_offset, false, &absent_sum);
-                sum.addAggregate(&self.aggregates[global_index]);
+                sum.addAggregate(&self.aggregate_pks_slice[global_index]);
                 sum.subtractAggregate(&absent_sum);
             } else if (present > 0) {
                 try pubkey_cache.sumMembersByBit(io, members, bits, bit_offset, true, &sum);
