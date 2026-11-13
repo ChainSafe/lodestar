@@ -1,11 +1,59 @@
 //! Storage for the chunk blobs of `.chunked_leaf` nodes.
 //!
-//! Blobs live in segments taken from the page allocator, and an allocation takes the free blob with
-//! the lowest index. Blobs that a block copies and reads together then stay close together in
-//! memory. A general purpose allocator reuses freed blobs in an order unrelated to their address,
-//! which spreads them out as the process ages and slows down the block steps that touch them.
+//! A chunked leaf keeps its chunks in a blob of `@sizeOf(ChunkedLeaf)` bytes outside the node
+//! pool, and its pool slot holds a pointer to the blob. A state transition does not edit a blob
+//! in place, because other states may still read it. It takes a new blob, copies the old one
+//! into it and changes the copy. Each block therefore takes a group of blobs and hashes them for
+//! the state root. The blobs return to the slab when the states that use them are dropped.
 //!
-//! Segments are added on demand and released only by `deinit`.
+//! Rationale
+//!
+//! A general purpose allocator reuses freed blobs in an order unrelated to their address. The
+//! blobs that one block takes then spread out in memory as the process ages, and the block steps
+//! that copy and hash them get slower with uptime.
+//!
+//! The slab owns the memory of all blobs and always hands out the free blob with the lowest
+//! index, same as the rule `Node.Pool` uses. Blobs taken one after another sit next to
+//! each other in memory, whatever order earlier blobs were released in.
+//!
+//! Layout
+//!
+//! Memory comes from the page allocator in segments of `segment_blocks` blobs. A blob has an
+//! index: it is in segment `index / segment_blocks` at position `index % segment_blocks`. One
+//! `FreeSlotBitmap` covers every index in the slab's capacity. A set bit means the blob is free.
+//! The indexes of a segment that is not allocated yet are marked in use.
+//!
+//! Example with `segment_blocks` = 4 and two segments allocated:
+//!
+//! ```text
+//!              segment 0                   segment 1             segment 2
+//! Index:     0      1      2      3      4      5      6      7      8 ...
+//! Blob:   [used] [used] [free] [used] [used] [free] [free] [free]   not allocated
+//! Bit:       0      0      1      0      0      1      1      1      0 ...
+//!                          ^
+//!                          `alloc` returns this blob
+//! ```
+//!
+//! Operations
+//!
+//! `alloc` takes the lowest free index from the bitmap. When no index is free, it allocates one
+//! more segment, marks the indexes of that segment free and takes the first of them. `release`
+//! finds the segment whose address range contains the blob, derives the index from the offset
+//! and marks it free. Starting from the example, apply these operations in order:
+//!
+//! ```text
+//! Operation          Free indexes before    Result
+//! alloc              {2, 5, 6, 7}           returns blob 2
+//! release(blob 0)    {5, 6, 7}              free indexes are {0, 5, 6, 7}
+//! alloc              {0, 5, 6, 7}           returns blob 0
+//! alloc (3 times)    {5, 6, 7}              returns blobs 5, 6, 7
+//! alloc              {}                     allocates segment 2, returns blob 8
+//! ```
+//!
+//! Segments are added on demand until the slab can hold the `max_blocks` passed to `init`. After
+//! that `alloc` returns `error.OutOfMemory`. Segments are released only by `deinit`. `rawAlloc`
+//! does not write to a new segment, so the operating system backs only the pages of blobs that
+//! were written.
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;

@@ -260,7 +260,7 @@ pub const Pool = struct {
     allocator: Allocator,
     nodes: std.MultiArrayList(Node).Slice,
     free_slots: FreeSlotBitmap,
-    /// Created by the first chunked leaf, so a pool without chunked leaves does not pay for it.
+    /// Optional; lazily created by the first chunked leaf. A pool without chunked leaves does not pay for it.
     chunked_leaf_slab: ?ChunkedLeafSlab,
     /// Lowest free slot, or `nodes.len` when no slot is free.
     next_free_node: Id,
