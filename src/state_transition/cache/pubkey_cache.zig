@@ -312,6 +312,7 @@ pub const PubkeyCache = struct {
     /// entries are trusted as the application's unforkable singleton history.
     pub fn syncPubkeys(
         self: *PubkeyCache,
+        allocator: std.mem.Allocator,
         io: std.Io,
         validators: []const *const Validator,
     ) !void {
@@ -329,12 +330,12 @@ pub const PubkeyCache = struct {
         if (validators.len <= old_len) return;
 
         const suffix = validators[old_len..];
-        const prepared = try self.allocator.alloc(bls.PublicKey, suffix.len);
-        defer self.allocator.free(prepared);
+        const prepared = try allocator.alloc(bls.PublicKey, suffix.len);
+        defer allocator.free(prepared);
 
         const batch_count = (suffix.len - 1) / uncompress_batch_size + 1;
-        const batch_errors = try self.allocator.alloc(?bls.BlstError, batch_count);
-        defer self.allocator.free(batch_errors);
+        const batch_errors = try allocator.alloc(?bls.BlstError, batch_count);
+        defer allocator.free(batch_errors);
         @memset(batch_errors, null);
 
         var group: std.Io.Group = .init;

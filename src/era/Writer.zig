@@ -198,7 +198,7 @@ pub fn writeSerializedState(self: *Writer, allocator: std.mem.Allocator, slot: u
 pub fn writeState(self: *Writer, allocator: std.mem.Allocator, state: fork_types.AnyBeaconState) !void {
     var s = state;
     const slot = try s.slot();
-    const short_era_root = try era.getShortEraRoot(state);
+    const short_era_root = try era.getShortEraRoot(allocator, state);
     const serialized = try state.serialize(allocator);
     defer allocator.free(serialized);
     try self.writeSerializedState(allocator, slot, short_era_root, serialized);
