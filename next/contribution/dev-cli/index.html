@@ -9,7 +9,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://chainsafe.github.io/lodestar/images/favicon-512x512.png">
 <script src="https://plausible.io/js/script.js" defer="defer" data-domain="chainsafe.github.io/lodestar"></script><link rel="stylesheet" href="/lodestar/assets/css/styles.a0c064e1.css">
-<script src="/lodestar/assets/js/runtime~main.1866b970.js" defer="defer"></script>
+<script src="/lodestar/assets/js/runtime~main.4294eed9.js" defer="defer"></script>
 <script src="/lodestar/assets/js/main.50afe3e7.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -150,7 +150,7 @@
 <p>Number of epochs to retain finalized data columns (minimum of the MIN_BLOB_DATA_RETENTION_MS window)</p>
 <p>type: <code>number</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--chainprunehistory"><code>--chain.pruneHistory</code><a href="#--chainprunehistory" class="hash-link" aria-label="Direct link to --chainprunehistory" title="Direct link to --chainprunehistory">​</a></h4>
-<p>Continually prune finalized blocks and execution payload envelopes older than <code>MIN_EPOCHS_FOR_BLOCK_REQUESTS</code> (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. This is useful to minimize disk usage when the node does not need to serve historical data. Initial pruning may be slow on first startup with an existing large database.</p>
+<p>Continually prune finalized blocks and execution payload envelopes older than <code>MIN_EPOCHS_FOR_BLOCK_REQUESTS</code> (33024 epochs / ~5 months on mainnet, 14299 epochs / ~2 months from gloas) and all archived states before the finalized epoch. This is useful to minimize disk usage when the node does not need to serve historical data. An existing large database is pruned gradually, up to 4096 slots of blocks on startup and on every finalized checkpoint.</p>
 <p>type: <code>boolean</code></p>
 <p>default: <code>false</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--executionurls"><code>--execution.urls</code><a href="#--executionurls" class="hash-link" aria-label="Direct link to --executionurls" title="Direct link to --executionurls">​</a></h4>
