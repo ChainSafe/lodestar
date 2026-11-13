@@ -40,6 +40,7 @@ it("handles a verification that rejects while later blocks are still being submi
       {forkName: "phase0"} as IBeaconStateView,
       blocks,
       blocks.map(() => []),
+      blocks.map(() => []),
       {}
     )
   ).rejects.toBe(failure);
