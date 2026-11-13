@@ -69,11 +69,13 @@ const ChunkedLeafSlab = @This();
 /// A segment is one contiguous piece of memory from the page allocator. It holds this many
 /// `ChunkedLeaf` structs side by side:
 /// 1 << 14 (= 16,384) * 2,112 bytes = 33 MiB.
+/// When every segment is full, the slab gets one more.
 ///
-/// NOTE: This value is arbitrarily based on loose benchmarks;
-/// Replaying 3,192 mainnet blocks, the state transition took 4.72 ms
-/// per block with 4,096 per segment (39 segments), 4.59 ms with 16,384 (10 segments) and
-/// 4.58 ms with 65,536 (3 segments). 16,384 is the smallest size where the time stops improving.
+/// NOTE: This value is arbitrary. Loose benchmarks show it is not critical: replaying 3,192
+/// mainnet blocks, the state transition took 4.58 to 4.61 ms per block for every value tried
+/// from `1 << 10` (about 150 segments) to `1 << 16` (3 segments). `1 << 14` is the middle of
+/// that range. A smaller value means more segments for `release` to walk, and a larger value
+/// maps more memory each time the slab grows.
 pub const chunked_leaves_per_segment = 1 << 14;
 
 /// 1 << 14 (= 16,384) * 2,112 bytes = 33 MiB.
