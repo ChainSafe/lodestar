@@ -1335,7 +1335,9 @@
     </spec>
 
 - name: compute_min_epochs_for_block_requests#phase0
-  sources: []
+  sources:
+    - file: packages/config/src/forkConfig/index.ts
+      search: "getMinEpochsForBlockRequests(epoch: Epoch): number {"
   spec: |
     <spec fn="compute_min_epochs_for_block_requests" fork="phase0" hash="eaa0817a">
     def compute_min_epochs_for_block_requests() -> Epoch:

@@ -1,5 +1,7 @@
 import {beforeAll, describe, expect, it} from "vitest";
 import {ForkName} from "@lodestar/params";
+import {chainConfig as mainnetChainConfig} from "../../src/chainConfig/configs/mainnet.js";
+import {chainConfig as minimalChainConfig} from "../../src/chainConfig/configs/minimal.js";
 import {chainConfig} from "../../src/default.js";
 import {ChainConfig, createChainConfig, createForkConfig} from "../../src/index.js";
 
@@ -152,5 +154,23 @@ describe("getScheduledGasLimit", () => {
     expect(config.getScheduledGasLimit(20)).toBe(75_000_000);
     expect(config.getScheduledGasLimit(30)).toBe(90_000_000);
     expect(config.getScheduledGasLimit(100)).toBe(90_000_000);
+  });
+});
+
+describe("getMinEpochsForBlockRequests", () => {
+  it("returns MIN_EPOCHS_FOR_BLOCK_REQUESTS pre-heze", () => {
+    const mainnetConfig = createForkConfig({...mainnetChainConfig, GLOAS_FORK_EPOCH: 5, HEZE_FORK_EPOCH: 10});
+    const minimalConfig = createForkConfig({...minimalChainConfig, GLOAS_FORK_EPOCH: 5, HEZE_FORK_EPOCH: 10});
+
+    expect(mainnetConfig.getMinEpochsForBlockRequests(9)).toBe(33024);
+    expect(minimalConfig.getMinEpochsForBlockRequests(9)).toBe(272);
+  });
+
+  it("returns MIN_EPOCHS_FOR_BLOCK_REQUESTS_HEZE from heze", () => {
+    const mainnetConfig = createForkConfig({...mainnetChainConfig, GLOAS_FORK_EPOCH: 5, HEZE_FORK_EPOCH: 10});
+    const minimalConfig = createForkConfig({...minimalChainConfig, GLOAS_FORK_EPOCH: 5, HEZE_FORK_EPOCH: 10});
+
+    expect(mainnetConfig.getMinEpochsForBlockRequests(10)).toBe(8192);
+    expect(minimalConfig.getMinEpochsForBlockRequests(10)).toBe(8192);
   });
 });
