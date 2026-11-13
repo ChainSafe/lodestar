@@ -16,6 +16,7 @@ pub fn isValidIndexedPayloadAttestation(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
+    validators: anytype,
     indexed_payload_attestation: *const ForkTypes(fork).IndexedPayloadAttestation.Type,
     verify_signature: bool,
 ) !bool {
@@ -35,6 +36,6 @@ pub fn isValidIndexedPayloadAttestation(
     if (!verify_signature) return true;
 
     var pubkeys_buf: [preset.PTC_SIZE]bls.PublicKey = undefined;
-    const sig_set = try getIndexedPayloadAttestationSignatureSet(fork, io, config, epoch_cache, indexed_payload_attestation, pubkeys_buf[0..attesting_indices.len]);
+    const sig_set = try getIndexedPayloadAttestationSignatureSet(fork, io, config, epoch_cache, validators, indexed_payload_attestation, pubkeys_buf[0..attesting_indices.len]);
     return verifyAggregatedSignatureSet(&sig_set);
 }

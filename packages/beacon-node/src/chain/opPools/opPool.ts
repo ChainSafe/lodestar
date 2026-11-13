@@ -17,6 +17,7 @@ import {
   getAttesterSlashableIndices,
   getAttesterSlashingSignatureSets,
   getProposerSlashingSignatureSets,
+  resolveSignatureSet,
 } from "@lodestar/state-transition";
 import {
   AttesterSlashing,
@@ -102,7 +103,11 @@ export class OpPool {
       }
       const verifiedDomains = getAttesterSlashingSignatureDomains(this.config, currentSlot, attesterSlashing);
       if (
-        !(await bls.verifySignatureSets(getAttesterSlashingSignatureSets(this.config, currentSlot, attesterSlashing)))
+        !(await bls.verifySignatureSets(
+          getAttesterSlashingSignatureSets(this.config, currentSlot, attesterSlashing).map((set) =>
+            resolveSignatureSet(set, state)
+          )
+        ))
       ) {
         continue;
       }

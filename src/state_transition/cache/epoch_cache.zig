@@ -163,7 +163,7 @@ pub const EpochCache = struct {
             var sync_committee_view = try state.currentSyncCommittee();
             var sync_committee: types.altair.SyncCommittee.Type = undefined;
             try sync_committee_view.toValue(allocator, &sync_committee);
-            break :blk try SyncCommitteeCacheAllForks.initSyncCommittee(allocator, &sync_committee, pubkey_cache, io);
+            break :blk try SyncCommitteeCacheAllForks.initSyncCommittee(allocator, &sync_committee, pubkey_cache, io, try state.validators());
         };
         errdefer sync_committee_cache.deinit();
 
@@ -182,7 +182,7 @@ pub const EpochCache = struct {
             var sync_committee_view = try state.nextSyncCommittee();
             var sync_committee: types.altair.SyncCommittee.Type = undefined;
             try sync_committee_view.toValue(allocator, &sync_committee);
-            break :blk try SyncCommitteeCacheAllForks.initSyncCommittee(allocator, &sync_committee, pubkey_cache, io);
+            break :blk try SyncCommitteeCacheAllForks.initSyncCommittee(allocator, &sync_committee, pubkey_cache, io, try state.validators());
         };
         errdefer sync_committee_cache.deinit();
 
@@ -215,11 +215,13 @@ pub const EpochCache = struct {
         const validators = try state.validatorsPtrSlice(allocator);
         defer allocator.free(validators);
 
-        // Sync before computing the remaining caches: sync committee indexing
-        // needs a fully populated pubkey cache.
+        // Register before sync committee indexing so unfinalized members can be resolved.
         const skip_sync_pubkeys = if (option) |opt| opt.skip_sync_pubkeys else false;
         if (!skip_sync_pubkeys) {
-            try pubkey_cache.syncPubkeys(allocator, io, validators);
+            const finalized_count = @min(pubkey_cache.count(io), validators.len);
+            for (validators[finalized_count..], finalized_count..) |validator, index| {
+                try pubkey_cache.addCandidate(io, validator.pubkey, index);
+            }
         }
 
         const effective_balance_increments_rc = try initEffectiveBalanceIncrementsRc(allocator, validator_count);

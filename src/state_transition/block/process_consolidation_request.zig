@@ -32,8 +32,8 @@ pub fn processConsolidationRequest(
     const target_pubkey = consolidation.target_pubkey;
     const source_address = consolidation.source_address;
 
-    const source_index = epoch_cache.pubkey_cache.get(io, source_pubkey) orelse return;
-    const target_index = epoch_cache.pubkey_cache.get(io, target_pubkey) orelse return;
+    const source_index = (try epoch_cache.pubkey_cache.getForState(io, source_pubkey, try state.validators())) orelse return;
+    const target_index = (try epoch_cache.pubkey_cache.getForState(io, target_pubkey, try state.validators())) orelse return;
     const validator_count = try state.validatorsCount();
     if (source_index >= validator_count or target_index >= validator_count) return;
 

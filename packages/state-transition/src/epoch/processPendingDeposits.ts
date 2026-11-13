@@ -68,7 +68,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
       let isValidatorExited = false;
       let isValidatorWithdrawn = false;
 
-      const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);
+      const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey, state);
       if (isValidatorKnown(state, validatorIndex)) {
         const validator = state.validators.getReadonly(validatorIndex);
         isValidatorExited = validator.exitEpoch < FAR_FUTURE_EPOCH;
@@ -121,7 +121,7 @@ function applyPendingDeposit(
   deposit: electra.PendingDeposit,
   cache: EpochTransitionCache
 ): void {
-  const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);
+  const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey, state);
   const {pubkey, withdrawalCredentials, amount, signature} = deposit;
   const cachedBalances = cache.balances;
 

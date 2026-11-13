@@ -13,6 +13,7 @@ pub fn getProposerSlashingSignatureSets(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
+    validators: anytype,
     proposer_slashing: *const types.phase0.ProposerSlashing.Type,
 ) ![2]SingleSignatureSet {
     const signed_header_1 = proposer_slashing.signed_header_1;
@@ -28,14 +29,14 @@ pub fn getProposerSlashingSignatureSets(
     try computeSigningRoot(types.phase0.BeaconBlockHeader, &signed_header_2.message, domain_2, &signing_root_2);
 
     result[0] = SingleSignatureSet{
-        .pubkey = epoch_cache.pubkey_cache.getPubkey(io, signed_header_1.message.proposer_index) orelse
+        .pubkey = (try epoch_cache.pubkey_cache.getPubkeyForState(io, signed_header_1.message.proposer_index, validators)) orelse
             return error.PubkeyNotFound,
         .signing_root = signing_root_1,
         .signature = signed_header_1.signature,
     };
 
     result[1] = SingleSignatureSet{
-        .pubkey = epoch_cache.pubkey_cache.getPubkey(io, signed_header_2.message.proposer_index) orelse
+        .pubkey = (try epoch_cache.pubkey_cache.getPubkeyForState(io, signed_header_2.message.proposer_index, validators)) orelse
             return error.PubkeyNotFound,
         .signing_root = signing_root_2,
         .signature = signed_header_2.signature,
@@ -50,13 +51,14 @@ pub fn proposerSlashingsSignatureSets(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
-    _: *const BeaconState(fork),
+    state: *BeaconState(fork),
     signed_block: *const ForkTypes(fork).SignedBeaconBlock.Type,
     out: *std.ArrayList(SingleSignatureSet),
 ) !void {
+    const validators = try state.validators();
     const proposer_slashings = signed_block.message.body.proposer_slashings.items;
     for (proposer_slashings) |*proposer_slashing| {
-        const signature_sets = try getProposerSlashingSignatureSets(io, config, epoch_cache, proposer_slashing);
+        const signature_sets = try getProposerSlashingSignatureSets(io, config, epoch_cache, validators, proposer_slashing);
         try out.append(allocator, signature_sets[0]);
         try out.append(allocator, signature_sets[1]);
     }

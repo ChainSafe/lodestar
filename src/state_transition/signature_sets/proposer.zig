@@ -16,6 +16,7 @@ pub fn verifyProposerSignature(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
+    validators: anytype,
     signed_block: AnySignedBeaconBlock,
 ) !bool {
     const signature_set = try getBlockProposerSignatureSet(
@@ -23,6 +24,7 @@ pub fn verifyProposerSignature(
         io,
         config,
         epoch_cache,
+        validators,
         signed_block,
     );
     return try verifySignatureSet(&signature_set);
@@ -33,6 +35,7 @@ pub fn getBlockProposerSignatureSet(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
+    validators: anytype,
     signed_block: AnySignedBeaconBlock,
 ) !SingleSignatureSet {
     const block = signed_block.beaconBlock();
@@ -46,7 +49,7 @@ pub fn getBlockProposerSignatureSet(
     // The proposer index isn't validated until processBlockHeader, so a malicious block could
     // put an out-of-range value here.
     const proposer_index = block.proposerIndex();
-    const pubkey = epoch_cache.pubkey_cache.getPubkey(io, proposer_index) orelse
+    const pubkey = (try epoch_cache.pubkey_cache.getPubkeyForState(io, proposer_index, validators)) orelse
         return error.InvalidProposerIndex;
 
     return .{
@@ -60,6 +63,7 @@ pub fn getBlockHeaderProposerSignatureSet(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
+    validators: anytype,
     signed_block_header: *const types.phase0.SignedBeaconBlockHeader.Type,
 ) !SingleSignatureSet {
     const domain = try config.getDomain(epoch_cache.epoch, c.DOMAIN_BEACON_PROPOSER, signed_block_header.message.slot);
@@ -67,7 +71,7 @@ pub fn getBlockHeaderProposerSignatureSet(
     try computeSigningRoot(types.phase0.SignedBeaconBlockHeader, signed_block_header, domain, &signing_root);
 
     return .{
-        .pubkey = epoch_cache.pubkey_cache.getPubkey(io, signed_block_header.message.proposer_index) orelse
+        .pubkey = (try epoch_cache.pubkey_cache.getPubkeyForState(io, signed_block_header.message.proposer_index, validators)) orelse
             return error.PubkeyNotFound,
         .signing_root = signing_root,
         .signature = signed_block_header.signature,

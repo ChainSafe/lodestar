@@ -54,7 +54,7 @@ pub fn processSyncAggregate(
 
             var pubkeys_buf: [preset.SYNC_COMMITTEE_SIZE]bls.PublicKey = undefined;
             const pubkeys = pubkeys_buf[0..participant_indices.len];
-            epoch_cache.pubkey_cache.getPubkeys(io, participant_indices, pubkeys) catch |err| switch (err) {
+            epoch_cache.pubkey_cache.getPubkeysForState(io, participant_indices, pubkeys, try state.validators()) catch |err| switch (err) {
                 error.InvalidIndex => return error.PubkeyNotFound,
                 else => return err,
             };
@@ -119,6 +119,7 @@ pub fn getSyncCommitteeSignatureSet(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
+    validators: anytype,
     sync_aggregate: *const SyncAggregate,
     block_slot: u64,
     block_parent_root: *const Root,
@@ -164,7 +165,7 @@ pub fn getSyncCommitteeSignatureSet(
 
     const pubkeys = try allocator.alloc(bls.PublicKey, participant_indices_.len);
     errdefer allocator.free(pubkeys);
-    epoch_cache.pubkey_cache.getPubkeys(io, participant_indices_, pubkeys) catch |err| switch (err) {
+    epoch_cache.pubkey_cache.getPubkeysForState(io, participant_indices_, pubkeys, validators) catch |err| switch (err) {
         error.InvalidIndex => return error.PubkeyNotFound,
         else => return err,
     };

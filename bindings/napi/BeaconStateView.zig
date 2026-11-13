@@ -142,7 +142,8 @@ fn stateBytesFork(beacon_config: *const c.BeaconConfig, bytes: []const u8) !c.Fo
 // Class Methods
 // -------------------------
 /// Requires state bytes with trusted provenance; SSZ decoding does not authenticate them.
-pub fn createFromBytes(bytes: js.Uint8Array, config: *const BeaconConfig) !BeaconStateView {
+/// Set `sync_pubkeys` only for the trusted startup anchor.
+pub fn createFromBytes(bytes: js.Uint8Array, config: *const BeaconConfig, sync_pubkeys: ?js.Boolean) !BeaconStateView {
     const config_rc = config.config_rc;
     const byte_slice = try bytes.toSlice();
     const fork_seq = try stateBytesFork(&config_rc.instance.config, byte_slice);
@@ -160,6 +161,14 @@ pub fn createFromBytes(bytes: js.Uint8Array, config: *const BeaconConfig) !Beaco
     errdefer allocator.destroy(cached_state);
 
     const io = js.io();
+    if (sync_pubkeys) |trusted_anchor| {
+        if (trusted_anchor.assertBool()) {
+            const validators = try state.validatorsPtrSlice(allocator);
+            defer allocator.free(validators);
+            try pubkey.state.cache.syncPubkeys(allocator, io, validators);
+            try pubkey.state.cache.pruneCandidates(io);
+        }
+    }
     try initCachedState(allocator, cached_state, io, state, &config_rc.instance.config, null);
 
     return .{

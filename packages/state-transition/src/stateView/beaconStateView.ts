@@ -833,7 +833,6 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       state,
       {
         config: this.config,
-        // as of Feb 2026, it's not necessary to sync pubkey cache as it's shared across states in Lodestar
         pubkeyCache: this.cachedState.epochCtx.pubkeyCache,
       },
       {

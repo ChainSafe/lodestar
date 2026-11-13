@@ -14,7 +14,7 @@ export function verifyVoluntaryExitSignature(
   state: IBeaconStateView,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): boolean {
-  return verifySignatureSet(getVoluntaryExitSignatureSet(config, state, signedVoluntaryExit));
+  return verifySignatureSet(getVoluntaryExitSignatureSet(config, state, signedVoluntaryExit), state);
 }
 
 /**

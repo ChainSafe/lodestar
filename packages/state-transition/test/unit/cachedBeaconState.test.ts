@@ -11,6 +11,7 @@ import {
 } from "@lodestar/params";
 import {Epoch, RootHex, ssz} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
+import {getValidatorPubkey} from "../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
 import {interopPubkeysCached} from "../../src/testUtils/interop.js";
 import {createCachedBeaconStateTest} from "../../src/testUtils/state.js";
@@ -39,7 +40,8 @@ describe("CachedBeaconState", () => {
     expect(state2.epochCtx.epoch).toBe(0);
   });
 
-  it("Clone and mutate cache", () => {
+  it("shares candidates while resolving validators against each clone", () => {
+    pubkeyCache.reset();
     const stateView = ssz.altair.BeaconState.defaultViewDU();
     const state1 = createCachedBeaconStateTest(stateView);
 
@@ -47,15 +49,19 @@ describe("CachedBeaconState", () => {
     const index2 = index1 + 1;
     const [pubkey1, pubkey2] = interopPubkeysCached(index2 + 1).slice(index1);
 
+    state1.validators.push(ssz.phase0.Validator.toViewDU({...ssz.phase0.Validator.defaultValue(), pubkey: pubkey1}));
     state1.epochCtx.addPubkey(index1, pubkey1);
+    state1.commit();
 
     const state2 = state1.clone();
+    state2.validators.push(ssz.phase0.Validator.toViewDU({...ssz.phase0.Validator.defaultValue(), pubkey: pubkey2}));
     state2.epochCtx.addPubkey(index2, pubkey2);
 
-    expect(state1.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
-    expect(state2.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
-    expect(state1.epochCtx.getValidatorIndex(pubkey2)).toBe(index2);
-    expect(state2.epochCtx.getValidatorIndex(pubkey2)).toBe(index2);
+    expect(state1.epochCtx.getValidatorIndex(pubkey1, state1)).toBe(index1);
+    expect(state2.epochCtx.getValidatorIndex(pubkey1, state2)).toBe(index1);
+    expect(state1.epochCtx.getValidatorIndex(pubkey2, state1)).toBeNull();
+    expect(state2.epochCtx.getValidatorIndex(pubkey2, state2)).toBe(index2);
+    expect(pubkeyCache.size).toBe(0);
   });
 
   it("Auto-commit on hashTreeRoot", () => {
@@ -185,6 +191,8 @@ describe("CachedBeaconState", () => {
         validatorCountDelta
       )} validators`;
       it(testName, () => {
+        pubkeyCache.reset();
+        pubkeyCache.syncPubkeys(pubkeys.slice(0, numValidator).map((pubkey) => ({pubkey})));
         const state = modifyStateSameValidator(stateView);
         for (let i = 0; i < state.validators.length; i++) {
           // only modify some validators
@@ -264,6 +272,7 @@ describe("CachedBeaconState", () => {
 
           return null;
         };
+        const denseSize = pubkeyCache.size;
         const newCachedState = loadCachedBeaconState(seedState, stateBytes, {
           skipSyncCommitteeCache: true,
           shufflingGetter,
@@ -277,17 +286,22 @@ describe("CachedBeaconState", () => {
             config,
             pubkeyCache,
           },
-          {skipSyncCommitteeCache: true, shufflingGetter}
+          {skipSyncCommitteeCache: true, skipSyncPubkeys: true, shufflingGetter}
         );
         // validatorCountDelta < 0 is unrealistic and shuffling computation results in a different result
         if (validatorCountDelta >= 0) {
           expect(newCachedState.epochCtx).toEqual(cachedState.epochCtx);
         }
 
+        expect(pubkeyCache.size).toBe(denseSize);
+
         // confirm loadCachedBeaconState() result
         for (let i = 0; i < newCachedState.validators.length; i++) {
-          expect(newCachedState.epochCtx.getValidatorIndex(newCachedState.validators.get(i).pubkey)).toBe(i);
-          expect(newCachedState.epochCtx.pubkeyCache.get(i)?.toBytes()).toEqual(pubkeys[i]);
+          expect(
+            newCachedState.epochCtx.getValidatorIndex(newCachedState.validators.get(i).pubkey, newCachedState),
+            `validator index ${i}`
+          ).toBe(i);
+          expect(getValidatorPubkey(newCachedState, i, pubkeyCache), `validator pubkey ${i}`).toEqual(pubkeys[i]);
         }
       });
     }

@@ -45,6 +45,54 @@ describe("pubkeys", () => {
     fs.rmSync(tempDir, {force: true, recursive: true});
   });
 
+  it("registers deduplicated candidates without decoding or extending the dense cache", () => {
+    const key = new Uint8Array(48);
+    pubkeyCache.addCandidate(3, key);
+    pubkeyCache.addCandidate(5, key);
+    pubkeyCache.addCandidate(3, key);
+    expect(pubkeyCache.getCandidates(key)).toEqual([3, 5]);
+    expect(pubkeyCache.getIndex(key)).toBeNull();
+    expect(pubkeyCache.size).toBe(3);
+    const candidates = pubkeyCache.getCandidates(key);
+    candidates[0] = 9;
+    expect(pubkeyCache.getCandidates(key)).toEqual([3, 5]);
+    expect(() => pubkeyCache.addCandidate(-1, key)).toThrow("InvalidUnsignedInteger");
+    expect(() => pubkeyCache.addCandidate(3, new Uint8Array(47))).toThrow("InvalidPubkeyLength");
+    expect(() => pubkeyCache.getCandidates(new Uint8Array(47))).toThrow("InvalidPubkeyLength");
+  });
+
+  it("prunes finalized candidates and resets candidates when loading a snapshot", () => {
+    pubkeyCache.reset();
+    pubkeyCache.addCandidate(0, keypairs[0].pubkeyBytes);
+    pubkeyCache.addCandidate(1, keypairs[0].pubkeyBytes);
+    pubkeyCache.addCandidate(0, keypairs[1].pubkeyBytes);
+    pubkeyCache.append(0, keypairs[0].pubkeyBytes);
+    pubkeyCache.pruneCandidates();
+    expect(pubkeyCache.getCandidates(keypairs[0].pubkeyBytes)).toEqual([1]);
+    expect(pubkeyCache.getCandidates(keypairs[1].pubkeyBytes)).toEqual([]);
+    pubkeyCache.save(tempPkixPath);
+    pubkeyCache.load(tempPkixPath, pubkeyCache.capacity);
+    expect(pubkeyCache.getCandidates(keypairs[0].pubkeyBytes)).toEqual([]);
+    expect(pubkeyCache.getIndex(keypairs[0].pubkeyBytes)).toBe(0);
+    pubkeyCache.addCandidate(1, keypairs[1].pubkeyBytes);
+    pubkeyCache.reset();
+    expect(pubkeyCache.getCandidates(keypairs[1].pubkeyBytes)).toEqual([]);
+  });
+
+  it("truncates a legacy suffix in both lookup directions", () => {
+    const capacity = pubkeyCache.capacity;
+    pubkeyCache.truncate(1);
+    expectCacheContents(1);
+    expect(pubkeyCache.capacity).toBe(capacity);
+    expect(pubkeyCache.getIndex(keypairs[1].pubkeyBytes)).toBeNull();
+    pubkeyCache.append(1, keypairs[2].pubkeyBytes);
+    expect(pubkeyCache.getIndex(keypairs[2].pubkeyBytes)).toBe(1);
+    expect(() => pubkeyCache.truncate(3)).toThrow("InvalidIndex");
+    expect(() => pubkeyCache.truncate(-1)).toThrow("InvalidUnsignedInteger");
+    pubkeyCache.truncate(0);
+    expect(pubkeyCache.size).toBe(0);
+  });
+
   it("append populates both directions and updates size", () => {
     pubkeyCache.reset();
     for (const {index, pubkeyBytes} of keypairs) {

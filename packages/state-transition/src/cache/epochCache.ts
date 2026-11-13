@@ -57,6 +57,7 @@ import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalanc
 import {BuilderDepositSignatureCache} from "./builderDepositSignatureCache.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {EpochTransitionCache} from "./epochTransitionCache.js";
+import {getValidatorIndex} from "./pubkeyCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateFulu, CachedBeaconStateGloas} from "./stateCache.js";
 import {
   SyncCommitteeCache,
@@ -76,6 +77,7 @@ export type EpochCacheImmutableData = {
 
 export type EpochCacheOpts = {
   skipSyncCommitteeCache?: boolean;
+  /** Set for unfinalized states. The default trusts the complete validator registry. */
   skipSyncPubkeys?: boolean;
   shufflingGetter?: ShufflingGetter;
 };
@@ -110,7 +112,7 @@ export class EpochCache {
   /**
    * Unique globally shared pubkey registry. There should only exist one for the entire application.
    *
-   * Couples both index→pubkey and pubkey→index lookups, keeping them in sync atomically.
+   * Finalized pubkeys share a dense registry; unfinalized candidates require state-aware lookup.
    */
   pubkeyCache: PubkeyCache;
   /**
@@ -324,7 +326,7 @@ export class EpochCache {
 
   /**
    * Create an epoch cache
-   * @param state a finalized beacon state. Passing in unfinalized state may cause unexpected behaviour
+   * @param state a trusted anchor or finalized state, unless skipSyncPubkeys is set
    *
    * SLOW CODE - 🐢
    */
@@ -345,10 +347,12 @@ export class EpochCache {
     const validators = state.validators.getAllReadonlyValues();
     const validatorCount = validators.length;
 
-    // syncPubkeys here to ensure EpochCacheImmutableData is populated before computing the rest of caches
-    // - computeSyncCommitteeCache() needs a fully populated pubkeyCache
     if (!opts?.skipSyncPubkeys) {
       pubkeyCache.syncPubkeys(validators);
+    } else {
+      for (let index = pubkeyCache.size; index < validatorCount; index++) {
+        pubkeyCache.addCandidate(index, validators[index].pubkey);
+      }
     }
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
@@ -470,8 +474,8 @@ export class EpochCache {
     // Allow to skip populating sync committee for initializeBeaconStateFromEth1()
     if (afterAltairFork && !opts?.skipSyncCommitteeCache) {
       const altairState = state as BeaconStateAltair;
-      currentSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.currentSyncCommittee, pubkeyCache);
-      nextSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.nextSyncCommittee, pubkeyCache);
+      currentSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.currentSyncCommittee, pubkeyCache, state);
+      nextSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.nextSyncCommittee, pubkeyCache, state);
     } else {
       currentSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
       nextSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
@@ -927,12 +931,12 @@ export class EpochCache {
     return this.pubkeyCache.get(index);
   }
 
-  getValidatorIndex(pubkey: Uint8Array): ValidatorIndex | null {
-    return this.pubkeyCache.getIndex(pubkey);
+  getValidatorIndex(pubkey: Uint8Array, state: BeaconStateAllForks): ValidatorIndex | null {
+    return getValidatorIndex(state, pubkey, this.pubkeyCache);
   }
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    this.pubkeyCache.append(index, pubkey);
+    this.pubkeyCache.addCandidate(index, pubkey);
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {

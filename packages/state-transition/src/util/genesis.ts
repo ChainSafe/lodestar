@@ -189,7 +189,7 @@ export function applyDeposits(
     const stateElectra = state as CachedBeaconStateElectra;
     stateElectra.commit();
     for (const {pubkey, amount} of stateElectra.pendingDeposits.getAllReadonly()) {
-      const validatorIndex = state.epochCtx.getValidatorIndex(pubkey);
+      const validatorIndex = state.epochCtx.getValidatorIndex(pubkey, state);
       if (validatorIndex === null) {
         // Should not happen if the gensis state is correct
         continue;

@@ -2,6 +2,8 @@ import {CompositeViewDU} from "@chainsafe/ssz";
 import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {ValidatorIndex, ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
+import {getValidatorIndex} from "./pubkeyCache.js";
+import {BeaconStateAllForks} from "./types.js";
 
 type ValidatorSyncCommitteeIndexMap = Map<ValidatorIndex, number[]>;
 
@@ -39,9 +41,10 @@ export function getSyncCommitteeCache(validatorIndices: Uint32Array): SyncCommit
 
 export function computeSyncCommitteeCache(
   syncCommittee: CompositeViewDU<typeof ssz.altair.SyncCommittee>,
-  pubkeyCache: PubkeyCache
+  pubkeyCache: PubkeyCache,
+  state: BeaconStateAllForks
 ): SyncCommitteeCache {
-  const validatorIndices = computeSyncCommitteeValidatorIndices(syncCommittee, pubkeyCache);
+  const validatorIndices = computeSyncCommitteeValidatorIndices(syncCommittee, pubkeyCache, state);
   const validatorIndexMap = computeValidatorSyncCommitteeIndexMap(validatorIndices);
   return {
     validatorIndices,
@@ -79,12 +82,13 @@ export function computeValidatorSyncCommitteeIndexMap(
  */
 function computeSyncCommitteeValidatorIndices(
   syncCommittee: CompositeViewDU<typeof ssz.altair.SyncCommittee>,
-  pubkeyCache: PubkeyCache
+  pubkeyCache: PubkeyCache,
+  state: BeaconStateAllForks
 ): Uint32Array {
   const pubkeys = syncCommittee.pubkeys.getAllReadonly();
   const validatorIndices = new Uint32Array(pubkeys.length);
   for (const [i, pubkey] of pubkeys.entries()) {
-    const validatorIndex = pubkeyCache.getIndex(pubkey);
+    const validatorIndex = getValidatorIndex(state, pubkey, pubkeyCache);
     if (validatorIndex === null) {
       throw Error(`SyncCommittee pubkey is unknown ${toPubkeyHex(pubkey)}`);
     }

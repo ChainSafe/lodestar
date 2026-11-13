@@ -61,22 +61,28 @@ describe("worker isolation", () => {
     const expected = SecretKey.fromKeygen(ikm).toPublicKey().toBytes();
     pubkeyCache.reset();
     pubkeyCache.append(0, expected);
+    pubkeyCache.addCandidate(1, new Uint8Array(48));
 
     const result = await runWorker<{
       pubkey: Uint8Array;
+      candidates: number[];
+      truncate: string | null;
       save: string | null;
       load: string | null;
       reset: string | null;
     }>("pubkeys");
 
     expect(result).toEqual({
+      candidates: [1, 2],
       load: "PubkeyCacheControlEnvironmentOnly",
       pubkey: expected,
       reset: "PubkeyCacheControlEnvironmentOnly",
       save: "PubkeyCacheControlEnvironmentOnly",
+      truncate: "PubkeyCacheControlEnvironmentOnly",
     });
     expect(pubkeyCache.size).toBe(1);
     expect(pubkeyCache.getOrThrow(0).toBytes()).toEqual(expected);
+    expect(pubkeyCache.getCandidates(new Uint8Array(48))).toEqual([1, 2]);
   });
 });
 

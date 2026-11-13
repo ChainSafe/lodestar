@@ -68,11 +68,11 @@ export function applyDeposit(
   state: CachedBeaconStateAllForks,
   deposit: phase0.DepositData | electra.DepositRequest
 ): void {
-  const {config, epochCtx, validators} = state;
+  const {config, epochCtx} = state;
   const {pubkey, withdrawalCredentials, amount, signature} = deposit;
 
-  const cachedIndex = epochCtx.getValidatorIndex(pubkey);
-  const isNewValidator = cachedIndex === null || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length;
+  const cachedIndex = epochCtx.getValidatorIndex(pubkey, state);
+  const isNewValidator = cachedIndex === null;
 
   if (fork < ForkSeq.electra) {
     if (isNewValidator) {

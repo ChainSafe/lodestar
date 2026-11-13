@@ -52,12 +52,34 @@ describe("cmds / beacon / pubkeysFile", () => {
     const pubkeys = interopPubkeys(0, 8);
     saveCacheWith(pubkeys, filepath);
 
-    loadWithAnchorPubkeys(filepath, pubkeys.slice(0, 6));
+    loadWithAnchorPubkeys(filepath, pubkeys);
 
     expect(pubkeyCache.size).toBe(pubkeys.length);
     for (let i = 0; i < pubkeys.length; i++) {
       expect(pubkeyCache.getPubkeyBytes(i), `wrong pubkey at index ${i}`).toEqual(pubkeys[i]);
     }
+  });
+
+  it("truncates a legacy unfinalized suffix to the anchor validator count", () => {
+    const pubkeys = interopPubkeys(0, 8);
+    saveCacheWith(pubkeys, filepath);
+
+    loadWithAnchorPubkeys(filepath, pubkeys.slice(0, 6));
+
+    expect(pubkeyCache.size).toBe(6);
+    expect(pubkeyCache.getPubkeyBytes(6)).toBeUndefined();
+    expect(pubkeyCache.getIndex(pubkeys[6])).toBeNull();
+    const canonicalPubkey = interopPubkeys(100, 1)[0];
+    pubkeyCache.append(6, canonicalPubkey);
+    expect(pubkeyCache.getPubkeyBytes(6)).toEqual(canonicalPubkey);
+  });
+
+  it("truncates the entire cache for an empty anchor registry", () => {
+    saveCacheWith(interopPubkeys(0, 8), filepath);
+
+    loadWithAnchorPubkeys(filepath, []);
+
+    expect(pubkeyCache.size).toBe(0);
   });
 
   it("discards a saved cache not matching the anchor state", () => {

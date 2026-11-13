@@ -3,6 +3,7 @@ import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {BeaconBlock, ValidatorIndex, altair, rewards} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
+import {getValidatorPubkey} from "../cache/pubkeyCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../cache/stateCache.js";
 
 export async function computeSyncCommitteeRewards(
@@ -49,9 +50,9 @@ export async function computeSyncCommitteeRewards(
   if (validatorIds.length) {
     const filtersSet = new Set(validatorIds);
     return rewards.filter((reward) => {
-      const pubkey = pubkeyCache.getPubkeyBytes(reward.validatorIndex);
-      const pubkeyHex = pubkey === undefined ? undefined : toPubkeyHex(pubkey);
-      return filtersSet.has(reward.validatorIndex) || (pubkeyHex !== undefined && filtersSet.has(pubkeyHex));
+      const pubkey = getValidatorPubkey(preState, reward.validatorIndex, pubkeyCache);
+      const pubkeyHex = toPubkeyHex(pubkey);
+      return filtersSet.has(reward.validatorIndex) || filtersSet.has(pubkeyHex);
     });
   }
 

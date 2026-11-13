@@ -30,13 +30,14 @@ pub fn getAttestationWithIndicesSignatureSet(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
+    validators: anytype,
     data: *const AttestationData,
     signature: BLSSignature,
     attesting_indices: []u64,
 ) !AggregatedSignatureSet {
     const pubkeys = try allocator.alloc(PublicKey, attesting_indices.len);
     errdefer allocator.free(pubkeys);
-    epoch_cache.pubkey_cache.getPubkeys(io, attesting_indices, pubkeys) catch |err| switch (err) {
+    epoch_cache.pubkey_cache.getPubkeysForState(io, attesting_indices, pubkeys, validators) catch |err| switch (err) {
         error.InvalidIndex => return error.PubkeyNotFound,
         else => return err,
     };
@@ -54,6 +55,7 @@ pub fn getIndexedAttestationSignatureSet(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
+    validators: anytype,
     indexed_attestation: *const ForkTypes(fork).IndexedAttestation.Type,
 ) !AggregatedSignatureSet {
     return try getAttestationWithIndicesSignatureSet(
@@ -61,6 +63,7 @@ pub fn getIndexedAttestationSignatureSet(
         io,
         config,
         epoch_cache,
+        validators,
         &indexed_attestation.data,
         indexed_attestation.signature,
         indexed_attestation.attesting_indices.items,

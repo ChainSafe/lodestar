@@ -36,6 +36,10 @@ export function loadPubkeysFile(
     }
   }
 
+  if (pubkeyCache.size > anchorValidatorCount) {
+    pubkeyCache.truncate(anchorValidatorCount);
+  }
+
   logger.debug("Loaded pubkeys file", {filepath, count: pubkeyCache.size, durationMs: Date.now() - start});
 }
 

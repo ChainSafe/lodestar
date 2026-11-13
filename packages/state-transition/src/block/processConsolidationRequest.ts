@@ -6,7 +6,6 @@ import {hasEth1WithdrawalCredential} from "../util/capella.js";
 import {
   hasCompoundingWithdrawalCredential,
   hasExecutionWithdrawalCredential,
-  isPubkeyKnown,
   switchToCompoundingValidator,
 } from "../util/electra.js";
 import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
@@ -18,12 +17,8 @@ export function processConsolidationRequest(
   consolidationRequest: electra.ConsolidationRequest
 ): void {
   const {sourcePubkey, targetPubkey, sourceAddress} = consolidationRequest;
-  if (!isPubkeyKnown(state, sourcePubkey) || !isPubkeyKnown(state, targetPubkey)) {
-    return;
-  }
-
-  const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey);
-  const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey);
+  const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey, state);
+  const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey, state);
 
   if (sourceIndex === null || targetIndex === null) {
     return;
@@ -109,8 +104,8 @@ function isValidSwitchToCompoundRequest(
   consolidationRequest: electra.ConsolidationRequest
 ): boolean {
   const {sourcePubkey, targetPubkey, sourceAddress} = consolidationRequest;
-  const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey);
-  const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey);
+  const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey, state);
+  const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey, state);
 
   // Verify pubkey exists
   if (sourceIndex === null) {

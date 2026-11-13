@@ -29,6 +29,7 @@ pub fn processRandao(
             io,
             beacon_config,
             epoch_cache,
+            try state.validators(),
             randao_reveal,
             try state.slot(),
             proposer_idx,

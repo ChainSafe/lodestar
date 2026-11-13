@@ -16,7 +16,7 @@ export function isValidIndexedPayloadAttestation(
   }
 
   if (verifySignature) {
-    return verifySignatureSet(getIndexedPayloadAttestationSignatureSet(state.config, indexedPayloadAttestation));
+    return verifySignatureSet(getIndexedPayloadAttestationSignatureSet(state.config, indexedPayloadAttestation), state);
   }
 
   return true;

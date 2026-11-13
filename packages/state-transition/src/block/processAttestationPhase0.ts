@@ -56,7 +56,8 @@ export function processAttestationPhase0(
       state.slot,
       state.validators.length,
       epochCtx.getIndexedAttestation(ForkSeq.phase0, attestation),
-      verifySignature
+      verifySignature,
+      state
     )
   ) {
     throw new Error("Attestation is not valid");

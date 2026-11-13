@@ -1,6 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {IndexedAttestation, IndexedAttestationBigint, Slot} from "@lodestar/types";
+import {PubkeyCacheState} from "../cache/pubkeyCache.js";
 import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
 import {verifySignatureSet} from "../util/index.js";
 
@@ -12,14 +13,15 @@ export function isValidIndexedAttestation(
   stateSlot: Slot,
   validatorsLen: number,
   indexedAttestation: IndexedAttestation,
-  verifySignature: boolean
+  verifySignature: boolean,
+  state?: PubkeyCacheState
 ): boolean {
   if (!isValidIndexedAttestationIndices(config, stateSlot, validatorsLen, indexedAttestation.attestingIndices)) {
     return false;
   }
 
   if (verifySignature) {
-    return verifySignatureSet(getIndexedAttestationSignatureSet(config, stateSlot, indexedAttestation));
+    return verifySignatureSet(getIndexedAttestationSignatureSet(config, stateSlot, indexedAttestation), state);
   }
   return true;
 }
@@ -29,14 +31,15 @@ export function isValidIndexedAttestationBigint(
   stateSlot: Slot,
   validatorsLen: number,
   indexedAttestation: IndexedAttestationBigint,
-  verifySignature: boolean
+  verifySignature: boolean,
+  state?: PubkeyCacheState
 ): boolean {
   if (!isValidIndexedAttestationIndices(config, stateSlot, validatorsLen, indexedAttestation.attestingIndices)) {
     return false;
   }
 
   if (verifySignature) {
-    return verifySignatureSet(getIndexedAttestationBigintSignatureSet(config, stateSlot, indexedAttestation));
+    return verifySignatureSet(getIndexedAttestationBigintSignatureSet(config, stateSlot, indexedAttestation), state);
   }
   return true;
 }

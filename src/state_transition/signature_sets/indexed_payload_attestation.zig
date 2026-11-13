@@ -26,12 +26,13 @@ pub fn getIndexedPayloadAttestationSignatureSet(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
+    validators: anytype,
     indexed_payload_attestation: *const ForkTypes(fork).IndexedPayloadAttestation.Type,
     pubkeys: []PublicKey,
 ) !AggregatedSignatureSet {
     const attesting_indices = indexed_payload_attestation.attesting_indices.items;
 
-    epoch_cache.pubkey_cache.getPubkeys(io, attesting_indices, pubkeys) catch |err| switch (err) {
+    epoch_cache.pubkey_cache.getPubkeysForState(io, attesting_indices, pubkeys, validators) catch |err| switch (err) {
         error.InvalidIndex => return error.PubkeyNotFound,
         else => return err,
     };

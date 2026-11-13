@@ -38,7 +38,7 @@ pub fn processAttesterSlashing(
         io,
         config,
         epoch_cache,
-        try state.validatorsCount(),
+        try state.validators(),
         attester_slashing,
         verify_signature,
     );
@@ -80,7 +80,7 @@ pub fn assertValidAttesterSlashing(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
-    validators_count: usize,
+    validators: anytype,
     attester_slashing: *const ForkTypes(fork).AttesterSlashing.Type,
     verify_signatures: bool,
 ) !void {
@@ -95,7 +95,7 @@ pub fn assertValidAttesterSlashing(
         io,
         config,
         epoch_cache,
-        validators_count,
+        validators,
         &attestations[0],
         verify_signatures,
     )) {
@@ -107,7 +107,7 @@ pub fn assertValidAttesterSlashing(
         io,
         config,
         epoch_cache,
-        validators_count,
+        validators,
         &attestations[1],
         verify_signatures,
     )) {

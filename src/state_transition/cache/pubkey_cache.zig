@@ -1,4 +1,4 @@
-//! Lock-protected, append-only cache for validator BLS public keys.
+//! Lock-protected finalized validator pubkeys and state-verified candidates.
 //!
 //! The cache maps each validator index to a compressed public key and its
 //! uncompressed affine form. It provides:
@@ -13,9 +13,9 @@
 //!
 //! Before cache insertion, each population path must establish these properties:
 //!
-//! 1. An append caller must reject cryptographically invalid keys.
-//! 2. Bulk synchronization must use state whose validator additions passed
-//!    deposit proof-of-possession validation.
+//! 1. An append caller must establish finality and reject cryptographically invalid keys.
+//! 2. Bulk synchronization must use a trusted anchor state whose validator additions
+//!    passed deposit proof-of-possession validation.
 //! 3. Snapshot installation must use a file produced from such a cache and
 //!    protected from untrusted modification.
 
@@ -81,16 +81,23 @@ pub const max_capacity: usize = @min(
     dense_capacity_limit / 2,
 );
 
-/// Append-only pubkey cache.
+const CandidateIndices = struct {
+    first: u32,
+    rest: std.ArrayList(u32) = .empty,
+};
+const CandidateMap = std.array_hash_map.Custom([48]u8, CandidateIndices, PubkeyHashContext, true);
+
+/// Finalized pubkey cache with unfinalized lookup candidates.
 ///
 /// ArrayHashMap storage may move when it grows, so every access is protected by
 /// the cache-owned read/write lock. Readers copy values out before releasing
 /// the shared lock; no pointer into the map escapes. Production mutations only
-/// append (and occasionally grow). `clear` exists for tests/API compatibility
-/// and retains all allocated capacity.
+/// append (and occasionally grow). Startup truncation discards legacy unfinalized
+/// suffixes. Candidate indices must always be checked against the requesting state.
 pub const PubkeyCache = struct {
     allocator: std.mem.Allocator,
     entries: PubkeyMap,
+    candidates: CandidateMap,
     hash_key: HashKey,
     /// Guards movable map storage and serializes cache allocator use.
     lock: std.Io.RwLock,
@@ -101,6 +108,7 @@ pub const PubkeyCache = struct {
         return .{
             .allocator = allocator,
             .entries = .empty,
+            .candidates = .empty,
             .hash_key = hash_key,
             .lock = .init,
         };
@@ -121,6 +129,8 @@ pub const PubkeyCache = struct {
 
     /// The owner must exclude concurrent users before destroying the cache.
     pub fn deinit(self: *PubkeyCache) void {
+        for (self.candidates.values()) |*indices| indices.rest.deinit(self.allocator);
+        self.candidates.deinit(self.allocator);
         self.entries.deinit(self.allocator);
         self.* = undefined;
     }
@@ -149,6 +159,154 @@ pub const PubkeyCache = struct {
         try self.lock.lock(io);
         defer self.lock.unlock(io);
         self.entries.clearRetainingCapacity();
+        for (self.candidates.values()) |*indices| indices.rest.deinit(self.allocator);
+        self.candidates.clearRetainingCapacity();
+    }
+
+    /// Startup-only: callers must exclude workers and states using a removed suffix.
+    pub fn truncate(self: *PubkeyCache, io: std.Io, size: u32) !void {
+        try self.lock.lock(io);
+        defer self.lock.unlock(io);
+        if (size > self.entries.count()) return error.InvalidIndex;
+        self.entries.shrinkRetainingCapacityContext(size, self.hashContext());
+    }
+
+    pub fn addCandidate(self: *PubkeyCache, io: std.Io, pubkey: [48]u8, index: u64) !void {
+        if (index >= max_capacity) return error.CapacityOverflow;
+        try self.lock.lock(io);
+        defer self.lock.unlock(io);
+        if (index < self.entries.count()) return;
+        const result = try self.candidates.getOrPutContext(self.allocator, pubkey, self.hashContext());
+        const candidate: u32 = @intCast(index);
+        if (!result.found_existing) {
+            result.value_ptr.* = .{ .first = candidate };
+        } else {
+            if (result.value_ptr.first == candidate) return;
+            for (result.value_ptr.rest.items) |existing| {
+                if (existing == candidate) return;
+            }
+            try result.value_ptr.rest.append(self.allocator, candidate);
+        }
+    }
+
+    /// The caller owns the returned copy. Candidate indices alone are not authoritative.
+    pub fn getCandidates(self: *const PubkeyCache, allocator: std.mem.Allocator, io: std.Io, pubkey: [48]u8) ![]u32 {
+        self.lockShared(io);
+        defer self.unlockShared(io);
+        const indices = self.candidates.getContext(pubkey, self.hashContext()) orelse return allocator.alloc(u32, 0);
+        const result = try allocator.alloc(u32, indices.rest.items.len + 1);
+        result[0] = indices.first;
+        @memcpy(result[1..], indices.rest.items);
+        return result;
+    }
+
+    pub fn pruneCandidates(self: *PubkeyCache, io: std.Io) !void {
+        try self.lock.lock(io);
+        defer self.lock.unlock(io);
+        const finalized_count = self.entries.count();
+        var i: usize = 0;
+        while (i < self.candidates.count()) {
+            const indices = &self.candidates.values()[i];
+            var retained: usize = if (indices.first >= finalized_count) 1 else 0;
+            for (indices.rest.items) |index| {
+                if (index < finalized_count) continue;
+                if (retained == 0) {
+                    indices.first = index;
+                } else {
+                    indices.rest.items[retained - 1] = index;
+                }
+                retained += 1;
+            }
+            if (retained == 0) {
+                indices.rest.deinit(self.allocator);
+                self.candidates.swapRemoveAt(i);
+            } else {
+                indices.rest.shrinkRetainingCapacity(retained - 1);
+                i += 1;
+            }
+        }
+    }
+
+    /// The state must share the finalized prefix; canonical historical states may be shorter.
+    pub fn getForState(self: *const PubkeyCache, io: std.Io, pubkey: [48]u8, validators: anytype) !?u64 {
+        const validator_count = try validators.length();
+        self.lockShared(io);
+        defer self.unlockShared(io);
+        if (self.entries.getIndexContext(pubkey, self.hashContext())) |index| {
+            if (index < validator_count) return @intCast(index);
+        }
+        const indices = self.candidates.getContext(pubkey, self.hashContext()) orelse return null;
+        if (try candidateMatches(validators, validator_count, indices.first, pubkey)) return indices.first;
+        for (indices.rest.items) |index| {
+            if (try candidateMatches(validators, validator_count, index, pubkey)) return index;
+        }
+        return null;
+    }
+
+    fn candidateMatches(validators: anytype, validator_count: usize, index: u32, pubkey: [48]u8) !bool {
+        if (index >= validator_count) return false;
+        var validator = try validators.getReadonly(index);
+        var state_pubkey: [48]u8 = undefined;
+        try validator.getValue(undefined, "pubkey", &state_pubkey);
+        return std.mem.eql(u8, &pubkey, &state_pubkey);
+    }
+
+    /// Indexed slashings can include inactive validators outside the finalized prefix.
+    pub fn getPubkeyForState(self: *const PubkeyCache, io: std.Io, index: u64, validators: anytype) !?bls.PublicKey {
+        if (index >= try validators.length()) return null;
+        if (self.getPubkey(io, index)) |pubkey| return pubkey;
+        var validator = try validators.getReadonly(@intCast(index));
+        var pubkey: [48]u8 = undefined;
+        try validator.getValue(undefined, "pubkey", &pubkey);
+        return try bls.PublicKey.uncompress(&pubkey);
+    }
+
+    pub fn getPubkeyBytesForState(self: *const PubkeyCache, io: std.Io, index: u64, validators: anytype) !?[48]u8 {
+        if (index >= try validators.length()) return null;
+        if (self.getPubkeyBytes(io, index)) |pubkey| return pubkey;
+        var validator = try validators.getReadonly(@intCast(index));
+        var pubkey: [48]u8 = undefined;
+        try validator.getValue(undefined, "pubkey", &pubkey);
+        return pubkey;
+    }
+
+    pub fn getPubkeysForState(self: *const PubkeyCache, io: std.Io, indices: []const u64, out: []bls.PublicKey, validators: anytype) !void {
+        if (indices.len != out.len) return error.InvalidLength;
+        const validator_count = try validators.length();
+        for (indices) |index| {
+            if (index >= validator_count) return error.InvalidIndex;
+        }
+        self.lockShared(io);
+        defer self.unlockShared(io);
+        for (indices, out) |index, *pubkey| {
+            if (index < self.entries.count()) {
+                pubkey.* = self.entries.values()[@intCast(index)];
+            } else {
+                var validator = try validators.getReadonly(@intCast(index));
+                var bytes: [48]u8 = undefined;
+                try validator.getValue(undefined, "pubkey", &bytes);
+                pubkey.* = try bls.PublicKey.uncompress(&bytes);
+            }
+        }
+    }
+
+    pub fn aggregateForState(self: *const PubkeyCache, io: std.Io, indices: []const u64, validators: anytype) !bls.PublicKey {
+        if (indices.len == 0) return error.InvalidLength;
+        const validator_count = try validators.length();
+        self.lockShared(io);
+        defer self.unlockShared(io);
+        var result: bls.AggregatePublicKey = undefined;
+        for (indices, 0..) |index, i| {
+            if (index >= validator_count) return error.InvalidIndex;
+            const pubkey = if (index < self.entries.count()) self.entries.values()[@intCast(index)] else blk: {
+                var validator = try validators.getReadonly(@intCast(index));
+                var bytes: [48]u8 = undefined;
+                try validator.getValue(undefined, "pubkey", &bytes);
+                break :blk try bls.PublicKey.uncompress(&bytes);
+            };
+            if (i == 0) result = pubkey.toAggregate() else result.add(&pubkey);
+        }
+        return result.toPublicKey();
     }
 
     pub fn count(self: *const PubkeyCache, io: std.Io) u32 {

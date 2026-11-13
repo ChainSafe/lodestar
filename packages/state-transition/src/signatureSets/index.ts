@@ -4,7 +4,7 @@ import {IndexedAttestation, SignedBeaconBlock, altair, capella, gloas} from "@lo
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {IBeaconStateView, IBeaconStateViewGloas} from "../stateView/interface.js";
-import {ISignatureSet, createAggregateSignatureSetFromComponents} from "../util/index.js";
+import {ISignatureSet, createAggregateSignatureSetFromComponents, resolveSignatureSet} from "../util/index.js";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
 import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
 import {getAttestationsSignatureSets} from "./indexedAttestation.js";
@@ -96,5 +96,5 @@ export function getBlockSignatureSets(
     }
   }
 
-  return signatureSets;
+  return signatureSets.map((signatureSet) => resolveSignatureSet(signatureSet, state));
 }

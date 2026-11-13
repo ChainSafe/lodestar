@@ -19,6 +19,7 @@ import {
 import {ValidatorIndex, rewards} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {EpochTransitionCache, beforeProcessEpoch} from "../cache/epochTransitionCache.js";
+import {getValidatorIndex} from "../cache/pubkeyCache.js";
 import {processInactivityUpdates} from "../epoch/processInactivityUpdates.js";
 import {processJustificationAndFinalization} from "../epoch/processJustificationAndFinalization.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
@@ -163,7 +164,7 @@ function computeTotalAttestationsRewardsAltair(
   const {flags} = transitionCache;
   const {epochCtx} = state;
   const validatorIndices = validatorIds
-    .map((id) => (typeof id === "number" ? id : pubkeyCache.getIndex(fromHex(id))))
+    .map((id) => (typeof id === "number" ? id : getValidatorIndex(state, fromHex(id), pubkeyCache)))
     .filter((index) => index !== undefined); // Validator indices to include in the result
 
   const inactivityPenaltyQuotient =

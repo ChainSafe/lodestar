@@ -35,6 +35,7 @@ import {
   isStatePostAltair,
   isStatePostElectra,
   isStatePostGloas,
+  promoteFinalizedPubkeys,
   proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
 import {
@@ -234,6 +235,8 @@ export class BeaconChain implements IBeaconChain {
 
   // Global state caches
   readonly pubkeyCache: PubkeyCache;
+  private pubkeyCacheFinalizedEpoch: Epoch = 0;
+  private pubkeyCachePromotion: Promise<void> | null = null;
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
@@ -470,6 +473,7 @@ export class BeaconChain implements IBeaconChain {
     this.payloadEnvelopeProcessor = new PayloadEnvelopeProcessor(this, metrics, signal);
 
     this.forkChoice = forkChoice;
+    this.pubkeyCacheFinalizedEpoch = forkChoice.getFinalizedCheckpoint().epoch;
     this.executionEngine = new ForkChoiceExecutionEngine(executionEngine, {
       forkChoice,
       recomputeHeadAfterELInvalidResponse: () => this.recomputeHeadAfterELInvalidResponse(),
@@ -1400,6 +1404,33 @@ export class BeaconChain implements IBeaconChain {
     };
   }
 
+  updateFinalizedPubkeys(): void {
+    const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
+    if (finalizedEpoch <= this.pubkeyCacheFinalizedEpoch || this.pubkeyCachePromotion !== null) {
+      return;
+    }
+    const head = this.forkChoice.getHead();
+    const headState = this.regen.getClosestHeadState(head);
+    if (headState !== null) {
+      promoteFinalizedPubkeys(this.pubkeyCache, headState, finalizedEpoch);
+      this.pubkeyCacheFinalizedEpoch = finalizedEpoch;
+      return;
+    }
+
+    this.pubkeyCachePromotion = this.regen
+      .getState(head.stateRoot, RegenCaller.onForkChoiceFinalized)
+      .then((state) => {
+        promoteFinalizedPubkeys(this.pubkeyCache, state, finalizedEpoch);
+        this.pubkeyCacheFinalizedEpoch = finalizedEpoch;
+      })
+      .catch((e: Error) => {
+        this.logger.error("Error promoting finalized validator pubkeys", {epoch: finalizedEpoch}, e);
+      })
+      .finally(() => {
+        this.pubkeyCachePromotion = null;
+      });
+  }
+
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
@@ -1863,6 +1894,7 @@ export class BeaconChain implements IBeaconChain {
     // updateTime() recomputes the head on epoch-boundary checkpoint pull-up and under fast confirmation
     const prevHead = this.forkChoice.getHead();
     this.forkChoice.updateTime(slot);
+    this.updateFinalizedPubkeys();
     this.emitHeadEvents(prevHead, this.forkChoice.getHead());
     this.metrics?.clockSlot.set(slot);
 

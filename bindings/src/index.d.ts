@@ -259,7 +259,8 @@ export type VoluntaryExitValidity =
 
 export declare class BeaconStateView {
   /** Requires state bytes with trusted provenance; SSZ decoding does not authenticate them. */
-  static createFromBytes(bytes: Uint8Array, config: BeaconConfig): BeaconStateView;
+  /** Set syncPubkeys only for the trusted startup anchor. */
+  static createFromBytes(bytes: Uint8Array, config: BeaconConfig, syncPubkeys?: boolean): BeaconStateView;
 
   /**
    * Idempotently release this view. Subsequent state access throws InvalidState.

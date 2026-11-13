@@ -1,7 +1,10 @@
-import {afterEach, beforeEach, describe, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {BeaconStateView} from "@lodestar/state-transition";
+import {aggregateSerializedPublicKeys} from "@lodestar/native/blst";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {FAR_FUTURE_EPOCH} from "@lodestar/params";
+import {BeaconStateView, SignatureSetType, interopSecretKey} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError.js";
 import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing.js";
@@ -63,6 +66,46 @@ describe("GossipMessageValidator", () => {
       };
 
       await validateGossipAttesterSlashing(chainStub, attesterSlashing);
+    });
+
+    it("resolves an unfinalized inactive participant before batch verification", async () => {
+      const state = new BeaconStateView(generateCachedState());
+      const pendingIndex = state.validatorCount;
+      const pendingPubkey = interopSecretKey(pendingIndex + 100)
+        .toPublicKey()
+        .toBytes();
+      state.cachedState.validators.push(
+        ssz.phase0.Validator.toViewDU({
+          ...ssz.phase0.Validator.defaultValue(),
+          pubkey: pendingPubkey,
+          activationEpoch: FAR_FUTURE_EPOCH,
+          activationEligibilityEpoch: FAR_FUTURE_EPOCH,
+          exitEpoch: FAR_FUTURE_EPOCH,
+        })
+      );
+      pubkeyCache.addCandidate(pendingIndex, pendingPubkey);
+      chainStub.getHeadState.mockReturnValue(state);
+      const data = ssz.phase0.AttestationDataBigint.defaultValue();
+      const slashing: phase0.AttesterSlashing = {
+        attestation1: {data, attestingIndices: [0, pendingIndex], signature: new Uint8Array(96)},
+        attestation2: {
+          data: {...data, slot: 1n},
+          attestingIndices: [0, pendingIndex],
+          signature: new Uint8Array(96),
+        },
+      };
+
+      await validateGossipAttesterSlashing(chainStub, slashing);
+
+      const expectedPubkey = aggregateSerializedPublicKeys([state.getValidator(0).pubkey, pendingPubkey]).toBytes();
+      expect(chainStub.bls.verifySignatureSets).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({type: SignatureSetType.single, pubkey: expectedPubkey}),
+          expect.objectContaining({type: SignatureSetType.single, pubkey: expectedPubkey}),
+        ],
+        {batchable: true, priority: false}
+      );
+      expect(pubkeyCache.size).toBe(pendingIndex);
     });
   });
 });

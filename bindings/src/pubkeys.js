@@ -42,6 +42,22 @@ export const pubkeyCache = {
     native.append(index, pubkey);
   },
 
+  addCandidate(index, pubkey) {
+    native.addCandidate(index, pubkey);
+  },
+
+  getCandidates(pubkey) {
+    return native.getCandidates(pubkey);
+  },
+
+  pruneCandidates() {
+    native.pruneCandidates();
+  },
+
+  truncate(size) {
+    native.truncate(size);
+  },
+
   syncPubkeys(validators) {
     native.syncPubkeys(validators);
   },

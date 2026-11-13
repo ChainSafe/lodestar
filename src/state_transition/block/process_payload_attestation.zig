@@ -41,5 +41,5 @@ pub fn processPayloadAttestation(
         if (try payload_attestation.aggregation_bits.get(i)) indexed.attesting_indices.appendAssumeCapacity(index);
     }
     std.mem.sort(u64, indexed.attesting_indices.items, {}, std.sort.asc(u64));
-    if (!(try isValidIndexedPayloadAttestation(fork, io, config, epoch_cache, &indexed, verify_signature))) return error.InvalidPayloadAttestation;
+    if (!(try isValidIndexedPayloadAttestation(fork, io, config, epoch_cache, try state.validators(), &indexed, verify_signature))) return error.InvalidPayloadAttestation;
 }

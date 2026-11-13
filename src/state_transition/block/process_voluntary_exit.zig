@@ -103,7 +103,7 @@ pub fn getVoluntaryExitValidity(
 
     // verify signature
     if (verify_signature) {
-        if (!try verifyVoluntaryExitSignature(io, config, epoch_cache, signed_voluntary_exit)) {
+        if (!try verifyVoluntaryExitSignature(io, config, epoch_cache, try state.validators(), signed_voluntary_exit)) {
             return .invalid_signature;
         }
     }

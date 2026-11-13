@@ -91,7 +91,7 @@ pub fn preVerifyBuilderDepositsPreGloas(
                 !try isValidatorKnown(
                     .fulu,
                     state.state.castToFork(.fulu),
-                    state.epoch_cache.pubkey_cache.get(io, deposit.pubkey),
+                    try state.epoch_cache.pubkey_cache.getForState(io, deposit.pubkey, try state.state.validators()),
                 ))
             {
                 // then find from cache,

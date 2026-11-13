@@ -95,6 +95,7 @@ pub fn processAttestationsAltair(
                 io,
                 config,
                 epoch_cache,
+                try state.validators(),
                 &attestation.data,
                 attestation.signature,
                 attesting_indices,

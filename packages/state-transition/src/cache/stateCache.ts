@@ -146,7 +146,7 @@ export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecution
 export type CachedBeaconStatePreHeze = CachedBeaconState<BeaconStatePreHeze>;
 /**
  * Create CachedBeaconState computing a new EpochCache instance
- * TODO ELECTRA: rename this to createFinalizedCachedBeaconState() as it's intended for finalized state only
+ * The default trusts every validator. Pass skipSyncPubkeys for unfinalized states.
  */
 export function createCachedBeaconState<T extends BeaconStateAllForks>(
   state: T,
@@ -170,7 +170,6 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
  * Create a CachedBeaconState given a cached seed state and state bytes
  * This guarantees that the returned state shares the same tree with the seed state
  * Check loadState() api for more details
- * // TODO: rename to loadUnfinalizedCachedBeaconState() due to ELECTRA
  */
 export function loadCachedBeaconState<T extends CachedBeaconStateAllForks>(
   cachedSeedState: T,
@@ -178,19 +177,8 @@ export function loadCachedBeaconState<T extends CachedBeaconStateAllForks>(
   opts?: EpochCacheOpts,
   seedValidatorsBytes?: Uint8Array
 ): T {
-  const {state: migratedState, modifiedValidators} = loadState(
-    cachedSeedState.config,
-    cachedSeedState,
-    stateBytes,
-    seedValidatorsBytes
-  );
+  const {state: migratedState} = loadState(cachedSeedState.config, cachedSeedState, stateBytes, seedValidatorsBytes);
   const {pubkeyCache} = cachedSeedState.epochCtx;
-  // Get the validators sub tree once for all the loop
-  const validators = migratedState.validators;
-  for (const validatorIndex of modifiedValidators) {
-    const validator = validators.getReadonly(validatorIndex);
-    pubkeyCache.append(validatorIndex, validator.pubkey);
-  }
 
   return createCachedBeaconState(
     migratedState,
