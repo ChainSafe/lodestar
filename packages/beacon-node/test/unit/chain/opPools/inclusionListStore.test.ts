@@ -202,18 +202,18 @@ describe("chain / opPools / InclusionListStore", () => {
   });
 
   describe("prune", () => {
-    it("retains MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS slots beyond the inclusion list slot", () => {
+    it("retains the inclusion lists one slot past MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS", () => {
       process(makeInclusionList(1, [txA]), true);
 
-      store.prune(slot + 1);
+      store.prune(slot + 2);
       expect(store.size).toBe(1);
 
-      store.prune(slot + 2);
+      store.prune(slot + 3);
       expect(store.size).toBe(0);
     });
 
     it("rejects inclusion lists below the prune horizon", () => {
-      store.prune(slot + 2);
+      store.prune(slot + 3);
 
       expect(process(makeInclusionList(1, [txA]), true)).toBe(InclusionListInsertOutcome.Old);
       expect(store.size).toBe(0);
@@ -224,7 +224,7 @@ describe("chain / opPools / InclusionListStore", () => {
       store.markSeen(slot, dependentRootHex, 1);
       expect(store.seenTwice(slot, dependentRootHex, 1)).toBe(true);
 
-      store.prune(slot + 2);
+      store.prune(slot + 3);
       expect(store.seenTwice(slot, dependentRootHex, 1)).toBe(false);
     });
   });
