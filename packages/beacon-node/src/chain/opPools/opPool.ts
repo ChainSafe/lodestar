@@ -96,13 +96,15 @@ export class OpPool {
     // The startup anchor may precede a fork whose slashings are already persisted.
     for (const {key, value: attesterSlashing} of attesterSlashings) {
       try {
-        assertValidAttesterSlashing(this.config, currentSlot, state.validatorCount, attesterSlashing, false);
+        assertValidAttesterSlashing(this.config, currentSlot, state, attesterSlashing, false);
       } catch {
         continue;
       }
       const verifiedDomains = getAttesterSlashingSignatureDomains(this.config, currentSlot, attesterSlashing);
       if (
-        !(await bls.verifySignatureSets(getAttesterSlashingSignatureSets(this.config, currentSlot, attesterSlashing)))
+        !(await bls.verifySignatureSets(
+          getAttesterSlashingSignatureSets(this.config, currentSlot, state, attesterSlashing)
+        ))
       ) {
         continue;
       }

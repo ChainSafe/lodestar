@@ -40,8 +40,8 @@ pub const SyncCommitteeCache = union(enum) {
         return SyncCommitteeCache{ .phase0 = {} };
     }
 
-    pub fn initSyncCommittee(allocator: Allocator, sync_committee: *const SyncCommittee, pubkey_cache: *const PubkeyCache, io: std.Io) !SyncCommitteeCache {
-        const cache = try SyncCommitteeCacheAltair.initSyncCommittee(allocator, sync_committee, pubkey_cache, io);
+    pub fn initSyncCommittee(allocator: Allocator, sync_committee: *const SyncCommittee, pubkey_cache: *const PubkeyCache, io: std.Io, validators: anytype) !SyncCommitteeCache {
+        const cache = try SyncCommitteeCacheAltair.initSyncCommittee(allocator, sync_committee, pubkey_cache, io, validators);
         return SyncCommitteeCache{ .altair = cache };
     }
 
@@ -71,10 +71,10 @@ const SyncCommitteeCacheAltair = struct {
 
     validator_index_map: *SyncComitteeValidatorIndexMap,
 
-    pub fn initSyncCommittee(allocator: Allocator, sync_committee: *const SyncCommittee, pubkey_cache: *const PubkeyCache, io: std.Io) !*SyncCommitteeCacheAltair {
+    pub fn initSyncCommittee(allocator: Allocator, sync_committee: *const SyncCommittee, pubkey_cache: *const PubkeyCache, io: std.Io, validators: anytype) !*SyncCommitteeCacheAltair {
         const validator_indices = try allocator.alloc(ValidatorIndex, sync_committee.pubkeys.len);
         errdefer allocator.free(validator_indices);
-        try computeSyncCommitteeIndices(sync_committee, pubkey_cache, io, validator_indices);
+        try computeSyncCommitteeIndices(sync_committee, pubkey_cache, io, validators, validator_indices);
         return SyncCommitteeCacheAltair.initValidatorIndices(allocator, validator_indices);
     }
 
@@ -128,8 +128,16 @@ test "initSyncCommittee - sanity" {
     var pubkey_cache = try PubkeyCache.initCapacity(allocator, std.testing.io, 1);
     defer pubkey_cache.deinit();
     try pubkey_cache.append(std.testing.io, pubkeys[0], 0);
+    const Node = @import("persistent_merkle_tree").Node;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 4096 });
+    defer pool.deinit();
+    var validators = try types.phase0.Validators.TreeView.fromValue(allocator, &pool, &types.phase0.Validators.default_value);
+    defer validators.deinit();
+    var validator = types.phase0.Validator.default_value;
+    validator.pubkey = pubkeys[0];
+    try validators.pushValue(&validator);
 
-    var cache = try SyncCommitteeCache.initSyncCommittee(allocator, &sync_committee, &pubkey_cache, std.testing.io);
+    var cache = try SyncCommitteeCache.initSyncCommittee(allocator, &sync_committee, &pubkey_cache, std.testing.io, validators);
     defer cache.deinit();
 
     try std.testing.expectEqualSlices(
@@ -175,8 +183,10 @@ test computeSyncCommitteeMap {
     }
 }
 
-fn computeSyncCommitteeIndices(sync_committee: *const SyncCommittee, pubkey_cache: *const PubkeyCache, io: std.Io, out: []ValidatorIndex) !void {
-    try pubkey_cache.getValidatorIndices(io, &sync_committee.pubkeys, out);
+fn computeSyncCommitteeIndices(sync_committee: *const SyncCommittee, pubkey_cache: *const PubkeyCache, io: std.Io, validators: anytype, out: []ValidatorIndex) !void {
+    for (sync_committee.pubkeys, out) |pubkey, *index| {
+        index.* = (try pubkey_cache.getValidatorIndex(io, validators, pubkey)) orelse return error.PubkeyNotFound;
+    }
 }
 
 test computeSyncCommitteeIndices {
@@ -191,9 +201,17 @@ test computeSyncCommitteeIndices {
     var pubkey_cache = try PubkeyCache.initCapacity(allocator, std.testing.io, 1);
     defer pubkey_cache.deinit();
     try pubkey_cache.append(std.testing.io, pubkeys[0], 0);
+    const Node = @import("persistent_merkle_tree").Node;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 4096 });
+    defer pool.deinit();
+    var validators = try types.phase0.Validators.TreeView.fromValue(allocator, &pool, &types.phase0.Validators.default_value);
+    defer validators.deinit();
+    var validator = types.phase0.Validator.default_value;
+    validator.pubkey = pubkeys[0];
+    try validators.pushValue(&validator);
 
     var out: [preset.SYNC_COMMITTEE_SIZE]ValidatorIndex = undefined;
-    try computeSyncCommitteeIndices(&sync_committee, &pubkey_cache, std.testing.io, &out);
+    try computeSyncCommitteeIndices(&sync_committee, &pubkey_cache, std.testing.io, validators, &out);
     try std.testing.expectEqualSlices(
         ValidatorIndex,
         &[_]ValidatorIndex{0} ** preset.SYNC_COMMITTEE_SIZE,

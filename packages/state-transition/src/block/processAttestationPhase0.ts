@@ -54,7 +54,7 @@ export function processAttestationPhase0(
     !isValidIndexedAttestation(
       state.config,
       state.slot,
-      state.validators.length,
+      state,
       epochCtx.getIndexedAttestation(ForkSeq.phase0, attestation),
       verifySignature
     )

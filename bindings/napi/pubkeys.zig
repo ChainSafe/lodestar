@@ -196,6 +196,39 @@ pub fn append(index: js.Number, pubkey: js.Uint8Array) !void {
     try state.cache.append(io, pubkey_bytes, idx);
 }
 
+pub fn addCandidate(index: js.Number, pubkey: js.Uint8Array) !void {
+    if (!state.initialized) return error.PubkeyIndexNotInitialized;
+    const idx = try index.toU32Exact();
+    const bytes = try pubkey.toSlice();
+    if (bytes.len != 48) return error.InvalidPubkeyLength;
+    try state.cache.addCandidate(js.io(), bytes[0..48].*, idx);
+}
+
+pub fn getCandidates(pubkey: js.Uint8Array) !js.Value {
+    if (!state.initialized) return error.PubkeyIndexNotInitialized;
+    const bytes = try pubkey.toSlice();
+    if (bytes.len != 48) return error.InvalidPubkeyLength;
+    const indices = try state.cache.getCandidates(allocator, js.io(), bytes[0..48].*);
+    defer allocator.free(indices);
+    return .{ .val = try @import("./to_napi_value.zig").numberSliceToNapiValue(js.env(), u32, indices, .{}) };
+}
+
+pub fn pruneCandidates() !void {
+    if (!state.initialized) return error.PubkeyIndexNotInitialized;
+    try state.cache.pruneCandidates(js.io());
+}
+
+pub fn truncate(size_: js.Number) !void {
+    if (!state.initialized) return error.PubkeyIndexNotInitialized;
+    try state.requireControlEnvironment(js.env());
+    try state.cache.truncate(js.io(), try size_.toU32Exact());
+}
+
+pub fn matchesValidators(serialized_validators: js.Uint8Array) !js.Boolean {
+    if (!state.initialized) return error.PubkeyIndexNotInitialized;
+    return js.Boolean.from(try state.cache.matchesValidators(js.io(), try serialized_validators.toSlice()));
+}
+
 /// JS: pubkeys.syncPubkeys(validators)
 pub fn syncPubkeys(validators: js.Array) !void {
     if (!state.initialized) return error.PubkeyIndexNotInitialized;

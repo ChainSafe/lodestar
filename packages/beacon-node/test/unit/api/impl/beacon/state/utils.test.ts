@@ -1,6 +1,7 @@
-import {Mock, describe, expect, it, vi} from "vitest";
+import {Mock, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {ExecutionStatus} from "@lodestar/fork-choice";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView, IBeaconStateViewGloas} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
@@ -13,7 +14,7 @@ import {
 import {NodeIsSyncing} from "../../../../../../src/api/impl/errors.js";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
 import {IBeaconSync, SyncState} from "../../../../../../src/sync/index.js";
-import {generateCachedAltairState} from "../../../../../utils/state.js";
+import {fakeStateView, generateCachedAltairState, interopPubkeys} from "../../../../../utils/state.js";
 
 describe("beacon state api utils", () => {
   describe("getStateValidatorIndex", () => {
@@ -70,6 +71,46 @@ describe("beacon state api utils", () => {
       } else {
         expect.fail("validator index should be found - Uint8Array input");
       }
+    });
+  });
+
+  describe("unfinalized validator pubkeys", () => {
+    beforeEach(() => pubkeyCache.reset());
+    afterEach(() => pubkeyCache.reset());
+
+    it("resolves the same candidate pubkey at different indices on different branches", () => {
+      const keys = interopPubkeys(3);
+      const branch = (indices: number[]) => fakeStateView(indices.map((index) => keys[index]));
+      pubkeyCache.append(0, keys[0]);
+      pubkeyCache.addCandidate(1, keys[1]);
+      pubkeyCache.addCandidate(2, keys[2]);
+      pubkeyCache.addCandidate(1, keys[2]);
+
+      expect(getStateValidatorIndex(keys[2], branch([0, 1, 2]), pubkeyCache)).toEqual({
+        valid: true,
+        validatorIndex: 2,
+      });
+      expect(getStateValidatorIndex(keys[2], branch([0, 2]), pubkeyCache)).toEqual({valid: true, validatorIndex: 1});
+      expect(getStateValidatorIndex(keys[1], branch([0, 2]), pubkeyCache).valid).toBe(false);
+      expect(getStateValidatorIndex(keys[2], branch([0]), pubkeyCache).valid).toBe(false);
+      expect(pubkeyCache.size).toBe(1);
+    });
+
+    it("does not return another validator from an orphan state after finalization", () => {
+      const keys = interopPubkeys(3);
+      const state = fakeStateView(keys);
+      pubkeyCache.append(0, keys[0]);
+      pubkeyCache.addCandidate(1, keys[1]);
+      pubkeyCache.addCandidate(2, keys[2]);
+      pubkeyCache.append(1, keys[2]);
+      pubkeyCache.pruneCandidates();
+
+      expect(getStateValidatorIndex(keys[2], state, pubkeyCache)).toEqual({
+        valid: false,
+        code: 404,
+        reason: "Validator pubkey not found in state",
+      });
+      expect(getStateValidatorIndex(1, state, pubkeyCache)).toEqual({valid: true, validatorIndex: 1});
     });
   });
 

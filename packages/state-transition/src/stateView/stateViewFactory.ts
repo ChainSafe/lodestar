@@ -16,7 +16,7 @@ type CreateBeaconStateViewOpts = {
 };
 
 /**
- * Create a BeaconStateView from raw SSZ bytes. Used at node startup.
+ * Create a BeaconStateView from trusted anchor bytes. Used at node startup.
  *
  * Caller must reserve pubkey capacity before calling this function.
  *
@@ -24,7 +24,7 @@ type CreateBeaconStateViewOpts = {
  */
 export function createBeaconStateView(opts: CreateBeaconStateViewOpts): IBeaconStateView {
   if (opts.nativeStateTransition) {
-    return createNativeBeaconStateView(opts.config, opts.stateBytes);
+    return createNativeBeaconStateView(opts.config, opts.stateBytes, "trusted");
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
@@ -53,7 +53,7 @@ type RegenNativeOpts = {
  */
 export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | RegenNativeOpts): IBeaconStateView {
   if (opts.nativeStateTransition) {
-    return createNativeBeaconStateView(opts.config, opts.stateBytes);
+    return createNativeBeaconStateView(opts.config, opts.stateBytes, "candidates");
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
@@ -61,11 +61,15 @@ export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | 
   return new BeaconStateView(cachedState);
 }
 
-function createNativeBeaconStateView(config: BeaconConfig, stateBytes: Uint8Array): IBeaconStateView {
+function createNativeBeaconStateView(
+  config: BeaconConfig,
+  stateBytes: Uint8Array,
+  pubkeyMode: "trusted" | "candidates"
+): IBeaconStateView {
   assertNativeForkSupported(config, getStateSlotFromBytes(stateBytes));
   const nativeConfig = new bindings.BeaconConfig(config, config.genesisValidatorsRoot);
   return new NativeBeaconStateView(
     config,
-    bindings.BeaconStateView.createFromBytes(stateBytes, nativeConfig) as IBeaconStateViewNative
+    bindings.BeaconStateView.createFromBytes(stateBytes, nativeConfig, {pubkeyMode}) as IBeaconStateViewNative
   );
 }

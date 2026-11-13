@@ -1,8 +1,11 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import {mainnetChainConfig} from "@lodestar/config/configs";
+import {ssz} from "@lodestar/types";
 import {afterAll, beforeEach, describe, expect, it} from "vitest";
 import {SecretKey, aggregatePublicKeys} from "../src/blst.js";
+import bindings from "../src/index.js";
 import {pubkeyCache} from "../src/pubkeys.js";
 
 // Generate deterministic valid BLS keypairs for testing
@@ -43,6 +46,99 @@ describe("pubkeys", () => {
 
   afterAll(() => {
     fs.rmSync(tempDir, {force: true, recursive: true});
+  });
+
+  it("registers deduplicated candidates without decoding or extending the dense cache", () => {
+    const key = new Uint8Array(48);
+    pubkeyCache.addCandidate(3, key);
+    pubkeyCache.addCandidate(5, key);
+    pubkeyCache.addCandidate(3, key);
+    expect(pubkeyCache.getCandidates(key)).toEqual([3, 5]);
+    expect(pubkeyCache.getIndex(key)).toBeNull();
+    expect(pubkeyCache.size).toBe(3);
+    const candidates = pubkeyCache.getCandidates(key);
+    candidates[0] = 9;
+    expect(pubkeyCache.getCandidates(key)).toEqual([3, 5]);
+    expect(() => pubkeyCache.addCandidate(-1, key)).toThrow("InvalidUnsignedInteger");
+    expect(() => pubkeyCache.addCandidate(3, new Uint8Array(47))).toThrow("InvalidPubkeyLength");
+    expect(() => pubkeyCache.getCandidates(new Uint8Array(47))).toThrow("InvalidPubkeyLength");
+  });
+
+  it("prunes finalized candidates and resets candidates when loading a snapshot", () => {
+    pubkeyCache.reset();
+    pubkeyCache.addCandidate(0, keypairs[0].pubkeyBytes);
+    pubkeyCache.addCandidate(1, keypairs[0].pubkeyBytes);
+    pubkeyCache.addCandidate(0, keypairs[1].pubkeyBytes);
+    pubkeyCache.append(0, keypairs[0].pubkeyBytes);
+    pubkeyCache.pruneCandidates();
+    expect(pubkeyCache.getCandidates(keypairs[0].pubkeyBytes)).toEqual([1]);
+    expect(pubkeyCache.getCandidates(keypairs[1].pubkeyBytes)).toEqual([]);
+    pubkeyCache.save(tempPkixPath);
+    pubkeyCache.load(tempPkixPath, pubkeyCache.capacity);
+    expect(pubkeyCache.getCandidates(keypairs[0].pubkeyBytes)).toEqual([]);
+    expect(pubkeyCache.getIndex(keypairs[0].pubkeyBytes)).toBe(0);
+    pubkeyCache.addCandidate(1, keypairs[1].pubkeyBytes);
+    pubkeyCache.reset();
+    expect(pubkeyCache.getCandidates(keypairs[1].pubkeyBytes)).toEqual([]);
+  });
+
+  it("truncates a legacy suffix in both lookup directions", () => {
+    const capacity = pubkeyCache.capacity;
+    pubkeyCache.truncate(1);
+    expectCacheContents(1);
+    expect(pubkeyCache.capacity).toBe(capacity);
+    expect(pubkeyCache.getIndex(keypairs[1].pubkeyBytes)).toBeNull();
+    pubkeyCache.append(1, keypairs[2].pubkeyBytes);
+    expect(pubkeyCache.getIndex(keypairs[2].pubkeyBytes)).toBe(1);
+    expect(() => pubkeyCache.truncate(3)).toThrow("InvalidIndex");
+    expect(() => pubkeyCache.truncate(-1)).toThrow("InvalidUnsignedInteger");
+    pubkeyCache.truncate(0);
+    expect(pubkeyCache.size).toBe(0);
+  });
+
+  it.each([undefined, "candidates", "trusted"] as const)("loads native registry with pubkey mode %s", (mode) => {
+    pubkeyCache.reset();
+    const value = ssz.phase0.BeaconState.defaultValue();
+    value.validators = keypairs.map(({pubkeyBytes}) => ({
+      ...ssz.phase0.Validator.defaultValue(),
+      activationEpoch: 0,
+      effectiveBalance: 32_000_000_000,
+      exitEpoch: Infinity,
+      pubkey: pubkeyBytes,
+      withdrawableEpoch: Infinity,
+    }));
+    value.balances = value.validators.map(() => 32_000_000_000);
+    const config = new bindings.BeaconConfig(mainnetChainConfig, value.genesisValidatorsRoot);
+    const state = bindings.BeaconStateView.createFromBytes(
+      ssz.phase0.BeaconState.serialize(value),
+      config,
+      mode ? {pubkeyMode: mode} : undefined
+    );
+    try {
+      expect(pubkeyCache.size).toBe(mode === "trusted" ? keypairs.length : 0);
+      for (const {index, pubkeyBytes} of keypairs) {
+        expect(state.getValidator(index).pubkey, `validator ${index}`).toEqual(pubkeyBytes);
+        expect(pubkeyCache.getCandidates(pubkeyBytes), `candidates ${index}`).toEqual(
+          mode === "trusted" ? [] : [index]
+        );
+      }
+    } finally {
+      state.release();
+    }
+  });
+
+  it("compares every retained key against serialized validators", () => {
+    const validatorSize = 121;
+    const validators = new Uint8Array(keypairs.length * validatorSize);
+    for (const {index, pubkeyBytes} of keypairs) validators.set(pubkeyBytes, index * validatorSize);
+    expect(pubkeyCache.matchesValidators(validators)).toBe(true);
+    validators[validatorSize] ^= 1;
+    expect(pubkeyCache.matchesValidators(validators)).toBe(false);
+    expect(pubkeyCache.matchesValidators(validators.subarray(0, validatorSize))).toBe(true);
+    expect(pubkeyCache.matchesValidators(new Uint8Array())).toBe(true);
+    expect(() => pubkeyCache.matchesValidators(validators.subarray(1))).toThrow("InvalidLength");
+    pubkeyCache.truncate(1);
+    expect(pubkeyCache.matchesValidators(validators)).toBe(true);
   });
 
   it("append populates both directions and updates size", () => {

@@ -15,11 +15,11 @@ pub fn isValidIndexedAttestation(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
-    validators_count: usize,
+    validators: anytype,
     indexed_attestation: *const ForkTypes(fork).IndexedAttestation.Type,
     verify_signature: bool,
 ) !bool {
-    if (!(try isValidIndexedAttestationIndices(fork, validators_count, indexed_attestation.attesting_indices.items))) {
+    if (!(try isValidIndexedAttestationIndices(fork, try validators.length(), indexed_attestation.attesting_indices.items))) {
         return false;
     }
 
@@ -30,6 +30,7 @@ pub fn isValidIndexedAttestation(
             io,
             config,
             epoch_cache,
+            validators,
             indexed_attestation,
         );
         defer allocator.free(signature_set.pubkeys);

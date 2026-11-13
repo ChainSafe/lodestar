@@ -75,7 +75,7 @@ pub fn processPendingDeposits(
         // Read validator state
         var is_validator_exited = false;
         var is_validator_withdrawn = false;
-        const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
+        const validator_index = try epoch_cache.pubkey_cache.getValidatorIndex(io, try state.validators(), deposit.pubkey);
 
         if (try isValidatorKnown(fork, state, validator_index)) {
             var validators = try state.validators();
@@ -132,7 +132,7 @@ fn applyPendingDeposit(
     deposit: PendingDeposit,
     cache: *EpochTransitionCache,
 ) !void {
-    const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
+    const validator_index = try epoch_cache.pubkey_cache.getValidatorIndex(io, try state.validators(), deposit.pubkey);
     const pubkey = &deposit.pubkey;
 
     const withdrawal_credentials = &deposit.withdrawal_credentials;

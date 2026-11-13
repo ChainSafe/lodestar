@@ -1,9 +1,30 @@
-import {beforeEach, describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {getConfig} from "@lodestar/config/test-utils";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {BeaconStateView, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {aggregateSerializedPublicKeys} from "@lodestar/native/blst";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {
+  FAR_FUTURE_EPOCH,
+  ForkName,
+  SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
+  SYNC_COMMITTEE_SIZE,
+} from "@lodestar/params";
+import {
+  BeaconStateView,
+  IBeaconStateView,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  createBeaconStateViewForHistoricalRegen,
+  interopSecretKey,
+  isStatePostAltair,
+} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
+import {byteArrayEquals} from "@lodestar/utils";
+import {BeaconChain} from "../../../../src/chain/chain.js";
+import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {RegenCaller} from "../../../../src/chain/regen/interface.js";
 import {processSlotsToNearestCheckpoint} from "../../../../src/chain/regen/regen.js";
 import {FIFOBlockStateCache} from "../../../../src/chain/stateCache/fifoBlockStateCache.js";
@@ -140,6 +161,110 @@ describe("regen", () => {
 
       // there are 2 epoch transitions, so the checkpoint states of epoch 20 should be pruned
       expect(fileApisBuffer.size).toEqual(1);
+    });
+  });
+
+  describe("finalized pubkey promotion during skipped epochs", () => {
+    afterEach(() => pubkeyCache.reset());
+
+    it.each([false, true])("promotes before a candidate activates (native=%s)", async (nativeStateTransition) => {
+      pubkeyCache.reset();
+      const config = createBeaconConfig(getConfig(ForkName.altair), new Uint8Array(32));
+      const value = ssz.altair.BeaconState.defaultValue();
+      value.slot = 252 * SLOTS_PER_EPOCH - 1;
+      value.latestBlockHeader.slot = value.slot;
+      value.fork = {
+        previousVersion: config.GENESIS_FORK_VERSION,
+        currentVersion: config.ALTAIR_FORK_VERSION,
+        epoch: 0,
+      };
+      value.validators = Array.from({length: 65}, (_, index) => ({
+        ...ssz.phase0.Validator.defaultValue(),
+        pubkey: interopSecretKey(index).toPublicKey().toBytes(),
+        effectiveBalance: 32e9,
+        activationEligibilityEpoch: index === 64 ? 250 : 0,
+        activationEpoch: index === 64 ? FAR_FUTURE_EPOCH : 0,
+        exitEpoch: FAR_FUTURE_EPOCH,
+        withdrawableEpoch: FAR_FUTURE_EPOCH,
+      }));
+      value.balances = value.validators.map(() => 32e9);
+      value.previousEpochParticipation = value.validators.map((_, index) => (index < 64 ? 7 : 0));
+      value.currentEpochParticipation = [...value.previousEpochParticipation];
+      value.inactivityScores = value.validators.map(() => 0);
+      value.finalizedCheckpoint.epoch = 249;
+      value.currentJustifiedCheckpoint.epoch = 250;
+      value.previousJustifiedCheckpoint.epoch = 249;
+      for (let index = 0; index < 4; index++) value.justificationBits.set(index, true);
+      value.currentSyncCommittee.pubkeys = Array.from(
+        {length: SYNC_COMMITTEE_SIZE},
+        (_, index) => value.validators[index % 64].pubkey
+      );
+      value.currentSyncCommittee.aggregatePubkey = aggregateSerializedPublicKeys(
+        value.currentSyncCommittee.pubkeys
+      ).toBytes();
+      value.nextSyncCommittee = value.currentSyncCommittee;
+      pubkeyCache.syncPubkeys(value.validators.slice(0, 64));
+      const preState = createBeaconStateViewForHistoricalRegen({
+        config,
+        nativeStateTransition,
+        stateBytes: ssz.altair.BeaconState.serialize(value),
+      });
+      const cache = new PersistentCheckpointStateCache(
+        {
+          config,
+          datastore: getTestDatastore(new Map()),
+          logger: testLogger(),
+          blockStateCache: new FIFOBlockStateCache({}, {}),
+        },
+        {maxCPStateEpochsInMemory: 8}
+      );
+      const chain = {
+        pubkeyCache,
+        pubkeyCacheFinalizedEpoch: 249,
+        promoteFinalizedPubkeys: BeaconChain.prototype.promoteFinalizedPubkeys,
+        shufflingCache: {processState: vi.fn()},
+      };
+      const emitter = new ChainEventEmitter();
+      emitter.on(ChainEvent.checkpoint, BeaconChain.prototype["onCheckpoint"].bind(chain as unknown as BeaconChain));
+      const boundaries: {epoch: number; finalizedEpoch: number; activationEpoch: number; denseSize: number}[] = [];
+      emitter.on(ChainEvent.checkpoint, (checkpoint, state) => {
+        boundaries.push({
+          epoch: checkpoint.epoch,
+          finalizedEpoch: state.finalizedCheckpoint.epoch,
+          activationEpoch: state.getValidator(64).activationEpoch,
+          denseSize: pubkeyCache.size,
+        });
+      });
+      let postState: IBeaconStateView | undefined;
+      try {
+        expect(pubkeyCache.size).toBe(64);
+        postState = await processSlotsToNearestCheckpoint(
+          {config, checkpointStateCache: cache, emitter, metrics: null, validatorMonitor: null, logger: null},
+          preState,
+          256 * SLOTS_PER_EPOCH,
+          RegenCaller.validateGossipBlock,
+          {dontTransferCache: true}
+        );
+        expect(boundaries[0]).toEqual({epoch: 252, finalizedEpoch: 250, activationEpoch: 256, denseSize: 65});
+        expect(boundaries).toHaveLength(5);
+        expect(chain.pubkeyCacheFinalizedEpoch).toBe(250);
+        expect(pubkeyCache.getPubkeyBytes(64)).toEqual(value.validators[64].pubkey);
+        expect(pubkeyCache.getCandidates(value.validators[64].pubkey)).toEqual([]);
+        expect(isStatePostAltair(postState)).toBe(true);
+        if (!isStatePostAltair(postState)) throw Error("expected Altair state");
+        expect(
+          postState.nextSyncCommittee.pubkeys.some((pubkey) => byteArrayEquals(pubkey, value.validators[64].pubkey))
+        ).toBe(true);
+        for (const index of postState.currentProposers) {
+          expect(pubkeyCache.getPubkeyBytes(index), `wrong key for proposer ${index}`).toEqual(
+            postState.getValidator(index).pubkey
+          );
+        }
+      } finally {
+        preState.release();
+        for (const state of cache.getStates()) state.release();
+        await cache.clear();
+      }
     });
   });
 });

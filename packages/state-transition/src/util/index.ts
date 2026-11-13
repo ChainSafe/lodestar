@@ -33,6 +33,7 @@ export {
   type StateBytesMetadata,
   getValidatorCountFromStateBytes,
   getValidatorPubkeyFromStateBytes,
+  getValidatorsBytesFromStateBytes,
   readBeaconStateBytesMetadata,
 } from "./sszBytes.js";
 export * from "./syncCommittee.js";

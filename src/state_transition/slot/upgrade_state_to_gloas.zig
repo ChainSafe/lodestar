@@ -105,7 +105,7 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
         const result = try lookup.getOrPutContext(allocator, deposit.pubkey, context);
         if (!result.found_existing) result.value_ptr.* = .{};
         const entry = result.value_ptr;
-        const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
+        const validator_index = try epoch_cache.pubkey_cache.getValidatorIndex(io, try state.validators(), deposit.pubkey);
         const known_validator = try isValidatorKnown(.gloas, state, validator_index);
         if (!known_validator) {
             if (entry.builder_index) |builder_index| {

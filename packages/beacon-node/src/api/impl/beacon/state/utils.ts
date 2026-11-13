@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {GENESIS_SLOT} from "@lodestar/params";
-import {IBeaconStateView, IBeaconStateViewGloas} from "@lodestar/state-transition";
+import {IBeaconStateView, IBeaconStateViewGloas, getValidatorIndex} from "@lodestar/state-transition";
 import {
   BLSPubkey,
   BuilderIndex,
@@ -13,7 +13,7 @@ import {
   getValidatorStatus,
   phase0,
 } from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
+import {byteArrayEquals, fromHex, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../chain/index.js";
 import {GENESIS_EPOCH} from "../../../../constants/index.js";
 import {IBeaconSync} from "../../../../sync/index.js";
@@ -222,12 +222,10 @@ export function getStateValidatorIndex(
   }
 
   // typeof id === Uint8Array
-  const validatorIndex = pubkeyCache.getIndex(id);
-  if (validatorIndex === null) {
+  const validatorIndex = getValidatorIndex(pubkeyCache, state, id);
+  // Cached orphan states can outlive a conflicting registry prefix becoming finalized.
+  if (validatorIndex === null || !byteArrayEquals(state.getValidator(validatorIndex).pubkey, id)) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
-  }
-  if (validatorIndex >= state.validatorCount) {
-    return {valid: false, code: 404, reason: "Validator pubkey from future state"};
   }
   return {valid: true, validatorIndex};
 }

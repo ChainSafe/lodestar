@@ -157,6 +157,8 @@ export async function importBlock(
     throw e;
   }
 
+  this.promoteFinalizedPubkeys(postState);
+
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);

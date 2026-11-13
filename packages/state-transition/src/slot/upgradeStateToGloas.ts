@@ -208,7 +208,7 @@ function onboardBuildersFromPendingDeposits(
   for (const deposit of state.pendingDeposits.getAllReadonly()) {
     const depositValue = deposit.toValue();
 
-    const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);
+    const validatorIndex = state.epochCtx.getValidatorIndex(state, deposit.pubkey);
     const pubkeyHex = toPubkeyHex(deposit.pubkey);
 
     // Deposits for existing validators stay in the pending queue

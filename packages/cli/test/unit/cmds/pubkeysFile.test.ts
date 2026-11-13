@@ -52,12 +52,34 @@ describe("cmds / beacon / pubkeysFile", () => {
     const pubkeys = interopPubkeys(0, 8);
     saveCacheWith(pubkeys, filepath);
 
-    loadWithAnchorPubkeys(filepath, pubkeys.slice(0, 6));
+    loadWithAnchorPubkeys(filepath, pubkeys);
 
     expect(pubkeyCache.size).toBe(pubkeys.length);
     for (let i = 0; i < pubkeys.length; i++) {
       expect(pubkeyCache.getPubkeyBytes(i), `wrong pubkey at index ${i}`).toEqual(pubkeys[i]);
     }
+  });
+
+  it("truncates a legacy unfinalized suffix to the anchor validator count", () => {
+    const pubkeys = interopPubkeys(0, 8);
+    saveCacheWith(pubkeys, filepath);
+
+    loadWithAnchorPubkeys(filepath, pubkeys.slice(0, 6));
+
+    expect(pubkeyCache.size).toBe(6);
+    expect(pubkeyCache.getPubkeyBytes(6)).toBeUndefined();
+    expect(pubkeyCache.getIndex(pubkeys[6])).toBeNull();
+    const canonicalPubkey = interopPubkeys(100, 1)[0];
+    pubkeyCache.append(6, canonicalPubkey);
+    expect(pubkeyCache.getPubkeyBytes(6)).toEqual(canonicalPubkey);
+  });
+
+  it("truncates the entire cache for an empty anchor registry", () => {
+    saveCacheWith(interopPubkeys(0, 8), filepath);
+
+    loadWithAnchorPubkeys(filepath, []);
+
+    expect(pubkeyCache.size).toBe(0);
   });
 
   it("discards a saved cache not matching the anchor state", () => {
@@ -66,6 +88,21 @@ describe("cmds / beacon / pubkeysFile", () => {
     loadWithAnchorPubkeys(filepath, interopPubkeys(100, 8));
 
     expect(pubkeyCache.size).toBe(0);
+  });
+
+  it("discards an interior branch swap with equal counts and matching endpoints", () => {
+    const [anchor, keyA, keyB, keyC] = interopPubkeys(0, 4);
+    saveCacheWith([anchor, keyA, keyB, keyC], filepath);
+
+    loadWithAnchorPubkeys(filepath, [anchor, keyB, keyA, keyC]);
+
+    expect(pubkeyCache.size).toBe(0);
+    const validators = [anchor, keyB, keyA, keyC].map((pubkey) => ({...ssz.phase0.Validator.defaultValue(), pubkey}));
+    pubkeyCache.syncPubkeys(validators);
+    expect(pubkeyCache.getPubkeyBytes(1)).toEqual(keyB);
+    expect(pubkeyCache.getPubkeyBytes(2)).toEqual(keyA);
+    expect(pubkeyCache.getIndex(keyB)).toBe(1);
+    expect(pubkeyCache.getIndex(keyA)).toBe(2);
   });
 
   it("leaves the cache empty when the file is missing", () => {

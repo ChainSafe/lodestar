@@ -14,12 +14,12 @@ describe("processWithdrawalRequest", () => {
     const state = generateCachedElectraState();
     const futureState = state.clone();
     const futureValidatorIndex = state.validators.length;
-    futureState.epochCtx.addPubkey(futureValidatorIndex, futureValidatorPubkey);
+    futureState.epochCtx.addPubkeyCandidate(futureValidatorIndex, futureValidatorPubkey);
 
     const request = ssz.electra.WithdrawalRequest.defaultValue();
     request.validatorPubkey = futureValidatorPubkey;
 
-    expect(state.epochCtx.getValidatorIndex(futureValidatorPubkey)).toBe(futureValidatorIndex);
+    expect(state.epochCtx.getValidatorIndex(state, futureValidatorPubkey)).toBeNull();
     expect(() => processWithdrawalRequest(ForkSeq.electra, state, request)).not.toThrow();
     expect(state.pendingPartialWithdrawals.length).toBe(0);
   });
