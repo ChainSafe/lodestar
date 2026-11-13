@@ -296,7 +296,7 @@ pub fn currentEpochParticipation(self: *BeaconStateView) !js.Uint8Array {
 pub fn getPreviousEpochParticipation(self: *BeaconStateView, index_arg: js.Number) !js.Number {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const index_value: usize = try index_arg.toU64Exact();
+    const index_value: usize = try index_arg.toSafeInteger();
     var view = try cached_state.state.previousEpochParticipation();
     const flag = view.get(index_value) catch {
         return throwNullAs(js.Number, "INVALID_INDEX", "Failed to get previous epoch participation");
@@ -307,7 +307,7 @@ pub fn getPreviousEpochParticipation(self: *BeaconStateView, index_arg: js.Numbe
 pub fn getCurrentEpochParticipation(self: *BeaconStateView, index_arg: js.Number) !js.Number {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const index_value: usize = try index_arg.toU64Exact();
+    const index_value: usize = try index_arg.toSafeInteger();
     var view = try cached_state.state.currentEpochParticipation();
     const flag = view.get(index_value) catch {
         return throwNullAs(js.Number, "INVALID_INDEX", "Failed to get current epoch participation");
@@ -351,7 +351,7 @@ pub fn getBlockRoot(self: *BeaconStateView, epoch_arg: js.Number) !js.Uint8Array
     const env = js.env();
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const epoch_value: u64 = try epoch_arg.toU64Exact();
+    const epoch_value: u64 = try epoch_arg.toSafeInteger();
 
     const slot_ = st.computeStartSlotAtEpoch(epoch_value);
 
@@ -374,7 +374,7 @@ pub fn getBlockRootAtSlot(self: *BeaconStateView, slot_arg: js.Number) !js.Uint8
     const env = js.env();
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const slot_value = slot_arg.toU64Exact() catch return error.InvalidSlot;
+    const slot_value = slot_arg.toSafeInteger() catch return error.InvalidSlot;
 
     const result = switch (cached_state.state.forkSeq()) {
         inline else => |f| st.getBlockRootAtSlot(f, cached_state.state.castToFork(f), slot_value),
@@ -395,7 +395,7 @@ pub fn getBlockRootAtEpoch(self: *BeaconStateView, epoch_arg: js.Number) !js.Uin
     const env = js.env();
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const epoch_value: u64 = try epoch_arg.toU64Exact();
+    const epoch_value: u64 = try epoch_arg.toSafeInteger();
     const slot_ = st.computeStartSlotAtEpoch(epoch_value);
 
     const result = switch (cached_state.state.forkSeq()) {
@@ -417,7 +417,7 @@ pub fn getRandaoMix(self: *BeaconStateView, epoch_arg: js.Number) !js.Uint8Array
     const env = js.env();
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const epoch_value: u64 = try epoch_arg.toU64Exact();
+    const epoch_value: u64 = try epoch_arg.toSafeInteger();
 
     const result = switch (cached_state.state.forkSeq()) {
         inline else => |f| st.getRandaoMix(f, cached_state.state.castToFork(f), epoch_value),
@@ -437,7 +437,7 @@ pub fn getStateRootAtSlot(self: *BeaconStateView, slot_arg: js.Number) !js.Uint8
     var state_roots_view = cached_state.state.stateRoots() catch {
         return throwNullAs(js.Uint8Array, "STATE_ERROR", "Failed to get stateRoots");
     };
-    const slot_: usize = try slot_arg.toU64Exact();
+    const slot_: usize = try slot_arg.toSafeInteger();
     const root = state_roots_view.getFieldRoot(slot_ % preset.SLOTS_PER_HISTORICAL_ROOT) catch {
         return throwNullAs(js.Uint8Array, "INVALID_SLOT", "Failed to get state root at slot");
     };
@@ -593,7 +593,7 @@ pub fn nextDecisionRoot(self: *BeaconStateView) !js.String {
 pub fn getShufflingDecisionRoot(self: *BeaconStateView, epoch_arg: js.Number) !js.String {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const epoch_value: u64 = try epoch_arg.toU64Exact();
+    const epoch_value: u64 = try epoch_arg.toSafeInteger();
     const root = st.calculateShufflingDecisionRoot(cached_state.state, epoch_value) catch {
         return throwNullAs(js.String, "STATE_ERROR", "Failed to calculate shuffling decision root");
     };
@@ -634,7 +634,7 @@ pub fn nextProposers(self: *BeaconStateView) !?js.Array {
 pub fn getBeaconProposer(self: *BeaconStateView, slot_arg: js.Number) !js.Number {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const slot_value: u64 = try slot_arg.toU64Exact();
+    const slot_value: u64 = try slot_arg.toSafeInteger();
     const proposer = try cached_state.epoch_cache.getBeaconProposer(slot_value);
     return js.Number.from(proposer);
 }
@@ -642,7 +642,7 @@ pub fn getBeaconProposer(self: *BeaconStateView, slot_arg: js.Number) !js.Number
 pub fn getBeaconProposerOrNull(self: *BeaconStateView, slot_arg: js.Number) !js.Value {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const slot_value: u64 = try slot_arg.toU64Exact();
+    const slot_value: u64 = try slot_arg.toSafeInteger();
     const proposer = cached_state.epoch_cache.getBeaconProposer(slot_value) catch return jsNull();
     return js_types.wrap(js.Value, js.Number.from(proposer).toValue());
 }
@@ -742,7 +742,7 @@ pub fn syncProposerReward(self: *BeaconStateView) !js.Number {
 pub fn getIndexedSyncCommitteeAtEpoch(self: *BeaconStateView, epoch_arg: js.Number) !js_types.IndexedSyncCommittee {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const epoch_value: u64 = try epoch_arg.toU64Exact();
+    const epoch_value: u64 = try epoch_arg.toSafeInteger();
 
     const sync_committee = cached_state.epoch_cache.getIndexedSyncCommitteeAtEpoch(epoch_value) catch {
         return throwNullAs(js_types.IndexedSyncCommittee, "NO_SYNC_COMMITTEE", "Sync committee not available for requested epoch");
@@ -755,7 +755,7 @@ pub fn getIndexedSyncCommitteeAtEpoch(self: *BeaconStateView, epoch_arg: js.Numb
 pub fn getIndexedSyncCommittee(self: *BeaconStateView, slot_arg: js.Number) !js_types.IndexedSyncCommittee {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const slot_value: u64 = try slot_arg.toU64Exact();
+    const slot_value: u64 = try slot_arg.toSafeInteger();
 
     const sync_committee = cached_state.epoch_cache.getIndexedSyncCommittee(slot_value) catch {
         return throwNullAs(js_types.IndexedSyncCommittee, "NO_SYNC_COMMITTEE", "Sync committee not available for requested slot");
@@ -785,7 +785,7 @@ pub fn getEffectiveBalanceIncrementsZeroInactive(self: *BeaconStateView) !js.Uin
 pub fn getBalance(self: *BeaconStateView, index_arg: js.Number) !js.Number {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const index_value: u64 = try index_arg.toU64Exact();
+    const index_value: u64 = try index_arg.toSafeInteger();
     var balances = try cached_state.state.balances();
     const balance = try balances.get(index_value);
     return js.Number.from(balance);
@@ -797,7 +797,7 @@ pub fn getValidator(self: *BeaconStateView, index_arg: js.Number) !js_types.Vali
     const cached_state = try self.acquireState();
     defer self.finishState();
     const allocator = cached_state.allocator;
-    const index_value: u64 = try index_arg.toU64Exact();
+    const index_value: u64 = try index_arg.toSafeInteger();
 
     var validators = try cached_state.state.validators();
     var validator_view = try validators.get(index_value);
@@ -813,7 +813,7 @@ pub fn getValidatorStatus(self: *BeaconStateView, index_arg: js.Number) !js.Stri
     const cached_state = try self.acquireState();
     defer self.finishState();
     const allocator = cached_state.allocator;
-    const index_value: u64 = try index_arg.toU64Exact();
+    const index_value: u64 = try index_arg.toSafeInteger();
     const current_epoch = cached_state.epoch_cache.epoch;
 
     var validators = try cached_state.state.validators();
@@ -873,7 +873,7 @@ pub fn getValidatorsByStatus(self: *BeaconStateView, statuses_set: js.Value, cur
     const cached_state = try self.acquireState();
     defer self.finishState();
     const allocator = cached_state.allocator;
-    const current_epoch: u64 = try current_epoch_arg.toU64Exact();
+    const current_epoch: u64 = try current_epoch_arg.toSafeInteger();
 
     const set_value = statuses_set.toValue();
     const has_fn = try set_value.getNamedProperty("has");
@@ -982,8 +982,8 @@ pub fn proposerRewards(self: *BeaconStateView) !js_types.ProposerRewards {
 fn signedVoluntaryExitFromJsValue(value: js.Value, out: *ct.phase0.SignedVoluntaryExit.Type) !void {
     const raw = value.toValue();
     const message = try raw.getNamedProperty("message");
-    out.message.epoch = try js_types.wrap(js.Number, try message.getNamedProperty("epoch")).toU64Exact();
-    out.message.validator_index = try js_types.wrap(js.Number, try message.getNamedProperty("validatorIndex")).toU64Exact();
+    out.message.epoch = try js_types.wrap(js.Number, try message.getNamedProperty("epoch")).toSafeInteger();
+    out.message.validator_index = try js_types.wrap(js.Number, try message.getNamedProperty("validatorIndex")).toSafeInteger();
 
     const signature = try raw.getNamedProperty("signature");
     if (!(try signature.isTypedarray())) return error.SignatureNotTypedArray;
@@ -1404,7 +1404,7 @@ fn byteViewsToSlice(output: js.Value) ![]u8 {
 /// Returns the number of bytes written.
 pub fn serializeToBytes(self: *BeaconStateView, output: js.Value, offset: js.Number) !js.Number {
     const output_slice = try byteViewsToSlice(output);
-    const off: usize = try offset.toU64Exact();
+    const off: usize = try offset.toSafeInteger();
     if (off > output_slice.len) return error.InvalidOffset;
 
     const cached_state = try self.acquireState();
@@ -1441,7 +1441,7 @@ pub fn serializedValidatorsSize(self: *BeaconStateView) !js.Number {
 /// Returns the number of bytes written.
 pub fn serializeValidatorsToBytes(self: *BeaconStateView, output: js.Value, offset: js.Number) !js.Number {
     const output_slice = try byteViewsToSlice(output);
-    const off: usize = try offset.toU64Exact();
+    const off: usize = try offset.toSafeInteger();
     if (off > output_slice.len) return error.InvalidOffset;
 
     const cached_state = try self.acquireState();
@@ -1468,7 +1468,7 @@ pub fn processSlots(self: *BeaconStateView, slot_arg: js.Number, options: ?js.Va
     const cached_state = try self.acquireState();
     defer self.finishState();
     const allocator = cached_state.allocator;
-    const slot_value = slot_arg.toU64Exact() catch return error.InvalidSlot;
+    const slot_value = slot_arg.toSafeInteger() catch return error.InvalidSlot;
 
     var transfer_cache = true;
     if (options) |value| {
@@ -1637,8 +1637,8 @@ pub fn getBeaconCommittee(self: *BeaconStateView, slot_arg: js.Number, index: js
     const env = js.env();
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const slot_: u64 = try slot_arg.toU64Exact();
-    const index_: u64 = try index.toU64Exact();
+    const slot_: u64 = try slot_arg.toSafeInteger();
+    const index_: u64 = try index.toSafeInteger();
 
     const committee = try cached_state.epoch_cache.getBeaconCommittee(slot_, index_);
     return .{ .val = try numberSliceToNapiValue(env, u32, committee, .{ .typed_array = .uint32 }) };
@@ -1647,7 +1647,7 @@ pub fn getBeaconCommittee(self: *BeaconStateView, slot_arg: js.Number, index: js
 pub fn getBeaconCommitteeCountPerSlot(self: *BeaconStateView, epoch_arg: js.Number) !js.Number {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const epoch_: u64 = try epoch_arg.toU64Exact();
+    const epoch_: u64 = try epoch_arg.toSafeInteger();
 
     return js.Number.from(try cached_state.epoch_cache.getCommitteeCountPerSlot(epoch_));
 }
@@ -1655,7 +1655,7 @@ pub fn getBeaconCommitteeCountPerSlot(self: *BeaconStateView, epoch_arg: js.Numb
 pub fn getShufflingAtEpoch(self: *BeaconStateView, epoch_arg: js.Number) !js.Value {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const epoch_value: u64 = try epoch_arg.toU64Exact();
+    const epoch_value: u64 = try epoch_arg.toSafeInteger();
 
     const shuffling = cached_state.epoch_cache.getShufflingAtEpochOrNull(epoch_value) orelse {
         return throwNullAs(js.Value, "NO_SHUFFLING", "Shuffling not available for requested epoch");
@@ -1707,7 +1707,7 @@ pub fn builderPendingWithdrawals(self: *BeaconStateView) !js.Array {
 pub fn getBuilder(self: *BeaconStateView, index_arg: js.Number) !js.Value {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const index = index_arg.toU64Exact() catch return error.InvalidBuilderIndex;
+    const index = index_arg.toSafeInteger() catch return error.InvalidBuilderIndex;
     var builders = switch (cached_state.state.*) {
         inline .gloas, .heze => |state| try state.getReadonly("builders"),
         else => return error.InvalidAtFork,
@@ -1721,8 +1721,8 @@ pub fn getBuilder(self: *BeaconStateView, index_arg: js.Number) !js.Value {
 pub fn canBuilderCoverBid(self: *BeaconStateView, builder_index: js.Number, bid_amount: js.Number) !js.Boolean {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const index = builder_index.toU64Exact() catch return error.InvalidBuilderIndex;
-    const amount = bid_amount.toU64Exact() catch return error.InvalidBidAmount;
+    const index = builder_index.toSafeInteger() catch return error.InvalidBuilderIndex;
+    const amount = bid_amount.toSafeInteger() catch return error.InvalidBidAmount;
     return switch (cached_state.state.forkSeq()) {
         inline .gloas, .heze => |f| js.Boolean.from(try st.canBuilderCoverBid(f, cached_state.state.castToFork(f), index, amount)),
         else => error.InvalidAtFork,
@@ -1746,7 +1746,7 @@ fn readPayloadTimelinessCommittee(cached_state: *CachedBeaconState, slot_value: 
 pub fn getInclusionListCommittee(self: *BeaconStateView, slot_arg: js.Number) !js.Uint32Array {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const slot_value = slot_arg.toU64Exact() catch return error.InvalidSlot;
+    const slot_value = slot_arg.toSafeInteger() catch return error.InvalidSlot;
     const shuffling = cached_state.epoch_cache.getShufflingAtEpochOrNull(st.computeEpochAtSlot(slot_value)) orelse return error.ShufflingNotAvailable;
     const committee = try st.getInclusionListCommittee(shuffling, slot_value);
     return js_types.wrap(js.Uint32Array, try numberSliceToNapiValue(js.env(), u64, &committee, .{ .typed_array = .uint32 }));
@@ -1755,7 +1755,7 @@ pub fn getInclusionListCommittee(self: *BeaconStateView, slot_arg: js.Number) !j
 pub fn getPayloadTimelinessCommittee(self: *BeaconStateView, slot_arg: js.Number) !js.Uint32Array {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const slot_value = slot_arg.toU64Exact() catch return error.InvalidSlot;
+    const slot_value = slot_arg.toSafeInteger() catch return error.InvalidSlot;
     var committee: [preset.PTC_SIZE]u64 = undefined;
     try readPayloadTimelinessCommittee(cached_state, slot_value, &committee);
     return js_types.wrap(js.Uint32Array, try numberSliceToNapiValue(js.env(), u64, &committee, .{ .typed_array = .uint32 }));
@@ -1764,7 +1764,7 @@ pub fn getPayloadTimelinessCommittee(self: *BeaconStateView, slot_arg: js.Number
 pub fn getEpochPTCs(self: *BeaconStateView, epoch_arg: js.Number) !js.Array {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const epoch_value = epoch_arg.toU64Exact() catch return error.InvalidEpoch;
+    const epoch_value = epoch_arg.toSafeInteger() catch return error.InvalidEpoch;
     const current_epoch = cached_state.epoch_cache.epoch;
     if (epoch_value != current_epoch and epoch_value != current_epoch + 1) return error.EpochOutOfRange;
     const start_slot = std.math.mul(u64, epoch_value, preset.SLOTS_PER_EPOCH) catch return error.InvalidEpoch;
@@ -1782,8 +1782,8 @@ pub fn getEpochPTCs(self: *BeaconStateView, epoch_arg: js.Number) !js.Array {
 pub fn getIndicesInPayloadTimelinessCommittee(self: *BeaconStateView, validator_index: js.Number, slot_arg: js.Number) !js.Array {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    const index = validator_index.toU64Exact() catch return error.InvalidValidatorIndex;
-    const slot_value = slot_arg.toU64Exact() catch return error.InvalidSlot;
+    const index = validator_index.toSafeInteger() catch return error.InvalidValidatorIndex;
+    const slot_value = slot_arg.toSafeInteger() catch return error.InvalidSlot;
     var committee: [preset.PTC_SIZE]u64 = undefined;
     try readPayloadTimelinessCommittee(cached_state, slot_value, &committee);
     const result = try js.env().createArray();
@@ -1878,7 +1878,7 @@ fn parseProposerRewards(value: ?js.Value) !?st.ProposerRewards {
 
 fn optionalU64(obj: napi.Value, name: [:0]const u8) !u64 {
     if (!try obj.hasNamedProperty(name)) return 0;
-    return js_types.wrap(js.Number, try obj.getNamedProperty(name)).toU64Exact();
+    return js_types.wrap(js.Number, try obj.getNamedProperty(name)).toSafeInteger();
 }
 
 pub fn computeAttestationsRewards(self: *BeaconStateView, validator_ids: ?js.Value) !js_types.AttestationsRewards {
@@ -1932,7 +1932,7 @@ fn parseAttestationRewardFilters(allocator: std.mem.Allocator, value: ?js.Value)
     for (0..count) |i| {
         const id = try raw.getElement(@intCast(i));
         if (try id.typeof() == .number) {
-            const index = js_types.wrap(js.Number, id).toU64Exact() catch |err| {
+            const index = js_types.wrap(js.Number, id).toSafeInteger() catch |err| {
                 if (err == error.InvalidUnsignedInteger) continue;
                 return err;
             };
@@ -1970,7 +1970,7 @@ pub fn computeSyncCommitteeRewards(self: *BeaconStateView, block: js.Value, vali
     defer self.finishState();
     const allocator = cached_state.allocator;
     const slot_number = js_types.wrap(js.Number, try block.val.getNamedProperty("slot"));
-    const block_slot = slot_number.toU64Exact() catch |err| {
+    const block_slot = slot_number.toSafeInteger() catch |err| {
         if (err == error.InvalidUnsignedInteger) return error.InvalidSlot;
         return err;
     };
@@ -2019,7 +2019,7 @@ fn parseSyncRewardFilters(allocator: std.mem.Allocator, value: ?js.Value) !?[]u6
         const id = try raw.getElement(@intCast(i));
         switch (try id.typeof()) {
             .number => {
-                const index = js_types.wrap(js.Number, id).toU64Exact() catch |err| {
+                const index = js_types.wrap(js.Number, id).toSafeInteger() catch |err| {
                     if (err == error.InvalidUnsignedInteger) continue;
                     return err;
                 };
@@ -2193,10 +2193,10 @@ fn isDefaultExecutionPayload(payload: napi.Value) !bool {
     try readByteArrayInto(payload, "prevRandao", &native_payload.prev_randao);
     try readByteArrayInto(payload, "blockHash", &native_payload.block_hash);
 
-    native_payload.block_number = try js_types.wrap(js.Number, try payload.getNamedProperty("blockNumber")).toU64Exact();
-    native_payload.gas_limit = try js_types.wrap(js.Number, try payload.getNamedProperty("gasLimit")).toU64Exact();
-    native_payload.gas_used = try js_types.wrap(js.Number, try payload.getNamedProperty("gasUsed")).toU64Exact();
-    native_payload.timestamp = try js_types.wrap(js.Number, try payload.getNamedProperty("timestamp")).toU64Exact();
+    native_payload.block_number = try js_types.wrap(js.Number, try payload.getNamedProperty("blockNumber")).toSafeInteger();
+    native_payload.gas_limit = try js_types.wrap(js.Number, try payload.getNamedProperty("gasLimit")).toSafeInteger();
+    native_payload.gas_used = try js_types.wrap(js.Number, try payload.getNamedProperty("gasUsed")).toSafeInteger();
+    native_payload.timestamp = try js_types.wrap(js.Number, try payload.getNamedProperty("timestamp")).toSafeInteger();
 
     native_payload.base_fee_per_gas = try readBigintU256(try payload.getNamedProperty("baseFeePerGas"));
 
