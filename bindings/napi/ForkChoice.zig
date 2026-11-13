@@ -93,7 +93,7 @@ pub fn init(config: *const BeaconConfig, genesis_time: js.Number, anchor: js.Val
     errdefer config_rc.unref();
     const beacon_config = &config_rc.instance.config;
     const summary = try blockSummary(beacon_config, anchor.toValue());
-    const genesis = try genesis_time.toU64Exact();
+    const genesis = try genesis_time.toSafeInteger();
 
     const inner = try allocator.create(Inner);
     errdefer allocator.destroy(inner);
@@ -221,7 +221,7 @@ fn typedArraySlice(comptime T: type, comptime Element: type, value: napi.Value) 
 // --- argument conversion ----------------------------------------------------------
 
 fn toU64(value: napi.Value) !u64 {
-    return js_types.wrap(js.Number, value).toU64Exact();
+    return js_types.wrap(js.Number, value).toSafeInteger();
 }
 
 fn toRoot(value: napi.Value) !Root {
@@ -324,12 +324,12 @@ pub fn currentSlot(self: *ForkChoice) js.Number {
 
 /// Spec `compute_time_at_slot_ms`.
 pub fn timeAtSlotMs(self: *ForkChoice, slot: js.Number) !js.Number {
-    return js.Number.from(self.inner.store.timing.timeAtSlotMs(try slot.toU64Exact()));
+    return js.Number.from(self.inner.store.timing.timeAtSlotMs(try slot.toSafeInteger()));
 }
 
 /// Spec `on_tick`. Time does not run backwards: an earlier `time_ms` is ignored.
 pub fn onTick(self: *ForkChoice, time_ms: js.Number) !void {
-    const time = try time_ms.toU64Exact();
+    const time = try time_ms.toSafeInteger();
     if (time <= self.inner.store.time_ms) return;
     try self.inner.store.onTick(time);
 }
@@ -356,11 +356,11 @@ pub fn onAttestation(
     is_from_block: js.Boolean,
 ) !void {
     const data: AttestationData = .{
-        .slot = try slot.toU64Exact(),
-        .index = try index.toU64Exact(),
+        .slot = try slot.toSafeInteger(),
+        .index = try index.toSafeInteger(),
         .beacon_block_root = try rootArg(beacon_block_root),
         .source = .{ .epoch = 0, .root = constants.ZERO_HASH },
-        .target = .{ .epoch = try target_epoch.toU64Exact(), .root = try rootArg(target_root) },
+        .target = .{ .epoch = try target_epoch.toSafeInteger(), .root = try rootArg(target_root) },
     };
     const indices = try widenIndices(&self.inner.indices, try attesting_indices.toSlice());
     try self.inner.store.onAttestationData(&data, indices, try is_from_block.toBool());
@@ -394,7 +394,7 @@ pub fn onPtcVotes(
 ) !void {
     try self.inner.store.onPtcVotes(
         try rootArg(beacon_block_root),
-        try slot.toU64Exact(),
+        try slot.toSafeInteger(),
         try positions.toSlice(),
         try payload_present.toBool(),
         try blob_data_available.toBool(),
@@ -477,7 +477,7 @@ pub fn getHead(self: *ForkChoice) !js.Number {
 /// build on when the head is reorged out, otherwise the reason it is kept.
 pub fn getProposerHead(self: *ForkChoice, head: js.Number, slot: js.Number) !js.Value {
     const env = js.env();
-    const decision = try fork_choice.proposer_head.decide(&self.inner.store, try self.nodeArg(head), try slot.toU64Exact());
+    const decision = try fork_choice.proposer_head.decide(&self.inner.store, try self.nodeArg(head), try slot.toSafeInteger());
     return switch (decision) {
         .reorg => |node| js_types.wrap(js.Value, nodeNumber(node).toValue()),
         .keep => |reason| js_types.wrap(js.Value, try env.createStringUtf8(@tagName(reason))),
@@ -647,7 +647,7 @@ pub fn parentNode(self: *ForkChoice, block: js.Number) !?js.Number {
 
 /// Spec `get_ancestor` on node ids.
 pub fn getAncestor(self: *ForkChoice, node: js.Number, slot: js.Number) !js.Number {
-    return nodeNumber(self.inner.store.getAncestor(try self.nodeArg(node), try slot.toU64Exact()));
+    return nodeNumber(self.inner.store.getAncestor(try self.nodeArg(node), try slot.toSafeInteger()));
 }
 
 /// Whether the block descends from, or is, the store's finalized block.
@@ -681,7 +681,7 @@ pub fn shouldExtendPayload(self: *ForkChoice, block: js.Number) !js.Boolean {
 pub fn shouldBuildOnFull(self: *ForkChoice, head: js.Number, slot: js.Number) !js.Boolean {
     const node = try self.nodeArg(head);
     if (node.payload_status == .pending) return error.PendingHeadNode;
-    return js.Boolean.from(self.inner.store.shouldBuildOnFull(node, try slot.toU64Exact()));
+    return js.Boolean.from(self.inner.store.shouldBuildOnFull(node, try slot.toSafeInteger()));
 }
 
 /// Every validator's latest message: its slot (`NaN` for none) and the node id it

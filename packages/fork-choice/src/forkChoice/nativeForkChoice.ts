@@ -947,8 +947,9 @@ export class NativeForkChoice implements IForkChoice {
     this.refreshExecutionStatuses();
   }
 
-  validateLatestHash(execResponse: LVHExecResponse): void {
+  validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean}): boolean {
     this.mutated();
+    const strict = opts?.strict ?? true;
     try {
       if (execResponse.executionStatus === ExecutionStatus.Valid) {
         this.store.onPayloadValid(fromHex(execResponse.latestValidExecHash));
@@ -961,32 +962,40 @@ export class NativeForkChoice implements IForkChoice {
       }
     } catch (e) {
       const code = nativeErrorCode(e);
-      // The engine contradicting a verdict it already gave is a consensus failure
-      if (code === "PayloadInvalidToValid" || code === "PayloadValidToInvalid") {
+      // The engine contradicting a verdict it already gave is a consensus failure, unless the verdict is a
+      // forkchoiceUpdated reply, which is applied leniently: one wrong reply must not shut the node down
+      if (strict && (code === "PayloadInvalidToValid" || code === "PayloadValidToInvalid")) {
         this.irrecoverableError = e as Error;
       }
-      return;
+      return false;
     }
-    this.refreshExecutionStatuses();
+    return this.refreshExecutionStatuses();
   }
 
-  /** Brings every node's `executionStatus` in line with the store, which derives it per node */
-  private refreshExecutionStatuses(): void {
+  /**
+   * Brings every node's `executionStatus` in line with the store, which derives it per node.
+   * Returns whether any status changed.
+   */
+  private refreshExecutionStatuses(): boolean {
     let statuses: Uint8Array;
     try {
       statuses = this.store.executionStatuses();
     } catch (e) {
       // The justified block stands on an invalidated payload: there is no head to compute
       this.irrecoverableError = e as Error;
-      return;
+      return false;
     }
+    let changed = false;
     for (let id = 0; id < this.nodes.length; id++) {
       const node = this.nodes[id];
       if (node === undefined || node.executionPayloadBlockHash === null) continue;
       const status = EXECUTION_STATUS_FROM_NATIVE[statuses[id]];
       // A node past the merge with no payload left to judge below it stands on validated ground
-      node.executionStatus = status === ExecutionStatus.PreMerge ? ExecutionStatus.Valid : status;
+      const executionStatus = status === ExecutionStatus.PreMerge ? ExecutionStatus.Valid : status;
+      if (node.executionStatus !== executionStatus) changed = true;
+      node.executionStatus = executionStatus;
     }
+    return changed;
   }
 
   prune(finalizedRoot: RootHex): ProtoBlock[] {
@@ -1634,6 +1643,11 @@ export class NativeForkChoice implements IForkChoice {
         return new ForkChoiceError({
           code: ForkChoiceErrorCode.INVALID_BLOCK,
           err: {code: InvalidBlockCode.UNKNOWN_PARENT, root: parentRootHex, hash: parentHashHex},
+        });
+      case "ParentPayloadInvalid":
+        return new ForkChoiceError({
+          code: ForkChoiceErrorCode.INVALID_BLOCK,
+          err: {code: InvalidBlockCode.PARENT_EXECUTION_INVALID, root: parentRootHex, hash: parentHashHex},
         });
       case "FutureBlock":
         return new ForkChoiceError({
