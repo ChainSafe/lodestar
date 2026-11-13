@@ -104,7 +104,6 @@ export class ArchiveStore {
 
   async init(): Promise<void> {
     if (this.opts.pruneHistory) {
-      // prune ALL stale data before starting
       this.logger.info("Pruning historical data");
       const {stateCutoffSlot} = await callFnWhenAwait(
         pruneHistory(
@@ -115,7 +114,8 @@ export class ArchiveStore {
           this.opts.anchorState.finalizedCheckpoint.epoch,
           this.chain.clock.currentEpoch,
           this.statePruneFromSlot,
-          this.advanceEarliestAvailableSlot
+          this.advanceEarliestAvailableSlot,
+          MAX_PRUNE_BLOCK_SLOTS_PER_RUN
         ),
         () => this.logger.info("Still pruning historical data, please wait..."),
         30_000,
