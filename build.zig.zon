@@ -233,6 +233,7 @@
         },
         .execution_block_hash = .{
             .root_source_file = "src/execution_block_hash/root.zig",
+            .imports = .{.config},
         },
         .state_transition = .{
             .root_source_file = "src/state_transition/root.zig",

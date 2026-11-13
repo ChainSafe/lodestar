@@ -9,28 +9,16 @@
 //! Nothing here allocates. Transactions are hashed in place.
 
 const std = @import("std");
+const ForkSeq = @import("config").ForkSeq;
 const assert = std.debug.assert;
 const Keccak256 = std.crypto.hash.sha3.Keccak256;
 const Sha256 = std.crypto.hash.sha2.Sha256;
 
 pub const Hash = [32]u8;
 
-/// Discriminants are the consensus fork sequence numbers.
-pub const Fork = enum(u8) {
-    bellatrix = 2,
-    capella = 3,
-    deneb = 4,
-    electra = 5,
-    fulu = 6,
-    gloas = 7,
-    heze = 8,
-
-    fn gte(self: Fork, other: Fork) bool {
-        return @intFromEnum(self) >= @intFromEnum(other);
-    }
-};
-
 pub const Error = error{
+    /// Forks before bellatrix have no execution payload.
+    InvalidFork,
     InvalidPayload,
     InvalidTransactions,
     /// An empty transaction is a deletion in the transactions trie, so it
@@ -77,8 +65,9 @@ const withdrawal_ssz_bytes = 44;
 const withdrawal_rlp_bytes_max = 1 + 3 * 9 + 21;
 const header_rlp_bytes_max = 1024;
 
-fn payloadFixedBytes(fork: Fork) usize {
+fn payloadFixedBytes(fork: ForkSeq) Error!usize {
     return switch (fork) {
+        .phase0, .altair => error.InvalidFork,
         .bellatrix => 508,
         .capella => 512,
         .deneb, .electra, .fulu => 528,
@@ -91,12 +80,12 @@ fn payloadFixedBytes(fork: Fork) usize {
 /// `parent_beacon_block_root` is required from deneb. `execution_requests`,
 /// the SSZ-serialized `ExecutionRequests` of `fork`, is required from electra.
 pub fn computeBlockHash(
-    fork: Fork,
+    fork: ForkSeq,
     payload: []const u8,
     parent_beacon_block_root: ?*const Hash,
     execution_requests: ?[]const u8,
 ) Error!Hash {
-    const fixed_bytes = payloadFixedBytes(fork);
+    const fixed_bytes = try payloadFixedBytes(fork);
     if (payload.len < fixed_bytes) return error.InvalidPayload;
 
     // Variable fields in serialization order, each ending where the next begins
@@ -198,7 +187,7 @@ pub fn computeTransactionsRoot(transactions: []const u8) Error!Hash {
 ///
 /// The lists have fixed-size elements, so each one's SSZ serialization is
 /// already its `requests_data`, and the list's position is its request type.
-fn computeRequestsHash(fork: Fork, requests: []const u8) Error!Hash {
+fn computeRequestsHash(fork: ForkSeq, requests: []const u8) Error!Hash {
     const lists_len: usize = if (fork.gte(.gloas)) 5 else 3;
     const fixed_bytes = lists_len * 4;
     if (requests.len < fixed_bytes) return error.InvalidExecutionRequests;

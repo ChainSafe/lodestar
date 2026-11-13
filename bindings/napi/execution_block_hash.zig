@@ -3,6 +3,7 @@
 
 const std = @import("std");
 const js = @import("zapi:zapi").js;
+const ForkSeq = @import("config").ForkSeq;
 const block_hash = @import("execution_block_hash");
 
 /// `parent_beacon_block_root` is required from deneb, `execution_requests` from electra.
@@ -12,7 +13,7 @@ pub fn computeExecutionBlockHash(
     parent_beacon_block_root: ?js.Uint8Array,
     execution_requests: ?js.Uint8Array,
 ) !js.Uint8Array {
-    const fork = std.enums.fromInt(block_hash.Fork, try fork_seq.toU32Exact()) orelse return error.InvalidFork;
+    const fork = std.enums.fromInt(ForkSeq, try fork_seq.toU32Exact()) orelse return error.InvalidFork;
     const root: ?*const block_hash.Hash = if (parent_beacon_block_root) |array| blk: {
         const slice = try array.toSlice();
         if (slice.len != 32) return error.InvalidParentBeaconBlockRoot;
