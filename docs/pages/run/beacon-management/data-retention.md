@@ -60,6 +60,6 @@ There is really only one flag that is needed to manage the data for Lodestar, [`
 
 ### Pruning history
 
-For validators seeking to store the least amount of data possible, and store no historical data, use [`--chain.pruneHistory`](./beacon-cli#--chainprunehistory). This flag will configure the beacon node to continually prune all old blocks and execution payload envelopes (older than `config.MIN_EPOCHS_FOR_BLOCK_REQUESTS`) and all prior finalized states.
+By default the beacon node continually prunes all old blocks and execution payload envelopes (older than `config.MIN_EPOCHS_FOR_BLOCK_REQUESTS`) and all prior finalized states. To retain historical data, set [`--chain.pruneHistory=false`](./beacon-cli#--chainprunehistory). Pruning is also disabled when `--serveHistoricalState` is set, unless `--chain.pruneHistory` is passed explicitly.
 
-**Note:** The initial pruning process can be slow on first startup with an existing large database.
+**Note:** The initial pruning process can be slow on first startup with an existing large database. Pruned data cannot be recovered without resyncing.
