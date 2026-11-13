@@ -76,7 +76,7 @@ fn chainConfigU64(value: napi.Value) !u64 {
     const number: js.Number = .{ .val = value };
     // Lodestar uses Infinity for disabled fork epochs.
     if (std.math.isPositiveInf(try number.toF64())) return std.math.maxInt(u64);
-    return number.toU64Exact() catch |err| switch (err) {
+    return number.toSafeInteger() catch |err| switch (err) {
         error.InvalidUnsignedInteger => error.InvalidChainConfigFieldValue,
         else => err,
     };
