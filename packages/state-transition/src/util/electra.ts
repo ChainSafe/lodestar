@@ -56,10 +56,6 @@ export function queueExcessActiveBalance(
   }
 }
 
-export function isPubkeyKnown(state: CachedBeaconStateElectra | CachedBeaconStateGloas, pubkey: Uint8Array): boolean {
-  return isValidatorKnown(state, state.epochCtx.getValidatorIndex(pubkey, state));
-}
-
 export function isValidatorKnown(
   state: CachedBeaconStateElectra | CachedBeaconStateGloas,
   index: ValidatorIndex | null

@@ -164,7 +164,7 @@ function computeTotalAttestationsRewardsAltair(
   const {flags} = transitionCache;
   const {epochCtx} = state;
   const validatorIndices = validatorIds
-    .map((id) => (typeof id === "number" ? id : getValidatorIndex(state, fromHex(id), pubkeyCache)))
+    .map((id) => (typeof id === "number" ? id : getValidatorIndex(pubkeyCache, state, fromHex(id))))
     .filter((index) => index !== undefined); // Validator indices to include in the result
 
   const inactivityPenaltyQuotient =

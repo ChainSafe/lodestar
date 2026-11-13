@@ -157,6 +157,8 @@ export async function importBlock(
     throw e;
   }
 
+  this.promoteFinalizedPubkeys(postState);
+
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);
@@ -316,8 +318,6 @@ export async function importBlock(
   const oldHead = this.forkChoice.getHead();
   const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
-
-  this.updateFinalizedPubkeys();
 
   // Prune the gloas payload-envelope cache below the new head's parent so it stays bounded during
   // syncing. On a synced node, cache holds just 2 entries — head (parent for

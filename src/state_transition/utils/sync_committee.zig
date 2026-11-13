@@ -17,6 +17,8 @@ pub const SyncCommitteeInfo = struct {
     sync_committee: SyncCommittee,
 };
 
+/// `pubkey_cache` must hold every validator in `active_validator_indices`. A missing member
+/// returns `error.PubkeyNotFound`.
 pub fn getNextSyncCommittee(
     comptime fork: ForkSeq,
     allocator: Allocator,
@@ -30,12 +32,11 @@ pub fn getNextSyncCommittee(
     const indices = &out.indices;
     try getNextSyncCommitteeIndices(fork, allocator, state, active_validator_indices, effective_balance_increments, indices);
 
-    const validators = try state.validators();
     for (indices, &out.sync_committee.pubkeys) |index, *pubkey| {
-        pubkey.* = (try pubkey_cache.getPubkeyBytesForState(io, index, validators)) orelse return error.PubkeyNotFound;
+        pubkey.* = pubkey_cache.getPubkeyBytes(io, index) orelse return error.PubkeyNotFound;
     }
 
-    const aggregate_pubkey = pubkey_cache.aggregateForState(io, indices, validators) catch |err| switch (err) {
+    const aggregate_pubkey = pubkey_cache.aggregate(io, indices) catch |err| switch (err) {
         error.InvalidIndex => return error.PubkeyNotFound,
         else => return err,
     };

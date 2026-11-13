@@ -33,7 +33,7 @@ export function processWithdrawalRequest(
   }
 
   // bail out if validator is not in beacon state
-  const validatorIndex = epochCtx.getValidatorIndex(withdrawalRequest.validatorPubkey, state);
+  const validatorIndex = epochCtx.getValidatorIndex(state, withdrawalRequest.validatorPubkey);
   if (!isValidatorKnown(state, validatorIndex)) {
     return;
   }

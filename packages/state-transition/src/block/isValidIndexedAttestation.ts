@@ -1,9 +1,10 @@
 import {BeaconConfig} from "@lodestar/config";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {IndexedAttestation, IndexedAttestationBigint, Slot} from "@lodestar/types";
-import {PubkeyCacheState} from "../cache/pubkeyCache.js";
+import {PubkeyCacheState, getStateValidatorCount} from "../cache/pubkeyCache.js";
 import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
-import {verifySignatureSet} from "../util/index.js";
+import {resolveSignatureSet, verifySignatureSet} from "../util/index.js";
 
 /**
  * Check if `indexedAttestation` has sorted and unique indices and a valid aggregate signature.
@@ -11,17 +12,25 @@ import {verifySignatureSet} from "../util/index.js";
 export function isValidIndexedAttestation(
   config: BeaconConfig,
   stateSlot: Slot,
-  validatorsLen: number,
+  state: PubkeyCacheState,
   indexedAttestation: IndexedAttestation,
-  verifySignature: boolean,
-  state?: PubkeyCacheState
+  verifySignature: boolean
 ): boolean {
-  if (!isValidIndexedAttestationIndices(config, stateSlot, validatorsLen, indexedAttestation.attestingIndices)) {
+  if (
+    !isValidIndexedAttestationIndices(
+      config,
+      stateSlot,
+      getStateValidatorCount(state),
+      indexedAttestation.attestingIndices
+    )
+  ) {
     return false;
   }
 
   if (verifySignature) {
-    return verifySignatureSet(getIndexedAttestationSignatureSet(config, stateSlot, indexedAttestation), state);
+    return verifySignatureSet(
+      resolveSignatureSet(pubkeyCache, state, getIndexedAttestationSignatureSet(config, stateSlot, indexedAttestation))
+    );
   }
   return true;
 }
@@ -29,17 +38,29 @@ export function isValidIndexedAttestation(
 export function isValidIndexedAttestationBigint(
   config: BeaconConfig,
   stateSlot: Slot,
-  validatorsLen: number,
+  state: PubkeyCacheState,
   indexedAttestation: IndexedAttestationBigint,
-  verifySignature: boolean,
-  state?: PubkeyCacheState
+  verifySignature: boolean
 ): boolean {
-  if (!isValidIndexedAttestationIndices(config, stateSlot, validatorsLen, indexedAttestation.attestingIndices)) {
+  if (
+    !isValidIndexedAttestationIndices(
+      config,
+      stateSlot,
+      getStateValidatorCount(state),
+      indexedAttestation.attestingIndices
+    )
+  ) {
     return false;
   }
 
   if (verifySignature) {
-    return verifySignatureSet(getIndexedAttestationBigintSignatureSet(config, stateSlot, indexedAttestation), state);
+    return verifySignatureSet(
+      resolveSignatureSet(
+        pubkeyCache,
+        state,
+        getIndexedAttestationBigintSignatureSet(config, stateSlot, indexedAttestation)
+      )
+    );
   }
   return true;
 }

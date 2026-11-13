@@ -177,21 +177,16 @@ export async function verifyBlocksInEpoch(
             };
           })();
 
-    // batch all I/O operations to reduce overhead
-    const [
-      segmentExecStatus,
-      {blockDAStatuses, payloadDAStatuses, availableTime},
-      {verifySignaturesTime},
-      {postStates, proposerBalanceDeltas, verifyStateTime},
-    ] = await Promise.all([
-      verifyExecutionPayloadsPromise,
-
-      // data availability (fork-specific; see daAvailabilityPromise above)
-      daAvailabilityPromise,
-
-      // All signatures at once. Must be called before verifyBlocksStateTransitionOnly()
-      // so we hand the BLS job to the worker pool before the main thread
-      // is busy with the state transition.
+    const needsPostStates =
+      !opts.validSignatures &&
+      blocks.some((block) =>
+        block.message.body.attesterSlashings.some((slashing) =>
+          [slashing.attestation1, slashing.attestation2].some((attestation) =>
+            attestation.attestingIndices.some((index) => index >= preState0.validatorCount)
+          )
+        )
+      );
+    const verifySignatures = (postStates?: IBeaconStateView[]) =>
       verifyBlocksSignatures(
         this.config,
         this.bls,
@@ -200,25 +195,34 @@ export async function verifyBlocksInEpoch(
         preState0,
         blocks,
         indexedAttestationsByBlock,
-        opts
-      ),
+        opts,
+        postStates
+      );
+    // Submit ordinary BLS jobs before the main thread starts the state transition.
+    const signaturesPromise = needsPostStates ? undefined : verifySignatures();
+    const stateTransitionPromise = verifyBlocksStateTransitionOnly(
+      preState0,
+      blockInputs,
+      // hack availability for state transition eval as availability is separately determined
+      blocks.map(() => DataAvailabilityStatus.Available),
+      this.serializedCache,
+      this.logger,
+      this.metrics,
+      this.validatorMonitor,
+      abortController.signal,
+      opts
+    );
 
-      // Run state transition only
-      verifyBlocksStateTransitionOnly(
-        preState0,
-        blockInputs,
-        // hack availability for state transition eval as availability is separately determined
-        blocks.map(() => DataAvailabilityStatus.Available),
-        this.serializedCache,
-        this.logger,
-        this.metrics,
-        this.validatorMonitor,
-        abortController.signal,
-        opts
-      ),
-
-      // TODO GLOAS: can verify payload signatures in batch too
-      // maybe chain with the above verifyBlocksSignatures()
+    const [
+      segmentExecStatus,
+      {blockDAStatuses, payloadDAStatuses, availableTime},
+      {verifySignaturesTime},
+      {postStates, proposerBalanceDeltas, verifyStateTime},
+    ] = await Promise.all([
+      verifyExecutionPayloadsPromise,
+      daAvailabilityPromise,
+      signaturesPromise ?? stateTransitionPromise.then(({postStates}) => verifySignatures(postStates)),
+      stateTransitionPromise,
     ]);
 
     if (blockInputs.length === 1 && opts.seenTimestampSec !== undefined) {

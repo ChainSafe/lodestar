@@ -53,6 +53,8 @@ const inline_test_allowlist = [_][]const u8{
     "src/state_transition/load_state.zig",
     // Private helper: ComputeShuffledIndex.
     "src/state_transition/utils/committee_indices.zig",
+    // Private helpers: computeSyncCommitteeIndices, computeSyncCommitteeMap.
+    "src/state_transition/cache/sync_committee_cache.zig",
     // Private helpers: computeCommitteeCount, unshuffleList.
     "src/state_transition/utils/epoch_shuffling.zig",
 };

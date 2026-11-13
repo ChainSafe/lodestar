@@ -90,6 +90,21 @@ describe("cmds / beacon / pubkeysFile", () => {
     expect(pubkeyCache.size).toBe(0);
   });
 
+  it("discards an interior branch swap with equal counts and matching endpoints", () => {
+    const [anchor, keyA, keyB, keyC] = interopPubkeys(0, 4);
+    saveCacheWith([anchor, keyA, keyB, keyC], filepath);
+
+    loadWithAnchorPubkeys(filepath, [anchor, keyB, keyA, keyC]);
+
+    expect(pubkeyCache.size).toBe(0);
+    const validators = [anchor, keyB, keyA, keyC].map((pubkey) => ({...ssz.phase0.Validator.defaultValue(), pubkey}));
+    pubkeyCache.syncPubkeys(validators);
+    expect(pubkeyCache.getPubkeyBytes(1)).toEqual(keyB);
+    expect(pubkeyCache.getPubkeyBytes(2)).toEqual(keyA);
+    expect(pubkeyCache.getIndex(keyB)).toBe(1);
+    expect(pubkeyCache.getIndex(keyA)).toBe(2);
+  });
+
   it("leaves the cache empty when the file is missing", () => {
     loadWithAnchorPubkeys(filepath, interopPubkeys(0, 8));
 

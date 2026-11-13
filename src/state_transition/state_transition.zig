@@ -233,7 +233,6 @@ pub fn stateTransition(
         io,
         config,
         post_epoch_cache,
-        try post_state.validators(),
         signed_block,
     )) {
         return error.InvalidBlockSignature;

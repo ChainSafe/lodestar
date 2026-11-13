@@ -84,6 +84,41 @@ pub const max_capacity: usize = @min(
 const CandidateIndices = struct {
     first: u32,
     rest: std.ArrayList(u32) = .empty,
+
+    fn count(self: CandidateIndices) usize {
+        return self.rest.items.len + 1;
+    }
+
+    fn get(self: CandidateIndices, position: usize) u32 {
+        return if (position == 0) self.first else self.rest.items[position - 1];
+    }
+
+    fn contains(self: CandidateIndices, index: u32) bool {
+        return self.first == index or std.mem.indexOfScalar(u32, self.rest.items, index) != null;
+    }
+
+    fn add(self: *CandidateIndices, allocator: std.mem.Allocator, index: u32) !void {
+        if (!self.contains(index)) try self.rest.append(allocator, index);
+    }
+
+    fn retainFrom(self: *CandidateIndices, minimum: usize) usize {
+        var retained: usize = if (self.first >= minimum) 1 else 0;
+        for (self.rest.items) |index| {
+            if (index < minimum) continue;
+            if (retained == 0) {
+                self.first = index;
+            } else {
+                self.rest.items[retained - 1] = index;
+            }
+            retained += 1;
+        }
+        if (retained > 0) self.rest.shrinkRetainingCapacity(retained - 1);
+        return retained;
+    }
+
+    fn deinit(self: *CandidateIndices, allocator: std.mem.Allocator) void {
+        self.rest.deinit(allocator);
+    }
 };
 const CandidateMap = std.array_hash_map.Custom([48]u8, CandidateIndices, PubkeyHashContext, true);
 
@@ -129,10 +164,16 @@ pub const PubkeyCache = struct {
 
     /// The owner must exclude concurrent users before destroying the cache.
     pub fn deinit(self: *PubkeyCache) void {
-        for (self.candidates.values()) |*indices| indices.rest.deinit(self.allocator);
-        self.candidates.deinit(self.allocator);
+        self.deinitCandidates();
         self.entries.deinit(self.allocator);
         self.* = undefined;
+    }
+
+    /// The caller must exclude concurrent users or hold the exclusive lock.
+    pub fn deinitCandidates(self: *PubkeyCache) void {
+        for (self.candidates.values()) |*indices| indices.deinit(self.allocator);
+        self.candidates.deinit(self.allocator);
+        self.candidates = .empty;
     }
 
     pub fn hashContext(self: *const PubkeyCache) PubkeyHashContext {
@@ -159,8 +200,7 @@ pub const PubkeyCache = struct {
         try self.lock.lock(io);
         defer self.lock.unlock(io);
         self.entries.clearRetainingCapacity();
-        for (self.candidates.values()) |*indices| indices.rest.deinit(self.allocator);
-        self.candidates.clearRetainingCapacity();
+        self.deinitCandidates();
     }
 
     /// Startup-only: callers must exclude workers and states using a removed suffix.
@@ -181,11 +221,7 @@ pub const PubkeyCache = struct {
         if (!result.found_existing) {
             result.value_ptr.* = .{ .first = candidate };
         } else {
-            if (result.value_ptr.first == candidate) return;
-            for (result.value_ptr.rest.items) |existing| {
-                if (existing == candidate) return;
-            }
-            try result.value_ptr.rest.append(self.allocator, candidate);
+            try result.value_ptr.add(self.allocator, candidate);
         }
     }
 
@@ -194,9 +230,8 @@ pub const PubkeyCache = struct {
         self.lockShared(io);
         defer self.unlockShared(io);
         const indices = self.candidates.getContext(pubkey, self.hashContext()) orelse return allocator.alloc(u32, 0);
-        const result = try allocator.alloc(u32, indices.rest.items.len + 1);
-        result[0] = indices.first;
-        @memcpy(result[1..], indices.rest.items);
+        const result = try allocator.alloc(u32, indices.count());
+        for (result, 0..) |*index, position| index.* = indices.get(position);
         return result;
     }
 
@@ -207,28 +242,17 @@ pub const PubkeyCache = struct {
         var i: usize = 0;
         while (i < self.candidates.count()) {
             const indices = &self.candidates.values()[i];
-            var retained: usize = if (indices.first >= finalized_count) 1 else 0;
-            for (indices.rest.items) |index| {
-                if (index < finalized_count) continue;
-                if (retained == 0) {
-                    indices.first = index;
-                } else {
-                    indices.rest.items[retained - 1] = index;
-                }
-                retained += 1;
-            }
-            if (retained == 0) {
-                indices.rest.deinit(self.allocator);
+            if (indices.retainFrom(finalized_count) == 0) {
+                indices.deinit(self.allocator);
                 self.candidates.swapRemoveAt(i);
             } else {
-                indices.rest.shrinkRetainingCapacity(retained - 1);
                 i += 1;
             }
         }
     }
 
     /// The state must share the finalized prefix; canonical historical states may be shorter.
-    pub fn getForState(self: *const PubkeyCache, io: std.Io, pubkey: [48]u8, validators: anytype) !?u64 {
+    pub fn getValidatorIndex(self: *const PubkeyCache, io: std.Io, validators: anytype, pubkey: [48]u8) !?u64 {
         const validator_count = try validators.length();
         self.lockShared(io);
         defer self.unlockShared(io);
@@ -236,77 +260,24 @@ pub const PubkeyCache = struct {
             if (index < validator_count) return @intCast(index);
         }
         const indices = self.candidates.getContext(pubkey, self.hashContext()) orelse return null;
-        if (try candidateMatches(validators, validator_count, indices.first, pubkey)) return indices.first;
-        for (indices.rest.items) |index| {
-            if (try candidateMatches(validators, validator_count, index, pubkey)) return index;
+        for (0..indices.count()) |position| {
+            const index = indices.get(position);
+            if (index < validator_count and std.mem.eql(u8, &pubkey, &try statePubkeyBytes(validators, index))) return index;
         }
         return null;
     }
 
-    fn candidateMatches(validators: anytype, validator_count: usize, index: u32, pubkey: [48]u8) !bool {
-        if (index >= validator_count) return false;
-        var validator = try validators.getReadonly(index);
-        var state_pubkey: [48]u8 = undefined;
-        try validator.getValue(undefined, "pubkey", &state_pubkey);
-        return std.mem.eql(u8, &pubkey, &state_pubkey);
-    }
-
-    /// Indexed slashings can include inactive validators outside the finalized prefix.
-    pub fn getPubkeyForState(self: *const PubkeyCache, io: std.Io, index: u64, validators: anytype) !?bls.PublicKey {
-        if (index >= try validators.length()) return null;
-        if (self.getPubkey(io, index)) |pubkey| return pubkey;
-        var validator = try validators.getReadonly(@intCast(index));
-        var pubkey: [48]u8 = undefined;
-        try validator.getValue(undefined, "pubkey", &pubkey);
-        return try bls.PublicKey.uncompress(&pubkey);
-    }
-
-    pub fn getPubkeyBytesForState(self: *const PubkeyCache, io: std.Io, index: u64, validators: anytype) !?[48]u8 {
-        if (index >= try validators.length()) return null;
-        if (self.getPubkeyBytes(io, index)) |pubkey| return pubkey;
-        var validator = try validators.getReadonly(@intCast(index));
-        var pubkey: [48]u8 = undefined;
-        try validator.getValue(undefined, "pubkey", &pubkey);
-        return pubkey;
-    }
-
-    pub fn getPubkeysForState(self: *const PubkeyCache, io: std.Io, indices: []const u64, out: []bls.PublicKey, validators: anytype) !void {
-        if (indices.len != out.len) return error.InvalidLength;
-        const validator_count = try validators.length();
-        for (indices) |index| {
-            if (index >= validator_count) return error.InvalidIndex;
-        }
+    pub fn matchesValidators(self: *const PubkeyCache, io: std.Io, serialized_validators: []const u8) !bool {
+        const validator_size = types.phase0.Validator.fixed_size;
+        if (serialized_validators.len % validator_size != 0) return error.InvalidLength;
         self.lockShared(io);
         defer self.unlockShared(io);
-        for (indices, out) |index, *pubkey| {
-            if (index < self.entries.count()) {
-                pubkey.* = self.entries.values()[@intCast(index)];
-            } else {
-                var validator = try validators.getReadonly(@intCast(index));
-                var bytes: [48]u8 = undefined;
-                try validator.getValue(undefined, "pubkey", &bytes);
-                pubkey.* = try bls.PublicKey.uncompress(&bytes);
-            }
+        const count_ = @min(self.entries.count(), serialized_validators.len / validator_size);
+        for (self.entries.keys()[0..count_], 0..) |pubkey, index| {
+            const start = index * validator_size;
+            if (!std.mem.eql(u8, &pubkey, serialized_validators[start..][0..48])) return false;
         }
-    }
-
-    pub fn aggregateForState(self: *const PubkeyCache, io: std.Io, indices: []const u64, validators: anytype) !bls.PublicKey {
-        if (indices.len == 0) return error.InvalidLength;
-        const validator_count = try validators.length();
-        self.lockShared(io);
-        defer self.unlockShared(io);
-        var result: bls.AggregatePublicKey = undefined;
-        for (indices, 0..) |index, i| {
-            if (index >= validator_count) return error.InvalidIndex;
-            const pubkey = if (index < self.entries.count()) self.entries.values()[@intCast(index)] else blk: {
-                var validator = try validators.getReadonly(@intCast(index));
-                var bytes: [48]u8 = undefined;
-                try validator.getValue(undefined, "pubkey", &bytes);
-                break :blk try bls.PublicKey.uncompress(&bytes);
-            };
-            if (i == 0) result = pubkey.toAggregate() else result.add(&pubkey);
-        }
-        return result.toPublicKey();
+        return true;
     }
 
     pub fn count(self: *const PubkeyCache, io: std.Io) u32 {
@@ -376,26 +347,6 @@ pub const PubkeyCache = struct {
         }
         for (indices, out) |index, *pubkey| {
             pubkey.* = values[@intCast(index)];
-        }
-    }
-
-    /// Resolve a batch of compressed pubkeys to validator indices while
-    /// holding one shared lock.
-    pub fn getValidatorIndices(
-        self: *const PubkeyCache,
-        io: std.Io,
-        pubkeys: []const [48]u8,
-        out: []u64,
-    ) !void {
-        if (pubkeys.len != out.len) return error.InvalidLength;
-
-        self.lockShared(io);
-        defer self.unlockShared(io);
-
-        const context = self.hashContext();
-        for (pubkeys, out) |pubkey, *index| {
-            index.* = @intCast(self.entries.getIndexContext(pubkey, context) orelse
-                return error.PubkeyNotFound);
         }
     }
 
@@ -568,6 +519,13 @@ pub const PubkeyCache = struct {
         @constCast(&self.lock).unlockShared(io);
     }
 };
+
+pub fn statePubkeyBytes(validators: anytype, index: u64) ![48]u8 {
+    var validator = try validators.getReadonly(@intCast(index));
+    var pubkey: [48]u8 = undefined;
+    try validator.getValue(undefined, "pubkey", &pubkey);
+    return pubkey;
+}
 
 test {
     _ = @import("pubkey_cache_test.zig");

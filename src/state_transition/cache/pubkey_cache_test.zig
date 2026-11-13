@@ -244,27 +244,6 @@ test "batch lookups preserve order and validate inputs" {
         const compressed = affine.compress();
         try testing.expectEqualSlices(u8, &pubkeys[1], &compressed);
     }
-
-    const requested_pubkeys = [_][48]u8{ pubkeys[3], pubkeys[0], pubkeys[3] };
-    var validator_indices: [requested_pubkeys.len]u64 = undefined;
-    try cache.getValidatorIndices(testing.io, &requested_pubkeys, &validator_indices);
-    try testing.expectEqualSlices(u64, &.{ 3, 0, 3 }, &validator_indices);
-    try testing.expectError(
-        error.InvalidLength,
-        cache.getValidatorIndices(
-            testing.io,
-            &requested_pubkeys,
-            validator_indices[0..2],
-        ),
-    );
-    try testing.expectError(
-        error.PubkeyNotFound,
-        cache.getValidatorIndices(
-            testing.io,
-            &.{ pubkeys[0], pubkeys[4], pubkeys[1] },
-            &validator_indices,
-        ),
-    );
 }
 
 test "candidates are deduplicated without decoding and pruned by finalized index" {
@@ -328,17 +307,17 @@ test "state-aware candidates resolve conflicting branches and bound historical d
     try cache.addCandidate(testing.io, pubkeys[1], 1);
     try cache.addCandidate(testing.io, pubkeys[2], 2);
     try cache.addCandidate(testing.io, pubkeys[2], 1);
-    try testing.expectEqual(@as(?u64, 1), try cache.getForState(testing.io, pubkeys[1], side));
-    try testing.expectEqual(@as(?u64, 2), try cache.getForState(testing.io, pubkeys[2], side));
-    try testing.expectEqual(@as(?u64, null), try cache.getForState(testing.io, pubkeys[1], canonical));
-    try testing.expectEqual(@as(?u64, 1), try cache.getForState(testing.io, pubkeys[2], canonical));
+    try testing.expectEqual(@as(?u64, 1), try cache.getValidatorIndex(testing.io, side, pubkeys[1]));
+    try testing.expectEqual(@as(?u64, 2), try cache.getValidatorIndex(testing.io, side, pubkeys[2]));
+    try testing.expectEqual(@as(?u64, null), try cache.getValidatorIndex(testing.io, canonical, pubkeys[1]));
+    try testing.expectEqual(@as(?u64, 1), try cache.getValidatorIndex(testing.io, canonical, pubkeys[2]));
     try testing.expectEqual(@as(u32, 1), cache.count(testing.io));
     try cache.append(testing.io, pubkeys[2], 1);
     try cache.pruneCandidates(testing.io);
-    try testing.expectEqual(@as(?u64, 1), try cache.getForState(testing.io, pubkeys[2], canonical));
+    try testing.expectEqual(@as(?u64, 1), try cache.getValidatorIndex(testing.io, canonical, pubkeys[2]));
     var historical = try canonical.sliceTo(0);
     defer historical.deinit();
-    try testing.expectEqual(@as(?u64, null), try cache.getForState(testing.io, pubkeys[2], historical));
+    try testing.expectEqual(@as(?u64, null), try cache.getValidatorIndex(testing.io, historical, pubkeys[2]));
 }
 
 test "truncate removes both dense lookup directions and permits a different suffix" {
@@ -361,40 +340,26 @@ test "truncate removes both dense lookup directions and permits a different suff
     try testing.expectEqual(@as(u32, 0), cache.count(testing.io));
 }
 
-test "state-backed signatures and aggregates resolve validators beyond the finalized cache" {
-    const Node = @import("persistent_merkle_tree").Node;
-    const Validators = types.phase0.Validators;
-    var pool = try Node.Pool.init(.{ .page_allocator = testing.allocator, .allocator = testing.allocator, .pool_size = 4096 });
-    defer pool.deinit();
-    var pubkeys: [3]types.primitive.BLSPubkey.Type = undefined;
+test "matchesValidators checks the entire retained prefix" {
+    var pubkeys: [4]types.primitive.BLSPubkey.Type = undefined;
     try interop.interopPubkeysCached(pubkeys.len, &pubkeys);
-    var validators = try Validators.TreeView.fromValue(testing.allocator, &pool, &Validators.default_value);
-    defer validators.deinit();
     var cache = PubkeyCache.init(testing.allocator, testing.io);
     defer cache.deinit();
-    for (pubkeys) |pubkey| {
-        var validator = types.phase0.Validator.default_value;
-        validator.pubkey = pubkey;
-        try validators.pushValue(&validator);
+    const validator_size = types.phase0.Validator.fixed_size;
+    var bytes: [pubkeys.len * validator_size]u8 = @splat(0);
+    for (pubkeys, 0..) |pubkey, index| {
+        try cache.append(testing.io, pubkey, index);
+        @memcpy(bytes[index * validator_size ..][0..48], &pubkey);
     }
-    try cache.append(testing.io, pubkeys[0], 0);
-    const single = (try cache.getPubkeyForState(testing.io, 1, validators)).?.compress();
-    try testing.expectEqualSlices(u8, &pubkeys[1], &single);
-    try testing.expect((try cache.getPubkeyForState(testing.io, 3, validators)) == null);
-    var batch: [3]bls.PublicKey = undefined;
-    try cache.getPubkeysForState(testing.io, &.{ 0, 1, 2 }, &batch, validators);
-    for (batch, pubkeys) |key, expected| {
-        const compressed = key.compress();
-        try testing.expectEqualSlices(u8, &expected, &compressed);
-    }
-    var expected = batch[0].toAggregate();
-    for (batch[1..]) |key| expected.add(&key);
-    const actual = (try cache.aggregateForState(testing.io, &.{ 0, 1, 2 }, validators)).compress();
-    const compressed = expected.toPublicKey().compress();
-    try testing.expectEqualSlices(u8, &compressed, &actual);
-    try testing.expectEqual(@as(u32, 1), cache.count(testing.io));
-    try testing.expectError(error.InvalidIndex, cache.getPubkeysForState(testing.io, &.{ 0, 1, 3 }, &batch, validators));
-    try testing.expectError(error.InvalidLength, cache.aggregateForState(testing.io, &.{}, validators));
+    try testing.expect(try cache.matchesValidators(testing.io, &bytes));
+    @memcpy(bytes[validator_size..][0..48], &pubkeys[2]);
+    @memcpy(bytes[2 * validator_size ..][0..48], &pubkeys[1]);
+    try testing.expect(!try cache.matchesValidators(testing.io, &bytes));
+    try testing.expect(try cache.matchesValidators(testing.io, bytes[0..validator_size]));
+    try testing.expect(try cache.matchesValidators(testing.io, &.{}));
+    try testing.expectError(error.InvalidLength, cache.matchesValidators(testing.io, bytes[0 .. bytes.len - 1]));
+    try cache.truncate(testing.io, 1);
+    try testing.expect(try cache.matchesValidators(testing.io, &bytes));
 }
 
 test "candidate allocation failures release all memory" {

@@ -71,7 +71,7 @@ export function applyDeposit(
   const {config, epochCtx} = state;
   const {pubkey, withdrawalCredentials, amount, signature} = deposit;
 
-  const cachedIndex = epochCtx.getValidatorIndex(pubkey, state);
+  const cachedIndex = epochCtx.getValidatorIndex(state, pubkey);
   const isNewValidator = cachedIndex === null;
 
   if (fork < ForkSeq.electra) {
@@ -139,7 +139,7 @@ export function addValidatorToRegistry(
   epochCtx.effectiveBalanceIncrementsSet(validatorIndex, effectiveBalance);
 
   // now that there is a new validator, update the epoch context with the new pubkey
-  epochCtx.addPubkey(validatorIndex, pubkey);
+  epochCtx.addPubkeyCandidate(validatorIndex, pubkey);
 
   // Only after altair:
   if (fork >= ForkSeq.altair) {

@@ -1,7 +1,9 @@
 import {BeaconConfig} from "@lodestar/config";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkSeq} from "@lodestar/params";
 import {IndexedAttestation, SignedBeaconBlock, altair, capella, gloas} from "@lodestar/types";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
+import {PubkeyCacheState} from "../cache/pubkeyCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {IBeaconStateView, IBeaconStateViewGloas} from "../stateView/interface.js";
 import {ISignatureSet, createAggregateSignatureSetFromComponents, resolveSignatureSet} from "../util/index.js";
@@ -40,6 +42,7 @@ export function getBlockSignatureSets(
   opts?: {
     /** Useful since block proposer signature is verified beforehand on gossip validation */
     skipProposerSignature?: boolean;
+    pubkeyState?: PubkeyCacheState;
   }
 ): ISignatureSet[] {
   // fork based validations
@@ -96,5 +99,7 @@ export function getBlockSignatureSets(
     }
   }
 
-  return signatureSets.map((signatureSet) => resolveSignatureSet(signatureSet, state));
+  return signatureSets.map((signatureSet) =>
+    resolveSignatureSet(pubkeyCache, opts?.pubkeyState ?? state, signatureSet)
+  );
 }

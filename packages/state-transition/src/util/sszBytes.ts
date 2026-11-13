@@ -119,6 +119,11 @@ export function getValidatorCountFromStateBytes(config: ChainForkConfig, stateBy
   return range === null ? null : (range.end - range.start) / VALIDATOR_BYTES_SIZE;
 }
 
+export function getValidatorsBytesFromStateBytes(config: ChainForkConfig, stateBytes: Uint8Array): Uint8Array | null {
+  const range = getValidatorsRangeFromStateBytes(stateBytes, getStateTypeFromBytes(config, stateBytes));
+  return range === null ? null : stateBytes.subarray(range.start, range.end);
+}
+
 /** Returns a view into `stateBytes`, or null if the index is not in the registry. */
 export function getValidatorPubkeyFromStateBytes(
   config: ChainForkConfig,

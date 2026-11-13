@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {type PubkeyCache} from "@lodestar/native/pubkeys";
-import {getValidatorPubkeyFromStateBytes} from "@lodestar/state-transition";
-import {Logger, byteArrayEquals} from "@lodestar/utils";
+import {getValidatorsBytesFromStateBytes} from "@lodestar/state-transition";
+import {Logger} from "@lodestar/utils";
 
 /**
  * Best effort load of a trusted pubkey cache saved by a previous run, to skip decompressing every validator
@@ -24,16 +24,11 @@ export function loadPubkeysFile(
     return;
   }
 
-  // load() only checks framing and checksum, so reject a file from another chain. Checking the endpoints
-  // suffices since the registry is append-only.
-  const overlap = Math.min(pubkeyCache.size, anchorValidatorCount);
-  for (const index of overlap > 0 ? [0, overlap - 1] : []) {
-    const anchorPubkey = getValidatorPubkeyFromStateBytes(config, anchorStateBytes, index);
-    if (anchorPubkey === null || !byteArrayEquals(pubkeyCache.getPubkeyBytesOrThrow(index), anchorPubkey)) {
-      pubkeyCache.reset();
-      logger.debug("Discarded pubkeys file not matching anchor state", {filepath, index});
-      return;
-    }
+  const validatorsBytes = getValidatorsBytesFromStateBytes(config, anchorStateBytes);
+  if (validatorsBytes === null || !pubkeyCache.matchesValidators(validatorsBytes)) {
+    pubkeyCache.reset();
+    logger.debug("Discarded pubkeys file not matching anchor state", {filepath});
+    return;
   }
 
   if (pubkeyCache.size > anchorValidatorCount) {

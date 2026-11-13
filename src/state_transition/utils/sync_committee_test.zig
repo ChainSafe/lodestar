@@ -50,7 +50,7 @@ test "getNextSyncCommittee returns the members' pubkeys and their aggregate" {
     );
 }
 
-test "getNextSyncCommittee reads unfinalized members from state without promoting them" {
+test "getNextSyncCommittee fails when a member is missing from the pubkey cache" {
     const allocator = std.testing.allocator;
 
     var pool = try Node.Pool.init(.{
@@ -68,7 +68,7 @@ test "getNextSyncCommittee reads unfinalized members from state without promotin
 
     const epoch_cache = test_state.cached_state.epoch_cache;
     var info: sync_committee.SyncCommitteeInfo = undefined;
-    try sync_committee.getNextSyncCommittee(
+    try std.testing.expectError(error.PubkeyNotFound, sync_committee.getNextSyncCommittee(
         .electra,
         allocator,
         std.testing.io,
@@ -77,13 +77,5 @@ test "getNextSyncCommittee reads unfinalized members from state without promotin
         epoch_cache.getNextEpochShuffling().active_indices,
         epoch_cache.getEffectiveBalanceIncrements(),
         &info,
-    );
-    try std.testing.expectEqual(@as(u32, 0), empty_cache.count(std.testing.io));
-    var validators = try test_state.cached_state.state.validators();
-    for (info.indices, info.sync_committee.pubkeys) |index, actual| {
-        var validator = try validators.getReadonly(index);
-        var expected: [48]u8 = undefined;
-        try validator.getValue(undefined, "pubkey", &expected);
-        try std.testing.expectEqualSlices(u8, &expected, &actual);
-    }
+    ));
 }

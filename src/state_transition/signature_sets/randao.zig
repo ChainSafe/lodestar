@@ -14,12 +14,11 @@ pub fn verifyRandaoSignature(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
-    validators: anytype,
     randao_reveal: *const [96]u8,
     slot: Slot,
     proposer_idx: u64,
 ) !bool {
-    const signature_set = try randaoRevealSignatureSet(io, config, epoch_cache, validators, randao_reveal, slot, proposer_idx);
+    const signature_set = try randaoRevealSignatureSet(io, config, epoch_cache, randao_reveal, slot, proposer_idx);
     return verifySingleSignatureSet(&signature_set);
 }
 
@@ -27,7 +26,6 @@ pub fn randaoRevealSignatureSet(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
-    validators: anytype,
     randao_reveal: *const [96]u8,
     slot: Slot,
     proposer_idx: u64,
@@ -38,7 +36,7 @@ pub fn randaoRevealSignatureSet(
     var signing_root: Root = undefined;
     try computeSigningRoot(types.primitive.Epoch, &epoch, domain, &signing_root);
     return .{
-        .pubkey = (try epoch_cache.pubkey_cache.getPubkeyForState(io, proposer_idx, validators)) orelse
+        .pubkey = epoch_cache.pubkey_cache.getPubkey(io, proposer_idx) orelse
             return error.PubkeyNotFound,
         .signing_root = signing_root,
         .signature = randao_reveal.*,

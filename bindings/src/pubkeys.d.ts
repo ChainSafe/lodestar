@@ -45,6 +45,8 @@ export interface PubkeyCache {
    * This method decodes public keys but does not validate.
    */
   syncPubkeys(validators: {pubkey: Uint8Array}[]): void;
+  /** Compare every overlapping key against the serialized validator registry, excluding any non-overlapping suffix. */
+  matchesValidators(serializedValidators: Uint8Array): boolean;
   /** Current number of cached entries. */
   readonly size: number;
   /** Number of entries the current native allocation can hold without growing. */

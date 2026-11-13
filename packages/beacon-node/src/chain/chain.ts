@@ -235,8 +235,7 @@ export class BeaconChain implements IBeaconChain {
 
   // Global state caches
   readonly pubkeyCache: PubkeyCache;
-  private pubkeyCacheFinalizedEpoch: Epoch = 0;
-  private pubkeyCachePromotion: Promise<void> | null = null;
+  pubkeyCacheFinalizedEpoch: Epoch = 0;
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
@@ -665,6 +664,15 @@ export class BeaconChain implements IBeaconChain {
       throw Error(`headState does not exist for head root=${head.blockRoot} slot=${head.slot}`);
     }
     return headState;
+  }
+
+  /** The state must come from an accepted block or processing its empty slots. */
+  promoteFinalizedPubkeys(state: IBeaconStateView): void {
+    const finalizedEpoch = state.finalizedCheckpoint.epoch;
+    if (finalizedEpoch > this.pubkeyCacheFinalizedEpoch) {
+      promoteFinalizedPubkeys(this.pubkeyCache, state, finalizedEpoch);
+      this.pubkeyCacheFinalizedEpoch = finalizedEpoch;
+    }
   }
 
   async getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<IBeaconStateView> {
@@ -1404,33 +1412,6 @@ export class BeaconChain implements IBeaconChain {
     };
   }
 
-  updateFinalizedPubkeys(): void {
-    const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
-    if (finalizedEpoch <= this.pubkeyCacheFinalizedEpoch || this.pubkeyCachePromotion !== null) {
-      return;
-    }
-    const head = this.forkChoice.getHead();
-    const headState = this.regen.getClosestHeadState(head);
-    if (headState !== null) {
-      promoteFinalizedPubkeys(this.pubkeyCache, headState, finalizedEpoch);
-      this.pubkeyCacheFinalizedEpoch = finalizedEpoch;
-      return;
-    }
-
-    this.pubkeyCachePromotion = this.regen
-      .getState(head.stateRoot, RegenCaller.onForkChoiceFinalized)
-      .then((state) => {
-        promoteFinalizedPubkeys(this.pubkeyCache, state, finalizedEpoch);
-        this.pubkeyCacheFinalizedEpoch = finalizedEpoch;
-      })
-      .catch((e: Error) => {
-        this.logger.error("Error promoting finalized validator pubkeys", {epoch: finalizedEpoch}, e);
-      })
-      .finally(() => {
-        this.pubkeyCachePromotion = null;
-      });
-  }
-
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
@@ -1894,7 +1875,6 @@ export class BeaconChain implements IBeaconChain {
     // updateTime() recomputes the head on epoch-boundary checkpoint pull-up and under fast confirmation
     const prevHead = this.forkChoice.getHead();
     this.forkChoice.updateTime(slot);
-    this.updateFinalizedPubkeys();
     this.emitHeadEvents(prevHead, this.forkChoice.getHead());
     this.metrics?.clockSlot.set(slot);
 
@@ -2000,6 +1980,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private onCheckpoint(this: BeaconChain, _checkpoint: phase0.Checkpoint, state: IBeaconStateView): void {
+    this.promoteFinalizedPubkeys(state);
     // Defer to not block other checkpoint event handlers, which can cause lightclient update delays
     callInNextEventLoop(() => {
       this.shufflingCache.processState(state);

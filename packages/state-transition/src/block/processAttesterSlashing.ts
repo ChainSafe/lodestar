@@ -20,14 +20,7 @@ export function processAttesterSlashing(
   verifySignatures = true
 ): void {
   const {epochCtx} = state;
-  assertValidAttesterSlashing(
-    state.config,
-    state.slot,
-    state.validators.length,
-    attesterSlashing,
-    verifySignatures,
-    state
-  );
+  assertValidAttesterSlashing(state.config, state.slot, state, attesterSlashing, verifySignatures);
 
   const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
 
@@ -49,10 +42,9 @@ export function processAttesterSlashing(
 export function assertValidAttesterSlashing(
   config: BeaconConfig,
   stateSlot: Slot,
-  validatorsLen: number,
+  state: PubkeyCacheState,
   attesterSlashing: AttesterSlashing,
-  verifySignatures = true,
-  state?: PubkeyCacheState
+  verifySignatures = true
 ): void {
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
@@ -65,7 +57,7 @@ export function assertValidAttesterSlashing(
   // be higher than the clock and the slashing would still be valid. Same applies to attestation data index, which
   // can be any arbitrary value. Must use bigint variants to hash correctly to all possible values
   for (const [i, attestation] of [attestation1, attestation2].entries()) {
-    if (!isValidIndexedAttestationBigint(config, stateSlot, validatorsLen, attestation, verifySignatures, state)) {
+    if (!isValidIndexedAttestationBigint(config, stateSlot, state, attestation, verifySignatures)) {
       throw new Error(`AttesterSlashing attestation${i} is invalid`);
     }
   }

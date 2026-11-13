@@ -224,6 +224,11 @@ pub fn truncate(size_: js.Number) !void {
     try state.cache.truncate(js.io(), try size_.toU32Exact());
 }
 
+pub fn matchesValidators(serialized_validators: js.Uint8Array) !js.Boolean {
+    if (!state.initialized) return error.PubkeyIndexNotInitialized;
+    return js.Boolean.from(try state.cache.matchesValidators(js.io(), try serialized_validators.toSlice()));
+}
+
 /// JS: pubkeys.syncPubkeys(validators)
 pub fn syncPubkeys(validators: js.Array) !void {
     if (!state.initialized) return error.PubkeyIndexNotInitialized;

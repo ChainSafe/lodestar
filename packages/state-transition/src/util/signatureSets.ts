@@ -1,8 +1,8 @@
 import {BLS_VERIFIER_SET_TYPE, type BlsSignatureSet, verifySignatureSets} from "@lodestar/native/bls-verifier";
 import {PublicKey, aggregatePublicKeys} from "@lodestar/native/blst";
-import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {Root} from "@lodestar/types";
-import {PubkeyCacheState, getValidatorPubkey} from "../cache/pubkeyCache.js";
+import {PubkeyCacheState, getValidatorPubkeyBytes} from "../cache/pubkeyCache.js";
 
 export enum SignatureSetType {
   single = "single",
@@ -89,12 +89,15 @@ export function toBlsSignatureSet(signatureSet: ISignatureSet): BlsSignatureSet 
   }
 }
 
-/** Indexed slashings can include inactive validators outside the finalized cache. */
-export function resolveSignatureSet(signatureSet: ISignatureSet, state: PubkeyCacheState): ISignatureSet {
+export function resolveSignatureSet(
+  pubkeyCache: PubkeyCache,
+  state: PubkeyCacheState,
+  signatureSet: ISignatureSet
+): ISignatureSet {
   const size = pubkeyCache.size;
   if (signatureSet.type === SignatureSetType.indexed && signatureSet.index >= size) {
     return createSingleSignatureSetFromComponents(
-      getValidatorPubkey(state, signatureSet.index, pubkeyCache),
+      getValidatorPubkeyBytes(pubkeyCache, state, signatureSet.index),
       signatureSet.signingRoot,
       signatureSet.signature
     );
@@ -106,7 +109,7 @@ export function resolveSignatureSet(signatureSet: ISignatureSet, state: PubkeyCa
       if (index < size) {
         finalizedIndices.push(index);
       } else {
-        pubkeys.push(PublicKey.fromBytes(getValidatorPubkey(state, index, pubkeyCache)));
+        pubkeys.push(PublicKey.fromBytes(getValidatorPubkeyBytes(pubkeyCache, state, index)));
       }
     }
     if (finalizedIndices.length > 0) {
@@ -121,10 +124,7 @@ export function resolveSignatureSet(signatureSet: ISignatureSet, state: PubkeyCa
   return signatureSet;
 }
 
-export function verifySignatureSet(signatureSet: ISignatureSet, state?: PubkeyCacheState): boolean {
-  if (state !== undefined) {
-    signatureSet = resolveSignatureSet(signatureSet, state);
-  }
+export function verifySignatureSet(signatureSet: ISignatureSet): boolean {
   return verifySignatureSets([toBlsSignatureSet(signatureSet)]);
 }
 

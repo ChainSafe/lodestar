@@ -257,9 +257,7 @@ pub fn install(cache: *PubkeyCache, io: std.Io, staged: *PubkeyCache) !void {
     std.mem.swap(@TypeOf(cache.entries), &cache.entries, &staged.entries);
     std.mem.swap(@TypeOf(cache.hash_key), &cache.hash_key, &staged.hash_key);
     std.mem.swap(@TypeOf(cache.candidates), &cache.candidates, &staged.candidates);
-    for (staged.candidates.values()) |*indices| indices.rest.deinit(staged.allocator);
-    staged.candidates.deinit(staged.allocator);
-    staged.candidates = .empty;
+    staged.deinitCandidates();
     staged.entries.deinit(staged.allocator);
     staged.entries = .empty;
 }

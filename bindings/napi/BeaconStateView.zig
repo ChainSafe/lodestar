@@ -6,6 +6,7 @@ const c = @import("config");
 const fork_types = @import("fork_types");
 const st = @import("state_transition");
 const CachedBeaconState = st.CachedBeaconState;
+const PubkeyMode = enum { trusted, candidates };
 const AnyBeaconState = fork_types.AnyBeaconState;
 const AnyExecutionPayloadHeader = fork_types.AnyExecutionPayloadHeader;
 const AnySignedBeaconBlock = fork_types.AnySignedBeaconBlock;
@@ -118,6 +119,7 @@ fn initCachedState(
     state: *AnyBeaconState,
     beacon_config: *const c.BeaconConfig,
     deposit_cache: ?*st.BuilderDepositSignatureCacheRc,
+    pubkey_mode: PubkeyMode,
 ) !void {
     try cached_state.init(
         allocator,
@@ -128,7 +130,7 @@ fn initCachedState(
             .pubkey_cache = &pubkey.state.cache,
             .builder_deposit_signature_cache = deposit_cache,
         },
-        null,
+        .{ .skip_sync_committee_cache = state.forkSeq().lt(.altair), .skip_sync_pubkeys = pubkey_mode == .candidates },
     );
 }
 
@@ -142,8 +144,18 @@ fn stateBytesFork(beacon_config: *const c.BeaconConfig, bytes: []const u8) !c.Fo
 // Class Methods
 // -------------------------
 /// Requires state bytes with trusted provenance; SSZ decoding does not authenticate them.
-/// Set `sync_pubkeys` only for the trusted startup anchor.
-pub fn createFromBytes(bytes: js.Uint8Array, config: *const BeaconConfig, sync_pubkeys: ?js.Boolean) !BeaconStateView {
+/// Set `pubkeyMode` to `trusted` only for the startup anchor or trusted fixtures.
+pub fn createFromBytes(bytes: js.Uint8Array, config: *const BeaconConfig, options: ?js.Value) !BeaconStateView {
+    var pubkey_mode: PubkeyMode = .candidates;
+    if (options) |value| {
+        const raw = value.toValue();
+        if (try raw.typeof() != .object) return error.InvalidStateOptions;
+        if (try raw.hasNamedProperty("pubkeyMode")) {
+            var buf: [16]u8 = undefined;
+            const mode = try (try raw.getNamedProperty("pubkeyMode")).getValueStringUtf8(&buf);
+            pubkey_mode = std.meta.stringToEnum(PubkeyMode, mode) orelse return error.InvalidPubkeyMode;
+        }
+    }
     const config_rc = config.config_rc;
     const byte_slice = try bytes.toSlice();
     const fork_seq = try stateBytesFork(&config_rc.instance.config, byte_slice);
@@ -161,15 +173,7 @@ pub fn createFromBytes(bytes: js.Uint8Array, config: *const BeaconConfig, sync_p
     errdefer allocator.destroy(cached_state);
 
     const io = js.io();
-    if (sync_pubkeys) |trusted_anchor| {
-        if (trusted_anchor.assertBool()) {
-            const validators = try state.validatorsPtrSlice(allocator);
-            defer allocator.free(validators);
-            try pubkey.state.cache.syncPubkeys(allocator, io, validators);
-            try pubkey.state.cache.pruneCandidates(io);
-        }
-    }
-    try initCachedState(allocator, cached_state, io, state, &config_rc.instance.config, null);
+    try initCachedState(allocator, cached_state, io, state, &config_rc.instance.config, null, pubkey_mode);
 
     return .{
         .cached_state = cached_state,
@@ -1313,6 +1317,7 @@ pub fn loadOtherState(
         new_state,
         old_cached_state.config,
         old_cached_state.epoch_cache.builder_deposit_signature_cache,
+        .candidates,
     );
     new_cached_state_initialized = true;
 

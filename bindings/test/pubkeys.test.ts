@@ -1,8 +1,11 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import {mainnetChainConfig} from "@lodestar/config/configs";
+import {ssz} from "@lodestar/types";
 import {afterAll, beforeEach, describe, expect, it} from "vitest";
 import {SecretKey, aggregatePublicKeys} from "../src/blst.js";
+import bindings from "../src/index.js";
 import {pubkeyCache} from "../src/pubkeys.js";
 
 // Generate deterministic valid BLS keypairs for testing
@@ -91,6 +94,51 @@ describe("pubkeys", () => {
     expect(() => pubkeyCache.truncate(-1)).toThrow("InvalidUnsignedInteger");
     pubkeyCache.truncate(0);
     expect(pubkeyCache.size).toBe(0);
+  });
+
+  it.each([undefined, "candidates", "trusted"] as const)("loads native registry with pubkey mode %s", (mode) => {
+    pubkeyCache.reset();
+    const value = ssz.phase0.BeaconState.defaultValue();
+    value.validators = keypairs.map(({pubkeyBytes}) => ({
+      ...ssz.phase0.Validator.defaultValue(),
+      activationEpoch: 0,
+      effectiveBalance: 32_000_000_000,
+      exitEpoch: Infinity,
+      pubkey: pubkeyBytes,
+      withdrawableEpoch: Infinity,
+    }));
+    value.balances = value.validators.map(() => 32_000_000_000);
+    const config = new bindings.BeaconConfig(mainnetChainConfig, value.genesisValidatorsRoot);
+    const state = bindings.BeaconStateView.createFromBytes(
+      ssz.phase0.BeaconState.serialize(value),
+      config,
+      mode ? {pubkeyMode: mode} : undefined
+    );
+    try {
+      expect(pubkeyCache.size).toBe(mode === "trusted" ? keypairs.length : 0);
+      for (const {index, pubkeyBytes} of keypairs) {
+        expect(state.getValidator(index).pubkey, `validator ${index}`).toEqual(pubkeyBytes);
+        expect(pubkeyCache.getCandidates(pubkeyBytes), `candidates ${index}`).toEqual(
+          mode === "trusted" ? [] : [index]
+        );
+      }
+    } finally {
+      state.release();
+    }
+  });
+
+  it("compares every retained key against serialized validators", () => {
+    const validatorSize = 121;
+    const validators = new Uint8Array(keypairs.length * validatorSize);
+    for (const {index, pubkeyBytes} of keypairs) validators.set(pubkeyBytes, index * validatorSize);
+    expect(pubkeyCache.matchesValidators(validators)).toBe(true);
+    validators[validatorSize] ^= 1;
+    expect(pubkeyCache.matchesValidators(validators)).toBe(false);
+    expect(pubkeyCache.matchesValidators(validators.subarray(0, validatorSize))).toBe(true);
+    expect(pubkeyCache.matchesValidators(new Uint8Array())).toBe(true);
+    expect(() => pubkeyCache.matchesValidators(validators.subarray(1))).toThrow("InvalidLength");
+    pubkeyCache.truncate(1);
+    expect(pubkeyCache.matchesValidators(validators)).toBe(true);
   });
 
   it("append populates both directions and updates size", () => {

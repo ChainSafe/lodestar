@@ -146,7 +146,7 @@ export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecution
 export type CachedBeaconStatePreHeze = CachedBeaconState<BeaconStatePreHeze>;
 /**
  * Create CachedBeaconState computing a new EpochCache instance
- * The default trusts every validator. Pass skipSyncPubkeys for unfinalized states.
+ * The default trusts every validator. Use skipSyncPubkeys: true for unfinalized states.
  */
 export function createCachedBeaconState<T extends BeaconStateAllForks>(
   state: T,
@@ -186,7 +186,7 @@ export function loadCachedBeaconState<T extends CachedBeaconStateAllForks>(
       config: cachedSeedState.config,
       pubkeyCache,
     },
-    {...(opts ?? {}), ...{skipSyncPubkeys: true}}
+    {...opts, skipSyncPubkeys: true}
   ) as T;
 }
 

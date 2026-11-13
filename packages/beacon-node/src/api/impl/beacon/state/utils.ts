@@ -222,7 +222,7 @@ export function getStateValidatorIndex(
   }
 
   // typeof id === Uint8Array
-  const validatorIndex = getValidatorIndex(state, id, pubkeyCache);
+  const validatorIndex = getValidatorIndex(pubkeyCache, state, id);
   // Cached orphan states can outlive a conflicting registry prefix becoming finalized.
   if (validatorIndex === null || !byteArrayEquals(state.getValidator(validatorIndex).pubkey, id)) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};

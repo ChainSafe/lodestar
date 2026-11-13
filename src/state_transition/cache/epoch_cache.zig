@@ -215,13 +215,15 @@ pub const EpochCache = struct {
         const validators = try state.validatorsPtrSlice(allocator);
         defer allocator.free(validators);
 
-        // Register before sync committee indexing so unfinalized members can be resolved.
         const skip_sync_pubkeys = if (option) |opt| opt.skip_sync_pubkeys else false;
-        if (!skip_sync_pubkeys) {
+        if (skip_sync_pubkeys) {
             const finalized_count = @min(pubkey_cache.count(io), validators.len);
             for (validators[finalized_count..], finalized_count..) |validator, index| {
                 try pubkey_cache.addCandidate(io, validator.pubkey, index);
             }
+        } else {
+            try pubkey_cache.syncPubkeys(allocator, io, validators);
+            try pubkey_cache.pruneCandidates(io);
         }
 
         const effective_balance_increments_rc = try initEffectiveBalanceIncrementsRc(allocator, validator_count);

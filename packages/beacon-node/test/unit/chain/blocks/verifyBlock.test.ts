@@ -137,6 +137,9 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
     expect(result.indexedAttestationsByBlock).toEqual([
       [{data: attestation.data, signature: attestation.signature, attestingIndices: [30, 10]}],
     ]);
+    expect(vi.mocked(verifyBlocksSignatures).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(verifyBlocksStateTransitionOnly).mock.invocationCallOrder[0]
+    );
     expect(chain.shufflingCache.processState).not.toHaveBeenCalled();
     expect(chain.shufflingCache.getIndexedAttestation).not.toHaveBeenCalled();
     expect(result.blockDAStatuses).toEqual([DataAvailabilityStatus.NotRequired]);

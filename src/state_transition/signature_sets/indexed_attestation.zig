@@ -9,6 +9,7 @@ const BLSSignature = types.primitive.BLSSignature.Type;
 const Root = types.primitive.Root.Type;
 const BeaconConfig = @import("config").BeaconConfig;
 const ForkSeq = @import("config").ForkSeq;
+const statePubkeyBytes = @import("../cache/pubkey_cache.zig").statePubkeyBytes;
 const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
 const ForkTypes = @import("fork_types").ForkTypes;
 const c = @import("constants");
@@ -37,10 +38,12 @@ pub fn getAttestationWithIndicesSignatureSet(
 ) !AggregatedSignatureSet {
     const pubkeys = try allocator.alloc(PublicKey, attesting_indices.len);
     errdefer allocator.free(pubkeys);
-    epoch_cache.pubkey_cache.getPubkeysForState(io, attesting_indices, pubkeys, validators) catch |err| switch (err) {
-        error.InvalidIndex => return error.PubkeyNotFound,
-        else => return err,
-    };
+    const validator_count = try validators.length();
+    for (attesting_indices, pubkeys) |index, *pubkey| {
+        if (index >= validator_count) return error.PubkeyNotFound;
+        pubkey.* = epoch_cache.pubkey_cache.getPubkey(io, index) orelse
+            try PublicKey.uncompress(&try statePubkeyBytes(validators, index));
+    }
 
     var signing_root: Root = undefined;
     try getAttestationDataSigningRoot(config, epoch_cache.epoch, data, &signing_root);
@@ -68,4 +71,8 @@ pub fn getIndexedAttestationSignatureSet(
         indexed_attestation.signature,
         indexed_attestation.attesting_indices.items,
     );
+}
+
+test {
+    _ = @import("indexed_attestation_test.zig");
 }

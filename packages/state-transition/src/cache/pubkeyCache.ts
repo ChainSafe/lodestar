@@ -8,25 +8,28 @@ export type PubkeyCacheState =
   | Pick<BeaconStateAllForks, "validators">
   | Pick<IBeaconStateView, "validatorCount" | "getValidator">;
 
+export function getStateValidatorCount(state: PubkeyCacheState): number {
+  return "validators" in state ? state.validators.length : state.validatorCount;
+}
+
+function getStateValidatorPubkey(state: PubkeyCacheState, index: ValidatorIndex): Uint8Array {
+  return "validators" in state ? state.validators.getReadonly(index).pubkey : state.getValidator(index).pubkey;
+}
+
 /** The state must share the finalized registry prefix, including canonical historical states. */
 export function getValidatorIndex(
+  pubkeyCache: PubkeyCache,
   state: PubkeyCacheState,
-  pubkey: Uint8Array,
-  pubkeyCache: PubkeyCache
+  pubkey: Uint8Array
 ): ValidatorIndex | null {
-  const validatorCount = "validators" in state ? state.validators.length : state.validatorCount;
+  const validatorCount = getStateValidatorCount(state);
   const index = pubkeyCache.getIndex(pubkey);
   if (index !== null && index < validatorCount) {
     return index;
   }
 
   for (const candidate of pubkeyCache.getCandidates(pubkey)) {
-    if (candidate >= validatorCount) {
-      continue;
-    }
-    const candidatePubkey =
-      "validators" in state ? state.validators.getReadonly(candidate).pubkey : state.getValidator(candidate).pubkey;
-    if (byteArrayEquals(pubkey, candidatePubkey)) {
+    if (candidate < validatorCount && byteArrayEquals(pubkey, getStateValidatorPubkey(state, candidate))) {
       return candidate;
     }
   }
@@ -34,32 +37,27 @@ export function getValidatorIndex(
   return null;
 }
 
-export function getValidatorPubkey(
+export function getValidatorPubkeyBytes(
+  pubkeyCache: PubkeyCache,
   state: PubkeyCacheState,
-  index: ValidatorIndex,
-  pubkeyCache: PubkeyCache
+  index: ValidatorIndex
 ): Uint8Array {
-  return (
-    pubkeyCache.getPubkeyBytes(index) ??
-    ("validators" in state ? state.validators.getReadonly(index).pubkey : state.getValidator(index).pubkey)
-  );
+  return pubkeyCache.getPubkeyBytes(index) ?? getStateValidatorPubkey(state, index);
 }
 
-/** The canonical head must descend from the finalized checkpoint before promoting its registry prefix. */
+/** The accepted state must descend from the finalized checkpoint before promoting its registry prefix. */
 export function promoteFinalizedPubkeys(
   pubkeyCache: PubkeyCache,
   state: Pick<IBeaconStateView, "validatorCount" | "getValidator">,
   finalizedEpoch: Epoch
 ): void {
   const size = pubkeyCache.size;
-  for (let lastIndex = state.validatorCount - 1; lastIndex >= size; lastIndex--) {
-    if (state.getValidator(lastIndex).activationEligibilityEpoch > finalizedEpoch) {
-      continue;
-    }
-    for (let index = size; index <= lastIndex; index++) {
-      pubkeyCache.append(index, state.getValidator(index).pubkey);
-    }
-    break;
+  let lastIndex = state.validatorCount - 1;
+  while (lastIndex >= size && state.getValidator(lastIndex).activationEligibilityEpoch > finalizedEpoch) {
+    lastIndex--;
+  }
+  for (let index = size; index <= lastIndex; index++) {
+    pubkeyCache.append(index, state.getValidator(index).pubkey);
   }
   pubkeyCache.pruneCandidates();
 }

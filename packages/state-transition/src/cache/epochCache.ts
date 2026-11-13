@@ -77,7 +77,7 @@ export type EpochCacheImmutableData = {
 
 export type EpochCacheOpts = {
   skipSyncCommitteeCache?: boolean;
-  /** Set for unfinalized states. The default trusts the complete validator registry. */
+  /** False trusts the complete registry; true only registers state-verified candidates. */
   skipSyncPubkeys?: boolean;
   shufflingGetter?: ShufflingGetter;
 };
@@ -349,6 +349,7 @@ export class EpochCache {
 
     if (!opts?.skipSyncPubkeys) {
       pubkeyCache.syncPubkeys(validators);
+      pubkeyCache.pruneCandidates();
     } else {
       for (let index = pubkeyCache.size; index < validatorCount; index++) {
         pubkeyCache.addCandidate(index, validators[index].pubkey);
@@ -931,11 +932,11 @@ export class EpochCache {
     return this.pubkeyCache.get(index);
   }
 
-  getValidatorIndex(pubkey: Uint8Array, state: BeaconStateAllForks): ValidatorIndex | null {
-    return getValidatorIndex(state, pubkey, this.pubkeyCache);
+  getValidatorIndex(state: BeaconStateAllForks, pubkey: Uint8Array): ValidatorIndex | null {
+    return getValidatorIndex(this.pubkeyCache, state, pubkey);
   }
 
-  addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
+  addPubkeyCandidate(index: ValidatorIndex, pubkey: Uint8Array): void {
     this.pubkeyCache.addCandidate(index, pubkey);
   }
 

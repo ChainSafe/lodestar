@@ -15,14 +15,12 @@ pub fn verifyVoluntaryExitSignature(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
-    validators: anytype,
     signed_voluntary_exit: *const SignedVoluntaryExit,
 ) !bool {
     const signature_set = try getVoluntaryExitSignatureSet(
         io,
         config,
         epoch_cache,
-        validators,
         signed_voluntary_exit,
     );
     return try verifySingleSignatureSet(&signature_set);
@@ -32,7 +30,6 @@ pub fn getVoluntaryExitSignatureSet(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
-    validators: anytype,
     signed_voluntary_exit: *const SignedVoluntaryExit,
 ) !SingleSignatureSet {
     const slot = computeStartSlotAtEpoch(signed_voluntary_exit.message.epoch);
@@ -41,7 +38,7 @@ pub fn getVoluntaryExitSignatureSet(
     try computeSigningRoot(types.phase0.VoluntaryExit, &signed_voluntary_exit.message, domain, &signing_root);
 
     return .{
-        .pubkey = (try epoch_cache.pubkey_cache.getPubkeyForState(io, signed_voluntary_exit.message.validator_index, validators)) orelse
+        .pubkey = epoch_cache.pubkey_cache.getPubkey(io, signed_voluntary_exit.message.validator_index) orelse
             return error.PubkeyNotFound,
         .signing_root = signing_root,
         .signature = signed_voluntary_exit.signature,
@@ -53,7 +50,6 @@ pub fn voluntaryExitsSignatureSets(
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
-    validators: anytype,
     voluntary_exits: []types.phase0.SignedVoluntaryExit.Type,
     out: *std.ArrayList(SingleSignatureSet),
 ) !void {
@@ -62,7 +58,6 @@ pub fn voluntaryExitsSignatureSets(
             io,
             config,
             epoch_cache,
-            validators,
             signed_voluntary_exit,
         );
         try out.append(allocator, signature_set);

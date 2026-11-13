@@ -78,7 +78,6 @@ test "process sync aggregate - sanity" {
         std.testing.io,
         config,
         epoch_cache,
-        try state.validators(),
         &sync_aggregate,
         try state.slot(),
         root_signed,

@@ -28,7 +28,8 @@ export async function verifyBlocksSignatures(
   preState0: IBeaconStateView,
   blocks: SignedBeaconBlock[],
   indexedAttestationsByBlock: IndexedAttestation[][],
-  opts: ImportBlockOpts
+  opts: ImportBlockOpts,
+  postStates?: IBeaconStateView[]
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
@@ -36,9 +37,8 @@ export async function verifyBlocksSignatures(
     ? preState0.currentSyncCommitteeIndexed
     : new SyncCommitteeCacheEmpty();
 
-  // Runs concurrently with the state transition. Signature sets are built from preState0, which
-  // verifyBlocksInEpoch() guarantees is in the same epoch as every block, so the proposer and attester shufflings
-  // and the sync committee are the ones the blocks were signed under.
+  // preState0 shares every block's epoch, preserving its domains, shufflings, and sync committee.
+  // Exceptional batches supply each block's pre-state registry for validators added during the batch.
   for (const [i, block] of blocks.entries()) {
     // Use [i] to make clear that the index has to be correct to blame the right block below on BlockError()
     isValidPromises[i] = opts.validSignatures
@@ -49,6 +49,7 @@ export async function verifyBlocksSignatures(
         bls.verifySignatureSets(
           getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
             skipProposerSignature: opts.validProposerSignature,
+            pubkeyState: i === 0 ? preState0 : postStates?.[i - 1],
           }),
           // Prioritize block verification over attestations, since
           // attestations already buffer up to `MAX_BUFFER_WAIT_MS`

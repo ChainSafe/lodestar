@@ -78,7 +78,6 @@ pub fn assertValidProposerSlashing(
             io,
             config,
             epoch_cache,
-            try state.validators(),
             proposer_slashing,
         );
         if (!try verifySignature(&signature_sets[0]) or !try verifySignature(&signature_sets[1])) {

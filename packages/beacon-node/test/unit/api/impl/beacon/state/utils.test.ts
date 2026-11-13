@@ -3,7 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateView, IBeaconStateView, IBeaconStateViewGloas, interopSecretKey} from "@lodestar/state-transition";
+import {BeaconStateView, IBeaconStateViewGloas} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {
   getBuilderIndexByPubkey,
@@ -14,7 +14,7 @@ import {
 import {NodeIsSyncing} from "../../../../../../src/api/impl/errors.js";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
 import {IBeaconSync, SyncState} from "../../../../../../src/sync/index.js";
-import {generateCachedAltairState} from "../../../../../utils/state.js";
+import {fakeStateView, generateCachedAltairState, interopPubkeys} from "../../../../../utils/state.js";
 
 describe("beacon state api utils", () => {
   describe("getStateValidatorIndex", () => {
@@ -79,12 +79,8 @@ describe("beacon state api utils", () => {
     afterEach(() => pubkeyCache.reset());
 
     it("resolves the same candidate pubkey at different indices on different branches", () => {
-      const keys = [0, 1, 2].map((index) => interopSecretKey(index).toPublicKey().toBytes());
-      const branch = (indices: number[]) =>
-        ({
-          validatorCount: indices.length,
-          getValidator: (index: number) => ({...ssz.phase0.Validator.defaultValue(), pubkey: keys[indices[index]]}),
-        }) as IBeaconStateView;
+      const keys = interopPubkeys(3);
+      const branch = (indices: number[]) => fakeStateView(indices.map((index) => keys[index]));
       pubkeyCache.append(0, keys[0]);
       pubkeyCache.addCandidate(1, keys[1]);
       pubkeyCache.addCandidate(2, keys[2]);
@@ -101,11 +97,8 @@ describe("beacon state api utils", () => {
     });
 
     it("does not return another validator from an orphan state after finalization", () => {
-      const keys = [0, 1, 2].map((index) => interopSecretKey(index).toPublicKey().toBytes());
-      const state = {
-        validatorCount: keys.length,
-        getValidator: (index: number) => ({...ssz.phase0.Validator.defaultValue(), pubkey: keys[index]}),
-      } as IBeaconStateView;
+      const keys = interopPubkeys(3);
+      const state = fakeStateView(keys);
       pubkeyCache.append(0, keys[0]);
       pubkeyCache.addCandidate(1, keys[1]);
       pubkeyCache.addCandidate(2, keys[2]);

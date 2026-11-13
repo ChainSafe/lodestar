@@ -102,8 +102,8 @@ pub fn applyDeposit(
     const amount = deposit.amount();
     const signature = deposit.signature();
 
-    const cached_index = (try epoch_cache.pubkey_cache.getForState(io, pubkey.*, try state.validators()));
-    const is_new_validator = cached_index == null or cached_index.? >= try state.validatorsCount();
+    const cached_index = try epoch_cache.pubkey_cache.getValidatorIndex(io, try state.validators(), pubkey.*);
+    const is_new_validator = cached_index == null;
 
     if (comptime fork.lt(.electra)) {
         if (is_new_validator) {

@@ -3,7 +3,6 @@ import {
   getAttesterSlashableIndices,
   getAttesterSlashingSignatureSets,
   isSlashableValidator,
-  resolveSignatureSet,
 } from "@lodestar/state-transition";
 import {AttesterSlashing, Domain} from "@lodestar/types";
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
@@ -46,7 +45,7 @@ export async function validateAttesterSlashing(
   // [REJECT] All of the conditions within process_attester_slashing pass validation.
   try {
     // verifySignature = false, verified in batch below
-    assertValidAttesterSlashing(chain.config, state.slot, state.validatorCount, attesterSlashing, false);
+    assertValidAttesterSlashing(chain.config, state.slot, state, attesterSlashing, false);
   } catch (e) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,
@@ -62,9 +61,7 @@ export async function validateAttesterSlashing(
     });
   }
 
-  const signatureSets = getAttesterSlashingSignatureSets(chain.config, state.slot, attesterSlashing).map((set) =>
-    resolveSignatureSet(set, state)
-  );
+  const signatureSets = getAttesterSlashingSignatureSets(chain.config, state.slot, state, attesterSlashing);
   const verifiedDomains = getAttesterSlashingSignatureDomains(chain.config, state.slot, attesterSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new AttesterSlashingError(GossipAction.REJECT, {

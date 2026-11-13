@@ -58,6 +58,10 @@ export const pubkeyCache = {
     native.truncate(size);
   },
 
+  matchesValidators(serializedValidators) {
+    return native.matchesValidators(serializedValidators);
+  },
+
   syncPubkeys(validators) {
     native.syncPubkeys(validators);
   },

@@ -2112,7 +2112,7 @@ export function getValidatorApi(
 
       const filteredRegistrations = registrations.filter((registration) => {
         const {pubkey} = registration.message;
-        const validatorIndex = getValidatorIndex(headState, pubkey, chain.pubkeyCache);
+        const validatorIndex = getValidatorIndex(chain.pubkeyCache, headState, pubkey);
         if (validatorIndex === null) return false;
 
         const validator = headState.getValidator(validatorIndex);

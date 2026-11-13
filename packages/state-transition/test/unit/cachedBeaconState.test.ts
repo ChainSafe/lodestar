@@ -11,7 +11,7 @@ import {
 } from "@lodestar/params";
 import {Epoch, RootHex, ssz} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
-import {getValidatorPubkey} from "../../src/cache/pubkeyCache.js";
+import {getValidatorPubkeyBytes} from "../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
 import {interopPubkeysCached} from "../../src/testUtils/interop.js";
 import {createCachedBeaconStateTest} from "../../src/testUtils/state.js";
@@ -50,17 +50,17 @@ describe("CachedBeaconState", () => {
     const [pubkey1, pubkey2] = interopPubkeysCached(index2 + 1).slice(index1);
 
     state1.validators.push(ssz.phase0.Validator.toViewDU({...ssz.phase0.Validator.defaultValue(), pubkey: pubkey1}));
-    state1.epochCtx.addPubkey(index1, pubkey1);
+    state1.epochCtx.addPubkeyCandidate(index1, pubkey1);
     state1.commit();
 
     const state2 = state1.clone();
     state2.validators.push(ssz.phase0.Validator.toViewDU({...ssz.phase0.Validator.defaultValue(), pubkey: pubkey2}));
-    state2.epochCtx.addPubkey(index2, pubkey2);
+    state2.epochCtx.addPubkeyCandidate(index2, pubkey2);
 
-    expect(state1.epochCtx.getValidatorIndex(pubkey1, state1)).toBe(index1);
-    expect(state2.epochCtx.getValidatorIndex(pubkey1, state2)).toBe(index1);
-    expect(state1.epochCtx.getValidatorIndex(pubkey2, state1)).toBeNull();
-    expect(state2.epochCtx.getValidatorIndex(pubkey2, state2)).toBe(index2);
+    expect(state1.epochCtx.getValidatorIndex(state1, pubkey1)).toBe(index1);
+    expect(state2.epochCtx.getValidatorIndex(state2, pubkey1)).toBe(index1);
+    expect(state1.epochCtx.getValidatorIndex(state1, pubkey2)).toBeNull();
+    expect(state2.epochCtx.getValidatorIndex(state2, pubkey2)).toBe(index2);
     expect(pubkeyCache.size).toBe(0);
   });
 
@@ -298,10 +298,10 @@ describe("CachedBeaconState", () => {
         // confirm loadCachedBeaconState() result
         for (let i = 0; i < newCachedState.validators.length; i++) {
           expect(
-            newCachedState.epochCtx.getValidatorIndex(newCachedState.validators.get(i).pubkey, newCachedState),
+            newCachedState.epochCtx.getValidatorIndex(newCachedState, newCachedState.validators.get(i).pubkey),
             `validator index ${i}`
           ).toBe(i);
-          expect(getValidatorPubkey(newCachedState, i, pubkeyCache), `validator pubkey ${i}`).toEqual(pubkeys[i]);
+          expect(getValidatorPubkeyBytes(pubkeyCache, newCachedState, i), `validator pubkey ${i}`).toEqual(pubkeys[i]);
         }
       });
     }

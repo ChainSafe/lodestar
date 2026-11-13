@@ -5,11 +5,12 @@ import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   BUILDER_WITHDRAWAL_PREFIX,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+  FAR_FUTURE_EPOCH,
   ForkName,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {getValidatorIndex} from "../../../src/cache/pubkeyCache.js";
+import {ssz} from "@lodestar/types";
 import {IBeaconStateView} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
 import {
@@ -17,14 +18,15 @@ import {
   createBeaconStateViewForHistoricalRegen,
 } from "../../../src/stateView/stateViewFactory.js";
 import {
-  addPubkeyCacheDeposits,
-  createPubkeyCacheFuluState,
+  addDeposits,
+  createFuluState,
+  expectBranchIndices,
   finalizedValidatorCount,
-  pubkeyCacheForkEpoch,
-  pubkeyCacheGenesisRoot,
-  pubkeyCacheKeyA,
-  pubkeyCacheKeyB,
-  slashPubkeyCacheFirstValidator,
+  forkEpoch,
+  genesisRoot,
+  keyA,
+  orderBranches,
+  slashFirstValidator,
 } from "../../utils/pubkeyCache.js";
 
 describe("NativeBeaconStateView validator pubkey cache branches", () => {
@@ -34,15 +36,15 @@ describe("NativeBeaconStateView validator pubkey cache branches", () => {
   });
 
   it.each(["side first", "canonical first"] as const)("keeps Gloas branch indices independent: %s", (order) => {
-    const config = createBeaconConfig(getConfig(ForkName.gloas, pubkeyCacheForkEpoch), pubkeyCacheGenesisRoot);
-    const forkSlot = pubkeyCacheForkEpoch * SLOTS_PER_EPOCH;
-    const base = createPubkeyCacheFuluState(config, forkSlot - SLOTS_PER_EPOCH);
+    const config = createBeaconConfig(getConfig(ForkName.gloas, forkEpoch), genesisRoot);
+    const forkSlot = forkEpoch * SLOTS_PER_EPOCH;
+    const base = createFuluState(config, forkSlot - SLOTS_PER_EPOCH);
     const churn = Math.min(config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA);
-    addPubkeyCacheDeposits(base, config, churn, BUILDER_WITHDRAWAL_PREFIX);
+    addDeposits(base, config, churn, BUILDER_WITHDRAWAL_PREFIX);
     base.commit();
     const baseBytes = base.serialize();
     const sideState = base.clone();
-    slashPubkeyCacheFirstValidator(sideState);
+    slashFirstValidator(sideState);
     sideState.commit();
     const sideBytes = sideState.serialize();
     const views: IBeaconStateView[] = [];
@@ -57,38 +59,62 @@ describe("NativeBeaconStateView validator pubkey cache branches", () => {
     };
 
     try {
-      const {side, canonical} =
-        order === "side first"
-          ? {
-              side: processBranch(sideBytes, forkSlot),
-              canonical: processBranch(baseBytes, forkSlot + SLOTS_PER_EPOCH),
-            }
-          : {
-              canonical: processBranch(baseBytes, forkSlot + SLOTS_PER_EPOCH),
-              side: processBranch(sideBytes, forkSlot),
-            };
-      const pubkeyA = pubkeyCacheKeyA.toPublicKey().toBytes();
-      const pubkeyB = pubkeyCacheKeyB.toPublicKey().toBytes();
-      expect(side.validatorCount).toBe(finalizedValidatorCount + 2);
-      expect(canonical.validatorCount).toBe(finalizedValidatorCount + 1);
-      expect(getValidatorIndex(side, pubkeyA, pubkeyCache)).toBe(finalizedValidatorCount);
-      expect(getValidatorIndex(side, pubkeyB, pubkeyCache)).toBe(finalizedValidatorCount + 1);
-      expect(getValidatorIndex(canonical, pubkeyA, pubkeyCache)).toBeNull();
-      expect(getValidatorIndex(canonical, pubkeyB, pubkeyCache)).toBe(finalizedValidatorCount);
-      expect(canonical.getValidator(finalizedValidatorCount).pubkey).toEqual(pubkeyB);
-      expect(pubkeyCache.size).toBe(finalizedValidatorCount);
-      expect(pubkeyCache.getIndex(pubkeyA)).toBeNull();
-      expect(pubkeyCache.getIndex(pubkeyB)).toBeNull();
+      const {side, canonical} = orderBranches(
+        order,
+        () => processBranch(sideBytes, forkSlot),
+        () => processBranch(baseBytes, forkSlot + SLOTS_PER_EPOCH)
+      );
+      expectBranchIndices(side, canonical, null, finalizedValidatorCount);
     } finally {
       for (const view of views) view.release();
     }
   });
 
-  it("loads and rotates sync committees with active validators beyond the finalized cache", () => {
-    const config = createBeaconConfig(getConfig(ForkName.fulu), pubkeyCacheGenesisRoot);
+  it.each([false, true])(
+    "loads trusted anchors densely and historical suffixes as candidates: native=%s",
+    (nativeStateTransition) => {
+      const config = createBeaconConfig(getConfig(ForkName.fulu), genesisRoot);
+      const state = createFuluState(config, 0);
+      const anchor = createBeaconStateView({nativeStateTransition, config, stateBytes: state.serialize()});
+      let historical: IBeaconStateView | undefined;
+      try {
+        expect(pubkeyCache.size).toBe(finalizedValidatorCount);
+        const pubkey = keyA.toPublicKey().toBytes();
+        state.validators.push(
+          ssz.phase0.Validator.toViewDU({
+            ...ssz.phase0.Validator.defaultValue(),
+            pubkey,
+            activationEligibilityEpoch: FAR_FUTURE_EPOCH,
+            activationEpoch: FAR_FUTURE_EPOCH,
+            exitEpoch: FAR_FUTURE_EPOCH,
+            withdrawableEpoch: FAR_FUTURE_EPOCH,
+          })
+        );
+        state.balances.push(0);
+        state.inactivityScores.push(0);
+        state.previousEpochParticipation.push(0);
+        state.currentEpochParticipation.push(0);
+        historical = createBeaconStateViewForHistoricalRegen({
+          nativeStateTransition,
+          config,
+          stateBytes: state.serialize(),
+        });
+        expect(historical.validatorCount).toBe(finalizedValidatorCount + 1);
+        expect(pubkeyCache.size).toBe(finalizedValidatorCount);
+        expect(pubkeyCache.getIndex(pubkey)).toBeNull();
+        expect(pubkeyCache.getCandidates(pubkey)).toEqual([finalizedValidatorCount]);
+      } finally {
+        historical?.release();
+        anchor.release();
+      }
+    }
+  );
+
+  it("loads and rotates sync committees from a trusted validator registry", () => {
+    const config = createBeaconConfig(getConfig(ForkName.fulu), genesisRoot);
     const targetSlot = EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
-    const state = createPubkeyCacheFuluState(config, targetSlot - SLOTS_PER_EPOCH);
-    pubkeyCache.append(0, state.validators.getReadonly(0).pubkey);
+    const state = createFuluState(config, targetSlot - SLOTS_PER_EPOCH);
+    pubkeyCache.syncPubkeys(state.validators.getAllReadonlyValues());
     const native = createBeaconStateViewForHistoricalRegen({
       nativeStateTransition: true,
       config,
@@ -101,11 +127,11 @@ describe("NativeBeaconStateView validator pubkey cache branches", () => {
       expect([...native.currentSyncCommitteeValidatorIndices]).toEqual(
         Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => i % finalizedValidatorCount)
       );
-      expect(pubkeyCache.size).toBe(1);
+      expect(pubkeyCache.size).toBe(finalizedValidatorCount);
       postState = native.processSlots(targetSlot);
       expect(postState.slot).toBe(targetSlot);
       expect(postState.validatorCount).toBe(finalizedValidatorCount);
-      expect(pubkeyCache.size).toBe(1);
+      expect(pubkeyCache.size).toBe(finalizedValidatorCount);
     } finally {
       postState?.release();
       native.release();
