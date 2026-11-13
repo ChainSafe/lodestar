@@ -62,4 +62,4 @@ There is really only one flag that is needed to manage the data for Lodestar, [`
 
 By default the beacon node continually prunes all old blocks and execution payload envelopes (older than `config.MIN_EPOCHS_FOR_BLOCK_REQUESTS`, which is ~5 months on mainnet and reduced to ~2 months from gloas) and all prior finalized states. To retain historical data, set [`--chain.pruneHistory=false`](./beacon-cli#--chainprunehistory). Pruning is also disabled when `--serveHistoricalState` is set, unless `--chain.pruneHistory` is passed explicitly.
 
-**Note:** An existing large database is pruned gradually, up to 4096 slots of blocks on startup and on every finalized checkpoint, so disk usage drops over days to weeks rather than immediately. Pruned data cannot be recovered without resyncing.
+**Note:** An existing large database is pruned gradually, up to 4096 slots of blocks on startup and on every finalized checkpoint, so disk usage drops over days to weeks rather than immediately. Pruned data cannot be recovered without syncing the node again.
