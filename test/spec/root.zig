@@ -14,4 +14,8 @@ test {
     testing.refAllDecls(@import("./test_case/transition_tests.zig"));
     testing.refAllDecls(@import("./test_case/random_tests.zig"));
     testing.refAllDecls(@import("./test_case/finality_tests.zig"));
+    testing.refAllDecls(@import("./test_case/fork_choice_tests.zig"));
+    testing.refAllDecls(@import("./test_case/fork_choice_compliance_tests.zig"));
+    testing.refAllDecls(@import("./test_case/fast_confirmation_tests.zig"));
+    testing.refAllDecls(@import("./test_case/sync_tests.zig"));
 }
