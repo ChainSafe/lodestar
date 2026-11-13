@@ -118,7 +118,7 @@ describe("ForkChoiceExecutionEngine", () => {
       );
 
       expect(await notifyFcu(engine)).toBeNull();
-      expect(validateLatestHash).toHaveBeenCalledWith(invalidLvh, {strict: false});
+      expect(validateLatestHash).toHaveBeenCalledWith(invalidLvh, {strict: false, fromNodeJudged: true});
       expect(recomputeHeadAfterELInvalidResponse).toHaveBeenCalledOnce();
     });
 
@@ -129,7 +129,7 @@ describe("ForkChoiceExecutionEngine", () => {
       );
 
       await expect(notifyFcu(engine, payloadAttributes)).rejects.toThrow("Invalid prepare payload");
-      expect(validateLatestHash).toHaveBeenCalledWith(invalidLvh, {strict: false});
+      expect(validateLatestHash).toHaveBeenCalledWith(invalidLvh, {strict: false, fromNodeJudged: true});
       expect(recomputeHeadAfterELInvalidResponse).toHaveBeenCalledOnce();
     });
 
@@ -155,13 +155,13 @@ describe("ForkChoiceExecutionEngine", () => {
   });
 
   describe("invalidateExecutionPayloads", () => {
-    const strictCases: [ExecutionInvalidSource, boolean][] = [
-      [ExecutionInvalidSource.blockSegment, true],
-      [ExecutionInvalidSource.newPayload, false],
-      [ExecutionInvalidSource.forkchoiceUpdated, false],
+    const cases: [ExecutionInvalidSource, boolean, boolean][] = [
+      [ExecutionInvalidSource.blockSegment, true, false],
+      [ExecutionInvalidSource.newPayload, false, false],
+      [ExecutionInvalidSource.forkchoiceUpdated, false, true],
     ];
-    for (const [source, strict] of strictCases) {
-      it(`source=${source} applies with strict=${strict} and recomputes head`, () => {
+    for (const [source, strict, fromNodeJudged] of cases) {
+      it(`source=${source} applies with strict=${strict} fromNodeJudged=${fromNodeJudged} and recomputes head`, () => {
         const {engine, validateLatestHash, recomputeHeadAfterELInvalidResponse} = setup(
           ExecutionStatus.Syncing,
           fcuResult(ExecutionPayloadStatus.VALID)
@@ -169,7 +169,7 @@ describe("ForkChoiceExecutionEngine", () => {
 
         engine.invalidateExecutionPayloads(invalidLvh, source);
 
-        expect(validateLatestHash).toHaveBeenCalledWith(invalidLvh, {strict});
+        expect(validateLatestHash).toHaveBeenCalledWith(invalidLvh, {strict, fromNodeJudged});
         expect(recomputeHeadAfterELInvalidResponse).toHaveBeenCalledOnce();
       });
     }
