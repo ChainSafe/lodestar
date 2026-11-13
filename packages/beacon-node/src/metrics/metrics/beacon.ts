@@ -1,6 +1,7 @@
 import {ProducedBlockSource} from "@lodestar/types";
 import {BlockSelectionResult} from "../../api/impl/validator/index.js";
 import {InclusionListSource} from "../../chain/blocks/types.js";
+import {PreparePayloadReason} from "../../chain/prepareNextSlot.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
@@ -163,6 +164,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_block_payload_prepare_time",
         help: "Time for preparing payload in advance",
         buckets: [0.1, 1, 3, 5, 10],
+      }),
+      payloadReprepare: register.counter<{reason: PreparePayloadReason; result: "changed" | "unchanged"}>({
+        name: "beacon_block_payload_reprepare_total",
+        help: "Re-runs of the next slot payload preparation after the scheduled run, by reason and whether the parent changed",
+        labelNames: ["reason", "result"],
       }),
       executionPayloadEnvelopeProcessingTime: register.histogram({
         name: "beacon_block_payload_envelope_processing_seconds",

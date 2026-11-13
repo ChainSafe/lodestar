@@ -12,6 +12,9 @@ const MAX_PAYLOAD_IDS = SLOTS_PER_EPOCH;
 // Since we do no processing with this id, we have no need to deserialize it
 export type PayloadId = string;
 
+/** Payload id returned by the engine and the time the payload was requested from it */
+export type PreparedPayloadId = {payloadId: PayloadId; preparedAtMs: number};
+
 export type WithdrawalV1 = {
   index: QUANTITY;
   validatorIndex: QUANTITY;
@@ -26,7 +29,7 @@ type FcuAttributes = {headBlockHash: DATA} & Omit<PayloadAttributesRpc, "withdra
 export class PayloadIdCache {
   private readonly payloadIdByFcuAttributes = new Map<
     string,
-    {payloadId: PayloadId; fullKey: string; inclusionListTransactions?: bellatrix.Transactions}
+    PreparedPayloadId & {fullKey: string; inclusionListTransactions?: bellatrix.Transactions}
   >();
 
   getFullKey({headBlockHash, timestamp, prevRandao, suggestedFeeRecipient}: FcuAttributes): string {
@@ -45,7 +48,7 @@ export class PayloadIdCache {
     const key = this.getKey(fcuAttributes);
     const fullKey = this.getFullKey(fcuAttributes);
     const {inclusionListTransactions} = fcuAttributes;
-    this.payloadIdByFcuAttributes.set(key, {payloadId, fullKey, inclusionListTransactions});
+    this.payloadIdByFcuAttributes.set(key, {payloadId, preparedAtMs: Date.now(), fullKey, inclusionListTransactions});
   }
 
   prune(): void {
@@ -53,13 +56,13 @@ export class PayloadIdCache {
     pruneSetToMax(this.payloadIdByFcuAttributes, MAX_PAYLOAD_IDS);
   }
 
-  get(fcuAttributes: FcuAttributes): PayloadId | undefined {
+  get(fcuAttributes: FcuAttributes): PreparedPayloadId | undefined {
     const key = this.getKey(fcuAttributes);
     const fullKey = this.getFullKey(fcuAttributes);
     const payloadInfo = this.payloadIdByFcuAttributes.get(key);
     return payloadInfo?.fullKey === fullKey &&
       isSameInclusionList(payloadInfo.inclusionListTransactions, fcuAttributes.inclusionListTransactions)
-      ? payloadInfo.payloadId
+      ? {payloadId: payloadInfo.payloadId, preparedAtMs: payloadInfo.preparedAtMs}
       : undefined;
   }
 }

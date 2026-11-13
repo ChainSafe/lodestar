@@ -425,7 +425,7 @@ describe("ExecutionEngine / rest", () => {
           prevRandao: toHex(hash),
           suggestedFeeRecipient: attributes.suggestedFeeRecipient,
         })
-      ).toBe(payloadIdHex);
+      ).toMatchObject({payloadId: payloadIdHex});
     });
 
     it("throws when the execution client is syncing and a payload was requested", async () => {
