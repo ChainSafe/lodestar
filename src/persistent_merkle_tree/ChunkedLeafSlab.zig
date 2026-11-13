@@ -18,12 +18,13 @@
 //!
 //! Layout
 //!
-//! Memory comes from the page allocator in segments of `segment_blocks` blobs. A blob has an
-//! index: it is in segment `index / segment_blocks` at position `index % segment_blocks`. One
-//! `FreeSlotBitmap` covers every index in the slab's capacity. A set bit means the blob is free.
-//! The indexes of a segment that is not allocated yet are marked in use.
+//! Memory comes from the page allocator in segments of `chunked_leaves_per_segment` blobs. A blob
+//! has an index: it is in segment `index / chunked_leaves_per_segment` at position
+//! `index % chunked_leaves_per_segment`. One `FreeSlotBitmap` covers every index in the slab's
+//! capacity. A set bit means the blob is free. The indexes of a segment that is not allocated yet
+//! are marked in use.
 //!
-//! Example with `segment_blocks` = 4 and two segments allocated:
+//! Example with `chunked_leaves_per_segment` = 4 and two segments allocated:
 //!
 //! ```text
 //!              segment 0                   segment 1             segment 2
@@ -50,10 +51,10 @@
 //! alloc              {}                     allocates segment 2, returns blob 8
 //! ```
 //!
-//! Segments are added on demand until the slab can hold the `max_blocks` passed to `init`. After
-//! that `alloc` returns `error.OutOfMemory`. Segments are released only by `deinit`. `rawAlloc`
-//! does not write to a new segment, so the operating system backs only the pages of blobs that
-//! were written.
+//! Segments are added on demand until the slab can hold the `max_chunked_leaves` passed to
+//! `init`. After that `alloc` returns `error.OutOfMemory`. Segments are released only by `deinit`.
+//! `rawAlloc` does not write to a new segment, so the operating system backs only the pages of
+//! blobs that were written.
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -63,25 +64,43 @@ const expensive_safety_checks = @import("root.zig").expensive_safety_checks;
 
 const ChunkedLeafSlab = @This();
 
-pub const segment_blocks = 1 << 14;
-const segment_bytes = segment_blocks * @sizeOf(ChunkedLeaf);
+/// How many chunked leaves one segment stores.
+///
+/// A segment is one contiguous piece of memory from the page allocator. It holds this many
+/// `ChunkedLeaf` structs side by side:
+/// 1 << 14 (= 16,384) * 2,112 bytes = 33 MiB.
+///
+/// NOTE: This value is arbitrarily based on loose benchmarks;
+/// Replaying 3,192 mainnet blocks, the state transition took 4.72 ms
+/// per block with 4,096 per segment (39 segments), 4.59 ms with 16,384 (10 segments) and
+/// 4.58 ms with 65,536 (3 segments). 16,384 is the smallest size where the time stops improving.
+pub const chunked_leaves_per_segment = 1 << 14;
+
+/// 1 << 14 (= 16,384) * 2,112 bytes = 33 MiB.
+const segment_bytes = chunked_leaves_per_segment * @sizeOf(ChunkedLeaf);
 
 /// One entry per segment the slab may ever hold. The first `segment_count` are allocated.
 segments: [][*]ChunkedLeaf,
 segment_count: u32,
-free_blocks: FreeSlotBitmap,
-blocks_in_use: usize,
+free_indexes: FreeSlotBitmap,
+chunked_leaves_in_use: usize,
 
-/// Creates an empty slab that can grow to at least `max_blocks` blobs.
-pub fn init(allocator: Allocator, max_blocks: u32) Allocator.Error!ChunkedLeafSlab {
-    std.debug.assert(max_blocks > 0);
-    const max_segments = (@as(usize, max_blocks) + segment_blocks - 1) / segment_blocks;
-    const capacity: u32 = @intCast(max_segments * segment_blocks);
+/// Creates an empty slab that can grow to at least `max_chunked_leaves` blobs.
+pub fn init(allocator: Allocator, max_chunked_leaves: u32) Allocator.Error!ChunkedLeafSlab {
+    std.debug.assert(max_chunked_leaves > 0);
+    const max_segments =
+        (@as(usize, max_chunked_leaves) + chunked_leaves_per_segment - 1) / chunked_leaves_per_segment;
+    const capacity: u32 = @intCast(max_segments * chunked_leaves_per_segment);
 
     const segments = try allocator.alloc([*]ChunkedLeaf, max_segments);
     errdefer allocator.free(segments);
-    const free_blocks = try FreeSlotBitmap.init(allocator, capacity, capacity);
-    return .{ .segments = segments, .segment_count = 0, .free_blocks = free_blocks, .blocks_in_use = 0 };
+    const free_indexes = try FreeSlotBitmap.init(allocator, capacity, capacity);
+    return .{
+        .segments = segments,
+        .segment_count = 0,
+        .free_indexes = free_indexes,
+        .chunked_leaves_in_use = 0,
+    };
 }
 
 pub fn deinit(self: *ChunkedLeafSlab, allocator: Allocator) void {
@@ -89,7 +108,7 @@ pub fn deinit(self: *ChunkedLeafSlab, allocator: Allocator) void {
         const bytes: [*]u8 = @ptrCast(segment);
         allocator.rawFree(bytes[0..segment_bytes], .of(ChunkedLeaf), @returnAddress());
     }
-    self.free_blocks.deinit(allocator);
+    self.free_indexes.deinit(allocator);
     allocator.free(self.segments);
     self.* = undefined;
 }
@@ -97,14 +116,14 @@ pub fn deinit(self: *ChunkedLeafSlab, allocator: Allocator) void {
 /// Returns storage for one blob. The caller must write all chunks and `len` before reading.
 /// `allocator` must be the allocator passed to `init`.
 pub fn alloc(self: *ChunkedLeafSlab, allocator: Allocator) Allocator.Error!*ChunkedLeaf {
-    var index = self.free_blocks.lowest();
-    if (index == self.free_blocks.capacity) {
+    var index = self.free_indexes.lowest();
+    if (index == self.free_indexes.capacity) {
         try self.addSegment(allocator);
-        index = self.free_blocks.lowest();
+        index = self.free_indexes.lowest();
     }
-    self.free_blocks.remove(index);
-    self.blocks_in_use += 1;
-    const storage = &self.segments[index / segment_blocks][index % segment_blocks];
+    self.free_indexes.remove(index);
+    self.chunked_leaves_in_use += 1;
+    const storage = &self.segments[index / chunked_leaves_per_segment][index % chunked_leaves_per_segment];
     // Exposes a read before write, as `Allocator.create` does.
     if (expensive_safety_checks) @memset(std.mem.asBytes(storage), 0xaa);
     return storage;
@@ -116,16 +135,16 @@ pub fn release(self: *ChunkedLeafSlab, storage: *const ChunkedLeaf) void {
     for (self.segments[0..self.segment_count], 0..) |segment, segment_index| {
         const start = @intFromPtr(segment);
         if (address < start or address >= start + segment_bytes) continue;
-        const index = segment_index * segment_blocks + (address - start) / @sizeOf(ChunkedLeaf);
-        self.free_blocks.insert(@intCast(index));
-        self.blocks_in_use -= 1;
+        const index = segment_index * chunked_leaves_per_segment + (address - start) / @sizeOf(ChunkedLeaf);
+        self.free_indexes.insert(@intCast(index));
+        self.chunked_leaves_in_use -= 1;
         return;
     }
     unreachable;
 }
 
 pub fn bytesInUse(self: *const ChunkedLeafSlab) usize {
-    return self.blocks_in_use * @sizeOf(ChunkedLeaf);
+    return self.chunked_leaves_in_use * @sizeOf(ChunkedLeaf);
 }
 
 fn addSegment(self: *ChunkedLeafSlab, allocator: Allocator) Allocator.Error!void {
@@ -135,9 +154,9 @@ fn addSegment(self: *ChunkedLeafSlab, allocator: Allocator) Allocator.Error!void
         return error.OutOfMemory;
     };
     self.segments[self.segment_count] = @ptrCast(@alignCast(bytes));
-    const first = self.segment_count * segment_blocks;
+    const first = self.segment_count * chunked_leaves_per_segment;
     self.segment_count += 1;
-    for (first..first + segment_blocks) |index| self.free_blocks.insert(@intCast(index));
+    for (first..first + chunked_leaves_per_segment) |index| self.free_indexes.insert(@intCast(index));
 }
 
 test {

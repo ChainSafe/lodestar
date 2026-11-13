@@ -26,8 +26,8 @@ test "ChunkedLeafSlab - reuses the lowest released blob first" {
 
 test "ChunkedLeafSlab - adds a segment when the current ones are full" {
     const allocator = std.testing.allocator;
-    const count = ChunkedLeafSlab.segment_blocks + 2;
-    var slab = try ChunkedLeafSlab.init(allocator, 2 * ChunkedLeafSlab.segment_blocks);
+    const count = ChunkedLeafSlab.chunked_leaves_per_segment + 2;
+    var slab = try ChunkedLeafSlab.init(allocator, 2 * ChunkedLeafSlab.chunked_leaves_per_segment);
     defer slab.deinit(allocator);
 
     const blobs = try allocator.alloc(*ChunkedLeaf, count);
@@ -50,6 +50,6 @@ test "ChunkedLeafSlab - fails when it cannot grow" {
     var slab = try ChunkedLeafSlab.init(allocator, 1);
     defer slab.deinit(allocator);
 
-    for (0..ChunkedLeafSlab.segment_blocks) |_| _ = try slab.alloc(allocator);
+    for (0..ChunkedLeafSlab.chunked_leaves_per_segment) |_| _ = try slab.alloc(allocator);
     try std.testing.expectError(error.OutOfMemory, slab.alloc(allocator));
 }
