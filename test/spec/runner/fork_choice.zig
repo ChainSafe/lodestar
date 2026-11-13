@@ -126,6 +126,7 @@ pub fn TestCase(comptime fork: ForkSeq) type {
         checkpoint_states: CheckpointStates,
         payload_verdicts: PayloadVerdicts,
         store: Store,
+        fast_confirmation: fork_choice.FastConfirmation,
 
         const Self = @This();
 
@@ -173,6 +174,7 @@ pub fn TestCase(comptime fork: ForkSeq) type {
             try self.block_states.put(allocator, anchor_root, self.anchor.cached_state);
 
             self.store = try Store.init(allocator, self.anchor.config, self.anchor.cached_state, block, .valid, self.stateProvider());
+            self.fast_confirmation = .init(&self.store);
         }
 
         fn deinit(self: *Self) void {
@@ -205,7 +207,38 @@ pub fn TestCase(comptime fork: ForkSeq) type {
         const provider_vtable: fork_choice.StateProvider.VTable = .{
             .justifiedBalances = justifiedBalances,
             .slotCommitteeMembers = slotCommitteeMembers,
+            .checkpointBalanceSource = checkpointBalanceSource,
+            .pulledUpBalanceSource = pulledUpBalanceSource,
         };
+
+        fn checkpointBalanceSource(ctx: *anyopaque, allocator: Allocator, checkpoint: Checkpoint) anyerror!fork_choice.BalanceSource {
+            const self: *Self = @ptrCast(@alignCast(ctx));
+            return balanceSource(allocator, try self.getCheckpointState(checkpoint));
+        }
+
+        /// Spec `get_pulled_up_head_state`: the same state as `store_target_checkpoint_state`
+        /// for the head's checkpoint of `epoch`.
+        fn pulledUpBalanceSource(ctx: *anyopaque, allocator: Allocator, root: Root, epoch: u64) anyerror!fork_choice.BalanceSource {
+            const self: *Self = @ptrCast(@alignCast(ctx));
+            return balanceSource(allocator, try self.getCheckpointState(.{ .epoch = epoch, .root = root }));
+        }
+
+        fn balanceSource(allocator: Allocator, state: *CachedBeaconState) !fork_choice.BalanceSource {
+            const validator_count = try state.state.validatorsCount();
+            const increments = try allocator.dupe(u16, state.epoch_cache.getEffectiveBalanceIncrements().items[0..validator_count]);
+            errdefer allocator.free(increments);
+            var active = try std.DynamicBitSetUnmanaged.initEmpty(allocator, validator_count);
+            errdefer active.deinit(allocator);
+            var slashed = try std.DynamicBitSetUnmanaged.initEmpty(allocator, validator_count);
+            errdefer slashed.deinit(allocator);
+            for (state.epoch_cache.getCurrentShuffling().active_indices) |index| active.set(index);
+            const validators = try state.state.validatorsPtrSlice(allocator);
+            defer allocator.free(validators);
+            for (validators, 0..) |validator, index| {
+                if (validator.slashed) slashed.set(index);
+            }
+            return .{ .effective_balance_increments = increments, .active = active, .slashed = slashed };
+        }
 
         fn justifiedBalances(ctx: *anyopaque, allocator: Allocator, checkpoint: Checkpoint) anyerror!fork_choice.JustifiedBalances {
             const self: *Self = @ptrCast(@alignCast(ctx));
@@ -608,6 +641,9 @@ pub fn TestCase(comptime fork: ForkSeq) type {
         // --- checks -------------------------------------------------------------------
 
         fn runChecks(self: *Self, checks: yaml.Yaml.Map) !void {
+            // The fast_confirmation generator runs `on_fast_confirmation` right before each
+            // check that reports its store.
+            if (checks.get("confirmed_root") != null) try self.fast_confirmation.onFastConfirmation(&self.store);
             if (checks.get("head")) |value| {
                 const expected = try value.asMap();
                 const head = try self.store.getHead();
@@ -645,6 +681,31 @@ pub fn TestCase(comptime fork: ForkSeq) type {
             }
             if (checks.get("payload_data_availability_vote")) |value| {
                 try self.checkPtcVotes(try value.asMap(), .blob_data_available);
+            }
+            try self.checkFastConfirmation(checks);
+        }
+
+        fn checkFastConfirmation(self: *Self, checks: yaml.Yaml.Map) !void {
+            const fcr = &self.fast_confirmation;
+            const checkpoints = [_]struct { []const u8, Checkpoint }{
+                .{ "previous_epoch_observed_justified_checkpoint", fcr.previous_epoch_observed_justified_checkpoint },
+                .{ "current_epoch_observed_justified_checkpoint", fcr.current_epoch_observed_justified_checkpoint },
+                .{ "previous_epoch_greatest_unrealized_checkpoint", fcr.previous_epoch_greatest_unrealized_checkpoint },
+            };
+            for (checkpoints) |entry| {
+                if (checks.get(entry[0])) |value| try expectCheckpoint(try parseCheckpoint(value), entry[1], entry[0]);
+            }
+            const roots = [_]struct { []const u8, Root }{
+                .{ "previous_slot_head", fcr.previous_slot_head },
+                .{ "current_slot_head", fcr.current_slot_head },
+                .{ "confirmed_root", fcr.confirmed_root },
+            };
+            for (roots) |entry| {
+                if (checks.get(entry[0])) |value| try expectRoot(try parseRoot(value), entry[1], entry[0]);
+            }
+            if (checks.get("safe_execution_block_hash")) |value| {
+                const hash = fcr.safeExecutionBlockHash(&self.store) orelse return error.UnknownBlock;
+                try expectRoot(try parseRoot(value), hash, "safe execution block hash");
             }
         }
 

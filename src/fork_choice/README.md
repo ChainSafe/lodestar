@@ -2,7 +2,8 @@
 
 Spec-driven rewrite of the beacon chain fork choice, written against
 [consensus-specs v1.7.0-beta.4](https://github.com/ethereum/consensus-specs/tree/v1.7.0-beta.4/specs)
-`fork-choice.md` for phase0 through heze. This document records the design, how it
+`fork-choice.md` for phase0 through heze, plus the fast confirmation rule from
+`fast-confirmation.md`. This document records the design, how it
 differs from the TypeScript proto-array in `packages/fork-choice`, the benchmarks,
 and what is still missing. It stays here while the rewrite is under review;
 `data_flow.html` next to it animates how each input moves through the store's arrays.
@@ -15,6 +16,7 @@ and what is still missing. It stays here while the rewrite is under review;
 | `head.zig`                         | Head computation as array passes, persistent vote totals                           | `get_weight`, `filter_node_tree`, `get_head`, `get_supported_node`, `should_apply_proposer_boost`, `is_head_weak`, `is_parent_strong`                                                                                                                                                           |
 | `proposer_head.zig`                | Proposer reorg helpers                                                             | `get_proposer_head` and its predicates                                                                                                                                                                                                                                                          |
 | `vote_targets.zig`                 | Interned vote targets: the distinct latest messages and the node each counts on    | `get_supported_node` (cached per target)                                                                                                                                                                                                                                                        |
+| `fast_confirmation.zig`            | Fast confirmation rule: the spec `FastConfirmationStore` and one run per slot      | `get_fast_confirmation_store`, `on_fast_confirmation`, `get_latest_confirmed`, `find_latest_confirmed_descendant`, `is_one_confirmed`, `is_confirmed_chain_safe`, the FFG helpers, `get_safe_execution_block_hash`                                                                              |
 | `store_test.zig`                   | Unit tests on a real two-branch chain                                              |                                                                                                                                                                                                                                                                                                 |
 | `test/spec/runner/fork_choice.zig` | Spec vector runner, plays the role of `block_states` and `checkpoint_states`       |                                                                                                                                                                                                                                                                                                 |
 | `bench/fork_choice/`               | `getHead` and `onAttestation` benchmarks, including mainnet-shaped `getHead` cases |                                                                                                                                                                                                                                                                                                 |
@@ -157,7 +159,29 @@ The boundary:
 - `executionStatus(node)` and `isOptimistic(node)` answer from the head cache, for
   `execution_optimistic` in API responses and for block production.
 - `StateProvider` supplies justified balances and, for `is_head_weak` with
-  equivocators, the beacon committee members of a slot.
+  equivocators, the beacon committee members of a slot. Two optional hooks serve the
+  fast confirmation rule: the balance source at a checkpoint and the pulled-up head
+  state's. A caller that does not run the rule leaves them null.
+
+### Fast confirmation
+
+`FastConfirmation` holds the six spec `FastConfirmationStore` fields as roots and
+checkpoints, so `prune` cannot invalidate them, and reads the `Store` passed to
+`onFastConfirmation`. Each run resolves them to block indices once and keeps its
+derived data in an arena:
+
+- Per balance source (the previous and current observed justified checkpoints), one
+  pass over `latest_votes` sums active, unslashed, non-equivocating balances per
+  vote target, then a child-to-parent pass over the block array turns that into
+  every block's `get_attestation_score`. `is_one_confirmed` then reads one number
+  instead of scanning the validators for each block it checks.
+- `get_current_target_score` sums the pulled-up head state's balances per vote
+  target too and computes each target's checkpoint once, not once per validator.
+- Committee membership is one byte per validator per epoch (the slot it attests
+  in), built from the head state's shuffling only when a range query needs it:
+  empty slots before a block or equivocators in the range.
+- Loads are lazy: the previous balance source is only read at an epoch start, for
+  reconfirmation, and the pulled-up head state only when an FFG check runs.
 
 ### Pruning
 
@@ -179,7 +203,7 @@ at the end of every vector and checks that the head stays put.
 | Proposer boost                      | previous and current boost deltas                           | path marked each pass                                                      | low                             |
 | Prune                               | threshold, slices node array                                | compacts rows, renumbers the vote target table                             | low                             |
 | Optimistic sync                     | execution status per node, `validateLatestHash`             | verdict per payload, node status derived                                   | low: 5 sync vectors, unit tests |
-| Fast confirmation                   | in the package                                              | absent                                                                     | medium, separate spec           |
+| Fast confirmation                   | in the package                                              | `fast_confirmation.zig`, scores per vote target folded up the block array  | low: 1431 vectors               |
 | `should_override_forkchoice_update` | implemented                                                 | omitted, removed from the spec                                             | low, see Deviations             |
 | Beacon states                       | `stateGetter` inside the store                              | `StateProvider`, balances and committees only                              | low                             |
 | Slot component timing               | rounds                                                      | floors, as the spec does                                                   | low, 1 ms, no vector hits it    |
@@ -304,6 +328,20 @@ zig build test:spec_tests -Dpreset=minimal "-Dspec_tests.filters=altair fork_cho
 Results at v1.7.0-beta.4, minimal: 1473 pass, 0 fail for each of altair, bellatrix,
 capella, deneb, electra, fulu and gloas, about 20 minutes per fork in Debug.
 
+The fast confirmation vectors (`fast_confirmation`, minimal only, altair through heze)
+run through the same runner: a `checks` step that reports `confirmed_root` follows the
+generator's implicit `on_fast_confirmation`, so the runner calls it there first.
+
+```
+zig build test:spec_tests -Dpreset=minimal "-Dspec_tests.filters=fast_confirmation"
+```
+
+Results at v1.7.0-beta.4: 1431 pass, 0 fail, 8 skip. The skips are
+`is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot` and
+`is_one_confirmed_passes_with_new_validator_activated_in_head_state` on electra
+through heze: they are generated with `@never_bls`, so their deposit carries the BLS
+stub signature, which a spec-correct `process_pending_deposits` rejects.
+
 On macOS 27 with Zig 0.16 the C++-linking test targets need
 `-Dtarget=aarch64-macos.15.0`; CI on Linux does not.
 
@@ -312,7 +350,7 @@ On macOS 27 with Zig 0.16 the C++-linking test targets need
 1. Done: the fork choice compliance vectors pass on every fork (see Tests).
 2. Done: execution status per payload and `onPayloadInvalid` (see Optimistic sync).
 3. Done: votes for a slot not yet past are queued in the store and applied on tick.
-4. Port the fast confirmation rule. `should_override_forkchoice_update` is omitted on
-   purpose (see Deviations).
+4. Done: the fast confirmation rule (see Fast confirmation).
+   `should_override_forkchoice_update` is omitted on purpose (see Deviations).
 5. Run the store in shadow mode behind a flag: it receives every event, logs each
    head mismatch against proto-array, decides nothing.
