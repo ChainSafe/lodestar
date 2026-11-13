@@ -1,9 +1,14 @@
 import crypto from "node:crypto";
 import {bench, describe} from "@chainsafe/benchmark";
 import {SerializedList} from "@chainsafe/ssz";
-import {ForkName, MAX_WITHDRAWALS_PER_PAYLOAD} from "@lodestar/params";
+import {
+  computeExecutionBlockHash as computeExecutionBlockHashNative,
+  computeTransactionsRoot,
+} from "@lodestar/native/execution-block-hash";
+import {ForkName, ForkSeq, MAX_WITHDRAWALS_PER_PAYLOAD} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
-import {computeExecutionBlockHash, computeOrderedTrieRoot} from "../../../src/execution/engine/blockHash.js";
+import {computeExecutionBlockHash} from "../../../src/execution/engine/blockHash.js";
+import * as reference from "../../utils/blockHashReference.js";
 
 describe("execution / engine / computeExecutionBlockHash", () => {
   const cases = [
@@ -31,12 +36,27 @@ describe("execution / engine / computeExecutionBlockHash", () => {
     const executionRequests: gloas.ExecutionRequests = ssz.gloas.ExecutionRequests.defaultValue();
     const name = `${id} ${txCount} txs x ${txSize} B, BAL ${balSize / 1024} KiB`;
 
-    bench(`block hash ${name}`, () => {
+    const payloadBytes = ssz.gloas.ExecutionPayload.serialize(payload);
+    const executionRequestsBytes = ssz.gloas.ExecutionRequests.serialize(executionRequests);
+
+    bench(`JS  - block hash ${name}`, () => {
+      reference.computeExecutionBlockHash(ForkName.gloas, payload, parentBeaconBlockRoot, executionRequests);
+    });
+
+    bench(`zig - block hash ${name}`, () => {
       computeExecutionBlockHash(ForkName.gloas, payload, parentBeaconBlockRoot, executionRequests);
     });
 
-    bench(`transactions trie ${name}`, () => {
-      computeOrderedTrieRoot(transactions);
+    bench(`zig - block hash of serialized payload ${name}`, () => {
+      computeExecutionBlockHashNative(ForkSeq.gloas, payloadBytes, parentBeaconBlockRoot, executionRequestsBytes);
+    });
+
+    bench(`JS  - transactions trie ${name}`, () => {
+      reference.computeOrderedTrieRoot(transactions);
+    });
+
+    bench(`zig - transactions trie ${name}`, () => {
+      computeTransactionsRoot(payload.transactions.bytes);
     });
   }
 });

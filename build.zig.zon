@@ -231,6 +231,10 @@
             .root_source_file = "src/swap_or_not_shuffle/root.zig",
             .imports = .{.blst},
         },
+        .execution_block_hash = .{
+            .root_source_file = "src/execution_block_hash/root.zig",
+            .imports = .{.config},
+        },
         .state_transition = .{
             .root_source_file = "src/state_transition/root.zig",
             .imports = .{
@@ -391,6 +395,7 @@
                     .bls_options,
                     .cpu_count,
                     .swap_or_not_shuffle,
+                    .execution_block_hash,
                     .hex,
                     .persistent_merkle_tree,
                     .ssz,
@@ -426,6 +431,7 @@
         .fork_types = .{ .root_module = .fork_types },
         .bls = .{ .root_module = .bls },
         .swap_or_not_shuffle = .{ .root_module = .swap_or_not_shuffle },
+        .execution_block_hash = .{ .root_module = .execution_block_hash },
         .state_transition = .{ .root_module = .state_transition },
         .era = .{ .root_module = .era },
         .clock = .{ .root_module = .clock },
