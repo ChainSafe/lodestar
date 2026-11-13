@@ -852,6 +852,122 @@ pub const Id = enum(u32) {
         @panic("getRoot exceeded the pool traversal bound");
     }
 
+    /// Chunked leaves hashed per task by `getRootParallel`. A mainnet balances list (~9k leaves)
+    /// splits into ~140 tasks: enough to keep cores of unequal speed busy, few enough that
+    /// per-task scheduling cost stays negligible.
+    pub const chunked_leaf_roots_per_task: usize = 64;
+
+    // Computes the roots of the lazy chunked_leaf nodes in `ids` in parallel on `io`. Each id may
+    // appear at most once, since two tasks writing one root would race.
+    fn computeChunkedLeafRoots(
+        pool: *Pool,
+        io: std.Io,
+        ids: []const Id,
+    ) std.Io.Cancelable!void {
+        if (ids.len <= chunked_leaf_roots_per_task) {
+            computeChunkedLeafRootsTask(pool, ids);
+            return;
+        }
+
+        var group: std.Io.Group = .init;
+        var start: usize = 0;
+        while (start < ids.len) : (start += chunked_leaf_roots_per_task) {
+            const end = @min(start + chunked_leaf_roots_per_task, ids.len);
+            group.async(io, computeChunkedLeafRootsTask, .{ pool, ids[start..end] });
+        }
+        try group.await(io);
+    }
+
+    // Runs on several threads at once, so it hashes into a stack scratch, not the shared
+    // `pool.chunked_leaf_scratch`, and writes only its own ids' roots.
+    fn computeChunkedLeafRootsTask(pool: *Pool, ids: []const Id) void {
+        std.debug.assert(ids.len <= chunked_leaf_roots_per_task);
+        const states = pool.nodes.items(.state);
+        const roots = pool.nodes.items(.root);
+        const payloads = pool.nodes.items(.payload);
+        var scratch: [ChunkedLeaf.K / 2][32]u8 align(64) = undefined;
+        for (ids) |node_id| {
+            const idx = @intFromEnum(node_id);
+            std.debug.assert(states[idx].kind() == .chunked_leaf);
+            std.debug.assert(std.mem.eql(u8, &roots[idx], &lazy_sentinel));
+
+            var hash: [32]u8 = undefined;
+            chunkedLeafPtr(payloads, idx).computeRoot(&scratch, &hash);
+            roots[idx] = hash;
+        }
+    }
+
+    /// Lazy chunked leaves gathered by `getRootParallel` before it hashes them. A mainnet block
+    /// leaves about 1.7k lazy leaves (participation, balances), so one batch covers a block.
+    pub const lazy_chunked_leaves_per_batch: usize = 4096;
+
+    /// `getRoot`, with the lazy chunked leaves under `node_id` hashed in parallel on `io` first.
+    /// Nothing may mutate `pool` until this returns.
+    pub fn getRootParallel(node_id: Id, pool: *Pool, io: std.Io) std.Io.Cancelable!*const [32]u8 {
+        try computeLazyChunkedLeafRoots(node_id, pool, io);
+        return node_id.getRoot(pool);
+    }
+
+    // Hashes the lazy chunked leaves reachable through lazy branches of `node_id`. No branch root
+    // is cached, so a shared lazy subtree is revisited once per path. The walk stops at `getRoot`'s
+    // traversal bounds instead of panicking; `getRoot` then hashes serially what the walk did not
+    // reach, or panics on an invalid tree.
+    fn computeLazyChunkedLeafRoots(node_id: Id, pool: *Pool, io: std.Io) std.Io.Cancelable!void {
+        var batch: [lazy_chunked_leaves_per_batch]Id = undefined;
+        var batch_len: usize = 0;
+        var pending_rights: [max_depth]Id = undefined;
+        var depth: usize = 0;
+        var current = node_id;
+
+        var remaining_visits = 2 * @as(u64, pool.nodes.len) + 1;
+        while (remaining_visits > 0) : (remaining_visits -= 1) {
+            const states = pool.nodes.items(.state);
+            const roots = pool.nodes.items(.root);
+            const idx = @intFromEnum(current);
+            switch (states[idx].kind()) {
+                .branch => if (std.mem.eql(u8, &roots[idx], &lazy_sentinel)) {
+                    if (depth == max_depth) break;
+                    const children = pool.nodes.items(.payload)[idx];
+                    pending_rights[depth] = unpackRight(children);
+                    depth += 1;
+                    current = unpackLeft(children);
+                    continue;
+                },
+                .chunked_leaf => if (std.mem.eql(u8, &roots[idx], &lazy_sentinel)) {
+                    batch[batch_len] = current;
+                    batch_len += 1;
+                    if (batch_len == batch.len) {
+                        try computeDistinctChunkedLeafRoots(pool, io, &batch);
+                        batch_len = 0;
+                    }
+                },
+                .zero, .leaf, .container_struct, .free => {},
+            }
+            if (depth == 0) break;
+            depth -= 1;
+            current = pending_rights[depth];
+        }
+        try computeDistinctChunkedLeafRoots(pool, io, batch[0..batch_len]);
+    }
+
+    // `computeChunkedLeafRoots` for ids that may repeat: a lazy leaf shared by two parents is
+    // gathered twice, and two tasks must not write one root.
+    fn computeDistinctChunkedLeafRoots(pool: *Pool, io: std.Io, ids: []Id) std.Io.Cancelable!void {
+        if (ids.len == 0) return;
+        std.mem.sortUnstable(Id, ids, {}, struct {
+            fn lessThan(_: void, a: Id, b: Id) bool {
+                return @intFromEnum(a) < @intFromEnum(b);
+            }
+        }.lessThan);
+        var distinct: usize = 1;
+        for (ids[1..]) |id| {
+            if (id == ids[distinct - 1]) continue;
+            ids[distinct] = id;
+            distinct += 1;
+        }
+        try computeChunkedLeafRoots(pool, io, ids[0..distinct]);
+    }
+
     pub fn getLeft(node_id: Id, pool: *Pool) Error!Id {
         const idx = @intFromEnum(node_id);
         const kind = pool.nodes.items(.state)[idx].kind();
@@ -899,14 +1015,27 @@ pub const Id = enum(u32) {
         comptime write: fn (*[32]u8, usize, *const T) void,
     ) Error!void {
         std.debug.assert(intra_chunk < valid_chunks);
+        const chunks = try node_id.beginChunkedLeafWrite(pool, valid_chunks);
+        write(&chunks[intra_chunk], index, value);
+    }
+
+    /// Sets the valid-chunk length, invalidates the cached root, and returns the chunks for
+    /// in-place writes. Requires reference count zero; `valid_chunks` must preserve or grow the
+    /// length. Finish writing before the next `getRoot`, which would cache a stale root.
+    pub fn beginChunkedLeafWrite(
+        node_id: Id,
+        pool: *Pool,
+        valid_chunks: u16,
+    ) Error!*align(64) [ChunkedLeaf.K][32]u8 {
+        std.debug.assert(valid_chunks > 0);
         std.debug.assert(valid_chunks <= ChunkedLeaf.K);
         const storage = try node_id.getChunkedLeafPtr(pool);
         // Only this check loads `len`, past the 2 KiB of chunks; the store below doesn't stall.
         if (expensive_safety_checks) std.debug.assert(storage.len <= valid_chunks);
 
-        write(&storage.chunks[intra_chunk], index, value);
         storage.len = valid_chunks;
         pool.nodes.items(.root)[@intFromEnum(node_id)] = lazy_sentinel;
+        return &storage.chunks;
     }
 
     pub fn setChunkedLeafChunk(node_id: Id, pool: *Pool, intra_index: u16, chunk: *const [32]u8) Error!Id {

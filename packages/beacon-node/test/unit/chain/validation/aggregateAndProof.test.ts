@@ -211,6 +211,20 @@ describe("chain / validation / aggregateAndProof", () => {
     expect(getAggregateAndProofSigningRoot(config, 1, signedAggregateAndProof)).toEqual(expectedRoot);
   });
 
+  it("NON_ZERO_ATTESTATION_DATA_INDEX - pre-gloas slot on gloas topic", async () => {
+    const config = createBeaconConfig({...defaultConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 4}, ZERO_HASH);
+    const chain = {config} as unknown as IBeaconChain;
+    const signedAggregateAndProof = ssz.gloas.SignedAggregateAndProof.defaultValue();
+    signedAggregateAndProof.message.aggregate.data.slot = 3 * SLOTS_PER_EPOCH;
+    signedAggregateAndProof.message.aggregate.data.index = 1;
+    signedAggregateAndProof.message.aggregate.committeeBits.set(0, true);
+
+    await expectRejectedWithLodestarError(
+      validateApiAggregateAndProof(ForkName.gloas, chain, signedAggregateAndProof),
+      AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX
+    );
+  });
+
   /** Alias to reduce code duplication */
   async function expectError(
     chain: IBeaconChain,

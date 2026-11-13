@@ -121,8 +121,7 @@ pub fn computeStartBlockSlotFromEraNumber(era_number: u64) !u64 {
     return (try std.math.sub(u64, era_number, 1)) * preset.SLOTS_PER_HISTORICAL_ROOT;
 }
 
-pub fn getShortEraRoot(state: fork_types.AnyBeaconState) ![8]u8 {
-    const allocator = std.heap.page_allocator;
+pub fn getShortEraRoot(allocator: std.mem.Allocator, state: fork_types.AnyBeaconState) ![8]u8 {
     var short_era_root: [8]u8 = undefined;
     var s = state;
     var era_root: [32]u8 = undefined;

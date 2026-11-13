@@ -73,7 +73,7 @@ jobs:
 
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 24
+          node: 26
           # Required for OIDC publish under pnpm v11 — without registry-url
           # setup-node skips writing the registry to .npmrc and the npm OIDC
           # auth flow rejects the token. Matches publish-dev.yml's setup.

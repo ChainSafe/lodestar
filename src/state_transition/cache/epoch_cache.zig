@@ -219,7 +219,7 @@ pub const EpochCache = struct {
         // needs a fully populated pubkey cache.
         const skip_sync_pubkeys = if (option) |opt| opt.skip_sync_pubkeys else false;
         if (!skip_sync_pubkeys) {
-            try pubkey_cache.syncPubkeys(io, validators);
+            try pubkey_cache.syncPubkeys(allocator, io, validators);
         }
 
         const effective_balance_increments_rc = try initEffectiveBalanceIncrementsRc(allocator, validator_count);

@@ -33,6 +33,8 @@ export class BeaconSync implements IBeaconSync {
   /** For metrics only */
   private readonly peerSyncType = new Map<string, PeerSyncType>();
   private readonly slotImportTolerance: Slot;
+  /** The requested subscription state, set while a change is being applied */
+  private pendingGossipSubscribed: boolean | undefined;
 
   constructor(opts: SyncOptions, modules: SyncModules) {
     const {config, chain, db, metrics, network, logger} = modules;
@@ -89,6 +91,7 @@ export class BeaconSync implements IBeaconSync {
   }
 
   close(): void {
+    this.pendingGossipSubscribed = undefined;
     this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
     this.chain.clock.off(ClockEvent.epoch, this.onClockEpoch);
@@ -296,17 +299,7 @@ export class BeaconSync implements IBeaconSync {
     if (state === SyncState.Synced && this.chain.clock.currentEpoch >= MIN_EPOCH_TO_START_GOSSIP) {
       this.chain.forkChoice.resumeFastConfirmation();
 
-      if (!this.network.isSubscribedToGossipCoreTopics()) {
-        this.network
-          .subscribeGossipCoreTopics()
-          .then(() => {
-            this.metrics?.syncSwitchGossipSubscriptions.inc({action: "subscribed"});
-            this.logger.info("Subscribed gossip core topics");
-          })
-          .catch((e) => {
-            this.logger.error("Error subscribing to gossip core topics", {}, e);
-          });
-      }
+      this.setGossipSubscription(true);
 
       // also start searching for unknown blocks
       if (!this.unknownBlockSync.isSubscribedToNetwork()) {
@@ -322,17 +315,8 @@ export class BeaconSync implements IBeaconSync {
         // Same debounce as gossip: transient blips keep the rule running, only a real gap pauses it
         this.chain.forkChoice.pauseFastConfirmation();
 
-        if (this.network.isSubscribedToGossipCoreTopics()) {
-          this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots`);
-          this.network
-            .unsubscribeGossipCoreTopics()
-            .then(() => {
-              this.metrics?.syncSwitchGossipSubscriptions.inc({action: "unsubscribed"});
-              this.logger.info("Un-subscribed gossip core topics");
-            })
-            .catch((e) => {
-              this.logger.error("Error unsubscribing to gossip core topics", {}, e);
-            });
+        if (this.setGossipSubscription(false)) {
+          this.logger.warn("Node sync has fallen behind", {slots: syncDiff});
         }
 
         // also stop searching for unknown blocks
@@ -343,6 +327,43 @@ export class BeaconSync implements IBeaconSync {
       }
     }
   };
+
+  private setGossipSubscription(subscribe: boolean): boolean {
+    if ((this.pendingGossipSubscribed ?? this.network.isSubscribedToGossipCoreTopics()) === subscribe) return false;
+    const applying = this.pendingGossipSubscribed !== undefined;
+    this.pendingGossipSubscribed = subscribe;
+    if (!applying) void this.applyGossipSubscription();
+    return true;
+  }
+
+  /**
+   * Applies the latest requested state one request at a time. Network skips a subscribe issued while an unsubscribe is
+   * in flight, so opposite requests must not overlap.
+   */
+  private async applyGossipSubscription(): Promise<void> {
+    for (;;) {
+      const subscribe = this.pendingGossipSubscribed;
+      if (subscribe === undefined || subscribe === this.network.isSubscribedToGossipCoreTopics()) break;
+      try {
+        await (subscribe ? this.network.subscribeGossipCoreTopics() : this.network.unsubscribeGossipCoreTopics());
+      } catch (e) {
+        this.logger.error(
+          subscribe ? "Error subscribing to gossip core topics" : "Error unsubscribing to gossip core topics",
+          {},
+          e as Error
+        );
+        // Leave a retry of the same request to the next sync state update
+        if (this.pendingGossipSubscribed === subscribe) break;
+        continue;
+      }
+      if (this.pendingGossipSubscribed === undefined || this.network.isSubscribedToGossipCoreTopics() !== subscribe) {
+        break;
+      }
+      this.metrics?.syncSwitchGossipSubscriptions.inc({action: subscribe ? "subscribed" : "unsubscribed"});
+      this.logger.info(subscribe ? "Subscribed gossip core topics" : "Un-subscribed gossip core topics");
+    }
+    this.pendingGossipSubscribed = undefined;
+  }
 
   private onClockEpoch = (): void => {
     // If a node witness the genesis event consider starting gossip
