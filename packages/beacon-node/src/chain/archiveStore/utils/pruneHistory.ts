@@ -6,12 +6,14 @@ import {IBeaconDb} from "../../../db/interface.js";
 import {Metrics} from "../../../metrics/index.js";
 
 /**
- * Bounds the blocks pruned per run, on startup and on every finalized checkpoint, so a large backlog is
- * drained over many runs instead of blocking one. The cutoff can be far ahead when pruning is first enabled
- * on an existing database, when the retention window shrinks at a fork or when finality resumes after a
- * long period of non-finality.
+ * Bounds the blocks pruned per run on a running node, so a large backlog is drained over many runs instead
+ * of stalling one. The cutoff can be far ahead when pruning is first enabled on an existing database, when
+ * the retention window shrinks at a fork or when finality resumes after a long period of non-finality.
  */
-export const MAX_PRUNE_BLOCK_SLOTS_PER_RUN = 32768;
+export const MAX_PRUNE_BLOCK_SLOTS_PER_RUN = 4096;
+
+/** Bounds the blocks pruned on startup. Larger than the per run limit since the node is not yet serving. */
+export const MAX_PRUNE_BLOCK_SLOTS_ON_STARTUP = 32768;
 
 export async function pruneHistory(
   config: ChainForkConfig,

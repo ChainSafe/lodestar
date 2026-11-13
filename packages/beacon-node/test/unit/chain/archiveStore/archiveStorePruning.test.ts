@@ -7,7 +7,7 @@ import {LogLevel} from "@lodestar/utils";
 import {ArchiveMode, ArchiveStore} from "../../../../src/chain/archiveStore/index.js";
 import {FrequencyStateArchiveStrategy} from "../../../../src/chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import * as archiveBlocksModule from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
-import {MAX_PRUNE_BLOCK_SLOTS_PER_RUN} from "../../../../src/chain/archiveStore/utils/pruneHistory.js";
+import {MAX_PRUNE_BLOCK_SLOTS_ON_STARTUP} from "../../../../src/chain/archiveStore/utils/pruneHistory.js";
 import {ChainEvent} from "../../../../src/chain/emitter.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {BeaconDb} from "../../../../src/db/index.js";
@@ -103,9 +103,10 @@ describe("chain / archiveStore / startup block pruning", () => {
     const {db, close} = await startIsolatedTmpBeaconDb(config, "lodestar-archive-store-startup-pruning-");
     const controller = new AbortController();
     const chain = getMockedBeaconChain();
-    const currentEpoch = config.MIN_EPOCHS_FOR_BLOCK_REQUESTS + 2 * computeEpochAtSlot(MAX_PRUNE_BLOCK_SLOTS_PER_RUN);
+    const currentEpoch =
+      config.MIN_EPOCHS_FOR_BLOCK_REQUESTS + 2 * computeEpochAtSlot(MAX_PRUNE_BLOCK_SLOTS_ON_STARTUP);
     vi.spyOn(chain.clock, "currentEpoch", "get").mockReturnValue(currentEpoch);
-    const slots = [0, MAX_PRUNE_BLOCK_SLOTS_PER_RUN - 1, MAX_PRUNE_BLOCK_SLOTS_PER_RUN];
+    const slots = [0, MAX_PRUNE_BLOCK_SLOTS_ON_STARTUP - 1, MAX_PRUNE_BLOCK_SLOTS_ON_STARTUP];
     await db.blockArchive.batchPut(
       slots.map((slot) => {
         const block = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -129,7 +130,7 @@ describe("chain / archiveStore / startup block pruning", () => {
     try {
       await store.init();
 
-      expect(await db.blockArchive.keys()).toEqual([MAX_PRUNE_BLOCK_SLOTS_PER_RUN]);
+      expect(await db.blockArchive.keys()).toEqual([MAX_PRUNE_BLOCK_SLOTS_ON_STARTUP]);
     } finally {
       controller.abort();
       await store.close();

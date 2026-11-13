@@ -62,4 +62,4 @@ There is really only one flag that is needed to manage the data for Lodestar, [`
 
 For validators seeking to store the least amount of data possible, and store no historical data, use [`--chain.pruneHistory`](./beacon-cli#--chainprunehistory). This flag will configure the beacon node to continually prune all old blocks and execution payload envelopes (older than `config.MIN_EPOCHS_FOR_BLOCK_REQUESTS`, which is ~5 months on mainnet and reduced to ~2 months from gloas) and all prior finalized states.
 
-**Note:** An existing large database is pruned gradually, up to 32768 slots of blocks on startup and on every finalized checkpoint, so disk usage drops over a few days rather than immediately.
+**Note:** An existing large database is pruned gradually, up to 32768 slots of blocks on startup and 4096 on every finalized checkpoint, so disk usage drops over days to weeks rather than immediately.
