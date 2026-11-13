@@ -264,12 +264,13 @@ pub const PubkeyCache = struct {
         defer self.unlockShared(io);
 
         const values = self.entries.values();
-        if (indices[0] >= values.len) return error.InvalidIndex;
-        var aggregate_pubkey = values[@intCast(indices[0])].toAggregate();
-        for (indices[1..]) |index| {
+        var aggregate_pubkey: bls.AggregatePublicKey = .{};
+        var adder = bls.AggregatePublicKey.BatchAdder.init(&aggregate_pubkey);
+        for (indices) |index| {
             if (index >= values.len) return error.InvalidIndex;
-            aggregate_pubkey.add(&values[@intCast(index)]);
+            adder.add(&values[@intCast(index)]);
         }
+        adder.finish();
         return aggregate_pubkey.toPublicKey();
     }
 
@@ -284,10 +285,12 @@ pub const PubkeyCache = struct {
         defer self.unlockShared(io);
 
         const values = self.entries.values();
+        var adder = bls.AggregatePublicKey.BatchAdder.init(sum);
         for (indices) |index| {
             if (index >= values.len) return error.InvalidIndex;
-            sum.add(&values[index]);
+            adder.add(&values[index]);
         }
+        adder.finish();
     }
 
     /// Add to `sum` the pubkeys of the `members` whose bit at `bit_offset + i`
@@ -307,12 +310,14 @@ pub const PubkeyCache = struct {
         defer self.unlockShared(io);
 
         const values = self.entries.values();
+        var adder = bls.AggregatePublicKey.BatchAdder.init(sum);
         for (members, bit_offset..) |index, bit| {
             const is_set = getBit(bits, bit);
             if (is_set != participating) continue;
             if (index >= values.len) return error.InvalidIndex;
-            sum.add(&values[index]);
+            adder.add(&values[index]);
         }
+        adder.finish();
     }
 
     /// Append a compressed pubkey at the next validator index. Supplying an
