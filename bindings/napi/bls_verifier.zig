@@ -110,7 +110,7 @@ pub fn verifySignatureSets(sets: js.Array) !js.Boolean {
                     io,
                     &pubkeys.state.cache,
                     try committee.committeePubkeysId.toU32Exact(),
-                    (try committee.slot.toU64Exact()) % preset.SLOTS_PER_EPOCH,
+                    (try committee.slot.toSafeInteger()) % preset.SLOTS_PER_EPOCH,
                     committee_indices,
                     try committee.aggregationBits.toSlice(),
                     try committee.bitLen.toU32Exact(),

@@ -32,7 +32,7 @@ const Fixture = struct {
 
         var cache = PubkeyCache.init(testing.allocator, testing.io);
         errdefer cache.deinit();
-        try cache.syncPubkeys(testing.io, &validator_ptrs);
+        try cache.syncPubkeys(testing.allocator, testing.io, &validator_ptrs);
 
         const shuffling = try testing.allocator.alloc(u32, count);
         errdefer testing.allocator.free(shuffling);
