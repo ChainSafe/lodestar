@@ -136,8 +136,10 @@ describe("cmds / beacon / args handler", () => {
     await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).rejects.toThrow(
       "--chain.nativeStateTransition does not support Heze"
     );
-    await expect(runBeaconHandlerInit({paramsFile})).resolves.toBeDefined();
-    await expect(runBeaconHandlerInit({"chain.nativeStateTransition": true})).resolves.toBeDefined();
+    const hezeDefault = await runBeaconHandlerInit({paramsFile});
+    expect(hezeDefault.options.chain.nativeStateTransition).toBe(false);
+    const gloasDefault = await runBeaconHandlerInit({});
+    expect(gloasDefault.options.chain.nativeStateTransition).toBe(true);
   });
 
   it("resolves the data column directory independently of the database directory", async () => {
