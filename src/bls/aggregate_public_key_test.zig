@@ -6,7 +6,7 @@ const PublicKey = @import("root.zig").PublicKey;
 const SecretKey = @import("SecretKey.zig");
 const AggregatePublicKey = @import("AggregatePublicKey.zig");
 const BatchAdder = AggregatePublicKey.BatchAdder;
-const batch_add_len = AggregatePublicKey.batch_add_len;
+const batch_add_max = AggregatePublicKey.batch_add_max;
 
 const key_count = 48;
 
@@ -47,11 +47,11 @@ fn expectBatchMatchesSerial(keys: []const *const PublicKey) !void {
 
 test "BatchAdder should match adding one key at a time" {
     const keys = try testKeys();
-    var refs: [2 * batch_add_len + 37]*const PublicKey = undefined;
+    var refs: [2 * batch_add_max + 37]*const PublicKey = undefined;
 
     // Distinct neighbours, across the serial threshold and the batch boundary.
     for (&refs, 0..) |*ref, i| ref.* = &keys[i % key_count];
-    for ([_]usize{ 0, 1, 2, 47, 48, 49, batch_add_len - 1, batch_add_len, batch_add_len + 1, refs.len }) |count| {
+    for ([_]usize{ 0, 1, 2, 47, 48, 49, batch_add_max - 1, batch_add_max, batch_add_max + 1, refs.len }) |count| {
         try expectBatchMatchesSerial(refs[0..count]);
     }
 
