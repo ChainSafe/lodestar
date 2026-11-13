@@ -21,6 +21,7 @@
 
 const std = @import("std");
 const bls = @import("bls");
+const getBit = @import("bit_array").getBit;
 const types = @import("consensus_types");
 const Validator = types.phase0.Validator.Type;
 
@@ -307,7 +308,7 @@ pub const PubkeyCache = struct {
 
         const values = self.entries.values();
         for (members, bit_offset..) |index, bit| {
-            const is_set = (bits[bit / 8] >> @intCast(bit % 8)) & 1 == 1;
+            const is_set = getBit(bits, bit);
             if (is_set != participating) continue;
             if (index >= values.len) return error.InvalidIndex;
             sum.add(&values[index]);

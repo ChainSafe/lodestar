@@ -1,4 +1,5 @@
 const std = @import("std");
+const getBit = @import("bit_array").getBit;
 const types = @import("consensus_types");
 const preset = @import("preset").preset;
 const bls = @import("bls");
@@ -74,7 +75,7 @@ const Fixture = struct {
         for (committee_indices) |committee_index| {
             const members = self.committees.committee(@intCast(slot * committees_per_slot + committee_index));
             for (members) |member| {
-                if ((bits[bit / 8] >> @intCast(bit % 8)) & 1 == 1) try participants.append(testing.allocator, member);
+                if (getBit(bits, bit)) try participants.append(testing.allocator, member);
                 bit += 1;
             }
         }

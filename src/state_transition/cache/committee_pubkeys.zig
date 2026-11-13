@@ -7,6 +7,7 @@
 
 const std = @import("std");
 const bls = @import("bls");
+const getBit = @import("bit_array").getBit;
 const preset = @import("preset").preset;
 const PubkeyCache = @import("pubkey_cache.zig").PubkeyCache;
 
@@ -47,7 +48,7 @@ pub const CommitteePubkeys = struct {
             .allocator = allocator,
             .committees_per_slot = committees_per_slot,
             .shuffling = shuffling,
-            .aggregate_pks_slice = aggregate_pks_slice ,
+            .aggregate_pks_slice = aggregate_pks_slice,
         };
         for (aggregate_pks_slice, 0..) |*aggregate, i| {
             aggregate.* = .{};
@@ -123,7 +124,7 @@ pub const CommitteePubkeys = struct {
 fn countSetBits(bits: []const u8, bit_offset: usize, len: usize) usize {
     var count: usize = 0;
     for (bit_offset..bit_offset + len) |bit| {
-        count += (bits[bit / 8] >> @intCast(bit % 8)) & 1;
+        count += @intFromBool(getBit(bits, bit));
     }
     return count;
 }
