@@ -5,7 +5,6 @@ import {BeaconPaths, defaultBeaconPaths} from "./paths.js";
 
 type BeaconExtraArgs = {
   genesisStateFile?: string;
-  configFile?: string;
   bootnodesFile?: string;
   checkpointSyncUrl?: string;
   checkpointState?: string;
@@ -32,12 +31,6 @@ type BeaconExtraArgs = {
 export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   genesisStateFile: {
     description: "Path or URL to download a genesis state file in ssz-encoded format",
-    type: "string",
-  },
-
-  configFile: {
-    hidden: true,
-    description: "[DEPRECATED] Beacon node configuration file path",
     type: "string",
   },
 
