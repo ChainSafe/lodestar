@@ -6,38 +6,58 @@ import {MapDef} from "@lodestar/utils";
  */
 const SLOTS_RETAINED = 2;
 
+export type SeenBuilderBids = {
+  /** Number of valid bids seen */
+  count: number;
+  /**
+   * The builder's bid limit. Bids for the same slot and parent root are validated against the same state,
+   * so it is known without the state once a bid was valid
+   */
+  limit: number;
+};
+
 /**
- * Tracks execution payload bids we've already seen per
+ * Counts the valid execution payload bids seen per
  * (slot, builder, parent block hash, parent block root).
  */
 export class SeenExecutionPayloadBids {
-  private readonly branchesByBuilderBySlot = new MapDef<Slot, MapDef<BuilderIndex, Set<string>>>(
-    () => new MapDef<BuilderIndex, Set<string>>(() => new Set<string>())
+  private readonly bidsByBranchByBuilderBySlot = new MapDef<Slot, MapDef<BuilderIndex, Map<string, SeenBuilderBids>>>(
+    () => new MapDef<BuilderIndex, Map<string, SeenBuilderBids>>(() => new Map<string, SeenBuilderBids>())
   );
   private lowestPermissibleSlot: Slot = 0;
 
-  isKnown(slot: Slot, builderIndex: BuilderIndex, parentBlockHash: RootHex, parentBlockRoot: RootHex): boolean {
-    return (
-      this.branchesByBuilderBySlot.get(slot)?.get(builderIndex)?.has(branchKey(parentBlockHash, parentBlockRoot)) ===
-      true
-    );
+  get(
+    slot: Slot,
+    builderIndex: BuilderIndex,
+    parentBlockHash: RootHex,
+    parentBlockRoot: RootHex
+  ): SeenBuilderBids | undefined {
+    return this.bidsByBranchByBuilderBySlot
+      .get(slot)
+      ?.get(builderIndex)
+      ?.get(branchKey(parentBlockHash, parentBlockRoot));
   }
 
-  add(slot: Slot, builderIndex: BuilderIndex, parentBlockHash: RootHex, parentBlockRoot: RootHex): void {
+  add(
+    slot: Slot,
+    builderIndex: BuilderIndex,
+    parentBlockHash: RootHex,
+    parentBlockRoot: RootHex,
+    bidLimit: number
+  ): void {
     if (slot < this.lowestPermissibleSlot) {
       throw Error(`slot ${slot} < lowestPermissibleSlot ${this.lowestPermissibleSlot}`);
     }
-    this.branchesByBuilderBySlot
-      .getOrDefault(slot)
-      .getOrDefault(builderIndex)
-      .add(branchKey(parentBlockHash, parentBlockRoot));
+    const bidsByBranch = this.bidsByBranchByBuilderBySlot.getOrDefault(slot).getOrDefault(builderIndex);
+    const key = branchKey(parentBlockHash, parentBlockRoot);
+    bidsByBranch.set(key, {count: (bidsByBranch.get(key)?.count ?? 0) + 1, limit: bidLimit});
   }
 
   prune(currentSlot: Slot): void {
     this.lowestPermissibleSlot = Math.max(currentSlot - SLOTS_RETAINED, 0);
-    for (const slot of this.branchesByBuilderBySlot.keys()) {
+    for (const slot of this.bidsByBranchByBuilderBySlot.keys()) {
       if (slot < this.lowestPermissibleSlot) {
-        this.branchesByBuilderBySlot.delete(slot);
+        this.bidsByBranchByBuilderBySlot.delete(slot);
       }
     }
   }

@@ -1,6 +1,7 @@
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {PAYLOAD_BUILDER_VERSION, isForkPostHeze} from "@lodestar/params";
 import {
+  ETH_TO_GWEI,
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
   getExecutionPayloadBidSigningRoot,
@@ -165,17 +166,23 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [IGNORE] this is the first signed bid seen with a valid signature from the given builder for
-  // the tuple `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
-  // Entries are only added after signature verification, so known tuples can be dropped before
-  // state regeneration and the other expensive validation steps.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)) {
+  // [IGNORE] The builder has not reached its bid limit, checked against the limit of its last valid bid.
+  // Bids for the same slot and parent root are validated against the same state, so bids past the
+  // limit can be dropped before state regeneration and the other expensive validation steps.
+  const seenBids = chain.seenExecutionPayloadBids.get(
+    bid.slot,
+    bid.builderIndex,
+    bidParentBlockHash,
+    bidParentBlockRoot
+  );
+  if (seenBids !== undefined && seenBids.count >= seenBids.limit) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
+      code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
       parentBlockRoot: bidParentBlockRoot,
       parentBlockHash: bidParentBlockHash,
+      bidLimit: seenBids.limit,
     });
   }
 
@@ -366,6 +373,24 @@ async function validateExecutionPayloadBid(
     });
   }
 
+  // [IGNORE] The builder has not reached its bid limit for the tuple
+  // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)` -- i.e. one bid per ETH of builder balance,
+  // `get_builder_bid_limit(state, bid.builder_index)`.
+  const bidLimit = Math.floor(builder.balance / ETH_TO_GWEI);
+  if (
+    (chain.seenExecutionPayloadBids.get(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)?.count ??
+      0) >= bidLimit
+  ) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+      parentBlockRoot: bidParentBlockRoot,
+      parentBlockHash: bidParentBlockHash,
+      bidLimit,
+    });
+  }
+
   // [IGNORE] `bid.value` is less or equal than the builder's excess balance --
   // i.e. `can_builder_cover_bid(state, builder_index, amount)` returns `True`.
   if (!state.canBuilderCoverBid(bid.builderIndex, bid.value)) {
@@ -426,20 +451,24 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // Repeat the seen check after the awaited signature verification to prevent concurrent bids
-  // for the same builder and tuple from both passing validation.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)) {
+  // Repeat the bid limit check after the awaited signature verification to prevent concurrent bids
+  // for the same builder and tuple from all passing validation.
+  if (
+    (chain.seenExecutionPayloadBids.get(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)?.count ??
+      0) >= bidLimit
+  ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
+      code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
       parentBlockRoot: bidParentBlockRoot,
       parentBlockHash: bidParentBlockHash,
+      bidLimit,
     });
   }
 
   // Valid
-  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot);
+  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot, bidLimit);
 
   return {proposerIndex: proposerPreferences.message.validatorIndex};
 }

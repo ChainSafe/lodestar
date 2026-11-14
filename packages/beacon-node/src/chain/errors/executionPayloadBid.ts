@@ -7,7 +7,7 @@ export enum ExecutionPayloadBidErrorCode {
   NON_ZERO_EXECUTION_PAYMENT = "EXECUTION_PAYLOAD_BID_ERROR_NON_ZERO_EXECUTION_PAYMENT",
   BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH = "EXECUTION_PAYLOAD_BID_ERROR_BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH",
   INCOMPATIBLE_WITH_HEAD = "EXECUTION_PAYLOAD_BID_ERROR_INCOMPATIBLE_WITH_HEAD",
-  BID_ALREADY_KNOWN = "EXECUTION_PAYLOAD_BID_ERROR_BID_ALREADY_KNOWN",
+  BID_LIMIT_REACHED = "EXECUTION_PAYLOAD_BID_ERROR_BID_LIMIT_REACHED",
   BID_TOO_LOW = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_LOW",
   BID_TOO_HIGH = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_HIGH",
   BUILDER_MAY_EXIT = "EXECUTION_PAYLOAD_BID_ERROR_BUILDER_MAY_EXIT",
@@ -46,11 +46,12 @@ export type ExecutionPayloadBidErrorType =
       headBlockRoot: RootHex;
     }
   | {
-      code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN;
+      code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED;
       builderIndex: BuilderIndex;
       slot: Slot;
       parentBlockRoot: RootHex;
       parentBlockHash: RootHex;
+      bidLimit: number;
     }
   | {code: ExecutionPayloadBidErrorCode.BID_TOO_LOW; bidValue: number; currentHighestBid: number}
   | {code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH; bidValue: number; builderBalance: number}
