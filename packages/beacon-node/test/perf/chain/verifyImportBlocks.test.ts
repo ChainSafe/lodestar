@@ -8,11 +8,11 @@ import {BeaconStateView} from "@lodestar/state-transition";
 import {rangeSyncTest} from "@lodestar/state-transition/test-utils";
 import {SignedBeaconBlock} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
-import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {BeaconChain} from "../../../src/chain/index.js";
+import {defaultChainOptions} from "../../../src/chain/options.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
@@ -87,7 +87,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           proposerBoostReorg: true,
           computeUnrealized: false,
           disableArchiveOnCheckpoint: true,
-          suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
+          suggestedFeeRecipient: defaultChainOptions.suggestedFeeRecipient,
           skipCreateStateCacheIfAvailable: true,
           archiveStateEpochFrequency: 1024,
           minSameMessageSignatureSetsToBatch: 32,

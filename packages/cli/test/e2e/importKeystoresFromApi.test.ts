@@ -92,9 +92,11 @@ describe("import keystores from api", () => {
     );
 
     // Attempt to run a second process and expect the keystore lock to throw
-    const validator = await spawnCliCommand("packages/cli/bin/lodestar.js", ["validator", "--dataDir", dataDir], {
-      logPrefix: "vc-2",
-    });
+    const validator = await spawnCliCommand(
+      "packages/cli/bin/lodestar.js",
+      ["validator", "--dataDir", dataDir, "--suggestedFeeRecipient", "0x0000000000000000000000000000000000000000"],
+      {logPrefix: "vc-2"}
+    );
 
     await new Promise<void>((resolve, reject) => {
       // logger.error is printed to stdout, Yargs errors are printed in stderr

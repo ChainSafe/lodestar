@@ -29,6 +29,7 @@ import {
   parseProposerConfig,
 } from "../../util/index.js";
 import {
+  ParsedProposerConfig,
   parseBuilderBoostFactor,
   parseBuilderGweiAmount,
   parseBuilderMinBid,
@@ -249,12 +250,12 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   }
 }
 
-function getProposerConfigFromArgs(
+export function getProposerConfigFromArgs(
   args: IValidatorCliArgs,
   {
     persistedKeysBackend,
     accountPaths,
-  }: {persistedKeysBackend: IPersistedKeysBackend; accountPaths: {proposerDir: string}}
+  }: {persistedKeysBackend: Pick<IPersistedKeysBackend, "readProposerConfigs">; accountPaths: {proposerDir: string}}
 ): ValidatorProposerConfig {
   const defaultConfig = {
     graffiti: args.graffiti,
@@ -272,7 +273,7 @@ function getProposerConfigFromArgs(
     },
   };
 
-  let valProposerConfig: ValidatorProposerConfig;
+  let valProposerConfig: ParsedProposerConfig;
   const proposerConfigFromKeymanager = persistedKeysBackend.readProposerConfigs();
 
   if (Object.keys(proposerConfigFromKeymanager).length > 0) {
@@ -289,8 +290,15 @@ function getProposerConfigFromArgs(
       // parseProposerConfig will override the defaults with the arg created defaultConfig
       valProposerConfig = parseProposerConfig(args.proposerSettingsFile, defaultConfig);
     } else {
-      valProposerConfig = {defaultConfig} as ValidatorProposerConfig;
+      valProposerConfig = {proposerConfig: {}, defaultConfig};
     }
+  }
+
+  const {feeRecipient} = valProposerConfig.defaultConfig;
+  if (feeRecipient === undefined) {
+    throw new YargsError(
+      "Fee recipient must be set via --suggestedFeeRecipient or default_config.fee_recipient in the proposer settings file"
+    );
   }
 
   // Trusted execution payments are only backed by the builder's promise to pay, require an
@@ -320,7 +328,7 @@ function getProposerConfigFromArgs(
     throw new YargsError("Builder selection executiononly can not be combined with builders");
   }
 
-  return valProposerConfig;
+  return {...valProposerConfig, defaultConfig: {...valProposerConfig.defaultConfig, feeRecipient}};
 }
 
 function parseBroadcastValidation(broadcastValidation?: string): routes.beacon.BroadcastValidation | undefined {

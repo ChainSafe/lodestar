@@ -241,8 +241,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   suggestedFeeRecipient: {
     description:
-      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or key manager API. Only used post merge.",
-    defaultDescription: defaultOptions.suggestedFeeRecipient,
+      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). Required unless a default is set via `--proposerSettingsFile`. Can be overridden per validator key using the proposer settings file or keymanager API.",
     type: "string",
   },
 

@@ -215,7 +215,7 @@ docker-compose up -d
 
 ###### Beacon node and validator
 
-First, you must have keystores and their secrets available locally at `./keystores` and your `password.txt` in `./secrets`
+First, you must have keystores and their secrets available locally at `./keystores` and your `password.txt` in `./secrets`. Set `LODESTAR_SUGGESTED_FEE_RECIPIENT` in `.env`, the validator client does not start without a fee recipient.
 
 ```sh
 docker-compose -f docker-compose.yml -f docker-compose.validator.yml up -d

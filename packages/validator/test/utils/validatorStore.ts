@@ -4,7 +4,7 @@ import {chainConfig} from "@lodestar/config/default";
 import {SecretKey} from "@lodestar/native/blst";
 import {Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
-import {ValidatorProposerConfig} from "../../src/services/validatorStore.js";
+import {ProposerConfig, ValidatorProposerConfig} from "../../src/services/validatorStore.js";
 import {testLogger} from "./logger.js";
 import {SlashingProtectionMock} from "./slashingProtectionMock.js";
 
@@ -15,7 +15,10 @@ export async function initValidatorStore(
   secretKeys: SecretKey[],
   api: ApiClient,
   customChainConfig: ChainConfig = chainConfig,
-  valProposerConfig: ValidatorProposerConfig = {defaultConfig: {builder: {}}, proposerConfig: {}}
+  valProposerConfig: Omit<ValidatorProposerConfig, "defaultConfig"> & {defaultConfig: ProposerConfig} = {
+    defaultConfig: {builder: {}},
+    proposerConfig: {},
+  }
 ): Promise<ValidatorStore> {
   const logger = testLogger();
   const genesisValidatorsRoot = Buffer.alloc(32, 0xdd);
@@ -36,6 +39,9 @@ export async function initValidatorStore(
       metrics,
     },
     signers,
-    valProposerConfig
+    {
+      ...valProposerConfig,
+      defaultConfig: {feeRecipient: "0x0000000000000000000000000000000000000000", ...valProposerConfig.defaultConfig},
+    }
   );
 }
