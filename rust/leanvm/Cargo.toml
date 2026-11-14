@@ -1,0 +1,16 @@
+[package]
+name = "lodestar-leanvm"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+leanvm = { git = "https://github.com/leanEthereum/leanVM", rev = "e5d75f858e91161921c0afe3d9f56300e9a3a03c" }
+
+# leanVM's own release profile, which a git dependency does not bring with it.
+[profile.release]
+lto = "thin"
+codegen-units = 1

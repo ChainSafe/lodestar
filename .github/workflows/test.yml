@@ -435,6 +435,10 @@ jobs:
       - name: Run ere_verifier tests
         run: |
           zig build test:ere_verifier
+      # Runs the runner's cargo on `rust/leanvm` unless Zig's global cache already holds its archive.
+      - name: Run leanvm tests
+        run: |
+          zig build test:leanvm
 
       - name: Build benchmarks
         run: |
@@ -678,6 +682,11 @@ jobs:
         with:
           node: 26
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      # The targets build in parallel, and rustup cannot install one toolchain from several
+      # cargo runs at once.
+      - name: Install the Rust toolchain
+        working-directory: rust/leanvm
+        run: cargo --version
       - name: Build release artifacts
         run: |
           pnpm --filter @lodestar/native exec zapi build-artifacts --optimize ReleaseSafe --zig-cwd .. --artifacts-dir "$PWD/bindings/artifacts"

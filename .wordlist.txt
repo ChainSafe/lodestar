@@ -193,6 +193,7 @@ keypair
 keyrings
 keystore
 keystores
+leanVM
 libp
 lifecycle
 lightclient
@@ -240,6 +241,7 @@ req
 reqresp
 responder
 runtime
+rustup
 scalability
 secp
 sepolia
@@ -255,6 +257,7 @@ tcp
 testnet
 testnets
 todo
+toolchain
 trustless
 typesafe
 udp

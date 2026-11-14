@@ -13,6 +13,7 @@ pub const blst = @import("./blst.zig");
 pub const blsVerifier = @import("./bls_verifier.zig");
 pub const pubkeys = @import("./pubkeys.zig");
 pub const executionProofVerifier = @import("./execution_proof_verifier.zig");
+pub const leanvm = @import("./leanvm.zig");
 
 const options = @import("bls_options");
 
