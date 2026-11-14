@@ -4,11 +4,11 @@ import {
   BlockExecutionStatus,
   BlockExtraMeta,
   ExecutionStatus,
+  LVHInvalidJudged,
   PayloadStatus,
   ProtoArray,
   ProtoBlock,
 } from "../../../src/index.js";
-import {LVHExecErrorCode} from "../../../src/protoArray/errors.js";
 
 type ValidationTestCase = {
   root: string;
@@ -171,8 +171,9 @@ describe("executionStatus / normal updates", () => {
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "2C",
-      invalidateFromParentBlockRoot: "3C",
-      invalidateFromParentBlockHash: "3C",
+      invalidateFromBlockRoot: "3C",
+      invalidateFromBlockHash: "3C",
+      judged: LVHInvalidJudged.FromBlock,
     },
     3
   );
@@ -235,8 +236,9 @@ describe("executionStatus / normal updates", () => {
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "1A",
-      invalidateFromParentBlockRoot: "3A",
-      invalidateFromParentBlockHash: "3A",
+      invalidateFromBlockRoot: "3A",
+      invalidateFromBlockHash: "3A",
+      judged: LVHInvalidJudged.FromBlock,
     },
     3
   );
@@ -283,8 +285,9 @@ describe("executionStatus / invalidate all postmerge chain", () => {
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      invalidateFromParentBlockRoot: "3B",
-      invalidateFromParentBlockHash: "3B",
+      invalidateFromBlockRoot: "3B",
+      invalidateFromBlockHash: "3B",
+      judged: LVHInvalidJudged.FromBlock,
     },
     3
   );
@@ -313,7 +316,7 @@ describe("executionStatus / invalidate all postmerge chain", () => {
   });
 });
 
-describe("executionStatus / poision forkchoice if we invalidate previous valid", () => {
+describe("executionStatus / INVALID never invalidates a previously valid node", () => {
   const fc = setupForkChoice();
 
   /**
@@ -358,25 +361,28 @@ describe("executionStatus / poision forkchoice if we invalidate previous valid",
     );
   });
 
-  it("protoarray should be poisioned with a buggy LVH response", () => {
-    expect(() =>
-      fc.validateLatestHash(
-        {
-          executionStatus: ExecutionStatus.Invalid,
-          latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          invalidateFromParentBlockRoot: "3A",
-          invalidateFromParentBlockHash: "3A",
-        },
-        3
-      )
-    ).toThrow(Error);
+  it("an INVALID whose LVH contradicts a validated ancestor only invalidates the judged node", () => {
+    const applied = fc.validateLatestHash(
+      {
+        executionStatus: ExecutionStatus.Invalid,
+        latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        invalidateFromBlockRoot: "3A",
+        invalidateFromBlockHash: "3A",
+        judged: LVHInvalidJudged.FromBlock,
+      },
+      3
+    );
 
-    expect(fc.lvhError).toEqual({lvhCode: LVHExecErrorCode.ValidToInvalid, blockRoot: "1A", execHash: "1A"});
-    expect(() => fc.findHead("0", 3)).toThrow(Error);
+    expect(applied).toBe(true);
+    expect(fc.lvhError).toBeUndefined();
+    expect(fc.getNode("3A", PayloadStatus.FULL)?.executionStatus).toBe(ExecutionStatus.Invalid);
+    expect(fc.getNode("2A", PayloadStatus.FULL)?.executionStatus).toBe(ExecutionStatus.Syncing);
+    expect(fc.getNode("1A", PayloadStatus.FULL)?.executionStatus).toBe(ExecutionStatus.Valid);
+    expect(fc.findHead("0", 3).blockRoot).toBe("3B");
   });
 });
 
-describe("executionStatus / poision forkchoice if we validate previous invalid", () => {
+describe("executionStatus / VALID never validates a previously invalid node", () => {
   const fc = setupForkChoice();
 
   /**
@@ -402,8 +408,9 @@ describe("executionStatus / poision forkchoice if we validate previous invalid",
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      invalidateFromParentBlockRoot: "3B",
-      invalidateFromParentBlockHash: "3B",
+      invalidateFromBlockRoot: "3B",
+      invalidateFromBlockHash: "3B",
+      judged: LVHInvalidJudged.FromBlock,
     },
     3
   );
@@ -423,19 +430,84 @@ describe("executionStatus / poision forkchoice if we validate previous invalid",
     );
   });
 
-  it("protoarray should be poisioned with a buggy LVH response", () => {
-    expect(() =>
-      fc.validateLatestHash(
-        {
-          executionStatus: ExecutionStatus.Valid,
-          latestValidExecHash: "2A",
-        },
-        3
-      )
-    ).toThrow(Error);
+  it("a VALID that contradicts an invalidated node is dropped", () => {
+    const applied = fc.validateLatestHash(
+      {
+        executionStatus: ExecutionStatus.Valid,
+        latestValidExecHash: "2A",
+      },
+      3
+    );
 
-    expect(fc.lvhError).toEqual({lvhCode: LVHExecErrorCode.InvalidToValid, blockRoot: "2A", execHash: "2A"});
-    expect(() => fc.findHead("0", 3)).toThrow(Error);
+    expect(applied).toBe(false);
+    expect(fc.lvhError).toBeUndefined();
+    expect(fc.getNode("2A", PayloadStatus.FULL)?.executionStatus).toBe(ExecutionStatus.Invalid);
+    expect(() => fc.findHead("0", 3)).not.toThrow();
+  });
+});
+
+describe("executionStatus / INVALID about a child payload with an unusable LVH is dropped", () => {
+  const zeroHash = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
+  function statuses(fc: ProtoArray): (ExecutionStatus | undefined)[] {
+    return ["1A", "2A", "3A"].map((root) => fc.getNode(root, PayloadStatus.FULL)?.executionStatus);
+  }
+
+  it("drops the verdict when the walk to the LVH meets a validated ancestor", () => {
+    const fc = setupForkChoice();
+    fc.validateLatestHash({executionStatus: ExecutionStatus.Valid, latestValidExecHash: "1A"}, 3);
+
+    // A payload built on 3A is INVALID with the LVH at the pre-merge block, which would invalidate the valid 1A
+    const applied = fc.validateLatestHash(
+      {
+        executionStatus: ExecutionStatus.Invalid,
+        latestValidExecHash: zeroHash,
+        invalidateFromBlockRoot: "3A",
+        invalidateFromBlockHash: "3A",
+        judged: LVHInvalidJudged.ChildPayload,
+      },
+      3
+    );
+
+    expect(applied).toBe(false);
+    expect(fc.lvhError).toBeUndefined();
+    expect(statuses(fc)).toEqual([ExecutionStatus.Valid, ExecutionStatus.Syncing, ExecutionStatus.Syncing]);
+  });
+
+  it("drops the verdict when the LVH is not an ancestor", () => {
+    const fc = setupForkChoice();
+
+    const applied = fc.validateLatestHash(
+      {
+        executionStatus: ExecutionStatus.Invalid,
+        latestValidExecHash: "2B",
+        invalidateFromBlockRoot: "3A",
+        invalidateFromBlockHash: "3A",
+        judged: LVHInvalidJudged.ChildPayload,
+      },
+      3
+    );
+
+    expect(applied).toBe(false);
+    expect(statuses(fc)).toEqual([ExecutionStatus.Syncing, ExecutionStatus.Syncing, ExecutionStatus.Syncing]);
+  });
+
+  it("invalidates up to a usable LVH", () => {
+    const fc = setupForkChoice();
+
+    const applied = fc.validateLatestHash(
+      {
+        executionStatus: ExecutionStatus.Invalid,
+        latestValidExecHash: "1A",
+        invalidateFromBlockRoot: "3A",
+        invalidateFromBlockHash: "3A",
+        judged: LVHInvalidJudged.ChildPayload,
+      },
+      3
+    );
+
+    expect(applied).toBe(true);
+    expect(statuses(fc)).toEqual([ExecutionStatus.Syncing, ExecutionStatus.Invalid, ExecutionStatus.Invalid]);
   });
 });
 
@@ -451,11 +523,11 @@ describe("executionStatus / null LVH invalidates only the queried payload", () =
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: null,
-      invalidateFromParentBlockRoot: "3A",
-      invalidateFromParentBlockHash: "3A",
+      invalidateFromBlockRoot: "3A",
+      invalidateFromBlockHash: "3A",
+      judged: LVHInvalidJudged.FromBlock,
     },
-    3,
-    {strict: false}
+    3
   );
   const nullLVH = collectProtoarrayValidationStatus(fc);
   it("invalidates 3A and nothing above it", () => {
@@ -484,11 +556,11 @@ describe("executionStatus / lenient verdicts never contradict an earlier VALID",
       {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-        invalidateFromParentBlockRoot: "1A",
-        invalidateFromParentBlockHash: "1A",
+        invalidateFromBlockRoot: "1A",
+        invalidateFromBlockHash: "1A",
+        judged: LVHInvalidJudged.FromBlock,
       },
-      3,
-      {strict: false}
+      3
     );
     expect(applied).toBe(false);
     expect(fc.lvhError).toBeUndefined();
@@ -505,11 +577,11 @@ describe("executionStatus / lenient verdicts never contradict an earlier VALID",
       {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-        invalidateFromParentBlockRoot: "3A",
-        invalidateFromParentBlockHash: "3A",
+        invalidateFromBlockRoot: "3A",
+        invalidateFromBlockHash: "3A",
+        judged: LVHInvalidJudged.FromBlock,
       },
-      3,
-      {strict: false}
+      3
     );
     expect(applied).toBe(true);
     expect(fc.lvhError).toBeUndefined();
@@ -561,8 +633,7 @@ describe("executionStatus / lenient verdicts never contradict an earlier VALID",
     );
     const applied = fc.validateLatestHash(
       {executionStatus: ExecutionStatus.Valid, latestValidExecHash: "4A", blockRoot: "4A"},
-      4,
-      {strict: false}
+      4
     );
     expect(applied).toBe(false);
     expect(fc.lvhError).toBeUndefined();
@@ -574,11 +645,11 @@ describe("executionStatus / lenient verdicts never contradict an earlier VALID",
       {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: null,
-        invalidateFromParentBlockRoot: "3A",
-        invalidateFromParentBlockHash: "3A",
+        invalidateFromBlockRoot: "3A",
+        invalidateFromBlockHash: "3A",
+        judged: LVHInvalidJudged.FromBlock,
       },
-      3,
-      {strict: false}
+      3
     );
     expect(applied).toBe(false);
   });
@@ -604,11 +675,11 @@ describe("executionStatus / lenient verdicts never cross the justified node", ()
       {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: "1A",
-        invalidateFromParentBlockRoot: "3A",
-        invalidateFromParentBlockHash: "3A",
+        invalidateFromBlockRoot: "3A",
+        invalidateFromBlockHash: "3A",
+        judged: LVHInvalidJudged.FromBlock,
       },
-      3,
-      {strict: false}
+      3
     );
     expect(applied).toBe(true);
     expect(fc.getNode("3A", PayloadStatus.FULL)?.executionStatus).toBe(ExecutionStatus.Invalid);

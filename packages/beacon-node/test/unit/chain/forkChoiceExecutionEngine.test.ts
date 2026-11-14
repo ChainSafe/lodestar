@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from "vitest";
-import {ExecutionStatus, IForkChoice, LVHInvalidResponse, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, IForkChoice, LVHInvalidJudged, LVHInvalidResponse, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {ExecutionInvalidSource} from "../../../src/chain/forkChoice/index.js";
@@ -59,8 +59,9 @@ describe("ForkChoiceExecutionEngine", () => {
   const invalidLvh: LVHInvalidResponse = {
     executionStatus: ExecutionStatus.Invalid,
     latestValidExecHash: latestValidHash,
-    invalidateFromParentBlockRoot: headBlockRoot,
-    invalidateFromParentBlockHash: headBlockHash,
+    invalidateFromBlockRoot: headBlockRoot,
+    invalidateFromBlockHash: headBlockHash,
+    judged: LVHInvalidJudged.FromBlock,
   };
 
   describe("notifyForkchoiceUpdate", () => {
@@ -89,10 +90,11 @@ describe("ForkChoiceExecutionEngine", () => {
       );
 
       expect(await notifyFcu(engine)).toBe(payloadId);
-      expect(validateLatestHash).toHaveBeenCalledWith(
-        {executionStatus: ExecutionStatus.Valid, latestValidExecHash: headBlockHash, blockRoot: headBlockRoot},
-        {strict: false}
-      );
+      expect(validateLatestHash).toHaveBeenCalledWith({
+        executionStatus: ExecutionStatus.Valid,
+        latestValidExecHash: headBlockHash,
+        blockRoot: headBlockRoot,
+      });
       expect(recomputeHeadAfterELInvalidResponse).not.toHaveBeenCalled();
     });
 
@@ -118,7 +120,7 @@ describe("ForkChoiceExecutionEngine", () => {
       );
 
       expect(await notifyFcu(engine)).toBeNull();
-      expect(validateLatestHash).toHaveBeenCalledWith(invalidLvh, {strict: false});
+      expect(validateLatestHash).toHaveBeenCalledWith(invalidLvh);
       expect(recomputeHeadAfterELInvalidResponse).toHaveBeenCalledOnce();
     });
 
@@ -129,7 +131,7 @@ describe("ForkChoiceExecutionEngine", () => {
       );
 
       await expect(notifyFcu(engine, payloadAttributes)).rejects.toThrow("Invalid prepare payload");
-      expect(validateLatestHash).toHaveBeenCalledWith(invalidLvh, {strict: false});
+      expect(validateLatestHash).toHaveBeenCalledWith(invalidLvh);
       expect(recomputeHeadAfterELInvalidResponse).toHaveBeenCalledOnce();
     });
 
@@ -155,13 +157,8 @@ describe("ForkChoiceExecutionEngine", () => {
   });
 
   describe("invalidateExecutionPayloads", () => {
-    const strictCases: [ExecutionInvalidSource, boolean][] = [
-      [ExecutionInvalidSource.blockSegment, true],
-      [ExecutionInvalidSource.newPayload, false],
-      [ExecutionInvalidSource.forkchoiceUpdated, false],
-    ];
-    for (const [source, strict] of strictCases) {
-      it(`source=${source} applies with strict=${strict} and recomputes head`, () => {
+    for (const source of Object.values(ExecutionInvalidSource)) {
+      it(`source=${source} applies the verdict and recomputes head`, () => {
         const {engine, validateLatestHash, recomputeHeadAfterELInvalidResponse} = setup(
           ExecutionStatus.Syncing,
           fcuResult(ExecutionPayloadStatus.VALID)
@@ -169,7 +166,7 @@ describe("ForkChoiceExecutionEngine", () => {
 
         engine.invalidateExecutionPayloads(invalidLvh, source);
 
-        expect(validateLatestHash).toHaveBeenCalledWith(invalidLvh, {strict});
+        expect(validateLatestHash).toHaveBeenCalledWith(invalidLvh);
         expect(recomputeHeadAfterELInvalidResponse).toHaveBeenCalledOnce();
       });
     }

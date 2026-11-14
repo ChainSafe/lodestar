@@ -5,6 +5,7 @@ import {
   ForkChoiceError,
   ForkChoiceErrorCode,
   InvalidBlockCode,
+  LVHInvalidJudged,
   PayloadExecutionStatus,
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
@@ -16,11 +17,12 @@ import {
   isStatePostHeze,
 } from "@lodestar/state-transition";
 import {RootHex, bellatrix} from "@lodestar/types";
-import {isErrorAborted} from "@lodestar/utils";
+import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
+import {ExecutionInvalidSource} from "../forkChoice/index.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "./payloadEnvelopeInput/index.js";
@@ -267,12 +269,29 @@ export async function importExecutionPayload(
     case ExecutionPayloadStatus.VALID:
       break;
 
-    case ExecutionPayloadStatus.INVALID:
+    case ExecutionPayloadStatus.INVALID: {
+      // An LVH above the parent means the payload chain this block builds on is invalid too. The rejected payload
+      // itself never enters fork choice, so an LVH equal to the parent hash changes nothing
+      const parentHashHex = toRootHex(envelope.payload.parentHash);
+      if (execResult.latestValidHash !== null && execResult.latestValidHash !== parentHashHex) {
+        this.executionEngine.invalidateExecutionPayloads(
+          {
+            executionStatus: ExecutionStatus.Invalid,
+            latestValidExecHash: execResult.latestValidHash,
+            invalidateFromBlockRoot: protoBlock.parentRoot,
+            invalidateFromBlockHash: parentHashHex,
+            judged: LVHInvalidJudged.ChildPayload,
+          },
+          ExecutionInvalidSource.newPayload,
+          {slot, root: blockRootHex, payloadBlockHash: blockHashHex}
+        );
+      }
       throw new PayloadError(payloadInput, {
         code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
         execStatus: execResult.status,
         errorMessage: execResult.validationError ?? "",
       });
+    }
 
     case ExecutionPayloadStatus.ACCEPTED:
     case ExecutionPayloadStatus.SYNCING:

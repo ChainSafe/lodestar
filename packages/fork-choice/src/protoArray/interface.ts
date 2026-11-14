@@ -58,13 +58,21 @@ export type LVHValidResponse = {
   /** Resolves the exact node to validate when several nodes carry the same payload hash (gloas variants) */
   blockRoot?: RootHex;
 };
+/** Which payload the execution engine judged INVALID, relative to the node the invalidation starts from */
+export enum LVHInvalidJudged {
+  /** The from node's own payload, e.g. the head sent in forkchoiceUpdated */
+  FromBlock = "from_block",
+  /** A payload built on the from node that is not in fork choice, e.g. a payload rejected by newPayload */
+  ChildPayload = "child_payload",
+}
 export type LVHInvalidResponse = {
   executionStatus: ExecutionStatus.Invalid;
   latestValidExecHash: RootHex | null;
-  invalidateFromParentBlockRoot: RootHex;
-  // EL block hash from invalid block's bid (gloas) or payload's parentHash (pre-gloas).
-  // Disambiguates which variant of the parent (FULL vs EMPTY) to invalidate from.
-  invalidateFromParentBlockHash: RootHex;
+  invalidateFromBlockRoot: RootHex;
+  // EL block hash of the from node's payload chain, disambiguates which variant (FULL vs EMPTY) to invalidate from.
+  // For `ChildPayload` it is the judged payload's parent hash.
+  invalidateFromBlockHash: RootHex;
+  judged: LVHInvalidJudged;
 };
 export type LVHExecResponse = LVHValidResponse | LVHInvalidResponse;
 

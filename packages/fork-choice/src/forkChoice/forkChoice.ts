@@ -1633,9 +1633,9 @@ export class ForkChoice implements IForkChoice {
    * justified's status as well as validate the terminal conditions if terminal block
    * becomes valid
    */
-  validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean}): boolean {
+  validateLatestHash(execResponse: LVHExecResponse): boolean {
     try {
-      return this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot, opts);
+      return this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot);
     } catch (e) {
       if (e instanceof ProtoArrayError && e.type.code === ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE) {
         this.irrecoverableError = e;
