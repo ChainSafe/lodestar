@@ -7,6 +7,7 @@
 //!    v1.2.1 (see the test)
 //!  - validation-order and error-path cases: written for this port; the
 //!    reference crashes on those inputs, so it has no equivalent
+//!  - parallel unshuffle: checked against the serial unshuffle
 
 const std = @import("std");
 const shuffle = @import("./root.zig");
@@ -881,4 +882,29 @@ test "computePtcIndicesForEpochInto rejects invalid inputs gracefully" {
         EFFECTIVE_BALANCE_INCREMENT,
         out[0 .. out.len - 1],
     ));
+}
+
+test "unshuffleListParallel matches unshuffleList" {
+    const allocator = std.testing.allocator;
+    // 2 * pairs_per_task keeps each range in one task, 2 * pairs_per_task + 3 can split off a
+    // one-pair task, and the larger sizes split each range into several tasks whose starts fall
+    // on and off the 8-pair blocks.
+    const sizes = [_]usize{ 2, 3, 2 * shuffle.pairs_per_task, 2 * shuffle.pairs_per_task + 3, 8 * shuffle.pairs_per_task + 3, 20_011 };
+    for (sizes) |size| {
+        for (0..8) |seed_byte| {
+            const seed = [_]u8{@intCast(seed_byte)} ** SEED_SIZE;
+            const expected = try allocator.alloc(u32, size);
+            defer allocator.free(expected);
+            const actual = try allocator.alloc(u32, size);
+            defer allocator.free(actual);
+            for (expected, actual, 0..) |*e, *a, i| {
+                e.* = @intCast(i);
+                a.* = @intCast(i);
+            }
+
+            try shuffle.unshuffleList(u32, expected, &seed, 90);
+            try shuffle.unshuffleListParallel(u32, std.testing.io, actual, &seed, 90);
+            try std.testing.expectEqualSlices(u32, expected, actual);
+        }
+    }
 }

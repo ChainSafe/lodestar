@@ -112,10 +112,10 @@ pub fn processEpoch(
 
     if (comptime fork.gte(.fulu)) {
         timer = time.start(io);
-        try processProposerLookahead(fork, allocator, epoch_cache, state, cache);
+        try processProposerLookahead(fork, allocator, io, epoch_cache, state, cache);
         try observeEpochTransitionStep(.{ .step = .process_proposer_lookahead }, @as(u64, @intCast(time.since(io, timer).nanoseconds)));
     }
     if (comptime fork.gte(.gloas)) {
-        try processPtcWindow(fork, allocator, epoch_cache, state, cache);
+        try processPtcWindow(fork, allocator, io, epoch_cache, state, cache);
     }
 }

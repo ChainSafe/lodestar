@@ -266,7 +266,7 @@ fn scanValidatorChunk(scan: *const ValidatorScan, chunk: validator_chunks.Chunk)
 }
 
 const ShufflingJob = struct {
-    const Error = Allocator.Error || @import("swap_or_not_shuffle").ShufflingError;
+    const Error = Allocator.Error || @import("swap_or_not_shuffle").ShufflingError || std.Io.Cancelable;
 
     io: std.Io,
     future: std.Io.Future(Error!Result),
@@ -280,7 +280,7 @@ const ShufflingJob = struct {
         errdefer allocator.free(active_indices);
 
         const timer = time.start(io);
-        const shuffling = try EpochShuffling.init(allocator, seed, epoch, active_indices);
+        const shuffling = try EpochShuffling.init(allocator, io, seed, epoch, active_indices);
         return .{ .shuffling = shuffling, .duration = time.since(io, timer) };
     }
 

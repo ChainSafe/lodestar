@@ -331,6 +331,7 @@ fn ProcessSyncCommitteeRotationBench(comptime fork: ForkSeq) type {
 fn ProcessProposerLookaheadBench(comptime fork: ForkSeq) type {
     return struct {
         epoch_transition_cache: *EpochTransitionCache,
+        io: std.Io,
         var cache_to_release: ?*EpochTransitionCache = null;
 
         pub fn afterEach() void {
@@ -349,6 +350,7 @@ fn ProcessProposerLookaheadBench(comptime fork: ForkSeq) type {
             state_transition.processProposerLookahead(
                 fork,
                 allocator,
+                self.io,
                 BenchState.cloned_cached_state.epoch_cache,
                 BenchState.cloned_cached_state.state.castToFork(fork),
                 cache,
@@ -624,6 +626,7 @@ fn ProcessEpochSegmentedBench(comptime fork: ForkSeq) type {
                 state_transition.processProposerLookahead(
                     fork,
                     allocator,
+                    io,
                     epoch_cache,
                     fork_state,
                     cache,
@@ -855,6 +858,7 @@ fn runBenchmark(
     if (comptime fork.gte(.fulu)) {
         try bench.addParam("proposer_lookahead(sync)", &ProcessProposerLookaheadBench(fork){
             .epoch_transition_cache = &epoch_transition_cache,
+            .io = io,
         }, .{ .hooks = .{
             .before_each = BenchState.beforeEach,
             .after_each = ProcessProposerLookaheadBench(fork).afterEach,

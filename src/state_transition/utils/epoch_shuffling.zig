@@ -8,6 +8,7 @@ const ForkSeq = @import("config").ForkSeq;
 const getSeed = @import("./seed.zig").getSeed;
 const c = @import("constants");
 const innerShuffleList = @import("swap_or_not_shuffle").innerShuffleList;
+const unshuffleListParallel = @import("swap_or_not_shuffle").unshuffleListParallel;
 const Epoch = types.primitive.Epoch.Type;
 const computeStartSlotAtEpoch = @import("./epoch.zig").computeStartSlotAtEpoch;
 const getBlockRootAtSlot = @import("./block_root.zig").getBlockRootAtSlot;
@@ -38,12 +39,12 @@ pub const EpochShuffling = struct {
     committees_per_slot: usize,
 
     /// Takes ownership of `active_indices` on success; the caller retains ownership on failure.
-    pub fn init(allocator: Allocator, seed: [32]u8, epoch: Epoch, active_indices: []const u32) !*EpochShuffling {
+    pub fn init(allocator: Allocator, io: std.Io, seed: [32]u8, epoch: Epoch, active_indices: []const u32) !*EpochShuffling {
         if (active_indices.len > std.math.maxInt(u32)) return error.InvalidActiveIndicesLength;
 
         const shuffling = try allocator.dupe(u32, active_indices);
         errdefer allocator.free(shuffling);
-        try unshuffleList(shuffling, seed[0..], preset.SHUFFLE_ROUND_COUNT);
+        try unshuffleListParallel(u32, io, shuffling, seed[0..], preset.SHUFFLE_ROUND_COUNT);
 
         const committees = try buildCommitteesFromShuffling(allocator, shuffling);
         errdefer for (committees) |slot_committees| {
@@ -111,15 +112,15 @@ test EpochShuffling {
             active_indices[i] = @intCast(i);
         }
 
-        var epoch_shuffling = try EpochShuffling.init(allocator, seed, 0, active_indices);
+        var epoch_shuffling = try EpochShuffling.init(allocator, std.testing.io, seed, 0, active_indices);
         defer epoch_shuffling.deinit();
     }
 }
 
 /// Takes ownership of `active_indices` on success; the caller retains ownership on failure.
-pub fn computeEpochShuffling(allocator: Allocator, state: *AnyBeaconState, active_indices: []u32, epoch: Epoch) !*EpochShuffling {
+pub fn computeEpochShuffling(allocator: Allocator, io: std.Io, state: *AnyBeaconState, active_indices: []u32, epoch: Epoch) !*EpochShuffling {
     return switch (state.forkSeq()) {
-        inline else => |f| computeEpochShufflingForFork(f, allocator, state.castToFork(f), active_indices, epoch),
+        inline else => |f| computeEpochShufflingForFork(f, allocator, io, state.castToFork(f), active_indices, epoch),
     };
 }
 
@@ -127,13 +128,14 @@ pub fn computeEpochShuffling(allocator: Allocator, state: *AnyBeaconState, activ
 pub fn computeEpochShufflingForFork(
     comptime fork: ForkSeq,
     allocator: Allocator,
+    io: std.Io,
     state: *BeaconState(fork),
     active_indices: []u32,
     epoch: Epoch,
 ) !*EpochShuffling {
     var seed = [_]u8{0} ** 32;
     try getSeed(fork, state, epoch, c.DOMAIN_BEACON_ATTESTER, &seed);
-    return EpochShuffling.init(allocator, seed, epoch, active_indices);
+    return EpochShuffling.init(allocator, io, seed, epoch, active_indices);
 }
 
 /// Unshuffle validator indices in place synchronously.

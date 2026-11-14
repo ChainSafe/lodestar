@@ -22,38 +22,67 @@ const EpochShuffling = @import("./epoch_shuffling.zig").EpochShuffling;
 const computePtcIndicesInto = @import("swap_or_not_shuffle").computePtcIndicesInto;
 const computeSyncCommitteeIndicesInto = @import("swap_or_not_shuffle").computeSyncCommitteeIndicesInto;
 
+fn ProposerSlots(comptime fork_seq: ForkSeq) type {
+    return struct {
+        epoch_seed: [32]u8,
+        start_slot: u64,
+        active_indices: []const u32,
+        effective_balance_increments: []const u16,
+        out: []ValidatorIndex,
+        errors: []?ComputeIndexUtils.ComputeProposerIndexError,
+
+        // Runs on several threads at once and writes only slot `i` of `out` and `errors`.
+        fn computeSlot(self: *const @This(), i: usize) void {
+            // epoch_seed is 32 bytes, slot is 8 bytes
+            var buffer: [40]u8 = [_]u8{0} ** (32 + 8);
+            @memcpy(buffer[0..32], self.epoch_seed[0..]);
+            std.mem.writeInt(u64, buffer[32..][0..8], self.start_slot + i, .little);
+
+            var seed: [32]u8 = undefined;
+            Sha256.hash(buffer[0..], &seed, .{});
+
+            const rand_byte_count: ByteCount = if (comptime fork_seq.gte(.electra)) ByteCount.Two else ByteCount.One;
+            const max_effective_balance: u64 = if (comptime fork_seq.gte(.electra)) preset.MAX_EFFECTIVE_BALANCE_ELECTRA else preset.MAX_EFFECTIVE_BALANCE;
+            self.out[i] = computeProposerIndex(
+                &seed,
+                self.active_indices,
+                self.effective_balance_increments,
+                rand_byte_count,
+                max_effective_balance,
+                preset.EFFECTIVE_BALANCE_INCREMENT,
+                preset.SHUFFLE_ROUND_COUNT,
+            ) catch |err| {
+                self.errors[i] = err;
+                return;
+            };
+        }
+    };
+}
+
+/// Computes the proposer of every slot of `epoch` into `out`, one task per slot on `io`.
 pub fn computeProposers(
     comptime fork_seq: ForkSeq,
-    allocator: Allocator,
+    io: std.Io,
     epoch_seed: [32]u8,
     epoch: Epoch,
     active_indices: []const u32,
     effective_balance_increments: EffectiveBalanceIncrements,
     out: []ValidatorIndex,
 ) !void {
-    const start_slot = computeStartSlotAtEpoch(epoch);
-    for (start_slot..start_slot + preset.SLOTS_PER_EPOCH, 0..) |slot, i| {
-        // epoch_seed is 32 bytes, slot is 8 bytes
-        var buffer: [40]u8 = [_]u8{0} ** (32 + 8);
-        @memcpy(buffer[0..32], epoch_seed[0..]);
-        std.mem.writeInt(u64, buffer[32..][0..8], slot, .little);
-
-        var seed: [32]u8 = undefined;
-        Sha256.hash(buffer[0..], &seed, .{});
-
-        const rand_byte_count: ByteCount = if (comptime fork_seq.gte(.electra)) ByteCount.Two else ByteCount.One;
-        const max_effective_balance: u64 = if (comptime fork_seq.gte(.electra)) preset.MAX_EFFECTIVE_BALANCE_ELECTRA else preset.MAX_EFFECTIVE_BALANCE;
-        out[i] = try computeProposerIndex(
-            allocator,
-            &seed,
-            active_indices,
-            effective_balance_increments.items,
-            rand_byte_count,
-            max_effective_balance,
-            preset.EFFECTIVE_BALANCE_INCREMENT,
-            preset.SHUFFLE_ROUND_COUNT,
-        );
-    }
+    std.debug.assert(out.len == preset.SLOTS_PER_EPOCH);
+    var errors: [preset.SLOTS_PER_EPOCH]?ComputeIndexUtils.ComputeProposerIndexError = .{null} ** preset.SLOTS_PER_EPOCH;
+    const slots: ProposerSlots(fork_seq) = .{
+        .epoch_seed = epoch_seed,
+        .start_slot = computeStartSlotAtEpoch(epoch),
+        .active_indices = active_indices,
+        .effective_balance_increments = effective_balance_increments.items,
+        .out = out,
+        .errors = &errors,
+    };
+    var group: std.Io.Group = .init;
+    for (0..preset.SLOTS_PER_EPOCH) |i| group.async(io, ProposerSlots(fork_seq).computeSlot, .{ &slots, i });
+    try group.await(io);
+    for (errors) |maybe_err| if (maybe_err) |err| return err;
 }
 
 pub fn getNextSyncCommitteeIndices(comptime fork: ForkSeq, allocator: Allocator, state: *BeaconState(fork), active_indices: []const u32, effective_balance_increments: EffectiveBalanceIncrements, out: *[preset.SYNC_COMMITTEE_SIZE]ValidatorIndex) !void {

@@ -131,10 +131,10 @@ pub fn TestCase(comptime fork: ForkSeq, comptime epoch_process_fn: EpochProcessi
                 .pending_deposits, .pending_deposits_churn => try state_transition.processPendingDeposits(fork, allocator, std.testing.io, config, epoch_cache, fork_state, &epoch_transition_cache),
                 .pending_consolidations => try state_transition.processPendingConsolidations(fork, epoch_cache, fork_state, &epoch_transition_cache),
                 .proposer_lookahead => {
-                    try state_transition.processProposerLookahead(fork, allocator, epoch_cache, fork_state, &epoch_transition_cache);
+                    try state_transition.processProposerLookahead(fork, allocator, std.testing.io, epoch_cache, fork_state, &epoch_transition_cache);
                 },
                 .builder_pending_payments => try state_transition.processBuilderPendingPayments(fork, allocator, fork_state, epoch_cache),
-                .ptc_window => try state_transition.processPtcWindow(fork, allocator, epoch_cache, fork_state, &epoch_transition_cache),
+                .ptc_window => try state_transition.processPtcWindow(fork, allocator, std.testing.io, epoch_cache, fork_state, &epoch_transition_cache),
             }
         }
     };

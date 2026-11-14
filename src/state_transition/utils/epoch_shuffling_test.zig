@@ -22,7 +22,7 @@ test "memory_safety: computeEpochShuffling retains caller ownership on allocatio
     var failing = std.testing.FailingAllocator.init(allocator, .{ .fail_index = 0 });
     try std.testing.expectError(
         error.OutOfMemory,
-        computeEpochShuffling(failing.allocator(), test_state.cached_state.state, input, test_state.cached_state.epoch_cache.epoch),
+        computeEpochShuffling(failing.allocator(), std.testing.io, test_state.cached_state.state, input, test_state.cached_state.epoch_cache.epoch),
     );
     try std.testing.expect(failing.has_induced_failure);
     try std.testing.expectEqualSlices(u32, &.{ 1, 7, 42 }, input);
@@ -45,7 +45,7 @@ test "EpochShuffling matches u64 shuffling near the u32 index limit" {
             const actual = blk: {
                 const active_indices = try allocator.dupe(u32, input);
                 errdefer allocator.free(active_indices);
-                break :blk try EpochShuffling.init(allocator, seed, 42, active_indices);
+                break :blk try EpochShuffling.init(allocator, std.testing.io, seed, 42, active_indices);
             };
             defer actual.deinit();
 
@@ -71,7 +71,7 @@ test "memory_safety: EpochShuffling.init frees output when committee allocation 
     var failing = std.testing.FailingAllocator.init(allocator, .{ .fail_index = 1 });
     try std.testing.expectError(
         error.OutOfMemory,
-        EpochShuffling.init(failing.allocator(), [_]u8{0} ** 32, 0, active_indices),
+        EpochShuffling.init(failing.allocator(), std.testing.io, [_]u8{0} ** 32, 0, active_indices),
     );
     try std.testing.expect(failing.has_induced_failure);
     try std.testing.expectEqual(failing.allocated_bytes, failing.freed_bytes);
@@ -85,7 +85,7 @@ test "memory_safety: EpochShuffling.init should free partial allocations on OOM"
             errdefer allocator.free(active_indices);
             for (active_indices, 0..) |*index, i| index.* = @intCast(i);
 
-            const shuffling = try EpochShuffling.init(allocator, [_]u8{0} ** 32, 0, active_indices);
+            const shuffling = try EpochShuffling.init(allocator, std.testing.io, [_]u8{0} ** 32, 0, active_indices);
             defer shuffling.deinit();
         }
     }.run, .{});

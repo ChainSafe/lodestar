@@ -47,7 +47,7 @@ test "EpochTransitionCache - finalProcessEpoch" {
     defer test_state.deinit();
 
     const fulu_state = try upgradeStateToFulu(
-        allocator,
+        std.testing.io,
         test_state.cached_state.config,
         test_state.cached_state.epoch_cache,
         try test_state.cached_state.state.tryCastToFork(.electra),
@@ -55,7 +55,7 @@ test "EpochTransitionCache - finalProcessEpoch" {
     test_state.cached_state.state.* = .{ .fulu = fulu_state.inner };
 
     const epoch_cache = test_state.cached_state.epoch_cache;
-    try epoch_cache.finalProcessEpoch(test_state.cached_state.state);
+    try epoch_cache.finalProcessEpoch(std.testing.io, test_state.cached_state.state);
 }
 
 test "EpochTransitionCache stores added compounding flags in a fixed tail" {

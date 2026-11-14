@@ -1,6 +1,7 @@
 //! Port of https://github.com/ChainSafe/swap-or-not-shuffle/blob/main/src/lib.rs
 
 const std = @import("std");
+const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const sha256 = @import("sha256.zig");
 
@@ -152,6 +153,61 @@ fn swapOrNotPairs(
 ///
 /// `T` is `u32` for the JS binding and `ValidatorIndex`/`u64` for Zig callers.
 pub fn innerShuffleList(comptime T: type, out: []T, seed: []const u8, rounds: i32, forwards: bool) ShufflingError!void {
+    shuffleRounds(T, null, out, seed, rounds, forwards) catch |err| switch (err) {
+        // Only a task group on an io can be canceled, and there is none without one.
+        error.Canceled => unreachable,
+        else => |e| return e,
+    };
+}
+
+/// `unshuffleList` with each round's swap-or-not pairs split across tasks on `io`.
+pub fn unshuffleListParallel(comptime T: type, io: std.Io, out: []T, seed: []const u8, rounds: i32) (ShufflingError || std.Io.Cancelable)!void {
+    return shuffleRounds(T, io, out, seed, rounds, false);
+}
+
+/// Pairs per task when a round runs on an io. Within a round the pairs are disjoint, so tasks never
+/// touch the same element; rounds still run one after another. Small in tests so that test lists
+/// split into many tasks with unaligned starts.
+pub const pairs_per_task: usize = if (builtin.is_test) 1 << 10 else 1 << 16;
+
+fn SwapPairsTask(comptime T: type) type {
+    return struct {
+        fn run(out: []T, manager: ShufflingManager, low_first: usize, high_first: usize, pair_count: usize) void {
+            var task_manager = manager;
+            swapOrNotPairs(T, out, &task_manager, low_first, high_first, pair_count);
+        }
+    };
+}
+
+fn swapOrNotPairsOnGroup(
+    comptime T: type,
+    io: std.Io,
+    group: *std.Io.Group,
+    out: []T,
+    manager: *ShufflingManager,
+    low_first: usize,
+    high_first: usize,
+    pair_count: usize,
+) void {
+    if (pair_count <= pairs_per_task) {
+        swapOrNotPairs(T, out, manager, low_first, high_first, pair_count);
+        return;
+    }
+    var start: usize = 0;
+    while (start < pair_count) : (start += pairs_per_task) {
+        const task_pair_count = @min(pairs_per_task, pair_count - start);
+        group.async(io, SwapPairsTask(T).run, .{ out, manager.*, low_first + start, high_first - start, task_pair_count });
+    }
+}
+
+fn shuffleRounds(
+    comptime T: type,
+    io: ?std.Io,
+    out: []T,
+    seed: []const u8,
+    rounds: i32,
+    forwards: bool,
+) (ShufflingError || std.Io.Cancelable)!void {
     if (rounds == 0) {
         // no shuffling rounds
         return;
@@ -186,11 +242,25 @@ pub fn innerShuffleList(comptime T: type, out: []T, seed: []const u8, rounds: i3
 
         // swap-or-not from beginning of list to mirror point
         const mirror_low = (pivot + 1) >> 1;
-        swapOrNotPairs(T, out, &manager, 0, pivot, mirror_low);
-
         // swap-or-not from just past the pivot to the mirror point of the rest of the list
         const mirror_high = (pivot + list_size + 1) >> 1;
-        swapOrNotPairs(T, out, &manager, pivot + 1, list_size - 1, mirror_high - (pivot + 1));
+
+        if (io) |task_io| {
+            const high_pair_count = mirror_high - (pivot + 1);
+            var group: std.Io.Group = .init;
+            // The smaller range may run inline, so spawn the larger one's tasks first.
+            if (mirror_low >= high_pair_count) {
+                swapOrNotPairsOnGroup(T, task_io, &group, out, &manager, 0, pivot, mirror_low);
+                swapOrNotPairsOnGroup(T, task_io, &group, out, &manager, pivot + 1, list_size - 1, high_pair_count);
+            } else {
+                swapOrNotPairsOnGroup(T, task_io, &group, out, &manager, pivot + 1, list_size - 1, high_pair_count);
+                swapOrNotPairsOnGroup(T, task_io, &group, out, &manager, 0, pivot, mirror_low);
+            }
+            try group.await(task_io);
+        } else {
+            swapOrNotPairs(T, out, &manager, 0, pivot, mirror_low);
+            swapOrNotPairs(T, out, &manager, pivot + 1, list_size - 1, mirror_high - (pivot + 1));
+        }
 
         // update current_round and stop when reaching the end of the
         // predetermined rounds
@@ -306,6 +376,60 @@ pub const ComputeShuffledIndex = struct {
             permuted = if (bit == 1) flip else permuted;
         }
 
+        return permuted;
+    }
+};
+
+/// `compute_shuffled_index` without `ComputeShuffledIndex`'s source cache, for callers that look
+/// up only a few indices per seed, such as proposer selection, where that cache almost never hits.
+/// It allocates nothing, so each thread can use its own copy.
+pub const ComputeShuffledIndexUncached = struct {
+    pub const max_rounds = 256;
+
+    pivots: [max_rounds]u32,
+    /// 32 bytes seed + 1 byte round + 4 bytes position_div
+    source_buffer: [TOTAL_SIZE]u8,
+    index_count: u32,
+    rounds: u32,
+
+    pub fn init(seed: []const u8, index_count: u32, rounds: u32) ShufflingError!ComputeShuffledIndexUncached {
+        if (seed.len != SEED_SIZE) return error.InvalidSeedLength;
+        if (index_count == 0) return error.InvalidActiveIndicesLength;
+        if (rounds > max_rounds) return error.InvalidNumberOfRounds;
+
+        var self: ComputeShuffledIndexUncached = .{
+            .pivots = undefined,
+            .source_buffer = undefined,
+            .index_count = index_count,
+            .rounds = rounds,
+        };
+        var pivot_buffer: [PIVOT_VIEW_SIZE]u8 = undefined;
+        @memcpy(pivot_buffer[0..SEED_SIZE], seed);
+        for (self.pivots[0..rounds], 0..) |*pivot, round| {
+            pivot_buffer[SEED_SIZE] = @intCast(round);
+            var digest: [sha256.digest_length]u8 = undefined;
+            sha256.hash(&pivot_buffer, &digest);
+            pivot.* = @intCast(std.mem.readInt(u64, digest[0..8], .little) % index_count);
+        }
+        @memcpy(self.source_buffer[0..SEED_SIZE], seed);
+        return self;
+    }
+
+    /// Same arithmetic as `ComputeShuffledIndex.get`.
+    pub fn get(self: *ComputeShuffledIndexUncached, index: u32) u32 {
+        const index_count = self.index_count;
+        var permuted: u32 = index;
+        for (self.pivots[0..self.rounds], 0..) |pivot, round| {
+            const flip = (pivot +% index_count -% permuted) % index_count;
+            const position = @max(permuted, flip);
+            self.source_buffer[SEED_SIZE] = @intCast(round);
+            std.mem.writeInt(u32, self.source_buffer[PIVOT_VIEW_SIZE..][0..POSITION_WINDOW_SIZE], position / 256, .little);
+            var source: [sha256.digest_length]u8 = undefined;
+            sha256.hash(&self.source_buffer, &source);
+
+            const bit = (source[position % 256 / 8] >> @intCast(position % 8)) & 1;
+            permuted = if (bit == 1) flip else permuted;
+        }
         return permuted;
     }
 };

@@ -5,30 +5,58 @@ const swap_or_not_shuffle = @import("swap_or_not_shuffle");
 
 const ACTIVE_INDICES_LENGTH_MAX: usize = std.math.maxInt(u32);
 const ComputeShuffledIndex = swap_or_not_shuffle.ComputeShuffledIndex;
+const ComputeShuffledIndexUncached = swap_or_not_shuffle.ComputeShuffledIndexUncached;
 
+pub const ComputeProposerIndexError = error{ InvalidIndexCount, InvalidRounds } || swap_or_not_shuffle.ShufflingError;
+
+/// The selection of `getCommitteeIndices` for a single proposer. A proposer seed only looks up a
+/// few dozen candidates, so the shuffled index skips the source cache and nothing is allocated.
 pub fn computeProposerIndex(
-    allocator: Allocator,
     seed: *const [32]u8,
     active_indices: []const u32,
-    effective_balance_increments: []u16,
+    effective_balance_increments: []const u16,
     rand_byte_count: ByteCount,
     max_effective_balance: u64,
     effective_balance_increment: u32,
     rounds: u32,
-) !u64 {
-    var out = [_]u64{0};
-    try getCommitteeIndices(
-        allocator,
-        seed,
-        active_indices,
-        effective_balance_increments,
-        rand_byte_count,
-        max_effective_balance,
-        effective_balance_increment,
-        rounds,
-        out[0..],
-    );
-    return out[0];
+) ComputeProposerIndexError!u64 {
+    if (active_indices.len == 0 or active_indices.len > ACTIVE_INDICES_LENGTH_MAX) {
+        return error.InvalidIndexCount;
+    }
+    if (rounds == 0) {
+        return error.InvalidRounds;
+    }
+
+    var shuffled_index = try ComputeShuffledIndexUncached.init(seed, @intCast(active_indices.len), rounds);
+    const max_random_value: u32 = switch (rand_byte_count) {
+        .One => 0xff,
+        .Two => 0xffff,
+    };
+    const max_effective_balance_increment: u64 = max_effective_balance / effective_balance_increment;
+    const hash_increment: u32 = 32 / @intFromEnum(rand_byte_count);
+
+    var hash_input = [_]u8{0} ** (32 + 8);
+    @memcpy(hash_input[0..32], seed);
+    var random_bytes: [32]u8 = undefined;
+
+    var i: u32 = 0;
+    while (true) : (i += 1) {
+        const candidate_index = active_indices[shuffled_index.get(@intCast(i % active_indices.len))];
+
+        if (i % hash_increment == 0) {
+            std.mem.writeInt(u32, hash_input[32..][0..4], i / hash_increment, .little);
+            Sha256.hash(hash_input[0..], random_bytes[0..], .{});
+        }
+        const random_value: u16 = switch (rand_byte_count) {
+            .One => random_bytes[i % hash_increment],
+            .Two => std.mem.readInt(u16, random_bytes[(i % hash_increment) * 2 ..][0..2], .little),
+        };
+
+        const candidate_effective_balance_increment = effective_balance_increments[@intCast(candidate_index)];
+        if (candidate_effective_balance_increment * max_random_value >= max_effective_balance_increment * random_value) {
+            return candidate_index;
+        }
+    }
 }
 
 pub fn computeSyncCommitteeIndices(
@@ -167,7 +195,6 @@ test "ComputeShuffledIndex" {
 }
 
 test "compute_proposer_index" {
-    const allocator = std.testing.allocator;
     const seed = [_]u8{1} ** 32;
     const index_count = 1000;
     // SHUFFLE_ROUND_COUNT is 90 in ethereum mainnet
@@ -184,8 +211,7 @@ test "compute_proposer_index" {
     const MAX_EFFECTIVE_BALANCE: u64 = 32000000000;
     const EFFECTIVE_BALANCE_INCREMENT: u32 = 1000000000;
     const phase0_index = try computeProposerIndex(
-        allocator,
-        seed[0..],
+        &seed,
         active_indices[0..],
         effective_balance_increments[0..],
         ByteCount.One,
@@ -198,8 +224,7 @@ test "compute_proposer_index" {
     // electra
     const MAX_EFFECTIVE_BALANCE_ELECTRA: u64 = 2048000000000;
     const electra_index = try computeProposerIndex(
-        allocator,
-        seed[0..],
+        &seed,
         active_indices[0..],
         effective_balance_increments[0..],
         ByteCount.Two,
