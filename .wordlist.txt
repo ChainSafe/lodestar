@@ -272,6 +272,7 @@ wip
 wordlist
 xRelayPubKey
 xcode
+xray
 yaml
 yamux
 yml
