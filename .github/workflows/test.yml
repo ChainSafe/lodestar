@@ -378,6 +378,10 @@ jobs:
         run: |
           zig build test:bindings_allocator
 
+      - name: Run leveldb tests
+        run: |
+          zig build test:leveldb
+
       - name: Run ssz tests
         run: |
           zig build test:ssz

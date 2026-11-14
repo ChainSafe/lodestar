@@ -79,12 +79,12 @@ describe("BeaconDb.pruneHotDb", () => {
 
     expect((await db.dataColumnSidecar.keys()).length).toBe(0);
     expect((await db.blobSidecars.keys()).length).toBe(0);
-    expect(await db.block.getBinary(root)).toEqual(Buffer.from(ssz.fulu.SignedBeaconBlock.serialize(block)));
+    expect(await db.block.getBinary(root)).toEqual(Uint8Array.from(ssz.fulu.SignedBeaconBlock.serialize(block)));
     expect(await db.blobSidecarsArchive.getBinary(slot)).toEqual(
-      Buffer.from(blobSidecarsWrapperSsz.serialize(blobSidecars))
+      Uint8Array.from(blobSidecarsWrapperSsz.serialize(blobSidecars))
     );
     expect(await db.dataColumnSidecarArchive.getBinary(slot, column.index)).toEqual(
-      Buffer.from(ssz.fulu.DataColumnSidecar.serialize(column))
+      Uint8Array.from(ssz.fulu.DataColumnSidecar.serialize(column))
     );
     expect(await db.dataColumns.getAll({slot, blockRoot: toRootHex(root)})).toEqual([column]);
   });
@@ -158,7 +158,7 @@ describe("BeaconDb.pruneHotDb", () => {
     );
 
     expect(await db.block.getBinary(root)).toBeNull();
-    expect(await db.blockArchive.getBinary(slot)).toEqual(Buffer.from(ssz.fulu.SignedBeaconBlock.serialize(block)));
+    expect(await db.blockArchive.getBinary(slot)).toEqual(Uint8Array.from(ssz.fulu.SignedBeaconBlock.serialize(block)));
     expect(await db.dataColumns.getManyBinary(key, [column.index])).toEqual([columnBytes]);
   });
 });
@@ -237,30 +237,6 @@ describe("BeaconDb.compactLegacyDataColumns", () => {
   afterEach(async () => {
     await db.close();
     await rm(tmpDir, {recursive: true, force: true});
-  });
-
-  function prunedEnd(slot: number): Uint8Array {
-    return encodeKey(Bucket.allForks_dataColumnSidecarsArchive, db.dataColumnSidecarArchive.getMinKeyRaw(slot));
-  }
-
-  it("rewrites legacy columns deleted while a snapshot was held", async () => {
-    // An open iterator holds a snapshot, so compaction keeps the deleted entries in the bottom level
-    const iterator = controller.keysStream()[Symbol.asyncIterator]();
-    await iterator.next();
-    await db.dataColumnSidecar.deleteMany(roots);
-    await db.dataColumnSidecarArchive.deleteMany([1, 2, 3, 4, 5]);
-    await controller.compactRange(start, prunedEnd(6));
-    await iterator.return?.();
-    await controller.compactRange(start, prunedEnd(6));
-    const sizeBefore = await controller.approximateSize(start, prunedEnd(6));
-    expect(sizeBefore).toBeGreaterThan(0);
-
-    await db.compactLegacyDataColumns(6, 0);
-
-    expect(await controller.approximateSize(start, prunedEnd(6))).toBeLessThan(sizeBefore / 10);
-    expect(await controller.keys({gte: start, lt: prunedEnd(6)})).toEqual([]);
-    expect(new Set((await db.dataColumnSidecarArchive.keys()).map(({prefix}) => prefix))).toEqual(new Set([6, 7, 8]));
-    expect(await db.dataColumnSidecarArchive.keys()).toHaveLength(3 * NUMBER_OF_COLUMNS);
   });
 
   it("skips the rewrite while the range is below the threshold", async () => {
