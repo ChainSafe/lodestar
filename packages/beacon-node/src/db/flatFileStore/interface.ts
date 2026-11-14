@@ -17,5 +17,6 @@ export interface IFlatFileStore {
   putDataColumnsBinary(slot: Slot, blockRoot: RootHex, columns: {index: number; data: Uint8Array}[]): Promise<void>;
 
   deleteMany(items: {slot: Slot; blockRoot: RootHex}[]): Promise<void>;
-  pruneBefore(slot: Slot): Promise<Slot[]>;
+  /** Prunes the oldest slots before `slot`, at most `maxSlots` of them. Returns the pruned slots. */
+  pruneBefore(slot: Slot, maxSlots?: number): Promise<Slot[]>;
 }

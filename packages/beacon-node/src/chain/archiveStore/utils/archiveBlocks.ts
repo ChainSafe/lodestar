@@ -27,6 +27,14 @@ import {LightClientServer} from "../../lightClient/index.js";
 const BLOCK_BATCH_SIZE = 256;
 const BLOB_SIDECAR_BATCH_SIZE = 32;
 
+/**
+ * Bound the expired slots pruned per finalized checkpoint, so a large backlog is drained over many runs instead
+ * of stalling one. The cutoff can be far ahead when finality resumes after a long period of non-finality or when
+ * `archiveDataEpochs` is lowered.
+ */
+export const MAX_PRUNE_BLOB_SLOTS_PER_RUN = 4096;
+export const MAX_PRUNE_DATA_COLUMN_SLOTS_PER_RUN = 256;
+
 type BlockRootSlot = {slot: Slot; root: Uint8Array};
 
 /**
@@ -254,7 +262,10 @@ export async function archiveBlocks(
       const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveDataEpochs ?? 0);
       const blobSidecarsMinEpoch = currentEpoch - blobsArchiveWindow;
       if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
-        const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
+        const slotsToDelete = await db.blobSidecarsArchive.keys({
+          lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch),
+          limit: MAX_PRUNE_BLOB_SLOTS_PER_RUN,
+        });
         if (slotsToDelete.length > 0) {
           await db.blobSidecarsArchive.batchDelete(slotsToDelete);
           logger.verbose(`blobSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`, logCtx);
@@ -274,7 +285,10 @@ export async function archiveBlocks(
       const dataColumnSidecarsMinEpoch = getDataColumnSidecarsMinEpoch(config, currentEpoch, archiveDataEpochs);
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
         const columnsPruneSlot = computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch);
-        const prunedColumnSlots = await db.dataColumns.pruneBefore(columnsPruneSlot);
+        const prunedColumnSlots = await db.dataColumns.pruneBefore(
+          columnsPruneSlot,
+          MAX_PRUNE_DATA_COLUMN_SLOTS_PER_RUN
+        );
         if (prunedColumnSlots.length > 0) {
           logger.verbose("dataColumnSidecars prune", {
             ...logCtx,
