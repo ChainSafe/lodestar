@@ -89,7 +89,7 @@ import {validateGossipProposerPreferences} from "../../chain/validation/proposer
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {getBlobKzgCommitments, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
-import {callInNextEventLoop} from "../../util/eventLoop.js";
+import {callImmediate, callInNextEventLoop} from "../../util/eventLoop.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -675,8 +675,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const signedBlock = sszDeserialize(topic, serializedData);
       try {
         const blockInput = await validateBeaconBlock(signedBlock, topic.boundary.fork, peerIdStr, seenTimestampSec);
-        // Handler - deferred to next event loop so the validation result propagates first
-        callInNextEventLoop(() => {
+        // Runs after the validation result is reported, except with `network.useWorker: false`
+        callImmediate(() => {
           try {
             chain.serializedCache.set(signedBlock, serializedData);
             handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
