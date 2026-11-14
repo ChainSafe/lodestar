@@ -330,7 +330,7 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     description: "Use native (Zig) state transition instead of JS implementation",
     type: "boolean",
-    default: defaultOptions.chain.nativeStateTransition,
+    defaultDescription: String(defaultOptions.chain.nativeStateTransition),
     group: "chain",
   },
 
