@@ -238,12 +238,6 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
-  if (options.chain.nativeStateTransition && config.HEZE_FORK_EPOCH !== Infinity) {
-    throw Error(
-      `--chain.nativeStateTransition does not support Heze, which is scheduled at epoch ${config.HEZE_FORK_EPOCH}`
-    );
-  }
-
   // Bids received up to the deadline plus the lag buffer must still have a chance to win the block
   // production race, otherwise the local block is selected at the race cutoff before any bid.
   // Only enforced on an explicitly configured deadline, the default is used as is on short slots
