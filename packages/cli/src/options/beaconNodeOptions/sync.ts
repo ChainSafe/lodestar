@@ -5,6 +5,7 @@ export type SyncArgs = {
   "sync.isSingleNode"?: boolean;
   "sync.disableProcessAsChainSegment"?: boolean;
   "sync.disableRangeSync"?: boolean;
+  "sync.backfill"?: boolean;
   "sync.slotImportTolerance"?: number;
 };
 
@@ -13,6 +14,7 @@ export function parseArgs(args: SyncArgs): IBeaconNodeOptions["sync"] {
     isSingleNode: args["sync.isSingleNode"],
     disableProcessAsChainSegment: args["sync.disableProcessAsChainSegment"],
     disableRangeSync: args["sync.disableRangeSync"],
+    backfill: args["sync.backfill"] ?? defaultOptions.sync.backfill,
     slotImportTolerance: args["sync.slotImportTolerance"] ?? defaultOptions.sync.slotImportTolerance,
   };
 }
@@ -33,6 +35,14 @@ Use only for local networks with a single node, can be dangerous in regular netw
     type: "boolean",
     description: "Disable range sync completely. Should only be used for debugging or testing.",
     defaultDescription: String(defaultOptions.sync.disableRangeSync),
+    group: "sync",
+  },
+
+  "sync.backfill": {
+    type: "boolean",
+    description:
+      "Backfill blocks and custody data columns below the checkpoint the node was synced from, down to `MIN_EPOCHS_FOR_BLOCK_REQUESTS` epochs behind the current epoch, to serve them to peers.",
+    default: defaultOptions.sync.backfill,
     group: "sync",
   },
 

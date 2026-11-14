@@ -16,6 +16,11 @@ export type SyncOptions = {
   disableRangeSync?: boolean;
   /** USE FOR TESTING ONLY. Disable unknown block sync completely */
   disableBlockInputSync?: boolean;
+  /**
+   * Backfill the history below the checkpoint the node was synced from, down to the range the spec requires
+   * to serve.
+   */
+  backfill?: boolean;
   /** For testing only, MAX_PENDING_BLOCKS by default */
   maxPendingBlocks?: number;
 
@@ -33,5 +38,6 @@ export type SyncOptions = {
 export const defaultSyncOptions: SyncOptions = {
   isSingleNode: false,
   disableProcessAsChainSegment: false,
+  backfill: true,
   slotImportTolerance: SLOTS_PER_EPOCH,
 };

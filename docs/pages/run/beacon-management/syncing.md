@@ -28,9 +28,9 @@ Range sync involves syncing blocks within a specified range, beneficial when a n
 
 ### Backfill Sync
 
-🚧 Work in progress. Backfill sync is not yet available in Lodestar.
+A checkpoint synced node starts without the history preceding its checkpoint. Once the node is synced, backfill sync downloads that history backwards from the checkpoint until the node holds everything peers may request: blocks for the last `MIN_EPOCHS_FOR_BLOCK_REQUESTS` epochs (~5 months on mainnet), and its custody data columns for the last `MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS` epochs (~18 days on mainnet).
 
-Backfill sync downloads historical blocks preceding a checkpoint.
+It is a relatively inexpensive sync from a CPU perspective because blocks are not executed: each batch only has to link to the already stored chain by its block roots and carry valid proposer signatures. Backfill sync runs in the background, is enabled by default and can be disabled with `--sync.backfill false`.
 
 ## Syncing Lodestar
 
