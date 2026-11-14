@@ -1487,7 +1487,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_cp_state_cache_state_persist_seconds_from_slot_sum[$rate_interval])\n/\nrate(lodestar_cp_state_cache_state_persist_seconds_from_slot_count[$rate_interval])",
+          "expr": "rate(lodestar_cp_state_cache_state_persist_from_slot_seconds_sum[$rate_interval])\n/\nrate(lodestar_cp_state_cache_state_persist_from_slot_seconds_count[$rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "sec_from_slot",
@@ -1500,7 +1500,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_cp_state_cache_state_persist_seconds_from_slot_count[$rate_interval]) * 384",
+          "expr": "rate(lodestar_cp_state_cache_state_persist_from_slot_seconds_count[$rate_interval]) * 384",
           "hide": false,
           "instant": false,
           "legendFormat": "count_per_epoch",
@@ -1636,7 +1636,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_cp_state_cache_state_reload_seconds_from_slot_sum[$rate_interval])\n/\nrate(lodestar_cp_state_cache_state_reload_seconds_from_slot_count[$rate_interval])",
+          "expr": "rate(lodestar_cp_state_cache_state_reload_from_slot_seconds_sum[$rate_interval])\n/\nrate(lodestar_cp_state_cache_state_reload_from_slot_seconds_count[$rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "sec_from_slot",
@@ -2213,7 +2213,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (entrypoint) (\n  rate(lodestar_regen_fn_call_duration_sum[$rate_interval])\n)\n/\nsum by (entrypoint) (\n  rate(lodestar_regen_fn_call_duration_count[$rate_interval])\n)",
+          "expr": "sum by (entrypoint) (\n  rate(lodestar_regen_fn_call_duration_seconds_sum[$rate_interval])\n)\n/\nsum by (entrypoint) (\n  rate(lodestar_regen_fn_call_duration_seconds_count[$rate_interval])\n)",
           "interval": "",
           "legendFormat": "{{entrypoint}}",
           "refId": "A"
@@ -2295,7 +2295,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (caller) (\n  rate(lodestar_regen_fn_call_duration_sum[$rate_interval])\n)\n/\nsum by (caller) (\n  rate(lodestar_regen_fn_call_duration_count[$rate_interval])\n)",
+          "expr": "sum by (caller) (\n  rate(lodestar_regen_fn_call_duration_seconds_sum[$rate_interval])\n)\n/\nsum by (caller) (\n  rate(lodestar_regen_fn_call_duration_seconds_count[$rate_interval])\n)",
           "interval": "",
           "legendFormat": "{{caller}}",
           "refId": "A"
@@ -2463,7 +2463,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (entrypoint) (\n  rate(lodestar_regen_fn_errors_total[$rate_interval])\n)\n/\nsum by (entrypoint) (\n  rate(lodestar_regen_fn_call_duration_count[$rate_interval])\n)",
+          "expr": "sum by (entrypoint) (\n  rate(lodestar_regen_fn_errors_total[$rate_interval])\n)\n/\nsum by (entrypoint) (\n  rate(lodestar_regen_fn_call_duration_seconds_count[$rate_interval])\n)",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -2631,7 +2631,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (caller) (\n  rate(lodestar_regen_fn_errors_total[$rate_interval])\n)\n/\nsum by (caller) (\n  rate(lodestar_regen_fn_call_duration_count[$rate_interval])\n)",
+          "expr": "sum by (caller) (\n  rate(lodestar_regen_fn_errors_total[$rate_interval])\n)\n/\nsum by (caller) (\n  rate(lodestar_regen_fn_call_duration_seconds_count[$rate_interval])\n)",
           "interval": "",
           "legendFormat": "",
           "refId": "A"

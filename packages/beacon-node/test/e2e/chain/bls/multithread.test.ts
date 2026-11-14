@@ -151,8 +151,8 @@ describe("chain / bls / multithread queue", () => {
     for (const [metricName, expectedUpperBound] of [
       ["lodestar_bls_thread_pool_queue_job_wait_time_seconds", 2],
       ["lodestar_bls_thread_pool_job_duration_seconds", 2],
-      ["lodestar_bls_thread_pool_latency_to_worker", 0.1],
-      ["lodestar_bls_thread_pool_latency_from_worker", 0.1],
+      ["lodestar_bls_thread_pool_latency_to_worker_seconds", 0.1],
+      ["lodestar_bls_thread_pool_latency_from_worker_seconds", 0.1],
       ["lodestar_bls_thread_pool_work_request_preparation_duration_seconds", 0.025],
       ["lodestar_bls_thread_pool_verification_call_duration_seconds", 0.5],
     ] as const) {

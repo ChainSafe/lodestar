@@ -334,37 +334,37 @@ pub fn init(allocator: Allocator, io: std.Io, comptime opts: m.RegistryOpts) !vo
         .prev_epoch_on_chain_balance = ValidatorMonitorMetrics.CountGauge.init(
             "validator_monitor_prev_epoch_on_chain_balance",
             .{ .help = "Total balance of all monitored validators after an epoch" },
-            opts,
+            metric_opts,
         ),
         .prev_epoch_on_chain_source_attester_hit = ValidatorMonitorMetrics.CountGauge.init(
             "validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
             .{ .help = "Incremented if the validator is flagged as a previous epoch source attester during per epoch processing" },
-            opts,
+            metric_opts,
         ),
         .prev_epoch_on_chain_source_attester_miss = ValidatorMonitorMetrics.CountGauge.init(
             "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
             .{ .help = "Incremented if the validator is not flagged as a previous epoch source attester during per epoch processing" },
-            opts,
+            metric_opts,
         ),
         .prev_epoch_on_chain_head_attester_hit = ValidatorMonitorMetrics.CountGauge.init(
             "validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
             .{ .help = "Incremented if the validator is flagged as a previous epoch head attester during per epoch processing" },
-            opts,
+            metric_opts,
         ),
         .prev_epoch_on_chain_head_attester_miss = ValidatorMonitorMetrics.CountGauge.init(
             "validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
             .{ .help = "Incremented if the validator is not flagged as a previous epoch head attester during per epoch processing" },
-            opts,
+            metric_opts,
         ),
         .prev_epoch_on_chain_target_attester_hit = ValidatorMonitorMetrics.CountGauge.init(
             "validator_monitor_prev_epoch_on_chain_target_attester_hit_total",
             .{ .help = "Incremented if the validator is flagged as a previous epoch target attester during per epoch processing" },
-            opts,
+            metric_opts,
         ),
         .prev_epoch_on_chain_target_attester_miss = ValidatorMonitorMetrics.CountGauge.init(
             "validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
             .{ .help = "Incremented if the validator is not flagged as a previous epoch target attester during per epoch processing" },
-            opts,
+            metric_opts,
         ),
     };
 }

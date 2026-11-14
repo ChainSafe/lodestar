@@ -565,13 +565,13 @@ export function createLodestarMetrics(
       }),
       // To measure the time cost of main thread <-> worker message passing
       latencyToWorker: register.histogram({
-        name: "lodestar_bls_thread_pool_latency_to_worker",
+        name: "lodestar_bls_thread_pool_latency_to_worker_seconds",
         help: "Time from sending the job to the worker and the worker receiving it",
         // The dashboard treats 20ms as slow; values above 100ms only need severe-stall classification.
         buckets: [0.00025, 0.001, 0.005, 0.02, 0.1],
       }),
       latencyFromWorker: register.histogram({
-        name: "lodestar_bls_thread_pool_latency_from_worker",
+        name: "lodestar_bls_thread_pool_latency_from_worker_seconds",
         help: "Time from the worker sending the result and the main thread receiving it",
         buckets: [0.00025, 0.001, 0.005, 0.02, 0.1],
       }),
@@ -775,7 +775,7 @@ export function createLodestarMetrics(
         labelNames: ["reason"],
       }),
       elapsedTimeTillReceived: register.histogram({
-        name: "lodestar_sync_unknown_block_elapsed_time_till_received",
+        name: "lodestar_sync_unknown_block_elapsed_time_till_received_seconds",
         help: "Time elapsed between block slot time and the time block received via unknown block sync",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
@@ -930,86 +930,86 @@ export function createLodestarMetrics(
     // Gossip block
     gossipBlock: {
       elapsedTimeTillReceived: register.histogram<{source: OpSource}>({
-        name: "lodestar_gossip_block_elapsed_time_till_received",
+        name: "lodestar_gossip_block_elapsed_time_till_received_seconds",
         help: "Time elapsed between block slot time and the time block received via gossip",
         labelNames: ["source"],
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
       elapsedTimeTillProcessed: register.histogram({
-        name: "lodestar_gossip_block_elapsed_time_till_processed",
+        name: "lodestar_gossip_block_elapsed_time_till_processed_seconds",
         help: "Time elapsed between block slot time and the time block processed",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
 
       gossipValidation: {
         recvToValidation: register.histogram({
-          name: "lodestar_gossip_block_received_to_gossip_validate",
+          name: "lodestar_gossip_block_received_to_gossip_validate_seconds",
           help: "Time elapsed between block received and block validated",
           buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
         }),
         validationTime: register.histogram({
-          name: "lodestar_gossip_block_gossip_validate_time",
+          name: "lodestar_gossip_block_gossip_validate_time_seconds",
           help: "Time to apply gossip validations",
           buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
         }),
       },
       stateTransition: {
         recvToValidation: register.histogram({
-          name: "lodestar_gossip_block_received_to_state_transition",
+          name: "lodestar_gossip_block_received_to_state_transition_seconds",
           help: "Time elapsed between block received and block state transition",
           buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
         }),
         validationTime: register.histogram({
-          name: "lodestar_gossip_block_state_transition_time",
+          name: "lodestar_gossip_block_state_transition_time_seconds",
           help: "Time to validate block state transition",
           buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
         }),
       },
       signatureVerification: {
         recvToValidation: register.histogram({
-          name: "lodestar_gossip_block_received_to_signatures_verification",
+          name: "lodestar_gossip_block_received_to_signatures_verification_seconds",
           help: "Time elapsed between block received and block signatures verification",
           buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
         }),
         validationTime: register.histogram({
-          name: "lodestar_gossip_block_signatures_verification_time",
+          name: "lodestar_gossip_block_signatures_verification_time_seconds",
           help: "Time elapsed for block signatures verification",
           buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
         }),
       },
       executionPayload: {
         recvToValidation: register.histogram({
-          name: "lodestar_gossip_block_received_to_execution_payload_verification",
+          name: "lodestar_gossip_block_received_to_execution_payload_verification_seconds",
           help: "Time elapsed between block received and execution payload verification",
           buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
         }),
         validationTime: register.histogram({
-          name: "lodestar_gossip_execution_payload_verification_time",
+          name: "lodestar_gossip_execution_payload_verification_time_seconds",
           help: "Time elapsed for execution payload verification",
           buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
         }),
       },
       blockImport: {
         recvToValidation: register.histogram({
-          name: "lodestar_gossip_block_received_to_block_import",
+          name: "lodestar_gossip_block_received_to_block_import_seconds",
           help: "Time elapsed between block received and block import",
           buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
         }),
         validationTime: register.histogram({
-          name: "lodestar_gossip_block_block_import_time",
+          name: "lodestar_gossip_block_block_import_time_seconds",
           help: "Time elapsed for block import",
           buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
         }),
       },
 
       receivedToBlobsAvailabilityTime: register.histogram<{numBlobs: number}>({
-        name: "lodestar_gossip_block_received_to_blobs_availability_time",
+        name: "lodestar_gossip_block_received_to_blobs_availability_time_seconds",
         help: "Time elapsed between block received and blobs became available",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
         labelNames: ["numBlobs"],
       }),
       receivedToFullyVerifiedTime: register.histogram({
-        name: "lodestar_gossip_block_received_to_fully_verified_time",
+        name: "lodestar_gossip_block_received_to_fully_verified_time_seconds",
         help: "Time elapsed between block received and fully verified state, signatures and payload",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
       }),
@@ -1019,7 +1019,7 @@ export function createLodestarMetrics(
         buckets: [0.01, 0.015, 0.02, 0.025, 0.03, 0.04, 0.5, 1],
       }),
       verifiedToBlobsAvailabiltyTime: register.histogram<{numBlobs: number}>({
-        name: "lodestar_gossip_block_verified_to_blobs_availability_time",
+        name: "lodestar_gossip_block_verified_to_blobs_availability_time_seconds",
         help: "Time elapsed between block verified and blobs became available",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
         labelNames: ["numBlobs"],
@@ -1045,12 +1045,12 @@ export function createLodestarMetrics(
     },
     gossipBlob: {
       recvToValidation: register.histogram({
-        name: "lodestar_gossip_blob_received_to_gossip_validate",
+        name: "lodestar_gossip_blob_received_to_gossip_validate_seconds",
         help: "Time elapsed between blob received and blob validation",
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
       validationTime: register.histogram({
-        name: "lodestar_gossip_blob_gossip_validate_time",
+        name: "lodestar_gossip_blob_gossip_validate_time_seconds",
         help: "Time elapsed for blob validation",
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
@@ -1058,7 +1058,7 @@ export function createLodestarMetrics(
     // Gossip execution payload envelope
     gossipExecutionPayloadEnvelope: {
       elapsedTimeTillReceived: register.histogram<{source: OpSource}>({
-        name: "lodestar_gossip_execution_payload_envelope_elapsed_time_till_received",
+        name: "lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_seconds",
         help: "Time elapsed between slot time and the time execution payload envelope received",
         labelNames: ["source"],
         buckets: [0.5, 1, 2, 4, 6, 12],
@@ -1157,7 +1157,7 @@ export function createLodestarMetrics(
         help: "Count persisting block with serialized data",
       }),
       elapsedTimeTillBecomeHead: register.histogram({
-        name: "lodestar_gossip_block_elapsed_time_till_become_head",
+        name: "lodestar_gossip_block_elapsed_time_till_become_head_seconds",
         help: "Time elapsed between block slot time and the time block becomes head",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
@@ -1682,7 +1682,7 @@ export function createLodestarMetrics(
         help: "Total number of states pruned from memory",
       }),
       statePersistSecFromSlot: register.histogram({
-        name: "lodestar_cp_state_cache_state_persist_seconds_from_slot",
+        name: "lodestar_cp_state_cache_state_persist_from_slot_seconds",
         help: "Histogram of time to persist state to db since the clock slot",
         buckets: [0, 2, 4, 6, 8, 10, 12],
       }),
@@ -1710,7 +1710,7 @@ export function createLodestarMetrics(
         buckets: [0, 1, 2, 4, 8, 16, 32],
       }),
       stateReloadSecFromSlot: register.histogram({
-        name: "lodestar_cp_state_cache_state_reload_seconds_from_slot",
+        name: "lodestar_cp_state_cache_state_reload_from_slot_seconds",
         help: "Histogram of time to load state from db since the clock slot",
         buckets: [0, 2, 4, 6, 8, 10, 12],
       }),
@@ -1916,7 +1916,7 @@ export function createLodestarMetrics(
       labelNames: ["entrypoint", "caller"],
     }),
     regenFnCallDuration: register.histogram<{entrypoint: RegenFnName; caller: RegenCaller}>({
-      name: "lodestar_regen_fn_call_duration",
+      name: "lodestar_regen_fn_call_duration_seconds",
       help: "regen function duration",
       labelNames: ["entrypoint", "caller"],
       buckets: [0.1, 1, 10, 100],

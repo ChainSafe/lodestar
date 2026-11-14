@@ -12,7 +12,7 @@ export declare function registerLocalValidator(index: number): void;
 
 /**
  * Remove a validator index from the native validator monitor, so its
- * `validator_monitor_*` status metrics stop being recorded. Mirrors the pruning
+ * `lodestar_validator_monitor_*` status metrics stop being recorded. Mirrors the pruning
  * of stale registrations in lodestar's validator monitor.
  */
 export declare function unregisterLocalValidator(index: number): void;

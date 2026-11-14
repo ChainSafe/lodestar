@@ -1551,7 +1551,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "384*rate(validator_monitor_prev_epoch_block_proposal_summary[$rate_interval])",
+          "expr": "384*rate(lodestar_validator_monitor_prev_epoch_block_proposal_summary[$rate_interval])",
           "format": "time_series",
           "instant": false,
           "interval": "",

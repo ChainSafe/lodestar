@@ -232,7 +232,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "validator_monitor_validators",
+          "expr": "lodestar_validator_monitor_validators",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1385,7 +1385,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(lodestar_gossip_block_elapsed_time_till_received_sum{source=\"gossip\"}[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_received_count{source=\"gossip\"}[$rate_interval])",
+          "expr": "rate(lodestar_gossip_block_elapsed_time_till_received_seconds_sum{source=\"gossip\"}[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_received_seconds_count{source=\"gossip\"}[$rate_interval])",
           "interval": "",
           "legendFormat": "till received",
           "range": true,
@@ -1397,7 +1397,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(lodestar_gossip_block_elapsed_time_till_processed_sum[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval])",
+          "expr": "rate(lodestar_gossip_block_elapsed_time_till_processed_seconds_sum[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_processed_seconds_count[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "till processed",
