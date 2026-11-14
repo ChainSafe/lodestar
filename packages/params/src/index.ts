@@ -3,7 +3,7 @@ import {presetStatus} from "./presetStatus.js";
 import {gnosisPreset} from "./presets/gnosis.js";
 import {mainnetPreset} from "./presets/mainnet.js";
 import {minimalPreset} from "./presets/minimal.js";
-import {userOverrides, userSelectedPreset} from "./setPreset.js";
+import {userSelectedPreset} from "./setPreset.js";
 
 export * from "./forkName.js";
 export {presetToJson} from "./json.js";
@@ -31,7 +31,7 @@ export const ACTIVE_PRESET =
   userSelectedPreset ??
   (typeof process !== "undefined" ? PresetName[process?.env?.LODESTAR_PRESET as PresetName] : undefined) ??
   PresetName.mainnet;
-export const activePreset = {...presets[ACTIVE_PRESET], ...userOverrides};
+export const activePreset = presets[ACTIVE_PRESET];
 
 // These variables must be exported individually and explicitly
 // in order to be accessible as top-level exports

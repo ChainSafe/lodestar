@@ -9,7 +9,6 @@ type GlobalSingleArgs = {
   network?: NetworkName;
   paramsFile?: string;
   preset: string;
-  presetFile?: string;
   rcConfig?: string;
   supernode?: boolean;
   semiSupernode?: boolean;
@@ -40,12 +39,6 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
     hidden: true,
     type: "string",
     default: ACTIVE_PRESET,
-  },
-
-  presetFile: {
-    hidden: true,
-    description: "Preset configuration file to override the active preset with custom values",
-    type: "string",
   },
 
   rcConfig: {
