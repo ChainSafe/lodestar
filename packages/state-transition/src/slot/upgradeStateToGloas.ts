@@ -115,6 +115,8 @@ export function upgradeStateToGloas(
   for (let i = 0; i < SLOTS_PER_HISTORICAL_ROOT; i++) {
     stateGloasView.executionPayloadAvailability.set(i, true);
   }
+  // process_slot of the last pre-fork slot ran with Fulu rules and did not unset the fork slot
+  stateGloasView.executionPayloadAvailability.set(stateFulu.slot % SLOTS_PER_HISTORICAL_ROOT, false);
   stateGloasView.latestBlockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
 
   const stateGloas = getCachedBeaconState(stateGloasView, stateFulu);
