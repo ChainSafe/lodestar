@@ -2,6 +2,7 @@ import path from "node:path";
 import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {chainConfigToJson} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
+import {HistoricalStateResponseCache} from "./responseCache.js";
 import {
   HistoricalStateRegenInitModules,
   HistoricalStateRegenModules,
@@ -19,10 +20,16 @@ const WORKER_DIR = process.env.NODE_ENV === "test" ? "../../../../lib/chain/arch
 export class HistoricalStateRegen implements HistoricalStateWorkerApi {
   private readonly api: ModuleThread<HistoricalStateWorkerApi>;
   private readonly logger: LoggerNode;
+  private readonly controller = new AbortController();
+  private readonly responses: HistoricalStateResponseCache;
 
   private constructor(modules: HistoricalStateRegenModules) {
     this.api = modules.api;
     this.logger = modules.logger;
+    this.responses = new HistoricalStateResponseCache(
+      (slot) => this.api.getHistoricalState(slot),
+      this.controller.signal
+    );
     modules.signal?.addEventListener("abort", () => this.close(), {once: true});
   }
   static async init(modules: HistoricalStateRegenInitModules): Promise<HistoricalStateRegen> {
@@ -57,6 +64,7 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
   }
 
   async close(): Promise<void> {
+    this.controller.abort();
     await this.api.close();
     this.logger.debug("Terminating historical state worker");
     await Thread.terminate(this.api);
@@ -64,6 +72,6 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
   }
 
   async getHistoricalState(slot: number): Promise<Uint8Array> {
-    return this.api.getHistoricalState(slot);
+    return this.responses.get(slot);
   }
 }
