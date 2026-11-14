@@ -294,7 +294,7 @@ export class BeaconNode {
         logger: logger.child({module: LoggerModule.execution}),
       }),
       executionBuilder: opts.executionBuilder.enabled
-        ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
+        ? initializeExecutionBuilder(opts.executionBuilder, config, clock, metrics, logger)
         : undefined,
       builderApiClientOpts: {
         timeout: opts.executionBuilder.timeout,
