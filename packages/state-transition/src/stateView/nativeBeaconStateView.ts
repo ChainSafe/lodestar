@@ -40,7 +40,6 @@ import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
-import {getStateSlotFromBytes} from "../util/sszBytes.js";
 import {computeNewStateRootStateTransitionOpts, getComputeNewStateRootResult} from "./computeNewStateRoot.js";
 import {
   BlockSTFInput,
@@ -51,12 +50,6 @@ import {
   IBeaconStateViewNative,
   isStatePostGloas,
 } from "./interface.js";
-
-export function assertNativeForkSupported(config: BeaconConfig, slot: Slot): void {
-  if (config.getForkSeq(slot) > ForkSeq.gloas) {
-    throw Error(`Native state transition does not support ${config.getForkName(slot)}`);
-  }
-}
 
 /**
  * Wraps a native binding (the auto-generated JS interface produced by a `.node`
@@ -619,7 +612,6 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     seedValidatorsBytes?: Uint8Array,
     opts?: {preloadValidatorsAndBalances?: boolean}
   ): IBeaconStateView {
-    assertNativeForkSupported(this.config, getStateSlotFromBytes(stateBytes));
     return new NativeBeaconStateView(this.config, this.binding.loadOtherState(stateBytes, seedValidatorsBytes, opts));
   }
 
@@ -685,7 +677,6 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     options: StateTransitionOpts,
     _modules: StateTransitionModules
   ): IBeaconStateView {
-    assertNativeForkSupported(this.config, block.message.slot);
     const isBlinded = isBlindedBeaconBlock(block.message);
     const signedBlockBytes =
       ssz ??
@@ -698,7 +689,6 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   processSlots(slot: Slot, opts?: {dontTransferCache?: boolean}, _modules?: StateTransitionModules): IBeaconStateView {
-    assertNativeForkSupported(this.config, slot);
     return new NativeBeaconStateView(this.config, this.binding.processSlots(slot, opts));
   }
 

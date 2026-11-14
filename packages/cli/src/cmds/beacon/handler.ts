@@ -276,13 +276,10 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
 }
 
 /**
- * The native addon is compiled for a single preset and up to a fixed fork.
+ * The native addon is compiled for a single preset.
  * Returns what the config requires that it cannot provide, or null if it can run this config.
  */
 function getNativeStateTransitionUnsupported(config: ChainForkConfig, args: BeaconArgs & GlobalArgs): string | null {
-  if (config.HEZE_FORK_EPOCH !== Infinity) {
-    return `Heze, which is scheduled at epoch ${config.HEZE_FORK_EPOCH}`;
-  }
   if (args.presetFile) {
     return "a custom preset file";
   }
