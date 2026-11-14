@@ -3,7 +3,7 @@ import {ExecutionStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-import {RootHex} from "@lodestar/types";
+import {RootHex, gloas, ssz} from "@lodestar/types";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/index.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
@@ -12,7 +12,7 @@ import {IBeaconDb} from "../../../../src/db/index.js";
 import {MAX_LOOK_AHEAD_EPOCHS} from "../../../../src/sync/constants.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
-import {getMockedClock} from "../../../mocks/clock.js";
+import {ClockStopped, getMockedClock} from "../../../mocks/clock.js";
 import {
   FULU_FORK_EPOCH,
   GLOAS_FORK_EPOCH,
@@ -239,6 +239,61 @@ describe("SeenPayloadEnvelopeInput", () => {
     cache.removeInvalid(invalid);
 
     expect(cache.get(rootHex)).toBe(recreated);
+  });
+
+  describe("execution invalid envelopes", () => {
+    let clock: ClockStopped;
+
+    beforeEach(() => {
+      clock = new ClockStopped(GLOAS_SLOT);
+      cache = new SeenPayloadEnvelopeInput({
+        config,
+        clock,
+        forkChoice,
+        chainEvents,
+        signal: abortController.signal,
+        serializedCache,
+        db,
+        seenBlockInputCache,
+        custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
+        metrics: null,
+        logger: testLogger(),
+      });
+    });
+
+    function signedEnvelope(signatureByte: number): gloas.SignedExecutionPayloadEnvelope {
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.signature = new Uint8Array(96).fill(signatureByte);
+      return envelope;
+    }
+
+    it("remembers the marked envelope only", () => {
+      cache.markExecutionInvalid(signedEnvelope(1));
+
+      expect(cache.isExecutionInvalid(signedEnvelope(1))).toBe(true);
+      expect(cache.isExecutionInvalid(signedEnvelope(2))).toBe(false);
+    });
+
+    it("forgets the envelope once the retry window has passed", () => {
+      cache.markExecutionInvalid(signedEnvelope(1));
+
+      clock.setSlot(GLOAS_SLOT + SLOTS_PER_EPOCH - 1);
+      expect(cache.isExecutionInvalid(signedEnvelope(1))).toBe(true);
+
+      clock.setSlot(GLOAS_SLOT + SLOTS_PER_EPOCH);
+      expect(cache.isExecutionInvalid(signedEnvelope(1))).toBe(false);
+    });
+
+    it("drops the oldest verdict when full", () => {
+      for (let i = 0; i <= SLOTS_PER_EPOCH; i++) {
+        cache.markExecutionInvalid(signedEnvelope(i));
+      }
+
+      expect(cache.isExecutionInvalid(signedEnvelope(0))).toBe(false);
+      for (let i = 1; i <= SLOTS_PER_EPOCH; i++) {
+        expect(cache.isExecutionInvalid(signedEnvelope(i)), `envelope ${i} should be remembered`).toBe(true);
+      }
+    });
   });
 
   describe("getOrReload", () => {

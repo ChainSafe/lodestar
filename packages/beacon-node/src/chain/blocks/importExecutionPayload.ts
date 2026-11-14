@@ -17,7 +17,7 @@ import {
 } from "@lodestar/state-transition";
 import {RootHex, bellatrix} from "@lodestar/types";
 import {isErrorAborted} from "@lodestar/utils";
-import {ExecutionPayloadStatus} from "../../execution/index.js";
+import {ExecutePayloadResponse, ExecutionPayloadStatus} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
@@ -31,6 +31,12 @@ import {
 } from "./verifyExecutionPayloadEnvelope.js";
 
 const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
+
+const KNOWN_EXECUTION_INVALID_RESPONSE: ExecutePayloadResponse = {
+  status: ExecutionPayloadStatus.INVALID,
+  latestValidHash: null,
+  validationError: "Envelope was already declared invalid by the execution engine",
+};
 
 export enum PayloadErrorCode {
   EXECUTION_ENGINE_INVALID = "PAYLOAD_ERROR_EXECUTION_ENGINE_INVALID",
@@ -230,19 +236,26 @@ export async function importExecutionPayload(
         : this.inclusionListStore.getInclusionListTransactions(inclusionListSlot, dependentRoot, true);
   }
 
-  // 4a. Run EL and signature verification in parallel
+  // 4a. Run EL and signature verification in parallel. Sync may download again an envelope the engine already
+  // declared INVALID, it is not sent to the engine a second time
   const logCtx = {slot, root: blockRootHex, executionBlock: envelope.payload.blockNumber};
-  this.logger.debug("Call engine api newPayload", logCtx);
+  const knownExecutionInvalid = this.seenPayloadEnvelopeInputCache.isExecutionInvalid(signedEnvelope);
+  this.logger.debug(
+    knownExecutionInvalid ? "Skip engine api newPayload for a known invalid envelope" : "Call engine api newPayload",
+    logCtx
+  );
   const verifyStartSec = Date.now() / 1000;
   const [execResult, signatureValid] = await Promise.all([
-    this.executionEngine.notifyNewPayload(
-      fork,
-      envelope.payload,
-      payloadInput.getVersionedHashes(),
-      envelope.parentBeaconBlockRoot,
-      envelope.executionRequests,
-      inclusionListTransactions
-    ),
+    knownExecutionInvalid
+      ? KNOWN_EXECUTION_INVALID_RESPONSE
+      : this.executionEngine.notifyNewPayload(
+          fork,
+          envelope.payload,
+          payloadInput.getVersionedHashes(),
+          envelope.parentBeaconBlockRoot,
+          envelope.executionRequests,
+          inclusionListTransactions
+        ),
 
     opts.validSignature === true
       ? Promise.resolve(true)
@@ -254,8 +267,10 @@ export async function importExecutionPayload(
           this.bls
         ),
   ]);
-  this.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
-  this.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
+  if (!knownExecutionInvalid) {
+    this.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
+    this.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
+  }
 
   // 4b. Check signature verification result
   if (!signatureValid) {
@@ -268,6 +283,10 @@ export async function importExecutionPayload(
       break;
 
     case ExecutionPayloadStatus.INVALID:
+      // A known invalid envelope keeps the slot of the engine verdict, the engine is asked again once it expires
+      if (!knownExecutionInvalid) {
+        this.seenPayloadEnvelopeInputCache.markExecutionInvalid(signedEnvelope);
+      }
       throw new PayloadError(payloadInput, {
         code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
         execStatus: execResult.status,
