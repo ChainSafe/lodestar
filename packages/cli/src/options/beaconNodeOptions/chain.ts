@@ -88,7 +88,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     // Circuit breaker thresholds are shared with the pre-gloas builder flow
     faultInspectionWindow: args["builder.faultInspectionWindow"],
     allowedFaults: args["builder.allowedFaults"],
-    pruneHistory: args["chain.pruneHistory"],
+    pruneHistory: args["chain.pruneHistory"] ?? !args.serveHistoricalState,
   };
 }
 
@@ -362,10 +362,10 @@ Will double processing times. Use only for debugging purposes.",
   "chain.pruneHistory": {
     description:
       "Continually prune finalized blocks and execution payload envelopes older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet, 14299 epochs / ~2 months from gloas) and all archived states before the finalized epoch. \
-This is useful to minimize disk usage when the node does not need to serve historical data. \
+Enabled by default unless `--serveHistoricalState` is set. Set to `false` to retain historical data. \
 An existing large database is pruned gradually, up to 4096 slots of blocks on startup and on every finalized checkpoint.",
     type: "boolean",
-    default: defaultOptions.chain.pruneHistory,
+    defaultDescription: String(defaultOptions.chain.pruneHistory),
     group: "chain",
   },
 };
