@@ -8,9 +8,52 @@ const GENESIS_EPOCH = @import("preset").GENESIS_EPOCH;
 const isInInactivityLeak = @import("inactivity_leak.zig").isInInactivityLeak;
 const attester_status_utils = @import("../utils/attester_status.zig");
 const hasMarkers = attester_status_utils.hasMarkers;
+const validator_chunks = @import("../utils/validator_chunks.zig");
+
+const FLAG_PREV_TARGET_ATTESTER_UNSLASHED = attester_status_utils.FLAG_PREV_TARGET_ATTESTER_UNSLASHED;
+const FLAG_ELIGIBLE_ATTESTER = attester_status_utils.FLAG_ELIGIBLE_ATTESTER;
+
+const InactivityScan = struct {
+    flags: []const u8,
+    /// Read as the current scores and updated in place.
+    scores: []u64,
+    is_in_inactivity_leak: bool,
+    score_bias: u64,
+    score_recovery_rate: u64,
+    /// A chunk writes the indices whose score changed from its own start onward.
+    changed: []u32,
+    changed_counts: []usize,
+};
+
+fn updateChunk(scan: *const InactivityScan, chunk: validator_chunks.Chunk) void {
+    var changed_count: usize = 0;
+    for (
+        scan.flags[chunk.start..chunk.end],
+        scan.scores[chunk.start..chunk.end],
+        chunk.start..,
+    ) |flag, *score, i| {
+        if (!hasMarkers(flag, FLAG_ELIGIBLE_ATTESTER)) continue;
+
+        const prev_score = score.*;
+        var new_score = if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED))
+            prev_score -| 1
+        else
+            prev_score + scan.score_bias;
+        if (!scan.is_in_inactivity_leak) {
+            new_score -|= scan.score_recovery_rate;
+        }
+        if (new_score != prev_score) {
+            score.* = new_score;
+            scan.changed[chunk.start + changed_count] = @intCast(i);
+            changed_count += 1;
+        }
+    }
+    scan.changed_counts[chunk.index] = changed_count;
+}
 
 pub fn processInactivityUpdates(
     comptime fork: ForkSeq,
+    io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
     state: *BeaconState(fork),
@@ -20,32 +63,31 @@ pub fn processInactivityUpdates(
         return;
     }
 
-    const INACTIVITY_SCORE_BIAS = config.chain.INACTIVITY_SCORE_BIAS;
-    const INACTIVITY_SCORE_RECOVERY_RATE = config.chain.INACTIVITY_SCORE_RECOVERY_RATE;
     const flags = cache.flags;
-    const is_in_activity_leak = isInInactivityLeak(epoch_cache.epoch, try state.finalizedEpoch());
-
-    // this avoids importing FLAG_ELIGIBLE_ATTESTER inside the for loop, check the compiled code
-    const FLAG_PREV_TARGET_ATTESTER_UNSLASHED = attester_status_utils.FLAG_PREV_TARGET_ATTESTER_UNSLASHED;
-    const FLAG_ELIGIBLE_ATTESTER = attester_status_utils.FLAG_ELIGIBLE_ATTESTER;
-
     var inactivity_scores = try state.inactivityScores();
     try inactivity_scores.commit();
-    const inactivity_scores_values = try inactivity_scores.getAllInto(cache.validator_scratch);
+    const scores = try inactivity_scores.getAllInto(cache.validator_scratch);
+    std.debug.assert(flags.len <= scores.len);
 
-    std.debug.assert(flags.len <= inactivity_scores_values.len);
-    for (flags, inactivity_scores_values[0..flags.len], 0..) |flag, prev_inactivity_score, i| {
-        if (!hasMarkers(flag, FLAG_ELIGIBLE_ATTESTER)) continue;
+    const changed_counts = try cache.allocator.alloc(usize, validator_chunks.count(flags.len));
+    defer cache.allocator.free(changed_counts);
 
-        var inactivity_score = if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED))
-            prev_inactivity_score -| 1
-        else
-            prev_inactivity_score + INACTIVITY_SCORE_BIAS;
-        if (!is_in_activity_leak) {
-            inactivity_score -|= INACTIVITY_SCORE_RECOVERY_RATE;
-        }
-        if (inactivity_score != prev_inactivity_score) {
-            try inactivity_scores.set(i, inactivity_score);
+    const scan: InactivityScan = .{
+        .flags = flags,
+        .scores = scores,
+        .is_in_inactivity_leak = isInInactivityLeak(epoch_cache.epoch, try state.finalizedEpoch()),
+        .score_bias = config.chain.INACTIVITY_SCORE_BIAS,
+        .score_recovery_rate = config.chain.INACTIVITY_SCORE_RECOVERY_RATE,
+        .changed = cache.index_scratch[0..flags.len],
+        .changed_counts = changed_counts,
+    };
+    try validator_chunks.run(io, flags.len, &scan, updateChunk);
+
+    // Tree views are not thread-safe, so the changed scores are written back on this thread.
+    for (changed_counts, 0..) |changed_count, chunk_index| {
+        const chunk = validator_chunks.at(flags.len, chunk_index);
+        for (scan.changed[chunk.start..][0..changed_count]) |i| {
+            try inactivity_scores.set(i, scores[i]);
         }
     }
 }

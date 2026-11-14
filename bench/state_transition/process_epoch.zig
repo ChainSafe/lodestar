@@ -46,11 +46,12 @@ fn ProcessBeforeProcessEpochBench(comptime fork: ForkSeq) type {
     return struct {
         io: std.Io,
 
-        pub fn run(_: *@This(), allocator: std.mem.Allocator) void {
+        pub fn run(self: *@This(), allocator: std.mem.Allocator) void {
             BenchState.cloned_cached_state.state.commit() catch unreachable;
 
             var epoch_transition_cache = EpochTransitionCache.init(
                 allocator,
+                self.io,
                 BenchState.cloned_cached_state.config,
                 BenchState.cloned_cached_state.epoch_cache,
                 BenchState.cloned_cached_state.state,
@@ -63,12 +64,14 @@ fn ProcessBeforeProcessEpochBench(comptime fork: ForkSeq) type {
 fn ProcessInactivityUpdatesBench(comptime fork: ForkSeq) type {
     return struct {
         epoch_transition_cache: *EpochTransitionCache,
+        io: std.Io,
 
         pub fn run(self: *@This(), _: std.mem.Allocator) void {
             const cache = self.epoch_transition_cache;
 
             state_transition.processInactivityUpdates(
                 fork,
+                self.io,
                 BenchState.cloned_cached_state.config,
                 BenchState.cloned_cached_state.epoch_cache,
                 BenchState.cloned_cached_state.state.castToFork(fork),
@@ -81,12 +84,14 @@ fn ProcessInactivityUpdatesBench(comptime fork: ForkSeq) type {
 fn ProcessRewardsAndPenaltiesBench(comptime fork: ForkSeq) type {
     return struct {
         epoch_transition_cache: *EpochTransitionCache,
+        io: std.Io,
 
         pub fn run(self: *@This(), _: std.mem.Allocator) void {
             const cache = self.epoch_transition_cache;
 
             state_transition.processRewardsAndPenalties(
                 fork,
+                self.io,
                 BenchState.cloned_cached_state.config,
                 BenchState.cloned_cached_state.epoch_cache,
                 BenchState.cloned_cached_state.state.castToFork(fork),
@@ -194,6 +199,7 @@ fn ProcessPendingConsolidationsBench(comptime fork: ForkSeq) type {
 fn ProcessEffectiveBalanceUpdatesBench(comptime fork: ForkSeq) type {
     return struct {
         epoch_transition_cache: *EpochTransitionCache,
+        io: std.Io,
 
         pub fn beforeEach() void {
             BenchState.beforeEach();
@@ -206,6 +212,7 @@ fn ProcessEffectiveBalanceUpdatesBench(comptime fork: ForkSeq) type {
             _ = state_transition.processEffectiveBalanceUpdates(
                 fork,
                 allocator,
+                self.io,
                 BenchState.cloned_cached_state.epoch_cache,
                 BenchState.cloned_cached_state.state.castToFork(fork),
                 cache,
@@ -419,6 +426,7 @@ fn ProcessEpochBench(comptime fork: ForkSeq) type {
         pub fn run(self: *@This(), allocator: std.mem.Allocator) void {
             var cache = EpochTransitionCache.init(
                 allocator,
+                self.io,
                 BenchState.cloned_cached_state.config,
                 BenchState.cloned_cached_state.epoch_cache,
                 BenchState.cloned_cached_state.state,
@@ -453,6 +461,7 @@ fn ProcessEpochSegmentedBench(comptime fork: ForkSeq) type {
             BenchState.cloned_cached_state.state.commit() catch unreachable;
             var cache_val = EpochTransitionCache.init(
                 allocator,
+                io,
                 BenchState.cloned_cached_state.config,
                 BenchState.cloned_cached_state.epoch_cache,
                 BenchState.cloned_cached_state.state,
@@ -484,6 +493,7 @@ fn ProcessEpochSegmentedBench(comptime fork: ForkSeq) type {
                 const inactivity_start = time.start(io);
                 state_transition.processInactivityUpdates(
                     fork,
+                    io,
                     BenchState.cloned_cached_state.config,
                     epoch_cache,
                     fork_state,
@@ -515,6 +525,7 @@ fn ProcessEpochSegmentedBench(comptime fork: ForkSeq) type {
             const rewards_start = time.start(io);
             state_transition.processRewardsAndPenalties(
                 fork,
+                io,
                 BenchState.cloned_cached_state.config,
                 epoch_cache,
                 fork_state,
@@ -556,6 +567,7 @@ fn ProcessEpochSegmentedBench(comptime fork: ForkSeq) type {
             _ = state_transition.processEffectiveBalanceUpdates(
                 fork,
                 allocator,
+                io,
                 epoch_cache,
                 fork_state,
                 cache,
@@ -748,6 +760,7 @@ fn runBenchmark(
 
     var epoch_transition_cache = try EpochTransitionCache.init(
         allocator,
+        io,
         cached_state.config,
         cached_state.epoch_cache,
         cached_state.state,
@@ -775,11 +788,13 @@ fn runBenchmark(
     if (comptime fork.gte(.altair)) {
         try bench.addParam("inactivity_updates", &ProcessInactivityUpdatesBench(fork){
             .epoch_transition_cache = &epoch_transition_cache,
+            .io = io,
         }, .{ .hooks = hooks });
     }
 
     try bench.addParam("rewards_and_penalties", &ProcessRewardsAndPenaltiesBench(fork){
         .epoch_transition_cache = &epoch_transition_cache,
+        .io = io,
     }, .{ .hooks = hooks });
 
     try bench.addParam("registry_updates", &ProcessRegistryUpdatesBench(fork){
@@ -809,6 +824,7 @@ fn runBenchmark(
 
     try bench.addParam("effective_balance_updates", &ProcessEffectiveBalanceUpdatesBench(fork){
         .epoch_transition_cache = &epoch_transition_cache,
+        .io = io,
     }, .{ .hooks = effective_balance_hooks });
 
     try bench.addParam("slashings_reset", &ProcessSlashingsResetBench(fork){

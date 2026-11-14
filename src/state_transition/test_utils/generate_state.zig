@@ -250,6 +250,7 @@ pub const TestCachedBeaconState = struct {
         errdefer allocator.destroy(epoch_transition_cache);
         epoch_transition_cache.* = try state_transition.EpochTransitionCache.init(
             allocator,
+            std.testing.io,
             cached_state.config,
             cached_state.epoch_cache,
             cached_state.state,

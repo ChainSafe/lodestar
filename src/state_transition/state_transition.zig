@@ -76,6 +76,7 @@ pub fn processSlots(
             var timer = time.start(io);
             var epoch_transition_cache = try EpochTransitionCache.init(
                 allocator,
+                io,
                 config,
                 epoch_cache,
                 state,

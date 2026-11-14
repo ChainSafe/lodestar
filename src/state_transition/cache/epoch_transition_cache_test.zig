@@ -90,6 +90,7 @@ test "EpochTransitionCache.beforeProcessEpoch" {
 
         var epoch_transition_cache = try EpochTransitionCache.init(
             allocator,
+            std.testing.io,
             test_state.cached_state.config,
             test_state.cached_state.epoch_cache,
             test_state.cached_state.state,
@@ -123,6 +124,7 @@ test "memory_safety: fixed compounding flag tail does not allocate for sequentia
 
     var cache = try EpochTransitionCache.init(
         second_caller.allocator(),
+        std.testing.io,
         test_state.cached_state.config,
         test_state.cached_state.epoch_cache,
         test_state.cached_state.state,
@@ -169,6 +171,7 @@ test "native progressive balance mismatch negative control reaches scraped count
     for (0..2) |_| {
         var cache = try EpochTransitionCache.init(
             allocator,
+            std.testing.io,
             test_state.cached_state.config,
             epoch_cache,
             test_state.cached_state.state,
