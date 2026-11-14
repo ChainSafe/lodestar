@@ -1,3 +1,4 @@
+import {computeCommitteePubkeys, releaseCommitteePubkeys} from "@lodestar/native/committee-pubkeys";
 import {ForkSeq, GENESIS_EPOCH} from "@lodestar/params";
 import {
   EpochShuffling,
@@ -272,6 +273,40 @@ export class ShufflingCache {
     // set the shuffling
     shufflingAtEpoch.set(decisionRoot, {type: CacheItemType.shuffling, shuffling});
     this.prune();
+    if (this.has(shuffling.epoch, decisionRoot)) {
+      this.computeCommitteePubkeys(shuffling, decisionRoot);
+    }
+  }
+
+  /**
+   * Committee pubkeys make attestation signature sets cheaper to verify. Until they resolve, and if computing them
+   * fails, sets aggregate the participants instead.
+   */
+  private computeCommitteePubkeys(shuffling: EpochShuffling, decisionRoot: RootHex): void {
+    const timer = this.metrics?.shufflingCache.committeePubkeysComputeTime.startTimer();
+    const onError = (e: unknown): void => {
+      this.metrics?.shufflingCache.committeePubkeysErrors.inc();
+      this.logger?.debug("Error computing committee pubkeys", {epoch: shuffling.epoch, decisionRoot}, e as Error);
+    };
+
+    let promise: Promise<number>;
+    try {
+      promise = computeCommitteePubkeys(shuffling.shuffling, shuffling.committeesPerSlot);
+    } catch (e) {
+      onError(e);
+      return;
+    }
+
+    promise.then((id) => {
+      timer?.();
+      const cacheItem = this.itemsByDecisionRootByEpoch.get(shuffling.epoch)?.get(decisionRoot);
+      if (cacheItem !== undefined && isShufflingCacheItem(cacheItem) && cacheItem.shuffling === shuffling) {
+        shuffling.committeePubkeysId = id;
+      } else {
+        // Pruned while computing
+        releaseCommitteePubkeys(id);
+      }
+    }, onError);
   }
 
   /**
@@ -294,6 +329,10 @@ export class ShufflingCache {
           this.metrics?.shufflingCache.cancelledPromises.inc({reason: ShufflingPromiseCancelReason.pruned});
         } else {
           prunedShufflings++;
+          if (cacheItem.shuffling.committeePubkeysId !== undefined) {
+            releaseCommitteePubkeys(cacheItem.shuffling.committeePubkeysId);
+            cacheItem.shuffling.committeePubkeysId = undefined;
+          }
         }
       }
       this.itemsByDecisionRootByEpoch.delete(epoch);

@@ -2,6 +2,7 @@ import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
+  EpochShuffling,
   IBeaconStateView,
   computeEpochAtSlot,
   getAttestingIndices,
@@ -111,22 +112,24 @@ export async function verifyBlocksInEpoch(
 
     // Store indexed attestations for each block to avoid recomputing them during import
     const indexedAttestationsByBlock: IndexedAttestation[][] = [];
+    const attestationShufflingsByBlock: EpochShuffling[][] = [];
     for (const [i, block] of blocks.entries()) {
-      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
+      attestationShufflingsByBlock[i] = block.message.body.attestations.map((attestation) => {
         const attEpoch = computeEpochAtSlot(attestation.data.slot);
         // calling getShufflingAtEpoch may take some time for NativeBeaconStateView
         // we should have the shuffling inside ShufflingCache most of the time
-        const shuffling =
+        return (
           this.shufflingCache.getSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
-          preState0.getShufflingAtEpoch(attEpoch);
-        // Unlike getIndexedAttestation, keep attestingIndices in committee order: sorting them dominates building
-        // these on mainnet blocks. See FullyVerifiedBlock.indexedAttestations.
-        return {
-          attestingIndices: getAttestingIndices(shuffling, fork, attestation),
-          data: attestation.data,
-          signature: attestation.signature,
-        };
+          preState0.getShufflingAtEpoch(attEpoch)
+        );
       });
+      // Unlike getIndexedAttestation, keep attestingIndices in committee order: sorting them dominates building
+      // these on mainnet blocks. See FullyVerifiedBlock.indexedAttestations.
+      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation, j) => ({
+        attestingIndices: getAttestingIndices(attestationShufflingsByBlock[i][j], fork, attestation),
+        data: attestation.data,
+        signature: attestation.signature,
+      }));
     }
 
     // Pick the data-availability source by fork:
@@ -200,6 +203,7 @@ export async function verifyBlocksInEpoch(
         preState0,
         blocks,
         indexedAttestationsByBlock,
+        attestationShufflingsByBlock,
         opts
       ),
 

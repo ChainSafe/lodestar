@@ -63,7 +63,7 @@ describe("bls verifier", () => {
   });
 
   it("exports native verifier limits and set type enum", () => {
-    expect(BLS_VERIFIER_SET_TYPE).toEqual({aggregate: 1, indexed: 0, single: 2});
+    expect(BLS_VERIFIER_SET_TYPE).toEqual({aggregate: 1, committee: 3, indexed: 0, single: 2});
     expect(BLS_VERIFIER_MAX_BATCH_SIZE).toBe(256);
     expect(BLS_VERIFIER_MAX_SAME_MESSAGE_BATCH_SIZE).toBe(128);
   });

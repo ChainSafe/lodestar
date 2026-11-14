@@ -1,5 +1,7 @@
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
+  ISignatureSet,
+  SignatureSetType,
   computeEpochAtSlot,
   createAggregateSignatureSetFromComponents,
   isAggregatorFromCommitteeLength,
@@ -259,11 +261,23 @@ async function validateAggregateAndProof(
   // [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
   // [REJECT] The signature of aggregate is valid.
   const signingRoot = cachedAttData ? cachedAttData.signingRoot : getAttestationDataSigningRoot(chain.config, attData);
-  const indexedAttestationSignatureSet = createAggregateSignatureSetFromComponents(
-    indexedAttestation.attestingIndices,
-    signingRoot,
-    indexedAttestation.signature
-  );
+  const indexedAttestationSignatureSet: ISignatureSet =
+    shuffling.committeePubkeysId === undefined
+      ? createAggregateSignatureSetFromComponents(
+          indexedAttestation.attestingIndices,
+          signingRoot,
+          indexedAttestation.signature
+        )
+      : {
+          type: SignatureSetType.committee,
+          indices: indexedAttestation.attestingIndices,
+          committeePubkeysId: shuffling.committeePubkeysId,
+          slot: attSlot,
+          committeeIndices: [committeeIndex],
+          aggregationBits: aggregate.aggregationBits,
+          signingRoot,
+          signature: indexedAttestation.signature,
+        };
   const signatureSets = [
     getSelectionProofSignatureSet(chain.config, attSlot, aggregatorIndex, signedAggregateAndProof),
     getAggregateAndProofSignatureSet(chain.config, attEpoch, aggregatorIndex, signedAggregateAndProof),

@@ -235,6 +235,7 @@
             .root_source_file = "src/state_transition/root.zig",
             .imports = .{
                 .build_options,
+                .bit_array,
                 .bounded_array,
                 .swap_or_not_shuffle,
                 .ssz,
