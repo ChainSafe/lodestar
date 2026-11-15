@@ -293,6 +293,21 @@ export declare class BeaconStateView {
   historicalSummaries: HistoricalSummary[];
   pendingDeposits: Uint8Array;
   pendingDepositsCount: number;
+  /** Fulu only. Limits: 0..10,000 new verifications and 0..60,000 milliseconds per call. */
+  preVerifyBuilderDepositsPreGloas(
+    maxBuilderDeposits: number,
+    maxDurationMs: number
+  ): {
+    validBuilderSignaturesCount: number;
+    invalidBuilderSignaturesCount: number;
+    validValidatorSignaturesCount: number;
+    invalidValidatorSignaturesCount: number;
+    scannedPendingDeposits: number;
+    totalCachedDeposits: number;
+    totalBuilderPubkeys: number;
+    pendingDepositsCount: number;
+  };
+  clearPreGloasBuilderDepositCache(): void;
   pendingPartialWithdrawals: Uint8Array;
   pendingPartialWithdrawalsCount: number;
   pendingConsolidations: Uint8Array;

@@ -693,7 +693,20 @@ export class ForkChoice implements IForkChoice {
     }
 
     // findHead returns the ProtoNode representing the head
-    const head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
+    let head: ProtoNode;
+    try {
+      head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
+    } catch (e) {
+      // A poisoned tree never recovers, shut the node down instead of failing every head computation
+      if (
+        e instanceof ProtoArrayError &&
+        (e.type.code === ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE ||
+          e.type.code === ProtoArrayErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS)
+      ) {
+        this.irrecoverableError = e;
+      }
+      throw e;
+    }
 
     this.head = head;
     return this.head;
@@ -753,6 +766,9 @@ export class ForkChoice implements IForkChoice {
    *
    * `justifiedBalances` balances of justified state which is updated synchronously.
    * This ensures that the forkchoice is never out of sync.
+   *
+   * A block whose parent payload chain was invalidated is rejected. `executionStatus` is ignored for a gloas
+   * block: it has no payload of its own and inherits the status of the parent variant it builds on.
    */
   onBlock(
     block: BeaconBlock,
@@ -775,6 +791,19 @@ export class ForkChoice implements IForkChoice {
         code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
           code: InvalidBlockCode.UNKNOWN_PARENT,
+          root: parentRootHex,
+          hash: parentHashHex,
+        },
+      });
+    }
+
+    // An execution engine verdict can invalidate the parent while this block is being verified. Inserting the
+    // block would put a viable node below an invalidated one, or poison the tree if this block is VALID
+    if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.INVALID_BLOCK,
+        err: {
+          code: InvalidBlockCode.PARENT_EXECUTION_INVALID,
           root: parentRootHex,
           hash: parentHashHex,
         },
@@ -942,7 +971,9 @@ export class ForkChoice implements IForkChoice {
               executionPayloadBlockHash: parentBlockHashFromBid,
               executionPayloadNumber: parentMeta.number,
               executionPayloadGasLimit: parentMeta.gasLimit,
-              executionStatus: this.getPostMergeExecStatus(executionStatus),
+              // The parent's default (PENDING) variant does not reflect a SYNCING parent payload, inheriting
+              // from the variant matching the bid's parent block hash keeps that payload from being marked VALID
+              executionStatus: this.getPostMergeExecStatus(parentBlock.executionStatus),
               dataAvailabilityStatus,
             };
           })()
@@ -1003,14 +1034,8 @@ export class ForkChoice implements IForkChoice {
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#on_attestation
    *
-   * It only approximates the specification since it does not perform
-   * `is_valid_indexed_attestation` since that should already have been called upstream and it's
-   * too expensive to call again.
-   *
-   * ## Notes:
-   *
-   * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
-   * will not be run here.
+   * Does not run `is_valid_indexed_attestation`. The caller must ensure all of its
+   * validity requirements except index ordering: `attestingIndices` may be unsorted.
    */
   onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void {
     // Ignore any attestations to the zero hash.
@@ -1149,6 +1174,19 @@ export class ForkChoice implements IForkChoice {
     executionStatus: PayloadExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
   ): void {
+    // Same guard as onBlock: the PENDING variant carries the status of the payload chain this block builds on
+    const pendingBlock = this.getBlockHexDefaultStatus(blockRoot);
+    if (pendingBlock?.executionStatus === ExecutionStatus.Invalid) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.INVALID_BLOCK,
+        err: {
+          code: InvalidBlockCode.PARENT_EXECUTION_INVALID,
+          root: pendingBlock.parentRoot,
+          hash: pendingBlock.executionPayloadBlockHash,
+        },
+      });
+    }
+
     this.protoArray.onExecutionPayload(
       blockRoot,
       this.fcStore.currentSlot,
@@ -1595,13 +1633,14 @@ export class ForkChoice implements IForkChoice {
    * justified's status as well as validate the terminal conditions if terminal block
    * becomes valid
    */
-  validateLatestHash(execResponse: LVHExecResponse): void {
+  validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean}): boolean {
     try {
-      this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot);
+      return this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot, opts);
     } catch (e) {
       if (e instanceof ProtoArrayError && e.type.code === ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE) {
         this.irrecoverableError = e;
       }
+      return false;
     }
   }
 

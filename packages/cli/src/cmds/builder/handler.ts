@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {getClient} from "@lodestar/api";
 import {
+  ExecutionPayloadStatus,
   RegistryMetricCreator,
   collectNodeJSMetrics,
   defaultExecutionEngineHttpOpts,
@@ -107,13 +108,17 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
   const payloadSource = new EnginePayloadSource(toPrintableUrl(executionUrl), {
     notifyForkchoiceUpdate: async (fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes) => {
       try {
-        return await engine.notifyForkchoiceUpdate(
+        const {payloadStatus, payloadId} = await engine.notifyForkchoiceUpdate(
           fork,
           headBlockHash,
           safeBlockHash,
           finalizedBlockHash,
           payloadAttributes
         );
+        if (payloadStatus.status === ExecutionPayloadStatus.INVALID) {
+          throw Error(`Invalid prepare payload, validationError=${payloadStatus.validationError ?? ""}`);
+        }
+        return payloadId;
       } catch (e) {
         // Only retry while the execution client is syncing, it has not imported the parent payload yet.
         // The engine interface does not expose the fcU status, this matches the error thrown for the SYNCING status

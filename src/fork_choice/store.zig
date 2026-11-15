@@ -267,6 +267,22 @@ pub const JustifiedBalances = struct {
     }
 };
 
+/// What the fast confirmation rule reads from one beacon state (spec `balance_source`).
+pub const BalanceSource = struct {
+    /// `state.validators[i].effective_balance / EFFECTIVE_BALANCE_INCREMENT` for every validator.
+    effective_balance_increments: []u16,
+    /// Set for validators active in the state's current epoch.
+    active: std.DynamicBitSetUnmanaged,
+    slashed: std.DynamicBitSetUnmanaged,
+
+    pub fn deinit(self: *BalanceSource, allocator: Allocator) void {
+        allocator.free(self.effective_balance_increments);
+        self.active.deinit(allocator);
+        self.slashed.deinit(allocator);
+        self.* = undefined;
+    }
+};
+
 /// Everything the fork choice needs from beacon states it does not hold itself.
 pub const StateProvider = struct {
     ctx: *anyopaque,
@@ -278,6 +294,11 @@ pub const StateProvider = struct {
         /// Members of every beacon committee of `slot`, taken from the state of block `root`
         /// (spec `is_head_weak`). Appended to `out`.
         slotCommitteeMembers: *const fn (ctx: *anyopaque, allocator: Allocator, root: Root, slot: Slot, out: *std.ArrayList(ValidatorIndex)) anyerror!void,
+        /// Fast confirmation only: the state at `checkpoint` (spec `store.checkpoint_states`).
+        checkpointBalanceSource: ?*const fn (ctx: *anyopaque, allocator: Allocator, checkpoint: Checkpoint) anyerror!BalanceSource = null,
+        /// Fast confirmation only: the state of block `root`, advanced to the start of `epoch`
+        /// when it is older (spec `get_pulled_up_head_state`).
+        pulledUpBalanceSource: ?*const fn (ctx: *anyopaque, allocator: Allocator, root: Root, epoch: Epoch) anyerror!BalanceSource = null,
     };
 
     pub fn justifiedBalances(self: StateProvider, allocator: Allocator, checkpoint: Checkpoint) !JustifiedBalances {
@@ -286,6 +307,16 @@ pub const StateProvider = struct {
 
     pub fn slotCommitteeMembers(self: StateProvider, allocator: Allocator, root: Root, slot: Slot, out: *std.ArrayList(ValidatorIndex)) !void {
         return self.vtable.slotCommitteeMembers(self.ctx, allocator, root, slot, out);
+    }
+
+    pub fn checkpointBalanceSource(self: StateProvider, allocator: Allocator, checkpoint: Checkpoint) !BalanceSource {
+        const get = self.vtable.checkpointBalanceSource orelse return error.FastConfirmationUnsupported;
+        return get(self.ctx, allocator, checkpoint);
+    }
+
+    pub fn pulledUpBalanceSource(self: StateProvider, allocator: Allocator, root: Root, epoch: Epoch) !BalanceSource {
+        const get = self.vtable.pulledUpBalanceSource orelse return error.FastConfirmationUnsupported;
+        return get(self.ctx, allocator, root, epoch);
     }
 };
 

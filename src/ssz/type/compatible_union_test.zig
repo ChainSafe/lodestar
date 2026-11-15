@@ -3,8 +3,12 @@
 const std = @import("std");
 const Node = @import("persistent_merkle_tree").Node;
 const FixedListType = @import("list.zig").FixedListType;
+const VariableListType = @import("list.zig").VariableListType;
 const UintType = @import("uint.zig").UintType;
 const BoolType = @import("bool.zig").BoolType;
+const BitVectorType = @import("bit_vector.zig").BitVectorType;
+const ByteVectorType = @import("byte_vector.zig").ByteVectorType;
+const VariableContainerType = @import("container.zig").VariableContainerType;
 const FixedProgressiveListType = @import("progressive_list.zig").FixedProgressiveListType;
 const CompatibleUnionType = @import("compatible_union.zig").CompatibleUnionType;
 
@@ -117,4 +121,161 @@ test "memory_safety: compatible union byte deserialization preserves out on malf
     );
     try std.testing.expectEqual(@as(u8, 1), Union.getSelector(&out));
     try std.testing.expectEqual(@as(usize, 0), out.option_1.items.len);
+}
+
+test "variable list of compatible unions should decode, round trip and clone" {
+    const allocator = std.testing.allocator;
+    const Items = FixedListType(UintType(8), 8, .{});
+    const Shape = CompatibleUnionType(.{
+        .{ 1, Items },
+        .{ 2, Items },
+    });
+    const Shapes = VariableListType(Shape, 4);
+    // Two offsets, then {selector 2, data 7 8} and {selector 1, no data}.
+    const bytes = [_]u8{ 8, 0, 0, 0, 11, 0, 0, 0, 2, 7, 8, 1 };
+
+    var decoded = Shapes.init;
+    defer Shapes.deinit(allocator, &decoded);
+    try Shapes.deserializeFromBytes(allocator, &bytes, &decoded);
+    try std.testing.expectEqual(@as(usize, 2), decoded.items.len);
+    try std.testing.expectEqual(@as(u8, 2), Shape.getSelector(&decoded.items[0]));
+    try std.testing.expectEqualSlices(u8, &.{ 7, 8 }, decoded.items[0].option_2.items);
+    try std.testing.expectEqual(@as(u8, 1), Shape.getSelector(&decoded.items[1]));
+    try std.testing.expectEqual(@as(usize, 0), decoded.items[1].option_1.items.len);
+
+    var serialized: [bytes.len]u8 = undefined;
+    try std.testing.expectEqual(bytes.len, Shapes.serializeIntoBytes(&decoded, &serialized));
+    try std.testing.expectEqualSlices(u8, &bytes, &serialized);
+
+    var pool = try Node.Pool.init(.{
+        .page_allocator = allocator,
+        .allocator = allocator,
+        .pool_size = 64,
+    });
+    defer pool.deinit();
+    const root = try Shapes.tree.fromValue(&pool, &decoded);
+    defer pool.unref(root);
+
+    var expected_root: [32]u8 = undefined;
+    try Shapes.hashTreeRoot(allocator, &decoded, &expected_root);
+    try std.testing.expectEqualSlices(u8, &expected_root, root.getRoot(&pool));
+
+    var from_tree = Shapes.init;
+    defer Shapes.deinit(allocator, &from_tree);
+    try Shapes.tree.toValue(allocator, root, &pool, &from_tree);
+    try std.testing.expect(Shapes.equals(&decoded, &from_tree));
+
+    var cloned = Shapes.init;
+    defer Shapes.deinit(allocator, &cloned);
+    try Shapes.clone(allocator, &decoded, &cloned);
+    try std.testing.expect(Shapes.equals(&decoded, &cloned));
+
+    var scanner = std.json.Scanner.initCompleteInput(
+        allocator,
+        "[{\"selector\":\"2\",\"data\":[\"7\",\"8\"]},{\"selector\":\"1\",\"data\":[]}]",
+    );
+    defer scanner.deinit();
+    var from_json = Shapes.init;
+    defer Shapes.deinit(allocator, &from_json);
+    try Shapes.deserializeFromJson(allocator, &scanner, &from_json);
+    try std.testing.expect(Shapes.equals(&decoded, &from_json));
+}
+
+test "variable container holding a compatible union should clone into owned memory" {
+    const allocator = std.testing.allocator;
+    const Items = FixedListType(UintType(8), 8, .{});
+    const Shape = CompatibleUnionType(.{
+        .{ 1, Items },
+        .{ 2, Items },
+    });
+    const Holder = VariableContainerType(struct {
+        tag: UintType(64),
+        body: Shape,
+    });
+    // Tag 5, body offset 12, then {selector 2, data 7 8}.
+    const bytes = [_]u8{ 5, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 2, 7, 8 };
+
+    var source = Holder.init;
+    defer Holder.deinit(allocator, &source);
+    try Holder.deserializeFromBytes(allocator, &bytes, &source);
+
+    var cloned = Holder.init;
+    defer Holder.deinit(allocator, &cloned);
+    try Holder.clone(allocator, &source, &cloned);
+    try std.testing.expect(Holder.equals(&source, &cloned));
+
+    source.body.option_2.items[0] = 9;
+    try std.testing.expectEqual(@as(u8, 7), cloned.body.option_2.items[0]);
+}
+
+test "memory_safety: compatible union list should stay deinit-safe after an invalid selector" {
+    const allocator = std.testing.allocator;
+    const Items = FixedListType(UintType(8), 8, .{});
+    const Shape = CompatibleUnionType(.{
+        .{ 1, Items },
+        .{ 2, Items },
+    });
+    const Shapes = VariableListType(Shape, 4);
+    // The first element {selector 2, data 7 8} decodes and allocates; the second has selector 3.
+    const bytes = [_]u8{ 8, 0, 0, 0, 11, 0, 0, 0, 2, 7, 8, 3 };
+
+    var out = Shapes.init;
+    defer Shapes.deinit(allocator, &out);
+    try std.testing.expectError(
+        error.InvalidSelector,
+        Shapes.deserializeFromBytes(allocator, &bytes, &out),
+    );
+    try std.testing.expectEqual(@as(usize, 2), out.items.len);
+    try std.testing.expectEqualSlices(u8, &.{ 7, 8 }, out.items[0].option_2.items);
+    try std.testing.expectEqual(@as(u8, 1), Shape.getSelector(&out.items[1]));
+    try std.testing.expectEqual(@as(usize, 0), out.items[1].option_1.items.len);
+}
+
+test "compatible union cloneInto should keep the selector in the destination union" {
+    const allocator = std.testing.allocator;
+    const Items = FixedListType(UintType(8), 8, .{});
+    const Shape = CompatibleUnionType(.{
+        .{ 1, Items },
+        .{ 2, Items },
+    });
+    const Destination = CompatibleUnionType(.{
+        .{ 2, Items },
+        .{ 5, Items },
+    });
+
+    var source = Shape.init;
+    defer Shape.deinit(allocator, &source);
+    try Shape.deserializeFromBytes(allocator, &.{ 2, 7, 8 }, &source);
+
+    var out = Destination.init;
+    defer Destination.deinit(allocator, &out);
+    try Shape.cloneInto(Destination, allocator, &source, &out);
+    try std.testing.expectEqual(@as(u8, 2), Destination.getSelector(&out));
+    try std.testing.expectEqualSlices(u8, &.{ 7, 8 }, out.option_2.items);
+
+    // Destination has no selector 1, so the clone fails and leaves `out` as it was.
+    const unmapped = Shape.init;
+    try std.testing.expectError(
+        error.InvalidSelector,
+        Shape.cloneInto(Destination, allocator, &unmapped, &out),
+    );
+    try std.testing.expectEqualSlices(u8, &.{ 7, 8 }, out.option_2.items);
+}
+
+test "init should start a union at its first option and equal default_value otherwise" {
+    const Items = FixedListType(UintType(8), 8, .{});
+    const Shape = CompatibleUnionType(.{
+        .{ 3, Items },
+        .{ 1, Items },
+    });
+    try std.testing.expectEqual(@as(u8, 3), Shape.getSelector(&Shape.init));
+    try std.testing.expectEqual(@as(usize, 0), Shape.init.option_3.items.len);
+
+    const Holder = VariableContainerType(struct {
+        tag: UintType(64),
+        root: ByteVectorType(32),
+        flags: BitVectorType(4),
+        items: Items,
+    });
+    try std.testing.expect(Holder.equals(&Holder.init, &Holder.default_value));
 }
