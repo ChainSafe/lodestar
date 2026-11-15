@@ -76,7 +76,7 @@ When using MacOS, there are a couple of extra prerequisites that are required.
 
 ## Getting Started
 
-- :gear: Run `corepack enable` to enable [Corepack](https://nodejs.org/api/corepack.html).
+- :gear: Run `corepack enable` to enable [Corepack](https://nodejs.org/api/corepack.html). On Node.js 26, run `npm install -g corepack` first since it is no longer bundled.
 - :gear: Run `pnpm` to install dependencies.
 - :gear: Run `pnpm build` to build lib from source.
 - :package: A `lodestar` binary will be bundled in `./packages/cli/bin`.
