@@ -71,6 +71,7 @@ pub fn FixedListType(comptime ST: type, comptime _limit: comptime_int, comptime 
         const chunked_leaf_depth: u8 = if (use_chunked_leaf) chunk_depth - ChunkedLeaf.k_log2 else 0;
 
         pub const default_value: Type = Type.empty;
+        pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = blk: {
             var buf = getZeroHash(chunk_depth).*;
@@ -348,12 +349,9 @@ pub fn FixedListType(comptime ST: type, comptime _limit: comptime_int, comptime 
                 while (byte_idx < data.len) {
                     const remaining = data.len - byte_idx;
                     const chunked_leaf_bytes = @min(remaining, bytes_per_chunked_leaf);
-                    const valid_chunks: u16 = @intCast((chunked_leaf_bytes + 31) / 32);
-                    var chunked_leaf_id_opt: ?Node.Id = try pool.createChunkedLeafEmpty(valid_chunks);
+                    var chunked_leaf_id_opt: ?Node.Id = try pool.createChunkedLeafFromBytes(data[byte_idx..][0..chunked_leaf_bytes]);
                     errdefer if (chunked_leaf_id_opt) |id| pool.unref(id);
 
-                    const storage = try chunked_leaf_id_opt.?.getChunkedLeafPtr(pool);
-                    @memcpy(@as([*]u8, @ptrCast(&storage.chunks))[0..chunked_leaf_bytes], data[byte_idx..][0..chunked_leaf_bytes]);
                     try it.append(chunked_leaf_id_opt.?);
                     chunked_leaf_id_opt = null;
                     byte_idx += chunked_leaf_bytes;
@@ -521,19 +519,25 @@ pub fn FixedListType(comptime ST: type, comptime _limit: comptime_int, comptime 
                 while (item_idx < len) {
                     const remaining = len - item_idx;
                     const items_in_chunked_leaf = @min(remaining, items_per_chunked_leaf);
-                    const valid_chunks: u16 = @intCast((items_in_chunked_leaf + items_per_chunk - 1) / items_per_chunk);
 
-                    var chunked_leaf_id_opt: ?Node.Id = try pool.createChunkedLeafEmpty(valid_chunks);
+                    var chunked_leaf_id_opt: ?Node.Id = null;
                     errdefer if (chunked_leaf_id_opt) |id| pool.unref(id);
 
-                    const storage = try chunked_leaf_id_opt.?.getChunkedLeafPtr(pool);
+                    if (comptime canMemcpySsz(Element)) {
+                        const items = value.items[item_idx..][0..items_in_chunked_leaf];
+                        chunked_leaf_id_opt = try pool.createChunkedLeafFromBytes(std.mem.sliceAsBytes(items));
+                    } else {
+                        const valid_chunks: u16 = @intCast((items_in_chunked_leaf + items_per_chunk - 1) / items_per_chunk);
+                        chunked_leaf_id_opt = try pool.createChunkedLeafEmpty(valid_chunks);
+                        const storage = try chunked_leaf_id_opt.?.getChunkedLeafPtr(pool);
 
-                    for (0..items_in_chunked_leaf) |k| {
-                        const chunked_leaf_chunk_idx = k / items_per_chunk;
-                        const intra_chunk = k % items_per_chunk;
-                        const dst_off = intra_chunk * Element.fixed_size;
-                        const dst_slice = storage.chunks[chunked_leaf_chunk_idx][dst_off .. dst_off + Element.fixed_size];
-                        _ = Element.serializeIntoBytes(&value.items[item_idx + k], dst_slice);
+                        for (0..items_in_chunked_leaf) |k| {
+                            const chunked_leaf_chunk_idx = k / items_per_chunk;
+                            const intra_chunk = k % items_per_chunk;
+                            const dst_off = intra_chunk * Element.fixed_size;
+                            const dst_slice = storage.chunks[chunked_leaf_chunk_idx][dst_off .. dst_off + Element.fixed_size];
+                            _ = Element.serializeIntoBytes(&value.items[item_idx + k], dst_slice);
+                        }
                     }
 
                     try it.append(chunked_leaf_id_opt.?);
@@ -699,6 +703,7 @@ pub fn VariableListType(comptime ST: type, comptime _limit: comptime_int) type {
         pub const chunk_depth: u8 = maxChunksToDepth(max_chunk_count);
 
         pub const default_value: Type = Type.empty;
+        pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = blk: {
             var buf = getZeroHash(chunk_depth).*;
@@ -741,7 +746,7 @@ pub fn VariableListType(comptime ST: type, comptime _limit: comptime_int) type {
             try out.ensureTotalCapacity(allocator, value.items.len);
 
             for (value.items) |*element| {
-                out.appendAssumeCapacity(DestinationST.Element.default_value);
+                out.appendAssumeCapacity(DestinationST.Element.init);
                 try Element.cloneInto(
                     DestinationST.Element,
                     allocator,
@@ -802,7 +807,7 @@ pub fn VariableListType(comptime ST: type, comptime _limit: comptime_int) type {
             const len = elements.len;
 
             try out.resize(allocator, len);
-            @memset(out.items[0..len], Element.default_value);
+            @memset(out.items[0..len], Element.init);
 
             var i: usize = 0;
             while (try elements.next()) |element_bytes| : (i += 1) {
@@ -913,7 +918,7 @@ pub fn VariableListType(comptime ST: type, comptime _limit: comptime_int) type {
                 var it = Node.DepthIterator.init(pool, node, chunk_depth + 1, 0);
 
                 try out.resize(allocator, len);
-                @memset(out.items, Element.default_value);
+                @memset(out.items, Element.init);
                 for (out.items) |*item| {
                     try Element.tree.toValue(allocator, try it.next(), pool, item);
                 }
@@ -997,7 +1002,7 @@ pub fn VariableListType(comptime ST: type, comptime _limit: comptime_int) type {
                 }
 
                 _ = try out.addOne(allocator);
-                out.items[i] = Element.default_value;
+                out.items[i] = Element.init;
                 try Element.deserializeFromJson(allocator, source, &out.items[i]);
             }
             return error.invalidLength;

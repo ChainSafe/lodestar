@@ -8,7 +8,7 @@
 //!       branch        : low 32 = left Id,  high 32 = right Id
 //!       chunked_leaf          : full 64-bit `*ChunkedLeaf` pointer
 //!       container_struct : full 64-bit `*ContainerStructRef` pointer
-//!       free          : low 32 = next-free Id (high 32 unused)
+//!       free          : unused
 //!       zero/leaf     : unused (zero/leaf root lives in `root`)
 //!   - `root`:  [32]u8 — leaf bytes, zero hash, or cached subtree root
 //!     (`lazy_sentinel` = uncomputed for branch/chunked_leaf/container_struct)
@@ -27,6 +27,8 @@ const max_depth = @import("hashing").max_depth;
 const Depth = @import("hashing").Depth;
 const Gindex = @import("gindex.zig").Gindex;
 const ChunkedLeaf = @import("ChunkedLeaf.zig");
+const FreeSlotBitmap = @import("FreeSlotBitmap.zig");
+const expensive_safety_checks = @import("root.zig").expensive_safety_checks;
 
 // Flat node fields (file-as-struct). Order doesn't affect SoA layout.
 payload: u64,
@@ -69,13 +71,12 @@ pub const NodeKind = enum(u8) {
     container_struct = 5,
 };
 
-/// Packed `[ free_bit | kind:3 | ref_count:28 ]` (in-use) or
-/// `[ free_bit | next_free:31 ]` (free).
+/// Packed `[ free_bit | kind:3 | ref_count:28 ]` (in-use) or `free_bit` alone (free).
 pub const State = enum(u32) {
+    free = free_bit,
     _,
 
     pub const free_bit: u32 = 0x8000_0000;
-    pub const next_free_mask: u32 = 0x7FFF_FFFF;
     pub const kind_shift: u5 = 28;
     pub const kind_field_mask: u32 = 0x7000_0000;
     pub const rc_mask: u32 = 0x0FFF_FFFF;
@@ -110,16 +111,6 @@ pub const State = enum(u32) {
     pub inline fn refCount(s: State) u32 {
         std.debug.assert(!s.isFree());
         return @intFromEnum(s) & rc_mask;
-    }
-
-    pub inline fn nextFree(s: State) Id {
-        std.debug.assert(s.isFree());
-        return @enumFromInt(@intFromEnum(s) & next_free_mask);
-    }
-
-    pub inline fn initFree(next: Id) State {
-        std.debug.assert(@intFromEnum(next) <= next_free_mask);
-        return @enumFromInt(free_bit | @intFromEnum(next));
     }
 
     pub inline fn initInUse(k: NodeKind, rc: u32) State {
@@ -260,16 +251,23 @@ inline fn containerStructRef(payloads: []const u64, idx: u32) *ContainerStructRe
     return @ptrCast(@alignCast(payloadAsPtr(payloads[idx])));
 }
 
-/// Stores nodes in a fixed-capacity memory pool, with reference counting and a free list.
+/// Stores nodes in a fixed-capacity memory pool, with reference counting.
+///
+/// Allocation takes the lowest free slot to keep active nodes close together in memory.
 pub const Pool = struct {
     page_allocator: Allocator,
     allocator: Allocator,
     nodes: std.MultiArrayList(Node).Slice,
+    free_slots: FreeSlotBitmap,
+    /// Lowest free slot, or `nodes.len` when no slot is free.
     next_free_node: Id,
     nodes_in_use: usize,
     // Reused scratch for chunked_leaf root recompute: single-threaded, and chunked_leaf is a leaf
     // of getRoot's traversal, so at most one computeRoot uses it at a time.
     chunked_leaf_scratch: [ChunkedLeaf.K / 2][32]u8 align(64),
+
+    /// Largest total slot count, zero-hash sentinels included.
+    pub const max_capacity: u32 = 0x7FFF_FFFF;
 
     pub const InitOptions = struct {
         page_allocator: Allocator = std.heap.page_allocator,
@@ -283,14 +281,18 @@ pub const Pool = struct {
         const total_capacity = std.math.add(u32, opts.pool_size, max_depth) catch {
             return error.InvalidPoolCapacity;
         };
-        if (total_capacity > State.next_free_mask) {
+        if (total_capacity > max_capacity) {
             return error.InvalidPoolCapacity;
         }
+
+        var free_slots = try FreeSlotBitmap.init(opts.page_allocator, total_capacity, max_depth);
+        errdefer free_slots.deinit(opts.page_allocator);
 
         var pool: Pool = .{
             .page_allocator = opts.page_allocator,
             .allocator = opts.allocator,
             .nodes = undefined,
+            .free_slots = free_slots,
             .next_free_node = @enumFromInt(max_depth),
             .nodes_in_use = max_depth,
             .chunked_leaf_scratch = undefined,
@@ -311,14 +313,8 @@ pub const Pool = struct {
             });
         }
 
-        // Initialize the free list across the user slots. `state` carries
-        // kind=free + next_free link in the low 31 bits; `payload`/`root`
-        // are unused for free slots.
-        const state_col = pool.nodes.items(.state);
-        for (max_depth..pool.nodes.len) |i| {
-            const next: Id = @enumFromInt(@as(u32, @intCast(i + 1)));
-            state_col[i] = State.initFree(next);
-        }
+        // Mark the user slots free. `payload`/`root` are unused for free slots.
+        @memset(pool.nodes.items(.state)[max_depth..], .free);
 
         return pool;
     }
@@ -346,6 +342,7 @@ pub const Pool = struct {
         }
         var list = self.nodes.toMultiArrayList();
         list.deinit(self.page_allocator);
+        self.free_slots.deinit(self.page_allocator);
         self.* = undefined;
     }
 
@@ -361,17 +358,24 @@ pub const Pool = struct {
         return self.nodes_in_use;
     }
 
-    /// Pop the next free slot from the free list. Caller must initialise
-    /// the returned slot.
+    /// Take the lowest free slot. Caller must initialise the returned slot.
     inline fn createUnsafe(self: *Pool) Id {
         const n: Id = self.next_free_node;
         const idx = @intFromEnum(n);
         std.debug.assert(idx < self.nodes.len);
-        const state_col = self.nodes.items(.state);
-        std.debug.assert(state_col[idx].isFree());
-        self.next_free_node = state_col[idx].nextFree();
+        std.debug.assert(self.nodes.items(.state)[idx].isFree());
+        self.free_slots.remove(idx);
+        self.next_free_node = @enumFromInt(self.free_slots.lowest());
         self.nodes_in_use += 1;
         return n;
+    }
+
+    /// Return an in-use slot to the free set.
+    inline fn release(self: *Pool, node_id: Id) void {
+        self.nodes.items(.state)[@intFromEnum(node_id)] = .free;
+        self.free_slots.insert(@intFromEnum(node_id));
+        if (@intFromEnum(node_id) < @intFromEnum(self.next_free_node)) self.next_free_node = node_id;
+        self.nodes_in_use -= 1;
     }
 
     fn create(self: *Pool) error{PoolExhausted}!Id {
@@ -427,7 +431,7 @@ pub const Pool = struct {
     /// lazy root; `Id.getRoot` will compute and cache it on first access.
     pub fn createChunkedLeaf(self: *Pool, chunks: *align(64) const [ChunkedLeaf.K][32]u8, len: u16) Error!Id {
         std.debug.assert(len <= ChunkedLeaf.K);
-        const storage = try self.allocator.create(ChunkedLeaf);
+        const storage = try self.allocChunkedLeaf();
         errdefer self.allocator.destroy(storage);
 
         storage.chunks = chunks.*;
@@ -445,7 +449,7 @@ pub const Pool = struct {
     /// `ChunkedLeaf`. Caller fills via `Id.getChunkedLeafPtr`.
     pub fn createChunkedLeafEmpty(self: *Pool, len: u16) Error!Id {
         std.debug.assert(len <= ChunkedLeaf.K);
-        const storage = try self.allocator.create(ChunkedLeaf);
+        const storage = try self.allocChunkedLeaf();
         errdefer self.allocator.destroy(storage);
 
         @memset(std.mem.asBytes(&storage.chunks), 0);
@@ -457,6 +461,39 @@ pub const Pool = struct {
         self.nodes.items(.root)[idx] = lazy_sentinel;
         self.nodes.items(.state)[idx] = State.initInUse(.chunked_leaf, 0);
         return node_id;
+    }
+
+    /// Creates a chunked_leaf Node whose chunks start with `bytes` (`bytes.len <= K * 32`) and are
+    /// zero after them, with `ceil(bytes.len / 32)` valid chunks.
+    pub fn createChunkedLeafFromBytes(self: *Pool, bytes: []const u8) Error!Id {
+        std.debug.assert(bytes.len <= ChunkedLeaf.K * 32);
+        const storage = try self.allocChunkedLeaf();
+        errdefer self.allocator.destroy(storage);
+
+        const chunk_bytes = std.mem.asBytes(&storage.chunks);
+        @memcpy(chunk_bytes[0..bytes.len], bytes);
+        @memset(chunk_bytes[bytes.len..], 0);
+        storage.len = @intCast((bytes.len + 31) / 32);
+
+        const node_id = try self.create();
+        const idx = @intFromEnum(node_id);
+        self.nodes.items(.payload)[idx] = ptrAsPayload(@ptrCast(storage));
+        self.nodes.items(.root)[idx] = lazy_sentinel;
+        self.nodes.items(.state)[idx] = State.initInUse(.chunked_leaf, 0);
+        return node_id;
+    }
+
+    /// The caller must write all chunks and `len` before reading. Free with `allocator.destroy`.
+    fn allocChunkedLeaf(self: *Pool) Allocator.Error!*ChunkedLeaf {
+        // `Allocator.create`'s 0xAA fill exposes a read before write, but costs 2 KiB per
+        // copy-on-write on a hot path whose caller overwrites every field.
+        if (expensive_safety_checks) return self.allocator.create(ChunkedLeaf);
+        const bytes = self.allocator.rawAlloc(
+            @sizeOf(ChunkedLeaf),
+            .of(ChunkedLeaf),
+            @returnAddress(),
+        ) orelse return error.OutOfMemory;
+        return @ptrCast(@alignCast(bytes));
     }
 
     /// Create a `.container_struct` Node holding a cloned `T` instance.
@@ -570,12 +607,7 @@ pub const Pool = struct {
         for (0..out.len) |i| {
             std.debug.assert(@intFromEnum(self.next_free_node) <= self.nodes.len);
             if (@intFromEnum(self.next_free_node) == self.nodes.len) {
-                const states = self.nodes.items(.state);
-                for (out[0..i]) |node_id| {
-                    states[@intFromEnum(node_id)] = State.initFree(self.next_free_node);
-                    self.next_free_node = node_id;
-                    self.nodes_in_use -= 1;
-                }
+                for (out[0..i]) |node_id| self.release(node_id);
                 return error.PoolExhausted;
             }
             out[i] = self.createUnsafe();
@@ -724,11 +756,7 @@ pub const Pool = struct {
                     current = null;
                 },
             }
-            // Return the node to the free list. Free-list link is encoded
-            // in `state` (the State.initFree representation).
-            states[@intFromEnum(id)] = State.initFree(self.next_free_node);
-            self.next_free_node = id;
-            self.nodes_in_use -= 1;
+            self.release(id);
         }
     }
 };
@@ -824,6 +852,122 @@ pub const Id = enum(u32) {
         @panic("getRoot exceeded the pool traversal bound");
     }
 
+    /// Chunked leaves hashed per task by `getRootParallel`. A mainnet balances list (~9k leaves)
+    /// splits into ~140 tasks: enough to keep cores of unequal speed busy, few enough that
+    /// per-task scheduling cost stays negligible.
+    pub const chunked_leaf_roots_per_task: usize = 64;
+
+    // Computes the roots of the lazy chunked_leaf nodes in `ids` in parallel on `io`. Each id may
+    // appear at most once, since two tasks writing one root would race.
+    fn computeChunkedLeafRoots(
+        pool: *Pool,
+        io: std.Io,
+        ids: []const Id,
+    ) std.Io.Cancelable!void {
+        if (ids.len <= chunked_leaf_roots_per_task) {
+            computeChunkedLeafRootsTask(pool, ids);
+            return;
+        }
+
+        var group: std.Io.Group = .init;
+        var start: usize = 0;
+        while (start < ids.len) : (start += chunked_leaf_roots_per_task) {
+            const end = @min(start + chunked_leaf_roots_per_task, ids.len);
+            group.async(io, computeChunkedLeafRootsTask, .{ pool, ids[start..end] });
+        }
+        try group.await(io);
+    }
+
+    // Runs on several threads at once, so it hashes into a stack scratch, not the shared
+    // `pool.chunked_leaf_scratch`, and writes only its own ids' roots.
+    fn computeChunkedLeafRootsTask(pool: *Pool, ids: []const Id) void {
+        std.debug.assert(ids.len <= chunked_leaf_roots_per_task);
+        const states = pool.nodes.items(.state);
+        const roots = pool.nodes.items(.root);
+        const payloads = pool.nodes.items(.payload);
+        var scratch: [ChunkedLeaf.K / 2][32]u8 align(64) = undefined;
+        for (ids) |node_id| {
+            const idx = @intFromEnum(node_id);
+            std.debug.assert(states[idx].kind() == .chunked_leaf);
+            std.debug.assert(std.mem.eql(u8, &roots[idx], &lazy_sentinel));
+
+            var hash: [32]u8 = undefined;
+            chunkedLeafPtr(payloads, idx).computeRoot(&scratch, &hash);
+            roots[idx] = hash;
+        }
+    }
+
+    /// Lazy chunked leaves gathered by `getRootParallel` before it hashes them. A mainnet block
+    /// leaves about 1.7k lazy leaves (participation, balances), so one batch covers a block.
+    pub const lazy_chunked_leaves_per_batch: usize = 4096;
+
+    /// `getRoot`, with the lazy chunked leaves under `node_id` hashed in parallel on `io` first.
+    /// Nothing may mutate `pool` until this returns.
+    pub fn getRootParallel(node_id: Id, pool: *Pool, io: std.Io) std.Io.Cancelable!*const [32]u8 {
+        try computeLazyChunkedLeafRoots(node_id, pool, io);
+        return node_id.getRoot(pool);
+    }
+
+    // Hashes the lazy chunked leaves reachable through lazy branches of `node_id`. No branch root
+    // is cached, so a shared lazy subtree is revisited once per path. The walk stops at `getRoot`'s
+    // traversal bounds instead of panicking; `getRoot` then hashes serially what the walk did not
+    // reach, or panics on an invalid tree.
+    fn computeLazyChunkedLeafRoots(node_id: Id, pool: *Pool, io: std.Io) std.Io.Cancelable!void {
+        var batch: [lazy_chunked_leaves_per_batch]Id = undefined;
+        var batch_len: usize = 0;
+        var pending_rights: [max_depth]Id = undefined;
+        var depth: usize = 0;
+        var current = node_id;
+
+        var remaining_visits = 2 * @as(u64, pool.nodes.len) + 1;
+        while (remaining_visits > 0) : (remaining_visits -= 1) {
+            const states = pool.nodes.items(.state);
+            const roots = pool.nodes.items(.root);
+            const idx = @intFromEnum(current);
+            switch (states[idx].kind()) {
+                .branch => if (std.mem.eql(u8, &roots[idx], &lazy_sentinel)) {
+                    if (depth == max_depth) break;
+                    const children = pool.nodes.items(.payload)[idx];
+                    pending_rights[depth] = unpackRight(children);
+                    depth += 1;
+                    current = unpackLeft(children);
+                    continue;
+                },
+                .chunked_leaf => if (std.mem.eql(u8, &roots[idx], &lazy_sentinel)) {
+                    batch[batch_len] = current;
+                    batch_len += 1;
+                    if (batch_len == batch.len) {
+                        try computeDistinctChunkedLeafRoots(pool, io, &batch);
+                        batch_len = 0;
+                    }
+                },
+                .zero, .leaf, .container_struct, .free => {},
+            }
+            if (depth == 0) break;
+            depth -= 1;
+            current = pending_rights[depth];
+        }
+        try computeDistinctChunkedLeafRoots(pool, io, batch[0..batch_len]);
+    }
+
+    // `computeChunkedLeafRoots` for ids that may repeat: a lazy leaf shared by two parents is
+    // gathered twice, and two tasks must not write one root.
+    fn computeDistinctChunkedLeafRoots(pool: *Pool, io: std.Io, ids: []Id) std.Io.Cancelable!void {
+        if (ids.len == 0) return;
+        std.mem.sortUnstable(Id, ids, {}, struct {
+            fn lessThan(_: void, a: Id, b: Id) bool {
+                return @intFromEnum(a) < @intFromEnum(b);
+            }
+        }.lessThan);
+        var distinct: usize = 1;
+        for (ids[1..]) |id| {
+            if (id == ids[distinct - 1]) continue;
+            ids[distinct] = id;
+            distinct += 1;
+        }
+        try computeChunkedLeafRoots(pool, io, ids[0..distinct]);
+    }
+
     pub fn getLeft(node_id: Id, pool: *Pool) Error!Id {
         const idx = @intFromEnum(node_id);
         const kind = pool.nodes.items(.state)[idx].kind();
@@ -871,13 +1015,27 @@ pub const Id = enum(u32) {
         comptime write: fn (*[32]u8, usize, *const T) void,
     ) Error!void {
         std.debug.assert(intra_chunk < valid_chunks);
+        const chunks = try node_id.beginChunkedLeafWrite(pool, valid_chunks);
+        write(&chunks[intra_chunk], index, value);
+    }
+
+    /// Sets the valid-chunk length, invalidates the cached root, and returns the chunks for
+    /// in-place writes. Requires reference count zero; `valid_chunks` must preserve or grow the
+    /// length. Finish writing before the next `getRoot`, which would cache a stale root.
+    pub fn beginChunkedLeafWrite(
+        node_id: Id,
+        pool: *Pool,
+        valid_chunks: u16,
+    ) Error!*align(64) [ChunkedLeaf.K][32]u8 {
+        std.debug.assert(valid_chunks > 0);
         std.debug.assert(valid_chunks <= ChunkedLeaf.K);
         const storage = try node_id.getChunkedLeafPtr(pool);
-        std.debug.assert(storage.len <= valid_chunks);
+        // Only this check loads `len`, past the 2 KiB of chunks; the store below doesn't stall.
+        if (expensive_safety_checks) std.debug.assert(storage.len <= valid_chunks);
 
-        write(&storage.chunks[intra_chunk], index, value);
         storage.len = valid_chunks;
         pool.nodes.items(.root)[@intFromEnum(node_id)] = lazy_sentinel;
+        return &storage.chunks;
     }
 
     pub fn setChunkedLeafChunk(node_id: Id, pool: *Pool, intra_index: u16, chunk: *const [32]u8) Error!Id {
@@ -887,7 +1045,7 @@ pub const Id = enum(u32) {
         if (pool.nodes.items(.state)[idx].kind() != .chunked_leaf) return error.InvalidNode;
         const old_storage = chunkedLeafPtr(pool.nodes.items(.payload), idx);
 
-        const new_storage = try pool.allocator.create(ChunkedLeaf);
+        const new_storage = try pool.allocChunkedLeaf();
         errdefer pool.allocator.destroy(new_storage);
 
         new_storage.chunks = old_storage.chunks;
@@ -918,7 +1076,7 @@ pub const Id = enum(u32) {
         if (pool.nodes.items(.state)[idx].kind() != .chunked_leaf) return error.InvalidNode;
         const old_storage = chunkedLeafPtr(pool.nodes.items(.payload), idx);
 
-        const new_storage = try pool.allocator.create(ChunkedLeaf);
+        const new_storage = try pool.allocChunkedLeaf();
         errdefer pool.allocator.destroy(new_storage);
 
         new_storage.chunks = old_storage.chunks;
@@ -938,7 +1096,7 @@ pub const Id = enum(u32) {
     }
 
     /// Returns the slot's packed `State`. Call methods on the result
-    /// (`isFree()`, `kind()`, `refCount()`, `nextFree()`).
+    /// (`isFree()`, `kind()`, `refCount()`).
     pub inline fn getState(node_id: Id, pool: *Pool) State {
         return pool.nodes.items(.state)[@intFromEnum(node_id)];
     }
@@ -1619,9 +1777,7 @@ fn restoreChildrenAndFreeParents(
         pool.unrefUnsafe(children.left);
         pool.unrefUnsafe(children.right);
         // Child refs are restored, so return only the parent slot.
-        parent_state.* = State.initFree(pool.next_free_node);
-        pool.next_free_node = parent;
-        pool.nodes_in_use -= 1;
+        pool.release(parent);
     }
 }
 

@@ -20,7 +20,7 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
-import {sleep, toRootHex} from "@lodestar/utils";
+import {defer, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {getDataColumnSidecarsMinEpoch} from "../chain/archiveStore/utils/archiveBlocks.js";
@@ -117,6 +117,7 @@ export class BeaconNode {
 
   status: BeaconNodeStatus;
   private controller?: AbortController;
+  private closePromise: Promise<void> | undefined;
 
   constructor({
     opts,
@@ -297,6 +298,7 @@ export class BeaconNode {
         : undefined,
       builderApiClientOpts: {
         timeout: opts.executionBuilder.timeout,
+        bidDeadline: opts.executionBuilder.bidDeadline,
         // Sent with all builder api requests, unless the node runs in private mode
         userAgent: opts.executionBuilder.userAgent,
       },
@@ -392,23 +394,40 @@ export class BeaconNode {
   /**
    * Stop beacon node and its sub-components.
    */
-  async close(): Promise<void> {
-    if (this.status === BeaconNodeStatus.started) {
-      this.status = BeaconNodeStatus.closing;
-      this.sync.close();
-      if (this.restApi) await this.restApi.close();
-      await this.network.close();
-      if (this.metricsServer) await this.metricsServer.close();
-      if (this.monitoring) await this.monitoring.close();
-      await this.chain.persistToDisk();
-      await this.chain.close();
+  close(): Promise<void> {
+    if (this.closePromise !== undefined) return this.closePromise;
+    const completion = defer<void>();
+    this.closePromise = completion.promise;
+    this.status = BeaconNodeStatus.closing;
+    void this.closeInternal().then(completion.resolve, completion.reject);
+    return this.closePromise;
+  }
+
+  private async closeInternal(): Promise<void> {
+    const errors: unknown[] = [];
+    for (const cleanup of [
+      () => this.sync.close(),
+      () => this.restApi?.close(),
+      () => this.network.close(),
+      () => this.metricsServer?.close(),
+      () => this.monitoring?.close(),
+      () => this.chain.persistToDisk(),
+      () => this.chain.close(),
       // Abort signal last: close() calls above clear intervals/timeouts so no new
       // operations get scheduled. If we aborted first, a still-pending interval could
       // fire and schedule a new operation after abort, leaving it stuck and delaying shutdown.
-      if (this.controller) this.controller.abort();
-      await sleep(DELAY_BEFORE_CLOSING_DB_MS);
-      await this.db.close();
-      this.status = BeaconNodeStatus.closed;
+      () => this.controller?.abort(),
+      () => sleep(DELAY_BEFORE_CLOSING_DB_MS),
+      () => this.db.close(),
+    ]) {
+      try {
+        await cleanup();
+      } catch (error) {
+        errors.push(error);
+      }
     }
+    this.status = BeaconNodeStatus.closed;
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) throw new AggregateError(errors, "Beacon node cleanup failed");
   }
 }

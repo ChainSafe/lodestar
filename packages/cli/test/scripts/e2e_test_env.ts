@@ -9,6 +9,7 @@ const bellatrixForkEpoch = 0;
 const capellaForkEpoch = 0;
 const denebForkEpoch = 0;
 const electraForkEpoch = 0;
+const fuluForkEpoch = 0;
 
 const {forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
@@ -16,6 +17,7 @@ const {forkConfig} = defineSimTestConfig({
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
   DENEB_FORK_EPOCH: denebForkEpoch,
   ELECTRA_FORK_EPOCH: electraForkEpoch,
+  FULU_FORK_EPOCH: fuluForkEpoch,
   runTillEpoch: Infinity,
   additionalSlotsForTTD: 0,
   initialNodes: 2,

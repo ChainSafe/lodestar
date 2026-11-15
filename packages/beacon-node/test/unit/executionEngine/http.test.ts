@@ -168,6 +168,31 @@ describe("ExecutionEngine / http", () => {
     expect(reqJsonRpcPayload).toEqual(request);
   });
 
+  it("notifyForkchoiceUpdate returns an INVALID verdict with its latestValidHash", async () => {
+    const headBlockHash = "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174";
+    const latestValidHash = "0x05a771b000000000000000000000000000000000000000000000000000000a05";
+    returnValue = {
+      jsonrpc: "2.0",
+      id: 67,
+      result: {
+        payloadStatus: {status: "INVALID", latestValidHash, validationError: "HeaderGasUsedMismatch"},
+        payloadId: null,
+      },
+    };
+
+    const result = await executionEngine.notifyForkchoiceUpdate(
+      ForkName.bellatrix,
+      headBlockHash,
+      headBlockHash,
+      headBlockHash
+    );
+
+    expect(result).toEqual({
+      payloadStatus: {status: "INVALID", latestValidHash, validationError: "HeaderGasUsedMismatch"},
+      payloadId: null,
+    });
+  });
+
   it("notifyForkchoiceUpdate returns the heze inclusion list verdict", async () => {
     const hash = "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174";
     returnValue = {
@@ -182,7 +207,7 @@ describe("ExecutionEngine / http", () => {
     const result = await executionEngine.notifyForkchoiceUpdate(ForkName.heze, hash, hash, hash);
 
     expect(reqJsonRpcPayload).toMatchObject({method: "engine_forkchoiceUpdatedV5"});
-    expect(result).toBeNull();
+    expect(result.payloadStatus).toMatchObject({status: "VALID", inclusionListSatisfied: false});
   });
 
   it("getPayloadBodiesByHashV2", async () => {

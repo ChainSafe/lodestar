@@ -67,7 +67,7 @@ pub fn processSlots(
     if (try state.slot() > slot) return error.outdatedSlot;
 
     while (try state.slot() < slot) {
-        try processSlot(cached_state.state);
+        try processSlot(io, cached_state.state);
 
         const next_slot = try state.slot() + 1;
         if (next_slot % preset.SLOTS_PER_EPOCH == 0) {
@@ -285,7 +285,7 @@ pub fn stateTransition(
     // Verify state root
     if (opts.verify_state_root) {
         const timer = time.start(io);
-        const post_state_root = try post_state.hashTreeRoot();
+        const post_state_root = try post_state.hashTreeRootParallel(io);
         try metrics.state_transition.state_hash_tree_root.observe(.{ .source = .state_transition }, time.durationSeconds(time.since(io, timer)));
 
         const block_state_root = block.stateRoot();

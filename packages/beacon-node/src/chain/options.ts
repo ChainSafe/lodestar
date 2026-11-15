@@ -43,8 +43,6 @@ export type IChainOptions = BlockProcessOpts &
     disableProposerSlashings?: boolean;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
-    /** Max number of produced blobs by local validators to cache */
-    maxCachedBlobSidecars?: number;
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */
     maxCachedProducedRoots?: number;
     initialCustodyGroupCount?: number;
@@ -90,6 +88,11 @@ export type PoolOpts = {
    * Only preaggregate attestation/sync committee message since clockSlot - preaggregateSlotDistance
    */
   preaggregateSlotDistance?: number;
+  /**
+   * Dev only: collect single attestations of every vote slot a block at the clock slot can include regardless of
+   * proposal duties, so that any produced block can pack them. Combine with `subscribeAllSubnets`
+   */
+  singleAttestationIgnoreProposalDuty?: boolean;
 };
 
 export type SeenCacheOpts = {

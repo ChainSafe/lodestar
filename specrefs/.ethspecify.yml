@@ -122,10 +122,17 @@ exceptions:
     - validate_merge_block#bellatrix
 
     # deneb
+    # Pre-fulu blob sidecar functions, replaced by data columns in fulu
+    - compute_subnet_for_blob_sidecar#deneb
+    - get_blob_sidecars#deneb
     - is_within_epoch#deneb
+    - validate_blob_sidecar_gossip#deneb
+    - verify_blob_sidecar_inclusion_proof#deneb
 
     # electra
+    - compute_subnet_for_blob_sidecar#electra
     - get_eth1_vote#electra
+    - validate_blob_sidecar_gossip#electra
 
     # fulu
     - verify_partial_data_column_header_inclusion_proof#fulu

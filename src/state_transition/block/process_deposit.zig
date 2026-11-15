@@ -18,6 +18,7 @@ const computeDomain = @import("../utils/domain.zig").computeDomain;
 const computeSigningRoot = @import("../utils/signing_root.zig").computeSigningRoot;
 const bls = @import("bls");
 const verify = @import("../utils/bls.zig").verify;
+const SignatureSetBatch = @import("../signature_sets/verifier.zig").SignatureSetBatch;
 const getMaxEffectiveBalance = @import("../utils/validator.zig").getMaxEffectiveBalance;
 const increaseBalance = @import("../utils/balance.zig").increaseBalance;
 const verifyMerkleBranch = @import("../utils/verify_merkle_branch.zig").verifyMerkleBranch;
@@ -203,6 +204,24 @@ pub fn validateDepositSignature(
     amount: u64,
     deposit_signature: BLSSignature,
 ) !void {
+    var signing_root: Root = undefined;
+    try depositSigningRoot(config, pubkey, withdrawal_credentials, amount, &signing_root);
+
+    // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
+    const public_key = try bls.PublicKey.uncompress(pubkey);
+    try public_key.validate();
+    const signature = try bls.Signature.uncompress(&deposit_signature);
+    try signature.validate(true);
+    try verify(&signing_root, &public_key, &signature, .{});
+}
+
+fn depositSigningRoot(
+    config: *const BeaconConfig,
+    pubkey: *const BLSPubkey,
+    withdrawal_credentials: *const WithdrawalCredentials,
+    amount: u64,
+    signing_root: *Root,
+) !void {
     // verify the deposit signature (proof of posession) which is not checked by the deposit contract
     const deposit_message = DepositMessage{
         .pubkey = pubkey.*,
@@ -215,13 +234,69 @@ pub fn validateDepositSignature(
     // fork-agnostic domain since deposits are valid across forks
     var domain: Domain = undefined;
     try computeDomain(DOMAIN_DEPOSIT, GENESIS_FORK_VERSION, ZERO_HASH, &domain);
-    var signing_root: Root = undefined;
-    try computeSigningRoot(types.phase0.DepositMessage, &deposit_message, &domain, &signing_root);
-
-    // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
-    const public_key = try bls.PublicKey.uncompress(pubkey);
-    try public_key.validate();
-    const signature = try bls.Signature.uncompress(&deposit_signature);
-    try signature.validate(true);
-    try verify(&signing_root, &public_key, &signature, .{});
+    try computeSigningRoot(types.phase0.DepositMessage, &deposit_message, &domain, signing_root);
 }
+
+pub const deposit_signature_batch_size = 32;
+
+/// Equivalent to validateDepositSignature for each entry. Invalid signatures are false;
+/// verifier infrastructure failures propagate and must never be cached as invalid deposits.
+pub fn verifyDepositSignatures(
+    io: std.Io,
+    pool: *bls.ThreadPool,
+    config: *const BeaconConfig,
+    deposits: []const types.electra.PendingDeposit.Type,
+    results: []bool,
+    batch_verify: bool,
+) !void {
+    std.debug.assert(deposits.len <= deposit_signature_batch_size);
+    std.debug.assert(deposits.len == results.len);
+    @memset(results, false);
+    var batch: SignatureSetBatch(deposit_signature_batch_size) = .{};
+    var indexes: [deposit_signature_batch_size]usize = undefined;
+    for (deposits, 0..) |*deposit, index| {
+        const public_key = bls.PublicKey.uncompress(&deposit.pubkey) catch continue;
+        public_key.validate() catch continue;
+        var signing_root: Root = undefined;
+        try depositSigningRoot(config, &deposit.pubkey, &deposit.withdrawal_credentials, deposit.amount, &signing_root);
+        indexes[batch.count] = index;
+        _ = batch.append(&public_key, &signing_root, &deposit.signature);
+    }
+    if (batch.count == 0) return;
+    if (batch_verify and try batch.verify(io, pool)) {
+        for (indexes[0..batch.count]) |index| results[index] = true;
+        return;
+    }
+    var jobs: [deposit_signature_batch_size]DepositVerificationJob = undefined;
+    var work_items: [deposit_signature_batch_size]*bls.ThreadPool.WorkItem = undefined;
+    for (0..batch.count) |index| {
+        jobs[index] = .{
+            .base = .{ .exec_fn = DepositVerificationJob.exec },
+            .message = &batch.messages[index],
+            .public_key = &batch.public_keys[index],
+            .signature = &batch.signatures[index],
+            .result = &results[indexes[index]],
+        };
+        work_items[index] = &jobs[index].base;
+    }
+    try pool.submitAndWait(io, work_items[0..batch.count]);
+}
+
+const DepositVerificationJob = struct {
+    base: bls.ThreadPool.WorkItem,
+    message: *const Root,
+    public_key: *const bls.PublicKey,
+    signature: *const bls.Signature,
+    result: *bool,
+
+    fn exec(base: *bls.ThreadPool.WorkItem) void {
+        const self: *DepositVerificationJob = @fieldParentPtr("base", base);
+        // Preparation already checked both subgroups and infinity. The core_verify
+        // wrapper repeats those checks unconditionally, even with validation disabled.
+        var buffer: [bls.Pairing.sizeOf()]u8 align(bls.Pairing.buf_align) = undefined;
+        var pairing = bls.Pairing.init(&buffer, true, bls.DST);
+        pairing.aggregate(self.public_key, false, self.signature, false, self.message, null) catch return;
+        pairing.commit();
+        self.result.* = pairing.finalVerify(null);
+    }
+};

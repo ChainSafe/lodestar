@@ -76,8 +76,7 @@ pub fn getRewardsAndPenaltiesAltair(
     if (rewards.len != validator_count or penalties.len != validator_count) {
         return error.InvalidArrayLength;
     }
-    @memset(rewards, 0);
-    @memset(penalties, 0);
+    std.debug.assert(cache.flags.len == validator_count);
 
     const is_in_inactivity_leak = isInInactivityLeak(epoch_cache.epoch, try state.finalizedEpoch());
     // effectiveBalance is a multiple of EFFECTIVE_BALANCE_INCREMENT and bounded by max effective balance
@@ -93,6 +92,8 @@ pub fn getRewardsAndPenaltiesAltair(
     var inactivity_scores = try state.inactivityScores();
     for (flags, 0..) |flag, i| {
         if (!hasMarkers(flag, FLAG_ELIGIBLE_ATTESTER)) {
+            rewards[i] = 0;
+            penalties[i] = 0;
             continue;
         }
 
@@ -110,31 +111,37 @@ pub fn getRewardsAndPenaltiesAltair(
         const timely_target_penalty = reward_penalty_item.timely_target_penalty;
         const timely_head_reward = reward_penalty_item.timely_head_reward;
 
+        var reward: u64 = 0;
+        var penalty: u64 = 0;
+
         // same logic to getFlagIndexDeltas
         if (hasMarkers(flag, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
             if (is_in_inactivity_leak) {} else {
-                rewards[i] += timely_source_reward;
+                reward += timely_source_reward;
             }
         } else {
-            penalties[i] += timely_source_penalty;
+            penalty += timely_source_penalty;
         }
 
         if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
             if (is_in_inactivity_leak) {} else {
-                rewards[i] += timely_target_reward;
+                reward += timely_target_reward;
             }
         } else {
-            penalties[i] += timely_target_penalty;
+            penalty += timely_target_penalty;
         }
 
         if (hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_UNSLASHED) and !is_in_inactivity_leak) {
-            rewards[i] += timely_head_reward;
+            reward += timely_head_reward;
         }
 
         // Same logic to getInactivityPenaltyDeltas
         // TODO: if we have limited value in inactivityScores we can provide a cache too
         if (!hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
-            penalties[i] += computeInactivityPenalty(effective_balance_increment, try inactivity_scores.get(i), penalty_denominator);
+            penalty += computeInactivityPenalty(effective_balance_increment, try inactivity_scores.get(i), penalty_denominator);
         }
+
+        rewards[i] = reward;
+        penalties[i] = penalty;
     }
 }
