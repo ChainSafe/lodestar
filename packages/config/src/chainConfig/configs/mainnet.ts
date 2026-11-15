@@ -212,6 +212,8 @@ export const chainConfig: ChainConfig = {
   // Gloas
   // 2**7 (= 128) payloads
   MAX_REQUEST_PAYLOADS: 128,
+  // `2**12` (= 4096 gas)
+  MIN_TRANSACTION_GAS: 4096,
 
   // Blob Scheduling
   // ---------------------------------------------------------------

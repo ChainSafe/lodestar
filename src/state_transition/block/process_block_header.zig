@@ -2,10 +2,8 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const types = @import("consensus_types");
 const ForkSeq = @import("config").ForkSeq;
-const ForkTypes = @import("fork_types").ForkTypes;
 const BeaconState = @import("fork_types").BeaconState;
 const BlockType = @import("fork_types").BlockType;
-const AnySignedBeaconBlock = @import("fork_types").AnySignedBeaconBlock;
 const BeaconBlock = @import("fork_types").BeaconBlock;
 const BeaconBlockHeader = types.phase0.BeaconBlockHeader.Type;
 const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
@@ -65,13 +63,4 @@ pub fn processBlockHeader(
     if (proposer_slashed) {
         return error.BlockProposerSlashed;
     }
-}
-
-pub fn blockToHeader(allocator: Allocator, signed_block: AnySignedBeaconBlock, out: *BeaconBlockHeader) !void {
-    const block = signed_block.beaconBlock();
-    out.slot = block.slot();
-    out.proposer_index = block.proposerIndex();
-    out.parent_root = block.parentRoot().*;
-    out.state_root = block.stateRoot().*;
-    try block.beaconBlockBody().hashTreeRoot(allocator, &out.body_root);
 }

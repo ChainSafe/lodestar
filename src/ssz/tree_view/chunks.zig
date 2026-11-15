@@ -9,6 +9,7 @@ const Node = pmt.Node;
 const Gindex = pmt.Gindex;
 
 const isFixedType = @import("../type/type_kind.zig").isFixedType;
+const canMemcpySsz = @import("../type/type_kind.zig").canMemcpySsz;
 const progressive = @import("../type/progressive.zig");
 
 const tree_view_root = @import("root.zig");
@@ -107,23 +108,119 @@ pub fn BasicPackedChunks(
             const intra_chunk_u16: u16 = @intCast(intra_chunk);
             const gindex = Gindex.fromDepth(chunked_leaf_depth, chunked_leaf_idx);
 
-            // The container length determines valid chunks, including those beyond this write.
-            const total_chunks = (container_len + items_per_chunk - 1) / items_per_chunk;
-            const chunked_leaf_len: u16 = @intCast(@min(
-                @as(usize, ChunkedLeaf.K),
-                total_chunks - chunked_leaf_idx * @as(usize, ChunkedLeaf.K),
-            ));
-
             try self.state.editChunkedLeaf(
                 gindex,
                 intra_chunk_u16,
-                chunked_leaf_len,
+                chunkedLeafLen(container_len, chunked_leaf_idx),
                 Element,
                 index,
                 &value,
                 ST.Element.tree.fromValuePackedIntoChunk,
             );
         }
+
+        /// The container length determines valid chunks, including those beyond the written one.
+        fn chunkedLeafLen(container_len: usize, chunked_leaf_idx: usize) u16 {
+            const total_chunks = (container_len + items_per_chunk - 1) / items_per_chunk;
+            std.debug.assert(chunked_leaf_idx * @as(usize, ChunkedLeaf.K) < total_chunks);
+            return @intCast(@min(
+                @as(usize, ChunkedLeaf.K),
+                total_chunks - chunked_leaf_idx * @as(usize, ChunkedLeaf.K),
+            ));
+        }
+
+        /// Reads and writes a chunked-leaf list, resolving each leaf once. Borrows the view, which
+        /// must outlive it. Until `deinit`, do not commit, hash, resize, `clearCache`, clone with
+        /// `transfer_cache`, or write the view another way. `get` and `set` assert that the view's
+        /// root is unchanged, which catches only a commit, best effort since node ids are reused.
+        pub const Editor = struct {
+            state: *TreeViewState,
+            view_root: Node.Id,
+            len: usize,
+            leaves: []Leaf,
+
+            /// The editor's handle on one chunked leaf node (K chunks), not a single-chunk Merkle
+            /// leaf: not looked up yet, borrowed for reads, or staged in the view and writable.
+            const Leaf = union(enum) {
+                unresolved,
+                readonly: *align(64) const [ChunkedLeaf.K][32]u8,
+                writable: *align(64) [ChunkedLeaf.K][32]u8,
+            };
+
+            const zero_chunks: [ChunkedLeaf.K][32]u8 align(64) = @splat(@splat(0));
+
+            /// `len` is the container length; the caller must `deinit` the editor.
+            pub fn init(state: *TreeViewState, len: usize) !Editor {
+                const chunk_count = (len + items_per_chunk - 1) / items_per_chunk;
+                const leaf_count = (chunk_count + ChunkedLeaf.K - 1) / ChunkedLeaf.K;
+                const leaves = try state.allocator.alloc(Leaf, leaf_count);
+                @memset(leaves, .unresolved);
+                return .{
+                    .state = state,
+                    .view_root = state.root,
+                    .len = len,
+                    .leaves = leaves,
+                };
+            }
+
+            pub fn deinit(self: *Editor) void {
+                self.state.allocator.free(self.leaves);
+                self.* = undefined;
+            }
+
+            pub fn get(self: *Editor, index: usize) !Element {
+                std.debug.assert(self.state.root == self.view_root);
+                if (index >= self.len) return error.IndexOutOfBounds;
+                const chunk_idx = index / items_per_chunk;
+                const chunked_leaf_idx = chunk_idx / ChunkedLeaf.K;
+                const intra_chunk = chunk_idx % ChunkedLeaf.K;
+                const chunks = switch (self.leaves[chunked_leaf_idx]) {
+                    .unresolved => try self.resolve(chunked_leaf_idx),
+                    .readonly => |readonly| readonly,
+                    .writable => |writable| writable,
+                };
+                var value: Element = undefined;
+                ST.Element.tree.toValuePackedFromBytes(&chunks[intra_chunk], index, &value);
+                return value;
+            }
+
+            pub fn set(self: *Editor, index: usize, value: Element) !void {
+                std.debug.assert(self.state.root == self.view_root);
+                if (index >= self.len) return error.IndexOutOfBounds;
+                const chunk_idx = index / items_per_chunk;
+                const chunked_leaf_idx = chunk_idx / ChunkedLeaf.K;
+                const intra_chunk = chunk_idx % ChunkedLeaf.K;
+                const chunks = switch (self.leaves[chunked_leaf_idx]) {
+                    .unresolved, .readonly => try self.stage(chunked_leaf_idx),
+                    .writable => |writable| writable,
+                };
+                ST.Element.tree.fromValuePackedIntoChunk(&chunks[intra_chunk], index, &value);
+            }
+
+            fn resolve(
+                self: *Editor,
+                chunked_leaf_idx: usize,
+            ) !*align(64) const [ChunkedLeaf.K][32]u8 {
+                const pool = self.state.pool;
+                const gindex = Gindex.fromDepth(chunked_leaf_depth, chunked_leaf_idx);
+                const node = try self.state.getChildNode(gindex);
+                const chunks = if (node.getState(pool).kind() == .zero)
+                    &zero_chunks
+                else
+                    try node.getChunkedLeafChunks(pool);
+                self.leaves[chunked_leaf_idx] = .{ .readonly = chunks };
+                return chunks;
+            }
+
+            fn stage(self: *Editor, chunked_leaf_idx: usize) !*align(64) [ChunkedLeaf.K][32]u8 {
+                const chunks = try self.state.beginChunkedLeafEdit(
+                    Gindex.fromDepth(chunked_leaf_depth, chunked_leaf_idx),
+                    chunkedLeafLen(self.len, chunked_leaf_idx),
+                );
+                self.leaves[chunked_leaf_idx] = .{ .writable = chunks };
+                return chunks;
+            }
+        };
 
         pub fn getAll(
             self: *Self,
@@ -202,30 +299,36 @@ pub fn BasicPackedChunks(
 
             var item_idx: usize = 0;
             outer: for (chunked_leaf_ids) |sid| {
+                const items_in_chunked_leaf = @min(ChunkedLeaf.K * items_per_chunk, len - item_idx);
                 // ChunkedLeaf boundary may be a zero sentinel for sparsely-filled
                 // trees (e.g. an empty list grown via push, or chunked_leaf slots
                 // beyond the materialized range). A zero subtree is
                 // semantically all-zero chunks; emit zero values without
                 // touching the (non-existent) chunked_leaf payload.
                 if (self.state.pool.nodes.items(.state)[@intFromEnum(sid)].kind() == .zero) {
-                    const items_in_chunked_leaf = @min(ChunkedLeaf.K * items_per_chunk, len - item_idx);
                     @memset(values[item_idx..][0..items_in_chunked_leaf], std.mem.zeroes(Element));
                     item_idx += items_in_chunked_leaf;
                     if (item_idx >= len) break :outer;
                     continue;
                 }
                 const chunks_ptr = try sid.getChunkedLeafChunks(self.state.pool);
-                for (0..ChunkedLeaf.K) |intra_chunk| {
-                    if (item_idx >= len) break :outer;
-                    const items_in_chunk = @min(items_per_chunk, len - item_idx);
-                    for (0..items_in_chunk) |i| {
-                        ST.Element.tree.toValuePackedFromBytes(
-                            &chunks_ptr[intra_chunk],
-                            item_idx + i,
-                            &values[item_idx + i],
-                        );
+                if (comptime canMemcpySsz(ST.Element)) {
+                    const bytes = std.mem.sliceAsBytes(values[item_idx..][0..items_in_chunked_leaf]);
+                    @memcpy(bytes, std.mem.asBytes(chunks_ptr)[0..bytes.len]);
+                    item_idx += items_in_chunked_leaf;
+                } else {
+                    for (0..ChunkedLeaf.K) |intra_chunk| {
+                        if (item_idx >= len) break :outer;
+                        const items_in_chunk = @min(items_per_chunk, len - item_idx);
+                        for (0..items_in_chunk) |i| {
+                            ST.Element.tree.toValuePackedFromBytes(
+                                &chunks_ptr[intra_chunk],
+                                item_idx + i,
+                                &values[item_idx + i],
+                            );
+                        }
+                        item_idx += items_in_chunk;
                     }
-                    item_idx += items_in_chunk;
                 }
             }
             return values;
@@ -482,13 +585,9 @@ pub fn CompositeChunks(
                 if (comptime isFixedType(ST.Element)) {
                     try ST.Element.tree.toValue(node, self.state.pool, &values[i]);
                 } else {
-                    // Initialize value to default before toValue for variable types
+                    // Initialize value before toValue for variable types
                     // (e.g. BitList fields need initialized ArrayList)
-                    if (comptime @hasDecl(ST.Element, "default_value")) {
-                        values[i] = ST.Element.default_value;
-                    } else {
-                        values[i] = std.mem.zeroes(Value);
-                    }
+                    values[i] = ST.Element.init;
                     errdefer if (comptime @hasDecl(ST.Element, "deinit")) {
                         ST.Element.deinit(allocator, &values[i]);
                     };

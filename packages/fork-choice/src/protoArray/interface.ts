@@ -55,6 +55,8 @@ export function isGloasBlock(block: ProtoBlock): block is ProtoBlock & {parentBl
 export type LVHValidResponse = {
   executionStatus: ExecutionStatus.Valid;
   latestValidExecHash: RootHex;
+  /** Resolves the exact node to validate when several nodes carry the same payload hash (gloas variants) */
+  blockRoot?: RootHex;
 };
 export type LVHInvalidResponse = {
   executionStatus: ExecutionStatus.Invalid;

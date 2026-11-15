@@ -35,6 +35,7 @@ pub fn BitListType(comptime _limit: comptime_int) type {
         pub const chunk_depth: u8 = maxChunksToDepth(max_chunk_count);
 
         pub const default_value: Type = Type.empty;
+        pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = blk: {
             var buf = getZeroHash(chunk_depth).*;

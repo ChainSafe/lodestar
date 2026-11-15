@@ -1,15 +1,14 @@
 import {ForkName} from "@lodestar/params";
-import {ColumnIndex, DataColumnSidecar, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ColumnIndex, DataColumnSidecar, RootHex, SignedBeaconBlock, Slot, fulu} from "@lodestar/types";
 import {VersionedHashes} from "../../../execution/index.js";
 
 export enum DAType {
   PreData = "pre-data",
-  Blobs = "blobs",
   Columns = "columns",
   NoData = "no-data",
 }
 
-export type DAData = null | deneb.BlobSidecars | fulu.DataColumnSidecar[];
+export type DAData = null | fulu.DataColumnSidecar[];
 
 /**
  * Represents were input originated. Blocks and Data can come from different
@@ -37,11 +36,6 @@ export type LogMetaBasic = {
   timeCreatedSec: number;
 };
 
-export type LogMetaBlobs = LogMetaBasic & {
-  expectedBlobs: number | string;
-  receivedBlobs: number;
-};
-
 export type LogMetaColumns = LogMetaBasic & {
   expectedColumns: number;
   receivedColumns: number;
@@ -54,8 +48,6 @@ export type SourceMeta = {
 };
 
 export type BlockWithSource = SourceMeta & {block: SignedBeaconBlock; blockRootHex: RootHex};
-
-export type BlobWithSource = SourceMeta & {blobSidecar: deneb.BlobSidecar};
 
 export type ColumnWithSource = SourceMeta & {columnSidecar: fulu.DataColumnSidecar};
 
@@ -82,18 +74,8 @@ export type AddBlock<F extends ForkName = ForkName> = SourceMeta & {
   blockRootHex: string;
 };
 
-export type AddBlob = BlobWithSource & {
-  blockRootHex: RootHex;
-};
-
 export type AddColumn = ColumnWithSource & {
   blockRootHex: RootHex;
-};
-
-export type BlobMeta = {
-  index: number;
-  blockRoot: Uint8Array;
-  versionedHash: Uint8Array;
 };
 
 export type MissingColumnMeta = {
