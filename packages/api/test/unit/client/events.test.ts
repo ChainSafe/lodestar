@@ -14,6 +14,7 @@ describe("event stream cancellation", () => {
     class {
       close = close;
       addEventListener = addEventListener;
+      onopen: (() => void) | null = null;
     }
   );
   const EventSourceConstructor = EventSourceMock as unknown as typeof EventSource;
@@ -73,5 +74,16 @@ describe("event stream cancellation", () => {
     expect(close).toHaveBeenCalledOnce();
     expect(onClose).toHaveBeenCalledOnce();
     expect(removeListener).toHaveBeenCalledWith("abort", expect.any(Function));
+  });
+
+  it("reports the initial connection and every reconnect", async () => {
+    const onOpen = vi.fn();
+    await client.eventstream({topics: [EventType.block], signal: controller.signal, onEvent: vi.fn(), onOpen});
+    const eventSource = EventSourceMock.mock.results[0].value;
+
+    expect(onOpen).not.toHaveBeenCalled();
+    eventSource.onopen?.();
+    eventSource.onopen?.();
+    expect(onOpen).toHaveBeenCalledTimes(2);
   });
 });

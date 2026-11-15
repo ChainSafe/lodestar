@@ -1,11 +1,13 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
 import {LogLevel} from "@lodestar/utils";
 import {ArchiveMode, ArchiveStore} from "../../../../src/chain/archiveStore/index.js";
 import {FrequencyStateArchiveStrategy} from "../../../../src/chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import * as archiveBlocksModule from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
+import {MAX_PRUNE_BLOCK_SLOTS_PER_RUN} from "../../../../src/chain/archiveStore/utils/pruneHistory.js";
 import {ChainEvent} from "../../../../src/chain/emitter.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {BeaconDb} from "../../../../src/db/index.js";
@@ -93,5 +95,46 @@ describe("chain / archiveStore / state pruning progress", () => {
       [{gte: previousSlot, lt: nextSlot}],
     ]);
     expect(await db.stateArchive.keys()).toEqual([nextSlot]);
+  });
+});
+
+describe("chain / archiveStore / startup block pruning", () => {
+  it("limits the blocks pruned on startup", async () => {
+    const {db, close} = await startIsolatedTmpBeaconDb(config, "lodestar-archive-store-startup-pruning-");
+    const controller = new AbortController();
+    const chain = getMockedBeaconChain();
+    const currentEpoch = config.MIN_EPOCHS_FOR_BLOCK_REQUESTS + 2 * computeEpochAtSlot(MAX_PRUNE_BLOCK_SLOTS_PER_RUN);
+    vi.spyOn(chain.clock, "currentEpoch", "get").mockReturnValue(currentEpoch);
+    const slots = [0, MAX_PRUNE_BLOCK_SLOTS_PER_RUN - 1, MAX_PRUNE_BLOCK_SLOTS_PER_RUN];
+    await db.blockArchive.batchPut(
+      slots.map((slot) => {
+        const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+        block.message.slot = slot;
+        return {key: slot, value: block};
+      })
+    );
+    const store = new ArchiveStore(
+      {chain, db, logger: testLogger(), metrics: null},
+      {
+        archiveMode: ArchiveMode.Frequency,
+        archiveStateEpochFrequency: 1024,
+        anchorState: {finalizedCheckpoint: {epoch: currentEpoch - 2, root: ZERO_HASH}},
+        dbName: "test",
+        dataColumnDir: "data_columns",
+        pruneHistory: true,
+      },
+      controller.signal
+    );
+
+    try {
+      await store.init();
+
+      expect(await db.blockArchive.keys()).toEqual([MAX_PRUNE_BLOCK_SLOTS_PER_RUN]);
+    } finally {
+      controller.abort();
+      await store.close();
+      vi.restoreAllMocks();
+      await close();
+    }
   });
 });

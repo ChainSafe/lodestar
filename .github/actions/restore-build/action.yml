@@ -1,0 +1,25 @@
+name: Restore workspace build
+description: Install dependencies and restore this run's build without recompiling
+inputs:
+  node:
+    description: Node version used to build
+    required: true
+  preset:
+    description: Native preset used to build
+    default: mainnet
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/setup-node
+      with:
+        node: ${{ inputs.node }}
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        name: workspace-build-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ inputs.preset }}
+        path: ${{ runner.temp }}/workspace-build
+    - name: Restore build outputs
+      shell: bash
+      run: tar -xzf "$RUNNER_TEMP/workspace-build/workspace-build.tar.gz"
+    - name: Check build
+      shell: bash
+      run: pnpm check-build

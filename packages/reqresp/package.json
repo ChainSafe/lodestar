@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.49.0",
+  "version": "1.50.1",
   "type": "module",
   "exports": {
     ".": {
@@ -46,8 +46,8 @@
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.2.0",
     "@chainsafe/snappy-wasm": "^0.5.2",
-    "@libp2p/interface": "^3.3.0",
-    "@libp2p/utils": "^7.4.0",
+    "@libp2p/interface": "^3.4.0",
+    "@libp2p/utils": "^7.4.3",
     "@lodestar/config": "workspace:^",
     "@lodestar/params": "workspace:^",
     "@lodestar/utils": "workspace:^",
@@ -56,15 +56,15 @@
     "uint8arraylist": "^3.0.2"
   },
   "devDependencies": {
-    "@chainsafe/ssz": "^1.8.0",
-    "@libp2p/crypto": "^5.1.23",
-    "@libp2p/peer-id": "^6.0.15",
+    "@chainsafe/ssz": "^1.9.0",
+    "@libp2p/crypto": "^5.1.25",
+    "@libp2p/peer-id": "^6.0.17",
     "@lodestar/logger": "workspace:^",
     "@lodestar/types": "workspace:^",
-    "libp2p": "3.3.9"
+    "libp2p": "3.4.0"
   },
   "peerDependencies": {
-    "libp2p": "^3.3.9"
+    "libp2p": "^3.4.0"
   },
   "keywords": [
     "ethereum",

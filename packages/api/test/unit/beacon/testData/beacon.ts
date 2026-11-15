@@ -1,4 +1,4 @@
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {
@@ -15,6 +15,13 @@ const balance = 32e9;
 const reward = 32e9;
 const pubkeyHex = toHex(Buffer.alloc(48, 1));
 const versionedHash = ssz.deneb.VersionedHash.defaultValue();
+
+const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+signedBlock.message.slot = SLOTS_PER_EPOCH;
+const signedEnvelopeContents = ssz.gloas.SignedExecutionPayloadEnvelopeContents.defaultValue();
+signedEnvelopeContents.signedExecutionPayloadEnvelope.message.payload.slotNumber = SLOTS_PER_EPOCH;
+const signedExecutionPayloadBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+signedExecutionPayloadBid.message.slot = SLOTS_PER_EPOCH;
 
 const blockHeaderResponse: BlockHeaderResponse = {
   root,
@@ -67,7 +74,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   publishBlockV2: {
     args: {
-      signedBlockContents: {signedBlock: ssz.gloas.SignedBeaconBlock.defaultValue()},
+      signedBlockContents: {signedBlock},
       broadcastValidation: BroadcastValidation.consensus,
       builderUrl: "https://builder.example.com",
     },
@@ -82,13 +89,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   publishExecutionPayloadEnvelope: {
     args: {
-      signedEnvelopeOrContents: ssz.gloas.SignedExecutionPayloadEnvelopeContents.defaultValue(),
+      signedEnvelopeOrContents: signedEnvelopeContents,
       broadcastValidation: BroadcastValidation.gossip,
     },
     res: undefined,
   },
   publishExecutionPayloadBid: {
-    args: {signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.defaultValue()},
+    args: {signedExecutionPayloadBid},
     res: undefined,
   },
   getSignedExecutionPayloadEnvelope: {
@@ -241,25 +248,32 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false},
     },
   },
+  getStatePtc: {
+    args: {stateId: "head", slot: 2},
+    res: {
+      data: {slot: 2, validators: ssz.gloas.PayloadTimelinessCommittee.defaultValue()},
+      meta: {executionOptimistic: true, finalized: false},
+    },
+  },
   getPendingDeposits: {
     args: {stateId: "head"},
     res: {
-      data: [ssz.electra.PendingDeposit.defaultValue()],
-      meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
+      data: [ssz.gloas.PendingDeposit.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
     },
   },
   getPendingPartialWithdrawals: {
     args: {stateId: "head"},
     res: {
-      data: [ssz.electra.PendingPartialWithdrawal.defaultValue()],
-      meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
+      data: [ssz.gloas.PendingPartialWithdrawal.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
     },
   },
   getPendingConsolidations: {
     args: {stateId: "head"},
     res: {
-      data: [ssz.electra.PendingConsolidation.defaultValue()],
-      meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
+      data: [ssz.gloas.PendingConsolidation.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
     },
   },
   getProposerLookahead: {
@@ -338,5 +352,9 @@ export const testData: GenericServerTestCases<Endpoints> = {
   getGenesis: {
     args: undefined,
     res: {data: ssz.phase0.Genesis.defaultValue()},
+  },
+  getProposerPreferences: {
+    args: {slot: 1, dependentRoot: new Uint8Array(32).fill(1)},
+    res: {data: [ssz.gloas.SignedProposerPreferences.defaultValue()], meta: {version: ForkName.gloas}},
   },
 };

@@ -51,7 +51,7 @@ describe("chain / archive / ArchiveStore", () => {
     );
   });
 
-  it("init sets earliestAvailableSlot from the earliest retained block", async () => {
+  it("init preserves earliestAvailableSlot despite older retained blocks", async () => {
     const controller = new AbortController();
     const emitter = new ChainEventEmitter();
     const chain = {bufferPool: {}, emitter, regen: {}, earliestAvailableSlot: 313312};
@@ -77,9 +77,8 @@ describe("chain / archive / ArchiveStore", () => {
 
     await archiveStore.init();
 
-    expect(firstKey).toHaveBeenCalledTimes(1);
-    // Lowered from the anchor (313312) to the earliest block still retained in the archive
-    expect(chain.earliestAvailableSlot).toBe(246560);
+    expect(firstKey).not.toHaveBeenCalled();
+    expect(chain.earliestAvailableSlot).toBe(313312);
   });
 
   it("init keeps earliestAvailableSlot at the anchor when the archive is empty", async () => {

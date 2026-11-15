@@ -8,13 +8,13 @@ import {platabergetChainConfig} from "./chainConfig/networks/plataberget.js";
 import {sepoliaChainConfig} from "./chainConfig/networks/sepolia.js";
 
 export {
-  mainnetChainConfig,
-  gnosisChainConfig,
-  sepoliaChainConfig,
-  hoodiChainConfig,
   chiadoChainConfig,
   ephemeryChainConfig,
+  gnosisChainConfig,
+  hoodiChainConfig,
+  mainnetChainConfig,
   platabergetChainConfig,
+  sepoliaChainConfig,
 };
 
 export type NetworkName = "mainnet" | "gnosis" | "sepolia" | "hoodi" | "plataberget" | "chiado" | "ephemery";

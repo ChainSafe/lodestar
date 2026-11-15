@@ -12,12 +12,13 @@ import {getPayloadAttestationDataSigningRoot} from "./indexedPayloadAttestation.
 import {getBlockProposerSignatureSet} from "./proposer.js";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
 import {getRandaoRevealSignatureSet} from "./randao.js";
-import {getVoluntaryExitsSignatureSets} from "./voluntaryExits.js";
+import {getVoluntaryExitSignatureSet} from "./voluntaryExits.js";
 
 export * from "./attesterSlashings.js";
 export * from "./blsToExecutionChange.js";
 export * from "./executionPayloadBid.js";
 export * from "./executionPayloadEnvelope.js";
+export * from "./inclusionList.js";
 export * from "./indexedAttestation.js";
 export * from "./indexedPayloadAttestation.js";
 export * from "./proposer.js";
@@ -49,7 +50,9 @@ export function getBlockSignatureSets(
     ...getProposerSlashingsSignatureSets(config, signedBlock),
     ...getAttesterSlashingsSignatureSets(config, signedBlock),
     ...getAttestationsSignatureSets(config, signedBlock, indexedAttestations),
-    ...getVoluntaryExitsSignatureSets(config, state, signedBlock),
+    ...signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
+      getVoluntaryExitSignatureSet(config, state, voluntaryExit)
+    ),
   ];
 
   if (!opts?.skipProposerSignature) {

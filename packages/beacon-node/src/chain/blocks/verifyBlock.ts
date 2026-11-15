@@ -4,6 +4,7 @@ import {
   DataAvailabilityStatus,
   IBeaconStateView,
   computeEpochAtSlot,
+  getAttestingIndices,
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
@@ -81,10 +82,6 @@ export async function verifyBlocksInEpoch(
       throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
     });
 
-  // in forky condition, make sure to populate ShufflingCache with regened state
-  // otherwise it may fail to get indexed attestations from shuffling cache later
-  this.shufflingCache.processState(preState0);
-
   if (!preState0.isStateValidatorsNodesPopulated()) {
     this.logger.verbose("verifyBlocksInEpoch preState0 SSZ cache stats", {
       slot: preState0.slot,
@@ -117,8 +114,18 @@ export async function verifyBlocksInEpoch(
     for (const [i, block] of blocks.entries()) {
       indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
         const attEpoch = computeEpochAtSlot(attestation.data.slot);
-        const decisionRoot = preState0.getShufflingDecisionRoot(attEpoch);
-        return this.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, fork, attestation);
+        // calling getShufflingAtEpoch may take some time for NativeBeaconStateView
+        // we should have the shuffling inside ShufflingCache most of the time
+        const shuffling =
+          this.shufflingCache.getSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
+          preState0.getShufflingAtEpoch(attEpoch);
+        // Unlike getIndexedAttestation, keep attestingIndices in committee order: sorting them dominates building
+        // these on mainnet blocks. See FullyVerifiedBlock.indexedAttestations.
+        return {
+          attestingIndices: getAttestingIndices(shuffling, fork, attestation),
+          data: attestation.data,
+          signature: attestation.signature,
+        };
       });
     }
 
@@ -142,6 +149,7 @@ export async function verifyBlocksInEpoch(
                 ? Array.from(payloadEnvelopes.values()).filter((payloadInput) => payloadInput.hasPayloadEnvelope())
                 : [];
             const {dataAvailabilityStatuses, availableTime} = await verifyPayloadsDataAvailability(
+              this.config,
               payloadInputsForDa,
               abortController.signal
             );
@@ -173,16 +181,29 @@ export async function verifyBlocksInEpoch(
     const [
       segmentExecStatus,
       {blockDAStatuses, payloadDAStatuses, availableTime},
-      {postStates, proposerBalanceDeltas, verifyStateTime},
       {verifySignaturesTime},
+      {postStates, proposerBalanceDeltas, verifyStateTime},
     ] = await Promise.all([
       verifyExecutionPayloadsPromise,
 
       // data availability (fork-specific; see daAvailabilityPromise above)
       daAvailabilityPromise,
 
+      // All signatures at once. Must be called before verifyBlocksStateTransitionOnly()
+      // so we hand the BLS job to the worker pool before the main thread
+      // is busy with the state transition.
+      verifyBlocksSignatures(
+        this.config,
+        this.bls,
+        this.logger,
+        this.metrics,
+        preState0,
+        blocks,
+        indexedAttestationsByBlock,
+        opts
+      ),
+
       // Run state transition only
-      // TODO: Ensure it yields to allow flushing to workers and engine API
       verifyBlocksStateTransitionOnly(
         preState0,
         blockInputs,
@@ -196,21 +217,16 @@ export async function verifyBlocksInEpoch(
         opts
       ),
 
-      // All signatures at once
-      verifyBlocksSignatures(
-        this.config,
-        this.bls,
-        this.logger,
-        this.metrics,
-        preState0,
-        blocks,
-        indexedAttestationsByBlock,
-        opts
-      ),
-
       // TODO GLOAS: can verify payload signatures in batch too
       // maybe chain with the above verifyBlocksSignatures()
     ]);
+
+    if (blockInputs.length === 1 && opts.seenTimestampSec !== undefined) {
+      const consensusVerifiedTime = Math.max(verifyStateTime, verifySignaturesTime);
+      this.metrics?.gossipBlock.receivedToConsensusVerifiedTime.observe(
+        consensusVerifiedTime / 1000 - opts.seenTimestampSec
+      );
+    }
 
     for (const blockInput of blockInputs) {
       const block = blockInput.getBlock();

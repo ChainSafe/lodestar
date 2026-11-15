@@ -1,16 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import {beforeEach, describe, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {ForkName, isForkPostGloas} from "@lodestar/params";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
 import {nativeStateTransition} from "./stateTransition.js";
 import {RunnerType, TestRunner} from "./types.js";
 
-let nativeStateTransitionPromise: Promise<typeof import("@chainsafe/lodestar-z/state-transition")> | null = null;
+let nativeStateTransitionPromise: Promise<typeof import("@lodestar/native/state-transition")> | null = null;
 
 async function resetNativeStateTransition(): Promise<void> {
-  nativeStateTransitionPromise ??= import("@chainsafe/lodestar-z/state-transition");
+  nativeStateTransitionPromise ??= import("@lodestar/native/state-transition");
   const nativeStateTransition = await nativeStateTransitionPromise;
   nativeStateTransition.deinitReusedEpochTransitionCache();
 }
@@ -25,6 +25,7 @@ const ARTIFACT_FILENAMES = new Set([
 
 export interface SkipOpts {
   skippedTestSuites?: RegExp[];
+  /** Matched against `<fork>/<runner>/<handler>/<suite>/<testCase>` */
   skippedTests?: RegExp[];
   skippedForks?: string[];
   skippedRunners?: string[];
@@ -88,10 +89,13 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/fork_choice_compliance\/.*/,
-    // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
-    /^heze\/fork_choice\/on_inclusion_list\/.*$/,
   ],
-  skippedTests: [],
+  skippedTests: [
+    // deneb..electra fork_choice/on_block negative vectors whose only invalid property is the blob data.
+    // Legacy blob sidecars are not tracked for these forks, so the runner does not load the blobs and the
+    // block imports successfully. See https://github.com/ChainSafe/lodestar/issues/9956
+    /^(deneb|electra)\/fork_choice\/on_block\/pyspec_tests\/invalid_(incorrect_proof|data_unavailable|wrong_blobs_length|wrong_proofs_length)$/,
+  ],
   skippedRunners: [],
   // Gossip handlers not implemented in the spec runner.
   skippedHandlers: [
@@ -102,7 +106,6 @@ export const defaultSkipOpts: SkipOpts = {
     "gossip_execution_payload_envelope",
     "gossip_payload_attestation_message",
     "gossip_proposer_preferences",
-    "gossip_inclusion_list",
   ],
 };
 
@@ -140,8 +143,6 @@ export function specTestIterator(
     const fork = forkStr as ForkName;
     if (
       opts?.skippedForks?.includes(forkStr) ||
-      // lodestar-z does not support Gloas state transition yet
-      (nativeStateTransition && isForkPostGloas(fork)) ||
       (process.env.SPEC_FILTER_FORK && forkStr !== process.env.SPEC_FILTER_FORK)
     ) {
       continue;

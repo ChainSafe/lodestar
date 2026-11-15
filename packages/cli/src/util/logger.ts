@@ -4,6 +4,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {LogFormat, TimestampFormatCode, logFormats} from "@lodestar/logger";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {getSlotDurations} from "@lodestar/state-transition";
 import {LogLevel} from "@lodestar/utils";
 import {GlobalArgs} from "../options/globalOptions.js";
 import {LogArgs} from "../options/logOptions.js";
@@ -40,6 +41,10 @@ export function parseLoggerArgs(
             genesisTime: args.logFormatGenesisTime,
             secondsPerSlot: config.SLOT_DURATION_MS / 1000,
             slotsPerEpoch: SLOTS_PER_EPOCH,
+            slotDurations: getSlotDurations(config).map(([epoch, slotDurationMs]): [number, number] => [
+              epoch,
+              slotDurationMs / 1000,
+            ]),
           }
         : {
             format: TimestampFormatCode.DateRegular,

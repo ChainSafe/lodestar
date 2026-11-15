@@ -16,7 +16,7 @@ import {HistoricalStateRegen} from "./historicalState/historicalStateRegen.js";
 import {ArchiveMode, ArchiveStoreOpts, StateArchiveStrategy} from "./interface.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {archiveBlocks} from "./utils/archiveBlocks.js";
-import {pruneHistory} from "./utils/pruneHistory.js";
+import {MAX_PRUNE_BLOCK_SLOTS_PER_RUN, pruneHistory} from "./utils/pruneHistory.js";
 
 type ArchiveStoreModules = {
   chain: IBeaconChain;
@@ -104,7 +104,6 @@ export class ArchiveStore {
 
   async init(): Promise<void> {
     if (this.opts.pruneHistory) {
-      // prune ALL stale data before starting
       this.logger.info("Pruning historical data");
       const {stateCutoffSlot} = await callFnWhenAwait(
         pruneHistory(
@@ -113,33 +112,16 @@ export class ArchiveStore {
           this.logger,
           this.metrics,
           this.opts.anchorState.finalizedCheckpoint.epoch,
-          this.chain.clock.currentEpoch
+          this.chain.clock.currentEpoch,
+          this.statePruneFromSlot,
+          this.advanceEarliestAvailableSlot,
+          MAX_PRUNE_BLOCK_SLOTS_PER_RUN
         ),
         () => this.logger.info("Still pruning historical data, please wait..."),
         30_000,
         this.signal
       );
       this.statePruneFromSlot = stateCutoffSlot;
-    }
-
-    // Initialize earliestAvailableSlot from the earliest block actually retained (after any pruning
-    // above), rather than the anchor state slot set in the constructor. On an in-place restart the DB
-    // still holds finalized history below the anchor; leaving the value at the anchor makes the node
-    // reject by_range requests (beacon_blocks, execution_payload_envelopes and data_column_sidecars
-    // all gate on this slot) for data it still retains. An empty archive (e.g. a fresh checkpoint
-    // sync with nothing below the anchor) leaves the constructor's anchor slot in place.
-    const earliestArchivedBlockSlot = await this.db.blockArchive.firstKey();
-    if (earliestArchivedBlockSlot != null) {
-      const oldEarliestAvailableSlot = this.chain.earliestAvailableSlot;
-      this.chain.earliestAvailableSlot = earliestArchivedBlockSlot;
-      this.logger.verbose("Initialized earliestAvailableSlot from retained block archive", {
-        oldEarliestAvailableSlot,
-        newEarliestAvailableSlot: earliestArchivedBlockSlot,
-      });
-    } else {
-      this.logger.verbose("Empty block archive on init, keeping anchor earliestAvailableSlot", {
-        earliestAvailableSlot: this.chain.earliestAvailableSlot,
-      });
     }
 
     if (this.opts.serveHistoricalState) {
@@ -157,6 +139,18 @@ export class ArchiveStore {
       });
     }
   }
+
+  /**
+   * The CLI owns the initial value; this only advances it during pruneHistory.
+   * Persisted before any deletion so a crash mid-prune never leaves the floor below deleted data.
+   */
+  private advanceEarliestAvailableSlot = async (blockCutoffSlot: Slot): Promise<void> => {
+    const earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
+    if (earliestAvailableSlot !== this.chain.earliestAvailableSlot) {
+      await this.db.earliestAvailableSlot.set(earliestAvailableSlot);
+      this.chain.earliestAvailableSlot = earliestAvailableSlot;
+    }
+  };
 
   async close(): Promise<void> {
     await this.historicalStateRegen?.close();
@@ -203,6 +197,7 @@ export class ArchiveStore {
     //
     // `jobQueue.push()` can throw synchronously (queue aborted / full) or reject asynchronously;
     // awaiting it inside the deferred callback funnels both failure modes into the one catch.
+    // biome-ignore lint/nursery/noMisusedPromises: the callback catches all errors itself
     callInNextEventLoop(async () => {
       try {
         await this.jobQueue.push(finalized);
@@ -259,17 +254,18 @@ export class ArchiveStore {
 
       if (this.opts.pruneHistory) {
         timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-        const {blockCutoffSlot, stateCutoffSlot} = await pruneHistory(
+        const {stateCutoffSlot} = await pruneHistory(
           this.chain.config,
           this.db,
           this.logger,
           this.metrics,
           finalizedEpoch,
           this.chain.clock.currentEpoch,
-          this.statePruneFromSlot
+          this.statePruneFromSlot,
+          this.advanceEarliestAvailableSlot,
+          MAX_PRUNE_BLOCK_SLOTS_PER_RUN
         );
         this.statePruneFromSlot = stateCutoffSlot;
-        this.chain.earliestAvailableSlot = Math.max(this.chain.earliestAvailableSlot, blockCutoffSlot);
         timer?.({source: ArchiveStoreTask.PruneHistory});
       }
 

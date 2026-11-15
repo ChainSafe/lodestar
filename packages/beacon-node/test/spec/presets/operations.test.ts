@@ -10,6 +10,7 @@ import {
   CachedBeaconStateCapella,
   CachedBeaconStateElectra,
   CachedBeaconStateGloas,
+  CachedBeaconStatePreHeze,
   ExecutionPayloadStatus,
   IndexedBuilderState,
   getBlockRootAtSlot,
@@ -60,7 +61,7 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
 
   deposit: (state, testCase: {deposit: phase0.Deposit}) => {
     const fork = state.config.getForkSeq(state.slot);
-    blockFns.processDeposit(fork, state, testCase.deposit);
+    blockFns.processDeposit(fork, state as CachedBeaconStatePreHeze, testCase.deposit);
   },
 
   proposer_slashing: (state, testCase: {proposer_slashing: phase0.ProposerSlashing}) => {
@@ -168,8 +169,9 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
       const state = testcase.pre.clone();
       const epoch = (state.fork as phase0.Fork).epoch;
       const config = createChainForkConfig({
-        ...getConfig(fork, epoch),
+        ...getConfig(fork),
         ...loadSpecTestConfig(path.join(specTestDir, directoryName, testCaseName)),
+        [`${fork.toUpperCase()}_FORK_EPOCH`]: epoch,
       });
       const cachedState = createCachedBeaconStateTest(state, config);
 
