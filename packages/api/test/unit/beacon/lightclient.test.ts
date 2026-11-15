@@ -7,10 +7,25 @@ import {getDefinitions} from "../../../src/beacon/routes/lightclient.js";
 import {HeadersExtra} from "../../../src/utils/headers.js";
 import {MetaHeader} from "../../../src/utils/metadata.js";
 
+const fuluForkSchedule = {
+  ALTAIR_FORK_EPOCH: 0,
+  BELLATRIX_FORK_EPOCH: 0,
+  CAPELLA_FORK_EPOCH: 0,
+  DENEB_FORK_EPOCH: 0,
+  ELECTRA_FORK_EPOCH: 0,
+  FULU_FORK_EPOCH: 0,
+  GLOAS_FORK_EPOCH: Infinity,
+  HEZE_FORK_EPOCH: Infinity,
+  BLOB_SCHEDULE: [
+    {EPOCH: 2048, MAX_BLOBS_PER_BLOCK: 12},
+    {EPOCH: 4096, MAX_BLOBS_PER_BLOCK: 15},
+  ],
+};
+
 describe("lightclient updates SSZ fork digests", () => {
   it.each(["ephemery", "mainnet"] as const)("uses the runtime genesis root for %s", (network) => {
     const config = createBeaconConfig(
-      {...networksChainConfig[network], FULU_FORK_EPOCH: 0},
+      {...networksChainConfig[network], ...fuluForkSchedule},
       new Uint8Array(32).fill(1)
     );
     const codec = getDefinitions(config).getLightClientUpdatesByRange.resp.data;
@@ -33,7 +48,7 @@ describe("lightclient updates SSZ fork digests", () => {
   });
 
   it("decodes updates serialized by a different node on the same ephemery iteration", () => {
-    const chainConfig = networksChainConfig.ephemery;
+    const chainConfig = {...networksChainConfig.ephemery, ...fuluForkSchedule};
     const root = new Uint8Array(32).fill(2);
     const senderConfig = createBeaconConfig(chainConfig, root);
     const receiverConfig = createBeaconConfig(chainConfig, root);
@@ -63,13 +78,13 @@ describe("lightclient updates SSZ fork digests", () => {
   it.each(["ephemery", "custom"] as const)("decodes mixed-fork updates without the genesis root on %s", (network) => {
     const chainConfig = createChainForkConfig({
       ...networksChainConfig.ephemery,
+      ...fuluForkSchedule,
       CONFIG_NAME: network,
-      ALTAIR_FORK_EPOCH: 0,
-      BELLATRIX_FORK_EPOCH: 0,
       CAPELLA_FORK_EPOCH: 1,
       DENEB_FORK_EPOCH: 2,
       ELECTRA_FORK_EPOCH: 3,
       FULU_FORK_EPOCH: 4,
+      BLOB_SCHEDULE: [],
     });
     const serverConfig = createBeaconConfig(chainConfig, new Uint8Array(32).fill(4));
     const versions = [ForkName.bellatrix, ForkName.capella, ForkName.deneb, ForkName.electra, ForkName.fulu] as const;
@@ -90,7 +105,7 @@ describe("lightclient updates SSZ fork digests", () => {
     "uses fork digests for missing version entries ($versions)",
     ({versions}) => {
       const config = createBeaconConfig(
-        {...networksChainConfig.ephemery, FULU_FORK_EPOCH: 0},
+        {...networksChainConfig.ephemery, ...fuluForkSchedule},
         new Uint8Array(32).fill(5)
       );
       const codec = getDefinitions(config).getLightClientUpdatesByRange.resp.data;
@@ -106,7 +121,10 @@ describe("lightclient updates SSZ fork digests", () => {
   );
 
   it("rejects version metadata that does not support light client updates", () => {
-    const config = createBeaconConfig(networksChainConfig.ephemery, new Uint8Array(32).fill(6));
+    const config = createBeaconConfig(
+      {...networksChainConfig.ephemery, ...fuluForkSchedule},
+      new Uint8Array(32).fill(6)
+    );
     const codec = getDefinitions(config).getLightClientUpdatesByRange.resp.data;
     const update = ssz.fulu.LightClientUpdate.defaultValue();
     const bytes = codec.serialize([update], {versions: [ForkName.fulu]});
@@ -117,7 +135,7 @@ describe("lightclient updates SSZ fork digests", () => {
   });
 
   it("normalizes version headers before decoding without the genesis root", () => {
-    const chainConfig = createChainForkConfig(networksChainConfig.ephemery);
+    const chainConfig = createChainForkConfig({...networksChainConfig.ephemery, ...fuluForkSchedule});
     const serverConfig = createBeaconConfig(chainConfig, new Uint8Array(32).fill(8));
     const updates = [ssz.fulu.LightClientUpdate.defaultValue(), ssz.fulu.LightClientUpdate.defaultValue()];
     const meta = {versions: [ForkName.fulu, ForkName.fulu]};
@@ -130,7 +148,7 @@ describe("lightclient updates SSZ fork digests", () => {
   });
 
   it("retains the zero-root fallback for a custom chain without runtime genesis", () => {
-    const chainConfig = {...networksChainConfig.ephemery, CONFIG_NAME: "custom"};
+    const chainConfig = {...networksChainConfig.ephemery, ...fuluForkSchedule, CONFIG_NAME: "custom"};
     const config = createChainForkConfig(chainConfig);
     const codec = getDefinitions(config).getLightClientUpdatesByRange.resp.data;
     const update = ssz.fulu.LightClientUpdate.defaultValue();

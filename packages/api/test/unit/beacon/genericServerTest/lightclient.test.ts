@@ -21,7 +21,15 @@ describe("beacon / lightclient", () => {
   it.each(["ephemery", "custom"] as const)(
     "decodes runtime-root SSZ updates with a chain-only %s client",
     async (network) => {
-      const chainConfig = createChainForkConfig({...networksChainConfig.ephemery, CONFIG_NAME: network});
+      const chainConfig = createChainForkConfig({
+        ...networksChainConfig.ephemery,
+        CONFIG_NAME: network,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: Infinity,
+        GLOAS_FORK_EPOCH: Infinity,
+        HEZE_FORK_EPOCH: Infinity,
+        BLOB_SCHEDULE: [],
+      });
       const serverConfig = createBeaconConfig(chainConfig, new Uint8Array(32).fill(7));
       const testCase = testData.getLightClientUpdatesByRange;
       const mockApi = getMockApi<Endpoints>(testData);
