@@ -16,6 +16,7 @@ const JustifiedBalances = store_mod.JustifiedBalances;
 const StateProvider = store_mod.StateProvider;
 const NO_BLOCK = store_mod.NO_BLOCK;
 const vote_targets_mod = @import("vote_targets.zig");
+const FastConfirmation = @import("fast_confirmation.zig").FastConfirmation;
 
 const validator_count = 64;
 
@@ -737,6 +738,20 @@ test "checkpoints: a provider failure at an epoch boundary holds the time so a r
     provider.fail = false;
     try store.onTick(store.timing.timeAtSlotMs(preset.SLOTS_PER_EPOCH));
     try testing.expectEqual(block.unrealized_justified_checkpoint, store.justified_checkpoint);
+}
+
+test "fast confirmation: a run without balances writes nothing" {
+    const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge });
+    var store = try Store.initFromSummary(testing.allocator, &@import("config").minimal.config, 0, anchor, Provider.stateProvider());
+    defer store.deinit();
+    var fcr = FastConfirmation.init(&store);
+    try store.onTick(store.timing.timeAtSlotMs(1));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 2, .parent = 1, .slot = 1, .status = .pre_merge }));
+    try store.onTick(store.timing.timeAtSlotMs(2));
+    const before = fcr;
+
+    try testing.expectError(error.FastConfirmationUnsupported, fcr.onFastConfirmation(&store));
+    try testing.expectEqual(before, fcr);
 }
 
 test "optimistic sync: valid walks down to the merge boundary, invalid removes the branch" {
