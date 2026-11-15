@@ -224,9 +224,9 @@ const Run = struct {
 
     /// Votes of active, unslashed, non-equivocating validators summed per vote target.
     fn targetWeights(self: *const Run, balances: *const BalanceSource) ![]u64 {
-        const weights = try self.allocator.alloc(u64, self.store.vote_targets.len());
+        const weights = try self.allocator.alloc(u64, self.store.votes.vote_targets.len());
         @memset(weights, 0);
-        for (self.store.latest_votes.items, 0..) |target, validator| {
+        for (self.store.votes.latest_votes.items, 0..) |target, validator| {
             if (target == NO_TARGET or self.store.isEquivocating(validator)) continue;
             weights[target] += unslashedWeight(balances, validator);
         }
@@ -239,7 +239,7 @@ const Run = struct {
         const target_weights = try self.targetWeights(balances);
         const scores = try self.allocator.alloc(u64, self.store.blocks.len);
         @memset(scores, 0);
-        for (self.store.vote_targets.messages.items, target_weights) |message, weight| {
+        for (self.store.votes.vote_targets.messages.items, target_weights) |message, weight| {
             if (weight == 0 or message.block == NO_BLOCK) continue;
             scores[message.block] += weight;
         }
@@ -295,9 +295,9 @@ const Run = struct {
     fn nodeSupportBetweenSlots(self: *Run, balances: *const BalanceSource, node: ForkChoiceNode, start_slot: Slot, end_slot: Slot) !u64 {
         if (start_slot > end_slot) return 0;
         const node_id = head_mod.nodeId(node);
-        const target_nodes = self.store.vote_targets.nodes.items;
+        const target_nodes = self.store.votes.vote_targets.nodes.items;
         var support: u64 = 0;
-        for (self.store.latest_votes.items, 0..) |target, validator| {
+        for (self.store.votes.latest_votes.items, 0..) |target, validator| {
             if (target == NO_TARGET or target_nodes[target] != node_id) continue;
             if (self.store.isEquivocating(validator)) continue;
             const weight = unslashedWeight(balances, validator);
@@ -311,7 +311,7 @@ const Run = struct {
     fn equivocationScore(self: *Run, balances: *const BalanceSource, start_slot: Slot, end_slot: Slot) !u64 {
         if (start_slot > end_slot) return 0;
         var score: u64 = 0;
-        var it = self.store.equivocating_indices.iterator(.{});
+        var it = self.store.votes.equivocating_indices.iterator(.{});
         while (it.next()) |validator| {
             if (validator >= balances.effective_balance_increments.len or !balances.active.isSet(validator)) continue;
             if (!try self.isInCommittees(validator, start_slot, end_slot)) continue;
@@ -396,7 +396,7 @@ const Run = struct {
         const target = self.currentTarget();
         const weights = try self.targetWeights(&src.balances);
         var score: u64 = 0;
-        for (self.store.vote_targets.messages.items, weights) |message, weight| {
+        for (self.store.votes.vote_targets.messages.items, weights) |message, weight| {
             if (weight == 0 or message.block == NO_BLOCK) continue;
             if (self.isCheckpointOf(target, message.block, computeEpochAtSlot(message.slot))) score += weight;
         }

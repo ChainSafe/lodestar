@@ -14,6 +14,7 @@ pub const store = @import("store.zig");
 pub const head = @import("head.zig");
 pub const proposer_head = @import("proposer_head.zig");
 pub const vote_targets = @import("vote_targets.zig");
+pub const votes = @import("votes.zig");
 pub const fast_confirmation = @import("fast_confirmation.zig");
 
 pub const Store = store.Store;
