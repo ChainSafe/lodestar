@@ -34,6 +34,17 @@ export type ForkChoiceOpts = RawForkChoiceOpts & {
 export enum ForkchoiceCaller {
   prepareNextSlot = "prepare_next_slot",
   importBlock = "import_block",
+  executionInvalid = "execution_invalid",
+}
+
+/**
+ * Where an execution engine INVALID verdict comes from. Only `blockSegment` verdicts are about the payload the engine
+ * just processed and keep the consensus failure semantics in fork choice, the others are applied leniently.
+ */
+export enum ExecutionInvalidSource {
+  forkchoiceUpdated = "forkchoice_updated",
+  newPayload = "new_payload",
+  blockSegment = "block_segment",
 }
 
 /**

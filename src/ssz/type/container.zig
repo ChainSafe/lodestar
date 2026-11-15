@@ -57,6 +57,7 @@ pub fn FixedContainerType(comptime ST: type) type {
             }
             break :blk out;
         };
+        pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = blk: {
             var buf: [32]u8 = undefined;
@@ -322,6 +323,7 @@ pub fn StructContainerType(comptime ST: type) type {
         pub const chunk_count: usize = fields.len;
         pub const chunk_depth: Depth = maxChunksToDepth(chunk_count);
         pub const default_value: Type = FixedCT.default_value;
+        pub const init: Type = default_value;
         pub const default_root: [32]u8 = FixedCT.default_root;
         pub const serialized = FixedCT.serialized;
         const Self = @This();
@@ -512,6 +514,14 @@ pub fn VariableContainerType(comptime ST: type) type {
             var out: Type = undefined;
             for (fields) |field| {
                 @field(out, field.name) = field.type.default_value;
+            }
+            break :blk out;
+        };
+
+        pub const init: Type = blk: {
+            var out: Type = undefined;
+            for (fields) |field| {
+                @field(out, field.name) = field.type.init;
             }
             break :blk out;
         };

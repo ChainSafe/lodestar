@@ -908,25 +908,12 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this.cachedProposerLookahead;
   }
 
-  preVerifyBuilderDepositsPreGloas(
-    _maxBuilderDeposits: number,
-    _maxDurationMs: number
-  ): PreVerifyBuilderDepositsResult {
-    // The native fork upgrade verifies directly; it does not maintain a warm-up cache.
-    return {
-      validBuilderSignaturesCount: 0,
-      invalidBuilderSignaturesCount: 0,
-      validValidatorSignaturesCount: 0,
-      invalidValidatorSignaturesCount: 0,
-      scannedPendingDeposits: 0,
-      totalCachedDeposits: 0,
-      totalBuilderPubkeys: 0,
-      pendingDepositsCount: this.pendingDepositsCount,
-    };
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult {
+    return this.binding.preVerifyBuilderDepositsPreGloas(maxBuilderDeposits, maxDurationMs);
   }
 
   clearPreGloasBuilderDepositCache(): void {
-    // The native implementation has no pre-Gloas deposit cache to clear.
+    this.binding.clearPreGloasBuilderDepositCache();
   }
 
   // ─── gloas ───────────────────────────────────────────────────────────────
