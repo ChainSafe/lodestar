@@ -36,6 +36,7 @@ pub fn ByteListType(comptime _limit: comptime_int) type {
         const GenericList = @import("list.zig").FixedListType(Element, limit, .{});
 
         pub const default_value: Type = Type.empty;
+        pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = blk: {
             var buf = getZeroHash(chunk_depth).*;

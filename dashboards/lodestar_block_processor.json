@@ -4104,439 +4104,9 @@
           "legendFormat": "blocks retried for blobs",
           "range": true,
           "refId": "H"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(beacon_get_blobs_v1_requests_total[$rate_interval])/((rate(beacon_blockinputs_already_available_total[$rate_interval]) +\nrate(beacon_datapromise_blockinputs_available_post_blobs_pull_total[$rate_interval])) or vector(1))",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "Total number of block inputs that were tried to resolve",
-          "range": true,
-          "refId": "I"
         }
       ],
       "title": "Block availability resolution stats",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 174
-      },
-      "id": 578,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(beacon_datapromise_blockinput_blobs_finally_queried_from_network_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_get_blobs_v1_blob_useful_response_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
-          "format": "time_series",
-          "instant": false,
-          "interval": "",
-          "legendFormat": "blobs finally req/resp queried",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_get_blobs_v1_blob_useful_response_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "blobs finally req/resp fetched",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(beacon_datapromise_blockinput_blobs_retried_from_network_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_get_blobs_v1_blob_useful_response_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "total blobs retried",
-          "range": true,
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(beacon_datapromise_blockinput_blobs_retried_and_resolved_from_network_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_get_blobs_v1_blob_useful_response_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "total blobs retried and resolved",
-          "range": true,
-          "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_get_blobs_v1_blob_useful_response_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "delayed gossip blobs available",
-          "range": true,
-          "refId": "E"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(beacon_get_blobs_v1_blob_returned_but_arrived_during_response_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_get_blobs_v1_blob_useful_response_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "delayed gossip blobs used",
-          "range": true,
-          "refId": "F"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(beacon_get_blobs_v1_blob_useful_response_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_get_blobs_v1_blob_useful_response_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "actual useful blobs (not delayed goissip available)",
-          "range": true,
-          "refId": "G"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(beacon_blockinput_blobs_already_available_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_get_blobs_v1_blob_useful_response_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "blobs of already available blocks",
-          "range": true,
-          "refId": "H"
-        }
-      ],
-      "title": "Blob availability resolution stats",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 182
-      },
-      "id": 577,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(beacon_get_blobs_v1_requested_blobs_count_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_get_blobs_v1_blob_useful_response_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
-          "format": "time_series",
-          "instant": false,
-          "interval": "",
-          "legendFormat": "total blobs queried in api",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(beacon_get_blobs_v1_blob_returned_response_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_get_blobs_v1_blob_useful_response_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "blobs available",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(beacon_get_blobs_v1_missing_blob_response_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_get_blobs_v1_blob_useful_response_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "blobs not available",
-          "range": true,
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(beacon_get_blobs_v1_response_error_total[$rate_interval])/\n((\nrate(beacon_blockinput_blobs_already_available_total[$rate_interval]) +  \nrate(beacon_datapromise_blockinput_blobs_already_available_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_delayed_gossip_available_total[$rate_interval]) + \nrate(beacon_get_blobs_v1_blob_useful_response_total[$rate_interval]) + \nrate(beacon_datapromise_blockinput_blobs_finally_resolved_from_network_total[$rate_interval])\n) or vector(1))",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "blobs errored",
-          "range": true,
-          "refId": "D"
-        }
-      ],
-      "title": "GetBlobs API Stats",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 182
-      },
-      "id": 586,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "12*rate(lodestar_gossip_blob_published_from_engine_total[$rate_interval])",
-          "instant": false,
-          "legendFormat": "count",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Blobs published to gossip / slot",
       "type": "timeseries"
     },
     {
@@ -6257,7 +5827,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Time elapsed between block received and execution payload verification",
+      "description": "Time from gossip block arrival until both the state transition and all block signature verifications are complete, excluding execution payload verification",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -6278,6 +5848,181 @@
         "w": 12,
         "x": 0,
         "y": 271
+      },
+      "id": 587,
+      "options": {
+        "calculate": false,
+        "calculation": {
+          "yBuckets": {
+            "scale": {
+              "type": "linear"
+            }
+          }
+        },
+        "cellGap": 1,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-orange",
+          "mode": "scheme",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "Magma",
+          "steps": 64
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-9
+        },
+        "legend": {
+          "show": true
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "mode": "single",
+          "showColorScale": false,
+          "yHistogram": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "reverse": false,
+          "unit": "s"
+        }
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_block_received_to_consensus_verified_seconds_bucket[$rate_interval])",
+          "format": "heatmap",
+          "instant": false,
+          "legendFormat": "{{le}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Block recv to consensus verified delay",
+      "type": "heatmap"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Time from gossip block arrival until both the state transition and all block signature verifications are complete, excluding execution payload verification",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 271
+      },
+      "id": 588,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_block_received_to_consensus_verified_seconds_sum[$rate_interval]) / rate(lodestar_gossip_block_received_to_consensus_verified_seconds_count[$rate_interval])",
+          "format": "heatmap",
+          "instant": false,
+          "legendFormat": "time",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Avg block recv to consensus verified delay",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Time elapsed between block received and execution payload verification",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 279
       },
       "id": 561,
       "options": {
@@ -6366,7 +6111,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 271
+        "y": 279
       },
       "id": 548,
       "options": {
@@ -6482,7 +6227,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 279
+        "y": 287
       },
       "id": 547,
       "options": {
@@ -6568,7 +6313,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 279
+        "y": 287
       },
       "id": 562,
       "options": {
@@ -6627,7 +6372,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 287
+        "y": 295
       },
       "id": 563,
       "options": {
@@ -6716,7 +6461,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 287
+        "y": 295
       },
       "id": 550,
       "options": {
@@ -6832,7 +6577,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 295
+        "y": 303
       },
       "id": 549,
       "options": {
@@ -6918,7 +6663,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 295
+        "y": 303
       },
       "id": 564,
       "options": {
@@ -6977,7 +6722,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 303
+        "y": 311
       },
       "id": 565,
       "options": {
@@ -7059,7 +6804,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 303
+        "y": 311
       },
       "id": 552,
       "options": {
@@ -7168,7 +6913,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 311
+        "y": 319
       },
       "id": 551,
       "options": {
@@ -7254,7 +6999,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 311
+        "y": 319
       },
       "id": 566,
       "options": {

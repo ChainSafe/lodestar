@@ -135,7 +135,7 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
     );
 
     expect(result.indexedAttestationsByBlock).toEqual([
-      [{data: attestation.data, signature: attestation.signature, attestingIndices: [10, 30]}],
+      [{data: attestation.data, signature: attestation.signature, attestingIndices: [30, 10]}],
     ]);
     expect(chain.shufflingCache.processState).not.toHaveBeenCalled();
     expect(chain.shufflingCache.getIndexedAttestation).not.toHaveBeenCalled();

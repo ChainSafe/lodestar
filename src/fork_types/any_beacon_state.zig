@@ -221,6 +221,13 @@ pub const AnyBeaconState = union(ForkSeq) {
         };
     }
 
+    /// `hashTreeRoot`, with lazy chunked leaves hashed in parallel on `io`.
+    pub fn hashTreeRootParallel(self: *AnyBeaconState, io: std.Io) !*const [32]u8 {
+        return switch (self.*) {
+            inline else => |state| try state.hashTreeRootParallel(io),
+        };
+    }
+
     pub fn deinit(self: *AnyBeaconState) void {
         switch (self.*) {
             inline else => |state| state.deinit(),

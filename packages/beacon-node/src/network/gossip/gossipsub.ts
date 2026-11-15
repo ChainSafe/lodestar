@@ -108,6 +108,7 @@ type GossipSubInternal = GossipSub & {
   score: {score: (peerIdStr: string) => number};
   direct: Set<string>;
   topics: Map<string, Set<string>>;
+  streamsOutbound: ReadonlyMap<string, unknown>;
   start: () => Promise<void>;
   stop: () => Promise<void>;
   publish: (topic: TopicStr, data: Uint8Array, opts?: PublishOpts) => Promise<PublishResult>;
@@ -246,6 +247,16 @@ export class Eth2Gossipsub {
 
   getMeshPeers(topic: TopicStr): string[] {
     return this.gossipsub.getMeshPeers(topic);
+  }
+
+  getSubscribersWithOutboundStream(topic: GossipTopic): Set<string> {
+    const topicStr = stringifyGossipTopic(this.config, topic);
+    const peers = new Set<string>();
+    for (const peer of this.gossipsub.getSubscribers(topicStr)) {
+      const id = peer.toString();
+      if (this.gossipsub.streamsOutbound.has(id)) peers.add(id);
+    }
+    return peers;
   }
 
   publish(topic: TopicStr, data: Uint8Array, opts?: PublishOpts): Promise<PublishResult> {
