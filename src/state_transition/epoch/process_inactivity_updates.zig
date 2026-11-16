@@ -34,23 +34,18 @@ pub fn processInactivityUpdates(
     const inactivity_scores_values = try inactivity_scores.getAllInto(cache.validator_scratch);
 
     std.debug.assert(flags.len <= inactivity_scores_values.len);
-    for (0..flags.len) |i| {
-        const flag = flags[i];
-        if (hasMarkers(flag, FLAG_ELIGIBLE_ATTESTER)) {
-            var inactivity_score = inactivity_scores_values[i];
+    for (flags, inactivity_scores_values[0..flags.len], 0..) |flag, prev_inactivity_score, i| {
+        if (!hasMarkers(flag, FLAG_ELIGIBLE_ATTESTER)) continue;
 
-            const prev_inactivity_score = inactivity_score;
-            if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
-                inactivity_score -= @min(1, inactivity_score);
-            } else {
-                inactivity_score += INACTIVITY_SCORE_BIAS;
-            }
-            if (!is_in_activity_leak) {
-                inactivity_score -= @min(INACTIVITY_SCORE_RECOVERY_RATE, inactivity_score);
-            }
-            if (inactivity_score != prev_inactivity_score) {
-                try inactivity_scores.set(i, inactivity_score);
-            }
+        var inactivity_score = if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED))
+            prev_inactivity_score -| 1
+        else
+            prev_inactivity_score + INACTIVITY_SCORE_BIAS;
+        if (!is_in_activity_leak) {
+            inactivity_score -|= INACTIVITY_SCORE_RECOVERY_RATE;
+        }
+        if (inactivity_score != prev_inactivity_score) {
+            try inactivity_scores.set(i, inactivity_score);
         }
     }
 }
