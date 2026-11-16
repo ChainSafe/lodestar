@@ -714,7 +714,9 @@ pub const Store = struct {
 
     // --- on_tick ----------------------------------------------------------------------
 
-    /// Spec `on_tick`.
+    /// Spec `on_tick`. On error the time stays at the last slot whose tick completed, and
+    /// calling again resumes from there. While the justified balances fail to load at an epoch
+    /// start, the time stays before that epoch, so none of its blocks import (`FutureBlock`).
     pub fn onTick(self: *Store, time_ms: u64) !void {
         if (time_ms < self.genesis_time_ms) return error.PreGenesisTime;
         const tick_slot = self.timing.slotAtTimeMs(time_ms);
@@ -799,7 +801,8 @@ pub const Store = struct {
     /// already validated by the caller. The store reads it and does not keep it.
     /// `execution_status` is the engine's verdict on the block's payload, see
     /// `BlockSummary.fromBlock`; an `.invalid` payload never reaches the store
-    /// (`onPayloadInvalid` takes its parent instead).
+    /// (`onPayloadInvalid` takes its parent instead). On error the store is unchanged, so
+    /// the same call can be retried.
     pub fn onBlock(self: *Store, block: AnyBeaconBlock, block_root: Root, post_state: *CachedBeaconState, execution_status: ExecutionStatus) !void {
         if (self.hasBlock(block_root)) return;
         try self.validateBlock(block, block_root);
@@ -813,7 +816,8 @@ pub const Store = struct {
     /// Spec `on_block` from the block's facts, without its payload attestations
     /// (feed those through `onPayloadAttestationMessage`). Optimistic sync: a block whose
     /// parent node stands on an invalidated payload is rejected, and a `.valid` payload
-    /// validates every not yet validated payload below it.
+    /// validates every not yet validated payload below it. On error the store is unchanged,
+    /// so the same call can be retried.
     pub fn onBlockSummary(self: *Store, summary: BlockSummary) !void {
         if (self.hasBlock(summary.root)) return;
         try self.importBlock(&summary, &.{});
