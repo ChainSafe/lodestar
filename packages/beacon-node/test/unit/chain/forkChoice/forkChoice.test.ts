@@ -1,9 +1,13 @@
 import {beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {getConfig} from "@lodestar/config/test-utils";
 import {CheckpointWithHex, ExecutionStatus, ForkChoice, PayloadStatus} from "@lodestar/fork-choice";
-import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkName, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {
+  BeaconStateFulu,
+  BeaconStateGloas,
   BeaconStateView,
   DataAvailabilityStatus,
   computeAnchorCheckpoint,
@@ -508,3 +512,74 @@ function createCheckpoint(block: phase0.SignedBeaconBlock): phase0.Checkpoint {
     epoch: computeEpochAtSlot(block.message.slot),
   };
 }
+
+describe("LodestarForkChoice anchor payload root", () => {
+  const blockHash = Buffer.alloc(32, 0x11);
+  const otherPayloadRoot = toHexString(Buffer.alloc(32, 0x33));
+
+  function getAnchorRoot(state: BeaconStateView): string {
+    return toHexString(state.computeAnchorCheckpoint().checkpoint.root);
+  }
+
+  function initForkChoice(state: BeaconStateView, forkConfig: ChainForkConfig, isFinalizedState: boolean): ForkChoice {
+    return initializeForkChoice(
+      forkConfig,
+      new ChainEventEmitter(),
+      state.slot + 1,
+      state,
+      isFinalizedState,
+      {},
+      () => getEffectiveBalanceIncrementsZeroed(16),
+      () => null,
+      null
+    );
+  }
+
+  describe.each([
+    {name: "finalized", isFinalizedState: true},
+    {name: "unfinalized", isFinalizedState: false},
+  ])("$name state", ({isFinalizedState}) => {
+    it("pre-gloas anchor is matched by the root of its payload only", () => {
+      const forkConfig = getConfig(ForkName.fulu);
+      const stateValue = generateState({slot: 0}, forkConfig) as BeaconStateFulu;
+      stateValue.latestExecutionPayloadHeader.blockHash = blockHash;
+      stateValue.latestExecutionPayloadHeader.blockNumber = 7;
+      const payloadRoot = toHexString(stateValue.latestExecutionPayloadHeader.hashTreeRoot());
+      const state = new BeaconStateView(createCachedBeaconStateTest(stateValue, forkConfig));
+
+      const forkChoice = initForkChoice(state, forkConfig, isFinalizedState);
+      const anchorRoot = getAnchorRoot(state);
+
+      const anchor = forkChoice.getBlockHexAndPayloadRoot(anchorRoot, payloadRoot);
+      expect(anchor?.payloadStatus).toBe(PayloadStatus.FULL);
+      expect(anchor?.executionPayloadRoot).toBe(payloadRoot);
+      expect(anchor?.executionPayloadBlockHash).toBe(toHexString(blockHash));
+      expect(forkChoice.getBlockHexAndPayloadRoot(anchorRoot, otherPayloadRoot)).toBeNull();
+      expect(forkChoice.getBlockHexAndPayloadRoot(anchorRoot, toHexString(blockHash))).toBeNull();
+    });
+
+    it("anchor from a state upgraded to gloas is matched by the last pre-gloas payload root", () => {
+      const forkConfig = getConfig(ForkName.gloas);
+      const stateValue = generateState({slot: 0}, forkConfig) as BeaconStateGloas;
+      // Same as upgradeStateToGloas: the latest block is pre-gloas, the state builds on its payload and the
+      // bid commits to that same payload
+      const payloadRoot = Buffer.alloc(32, 0x22);
+      stateValue.latestBlockHash = blockHash;
+      stateValue.latestPayloadRoot = payloadRoot;
+      stateValue.latestExecutionPayloadBid.blockHash = blockHash;
+      stateValue.latestExecutionPayloadBid.payloadRoot = payloadRoot;
+      const state = new BeaconStateView(createCachedBeaconStateTest(stateValue, forkConfig));
+
+      const forkChoice = initForkChoice(state, forkConfig, isFinalizedState);
+      const anchorRoot = getAnchorRoot(state);
+
+      // No payload can be imported for the anchor, a block building on it builds on its EMPTY variant
+      expect(forkChoice.getBlockHex(anchorRoot, PayloadStatus.FULL)).toBeNull();
+      const anchor = forkChoice.getBlockHexAndPayloadRoot(anchorRoot, toHexString(payloadRoot));
+      expect(anchor?.payloadStatus).toBe(PayloadStatus.EMPTY);
+      expect(anchor?.executionPayloadRoot).toBe(toHexString(payloadRoot));
+      expect(anchor?.executionPayloadBlockHash).toBe(toHexString(blockHash));
+      expect(forkChoice.getBlockHexAndPayloadRoot(anchorRoot, otherPayloadRoot)).toBeNull();
+    });
+  });
+});

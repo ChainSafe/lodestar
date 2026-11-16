@@ -65,6 +65,7 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
           unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
           unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
           executionPayloadBlockHash: null,
+          executionPayloadRoot: null,
           executionStatus: ExecutionStatus.PreMerge,
 
           timeliness: false,
@@ -99,6 +100,7 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
             unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
             unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
             executionPayloadBlockHash: null,
+            executionPayloadRoot: null,
             executionStatus: ExecutionStatus.PreMerge,
             timeliness: false,
             importedTimely: false,

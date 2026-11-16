@@ -500,10 +500,18 @@ describe("validateEnvelopesByRangeResponse", () => {
     });
   });
 
+  it("drops an envelope for a batch block that has no bid to check it against", () => {
+    const preGloasBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    preGloasBlock.message.slot = block.message.slot;
+    const result = validateEnvelopesByRangeResponse([{block: preGloasBlock, blockRoot}], undefined, [envelope()]);
+    expect(result.size).toBe(0);
+  });
+
   describe("dangling parent envelope", () => {
     const parentPayload: ParentPayload = {
       blockRoot,
       blockRootHex: toRootHex(blockRoot),
+      parentRoot: block.message.parentRoot,
       slot: block.message.slot,
       proposerIndex: block.message.proposerIndex,
       forkName: ForkName.gloas,
@@ -519,6 +527,23 @@ describe("validateEnvelopesByRangeResponse", () => {
     it.each(bidMismatchCases)("rejects an envelope whose $name does not match the parent bid", ({code, modify}) => {
       expect(() => validateEnvelopesByRangeResponse([], undefined, [envelope(modify)], parentPayload)).toThrow(
         expect.objectContaining({type: expect.objectContaining({code, slot: block.message.slot})})
+      );
+    });
+
+    it("rejects an envelope whose parent beacon block root does not match the parent's parent root", () => {
+      const wrongParent = Buffer.alloc(32, 0x88);
+      const wrongParentRoot = envelope((e) => {
+        e.parentBeaconBlockRoot = wrongParent;
+      });
+      expect(() => validateEnvelopesByRangeResponse([], undefined, [wrongParentRoot], parentPayload)).toThrow(
+        expect.objectContaining({
+          type: {
+            code: DownloadByRangeErrorCode.INVALID_ENVELOPE_PARENT_BEACON_BLOCK_ROOT,
+            slot: block.message.slot,
+            expected: toRootHex(block.message.parentRoot),
+            actual: toRootHex(wrongParent),
+          },
+        })
       );
     });
 
@@ -551,6 +576,7 @@ describe("cacheByRangeResponses", () => {
   const parentPayload: ParentPayload = {
     blockRoot,
     blockRootHex: toRootHex(blockRoot),
+    parentRoot: block.message.parentRoot,
     slot: block.message.slot,
     proposerIndex: block.message.proposerIndex,
     forkName: ForkName.gloas,

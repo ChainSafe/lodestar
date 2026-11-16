@@ -359,6 +359,7 @@ describe("sync / range / batch", async () => {
         const parentPayload: ParentPayload = {
           blockRoot: parentRoot,
           blockRootHex: toRootHex(parentRoot),
+          parentRoot: Buffer.alloc(32),
           slot: getBatchSlotRange(startEpoch).startSlot - 1,
           proposerIndex: 0,
           forkName: ForkName.gloas,

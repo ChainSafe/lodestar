@@ -121,7 +121,9 @@ export async function validateGossipBlock(
   // [IGNORE] If the parent block is full (the bid builds on the parent's payload, defined by
   // bid.parent_payload_root), the parent payload has been seen (via gossip or non-gossip sources)
   // (a client MAY queue blocks for processing once the parent payload is retrieved).
-  // A bid which builds on neither the parent's payload nor the payload the parent built on is rejected below
+  // A bid which builds on neither the parent's payload nor the payload the parent built on is rejected below.
+  // A pre-gloas parent or the anchor of a state upgraded to gloas has no payload to wait for, fork choice
+  // resolves the bid to the variant which carries the last pre-gloas payload
   if (isGloasBeaconBlock(block)) {
     const parentPayloadRootHex = toRootHex(block.body.signedExecutionPayloadBid.message.parentPayloadRoot);
     if (
@@ -292,15 +294,23 @@ export async function validateGossipBlock(
 
   // [REJECT] The bid builds on the parent's execution head. `state` is the parent's post-state, possibly
   // advanced through empty slots, which do not change the fields read here.
-  // A pre-gloas state is only possible for the first gloas block, its bid is checked by the state transition
-  if (isGloasBeaconBlock(block) && isStatePostGloas(state)) {
+  if (isGloasBeaconBlock(block)) {
     const bid = block.body.signedExecutionPayloadBid.message;
-    const parentBid = state.latestExecutionPayloadBid;
-    const isParentFull = byteArrayEquals(bid.parentPayloadRoot, parentBid.payloadRoot);
-    const buildsOnParentExecutionHead = isParentFull
-      ? byteArrayEquals(bid.parentBlockHash, parentBid.blockHash)
-      : byteArrayEquals(bid.parentBlockHash, state.latestBlockHash) &&
-        byteArrayEquals(bid.parentPayloadRoot, state.latestPayloadRoot);
+    let buildsOnParentExecutionHead: boolean;
+    if (isStatePostGloas(state)) {
+      const parentBid = state.latestExecutionPayloadBid;
+      const isParentFull = byteArrayEquals(bid.parentPayloadRoot, parentBid.payloadRoot);
+      buildsOnParentExecutionHead = isParentFull
+        ? byteArrayEquals(bid.parentBlockHash, parentBid.blockHash)
+        : byteArrayEquals(bid.parentBlockHash, state.latestBlockHash) &&
+          byteArrayEquals(bid.parentPayloadRoot, state.latestPayloadRoot);
+    } else {
+      // A pre-gloas state is only possible for the first gloas block. The state upgraded to gloas builds on
+      // the payload of the parent, which fork choice tracks
+      buildsOnParentExecutionHead =
+        toRootHex(bid.parentBlockHash) === parentBlock.executionPayloadBlockHash &&
+        toRootHex(bid.parentPayloadRoot) === parentBlock.executionPayloadRoot;
+    }
     if (!buildsOnParentExecutionHead) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.BID_PARENT_PAYLOAD_MISMATCH,

@@ -13,6 +13,14 @@ export enum ExecutionPayloadEnvelopeErrorCode {
   EXECUTION_REQUESTS_ROOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_EXECUTION_REQUESTS_ROOT_MISMATCH",
   TOO_MANY_TRANSACTIONS = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_TOO_MANY_TRANSACTIONS",
   PAYLOAD_ROOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PAYLOAD_ROOT_MISMATCH",
+  PREV_RANDAO_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PREV_RANDAO_MISMATCH",
+  GAS_LIMIT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_GAS_LIMIT_MISMATCH",
+  TOO_MANY_EXECUTION_REQUESTS = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_TOO_MANY_EXECUTION_REQUESTS",
+  TOO_MANY_WITHDRAWALS = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_TOO_MANY_WITHDRAWALS",
+  PARENT_HASH_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PARENT_HASH_MISMATCH",
+  INCORRECT_TIMESTAMP = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_INCORRECT_TIMESTAMP",
+  EMPTY_TRANSACTION = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_EMPTY_TRANSACTION",
+  WITHDRAWALS_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_WITHDRAWALS_MISMATCH",
   PAYLOAD_ENVELOPE_INPUT_MISSING = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PAYLOAD_ENVELOPE_INPUT_MISSING",
 }
 export type ExecutionPayloadEnvelopeErrorType =
@@ -67,6 +75,58 @@ export type ExecutionPayloadEnvelopeErrorType =
       envelopePayloadRoot: RootHex;
       bidPayloadRoot: RootHex;
     }
+  | {
+      code:
+        | ExecutionPayloadEnvelopeErrorCode.PREV_RANDAO_MISMATCH
+        | ExecutionPayloadEnvelopeErrorCode.PARENT_HASH_MISMATCH
+        | ExecutionPayloadEnvelopeErrorCode.WITHDRAWALS_MISMATCH;
+      slot: Slot;
+      root: RootHex;
+      actual: string;
+      expected: string;
+    }
+  | {
+      code:
+        | ExecutionPayloadEnvelopeErrorCode.GAS_LIMIT_MISMATCH
+        | ExecutionPayloadEnvelopeErrorCode.INCORRECT_TIMESTAMP;
+      slot: Slot;
+      root: RootHex;
+      actual: number;
+      expected: number;
+    }
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_EXECUTION_REQUESTS;
+      slot: Slot;
+      root: RootHex;
+      requestType: string;
+      count: number;
+      limit: number;
+    }
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_WITHDRAWALS;
+      slot: Slot;
+      root: RootHex;
+      count: number;
+      limit: number;
+    }
+  | {code: ExecutionPayloadEnvelopeErrorCode.EMPTY_TRANSACTION; slot: Slot; root: RootHex; index: number}
   | {code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING; blockRoot: RootHex};
 
 export class ExecutionPayloadEnvelopeError extends GossipActionError<ExecutionPayloadEnvelopeErrorType> {}
+
+/**
+ * The envelope is not signed, these are the checks that bind it to its block. They can only be made once the
+ * block is known and no honest peer forwards or serves an envelope that fails one of them for a block it has.
+ */
+const blockBindingErrorCodes = new Set<ExecutionPayloadEnvelopeErrorCode>([
+  ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
+  ExecutionPayloadEnvelopeErrorCode.PARENT_BEACON_BLOCK_ROOT_MISMATCH,
+  ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+  ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
+  ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ROOT_MISMATCH,
+]);
+
+/** True if `e` is the failure of a check that binds the envelope to its block */
+export function isExecutionPayloadEnvelopeBlockBindingError(e: unknown): e is ExecutionPayloadEnvelopeError {
+  return e instanceof ExecutionPayloadEnvelopeError && blockBindingErrorCodes.has(e.type.code);
+}

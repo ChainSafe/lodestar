@@ -1,8 +1,17 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {ForkName} from "@lodestar/params";
+import {
+  ForkName,
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
+  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
+} from "@lodestar/params";
+import {IBeaconStateView, computeTimeAtSlot} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -34,6 +43,7 @@ describe("validateGossipExecutionPayloadEnvelope", () => {
   let chain: MockedBeaconChain;
   /** The envelope the block's bid commits to */
   let envelope: gloas.ExecutionPayloadEnvelope;
+  let bid: gloas.ExecutionPayloadBid;
   let blockRootHex: string;
   let payloadInput: PayloadEnvelopeInput;
 
@@ -41,6 +51,10 @@ describe("validateGossipExecutionPayloadEnvelope", () => {
     envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
     envelope.payload.slotNumber = slot;
     envelope.payload.blockHash = Buffer.alloc(32, 0x11);
+    envelope.payload.parentHash = Buffer.alloc(32, 0x22);
+    envelope.payload.prevRandao = Buffer.alloc(32, 0x33);
+    envelope.payload.gasLimit = 30_000_000;
+    envelope.payload.timestamp = computeTimeAtSlot(config, slot, 0);
     envelope.executionRequests.withdrawals.push(ssz.electra.WithdrawalRequest.defaultValue());
     envelope.parentBeaconBlockRoot = parentRoot;
 
@@ -48,8 +62,10 @@ describe("validateGossipExecutionPayloadEnvelope", () => {
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = slot;
     block.message.parentRoot = parentRoot;
-    const bid = block.message.body.signedExecutionPayloadBid.message;
-    bid.gasLimit = 30_000_000n;
+    bid = block.message.body.signedExecutionPayloadBid.message;
+    bid.gasLimit = BigInt(envelope.payload.gasLimit);
+    bid.prevRandao = envelope.payload.prevRandao;
+    bid.parentBlockHash = envelope.payload.parentHash;
     bid.blockHash = envelope.payload.blockHash;
     bid.payloadRoot = ssz.gloas.ExecutionPayload.hashTreeRoot(envelope.payload);
     bid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
@@ -68,7 +84,7 @@ describe("validateGossipExecutionPayloadEnvelope", () => {
       seenTimestampSec: 0,
     });
 
-    chain = getMockedBeaconChain({config});
+    chain = getMockedBeaconChain({config, genesisTime: 0});
     chain.forkChoice.getBlockDefaultStatus.mockReturnValue(
       generateProtoBlock({
         slot,
@@ -168,5 +184,165 @@ describe("validateGossipExecutionPayloadEnvelope", () => {
       })
     );
     await expect(promise).rejects.toHaveProperty("action", GossipAction.REJECT);
+  });
+  describe("an envelope the bid commits to that is not valid for the block", () => {
+    /** Makes the bid commit to the envelope as modified by the test, the checks that bind it to the block pass */
+    function commitBid(): void {
+      bid.payloadRoot = ssz.gloas.ExecutionPayload.hashTreeRoot(envelope.payload);
+      bid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+    }
+
+    async function expectReject(type: ExecutionPayloadEnvelopeError["type"]): Promise<void> {
+      const promise = validateGossipExecutionPayloadEnvelope(chain, envelope);
+      await expectRejectedWithLodestarError(promise, new ExecutionPayloadEnvelopeError(GossipAction.REJECT, type));
+      await expect(promise).rejects.toHaveProperty("action", GossipAction.REJECT);
+    }
+
+    it("rejects a payload whose prev randao is not the bid's", async () => {
+      bid.prevRandao = Buffer.alloc(32, 0x44);
+      await expectReject({
+        code: ExecutionPayloadEnvelopeErrorCode.PREV_RANDAO_MISMATCH,
+        slot,
+        root: blockRootHex,
+        actual: toRootHex(envelope.payload.prevRandao),
+        expected: toRootHex(bid.prevRandao),
+      });
+    });
+
+    it("rejects a payload whose gas limit is not the bid's", async () => {
+      bid.gasLimit = 36_000_000n;
+      await expectReject({
+        code: ExecutionPayloadEnvelopeErrorCode.GAS_LIMIT_MISMATCH,
+        slot,
+        root: blockRootHex,
+        actual: 30_000_000,
+        expected: 36_000_000,
+      });
+    });
+
+    it.each([
+      {
+        requestType: "withdrawals" as const,
+        limit: MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
+        request: ssz.electra.WithdrawalRequest.defaultValue(),
+      },
+      {
+        requestType: "consolidations" as const,
+        limit: MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+        request: ssz.electra.ConsolidationRequest.defaultValue(),
+      },
+      {
+        requestType: "builderDeposits" as const,
+        limit: MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
+        request: ssz.gloas.BuilderDepositRequest.defaultValue(),
+      },
+      {
+        requestType: "builderExits" as const,
+        limit: MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
+        request: ssz.gloas.BuilderExitRequest.defaultValue(),
+      },
+    ])("rejects execution requests with more $requestType than the limit", async ({requestType, limit, request}) => {
+      (envelope.executionRequests[requestType] as unknown[]) = Array.from({length: limit + 1}, () => request);
+      commitBid();
+      await expectReject({
+        code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_EXECUTION_REQUESTS,
+        slot,
+        root: blockRootHex,
+        requestType,
+        count: limit + 1,
+        limit,
+      });
+    });
+
+    it("rejects a payload with more withdrawals than the limit", async () => {
+      envelope.payload.withdrawals = Array.from({length: MAX_WITHDRAWALS_PER_PAYLOAD + 1}, () =>
+        ssz.capella.Withdrawal.defaultValue()
+      );
+      commitBid();
+      await expectReject({
+        code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_WITHDRAWALS,
+        slot,
+        root: blockRootHex,
+        count: MAX_WITHDRAWALS_PER_PAYLOAD + 1,
+        limit: MAX_WITHDRAWALS_PER_PAYLOAD,
+      });
+    });
+
+    it("rejects a payload that does not build on the parent block hash of the bid", async () => {
+      bid.parentBlockHash = Buffer.alloc(32, 0x55);
+      await expectReject({
+        code: ExecutionPayloadEnvelopeErrorCode.PARENT_HASH_MISMATCH,
+        slot,
+        root: blockRootHex,
+        actual: toRootHex(envelope.payload.parentHash),
+        expected: toRootHex(bid.parentBlockHash),
+      });
+    });
+
+    it("rejects a payload whose timestamp is not the time of the block's slot", async () => {
+      const expected = envelope.payload.timestamp;
+      envelope.payload.timestamp += 1;
+      commitBid();
+      await expectReject({
+        code: ExecutionPayloadEnvelopeErrorCode.INCORRECT_TIMESTAMP,
+        slot,
+        root: blockRootHex,
+        actual: expected + 1,
+        expected,
+      });
+    });
+
+    it("rejects a payload with an empty transaction", async () => {
+      envelope.payload.transactions = SerializedList.fromArray([new Uint8Array([1]), new Uint8Array(0)]);
+      commitBid();
+      await expectReject({
+        code: ExecutionPayloadEnvelopeErrorCode.EMPTY_TRANSACTION,
+        slot,
+        root: blockRootHex,
+        index: 1,
+      });
+    });
+
+    describe("withdrawals expected by the block's post-state", () => {
+      const expectedWithdrawals = [{...ssz.capella.Withdrawal.defaultValue(), amount: 1n}];
+
+      beforeEach(() => {
+        // the post-state of a block that was just imported is in the state cache
+        chain.regen.getStateSync.mockReturnValue({
+          forkName: ForkName.gloas,
+          payloadExpectedWithdrawals: expectedWithdrawals,
+        } as unknown as IBeaconStateView);
+      });
+
+      it("rejects a payload whose withdrawals are not the expected ones", async () => {
+        await expectReject({
+          code: ExecutionPayloadEnvelopeErrorCode.WITHDRAWALS_MISMATCH,
+          slot,
+          root: blockRootHex,
+          actual: toRootHex(ssz.gloas.Withdrawals.hashTreeRoot([])),
+          expected: toRootHex(ssz.gloas.Withdrawals.hashTreeRoot(expectedWithdrawals)),
+        });
+      });
+
+      it("accepts a payload with the expected withdrawals, without regenerating a state", async () => {
+        envelope.payload.withdrawals = expectedWithdrawals;
+        commitBid();
+        await expect(validateGossipExecutionPayloadEnvelope(chain, envelope)).resolves.toBeUndefined();
+        expect(chain.regen.getState).not.toHaveBeenCalled();
+      });
+    });
+
+    it("fails the check that binds the envelope to the block for an envelope that is also not valid", async () => {
+      const bidPayloadRoot = bid.payloadRoot;
+      // not the payload of the bid, and its timestamp is wrong
+      envelope.payload.timestamp += 1;
+      await expectReject({
+        code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ROOT_MISMATCH,
+        slot,
+        root: blockRootHex,
+        envelopePayloadRoot: toRootHex(ssz.gloas.ExecutionPayload.hashTreeRoot(envelope.payload)),
+        bidPayloadRoot: toRootHex(bidPayloadRoot),
+      });
+    });
   });
 });

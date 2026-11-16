@@ -74,7 +74,8 @@ function isBidCompatibleWithHead(
     return false;
   }
 
-  const buildsOnHeadPayload = bidParentPayloadRoot === head.payloadRoot;
+  // The payload at the tip of the head variant: its own if the head is FULL or pre-gloas
+  const buildsOnHeadPayload = bidParentPayloadRoot === head.executionPayloadRoot;
 
   if (chain.forkChoice.shouldBuildOnFull(head, bidSlot)) {
     return buildsOnHeadPayload;
@@ -348,17 +349,13 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] `bid.parent_payload_root` is the root of a known execution payload in fork
   // choice. Looks up the variant of `bid.parent_block_root` whose payload root matches
-  // `bid.parent_payload_root` — works for both FULL parents (FULL variant carries the delivered
-  // payload) and EMPTY parents (EMPTY/PENDING variants carry the inherited parent
-  // payload, since the new block doesn't have its own payload). Variant carries the
+  // `bid.parent_payload_root` — works for FULL parents (FULL variant carries the delivered
+  // payload), EMPTY parents (EMPTY/PENDING variants carry the inherited parent
+  // payload, since the new block doesn't have its own payload) and pre-gloas parents (their
+  // single variant carries their own payload). Variant carries the
   // executed payload's block hash and gas_limit, which we use as `parent_gas_limit` below.
   const parentPayloadVariant = chain.forkChoice.getBlockHexAndPayloadRoot(bidParentBlockRoot, bidParentPayloadRoot);
-  if (
-    parentPayloadVariant === null ||
-    parentPayloadVariant.executionPayloadBlockHash === null ||
-    // Fork choice does not track the payload root of a pre-gloas parent, the upgraded state does
-    (parentPayloadVariant.payloadRoot === null && !byteArrayEquals(bid.parentPayloadRoot, state.latestPayloadRoot))
-  ) {
+  if (parentPayloadVariant === null || parentPayloadVariant.executionPayloadBlockHash === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_PAYLOAD_ROOT,
       parentPayloadRoot: bidParentPayloadRoot,

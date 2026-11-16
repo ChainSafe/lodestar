@@ -47,6 +47,7 @@ export const eventTestData: EventData = {
     slot: 10,
     block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
     blockHash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    payloadRoot: "0x2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
     builderIndex: 42,
     executionOptimistic: false,
   },
@@ -315,6 +316,7 @@ export const eventTestData: EventData = {
     slot: 10,
     builderIndex: 42,
     blockHash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    payloadRoot: "0x2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
     blockRoot: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
     executionOptimistic: false,
   },
@@ -322,6 +324,7 @@ export const eventTestData: EventData = {
     slot: 10,
     builderIndex: 42,
     blockHash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    payloadRoot: "0x2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
     blockRoot: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
   },
   [EventType.executionPayloadAvailable]: {

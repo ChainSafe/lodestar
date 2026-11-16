@@ -1,7 +1,14 @@
 import {PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
+  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
+} from "@lodestar/params";
+import {computeStartSlotAtEpoch, computeTimeAtSlot, isStatePostGloas} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
-import {byteArrayEquals, toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {
   getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
   getSlotFromExecutionPayloadEnvelopeSerialized,
@@ -182,6 +189,120 @@ async function validateExecutionPayloadEnvelope(
       envelopePayloadRoot: toRootHex(payloadRoot),
       bidPayloadRoot: toRootHex(payloadInput.getBid().payloadRoot),
     });
+  }
+
+  // From here the envelope is the one the block commits to. The checks above have the order of the spec, the
+  // remaining ones come after `hash_tree_root(payload) == bid.payload_root` so that an envelope that is not the
+  // one of the block always fails a check that binds it to the block, whatever else is wrong with it
+  const bid = payloadInput.getBid();
+
+  // [REJECT] `payload.prev_randao == bid.prev_randao`
+  if (!byteArrayEquals(payload.prevRandao, bid.prevRandao)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.PREV_RANDAO_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      actual: toHex(payload.prevRandao),
+      expected: toHex(bid.prevRandao),
+    });
+  }
+
+  // [REJECT] `payload.gas_limit == bid.gas_limit`
+  if (BigInt(payload.gasLimit) !== bid.gasLimit) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.GAS_LIMIT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      actual: payload.gasLimit,
+      expected: Number(bid.gasLimit),
+    });
+  }
+
+  // [REJECT] The execution request counts are within their limits, `verify_execution_requests_limits`
+  const {executionRequests} = envelope;
+  for (const [requestType, count, limit] of [
+    ["withdrawals", executionRequests.withdrawals.length, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD],
+    ["consolidations", executionRequests.consolidations.length, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD],
+    ["builderDeposits", executionRequests.builderDeposits.length, MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD],
+    ["builderExits", executionRequests.builderExits.length, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD],
+  ] as const) {
+    if (count > limit) {
+      throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+        code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_EXECUTION_REQUESTS,
+        slot: payload.slotNumber,
+        root: blockRootHex,
+        requestType,
+        count,
+        limit,
+      });
+    }
+  }
+
+  // [REJECT] `len(payload.withdrawals) <= MAX_WITHDRAWALS_PER_PAYLOAD`
+  if (payload.withdrawals.length > MAX_WITHDRAWALS_PER_PAYLOAD) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_WITHDRAWALS,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      count: payload.withdrawals.length,
+      limit: MAX_WITHDRAWALS_PER_PAYLOAD,
+    });
+  }
+
+  // [REJECT] `payload.parent_hash == state.latest_block_hash`
+  // `process_execution_payload_bid` asserts `bid.parent_block_hash == state.latest_block_hash` and nothing in the
+  // block changes it afterwards, so the bid of the block has the value of the block's post-state
+  if (!byteArrayEquals(payload.parentHash, bid.parentBlockHash)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.PARENT_HASH_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      actual: toRootHex(payload.parentHash),
+      expected: toRootHex(bid.parentBlockHash),
+    });
+  }
+
+  // [REJECT] `payload.timestamp == compute_time_at_slot(state.genesis_time, block.slot)`
+  const expectedTimestamp = computeTimeAtSlot(chain.config, block.slot, chain.genesisTime);
+  if (payload.timestamp !== expectedTimestamp) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.INCORRECT_TIMESTAMP,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      actual: payload.timestamp,
+      expected: expectedTimestamp,
+    });
+  }
+
+  // [REJECT] The payload contains no empty transactions
+  for (let index = 0; index < payload.transactions.length; index++) {
+    if (payload.transactions.getSize(index) === 0) {
+      throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+        code: ExecutionPayloadEnvelopeErrorCode.EMPTY_TRANSACTION,
+        slot: payload.slotNumber,
+        root: blockRootHex,
+        index,
+      });
+    }
+  }
+
+  // [REJECT] `hash_tree_root(payload.withdrawals) == hash_tree_root(state.payload_expected_withdrawals)`
+  // Only the block's post-state has the expected withdrawals. It is checked here if the state is still cached,
+  // which is the case for a block that was just imported, a regen is too expensive for gossip validation.
+  // The import of the payload checks it in any case, see `verifyExecutionPayloadEnvelope`
+  const blockState = chain.regen.getStateSync(block.stateRoot);
+  if (blockState && isStatePostGloas(blockState)) {
+    const withdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(payload.withdrawals);
+    const expectedWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(blockState.payloadExpectedWithdrawals);
+    if (!byteArrayEquals(withdrawalsRoot, expectedWithdrawalsRoot)) {
+      throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+        code: ExecutionPayloadEnvelopeErrorCode.WITHDRAWALS_MISMATCH,
+        slot: payload.slotNumber,
+        root: blockRootHex,
+        actual: toRootHex(withdrawalsRoot),
+        expected: toRootHex(expectedWithdrawalsRoot),
+      });
+    }
   }
 }
 

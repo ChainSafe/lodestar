@@ -110,6 +110,7 @@ describe("SeenPayloadEnvelopeInput", () => {
       ptcTimeliness: false,
       proposerIndex: 0,
       executionPayloadBlockHash: null,
+      executionPayloadRoot: null,
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       payloadStatus: PayloadStatus.FULL,

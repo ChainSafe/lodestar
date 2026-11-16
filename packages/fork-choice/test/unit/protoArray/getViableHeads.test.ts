@@ -30,7 +30,7 @@ function blockFields(overrides: {
     ptcTimeliness: false,
     proposerIndex: 0,
 
-    ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+    ...{executionPayloadBlockHash: null, executionPayloadRoot: null, executionStatus: ExecutionStatus.PreMerge},
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
@@ -85,13 +85,14 @@ describe("ProtoArray.getViableHeads", () => {
         ...blockFields({slot: 1, blockRoot: "2", parentRoot: "1", payloadStatus: PayloadStatus.PENDING}),
         ...{
           executionPayloadBlockHash: "0xeb",
+          executionPayloadRoot: "0xearoot",
           executionPayloadNumber: 1,
           executionPayloadGasLimit: 30_000_000,
           executionStatus: ExecutionStatus.Valid,
         },
         parentBlockHash: "0xea",
-        parentPayloadRoot: "0xea",
-        payloadRoot: "0xeb",
+        parentPayloadRoot: "0xearoot",
+        payloadRoot: "0xebroot",
       },
       1,
       null

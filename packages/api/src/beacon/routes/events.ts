@@ -83,6 +83,7 @@ const gloasBlock = new ContainerType(
     slot: ssz.Slot,
     block: stringType,
     blockHash: stringType,
+    payloadRoot: stringType,
     builderIndex: ssz.BuilderIndex,
     executionOptimistic: ssz.Boolean,
   },
@@ -146,9 +147,9 @@ export enum EventType {
   blobSidecar = "blob_sidecar",
   /** The node has received a valid DataColumnSidecar (from P2P or API) */
   dataColumnSidecar = "data_column_sidecar",
-  /** The node has received an `ExecutionPayloadEnvelope` (from P2P or API) that is successfully imported on the fork-choice `on_execution_payload_envelope` handler. The `builderIndex` is that of the execution payload bid in the beacon block */
+  /** The node has received an `ExecutionPayloadEnvelope` (from P2P or API) that is successfully imported on the fork-choice `on_execution_payload_envelope` handler. The `builderIndex` is that of the execution payload bid in the beacon block, and the `payloadRoot` is the hash tree root of the execution payload, which that bid commits to */
   executionPayload = "execution_payload",
-  /** The node has received an `ExecutionPayloadEnvelope` (from P2P or API) that passes validation rules of the `execution_payload` topic. The `builderIndex` is that of the execution payload bid in the beacon block */
+  /** The node has received an `ExecutionPayloadEnvelope` (from P2P or API) that passes validation rules of the `execution_payload` topic. The `builderIndex` is that of the execution payload bid in the beacon block, and the `payloadRoot` is the hash tree root of the execution payload, which that bid commits to */
   executionPayloadGossip = "execution_payload_gossip",
   /** The node has verified that the execution payload and blobs for a block are available and ready for payload attestation */
   executionPayloadAvailable = "execution_payload_available",
@@ -244,6 +245,7 @@ export type EventData = {
     slot: Slot;
     builderIndex: BuilderIndex;
     blockHash: RootHex;
+    payloadRoot: RootHex;
     blockRoot: RootHex;
     executionOptimistic: boolean;
   };
@@ -251,6 +253,7 @@ export type EventData = {
     slot: Slot;
     builderIndex: BuilderIndex;
     blockHash: RootHex;
+    payloadRoot: RootHex;
     blockRoot: RootHex;
   };
   [EventType.executionPayloadAvailable]: {
@@ -451,6 +454,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
         slot: ssz.Slot,
         builderIndex: ssz.BuilderIndex,
         blockHash: stringType,
+        payloadRoot: stringType,
         blockRoot: stringType,
         executionOptimistic: ssz.Boolean,
       },
@@ -461,6 +465,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
         slot: ssz.Slot,
         builderIndex: ssz.BuilderIndex,
         blockHash: stringType,
+        payloadRoot: stringType,
         blockRoot: stringType,
       },
       {jsonCase: "eth2"}

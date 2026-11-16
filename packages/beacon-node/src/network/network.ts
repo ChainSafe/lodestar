@@ -30,7 +30,7 @@ import {
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
-import {defer, prettyPrintIndices, sleep, toRootHex} from "@lodestar/utils";
+import {defer, prettyPrintIndices, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
@@ -855,19 +855,30 @@ export class Network implements INetwork {
   };
 
   private onPublishDataColumns = async (sidecars: DataColumnSidecar[]): Promise<void> => {
-    await promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
+    try {
+      await promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
+    } catch (e) {
+      this.logger.error("Error publishing data column sidecars", {columns: sidecars.length}, e as Error);
+    }
   };
 
-  private onPublishExecutionPayloadEnvelope = async (envelope: gloas.ExecutionPayloadEnvelope): Promise<void> => {
+  private onPublishExecutionPayloadEnvelope = async (
+    envelope: gloas.ExecutionPayloadEnvelope,
+    dataColumnSidecars: gloas.DataColumnSidecar[],
+    onPublished: (error: Error | null) => void
+  ): Promise<void> => {
+    let error: Error | null = null;
     try {
-      await this.publishExecutionPayloadEnvelope(envelope);
+      // Gossip the envelope first, then its data columns
+      await promiseAllMaybeAsync<unknown>([
+        () => this.publishExecutionPayloadEnvelope(envelope),
+        ...dataColumnSidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)),
+      ]);
     } catch (e) {
-      this.logger.error(
-        "Error publishing execution payload envelope",
-        {slot: envelope.payload.slotNumber, blockRoot: toRootHex(envelope.beaconBlockRoot)},
-        e as Error
-      );
+      error = e as Error;
     }
+    // The chain logs the error and reveals the payload again later
+    onPublished(error);
   };
 
   private onPublishProposerSlashing = async (proposerSlashing: phase0.ProposerSlashing): Promise<void> => {

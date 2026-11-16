@@ -40,6 +40,7 @@ function buildBlock(opts: {
     return {
       ...common,
       executionPayloadBlockHash: null,
+      executionPayloadRoot: null,
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     };
@@ -47,6 +48,7 @@ function buildBlock(opts: {
   return {
     ...common,
     executionPayloadBlockHash: opts.executionPayloadBlockHash,
+    executionPayloadRoot: "0xexecutionPayloadRoot",
     executionPayloadNumber: 0,
     executionPayloadGasLimit: 30_000_000,
     executionStatus: ExecutionStatus.Valid,

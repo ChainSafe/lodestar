@@ -1,7 +1,7 @@
 import {Mock, Mocked, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
-import {ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkPostDeneb, ForkPreFulu, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
@@ -14,6 +14,7 @@ import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../../src/constants/index.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateCachedState} from "../../../utils/state.js";
+import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 describe("gossip block validation", () => {
   let chain: MockedBeaconChain;
@@ -243,8 +244,17 @@ describe("gossip block validation", () => {
         signedBlock.message.slot = clockSlot;
         signedBlock.message.proposerIndex = proposerIndex;
         forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-        forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
-        forkChoice.getBlockHexAndBlockHash.mockReturnValue({slot: clockSlot - 1} as ProtoBlock);
+        // A pre-gloas parent, the default bid of the block builds on its payload
+        const parentBlock = generateProtoBlock({
+          slot: clockSlot - 1,
+          executionPayloadBlockHash: toRootHex(ZERO_HASH),
+          executionPayloadRoot: toRootHex(ZERO_HASH),
+          executionPayloadNumber: 0,
+          executionPayloadGasLimit: 0,
+          executionStatus: ExecutionStatus.Valid,
+        });
+        forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(parentBlock);
+        forkChoice.getBlockHexAndBlockHash.mockReturnValue(parentBlock);
         const state = new BeaconStateView(generateCachedState());
         regen.getState.mockResolvedValue(state);
         vi.spyOn(state.cachedState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
@@ -443,5 +453,88 @@ describe("gossip block validation", () => {
     // Keep number of kzg commitments as is so it stays within the limit
 
     await validateGossipBlock(denebConfig, chain, job, ForkName.deneb);
+  });
+  describe("gloas - bid builds on the parent's execution head", () => {
+    const parentBlockHash = Buffer.alloc(32, 0x11);
+    const parentPayloadRoot = Buffer.alloc(32, 0x22);
+    const otherRoot = Buffer.alloc(32, 0x33);
+    let gloasJob: SignedBeaconBlock<ForkName.gloas>;
+
+    /** `state` is the pre-gloas post-state of the parent, as returned by regen for the first gloas block */
+    function setup(parentBlock: ProtoBlock, parentPayloadVariant: ProtoBlock | null): void {
+      setupChain(gloasConfig);
+      const gloasBlock = ssz.gloas.BeaconBlock.defaultValue();
+      gloasBlock.slot = clockSlot;
+      gloasBlock.proposerIndex = proposerIndex;
+      gloasBlock.body.signedExecutionPayloadBid.message.parentBlockHash = parentBlockHash;
+      gloasBlock.body.signedExecutionPayloadBid.message.parentPayloadRoot = parentPayloadRoot;
+      gloasJob = {signature, message: gloasBlock};
+
+      forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
+      forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(parentBlock);
+      forkChoice.getBlockHexAndPayloadRoot = vi.fn().mockReturnValue(parentPayloadVariant);
+      const state = new BeaconStateView(generateCachedState());
+      regen.getState.mockResolvedValue(state);
+      vi.spyOn(state.cachedState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
+    }
+
+    function preGloasParent(executionPayloadBlockHash: Uint8Array, executionPayloadRoot: Uint8Array): ProtoBlock {
+      return generateProtoBlock({
+        slot: clockSlot - 1,
+        executionPayloadBlockHash: toRootHex(executionPayloadBlockHash),
+        executionPayloadRoot: toRootHex(executionPayloadRoot),
+        executionPayloadNumber: 1,
+        executionPayloadGasLimit: 30_000_000,
+        executionStatus: ExecutionStatus.Valid,
+      });
+    }
+
+    it("valid - first gloas block builds on the payload of its pre-gloas parent", async () => {
+      const parentBlock = preGloasParent(parentBlockHash, parentPayloadRoot);
+      setup(parentBlock, parentBlock);
+
+      await validateGossipBlock(gloasConfig, chain, gloasJob, ForkName.gloas);
+    });
+
+    it("BID_PARENT_PAYLOAD_MISMATCH - first gloas block names another parent payload root", async () => {
+      // Fork choice does not resolve the root to the pre-gloas parent, which has no payload to wait for
+      setup(preGloasParent(parentBlockHash, otherRoot), null);
+
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(gloasConfig, chain, gloasJob, ForkName.gloas),
+        BlockErrorCode.BID_PARENT_PAYLOAD_MISMATCH
+      );
+    });
+
+    it("BID_PARENT_PAYLOAD_MISMATCH - first gloas block names another parent block hash", async () => {
+      const parentBlock = preGloasParent(otherRoot, parentPayloadRoot);
+      setup(parentBlock, parentBlock);
+
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(gloasConfig, chain, gloasJob, ForkName.gloas),
+        BlockErrorCode.BID_PARENT_PAYLOAD_MISMATCH
+      );
+    });
+
+    it("PARENT_PAYLOAD_UNKNOWN - the payload of the gloas parent is not imported", async () => {
+      const parentBlock = generateProtoBlock({
+        slot: clockSlot - 1,
+        executionPayloadBlockHash: toRootHex(otherRoot),
+        executionPayloadRoot: toRootHex(otherRoot),
+        executionPayloadNumber: 1,
+        executionPayloadGasLimit: 30_000_000,
+        executionStatus: ExecutionStatus.Valid,
+        payloadStatus: PayloadStatus.PENDING,
+        parentBlockHash: toRootHex(otherRoot),
+        parentPayloadRoot: toRootHex(otherRoot),
+        payloadRoot: toRootHex(parentPayloadRoot),
+      });
+      setup(parentBlock, null);
+
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(gloasConfig, chain, gloasJob, ForkName.gloas),
+        BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
+      );
+    });
   });
 });

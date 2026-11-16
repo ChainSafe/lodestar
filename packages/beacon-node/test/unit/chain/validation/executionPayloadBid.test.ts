@@ -55,7 +55,10 @@ describe("validateGossipExecutionPayloadBid", () => {
       blockRoot: toRootHex(parentBlockRoot),
       executionPayloadBlockHash: toRootHex(parentBlockHash),
       executionPayloadGasLimit: 0,
+      // The FULL variant of a gloas block: it carries its own payload
+      executionPayloadRoot: toRootHex(parentPayloadRoot),
       payloadRoot: toRootHex(parentPayloadRoot),
+      parentBlockHash: toRootHex(Buffer.alloc(32, 2)),
       parentPayloadRoot: toRootHex(Buffer.alloc(32, 3)),
     });
     chain.forkChoice.getHead.mockReturnValue(parentBlock);
@@ -129,19 +132,38 @@ describe("validateGossipExecutionPayloadBid", () => {
     expect(chain.bls.verifySignatureSets).not.toHaveBeenCalled();
   });
 
-  it("ignores a bid on a pre-gloas parent whose parent payload root is not the latest payload root of the state", async () => {
-    const parentBlock = generateProtoBlock({
-      slot: 1,
-      blockRoot: toRootHex(parentBlockRoot),
-      executionPayloadBlockHash: toRootHex(parentBlockHash),
-      executionPayloadGasLimit: 0,
-      payloadRoot: null,
-      parentPayloadRoot: null,
+  describe("pre-gloas head", () => {
+    // The bid for the first gloas block builds on the payload of the last pre-gloas block
+    function mockPreGloasHead(executionPayloadRoot: Uint8Array): void {
+      const parentBlock = generateProtoBlock({
+        slot: 1,
+        blockRoot: toRootHex(parentBlockRoot),
+        executionPayloadBlockHash: toRootHex(parentBlockHash),
+        executionPayloadRoot: toRootHex(executionPayloadRoot),
+        executionPayloadGasLimit: 0,
+        parentBlockHash: null,
+        parentPayloadRoot: null,
+        payloadRoot: null,
+      });
+      chain.forkChoice.getHead.mockReturnValue(parentBlock);
+      chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(parentBlock);
+      chain.forkChoice.getBlockHexAndPayloadRoot.mockReturnValue(parentBlock);
+    }
+
+    it("accepts a bid building on the payload of the head", async () => {
+      mockPreGloasHead(parentPayloadRoot);
+      expect(await validateGossipExecutionPayloadBid(chain, signedBid)).toEqual({proposerIndex});
     });
-    chain.forkChoice.getBlockHexAndPayloadRoot.mockReturnValue(parentBlock);
-    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
-      action: GossipAction.IGNORE,
-      type: {code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_PAYLOAD_ROOT},
+
+    it("ignores a bid building on another payload", async () => {
+      mockPreGloasHead(Buffer.alloc(32, 13));
+      await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+        action: GossipAction.IGNORE,
+        type: {
+          code: ExecutionPayloadBidErrorCode.INCOMPATIBLE_WITH_HEAD,
+          parentPayloadRoot: toRootHex(parentPayloadRoot),
+        },
+      });
     });
   });
 
@@ -205,6 +227,7 @@ describe("validateGossipExecutionPayloadBid", () => {
       slot: 2,
       blockRoot: toRootHex(parentBlockRoot),
       executionPayloadBlockHash: toRootHex(parentBlockHash),
+      executionPayloadRoot: toRootHex(parentPayloadRoot),
       payloadRoot: toRootHex(parentPayloadRoot),
     });
     chain.forkChoice.getHead.mockReturnValue(parentBlock);

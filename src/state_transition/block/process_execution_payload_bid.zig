@@ -99,3 +99,7 @@ fn verifyExecutionPayloadBidSignature(
     verify(&signing_root, &public_key, &signature, .{ .sig_groupcheck = true, .pk_validate = true }) catch return false;
     return true;
 }
+
+test {
+    _ = @import("process_execution_payload_bid_test.zig");
+}

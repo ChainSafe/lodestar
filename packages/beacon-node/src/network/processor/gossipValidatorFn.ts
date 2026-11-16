@@ -9,6 +9,7 @@ import {
   BlsToExecutionChangeErrorCode,
   DataColumnSidecarErrorCode,
   ExecutionPayloadBidErrorCode,
+  ExecutionPayloadEnvelopeErrorCode,
   GossipAction,
   GossipActionError,
   InclusionListErrorCode,
@@ -46,7 +47,7 @@ type RejectPeerActionRule = {default: PeerAction; byCode?: Record<string, PeerAc
 
 /**
  * PeerAction mapping based on the topic and specific codes.
- * Invalid signatures are Fatal on every topic.
+ * Invalid signatures are Fatal on every topic, and so is an execution_payload that is not the one its block commits to.
  */
 const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
   [GossipType.beacon_block]: {
@@ -59,6 +60,15 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
   },
   [GossipType.execution_payload]: {
     default: PeerAction.LowToleranceError,
+    // The envelope is not signed, these checks are what binds it to its block instead of a signature. They only
+    // run once the block is known, so no honest peer forwards an envelope that fails one of them
+    byCode: {
+      [ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH]: PeerAction.Fatal,
+      [ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH]: PeerAction.Fatal,
+      [ExecutionPayloadEnvelopeErrorCode.PARENT_BEACON_BLOCK_ROOT_MISMATCH]: PeerAction.Fatal,
+      [ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH]: PeerAction.Fatal,
+      [ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ROOT_MISMATCH]: PeerAction.Fatal,
+    },
   },
   [GossipType.beacon_aggregate_and_proof]: {
     default: PeerAction.MidToleranceError,

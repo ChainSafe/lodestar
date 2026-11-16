@@ -35,8 +35,7 @@ export async function validateBuilderApiExecutionPayloadBid(
     slot: Slot;
     parentBlock: ProtoBlock;
     parentBlockHash: RootHex;
-    /** null if the parent is a pre-gloas block, fork choice does not track its payload root */
-    parentPayloadRoot: RootHex | null;
+    parentPayloadRoot: RootHex;
     parentBlockRoot: RootHex;
     entry: routes.validator.BuilderEntry;
     getParentExecutionRequests: () => Promise<gloas.ExecutionRequests>;
@@ -57,6 +56,13 @@ export async function validateBuilderApiExecutionPayloadBid(
     throw Error(
       `Bid parent parentBlockHash=${bidParentBlockHash} parentBlockRoot=${bidParentBlockRoot} does not match ` +
         `requested parentBlockHash=${parentBlockHash} parentBlockRoot=${parentBlockRoot}`
+    );
+  }
+
+  const bidParentPayloadRoot = toRootHex(bid.parentPayloadRoot);
+  if (bidParentPayloadRoot !== parentPayloadRoot) {
+    throw Error(
+      `Bid parentPayloadRoot=${bidParentPayloadRoot} does not match requested parentPayloadRoot=${parentPayloadRoot}`
     );
   }
 
@@ -112,15 +118,6 @@ export async function validateBuilderApiExecutionPayloadBid(
 
   if (!isStatePostGloas(state)) {
     throw Error(`Expected gloas+ state for execution payload bid validation, got fork=${state.forkName}`);
-  }
-
-  // The upgraded state holds the payload root of a pre-gloas parent
-  const bidParentPayloadRoot = toRootHex(bid.parentPayloadRoot);
-  const expectedParentPayloadRoot = parentPayloadRoot ?? toRootHex(state.latestPayloadRoot);
-  if (bidParentPayloadRoot !== expectedParentPayloadRoot) {
-    throw Error(
-      `Bid parentPayloadRoot=${bidParentPayloadRoot} does not match requested parentPayloadRoot=${expectedParentPayloadRoot}`
-    );
   }
 
   if (bid.builderIndex >= state.getBuildersLength()) {

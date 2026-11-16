@@ -53,6 +53,8 @@ export type DownloadByRangeRequests = {
 export type ParentPayload = {
   blockRoot: Uint8Array;
   blockRootHex: RootHex;
+  /** `parent_root` of the block, the envelope's `parent_beacon_block_root` must match it */
+  parentRoot: Uint8Array;
   slot: Slot;
   proposerIndex: ValidatorIndex;
   forkName: ForkName;
@@ -1127,7 +1129,8 @@ export class DownloadByRangeError extends LodestarError<DownloadByRangeErrorType
  *   - In-batch slot whose block we have: verify envelope.beaconBlockRoot matches.
  *   - Dangling-parent envelope (only when `parentPayload` is set, i.e. the first
  *     batch of a `SyncChain`): keep if `envelope.beaconBlockRoot === parentPayload.blockRoot`, its slot,
- *     block hash, payload root and execution requests root must match the parent's bid.
+ *     block hash, payload root and execution requests root must match the parent's bid and its parent beacon
+ *     block root the parent's parent root.
  *   - Other "orphan" envelopes (e.g. unrelated slots): ignored.
  */
 export function validateEnvelopesByRangeResponse(
@@ -1167,7 +1170,7 @@ export function validateEnvelopesByRangeResponse(
             actual: slot,
           });
         }
-        assertEnvelopeMatchesBid(payloadEnvelope, parentPayload.bid);
+        assertEnvelopeMatchesBlock(payloadEnvelope, parentPayload.bid, parentPayload.parentRoot);
         payloadEnvelopeMap.set(slot, payloadEnvelope);
       }
       continue;
@@ -1183,18 +1186,16 @@ export function validateEnvelopesByRangeResponse(
       });
     }
 
-    if (batchBlock.block !== null && isGloasBeaconBlock(batchBlock.block.message)) {
-      assertEnvelopeMatchesBid(payloadEnvelope, batchBlock.block.message.body.signedExecutionPayloadBid.message);
-      if (!byteArrayEquals(payloadEnvelope.parentBeaconBlockRoot, batchBlock.block.message.parentRoot)) {
-        throw new DownloadByRangeError({
-          code: DownloadByRangeErrorCode.INVALID_ENVELOPE_PARENT_BEACON_BLOCK_ROOT,
-          slot,
-          expected: toRootHex(batchBlock.block.message.parentRoot),
-          actual: toRootHex(payloadEnvelope.parentBeaconBlockRoot),
-        });
-      }
+    // Without the block's bid nothing ties the envelope to the block, it must not be cached
+    if (batchBlock.block === null || !isGloasBeaconBlock(batchBlock.block.message)) {
+      continue;
     }
 
+    assertEnvelopeMatchesBlock(
+      payloadEnvelope,
+      batchBlock.block.message.body.signedExecutionPayloadBid.message,
+      batchBlock.block.message.parentRoot
+    );
     payloadEnvelopeMap.set(slot, payloadEnvelope);
   }
 
@@ -1202,15 +1203,24 @@ export function validateEnvelopesByRangeResponse(
 }
 
 /**
- * The envelope is not signed, it is only tied to the block by the commitments of the block's bid, so those
- * are checked before it is cached. In-batch, `assertLinearChainSegment` fails on a wrong hash without
+ * The envelope is not signed, it is only tied to the block by the block's parent root and the commitments of
+ * the block's bid, so those are checked before it is cached. In-batch, `assertLinearChainSegment` fails on a wrong hash without
  * evicting the envelope. For the dangling parent, the mismatch would only be caught at import.
  */
-function assertEnvelopeMatchesBid(
+function assertEnvelopeMatchesBlock(
   payloadEnvelope: gloas.ExecutionPayloadEnvelope,
-  bid: gloas.ExecutionPayloadBid
+  bid: gloas.ExecutionPayloadBid,
+  parentRoot: Uint8Array
 ): void {
   const slot = payloadEnvelope.payload.slotNumber;
+  if (!byteArrayEquals(payloadEnvelope.parentBeaconBlockRoot, parentRoot)) {
+    throw new DownloadByRangeError({
+      code: DownloadByRangeErrorCode.INVALID_ENVELOPE_PARENT_BEACON_BLOCK_ROOT,
+      slot,
+      expected: toRootHex(parentRoot),
+      actual: toRootHex(payloadEnvelope.parentBeaconBlockRoot),
+    });
+  }
   if (!byteArrayEquals(payloadEnvelope.payload.blockHash, bid.blockHash)) {
     throw new DownloadByRangeError({
       code: DownloadByRangeErrorCode.INVALID_ENVELOPE_BLOCK_HASH,

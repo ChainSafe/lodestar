@@ -532,6 +532,7 @@ export async function importBlock(
           executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
           ...(isGloasBeaconBlock(block.message) && {
             blockHash: toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash),
+            payloadRoot: toRootHex(block.message.body.signedExecutionPayloadBid.message.payloadRoot),
             builderIndex: block.message.body.signedExecutionPayloadBid.message.builderIndex,
           }),
         });

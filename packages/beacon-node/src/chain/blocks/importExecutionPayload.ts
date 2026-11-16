@@ -370,6 +370,7 @@ export async function importExecutionPayload(
       slot,
       builderIndex: payloadInput.getBuilderIndex(),
       blockHash: blockHashHex,
+      payloadRoot: payloadInput.getPayloadRootHex(),
       blockRoot: blockRootHex,
       executionOptimistic: execStatus === ExecutionStatus.Syncing,
     });

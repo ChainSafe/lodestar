@@ -181,6 +181,7 @@ describe("NetworkProcessor lifecycle", () => {
         slot: 64,
         builderIndex: 0,
         blockHash: rootHex,
+        payloadRoot: rootHex,
         executionOptimistic: false,
       });
       await vi.runAllTimersAsync();

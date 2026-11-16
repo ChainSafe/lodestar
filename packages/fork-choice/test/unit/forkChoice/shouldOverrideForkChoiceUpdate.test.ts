@@ -54,6 +54,8 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     unrealizedFinalizedRoot: genesisRoot,
 
     executionPayloadBlockHash: null,
+
+    executionPayloadRoot: null,
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
@@ -85,6 +87,8 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     unrealizedFinalizedRoot: genesisRoot,
 
     executionPayloadBlockHash: null,
+
+    executionPayloadRoot: null,
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
@@ -118,6 +122,8 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     unrealizedFinalizedRoot: genesisRoot,
 
     executionPayloadBlockHash: null,
+
+    executionPayloadRoot: null,
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,

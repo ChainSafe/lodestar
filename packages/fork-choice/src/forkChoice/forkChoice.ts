@@ -970,6 +970,8 @@ export class ForkChoice implements IForkChoice {
 
             return {
               executionPayloadBlockHash: parentBlockHashFromBid,
+              // Same as the block hash: the payload the block builds on until its own payload is imported
+              executionPayloadRoot: toRootHex(block.body.signedExecutionPayloadBid.message.parentPayloadRoot),
               executionPayloadNumber: parentMeta.number,
               executionPayloadGasLimit: parentMeta.gasLimit,
               // The parent's default (PENDING) variant does not reflect a SYNCING parent payload, inheriting
@@ -984,6 +986,13 @@ export class ForkChoice implements IForkChoice {
             state.isExecutionEnabled(block)
           ? {
               executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
+              // The root of a payload equals the root of its header, which the post-state holds. Hashing the
+              // header does not merkleize the transactions and withdrawals again
+              executionPayloadRoot: toRootHex(
+                this.config
+                  .getPostBellatrixForkTypes(slot)
+                  .ExecutionPayloadHeader.hashTreeRoot(state.latestExecutionPayloadHeader)
+              ),
               executionPayloadNumber: block.body.executionPayload.blockNumber,
               executionPayloadGasLimit: block.body.executionPayload.gasLimit,
               executionStatus: this.getPostMergeExecStatus(executionStatus),
@@ -991,6 +1000,7 @@ export class ForkChoice implements IForkChoice {
             }
           : {
               executionPayloadBlockHash: null,
+              executionPayloadRoot: null,
               executionStatus: this.getPreMergeExecStatus(executionStatus),
               dataAvailabilityStatus: this.getPreMergeDataStatus(dataAvailabilityStatus),
             }),
@@ -1372,6 +1382,7 @@ export class ForkChoice implements IForkChoice {
   /**
    * Returns EMPTY or FULL `ProtoBlock` that has matching block root and whose latest execution payload has the
    * given root. This is the variant a block with `bid.parent_payload_root == payloadRoot` builds on.
+   * A pre-gloas block matches by the root of its own payload.
    */
   getBlockHexAndPayloadRoot(blockRoot: RootHex, payloadRoot: RootHex): ProtoBlock | null {
     return this.protoArray.getBlockHexAndPayloadRoot(blockRoot, payloadRoot);

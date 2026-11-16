@@ -976,10 +976,10 @@ export function getValidatorApi(
 
       const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
       const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
-      // null if the parent is a pre-gloas block, fork choice does not track its payload root
-      const bidParentPayloadRoot = isBuildingOnFull ? parentBlock.payloadRoot : parentBlock.parentPayloadRoot;
-      // Post-gloas every proposal parent has an execution payload hash
-      if (bidParentBlockHash === null) {
+      // The root of the same payload. A pre-gloas parent is built on in full, by the root of its own payload
+      const bidParentPayloadRoot = isBuildingOnFull ? parentBlock.executionPayloadRoot : parentBlock.parentPayloadRoot;
+      // Post-gloas every proposal parent has an execution payload hash and root
+      if (bidParentBlockHash === null || bidParentPayloadRoot === null) {
         throw new ApiError(500, `Unknown parent block hash for proposal parent ${parentBlockRootHex}`);
       }
       const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot, parentBlock);

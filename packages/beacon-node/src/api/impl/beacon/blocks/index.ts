@@ -25,6 +25,7 @@ import {
 } from "@lodestar/state-transition";
 import {
   ProducedBlockSource,
+  RootHex,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
   SignedBlockContents,
@@ -33,9 +34,10 @@ import {
   fulu,
   gloas,
   isDenebBlockContents,
+  ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {fromHex, prettyGweiToEth, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, fromHex, prettyGweiToEth, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputSource, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
@@ -61,6 +63,7 @@ import {
 } from "../../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../../chain/regen/index.js";
 import {validateGossipBlock, verifyBlockProposerSignature} from "../../../../chain/validation/block.js";
+import {verifyDataColumnSidecarKzgProofs} from "../../../../chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
@@ -180,6 +183,8 @@ export function getBeaconBlockApi(
     const bodyRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
     const blockLocallyProduced = chain.blockProductionCache.has(blockRoot);
     const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
+    // The payload of a self-built block is only revealed if the proposer signature of the block is valid
+    let proposerSignatureValid: Promise<boolean> = Promise.resolve(true);
 
     if (chain.forkChoice.hasBlockHex(blockRoot)) {
       // Block was already imported, e.g. published again by the validator client or received via gossip
@@ -211,6 +216,21 @@ export function getBeaconBlockApi(
             );
             throw error;
           }
+        } else if (isForkPostGloas(fork)) {
+          // The gossip checks are skipped for a locally produced block, its proposer signature included. The
+          // block is broadcast regardless, as before, but its payload must not be revealed if nobody validly
+          // signed the block, as it can then never be imported. The check runs while the block is broadcast
+          proposerSignatureValid = verifyBlockProposerSignature(chain, signedBlock, blockRoot).then(
+            () => true,
+            (e) => {
+              chain.logger.error(
+                "Proposer signature validation failed while publishing the block, not revealing its payload",
+                valLogMeta,
+                e as Error
+              );
+              return false;
+            }
+          );
         }
         chain.logger.debug("Gossip checks validated while publishing the block", valLogMeta);
         break;
@@ -359,7 +379,9 @@ export function getBeaconBlockApi(
       async () => {
         const sentPeers = await network.publishBeaconBlock(signedBlock);
         // If this node built the block itself, it reveals the payload as soon as the block is broadcast
-        chain.revealSelfBuiltPayload(blockRoot);
+        if (await proposerSignatureValid) {
+          chain.revealSelfBuiltPayload(blockRoot);
+        }
         return sentPeers;
       },
       ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
@@ -743,6 +765,8 @@ export function getBeaconBlockApi(
         broadcastValidation,
         submittedBlobs: submittedContents.blobs.length,
       };
+      // An envelope this node already knows is not broadcast again, its blob data still is
+      let envelopeAlreadyKnown = false;
       try {
         switch (broadcastValidation) {
           case routes.beacon.BroadcastValidation.gossip: {
@@ -795,15 +819,43 @@ export function getBeaconBlockApi(
           error.type.code === ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN
         ) {
           // The envelope may already be known, e.g. revealed by this node for a block it built itself or
-          // received via gossip from another node in a multi node setup, this is benign and treated as a
-          // successful publish (same as blocks)
-          chain.logger.debug("Ignoring already-known execution payload envelope during publishing", valLogMeta);
-          return;
+          // received via gossip from another node in a multi node setup
+          envelopeAlreadyKnown = true;
+        } else {
+          throw error;
         }
-        throw error;
       }
 
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+
+      if (envelopeAlreadyKnown) {
+        // Validation stops at the known envelope, before the submitted one is checked against the block. The bid
+        // of the block commits to every field of the envelope, so if it matches the bid it is the known envelope
+        const bid =
+          payloadInput?.getBid() ??
+          ((await chain.getBlockByRoot(blockRootHex))?.block as SignedBeaconBlock<ForkPostGloas> | undefined)?.message
+            .body.signedExecutionPayloadBid.message;
+        if (bid === undefined) {
+          throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
+        }
+        try {
+          assertEnvelopeMatchesBid(envelope, block.parentRoot, bid);
+        } catch (error) {
+          chain.logger.error(
+            "Execution payload envelope does not match the known envelope of its block",
+            valLogMeta,
+            error as Error
+          );
+          throw error;
+        }
+        if (!payloadInput) {
+          // The payload was imported and its PayloadEnvelopeInput pruned, the blob data was available then
+          chain.logger.debug("Ignoring already-imported execution payload envelope during publishing", valLogMeta);
+          return;
+        }
+        chain.logger.debug("Publishing data columns of already-known execution payload envelope", valLogMeta);
+      }
+
       if (!payloadInput) {
         // The block is awaited above (queuing if the envelope arrived first), and both the API and
         // gossip import paths seed the PayloadEnvelopeInput before importing the block, so the input
@@ -845,6 +897,42 @@ export function getBeaconBlockApi(
 
       if (cells !== undefined && kzgProofs !== undefined && cells.length > 0) {
         const proofs = kzgProofs;
+        // The request is not authenticated, anyone who holds the envelope can submit it. Its cells and proofs
+        // must match the commitments of the bid before any data column built from them is stored or gossiped.
+        // Proofs equal to those this node verified when it produced the block are not verified again
+        const cachedProofs = cachedGloasResult?.cells ? cachedGloasResult.blobsBundle.proofs : undefined;
+        const proofsLocallyProduced =
+          cachedProofs !== undefined &&
+          cachedProofs.length === proofs.length &&
+          cachedProofs.every((cachedProof, i) => byteArrayEquals(cachedProof, proofs[i]));
+        if (!proofsLocallyProduced) {
+          const kzgCommitments = payloadInput.getBlobKzgCommitments();
+          const cellCommitments: Uint8Array[] = [];
+          const cellIndices: number[] = [];
+          for (let rowIndex = 0; rowIndex < cells.length; rowIndex++) {
+            for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+              cellCommitments.push(kzgCommitments[rowIndex]);
+              cellIndices.push(columnIndex);
+            }
+          }
+          const kzgProofTimer = metrics?.peerDas.dataColumnSidecarKzgProofsVerificationTime.startTimer();
+          try {
+            await verifyDataColumnSidecarKzgProofs(cellCommitments, cellIndices, cells.flat(), proofs);
+          } catch (error) {
+            chain.logger.error(
+              "KZG proof validation failed while publishing execution payload envelope",
+              valLogMeta,
+              error as Error
+            );
+            throw new ApiError(
+              400,
+              `Submitted blobs and KZG proofs do not match bid commitments: ${(error as Error).message}`
+            );
+          } finally {
+            kzgProofTimer?.();
+          }
+        }
+
         const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
           cells: rowCells,
           proofs: proofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
@@ -881,7 +969,10 @@ export function getBeaconBlockApi(
         chain.logger.debug("Equivocation validated while publishing execution payload envelope", valLogMeta);
       }
 
-      if (payloadInput.hasPayloadEnvelope()) {
+      if (envelopeAlreadyKnown) {
+        // Only publish the data columns this node has not seen, the others were gossiped to or by this node
+        dataColumnSidecars = dataColumnSidecars.filter(({index}) => !payloadInput.hasColumn(index));
+      } else if (payloadInput.hasPayloadEnvelope()) {
         // The envelope may have been added while this request was being validated, e.g. via gossip
         chain.logger.debug("Execution payload envelope already added during publishing", valLogMeta);
       } else {
@@ -905,38 +996,55 @@ export function getBeaconBlockApi(
       }
 
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
-      metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
-      chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.api, delaySec, envelope);
+      if (!envelopeAlreadyKnown) {
+        metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
+        chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.api, delaySec, envelope);
+      }
 
-      chain.logger.info("Publishing execution payload envelope", {
-        ...valLogMeta,
-        dataColumns: dataColumnSidecars.length,
-      });
+      chain.logger.info(
+        envelopeAlreadyKnown
+          ? "Publishing data columns of already-known execution payload envelope"
+          : "Publishing execution payload envelope",
+        {...valLogMeta, dataColumns: dataColumnSidecars.length}
+      );
 
       const publishPromises = [
-        // Gossip the execution payload envelope first
-        () => network.publishExecutionPayloadEnvelope(envelope),
+        // Gossip the execution payload envelope first, unless it is already known
+        async () => (envelopeAlreadyKnown ? 0 : network.publishExecutionPayloadEnvelope(envelope)),
         // Publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
         // Import execution payload
-        () =>
-          chain.processExecutionPayload(payloadInput, {
+        async () => {
+          // A known envelope may be imported already. If it is not, its import may have lacked the data columns
+          // added above, an import that is still running is shared
+          if (
+            envelopeAlreadyKnown &&
+            (!payloadInput.hasPayloadEnvelope() ||
+              chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL) !== null)
+          ) {
+            return;
+          }
+          return chain.processExecutionPayload(payloadInput, {
             // Only the submitted envelope is verified during broadcast validation,
             // an envelope cached by another source is verified at import
             validEnvelope: payloadInput.getPayloadEnvelope() === envelope,
-          }),
+          });
+        },
       ];
 
       const publishPromise = promiseAllMaybeAsync<{sentPeers: number; alreadyPublished: boolean} | number | void>(
         publishPromises
       );
 
-      chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
-        slot,
-        builderIndex: payloadInput.getBuilderIndex(),
-        blockHash: blockHashHex,
-        blockRoot: blockRootHex,
-      });
+      if (!envelopeAlreadyKnown) {
+        chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
+          slot,
+          builderIndex: payloadInput.getBuilderIndex(),
+          blockHash: blockHashHex,
+          payloadRoot: payloadInput.getPayloadRootHex(),
+          blockRoot: blockRootHex,
+        });
+      }
 
       const sentPeersArr = await publishPromise;
 
@@ -974,11 +1082,12 @@ export function getBeaconBlockApi(
         }
       }
 
-      chain.logger.info("Published execution payload envelope", {
-        ...valLogMeta,
-        delaySec,
-        sentPeers: (sentPeersArr[0] as number) ?? 0,
-      });
+      chain.logger.info(
+        envelopeAlreadyKnown
+          ? "Published data columns of already-known execution payload envelope"
+          : "Published execution payload envelope",
+        {...valLogMeta, delaySec, sentPeers: (sentPeersArr[0] as number) ?? 0}
+      );
     },
 
     async publishExecutionPayloadBid({signedExecutionPayloadBid}) {
@@ -1270,6 +1379,28 @@ export function getBeaconBlockApi(
       };
     },
   };
+}
+
+/**
+ * Check every field of an envelope against its block. The bid of the block commits to all of them, so an
+ * envelope that passes is the only valid envelope of the block.
+ */
+function assertEnvelopeMatchesBid(
+  envelope: gloas.ExecutionPayloadEnvelope,
+  blockParentRootHex: RootHex,
+  bid: gloas.ExecutionPayloadBid
+): void {
+  if (toRootHex(envelope.parentBeaconBlockRoot) !== blockParentRootHex) {
+    throw new ApiError(400, "Envelope parent beacon block root does not match the parent root of its block");
+  }
+  if (!byteArrayEquals(ssz.gloas.ExecutionPayload.hashTreeRoot(envelope.payload), bid.payloadRoot)) {
+    throw new ApiError(400, "Envelope payload does not match the payload root of the bid of its block");
+  }
+  if (
+    !byteArrayEquals(ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests), bid.executionRequestsRoot)
+  ) {
+    throw new ApiError(400, "Envelope execution requests do not match the execution requests root of the bid");
+  }
 }
 
 async function reconstructBuilderSignedBlockContents(

@@ -317,10 +317,10 @@ export class ProtoArray {
   /**
    * Returns the node index of the EMPTY or FULL variant whose latest execution payload has the given root,
    * ie. the variant that a child block with `bid.parent_payload_root == payloadRoot` builds on.
-   * - FULL: the payload of the block itself, `payloadRoot` of the node (`bid.payload_root`)
-   * - EMPTY: the payload the block was built on, `parentPayloadRoot` of the node (`bid.parent_payload_root`)
-   * - Pre-gloas: the single variant. Its payload root is not tracked so it is not checked, this is only
-   *   reachable for the first gloas block whose bid is checked against the state in the state transition
+   * Pre-gloas: checks the single variant. Post-gloas: prefers FULL, falls back to EMPTY.
+   *
+   * Same as `getNodeIndexByRootAndBlockHash` but by `executionPayloadRoot`. Only variants that exist are
+   * compared, so a block whose payload is not imported never resolves to FULL.
    */
   getNodeIndexByRootAndPayloadRoot(blockRoot: RootHex, payloadRoot: RootHex): number | undefined {
     const variantIndices = this.indices.get(blockRoot);
@@ -330,18 +330,17 @@ export class ProtoArray {
 
     // Pre-Gloas
     if (!Array.isArray(variantIndices)) {
-      return variantIndices;
+      return this.nodes[variantIndices].executionPayloadRoot === payloadRoot ? variantIndices : undefined;
     }
 
-    // Post-Gloas, FULL then EMPTY. Both can not match as a bid has distinct payload_root and parent_payload_root
+    // Post-Gloas, prefer FULL then EMPTY
+    const fullNodeIndex = variantIndices[PayloadStatus.FULL];
+    if (fullNodeIndex !== undefined && this.nodes[fullNodeIndex].executionPayloadRoot === payloadRoot) {
+      return fullNodeIndex;
+    }
+
     const emptyNodeIndex = variantIndices[PayloadStatus.EMPTY];
-    const emptyNode = this.nodes[emptyNodeIndex];
-    if (emptyNode.payloadRoot === payloadRoot) {
-      // undefined if the payload is not imported yet
-      return variantIndices[PayloadStatus.FULL];
-    }
-
-    if (emptyNode.parentPayloadRoot === payloadRoot) {
+    if (this.nodes[emptyNodeIndex].executionPayloadRoot === payloadRoot) {
       return emptyNodeIndex;
     }
 
@@ -725,6 +724,13 @@ export class ProtoArray {
       });
     }
 
+    if (!isGloasBlock(pendingNode)) {
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.PRE_GLOAS_BLOCK,
+        root: blockRoot,
+      });
+    }
+
     // Create FULL variant as a child of PENDING (sibling to EMPTY).
     const fullNode: ProtoNode = {
       ...pendingNode,
@@ -736,6 +742,8 @@ export class ProtoArray {
       bestDescendant: undefined,
       executionStatus,
       executionPayloadBlockHash,
+      // The payload of the block itself, which its bid commits to
+      executionPayloadRoot: pendingNode.payloadRoot,
       executionPayloadNumber,
       executionPayloadGasLimit,
       dataAvailabilityStatus,

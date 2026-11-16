@@ -221,6 +221,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
     await vi.advanceTimersByTimeAsync(0);
 
     expect(onGossip).toHaveBeenCalledOnce();
+    expect(onGossip).toHaveBeenCalledWith(expect.objectContaining({payloadRoot: payloadInput.getPayloadRootHex()}));
     expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validEnvelope: true});
   });
 

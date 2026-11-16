@@ -390,6 +390,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         parentPayload = {
           blockRoot: headRoot,
           blockRootHex: toRootHex(headRoot),
+          parentRoot: headState.latestBlockHeader.parentRoot,
           slot: headSlot,
           proposerIndex: headState.latestBlockHeader.proposerIndex,
           forkName: this.config.getForkName(headSlot),

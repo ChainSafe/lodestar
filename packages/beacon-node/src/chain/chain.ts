@@ -86,7 +86,7 @@ import {IBlockInput, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
-import {revealSelfBuiltPayload} from "./blocks/revealSelfBuiltPayload.js";
+import {SelfBuiltPayloadRevealStatus, revealSelfBuiltPayload} from "./blocks/revealSelfBuiltPayload.js";
 import {ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
@@ -246,8 +246,11 @@ export class BeaconChain implements IBeaconChain {
    * assemble into full blocks before publishing to the network.
    */
   readonly blockProductionCache = new Map<RootHex, ProduceResult>();
-  /** Roots of self-built blocks whose execution payload envelope this node broadcast, see `revealSelfBuiltPayload` */
-  readonly revealedSelfBuiltPayloads = new Set<RootHex>();
+  /**
+   * Self-built blocks whose execution payload envelope this node is broadcasting or has broadcast, by block
+   * root, see `revealSelfBuiltPayload`
+   */
+  readonly selfBuiltPayloadReveals = new Map<RootHex, SelfBuiltPayloadRevealStatus>();
 
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
 
@@ -1890,9 +1893,9 @@ export class BeaconChain implements IBeaconChain {
     // Prune old cached block production artifacts, those are only useful on their slot
     pruneSetToMax(this.blockProductionCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_RESULTS);
     this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
-    for (const blockRootHex of this.revealedSelfBuiltPayloads) {
+    for (const blockRootHex of this.selfBuiltPayloadReveals.keys()) {
       if (!this.blockProductionCache.has(blockRootHex)) {
-        this.revealedSelfBuiltPayloads.delete(blockRootHex);
+        this.selfBuiltPayloadReveals.delete(blockRootHex);
       }
     }
 

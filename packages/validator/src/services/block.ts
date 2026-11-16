@@ -293,9 +293,9 @@ export class BlockProposingService {
     // Step 2: Sign and publish the beacon block
     const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot, this.logger);
 
-    // Publish the block first so it propagates as soon as possible. This reduces the chance other nodes
-    // see the payload envelope before the block over gossip and have to queue it. There's also plenty of
-    // time left in the slot to propagate the payload, so publishing it in parallel is unnecessary.
+    // Publish the block first so it propagates as soon as possible. The beacon node that built the payload
+    // reveals the envelope right behind the block, once it has broadcast or imported it, so the envelope
+    // published in step 3 is only a fallback and there is no need to publish it in parallel.
     (
       await this.api.beacon
         .publishBlockV2({

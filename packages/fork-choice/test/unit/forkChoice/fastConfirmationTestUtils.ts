@@ -65,6 +65,7 @@ export function makeBlock(
     return {
       ...block,
       executionPayloadBlockHash: null,
+      executionPayloadRoot: null,
       executionStatus,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     };
@@ -73,6 +74,7 @@ export function makeBlock(
   return {
     ...block,
     executionPayloadBlockHash: blockRoot,
+    executionPayloadRoot: `${blockRoot}root`,
     executionPayloadNumber: 0,
     executionPayloadGasLimit: 0,
     executionStatus,

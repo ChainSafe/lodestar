@@ -164,6 +164,14 @@ export function initializeForkChoiceFromFinalizedState(
               executionPayloadBlockHash: isStatePostGloas(state)
                 ? toRootHex(state.latestBlockHash)
                 : toRootHex(state.latestExecutionPayloadHeader.blockHash),
+              // The root of the same payload, the root of a payload equals the root of its header
+              executionPayloadRoot: isStatePostGloas(state)
+                ? toRootHex(state.latestPayloadRoot)
+                : toRootHex(
+                    config
+                      .getPostBellatrixForkTypes(state.slot)
+                      .ExecutionPayloadHeader.hashTreeRoot(state.latestExecutionPayloadHeader)
+                  ),
               // TODO GLOAS: executionPayloadNumber/GasLimit are not tracked in BeaconState post-gloas
               // (EIP-7732 removed latestExecutionPayloadHeader). Using 0 as unavailable fallback —
               // see initializeForkChoiceFromUnfinalizedState for the same caveat on validation.
@@ -171,13 +179,15 @@ export function initializeForkChoiceFromFinalizedState(
               executionPayloadGasLimit: isStatePostGloas(state) ? 0 : state.latestExecutionPayloadHeader.gasLimit,
               executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
             }
-          : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
+          : {executionPayloadBlockHash: null, executionPayloadRoot: null, executionStatus: ExecutionStatus.PreMerge}),
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
         payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
         parentBlockHash: isStatePostGloas(state) ? toRootHex(state.latestBlockHash) : null,
         // The anchor state is the post-state of the anchor block, both still hold the values its bid was checked against
         parentPayloadRoot: isStatePostGloas(state) ? toRootHex(state.latestPayloadRoot) : null,
+        // Equals `parentPayloadRoot` if the anchor block is pre-gloas and the state was upgraded: the bid
+        // of an upgraded state commits to the last pre-gloas payload, which no envelope will deliver
         payloadRoot: isStatePostGloas(state) ? toRootHex(state.latestExecutionPayloadBid.payloadRoot) : null,
       },
       currentSlot
@@ -269,6 +279,14 @@ export function initializeForkChoiceFromUnfinalizedState(
           executionPayloadBlockHash: isStatePostGloas(unfinalizedState)
             ? toRootHex(unfinalizedState.latestBlockHash)
             : toRootHex(unfinalizedState.latestExecutionPayloadHeader.blockHash),
+          // The root of the same payload, the root of a payload equals the root of its header
+          executionPayloadRoot: isStatePostGloas(unfinalizedState)
+            ? toRootHex(unfinalizedState.latestPayloadRoot)
+            : toRootHex(
+                config
+                  .getPostBellatrixForkTypes(unfinalizedState.slot)
+                  .ExecutionPayloadHeader.hashTreeRoot(unfinalizedState.latestExecutionPayloadHeader)
+              ),
           // TODO GLOAS: executionPayloadNumber/GasLimit are not tracked in BeaconState post-gloas
           // (EIP-7732 removed latestExecutionPayloadHeader). Using 0 as unavailable fallback until
           // a solution is found. The 0 doesn't gate validation in practice: at boot the head's
@@ -282,7 +300,7 @@ export function initializeForkChoiceFromUnfinalizedState(
             : unfinalizedState.latestExecutionPayloadHeader.gasLimit,
           executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
         }
-      : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
+      : {executionPayloadBlockHash: null, executionPayloadRoot: null, executionStatus: ExecutionStatus.PreMerge}),
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,

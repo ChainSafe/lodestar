@@ -1207,6 +1207,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             slot,
             builderIndex: payloadInput.getBuilderIndex(),
             blockHash: toRootHex(envelope.payload.blockHash),
+            payloadRoot: payloadInput.getPayloadRootHex(),
             blockRoot: blockRootHex,
           });
 

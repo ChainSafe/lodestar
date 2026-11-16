@@ -295,6 +295,7 @@ describe("sync / range / peerBalancer", () => {
       const parentPayload: ParentPayload = {
         blockRoot: parentRoot,
         blockRootHex: toRootHex(parentRoot),
+        parentRoot: Buffer.alloc(32),
         slot: computeStartSlotAtEpoch(1) - 1,
         proposerIndex: 0,
         forkName: ForkName.gloas,

@@ -93,6 +93,11 @@ export type BlockExtraMeta =
       //   - this is parentBlockHash of block bid because payload is only received later
       //   - payload block hash for FULL variant
       executionPayloadBlockHash: RootHex;
+      // Hash tree root of the execution payload identified by executionPayloadBlockHash, with the same
+      // semantics for each variant. Bids commit to the payload they build on by this root
+      // (`bid.parent_payload_root`), so this is what decides which variant a block or bid builds on,
+      // executionPayloadBlockHash is for the execution engine
+      executionPayloadRoot: RootHex;
       executionPayloadNumber: UintNum64;
       // Gas limit of the executed payload identified by executionPayloadBlockHash. Set on
       // pre-Gloas blocks (from block.body.executionPayload.gasLimit) and on Gloas variants:
@@ -107,6 +112,7 @@ export type BlockExtraMeta =
     }
   | {
       executionPayloadBlockHash: null;
+      executionPayloadRoot: null;
       executionStatus: ExecutionStatus.PreMerge;
       dataAvailabilityStatus: DataAvailabilityStatus.PreData;
     };
@@ -173,7 +179,9 @@ export type ProtoBlock = BlockExtraMeta & {
   // Spec: gloas/fork-choice.md#new-get_parent_payload_status
   parentPayloadRoot: RootHex | null;
 
-  // `payload_root` of the block's bid, null pre-gloas. Same for all variants of the block
+  // `payload_root` of the block's bid, null pre-gloas. Same for all variants of the block, it becomes the
+  // executionPayloadRoot of the FULL variant once the payload is imported. Do not use it to look up the
+  // payload a child builds on, the FULL variant may not exist: use executionPayloadRoot of the variants
   payloadRoot: RootHex | null;
 };
 

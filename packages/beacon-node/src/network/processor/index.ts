@@ -86,9 +86,16 @@ export const MAX_SEARCHED_ROOTS_PER_SLOT = 32;
  */
 export const MAX_AWAITING_MESSAGES_PER_ROOT: Partial<Record<GossipType, number>> = {
   [GossipType.data_column_sidecar]: 2 * NUMBER_OF_COLUMNS,
-  [GossipType.execution_payload]: 2,
+  // see canAwaitExecutionPayload() for the other limits of this topic
+  [GossipType.execution_payload]: 8,
   [GossipType.execution_payload_bid]: 8,
 };
+
+/**
+ * Max total size of the execution_payload messages held for one unknown block root, as a multiple of
+ * `MAX_PAYLOAD_SIZE`. Bounds the memory of the held envelopes regardless of MAX_AWAITING_MESSAGES_PER_ROOT.
+ */
+export const MAX_AWAITING_EXECUTION_PAYLOAD_SIZE_PER_ROOT_FACTOR = 2;
 
 /**
  * Track the forwarded peers we already emit to UnknownBlockInput sync.
@@ -693,9 +700,15 @@ export class NetworkProcessor {
     }
     // per-(root, topic) message cap: e.g. <= NUMBER_OF_COLUMNS columns per root
     const perRootCap = MAX_AWAITING_MESSAGES_PER_ROOT[topicType];
+    const awaitingMessages = this.awaitingMessagesByBlockRoot.get(root)?.get(topicType);
+    if (perRootCap !== undefined && (awaitingMessages?.size ?? 0) >= perRootCap) {
+      metric?.reject.inc({reason: ReprocessRejectReason.reached_topic_limit, topic: topicType});
+      return;
+    }
     if (
-      perRootCap !== undefined &&
-      (this.awaitingMessagesByBlockRoot.get(root)?.get(topicType)?.size ?? 0) >= perRootCap
+      topicType === GossipType.execution_payload &&
+      awaitingMessages !== undefined &&
+      !this.canAwaitExecutionPayload(awaitingMessages, message)
     ) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_topic_limit, topic: topicType});
       return;
@@ -708,6 +721,31 @@ export class NetworkProcessor {
     metric?.queue.inc({topic: topicType});
     this.awaitingMessagesByBlockRoot.getOrDefault(root).getOrDefault(topicType).add(message);
     this.awaitingBlockMessageCount++;
+  }
+
+  /**
+   * The envelope is not signed, nothing ties it to its block until the block is known, so any peer can make up
+   * envelopes for a block root we wait for. They are all validated once the block arrives: the one the bid
+   * commits to is accepted and the peers that sent the others are penalized. Until then, on top of
+   * MAX_AWAITING_MESSAGES_PER_ROOT:
+   * - one envelope per peer, so that a single peer cannot use up the messages held for a block root
+   * - a total size per block root, so that holding more than a couple of envelopes costs no extra memory in the
+   *   worst case. Small made-up envelopes then do not fill up what the valid one needs
+   * An envelope that is not held is not lost: the payload votes and data columns of the block make BlockInputSync
+   * download it by root once the block is known.
+   */
+  private canAwaitExecutionPayload(
+    awaitingMessages: Set<PendingGossipsubMessage>,
+    message: PendingGossipsubMessage
+  ): boolean {
+    let size = message.msg.data.length;
+    for (const awaitingMessage of awaitingMessages) {
+      if (awaitingMessage.propagationSource === message.propagationSource) {
+        return false;
+      }
+      size += awaitingMessage.msg.data.length;
+    }
+    return size <= MAX_AWAITING_EXECUTION_PAYLOAD_SIZE_PER_ROOT_FACTOR * this.chain.config.MAX_PAYLOAD_SIZE;
   }
 
   /** Payload counterpart of maybeAwaitBlock */

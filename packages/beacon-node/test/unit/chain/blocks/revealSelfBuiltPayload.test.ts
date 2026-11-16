@@ -1,15 +1,20 @@
 import {Mock, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
+import {config} from "@lodestar/config/default";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {BUILDER_INDEX_SELF_BUILD, BYTES_PER_CELL, ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {DataColumnSidecar, RootHex, gloas, ssz} from "@lodestar/types";
+import {RootHex, gloas, ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
-import {revealSelfBuiltPayload} from "../../../../src/chain/blocks/revealSelfBuiltPayload.js";
+import {
+  SelfBuiltPayloadRevealStatus,
+  revealSelfBuiltPayload,
+} from "../../../../src/chain/blocks/revealSelfBuiltPayload.js";
 import type {BeaconChain} from "../../../../src/chain/chain.js";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {BlockType, ProduceFullGloas, ProduceResult} from "../../../../src/chain/produceBlock/index.js";
+import {OpSource} from "../../../../src/chain/validatorMonitor.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 
 describe("chain / blocks / revealSelfBuiltPayload", () => {
@@ -18,12 +23,23 @@ describe("chain / blocks / revealSelfBuiltPayload", () => {
 
   let blockProductionCache: Map<RootHex, ProduceResult>;
   let payloadInputs: Map<RootHex, PayloadEnvelopeInput>;
+  let blocks: Map<RootHex, gloas.SignedBeaconBlock>;
   /** Roots of blocks in fork choice, and of those whose payload is imported */
   let importedBlocks: Set<RootHex>;
   let importedPayloads: Set<RootHex>;
   let emitter: ChainEventEmitter;
-  let onPublishEnvelope: Mock<(envelope: gloas.ExecutionPayloadEnvelope) => void>;
-  let onPublishDataColumns: Mock<(sidecars: DataColumnSidecar[]) => void>;
+  let onPublishEnvelope: Mock<
+    (
+      envelope: gloas.ExecutionPayloadEnvelope,
+      sidecars: gloas.DataColumnSidecar[],
+      onPublished: (error: Error | null) => void
+    ) => void
+  >;
+  /** Outcome the network reports for the publish, `undefined` to leave the publish pending */
+  let publishOutcome: Error | null | undefined;
+  let selfBuiltPayloadReveals: Map<RootHex, SelfBuiltPayloadRevealStatus>;
+  let clock: {currentSlot: number};
+  let registerExecutionPayloadEnvelope: ReturnType<typeof vi.fn>;
   let onExecutionPayloadGossip: Mock<
     (data: routes.events.EventData[routes.events.EventType.executionPayloadGossip]) => void
   >;
@@ -34,21 +50,31 @@ describe("chain / blocks / revealSelfBuiltPayload", () => {
   beforeEach(() => {
     blockProductionCache = new Map();
     payloadInputs = new Map();
+    blocks = new Map();
     importedBlocks = new Set();
     importedPayloads = new Set();
     emitter = new ChainEventEmitter();
-    onPublishEnvelope = vi.fn();
-    onPublishDataColumns = vi.fn();
+    publishOutcome = null;
+    onPublishEnvelope = vi.fn((_envelope, _sidecars, onPublished) => {
+      if (publishOutcome !== undefined) onPublished(publishOutcome);
+    });
+    selfBuiltPayloadReveals = new Map();
+    clock = {currentSlot: slot};
+    registerExecutionPayloadEnvelope = vi.fn();
     onExecutionPayloadGossip = vi.fn();
     emitter.on(ChainEvent.publishExecutionPayloadEnvelope, onPublishEnvelope);
-    emitter.on(ChainEvent.publishDataColumns, onPublishDataColumns);
     emitter.on(routes.events.EventType.executionPayloadGossip, onExecutionPayloadGossip);
     processExecutionPayload = vi.fn().mockResolvedValue(undefined);
     persistExecutionPayloadEnvelope = vi.fn();
 
     chain = {
       blockProductionCache,
-      revealedSelfBuiltPayloads: new Set<RootHex>(),
+      selfBuiltPayloadReveals,
+      config,
+      genesisTime: 0,
+      clock,
+      metrics: null,
+      validatorMonitor: {registerExecutionPayloadEnvelope},
       seenPayloadEnvelopeInputCache: {get: (rootHex: RootHex) => payloadInputs.get(rootHex)},
       forkChoice: {
         hasBlockHex: (rootHex: RootHex) => importedBlocks.has(rootHex),
@@ -62,6 +88,19 @@ describe("chain / blocks / revealSelfBuiltPayload", () => {
       persistExecutionPayloadEnvelope,
     } as unknown as BeaconChain;
   });
+
+  function createPayloadInput(blockRootHex: RootHex, block: gloas.SignedBeaconBlock): PayloadEnvelopeInput {
+    return PayloadEnvelopeInput.createFromBlock({
+      blockRootHex,
+      block,
+      forkName: ForkName.gloas,
+      sampledColumns: [],
+      custodyColumns: [],
+      seenTimestampSec: 0,
+      source: PayloadEnvelopeInputSource.gossip,
+      daOutOfRange: false,
+    });
+  }
 
   /**
    * A block as it is known to the node once it was published through the API or received on gossip: its
@@ -95,17 +134,9 @@ describe("chain / blocks / revealSelfBuiltPayload", () => {
     bid.blobKzgCommitments = blobsBundle.commitments;
     const blockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message));
 
-    const payloadInput = PayloadEnvelopeInput.createFromBlock({
-      blockRootHex,
-      block,
-      forkName: ForkName.gloas,
-      sampledColumns: [],
-      custodyColumns: [],
-      seenTimestampSec: 0,
-      source: PayloadEnvelopeInputSource.gossip,
-      daOutOfRange: false,
-    });
+    const payloadInput = createPayloadInput(blockRootHex, block);
     payloadInputs.set(blockRootHex, payloadInput);
+    blocks.set(blockRootHex, block);
 
     const produceResult: ProduceFullGloas = {
       type: BlockType.Full,
@@ -138,12 +169,17 @@ describe("chain / blocks / revealSelfBuiltPayload", () => {
     // publishBlockV2 calls it right after the block was broadcast, the block is not in fork choice yet
     expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(true);
 
-    expect(onPublishEnvelope).toHaveBeenCalledExactlyOnceWith(expectedEnvelope(blockRootHex, produceResult));
+    expect(onPublishEnvelope).toHaveBeenCalledExactlyOnceWith(
+      expectedEnvelope(blockRootHex, produceResult),
+      [],
+      expect.any(Function)
+    );
     expect(payloadInput.getPayloadEnvelope()).toEqual(expectedEnvelope(blockRootHex, produceResult));
     expect(onExecutionPayloadGossip).toHaveBeenCalledExactlyOnceWith({
       slot,
       builderIndex: BUILDER_INDEX_SELF_BUILD,
       blockHash: toRootHex(produceResult.executionPayload.blockHash),
+      payloadRoot: toRootHex(ssz.gloas.ExecutionPayload.hashTreeRoot(produceResult.executionPayload)),
       blockRoot: blockRootHex,
     });
     expect(processExecutionPayload).not.toHaveBeenCalled();
@@ -163,7 +199,11 @@ describe("chain / blocks / revealSelfBuiltPayload", () => {
     importedBlocks.add(blockRootHex);
     expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(true);
 
-    expect(onPublishEnvelope).toHaveBeenCalledExactlyOnceWith(expectedEnvelope(blockRootHex, produceResult));
+    expect(onPublishEnvelope).toHaveBeenCalledExactlyOnceWith(
+      expectedEnvelope(blockRootHex, produceResult),
+      [],
+      expect.any(Function)
+    );
     expect(processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validEnvelope: false});
   });
 
@@ -173,8 +213,7 @@ describe("chain / blocks / revealSelfBuiltPayload", () => {
     expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(true);
 
     expect(onPublishEnvelope).toHaveBeenCalledOnce();
-    expect(onPublishDataColumns).toHaveBeenCalledOnce();
-    const sidecars = onPublishDataColumns.mock.calls[0][0] as gloas.DataColumnSidecar[];
+    const sidecars = onPublishEnvelope.mock.calls[0][1];
     expect(sidecars).toHaveLength(NUMBER_OF_COLUMNS);
     for (const [index, sidecar] of sidecars.entries()) {
       expect(sidecar.index).toBe(index);
@@ -184,18 +223,6 @@ describe("chain / blocks / revealSelfBuiltPayload", () => {
       expect(sidecar.kzgProofs).toHaveLength(2);
     }
     expect(payloadInput.getAllColumns()).toHaveLength(NUMBER_OF_COLUMNS);
-    // The envelope goes out before its data columns
-    expect(onPublishEnvelope.mock.invocationCallOrder[0]).toBeLessThan(
-      onPublishDataColumns.mock.invocationCallOrder[0]
-    );
-  });
-
-  it("does not broadcast data columns for a payload without blobs", () => {
-    const {blockRootHex} = addBlock({selfBuilt: true});
-
-    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(true);
-
-    expect(onPublishDataColumns).not.toHaveBeenCalled();
   });
 
   it("does nothing for a block this node did not build", () => {
@@ -205,7 +232,6 @@ describe("chain / blocks / revealSelfBuiltPayload", () => {
     expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(false);
 
     expect(onPublishEnvelope).not.toHaveBeenCalled();
-    expect(onPublishDataColumns).not.toHaveBeenCalled();
     expect(onExecutionPayloadGossip).not.toHaveBeenCalled();
     expect(processExecutionPayload).not.toHaveBeenCalled();
     expect(payloadInput.hasPayloadEnvelope()).toBe(false);
@@ -238,15 +264,15 @@ describe("chain / blocks / revealSelfBuiltPayload", () => {
     expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(false);
 
     expect(onPublishEnvelope).toHaveBeenCalledOnce();
-    expect(onPublishDataColumns).toHaveBeenCalledOnce();
     expect(onExecutionPayloadGossip).toHaveBeenCalledOnce();
+    expect(registerExecutionPayloadEnvelope).toHaveBeenCalledOnce();
     // The payload import is requested on every call until the payload is in fork choice, the
     // PayloadEnvelopeProcessor shares the in-flight import between callers
     expect(processExecutionPayload).toHaveBeenCalledTimes(2);
     expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput, {validEnvelope: false});
   });
 
-  it("does not broadcast an envelope that was already published through the API", () => {
+  it("does not broadcast an envelope that was already received on gossip or published through the API", () => {
     const {blockRootHex, payloadInput, produceResult} = addBlock({selfBuilt: true});
     const apiEnvelope = expectedEnvelope(blockRootHex, produceResult);
     payloadInput.addPayloadEnvelope({
@@ -261,7 +287,7 @@ describe("chain / blocks / revealSelfBuiltPayload", () => {
 
     expect(onPublishEnvelope).not.toHaveBeenCalled();
     expect(payloadInput.getPayloadEnvelope()).toBe(apiEnvelope);
-    // The API publish imports the envelope it added
+    // Whoever added the envelope imports it
     expect(processExecutionPayload).not.toHaveBeenCalled();
   });
 
@@ -274,5 +300,139 @@ describe("chain / blocks / revealSelfBuiltPayload", () => {
     expect(persistExecutionPayloadEnvelope).toHaveBeenCalledExactlyOnceWith(
       expectedEnvelope(blockRootHex, produceResult)
     );
+  });
+
+  it("registers the revealed envelope with the validator monitor, as the publish API does", () => {
+    const {blockRootHex, produceResult} = addBlock({selfBuilt: true});
+
+    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(true);
+
+    expect(registerExecutionPayloadEnvelope).toHaveBeenCalledExactlyOnceWith(
+      OpSource.api,
+      expect.any(Number),
+      expectedEnvelope(blockRootHex, produceResult)
+    );
+  });
+
+  it("does not add the envelope before it is broadcast, and does not broadcast it again meanwhile", () => {
+    const {blockRootHex, payloadInput} = addBlock({selfBuilt: true, blobs: 1});
+    publishOutcome = undefined;
+    importedBlocks.add(blockRootHex);
+
+    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(true);
+    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(false);
+
+    expect(onPublishEnvelope).toHaveBeenCalledOnce();
+    // The publish API still accepts the envelope from the validator client
+    expect(payloadInput.hasPayloadEnvelope()).toBe(false);
+    expect(processExecutionPayload).not.toHaveBeenCalled();
+
+    // The network reports the broadcast
+    onPublishEnvelope.mock.calls[0][2](null);
+
+    expect(payloadInput.hasPayloadEnvelope()).toBe(true);
+    expect(payloadInput.getAllColumns()).toHaveLength(NUMBER_OF_COLUMNS);
+    expect(processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validEnvelope: false});
+  });
+
+  it("leaves the payload revealable if the broadcast fails", () => {
+    const {blockRootHex, payloadInput, produceResult} = addBlock({selfBuilt: true, blobs: 1});
+    publishOutcome = new Error("PublishError.NoPeersSubscribedToTopic");
+
+    // publishBlockV2 calls it, the broadcast fails
+    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(true);
+
+    expect(onPublishEnvelope).toHaveBeenCalledOnce();
+    // Not recorded as revealed, and the publish API does not answer that the envelope is already known
+    expect(selfBuiltPayloadReveals.has(blockRootHex)).toBe(false);
+    expect(payloadInput.hasPayloadEnvelope()).toBe(false);
+    expect(payloadInput.getAllColumns()).toHaveLength(0);
+    expect(onExecutionPayloadGossip).not.toHaveBeenCalled();
+    expect(registerExecutionPayloadEnvelope).not.toHaveBeenCalled();
+
+    // importBlock calls it again, the broadcast succeeds
+    publishOutcome = null;
+    importedBlocks.add(blockRootHex);
+    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(true);
+
+    expect(onPublishEnvelope).toHaveBeenCalledTimes(2);
+    expect(onPublishEnvelope.mock.calls[1][1]).toHaveLength(NUMBER_OF_COLUMNS);
+    expect(selfBuiltPayloadReveals.get(blockRootHex)).toBe(SelfBuiltPayloadRevealStatus.published);
+    expect(payloadInput.getPayloadEnvelope()).toEqual(expectedEnvelope(blockRootHex, produceResult));
+    expect(onExecutionPayloadGossip).toHaveBeenCalledOnce();
+    expect(processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validEnvelope: false});
+  });
+
+  it("does not record the payload as revealed if nothing can publish it", () => {
+    const {blockRootHex, payloadInput} = addBlock({selfBuilt: true});
+    emitter.off(ChainEvent.publishExecutionPayloadEnvelope, onPublishEnvelope);
+
+    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(false);
+
+    expect(selfBuiltPayloadReveals.has(blockRootHex)).toBe(false);
+    expect(payloadInput.hasPayloadEnvelope()).toBe(false);
+  });
+
+  it("does not throw, so that neither the block import nor the block publish fails", () => {
+    const {blockRootHex} = addBlock({selfBuilt: true});
+    onPublishEnvelope.mockImplementationOnce(() => {
+      throw new Error("publish failed");
+    });
+
+    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(false);
+    expect(selfBuiltPayloadReveals.has(blockRootHex)).toBe(false);
+
+    // Nor if the import of the revealed payload throws
+    processExecutionPayload.mockImplementation(() => {
+      throw new Error("import failed");
+    });
+    importedBlocks.add(blockRootHex);
+    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(true);
+    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(false);
+  });
+
+  it("does not reveal the payload of a block from a past slot", () => {
+    const {blockRootHex, payloadInput} = addBlock({selfBuilt: true, blobs: 1});
+    clock.currentSlot = slot + 1;
+    importedBlocks.add(blockRootHex);
+
+    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(false);
+
+    expect(onPublishEnvelope).not.toHaveBeenCalled();
+    expect(onExecutionPayloadGossip).not.toHaveBeenCalled();
+    expect(processExecutionPayload).not.toHaveBeenCalled();
+    expect(payloadInput.hasPayloadEnvelope()).toBe(false);
+    expect(selfBuiltPayloadReveals.has(blockRootHex)).toBe(false);
+  });
+
+  it("still imports a payload it revealed in its slot once the slot has passed", () => {
+    const {blockRootHex, payloadInput} = addBlock({selfBuilt: true});
+
+    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(true);
+
+    // The block is imported in the next slot
+    clock.currentSlot = slot + 1;
+    importedBlocks.add(blockRootHex);
+    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(false);
+
+    expect(onPublishEnvelope).toHaveBeenCalledOnce();
+    expect(processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validEnvelope: false});
+  });
+
+  it("imports the payload if its PayloadEnvelopeInput was pruned and created again after the reveal", () => {
+    const {blockRootHex, produceResult} = addBlock({selfBuilt: true, blobs: 1});
+
+    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(true);
+
+    // The block is seen again, e.g. on gossip, and seeds a new PayloadEnvelopeInput
+    const recreatedPayloadInput = createPayloadInput(blockRootHex, blocks.get(blockRootHex) as gloas.SignedBeaconBlock);
+    payloadInputs.set(blockRootHex, recreatedPayloadInput);
+    importedBlocks.add(blockRootHex);
+    expect(revealSelfBuiltPayload.call(chain, blockRootHex)).toBe(false);
+
+    expect(onPublishEnvelope).toHaveBeenCalledOnce();
+    expect(recreatedPayloadInput.getPayloadEnvelope()).toEqual(expectedEnvelope(blockRootHex, produceResult));
+    expect(recreatedPayloadInput.getAllColumns()).toHaveLength(NUMBER_OF_COLUMNS);
+    expect(processExecutionPayload).toHaveBeenCalledExactlyOnceWith(recreatedPayloadInput, {validEnvelope: false});
   });
 });

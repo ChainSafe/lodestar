@@ -8,9 +8,14 @@ import {
   MIN_DEPOSIT_AMOUNT,
   PAYLOAD_BUILDER_VERSION,
   SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
-import {applyParentExecutionPayload} from "../../../src/block/processParentExecutionPayload.js";
+import {toRootHex} from "@lodestar/utils";
+import {
+  applyParentExecutionPayload,
+  processParentExecutionPayload,
+} from "../../../src/block/processParentExecutionPayload.js";
 import {createCachedBeaconState} from "../../../src/index.js";
 import {CachedBeaconStateGloas} from "../../../src/types.js";
 import {getPendingBalanceToWithdrawForBuilder, isActiveBuilder} from "../../../src/util/gloas.js";
@@ -91,5 +96,62 @@ describe("applyParentExecutionPayload", () => {
 
     expect(state.builderPendingWithdrawals.length).toBe(0);
     expect(state.builders.getReadonly(builderIndex).withdrawableEpoch).not.toBe(FAR_FUTURE_EPOCH);
+  });
+});
+
+describe("processParentExecutionPayload", () => {
+  const parentSlot = 3;
+  const parentBlockHash = Buffer.alloc(32, 4);
+  const parentPayloadRoot = Buffer.alloc(32, 6);
+  const latestBlockHash = Buffer.alloc(32, 7);
+  const latestPayloadRoot = Buffer.alloc(32, 8);
+
+  /** State whose latest block committed to `parentBlockHash` and `parentPayloadRoot`, its payload is not applied */
+  function buildState(): CachedBeaconStateGloas {
+    const state = buildStateWithEvictedPayment(0);
+    state.latestExecutionPayloadBid.payloadRoot = parentPayloadRoot;
+    state.latestExecutionPayloadBid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(
+      ssz.gloas.ExecutionRequests.defaultValue()
+    );
+    state.latestBlockHash = latestBlockHash;
+    state.latestPayloadRoot = latestPayloadRoot;
+    state.commit();
+    return state;
+  }
+
+  function buildBlock(bid: {parentBlockHash: Uint8Array; parentPayloadRoot: Uint8Array}): gloas.BeaconBlock {
+    const block = ssz.gloas.BeaconBlock.defaultValue();
+    block.body.signedExecutionPayloadBid.message.parentBlockHash = bid.parentBlockHash;
+    block.body.signedExecutionPayloadBid.message.parentPayloadRoot = bid.parentPayloadRoot;
+    return block;
+  }
+
+  it("treats the parent as EMPTY if the bid has the parent's block hash but another parent payload root", () => {
+    const state = buildState();
+    const block = buildBlock({parentBlockHash, parentPayloadRoot: Buffer.alloc(32, 9)});
+
+    processParentExecutionPayload(state, block);
+
+    expect(toRootHex(state.latestBlockHash)).toBe(toRootHex(latestBlockHash));
+    expect(toRootHex(state.latestPayloadRoot)).toBe(toRootHex(latestPayloadRoot));
+    expect(state.executionPayloadAvailability.get(parentSlot % SLOTS_PER_HISTORICAL_ROOT)).toBe(false);
+
+    // no execution requests are expected of an EMPTY parent
+    block.body.parentExecutionRequests = exitRequestFor(state);
+    expect(() => processParentExecutionPayload(state, block)).toThrow(
+      "Parent execution requests must be empty when parent block is EMPTY"
+    );
+  });
+
+  it("treats the parent as FULL if the bid has the parent's payload root but another parent block hash", () => {
+    const state = buildState();
+    const block = buildBlock({parentBlockHash: Buffer.alloc(32, 9), parentPayloadRoot});
+
+    processParentExecutionPayload(state, block);
+
+    // the latest block hash and the latest payload root are written together
+    expect(toRootHex(state.latestBlockHash)).toBe(toRootHex(parentBlockHash));
+    expect(toRootHex(state.latestPayloadRoot)).toBe(toRootHex(parentPayloadRoot));
+    expect(state.executionPayloadAvailability.get(parentSlot % SLOTS_PER_HISTORICAL_ROOT)).toBe(true);
   });
 });

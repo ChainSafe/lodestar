@@ -9,7 +9,11 @@ import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
-import {BlockInputColumns, BlockInputSource} from "../../../../../../src/chain/blocks/blockInput/index.js";
+import {
+  BlockInputColumns,
+  BlockInputNoData,
+  BlockInputSource,
+} from "../../../../../../src/chain/blocks/blockInput/index.js";
 import {verifyBlocksInEpoch} from "../../../../../../src/chain/blocks/verifyBlock.js";
 import {BlockError, BlockErrorCode, BlockGossipError, GossipAction} from "../../../../../../src/chain/errors/index.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
@@ -308,6 +312,78 @@ describe("api - beacon - publishBlockV2", () => {
         expect(modules.network.publishBeaconBlock).toHaveBeenCalledWith(signedBlock);
       }
     );
+  });
+
+  describe("reveal of a self-built payload", () => {
+    const gloasConfig = createBeaconConfig(
+      {
+        ...configDef,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+      },
+      Buffer.alloc(32, 1)
+    );
+
+    /** A gloas block this node produced, published with the gossip checks that skip a locally produced block */
+    async function publishLocalGloasBlock({validSignature}: {validSignature: boolean}): Promise<string> {
+      modules = getApiTestModules({config: gloasConfig});
+      modules.chain.bls.verifySignatureSets.mockResolvedValue(validSignature);
+      Object.defineProperty(modules.chain, "blockProductionCache", {value: new Map()});
+      Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
+      modules.network.publishBeaconBlock = vi.fn();
+      modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
+      modules.chain.revealSelfBuiltPayload = vi.fn().mockReturnValue(true);
+      Object.defineProperty(modules.chain, "custodyConfig", {value: {sampledColumns: [], custodyColumns: []}});
+      Object.defineProperty(modules.chain, "seenPayloadEnvelopeInputCache", {value: {add: vi.fn()}});
+
+      const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+      signedBlock.message.slot = 1;
+      signedBlock.message.proposerIndex = 2;
+      const blockRoot = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(signedBlock.message));
+      vi.spyOn(modules.chain.blockProductionCache, "has").mockReturnValue(true);
+      modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(
+        BlockInputNoData.createFromBlock({
+          forkName: ForkName.gloas,
+          block: signedBlock,
+          blockRootHex: blockRoot,
+          source: BlockInputSource.api,
+          seenTimestampSec: 0,
+          daOutOfRange: false,
+        })
+      );
+
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      await api.publishBlockV2({
+        signedBlockContents: {signedBlock},
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+      });
+
+      expect(validateGossipBlock).not.toHaveBeenCalled();
+      expect(modules.network.publishBeaconBlock).toHaveBeenCalledWith(signedBlock);
+      return blockRoot;
+    }
+
+    it("reveals the payload once the block with a valid proposer signature is broadcast", async () => {
+      const blockRoot = await publishLocalGloasBlock({validSignature: true});
+
+      expect(modules.chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
+      expect(modules.chain.revealSelfBuiltPayload).toHaveBeenCalledExactlyOnceWith(blockRoot);
+      expect(vi.mocked(modules.network.publishBeaconBlock).mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(modules.chain.revealSelfBuiltPayload).mock.invocationCallOrder[0]
+      );
+    });
+
+    it("does not reveal the payload of a block without a valid proposer signature", async () => {
+      await publishLocalGloasBlock({validSignature: false});
+
+      expect(modules.chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
+      expect(modules.chain.revealSelfBuiltPayload).not.toHaveBeenCalled();
+    });
   });
 
   it("rejects a pre-fulu block", async () => {

@@ -12,6 +12,7 @@ import {NetworkEvent, NetworkEventBus} from "../../../../src/network/events.js";
 import {GossipType} from "../../../../src/network/gossip/interface.js";
 import {PeerAction} from "../../../../src/network/peers/score/interface.js";
 import {
+  MAX_AWAITING_EXECUTION_PAYLOAD_SIZE_PER_ROOT_FACTOR,
   MAX_AWAITING_MESSAGES_PER_ROOT,
   MAX_BUFFERED_ROOTS_PER_SLOT,
   MAX_SEARCHED_ROOTS_PER_SLOT,
@@ -57,6 +58,7 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
 
     getBlockHexDefaultStatus = vi.fn().mockReturnValue(null);
     const chain = {
+      config,
       clock: new ClockStopped(clockSlot),
       emitter,
       forkChoice: {
@@ -85,12 +87,12 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     processor = new NetworkProcessor(modules, {});
   });
 
-  function emit(topicType: GossipType, fork: ForkName, data: Uint8Array): void {
+  function emit(topicType: GossipType, fork: ForkName, data: Uint8Array, propagationSource = peerIdStr): void {
     (processor as unknown as {events: NetworkEventBus}).events.emit(NetworkEvent.pendingGossipsubMessage, {
       topic: {type: topicType, boundary: {fork, epoch: GENESIS_EPOCH}},
       msg: {data},
       msgId: "id",
-      propagationSource: peerIdStr,
+      propagationSource,
       clientAgent: "",
       clientVersion: "",
       seenTimestampSec: 0,
@@ -149,13 +151,18 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     emit(GossipType.data_column_sidecar, ForkName.gloas, data);
   }
 
-  /** An execution payload for an unknown block (there is only ever one payload per block). */
-  function processExecutionPayload(rootByte = 0xdd): void {
-    const signedEnvelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
-    signedEnvelope.payload.slotNumber = clockSlot;
-    signedEnvelope.beaconBlockRoot = Buffer.alloc(32, rootByte);
-    const data = ssz.gloas.ExecutionPayloadEnvelope.serialize(signedEnvelope);
-    emit(GossipType.execution_payload, ForkName.gloas, data);
+  /**
+   * An execution payload for an unknown block (there is only ever one payload per block), sent by peer `peer`.
+   * `size` pads the message, only its slot and block root are read before the block is known.
+   */
+  function processExecutionPayload(peer = 0, size = 0, rootByte = 0xdd): void {
+    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    envelope.payload.slotNumber = clockSlot;
+    envelope.beaconBlockRoot = Buffer.alloc(32, rootByte);
+    const serialized = ssz.gloas.ExecutionPayloadEnvelope.serialize(envelope);
+    const data = new Uint8Array(Math.max(size, serialized.length));
+    data.set(serialized);
+    emit(GossipType.execution_payload, ForkName.gloas, data, `${peerIdStr}${peer}` as PeerIdStr);
   }
 
   function bufferedBlockCount(): number {
@@ -264,12 +271,46 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     });
 
     it("holds a limited number of execution payloads for one block", () => {
-      for (let i = 0; i < MAX_EXECUTION_PAYLOAD_PER_ROOT + 2; i++) {
-        processExecutionPayload();
+      for (let peer = 0; peer < MAX_EXECUTION_PAYLOAD_PER_ROOT + 2; peer++) {
+        processExecutionPayload(peer);
       }
-      // a block has exactly one genuine payload; we keep one extra slot so a malformed front-runner
-      // doesn't push the genuine payload out, then drop further messages
+      // a block has exactly one genuine payload, but it is not signed: until the block is known we cannot tell
+      // it from the ones a peer makes up, so we hold some from different peers, then drop further messages
       expect(bufferedBlockCount()).toBe(MAX_EXECUTION_PAYLOAD_PER_ROOT);
+    });
+
+    it("still holds the genuine execution payload after two peers sent made-up ones", () => {
+      processExecutionPayload(0);
+      processExecutionPayload(1);
+      processExecutionPayload(2);
+      expect(bufferedBlockCount()).toBe(3);
+    });
+
+    it("holds only one execution payload per peer for one block", () => {
+      for (let i = 0; i < MAX_EXECUTION_PAYLOAD_PER_ROOT; i++) {
+        processExecutionPayload(0);
+      }
+      // a single peer cannot use up the messages we hold for the block
+      expect(bufferedBlockCount()).toBe(1);
+
+      // the same peer can still send the payload of another block
+      processExecutionPayload(0, 0, 0xde);
+      expect(bufferedBlockCount()).toBe(2);
+    });
+
+    it("limits the total size of the execution payloads held for one block", () => {
+      const maxSize = MAX_AWAITING_EXECUTION_PAYLOAD_SIZE_PER_ROOT_FACTOR * config.MAX_PAYLOAD_SIZE;
+      // each message takes more than a third of the size we hold for one block
+      const size = Math.ceil(maxSize / 3) + 1;
+      for (let peer = 0; peer < MAX_EXECUTION_PAYLOAD_PER_ROOT; peer++) {
+        processExecutionPayload(peer, size);
+      }
+      // holding more messages than before does not take more memory in the worst case
+      expect(bufferedBlockCount()).toBe(2);
+
+      // a small one still fits
+      processExecutionPayload(MAX_EXECUTION_PAYLOAD_PER_ROOT);
+      expect(bufferedBlockCount()).toBe(3);
     });
   });
 
@@ -474,7 +515,7 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
         p.searchedRootsBySlot.getOrDefault(clockSlot).getOrDefault(`0x${i}`).blockPeerIds = new Set();
       }
 
-      processExecutionPayload(0xdd);
+      processExecutionPayload(0, 0, 0xdd);
       expect(unknownBlockRootSpy).not.toHaveBeenCalled();
       expect(bufferedBlockCount()).toBe(1);
 

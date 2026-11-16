@@ -51,8 +51,9 @@ export enum ChainEvent {
    */
   publishDataColumns = "publishDataColumns",
   /**
-   * This event signals that the execution payload envelope of a block this node built itself
-   * is ready to be published.
+   * This event signals that the execution payload envelope of a block this node built itself and its
+   * data columns are ready to be published. The callback is called once with the outcome, with an error
+   * if the envelope or any of its data columns could not be published.
    */
   publishExecutionPayloadEnvelope = "publishExecutionPayloadEnvelope",
   /**
@@ -128,7 +129,11 @@ export type IChainEvents = ApiEvents & {
 
   [ChainEvent.publishDataColumns]: (sidecars: DataColumnSidecar[]) => void;
 
-  [ChainEvent.publishExecutionPayloadEnvelope]: (envelope: gloas.ExecutionPayloadEnvelope) => void;
+  [ChainEvent.publishExecutionPayloadEnvelope]: (
+    envelope: gloas.ExecutionPayloadEnvelope,
+    dataColumnSidecars: gloas.DataColumnSidecar[],
+    onPublished: (error: Error | null) => void
+  ) => void;
 
   [ChainEvent.publishProposerSlashing]: (proposerSlashing: phase0.ProposerSlashing) => void;
 

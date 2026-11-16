@@ -41,6 +41,8 @@ describe("Forkchoice", () => {
         finalizedRoot: genesisRoot,
 
         executionPayloadBlockHash: null,
+
+        executionPayloadRoot: null,
         executionStatus: ExecutionStatus.PreMerge,
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
@@ -150,6 +152,8 @@ describe("Forkchoice", () => {
       unrealizedFinalizedRoot: genesisRoot,
 
       executionPayloadBlockHash: null,
+
+      executionPayloadRoot: null,
       executionStatus: ExecutionStatus.PreMerge,
 
       timeliness: false,

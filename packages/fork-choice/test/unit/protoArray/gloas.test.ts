@@ -28,12 +28,27 @@ describe("Gloas Fork Choice", () => {
     return (protoArray as any).nodes[index];
   }
 
+  /**
+   * The root of the payload with the given block hash. Roots and block hashes never share a value in these
+   * tests, so that a lookup by root can not pass by matching a block hash and vice versa.
+   */
+  function toPayloadRoot(blockHash: RootHex): RootHex {
+    return `${blockHash}root`;
+  }
+
+  /**
+   * @param parentBlockHash block hash of the payload the block builds on, makes the block a gloas block.
+   * A child extends the FULL variant of its parent by naming the block hash of the parent's payload, and
+   * the EMPTY variant by naming the `parentBlockHash` of the parent. The bid commits to the root of the
+   * same payload
+   * @param payloadBlockHash block hash of the payload of a gloas block, to pass to `onExecutionPayload`
+   */
   function createTestBlock(
     slot: number,
     blockRoot: RootHex,
     parentRoot: RootHex,
     parentBlockHash?: RootHex,
-    payloadRoot: RootHex = blockRoot
+    payloadBlockHash: RootHex = blockRoot
   ): ProtoBlock {
     return {
       slot,
@@ -54,16 +69,15 @@ describe("Gloas Fork Choice", () => {
       ptcTimeliness: true,
       proposerIndex: 0,
       executionPayloadBlockHash: blockRoot, // Use blockRoot as execution hash
+      // Pre-gloas the root of the block's own payload, post-gloas the root of the payload it builds on
+      executionPayloadRoot: toPayloadRoot(parentBlockHash === undefined ? blockRoot : parentBlockHash),
       executionPayloadNumber: slot,
       executionPayloadGasLimit: 30000000,
       executionStatus: ExecutionStatus.Valid,
       dataAvailabilityStatus: DataAvailabilityStatus.Available,
       parentBlockHash: parentBlockHash === undefined ? null : parentBlockHash,
-      // The root of a payload is identified with its block hash. A child extends the FULL variant of its
-      // parent by setting `parentBlockHash` to the parent's `payloadRoot`, and the EMPTY variant by
-      // setting it to the parent's `parentBlockHash`
-      parentPayloadRoot: parentBlockHash === undefined ? null : parentBlockHash,
-      payloadRoot: parentBlockHash === undefined ? null : payloadRoot,
+      parentPayloadRoot: parentBlockHash === undefined ? null : toPayloadRoot(parentBlockHash),
+      payloadRoot: parentBlockHash === undefined ? null : toPayloadRoot(payloadBlockHash),
       payloadStatus: PayloadStatus.FULL,
     };
   }
@@ -2421,6 +2435,7 @@ describe("Gloas Fork Choice", () => {
 
   describe("Parent variant lookup by payload root", () => {
     let protoArray: ProtoArray;
+    const genesisPayloadRoot = toPayloadRoot(genesisRoot);
 
     beforeEach(() => {
       protoArray = new ProtoArray({
@@ -2431,19 +2446,19 @@ describe("Gloas Fork Choice", () => {
         finalizedRoot: genesisRoot,
       });
       protoArray.onBlock(createTestBlock(0, genesisRoot, "0x00"), 0, null);
-      // bid of 0x02: parent_payload_root = genesisRoot, payload_root = 0x02root
+      // bid of 0x02: parent_payload_root = root of the genesis payload, payload_root = 0x02hashroot
       protoArray.onBlock(
-        createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot, "0x02root"),
+        createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot, "0x02hash"),
         gloasForkSlot,
         null
       );
     });
 
-    function deliverPayload(): void {
+    function deliverPayload(blockRoot = "0x02", blockHash = "0x02hash"): void {
       protoArray.onExecutionPayload(
-        "0x02",
+        blockRoot,
         gloasForkSlot,
-        "0x02hash",
+        blockHash,
         1,
         30000000,
         null,
@@ -2455,32 +2470,105 @@ describe("Gloas Fork Choice", () => {
     it("returns FULL when the root matches the block's payload root", () => {
       deliverPayload();
       const fullIdx = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL);
-      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x02", "0x02root")).toBe(fullIdx);
-      expect(protoArray.getBlockHexAndPayloadRoot("0x02", "0x02root")?.payloadStatus).toBe(PayloadStatus.FULL);
+      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x02", "0x02hashroot")).toBe(fullIdx);
+      expect(protoArray.getBlockHexAndPayloadRoot("0x02", "0x02hashroot")?.payloadStatus).toBe(PayloadStatus.FULL);
+    });
+
+    it("the FULL variant carries the payload root of the bid, PENDING and EMPTY the parent payload root", () => {
+      deliverPayload();
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING)?.executionPayloadRoot).toBe(
+        genesisPayloadRoot
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY)?.executionPayloadRoot).toBe(
+        genesisPayloadRoot
+      );
+      const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
+      expect(fullNode?.executionPayloadRoot).toBe("0x02hashroot");
+      expect(fullNode?.executionPayloadBlockHash).toBe("0x02hash");
     });
 
     it("returns undefined for the block's payload root until the payload is imported", () => {
-      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x02", "0x02root")).toBeUndefined();
-      expect(protoArray.getBlockHexAndPayloadRoot("0x02", "0x02root")).toBeNull();
+      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x02", "0x02hashroot")).toBeUndefined();
+      expect(protoArray.getBlockHexAndPayloadRoot("0x02", "0x02hashroot")).toBeNull();
     });
 
     it("returns EMPTY when the root matches the block's parent payload root", () => {
-      deliverPayload();
       const emptyIdx = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
-      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x02", genesisRoot)).toBe(emptyIdx);
+      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x02", genesisPayloadRoot)).toBe(emptyIdx);
+      deliverPayload();
+      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x02", genesisPayloadRoot)).toBe(emptyIdx);
     });
 
     it("returns undefined when no variant matches", () => {
       deliverPayload();
-      // The block hash of the payload is not its root
+      // The block hash of a payload is not its root
       expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x02", "0x02hash")).toBeUndefined();
-      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x99", "0x02root")).toBeUndefined();
+      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x02", genesisRoot)).toBeUndefined();
+      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x99", "0x02hashroot")).toBeUndefined();
     });
 
-    it("returns the single variant of a pre-gloas block", () => {
+    it("matches a pre-gloas block by the root of its payload only", () => {
       protoArray.onBlock(createTestBlock(gloasForkSlot - 1, "0x05", genesisRoot), gloasForkSlot - 1, null);
       const fullIdx = protoArray.getNodeIndexByRootAndStatus("0x05", PayloadStatus.FULL);
-      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x05", "0x05root")).toBe(fullIdx);
+      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x05", toPayloadRoot("0x05"))).toBe(fullIdx);
+      // Neither another root nor the block hash of its payload
+      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x05", "0xffroot")).toBeUndefined();
+      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x05", "0x05")).toBeUndefined();
+      expect(protoArray.getBlockHexAndPayloadRoot("0x05", "0xffroot")).toBeNull();
+    });
+
+    it("getParent resolves a pre-gloas parent by the root of its payload only", () => {
+      protoArray.onBlock(createTestBlock(gloasForkSlot - 1, "0x05", genesisRoot), gloasForkSlot - 1, null);
+      expect(protoArray.getParent("0x05", toPayloadRoot("0x05"))?.blockRoot).toBe("0x05");
+      expect(protoArray.getParent("0x05", "0xffroot")).toBeNull();
+      // The first gloas block builds on the payload of the last pre-gloas block
+      const child = createTestBlock(gloasForkSlot, "0x06", "0x05", "0x05");
+      expect(protoArray.getParentPayloadStatus(child)).toBe(PayloadStatus.FULL);
+      expect(() => protoArray.getParentPayloadStatus({...child, parentPayloadRoot: "0xffroot"})).toThrow();
+    });
+
+    it("does not resolve to a missing FULL variant when payloadRoot equals parentPayloadRoot", () => {
+      // The bid of a state upgraded to gloas commits to the last pre-gloas payload, which is also the
+      // payload the state builds on. No payload can be imported for such a block
+      const anchor = {
+        ...createTestBlock(gloasForkSlot, "0x07", genesisRoot, genesisRoot),
+        payloadRoot: genesisPayloadRoot,
+      };
+      expect(anchor.parentPayloadRoot).toBe(genesisPayloadRoot);
+      protoArray.onBlock(anchor, gloasForkSlot, null);
+
+      const emptyIdx = protoArray.getNodeIndexByRootAndStatus("0x07", PayloadStatus.EMPTY);
+      expect(protoArray.getNodeIndexByRootAndStatus("0x07", PayloadStatus.FULL)).toBeUndefined();
+      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x07", genesisPayloadRoot)).toBe(emptyIdx);
+      expect(protoArray.getParent("0x07", genesisPayloadRoot)?.payloadStatus).toBe(PayloadStatus.EMPTY);
+
+      // The next block builds on the same payload
+      const child = createTestBlock(gloasForkSlot + 1, "0x08", "0x07", genesisRoot);
+      expect(protoArray.getParentPayloadStatus(child)).toBe(PayloadStatus.EMPTY);
+      protoArray.onBlock(child, gloasForkSlot + 1, null);
+      expect(getNodeByPayloadStatus(protoArray, "0x08", PayloadStatus.PENDING)?.parent).toBe(emptyIdx);
+    });
+
+    it("resolves a chain of blocks without payload to the EMPTY variants", () => {
+      // 0x02, 0x03 and 0x04 all build on the genesis payload, none of their payloads is imported
+      protoArray.onBlock(createTestBlock(gloasForkSlot + 1, "0x03", "0x02", genesisRoot), gloasForkSlot + 1, null);
+      protoArray.onBlock(createTestBlock(gloasForkSlot + 2, "0x04", "0x03", genesisRoot), gloasForkSlot + 2, null);
+
+      for (const [blockRoot, parentBlockRoot] of [
+        ["0x03", "0x02"],
+        ["0x04", "0x03"],
+      ]) {
+        const parentEmptyIdx = protoArray.getNodeIndexByRootAndStatus(parentBlockRoot, PayloadStatus.EMPTY);
+        expect(protoArray.getNodeIndexByRootAndPayloadRoot(parentBlockRoot, genesisPayloadRoot)).toBe(parentEmptyIdx);
+        expect(getNodeByPayloadStatus(protoArray, blockRoot, PayloadStatus.PENDING)?.parent).toBe(parentEmptyIdx);
+      }
+
+      // A late payload for 0x03 does not change which variant 0x04 builds on
+      deliverPayload("0x03", "0x03hash");
+      const block4 = createTestBlock(gloasForkSlot + 2, "0x04", "0x03", genesisRoot);
+      expect(protoArray.getParentPayloadStatus(block4)).toBe(PayloadStatus.EMPTY);
+      // and a block naming a payload which was never built on is not resolved
+      expect(protoArray.getNodeIndexByRootAndPayloadRoot("0x04", toPayloadRoot("0x04"))).toBeUndefined();
     });
 
     it("getParentPayloadStatus is decided by the payload root, not the block hash", () => {
@@ -2491,7 +2579,7 @@ describe("Gloas Fork Choice", () => {
         parentBlockHash: "0x02hash",
       };
       expect(protoArray.getParentPayloadStatus(child)).toBe(PayloadStatus.EMPTY);
-      expect(protoArray.getParentPayloadStatus({...child, parentPayloadRoot: "0x02root"})).toBe(PayloadStatus.FULL);
+      expect(protoArray.getParentPayloadStatus({...child, parentPayloadRoot: "0x02hashroot"})).toBe(PayloadStatus.FULL);
       expect(() => protoArray.getParentPayloadStatus({...child, parentPayloadRoot: "0x02hash"})).toThrow();
     });
   });
