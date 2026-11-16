@@ -613,6 +613,10 @@ jobs:
           - merkle_proof
           - sync
           - fast_confirmation
+        exclude:
+          # The fast confirmation vectors ship for the minimal preset only.
+          - preset: mainnet
+            runner: fast_confirmation
         include:
           - preset: minimal
             optimize: Debug
