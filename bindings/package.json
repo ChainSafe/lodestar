@@ -41,13 +41,13 @@
     }
   },
   "scripts": {
-    "prepare-mainnet": "cd .. && zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=mainnet --prefix bindings/zig-out",
-    "prepare-minimal": "cd .. && zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=minimal --prefix bindings/zig-out",
-    "prepare-gnosis": "cd .. && zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=gnosis --prefix bindings/zig-out",
+    "prepare-mainnet": "zapi build --variant mainnet --optimize ReleaseSafe --zig-cwd .. --prefix bindings/zig-out",
+    "prepare-minimal": "zapi build --variant minimal --optimize ReleaseSafe --zig-cwd .. --prefix bindings/zig-out",
+    "prepare-gnosis": "zapi build --variant gnosis --optimize ReleaseSafe --zig-cwd .. --prefix bindings/zig-out",
     "lint": "biome check",
     "test": "NODE_OPTIONS='--expose-gc' vitest run",
     "benchmark": "NODE_OPTIONS='--import tsx' benchmark 'perf/**/*.test.ts' --isolate --config .benchrc.yaml --defaultBranch unstable",
-    "build": "pnpm run prepare-${LODESTAR_PRESET:-mainnet}",
+    "build": "pnpm run prepare-mainnet && pnpm run prepare-minimal && pnpm run prepare-gnosis",
     "build:watch": "pnpm run build --watch",
     "build:release": "pnpm clean && pnpm build",
     "clean": "rm -rf zig-out",
@@ -72,10 +72,21 @@
       "x86_64-apple-darwin",
       "x86_64-unknown-linux-gnu",
       "x86_64-unknown-linux-musl"
-    ]
+    ],
+    "variants": {
+      "mainnet": [
+        "-Dpreset=mainnet"
+      ],
+      "minimal": [
+        "-Dpreset=minimal"
+      ],
+      "gnosis": [
+        "-Dpreset=gnosis"
+      ]
+    }
   },
   "dependencies": {
-    "@chainsafe/zapi": "4.3.0"
+    "@chainsafe/zapi": "4.5.0"
   },
   "devDependencies": {
     "@chainsafe/benchmark": "2.1.0",
