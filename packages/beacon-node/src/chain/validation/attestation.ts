@@ -291,7 +291,7 @@ async function validateAttestationNoSignatureCheck(
       // api or first time validation of a gossip attestation
       committeeIndex = attestationOrCache.attestation.committeeIndex;
 
-      if (isForkPostGloas(fork)) {
+      if (isForkPostGloas(fork) && isForkPostGloas(chain.config.getForkName(attSlot))) {
         // [REJECT] `attestation.data.index < 2`.
         if (attData.index >= 2) {
           throw new AttestationError(GossipAction.REJECT, {
