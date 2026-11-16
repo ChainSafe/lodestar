@@ -7,6 +7,7 @@ import {DataColumnSidecar, RootHex, Slot, gloas, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import type {PublishExecutionPayloadEnvelopeResult} from "./blocks/revealSelfBuiltPayload.js";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -52,8 +53,9 @@ export enum ChainEvent {
   publishDataColumns = "publishDataColumns",
   /**
    * This event signals that the execution payload envelope of a block this node built itself and its
-   * data columns are ready to be published. The callback is called once with the outcome, with an error
-   * if the envelope or any of its data columns could not be published.
+   * data columns are ready to be published. The envelope is null if only data columns are to be published.
+   * The callback is called once with the outcome, which tells the envelope and each data column apart: one
+   * that could not be published does not fail the others.
    */
   publishExecutionPayloadEnvelope = "publishExecutionPayloadEnvelope",
   /**
@@ -130,9 +132,9 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.publishDataColumns]: (sidecars: DataColumnSidecar[]) => void;
 
   [ChainEvent.publishExecutionPayloadEnvelope]: (
-    envelope: gloas.ExecutionPayloadEnvelope,
+    envelope: gloas.ExecutionPayloadEnvelope | null,
     dataColumnSidecars: gloas.DataColumnSidecar[],
-    onPublished: (error: Error | null) => void
+    onPublished: (result: PublishExecutionPayloadEnvelopeResult) => void
   ) => void;
 
   [ChainEvent.publishProposerSlashing]: (proposerSlashing: phase0.ProposerSlashing) => void;

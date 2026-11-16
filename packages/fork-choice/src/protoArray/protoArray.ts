@@ -7,8 +7,10 @@ import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
 import {LVHExecError, LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 import {
   ExecutionStatus,
+  GloasBlockBidMeta,
   HEX_ZERO_HASH,
   LVHExecResponse,
+  ParentPayloadDependency,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
@@ -330,7 +332,10 @@ export class ProtoArray {
 
     // Pre-Gloas
     if (!Array.isArray(variantIndices)) {
-      return this.nodes[variantIndices].executionPayloadRoot === payloadRoot ? variantIndices : undefined;
+      const node = this.nodes[variantIndices];
+      // A pre-gloas block has a single payload and a single variant, there is nothing else a child can build on.
+      // The payload root of a placeholder is not the one of its block, so it cannot be held against the child
+      return node.isPlaceholder || node.executionPayloadRoot === payloadRoot ? variantIndices : undefined;
     }
 
     // Post-Gloas, prefer FULL then EMPTY
@@ -354,6 +359,43 @@ export class ProtoArray {
   getBlockHexAndPayloadRoot(blockRoot: RootHex, payloadRoot: RootHex): ProtoBlock | null {
     const idx = this.getNodeIndexByRootAndPayloadRoot(blockRoot, payloadRoot);
     return idx !== undefined ? this.nodes[idx] : null;
+  }
+
+  /**
+   * What the block `parentRoot` has to offer to a block or bid that builds on it with
+   * `bid.parent_payload_root == parentPayloadRoot`. A valid child names the payload of the parent block (the
+   * parent is FULL) or the payload the parent block builds on (the parent is EMPTY), both of which the bid of
+   * the parent commits to.
+   *
+   * This is the single place that decides between "wait for the payload of the parent" and "no valid block names
+   * this payload", block gossip validation and by-root sync must not derive it from the fields of the parent.
+   * In particular the fields of a placeholder are not those of its block, see `ProtoBlock.isPlaceholder`:
+   * it never yields `Invalid`.
+   */
+  getParentPayloadDependency(parentRoot: RootHex, parentPayloadRoot: RootHex): ParentPayloadDependency {
+    const parentIndex = this.getDefaultNodeIndex(parentRoot);
+    if (parentIndex === undefined) {
+      return ParentPayloadDependency.UnknownBlock;
+    }
+    if (this.getNodeIndexByRootAndPayloadRoot(parentRoot, parentPayloadRoot) !== undefined) {
+      return ParentPayloadDependency.Ready;
+    }
+
+    const parent = this.nodes[parentIndex];
+    if (!isGloasBlock(parent)) {
+      // The single payload of a pre-gloas block is known, there is none to wait for
+      return ParentPayloadDependency.Invalid;
+    }
+    if (parent.isPlaceholder) {
+      // Neither the payload of the block nor the one it builds on is known. The EMPTY variant carries the payload
+      // the anchor builds on, anything else can only be decided with the envelope of the block
+      return ParentPayloadDependency.AwaitingPayload;
+    }
+    // The EMPTY variant, which always exists, carries `parent.parentPayloadRoot`: only the payload of the parent
+    // block itself can be missing
+    return parent.payloadRoot === parentPayloadRoot
+      ? ParentPayloadDependency.AwaitingPayload
+      : ParentPayloadDependency.Invalid;
   }
 
   /**
@@ -561,6 +603,23 @@ export class ProtoArray {
         root: block.blockRoot,
       });
     }
+    // The bid fields are all set (gloas) or all null (pre-gloas). The type says so, but not every caller builds
+    // the block in a way the type checks. With only some of them set the block would be handled as a pre-gloas
+    // or as a gloas block depending on the field that is read: a single FULL variant with a parent that is
+    // always FULL, or variants that are looked up by a root that is not there
+    const {parentBlockHash, parentPayloadRoot, payloadRoot} = block as {
+      [K in keyof GloasBlockBidMeta]: RootHex | null | undefined;
+    };
+    const bidFields = [parentBlockHash, parentPayloadRoot, payloadRoot];
+    if (!bidFields.every((field) => field === null) && !bidFields.every((field) => typeof field === "string")) {
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.PARTIAL_BID_FIELDS,
+        root: block.blockRoot,
+        parentBlockHash: parentBlockHash ?? null,
+        parentPayloadRoot: parentPayloadRoot ?? null,
+        payloadRoot: payloadRoot ?? null,
+      });
+    }
 
     if (isGloasBlock(block)) {
       // Gloas: Create PENDING + EMPTY nodes with correct parent relationships
@@ -727,6 +786,14 @@ export class ProtoArray {
     if (!isGloasBlock(pendingNode)) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.PRE_GLOAS_BLOCK,
+        root: blockRoot,
+      });
+    }
+
+    if (pendingNode.isPlaceholder) {
+      // `payloadRoot` is not the one of the block's bid, the FULL variant would carry the root of another payload
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.PLACEHOLDER_BLOCK,
         root: blockRoot,
       });
     }

@@ -20,6 +20,7 @@ import {
   BlockType,
   PayloadPreparationType,
   getPayloadAttributesForSSE,
+  isExtendingParentPayload,
   prepareExecutionPayload,
   produceBlockBody,
   produceCommonBlockBody,
@@ -310,9 +311,73 @@ describe("supported payload attributes", () => {
         finalizedBlockHash,
         feeRecipient: "0xccccccccccccccccccccccccccccccccccccccaa",
       })
-    ).toThrow("Expected state with parent execution payload applied for withdrawals");
+    ).toThrow("Expected parent block hash to be the latest block hash of the state");
     expect(withdrawalSpy).not.toHaveBeenCalled();
   });
+  // The state transition decides whether a block extends the payload of its parent by payload root
+  // (`process_withdrawals`, `process_parent_execution_payload`). Block hashes do not identify a payload: a dev
+  // genesis has a zero block hash for the payload the genesis block builds on and for the one its bid commits to
+  it.each([
+    {
+      name: "builds on an empty parent whose bid has the block hash of the latest payload",
+      bidBlockHash: 6,
+      bidPayloadRoot: 3,
+      isExtendingPayload: false,
+    },
+    {
+      name: "extends the parent payload although the bid has another block hash",
+      bidBlockHash: 5,
+      bidPayloadRoot: 4,
+      isExtendingPayload: true,
+    },
+  ])("gloas decides by payload root: $name", ({bidBlockHash, bidPayloadRoot, isExtendingPayload}) => {
+    const {state, chain, modules, slot, parentBlockRoot} = setup(ForkName.gloas);
+    const latestBlockHash = new Uint8Array(32).fill(6);
+    const latestPayloadRoot = new Uint8Array(32).fill(4);
+    const computed = [{...ssz.capella.Withdrawal.defaultValue(), amount: 7n}];
+    const carried = [{...ssz.capella.Withdrawal.defaultValue(), amount: 8n}];
+    const withdrawalSpy = vi.spyOn(state, "getExpectedWithdrawals").mockReturnValue({
+      expectedWithdrawals: computed,
+      processedBuilderWithdrawalsCount: 0,
+      processedPartialWithdrawalsCount: 0,
+      processedBuildersSweepCount: 0,
+      processedValidatorSweepCount: 0,
+    });
+    vi.spyOn(state, "latestExecutionPayloadBid", "get").mockReturnValue({
+      ...ssz.gloas.ExecutionPayloadBid.defaultValue(),
+      blockHash: new Uint8Array(32).fill(bidBlockHash),
+      payloadRoot: new Uint8Array(32).fill(bidPayloadRoot),
+    });
+    vi.spyOn(state, "latestBlockHash", "get").mockReturnValue(latestBlockHash);
+    vi.spyOn(state, "latestPayloadRoot", "get").mockReturnValue(latestPayloadRoot);
+    vi.spyOn(state, "payloadExpectedWithdrawals", "get").mockReturnValue(carried);
+    vi.spyOn(state, "getBeaconProposer").mockReturnValue(0);
+    modules.forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
+    modules.forkChoice.getBlockHexAndPayloadRoot = vi.fn().mockReturnValue(
+      generateProtoBlock({
+        executionPayloadBlockHash: toRootHex(latestBlockHash),
+        executionPayloadGasLimit: 30_000_000,
+      })
+    );
+
+    if (!isStatePostGloas(state)) throw new Error("Expected gloas state");
+    expect(isExtendingParentPayload(state)).toBe(isExtendingPayload);
+    const result = getPayloadAttributesForSSE(ForkName.gloas, chain, {
+      prepareState: state,
+      prepareSlot: slot,
+      parentBlockRoot,
+      // The head hash sent to the execution engine stays a block hash, the one of the latest payload
+      parentBlockHash: latestBlockHash,
+      safeBlockHash,
+      finalizedBlockHash,
+      feeRecipient: "0xccccccccccccccccccccccccccccccccccccccaa",
+    });
+
+    expect(result.payloadAttributes).toMatchObject({withdrawals: isExtendingPayload ? computed : carried});
+    expect(withdrawalSpy).toHaveBeenCalledTimes(isExtendingPayload ? 1 : 0);
+    expect(result.parentBlockHash).toEqual(latestBlockHash);
+  });
+
   for (const fork of [ForkName.fulu, ForkName.gloas, ForkName.heze] as const) {
     for (const fullParent of fork === ForkName.fulu ? [true] : [true, false]) {
       it(`${fork} builds on a ${fullParent ? "full" : "empty"} parent with the correct withdrawals`, () => {
@@ -332,6 +397,7 @@ describe("supported payload attributes", () => {
           vi.spyOn(state, "latestExecutionPayloadBid", "get").mockReturnValue({
             ...ssz.gloas.ExecutionPayloadBid.defaultValue(),
             blockHash: new Uint8Array(32).fill(5),
+            payloadRoot: fullParent ? latestPayloadRoot : new Uint8Array(32).fill(3),
           });
           // A full parent has its payload applied, an empty parent leaves the payload it was built on as latest
           vi.spyOn(state, "latestBlockHash", "get").mockReturnValue(parentBlockHash);

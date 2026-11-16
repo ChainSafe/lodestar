@@ -24,6 +24,7 @@ import {
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
   type IBeaconStateViewBellatrix,
+  type IBeaconStateViewGloas,
   computeEpochAtSlot,
   computeTimeAtSlot,
   getExpectedGasLimit,
@@ -929,6 +930,19 @@ export function getPayloadAttributesForSSE(
   return ssePayloadAttributes;
 }
 
+/**
+ * True if the latest payload of `state` is the one of its latest block, ie. a block on top of `state` extends
+ * the payload of its parent block. Same condition as the withdrawals gate of the state transition:
+ *
+ *   state.latest_payload_root == state.latest_execution_payload_bid.payload_root
+ *
+ * It holds once the payload of the latest block is applied (`withParentPayloadApplied`), and for a state
+ * upgraded to gloas whose bid commits to the last pre-gloas payload.
+ */
+export function isExtendingParentPayload(state: IBeaconStateViewGloas): boolean {
+  return byteArrayEquals(state.latestPayloadRoot, state.latestExecutionPayloadBid.payloadRoot);
+}
+
 function preparePayloadAttributes(
   fork: ForkPostBellatrix,
   chain: {
@@ -963,19 +977,22 @@ function preparePayloadAttributes(
 
   let withdrawals: capella.Withdrawal[];
   if (isStatePostGloas(prepareState)) {
-    const isExtendingPayload = byteArrayEquals(parentBlockHash, prepareState.latestExecutionPayloadBid.blockHash);
+    // Extending the payload of the parent block is decided by payload root, the way the state transition does
+    // (`process_withdrawals`): the callers apply the payload of the parent to prepareState when they build on it,
+    // after which the latest payload of the state is the one its bid commits to. Block hashes do not decide it,
+    // they are not unique: a dev genesis has a zero block hash for both
+    const isExtendingPayload = isExtendingParentPayload(prepareState);
+    // `parentBlockHash` is the head hash sent to the execution engine: in both cases it is the block hash of the
+    // latest payload of prepareState. A mismatch means that the caller builds on the payload of the parent
+    // without having applied it to prepareState, or the other way around
+    if (!byteArrayEquals(parentBlockHash, prepareState.latestBlockHash)) {
+      throw new Error(
+        `Expected parent block hash to be the latest block hash of the state isExtendingPayload=${isExtendingPayload} parentBlockHash=${toRootHex(parentBlockHash)} latestBlockHash=${toRootHex(prepareState.latestBlockHash)}`
+      );
+    }
     if (isExtendingPayload) {
-      // applyParentExecutionPayload sets latestBlockHash = parentBid.blockHash, so a mismatch
-      // here means the caller did not apply parent payload to prepareState
-      if (!byteArrayEquals(prepareState.latestBlockHash, prepareState.latestExecutionPayloadBid.blockHash)) {
-        throw new Error("Expected state with parent execution payload applied for withdrawals");
-      }
       withdrawals = prepareState.getExpectedWithdrawals().expectedWithdrawals;
     } else {
-      // The payload must build on the latest payload of the state, the one before the parent's
-      if (!byteArrayEquals(parentBlockHash, prepareState.latestBlockHash)) {
-        throw new Error("Expected parent block hash to be the latest block hash of the state");
-      }
       // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
       // already deducted from CL balances but never credited on the EL (the envelope
       // was not delivered). The next payload must carry those same withdrawals to

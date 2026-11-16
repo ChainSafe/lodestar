@@ -1,6 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {
+  BlockBidMeta,
   ExecutionStatus,
   ForkChoice,
   ForkChoiceStateGetter,
@@ -183,12 +184,7 @@ export function initializeForkChoiceFromFinalizedState(
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
         payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
-        parentBlockHash: isStatePostGloas(state) ? toRootHex(state.latestBlockHash) : null,
-        // The anchor state is the post-state of the anchor block, both still hold the values its bid was checked against
-        parentPayloadRoot: isStatePostGloas(state) ? toRootHex(state.latestPayloadRoot) : null,
-        // Equals `parentPayloadRoot` if the anchor block is pre-gloas and the state was upgraded: the bid
-        // of an upgraded state commits to the last pre-gloas payload, which no envelope will deliver
-        payloadRoot: isStatePostGloas(state) ? toRootHex(state.latestExecutionPayloadBid.payloadRoot) : null,
+        ...getAnchorBidMeta(state),
       },
       currentSlot
     ),
@@ -304,18 +300,20 @@ export function initializeForkChoiceFromUnfinalizedState(
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
-    parentBlockHash: isStatePostGloas(unfinalizedState) ? toRootHex(unfinalizedState.latestBlockHash) : null,
-    parentPayloadRoot: isStatePostGloas(unfinalizedState) ? toRootHex(unfinalizedState.latestPayloadRoot) : null,
-    payloadRoot: isStatePostGloas(unfinalizedState)
-      ? toRootHex(unfinalizedState.latestExecutionPayloadBid.payloadRoot)
-      : null,
+    ...getAnchorBidMeta(unfinalizedState),
   };
+
+  // The ancestors of the head block are only known by root. Fork choice needs them as nodes, for the head to
+  // descend from the justified and finalized blocks. They are clones of the head node with the root replaced and
+  // are marked as placeholders: their bid and execution payload fields are those of the head, which is what links
+  // them into a chain (each node "builds on" the payload the head builds on), not those of their blocks
 
   const parentSlot = blockHeader.slot - 1;
   const parentEpoch = computeEpochAtSlot(parentSlot);
   // parent of head block
   const parentBlock: ProtoBlock = {
     ...headBlock,
+    isPlaceholder: true,
     slot: parentSlot,
     // link this to the dummy justified block
     parentRoot: toRootHex(justifiedCheckpoint.root),
@@ -327,6 +325,7 @@ export function initializeForkChoiceFromUnfinalizedState(
 
   const justifiedBlock: ProtoBlock = {
     ...headBlock,
+    isPlaceholder: true,
     slot: computeStartSlotAtEpoch(justifiedCheckpoint.epoch),
     // link this to the finalized root so that getAncestors can find the finalized block
     parentRoot: toRootHex(finalizedCheckpoint.root),
@@ -339,6 +338,7 @@ export function initializeForkChoiceFromUnfinalizedState(
 
   const finalizedBlock: ProtoBlock = {
     ...headBlock,
+    isPlaceholder: true,
     slot: computeStartSlotAtEpoch(finalizedCheckpoint.epoch),
     // we don't care parent of finalized block
     parentRoot: ZERO_HASH_HEX,
@@ -361,4 +361,25 @@ export function initializeForkChoiceFromUnfinalizedState(
   const forkchoiceConstructor = opts.forkchoiceConstructor ?? ForkChoice;
 
   return new forkchoiceConstructor(config, store, protoArray, unfinalizedState.validatorCount, metrics, opts, logger);
+}
+
+/**
+ * The bid fields of the anchor block, read from its post-state `state`.
+ *
+ * `process_execution_payload_bid` checks `bid.parent_block_hash` and `bid.parent_payload_root` against
+ * `state.latest_block_hash` and `state.latest_payload_root` and nothing changes them until the next block, so the
+ * state still holds the values of the bid.
+ *
+ * If the anchor block is pre-gloas and the state was upgraded to gloas, `payloadRoot` equals `parentPayloadRoot`:
+ * the bid of an upgraded state commits to the last pre-gloas payload, which no envelope will deliver.
+ */
+function getAnchorBidMeta(state: IBeaconStateView): BlockBidMeta {
+  if (!isStatePostGloas(state)) {
+    return {parentBlockHash: null, parentPayloadRoot: null, payloadRoot: null};
+  }
+  return {
+    parentBlockHash: toRootHex(state.latestBlockHash),
+    parentPayloadRoot: toRootHex(state.latestPayloadRoot),
+    payloadRoot: toRootHex(state.latestExecutionPayloadBid.payloadRoot),
+  };
 }

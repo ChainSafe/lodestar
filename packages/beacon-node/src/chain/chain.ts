@@ -86,7 +86,12 @@ import {IBlockInput, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
-import {SelfBuiltPayloadRevealStatus, revealSelfBuiltPayload} from "./blocks/revealSelfBuiltPayload.js";
+import {
+  SelfBuiltPayloadRevealOutcome,
+  SelfBuiltPayloadReveals,
+  completeSelfBuiltPayloadReveal,
+  revealSelfBuiltPayload,
+} from "./blocks/revealSelfBuiltPayload.js";
 import {ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
@@ -246,11 +251,8 @@ export class BeaconChain implements IBeaconChain {
    * assemble into full blocks before publishing to the network.
    */
   readonly blockProductionCache = new Map<RootHex, ProduceResult>();
-  /**
-   * Self-built blocks whose execution payload envelope this node is broadcasting or has broadcast, by block
-   * root, see `revealSelfBuiltPayload`
-   */
-  readonly selfBuiltPayloadReveals = new Map<RootHex, SelfBuiltPayloadRevealStatus>();
+  /** Self-built blocks whose execution payload this node reveals, see `revealSelfBuiltPayload` */
+  readonly selfBuiltPayloadReveals = new SelfBuiltPayloadReveals();
 
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
 
@@ -592,6 +594,9 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async close(): Promise<void> {
+    // Nothing is revealed or retried once the chain is closing
+    this.selfBuiltPayloadReveals.close();
+
     await this.archiveStore.close();
     await this.bls.close();
 
@@ -1328,6 +1333,10 @@ export class BeaconChain implements IBeaconChain {
     return revealSelfBuiltPayload.call(this, blockRootHex);
   }
 
+  completeSelfBuiltPayloadReveal(blockRootHex: RootHex): Promise<SelfBuiltPayloadRevealOutcome> | null {
+    return completeSelfBuiltPayloadReveal.call(this, blockRootHex);
+  }
+
   processProposerEquivocation(blockSlot: Slot, proposerIndex: ValidatorIndex): void {
     this.produceProposerSlashing(blockSlot, proposerIndex).catch((e) => {
       this.logger.debug("Error producing proposer slashing", {slot: blockSlot, proposerIndex}, e as Error);
@@ -1893,11 +1902,7 @@ export class BeaconChain implements IBeaconChain {
     // Prune old cached block production artifacts, those are only useful on their slot
     pruneSetToMax(this.blockProductionCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_RESULTS);
     this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
-    for (const blockRootHex of this.selfBuiltPayloadReveals.keys()) {
-      if (!this.blockProductionCache.has(blockRootHex)) {
-        this.selfBuiltPayloadReveals.delete(blockRootHex);
-      }
-    }
+    this.selfBuiltPayloadReveals.prune((blockRootHex) => this.blockProductionCache.has(blockRootHex));
 
     const metrics = this.metrics;
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {

@@ -73,6 +73,7 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getBlockHexDefaultStatus: vi.fn(),
       getBlockHexAndBlockHash: vi.fn(),
       getBlockHexAndPayloadRoot: vi.fn(),
+      getParentPayloadDependency: vi.fn(),
       getAllAncestorBlocks: vi.fn(),
       getAllNonAncestorBlocks: vi.fn(),
       getAllAncestorAndNonAncestorBlocks: vi.fn(),

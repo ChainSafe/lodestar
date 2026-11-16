@@ -1,10 +1,17 @@
 import {beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {toHexString} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
-import {CheckpointWithHex, ExecutionStatus, ForkChoice, PayloadStatus} from "@lodestar/fork-choice";
-import {FAR_FUTURE_EPOCH, ForkName, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {
+  CheckpointWithHex,
+  ExecutionStatus,
+  ForkChoice,
+  ParentPayloadDependency,
+  PayloadStatus,
+  ProtoBlock,
+} from "@lodestar/fork-choice";
+import {FAR_FUTURE_EPOCH, ForkName, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   BeaconStateFulu,
   BeaconStateGloas,
@@ -12,15 +19,21 @@ import {
   DataAvailabilityStatus,
   computeAnchorCheckpoint,
   computeEpochAtSlot,
+  computeStartSlotAtEpoch,
   getEffectiveBalanceIncrementsZeroed,
   getTemporaryBlockHeader,
   processSlots,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, Slot, ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {ChainEventEmitter, initializeForkChoice} from "../../../../src/chain/index.js";
+import {initDevState} from "../../../../src/node/utils/state.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 import {generateState} from "../../../utils/state.js";
 import {generateSignedBlockAtSlot} from "../../../utils/typeGenerator.js";
+import {
+  generateGloasAnchorState,
+  initForkChoiceFromUnfinalizedGloasState,
+} from "../../../utils/unfinalizedForkChoice.js";
 import {generateValidators} from "../../../utils/validator.js";
 
 // We mock this package globally
@@ -581,5 +594,419 @@ describe("LodestarForkChoice anchor payload root", () => {
       expect(anchor?.executionPayloadBlockHash).toBe(toHexString(blockHash));
       expect(forkChoice.getBlockHexAndPayloadRoot(anchorRoot, otherPayloadRoot)).toBeNull();
     });
+  });
+});
+
+/**
+ * The anchor node is the only node whose bid and execution payload fields are not read from a block but derived
+ * from a state. These tests go through the initialisation code of the node with states that are built by the
+ * state transition where it matters (upgrade to gloas, genesis), and check what a child and the envelope of the
+ * anchor do with the node.
+ */
+describe("LodestarForkChoice anchor variants", () => {
+  const otherPayloadRoot = toHexString(Buffer.alloc(32, 0x33));
+  const envelopeBlockHash = toHexString(Buffer.alloc(32, 0xee));
+
+  function initForkChoice(state: BeaconStateView, forkConfig: ChainForkConfig, isFinalizedState: boolean): ForkChoice {
+    return initializeForkChoice(
+      forkConfig,
+      new ChainEventEmitter(),
+      state.slot + 1,
+      state,
+      isFinalizedState,
+      {},
+      () => getEffectiveBalanceIncrementsZeroed(state.validatorCount),
+      () => null,
+      null
+    );
+  }
+
+  /** What the anchor state says about its latest block, read independently of the fork choice code */
+  function readAnchor(state: BeaconStateView): {
+    root: string;
+    slot: Slot;
+    latestBlockHash: string;
+    latestPayloadRoot: string;
+    bidPayloadRoot: string;
+  } {
+    const stateGloas = state.cachedState as BeaconStateGloas;
+    return {
+      root: toHexString(state.computeAnchorCheckpoint().checkpoint.root),
+      slot: stateGloas.latestBlockHeader.slot,
+      latestBlockHash: toHexString(stateGloas.latestBlockHash),
+      latestPayloadRoot: toHexString(stateGloas.latestPayloadRoot),
+      bidPayloadRoot: toHexString(stateGloas.latestExecutionPayloadBid.payloadRoot),
+    };
+  }
+
+  /** Imports a gloas block on top of the anchor, with a bid that builds on the given payload */
+  function importChild(
+    forkChoice: ForkChoice,
+    anchorRoot: string,
+    slot: Slot,
+    parentBlockHash: string,
+    parentPayloadRoot: string
+  ): ProtoBlock {
+    const block = ssz.gloas.BeaconBlock.defaultValue();
+    block.slot = slot;
+    block.parentRoot = fromHexString(anchorRoot);
+    block.body.signedExecutionPayloadBid.message.parentBlockHash = fromHexString(parentBlockHash);
+    block.body.signedExecutionPayloadBid.message.parentPayloadRoot = fromHexString(parentPayloadRoot);
+    block.body.signedExecutionPayloadBid.message.payloadRoot = Buffer.alloc(32, 0x44);
+    // Fork choice reads the checkpoints and the target root from the post-state of the block
+    const justifiedCheckpoint = forkChoice.getJustifiedCheckpoint();
+    const finalizedCheckpoint = forkChoice.getFinalizedCheckpoint();
+    const postState = {
+      currentJustifiedCheckpoint: justifiedCheckpoint,
+      finalizedCheckpoint,
+      computeUnrealizedCheckpoints: () => ({justifiedCheckpoint, finalizedCheckpoint}),
+      getBlockRootAtSlot: () => fromHexString(anchorRoot),
+      isExecutionStateType: false,
+    } as unknown as BeaconStateView;
+    forkChoice.updateTime(slot);
+    return forkChoice.onBlock(
+      block,
+      postState,
+      0,
+      0,
+      slot,
+      ExecutionStatus.Syncing,
+      DataAvailabilityStatus.NotRequired
+    );
+  }
+
+  /** The payload status of the variant of the parent which the PENDING node of `child` is attached to */
+  function getAttachedParentVariant(forkChoice: ForkChoice, child: ProtoBlock): PayloadStatus | undefined {
+    const protoArray = forkChoice["protoArray"];
+    const parentIndex = protoArray.getNode(child.blockRoot, PayloadStatus.PENDING)?.parent;
+    for (const status of [PayloadStatus.PENDING, PayloadStatus.EMPTY, PayloadStatus.FULL]) {
+      if (
+        parentIndex !== undefined &&
+        protoArray.getNodeIndexByRootAndStatus(child.parentRoot, status) === parentIndex
+      ) {
+        return status;
+      }
+    }
+    return undefined;
+  }
+
+  function importAnchorPayload(forkChoice: ForkChoice, anchorRoot: string): void {
+    forkChoice.onExecutionPayload(
+      anchorRoot,
+      envelopeBlockHash,
+      9,
+      30_000_000,
+      ExecutionStatus.Syncing,
+      DataAvailabilityStatus.Available
+    );
+  }
+
+  /** PENDING and EMPTY carry the payload the anchor block builds on, there is no FULL variant at start */
+  function expectAnchorVariants(forkChoice: ForkChoice, anchor: ReturnType<typeof readAnchor>): void {
+    for (const status of [PayloadStatus.PENDING, PayloadStatus.EMPTY]) {
+      const node = forkChoice.getBlockHex(anchor.root, status);
+      expect(node?.payloadStatus).toBe(status);
+      expect(node?.isPlaceholder).toBeUndefined();
+      expect(node?.executionPayloadRoot).toBe(anchor.latestPayloadRoot);
+      expect(node?.executionPayloadBlockHash).toBe(anchor.latestBlockHash);
+      expect(node?.parentPayloadRoot).toBe(anchor.latestPayloadRoot);
+      expect(node?.parentBlockHash).toBe(anchor.latestBlockHash);
+      expect(node?.payloadRoot).toBe(anchor.bidPayloadRoot);
+    }
+    expect(forkChoice.getBlockHex(anchor.root, PayloadStatus.FULL)).toBeNull();
+    expect(forkChoice.getBlockHexAndPayloadRoot(anchor.root, anchor.latestPayloadRoot)?.payloadStatus).toBe(
+      PayloadStatus.EMPTY
+    );
+    expect(forkChoice.getParentPayloadDependency(anchor.root, anchor.latestPayloadRoot)).toBe(
+      ParentPayloadDependency.Ready
+    );
+    // The block hash of a payload is not its root
+    expect(forkChoice.getBlockHexAndPayloadRoot(anchor.root, anchor.latestBlockHash)).toBeNull();
+    expect(forkChoice.getParentPayloadDependency(anchor.root, otherPayloadRoot)).toBe(ParentPayloadDependency.Invalid);
+  }
+
+  /** The envelope of the anchor creates the FULL variant, with the payload root of the bid in the state */
+  function expectAnchorFullVariant(forkChoice: ForkChoice, anchor: ReturnType<typeof readAnchor>): void {
+    const full = forkChoice.getBlockHex(anchor.root, PayloadStatus.FULL);
+    expect(full?.payloadStatus).toBe(PayloadStatus.FULL);
+    expect(full?.executionPayloadRoot).toBe(anchor.bidPayloadRoot);
+    expect(full?.executionPayloadBlockHash).toBe(envelopeBlockHash);
+    // The other variants still carry the payload the anchor block builds on
+    expect(forkChoice.getBlockHex(anchor.root, PayloadStatus.EMPTY)?.executionPayloadRoot).toBe(
+      anchor.latestPayloadRoot
+    );
+    expect(forkChoice.getBlockHex(anchor.root, PayloadStatus.PENDING)?.executionPayloadRoot).toBe(
+      anchor.latestPayloadRoot
+    );
+  }
+
+  describe.each([
+    {name: "finalized", isFinalizedState: true},
+    {name: "unfinalized", isFinalizedState: false},
+  ])("$name state", ({isFinalizedState}) => {
+    describe("anchor from a state upgraded to gloas, the latest block is pre-gloas", () => {
+      const gloasForkEpoch = 3;
+      const forkConfig = getConfig(ForkName.gloas, gloasForkEpoch);
+      const gloasForkSlot = computeStartSlotAtEpoch(gloasForkEpoch);
+      const lastPayloadBlockHash = Buffer.alloc(32, 0x11);
+
+      /**
+       * A fulu genesis state advanced into gloas by the state transition, which upgrades it at the fork epoch
+       * (`upgradeStateToGloas`). No block is imported on the way, the last pre-gloas payload is the genesis
+       * payload. The block header and the checkpoints are then set to those of a chain with a latest block in
+       * the last pre-gloas slot and justified and finalized checkpoints, as fork choice needs them
+       */
+      let upgradedState: {state: BeaconStateView; lastPayloadRoot: string} | undefined;
+      function getUpgradedState(): {state: BeaconStateView; lastPayloadRoot: string} {
+        // Advancing the state is slow, fork choice does not change it
+        upgradedState ??= buildUpgradedState();
+        return upgradedState;
+      }
+
+      function buildUpgradedState(): {state: BeaconStateView; lastPayloadRoot: string} {
+        // Enough validators for every slot to have a committee, which the PTC of the upgraded state is sampled from
+        const stateFulu = initDevState(forkConfig, 2 * SLOTS_PER_EPOCH, {
+          eth1BlockHash: lastPayloadBlockHash,
+        }) as BeaconStateFulu;
+        // The root of a payload equals the root of its header
+        const lastPayloadRoot = toHexString(stateFulu.latestExecutionPayloadHeader.hashTreeRoot());
+        expect(toHexString(stateFulu.latestExecutionPayloadHeader.blockHash)).toBe(toHexString(lastPayloadBlockHash));
+
+        const stateGloas = processSlots(
+          createCachedBeaconStateTest(stateFulu, forkConfig),
+          gloasForkSlot
+        ) as BeaconStateGloas;
+        stateGloas.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU({
+          slot: gloasForkSlot - 1,
+          proposerIndex: 0,
+          parentRoot: Buffer.alloc(32, 0xa1),
+          stateRoot: Buffer.alloc(32),
+          bodyRoot: Buffer.alloc(32, 0xb0),
+        });
+        stateGloas.currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
+          epoch: 2,
+          root: Buffer.alloc(32, 0xa2),
+        });
+        stateGloas.finalizedCheckpoint = ssz.phase0.Checkpoint.toViewDU({epoch: 1, root: Buffer.alloc(32, 0xa3)});
+        stateGloas.commit();
+        return {state: new BeaconStateView(createCachedBeaconStateTest(stateGloas, forkConfig)), lastPayloadRoot};
+      }
+
+      it("has PENDING and EMPTY variants on the last pre-gloas payload, which the bid commits to as well", () => {
+        const {state, lastPayloadRoot} = getUpgradedState();
+        const anchor = readAnchor(state);
+        // What the anchor code has to derive, from the fulu state
+        expect(anchor.slot).toBe(gloasForkSlot - 1);
+        expect(anchor.latestPayloadRoot).toBe(lastPayloadRoot);
+        expect(anchor.bidPayloadRoot).toBe(lastPayloadRoot);
+        expect(anchor.latestBlockHash).toBe(toHexString(lastPayloadBlockHash));
+
+        const forkChoice = initForkChoice(state, forkConfig, isFinalizedState);
+        expectAnchorVariants(forkChoice, anchor);
+      });
+
+      it("the first gloas block builds on the EMPTY variant, it has no payload to wait for", () => {
+        const {state} = getUpgradedState();
+        const anchor = readAnchor(state);
+        const forkChoice = initForkChoice(state, forkConfig, isFinalizedState);
+
+        // The state is at the fork slot without a block, the first gloas block comes after it
+        const child = importChild(
+          forkChoice,
+          anchor.root,
+          gloasForkSlot + 1,
+          anchor.latestBlockHash,
+          anchor.bidPayloadRoot
+        );
+        expect(getAttachedParentVariant(forkChoice, child)).toBe(PayloadStatus.EMPTY);
+        expect(child.executionPayloadRoot).toBe(anchor.latestPayloadRoot);
+        expect(child.executionPayloadBlockHash).toBe(anchor.latestBlockHash);
+      });
+
+      it("an envelope imported on the anchor creates the FULL variant with the payload root of the bid", () => {
+        const {state} = getUpgradedState();
+        const anchor = readAnchor(state);
+        const forkChoice = initForkChoice(state, forkConfig, isFinalizedState);
+
+        importAnchorPayload(forkChoice, anchor.root);
+        expectAnchorFullVariant(forkChoice, anchor);
+      });
+    });
+
+    describe("gloas anchor", () => {
+      const forkConfig = getConfig(ForkName.gloas);
+      // A finalized anchor state is at the start of its epoch, an unfinalized one is anywhere
+      const anchorSlot = 3 * SLOTS_PER_EPOCH + (isFinalizedState ? 0 : 5);
+
+      it("has PENDING and EMPTY variants on the payload the anchor block builds on", () => {
+        const state = generateGloasAnchorState(forkConfig, anchorSlot);
+        const anchor = readAnchor(state);
+        expect(anchor.bidPayloadRoot).not.toBe(anchor.latestPayloadRoot);
+
+        const forkChoice = initForkChoice(state, forkConfig, isFinalizedState);
+        expectAnchorVariants(forkChoice, anchor);
+        // The payload of the anchor block is not imported, a block building on it has to wait for it
+        expect(forkChoice.getBlockHexAndPayloadRoot(anchor.root, anchor.bidPayloadRoot)).toBeNull();
+        expect(forkChoice.getParentPayloadDependency(anchor.root, anchor.bidPayloadRoot)).toBe(
+          ParentPayloadDependency.AwaitingPayload
+        );
+      });
+
+      it("anchor block was FULL: its envelope creates the FULL variant, which the child builds on", () => {
+        const state = generateGloasAnchorState(forkConfig, anchorSlot);
+        const anchor = readAnchor(state);
+        const forkChoice = initForkChoice(state, forkConfig, isFinalizedState);
+
+        // The child names the payload of the anchor block, there is no variant for it without the envelope
+        expect(() =>
+          importChild(forkChoice, anchor.root, anchorSlot + 1, envelopeBlockHash, anchor.bidPayloadRoot)
+        ).toThrow();
+
+        importAnchorPayload(forkChoice, anchor.root);
+        expectAnchorFullVariant(forkChoice, anchor);
+        expect(forkChoice.getParentPayloadDependency(anchor.root, anchor.bidPayloadRoot)).toBe(
+          ParentPayloadDependency.Ready
+        );
+
+        const child = importChild(forkChoice, anchor.root, anchorSlot + 1, envelopeBlockHash, anchor.bidPayloadRoot);
+        expect(getAttachedParentVariant(forkChoice, child)).toBe(PayloadStatus.FULL);
+        expect(child.executionPayloadRoot).toBe(anchor.bidPayloadRoot);
+        expect(child.executionPayloadBlockHash).toBe(envelopeBlockHash);
+      });
+
+      it("anchor block was EMPTY: the child builds on the EMPTY variant, with or without the envelope", () => {
+        for (const withEnvelope of [false, true]) {
+          const state = generateGloasAnchorState(forkConfig, anchorSlot);
+          const anchor = readAnchor(state);
+          const forkChoice = initForkChoice(state, forkConfig, isFinalizedState);
+          if (withEnvelope) {
+            importAnchorPayload(forkChoice, anchor.root);
+            expectAnchorFullVariant(forkChoice, anchor);
+          }
+
+          // The child names the payload the anchor block builds on
+          const child = importChild(
+            forkChoice,
+            anchor.root,
+            anchorSlot + 1,
+            anchor.latestBlockHash,
+            anchor.latestPayloadRoot
+          );
+          expect(getAttachedParentVariant(forkChoice, child)).toBe(PayloadStatus.EMPTY);
+          expect(child.executionPayloadRoot).toBe(anchor.latestPayloadRoot);
+          expect(child.executionPayloadBlockHash).toBe(anchor.latestBlockHash);
+        }
+      });
+    });
+  });
+
+  describe("gloas genesis", () => {
+    const forkConfig = getConfig(ForkName.gloas);
+    const eth1BlockHash = Buffer.alloc(32, 0xbb);
+
+    function getGenesisState(): BeaconStateView {
+      const stateValue = initDevState(forkConfig, 8, {eth1BlockHash}) as BeaconStateGloas;
+      return new BeaconStateView(createCachedBeaconStateTest(stateValue, forkConfig));
+    }
+
+    it("has PENDING and EMPTY variants on the genesis payload, the genesis bid commits to no payload", () => {
+      const state = getGenesisState();
+      const anchor = readAnchor(state);
+      expect(anchor.slot).toBe(0);
+      expect(anchor.latestBlockHash).toBe(toHexString(eth1BlockHash));
+      expect(anchor.bidPayloadRoot).toBe(toHexString(Buffer.alloc(32)));
+      expect(anchor.latestPayloadRoot).not.toBe(anchor.bidPayloadRoot);
+
+      const forkChoice = initForkChoice(state, forkConfig, true);
+      expectAnchorVariants(forkChoice, anchor);
+    });
+
+    it("the first block builds on the EMPTY variant", () => {
+      const state = getGenesisState();
+      const anchor = readAnchor(state);
+      const forkChoice = initForkChoice(state, forkConfig, true);
+
+      const child = importChild(forkChoice, anchor.root, 1, anchor.latestBlockHash, anchor.latestPayloadRoot);
+      expect(getAttachedParentVariant(forkChoice, child)).toBe(PayloadStatus.EMPTY);
+      expect(child.executionPayloadRoot).toBe(anchor.latestPayloadRoot);
+      expect(child.executionPayloadBlockHash).toBe(toHexString(eth1BlockHash));
+    });
+
+    it("an envelope imported on the anchor creates the FULL variant with the payload root of the bid", () => {
+      const state = getGenesisState();
+      const anchor = readAnchor(state);
+      const forkChoice = initForkChoice(state, forkConfig, true);
+
+      importAnchorPayload(forkChoice, anchor.root);
+      expectAnchorFullVariant(forkChoice, anchor);
+    });
+  });
+});
+
+describe("LodestarForkChoice restarted from an unfinalized gloas state", () => {
+  const otherPayloadRoot = toHexString(Buffer.alloc(32, 0x33));
+
+  it("marks the ancestors of the head as placeholders, not the head", async () => {
+    const {forkChoice, headRoot, parentRoot, justifiedRoot, finalizedRoot} =
+      await initForkChoiceFromUnfinalizedGloasState();
+
+    expect(forkChoice.getHead().blockRoot).toBe(headRoot);
+    for (const status of [PayloadStatus.PENDING, PayloadStatus.EMPTY]) {
+      expect(forkChoice.getBlockHex(headRoot, status)?.isPlaceholder).toBeUndefined();
+      for (const root of [parentRoot, justifiedRoot, finalizedRoot]) {
+        expect(forkChoice.getBlockHex(root, status)?.isPlaceholder).toBe(true);
+      }
+    }
+  });
+
+  it("the head is a real node: a payload its bid does not name is invalid", async () => {
+    const {forkChoice, headRoot, headParentPayloadRoot, headPayloadRoot} =
+      await initForkChoiceFromUnfinalizedGloasState();
+
+    expect(forkChoice.getParentPayloadDependency(headRoot, headParentPayloadRoot)).toBe(ParentPayloadDependency.Ready);
+    expect(forkChoice.getParentPayloadDependency(headRoot, headPayloadRoot)).toBe(
+      ParentPayloadDependency.AwaitingPayload
+    );
+    expect(forkChoice.getParentPayloadDependency(headRoot, otherPayloadRoot)).toBe(ParentPayloadDependency.Invalid);
+  });
+
+  it.each(["parentRoot", "justifiedRoot", "finalizedRoot"] as const)(
+    "a block that forks off the placeholder %s is never classified as invalid",
+    async (ancestor) => {
+      const restarted = await initForkChoiceFromUnfinalizedGloasState();
+      const {forkChoice, headParentPayloadRoot, headPayloadRoot} = restarted;
+      const ancestorRoot = restarted[ancestor];
+
+      // The placeholder carries the bid fields of the head, the real block has another bid. A valid child of
+      // the real block names a payload root which is neither `payloadRoot` nor `parentPayloadRoot` of the node
+      expect(forkChoice.getBlockHexDefaultStatus(ancestorRoot)?.payloadRoot).toBe(headPayloadRoot);
+      expect(forkChoice.getBlockHexDefaultStatus(ancestorRoot)?.parentPayloadRoot).toBe(headParentPayloadRoot);
+      for (const parentPayloadRoot of [otherPayloadRoot, headPayloadRoot]) {
+        expect(forkChoice.getBlockHexAndPayloadRoot(ancestorRoot, parentPayloadRoot)).toBeNull();
+        expect(forkChoice.getParentPayloadDependency(ancestorRoot, parentPayloadRoot)).toBe(
+          ParentPayloadDependency.AwaitingPayload
+        );
+      }
+      // The head builds on the placeholders through the payload it names
+      expect(forkChoice.getParentPayloadDependency(ancestorRoot, headParentPayloadRoot)).toBe(
+        ParentPayloadDependency.Ready
+      );
+    }
+  );
+
+  it("does not create a FULL variant for a placeholder, its payload root is not the one of the block", async () => {
+    const {forkChoice, parentRoot} = await initForkChoiceFromUnfinalizedGloasState();
+
+    expect(() =>
+      forkChoice.onExecutionPayload(
+        parentRoot,
+        toHexString(Buffer.alloc(32, 0xee)),
+        9,
+        30_000_000,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      )
+    ).toThrow();
+    expect(forkChoice.getBlockHex(parentRoot, PayloadStatus.FULL)).toBeNull();
   });
 });

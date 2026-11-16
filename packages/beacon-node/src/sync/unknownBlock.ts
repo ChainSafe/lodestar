@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {CheckpointWithHex} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ParentPayloadDependency} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
@@ -692,17 +692,22 @@ export class BlockInputSync {
 
     const block = blockInput.getBlock() as gloas.SignedBeaconBlock;
     const parentPayloadRootHex = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot);
-    if (this.chain.forkChoice.getBlockHexAndPayloadRoot(parentRootHex, parentPayloadRootHex) !== null) {
-      return {kind: "ready"};
-    }
+    // Fork choice decides, see `getParentPayloadDependency`: it knows which of the parent's fields can be trusted
+    switch (this.chain.forkChoice.getParentPayloadDependency(parentRootHex, parentPayloadRootHex)) {
+      case ParentPayloadDependency.UnknownBlock:
+        return {kind: "parentBlock", rootHex: parentRootHex};
 
-    // `parentPayloadRootHex` is neither the parent's payload nor the payload the parent built on
-    if (parentBlock.payloadRoot !== parentPayloadRootHex) {
-      return {kind: "invalidParentPayload", parentRootHex, parentPayloadRootHex};
-    }
+      case ParentPayloadDependency.Ready:
+        return {kind: "ready"};
 
-    // Parent is in fork choice but its payload `parentPayloadRootHex` isn't revealed yet
-    return {kind: "parentPayload", rootHex: parentRootHex, slot: parentBlock.slot};
+      case ParentPayloadDependency.AwaitingPayload:
+        // Parent is in fork choice but its payload `parentPayloadRootHex` isn't revealed yet
+        return {kind: "parentPayload", rootHex: parentRootHex, slot: parentBlock.slot};
+
+      case ParentPayloadDependency.Invalid:
+        // `parentPayloadRootHex` is neither the parent's payload nor the payload the parent built on
+        return {kind: "invalidParentPayload", parentRootHex, parentPayloadRootHex};
+    }
   }
 
   private advancePendingBlock(pendingBlock: PendingBlockInput): AdvancePendingBlockResult {

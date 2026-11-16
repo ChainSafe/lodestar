@@ -41,6 +41,7 @@ import {
   HEX_ZERO_HASH,
   LVHExecResponse,
   NULL_VOTE_INDEX,
+  ParentPayloadDependency,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
@@ -1006,9 +1007,13 @@ export class ForkChoice implements IForkChoice {
             }),
 
       payloadStatus: isGloasBeaconBlock(block) ? PayloadStatus.PENDING : PayloadStatus.FULL,
-      parentBlockHash: parentHashHex,
-      parentPayloadRoot: parentPayloadRootHex,
-      payloadRoot: bid ? toRootHex(bid.payloadRoot) : null,
+      ...(bid
+        ? {
+            parentBlockHash: toRootHex(bid.parentBlockHash),
+            parentPayloadRoot: toRootHex(bid.parentPayloadRoot),
+            payloadRoot: toRootHex(bid.payloadRoot),
+          }
+        : {parentBlockHash: null, parentPayloadRoot: null, payloadRoot: null}),
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot, proposerBoostRoot);
@@ -1386,6 +1391,11 @@ export class ForkChoice implements IForkChoice {
    */
   getBlockHexAndPayloadRoot(blockRoot: RootHex, payloadRoot: RootHex): ProtoBlock | null {
     return this.protoArray.getBlockHexAndPayloadRoot(blockRoot, payloadRoot);
+  }
+
+  /** See `ProtoArray.getParentPayloadDependency` */
+  getParentPayloadDependency(parentRoot: RootHex, parentPayloadRoot: RootHex): ParentPayloadDependency {
+    return this.protoArray.getParentPayloadDependency(parentRoot, parentPayloadRoot);
   }
 
   getJustifiedBlock(): ProtoBlock {

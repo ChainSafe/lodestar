@@ -36,6 +36,7 @@ import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
+import type {SelfBuiltPayloadRevealOutcome} from "./blocks/revealSelfBuiltPayload.js";
 import {ImportBlockOpts, ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
@@ -276,9 +277,15 @@ export interface IBeaconChain {
 
   /**
    * Broadcast and import the execution payload envelope of a block this node built itself, to be called once the
-   * block was broadcast and once it was imported. Returns true if the envelope was broadcast by this call
+   * block was broadcast and once it was imported. Returns true if this call started the reveal
    */
   revealSelfBuiltPayload(blockRootHex: RootHex): boolean;
+
+  /**
+   * Wait for the reveal of a self-built payload that is in flight and broadcast what is still missing. Returns
+   * null, synchronously, if this node does not reveal the payload of the block
+   */
+  completeSelfBuiltPayloadReveal(blockRootHex: RootHex): Promise<SelfBuiltPayloadRevealOutcome> | null;
 
   /** Produce and publish a proposer slashing from an observed equivocation. Does not throw, only logs errors */
   processProposerEquivocation(blockSlot: Slot, proposerIndex: ValidatorIndex): void;

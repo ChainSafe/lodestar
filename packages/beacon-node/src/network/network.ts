@@ -32,6 +32,7 @@ import {
 } from "@lodestar/types";
 import {defer, prettyPrintIndices, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
+import type {PublishExecutionPayloadEnvelopeResult} from "../chain/blocks/revealSelfBuiltPayload.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {GoodByeReasonCode} from "../constants/index.js";
@@ -107,6 +108,37 @@ export type NetworkInitModules = {
  * - libp2p in worker
  * - libp2p in main thread
  */
+/**
+ * Publish an execution payload envelope, if any, and its data columns. Gossips the envelope first, then the
+ * data columns. Each is published on its own: one that fails neither stops nor fails the others, and is reported
+ * in the result. Never throws.
+ */
+export async function publishExecutionPayloadEnvelopeAndColumns(
+  network: Pick<INetwork, "publishExecutionPayloadEnvelope" | "publishDataColumnSidecar">,
+  envelope: gloas.ExecutionPayloadEnvelope | null,
+  dataColumnSidecars: gloas.DataColumnSidecar[]
+): Promise<PublishExecutionPayloadEnvelopeResult> {
+  // The publish functions are called in order, each wrapped so that a synchronous throw is a failure as well
+  const envelopePromise =
+    envelope === null ? null : Promise.resolve().then(() => network.publishExecutionPayloadEnvelope(envelope));
+  const columnPromises = dataColumnSidecars.map((sidecar) =>
+    Promise.resolve().then(() => network.publishDataColumnSidecar(sidecar))
+  );
+
+  const [envelopeResult, ...columnResults] = await Promise.allSettled([envelopePromise, ...columnPromises]);
+
+  const columnErrors = new Map<number, Error>();
+  for (const [i, columnResult] of columnResults.entries()) {
+    if (columnResult.status === "rejected") {
+      columnErrors.set(dataColumnSidecars[i].index, columnResult.reason as Error);
+    }
+  }
+  return {
+    envelopeError: envelopeResult.status === "rejected" ? (envelopeResult.reason as Error) : null,
+    columnErrors,
+  };
+}
+
 export class Network implements INetwork {
   readonly peerId: PeerId;
   readonly custodyConfig: CustodyConfig;
@@ -863,22 +895,12 @@ export class Network implements INetwork {
   };
 
   private onPublishExecutionPayloadEnvelope = async (
-    envelope: gloas.ExecutionPayloadEnvelope,
+    envelope: gloas.ExecutionPayloadEnvelope | null,
     dataColumnSidecars: gloas.DataColumnSidecar[],
-    onPublished: (error: Error | null) => void
+    onPublished: (result: PublishExecutionPayloadEnvelopeResult) => void
   ): Promise<void> => {
-    let error: Error | null = null;
-    try {
-      // Gossip the envelope first, then its data columns
-      await promiseAllMaybeAsync<unknown>([
-        () => this.publishExecutionPayloadEnvelope(envelope),
-        ...dataColumnSidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)),
-      ]);
-    } catch (e) {
-      error = e as Error;
-    }
-    // The chain logs the error and reveals the payload again later
-    onPublished(error);
+    // The chain logs the errors and publishes what failed again later
+    onPublished(await publishExecutionPayloadEnvelopeAndColumns(this, envelope, dataColumnSidecars));
   };
 
   private onPublishProposerSlashing = async (proposerSlashing: phase0.ProposerSlashing): Promise<void> => {

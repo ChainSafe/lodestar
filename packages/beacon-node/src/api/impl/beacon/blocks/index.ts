@@ -969,6 +969,25 @@ export function getBeaconBlockApi(
         chain.logger.debug("Equivocation validated while publishing execution payload envelope", valLogMeta);
       }
 
+      // This node built the block and reveals its payload itself, see `revealSelfBuiltPayload`. The submitted
+      // envelope and blob data were validated above, against the bid if the node already holds the envelope.
+      // Nothing of it is published here, else the envelope and the data columns the node is broadcasting or has
+      // broadcast would go out twice. Wait for the reveal instead, which publishes what is still missing, emits
+      // the `execution_payload_gossip` event once and imports the payload
+      const revealCompletion = chain.completeSelfBuiltPayloadReveal(blockRootHex);
+      if (revealCompletion != null) {
+        const revealOutcome = await revealCompletion;
+        if (!revealOutcome.envelopePublished || revealOutcome.unpublishedColumns > 0) {
+          // The reveal logs why, and tries again by itself within the slot
+          throw new ApiError(
+            500,
+            `Self-built execution payload not fully published slot=${slot} blockRoot=${blockRootHex} envelopePublished=${revealOutcome.envelopePublished} unpublishedColumns=${revealOutcome.unpublishedColumns} inFlight=${revealOutcome.inFlight}`
+          );
+        }
+        chain.logger.debug("Execution payload envelope is revealed by this node, not publishing it again", valLogMeta);
+        return;
+      }
+
       if (envelopeAlreadyKnown) {
         // Only publish the data columns this node has not seen, the others were gossiped to or by this node
         dataColumnSidecars = dataColumnSidecars.filter(({index}) => !payloadInput.hasColumn(index));

@@ -118,27 +118,35 @@ async function validateExecutionPayloadEnvelope(
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
   // it is possible that the block didn't pass the validation
 
+  // The slot and the parent root of the block are read from `payloadInput`, which is created from the block
+  // itself, and not from the fork choice node: after a start from an unfinalized state the ancestors of the anchor
+  // are placeholders whose `slot` and `parentRoot` are not those of their blocks (see `ProtoBlock.isPlaceholder`),
+  // while a `payloadInput` is still reloaded for them from the block in the db. An honest envelope would fail
+  // a comparison with these fields and its peer would be penalized for it.
+
   // [REJECT] `block.slot` equals `payload.slotNumber`.
-  if (block.slot !== payload.slotNumber) {
+  const blockSlot = payloadInput.slot;
+  if (blockSlot !== payload.slotNumber) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
       slot: payload.slotNumber,
       root: blockRootHex,
       envelopeSlot: payload.slotNumber,
-      blockSlot: block.slot,
+      blockSlot,
     });
   }
 
   // [REJECT] `envelope.parent_beacon_block_root == block.parent_root`
-  // The envelope is not signed, every field must be checked against the block for the envelope to be unique
-  const envelopeParentRootHex = toRootHex(envelope.parentBeaconBlockRoot);
-  if (envelopeParentRootHex !== block.parentRoot) {
+  // The envelope is not signed, every field must be checked against the block for the envelope to be unique.
+  // `process_execution_payload_bid` asserts that `bid.parent_block_root` is the root of the latest block header,
+  // which `process_block_header` asserts `block.parent_root` to be: the bid has the parent root of the block
+  if (!byteArrayEquals(envelope.parentBeaconBlockRoot, payloadInput.getBid().parentBlockRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.PARENT_BEACON_BLOCK_ROOT_MISMATCH,
       slot: payload.slotNumber,
       root: blockRootHex,
-      envelopeParentRoot: envelopeParentRootHex,
-      blockParentRoot: block.parentRoot,
+      envelopeParentRoot: toRootHex(envelope.parentBeaconBlockRoot),
+      blockParentRoot: toRootHex(payloadInput.getBid().parentBlockRoot),
     });
   }
 
@@ -263,7 +271,7 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `payload.timestamp == compute_time_at_slot(state.genesis_time, block.slot)`
-  const expectedTimestamp = computeTimeAtSlot(chain.config, block.slot, chain.genesisTime);
+  const expectedTimestamp = computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime);
   if (payload.timestamp !== expectedTimestamp) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.INCORRECT_TIMESTAMP,

@@ -63,6 +63,8 @@ describe("validateGossipExecutionPayloadEnvelope", () => {
     block.message.slot = slot;
     block.message.parentRoot = parentRoot;
     bid = block.message.body.signedExecutionPayloadBid.message;
+    // `process_execution_payload_bid` asserts that the bid names the parent of the block
+    bid.parentBlockRoot = parentRoot;
     bid.gasLimit = BigInt(envelope.payload.gasLimit);
     bid.prevRandao = envelope.payload.prevRandao;
     bid.parentBlockHash = envelope.payload.parentHash;
@@ -165,6 +167,40 @@ describe("validateGossipExecutionPayloadEnvelope", () => {
       })
     );
     await expect(promise).rejects.toHaveProperty("action", GossipAction.REJECT);
+  });
+
+  it("accepts the envelope of a block that fork choice only holds a placeholder for", async () => {
+    // After a start from an unfinalized state the ancestors of the anchor are placeholders: the slot is an upper
+    // bound and the parent root links to the next placeholder, they are not those of the block. The
+    // PayloadEnvelopeInput is reloaded from the block in the db and has the real ones
+    chain.forkChoice.getBlockDefaultStatus.mockReturnValue(
+      generateProtoBlock({
+        isPlaceholder: true,
+        slot: slot + 3,
+        blockRoot: blockRootHex,
+        parentRoot: toRootHex(Buffer.alloc(32, 0x99)),
+        executionPayloadGasLimit: 0,
+        payloadRoot: toRootHex(Buffer.alloc(32, 0xaa)),
+      })
+    );
+
+    await expect(validateGossipExecutionPayloadEnvelope(chain, envelope)).resolves.toBeUndefined();
+  });
+
+  it("rejects an envelope whose slot is not the slot of the block", async () => {
+    envelope.payload.slotNumber = slot + 1;
+
+    const promise = validateGossipExecutionPayloadEnvelope(chain, envelope);
+    await expectRejectedWithLodestarError(
+      promise,
+      new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+        code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
+        slot: slot + 1,
+        root: blockRootHex,
+        envelopeSlot: slot + 1,
+        blockSlot: slot,
+      })
+    );
   });
 
   it("rejects an envelope whose payload root is not the one the bid commits to", async () => {

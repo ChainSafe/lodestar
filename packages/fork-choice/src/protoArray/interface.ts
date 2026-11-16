@@ -46,15 +46,59 @@ export enum PayloadStatus {
 }
 
 /**
+ * Bid fields of a gloas block, see `BlockBidMeta`
+ */
+export type GloasBlockBidMeta = {
+  // `parent_block_hash` of the block's bid. This is the execution block hash the block builds on,
+  // reported to the execution engine while the block's own payload is not imported
+  parentBlockHash: RootHex;
+
+  // `parent_payload_root` of the block's bid
+  // Used to determine if this block extends EMPTY or FULL parent variant
+  // Spec: gloas/fork-choice.md#new-get_parent_payload_status
+  parentPayloadRoot: RootHex;
+
+  // `payload_root` of the block's bid. Same for all variants of the block, it becomes the
+  // executionPayloadRoot of the FULL variant once the payload is imported. Do not use it to look up the
+  // payload a child builds on, the FULL variant may not exist: use executionPayloadRoot of the variants
+  payloadRoot: RootHex;
+};
+
+/**
+ * The fields that come from the block's bid: all set for a gloas block, all null for a pre-gloas block.
+ * A block with only some of them set is not a valid `ProtoBlock`, `ProtoArray.onBlock` throws on it.
+ */
+export type BlockBidMeta = GloasBlockBidMeta | {parentBlockHash: null; parentPayloadRoot: null; payloadRoot: null};
+
+/**
  * Check if a block is in the Gloas fork (ePBS enabled)
  *
  * `parentBlockHash`, `parentPayloadRoot` and `payloadRoot` come from the block's bid, so they are either all
- * set (gloas) or all null (pre-gloas)
+ * set (gloas) or all null (pre-gloas). `ProtoArray.onBlock` enforces it for every node it holds.
  */
-export function isGloasBlock(
-  block: ProtoBlock
-): block is ProtoBlock & {parentBlockHash: RootHex; parentPayloadRoot: RootHex; payloadRoot: RootHex} {
-  return block.parentBlockHash !== null && block.parentPayloadRoot !== null && block.payloadRoot !== null;
+export function isGloasBlock(block: ProtoBlock): block is ProtoBlock & GloasBlockBidMeta {
+  return block.parentBlockHash !== null;
+}
+
+/**
+ * What the parent of a block or bid has to offer for the payload they build on (`bid.parent_payload_root`),
+ * see `ProtoArray.getParentPayloadDependency`
+ */
+export enum ParentPayloadDependency {
+  /** The parent block is not in fork choice */
+  UnknownBlock = "unknown_block",
+  /** A variant of the parent carries the payload, the block can be imported on top of it */
+  Ready = "ready",
+  /**
+   * The payload may be the one of the parent block, which is not imported. This is certain for a block whose
+   * bid fork choice knows, and the only option left for a placeholder
+   */
+  AwaitingPayload = "awaiting_payload",
+  /**
+   * The payload is neither the one of the parent block nor the one the parent block builds on, no valid block
+   * names it. Never returned for a placeholder, fork choice does not know its bid.
+   */
+  Invalid = "invalid",
 }
 
 export type LVHValidResponse = {
@@ -117,13 +161,16 @@ export type BlockExtraMeta =
       dataAvailabilityStatus: DataAvailabilityStatus.PreData;
     };
 
+/** The execution payload fields and the bid fields of a block, both discriminated on the fork of the block */
+type BlockMeta = BlockExtraMeta & BlockBidMeta;
+
 /**
  * A block that is to be applied to the fork choice
  *
  * A simplified version of BeaconBlock
  */
 
-export type ProtoBlock = BlockExtraMeta & {
+export type ProtoBlock = BlockMeta & {
   /**
    * The slot is not necessary for ProtoArray,
    * it just exists so external components can easily query the block slot.
@@ -170,19 +217,15 @@ export type ProtoBlock = BlockExtraMeta & {
   /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
   payloadStatus: PayloadStatus;
 
-  // `parent_block_hash` of the block's bid, null pre-gloas. This is the execution block hash the
-  // block builds on, reported to the execution engine while the block's own payload is not imported
-  parentBlockHash: RootHex | null;
-
-  // `parent_payload_root` of the block's bid, null pre-gloas
-  // Used to determine if this block extends EMPTY or FULL parent variant
-  // Spec: gloas/fork-choice.md#new-get_parent_payload_status
-  parentPayloadRoot: RootHex | null;
-
-  // `payload_root` of the block's bid, null pre-gloas. Same for all variants of the block, it becomes the
-  // executionPayloadRoot of the FULL variant once the payload is imported. Do not use it to look up the
-  // payload a child builds on, the FULL variant may not exist: use executionPayloadRoot of the variants
-  payloadRoot: RootHex | null;
+  /**
+   * Set on a node that stands in for a block of which fork choice only knows the root: the ancestors of the
+   * anchor block (parent, justified and finalized) when fork choice starts from an unfinalized state.
+   * Only `blockRoot` is the one of the block. `slot` is an upper bound, `parentRoot` links to the next
+   * placeholder and not to the parent of the block, and `stateRoot`, the bid fields and the execution payload
+   * fields are not those of the block. Nothing may be concluded about a block or an envelope from these fields,
+   * in particular a mismatch with them is never a fault of a peer.
+   */
+  isPlaceholder?: boolean;
 };
 
 /**

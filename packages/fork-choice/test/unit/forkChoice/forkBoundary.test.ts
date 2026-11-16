@@ -92,6 +92,9 @@ describe("ForkChoice / first gloas block", () => {
     // The latest block of the state is pre-gloas. `upgradeStateToGloas` sets both `latestPayloadRoot` and
     // `latestExecutionPayloadBid.payloadRoot` to the root of the last pre-gloas payload, so the anchor
     // commits to the payload it builds on. It has no payload of its own to import
+    // This anchor is built by hand, it shows what fork choice does with such a node. That the node of a real
+    // upgraded state has these fields is covered in beacon-node, which owns the code that derives them from the
+    // state: "LodestarForkChoice anchor variants" in test/unit/chain/forkChoice/forkChoice.test.ts
     const anchor = toProtoBlock(anchorSlot, anchorRoot, true, {
       executionPayloadBlockHash: lastPayloadHash,
       executionPayloadRoot: lastPayloadRoot,
