@@ -5,6 +5,7 @@ import {
   BlockExtraMeta,
   ExecutionStatus,
   LVHInvalidJudged,
+  LVHNotAppliedReason,
   PayloadStatus,
   ProtoArray,
   ProtoBlock,
@@ -373,8 +374,7 @@ describe("executionStatus / INVALID never invalidates a previously valid node", 
       3
     );
 
-    expect(applied).toBe(true);
-    expect(fc.lvhError).toBeUndefined();
+    expect(applied).toEqual({applied: true});
     expect(fc.getNode("3A", PayloadStatus.FULL)?.executionStatus).toBe(ExecutionStatus.Invalid);
     expect(fc.getNode("2A", PayloadStatus.FULL)?.executionStatus).toBe(ExecutionStatus.Syncing);
     expect(fc.getNode("1A", PayloadStatus.FULL)?.executionStatus).toBe(ExecutionStatus.Valid);
@@ -439,8 +439,7 @@ describe("executionStatus / VALID never validates a previously invalid node", ()
       3
     );
 
-    expect(applied).toBe(false);
-    expect(fc.lvhError).toBeUndefined();
+    expect(applied).toEqual({applied: false, reason: LVHNotAppliedReason.Contradiction});
     expect(fc.getNode("2A", PayloadStatus.FULL)?.executionStatus).toBe(ExecutionStatus.Invalid);
     expect(() => fc.findHead("0", 3)).not.toThrow();
   });
@@ -469,8 +468,7 @@ describe("executionStatus / INVALID about a child payload with an unusable LVH i
       3
     );
 
-    expect(applied).toBe(false);
-    expect(fc.lvhError).toBeUndefined();
+    expect(applied).toEqual({applied: false, reason: LVHNotAppliedReason.Contradiction});
     expect(statuses(fc)).toEqual([ExecutionStatus.Valid, ExecutionStatus.Syncing, ExecutionStatus.Syncing]);
   });
 
@@ -488,7 +486,7 @@ describe("executionStatus / INVALID about a child payload with an unusable LVH i
       3
     );
 
-    expect(applied).toBe(false);
+    expect(applied).toEqual({applied: false, reason: LVHNotAppliedReason.UnusableLVH});
     expect(statuses(fc)).toEqual([ExecutionStatus.Syncing, ExecutionStatus.Syncing, ExecutionStatus.Syncing]);
   });
 
@@ -506,7 +504,7 @@ describe("executionStatus / INVALID about a child payload with an unusable LVH i
       3
     );
 
-    expect(applied).toBe(true);
+    expect(applied).toEqual({applied: true});
     expect(statuses(fc)).toEqual([ExecutionStatus.Syncing, ExecutionStatus.Invalid, ExecutionStatus.Invalid]);
   });
 });
@@ -531,7 +529,7 @@ describe("executionStatus / null LVH invalidates only the queried payload", () =
   );
   const nullLVH = collectProtoarrayValidationStatus(fc);
   it("invalidates 3A and nothing above it", () => {
-    expect(applied).toBe(true);
+    expect(applied).toEqual({applied: true});
     expect(nullLVH).toEqual(
       toFcTestCase([
         ["0", "1A", "3B", ExecutionStatus.PreMerge],
@@ -562,8 +560,7 @@ describe("executionStatus / lenient verdicts never contradict an earlier VALID",
       },
       3
     );
-    expect(applied).toBe(false);
-    expect(fc.lvhError).toBeUndefined();
+    expect(applied).toEqual({applied: false, reason: LVHNotAppliedReason.Contradiction});
     expect(fc.getNode("1A", PayloadStatus.FULL)?.executionStatus).toBe(ExecutionStatus.Valid);
   });
 
@@ -583,8 +580,7 @@ describe("executionStatus / lenient verdicts never contradict an earlier VALID",
       },
       3
     );
-    expect(applied).toBe(true);
-    expect(fc.lvhError).toBeUndefined();
+    expect(applied).toEqual({applied: true});
     expect(collectProtoarrayValidationStatus(fc)).toEqual(
       toFcTestCase([
         ["0", "1A", "3B", ExecutionStatus.PreMerge],
@@ -635,8 +631,7 @@ describe("executionStatus / lenient verdicts never contradict an earlier VALID",
       {executionStatus: ExecutionStatus.Valid, latestValidExecHash: "4A", blockRoot: "4A"},
       4
     );
-    expect(applied).toBe(false);
-    expect(fc.lvhError).toBeUndefined();
+    expect(applied).toEqual({applied: false, reason: LVHNotAppliedReason.Contradiction});
     expect(fc.getNode("4A", PayloadStatus.FULL)?.executionStatus).toBe(ExecutionStatus.Syncing);
   });
 
@@ -651,7 +646,7 @@ describe("executionStatus / lenient verdicts never contradict an earlier VALID",
       },
       3
     );
-    expect(applied).toBe(false);
+    expect(applied).toEqual({applied: false, reason: LVHNotAppliedReason.AlreadyApplied});
   });
 });
 
@@ -681,7 +676,7 @@ describe("executionStatus / lenient verdicts never cross the justified node", ()
       },
       3
     );
-    expect(applied).toBe(true);
+    expect(applied).toEqual({applied: true});
     expect(fc.getNode("3A", PayloadStatus.FULL)?.executionStatus).toBe(ExecutionStatus.Invalid);
     expect(fc.getNode("2A", PayloadStatus.FULL)?.executionStatus).toBe(ExecutionStatus.Syncing);
     expect(fc.findHead("2A", 3).blockRoot).toBe("2A");

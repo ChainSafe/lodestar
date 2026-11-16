@@ -76,6 +76,24 @@ export type LVHInvalidResponse = {
 };
 export type LVHExecResponse = LVHValidResponse | LVHInvalidResponse;
 
+export enum LVHNotAppliedReason {
+  /** VALID verdict whose latest valid hash is not in fork choice */
+  UnknownLVH = "unknown_lvh",
+  /** Fork choice already holds the verdict */
+  AlreadyApplied = "already_applied",
+  /** The verdict contradicts a status the engine already resolved */
+  Contradiction = "contradiction",
+  /** INVALID verdict on a payload that is not in fork choice, with a latest valid hash that is null or unknown */
+  UnusableLVH = "unusable_lvh",
+  /** INVALID verdict that covers no node above the latest valid hash or the justified block */
+  NothingToInvalidate = "nothing_to_invalidate",
+  Error = "error",
+}
+export type LVHVerdictResult =
+  | {applied: true}
+  | {applied: false; reason: Exclude<LVHNotAppliedReason, LVHNotAppliedReason.Error>}
+  | {applied: false; reason: LVHNotAppliedReason.Error; error: Error};
+
 /**
  * Any execution status that is not definitively invalid.
  * Valid | Syncing | PreMerge

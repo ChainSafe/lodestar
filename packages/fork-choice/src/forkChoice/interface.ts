@@ -3,6 +3,7 @@ import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex,
 import {
   BlockExecutionStatus,
   LVHExecResponse,
+  LVHVerdictResult,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
@@ -361,9 +362,10 @@ export interface IForkChoice {
   getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult;
   /**
    * Apply an execution engine verdict with a latest valid hash, see `ProtoArray.validateLatestHash`.
-   * Returns whether any execution status changed. A consensus failure is recorded in `irrecoverableError`.
+   * Returns whether any execution status changed, and if not, why. A consensus failure is recorded in
+   * `irrecoverableError`.
    */
-  validateLatestHash(execResponse: LVHExecResponse): boolean;
+  validateLatestHash(execResponse: LVHExecResponse): LVHVerdictResult;
 
   /**
    * A dependent root is the block root of the last block before the state transition that decided a specific shuffling

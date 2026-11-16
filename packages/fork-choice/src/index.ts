@@ -41,6 +41,7 @@ export type {
   BlockExtraMeta,
   LVHInvalidResponse,
   LVHValidResponse,
+  LVHVerdictResult,
   PayloadExecutionStatus,
   ProtoBlock,
   ProtoNode,
@@ -49,6 +50,7 @@ export type {
 export {
   ExecutionStatus,
   LVHInvalidJudged,
+  LVHNotAppliedReason,
   PayloadStatus,
   getPtcVerdict,
   isGloasBlock,

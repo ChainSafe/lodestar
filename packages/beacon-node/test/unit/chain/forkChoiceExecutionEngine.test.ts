@@ -1,5 +1,12 @@
 import {describe, expect, it, vi} from "vitest";
-import {ExecutionStatus, IForkChoice, LVHInvalidJudged, LVHInvalidResponse, ProtoBlock} from "@lodestar/fork-choice";
+import {
+  ExecutionStatus,
+  IForkChoice,
+  LVHInvalidJudged,
+  LVHInvalidResponse,
+  LVHNotAppliedReason,
+  ProtoBlock,
+} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {ExecutionInvalidSource} from "../../../src/chain/forkChoice/index.js";
@@ -27,7 +34,7 @@ describe("ForkChoiceExecutionEngine", () => {
     const getBlockHexAndBlockHash = vi
       .fn()
       .mockReturnValue(headExecutionStatus === null ? null : ({executionStatus: headExecutionStatus} as ProtoBlock));
-    const validateLatestHash = vi.fn().mockReturnValue(true);
+    const validateLatestHash = vi.fn().mockReturnValue({applied: true});
     const recomputeHeadAfterELInvalidResponse = vi.fn();
 
     const engine = new ForkChoiceExecutionEngine({notifyForkchoiceUpdate} as unknown as IExecutionEngine, {
@@ -176,7 +183,7 @@ describe("ForkChoiceExecutionEngine", () => {
         ExecutionStatus.Syncing,
         fcuResult(ExecutionPayloadStatus.VALID)
       );
-      validateLatestHash.mockReturnValue(false);
+      validateLatestHash.mockReturnValue({applied: false, reason: LVHNotAppliedReason.Contradiction});
 
       engine.invalidateExecutionPayloads(invalidLvh, ExecutionInvalidSource.newPayload);
 

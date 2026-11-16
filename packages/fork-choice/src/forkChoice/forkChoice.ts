@@ -40,6 +40,8 @@ import {
   ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,
+  LVHNotAppliedReason,
+  LVHVerdictResult,
   NULL_VOTE_INDEX,
   PayloadExecutionStatus,
   PayloadStatus,
@@ -698,11 +700,7 @@ export class ForkChoice implements IForkChoice {
       head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
     } catch (e) {
       // A poisoned tree never recovers, shut the node down instead of failing every head computation
-      if (
-        e instanceof ProtoArrayError &&
-        (e.type.code === ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE ||
-          e.type.code === ProtoArrayErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS)
-      ) {
+      if (e instanceof ProtoArrayError && e.type.code === ProtoArrayErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS) {
         this.irrecoverableError = e;
       }
       throw e;
@@ -1633,14 +1631,14 @@ export class ForkChoice implements IForkChoice {
    * justified's status as well as validate the terminal conditions if terminal block
    * becomes valid
    */
-  validateLatestHash(execResponse: LVHExecResponse): boolean {
+  validateLatestHash(execResponse: LVHExecResponse): LVHVerdictResult {
     try {
       return this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot);
     } catch (e) {
       if (e instanceof ProtoArrayError && e.type.code === ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE) {
         this.irrecoverableError = e;
       }
-      return false;
+      return {applied: false, reason: LVHNotAppliedReason.Error, error: e as Error};
     }
   }
 

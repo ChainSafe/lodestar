@@ -92,7 +92,7 @@ function invalidateHead(forkChoice: ForkChoice, isGloas: boolean): void {
     invalidateFromBlockHash: payloadHash(isGloas ? headSlot - 1 : headSlot),
     judged: LVHInvalidJudged.FromBlock,
   });
-  expect(applied).toBe(true);
+  expect(applied).toEqual({applied: true});
 }
 
 function expectParentExecutionInvalid(fn: () => void): void {
