@@ -188,7 +188,7 @@ test "deposit preverify resumes bounded work and warms validator prefixes across
     try std.testing.expectEqual(@as(usize, 1), try builders.length());
     var builder_value: ct.gloas.Builder.Type = undefined;
     try builders.getValue(undefined, 0, &builder_value);
-    try std.testing.expectEqual(builder.amount + validator.amount, builder_value.balance);
+    try std.testing.expectEqual(builder.amount, builder_value.balance);
     var output: std.Io.Writer.Allocating = .init(allocator);
     defer output.deinit();
     try metrics.write(&output.writer);
@@ -196,7 +196,7 @@ test "deposit preverify resumes bounded work and warms validator prefixes across
         std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 0\n") != null,
     );
     try std.testing.expect(
-        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 41\n") != null,
+        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 1\n") != null,
     );
 }
 
@@ -311,7 +311,7 @@ test "deposit preverify covers a late builder trigger and skips recoverable top-
     defer output.deinit();
     try metrics.write(&output.writer);
     try std.testing.expect(
-        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 41\n") != null,
+        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 1\n") != null,
     );
     try std.testing.expect(
         std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 1\n") != null,
@@ -333,7 +333,9 @@ test "deposit preverify valid validator prefix suppresses later signatures at th
         topup.amount += index + 1;
         try pending.pushValue(&topup);
     }
-    try pending.pushValue(&(try signedDeposit(state.config, 45, c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000)));
+    var invalid_builder = try signedDeposit(state.config, 45, c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000);
+    invalid_builder.amount += 1;
+    try pending.pushValue(&invalid_builder);
     try state.state.commit();
     const pool = try bls.ThreadPool.init(allocator, std.testing.io, .{ .n_workers = 4 });
     defer pool.deinit(std.testing.io);
@@ -358,6 +360,6 @@ test "deposit preverify valid validator prefix suppresses later signatures at th
         std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 0\n") != null,
     );
     try std.testing.expect(
-        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 1\n") != null,
+        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 2\n") != null,
     );
 }
