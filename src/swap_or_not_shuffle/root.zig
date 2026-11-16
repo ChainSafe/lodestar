@@ -572,6 +572,7 @@ pub fn computeProposerIndexElectra(
 
 fn getCommitteeIndicesFromListShuffle(
     allocator: Allocator,
+    io: std.Io,
     seed: []const u8,
     active_indices: []const u32,
     effective_balance_increments: []const u16,
@@ -587,7 +588,7 @@ fn getCommitteeIndicesFromListShuffle(
     const shuffled_indices = try allocator.dupe(u32, active_indices);
     defer allocator.free(shuffled_indices);
 
-    try unshuffleList(u32, shuffled_indices, seed, @intCast(rounds));
+    try unshuffleListParallel(u32, io, shuffled_indices, seed, @intCast(rounds));
 
     const max_random_value: i64 = 0xffff;
     const max_increments = @divTrunc(max_effective_balance, effective_balance_increment);
@@ -621,8 +622,11 @@ fn getCommitteeIndicesFromListShuffle(
 }
 
 /// Fills caller-owned `out`, which must not alias the inputs. An error may leave it partially written.
+/// Returns `error.Canceled` if the caller is canceled while waiting on the shuffle's tasks on
+/// `io`. `io` is unused when sampling falls back to one shuffled index per candidate.
 pub fn computeSyncCommitteeIndicesInto(
     allocator: Allocator,
+    io: std.Io,
     seed: []const u8,
     active_indices: []const u32,
     effective_balance_increments: []const u16,
@@ -638,6 +642,7 @@ pub fn computeSyncCommitteeIndicesInto(
     {
         return getCommitteeIndicesFromListShuffle(
             allocator,
+            io,
             seed,
             active_indices,
             effective_balance_increments,

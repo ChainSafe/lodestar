@@ -231,6 +231,7 @@ test "computeSyncCommitteeIndices matches reference vectors" {
     var phase0: [32]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         seed[0..],
         data.indices[0..],
         data.increments[0..],
@@ -250,6 +251,7 @@ test "computeSyncCommitteeIndices matches reference vectors" {
     var electra: [32]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         seed[0..],
         data.indices[0..],
         data.increments[0..],
@@ -292,6 +294,7 @@ fn expectSyncCommitteeMatchesGetCommitteeIndices(
     var actual: [committee_size]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         seed,
         active_indices,
         effective_balance_increments,
@@ -385,6 +388,7 @@ test "computeSyncCommitteeIndicesInto reports the same input errors as getCommit
     // A one-entry list is never shuffled, so the seed length has to be checked separately.
     try std.testing.expectError(error.InvalidSeedLength, shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         &short_seed,
         &one_index,
         &one_increment,
@@ -400,6 +404,7 @@ test "computeSyncCommitteeIndicesInto reports the same input errors as getCommit
         error.EffectiveBalanceIncrementsOutOfBounds,
         shuffle.computeSyncCommitteeIndicesInto(
             allocator,
+            std.testing.io,
             &seed,
             &out_of_bounds_index,
             &one_increment,
@@ -415,6 +420,7 @@ test "computeSyncCommitteeIndicesInto reports the same input errors as getCommit
         error.EmptyActiveIndices,
         shuffle.computeSyncCommitteeIndicesInto(
             allocator,
+            std.testing.io,
             &seed,
             &[_]u32{},
             &one_increment,
@@ -430,6 +436,7 @@ test "computeSyncCommitteeIndicesInto reports the same input errors as getCommit
         error.InvalidEffectiveBalanceIncrement,
         shuffle.computeSyncCommitteeIndicesInto(
             allocator,
+            std.testing.io,
             &seed,
             &one_index,
             &one_increment,
@@ -465,6 +472,7 @@ test "computeSyncCommitteeIndices with one random byte matches getCommitteeIndic
     var actual: [32]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         &seed,
         &active_indices,
         &effective_balance_increments,
@@ -503,6 +511,7 @@ test "computeSyncCommitteeIndicesInto wraps like getCommitteeIndices on an overs
     var actual: [32]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         &seed,
         &active_indices,
         &effective_balance_increments,
@@ -539,6 +548,7 @@ test "computeSyncCommitteeIndicesInto matches getCommitteeIndices on a negative 
     var actual: [32]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         &seed,
         &active_indices,
         &effective_balance_increments,
@@ -560,6 +570,7 @@ fn sampleLowBalanceSyncCommittee(allocator: std.mem.Allocator) !void {
     var committee: [32]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         &seed,
         &active_indices,
         &effective_balance_increments,
@@ -579,7 +590,7 @@ test "memory_safety: computeSyncCommitteeIndicesInto frees everything when an al
     );
 }
 
-test "computeSyncCommitteeIndicesInto uses only shuffle scratch for low and high balances" {
+test "computeSyncCommitteeIndicesInto allocates only shuffle scratch from its allocator for low and high balances" {
     const seed = [_]u8{0x5a} ** SEED_SIZE;
     var active_indices: [4097]u32 = undefined;
     for (&active_indices, 0..) |*index, i| index.* = @intCast(i);
@@ -603,6 +614,7 @@ test "computeSyncCommitteeIndicesInto uses only shuffle scratch for low and high
         var counting = std.testing.FailingAllocator.init(std.testing.allocator, .{});
         try shuffle.computeSyncCommitteeIndicesInto(
             counting.allocator(),
+            std.testing.io,
             &seed,
             &active_indices,
             &effective_balance_increments,
