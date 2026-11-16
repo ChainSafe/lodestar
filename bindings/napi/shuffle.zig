@@ -81,6 +81,7 @@ pub fn computeSyncCommitteeIndices(
     const out_array = try js.Uint32Array.alloc(sync_committee_size.assertU32());
     try sons.computeSyncCommitteeIndicesInto(
         allocator,
+        js.io(),
         try seed.toSlice(),
         try active_indices.toSlice(),
         try effective_balance_increments.toSlice(),

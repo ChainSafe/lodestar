@@ -85,7 +85,7 @@ pub fn computeProposers(
     for (errors) |maybe_err| if (maybe_err) |err| return err;
 }
 
-pub fn getNextSyncCommitteeIndices(comptime fork: ForkSeq, allocator: Allocator, state: *BeaconState(fork), active_indices: []const u32, effective_balance_increments: EffectiveBalanceIncrements, out: *[preset.SYNC_COMMITTEE_SIZE]ValidatorIndex) !void {
+pub fn getNextSyncCommitteeIndices(comptime fork: ForkSeq, allocator: Allocator, io: std.Io, state: *BeaconState(fork), active_indices: []const u32, effective_balance_increments: EffectiveBalanceIncrements, out: *[preset.SYNC_COMMITTEE_SIZE]ValidatorIndex) !void {
     const epoch = computeEpochAtSlot(try state.slot()) + 1;
     var seed: [32]u8 = undefined;
     try getSeed(fork, state, epoch, c.DOMAIN_SYNC_COMMITTEE, &seed);
@@ -93,6 +93,7 @@ pub fn getNextSyncCommitteeIndices(comptime fork: ForkSeq, allocator: Allocator,
         var indices: [preset.SYNC_COMMITTEE_SIZE]u32 = undefined;
         try computeSyncCommitteeIndicesInto(
             allocator,
+            io,
             &seed,
             active_indices,
             effective_balance_increments.items,
