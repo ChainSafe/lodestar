@@ -279,9 +279,19 @@ const ShufflingJob = struct {
     fn worker(allocator: Allocator, io: std.Io, seed: [32]u8, epoch: Epoch, active_indices: []u32) Error!Result {
         errdefer allocator.free(active_indices);
 
+        const diag = @import("swap_or_not_shuffle").diag;
+        diag.stats.reset();
+        const worker_before = diag.usage(diag.thread_usage);
+        const process_before = diag.usage(diag.self_usage);
         const timer = time.start(io);
         const shuffling = try EpochShuffling.init(allocator, io, seed, epoch, active_indices);
-        return .{ .shuffling = shuffling, .duration = time.since(io, timer) };
+        const duration = time.since(io, timer);
+        diag.report(
+            @intCast(duration.nanoseconds),
+            diag.usage(diag.thread_usage).sub(worker_before),
+            diag.usage(diag.self_usage).sub(process_before),
+        );
+        return .{ .shuffling = shuffling, .duration = duration };
     }
 
     fn start(allocator: Allocator, io: std.Io, seed: [32]u8, epoch: Epoch, active_indices: []u32) @This() {
@@ -292,7 +302,9 @@ const ShufflingJob = struct {
     }
 
     fn join(self: *@This()) !*EpochShuffling {
+        const wait_timer = time.start(self.io);
         const result = try self.future.await(self.io);
+        std.log.warn("shuffle_diag join_wait={d:.2}ms", .{time.durationSeconds(time.since(self.io, wait_timer)) * 1000});
         metrics.state_transition.epoch_shuffling_job.observe(time.durationSeconds(result.duration));
         return result.shuffling;
     }
