@@ -13,7 +13,21 @@ export enum IntersectResult {
 }
 
 /**
- * Compare a and b as sets of bit indices. Bytes missing from the shorter array count as zero.
+ * For each byte check if a includes b,
+ * | a        | b        | result        |
+ * | -------- | -------- | ------------- |
+ * | 00001111 | 00001111 | A equals B    |
+ * | 00001111 | 00000011 | A superset B  |
+ * | 00000011 | 00001111 | A subset B    |
+ * | 11110000 | 00001111 | A exclude B   |
+ * | 11111100 | 00111111 | A intersect B |
+ *
+ * For all bytes in BitArray, bytes missing from the shorter array count as zero:
+ * - equals = neither has a bit the other lacks
+ * - superset = only A has bits B lacks
+ * - subset = only B has bits A lacks
+ * - exclude = both have bits the other lacks, none shared
+ * - intersect = both have bits the other lacks, some shared
  */
 export function intersectUint8Arrays(aUA: Uint8Array, bUA: Uint8Array): IntersectResult {
   const len = Math.max(aUA.length, bUA.length);
