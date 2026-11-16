@@ -63,8 +63,6 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
     // The envelope is not signed, these checks are what binds it to its block instead of a signature. They only
     // run once the block is known, so no honest peer forwards an envelope that fails one of them
     byCode: {
-      [ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH]: PeerAction.Fatal,
-      [ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH]: PeerAction.Fatal,
       [ExecutionPayloadEnvelopeErrorCode.PARENT_BEACON_BLOCK_ROOT_MISMATCH]: PeerAction.Fatal,
       [ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH]: PeerAction.Fatal,
       [ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ROOT_MISMATCH]: PeerAction.Fatal,

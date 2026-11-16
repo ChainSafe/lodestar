@@ -19,9 +19,7 @@ import {
 describe("gossipValidatorFn execution_payload", () => {
   // The envelope is not signed, an envelope that fails one of these checks is not the one of the block
   const blockBindingErrorCodes = [
-    ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
     ExecutionPayloadEnvelopeErrorCode.PARENT_BEACON_BLOCK_ROOT_MISMATCH,
-    ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
     ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
     ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ROOT_MISMATCH,
   ];
@@ -31,6 +29,9 @@ describe("gossipValidatorFn execution_payload", () => {
   });
 
   it.each([
+    // Cheap checks of payload fields, which the envelope the block commits to can fail as well
+    ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
+    ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
     ExecutionPayloadEnvelopeErrorCode.PREV_RANDAO_MISMATCH,
     ExecutionPayloadEnvelopeErrorCode.GAS_LIMIT_MISMATCH,
     ExecutionPayloadEnvelopeErrorCode.PARENT_HASH_MISMATCH,
