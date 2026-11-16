@@ -54,12 +54,15 @@ pub const FastConfirmation = struct {
     }
 
     /// Spec `on_fast_confirmation`. Call once per slot, after the past slots' attestations.
+    /// Writes nothing when it fails, so a retry does not shift the heads or checkpoints twice.
     pub fn onFastConfirmation(self: *FastConfirmation, store: *Store) !void {
-        try self.updateFastConfirmationVariables(store);
+        var next = self.*;
+        try next.updateFastConfirmationVariables(store);
         var arena = std.heap.ArenaAllocator.init(store.allocator);
         defer arena.deinit();
-        var run = try Run.init(store, self, arena.allocator());
-        self.confirmed_root = try run.getLatestConfirmed();
+        var run = try Run.init(store, &next, arena.allocator());
+        next.confirmed_root = try run.getLatestConfirmed();
+        self.* = next;
     }
 
     /// Spec `update_fast_confirmation_variables`.
