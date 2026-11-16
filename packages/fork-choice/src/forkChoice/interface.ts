@@ -362,8 +362,7 @@ export interface IForkChoice {
   getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult;
   /**
    * Apply an execution engine verdict with a latest valid hash, see `ProtoArray.validateLatestHash`.
-   * Returns whether any execution status changed, and if not, why. A consensus failure is recorded in
-   * `irrecoverableError`.
+   * Returns whether any execution status changed, and if not, why.
    */
   validateLatestHash(execResponse: LVHExecResponse): LVHVerdictResult;
 

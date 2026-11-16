@@ -1635,9 +1635,6 @@ export class ForkChoice implements IForkChoice {
     try {
       return this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot);
     } catch (e) {
-      if (e instanceof ProtoArrayError && e.type.code === ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE) {
-        this.irrecoverableError = e;
-      }
       return {applied: false, reason: LVHNotAppliedReason.Error, error: e as Error};
     }
   }
