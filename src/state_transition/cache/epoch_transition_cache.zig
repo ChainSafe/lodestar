@@ -196,7 +196,8 @@ inline fn classifyRegistryCandidate(scan: *const ValidatorScan, validator: vfc.V
     };
 }
 
-fn scanValidatorChunk(scan: *const ValidatorScan, chunk: validator_chunks.Chunk) void {
+fn scanValidatorChunk(scan_ptr: *const ValidatorScan, chunk: validator_chunks.Chunk) void {
+    const scan = scan_ptr.*;
     const prev_epoch = scan.prev_epoch;
     const current_epoch = scan.current_epoch;
     const next_epoch = current_epoch + 1;
@@ -245,7 +246,7 @@ fn scanValidatorChunk(scan: *const ValidatorScan, chunk: validator_chunks.Chunk)
             total_active_stake_by_increment += scan.effective_balance_increments[i];
         }
 
-        const candidate = classifyRegistryCandidate(scan, validator, is_active_curr);
+        const candidate = classifyRegistryCandidate(&scan, validator, is_active_curr);
         if (candidate.to_slash or candidate.list != .none) {
             scan.registry_candidates[chunk.start + registry_candidate_count] = @intCast(i);
             registry_candidate_count += 1;
