@@ -244,6 +244,8 @@ describe("block archiver task", () => {
       blockRoot: root(4),
       parentRoot: root(1),
       parentBlockHash: ZERO_HASH_HEX,
+      parentPayloadRoot: ZERO_HASH_HEX,
+      payloadRoot: ZERO_HASH_HEX,
       payloadStatus: PayloadStatus.PENDING,
     });
     const boundaryEmpty = generateProtoBlock({
@@ -251,6 +253,8 @@ describe("block archiver task", () => {
       blockRoot: root(1),
       parentRoot: root(2),
       parentBlockHash: ZERO_HASH_HEX,
+      parentPayloadRoot: ZERO_HASH_HEX,
+      payloadRoot: ZERO_HASH_HEX,
       payloadStatus: PayloadStatus.EMPTY,
     });
     const boundaryFull = generateProtoBlock({
@@ -258,12 +262,16 @@ describe("block archiver task", () => {
       blockRoot: root(1),
       parentRoot: root(2),
       parentBlockHash: ZERO_HASH_HEX,
+      parentPayloadRoot: ZERO_HASH_HEX,
+      payloadRoot: ZERO_HASH_HEX,
       payloadStatus: PayloadStatus.FULL,
     });
     const parentFull = generateProtoBlock({
       slot: 31,
       blockRoot: root(2),
       parentBlockHash: ZERO_HASH_HEX,
+      parentPayloadRoot: ZERO_HASH_HEX,
+      payloadRoot: ZERO_HASH_HEX,
       payloadStatus: PayloadStatus.FULL,
     });
     const parentEmpty = {...parentFull, payloadStatus: PayloadStatus.EMPTY};
@@ -271,6 +279,8 @@ describe("block archiver task", () => {
       slot: 30,
       blockRoot: root(3),
       parentBlockHash: ZERO_HASH_HEX,
+      parentPayloadRoot: ZERO_HASH_HEX,
+      payloadRoot: ZERO_HASH_HEX,
       payloadStatus: PayloadStatus.FULL,
     });
     const orphanEmpty = {...orphan, payloadStatus: PayloadStatus.EMPTY};
@@ -335,12 +345,16 @@ describe("block archiver task", () => {
       slot: 32,
       blockRoot: toHexString(Buffer.alloc(32, 1)),
       parentBlockHash: ZERO_HASH_HEX,
+      parentPayloadRoot: ZERO_HASH_HEX,
+      payloadRoot: ZERO_HASH_HEX,
       payloadStatus: PayloadStatus.FULL,
     });
     const previousFinalized = generateProtoBlock({
       slot: 64,
       blockRoot: toHexString(Buffer.alloc(32, 2)),
       parentBlockHash: ZERO_HASH_HEX,
+      parentPayloadRoot: ZERO_HASH_HEX,
+      payloadRoot: ZERO_HASH_HEX,
       payloadStatus: PayloadStatus.EMPTY,
     });
     const finalizedPending = generateProtoBlock({
@@ -348,6 +362,8 @@ describe("block archiver task", () => {
       blockRoot: toHexString(Buffer.alloc(32, 3)),
       parentRoot: previousFinalized.blockRoot,
       parentBlockHash: ZERO_HASH_HEX,
+      parentPayloadRoot: ZERO_HASH_HEX,
+      payloadRoot: ZERO_HASH_HEX,
       payloadStatus: PayloadStatus.PENDING,
     });
     vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(null);

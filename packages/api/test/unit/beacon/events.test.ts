@@ -8,6 +8,7 @@ import {EventData, EventType, getTypeByEvent} from "../../../src/beacon/routes/e
 describe("beacon / events / block codec", () => {
   const blockRoot = "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf";
   const blockHash = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+  const payloadRoot = "0x" + "33".repeat(32);
 
   describe("post-gloas", () => {
     const blockType = getTypeByEvent(createChainForkConfig({...defaultChainConfig, GLOAS_FORK_EPOCH: 0}))[
@@ -19,6 +20,7 @@ describe("beacon / events / block codec", () => {
         slot: 10,
         block: blockRoot,
         blockHash,
+        payloadRoot,
         builderIndex: 1,
         executionOptimistic: false,
       };
@@ -28,6 +30,7 @@ describe("beacon / events / block codec", () => {
         slot: "10",
         block: blockRoot,
         block_hash: blockHash,
+        payload_root: payloadRoot,
         builder_index: "1",
         execution_optimistic: false,
       });
@@ -39,6 +42,7 @@ describe("beacon / events / block codec", () => {
         slot: 10,
         block: blockRoot,
         blockHash,
+        payloadRoot,
         builderIndex: BUILDER_INDEX_SELF_BUILD,
         executionOptimistic: false,
       };
