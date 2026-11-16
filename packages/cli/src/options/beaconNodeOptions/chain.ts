@@ -119,7 +119,8 @@ export const options: CliCommandOptions<ChainArgs> = {
     description:
       "Regenerate finalized beacon states on demand and serve them via the REST API (e.g. `/eth/v2/debug/beacon/states/{state_id}`). \
 Does not backfill historical data, only states the node already has (since genesis sync or `--checkpointState`) can be regenerated. \
-Regeneration cost depends on `--chain.archiveStateEpochFrequency` and may affect validator performance.",
+Regeneration cost depends on `--chain.archiveStateEpochFrequency` and may affect validator performance. \
+Disables history pruning unless `--chain.pruneHistory` is set explicitly.",
     type: "boolean",
     default: defaultOptions.chain.serveHistoricalState,
     group: "chain",
@@ -280,7 +281,8 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.archiveStateEpochFrequency": {
-    description: "Minimum number of epochs between archived states",
+    description:
+      "Minimum number of epochs between archived states. Only relevant when history is retained (`--chain.pruneHistory=false` or `--serveHistoricalState`), otherwise archived states before the finalized epoch are pruned",
     default: defaultOptions.chain.archiveStateEpochFrequency,
     type: "number",
     group: "chain",
