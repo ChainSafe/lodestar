@@ -282,7 +282,7 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.archiveStateEpochFrequency": {
     description:
-      "Minimum number of epochs between archived states. Only relevant when history is retained (`--chain.pruneHistory=false` or `--serveHistoricalState`), otherwise archived states before the finalized epoch are pruned",
+      "Minimum number of epochs between archived states. When history is pruned (the default), archived states before the finalized epoch are removed, so this only controls how often the latest finalized state is persisted, and only for values below 32",
     default: defaultOptions.chain.archiveStateEpochFrequency,
     type: "number",
     group: "chain",
