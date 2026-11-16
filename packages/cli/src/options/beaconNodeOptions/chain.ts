@@ -23,6 +23,7 @@ export type ChainArgs = {
   "chain.proposerBoostReorg"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
   "chain.preaggregateSlotDistance"?: number;
+  "chain.singleAttestationIgnoreProposalDuty"?: boolean;
   "chain.attDataCacheSlotDistance"?: number;
   "chain.computeUnrealized"?: boolean;
   "chain.fastConfirmation"?: boolean;
@@ -65,6 +66,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     proposerBoostReorg: args["chain.proposerBoostReorg"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
+    singleAttestationIgnoreProposalDuty: args["chain.singleAttestationIgnoreProposalDuty"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
     fastConfirmation: args["chain.fastConfirmation"],
@@ -230,6 +232,15 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
+  "chain.singleAttestationIgnoreProposalDuty": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "collect single attestations of every vote slot a block at the current slot can include regardless of block proposal duties, could be used with --subscribeAllSubnets",
+    defaultDescription: "false",
+    group: "chain",
+  },
+
   "chain.attDataCacheSlotDistance": {
     hidden: true,
     type: "number",
@@ -350,9 +361,9 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.pruneHistory": {
     description:
-      "Continually prune finalized blocks and execution payload envelopes older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. \
+      "Continually prune finalized blocks and execution payload envelopes older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet, 14299 epochs / ~2 months from gloas) and all archived states before the finalized epoch. \
 This is useful to minimize disk usage when the node does not need to serve historical data. \
-Initial pruning may be slow on first startup with an existing large database.",
+An existing large database is pruned gradually, up to 4096 slots of blocks on startup and on every finalized checkpoint.",
     type: "boolean",
     default: defaultOptions.chain.pruneHistory,
     group: "chain",

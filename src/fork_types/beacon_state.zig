@@ -28,6 +28,10 @@ pub fn BeaconState(comptime f: ForkSeq) type {
             return try self.inner.hashTreeRoot();
         }
 
+        pub fn hashTreeRootParallel(self: *Self, io: std.Io) !*const [32]u8 {
+            return try self.inner.hashTreeRootParallel(io);
+        }
+
         pub fn deinit(self: *Self) void {
             self.inner.deinit();
         }

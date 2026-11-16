@@ -64,12 +64,11 @@ fn ProcessInactivityUpdatesBench(comptime fork: ForkSeq) type {
     return struct {
         epoch_transition_cache: *EpochTransitionCache,
 
-        pub fn run(self: *@This(), allocator: std.mem.Allocator) void {
+        pub fn run(self: *@This(), _: std.mem.Allocator) void {
             const cache = self.epoch_transition_cache;
 
             state_transition.processInactivityUpdates(
                 fork,
-                allocator,
                 BenchState.cloned_cached_state.config,
                 BenchState.cloned_cached_state.epoch_cache,
                 BenchState.cloned_cached_state.state.castToFork(fork),
@@ -437,7 +436,7 @@ fn ProcessEpochBench(comptime fork: ForkSeq) type {
             ) catch unreachable;
             // hashTreeRoot, not commit: the re-merkleization runs here — the
             // real per-epoch cost (state_root is verified each epoch).
-            _ = BenchState.cloned_cached_state.state.hashTreeRoot() catch unreachable;
+            _ = BenchState.cloned_cached_state.state.hashTreeRootParallel(self.io) catch unreachable;
         }
     };
 }
@@ -485,7 +484,6 @@ fn ProcessEpochSegmentedBench(comptime fork: ForkSeq) type {
                 const inactivity_start = time.start(io);
                 state_transition.processInactivityUpdates(
                     fork,
-                    allocator,
                     BenchState.cloned_cached_state.config,
                     epoch_cache,
                     fork_state,
@@ -622,7 +620,7 @@ fn ProcessEpochSegmentedBench(comptime fork: ForkSeq) type {
             }
 
             const state_root_start = time.start(io);
-            _ = BenchState.cloned_cached_state.state.hashTreeRoot() catch unreachable;
+            _ = BenchState.cloned_cached_state.state.hashTreeRootParallel(io) catch unreachable;
             recordSegment(.state_root, @as(u64, @intCast(time.since(io, state_root_start).nanoseconds)));
 
             recordSegment(.epoch_total, @as(u64, @intCast(time.since(io, epoch_start).nanoseconds)));

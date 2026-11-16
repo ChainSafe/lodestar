@@ -49,6 +49,14 @@ export async function createExecutionNode<E extends ExecutionClient>(
         secondsPerSlot: forkConfig.SLOT_DURATION_MS / 1000,
         additionalSlots: 0,
       }),
+    osakaTime:
+      options.osakaTime ??
+      getEstimatedForkTime({
+        forkEpoch: forkConfig.FULU_FORK_EPOCH,
+        genesisTime: options.genesisTime,
+        secondsPerSlot: forkConfig.SLOT_DURATION_MS / 1000,
+        additionalSlots: 0,
+      }),
     clientOptions: options.clientOptions ?? [],
   };
 

@@ -63,7 +63,6 @@
     "@lodestar/logger": "workspace:^",
     "@lodestar/spec-test-util": "workspace:^",
     "@lodestar/test-utils": "workspace:^",
-    "@vekexasia/bigint-buffer2": "^1.1.1",
-    "rimraf": "^4.4.1"
+    "@vekexasia/bigint-buffer2": "^1.1.1"
   }
 }
