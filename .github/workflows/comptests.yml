@@ -77,4 +77,4 @@ jobs:
       - name: Write spec tests
         run: zig build run:write_spec_tests
       - name: Fork-choice compliance tests
-        run: zig build test:spec_tests -Dpreset=minimal -Doptimize=ReleaseSafe -Dspec_tests.filters=fork_choice_compliance
+        run: zig build test:spec_tests -Dpreset=minimal -Doptimize=ReleaseSafe -Dspec_tests.filters=fork_choice_compliance --summary line
