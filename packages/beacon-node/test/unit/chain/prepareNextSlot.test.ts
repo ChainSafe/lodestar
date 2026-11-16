@@ -1,3 +1,4 @@
+import {strict as assert} from "node:assert";
 import {Mock, MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
@@ -6,9 +7,9 @@ import {getConfig} from "@lodestar/config/test-utils";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
+import {BeaconStateView, createCachedBeaconState, isStatePostGloas} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {IChainOptions} from "../../../src/chain/options.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
 import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
@@ -216,11 +217,15 @@ describe("PrepareNextSlot scheduler", () => {
       ...zeroProtoBlock,
       slot: SLOTS_PER_EPOCH - 3,
       parentBlockHash: safeBlockHash,
+      parentPayloadRoot: zeroProtoBlock.blockRoot,
+      payloadRoot: zeroProtoBlock.blockRoot,
     } as ProtoBlock);
     forkChoiceStub.getFinalizedBlock.mockReturnValue({
       ...zeroProtoBlock,
       slot: SLOTS_PER_EPOCH - 3,
       parentBlockHash: finalizedBlockHash,
+      parentPayloadRoot: zeroProtoBlock.blockRoot,
+      payloadRoot: zeroProtoBlock.blockRoot,
     } as ProtoBlock);
     forkChoiceStub.getFinalizedCheckpoint.mockReturnValue({
       epoch: 0,
@@ -228,7 +233,7 @@ describe("PrepareNextSlot scheduler", () => {
       rootHex: zeroProtoBlock.blockRoot,
     });
     forkChoiceStub.getBlockHexDefaultStatus.mockReturnValue(null);
-    forkChoiceStub.getBlockHexAndBlockHash.mockReturnValue({
+    forkChoiceStub.getBlockHexAndPayloadRoot = vi.fn().mockReturnValue({
       ...zeroProtoBlock,
       executionPayloadBlockHash: zeroProtoBlock.blockRoot,
       executionPayloadGasLimit: 30_000_000,
@@ -241,7 +246,8 @@ describe("PrepareNextSlot scheduler", () => {
     const headState = makeState(SLOTS_PER_EPOCH - 3);
     vi.spyOn(headState, "getBeaconProposer").mockReturnValue(proposerIndex);
     chainStub.getHeadState.mockReturnValue(headState);
-    regenStub.getBlockSlotState.mockResolvedValue(makeState(SLOTS_PER_EPOCH - 1));
+    const preparedState = makeState(SLOTS_PER_EPOCH - 1);
+    regenStub.getBlockSlotState.mockResolvedValue(preparedState);
     beaconProposerCacheStub.has.mockReturnValue(true);
     beaconProposerCacheStub.getOrDefault.mockReturnValue("0x fee recipient address");
     (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
@@ -251,11 +257,21 @@ describe("PrepareNextSlot scheduler", () => {
       vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
 
+    assert(isStatePostGloas(preparedState));
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy.mock.calls[0][0]).toMatchObject({
       version: ForkName.gloas,
-      data: {safeBlockHash: fromHex(safeBlockHash), finalizedBlockHash: fromHex(finalizedBlockHash)},
+      data: {
+        parentPayloadRoot: preparedState.latestPayloadRoot,
+        safeBlockHash: fromHex(safeBlockHash),
+        finalizedBlockHash: fromHex(finalizedBlockHash),
+      },
     });
+    // The gas limit target falls back to the parent payload, fork choice identifies it by its root
+    expect(forkChoiceStub.getBlockHexAndPayloadRoot).toHaveBeenCalledWith(
+      zeroProtoBlock.blockRoot,
+      toRootHex(preparedState.latestPayloadRoot)
+    );
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledWith(
       ForkName.gloas,
       expect.any(String),
@@ -276,6 +292,8 @@ describe("PrepareNextSlot scheduler", () => {
       ...zeroProtoBlock,
       slot: SLOTS_PER_EPOCH - 3,
       parentBlockHash: zeroProtoBlock.blockRoot,
+      parentPayloadRoot: zeroProtoBlock.blockRoot,
+      payloadRoot: zeroProtoBlock.blockRoot,
     } as ProtoBlock;
     chainStub.recomputeForkChoiceHead.mockReturnValue(head);
     chainStub.predictProposerHead.mockReturnValue(head);

@@ -33,6 +33,8 @@ function buildBlock(opts: {
     proposerIndex: 0,
     payloadStatus: PayloadStatus.FULL,
     parentBlockHash: opts.parentBlockHash,
+    parentPayloadRoot: opts.parentBlockHash === null ? null : "0xparentPayloadRoot",
+    payloadRoot: opts.parentBlockHash === null ? null : "0xpayloadRoot",
   };
   if (opts.executionPayloadBlockHash === null) {
     return {

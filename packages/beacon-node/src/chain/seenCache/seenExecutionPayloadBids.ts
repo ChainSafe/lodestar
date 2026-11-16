@@ -8,7 +8,7 @@ const SLOTS_RETAINED = 2;
 
 /**
  * Tracks execution payload bids we've already seen per
- * (slot, builder, parent block hash, parent block root).
+ * (slot, builder, parent payload root, parent block root).
  */
 export class SeenExecutionPayloadBids {
   private readonly branchesByBuilderBySlot = new MapDef<Slot, MapDef<BuilderIndex, Set<string>>>(
@@ -16,21 +16,21 @@ export class SeenExecutionPayloadBids {
   );
   private lowestPermissibleSlot: Slot = 0;
 
-  isKnown(slot: Slot, builderIndex: BuilderIndex, parentBlockHash: RootHex, parentBlockRoot: RootHex): boolean {
+  isKnown(slot: Slot, builderIndex: BuilderIndex, parentPayloadRoot: RootHex, parentBlockRoot: RootHex): boolean {
     return (
-      this.branchesByBuilderBySlot.get(slot)?.get(builderIndex)?.has(branchKey(parentBlockHash, parentBlockRoot)) ===
+      this.branchesByBuilderBySlot.get(slot)?.get(builderIndex)?.has(branchKey(parentPayloadRoot, parentBlockRoot)) ===
       true
     );
   }
 
-  add(slot: Slot, builderIndex: BuilderIndex, parentBlockHash: RootHex, parentBlockRoot: RootHex): void {
+  add(slot: Slot, builderIndex: BuilderIndex, parentPayloadRoot: RootHex, parentBlockRoot: RootHex): void {
     if (slot < this.lowestPermissibleSlot) {
       throw Error(`slot ${slot} < lowestPermissibleSlot ${this.lowestPermissibleSlot}`);
     }
     this.branchesByBuilderBySlot
       .getOrDefault(slot)
       .getOrDefault(builderIndex)
-      .add(branchKey(parentBlockHash, parentBlockRoot));
+      .add(branchKey(parentPayloadRoot, parentBlockRoot));
   }
 
   prune(currentSlot: Slot): void {
@@ -43,6 +43,6 @@ export class SeenExecutionPayloadBids {
   }
 }
 
-function branchKey(parentBlockHash: RootHex, parentBlockRoot: RootHex): string {
-  return `${parentBlockHash}:${parentBlockRoot}`;
+function branchKey(parentPayloadRoot: RootHex, parentBlockRoot: RootHex): string {
+  return `${parentPayloadRoot}:${parentBlockRoot}`;
 }

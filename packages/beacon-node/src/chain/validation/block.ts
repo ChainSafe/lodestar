@@ -8,6 +8,7 @@ import {
   getBlockProposerSignatureSet,
   isExecutionBlockBodyType,
   isStatePostBellatrix,
+  isStatePostGloas,
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock, ssz} from "@lodestar/types";
@@ -117,15 +118,20 @@ export async function validateGossipBlock(
     });
   }
 
-  // [IGNORE] The block's parent execution payload (defined by bid.parent_block_hash) has been seen
-  // (via gossip or non-gossip sources) (a client MAY queue blocks for processing once the parent payload is retrieved).
+  // [IGNORE] If the parent block is full (the bid builds on the parent's payload, defined by
+  // bid.parent_payload_root), the parent payload has been seen (via gossip or non-gossip sources)
+  // (a client MAY queue blocks for processing once the parent payload is retrieved).
+  // A bid which builds on neither the parent's payload nor the payload the parent built on is rejected below
   if (isGloasBeaconBlock(block)) {
-    const parentBlockHashHex = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
-    if (chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHashHex) === null) {
+    const parentPayloadRootHex = toRootHex(block.body.signedExecutionPayloadBid.message.parentPayloadRoot);
+    if (
+      parentBlock.payloadRoot === parentPayloadRootHex &&
+      chain.forkChoice.getBlockHexAndPayloadRoot(parentRoot, parentPayloadRootHex) === null
+    ) {
       throw new BlockGossipError(GossipAction.IGNORE, {
         code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
         parentRoot,
-        parentBlockHash: parentBlockHashHex,
+        parentPayloadRoot: parentPayloadRootHex,
       });
     }
   }
@@ -282,6 +288,28 @@ export async function validateGossipBlock(
       root: blockRoot,
       proposerIndex,
     });
+  }
+
+  // [REJECT] The bid builds on the parent's execution head. `state` is the parent's post-state, possibly
+  // advanced through empty slots, which do not change the fields read here.
+  // A pre-gloas state is only possible for the first gloas block, its bid is checked by the state transition
+  if (isGloasBeaconBlock(block) && isStatePostGloas(state)) {
+    const bid = block.body.signedExecutionPayloadBid.message;
+    const parentBid = state.latestExecutionPayloadBid;
+    const isParentFull = byteArrayEquals(bid.parentPayloadRoot, parentBid.payloadRoot);
+    const buildsOnParentExecutionHead = isParentFull
+      ? byteArrayEquals(bid.parentBlockHash, parentBid.blockHash)
+      : byteArrayEquals(bid.parentBlockHash, state.latestBlockHash) &&
+        byteArrayEquals(bid.parentPayloadRoot, state.latestPayloadRoot);
+    if (!buildsOnParentExecutionHead) {
+      throw new BlockGossipError(GossipAction.REJECT, {
+        code: BlockErrorCode.BID_PARENT_PAYLOAD_MISMATCH,
+        slot: blockSlot,
+        root: blockRoot,
+        parentBlockHash: toRootHex(bid.parentBlockHash),
+        parentPayloadRoot: toRootHex(bid.parentPayloadRoot),
+      });
+    }
   }
 
   // Simple implementation of a pending block queue. Keeping the block here recycles the queue logic, and keeps the

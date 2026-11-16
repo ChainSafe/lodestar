@@ -30,7 +30,7 @@ import {
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
-import {defer, prettyPrintIndices, sleep} from "@lodestar/utils";
+import {defer, prettyPrintIndices, sleep, toRootHex} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
@@ -149,6 +149,7 @@ export class Network implements INetwork {
     this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     this.chain.emitter.on(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
+    this.chain.emitter.on(ChainEvent.publishExecutionPayloadEnvelope, this.onPublishExecutionPayloadEnvelope);
     this.chain.emitter.on(ChainEvent.publishProposerSlashing, this.onPublishProposerSlashing);
     this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
     this.chain.emitter.on(ChainEvent.localProposalSlots, this.onLocalProposalSlots);
@@ -254,6 +255,7 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     this.chain.emitter.off(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
+    this.chain.emitter.off(ChainEvent.publishExecutionPayloadEnvelope, this.onPublishExecutionPayloadEnvelope);
     this.chain.emitter.off(ChainEvent.publishProposerSlashing, this.onPublishProposerSlashing);
     this.chain.emitter.off(ChainEvent.updateStatus, this.onUpdateStatus);
     this.chain.emitter.off(ChainEvent.localProposalSlots, this.onLocalProposalSlots);
@@ -510,14 +512,11 @@ export class Network implements INetwork {
     );
   }
 
-  async publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number> {
-    const epoch = computeEpochAtSlot(signedEnvelope.message.payload.slotNumber);
+  async publishExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): Promise<number> {
+    const epoch = computeEpochAtSlot(envelope.payload.slotNumber);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
-    return this.publishGossip<GossipType.execution_payload>(
-      {type: GossipType.execution_payload, boundary},
-      signedEnvelope
-    );
+    return this.publishGossip<GossipType.execution_payload>({type: GossipType.execution_payload, boundary}, envelope);
   }
 
   async publishSignedExecutionPayloadBid(signedBid: gloas.SignedExecutionPayloadBid): Promise<number> {
@@ -685,7 +684,7 @@ export class Network implements INetwork {
   async sendExecutionPayloadEnvelopesByRange(
     peerId: PeerIdStr,
     request: gloas.ExecutionPayloadEnvelopesByRangeRequest
-  ): Promise<gloas.SignedExecutionPayloadEnvelope[]> {
+  ): Promise<gloas.ExecutionPayloadEnvelope[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.ExecutionPayloadEnvelopesByRange, [Version.V1], request),
       request.count,
@@ -696,7 +695,7 @@ export class Network implements INetwork {
   async sendExecutionPayloadEnvelopesByRoot(
     peerId: PeerIdStr,
     request: ExecutionPayloadEnvelopesByRootRequest
-  ): Promise<gloas.SignedExecutionPayloadEnvelope[]> {
+  ): Promise<gloas.ExecutionPayloadEnvelope[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.ExecutionPayloadEnvelopesByRoot, [Version.V1], request),
       request.length,
@@ -857,6 +856,18 @@ export class Network implements INetwork {
 
   private onPublishDataColumns = async (sidecars: DataColumnSidecar[]): Promise<void> => {
     await promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
+  };
+
+  private onPublishExecutionPayloadEnvelope = async (envelope: gloas.ExecutionPayloadEnvelope): Promise<void> => {
+    try {
+      await this.publishExecutionPayloadEnvelope(envelope);
+    } catch (e) {
+      this.logger.error(
+        "Error publishing execution payload envelope",
+        {slot: envelope.payload.slotNumber, blockRoot: toRootHex(envelope.beaconBlockRoot)},
+        e as Error
+      );
+    }
   };
 
   private onPublishProposerSlashing = async (proposerSlashing: phase0.ProposerSlashing): Promise<void> => {

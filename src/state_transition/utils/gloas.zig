@@ -225,9 +225,9 @@ pub fn isAttestationSameSlotRootCache(comptime fork: ForkSeq, root_cache: *RootC
 
 pub fn isParentBlockFull(comptime fork: ForkSeq, state: *BeaconState(fork)) !bool {
     var bid = try state.inner.getReadonly("latest_execution_payload_bid");
-    const bid_block_hash = try bid.getFieldRoot("block_hash");
-    const latest_block_hash = try state.inner.getFieldRoot("latest_block_hash");
-    return std.mem.eql(u8, bid_block_hash, latest_block_hash);
+    const bid_payload_root = try bid.getFieldRoot("payload_root");
+    const latest_payload_root = try state.inner.getFieldRoot("latest_payload_root");
+    return std.mem.eql(u8, bid_payload_root, latest_payload_root);
 }
 
 pub fn initializePtcWindow(

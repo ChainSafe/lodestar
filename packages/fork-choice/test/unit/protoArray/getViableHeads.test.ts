@@ -34,6 +34,8 @@ function blockFields(overrides: {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
+    parentPayloadRoot: null,
+    payloadRoot: null,
     payloadStatus: overrides.payloadStatus ?? PayloadStatus.FULL,
   };
 }
@@ -88,6 +90,8 @@ describe("ProtoArray.getViableHeads", () => {
           executionStatus: ExecutionStatus.Valid,
         },
         parentBlockHash: "0xea",
+        parentPayloadRoot: "0xea",
+        payloadRoot: "0xeb",
       },
       1,
       null

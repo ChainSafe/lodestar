@@ -7,9 +7,9 @@ import {toRootHex} from "@lodestar/utils";
 import {migrateExecutionPayloadEnvelopesFromHotToColdDb} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
 import {ArchivedEnvelope, decodeArchivedEnvelope} from "../../../../src/db/repositories/index.js";
-import {toSignedHeaderEnvelope} from "../../../../src/util/headerEnvelope.js";
+import {toHeaderEnvelope} from "../../../../src/util/headerEnvelope.js";
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
-import {generateProtoBlock, generateSignedExecutionPayloadEnvelope} from "../../../utils/typeGenerator.js";
+import {generateExecutionPayloadEnvelope, generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
   const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
@@ -35,11 +35,11 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
     payloadStatus = PayloadStatus.FULL,
     executionStatus = ExecutionStatus.Valid
   ): Promise<ProtoBlock> {
-    const envelope = generateSignedExecutionPayloadEnvelope(slot);
-    await db.executionPayloadEnvelope.put(envelope.message.beaconBlockRoot, envelope);
+    const envelope = generateExecutionPayloadEnvelope(slot);
+    await db.executionPayloadEnvelope.put(envelope.beaconBlockRoot, envelope);
     return generateProtoBlock({
       slot,
-      blockRoot: toRootHex(envelope.message.beaconBlockRoot),
+      blockRoot: toRootHex(envelope.beaconBlockRoot),
       payloadStatus,
       executionStatus,
     });
@@ -55,14 +55,12 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
       const archived = await readArchived(slot);
       if (archived.headerEnvelope === undefined) throw Error("expected a header entry");
       expect(
-        ssz.gloas.SignedExecutionPayloadHeaderEnvelope.equals(
+        ssz.gloas.ExecutionPayloadHeaderEnvelope.equals(
           archived.headerEnvelope,
-          toSignedHeaderEnvelope(generateSignedExecutionPayloadEnvelope(slot))
+          toHeaderEnvelope(generateExecutionPayloadEnvelope(slot))
         )
       ).toBe(true);
-      expect(
-        await db.executionPayloadEnvelope.get(generateSignedExecutionPayloadEnvelope(slot).message.beaconBlockRoot)
-      ).toBeNull();
+      expect(await db.executionPayloadEnvelope.get(generateExecutionPayloadEnvelope(slot).beaconBlockRoot)).toBeNull();
     }
   });
 
@@ -74,11 +72,9 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
     const archived = await readArchived(10);
     if (archived.envelopeBytes === undefined) throw Error("expected a full entry");
     expect(Uint8Array.from(archived.envelopeBytes)).toEqual(
-      ssz.gloas.SignedExecutionPayloadEnvelope.serialize(generateSignedExecutionPayloadEnvelope(10))
+      ssz.gloas.ExecutionPayloadEnvelope.serialize(generateExecutionPayloadEnvelope(10))
     );
-    expect(
-      await db.executionPayloadEnvelope.get(generateSignedExecutionPayloadEnvelope(10).message.beaconBlockRoot)
-    ).toBeNull();
+    expect(await db.executionPayloadEnvelope.get(generateExecutionPayloadEnvelope(10).beaconBlockRoot)).toBeNull();
   });
 
   it("serves a mixed archive through the union: both forms round-trip from the same bucket", async () => {
@@ -109,9 +105,7 @@ describe("migrateExecutionPayloadEnvelopesFromHotToColdDb", () => {
     expect(migrated).toHaveLength(300);
     expect((await readArchived(0)).headerEnvelope).toBeDefined();
     expect((await readArchived(299)).headerEnvelope).toBeDefined();
-    expect(
-      await db.executionPayloadEnvelope.get(generateSignedExecutionPayloadEnvelope(299).message.beaconBlockRoot)
-    ).toBeNull();
+    expect(await db.executionPayloadEnvelope.get(generateExecutionPayloadEnvelope(299).beaconBlockRoot)).toBeNull();
   });
 
   it("skips EMPTY payload-status blocks and blocks missing from hot", async () => {

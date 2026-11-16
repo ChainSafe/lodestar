@@ -377,11 +377,23 @@ describe("getBlocksForDataValidation", () => {
 // });
 
 describe("validateEnvelopesByRangeResponse", () => {
+  // The envelope is not signed, it is tied to the block only through the commitments of the block's bid
   const blockHash = Buffer.alloc(32, 0x11);
+  const validEnvelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+  validEnvelope.payload.slotNumber = 5;
+  validEnvelope.payload.blockHash = blockHash;
+  validEnvelope.executionRequests.withdrawals.push(ssz.electra.WithdrawalRequest.defaultValue());
+  validEnvelope.parentBeaconBlockRoot = Buffer.alloc(32, 0x77);
+
   const block = ssz.gloas.SignedBeaconBlock.defaultValue();
-  block.message.slot = 5;
-  block.message.body.signedExecutionPayloadBid.message.blockHash = blockHash;
+  block.message.slot = validEnvelope.payload.slotNumber;
+  block.message.parentRoot = validEnvelope.parentBeaconBlockRoot;
+  const bid = block.message.body.signedExecutionPayloadBid.message;
+  bid.blockHash = blockHash;
+  bid.payloadRoot = ssz.gloas.ExecutionPayload.hashTreeRoot(validEnvelope.payload);
+  bid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(validEnvelope.executionRequests);
   const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+  validEnvelope.beaconBlockRoot = blockRoot;
   const blockInput = BlockInputNoData.createFromBlock({
     block,
     blockRootHex: toRootHex(blockRoot),
@@ -391,38 +403,101 @@ describe("validateEnvelopesByRangeResponse", () => {
     seenTimestampSec: 0,
   });
 
-  function envelope(payloadBlockHash: Uint8Array): gloas.SignedExecutionPayloadEnvelope {
-    const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    signedEnvelope.message.beaconBlockRoot = blockRoot;
-    signedEnvelope.message.payload.slotNumber = block.message.slot;
-    signedEnvelope.message.payload.blockHash = payloadBlockHash;
-    return signedEnvelope;
+  /** A copy of the envelope the bid commits to, with `modify` applied */
+  function envelope(modify?: (envelope: gloas.ExecutionPayloadEnvelope) => void): gloas.ExecutionPayloadEnvelope {
+    const payloadEnvelope = ssz.gloas.ExecutionPayloadEnvelope.clone(validEnvelope);
+    modify?.(payloadEnvelope);
+    return payloadEnvelope;
   }
+
+  /** Envelopes that break exactly one commitment of the bid */
+  const bidMismatchCases: {
+    name: string;
+    code: DownloadByRangeErrorCode;
+    modify: (envelope: gloas.ExecutionPayloadEnvelope) => void;
+  }[] = [
+    {
+      name: "payload block hash",
+      code: DownloadByRangeErrorCode.INVALID_ENVELOPE_BLOCK_HASH,
+      modify: (e) => {
+        e.payload.blockHash = Buffer.alloc(32, 0xee);
+      },
+    },
+    {
+      // same block hash, another payload
+      name: "payload root",
+      code: DownloadByRangeErrorCode.INVALID_ENVELOPE_PAYLOAD_ROOT,
+      modify: (e) => {
+        e.payload.gasUsed += 1;
+      },
+    },
+    {
+      name: "execution requests root",
+      code: DownloadByRangeErrorCode.INVALID_ENVELOPE_EXECUTION_REQUESTS_ROOT,
+      modify: (e) => {
+        e.executionRequests.withdrawals = [];
+      },
+    },
+  ];
 
   const blockCases = [
     {name: "a block downloaded in this attempt", validated: true},
     {name: "a block cached from a previous attempt", validated: false},
   ];
 
-  it.each(blockCases)("accepts an envelope whose payload block hash matches the bid of $name", ({validated}) => {
-    const result = validateEnvelopesByRangeResponse(
-      validated ? [{block, blockRoot}] : [],
-      validated ? undefined : [blockInput],
-      [envelope(blockHash)]
-    );
-    expect(result.get(block.message.slot)).toBeDefined();
-  });
+  describe.each(blockCases)("$name", ({validated}) => {
+    function validate(payloadEnvelope: gloas.ExecutionPayloadEnvelope): Map<number, gloas.ExecutionPayloadEnvelope> {
+      return validateEnvelopesByRangeResponse(
+        validated ? [{block, blockRoot}] : [],
+        validated ? undefined : [blockInput],
+        [payloadEnvelope]
+      );
+    }
 
-  it.each(blockCases)("rejects an envelope whose payload block hash does not match the bid of $name", ({validated}) => {
-    expect(() =>
-      validateEnvelopesByRangeResponse(validated ? [{block, blockRoot}] : [], validated ? undefined : [blockInput], [
-        envelope(Buffer.alloc(32, 0xee)),
-      ])
-    ).toThrow(
-      expect.objectContaining({
-        type: expect.objectContaining({code: DownloadByRangeErrorCode.INVALID_ENVELOPE_BLOCK_HASH}),
-      })
-    );
+    it("accepts an envelope that matches the commitments of the block's bid", () => {
+      const payloadEnvelope = envelope();
+      expect(validate(payloadEnvelope).get(block.message.slot)).toBe(payloadEnvelope);
+    });
+
+    it.each(bidMismatchCases)("rejects an envelope whose $name does not match the bid", ({code, modify}) => {
+      expect(() => validate(envelope(modify))).toThrow(
+        expect.objectContaining({type: expect.objectContaining({code, slot: block.message.slot})})
+      );
+    });
+
+    it("rejects an envelope whose parent beacon block root does not match the block's parent root", () => {
+      const wrongParent = Buffer.alloc(32, 0x88);
+      expect(() =>
+        validate(
+          envelope((e) => {
+            e.parentBeaconBlockRoot = wrongParent;
+          })
+        )
+      ).toThrow(
+        expect.objectContaining({
+          type: {
+            code: DownloadByRangeErrorCode.INVALID_ENVELOPE_PARENT_BEACON_BLOCK_ROOT,
+            slot: block.message.slot,
+            expected: toRootHex(block.message.parentRoot),
+            actual: toRootHex(wrongParent),
+          },
+        })
+      );
+    });
+
+    it("rejects an envelope that references another block", () => {
+      expect(() =>
+        validate(
+          envelope((e) => {
+            e.beaconBlockRoot = Buffer.alloc(32, 0x99);
+          })
+        )
+      ).toThrow(
+        expect.objectContaining({
+          type: expect.objectContaining({code: DownloadByRangeErrorCode.INVALID_ENVELOPE_BEACON_BLOCK_ROOT}),
+        })
+      );
+    });
   });
 
   describe("dangling parent envelope", () => {
@@ -432,32 +507,38 @@ describe("validateEnvelopesByRangeResponse", () => {
       slot: block.message.slot,
       proposerIndex: block.message.proposerIndex,
       forkName: ForkName.gloas,
-      bid: block.message.body.signedExecutionPayloadBid.message,
+      bid,
     };
 
-    it("accepts an envelope whose slot and payload block hash match the parent bid", () => {
-      const result = validateEnvelopesByRangeResponse([], undefined, [envelope(blockHash)], parentPayload);
-      expect(result.get(block.message.slot)).toBeDefined();
+    it("accepts an envelope whose slot and payload match the commitments of the parent bid", () => {
+      const payloadEnvelope = envelope();
+      const result = validateEnvelopesByRangeResponse([], undefined, [payloadEnvelope], parentPayload);
+      expect(result.get(block.message.slot)).toBe(payloadEnvelope);
     });
 
-    it("rejects an envelope whose payload block hash does not match the parent bid", () => {
-      expect(() =>
-        validateEnvelopesByRangeResponse([], undefined, [envelope(Buffer.alloc(32, 0xee))], parentPayload)
-      ).toThrow(
-        expect.objectContaining({
-          type: expect.objectContaining({code: DownloadByRangeErrorCode.INVALID_ENVELOPE_BLOCK_HASH}),
-        })
+    it.each(bidMismatchCases)("rejects an envelope whose $name does not match the parent bid", ({code, modify}) => {
+      expect(() => validateEnvelopesByRangeResponse([], undefined, [envelope(modify)], parentPayload)).toThrow(
+        expect.objectContaining({type: expect.objectContaining({code, slot: block.message.slot})})
       );
     });
 
     it("rejects an envelope whose slot does not match the parent", () => {
-      const wrongSlot = envelope(blockHash);
-      wrongSlot.message.payload.slotNumber = block.message.slot + 1;
+      const wrongSlot = envelope((e) => {
+        e.payload.slotNumber = block.message.slot + 1;
+      });
       expect(() => validateEnvelopesByRangeResponse([], undefined, [wrongSlot], parentPayload)).toThrow(
         expect.objectContaining({
           type: expect.objectContaining({code: DownloadByRangeErrorCode.INVALID_ENVELOPE_SLOT}),
         })
       );
+    });
+
+    it("drops an envelope that references neither a batch block nor the parent", () => {
+      const unrelated = envelope((e) => {
+        e.beaconBlockRoot = Buffer.alloc(32, 0x99);
+      });
+      const result = validateEnvelopesByRangeResponse([], undefined, [unrelated], parentPayload);
+      expect(result.size).toBe(0);
     });
   });
 });
@@ -475,10 +556,10 @@ describe("cacheByRangeResponses", () => {
     forkName: ForkName.gloas,
     bid: block.message.body.signedExecutionPayloadBid.message,
   };
-  const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-  envelope.message.beaconBlockRoot = blockRoot;
-  envelope.message.payload.slotNumber = block.message.slot;
-  envelope.message.payload.blockHash = parentPayload.bid.blockHash;
+  const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+  envelope.beaconBlockRoot = blockRoot;
+  envelope.payload.slotNumber = block.message.slot;
+  envelope.payload.blockHash = parentPayload.bid.blockHash;
 
   function cacheParentEnvelope(entries: Map<RootHex, PayloadEnvelopeInput>): Map<number, PayloadEnvelopeInput> | null {
     const seenPayloadEnvelopeInputCache = {

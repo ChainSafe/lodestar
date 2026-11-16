@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, it} from "vitest";
+import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
@@ -9,7 +9,7 @@ import {toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputNoData, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {verifyBlocksSanityChecks as verifyBlocksImportSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
-import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
+import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {IChainOptions} from "../../../../src/chain/options.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
@@ -55,12 +55,25 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     const gloasBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
     gloasBlock.message.slot = currentSlot;
 
+    const parentPayloadRoot = Buffer.alloc(32, 0x11);
+    gloasBlock.message.body.signedExecutionPayloadBid.message.parentPayloadRoot = parentPayloadRoot;
+
     forkChoice.getBlockHexDefaultStatus.mockReturnValue({slot: 0} as ProtoBlock);
-    forkChoice.getBlockHexAndBlockHash.mockReturnValue(null);
+    // assigned since the shared ForkChoice mock does not define this method
+    const getBlockHexAndPayloadRoot = vi.fn<IForkChoice["getBlockHexAndPayloadRoot"]>().mockReturnValue(null);
+    forkChoice.getBlockHexAndPayloadRoot = getBlockHexAndPayloadRoot;
 
     expectThrowsLodestarError(
       () => verifyBlocksSanityChecks({...modules, config: gloasConfig}, [gloasBlock], null, {}),
-      BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
+      new BlockError(gloasBlock, {
+        code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+        parentRoot: toRootHex(gloasBlock.message.parentRoot),
+        parentPayloadRoot: toRootHex(parentPayloadRoot),
+      })
+    );
+    expect(getBlockHexAndPayloadRoot).toHaveBeenCalledWith(
+      toRootHex(gloasBlock.message.parentRoot),
+      toRootHex(parentPayloadRoot)
     );
   });
 

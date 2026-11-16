@@ -33,6 +33,7 @@ test "Gloas settles a delayed parent payment before processing its builder exit"
     bid.slot = 1;
     bid.value = 17;
     bid.block_hash = @splat(3);
+    bid.payload_root = @splat(4);
     try state.inner.setValue("latest_execution_payload_bid", &bid);
     const active_config = if (@import("preset").active_preset == .mainnet) config_module.mainnet.chain_config else config_module.minimal.chain_config;
     var config = config_module.BeaconConfig.init(active_config, c.ZERO_HASH);
@@ -52,6 +53,7 @@ test "Gloas settles a delayed parent payment before processing its builder exit"
     try pending.getValue(undefined, 0, &withdrawal);
     try std.testing.expectEqual(@as(u64, 17), withdrawal.amount);
     try std.testing.expectEqualSlices(u8, &bid.block_hash, try state.inner.getFieldRoot("latest_block_hash"));
+    try std.testing.expectEqualSlices(u8, &bid.payload_root, try state.inner.getFieldRoot("latest_payload_root"));
 }
 
 test "Gloas request operation limits apply independently of SSZ decoding" {

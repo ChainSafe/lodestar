@@ -142,10 +142,10 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
     ] as SequentialGossipHandler<GossipType.data_column_sidecar>;
 
     function createEnvelope(transactionCount = 0) {
-      const envelope = forkTypes.SignedExecutionPayloadEnvelope.defaultValue();
-      envelope.message.beaconBlockRoot = blockRoot;
-      envelope.message.payload.slotNumber = 1;
-      envelope.message.payload.transactions = SerializedList.fromArray(
+      const envelope = forkTypes.ExecutionPayloadEnvelope.defaultValue();
+      envelope.beaconBlockRoot = blockRoot;
+      envelope.payload.slotNumber = 1;
+      envelope.payload.transactions = SerializedList.fromArray(
         Array.from({length: transactionCount}, () => new Uint8Array(1))
       );
       return envelope;
@@ -155,7 +155,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
     async function validateEnvelope(transactionCount = 0): Promise<void> {
       await envelopeHandler({
         gossipData: {
-          serializedData: forkTypes.SignedExecutionPayloadEnvelope.serialize(createEnvelope(transactionCount)),
+          serializedData: forkTypes.ExecutionPayloadEnvelope.serialize(createEnvelope(transactionCount)),
         },
         topic: {boundary: {fork, epoch: 0}, type: GossipType.execution_payload},
         peerIdStr,
@@ -198,10 +198,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
   }
 
   // What BlockInputSync does when a by-root response lands, see toPendingPayloadInput
-  function addByRootIfMissing(
-    payloadInput: PayloadEnvelopeInput,
-    envelope: gloas.SignedExecutionPayloadEnvelope
-  ): void {
+  function addByRootIfMissing(payloadInput: PayloadEnvelopeInput, envelope: gloas.ExecutionPayloadEnvelope): void {
     if (!payloadInput.hasPayloadEnvelope()) {
       payloadInput.addPayloadEnvelope({
         envelope,
@@ -224,7 +221,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
     await vi.advanceTimersByTimeAsync(0);
 
     expect(onGossip).toHaveBeenCalledOnce();
-    expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validSignature: true});
+    expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validEnvelope: true});
   });
 
   it("still emits and imports if another source added the envelope while gossip validation was running", async () => {
@@ -239,7 +236,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
     expect(payloadInput.getPayloadEnvelope()).toBe(byRootEnvelope);
     expect(onGossip).toHaveBeenCalledOnce();
     // The stored envelope is not the one gossip validated, so its signature must be verified at import
-    expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validSignature: false});
+    expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validEnvelope: false});
   });
 
   it("requests missing columns at the configured payload deadline when only the envelope arrives", async () => {
@@ -457,12 +454,12 @@ describe("getGossipHandlers", () => {
   });
 
   it("imports a signature-verified REPEAT_PROPOSAL gloas block whose parent payload is known", async () => {
-    const {processBlock, threw, getBlockHexAndBlockHash} = await runBeaconBlockRepeatProposal(gloasConfig, {
+    const {processBlock, threw, getBlockHexAndPayloadRoot} = await runBeaconBlockRepeatProposal(gloasConfig, {
       recorded: true,
     });
-    expect(getBlockHexAndBlockHash).toHaveBeenCalledExactlyOnceWith(
+    expect(getBlockHexAndPayloadRoot).toHaveBeenCalledExactlyOnceWith(
       toRootHex(Buffer.alloc(32, 0)),
-      toRootHex(Buffer.alloc(32, 0xaa))
+      toRootHex(Buffer.alloc(32, 0xab))
     );
 
     expect(processBlock).toHaveBeenCalledOnce();
@@ -470,11 +467,14 @@ describe("getGossipHandlers", () => {
   });
 
   it("does not import a signature-verified REPEAT_PROPOSAL gloas block whose parent conflicts with finalization", async () => {
-    const {processBlock, threw, getByBlock, getBlockHexAndBlockHash} = await runBeaconBlockRepeatProposal(gloasConfig, {
-      recorded: true,
-      parentKnown: false,
-    });
-    expect(getBlockHexAndBlockHash).not.toHaveBeenCalled();
+    const {processBlock, threw, getByBlock, getBlockHexAndPayloadRoot} = await runBeaconBlockRepeatProposal(
+      gloasConfig,
+      {
+        recorded: true,
+        parentKnown: false,
+      }
+    );
+    expect(getBlockHexAndPayloadRoot).not.toHaveBeenCalled();
     expect(getByBlock).not.toHaveBeenCalled();
 
     expect(processBlock).not.toHaveBeenCalled();
@@ -493,7 +493,6 @@ describe("getGossipHandlers", () => {
   });
 
   it.each<PayloadErrorType>([
-    {code: PayloadErrorCode.INVALID_SIGNATURE},
     {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
     {
       code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
@@ -508,7 +507,6 @@ describe("getGossipHandlers", () => {
   });
 
   it.each<PayloadErrorType>([
-    {code: PayloadErrorCode.INVALID_SIGNATURE},
     {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
     {
       code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
@@ -578,12 +576,12 @@ async function runExecutionPayloadProcessingError(
     source: PayloadEnvelopeInputSource.gossip,
     seenTimestampSec: 0,
   });
-  const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-  signedEnvelope.message.beaconBlockRoot = blockRoot;
-  signedEnvelope.message.payload.slotNumber = 1;
+  const signedEnvelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+  signedEnvelope.beaconBlockRoot = blockRoot;
+  signedEnvelope.payload.slotNumber = 1;
 
   if (opts.addedByAnotherSource) {
-    const byRootEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(signedEnvelope);
+    const byRootEnvelope = ssz.gloas.ExecutionPayloadEnvelope.clone(signedEnvelope);
     payloadInput.addPayloadEnvelope({
       envelope: byRootEnvelope,
       source: PayloadEnvelopeInputSource.byRoot,
@@ -624,7 +622,7 @@ async function runExecutionPayloadProcessingError(
   ] as SequentialGossipHandler<GossipType.execution_payload>;
 
   await executionPayloadHandler({
-    gossipData: {serializedData: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(signedEnvelope)},
+    gossipData: {serializedData: ssz.gloas.ExecutionPayloadEnvelope.serialize(signedEnvelope)},
     peerIdStr,
     seenTimestampSec: 0,
     topic: {
@@ -734,7 +732,7 @@ async function runBeaconBlockRepeatProposal(
   processBlock: ReturnType<typeof vi.fn>;
   threw: boolean;
   getByBlock: ReturnType<typeof vi.fn>;
-  getBlockHexAndBlockHash: ReturnType<typeof vi.fn>;
+  getBlockHexAndPayloadRoot: ReturnType<typeof vi.fn>;
 }> {
   const logger = testLogger();
   const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
@@ -754,6 +752,7 @@ async function runBeaconBlockRepeatProposal(
     block.message.slot = 1;
     block.message.proposerIndex = 3;
     block.message.body.signedExecutionPayloadBid.message.parentBlockHash = Buffer.alloc(32, 0xaa);
+    block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot = Buffer.alloc(32, 0xab);
     blockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message));
     serializedData = ssz.gloas.SignedBeaconBlock.serialize(block);
     blockInput = BlockInputNoData.createFromBlock({...blockInputMeta, block, blockRootHex, forkName: ForkName.gloas});
@@ -799,14 +798,14 @@ async function runBeaconBlockRepeatProposal(
 
   const processBlock = vi.fn().mockResolvedValue(undefined);
   const getByBlock = vi.fn().mockReturnValue(blockInput);
-  const getBlockHexAndBlockHash = vi.fn().mockReturnValue(parentPayloadKnown ? {} : null);
+  const getBlockHexAndPayloadRoot = vi.fn().mockReturnValue(parentPayloadKnown ? {} : null);
   const chain = {
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
     emitter: new ChainEventEmitter(),
     forkChoice: {
       getBlockHexDefaultStatus: vi.fn().mockReturnValue(parentKnown ? {} : null),
-      getBlockHexAndBlockHash,
+      getBlockHexAndPayloadRoot,
     },
     getBlobsTracker: {triggerGetBlobs: vi.fn()},
     logger,
@@ -862,7 +861,7 @@ async function runBeaconBlockRepeatProposal(
   await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  return {processBlock, threw, getByBlock, getBlockHexAndBlockHash};
+  return {processBlock, threw, getByBlock, getBlockHexAndPayloadRoot};
 }
 
 function getExecutionBlockError(

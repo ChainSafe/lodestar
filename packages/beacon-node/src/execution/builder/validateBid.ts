@@ -35,6 +35,8 @@ export async function validateBuilderApiExecutionPayloadBid(
     slot: Slot;
     parentBlock: ProtoBlock;
     parentBlockHash: RootHex;
+    /** null if the parent is a pre-gloas block, fork choice does not track its payload root */
+    parentPayloadRoot: RootHex | null;
     parentBlockRoot: RootHex;
     entry: routes.validator.BuilderEntry;
     getParentExecutionRequests: () => Promise<gloas.ExecutionRequests>;
@@ -42,7 +44,8 @@ export async function validateBuilderApiExecutionPayloadBid(
 ): Promise<void> {
   const bid = signedExecutionPayloadBid.message;
   const fork = chain.config.getForkName(bid.slot);
-  const {slot, parentBlock, parentBlockHash, parentBlockRoot, entry, getParentExecutionRequests} = request;
+  const {slot, parentBlock, parentBlockHash, parentPayloadRoot, parentBlockRoot, entry, getParentExecutionRequests} =
+    request;
 
   if (bid.slot !== slot) {
     throw Error(`Bid slot=${bid.slot} does not match requested slot=${slot}`);
@@ -59,6 +62,10 @@ export async function validateBuilderApiExecutionPayloadBid(
 
   if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
     throw Error(`Bid block hash ${toRootHex(bid.blockHash)} must not equal its parent block hash`);
+  }
+
+  if (byteArrayEquals(bid.payloadRoot, bid.parentPayloadRoot)) {
+    throw Error(`Bid payload root ${toRootHex(bid.payloadRoot)} must not equal its parent payload root`);
   }
 
   const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
@@ -107,6 +114,15 @@ export async function validateBuilderApiExecutionPayloadBid(
     throw Error(`Expected gloas+ state for execution payload bid validation, got fork=${state.forkName}`);
   }
 
+  // The upgraded state holds the payload root of a pre-gloas parent
+  const bidParentPayloadRoot = toRootHex(bid.parentPayloadRoot);
+  const expectedParentPayloadRoot = parentPayloadRoot ?? toRootHex(state.latestPayloadRoot);
+  if (bidParentPayloadRoot !== expectedParentPayloadRoot) {
+    throw Error(
+      `Bid parentPayloadRoot=${bidParentPayloadRoot} does not match requested parentPayloadRoot=${expectedParentPayloadRoot}`
+    );
+  }
+
   if (bid.builderIndex >= state.getBuildersLength()) {
     throw Error(`Bid builderIndex=${bid.builderIndex} is out of bounds`);
   }
@@ -145,7 +161,7 @@ export async function validateBuilderApiExecutionPayloadBid(
   }
 
   // The parent's payload does not try to exit the builder
-  if (byteArrayEquals(bid.parentBlockHash, state.latestExecutionPayloadBid.blockHash)) {
+  if (byteArrayEquals(bid.parentPayloadRoot, state.latestExecutionPayloadBid.payloadRoot)) {
     const requests = await getParentExecutionRequests();
     if (
       requests.builderExits.some(
@@ -181,9 +197,9 @@ export async function validateBuilderApiExecutionPayloadBid(
     );
   }
 
-  const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(bidParentBlockRoot, bidParentBlockHash);
+  const parentPayloadVariant = chain.forkChoice.getBlockHexAndPayloadRoot(bidParentBlockRoot, bidParentPayloadRoot);
   if (parentPayloadVariant === null || parentPayloadVariant.executionPayloadBlockHash === null) {
-    throw Error(`Unable to resolve parent payload gas limit for bid parentBlockHash=${bidParentBlockHash}`);
+    throw Error(`Unable to resolve parent payload gas limit for bid parentPayloadRoot=${bidParentPayloadRoot}`);
   }
   const parentGasLimit = BigInt(parentPayloadVariant.executionPayloadGasLimit);
   const targetGasLimit = proposerPreferences.message.targetGasLimit;

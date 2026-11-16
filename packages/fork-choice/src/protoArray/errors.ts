@@ -36,7 +36,7 @@ export type ProtoArrayErrorType =
   | {code: ProtoArrayErrorCode.FINALIZED_NODE_UNKNOWN; root: RootHex}
   | {code: ProtoArrayErrorCode.JUSTIFIED_NODE_UNKNOWN; root: RootHex}
   | {code: ProtoArrayErrorCode.UNKNOWN_BLOCK; root: RootHex}
-  | {code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK; parentRoot: RootHex; parentHash: RootHex | null}
+  | {code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK; parentRoot: RootHex; parentPayloadRoot: RootHex | null}
   | {code: ProtoArrayErrorCode.INVALID_FINALIZED_ROOT_CHANGE}
   | {code: ProtoArrayErrorCode.INVALID_NODE_INDEX; index: number}
   | {code: ProtoArrayErrorCode.INVALID_PARENT_INDEX; index: number}

@@ -34,6 +34,7 @@ export function createGloasState() {
   state.latestExecutionPayloadBid.builderIndex = Infinity;
   state.latestExecutionPayloadBid.slot = state.slot - 1;
   state.latestExecutionPayloadBid.blockHash.fill(3);
+  state.latestExecutionPayloadBid.payloadRoot.fill(4);
   state.latestExecutionPayloadBid.gasLimit = (1n << 64n) - 1n;
   state.latestExecutionPayloadBid.executionPayment = (1n << 63n) + 123n;
   state.builders = [

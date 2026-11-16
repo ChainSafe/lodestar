@@ -17,6 +17,8 @@ import type {BuiltPayload} from "./payloadSource.js";
 type CommonBidInput<F extends ForkPostGloas> = {
   slot: Slot;
   parentBlockRoot: Root;
+  /** Hash tree root of the parent execution payload, from the BN payload attributes used for this build. */
+  parentPayloadRoot: Root;
   /** Expected value from the BN payload attributes used for this build. */
   prevRandao: Bytes32;
   builderIndex: BuilderIndex;
@@ -39,6 +41,7 @@ export enum ExecutionPayloadBidErrorCode {
   INVALID_GAS_LIMIT = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_GAS_LIMIT",
   SLOT_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_SLOT_MISMATCH",
   BLOCK_HASH_EQUALS_PARENT = "EXECUTION_PAYLOAD_BID_ERROR_BLOCK_HASH_EQUALS_PARENT",
+  PAYLOAD_ROOT_EQUALS_PARENT = "EXECUTION_PAYLOAD_BID_ERROR_PAYLOAD_ROOT_EQUALS_PARENT",
   INVALID_INCLUSION_LIST_BITS = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_INCLUSION_LIST_BITS",
   PREV_RANDAO_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_PREV_RANDAO_MISMATCH",
 }
@@ -47,6 +50,7 @@ export type ExecutionPayloadBidErrorType =
   | {code: ExecutionPayloadBidErrorCode.INVALID_GAS_LIMIT; gasLimit: number}
   | {code: ExecutionPayloadBidErrorCode.SLOT_MISMATCH; slot: Slot; payloadSlot: Slot}
   | {code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT}
+  | {code: ExecutionPayloadBidErrorCode.PAYLOAD_ROOT_EQUALS_PARENT}
   | {code: ExecutionPayloadBidErrorCode.INVALID_INCLUSION_LIST_BITS; bitLen: number | undefined}
   | {
       code: ExecutionPayloadBidErrorCode.PREV_RANDAO_MISMATCH;
@@ -88,6 +92,10 @@ export function createExecutionPayloadBid(input: ExecutionPayloadBidInput): Exec
   if (byteArrayEquals(executionPayload.blockHash, executionPayload.parentHash)) {
     throw new ExecutionPayloadBidError({code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT});
   }
+  const payloadRoot = sszTypesFor(fork).ExecutionPayload.hashTreeRoot(executionPayload);
+  if (byteArrayEquals(payloadRoot, input.parentPayloadRoot)) {
+    throw new ExecutionPayloadBidError({code: ExecutionPayloadBidErrorCode.PAYLOAD_ROOT_EQUALS_PARENT});
+  }
   if (!byteArrayEquals(executionPayload.prevRandao, input.prevRandao)) {
     throw new ExecutionPayloadBidError({
       code: ExecutionPayloadBidErrorCode.PREV_RANDAO_MISMATCH,
@@ -97,8 +105,10 @@ export function createExecutionPayloadBid(input: ExecutionPayloadBidInput): Exec
   }
   const bid: gloas.ExecutionPayloadBid = {
     parentBlockHash: executionPayload.parentHash,
+    parentPayloadRoot: input.parentPayloadRoot,
     parentBlockRoot: input.parentBlockRoot,
     blockHash: executionPayload.blockHash,
+    payloadRoot,
     prevRandao: input.prevRandao,
     feeRecipient: input.feeRecipient,
     gasLimit: BigInt(executionPayload.gasLimit),

@@ -46,6 +46,8 @@ describe("fast confirmation pause/resume", () => {
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
         parentBlockHash: null,
+        parentPayloadRoot: null,
+        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
         timeliness: false,
         importedTimely: false,

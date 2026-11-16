@@ -64,6 +64,7 @@ describe("Revealer", () => {
     signedBid.message.parentBlockHash = payload.executionPayload.parentHash;
     signedBid.message.parentBlockRoot = Buffer.alloc(32, 4);
     signedBid.message.blockHash = payload.executionPayload.blockHash;
+    signedBid.message.payloadRoot = ssz.gloas.ExecutionPayload.hashTreeRoot(payload.executionPayload);
     signedBid.message.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(payload.executionRequests);
     const blockHash = toRootHex(signedBid.message.blockHash);
 
@@ -97,15 +98,12 @@ describe("Revealer", () => {
     await revealer.onBlock(observed);
 
     expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
-    const {signedEnvelopeOrContents} = api.beacon.publishExecutionPayloadEnvelope.mock.calls[0][0];
-    expect(signedEnvelopeOrContents).toMatchObject({
-      signedExecutionPayloadEnvelope: {
-        message: {
-          builderIndex,
-          beaconBlockRoot: config.getForkTypes(observed.slot).BeaconBlock.hashTreeRoot(observed.block.message),
-          parentBeaconBlockRoot: observed.signedBid.message.parentBlockRoot,
-          payload: {blockHash: observed.signedBid.message.blockHash},
-        },
+    const {executionPayloadEnvelopeContents} = api.beacon.publishExecutionPayloadEnvelope.mock.calls[0][0];
+    expect(executionPayloadEnvelopeContents).toMatchObject({
+      executionPayloadEnvelope: {
+        beaconBlockRoot: config.getForkTypes(observed.slot).BeaconBlock.hashTreeRoot(observed.block.message),
+        parentBeaconBlockRoot: observed.signedBid.message.parentBlockRoot,
+        payload: {blockHash: observed.signedBid.message.blockHash},
       },
       kzgProofs: [],
       blobs: [],

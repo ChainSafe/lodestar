@@ -9,7 +9,6 @@ import {
   BlsToExecutionChangeErrorCode,
   DataColumnSidecarErrorCode,
   ExecutionPayloadBidErrorCode,
-  ExecutionPayloadEnvelopeErrorCode,
   GossipAction,
   GossipActionError,
   InclusionListErrorCode,
@@ -60,7 +59,6 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
   },
   [GossipType.execution_payload]: {
     default: PeerAction.LowToleranceError,
-    byCode: {[ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
   [GossipType.beacon_aggregate_and_proof]: {
     default: PeerAction.MidToleranceError,

@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {BUILDER_INDEX_SELF_BUILD, ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
+import {ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {defer, fromHex, toRootHex} from "@lodestar/utils";
 import {EngineBlockSelectionReason, getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
@@ -59,6 +59,8 @@ describe("api/validator - produceBlockV4", () => {
     slot: slot - 1,
     executionPayloadBlockHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     parentBlockHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    payloadRoot: "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    parentPayloadRoot: "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
   } as ProtoBlock;
 
   const randaoReveal = engineBlock.body.randaoReveal;
@@ -101,7 +103,7 @@ describe("api/validator - produceBlockV4", () => {
 
     expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalledWith(
       slot,
-      parentBlock.executionPayloadBlockHash,
+      parentBlock.payloadRoot,
       parentBlock.blockRoot
     );
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
@@ -277,6 +279,14 @@ describe("api/validator - produceBlockV4", () => {
 
     expect(modules.chain.builderApiClient.getExecutionPayloadBids).toHaveBeenCalledOnce();
     expect(validateBuilderApiExecutionPayloadBid).toHaveBeenCalledOnce();
+    expect(validateBuilderApiExecutionPayloadBid).toHaveBeenCalledWith(
+      expect.anything(),
+      apiBid,
+      expect.objectContaining({
+        parentBlockHash: parentBlock.executionPayloadBlockHash,
+        parentPayloadRoot: parentBlock.payloadRoot,
+      })
+    );
     // The bid block commits to the builder API bid since its boosted total (2) beats the p2p bid (1)
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: apiBid}));
     expect(block).toEqual(bidBlock);
@@ -770,7 +780,6 @@ describe("api/validator - produceBlockV4", () => {
     const expectedEnvelope: gloas.ExecutionPayloadEnvelope = {
       payload,
       executionRequests: produceResult.executionRequests,
-      builderIndex: BUILDER_INDEX_SELF_BUILD,
       beaconBlockRoot,
       parentBeaconBlockRoot: produceResult.parentBlockRoot,
     };
@@ -785,12 +794,8 @@ describe("api/validator - produceBlockV4", () => {
     });
     expect(blockResponse.data).toMatchObject({executionPayloadEnvelope: expectedEnvelope});
 
-    const envelopeResponse = await api.getExecutionPayloadEnvelope({slot, beaconBlockRoot});
-    expect(envelopeResponse.data).toEqual(expectedEnvelope);
     if (enabled) {
-      expect(modules.chain.persistExecutionPayloadEnvelope).toHaveBeenCalledTimes(2);
-      expect(modules.chain.persistExecutionPayloadEnvelope).toHaveBeenNthCalledWith(1, expectedEnvelope);
-      expect(modules.chain.persistExecutionPayloadEnvelope).toHaveBeenNthCalledWith(2, expectedEnvelope);
+      expect(modules.chain.persistExecutionPayloadEnvelope).toHaveBeenCalledExactlyOnceWith(expectedEnvelope);
     } else {
       expect(modules.chain.persistExecutionPayloadEnvelope).not.toHaveBeenCalled();
     }

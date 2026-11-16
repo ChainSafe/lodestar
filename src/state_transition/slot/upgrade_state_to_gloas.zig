@@ -42,10 +42,12 @@ pub fn upgradeStateToGloas(allocator: Allocator, io: std.Io, config: *const Beac
     try fulu_state.latestExecutionPayloadHeader(allocator, &header);
     defer ct.fulu.ExecutionPayloadHeader.deinit(allocator, &header);
     var block_header = try fulu_state.latestBlockHeader();
+    const payload_root = (try fulu_state.inner.getFieldRoot("latest_execution_payload_header")).*;
     var bid = ct.gloas.ExecutionPayloadBid.default_value;
     bid.parent_block_hash = header.parent_hash;
     bid.parent_block_root = (try block_header.getFieldRoot("parent_root")).*;
     bid.block_hash = header.block_hash;
+    bid.payload_root = payload_root;
     bid.prev_randao = header.prev_randao;
     bid.gas_limit = header.gas_limit;
     bid.builder_index = c.BUILDER_INDEX_SELF_BUILD;
@@ -53,6 +55,7 @@ pub fn upgradeStateToGloas(allocator: Allocator, io: std.Io, config: *const Beac
     try ct.gloas.ExecutionRequests.hashTreeRoot(allocator, &ct.gloas.ExecutionRequests.default_value, &bid.execution_requests_root);
     try state.inner.setValue("latest_execution_payload_bid", &bid);
     try state.inner.setValue("latest_block_hash", &header.block_hash);
+    try state.inner.setValue("latest_payload_root", &payload_root);
     var availability = try state.inner.get("execution_payload_availability");
     for (0..preset.SLOTS_PER_HISTORICAL_ROOT) |slot| try availability.set(slot, true);
     const ptc_window = try gloas.initializePtcWindow(.fulu, allocator, epoch_cache, fulu_state);

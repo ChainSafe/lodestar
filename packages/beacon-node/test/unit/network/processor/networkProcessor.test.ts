@@ -3,7 +3,7 @@ import {Mock, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {MapDef} from "@lodestar/utils";
+import {MapDef, toRootHex} from "@lodestar/utils";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {GossipErrorCode} from "../../../../src/chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../../../src/chain/interface.js";
@@ -42,6 +42,7 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   let unknownEnvelopeBlockRootSpy: Mock<(data: unknown) => void>;
   let unknownEnvelopeBlockRootSlotSpy: Mock<(data: unknown) => void>;
   let reportPeerSpy: Mock<(peer: PeerIdStr, action: PeerAction, actionName: string) => void>;
+  let getBlockHexDefaultStatus: Mock<(blockRoot: string) => {payloadRoot: string | null} | null>;
 
   beforeEach(() => {
     emitter = new ChainEventEmitter();
@@ -54,15 +55,18 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     emitter.on(ChainEvent.unknownEnvelopeBlockRoot, (data) => unknownEnvelopeBlockRootSpy(data));
     emitter.on(ChainEvent.unknownEnvelopeBlockRootSlot, (data) => unknownEnvelopeBlockRootSlotSpy(data));
 
+    getBlockHexDefaultStatus = vi.fn().mockReturnValue(null);
     const chain = {
       clock: new ClockStopped(clockSlot),
       emitter,
       forkChoice: {
         hasBlockHexUnsafe: vi.fn().mockReturnValue(false),
         hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
-        getBlockHexAndBlockHash: vi.fn().mockReturnValue(undefined),
-        getBlockHexDefaultStatus: vi.fn().mockReturnValue(null),
+        getBlockHexAndPayloadRoot: vi.fn().mockReturnValue(null),
+        getBlockHexDefaultStatus,
       },
+      // a message that is not held goes to its queue and stays there
+      blsThreadPoolCanAcceptWork: vi.fn().mockReturnValue(false),
       seenBlock: vi.fn().mockReturnValue(false),
       seenPayloadEnvelope: vi.fn().mockReturnValue(false),
     } as unknown as IBeaconChain;
@@ -130,6 +134,7 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     signedBid.message.builderIndex = builderIndex;
     signedBid.message.parentBlockRoot = Buffer.alloc(32, 0xaa);
     signedBid.message.parentBlockHash = Buffer.alloc(32, 0xbb);
+    signedBid.message.parentPayloadRoot = Buffer.alloc(32, 0xbc);
     const data = ssz.gloas.SignedExecutionPayloadBid.serialize(signedBid);
     emit(GossipType.execution_payload_bid, ForkName.gloas, data);
   }
@@ -146,10 +151,10 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
 
   /** An execution payload for an unknown block (there is only ever one payload per block). */
   function processExecutionPayload(rootByte = 0xdd): void {
-    const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    signedEnvelope.message.payload.slotNumber = clockSlot;
-    signedEnvelope.message.beaconBlockRoot = Buffer.alloc(32, rootByte);
-    const data = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(signedEnvelope);
+    const signedEnvelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    signedEnvelope.payload.slotNumber = clockSlot;
+    signedEnvelope.beaconBlockRoot = Buffer.alloc(32, rootByte);
+    const data = ssz.gloas.ExecutionPayloadEnvelope.serialize(signedEnvelope);
     emit(GossipType.execution_payload, ForkName.gloas, data);
   }
 
@@ -307,6 +312,28 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       expect(unknownEnvelopeBlockRootSlotSpy).not.toHaveBeenCalled();
       expect(unknownEnvelopeBlockRootSpy).toHaveBeenCalledTimes(1);
       expect(lastEnvelopeSearch()).toEqual(expect.not.objectContaining({slot: expect.anything()}));
+    });
+
+    it("looks up the parent's envelope for a bid that builds on the parent's own payload, not yet imported", () => {
+      // the parent block is known and the bid's parent payload root is the payload the parent committed to
+      getBlockHexDefaultStatus.mockReturnValue({payloadRoot: toRootHex(Buffer.alloc(32, 0xbc))});
+      processBid(0);
+      expect(unknownBlockRootSpy).not.toHaveBeenCalled();
+      expect(unknownEnvelopeBlockRootSlotSpy).not.toHaveBeenCalled();
+      expect(unknownEnvelopeBlockRootSpy).toHaveBeenCalledTimes(1);
+      expect(lastEnvelopeSearch()).toEqual(expect.not.objectContaining({slot: expect.anything()}));
+      expect(bufferedPayloadCount()).toBe(1);
+    });
+
+    it("does not look up an envelope for a bid whose parent payload root is not the parent's payload", () => {
+      // no envelope of the known parent can ever make this bid's parent payload known
+      getBlockHexDefaultStatus.mockReturnValue({payloadRoot: toRootHex(Buffer.alloc(32, 0xbd))});
+      processBid(0);
+      expect(unknownBlockRootSpy).not.toHaveBeenCalled();
+      expect(unknownEnvelopeBlockRootSpy).not.toHaveBeenCalled();
+      expect(unknownEnvelopeBlockRootSlotSpy).not.toHaveBeenCalled();
+      expect(bufferedBlockCount()).toBe(0);
+      expect(bufferedPayloadCount()).toBe(0);
     });
 
     it("still emits the payload slot once when a slot-less lookup started the search", () => {

@@ -274,6 +274,7 @@ export const eventTestData: EventData = {
       proposal_slot: "10",
       parent_block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
       parent_block_hash: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+      parent_payload_root: "0x7a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
       safe_block_hash: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
       finalized_block_hash: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
       payload_attributes: {
@@ -346,8 +347,10 @@ export const eventTestData: EventData = {
     data: ssz.gloas.SignedExecutionPayloadBid.fromJson({
       message: {
         parent_block_hash: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+        parent_payload_root: "0x7a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
         parent_block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
         block_hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        payload_root: "0x2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
         prev_randao: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
         fee_recipient: "0x0000000000000000000000000000000000000000",
         gas_limit: "30000000",

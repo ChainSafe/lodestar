@@ -19,42 +19,65 @@ describe("chain / blocks / importBlock", () => {
   const parentRoot = Buffer.alloc(32, 1);
   const parentBlockHash = Buffer.alloc(32, 2);
 
-  function importGloasBlock(onBlockError: Error) {
+  function importGloasBlock(onBlockError: Error | null, source = BlockInputSource.gossip) {
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = 1;
     block.message.parentRoot = parentRoot;
     block.message.body.signedExecutionPayloadBid.message.parentBlockHash = parentBlockHash;
+    const blockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message));
     const blockInput = BlockInputNoData.createFromBlock({
       block,
-      blockRootHex: toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message)),
+      blockRootHex,
       forkName: ForkName.gloas,
       daOutOfRange: false,
-      source: BlockInputSource.gossip,
+      source,
       seenTimestampSec: 0,
     });
 
+    const head = {blockRoot: toRootHex(parentRoot), parentRoot: toRootHex(Buffer.alloc(32))};
     const forkChoice = {
-      getTime: vi.fn().mockReturnValue(1),
+      // Far enough ahead of the block that its attestations, events and forkchoiceUpdated are skipped
+      getTime: vi.fn().mockReturnValue(onBlockError === null ? 1000 : 1),
       getFinalizedCheckpoint: vi.fn().mockReturnValue({epoch: 0}),
       onBlock: vi.fn().mockImplementation(() => {
-        throw onBlockError;
+        if (onBlockError !== null) throw onBlockError;
+        return {};
       }),
+      getHead: vi.fn().mockReturnValue(head),
+      getBlockHexDefaultStatus: vi.fn().mockReturnValue(null),
     };
+    const revealSelfBuiltPayload = vi.fn().mockReturnValue(false);
     const chain = {
       config,
+      opts: {},
       forkChoice,
       logger: getMockedLogger(),
-      clock: {secFromSlot: vi.fn().mockReturnValue(0), msFromSlot: vi.fn().mockReturnValue(0)},
+      clock: {
+        secFromSlot: vi.fn().mockReturnValue(0),
+        msFromSlot: vi.fn().mockReturnValue(0),
+        slotWithFutureTolerance: vi.fn().mockReturnValue(1000),
+      },
       unfinalizedBlockWrites: {
         waitForSpace: vi.fn().mockResolvedValue(undefined),
         push: vi.fn().mockResolvedValue(undefined),
       },
       checkpointBalancesCache: {processState: vi.fn()},
+      regen: {processState: vi.fn()},
+      singleAttestationPool: {isEmpty: vi.fn().mockReturnValue(true)},
+      recomputeForkChoiceHead: vi.fn().mockReturnValue(head),
+      seenPayloadEnvelopeInputCache: {pruneBelowParent: vi.fn()},
+      reprocessController: {onBlockImported: vi.fn()},
+      revealSelfBuiltPayload,
     } as unknown as BeaconChain;
 
     const fullyVerifiedBlock: FullyVerifiedBlock = {
       blockInput,
-      postState: {genesisTime: 0} as IBeaconStateView,
+      postState: {
+        genesisTime: 0,
+        forkName: ForkName.gloas,
+        isStateValidatorsNodesPopulated: () => true,
+        currentSyncCommitteeValidatorIndices: new Uint32Array(),
+      } as unknown as IBeaconStateView,
       parentBlockSlot: 0,
       proposerBalanceDelta: 0,
       dataAvailabilityStatus: DataAvailabilityStatus.NotRequired,
@@ -63,11 +86,16 @@ describe("chain / blocks / importBlock", () => {
       executionStatus: ExecutionStatus.Valid,
     };
 
-    return importBlock.call(chain, fullyVerifiedBlock, {});
+    return {
+      result: importBlock.call(chain, fullyVerifiedBlock, {}),
+      blockRootHex,
+      forkChoice,
+      revealSelfBuiltPayload,
+    };
   }
 
   it("reports a parent invalidated during verification as PARENT_EXECUTION_INVALID", async () => {
-    const result = importGloasBlock(
+    const {result} = importGloasBlock(
       new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
@@ -87,9 +115,36 @@ describe("chain / blocks / importBlock", () => {
   it("rethrows any other fork choice error", async () => {
     const error = new ForkChoiceError({
       code: ForkChoiceErrorCode.INVALID_BLOCK,
-      err: {code: InvalidBlockCode.UNKNOWN_PARENT, root: toRootHex(parentRoot), hash: toRootHex(parentBlockHash)},
+      err: {
+        code: InvalidBlockCode.UNKNOWN_PARENT,
+        root: toRootHex(parentRoot),
+        parentPayloadRoot: toRootHex(parentBlockHash),
+      },
     });
 
-    await expect(importGloasBlock(error)).rejects.toBe(error);
+    await expect(importGloasBlock(error).result).rejects.toBe(error);
+  });
+
+  it.each([BlockInputSource.gossip, BlockInputSource.api])(
+    "reveals the payload of a self-built block once the block from %s is imported",
+    async (source) => {
+      const {result, blockRootHex, forkChoice, revealSelfBuiltPayload} = importGloasBlock(null, source);
+
+      await expect(result).resolves.toBeUndefined();
+
+      expect(revealSelfBuiltPayload).toHaveBeenCalledExactlyOnceWith(blockRootHex);
+      // The block is in fork choice by then, which the payload import requires
+      expect(forkChoice.onBlock.mock.invocationCallOrder[0]).toBeLessThan(
+        revealSelfBuiltPayload.mock.invocationCallOrder[0]
+      );
+    }
+  );
+
+  it("does not reveal a payload if the block import fails", async () => {
+    const error = new Error("onBlock failed");
+    const {result, revealSelfBuiltPayload} = importGloasBlock(error);
+
+    await expect(result).rejects.toBe(error);
+    expect(revealSelfBuiltPayload).not.toHaveBeenCalled();
   });
 });

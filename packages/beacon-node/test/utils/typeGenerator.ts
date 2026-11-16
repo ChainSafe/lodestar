@@ -26,15 +26,15 @@ export function generateSignedBlockAtSlot(slot: Slot): phase0.SignedBeaconBlock 
 /**
  * A populated Gloas envelope whose roots, hashes and bodies are unique per slot (2 bytes of slot, so
  * >256 slots don't collide), for archive/migration/reconstruction tests that need a body to drop
- * and put back. Signature is a fixed filler, never verified.
+ * and put back.
  */
-export function generateSignedExecutionPayloadEnvelope(slot: Slot): gloas.SignedExecutionPayloadEnvelope {
+export function generateExecutionPayloadEnvelope(slot: Slot): gloas.ExecutionPayloadEnvelope {
   const hi = (slot >> 8) & 0xff;
   const lo = slot & 0xff;
   const root32 = (tag: number): Uint8Array => Uint8Array.from([tag, hi, lo, ...new Uint8Array(29)]);
 
-  const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-  const p = envelope.message.payload;
+  const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+  const p = envelope.payload;
   p.slotNumber = slot; // GLOAS:EIP-7843
   p.blockNumber = slot;
   p.blockHash = root32(0xaa);
@@ -42,20 +42,18 @@ export function generateSignedExecutionPayloadEnvelope(slot: Slot): gloas.Signed
   p.transactions = SerializedList.fromArray([Uint8Array.from([lo, 1, 2]), Uint8Array.from([lo, 3, 4])]);
   p.withdrawals = [{index: slot, validatorIndex: 2, address: new Uint8Array(20).fill(0xdd), amount: 99n}];
   p.blockAccessList = Uint8Array.from([lo, 0x22]); // GLOAS:EIP-7928
-  envelope.message.builderIndex = 7;
-  envelope.message.beaconBlockRoot = root32(0xcc);
-  envelope.message.parentBeaconBlockRoot = root32(0x99);
-  envelope.signature = new Uint8Array(96).fill(0xee);
+  envelope.beaconBlockRoot = root32(0xcc);
+  envelope.parentBeaconBlockRoot = root32(0x99);
   return envelope;
 }
 
 /** The parts of an envelope's payload the EL serves back via engine_getPayloadBodiesByHashV2 */
-export function payloadBodiesOf(envelope: gloas.SignedExecutionPayloadEnvelope): {
+export function payloadBodiesOf(envelope: gloas.ExecutionPayloadEnvelope): {
   transactions: gloas.Transactions;
   withdrawals: gloas.Withdrawals;
   blockAccessList: gloas.BlockAccessList;
 } {
-  const {transactions, withdrawals, blockAccessList} = envelope.message.payload;
+  const {transactions, withdrawals, blockAccessList} = envelope.payload;
   return {transactions, withdrawals, blockAccessList};
 }
 

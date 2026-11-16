@@ -28,6 +28,7 @@ describe("Gloas native state view", () => {
   it("preserves progressive state bytes, roots and full-width bid integers", () => {
     const value = createGloasState();
     value.latestBlockHash.fill(7);
+    value.latestPayloadRoot.fill(8);
     value.executionPayloadAvailability.set(3, true);
     value.payloadExpectedWithdrawals.push({
       ...ssz.capella.Withdrawal.defaultValue(),
@@ -51,6 +52,7 @@ describe("Gloas native state view", () => {
       expect(Buffer.compare(ssz.gloas.BeaconState.serialize(materialized), state.serialize())).toBe(0);
       expect(state.latestExecutionPayloadBid).toEqual(value.latestExecutionPayloadBid);
       expect(state.latestBlockHash).toEqual(value.latestBlockHash);
+      expect(state.latestPayloadRoot).toEqual(value.latestPayloadRoot);
       const availability = state.executionPayloadAvailability;
       expect(availability.bitLen).toBe(value.executionPayloadAvailability.bitLen);
       expect(availability.uint8Array).toEqual(value.executionPayloadAvailability.uint8Array);
@@ -228,6 +230,7 @@ describe("Gloas native state view", () => {
           true
         );
         expected.latestBlockHash = expected.latestExecutionPayloadBid.blockHash;
+        expected.latestPayloadRoot = expected.latestExecutionPayloadBid.payloadRoot;
         expect(Buffer.compare(post.serialize(), ssz.gloas.BeaconState.serialize(expected))).toBe(0);
         expect(post.hashTreeRoot()).toEqual(ssz.gloas.BeaconState.hashTreeRoot(expected));
         expect(post.getExpectedWithdrawals().processedBuilderWithdrawalsCount).toBe(1);

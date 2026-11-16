@@ -251,7 +251,7 @@ export class PrepareNextSlotScheduler {
               stateAfterParentPayload = preparedState.withParentPayloadApplied(parentExecutionRequests);
             }
           } else {
-            parentBlockHash = preparedState.latestExecutionPayloadBid.parentBlockHash;
+            parentBlockHash = preparedState.latestBlockHash;
           }
         } else {
           parentBlockHash = preparedState.latestExecutionPayloadHeader.blockHash;

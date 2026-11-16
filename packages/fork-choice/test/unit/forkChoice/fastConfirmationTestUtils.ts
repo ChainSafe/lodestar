@@ -52,6 +52,8 @@ export function makeBlock(
     unrealizedFinalizedEpoch: 0,
     unrealizedFinalizedRoot: ZERO_ROOT,
     parentBlockHash: null,
+    parentPayloadRoot: null,
+    payloadRoot: null,
     payloadStatus: opts.payloadStatus ?? PayloadStatus.FULL,
     timeliness: false,
     importedTimely: false,

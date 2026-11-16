@@ -279,6 +279,7 @@ export interface IForkChoice {
   getBlockDefaultStatus(blockRoot: Root): ProtoBlock | null;
   getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
+  getBlockHexAndPayloadRoot(blockRoot: RootHex, payloadRoot: RootHex): ProtoBlock | null;
   shouldExtendPayload(blockRoot: RootHex): boolean;
   /** Spec: should_build_on_full(store, head, slot) */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean;

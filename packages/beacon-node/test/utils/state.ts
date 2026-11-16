@@ -179,4 +179,6 @@ export const zeroProtoBlock: ProtoBlock = {
   dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   payloadStatus: PayloadStatus.FULL,
   parentBlockHash: null,
+  parentPayloadRoot: null,
+  payloadRoot: null,
 };

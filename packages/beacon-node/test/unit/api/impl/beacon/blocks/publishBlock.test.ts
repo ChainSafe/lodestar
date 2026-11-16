@@ -51,6 +51,7 @@ describe("api - beacon - publishBlockV2", () => {
     Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
     modules.network.publishBeaconBlock = vi.fn();
     modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
+    modules.chain.revealSelfBuiltPayload = vi.fn().mockReturnValue(false);
     vi.mocked(validateGossipBlock).mockResolvedValue({skippedSlots: 0});
   });
 
@@ -265,6 +266,7 @@ describe("api - beacon - publishBlockV2", () => {
         await api.publishBlockV2({signedBlockContents: {signedBlock}, broadcastValidation});
 
         expect(modules.chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
+        expect(modules.chain.revealSelfBuiltPayload).toHaveBeenCalledExactlyOnceWith(blockRoot);
         expect(
           modules.chain.seenBlockProposers.hasBlockRoot(
             signedBlock.message.slot,
@@ -351,6 +353,7 @@ describe("api - beacon - publishBlockV2", () => {
     Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
     modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
     modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
+    modules.chain.revealSelfBuiltPayload = vi.fn().mockReturnValue(false);
     modules.network.publishBeaconBlock = vi.fn();
     modules.network.publishDataColumnSidecar = vi.fn().mockResolvedValue({sentPeers: 1, alreadyPublished: false});
 

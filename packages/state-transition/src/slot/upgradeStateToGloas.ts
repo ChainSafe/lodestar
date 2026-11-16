@@ -73,10 +73,14 @@ export function upgradeStateToGloas(
   );
   stateGloasView.currentSyncCommittee = stateGloasCloned.currentSyncCommittee;
   stateGloasView.nextSyncCommittee = stateGloasCloned.nextSyncCommittee;
+  // The root of the last Fulu payload, which equals the root of its header
+  const latestPayloadRoot = stateFulu.latestExecutionPayloadHeader.hashTreeRoot();
   const latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU({
     parentBlockHash: stateFulu.latestExecutionPayloadHeader.parentHash,
+    parentPayloadRoot: ssz.Root.defaultValue(),
     parentBlockRoot: stateFulu.latestBlockHeader.parentRoot,
     blockHash: stateFulu.latestExecutionPayloadHeader.blockHash,
+    payloadRoot: latestPayloadRoot,
     prevRandao: stateFulu.latestExecutionPayloadHeader.prevRandao,
     feeRecipient: ssz.ExecutionAddress.defaultValue(),
     gasLimit: BigInt(stateFulu.latestExecutionPayloadHeader.gasLimit),
@@ -116,6 +120,7 @@ export function upgradeStateToGloas(
     stateGloasView.executionPayloadAvailability.set(i, true);
   }
   stateGloasView.latestBlockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
+  stateGloasView.latestPayloadRoot = latestPayloadRoot;
 
   const stateGloas = getCachedBeaconState(stateGloasView, stateFulu);
 

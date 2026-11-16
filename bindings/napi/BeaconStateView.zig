@@ -68,6 +68,7 @@ pub const js_meta = js.class(.{ .properties = .{
     .clonedCountWithTransferCache = js.prop(.{ .get = true, .set = false }),
     .createdWithTransferCache = js.prop(.{ .get = true, .set = false }),
     .latestBlockHash = js.prop(.{ .get = true, .set = false }),
+    .latestPayloadRoot = js.prop(.{ .get = true, .set = false }),
     .executionPayloadAvailability = js.prop(.{ .get = true, .set = false }),
     .latestExecutionPayloadBid = js.prop(.{ .get = true, .set = false }),
     .payloadExpectedWithdrawals = js.prop(.{ .get = true, .set = false }),
@@ -1682,6 +1683,10 @@ fn gloasFieldValue(self: *BeaconStateView, comptime field: []const u8) !napi.Val
 
 pub fn latestBlockHash(self: *BeaconStateView) !js.Uint8Array {
     return js_types.wrap(js.Uint8Array, try self.gloasFieldValue("latest_block_hash"));
+}
+
+pub fn latestPayloadRoot(self: *BeaconStateView) !js.Uint8Array {
+    return js_types.wrap(js.Uint8Array, try self.gloasFieldValue("latest_payload_root"));
 }
 
 pub fn executionPayloadAvailability(self: *BeaconStateView) !js.Value {

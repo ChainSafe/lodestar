@@ -55,7 +55,13 @@ function setup(isGloas: boolean): {forkChoice: ForkChoice; protoArray: ProtoArra
       toProtoBlock(slot, parentRoot, isGloas, {
         executionStatus: ExecutionStatus.Syncing,
         executionPayloadBlockHash: payloadHash(isGloas ? slot - 1 : slot),
-        ...(isGloas ? {parentBlockHash: payloadHash(slot - 1)} : {}),
+        ...(isGloas
+          ? {
+              parentBlockHash: payloadHash(slot - 1),
+              parentPayloadRoot: payloadHash(slot - 1),
+              payloadRoot: payloadHash(slot),
+            }
+          : {}),
       }),
       slot,
       null
@@ -157,6 +163,7 @@ describe("ForkChoice / invalidated parent payload chain", () => {
     block.slot = childSlot;
     block.parentRoot = fromHexString(getBlockRoot(parentSlot));
     block.body.signedExecutionPayloadBid.message.parentBlockHash = fromHexString(payloadHash(parentSlot));
+    block.body.signedExecutionPayloadBid.message.parentPayloadRoot = fromHexString(payloadHash(parentSlot));
 
     const protoBlock = forkChoice.onBlock(
       block,

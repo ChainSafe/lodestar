@@ -48,6 +48,8 @@ function toProtoBlock(slot: number, blockRoot: RootHex, parentRoot: RootHex): Pr
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
+    parentPayloadRoot: null,
+    payloadRoot: null,
     payloadStatus: PayloadStatus.FULL,
   };
 }

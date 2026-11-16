@@ -85,6 +85,8 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
+    parentPayloadRoot: null,
+    payloadRoot: null,
     payloadStatus: 2, // PayloadStatus.FULL
   };
 

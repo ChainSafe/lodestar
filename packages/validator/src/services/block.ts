@@ -180,13 +180,13 @@ export class BlockProposingService {
    *    the stateless flow (`payloadLocal=false`), the response also includes the full block contents
    *    (execution payload envelope, KZG proofs and blobs).
    * 2. Sign and publish the beacon block.
-   * 3. Reveal the execution payload envelope:
-   *    - Self-build: the proposer signs and publishes the envelope
+   * 3. Reveal the execution payload envelope, which is not signed:
+   *    - Self-build: the beacon node that produced the block reveals the envelope itself as soon as
+   *      it has broadcast or imported the block
    *      - Stateless (`payloadLocal=false`): envelope and blobs are already available from step 1,
-   *        publish `SignedExecutionPayloadEnvelopeContents` which can be sent via any beacon node
-   *      - Stateful (`payloadLocal=true`): fetch the envelope from the beacon node that produced the
-   *        block, then publish the bare `SignedExecutionPayloadEnvelope` back to it; that node
-   *        attaches the cached blobs and KZG proofs
+   *        publish `ExecutionPayloadEnvelopeContents` as a fallback in case the block was published
+   *        via a different beacon node than the one that produced it
+   *      - Stateful (`payloadLocal=true`): the proposer does nothing further
    *    - Builder bid: the builder reveals the envelope, so the proposer does nothing further
    */
   private async createAndPublishBlockGloas(pubkey: BLSPubkey, slot: Slot): Promise<void> {
@@ -322,84 +322,40 @@ export class BlockProposingService {
     this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
     this.metrics?.blocksPublished.inc();
 
-    if (isSelfBuild) {
-      // Self-build: proposer is responsible for building and publishing the execution payload envelope
-      const flow = executionPayloadIncluded ? "stateless" : "stateful";
-      if (executionPayloadIncluded) {
-        // Stateless flow: envelope and blobs are already available from block production
-        const {executionPayloadEnvelope, kzgProofs, blobs} = blockOrContents as BlockContents<ForkPostGloas>;
-
-        // Step 3: Sign and publish the envelope with blobs and KZG proofs
-        const signedEnvelope = await this.validatorStore.signExecutionPayloadEnvelope(
-          pubkey,
-          executionPayloadEnvelope,
-          slot,
-          this.logger
-        );
-
-        (
-          await this.api.beacon
-            .publishExecutionPayloadEnvelope({
-              signedEnvelopeOrContents: {signedExecutionPayloadEnvelope: signedEnvelope, kzgProofs, blobs},
-              broadcastValidation,
-            })
-            .catch((e: Error) => {
-              this.metrics?.payloadEnvelopeProposingErrors.inc({error: "publish"});
-              throw extendError(
-                e,
-                `Failed to publish execution payload envelope slot=${slot} blockRoot=${blockRootHex} flow=${flow}`
-              );
-            })
-        ).assertOk();
-      } else {
-        // Stateful flow: fetch the envelope from the same beacon node that produced the block
-        const envelopeRes = await this.api.validator
-          .getExecutionPayloadEnvelope({
-            slot,
-            beaconBlockRoot,
-          })
-          .catch((e: Error) => {
-            this.metrics?.payloadEnvelopeProposingErrors.inc({error: "produce"});
-            throw extendError(e, `Failed to get execution payload envelope slot=${slot} blockRoot=${blockRootHex}`);
-          });
-        const envelope = envelopeRes.value();
-
-        this.logger.debug("Retrieved execution payload envelope", debugLogCtx);
-
-        // Step 3: Sign and publish the envelope, beacon node attaches blobs and KZG proofs from its cache
-        const signedEnvelope = await this.validatorStore.signExecutionPayloadEnvelope(
-          pubkey,
-          envelope,
-          slot,
-          this.logger
-        );
-
-        (
-          await this.api.beacon
-            .publishExecutionPayloadEnvelope({
-              signedEnvelopeOrContents: signedEnvelope,
-              broadcastValidation,
-            })
-            .catch((e: Error) => {
-              this.metrics?.payloadEnvelopeProposingErrors.inc({error: "publish"});
-              throw extendError(
-                e,
-                `Failed to publish execution payload envelope slot=${slot} blockRoot=${blockRootHex} flow=${flow}`
-              );
-            })
-        ).assertOk();
-      }
-
-      this.logger.info("Published execution payload envelope", {
-        ...logCtx,
-        blockRoot: blockRootHex,
-        flow,
-      });
-    } else {
+    if (!isSelfBuild) {
       // Committed to a builder bid, the builder is responsible for revealing the execution payload envelope
       this.logger.info("Execution payload envelope to be revealed by builder", {
         ...logCtx,
         builderIndex: block.body.signedExecutionPayloadBid.message.builderIndex,
+        blockRoot: blockRootHex,
+      });
+    } else if (executionPayloadIncluded) {
+      // Stateless self-build: envelope and blobs are already available from block production
+      const {executionPayloadEnvelope, kzgProofs, blobs} = blockOrContents as BlockContents<ForkPostGloas>;
+
+      // Step 3: Publish the envelope with blobs and KZG proofs. The beacon node that produced the block
+      // reveals the envelope itself once it has seen the block, this is a fallback in case the block was
+      // published via a different beacon node. An already known envelope is not an error (200 response).
+      (
+        await this.api.beacon
+          .publishExecutionPayloadEnvelope({
+            executionPayloadEnvelopeContents: {executionPayloadEnvelope, kzgProofs, blobs},
+            broadcastValidation,
+          })
+          .catch((e: Error) => {
+            this.metrics?.payloadEnvelopeProposingErrors.inc({error: "publish"});
+            throw extendError(e, `Failed to publish execution payload envelope slot=${slot} blockRoot=${blockRootHex}`);
+          })
+      ).assertOk();
+
+      this.logger.info("Published execution payload envelope", {
+        ...logCtx,
+        blockRoot: blockRootHex,
+      });
+    } else {
+      // Stateful self-build: the beacon node that produced the block reveals the envelope itself
+      this.logger.info("Execution payload envelope to be revealed by beacon node", {
+        ...logCtx,
         blockRoot: blockRootHex,
       });
     }

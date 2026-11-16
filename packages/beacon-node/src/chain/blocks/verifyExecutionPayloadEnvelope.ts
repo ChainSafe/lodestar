@@ -1,23 +1,18 @@
 import {BeaconConfig} from "@lodestar/config";
-import {
-  type IBeaconStateViewGloas,
-  computeTimeAtSlot,
-  getExecutionPayloadEnvelopeSignatureSet,
-} from "@lodestar/state-transition";
+import {type IBeaconStateViewGloas, computeTimeAtSlot} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
-import {IBlsVerifier} from "../bls/index.js";
 
 export type VerifyExecutionPayloadEnvelopeOpts = {
   verifyExecutionRequestsRoot?: boolean;
+  verifyPayloadRoot?: boolean;
 };
 
 /**
  * Verify execution payload envelope fields against the post-block state.
  *
- * Signature verification and the execution engine call (`verify_and_notify_new_payload`) are
- * performed outside this function, see `verifyExecutionPayloadEnvelopeSignature` and
- * `importExecutionPayload` which run both in parallel with this check.
+ * The execution engine call (`verify_and_notify_new_payload`) is performed outside this function,
+ * see `importExecutionPayload`.
  *
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/fork-choice.md#new-verify_execution_payload_envelope
  */
@@ -27,7 +22,7 @@ export function verifyExecutionPayloadEnvelope(
   envelope: gloas.ExecutionPayloadEnvelope,
   opts?: VerifyExecutionPayloadEnvelopeOpts
 ): void {
-  const {verifyExecutionRequestsRoot = true} = opts ?? {};
+  const {verifyExecutionRequestsRoot = true, verifyPayloadRoot = true} = opts ?? {};
   const payload = envelope.payload;
 
   // Verify consistency with the beacon block.
@@ -50,11 +45,6 @@ export function verifyExecutionPayloadEnvelope(
 
   // Verify consistency with the committed bid
   const bid = state.latestExecutionPayloadBid;
-  if (envelope.builderIndex !== bid.builderIndex) {
-    throw new Error(
-      `Builder index mismatch between envelope and committed bid envelope=${envelope.builderIndex} bid=${bid.builderIndex}`
-    );
-  }
   if (!byteArrayEquals(bid.prevRandao, payload.prevRandao)) {
     throw new Error(
       `Prev randao mismatch between bid and payload bid=${toHex(bid.prevRandao)} payload=${toHex(payload.prevRandao)}`
@@ -98,6 +88,17 @@ export function verifyExecutionPayloadEnvelope(
     );
   }
 
+  // Verify the payload root matches the bid commitment.
+  // Can be skipped if already verified during gossip validation.
+  if (verifyPayloadRoot) {
+    const payloadRoot = ssz.gloas.ExecutionPayload.hashTreeRoot(payload);
+    if (!byteArrayEquals(payloadRoot, bid.payloadRoot)) {
+      throw new Error(
+        `Payload root mismatch between payload and bid payload=${toRootHex(payloadRoot)} bid=${toRootHex(bid.payloadRoot)}`
+      );
+    }
+  }
+
   // Verify consistency with expected withdrawals
   const payloadWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(payload.withdrawals);
   const expectedWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(state.payloadExpectedWithdrawals);
@@ -108,20 +109,4 @@ export function verifyExecutionPayloadEnvelope(
   }
 
   // Execution engine verification (verify_and_notify_new_payload) is done externally by the caller
-}
-
-/**
- * Verify the BLS signature of an execution payload envelope.
- *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/fork-choice.md#new-verify_execution_payload_envelope_signature
- */
-export async function verifyExecutionPayloadEnvelopeSignature(
-  config: BeaconConfig,
-  state: IBeaconStateViewGloas,
-  signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
-  proposerIndex: number,
-  bls: IBlsVerifier
-): Promise<boolean> {
-  const signatureSet = getExecutionPayloadEnvelopeSignatureSet(config, state, signedEnvelope, proposerIndex);
-  return bls.verifySignatureSets([signatureSet]);
 }

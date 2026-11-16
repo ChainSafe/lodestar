@@ -85,6 +85,11 @@ export function toProtoBlock(
     dataAvailabilityStatus: DataAvailabilityStatus.Available,
 
     parentBlockHash: isGloas ? getPayloadBlockHash(slot - 1) : null,
+    // The payload root of a block is identified with its payload block hash. By default a gloas block
+    // builds on the EMPTY variant of its parent, ie. both commit to the same parent payload root.
+    // Override `parentPayloadRoot` with the parent's `payloadRoot` to build on its FULL variant
+    parentPayloadRoot: isGloas ? getPayloadBlockHash(genesisSlot) : null,
+    payloadRoot: isGloas ? getPayloadBlockHash(slot) : null,
     payloadStatus: PayloadStatus.FULL,
 
     ...overrides,

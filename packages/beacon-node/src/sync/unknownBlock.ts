@@ -329,11 +329,11 @@ export class BlockInputSync {
 
         const pendingBlock = this.pendingBlocks.get(data.blockInput.blockRootHex);
         if (pendingBlock && isPendingBlockInput(pendingBlock)) {
-          this.logger.debug("Ignoring block with conflicting parent payload hash", {
+          this.logger.debug("Ignoring block with conflicting parent payload root", {
             slot: pendingBlock.blockInput.slot,
             root: pendingBlock.blockInput.blockRootHex,
             parentRoot: missingDependency.parentRootHex,
-            parentBlockHash: missingDependency.parentBlockHashHex,
+            parentPayloadRoot: missingDependency.parentPayloadRootHex,
           });
           this.removeAndDownScoreAllDescendants(pendingBlock, DroppedItemReason.invalidParentPayload);
         }
@@ -675,7 +675,7 @@ export class BlockInputSync {
     | {kind: "ready"}
     | {kind: "block" | "parentBlock"; rootHex: RootHex}
     | {kind: "parentPayload"; rootHex: RootHex; slot: Slot}
-    | {kind: "invalidParentPayload"; parentRootHex: RootHex; parentBlockHashHex: RootHex} {
+    | {kind: "invalidParentPayload"; parentRootHex: RootHex; parentPayloadRootHex: RootHex} {
     const parentRootHex = blockInput.parentRootHex;
     const parentBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRootHex);
     if (!parentBlock) {
@@ -691,17 +691,17 @@ export class BlockInputSync {
     }
 
     const block = blockInput.getBlock() as gloas.SignedBeaconBlock;
-    const parentBlockHashHex = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
-    if (this.chain.forkChoice.getBlockHexAndBlockHash(parentRootHex, parentBlockHashHex) !== null) {
+    const parentPayloadRootHex = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot);
+    if (this.chain.forkChoice.getBlockHexAndPayloadRoot(parentRootHex, parentPayloadRootHex) !== null) {
       return {kind: "ready"};
     }
 
-    // The parent's payload is known but does not match `parentBlockHashHex`
-    if (this.chain.forkChoice.hasPayloadHexUnsafe(parentRootHex)) {
-      return {kind: "invalidParentPayload", parentRootHex, parentBlockHashHex};
+    // `parentPayloadRootHex` is neither the parent's payload nor the payload the parent built on
+    if (parentBlock.payloadRoot !== parentPayloadRootHex) {
+      return {kind: "invalidParentPayload", parentRootHex, parentPayloadRootHex};
     }
 
-    // Parent is in fork choice but its payload `parentBlockHashHex` isn't revealed yet
+    // Parent is in fork choice but its payload `parentPayloadRootHex` isn't revealed yet
     return {kind: "parentPayload", rootHex: parentRootHex, slot: parentBlock.slot};
   }
 
@@ -733,11 +733,11 @@ export class BlockInputSync {
       }
 
       case "invalidParentPayload":
-        this.logger.debug("Removing block with conflicting parent payload hash", {
+        this.logger.debug("Removing block with conflicting parent payload root", {
           slot: pendingBlock.blockInput.slot,
           root: pendingBlock.blockInput.blockRootHex,
           parentRoot: missingDependency.parentRootHex,
-          parentBlockHash: missingDependency.parentBlockHashHex,
+          parentPayloadRoot: missingDependency.parentPayloadRootHex,
         });
         this.removeAndDownScoreAllDescendants(pendingBlock, DroppedItemReason.invalidParentPayload);
         return "removed";
@@ -747,7 +747,7 @@ export class BlockInputSync {
   private toPendingPayloadInput(
     payloadInput: PayloadEnvelopeInput,
     previous?: PayloadSyncCacheItem,
-    envelope?: gloas.SignedExecutionPayloadEnvelope
+    envelope?: gloas.ExecutionPayloadEnvelope
   ): PendingPayloadInput {
     // Normalize every payload queueing path into the same cache shape while preserving first-seen
     // timing and peer provenance from any earlier by-root or envelope-only entry.
@@ -1211,7 +1211,7 @@ export class BlockInputSync {
               {
                 ...errorData,
                 parentRoot: pendingBlock.blockInput.parentRootHex,
-                parentBlockHash: res.err.type.parentBlockHash,
+                parentPayloadRoot: res.err.type.parentPayloadRoot,
               },
               res.err
             );
@@ -1297,14 +1297,14 @@ export class BlockInputSync {
       if (validationResult.err) {
         this.logger.debug(
           "Pending payload envelope failed validation after block import, refetching by root",
-          {slot: pendingPayload.envelope.message.payload.slotNumber, root: rootHex},
+          {slot: pendingPayload.envelope.payload.slotNumber, root: rootHex},
           validationResult.err
         );
 
         const pendingPayloadByRoot: PendingPayloadRootHex = {
           status: PendingPayloadInputStatus.pending,
           rootHex,
-          slot: pendingPayload.envelope.message.payload.slotNumber,
+          slot: pendingPayload.envelope.payload.slotNumber,
           timeAddedSec: pendingPayload.timeAddedSec,
           peerIdStrings: new Set(pendingPayload.peerIdStrings),
         };
@@ -1480,12 +1480,6 @@ export class BlockInputSync {
           this.removePendingPayloadAndDescendants(rootHex, DroppedItemReason.invalidEnvelope);
           break;
 
-        case PayloadErrorCode.INVALID_SIGNATURE:
-          this.logger.debug("Error processing payload from unknown sync", logCtx, res.err);
-          this.chain.seenPayloadEnvelopeInputCache.removeInvalid(pendingPayload.payloadInput);
-          this.removePendingPayloadAndDescendants(rootHex, DroppedItemReason.invalidSignature);
-          break;
-
         default:
           this.logger.debug("Error processing payload from unknown sync", logCtx, res.err);
           if (this.pendingPayloads.delete(rootHex)) {
@@ -1565,7 +1559,7 @@ export class BlockInputSync {
           envelope = await this.fetchExecutionPayloadEnvelope(peerId, blockRoot, rootHex);
           cacheItem.peerIdStrings.add(peerId);
           const slotWasUnknown = typeof slot !== "number";
-          slot = envelope.message.payload.slotNumber;
+          slot = envelope.payload.slotNumber;
           if (slotWasUnknown) {
             // we were not able to observe the time into slot when starting the fetch, do it now
             this.metrics?.blockInputSync.payloadFetchBegin.observe(this.chain.clock.secFromSlot(slot, fetchStartSec));
@@ -1695,14 +1689,14 @@ export class BlockInputSync {
     peerIdStr: PeerIdStr,
     blockRoot: Uint8Array,
     rootHex: RootHex
-  ): Promise<gloas.SignedExecutionPayloadEnvelope> {
+  ): Promise<gloas.ExecutionPayloadEnvelope> {
     const response = await this.network.sendExecutionPayloadEnvelopesByRoot(peerIdStr, [blockRoot]);
     const envelope = response.at(0);
     if (!envelope) {
       throw new Error(`Missing execution payload envelope for root=${rootHex}`);
     }
 
-    const receivedRootHex = toRootHex(envelope.message.beaconBlockRoot);
+    const receivedRootHex = toRootHex(envelope.beaconBlockRoot);
     if (receivedRootHex !== rootHex) {
       throw new Error(`Execution payload envelope root mismatch requested=${rootHex} received=${receivedRootHex}`);
     }

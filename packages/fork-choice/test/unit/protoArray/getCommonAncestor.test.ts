@@ -50,6 +50,8 @@ describe("getCommonAncestor", () => {
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
       parentBlockHash: null,
+      parentPayloadRoot: null,
+      payloadRoot: null,
       payloadStatus: PayloadStatus.FULL,
     },
     0
@@ -82,6 +84,8 @@ describe("getCommonAncestor", () => {
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
         parentBlockHash: null,
+        parentPayloadRoot: null,
+        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
       },
       block.slot,

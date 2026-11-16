@@ -86,6 +86,7 @@ import {IBlockInput, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
+import {revealSelfBuiltPayload} from "./blocks/revealSelfBuiltPayload.js";
 import {ImportPayloadOpts, ProcessBlocksResult} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
@@ -245,6 +246,8 @@ export class BeaconChain implements IBeaconChain {
    * assemble into full blocks before publishing to the network.
    */
   readonly blockProductionCache = new Map<RootHex, ProduceResult>();
+  /** Roots of self-built blocks whose execution payload envelope this node broadcast, see `revealSelfBuiltPayload` */
+  readonly revealedSelfBuiltPayloads = new Set<RootHex>();
 
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
 
@@ -975,7 +978,7 @@ export class BeaconChain implements IBeaconChain {
     onMiss: ReconstructMissPolicy = "throw"
   ): Promise<(Uint8Array | null)[]> {
     const out: (Uint8Array | null)[] = new Array(requests.length).fill(null);
-    const headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[] = [];
+    const headerEnvelopes: gloas.ExecutionPayloadHeaderEnvelope[] = [];
     const headerEnvelopeIdxs: number[] = [];
 
     for (let i = 0; i < requests.length; i++) {
@@ -984,7 +987,7 @@ export class BeaconChain implements IBeaconChain {
       const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
       if (payloadInput?.hasPayloadEnvelope()) {
         const envelope = payloadInput.getPayloadEnvelope();
-        out[i] = this.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+        out[i] = this.serializedCache.get(envelope) ?? ssz.gloas.ExecutionPayloadEnvelope.serialize(envelope);
         continue;
       }
 
@@ -1021,7 +1024,7 @@ export class BeaconChain implements IBeaconChain {
           );
           continue;
         }
-        out[headerEnvelopeIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
+        out[headerEnvelopeIdxs[j]] = ssz.gloas.ExecutionPayloadEnvelope.serialize(result);
       }
     }
 
@@ -1031,7 +1034,7 @@ export class BeaconChain implements IBeaconChain {
   async getExecutionPayloadEnvelope(
     blockSlot: Slot,
     blockRootHex: string
-  ): Promise<gloas.SignedExecutionPayloadEnvelope | null> {
+  ): Promise<gloas.ExecutionPayloadEnvelope | null> {
     const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
     if (payloadInput?.hasPayloadEnvelope()) {
       return payloadInput.getPayloadEnvelope();
@@ -1044,7 +1047,7 @@ export class BeaconChain implements IBeaconChain {
     if (archivedBytes === null) return null;
     const archived = decodeArchivedEnvelope(archivedBytes);
     if (archived.envelopeBytes !== undefined) {
-      return ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes);
+      return ssz.gloas.ExecutionPayloadEnvelope.deserialize(archived.envelopeBytes);
     }
     const [result] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, [
       archived.headerEnvelope,
@@ -1064,11 +1067,11 @@ export class BeaconChain implements IBeaconChain {
     // executionRequests is kept in the header envelope, so read it without reconstructing
     const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
     if (payloadInput?.hasPayloadEnvelope()) {
-      return payloadInput.getPayloadEnvelope().message.executionRequests;
+      return payloadInput.getPayloadEnvelope().executionRequests;
     }
 
     const hot = await this.db.executionPayloadEnvelope.get(fromHex(parentBlockRootHex));
-    if (hot !== null) return hot.message.executionRequests;
+    if (hot !== null) return hot.executionRequests;
 
     const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(parentBlockSlot);
     if (archivedBytes === null) {
@@ -1076,8 +1079,8 @@ export class BeaconChain implements IBeaconChain {
     }
     const archived = decodeArchivedEnvelope(archivedBytes);
     return archived.envelopeBytes !== undefined
-      ? ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes).message.executionRequests
-      : archived.headerEnvelope.message.executionRequests;
+      ? ssz.gloas.ExecutionPayloadEnvelope.deserialize(archived.envelopeBytes).executionRequests
+      : archived.headerEnvelope.executionRequests;
   }
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {
@@ -1316,6 +1319,10 @@ export class BeaconChain implements IBeaconChain {
 
   async processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void> {
     return this.payloadEnvelopeProcessor.processPayloadEnvelopeJob(payloadInput, opts);
+  }
+
+  revealSelfBuiltPayload(blockRootHex: RootHex): boolean {
+    return revealSelfBuiltPayload.call(this, blockRootHex);
   }
 
   processProposerEquivocation(blockSlot: Slot, proposerIndex: ValidatorIndex): void {
@@ -1883,6 +1890,11 @@ export class BeaconChain implements IBeaconChain {
     // Prune old cached block production artifacts, those are only useful on their slot
     pruneSetToMax(this.blockProductionCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_RESULTS);
     this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
+    for (const blockRootHex of this.revealedSelfBuiltPayloads) {
+      if (!this.blockProductionCache.has(blockRootHex)) {
+        this.revealedSelfBuiltPayloads.delete(blockRootHex);
+      }
+    }
 
     const metrics = this.metrics;
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {

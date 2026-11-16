@@ -1,5 +1,5 @@
 import {RootHex, Slot} from "@lodestar/types";
-import {SignedExecutionPayloadEnvelope} from "@lodestar/types/gloas";
+import {ExecutionPayloadEnvelope} from "@lodestar/types/gloas";
 import {toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -99,12 +99,10 @@ export enum DroppedItemReason {
   elInvalid = "el_invalid",
   /** a block failed our own checks (not correct w.r.t. our chain) */
   invalidBlock = "invalid_block",
-  /** a block declares a parent payload hash that conflicts with the parent's actual payload (gloas) */
+  /** a block declares a parent payload root that conflicts with the parent's actual payload (gloas) */
   invalidParentPayload = "invalid_parent_payload",
   /** a payload envelope failed gossip verification (ENVELOPE_VERIFICATION_ERROR) */
   invalidEnvelope = "invalid_envelope",
-  /** a payload had an invalid signature (INVALID_SIGNATURE) */
-  invalidSignature = "invalid_signature",
   /** an unexpected / unhandled error code led to removal */
   unknown = "unknown",
 }
@@ -160,7 +158,7 @@ export type PendingPayloadRootHex = {
 
 export type PendingPayloadEnvelope = {
   status: PendingPayloadInputStatus.waitingForBlock;
-  envelope: SignedExecutionPayloadEnvelope;
+  envelope: ExecutionPayloadEnvelope;
   timeAddedSec: number;
   peerIdStrings: Set<string>;
 };
@@ -193,7 +191,7 @@ export function getPayloadSyncCacheItemRootHex(payload: PayloadSyncCacheItem): R
   }
 
   if (isPendingPayloadEnvelope(payload)) {
-    return toRootHex(payload.envelope.message.beaconBlockRoot);
+    return toRootHex(payload.envelope.beaconBlockRoot);
   }
 
   return payload.rootHex;
@@ -205,7 +203,7 @@ export function getPayloadSyncCacheItemSlot(payload: PayloadSyncCacheItem): Slot
   }
 
   if (isPendingPayloadEnvelope(payload)) {
-    return payload.envelope.message.payload.slotNumber;
+    return payload.envelope.payload.slotNumber;
   }
 
   return payload.slot ?? "unknown";

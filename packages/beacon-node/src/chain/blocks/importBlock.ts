@@ -501,9 +501,9 @@ export async function importBlock(
     this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
 
     const parentBlockSummary = isGloasBeaconBlock(block.message)
-      ? this.forkChoice.getBlockHexAndBlockHash(
+      ? this.forkChoice.getBlockHexAndPayloadRoot(
           toRootHex(checkpointState.latestBlockHeader.parentRoot),
-          toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+          toRootHex(block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot)
         )
       : this.forkChoice.getBlockDefaultStatus(checkpointState.latestBlockHeader.parentRoot);
 
@@ -608,6 +608,9 @@ export async function importBlock(
     root: blockRootHex,
     delaySec: this.clock.secFromSlot(blockSlot),
   });
+
+  // A block this node built itself is in fork choice, however it arrived. Reveal its payload
+  this.revealSelfBuiltPayload(blockRootHex);
 }
 
 export function addAttestationPreElectra(

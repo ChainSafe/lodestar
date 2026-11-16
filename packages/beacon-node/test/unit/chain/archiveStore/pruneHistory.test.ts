@@ -50,9 +50,9 @@ describe("chain / archiveStore / pruneHistory", () => {
     );
     await db.executionPayloadEnvelopeArchive.batchPutBinary(
       slots.map((slot) => {
-        const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-        envelope.message.payload.slotNumber = slot;
-        return {key: slot, value: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope)};
+        const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+        envelope.payload.slotNumber = slot;
+        return {key: slot, value: ssz.gloas.ExecutionPayloadEnvelope.serialize(envelope)};
       })
     );
 

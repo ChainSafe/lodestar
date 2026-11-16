@@ -333,7 +333,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   payloadLocal: {
     type: "boolean",
     description:
-      "Request keeping the execution payload (envelope and blobs) local to the beacon node during post-Gloas block production. Reduces bandwidth but the envelope must be published via the same beacon node that produced the block",
+      "Request keeping the execution payload (envelope and blobs) local to the beacon node during post-Gloas block production. Reduces bandwidth, the beacon node that produced the block reveals the envelope itself once it has seen the signed block. If false, the validator client also publishes the envelope as a fallback",
     defaultDescription: "true if a single beacon node is configured, otherwise false",
   },
 

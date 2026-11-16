@@ -88,6 +88,7 @@ describe("beacon / events / payload_attributes codec", () => {
       "proposal_slot",
       "parent_block_root",
       "parent_block_hash",
+      "parent_payload_root",
       "safe_block_hash",
       "finalized_block_hash",
       "payload_attributes",

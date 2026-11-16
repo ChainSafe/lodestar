@@ -46,6 +46,7 @@ export function upgradeStateToHeze(stateGloas: CachedBeaconStateGloas): CachedBe
   stateHezeView.currentSyncCommittee = stateHezeCloned.currentSyncCommittee;
   stateHezeView.nextSyncCommittee = stateHezeCloned.nextSyncCommittee;
   stateHezeView.latestBlockHash = stateHezeCloned.latestBlockHash;
+  stateHezeView.latestPayloadRoot = stateHezeCloned.latestPayloadRoot;
   stateHezeView.nextWithdrawalIndex = stateHezeCloned.nextWithdrawalIndex;
   stateHezeView.nextWithdrawalValidatorIndex = stateHezeCloned.nextWithdrawalValidatorIndex;
   stateHezeView.historicalSummaries = stateHezeCloned.historicalSummaries;
@@ -68,8 +69,10 @@ export function upgradeStateToHeze(stateGloas: CachedBeaconStateGloas): CachedBe
   const oldBid = stateHezeCloned.latestExecutionPayloadBid;
   const newBid = ssz.heze.ExecutionPayloadBid.defaultViewDU();
   newBid.parentBlockHash = oldBid.parentBlockHash;
+  newBid.parentPayloadRoot = oldBid.parentPayloadRoot;
   newBid.parentBlockRoot = oldBid.parentBlockRoot;
   newBid.blockHash = oldBid.blockHash;
+  newBid.payloadRoot = oldBid.payloadRoot;
   newBid.prevRandao = oldBid.prevRandao;
   newBid.feeRecipient = oldBid.feeRecipient;
   newBid.gasLimit = oldBid.gasLimit;

@@ -6,6 +6,7 @@ export enum ExecutionPayloadBidErrorCode {
   INVALID_BUILDER_VERSION = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_BUILDER_VERSION",
   NON_ZERO_EXECUTION_PAYMENT = "EXECUTION_PAYLOAD_BID_ERROR_NON_ZERO_EXECUTION_PAYMENT",
   BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH = "EXECUTION_PAYLOAD_BID_ERROR_BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH",
+  PAYLOAD_ROOT_EQUALS_PARENT_PAYLOAD_ROOT = "EXECUTION_PAYLOAD_BID_ERROR_PAYLOAD_ROOT_EQUALS_PARENT_PAYLOAD_ROOT",
   INCOMPATIBLE_WITH_HEAD = "EXECUTION_PAYLOAD_BID_ERROR_INCOMPATIBLE_WITH_HEAD",
   BID_ALREADY_KNOWN = "EXECUTION_PAYLOAD_BID_ERROR_BID_ALREADY_KNOWN",
   BID_TOO_LOW = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_LOW",
@@ -13,7 +14,8 @@ export enum ExecutionPayloadBidErrorCode {
   BUILDER_MAY_EXIT = "EXECUTION_PAYLOAD_BID_ERROR_BUILDER_MAY_EXIT",
   TOO_MANY_KZG_COMMITMENTS = "EXECUTION_PAYLOAD_BID_ERROR_TOO_MANY_KZG_COMMITMENTS",
   UNKNOWN_BLOCK_ROOT = "EXECUTION_PAYLOAD_BID_ERROR_UNKNOWN_BLOCK_ROOT",
-  UNKNOWN_PARENT_BLOCK_HASH = "EXECUTION_PAYLOAD_BID_ERROR_UNKNOWN_PARENT_BLOCK_HASH",
+  UNKNOWN_PARENT_PAYLOAD_ROOT = "EXECUTION_PAYLOAD_BID_ERROR_UNKNOWN_PARENT_PAYLOAD_ROOT",
+  PARENT_BLOCK_HASH_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_PARENT_BLOCK_HASH_MISMATCH",
   INVALID_SLOT = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_SLOT",
   NOT_LATER_THAN_PARENT = "EXECUTION_PAYLOAD_BID_ERROR_NOT_LATER_THAN_PARENT",
   INVALID_PREV_RANDAO = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_PREV_RANDAO",
@@ -42,7 +44,7 @@ export type ExecutionPayloadBidErrorType =
       code: ExecutionPayloadBidErrorCode.INCOMPATIBLE_WITH_HEAD;
       slot: Slot;
       parentBlockRoot: RootHex;
-      parentBlockHash: RootHex;
+      parentPayloadRoot: RootHex;
       headBlockRoot: RootHex;
     }
   | {
@@ -50,7 +52,7 @@ export type ExecutionPayloadBidErrorType =
       builderIndex: BuilderIndex;
       slot: Slot;
       parentBlockRoot: RootHex;
-      parentBlockHash: RootHex;
+      parentPayloadRoot: RootHex;
     }
   | {code: ExecutionPayloadBidErrorCode.BID_TOO_LOW; bidValue: number; currentHighestBid: number}
   | {code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH; bidValue: number; builderBalance: number}
@@ -65,8 +67,15 @@ export type ExecutionPayloadBidErrorType =
       commitmentLimit: number;
     }
   | {code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT; parentBlockRoot: RootHex}
-  | {code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH; parentBlockHash: RootHex}
+  | {code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_PAYLOAD_ROOT; parentPayloadRoot: RootHex}
+  | {
+      code: ExecutionPayloadBidErrorCode.PARENT_BLOCK_HASH_MISMATCH;
+      parentPayloadRoot: RootHex;
+      parentBlockHash: RootHex;
+      expectedParentBlockHash: RootHex;
+    }
   | {code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH; blockHash: RootHex}
+  | {code: ExecutionPayloadBidErrorCode.PAYLOAD_ROOT_EQUALS_PARENT_PAYLOAD_ROOT; payloadRoot: RootHex}
   | {code: ExecutionPayloadBidErrorCode.INVALID_SLOT; builderIndex: BuilderIndex; slot: Slot}
   | {code: ExecutionPayloadBidErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {

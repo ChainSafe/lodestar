@@ -74,6 +74,8 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
           dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
           parentBlockHash: null,
+          parentPayloadRoot: null,
+          payloadRoot: null,
           payloadStatus: 2, // PayloadStatus.FULL
         },
         originalState.slot
@@ -105,6 +107,8 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
             dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
             parentBlockHash: null,
+            parentPayloadRoot: null,
+            payloadRoot: null,
             payloadStatus: 2, // PayloadStatus.FULL
           },
           slot,

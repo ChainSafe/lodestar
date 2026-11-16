@@ -75,7 +75,7 @@ pub fn main(init: std.process.Init) !void {
             // Partial-column DAS types are not implemented yet. Keep this list
             // aligned with Lodestar's specTestIterator.ts; state-transition
             // containers and all other Gloas types remain required.
-            if (unsupportedPartialColumnType(fork, type_name)) {
+            if (unsupportedPartialColumnType(fork, type_name) or removedType(type_name)) {
                 std.log.info("unsupported SSZ static type: {s}/{s}", .{ fork, type_name });
                 continue;
             }
@@ -131,6 +131,11 @@ pub fn main(init: std.process.Init) !void {
     }
 
     try file_writer.flush();
+}
+
+/// Types the pinned vectors still ship but the spec has since removed.
+fn removedType(type_name: []const u8) bool {
+    return std.mem.eql(u8, type_name, "SignedExecutionPayloadEnvelope");
 }
 
 fn unsupportedPartialColumnType(fork: []const u8, type_name: []const u8) bool {

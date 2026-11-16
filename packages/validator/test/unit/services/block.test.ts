@@ -352,4 +352,96 @@ describe("BlockDutiesService", () => {
       expect(api.beacon.publishBlockV2).toHaveBeenCalledTimes(published ? 1 : 0);
     }
   );
+
+  it.each([
+    {executionPayloadIncluded: true, revealed: true},
+    {executionPayloadIncluded: false, revealed: false},
+  ])(
+    "Should publish the envelope of a self-built Gloas block only if the payload is included executionPayloadIncluded=$executionPayloadIncluded",
+    async ({executionPayloadIncluded, revealed}) => {
+      const gloasConfig = createChainForkConfig({...mainnetConfig, GLOAS_FORK_EPOCH: 0});
+      api.validator.getProposerDuties.mockResolvedValue(
+        mockApiResponse({
+          data: [{slot: 0, validatorIndex: 0, pubkey: pubkeys[0]}],
+          meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
+        })
+      );
+
+      const clock = new ClockMock();
+      const dutiesService = new BlockDutiesService(
+        gloasConfig,
+        loggerVc,
+        api,
+        clock,
+        validatorStore,
+        chainHeaderTracker,
+        null
+      );
+      const blockService = new BlockProposingService(
+        gloasConfig,
+        loggerVc,
+        api,
+        clock,
+        validatorStore,
+        dutiesService,
+        null,
+        {
+          broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+          blindedLocal: false,
+          payloadLocal: !executionPayloadIncluded,
+        }
+      );
+
+      const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+      signedBlock.message.body.signedExecutionPayloadBid.message.builderIndex = BUILDER_INDEX_SELF_BUILD;
+      const contents = {
+        block: signedBlock.message,
+        executionPayloadEnvelope: ssz.gloas.ExecutionPayloadEnvelope.defaultValue(),
+        kzgProofs: [],
+        blobs: [],
+      };
+      validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
+      validatorStore.signBlock.mockResolvedValue(signedBlock);
+      validatorStore.getBuilderSelectionParams.mockReturnValue({
+        selection: routes.validator.BuilderSelection.ExecutionOnly,
+        boostFactor: BigInt(0),
+      });
+      validatorStore.getBuilderMinBid.mockReturnValue(0n);
+      validatorStore.getGraffiti.mockReturnValue("aaaa");
+      validatorStore.getFeeRecipient.mockReturnValue("0xcccccccccccccccccccccccccccccccccccccccc");
+      validatorStore.strictFeeRecipientCheck.mockReturnValue(true);
+
+      api.validator.produceBlockV4.mockResolvedValue(
+        mockApiResponse({
+          data: executionPayloadIncluded ? contents : signedBlock.message,
+          meta: {
+            version: ForkName.gloas,
+            executionPayloadValue: BigInt(1),
+            consensusBlockValue: BigInt(1),
+            executionPayloadIncluded,
+          },
+        })
+      );
+      api.beacon.publishBlockV2.mockResolvedValue(mockApiResponse({}));
+      api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(mockApiResponse({}));
+
+      const notifyBlockProductionFn = blockService["dutiesService"]["notifyBlockProductionFn"];
+      notifyBlockProductionFn(1, [pubkeys[0]]);
+      await sleep(20, controller.signal);
+
+      expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
+      if (revealed) {
+        expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledExactlyOnceWith({
+          executionPayloadEnvelopeContents: {
+            executionPayloadEnvelope: contents.executionPayloadEnvelope,
+            kzgProofs: contents.kzgProofs,
+            blobs: contents.blobs,
+          },
+          broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+        });
+      } else {
+        expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+      }
+    }
+  );
 });

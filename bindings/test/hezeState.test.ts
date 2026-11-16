@@ -15,7 +15,7 @@ const {
 } = ssz.heze.BeaconState.fields;
 const HEZE_STATE = new ProgressiveContainerType(
   stateFields,
-  Array.from({length: 46}, (_, index) => ![8, 9, 10, 28].includes(index))
+  Array.from({length: 47}, (_, index) => ![8, 9, 10, 28].includes(index))
 );
 const {eth1Data: _bodyEth1Data, deposits: _deposits, ...bodyFields} = ssz.heze.BeaconBlockBody.fields;
 const HEZE_BLOCK_BODY = new ProgressiveContainerType(
@@ -56,6 +56,7 @@ describe("Heze native state view", () => {
       expect(Buffer.compare(HEZE_STATE.serialize(state.toValue()), bytes)).toBe(0);
       expect(state.latestExecutionPayloadBid).toEqual(value.latestExecutionPayloadBid);
       expect(state.latestBlockHash).toEqual(value.latestBlockHash);
+      expect(state.latestPayloadRoot).toEqual(value.latestPayloadRoot);
       expect(state.getBuilder(0)).toEqual(value.builders[0]);
       expect(state.canBuilderCoverBid(0, 0)).toBe(true);
       expect(state.isMergeTransitionComplete).toBe(true);
@@ -102,6 +103,7 @@ describe("Heze native state view", () => {
       try {
         expect(post.forkName).toBe("heze");
         expect(post.latestBlockHash).toEqual(value.latestExecutionPayloadBid.blockHash);
+        expect(post.latestPayloadRoot).toEqual(value.latestExecutionPayloadBid.payloadRoot);
         expect(state.hashTreeRoot()).toEqual(HEZE_STATE.hashTreeRoot(value));
       } finally {
         post.release();

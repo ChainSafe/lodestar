@@ -1,6 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {PublicKey, SecretKey} from "@lodestar/native/blst";
-import {getExecutionPayloadBidSigningRoot, getExecutionPayloadEnvelopeSigningRoot} from "@lodestar/state-transition";
+import {getExecutionPayloadBidSigningRoot} from "@lodestar/state-transition";
 import {gloas, heze} from "@lodestar/types";
 
 export type Keypair = {publicKey: PublicKey; secretKey: SecretKey};
@@ -12,15 +12,6 @@ export class BuilderSigner {
   constructor(config: BeaconConfig, keypair: Keypair) {
     this.config = config;
     this.keypair = keypair;
-  }
-
-  signExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): gloas.SignedExecutionPayloadEnvelope {
-    const signingRoot = getExecutionPayloadEnvelopeSigningRoot(this.config, envelope);
-
-    return {
-      message: envelope,
-      signature: this.keypair.secretKey.sign(signingRoot).toBytes(),
-    };
   }
 
   signExecutionPayloadBid(bid: heze.ExecutionPayloadBid): heze.SignedExecutionPayloadBid;

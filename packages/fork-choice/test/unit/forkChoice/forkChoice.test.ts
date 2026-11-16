@@ -46,6 +46,8 @@ describe("Forkchoice", () => {
 
         // Pre-Gloas block fields (required to avoid being treated as Gloas)
         parentBlockHash: null,
+        parentPayloadRoot: null,
+        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
         timeliness: false,
         importedTimely: false,
@@ -157,6 +159,8 @@ describe("Forkchoice", () => {
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
       parentBlockHash: null,
+      parentPayloadRoot: null,
+      payloadRoot: null,
       payloadStatus: PayloadStatus.FULL,
     };
   };

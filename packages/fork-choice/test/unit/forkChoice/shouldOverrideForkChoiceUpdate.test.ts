@@ -63,6 +63,8 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
+    parentPayloadRoot: null,
+    payloadRoot: null,
     payloadStatus: PayloadStatus.FULL,
   };
 
@@ -94,6 +96,8 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
+    parentPayloadRoot: null,
+    payloadRoot: null,
     payloadStatus: PayloadStatus.FULL,
   };
 
@@ -124,6 +128,8 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
+    parentPayloadRoot: null,
+    payloadRoot: null,
     payloadStatus: PayloadStatus.FULL,
   };
 

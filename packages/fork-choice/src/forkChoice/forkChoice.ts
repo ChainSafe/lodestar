@@ -782,17 +782,18 @@ export class ForkChoice implements IForkChoice {
     const {parentRoot, slot} = block;
     const parentRootHex = toRootHex(parentRoot);
     // Parent block must be known because state_transition would have failed otherwise.
-    const parentHashHex = isGloasBeaconBlock(block)
-      ? toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
-      : null;
-    const parentBlock = this.protoArray.getParent(parentRootHex, parentHashHex);
+    const bid = isGloasBeaconBlock(block) ? block.body.signedExecutionPayloadBid.message : null;
+    const parentHashHex = bid ? toRootHex(bid.parentBlockHash) : null;
+    const parentPayloadRootHex = bid ? toRootHex(bid.parentPayloadRoot) : null;
+    // The parent variant (EMPTY or FULL) is decided by payload root
+    const parentBlock = this.protoArray.getParent(parentRootHex, parentPayloadRootHex);
     if (!parentBlock) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
           code: InvalidBlockCode.UNKNOWN_PARENT,
           root: parentRootHex,
-          hash: parentHashHex,
+          parentPayloadRoot: parentPayloadRootHex,
         },
       });
     }
@@ -958,9 +959,9 @@ export class ForkChoice implements IForkChoice {
             const parentBlockHashFromBid = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
 
             // Inherit parent payload's (number, gasLimit) for the PENDING/EMPTY variants.
-            // `parentBlock` is already the variant matching `parentBlockHashFromBid` —
+            // `parentBlock` is already the variant matching the bid's `parentPayloadRoot` —
             // `getParent` (called above) resolves Gloas parents via
-            // `getBlockHexAndBlockHash(parentRoot, parentBlockHash)`, and pre-Gloas parents
+            // `getBlockHexAndPayloadRoot(parentRoot, parentPayloadRoot)`, and pre-Gloas parents
             // have a single variant. Pre-merge parents have null payload hash and zero values.
             const parentMeta: {number: number; gasLimit: number} =
               parentBlock.executionPayloadBlockHash === null
@@ -972,7 +973,7 @@ export class ForkChoice implements IForkChoice {
               executionPayloadNumber: parentMeta.number,
               executionPayloadGasLimit: parentMeta.gasLimit,
               // The parent's default (PENDING) variant does not reflect a SYNCING parent payload, inheriting
-              // from the variant matching the bid's parent block hash keeps that payload from being marked VALID
+              // from the variant matching the bid's parent payload root keeps that payload from being marked VALID
               executionStatus: this.getPostMergeExecStatus(parentBlock.executionStatus),
               dataAvailabilityStatus,
             };
@@ -996,6 +997,8 @@ export class ForkChoice implements IForkChoice {
 
       payloadStatus: isGloasBeaconBlock(block) ? PayloadStatus.PENDING : PayloadStatus.FULL,
       parentBlockHash: parentHashHex,
+      parentPayloadRoot: parentPayloadRootHex,
+      payloadRoot: bid ? toRootHex(bid.payloadRoot) : null,
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot, proposerBoostRoot);
@@ -1364,6 +1367,14 @@ export class ForkChoice implements IForkChoice {
    */
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null {
     return this.protoArray.getBlockHexAndBlockHash(blockRoot, blockHash);
+  }
+
+  /**
+   * Returns EMPTY or FULL `ProtoBlock` that has matching block root and whose latest execution payload has the
+   * given root. This is the variant a block with `bid.parent_payload_root == payloadRoot` builds on.
+   */
+  getBlockHexAndPayloadRoot(blockRoot: RootHex, payloadRoot: RootHex): ProtoBlock | null {
+    return this.protoArray.getBlockHexAndPayloadRoot(blockRoot, payloadRoot);
   }
 
   getJustifiedBlock(): ProtoBlock {

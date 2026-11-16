@@ -51,8 +51,10 @@ interface ExecutionPayloadHeader {
 
 export interface ExecutionPayloadBid {
   parentBlockHash: Uint8Array;
+  parentPayloadRoot: Uint8Array;
   parentBlockRoot: Uint8Array;
   blockHash: Uint8Array;
+  payloadRoot: Uint8Array;
   prevRandao: Uint8Array;
   feeRecipient: Uint8Array;
   gasLimit: bigint;
@@ -315,6 +317,7 @@ export declare class BeaconStateView {
   proposerLookahead: Uint32Array;
   // Gloas fields throw when called on an earlier fork.
   latestBlockHash: Uint8Array;
+  latestPayloadRoot: Uint8Array;
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
   latestExecutionPayloadBid: ExecutionPayloadBid | HezeExecutionPayloadBid;
   payloadExpectedWithdrawals: Withdrawal[];

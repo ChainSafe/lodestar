@@ -14,6 +14,7 @@ import type {BuiltPayload} from "../../../src/services/payloadSource.js";
 describe("createExecutionPayloadBid", () => {
   const slot = 10;
   const parentBlockRoot = Buffer.alloc(32, 1);
+  const parentPayloadRoot = Buffer.alloc(32, 8);
   const feeRecipient = Buffer.alloc(20, 2);
   const builderIndex = 7;
   const prevRandao = Buffer.alloc(32, 5);
@@ -27,6 +28,7 @@ describe("createExecutionPayloadBid", () => {
     const bid = createExecutionPayloadBid({
       slot,
       parentBlockRoot,
+      parentPayloadRoot,
       prevRandao,
       builderIndex,
       feeRecipient,
@@ -36,8 +38,10 @@ describe("createExecutionPayloadBid", () => {
 
     expect(bid).toEqual({
       parentBlockHash: payload.executionPayload.parentHash,
+      parentPayloadRoot,
       parentBlockRoot,
       blockHash: payload.executionPayload.blockHash,
+      payloadRoot: ssz.gloas.ExecutionPayload.hashTreeRoot(payload.executionPayload),
       prevRandao: payload.executionPayload.prevRandao,
       feeRecipient,
       gasLimit: 30_000_000n,
@@ -59,6 +63,7 @@ describe("createExecutionPayloadBid", () => {
     const bid = createExecutionPayloadBid({
       slot,
       parentBlockRoot,
+      parentPayloadRoot,
       prevRandao,
       builderIndex,
       feeRecipient,
@@ -69,8 +74,10 @@ describe("createExecutionPayloadBid", () => {
 
     expect(bid).toEqual({
       parentBlockHash: payload.executionPayload.parentHash,
+      parentPayloadRoot,
       parentBlockRoot,
       blockHash: payload.executionPayload.blockHash,
+      payloadRoot: ssz.heze.ExecutionPayload.hashTreeRoot(payload.executionPayload),
       prevRandao: payload.executionPayload.prevRandao,
       feeRecipient,
       gasLimit: 0n,
@@ -91,6 +98,7 @@ describe("createExecutionPayloadBid", () => {
         createExecutionPayloadBid({
           slot,
           parentBlockRoot,
+          parentPayloadRoot,
           prevRandao,
           builderIndex,
           feeRecipient,
@@ -112,6 +120,7 @@ describe("createExecutionPayloadBid", () => {
     const input = {
       slot,
       parentBlockRoot,
+      parentPayloadRoot,
       prevRandao,
       builderIndex,
       feeRecipient,
@@ -147,6 +156,7 @@ describe("createExecutionPayloadBid", () => {
         createExecutionPayloadBid({
           slot,
           parentBlockRoot,
+          parentPayloadRoot,
           prevRandao,
           builderIndex,
           feeRecipient,
@@ -163,6 +173,7 @@ describe("createExecutionPayloadBid", () => {
     const bid = createExecutionPayloadBid({
       slot,
       parentBlockRoot,
+      parentPayloadRoot,
       prevRandao,
       builderIndex,
       feeRecipient,
@@ -179,6 +190,7 @@ describe("createExecutionPayloadBid", () => {
         createExecutionPayloadBid({
           slot,
           parentBlockRoot,
+          parentPayloadRoot,
           prevRandao,
           builderIndex,
           feeRecipient,
@@ -200,7 +212,7 @@ describe("createExecutionPayloadBid", () => {
   });
 
   it.each([ForkName.gloas, ForkName.heze] as const)("accepts a union-typed %s input", (fork) => {
-    const common = {slot, parentBlockRoot, prevRandao, builderIndex, feeRecipient, value: 1};
+    const common = {slot, parentBlockRoot, parentPayloadRoot, prevRandao, builderIndex, feeRecipient, value: 1};
     const input: ExecutionPayloadBidInput =
       fork === ForkName.heze
         ? {
@@ -215,6 +227,23 @@ describe("createExecutionPayloadBid", () => {
     expect(bid.blockHash).toEqual(input.payload.executionPayload.blockHash);
   });
 
+  it("rejects a payload whose root equals the parent payload root", () => {
+    const payload = createBuiltPayload(ForkName.gloas);
+
+    expect(() =>
+      createExecutionPayloadBid({
+        slot,
+        parentBlockRoot,
+        parentPayloadRoot: ssz.gloas.ExecutionPayload.hashTreeRoot(payload.executionPayload),
+        prevRandao,
+        builderIndex,
+        feeRecipient,
+        value: 1,
+        payload,
+      })
+    ).toThrowError(new ExecutionPayloadBidError({code: ExecutionPayloadBidErrorCode.PAYLOAD_ROOT_EQUALS_PARENT}));
+  });
+
   it.each(["slot", "parent"] as const)("rejects inconsistent payload %s before assembling a bid", (field) => {
     const payload = createBuiltPayload(ForkName.gloas);
     if (field === "slot") payload.executionPayload.slotNumber++;
@@ -224,6 +253,7 @@ describe("createExecutionPayloadBid", () => {
       createExecutionPayloadBid({
         slot,
         parentBlockRoot,
+        parentPayloadRoot,
         prevRandao,
         builderIndex,
         feeRecipient,

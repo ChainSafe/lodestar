@@ -1,3 +1,4 @@
+import {strict as assert} from "node:assert";
 import {describe, expect, it, vi} from "vitest";
 import {SerializedList} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
@@ -5,8 +6,14 @@ import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName} from "@lodestar/params";
-import {BeaconStateView, computeTimeAtSlot, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {
+  BeaconStateView,
+  computeTimeAtSlot,
+  createCachedBeaconState,
+  isStatePostFulu,
+  isStatePostGloas,
+} from "@lodestar/state-transition";
+import {gloas, ssz} from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {
@@ -219,7 +226,7 @@ describe("Gloas engine body", () => {
     modules.forkChoice.shouldBuildOnFull.mockReturnValue(false);
     modules.forkChoice.getBlockHexDefaultStatus.mockReturnValue(pooled ? attrs.parentBlock : null);
     modules.forkChoice.getDependentRoot.mockReturnValue(attrs.parentBlock.blockRoot);
-    modules.forkChoice.getBlockHexAndBlockHash.mockReturnValue({
+    modules.forkChoice.getBlockHexAndPayloadRoot = vi.fn().mockReturnValue({
       ...attrs.parentBlock,
       executionStatus: ExecutionStatus.Valid,
       executionPayloadBlockHash: toRootHex(new Uint8Array(32)),
@@ -232,7 +239,7 @@ describe("Gloas engine body", () => {
     (modules.chain.executionEngine as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache =
       new PayloadIdCache();
     modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
-    const executionPayload = ssz.fulu.ExecutionPayload.defaultValue();
+    const executionPayload = ssz.gloas.ExecutionPayload.defaultValue();
     executionPayload.blockHash = new Uint8Array(32).fill(9);
     modules.chain.executionEngine.getPayload.mockResolvedValue({
       executionPayload,
@@ -240,7 +247,7 @@ describe("Gloas engine body", () => {
       blobsBundle: ssz.fulu.BlobsBundle.defaultValue(),
       executionRequests: ssz.gloas.ExecutionRequests.defaultValue(),
     });
-    return context;
+    return {...context, executionPayload};
   }
 
   for (const [source, requested, pooled, expected] of [
@@ -249,8 +256,10 @@ describe("Gloas engine body", () => {
     ["cached", false, false, cachedRecipient],
   ] as const) {
     it(`uses the ${source} fee recipient for payload preparation`, async () => {
-      const {state, modules, chain, attrs, common} = setupGloas(pooled);
-      await produceBlockBody.call(chain, BlockType.Full, state, {
+      const {state, modules, chain, attrs, common, executionPayload} = setupGloas(pooled);
+      const latestPayloadRoot = new Uint8Array(32).fill(4);
+      vi.spyOn(state, "latestPayloadRoot", "get").mockReturnValue(latestPayloadRoot);
+      const {body} = await produceBlockBody.call(chain, BlockType.Full, state, {
         ...attrs,
         feeRecipient: requested ? requestedRecipient : undefined,
         proposerIndex: 0,
@@ -265,6 +274,15 @@ describe("Gloas engine body", () => {
         expect.any(String),
         expect.objectContaining({suggestedFeeRecipient: expected, targetGasLimit: 30_000_000n})
       );
+      // The self-build bid builds on the empty parent, so on the latest payload of the state, and commits
+      // to the root of the produced payload
+      assert(isStatePostGloas(state));
+      expect((body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message).toMatchObject({
+        parentBlockHash: state.latestBlockHash,
+        parentPayloadRoot: latestPayloadRoot,
+        blockHash: executionPayload.blockHash,
+        payloadRoot: ssz.gloas.ExecutionPayload.hashTreeRoot(executionPayload),
+      });
     });
   }
 });
@@ -300,6 +318,7 @@ describe("supported payload attributes", () => {
       it(`${fork} builds on a ${fullParent ? "full" : "empty"} parent with the correct withdrawals`, () => {
         const {state, chain, modules, slot, parentBlockRoot} = setup(fork);
         const parentBlockHash = new Uint8Array(32).fill(fullParent ? 5 : 6);
+        const latestPayloadRoot = new Uint8Array(32).fill(4);
         const computed = [{...ssz.capella.Withdrawal.defaultValue(), amount: 7n}];
         const carried = [{...ssz.capella.Withdrawal.defaultValue(), amount: 8n}];
         const withdrawalSpy = vi.spyOn(state, "getExpectedWithdrawals").mockReturnValue({
@@ -314,10 +333,12 @@ describe("supported payload attributes", () => {
             ...ssz.gloas.ExecutionPayloadBid.defaultValue(),
             blockHash: new Uint8Array(32).fill(5),
           });
-          vi.spyOn(state, "latestBlockHash", "get").mockReturnValue(new Uint8Array(32).fill(5));
+          // A full parent has its payload applied, an empty parent leaves the payload it was built on as latest
+          vi.spyOn(state, "latestBlockHash", "get").mockReturnValue(parentBlockHash);
+          vi.spyOn(state, "latestPayloadRoot", "get").mockReturnValue(latestPayloadRoot);
           vi.spyOn(state, "payloadExpectedWithdrawals", "get").mockReturnValue(carried);
           modules.forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
-          modules.forkChoice.getBlockHexAndBlockHash.mockReturnValue(
+          modules.forkChoice.getBlockHexAndPayloadRoot = vi.fn().mockReturnValue(
             generateProtoBlock({
               executionPayloadBlockHash: toRootHex(parentBlockHash),
               executionPayloadGasLimit: 30_000_000,
@@ -344,9 +365,15 @@ describe("supported payload attributes", () => {
           expect(result.payloadAttributes).toMatchObject({slotNumber: slot, targetGasLimit: 30_000_000n});
           expect(result).not.toHaveProperty("parentBlockNumber");
           expect(result).toMatchObject({
+            parentPayloadRoot: latestPayloadRoot,
             safeBlockHash: fromHex(safeBlockHash),
             finalizedBlockHash: fromHex(finalizedBlockHash),
           });
+          // The parent payload is the latest payload of the state, fork choice identifies it by its root
+          expect(modules.forkChoice.getBlockHexAndPayloadRoot).toHaveBeenCalledWith(
+            toRootHex(parentBlockRoot),
+            toRootHex(latestPayloadRoot)
+          );
         } else {
           expect(result).toHaveProperty("parentBlockNumber", state.payloadBlockNumber);
           expect(result).not.toHaveProperty("safeBlockHash");

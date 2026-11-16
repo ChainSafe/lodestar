@@ -126,6 +126,7 @@ describe("upgradeState", () => {
     );
     const expectedInactivityScoresRoot = ssz.gloas.InactivityScores.hashTreeRoot(fuluState.inactivityScores.getAll());
 
+    const latestPayloadRoot = fuluState.latestExecutionPayloadHeader.hashTreeRoot();
     const gloasState = upgradeStateToGloas(fuluState);
 
     // Node-reuse must produce byte-identical merkle roots for every migrated composite list
@@ -145,6 +146,10 @@ describe("upgradeState", () => {
     expect(latestBid.parentBlockHash).toEqual(latestPayloadParentHash);
     expect(latestBid.parentBlockRoot).toEqual(latestBlockParentRoot);
     expect(latestBid.blockHash).toEqual(latestPayloadBlockHash);
+    expect(latestBid.parentPayloadRoot).toEqual(ssz.Root.defaultValue());
+    expect(latestBid.payloadRoot).toEqual(latestPayloadRoot);
+    expect(gloasState.latestBlockHash).toEqual(latestPayloadBlockHash);
+    expect(gloasState.latestPayloadRoot).toEqual(latestPayloadRoot);
     expect(latestBid.prevRandao).toEqual(latestPayloadPrevRandao);
     expect(latestBid.feeRecipient).toEqual(ssz.ExecutionAddress.defaultValue());
     expect(latestBid.gasLimit).toBe(BigInt(latestPayloadGasLimit));

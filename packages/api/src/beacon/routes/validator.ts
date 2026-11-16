@@ -520,7 +520,8 @@ export type Endpoints = {
    * When self-building and `includePayload` is true, the response contains the full `BlockContents`
    * (block, execution payload envelope, KZG proofs and blobs) which enables stateless envelope
    * publishing via any beacon node. When `includePayload` is false, only the `BeaconBlock` is
-   * returned and the beacon node caches the envelope and blobs internally.
+   * returned. In both cases the beacon node keeps the envelope and blobs until the end of the slot
+   * and broadcasts them itself as soon as it has broadcast or imported the block.
    * When committing to a builder bid, only the `BeaconBlock` is returned in either case.
    */
   produceBlockV4: Endpoint<
@@ -552,25 +553,6 @@ export type Endpoints = {
     },
     BeaconBlock<ForkPostGloas> | BlockContents<ForkPostGloas>,
     ProduceBlockV4Meta
-  >;
-
-  /**
-   * Get execution payload envelope.
-   * Retrieves the cached execution payload envelope for a given slot and beacon block root,
-   * to be signed and published via `publishExecutionPayloadEnvelope`.
-   * Used in the stateful (`includePayload=false`) local build flow.
-   */
-  getExecutionPayloadEnvelope: Endpoint<
-    "GET",
-    {
-      /** Slot for which the execution payload envelope is requested */
-      slot: Slot;
-      /** Root of the beacon block that this envelope is for */
-      beaconBlockRoot: Root;
-    },
-    {params: {slot: Slot; beacon_block_root: string}},
-    gloas.ExecutionPayloadEnvelope,
-    VersionMeta
   >;
 
   /**
@@ -1176,32 +1158,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             builderUrl: headers.get(MetaHeader.BuilderUrl) ?? undefined,
           }),
         },
-      },
-    },
-    getExecutionPayloadEnvelope: {
-      url: "/eth/v1/validator/execution_payload_envelopes/{slot}/{beacon_block_root}",
-      method: "GET",
-      req: {
-        writeReq: ({slot, beaconBlockRoot}) => ({
-          params: {
-            slot,
-            beacon_block_root: toRootHex(beaconBlockRoot),
-          },
-        }),
-        parseReq: ({params}) => ({
-          slot: params.slot,
-          beaconBlockRoot: fromHex(params.beacon_block_root),
-        }),
-        schema: {
-          params: {
-            slot: Schema.UintRequired,
-            beacon_block_root: Schema.StringRequired,
-          },
-        },
-      },
-      resp: {
-        data: ssz.gloas.ExecutionPayloadEnvelope,
-        meta: VersionCodec,
       },
     },
     produceAttestationData: {

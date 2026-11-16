@@ -17,7 +17,7 @@ import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem, encodeArchivedHeaderEnvelope} from "../../../db/repositories/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
-import {toSignedHeaderEnvelope} from "../../../util/headerEnvelope.js";
+import {toHeaderEnvelope} from "../../../util/headerEnvelope.js";
 import {BlockRootHex} from "../../../util/sszBytes.js";
 import {LightClientServer} from "../../lightClient/index.js";
 
@@ -471,7 +471,7 @@ export async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
         const root = fromHex(block.blockRoot);
         if (dedupePayloads && block.executionStatus === ExecutionStatus.Valid) {
           const envelope = await db.executionPayloadEnvelope.get(root);
-          return envelope === null ? null : encodeArchivedHeaderEnvelope(toSignedHeaderEnvelope(envelope));
+          return envelope === null ? null : encodeArchivedHeaderEnvelope(toHeaderEnvelope(envelope));
         }
         return db.executionPayloadEnvelope.getBinary(root);
       })

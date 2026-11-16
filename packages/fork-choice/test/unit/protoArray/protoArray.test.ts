@@ -39,6 +39,8 @@ describe("ProtoArray", () => {
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
         parentBlockHash: null,
+        parentPayloadRoot: null,
+        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
       },
       genesisSlot
@@ -71,6 +73,8 @@ describe("ProtoArray", () => {
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
         parentBlockHash: null,
+        parentPayloadRoot: null,
+        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
       },
       genesisSlot + 1,
@@ -104,6 +108,8 @@ describe("ProtoArray", () => {
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
         parentBlockHash: null,
+        parentPayloadRoot: null,
+        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
       },
       genesisSlot + 1,

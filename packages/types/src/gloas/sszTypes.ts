@@ -399,8 +399,10 @@ export const SignedProposerPreferences = new ContainerType(
 export const ExecutionPayloadBid = new ProgressiveContainerType(
   {
     parentBlockHash: Bytes32,
+    parentPayloadRoot: Root,
     parentBlockRoot: Root,
     blockHash: Bytes32,
+    payloadRoot: Root,
     prevRandao: Bytes32,
     feeRecipient: ExecutionAddress,
     // gasLimit is a uint64 with no bound in process_execution_payload_bid (the gas-limit target
@@ -422,7 +424,7 @@ export const ExecutionPayloadBid = new ProgressiveContainerType(
     blobKzgCommitments: BlobKzgCommitments,
     executionRequestsRoot: Root,
   },
-  activeFields(12),
+  activeFields(14),
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
 );
 
@@ -495,20 +497,11 @@ export const ExecutionPayloadEnvelope = new ProgressiveContainerType(
   {
     payload: ExecutionPayload,
     executionRequests: ExecutionRequests,
-    builderIndex: BuilderIndex,
     beaconBlockRoot: Root,
     parentBeaconBlockRoot: Root,
   },
-  activeFields(5),
+  activeFields(4),
   {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2", cachePermanentRootStruct: true}
-);
-
-export const SignedExecutionPayloadEnvelope = new ContainerType(
-  {
-    message: ExecutionPayloadEnvelope,
-    signature: BLSSignature,
-  },
-  {typeName: "SignedExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
 
 /**
@@ -537,25 +530,17 @@ export const ExecutionPayloadHeaderEnvelope = new ProgressiveContainerType(
     payloadHeader: ExecutionPayloadHeader,
     ...envelopeFieldsWithoutPayload,
   },
-  activeFields(5),
+  activeFields(4),
   {typeName: "ExecutionPayloadHeaderEnvelope", jsonCase: "eth2"}
 );
 
-export const SignedExecutionPayloadHeaderEnvelope = new ContainerType(
+export const ExecutionPayloadEnvelopeContents = new ContainerType(
   {
-    message: ExecutionPayloadHeaderEnvelope,
-    signature: BLSSignature,
-  },
-  {typeName: "SignedExecutionPayloadHeaderEnvelope", jsonCase: "eth2"}
-);
-
-export const SignedExecutionPayloadEnvelopeContents = new ContainerType(
-  {
-    signedExecutionPayloadEnvelope: SignedExecutionPayloadEnvelope,
+    executionPayloadEnvelope: ExecutionPayloadEnvelope,
     kzgProofs: fuluSsz.KZGProofs,
     blobs: denebSsz.Blobs,
   },
-  {typeName: "SignedExecutionPayloadEnvelopeContents", jsonCase: "eth2"}
+  {typeName: "ExecutionPayloadEnvelopeContents", jsonCase: "eth2"}
 );
 
 export const BeaconBlockBody = new ProgressiveContainerType(
@@ -728,8 +713,9 @@ export const BeaconState = new ProgressiveContainerType(
     latestExecutionPayloadBid: ExecutionPayloadBid, // New in GLOAS:EIP7732
     payloadExpectedWithdrawals: Withdrawals, // New in GLOAS:EIP7732
     ptcWindow: PayloadTimelinessCommitteeWindow, // New in GLOAS:EIP7732
+    latestPayloadRoot: Root, // New in GLOAS:EIP7732
   },
-  activeFields(46),
+  activeFields(47),
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
@@ -771,6 +757,7 @@ export const SSEPayloadAttributes = new ContainerType(
     // parentBlockNumber: UintNum64, // Removed in GLOAS:EIP7732
     parentBlockRoot: Root,
     parentBlockHash: Root,
+    parentPayloadRoot: Root, // New in GLOAS
     safeBlockHash: Root, // New in GLOAS
     finalizedBlockHash: Root, // New in GLOAS
     payloadAttributes: PayloadAttributes,

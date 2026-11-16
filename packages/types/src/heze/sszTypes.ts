@@ -45,7 +45,7 @@ export const ExecutionPayloadBid = new ProgressiveContainerType(
     ...gloasSsz.ExecutionPayloadBid.fields,
     inclusionListBits: InclusionListBits, // [New in Heze:EIP7805]
   },
-  activeFields(13),
+  activeFields(15),
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
 );
 
@@ -74,7 +74,7 @@ export const BeaconState = new ProgressiveContainerType(
     latestExecutionPayloadBid: ExecutionPayloadBid, // [Modified in Heze:EIP7805]
   },
   // [Modified in Heze:EIP8015] gaps keep the surviving generalized indices stable
-  activeFields(46, [8, 9, 10, 28]),
+  activeFields(47, [8, 9, 10, 28]),
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 

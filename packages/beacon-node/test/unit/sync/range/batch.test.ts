@@ -280,7 +280,7 @@ describe("sync / range / batch", async () => {
       function buildGloasBlockWithEnvelope({
         slot,
         parentRoot,
-        parentBlockHash,
+        parentPayloadRoot,
         blobCount = 0,
         sampledColumns = [],
         addEnvelope = true,
@@ -288,7 +288,7 @@ describe("sync / range / batch", async () => {
       }: {
         slot: number;
         parentRoot?: Uint8Array;
-        parentBlockHash?: Uint8Array;
+        parentPayloadRoot?: Uint8Array;
         blobCount?: number;
         sampledColumns?: number[];
         addEnvelope?: boolean;
@@ -297,7 +297,9 @@ describe("sync / range / batch", async () => {
         const block = ssz.gloas.SignedBeaconBlock.defaultValue();
         block.message.slot = slot;
         if (parentRoot) block.message.parentRoot = parentRoot;
-        if (parentBlockHash) block.message.body.signedExecutionPayloadBid.message.parentBlockHash = parentBlockHash;
+        if (parentPayloadRoot) {
+          block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot = parentPayloadRoot;
+        }
         block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = Array.from({length: blobCount}, () =>
           Buffer.alloc(48, 0x11)
         );
@@ -323,9 +325,9 @@ describe("sync / range / batch", async () => {
           daOutOfRange: false,
         });
         if (addEnvelope) {
-          const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-          envelope.message.beaconBlockRoot = blockRoot;
-          envelope.message.payload.slotNumber = slot;
+          const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+          envelope.beaconBlockRoot = blockRoot;
+          envelope.payload.slotNumber = slot;
           payloadInput.addPayloadEnvelope({
             envelope,
             source: PayloadEnvelopeInputSource.byRange,
@@ -352,7 +354,7 @@ describe("sync / range / batch", async () => {
 
       it("requests the dangling parent payload only if the first block builds on the FULL variant of the parent", () => {
         const parentBid = ssz.gloas.ExecutionPayloadBid.defaultValue();
-        parentBid.blockHash = Buffer.alloc(32, 0x22);
+        parentBid.payloadRoot = Buffer.alloc(32, 0x22);
         const parentRoot = Buffer.alloc(32, 0x33);
         const parentPayload: ParentPayload = {
           blockRoot: parentRoot,
@@ -364,26 +366,26 @@ describe("sync / range / batch", async () => {
         };
         const testCases = [
           {
-            name: "parent root and parent block hash match",
+            name: "parent root and parent payload root match",
             parentRoot,
-            parentBlockHash: parentBid.blockHash,
+            parentPayloadRoot: parentBid.payloadRoot,
             expected: true,
           },
           {
-            name: "parent block hash matches but parent root does not",
+            name: "parent payload root matches but parent root does not",
             parentRoot: Buffer.alloc(32, 0x44),
-            parentBlockHash: parentBid.blockHash,
+            parentPayloadRoot: parentBid.payloadRoot,
             expected: false,
           },
           {
             name: "parent root matches but the block builds on the EMPTY variant",
             parentRoot,
-            parentBlockHash: Buffer.alloc(32, 0x55),
+            parentPayloadRoot: Buffer.alloc(32, 0x55),
             expected: false,
           },
         ];
 
-        for (const {name, parentRoot, parentBlockHash, expected} of testCases) {
+        for (const {name, parentRoot, parentPayloadRoot, expected} of testCases) {
           const batch = new Batch(
             startEpoch,
             config,
@@ -397,7 +399,7 @@ describe("sync / range / batch", async () => {
           const {blockInput, payloadInput} = buildGloasBlockWithEnvelope({
             slot: batch.startSlot + 1,
             parentRoot,
-            parentBlockHash,
+            parentPayloadRoot,
           });
 
           batch.downloadingSuccess(peer, [blockInput], new Map([[blockInput.slot, payloadInput]]));

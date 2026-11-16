@@ -73,7 +73,7 @@ describe("Gloas EIP-7688 SSZ types", () => {
 
     assertRoundTrips(ssz.gloas.BeaconState);
     assertRoundTrips(ssz.gloas.SignedBeaconBlock);
-    assertRoundTrips(ssz.gloas.SignedExecutionPayloadEnvelope);
+    assertRoundTrips(ssz.gloas.ExecutionPayloadEnvelope);
     assertRoundTrips(ssz.gloas.SignedExecutionPayloadBid);
   });
 

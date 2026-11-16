@@ -66,6 +66,8 @@ describe("Forkchoice / GetProposerHead", () => {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
+    parentPayloadRoot: null,
+    payloadRoot: null,
     payloadStatus: PayloadStatus.FULL,
   };
 
@@ -97,6 +99,8 @@ describe("Forkchoice / GetProposerHead", () => {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
+    parentPayloadRoot: null,
+    payloadRoot: null,
     payloadStatus: PayloadStatus.FULL,
   };
 
@@ -127,6 +131,8 @@ describe("Forkchoice / GetProposerHead", () => {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
+    parentPayloadRoot: null,
+    payloadRoot: null,
     payloadStatus: PayloadStatus.FULL,
   };
 

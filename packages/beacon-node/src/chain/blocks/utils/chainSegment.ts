@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ProtoBlock} from "@lodestar/fork-choice";
+import {PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {Slot, isGloasBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../../errors/index.js";
@@ -20,10 +20,10 @@ export type ChainSegmentResult = {warnings: OrphanedPayloadEnvelope[] | null};
  *
  * For each block:
  * - Verifies parent root + slot linearity
- * - For gloas: verifies bid.parentBlockHash matches the tracked execution hash; if not, the
+ * - For gloas: verifies bid.parentPayloadRoot matches the tracked payload root; if not, the
  *   previous FULL envelope is treated as orphaned (segment continues as if previous slot was EMPTY)
  * - If an envelope exists for this slot (or the parent's slot): verifies it references this block's root
- * - Advances the tracked execution hash (FULL if envelope present, EMPTY if not)
+ * - Advances the tracked payload root (FULL if envelope present, EMPTY if not)
  */
 export function assertLinearChainSegment(
   config: ChainForkConfig,
@@ -37,14 +37,20 @@ export function assertLinearChainSegment(
 
   const warnings: OrphanedPayloadEnvelope[] = [];
 
-  // Track the expected execution payload block hash through the segment, seeded from the FIRST
+  // Track the expected execution payload root through the segment, seeded from the FIRST
   // block's own bid
   const firstBlockMessage = blocks[0].getBlock().message;
-  let currentExecHash: string | null = isGloasBeaconBlock(firstBlockMessage)
-    ? toRootHex(firstBlockMessage.body.signedExecutionPayloadBid.message.parentBlockHash)
+  let currentPayloadRoot: string | null = isGloasBeaconBlock(firstBlockMessage)
+    ? toRootHex(firstBlockMessage.body.signedExecutionPayloadBid.message.parentPayloadRoot)
     : null;
 
-  let parentExecHash: string | null = parentBlock?.executionPayloadBlockHash ?? null;
+  // Root of the latest payload of the parent variant: its own payload if FULL, the one it built on otherwise
+  let parentPayloadRoot: string | null =
+    parentBlock === null
+      ? null
+      : parentBlock.payloadStatus === PayloadStatus.FULL
+        ? parentBlock.payloadRoot
+        : parentBlock.parentPayloadRoot;
   if (parentBlock !== null) {
     const parentPayloadInput = payloadEnvelopes?.get(parentBlock.slot);
     if (parentPayloadInput?.hasPayloadEnvelope()) {
@@ -57,11 +63,11 @@ export function assertLinearChainSegment(
           blockRoot: parentBlock.blockRoot,
         });
       }
-      const parentPayloadBlockHash = parentPayloadInput.getBlockHashHex();
-      if (currentExecHash === parentPayloadBlockHash) {
+      const parentInputPayloadRoot = parentPayloadInput.getPayloadRootHex();
+      if (currentPayloadRoot === parentInputPayloadRoot) {
         // Checkpoint-sync first batch: the anchor is stored PENDING with the inherited (grandparent)
-        // hash, its own payload is in this batch and is the real parent EL head
-        parentExecHash = parentPayloadBlockHash;
+        // payload root, its own payload is in this batch and is the real parent EL head
+        parentPayloadRoot = parentInputPayloadRoot;
       } else {
         // First block builds on the parent's EMPTY variant, the parent's payload in this batch is orphaned
         warnings.push({slot: parentBlock.slot, payloadEnvelopeInput: parentPayloadInput});
@@ -71,18 +77,18 @@ export function assertLinearChainSegment(
 
   // First block must build on the parent's EL head. PARENT_PAYLOAD_UNKNOWN (vs the in-segment
   // NON_LINEAR_PAYLOAD_ROOTS below) tells range sync this is a parent-link problem, not an in-batch one.
-  if (parentExecHash !== null && currentExecHash !== null && currentExecHash !== parentExecHash) {
+  if (parentPayloadRoot !== null && currentPayloadRoot !== null && currentPayloadRoot !== parentPayloadRoot) {
     throw new BlockError(blocks[0].getBlock(), {
       code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
       parentRoot: toRootHex(firstBlockMessage.parentRoot),
-      parentBlockHash: currentExecHash,
+      parentPayloadRoot: currentPayloadRoot,
     });
   }
 
-  // Track the execution hash before the last FULL advancement so we can recover
+  // Track the payload root before the last FULL advancement so we can recover
   // if the next block reveals that envelope was orphaned.
-  let prevExecHash: string | null = currentExecHash;
-  // The slot whose envelope last advanced currentExecHash (for warning context).
+  let prevPayloadRoot: string | null = currentPayloadRoot;
+  // The slot whose envelope last advanced currentPayloadRoot (for warning context).
   let lastFullSlot: Slot | null = null;
 
   for (let i = 0; i < blocks.length; i++) {
@@ -107,21 +113,21 @@ export function assertLinearChainSegment(
     }
 
     if (isGloasBeaconBlock(block.message)) {
-      // currentExecHash and prevExecHash are only null for a pre-gloas first block (fork-transition segment); always set post-gloas.
-      if (currentExecHash !== null) {
-        // Verify the bid's parentBlockHash matches the tracked execution hash.
+      // currentPayloadRoot and prevPayloadRoot are only null for a pre-gloas first block (fork-transition segment); always set post-gloas.
+      if (currentPayloadRoot !== null) {
+        // Verify the bid's parentPayloadRoot matches the tracked payload root.
         // This ensures the block was built on the correct FULL or EMPTY variant of its parent.
-        const bidParentHash = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
-        if (bidParentHash !== currentExecHash) {
+        const bidParentPayloadRoot = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot);
+        if (bidParentPayloadRoot !== currentPayloadRoot) {
           // Maybe the previous slot's FULL envelope was orphaned — try falling back.
-          // If even prevExecHash doesn't match, the segment is non-linear.
-          if (bidParentHash !== prevExecHash) {
+          // If even prevPayloadRoot doesn't match, the segment is non-linear.
+          if (bidParentPayloadRoot !== prevPayloadRoot) {
             // Broken link inside the segment: throw NON_LINEAR_PAYLOAD_ROOTS instead of PARENT_PAYLOAD_UNKNOWN
             // this is important for range sync to handle accordingly
             throw new BlockError(block, {
               code: BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS,
-              parentBlockHash: bidParentHash,
-              expectedBlockHash: currentExecHash,
+              parentPayloadRoot: bidParentPayloadRoot,
+              expectedPayloadRoot: currentPayloadRoot,
             });
           }
           if (lastFullSlot !== null && payloadEnvelopes !== null) {
@@ -130,7 +136,7 @@ export function assertLinearChainSegment(
               warnings.push({slot: lastFullSlot, payloadEnvelopeInput: orphanedInput});
             }
           }
-          currentExecHash = prevExecHash;
+          currentPayloadRoot = prevPayloadRoot;
         }
       }
 
@@ -139,7 +145,7 @@ export function assertLinearChainSegment(
       if (payloadEnvelope !== null) {
         // Verify the envelope references this block's root
         const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message));
-        const envelopeBlockRoot = toRootHex(payloadEnvelope.message.beaconBlockRoot);
+        const envelopeBlockRoot = toRootHex(payloadEnvelope.beaconBlockRoot);
         if (blockRoot !== envelopeBlockRoot) {
           throw new BlockError(block, {
             code: BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH,
@@ -149,11 +155,11 @@ export function assertLinearChainSegment(
         }
 
         // FULL variant: save state before advancing, then advance
-        prevExecHash = currentExecHash;
+        prevPayloadRoot = currentPayloadRoot;
         lastFullSlot = slot;
-        currentExecHash = toRootHex(payloadEnvelope.message.payload.blockHash);
+        currentPayloadRoot = toRootHex(block.message.body.signedExecutionPayloadBid.message.payloadRoot);
       }
-      // EMPTY variant: currentExecHash unchanged
+      // EMPTY variant: currentPayloadRoot unchanged
     }
   }
 

@@ -3,7 +3,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex, PtcQuorumEvent} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
-import {DataColumnSidecar, RootHex, Slot, phase0} from "@lodestar/types";
+import {DataColumnSidecar, RootHex, Slot, gloas, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -51,6 +51,11 @@ export enum ChainEvent {
    */
   publishDataColumns = "publishDataColumns",
   /**
+   * This event signals that the execution payload envelope of a block this node built itself
+   * is ready to be published.
+   */
+  publishExecutionPayloadEnvelope = "publishExecutionPayloadEnvelope",
+  /**
    * This event signals that a proposer slashing has been produced from an observed equivocation
    * and is ready to be published.
    */
@@ -66,7 +71,7 @@ export enum ChainEvent {
   updateStatus = "updateStatus",
   /**
    * Trigger BlockInputSync to find parent of a SignedBeaconBlock received
-   * Post-gloas, missing parent could be a SignedBeaconBlock and/or a SignedExecutionPayloadEnvelope
+   * Post-gloas, missing parent could be a SignedBeaconBlock and/or a ExecutionPayloadEnvelope
    */
   blockUnknownParent = "blockUnknownParent",
   /**
@@ -74,7 +79,7 @@ export enum ChainEvent {
    */
   unknownBlockRoot = "unknownBlockRoot",
   /**
-   * Trigger BlockInputSync to find a SignedExecutionPayloadEnvelope with specified block root.
+   * Trigger BlockInputSync to find a ExecutionPayloadEnvelope with specified block root.
    */
   unknownEnvelopeBlockRoot = "unknownEnvelopeBlockRoot",
   /**
@@ -122,6 +127,8 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
 
   [ChainEvent.publishDataColumns]: (sidecars: DataColumnSidecar[]) => void;
+
+  [ChainEvent.publishExecutionPayloadEnvelope]: (envelope: gloas.ExecutionPayloadEnvelope) => void;
 
   [ChainEvent.publishProposerSlashing]: (proposerSlashing: phase0.ProposerSlashing) => void;
 

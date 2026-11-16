@@ -49,6 +49,8 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
       parentBlockHash: null,
+      parentPayloadRoot: null,
+      payloadRoot: null,
       payloadStatus: PayloadStatus.FULL,
     } as Omit<ProtoBlock, "targetRoot">,
     genesisSlot
@@ -167,9 +169,12 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       proposerIndex: 0,
       dataAvailabilityStatus: gloasBoosted ? DataAvailabilityStatus.Available : DataAvailabilityStatus.PreData,
 
-      // The parent's own payload hash links this block to the parent's PENDING/EMPTY variant (the
-      // FULL variant only exists once the envelope is revealed, which this harness does not simulate)
       parentBlockHash: gloasBoosted ? payloadHash(slot - 1) : null,
+      // No payload is ever revealed in this harness (the FULL variant only exists once the envelope
+      // is revealed), so every block has the same parent payload root, which links it to the
+      // parent's PENDING/EMPTY variant
+      parentPayloadRoot: gloasBoosted ? payloadHash(0) : null,
+      payloadRoot: gloasBoosted ? payloadHash(slot) : null,
       payloadStatus: PayloadStatus.FULL,
       // ProtoBlock is a union over the execution fields; the conditionals lose the narrowing
     } as ProtoBlock;

@@ -80,6 +80,8 @@ function setupForkChoice(): ProtoArray {
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
       parentBlockHash: null,
+      parentPayloadRoot: null,
+      payloadRoot: null,
       payloadStatus: PayloadStatus.FULL,
     } as Omit<ProtoBlock, "targetRoot">,
     0
@@ -127,6 +129,8 @@ function setupForkChoice(): ProtoArray {
         ...executionData,
 
         parentBlockHash: null,
+        parentPayloadRoot: null,
+        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
       },
       block.slot,
@@ -554,6 +558,8 @@ describe("executionStatus / lenient verdicts never contradict an earlier VALID",
         executionStatus: ExecutionStatus.Syncing,
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
         parentBlockHash: null,
+        parentPayloadRoot: null,
+        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
       },
       4,

@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {IClock} from "@lodestar/state-transition";
-import {BuilderIndex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics, RevealResult} from "../metrics.js";
 import {BidSelector} from "./bidSelector.js";
@@ -24,7 +23,6 @@ export type RevealerModules = {
   bidSelector: BidSelector;
   payloadStore: PayloadStore;
   envelopePublisher: EnvelopePublisher;
-  builderIndex: BuilderIndex;
   metrics: Metrics | null;
   signal: AbortSignal;
 };
@@ -65,7 +63,6 @@ export class Revealer {
 
     const contents = createExecutionPayloadEnvelopeContents({
       blockRoot,
-      builderIndex: this.modules.builderIndex,
       selectedBid: observed.signedBid.message,
       storedPayload,
     });
@@ -81,7 +78,7 @@ export class Revealer {
     logger.info("Revealed execution payload", {
       ...logCtx,
       blobs: contents.blobs.length,
-      transactions: contents.envelope.payload.transactions.length,
+      transactions: contents.executionPayloadEnvelope.payload.transactions.length,
       secFromSlot: clock.secFromSlot(slot),
     });
   }

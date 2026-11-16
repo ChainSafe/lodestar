@@ -2,7 +2,6 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {
-  BUILDER_INDEX_SELF_BUILD,
   ForkName,
   ForkPostBellatrix,
   ForkPostDeneb,
@@ -977,6 +976,8 @@ export function getValidatorApi(
 
       const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
       const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
+      // null if the parent is a pre-gloas block, fork choice does not track its payload root
+      const bidParentPayloadRoot = isBuildingOnFull ? parentBlock.payloadRoot : parentBlock.parentPayloadRoot;
       // Post-gloas every proposal parent has an execution payload hash
       if (bidParentBlockHash === null) {
         throw new ApiError(500, `Unknown parent block hash for proposal parent ${parentBlockRootHex}`);
@@ -1007,7 +1008,7 @@ export function getValidatorApi(
       const builderBidExpected =
         builderConfig.builders.length > 0 ||
         (!circuitBreakerActive &&
-          chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
+          chain.executionPayloadBidPool.getBestBid(slot, bidParentPayloadRoot, parentBlockRootHex) !== null);
 
       // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
       // not delay the proposal when a builder bid block is available (and vice versa)
@@ -1038,7 +1039,7 @@ export function getValidatorApi(
 
         let p2pBid: PooledExecutionPayloadBid | null = circuitBreakerActive
           ? null
-          : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+          : chain.executionPayloadBidPool.getBestBid(slot, bidParentPayloadRoot, parentBlockRootHex);
         // Discard p2p bids below the proposer's configured floor on the total payment.
         // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
         if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
@@ -1061,6 +1062,7 @@ export function getValidatorApi(
                   slot,
                   parentBlock,
                   parentBlockHash: bidParentBlockHash,
+                  parentPayloadRoot: bidParentPayloadRoot,
                   parentBlockRoot: parentBlockRootHex,
                   entry,
                   getParentExecutionRequests: () => {
@@ -1334,7 +1336,6 @@ export function getValidatorApi(
           executionPayloadEnvelope: {
             payload: executionPayload,
             executionRequests,
-            builderIndex: BUILDER_INDEX_SELF_BUILD,
             beaconBlockRoot: fromHex(blockRoot),
             parentBeaconBlockRoot: parentBlockRoot,
           },
@@ -2335,70 +2336,6 @@ export function getValidatorApi(
 
       await network.publishInclusionList(signedInclusionList);
       metrics?.inclusionListsPublished.inc();
-    },
-
-    async getExecutionPayloadEnvelope({slot, beaconBlockRoot}) {
-      const fork = config.getForkName(slot);
-
-      if (!isForkPostGloas(fork)) {
-        throw new ApiError(400, `getExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
-      }
-
-      notWhileSyncing(chain, sync.state);
-      await waitForSlot(slot);
-
-      const blockRootHex = toRootHex(beaconBlockRoot);
-      const produceResult = chain.blockProductionCache.get(blockRootHex);
-
-      if (produceResult === undefined) {
-        throw new ApiError(404, `No cached block production result found for block root ${blockRootHex}`);
-      }
-      if (!isForkPostGloas(produceResult.fork)) {
-        throw Error(`Cached block production result is for pre-gloas fork=${produceResult.fork}`);
-      }
-      if (produceResult.type !== BlockType.Full) {
-        throw Error("Cached block production result is not full block");
-      }
-
-      const {executionPayload, executionRequests, parentBlockRoot} = produceResult as ProduceFullGloas;
-
-      if (executionPayload === undefined) {
-        // Blocks committing to a builder bid are cached as full but without payload data
-        throw new ApiError(404, `No local execution payload cached for block root ${blockRootHex}`);
-      }
-
-      if (executionPayload.slotNumber !== slot) {
-        throw new ApiError(
-          404,
-          `Cached execution payload is for slot=${executionPayload.slotNumber}, requested slot=${slot}`
-        );
-      }
-
-      const envelope: gloas.ExecutionPayloadEnvelope = {
-        payload: executionPayload,
-        executionRequests: executionRequests,
-        builderIndex: BUILDER_INDEX_SELF_BUILD,
-        beaconBlockRoot,
-        parentBeaconBlockRoot: parentBlockRoot,
-      };
-
-      logger.info("Produced execution payload envelope", {
-        slot,
-        blockRoot: blockRootHex,
-        transactions: executionPayload.transactions.length,
-        blockHash: toRootHex(executionPayload.blockHash),
-      });
-
-      if (chain.opts.persistProducedPayloadEnvelopes) {
-        chain.persistExecutionPayloadEnvelope(envelope);
-      }
-
-      return {
-        data: envelope,
-        meta: {
-          version: fork,
-        },
-      };
     },
   };
 }

@@ -18,8 +18,8 @@ const versionedHash = ssz.deneb.VersionedHash.defaultValue();
 
 const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
 signedBlock.message.slot = SLOTS_PER_EPOCH;
-const signedEnvelopeContents = ssz.gloas.SignedExecutionPayloadEnvelopeContents.defaultValue();
-signedEnvelopeContents.signedExecutionPayloadEnvelope.message.payload.slotNumber = SLOTS_PER_EPOCH;
+const executionPayloadEnvelopeContents = ssz.gloas.ExecutionPayloadEnvelopeContents.defaultValue();
+executionPayloadEnvelopeContents.executionPayloadEnvelope.payload.slotNumber = SLOTS_PER_EPOCH;
 const signedExecutionPayloadBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
 signedExecutionPayloadBid.message.slot = SLOTS_PER_EPOCH;
 
@@ -89,7 +89,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   publishExecutionPayloadEnvelope: {
     args: {
-      signedEnvelopeOrContents: signedEnvelopeContents,
+      executionPayloadEnvelopeContents,
       broadcastValidation: BroadcastValidation.gossip,
     },
     res: undefined,
@@ -98,10 +98,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {signedExecutionPayloadBid},
     res: undefined,
   },
-  getSignedExecutionPayloadEnvelope: {
+  getExecutionPayloadEnvelope: {
     args: {blockId: "head"},
     res: {
-      data: ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue(),
+      data: ssz.gloas.ExecutionPayloadEnvelope.defaultValue(),
       meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
     },
   },

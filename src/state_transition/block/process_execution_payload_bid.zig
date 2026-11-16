@@ -55,8 +55,11 @@ pub fn processExecutionPayloadBid(
 
     const latest_block_hash = try state.inner.getFieldRoot("latest_block_hash");
     if (!std.mem.eql(u8, &bid.parent_block_hash, latest_block_hash)) return error.BidParentBlockHashMismatch;
+    const latest_payload_root = try state.inner.getFieldRoot("latest_payload_root");
+    if (!std.mem.eql(u8, &bid.parent_payload_root, latest_payload_root)) return error.BidParentPayloadRootMismatch;
 
     if (std.mem.eql(u8, &bid.block_hash, &bid.parent_block_hash)) return error.BidBlockHashEqualsParent;
+    if (std.mem.eql(u8, &bid.payload_root, &bid.parent_payload_root)) return error.BidPayloadRootEqualsParent;
 
     const parent_block_root = try getBlockRootAtSlot(fork, state, state_slot - 1);
     if (!std.mem.eql(u8, &bid.parent_block_root, parent_block_root)) return error.BidParentBlockRootMismatch;

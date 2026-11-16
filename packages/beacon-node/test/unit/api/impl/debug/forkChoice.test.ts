@@ -49,7 +49,15 @@ describe("getDebugForkChoiceV2", () => {
     });
     protoArray = ProtoArray.initialize(block, 1);
     protoArray.onBlock(
-      {...block, slot: 2, blockRoot: root(3), parentRoot: root(2), parentBlockHash: root(12)},
+      {
+        ...block,
+        slot: 2,
+        blockRoot: root(3),
+        parentRoot: root(2),
+        parentBlockHash: root(12),
+        parentPayloadRoot: root(32),
+        payloadRoot: root(33),
+      },
       2,
       null
     );
@@ -66,7 +74,16 @@ describe("getDebugForkChoiceV2", () => {
     protoArray.notifyPtcMessages(root(3), 2, [0, 2], true, false);
     protoArray.notifyPtcMessages(root(3), 2, [1], false, true);
     protoArray.onBlock(
-      {...block, slot: 3, blockRoot: root(4), parentRoot: root(3), parentBlockHash: root(12)},
+      {
+        ...block,
+        slot: 3,
+        blockRoot: root(4),
+        parentRoot: root(3),
+        parentBlockHash: root(12),
+        // builds on the EMPTY variant of the parent, ie. on the payload the parent was built on
+        parentPayloadRoot: root(32),
+        payloadRoot: root(34),
+      },
       3,
       null
     );
@@ -77,6 +94,9 @@ describe("getDebugForkChoiceV2", () => {
         blockRoot: root(5),
         parentRoot: root(3),
         parentBlockHash: root(13),
+        // builds on the FULL variant of the parent, ie. on the payload of the parent
+        parentPayloadRoot: root(33),
+        payloadRoot: root(35),
         executionPayloadBlockHash: root(13),
         executionStatus: ExecutionStatus.Syncing,
         executionPayloadNumber: 2,
@@ -129,7 +149,14 @@ describe("getDebugForkChoiceV2", () => {
     });
     protoArray.onBlock(generateProtoBlock({blockRoot: root(1)}), 0, null);
     protoArray.onBlock(
-      generateProtoBlock({slot: 1, blockRoot: root(2), parentRoot: root(1), parentBlockHash: ZERO_HASH_HEX}),
+      generateProtoBlock({
+        slot: 1,
+        blockRoot: root(2),
+        parentRoot: root(1),
+        parentBlockHash: ZERO_HASH_HEX,
+        parentPayloadRoot: ZERO_HASH_HEX,
+        payloadRoot: root(31),
+      }),
       1,
       null
     );

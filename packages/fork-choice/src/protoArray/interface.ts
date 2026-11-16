@@ -47,9 +47,14 @@ export enum PayloadStatus {
 
 /**
  * Check if a block is in the Gloas fork (ePBS enabled)
+ *
+ * `parentBlockHash`, `parentPayloadRoot` and `payloadRoot` come from the block's bid, so they are either all
+ * set (gloas) or all null (pre-gloas)
  */
-export function isGloasBlock(block: ProtoBlock): block is ProtoBlock & {parentBlockHash: RootHex} {
-  return block.parentBlockHash !== null;
+export function isGloasBlock(
+  block: ProtoBlock
+): block is ProtoBlock & {parentBlockHash: RootHex; parentPayloadRoot: RootHex; payloadRoot: RootHex} {
+  return block.parentBlockHash !== null && block.parentPayloadRoot !== null && block.payloadRoot !== null;
 }
 
 export type LVHValidResponse = {
@@ -159,9 +164,17 @@ export type ProtoBlock = BlockExtraMeta & {
   /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
   payloadStatus: PayloadStatus;
 
+  // `parent_block_hash` of the block's bid, null pre-gloas. This is the execution block hash the
+  // block builds on, reported to the execution engine while the block's own payload is not imported
+  parentBlockHash: RootHex | null;
+
+  // `parent_payload_root` of the block's bid, null pre-gloas
   // Used to determine if this block extends EMPTY or FULL parent variant
   // Spec: gloas/fork-choice.md#new-get_parent_payload_status
-  parentBlockHash: RootHex | null;
+  parentPayloadRoot: RootHex | null;
+
+  // `payload_root` of the block's bid, null pre-gloas. Same for all variants of the block
+  payloadRoot: RootHex | null;
 };
 
 /**

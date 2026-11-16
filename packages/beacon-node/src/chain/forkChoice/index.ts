@@ -176,6 +176,9 @@ export function initializeForkChoiceFromFinalizedState(
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
         payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
         parentBlockHash: isStatePostGloas(state) ? toRootHex(state.latestBlockHash) : null,
+        // The anchor state is the post-state of the anchor block, both still hold the values its bid was checked against
+        parentPayloadRoot: isStatePostGloas(state) ? toRootHex(state.latestPayloadRoot) : null,
+        payloadRoot: isStatePostGloas(state) ? toRootHex(state.latestExecutionPayloadBid.payloadRoot) : null,
       },
       currentSlot
     ),
@@ -284,6 +287,10 @@ export function initializeForkChoiceFromUnfinalizedState(
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
     parentBlockHash: isStatePostGloas(unfinalizedState) ? toRootHex(unfinalizedState.latestBlockHash) : null,
+    parentPayloadRoot: isStatePostGloas(unfinalizedState) ? toRootHex(unfinalizedState.latestPayloadRoot) : null,
+    payloadRoot: isStatePostGloas(unfinalizedState)
+      ? toRootHex(unfinalizedState.latestExecutionPayloadBid.payloadRoot)
+      : null,
   };
 
   const parentSlot = blockHeader.slot - 1;

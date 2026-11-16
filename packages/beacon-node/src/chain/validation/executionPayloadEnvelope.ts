@@ -1,9 +1,5 @@
 import {PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {
-  computeStartSlotAtEpoch,
-  getExecutionPayloadEnvelopeSignatureSet,
-  isStatePostGloas,
-} from "@lodestar/state-transition";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {
@@ -13,19 +9,18 @@ import {
 } from "../../util/sszBytes.js";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
-import {RegenCaller} from "../regen/index.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 
 export async function validateApiExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  executionPayloadEnvelope: gloas.ExecutionPayloadEnvelope
 ): Promise<void> {
   return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
 }
 
 export async function validateGossipExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  executionPayloadEnvelope: gloas.ExecutionPayloadEnvelope
 ): Promise<void> {
   return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
 }
@@ -66,9 +61,8 @@ export function validateGossipExecutionPayloadEnvelopeSerialized(
 
 async function validateExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  envelope: gloas.ExecutionPayloadEnvelope
 ): Promise<void> {
-  const envelope = executionPayloadEnvelope.message;
   const {payload} = envelope;
   const blockRootHex = toRootHex(envelope.beaconBlockRoot);
 
@@ -83,8 +77,7 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  // [IGNORE] The node has not seen another valid
-  // `SignedExecutionPayloadEnvelope` for this block root from this builder.
+  // [IGNORE] The node has not seen another valid `ExecutionPayloadEnvelope` for this block root.
   const envelopeBlock = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
   const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
   if (envelopeBlock || payloadInput?.hasPayloadEnvelope()) {
@@ -129,14 +122,16 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  // [REJECT] `envelope.builder_index == bid.builder_index`
-  if (envelope.builderIndex !== payloadInput.getBuilderIndex()) {
+  // [REJECT] `envelope.parent_beacon_block_root == block.parent_root`
+  // The envelope is not signed, every field must be checked against the block for the envelope to be unique
+  const envelopeParentRootHex = toRootHex(envelope.parentBeaconBlockRoot);
+  if (envelopeParentRootHex !== block.parentRoot) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
-      code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
+      code: ExecutionPayloadEnvelopeErrorCode.PARENT_BEACON_BLOCK_ROOT_MISMATCH,
       slot: payload.slotNumber,
       root: blockRootHex,
-      envelopeBuilderIndex: envelope.builderIndex,
-      bidBuilderIndex: payloadInput.getBuilderIndex(),
+      envelopeParentRoot: envelopeParentRootHex,
+      blockParentRoot: block.parentRoot,
     });
   }
 
@@ -177,34 +172,15 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  // Get the block state to verify the builder's signature.
-  const blockState = await chain.regen
-    .getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope)
-    .catch(() => {
-      throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-        code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE,
-        blockRoot: blockRootHex,
-        slot: payload.slotNumber,
-      });
-    });
-  if (!isStatePostGloas(blockState)) {
-    throw new Error(`Expected gloas+ state for execution payload envelope validation, got fork=${blockState.forkName}`);
-  }
-
-  // [REJECT] `signed_execution_payload_envelope.signature` is valid as verified
-  // by `verify_execution_payload_envelope_signature`.
-  const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
-    chain.config,
-    blockState,
-    executionPayloadEnvelope,
-    payloadInput.proposerIndex
-  );
-
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
+  // [REJECT] `hash_tree_root(payload) == bid.payload_root`
+  const payloadRoot = ssz.gloas.ExecutionPayload.hashTreeRoot(payload);
+  if (!byteArrayEquals(payloadRoot, payloadInput.getBid().payloadRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
-      code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
+      code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ROOT_MISMATCH,
       slot: payload.slotNumber,
       root: blockRootHex,
+      envelopePayloadRoot: toRootHex(payloadRoot),
+      bidPayloadRoot: toRootHex(payloadInput.getBid().payloadRoot),
     });
   }
 }

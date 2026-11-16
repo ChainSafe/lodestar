@@ -194,9 +194,9 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
       labelNames: ["error"],
     }),
 
-    payloadEnvelopeProposingErrors: register.gauge<{error: "produce" | "publish"}>({
+    payloadEnvelopeProposingErrors: register.gauge<{error: "publish"}>({
       name: "vc_payload_envelope_proposing_errors_total",
-      help: "Total count of errors producing or publishing an execution payload envelope",
+      help: "Total count of errors publishing an execution payload envelope",
       labelNames: ["error"],
     }),
 
