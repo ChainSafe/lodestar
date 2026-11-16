@@ -1209,17 +1209,15 @@ pub const Store = struct {
     /// Spec `on_execution_payload_envelope` after the caller verified the envelope and
     /// data availability. `execution_status` is the engine's verdict on the payload,
     /// `.valid` or `.syncing`; `inclusion_list_satisfied` carries the Heze engine verdict.
+    /// `error.PayloadInvalidToValid` means the engine contradicted an earlier verdict, which
+    /// optimistic sync leaves to manual intervention. The store may then be partly updated,
+    /// so the caller must stop the node.
     pub fn onExecutionPayloadEnvelope(self: *Store, beacon_block_root: Root, execution_status: ExecutionStatus, inclusion_list_satisfied: ?bool) Error!void {
         const block = self.blockIndex(beacon_block_root) orelse return error.UnknownBlock;
         if (execution_status != .valid and execution_status != .syncing) return error.ExecutionStatusMismatch;
         const statuses = self.blocks.items(.execution_status);
-        if (statuses[block] == .invalid) return error.PayloadInvalidToValid;
-        const parent = self.blocks.items(.parent)[block];
-        const parent_node: ForkChoiceNode = .{ .block = parent, .payload_status = self.blocks.items(.parent_payload_status)[block] };
-        const parent_validation: ?ChainValidation = if (execution_status == .valid and parent != NO_BLOCK) try self.checkChainValid(parent_node) else null;
-
         switch (statuses[block]) {
-            .invalid => unreachable,
+            .invalid => return error.PayloadInvalidToValid,
             .valid => {},
             .syncing, .pre_merge => statuses[block] = execution_status,
         }
@@ -1228,7 +1226,10 @@ pub const Store = struct {
         }
         self.blocks.items(.payload_verified)[block] = true;
         self.head_cache.dirty = true;
-        if (parent_validation) |validation| self.applyChainValid(parent_node, validation);
+        const parent = self.blocks.items(.parent)[block];
+        if (execution_status == .valid and parent != NO_BLOCK) {
+            try self.markChainValid(.{ .block = parent, .payload_status = self.blocks.items(.parent_payload_status)[block] });
+        }
     }
 
     // --- optimistic sync --------------------------------------------------------------
@@ -1258,26 +1259,20 @@ pub const Store = struct {
 
     /// Optimistic sync `NOT_VALIDATED -> VALID` for the payload with `block_hash`, in every
     /// block carrying it, and, as the spec requires, every not yet validated payload below it.
-    /// Writes nothing when an `.invalid` payload stands at or below any of those blocks.
+    /// `error.PayloadInvalidToValid` means the engine contradicted an earlier verdict, which
+    /// optimistic sync leaves to manual intervention. The store may then be partly updated,
+    /// so the caller must stop the node.
     pub fn onPayloadValid(self: *Store, block_hash: Root) Error!void {
         const hashes = self.blocks.items(.payload_block_hash);
         var found = false;
         for (hashes, 0..) |*hash, i| {
             if (!std.mem.eql(u8, hash, &block_hash)) continue;
             found = true;
-            _ = try self.checkChainValid(self.ownPayloadNode(@intCast(i)));
+            const index: BlockIndex = @intCast(i);
+            const node: ForkChoiceNode = if (self.blocks.items(.fork)[i].gte(.gloas)) .{ .block = index, .payload_status = .full } else pendingNode(index);
+            try self.markChainValid(node);
         }
         if (!found) return error.UnknownPayload;
-        for (hashes, 0..) |*hash, i| {
-            if (!std.mem.eql(u8, hash, &block_hash)) continue;
-            // Marking a chain valid writes no `.invalid`, so every check above still passes.
-            self.markChainValid(self.ownPayloadNode(@intCast(i))) catch unreachable;
-        }
-    }
-
-    /// The node standing on `block`'s own payload.
-    fn ownPayloadNode(self: *const Store, block: BlockIndex) ForkChoiceNode {
-        return if (self.blocks.items(.fork)[block].gte(.gloas)) .{ .block = block, .payload_status = .full } else pendingNode(block);
     }
 
     /// Marks the `.syncing` payloads from `node` down `.valid`, stopping at the first payload

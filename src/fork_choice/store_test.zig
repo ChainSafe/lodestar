@@ -972,7 +972,7 @@ test "optimistic sync: Gloas empty links skip the parent's own payload" {
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(fullOf(&store, 0x21)));
 }
 
-test "optimistic sync: a valid envelope over an invalidated payload is rejected before it writes" {
+test "optimistic sync: a valid envelope over an invalidated payload returns PayloadInvalidToValid" {
     const config_mod = @import("config");
     const chain_config = config_mod.mainnet.chain_config.merge(.{
         .ALTAIR_FORK_EPOCH = 0,
@@ -993,28 +993,7 @@ test "optimistic sync: a valid envelope over an invalidated payload is rejected 
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x21, .parent = 0x20, .slot = 2, .fork = .gloas, .bid_parent = 0x20 }));
     try store.onPayloadInvalid(tagRoot(0x20), tagHash(0x20), tagHash(1));
 
-    const index = store.blockIndex(tagRoot(0x21)).?;
     try testing.expectError(error.PayloadInvalidToValid, store.onExecutionPayloadEnvelope(tagRoot(0x21), .valid, null));
-    try testing.expectEqual(ExecutionStatus.syncing, store.blocks.items(.execution_status)[index]);
-    try testing.expect(!store.blocks.items(.payload_verified)[index]);
-}
-
-test "optimistic sync: a valid payload whose twin sits on an invalidated payload writes nothing" {
-    const config = &@import("config").mainnet.config;
-    var store = try Store.initFromSummary(testing.allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
-    defer store.deinit();
-    try store.onTick(store.timing.timeAtSlotMs(8));
-    // 0x30 and 0x31 carry the same payload; 0x31 builds on 0x21, whose payload is then invalidated.
-    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
-    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 0x20, .slot = 2 }));
-    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x21, .parent = 0x20, .slot = 2 }));
-    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x31, .parent = 0x21, .slot = 3, .payload = 0x30 }));
-    try store.onPayloadInvalid(tagRoot(0x21), tagHash(0x21), tagHash(0x20));
-
-    try testing.expectError(error.PayloadInvalidToValid, store.onPayloadValid(tagHash(0x30)));
-    const statuses = store.blocks.items(.execution_status);
-    try testing.expectEqual(ExecutionStatus.syncing, statuses[store.blockIndex(tagRoot(0x20)).?]);
-    try testing.expectEqual(ExecutionStatus.syncing, statuses[store.blockIndex(tagRoot(0x30)).?]);
 }
 
 test "get_ancestor: a Gloas walk takes each link's payload status from the child" {
