@@ -565,6 +565,9 @@ pub const EpochTransitionCache = struct {
             var current_epoch_participation_view = try state.currentEpochParticipation();
             _ = try current_epoch_participation_view.getAllInto(reused_cache.current_epoch_participation.items);
 
+            // Multi-object `for`: lengths are checked once at loop entry. Indexing through
+            // `reused_cache` instead reloads every slice header after each `flag` store (a u8
+            // store may alias them) and bounds-checks every access.
             for (
                 flags_arr,
                 is_active_prev_arr,

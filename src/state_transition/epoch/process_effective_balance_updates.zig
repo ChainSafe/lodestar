@@ -59,7 +59,12 @@ pub fn processEffectiveBalanceUpdates(
         const effective_balance_limit: u64 = if (comptime fork.lt(.electra))
             preset.MAX_EFFECTIVE_BALANCE
         else blk: {
-            const is_compounding = if (i < compounding_flags_base.len) compounding_flags_base[i] else cache.isCompoundingValidator(i);
+            // Same as `cache.isCompoundingValidator(i)`, but existing validators read the hoisted
+            // base slice; only those appended this epoch go through `cache`.
+            const is_compounding = if (i < compounding_flags_base.len)
+                compounding_flags_base[i]
+            else
+                cache.isCompoundingValidator(i);
             // from electra, effectiveBalanceLimit is per validator
             if (is_compounding) {
                 break :blk preset.MAX_EFFECTIVE_BALANCE_ELECTRA;
