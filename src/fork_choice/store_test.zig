@@ -740,7 +740,7 @@ test "checkpoints: a provider failure at an epoch boundary holds the time so a r
     try testing.expectEqual(block.unrealized_justified_checkpoint, store.justified_checkpoint);
 }
 
-test "fast confirmation: a run without balances writes nothing" {
+test "fast confirmation: a run without balances keeps the slot's variable update" {
     const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge });
     var store = try Store.initFromSummary(testing.allocator, &@import("config").minimal.config, 0, anchor, Provider.stateProvider());
     defer store.deinit();
@@ -748,10 +748,15 @@ test "fast confirmation: a run without balances writes nothing" {
     try store.onTick(store.timing.timeAtSlotMs(1));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 2, .parent = 1, .slot = 1, .status = .pre_merge }));
     try store.onTick(store.timing.timeAtSlotMs(2));
-    const before = fcr;
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 3, .parent = 2, .slot = 2, .status = .pre_merge }));
+    try store.onTick(store.timing.timeAtSlotMs(3));
+    fcr.current_slot_head = tagRoot(2);
+    fcr.confirmed_root = tagRoot(2);
 
     try testing.expectError(error.FastConfirmationUnsupported, fcr.onFastConfirmation(&store));
-    try testing.expectEqual(before, fcr);
+    try testing.expectEqual(tagRoot(2), fcr.previous_slot_head);
+    try testing.expectEqual(tagRoot(3), fcr.current_slot_head);
+    try testing.expectEqual(tagRoot(2), fcr.confirmed_root);
 }
 
 test "optimistic sync: valid walks down to the merge boundary, invalid removes the branch" {
