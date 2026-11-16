@@ -608,9 +608,10 @@ jobs:
           - transition
           - random
           - fork
+          - fork_choice
           - finality
           - merkle_proof
-          - sync_tests
+          - sync
           - fast_confirmation
         include:
           - preset: minimal
@@ -639,8 +640,10 @@ jobs:
           name: zig-spec-test-generated
           path: test/spec
       - name: Run spec tests - ${{ matrix.preset }} (${{ matrix.runner }})
+        # Filters match test names by substring. Each runner's tests are generated into
+        # <runner>_tests.zig, and that file name is part of every test name.
         run: |
-          zig build test:spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=${{ matrix.optimize }} -Dbuild_options.expensive_safety_checks=true -Dspec_tests.filters=${{ matrix.runner }}
+          zig build test:spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=${{ matrix.optimize }} -Dbuild_options.expensive_safety_checks=true -Dspec_tests.filters=${{ matrix.runner }}_tests
 
   zig-build-fuzz:
     name: Zig fuzz build
