@@ -33,6 +33,11 @@ const BLOB_SIDECAR_BATCH_SIZE = 32;
  * `archiveDataEpochs` is lowered.
  */
 export const MAX_PRUNE_BLOB_SLOTS_PER_RUN = 4096;
+/**
+ * Applied separately to the flat files and the legacy LevelDB archive. Lower than the blob limit since each
+ * flat file slot is a directory removal (~0.5 to 0.8 ms on ext4) rather than a key delete, which keeps a run
+ * around 130 to 200 ms, in line with `MAX_PRUNE_BLOCK_SLOTS_PER_RUN`.
+ */
 export const MAX_PRUNE_DATA_COLUMN_SLOTS_PER_RUN = 256;
 
 type BlockRootSlot = {slot: Slot; root: Uint8Array};
