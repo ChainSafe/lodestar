@@ -91,7 +91,10 @@ export async function verifyBlocks(
   const preState0 = await this.regen
     .getPreState(block0.message, {dontTransferCache: false}, RegenCaller.processBlocksInEpoch)
     .catch((e) => {
-      throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
+      throw new BlockError(block0, {
+        code: BlockErrorCode.PRESTATE_MISSING,
+        errorMessage: e instanceof Error ? e.message : String(e),
+      });
     });
 
   // [beacon-engine] deviation: retain branch omission of upstream pre-state SSZ-cache diagnostic logs.

@@ -275,10 +275,10 @@ function getBlockOrPayloadError(e: unknown, block: SignedBeaconBlock): BlockErro
   }
 
   if (e instanceof Error) {
-    const blockError = new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e});
+    const blockError = new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, errorMessage: e.message});
     blockError.stack = e.stack;
     return blockError;
   }
 
-  return new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error});
+  return new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, errorMessage: String(e)});
 }

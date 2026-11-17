@@ -2,6 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {LogLevel} from "@lodestar/logger";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {bellatrix, ssz, sszTypesFor} from "@lodestar/types";
@@ -33,6 +34,7 @@ import {ForkChoiceExecutionEngine} from "../../../../src/chain/forkChoiceExecuti
 import * as blockValidation from "../../../../src/chain/validation/block.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/engine/interface.js";
 import {kzgCommitmentToVersionedHash} from "../../../../src/util/blobs.js";
+import {QueueError, QueueErrorCode} from "../../../../src/util/queue/index.js";
 import {getMockedBeaconChain, withBeaconEngineFacade} from "../../../mocks/mockedBeaconChain.js";
 import {generateCachedBellatrixState, zeroProtoBlock} from "../../../utils/state.js";
 
@@ -847,12 +849,13 @@ describe("BeaconEngineCore block execution verification", () => {
     chain.opts.beaconEngineMode = BeaconEngineMode.Worker;
     facade = withBeaconEngineFacade(chain);
     const inputs = [bellatrixInput(false, 1), bellatrixInput(false, 2)];
-    const cause = new Error("state transition failed");
+    const errorMessage = "state transition failed";
+    const debug = vi.spyOn(core.logger, LogLevel.debug);
     vi.mocked(stf.verifyBlocksStateTransitionOnly).mockImplementation(async (_config, _state, blocks) => {
       throw new BlockError(blocks[1], {
         code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR,
         blockRoot: inputs[1].blockRootHex,
-        error: cause,
+        errorMessage,
       });
     });
     const verify = core.verifyBlocksBytes;
@@ -869,8 +872,21 @@ describe("BeaconEngineCore block execution verification", () => {
     });
     await verification.catch((error: BlockError) => {
       expect(error.signedBlock).toBe(inputs[1].getBlock());
-      expect(error.type).toHaveProperty("error.message", cause.message);
+      expect(error.type).toHaveProperty("errorMessage", errorMessage);
     });
+    expect(debug.mock.calls.filter((call) => call[0] === "Error processing block")).toEqual([
+      [
+        "Error processing block",
+        {
+          fromSlot: inputs[0].getBlock().message.slot,
+          toSlot: inputs[1].getBlock().message.slot,
+          code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR,
+          blockRoot: inputs[1].blockRootHex,
+          error: errorMessage,
+        },
+        expect.any(BlockError),
+      ],
+    ]);
     expect(core.verifyBlocksBytes).toHaveBeenCalledExactlyOnceWith(serializeBlocks(...inputs), {validSignatures: true});
     expect(core.verifyGossipBlockBytes).not.toHaveBeenCalled();
     expect(core.verifyGossipBlock).not.toHaveBeenCalled();
@@ -888,6 +904,100 @@ describe("BeaconEngineCore block execution verification", () => {
     const input = bellatrixInput();
     await verifyEngineBlocks.call(core, serializeBlocks(input), {...opts, validSignatures: true});
     expect(core.verifiedBlocks.get(signedRoot(input))?.seenTimestampSec).toBe(expected);
+  });
+
+  it("returns a pre-state failure message and logs the wrapped error", async () => {
+    const error = new Error("pre-state unavailable");
+    chain.regen.getPreState.mockRejectedValue(error);
+    const debug = vi.spyOn(core.logger, LogLevel.debug);
+    const input = bellatrixInput();
+
+    const result = await core.verifyBlocksBytes(serializeBlocks(input), {});
+
+    expect(result.err).toMatchObject({
+      blockIndex: 0,
+      blockRoot: input.blockRootHex,
+      type: {code: BlockErrorCode.PRESTATE_MISSING, errorMessage: error.message},
+    });
+    expect(result.err).not.toHaveProperty("stack");
+    expect(result.err?.type).not.toHaveProperty("error");
+    expect(debug).toHaveBeenCalledExactlyOnceWith(
+      "Error processing block",
+      {
+        fromSlot: input.getBlock().message.slot,
+        toSlot: input.getBlock().message.slot,
+        code: BlockErrorCode.PRESTATE_MISSING,
+        error: error.message,
+      },
+      expect.any(BlockError)
+    );
+  });
+
+  describe.each(["verifyBlocks", "verifyBlocksBytes"] as const)("%s error logging", (method) => {
+    it.each([
+      new Error("unexpected"),
+      new ErrorAborted("closed"),
+      new QueueError({code: QueueErrorCode.QUEUE_ABORTED}),
+      {code: BlockErrorCode.INVALID_SIGNATURE, stateSlot: 0},
+      {code: BlockErrorCode.PRESTATE_MISSING, errorMessage: "pre-state unavailable"},
+      {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR, blockRoot: "0x1234", errorMessage: "invalid operation"},
+      {
+        code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+        execStatus: ExecutionPayloadStatus.UNAVAILABLE,
+        errorMessage: QueueErrorCode.QUEUE_ABORTED,
+      },
+    ] as const)("logs %s at debug before converting the failure", async (cause) => {
+      const input = bellatrixInput(false, 1);
+      const error = cause instanceof Error ? cause : new BlockError(input.getBlock(), cause);
+      chain.forkChoice.getBlockHexDefaultStatus.mockImplementation(() => {
+        throw error;
+      });
+      const debug = vi.spyOn(core.logger, LogLevel.debug);
+      const errorLog = vi.spyOn(core.logger, LogLevel.error);
+      const result =
+        method === "verifyBlocksBytes"
+          ? core.verifyBlocksBytes(serializeBlocks(input), {})
+          : core.verifyBlocks([{data: input.getBlock(), bytes: serializeBlocks(input)[0].blockBytes}], {});
+
+      if (error instanceof BlockError) {
+        await expect(result).resolves.toMatchObject({err: {type: error.type}});
+      } else {
+        await expect(result).rejects.toBe(error);
+      }
+      expect(debug).toHaveBeenCalledExactlyOnceWith(
+        "Error processing block",
+        {
+          ...(error instanceof BlockError ? error.getMetadata() : {code: "UNEXPECTED_ERROR"}),
+          fromSlot: input.getBlock().message.slot,
+          toSlot: input.getBlock().message.slot,
+        },
+        error
+      );
+      expect(errorLog).not.toHaveBeenCalled();
+    });
+  });
+
+  it("logs pre-state cancellation once at debug level", async () => {
+    const error = new ErrorAborted("closed");
+    chain.regen.getPreState.mockRejectedValue(error);
+    const debug = vi.spyOn(core.logger, LogLevel.debug);
+    const errorLog = vi.spyOn(core.logger, LogLevel.error);
+    const input = bellatrixInput();
+
+    const result = await core.verifyBlocksBytes(serializeBlocks(input), {});
+
+    expect(result.err).toMatchObject({type: {code: BlockErrorCode.PRESTATE_MISSING, errorMessage: error.message}});
+    expect(debug).toHaveBeenCalledExactlyOnceWith(
+      "Error processing block",
+      {
+        fromSlot: input.getBlock().message.slot,
+        toSlot: input.getBlock().message.slot,
+        code: BlockErrorCode.PRESTATE_MISSING,
+        error: error.message,
+      },
+      expect.any(BlockError)
+    );
+    expect(errorLog).not.toHaveBeenCalled();
   });
 
   it.each(["verifyBlocksBytes", "validateApiBlockBytes"] as const)(

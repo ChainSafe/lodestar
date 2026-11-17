@@ -124,7 +124,10 @@ import {Clock, IClock} from "../../util/clock.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock, toForkChoiceValidity, toPayloadStatusName} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
-import {getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
+import {
+  getSlotFromExecutionPayloadEnvelopeSerialized,
+  getSlotFromSignedBeaconBlockSerialized,
+} from "../../util/sszBytes.js";
 import {Result, wrapError} from "../../util/wrapError.js";
 import {HistoricalStateRegen} from "../archiveStore/historicalState/historicalStateRegen.js";
 import {ArchiveMode, StateArchiveStrategy} from "../archiveStore/interface.js";
@@ -133,6 +136,7 @@ import {CheckpointBalancesCache} from "../balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "../beaconProposerCache.js";
 import {BlockBytes, BlockSerializedCache} from "../blocks/blockSerializedCache.js";
 import {SourceMeta} from "../blocks/payloadEnvelopeInput/types.js";
+import {PayloadError} from "../blocks/payloadError.js";
 import {
   SignedBlockRoot,
   SignedBlockRootHex,
@@ -144,7 +148,7 @@ import {verifyExecutionPayloadEnvelope as verifyEnvelopeFields} from "../blocks/
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "../bls/index.js";
 import {BuilderCircuitBreaker} from "../builderCircuitBreaker.js";
 import {ChainViewBlock, ChainViewSnapshot} from "../chainView/interface.js";
-import {BlockErrorCode} from "../errors/blockError.js";
+import {BlockError, BlockErrorCode} from "../errors/blockError.js";
 import {GossipActionError} from "../errors/gossipValidation.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {ForkchoiceCaller, initializeForkChoice} from "../forkChoice/index.js";
@@ -783,11 +787,18 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     try {
       response = {ok: true, data: await prepareForNextSlot.call(this, clockSlot, opts), headUpdate: false};
     } catch (e) {
+      const aborted = isErrorAborted(e) || isQueueErrorAborted(e);
+      if (!aborted) {
+        this.logger.error(
+          "Error preparing next slot",
+          {slot: clockSlot + 1, code: BeaconEngineErrorCode.INTERNAL},
+          e as Error
+        );
+      }
       response = {
         ok: false,
         headUpdate: false,
-        code:
-          isErrorAborted(e) || isQueueErrorAborted(e) ? BeaconEngineErrorCode.ABORTED : BeaconEngineErrorCode.INTERNAL,
+        code: aborted ? BeaconEngineErrorCode.ABORTED : BeaconEngineErrorCode.INTERNAL,
         payload: {message: e instanceof Error ? e.message : String(e)},
       };
     }
@@ -931,7 +942,17 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
           true
         );
       },
-      (error) => blockFailureFromError(error, this.config, [signedBlockRoot])
+      (error) => {
+        this.logger.debug(
+          "Error processing block",
+          {
+            ...(error instanceof BlockError ? error.getMetadata() : {code: "UNEXPECTED_ERROR"}),
+            slot: getSlotFromSignedBeaconBlockSerialized(blockBytes),
+          },
+          error as Error
+        );
+        return blockFailureFromError(error, this.config, [signedBlockRoot]);
+      }
     );
   }
 
@@ -947,10 +968,19 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
       async () => {
         await verifyBlocks.call(this, [block], {...opts, skipVerifyExecutionPayload: true}, true);
       },
-      (error) =>
-        blockFailureFromError(error, this.config, [
+      (error) => {
+        this.logger.debug(
+          "Error processing block",
+          {
+            ...(error instanceof BlockError ? error.getMetadata() : {code: "UNEXPECTED_ERROR"}),
+            slot: block.data.message.slot,
+          },
+          error as Error
+        );
+        return blockFailureFromError(error, this.config, [
           computeSignedBlockRoot(this.config.getForkName(block.data.message.slot), block.data),
-        ])
+        ]);
+      }
     );
   }
 
@@ -962,6 +992,17 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
       () => verifyBlocksBytes.call(this, blocks, opts),
       (error) => {
         this.reportIrrecoverableError();
+        const firstBlock = blocks[0];
+        const lastBlock = blocks.at(-1);
+        this.logger.debug(
+          "Error processing block",
+          {
+            ...(error instanceof BlockError ? error.getMetadata() : {code: "UNEXPECTED_ERROR"}),
+            fromSlot: firstBlock ? getSlotFromSignedBeaconBlockSerialized(firstBlock.blockBytes) : null,
+            toSlot: lastBlock ? getSlotFromSignedBeaconBlockSerialized(lastBlock.blockBytes) : null,
+          },
+          error as Error
+        );
         return blockFailureFromError(
           error,
           this.config,
@@ -983,6 +1024,15 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
       () => verifyBlocks.call(this, blocks, opts),
       (error) => {
         this.reportIrrecoverableError();
+        this.logger.debug(
+          "Error processing block",
+          {
+            ...(error instanceof BlockError ? error.getMetadata() : {code: "UNEXPECTED_ERROR"}),
+            fromSlot: blocks[0]?.data.message.slot ?? null,
+            toSlot: blocks.at(-1)?.data.message.slot ?? null,
+          },
+          error as Error
+        );
         return blockFailureFromError(
           error,
           this.config,
@@ -1006,6 +1056,14 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
       () => verifyBlocksBytes.call(this, [{signedBlockRoot, blockBytes: cached.bytes}], opts),
       (error) => {
         this.reportIrrecoverableError();
+        this.logger.debug(
+          "Error processing block",
+          {
+            ...(error instanceof BlockError ? error.getMetadata() : {code: "UNEXPECTED_ERROR"}),
+            slot: cached.block.message.slot,
+          },
+          error as Error
+        );
         return blockFailureFromError(error, this.config, [signedBlockRoot]);
       }
     );
@@ -1029,10 +1087,19 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
   ): Promise<Result<ImportBlockResponse, BlockFailure>> {
     return wrapError(
       () => importBlock.call(this, verifiedBlock, dataAvailabilityStatus, opts),
-      (error) =>
-        blockFailureFromError(error, this.config, [
+      (error) => {
+        this.logger.debug(
+          "Error processing block",
+          {
+            ...(error instanceof BlockError ? error.getMetadata() : {code: "UNEXPECTED_ERROR"}),
+            slot: verifiedBlock.block.message.slot,
+          },
+          error as Error
+        );
+        return blockFailureFromError(error, this.config, [
           computeSignedBlockRoot(this.config.getForkName(verifiedBlock.block.message.slot), verifiedBlock.block),
-        ])
+        ]);
+      }
     );
   }
 
@@ -1049,7 +1116,17 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
       return await wrapError(
         () => importBlock.call(this, v, dataAvailabilityStatus, opts, this.blockSerializedCache),
         // TODO - beacon engine: return or pull fork-choice changes if import fails after inserting the block.
-        (error) => blockFailureFromError(error, this.config, [signedBlockRoot])
+        (error) => {
+          this.logger.debug(
+            "Error processing block",
+            {
+              ...(error instanceof BlockError ? error.getMetadata() : {code: "UNEXPECTED_ERROR"}),
+              slot: v.block.message.slot,
+            },
+            error as Error
+          );
+          return blockFailureFromError(error, this.config, [signedBlockRoot]);
+        }
       );
     } finally {
       this.verifiedBlocks.delete(signedBlockRootHex);
@@ -1064,7 +1141,17 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
   ): Promise<Result<ImportExecutionPayloadResult, PayloadFailure>> {
     return wrapError(
       () => importExecutionPayloadBytes.call(this, envelopeBytes, dataAvailabilityStatus, opts),
-      payloadFailureFromError
+      (error) => {
+        this.logger.debug(
+          "Error importing execution payload",
+          {
+            ...(error instanceof PayloadError ? error.type : {code: "UNEXPECTED_ERROR"}),
+            slot: getSlotFromExecutionPayloadEnvelopeSerialized(envelopeBytes),
+          },
+          error as Error
+        );
+        return payloadFailureFromError(error);
+      }
     );
   }
 
@@ -1079,7 +1166,17 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
   ): Promise<Result<ImportExecutionPayloadResult, PayloadFailure>> {
     return wrapError(
       () => importExecutionPayload.call(this, envelope, dataAvailabilityStatus, opts),
-      payloadFailureFromError
+      (error) => {
+        this.logger.debug(
+          "Error importing execution payload",
+          {
+            ...(error instanceof PayloadError ? error.type : {code: "UNEXPECTED_ERROR"}),
+            slot: envelope.data.message.payload.slotNumber,
+          },
+          error as Error
+        );
+        return payloadFailureFromError(error);
+      }
     );
   }
 
@@ -1188,6 +1285,7 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
       };
     } catch (e) {
       if (e instanceof NodeIsSyncing) {
+        this.logger.debug("Error producing block", {slot: request.slot, code: BeaconEngineErrorCode.NODE_SYNCING}, e);
         response = {
           ok: false,
           headUpdate: false,
@@ -1195,6 +1293,11 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
           payload: {message: e.message.replace(/^Node is syncing - /, "")},
         };
       } else if (e instanceof ApiError) {
+        this.logger.debug(
+          "Error producing block",
+          {slot: request.slot, code: BeaconEngineErrorCode.API_ERROR, status: e.statusCode},
+          e
+        );
         response = {
           ok: false,
           headUpdate: false,
@@ -1202,13 +1305,18 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
           payload: {status: e.statusCode, message: e.message},
         };
       } else {
+        const aborted = isErrorAborted(e) || isQueueErrorAborted(e);
+        if (!aborted) {
+          this.logger.error(
+            "Error producing block",
+            {slot: request.slot, code: BeaconEngineErrorCode.INTERNAL},
+            e as Error
+          );
+        }
         response = {
           ok: false,
           headUpdate: false,
-          code:
-            isErrorAborted(e) || isQueueErrorAborted(e)
-              ? BeaconEngineErrorCode.ABORTED
-              : BeaconEngineErrorCode.INTERNAL,
+          code: aborted ? BeaconEngineErrorCode.ABORTED : BeaconEngineErrorCode.INTERNAL,
           payload: {message: e instanceof Error ? e.message : String(e)},
         };
       }
@@ -1225,6 +1333,11 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
       response = {ok: true, data: await produceBlockV4.call(this, request), headUpdate: false};
     } catch (e) {
       if (e instanceof NodeIsSyncing) {
+        this.logger.debug(
+          "Error producing block V4",
+          {slot: request.slot, code: BeaconEngineErrorCode.NODE_SYNCING},
+          e
+        );
         response = {
           ok: false,
           headUpdate: false,
@@ -1232,6 +1345,11 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
           payload: {message: e.message.replace(/^Node is syncing - /, "")},
         };
       } else if (e instanceof ApiError) {
+        this.logger.debug(
+          "Error producing block V4",
+          {slot: request.slot, code: BeaconEngineErrorCode.API_ERROR, status: e.statusCode},
+          e
+        );
         response = {
           ok: false,
           headUpdate: false,
@@ -1239,13 +1357,18 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
           payload: {status: e.statusCode, message: e.message},
         };
       } else {
+        const aborted = isErrorAborted(e) || isQueueErrorAborted(e);
+        if (!aborted) {
+          this.logger.error(
+            "Error producing block V4",
+            {slot: request.slot, code: BeaconEngineErrorCode.INTERNAL},
+            e as Error
+          );
+        }
         response = {
           ok: false,
           headUpdate: false,
-          code:
-            isErrorAborted(e) || isQueueErrorAborted(e)
-              ? BeaconEngineErrorCode.ABORTED
-              : BeaconEngineErrorCode.INTERNAL,
+          code: aborted ? BeaconEngineErrorCode.ABORTED : BeaconEngineErrorCode.INTERNAL,
           payload: {message: e instanceof Error ? e.message : String(e)},
         };
       }
@@ -1327,12 +1450,24 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
       return await produceAttestationData.call(this, slot, committeeIndex, this.getHeadStateAtEpoch.bind(this));
     } catch (e) {
       if (e instanceof ApiError) {
+        this.logger.debug(
+          "Error producing attestation data",
+          {slot, committeeIndex, code: BeaconEngineErrorCode.API_ERROR, status: e.statusCode},
+          e
+        );
         return {ok: false, code: BeaconEngineErrorCode.API_ERROR, payload: {status: e.statusCode, message: e.message}};
+      }
+      const aborted = isErrorAborted(e) || isQueueErrorAborted(e);
+      if (!aborted) {
+        this.logger.error(
+          "Error producing attestation data",
+          {slot, committeeIndex, code: BeaconEngineErrorCode.INTERNAL},
+          e as Error
+        );
       }
       return {
         ok: false,
-        code:
-          isErrorAborted(e) || isQueueErrorAborted(e) ? BeaconEngineErrorCode.ABORTED : BeaconEngineErrorCode.INTERNAL,
+        code: aborted ? BeaconEngineErrorCode.ABORTED : BeaconEngineErrorCode.INTERNAL,
         payload: {message: e instanceof Error ? e.message : String(e)},
       };
     }

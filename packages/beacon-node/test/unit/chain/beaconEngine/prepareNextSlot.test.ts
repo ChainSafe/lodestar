@@ -166,7 +166,7 @@ describe("next-slot preparation head pull", () => {
   it.each([new Error("preparation failed"), new ErrorAborted("preparation cancelled")])(
     "refreshes the head before returning a preparation failure: %s",
     async (error) => {
-      const {engine, view, next, regen, coreEmit, order} = await setup();
+      const {engine, view, next, regen, coreEmit, order, logger} = await setup();
       regen.getBlockSlotState.mockRejectedValueOnce(error);
       const response = await engine.prepareForNextSlot(clockSlot, opts);
       expect(response).toEqual({
@@ -178,6 +178,15 @@ describe("next-slot preparation head pull", () => {
       expect(view.getHead()).toEqual(toChainViewBlock(next));
       expect(order).toEqual(["view", "head", "head_v2"]);
       expect(coreEmit).not.toHaveBeenCalled();
+      if (error instanceof ErrorAborted) {
+        expect(logger.error).not.toHaveBeenCalled();
+      } else {
+        expect(logger.error).toHaveBeenCalledExactlyOnceWith(
+          "Error preparing next slot",
+          {slot: clockSlot + 1, code: BeaconEngineErrorCode.INTERNAL},
+          error
+        );
+      }
     }
   );
 

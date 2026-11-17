@@ -41,7 +41,6 @@ import {rootHexRegex} from "../execution/engine/utils.js";
 import {CommitteeSubscription} from "../network/subnets/interface.js";
 import {IClock} from "../util/clock.js";
 import {SerializedCache} from "../util/serializedCache.js";
-import {deserializeError} from "../util/serializedError.js";
 import {Result} from "../util/wrapError.js";
 import type {BeaconEngineCore} from "./beaconEngine/beaconEngineCore.js";
 import {
@@ -79,7 +78,7 @@ import {
   SubmitBlindedBlockResponse,
   VerifyBlocksOpts,
 } from "./beaconEngine/interface.js";
-import {BlockFailure, SerializedBlockErrorType} from "./beaconEngine/processingResult.js";
+import {BlockFailure} from "./beaconEngine/processingResult.js";
 import {ProposerPreparationData} from "./beaconProposerCache.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/index.js";
 import {PayloadImportError} from "./blocks/importExecutionPayload.js";
@@ -92,7 +91,7 @@ import {ForkChoiceChainView} from "./chainView/forkChoiceChainView.js";
 import {ChainViewBlock, IChainView} from "./chainView/interface.js";
 import {ReplicateChainView} from "./chainView/replicateChainView.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
-import {BlockError, BlockErrorCode, BlockErrorType} from "./errors/blockError.js";
+import {BlockError} from "./errors/blockError.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
 import type {BlockImportData, IBeaconEngine} from "./interface.js";
 import {InsertOutcome} from "./opPools/types.js";
@@ -394,9 +393,7 @@ export class BeaconEngine implements IBeaconEngine {
             opts
           );
     if (res.err !== null) {
-      const error = new PayloadImportError(payloadInput, res.err.type, res.err.message);
-      error.stack = res.err.stack;
-      throw error;
+      throw new PayloadImportError(payloadInput, res.err.type, res.err.message);
     }
     const {block, executionOptimistic} = res.result;
     this.chainView.onChainViewUpdate?.({blocks: [fromChainViewBlockBytes(block)]});
@@ -1551,22 +1548,9 @@ function blockErrorFromFailure(
       blockRoot: failure.blockRoot,
     });
   }
-  const type = failure.type;
-  const error = new BlockError(input.getBlock(), deserializeBlockErrorType(type));
+  const error = new BlockError(input.getBlock(), failure.type);
   error.message = failure.message;
-  error.stack = failure.stack;
   return error;
-}
-
-function deserializeBlockErrorType(type: SerializedBlockErrorType): BlockErrorType {
-  switch (type.code) {
-    case BlockErrorCode.PRESTATE_MISSING:
-    case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
-    case BlockErrorCode.BEACON_CHAIN_ERROR:
-      return {...type, error: deserializeError(type.error)};
-    default:
-      return type;
-  }
 }
 
 function fromChainViewBlockBytes(block: ChainViewBlock<Root>): ChainViewBlock {

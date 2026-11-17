@@ -110,7 +110,7 @@ type ExecutionErrorStatus = Exclude<
 type ExecutionEngineErrorStatus = Exclude<ExecutionErrorStatus, ExecutionPayloadStatus.INVALID>;
 
 export type BlockErrorType =
-  | {code: BlockErrorCode.PRESTATE_MISSING; error: Error}
+  | {code: BlockErrorCode.PRESTATE_MISSING; errorMessage: string}
   | {code: BlockErrorCode.GOSSIP_BLOCK_NOT_CACHED}
   | {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN; parentRoot: RootHex}
   | {code: BlockErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
@@ -134,8 +134,8 @@ export type BlockErrorType =
   | {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS}
   | {code: BlockErrorCode.NON_LINEAR_SLOTS}
   | {code: BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH; envelopeBlockRoot: RootHex; blockRoot: RootHex}
-  | {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR; blockRoot: RootHex; error: Error}
-  | {code: BlockErrorCode.BEACON_CHAIN_ERROR; error: Error}
+  | {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR; blockRoot: RootHex; errorMessage: string}
+  | {code: BlockErrorCode.BEACON_CHAIN_ERROR; errorMessage: string}
   | {code: BlockErrorCode.KNOWN_BAD_BLOCK}
   | {code: BlockErrorCode.BLACKLISTED_BLOCK}
   | {code: BlockErrorCode.INCORRECT_TIMESTAMP; slot: Slot; root: RootHex; timestamp: number; expectedTimestamp: number}
@@ -198,14 +198,14 @@ export function renderBlockErrorType(type: BlockErrorType): Record<string, strin
     case BlockErrorCode.BEACON_CHAIN_ERROR:
       return {
         code: type.code,
-        error: type.error.message,
+        error: type.errorMessage,
       };
 
     case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
       return {
         code: type.code,
         blockRoot: type.blockRoot,
-        error: type.error.message,
+        error: type.errorMessage,
       };
 
     case BlockErrorCode.INVALID_SIGNATURE:

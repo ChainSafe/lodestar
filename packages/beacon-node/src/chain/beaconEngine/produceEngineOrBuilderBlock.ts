@@ -30,6 +30,7 @@ import {
   defer,
   formatWeiToEth,
   fromHex,
+  isErrorAborted,
   prettyGweiToEth,
   prettyWeiToEth,
   resolveOrRacePromises,
@@ -46,6 +47,7 @@ import {BuilderStatus, NoBidReceived} from "../../execution/builder/http.js";
 import {getBuilderBidTotalGwei, validateBuilderApiExecutionPayloadBid} from "../../execution/builder/validateBid.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
+import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {CommonBlockBody} from "../interface.js";
 import {PooledExecutionPayloadBid} from "../opPools/index.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas, ProduceResult} from "../produceBlock/index.js";
@@ -894,6 +896,22 @@ export async function produceBlockV4(
       : {}),
   };
 
+  if (
+    engineResult.status === "rejected" &&
+    !isErrorAborted(engineResult.reason) &&
+    !isQueueErrorAborted(engineResult.reason)
+  ) {
+    logger.warn("Error producing local block", logCtx, engineResult.reason as Error);
+  }
+  if (
+    bidBlockResult.status === "rejected" &&
+    !(bidBlockResult.reason instanceof Error && bidBlockResult.reason.message === NO_BID_AVAILABLE) &&
+    !isErrorAborted(bidBlockResult.reason) &&
+    !isQueueErrorAborted(bidBlockResult.reason)
+  ) {
+    logger.warn("Error producing builder bid block", logCtx, bidBlockResult.reason as Error);
+  }
+
   if (circuitBreakerActive && engineResult.status === "fulfilled") {
     source = ProducedBlockSource.engine;
     bestResult = engineResult;
@@ -978,11 +996,6 @@ export async function produceBlockV4(
   if (bestResult === null || bestResult.status !== "fulfilled") {
     const engineReason = engineResult.status === "rejected" ? engineResult.reason : engineResult.status;
     const bidReason = bidBlockResult.status === "rejected" ? bidBlockResult.reason : bidBlockResult.status;
-    logger.error("Block production failed", {
-      ...logCtx,
-      engineReason: String(engineReason),
-      bidReason: String(bidReason),
-    });
     throw Error(`Block production failed: engine=${String(engineReason)} builder=${String(bidReason)}`);
   }
 

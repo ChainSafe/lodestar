@@ -1,13 +1,13 @@
 import {describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {verifyBlocksStateTransitionOnly} from "../../../../src/chain/blocks/verifyBlocksStateTransitionOnly.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
+import {getMockedLogger} from "../../../mocks/loggerMock.js";
 
 describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
   // A block with an invalid deposit/attestation/operation makes preState.stateTransition() throw a
@@ -17,9 +17,11 @@ describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
   it("wraps a state-transition failure as PER_BLOCK_PROCESSING_ERROR with the block root", async () => {
     const block = ssz.deneb.SignedBeaconBlock.defaultValue();
     const blockRootHex = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message));
+    const error = new Error("invalid attestation");
+    const logger = getMockedLogger();
     const preState = {
       stateTransition: () => {
-        throw new Error("invalid attestation");
+        throw error;
       },
     } as unknown as IBeaconStateView;
 
@@ -29,7 +31,7 @@ describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
       [block],
       [DataAvailabilityStatus.Available],
       [ssz.deneb.SignedBeaconBlock.serialize(ssz.deneb.SignedBeaconBlock.defaultValue())],
-      testLogger(),
+      logger,
       null,
       null,
       new AbortController().signal,
@@ -41,10 +43,12 @@ describe("chain / blocks / verifyBlocksStateTransitionOnly", () => {
 
     expect(err).toBeInstanceOf(BlockError);
     const {type} = err as BlockError;
-    expect(type.code).toBe(BlockErrorCode.PER_BLOCK_PROCESSING_ERROR);
-    if (type.code === BlockErrorCode.PER_BLOCK_PROCESSING_ERROR) {
-      expect(type.blockRoot).toBe(blockRootHex);
-      expect(type.error.message).toBe("invalid attestation");
-    }
+    expect(type).toEqual({
+      code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR,
+      blockRoot: blockRootHex,
+      errorMessage: error.message,
+    });
+    expect(logger.debug).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
   });
 });

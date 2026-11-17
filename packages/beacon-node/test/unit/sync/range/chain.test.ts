@@ -765,7 +765,7 @@ describe("sync / range / chain", () => {
 
     it("does not report peers when teardown is caused by our own internal error", async () => {
       const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
-        throw new BlockError(blocks[0].getBlock(), {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: new Error("boom")});
+        throw new BlockError(blocks[0].getBlock(), {code: BlockErrorCode.BEACON_CHAIN_ERROR, errorMessage: "boom"});
       };
 
       const {reportPeerSpy, err} = await runToTeardown(RangeSyncType.Finalized, processChainSegment);

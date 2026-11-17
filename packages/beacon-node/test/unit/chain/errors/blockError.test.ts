@@ -8,7 +8,7 @@ describe("chain / errors / renderBlockErrorType", () => {
     const metadata = renderBlockErrorType({
       code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR,
       blockRoot: "0x1234",
-      error: new Error("invalid attestation"),
+      errorMessage: "invalid attestation",
     });
 
     expect(metadata).toEqual({

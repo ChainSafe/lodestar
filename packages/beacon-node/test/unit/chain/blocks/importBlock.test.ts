@@ -187,7 +187,7 @@ describe.each(engineModes)("BeaconChain serialized bytes lifecycle (beaconEngine
     await importing.catch((failure: BlockError) => {
       expect(failure.signedBlock).toBe(block);
       expect(failure.type).toEqual(error.type);
-      expect(failure.stack).toBe(error.stack);
+      expect(failure.stack).not.toBe(error.stack);
     });
     expect(chain.beaconEngine[importMethod]).toHaveBeenCalledExactlyOnceWith(
       beaconEngineMode === BeaconEngineMode.MainThread ? bundle : roots[0],

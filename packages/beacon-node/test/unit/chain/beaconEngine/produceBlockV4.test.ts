@@ -2,6 +2,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {ApiError} from "@lodestar/api/server";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {LogLevel} from "@lodestar/logger";
 import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
@@ -146,11 +147,23 @@ describe("BeaconEngineCore V4 production", () => {
       signedBid: ssz.gloas.SignedExecutionPayloadBid.defaultValue(),
       receivedMs: 0,
     });
-    modules.chain.produceBlockWrapper.mockRejectedValue(Error("failed"));
+    const error = new Error("failed");
+    const warn = vi.spyOn(modules.chain.beaconEngine.logger, LogLevel.warn);
+    modules.chain.produceBlockWrapper.mockRejectedValue(error);
     const result = await modules.chain.beaconEngine.produceBlockV4(attrs);
     expect(result.ok).toBe(false);
     if (result.ok) throw Error("expected failure");
     expect(result.code).toBe(BeaconEngineErrorCode.INTERNAL);
     expect(result.payload.message).toContain("Block production failed: engine=Error: failed builder=Error: failed");
+    expect(warn).toHaveBeenCalledWith(
+      "Error producing local block",
+      expect.objectContaining({slot: attrs.slot}),
+      error
+    );
+    expect(warn).toHaveBeenCalledWith(
+      "Error producing builder bid block",
+      expect.objectContaining({slot: attrs.slot}),
+      error
+    );
   });
 });

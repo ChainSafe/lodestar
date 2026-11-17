@@ -73,10 +73,11 @@ export async function verifyBlocksStateTransitionOnly(
         {metrics: metrics?.stateTransition, validatorMonitor}
       );
     } catch (e) {
+      const blockRoot = toRootHex(config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
       throw new BlockError(block, {
         code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR,
-        blockRoot: toRootHex(config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
-        error: e as Error,
+        blockRoot,
+        errorMessage: e instanceof Error ? e.message : String(e),
       });
     }
 

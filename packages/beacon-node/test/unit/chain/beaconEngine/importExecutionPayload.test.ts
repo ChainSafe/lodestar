@@ -1,6 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {LogLevel} from "@lodestar/logger";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus, createCachedBeaconState} from "@lodestar/state-transition";
@@ -13,7 +14,7 @@ import {
   PayloadEnvelopeInput,
   PayloadEnvelopeInputSource,
 } from "../../../../src/chain/blocks/payloadEnvelopeInput/index.js";
-import {PayloadErrorCode} from "../../../../src/chain/blocks/payloadError.js";
+import {PayloadError, PayloadErrorCode} from "../../../../src/chain/blocks/payloadError.js";
 import * as payloadVerification from "../../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
 import * as envelopeValidation from "../../../../src/chain/validation/executionPayloadEnvelope.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
@@ -96,6 +97,118 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
 
   afterEach(() => vi.restoreAllMocks());
 
+  describe.each(["importExecutionPayload", "importExecutionPayloadBytes"] as const)("%s error logging", (method) => {
+    it.each([
+      new Error("unexpected"),
+      new ErrorAborted("closed"),
+      new QueueError({code: QueueErrorCode.QUEUE_ABORTED}),
+      new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE}),
+      new PayloadError({code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "invalid envelope"}),
+      new PayloadError({
+        code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+        execStatus: ExecutionPayloadStatus.UNAVAILABLE,
+        errorMessage: QueueErrorCode.QUEUE_ABORTED,
+      }),
+    ])("logs %s at debug before converting the failure", async (error) => {
+      chain.forkChoice.getBlockHexDefaultStatus.mockImplementation(() => {
+        throw error;
+      });
+      const core = chain.beaconEngine;
+      const debug = vi.spyOn(core.logger, LogLevel.debug);
+      const errorLog = vi.spyOn(core.logger, LogLevel.error);
+      const result =
+        method === "importExecutionPayloadBytes"
+          ? BeaconEngineCore.prototype.importExecutionPayloadBytes.call(
+              core,
+              envelopeBytes,
+              DataAvailabilityStatus.Available,
+              {validSignature: true}
+            )
+          : BeaconEngineCore.prototype.importExecutionPayload.call(
+              core,
+              {data: envelope, bytes: envelopeBytes},
+              DataAvailabilityStatus.Available,
+              {validSignature: true}
+            );
+
+      if (error instanceof PayloadError) {
+        await expect(result).resolves.toMatchObject({err: {type: error.type}});
+      } else {
+        await expect(result).rejects.toBe(error);
+      }
+      expect(debug).toHaveBeenCalledExactlyOnceWith(
+        "Error importing execution payload",
+        {
+          ...(error instanceof PayloadError ? error.type : {code: "UNEXPECTED_ERROR"}),
+          slot: envelope.message.payload.slotNumber,
+        },
+        error
+      );
+      expect(errorLog).not.toHaveBeenCalled();
+    });
+  });
+
+  it.each(["importExecutionPayload", "importExecutionPayloadBytes"] as const)(
+    "%s logs the wrapped envelope verification error before returning its message",
+    async (method) => {
+      const error = new Error("invalid execution requests");
+      vi.mocked(payloadVerification.verifyExecutionPayloadEnvelope).mockImplementation(() => {
+        throw error;
+      });
+      const debug = vi.spyOn(chain.beaconEngine.logger, LogLevel.debug);
+      const errorLog = vi.spyOn(chain.beaconEngine.logger, LogLevel.error);
+      const result = await (method === "importExecutionPayloadBytes"
+        ? BeaconEngineCore.prototype.importExecutionPayloadBytes.call(
+            chain.beaconEngine,
+            envelopeBytes,
+            DataAvailabilityStatus.Available,
+            {validSignature: true}
+          )
+        : BeaconEngineCore.prototype.importExecutionPayload.call(
+            chain.beaconEngine,
+            {data: envelope, bytes: envelopeBytes},
+            DataAvailabilityStatus.Available,
+            {validSignature: true}
+          ));
+      expect(result.err).toMatchObject({
+        type: {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: error.message},
+      });
+      expect(result.err).not.toHaveProperty("stack");
+      expect(result.err).not.toHaveProperty("error");
+      expect(debug).toHaveBeenCalledExactlyOnceWith(
+        "Error importing execution payload",
+        {
+          code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
+          message: error.message,
+          slot: envelope.message.payload.slotNumber,
+        },
+        expect.any(PayloadError)
+      );
+      expect(errorLog).not.toHaveBeenCalled();
+    }
+  );
+
+  it("logs a malformed envelope once without returning its original exception", async () => {
+    const debug = vi.spyOn(chain.beaconEngine.logger, LogLevel.debug);
+    const errorLog = vi.spyOn(chain.beaconEngine.logger, LogLevel.error);
+    const result = await BeaconEngineCore.prototype.importExecutionPayloadBytes.call(
+      chain.beaconEngine,
+      new Uint8Array(),
+      DataAvailabilityStatus.Available,
+      {validSignature: true}
+    );
+    expect(result.err).toEqual({
+      type: {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: expect.any(String)},
+      message: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
+    });
+    expect(debug).toHaveBeenCalledExactlyOnceWith(
+      "Error importing execution payload",
+      {...result.err?.type, slot: null},
+      expect.any(PayloadError)
+    );
+    expect(errorLog).not.toHaveBeenCalled();
+  });
+
   it.each([
     [ExecutionPayloadStatus.INVALID, PayloadErrorCode.EXECUTION_ENGINE_INVALID],
     [ExecutionPayloadStatus.UNAVAILABLE, PayloadErrorCode.EXECUTION_ENGINE_ERROR],
@@ -115,6 +228,7 @@ describe("BeaconEngineCore importExecutionPayload FCU", () => {
     );
     expect(result).toMatchObject({err: {type: {code, execStatus: status, errorMessage: "EL failure"}, message: code}});
     expect(result.err).not.toBeInstanceOf(Error);
+    expect(result.err).not.toHaveProperty("stack");
     expect(putEnvelope).not.toHaveBeenCalled();
     expect(chain.forkChoice.onExecutionPayload).not.toHaveBeenCalled();
   });

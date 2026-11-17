@@ -452,6 +452,10 @@ describe("chain / blocks / processBlocks", () => {
       (e) => e
     );
     expect(err).toBeInstanceOf(BlockError);
-    expect((err as BlockError).type.code).toBe(BlockErrorCode.BEACON_CHAIN_ERROR);
+    expect((err as BlockError).type).toEqual({
+      code: BlockErrorCode.BEACON_CHAIN_ERROR,
+      errorMessage: internalError.message,
+    });
+    expect((err as BlockError).stack).toBe(internalError.stack);
   });
 });

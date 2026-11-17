@@ -841,7 +841,7 @@ describe("sync / range / batch", async () => {
         const batch = downloadedBatch();
         batch.startProcessing();
         batch.processingError(
-          blockError({code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR, blockRoot: "0x1234", error: new Error("bad op")})
+          blockError({code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR, blockRoot: "0x1234", errorMessage: "bad op"})
         );
 
         // a block that fails per_slot/per_block processing is the peer's bad data
@@ -853,7 +853,7 @@ describe("sync / range / batch", async () => {
       it("BEACON_CHAIN_ERROR (our internal fault) => failedProcessingAttempts, NOT peer attributable", () => {
         const batch = downloadedBatch();
         batch.startProcessing();
-        batch.processingError(blockError({code: BlockErrorCode.BEACON_CHAIN_ERROR, error: new Error("regen boom")}));
+        batch.processingError(blockError({code: BlockErrorCode.BEACON_CHAIN_ERROR, errorMessage: "regen boom"}));
 
         // still counts toward the processing retry budget, but blaming a peer for our own bug would
         // risk self-isolation, so it must not be peer-attributable

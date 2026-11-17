@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
-import {ErrorAborted, LodestarError, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, toRootHex} from "@lodestar/utils";
 import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {blockFailureFromError, payloadFailureFromError} from "../../../../src/chain/beaconEngine/processingResult.js";
 import {BlockInputPreData, BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
@@ -11,6 +11,7 @@ import {computeSignedBlockRoot} from "../../../../src/chain/blocks/signedBlockRo
 import {BlockError, BlockErrorCode, BlockErrorType} from "../../../../src/chain/errors/blockError.js";
 import type {IBeaconEngine} from "../../../../src/chain/interface.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
+import {QueueError, QueueErrorCode} from "../../../../src/util/queue/index.js";
 import {MockedBeaconChain, getMockedBeaconChain, withBeaconEngineFacade} from "../../../mocks/mockedBeaconChain.js";
 
 function createBlockInput(block: phase0.SignedBeaconBlock): BlockInputPreData {
@@ -33,16 +34,17 @@ describe("processing failure transport", () => {
   const roots = blocks.map((block) => ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
   const signedRoots = blocks.map((block) => computeSignedBlockRoot(ForkName.phase0, block));
   const inputs = blocks.map(createBlockInput);
-  const cause = new Error("database read failed");
-  const nested = new LodestarError({code: "REGEN_FAILED", slot: 2, root: roots[1], count: 4n});
-  nested.cause = cause;
   const types: BlockErrorType[] = [
     {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot: toRootHex(roots[0])},
     {code: BlockErrorCode.INVALID_SIGNATURE, stateSlot: 2},
     {code: BlockErrorCode.INVALID_STATE_ROOT, root: roots[0], expectedRoot: roots[1]},
-    {code: BlockErrorCode.PRESTATE_MISSING, error: nested},
-    {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR, blockRoot: toRootHex(roots[1]), error: nested},
-    {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: nested},
+    {code: BlockErrorCode.PRESTATE_MISSING, errorMessage: "pre-state unavailable"},
+    {
+      code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR,
+      blockRoot: toRootHex(roots[1]),
+      errorMessage: "invalid attestation",
+    },
+    {code: BlockErrorCode.BEACON_CHAIN_ERROR, errorMessage: "database read failed"},
     {
       code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
       execStatus: ExecutionPayloadStatus.INVALID,
@@ -70,6 +72,8 @@ describe("processing failure transport", () => {
       const failure = structuredClone(blockFailureFromError(original, config, signedRoots));
       expect(failure).toMatchObject({blockIndex: 1, blockRoot: inputs[1].blockRootHex, message: original.message});
       expect(failure).not.toHaveProperty("signedBlock");
+      expect(failure).not.toHaveProperty("stack");
+      expect(failure.type).not.toHaveProperty("error");
       vi.spyOn(
         chain.beaconEngine,
         beaconEngineMode !== BeaconEngineMode.MainThread ? "verifyBlocksBytes" : "verifyBlocks"
@@ -80,20 +84,8 @@ describe("processing failure transport", () => {
         expect(error).toBeInstanceOf(BlockError);
         expect(error.signedBlock).toBe(blocks[1]);
         expect(error.message).toBe(original.message);
-        expect(error.stack).toBe(original.stack);
-        expect(error.type).toMatchObject("error" in type ? {...type, error: expect.any(Error)} : type);
-        if ("error" in type && "error" in error.type && "error" in failure.type) {
-          expect(failure.type.error).not.toBeInstanceOf(Error);
-          expect(error.type.error).toBeInstanceOf(Error);
-          expect(error.type.error).toMatchObject({
-            name: nested.name,
-            type: nested.type,
-            message: nested.message,
-            stack: nested.stack,
-          });
-          expect(error.type.error.cause).toBeInstanceOf(Error);
-          expect(error.type.error.cause).toMatchObject({message: cause.message, stack: cause.stack});
-        }
+        expect(error.stack).not.toBe(original.stack);
+        expect(error.type).toEqual(type);
       });
     });
 
@@ -137,7 +129,11 @@ describe("processing failure transport", () => {
     });
   });
 
-  it.each([new Error("unexpected"), new ErrorAborted("shutdown")])("preserves unexpected exceptions: %s", (error) => {
+  it.each([
+    new Error("unexpected"),
+    new ErrorAborted("shutdown"),
+    new QueueError({code: QueueErrorCode.QUEUE_ABORTED}),
+  ])("preserves exceptions outside the failure contract: %s", (error) => {
     expect(() => blockFailureFromError(error, config, signedRoots)).toThrow(error);
     expect(() => payloadFailureFromError(error)).toThrow(error);
   });
@@ -148,7 +144,7 @@ describe("processing failure transport", () => {
       "Envelope verification error: bad envelope"
     );
     const failure = structuredClone(payloadFailureFromError(error));
-    expect(failure).toEqual({type: error.type, message: error.message, stack: error.stack});
+    expect(failure).toEqual({type: error.type, message: error.message});
     expect(failure).not.toBeInstanceOf(Error);
   });
 });

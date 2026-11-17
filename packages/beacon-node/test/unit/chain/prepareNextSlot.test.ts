@@ -129,7 +129,12 @@ describe("PrepareNextSlot scheduler", () => {
     ]);
     expect(chainStub.recomputeForkChoiceHeadSync).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
-    expect(loggerStub.error).toHaveBeenCalledTimes(1);
+    expect(loggerStub.error).not.toHaveBeenCalled();
+    expect(chainStub.logger.error).toHaveBeenCalledExactlyOnceWith(
+      "Error preparing next slot",
+      {slot: SLOTS_PER_EPOCH, code: BeaconEngineErrorCode.INTERNAL},
+      "Unit test error"
+    );
   });
 
   it("bellatrix - should skip, headSlot is more than 1 epoch to prepare slot", async () => {
@@ -264,7 +269,7 @@ describe("PrepareNextSlot scheduler", () => {
     ]);
 
     expect(spy).not.toHaveBeenCalled();
-    expect(loggerStub.error).toHaveBeenCalledOnce();
+    expect(loggerStub.error).not.toHaveBeenCalled();
   });
 
   it("gloas - should emit payload attributes with the forkchoice hashes sent to the execution layer", async () => {

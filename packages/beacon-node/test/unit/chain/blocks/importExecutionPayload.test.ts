@@ -62,7 +62,6 @@ describe("payload import error context", () => {
       payloadInput,
       type: error.type,
       message: error.message,
-      stack: error.stack,
     });
     expect("payloadInput" in error).toBe(false);
     const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
