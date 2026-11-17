@@ -45,7 +45,10 @@ export class HeadTracker {
     return blockRoot;
   }
 
-  /** Drops heads from before the previous epoch, their dependent roots cannot cover a proposal from `currentSlot` on */
+  /**
+   * Drops heads from before the previous epoch. An older head is only the parent of a proposal after a full
+   * epoch without blocks, the proposer duties fallback covers that.
+   */
   prune(currentSlot: Slot): number {
     const minSlot = computeStartSlotAtEpoch(Math.max(computeEpochAtSlot(currentSlot) - 1, 0));
     let removed = 0;
