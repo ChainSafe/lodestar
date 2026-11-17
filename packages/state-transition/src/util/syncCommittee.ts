@@ -1,18 +1,21 @@
 import {aggregateSerializedPublicKeys} from "@chainsafe/lodestar-z/blst";
+import {ChainConfig} from "@lodestar/config";
 import {
   BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,
   ForkSeq,
+  GENESIS_EPOCH,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
   SYNC_REWARD_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
-import {altair} from "@lodestar/types";
+import {Epoch, altair} from "@lodestar/types";
 import {bigIntSqrt} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks} from "../types.js";
 import {getNextSyncCommitteeIndices} from "./seed.js";
+import {getSlotDurationMsAtEpoch} from "./slot.js";
 
 /**
  * Return the sync committee for a given state and epoch.
@@ -45,11 +48,12 @@ export function getNextSyncCommittee(
 /**
  * Same logic in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#sync-committee-processing
  */
-export function computeSyncParticipantReward(totalActiveBalanceIncrements: number): number {
-  const totalActiveBalance = BigInt(totalActiveBalanceIncrements) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
-  const baseRewardPerIncrement = Math.floor(
-    (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR) / Number(bigIntSqrt(totalActiveBalance))
-  );
+export function computeSyncParticipantReward(
+  config: ChainConfig,
+  epoch: Epoch,
+  totalActiveBalanceIncrements: number
+): number {
+  const baseRewardPerIncrement = computeBaseRewardPerIncrement(config, epoch, totalActiveBalanceIncrements);
   const totalBaseRewards = baseRewardPerIncrement * totalActiveBalanceIncrements;
   const maxParticipantRewards = Math.floor(
     Math.floor((totalBaseRewards * SYNC_REWARD_WEIGHT) / WEIGHT_DENOMINATOR) / SLOTS_PER_EPOCH
@@ -61,9 +65,17 @@ export function computeSyncParticipantReward(totalActiveBalanceIncrements: numbe
  * Before we manage bigIntSqrt(totalActiveStake) as BigInt and return BigInt.
  * bigIntSqrt(totalActiveStake) should fit a number (2 ** 53 -1 max)
  **/
-export function computeBaseRewardPerIncrement(totalActiveStakeByIncrement: number): number {
+export function computeBaseRewardPerIncrement(
+  config: ChainConfig,
+  epoch: Epoch,
+  totalActiveStakeByIncrement: number
+): number {
+  // Divide last so the exact slot duration ratio applies
+  const numerator = Math.floor(
+    (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR * getSlotDurationMsAtEpoch(config, epoch)) /
+      getSlotDurationMsAtEpoch(config, GENESIS_EPOCH)
+  );
   return Math.floor(
-    (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR) /
-      Number(bigIntSqrt(BigInt(totalActiveStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT)))
+    numerator / Number(bigIntSqrt(BigInt(totalActiveStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT)))
   );
 }

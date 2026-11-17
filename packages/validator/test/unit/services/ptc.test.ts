@@ -195,7 +195,7 @@ describe("PtcService", () => {
   );
 
   it("Should redownload PTC duties when dependent root changes", async () => {
-    const slot = 0;
+    const slot = SLOTS_PER_EPOCH;
     const newDependentRoot = "0x1111111111111111111111111111111111111111111111111111111111111111";
     const clock = new ClockMock();
     const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 0});
@@ -224,7 +224,7 @@ describe("PtcService", () => {
       null
     );
 
-    await clock.tickEpochFns(0, controller.signal);
+    await clock.tickEpochFns(1, controller.signal);
     expect(ptcDutiesService.getDutiesAtSlot(slot)).toEqual([duty]);
 
     api.validator.getPtcDuties.mockResolvedValueOnce(
@@ -236,6 +236,54 @@ describe("PtcService", () => {
       head: newDependentRoot,
       previousDutyDependentRoot: newDependentRoot,
       currentDutyDependentRoot: ZERO_HASH_HEX,
+    });
+
+    expect(ptcDutiesService.getDutiesAtSlot(slot + 1)).toEqual([reorgedDuty]);
+  });
+
+  it("Should redownload PTC duties of the first Gloas epoch when the previous epoch is reorged", async () => {
+    const slot = SLOTS_PER_EPOCH;
+    const newDependentRoot = "0x1111111111111111111111111111111111111111111111111111111111111111";
+    const clock = new ClockMock();
+    const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 1});
+    const duty: routes.validator.PtcDuty = {
+      slot,
+      validatorIndex: 0,
+      pubkey: pubkeys[0],
+    };
+    const reorgedDuty: routes.validator.PtcDuty = {
+      ...duty,
+      slot: slot + 1,
+    };
+
+    api.validator.getPtcDuties.mockResolvedValue(
+      mockApiResponse({data: [duty], meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})
+    );
+
+    const ptcDutiesService = new PtcDutiesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null
+    );
+
+    await clock.tickEpochFns(1, controller.signal);
+    expect(ptcDutiesService.getDutiesAtSlot(slot)).toEqual([duty]);
+
+    // The last block of the previous epoch also decides the next epoch duties, both are redownloaded
+    api.validator.getPtcDuties.mockResolvedValue(
+      mockApiResponse({data: [reorgedDuty], meta: {dependentRoot: newDependentRoot, executionOptimistic: false}})
+    );
+
+    await ptcDutiesService["onNewHead"]({
+      slot,
+      head: newDependentRoot,
+      previousDutyDependentRoot: ZERO_HASH_HEX,
+      currentDutyDependentRoot: newDependentRoot,
     });
 
     expect(ptcDutiesService.getDutiesAtSlot(slot + 1)).toEqual([reorgedDuty]);

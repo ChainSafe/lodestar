@@ -4,8 +4,8 @@ import {config} from "@lodestar/config/default";
 import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {
-  CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
+  CachedBeaconStatePreHeze,
   ZERO_HASH,
   computeDomain,
   computeEpochAtSlot,
@@ -29,7 +29,7 @@ export type BlockAltairOpts = BlockOpts & {syncCommitteeBitsLen: number};
  * Generate a block that would pass stateTransition with a customizable count of operations
  */
 export function getBlockPhase0(
-  preState: CachedBeaconStateAllForks,
+  preState: CachedBeaconStatePreHeze,
   {proposerSlashingLen, attesterSlashingLen, attestationLen, depositsLen, voluntaryExitLen, bitsLen}: BlockOpts
 ): phase0.SignedBeaconBlock {
   const emptySig = Buffer.alloc(96);
@@ -199,7 +199,7 @@ export function getBlockAltair(preState: CachedBeaconStateAltair, opts: BlockAlt
  * Generate valid deposits with valid signatures and valid merkle proofs.
  * NOTE: Mutates `preState` to add the new `eth1Data.depositRoot`
  */
-function getDeposits(preState: CachedBeaconStateAllForks, count: number): phase0.Deposit[] {
+function getDeposits(preState: CachedBeaconStatePreHeze, count: number): phase0.Deposit[] {
   const depositRootViewDU = ssz.phase0.DepositDataRootList.toViewDU([]);
   const depositCount = Number(preState.eth1Data.depositCount);
   const withdrawalCredentials = Buffer.alloc(32, 0xee);

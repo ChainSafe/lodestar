@@ -45,6 +45,8 @@ export const config = createChainForkConfig({
   FULU_FORK_EPOCH,
   GLOAS_FORK_EPOCH,
   HEZE_FORK_EPOCH,
+  // keep the wall-clock retention window at epoch-count semantics across the heze fork
+  SLOT_DURATION_MS_HEZE: defaultChainConfig.SLOT_DURATION_MS,
 });
 export const clock = new Clock({
   config,

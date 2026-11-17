@@ -1,6 +1,6 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {routes} from "@lodestar/api";
-import {ForkSeq, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkSeq, NUMBER_OF_COLUMNS, isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
 import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
@@ -63,7 +63,7 @@ export type NetworkProcessorOpts = GossipHandlerOpts & {
 /**
  * Keep up to 3 slot of unknown roots, so we don't always emit to UnknownBlock sync.
  */
-const MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE = 3;
+export const MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE = 3;
 
 /**
  * Max distinct roots we BUFFER messages for, per slot. Kept tight to avoid the OOM
@@ -140,6 +140,7 @@ const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.payload_attestation_message]: {},
   [GossipType.execution_payload_bid]: {},
   [GossipType.proposer_preferences]: {},
+  [GossipType.inclusion_list]: {},
 };
 const executeGossipWorkOrder = Object.keys(executeGossipWorkOrderObj) as (keyof typeof executeGossipWorkOrderObj)[];
 
@@ -528,9 +529,9 @@ export class NetworkProcessor {
       const parentRoot = getParentRootFromSignedBeaconBlockSerialized(message.msg.data);
       if (parentRoot) {
         let search: SearchUnknownRootTarget | null = null;
-        if (ForkSeq[fork] >= ForkSeq.gloas) {
+        if (isForkPostGloas(fork)) {
           // GLOAS: also check parent envelope, same logic as execution_payload_bid
-          const parentBlockHash = getParentBlockHashFromGloasSignedBeaconBlockSerialized(message.msg.data);
+          const parentBlockHash = getParentBlockHashFromGloasSignedBeaconBlockSerialized(message.msg.data, fork);
           if (parentBlockHash && !this.chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash)) {
             const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
             if (protoBlock === null) {
@@ -665,6 +666,7 @@ export class NetworkProcessor {
    *
    * For DOS protection, the message is ignored (reject metric incremented) when any cap is hit:
    * - MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS: global awaiting-block message count
+   * - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE: message slot already pruned by onClockSlot, so not bounded by the per-slot root budget
    * - MAX_BUFFERED_ROOTS_PER_SLOT: distinct roots we buffer messages for, per slot
    * - MAX_AWAITING_MESSAGES_PER_ROOT[topic]: messages buffered per (root, topic)
    */
@@ -673,6 +675,10 @@ export class NetworkProcessor {
     // global message-count cap - cheapest check first
     if (this.awaitingBlockMessageCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_limit, topic: topicType});
+      return;
+    }
+    if (slot <= this.chain.clock.currentSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE) {
+      metric?.reject.inc({reason: ReprocessRejectReason.expired, topic: topicType});
       return;
     }
     // per-(root, topic) message cap: e.g. <= NUMBER_OF_COLUMNS columns per root
@@ -699,6 +705,10 @@ export class NetworkProcessor {
     const metric = this.metrics?.awaitingPayloadGossipMessages;
     if (this.awaitingPayloadMessageCount > MAX_QUEUED_UNKNOWN_PAYLOAD_GOSSIP_OBJECTS) {
       metric?.reject.inc({reason: ReprocessRejectReason.reached_limit, topic: topicType});
+      return;
+    }
+    if (slot <= this.chain.clock.currentSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE) {
+      metric?.reject.inc({reason: ReprocessRejectReason.expired, topic: topicType});
       return;
     }
     const perRootCap = MAX_AWAITING_MESSAGES_PER_ROOT[topicType];
@@ -857,19 +867,20 @@ export class NetworkProcessor {
     const nowSec = Date.now() / 1000;
     const minSlot = clockSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE;
 
-    for (const [slot, searchedRoots] of this.searchedRootsBySlot) {
+    for (const [slot, bufferedRoots] of this.bufferedRootsBySlot) {
       if (slot > minSlot) continue;
 
-      // expire messages awaiting an unknown block for these roots. Only roots this slot did a BLOCK search
-      // for (blockPeerIds set) have block waits keyed here; skipping the rest avoids deleting a payload wait
-      // that a newer slot created for the same root (block/envelope searches share searchedRootsBySlot).
-      for (const [rootHex, entry] of searchedRoots) {
-        if (entry.blockPeerIds === undefined) continue;
+      for (const rootHex of bufferedRoots) {
         const messagesByTopic = this.awaitingMessagesByBlockRoot.get(rootHex);
         if (messagesByTopic === undefined) continue;
-        let removed = 0;
+        let remaining = 0;
         for (const messages of messagesByTopic.values()) {
           for (const message of messages) {
+            // the same root may be buffered again from a newer slot, keep those messages.
+            // msgSlot is always set before buffering, a missing one expires rather than leaks
+            if ((message.msgSlot ?? minSlot) > minSlot) continue;
+            messages.delete(message);
+            this.awaitingBlockMessageCount--;
             const topicType = message.topic.type;
             this.metrics?.awaitingBlockGossipMessages.reject.inc({
               topic: topicType,
@@ -881,22 +892,22 @@ export class NetworkProcessor {
             );
             // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           }
-          removed += messages.size;
+          remaining += messages.size;
         }
-        if (this.awaitingMessagesByBlockRoot.delete(rootHex)) {
-          this.awaitingBlockMessageCount -= removed;
-        }
+        if (remaining === 0) this.awaitingMessagesByBlockRoot.delete(rootHex);
       }
 
-      // expire messages awaiting an unknown payload envelope for these roots. Symmetric to the block pass:
-      // only roots this slot did an ENVELOPE search for (envelopePeerIds set) have payload waits keyed here.
-      for (const [rootHex, entry] of searchedRoots) {
-        if (entry.envelopePeerIds === undefined) continue;
+      for (const rootHex of bufferedRoots) {
         const messagesByTopic = this.awaitingMessagesByPayloadBlockRoot.get(rootHex);
         if (messagesByTopic === undefined) continue;
-        let removed = 0;
+        let remaining = 0;
         for (const messages of messagesByTopic.values()) {
           for (const message of messages) {
+            // the same root may be buffered again from a newer slot, keep those messages.
+            // msgSlot is always set before buffering, a missing one expires rather than leaks
+            if ((message.msgSlot ?? minSlot) > minSlot) continue;
+            messages.delete(message);
+            this.awaitingPayloadMessageCount--;
             const topicType = message.topic.type;
             this.metrics?.awaitingPayloadGossipMessages.reject.inc({
               topic: topicType,
@@ -908,18 +919,16 @@ export class NetworkProcessor {
             );
             // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           }
-          removed += messages.size;
+          remaining += messages.size;
         }
-        if (this.awaitingMessagesByPayloadBlockRoot.delete(rootHex)) {
-          this.awaitingPayloadMessageCount -= removed;
-        }
+        if (remaining === 0) this.awaitingMessagesByPayloadBlockRoot.delete(rootHex);
       }
 
-      this.searchedRootsBySlot.delete(slot);
+      this.bufferedRootsBySlot.delete(slot);
     }
 
-    for (const slot of this.bufferedRootsBySlot.keys()) {
-      if (slot <= minSlot) this.bufferedRootsBySlot.delete(slot);
+    for (const slot of this.searchedRootsBySlot.keys()) {
+      if (slot <= minSlot) this.searchedRootsBySlot.delete(slot);
     }
 
     for (const [peer, slot] of this.fatalPeers) {

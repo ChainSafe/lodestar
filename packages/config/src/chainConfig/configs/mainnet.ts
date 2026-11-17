@@ -70,6 +70,8 @@ export const chainConfig: ChainConfig = {
   SECONDS_PER_SLOT: 12,
   // 12000 milliseconds, 12 seconds
   SLOT_DURATION_MS: 12000,
+  // 12000 milliseconds, 12 seconds
+  SLOT_DURATION_MS_HEZE: 12000,
   // 14 (estimate from Eth1 mainnet)
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs ~27 hours
@@ -196,6 +198,8 @@ export const chainConfig: ChainConfig = {
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000,
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096,
+  // 2**12 * 32 * 12,000 (= 1,572,864,000) milliseconds, ~18 days
+  MIN_BLOB_DATA_RETENTION_MS: 1572864000,
 
   // HEZE
   // 2**4 (= 16)

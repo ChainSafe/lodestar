@@ -1,4 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {gloas, ssz} from "@lodestar/types";
@@ -235,7 +236,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
   });
 
   it.each<[string, Partial<ExecutionPayloadBodyV2>]>([
-    ["transactions", {transactions: [Uint8Array.from([0xff])]}],
+    ["transactions", {transactions: SerializedList.fromArray([Uint8Array.from([0xff])])}],
     ["withdrawals", {withdrawals: [{index: 99, validatorIndex: 99, address: new Uint8Array(20), amount: 1n}]}],
     ["blockAccessList", {blockAccessList: Uint8Array.from([0xff])}],
   ])("ends the range (no throw) when the EL returns %s that don't match the archived root", async (_f, override) => {
@@ -249,7 +250,9 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
 
   it("reports a mismatch as a miss carrying BODY_ROOT_MISMATCH on the batch getter path", async () => {
     const full = await seed(10);
-    getPayloadBodiesByHashV2.mockResolvedValue([{...bodyOf(full), transactions: [Uint8Array.from([0xff])]}]);
+    getPayloadBodiesByHashV2.mockResolvedValue([
+      {...bodyOf(full), transactions: SerializedList.fromArray([Uint8Array.from([0xff])])},
+    ]);
     const [result] = await reconstructExecutionPayloadEnvelopes(executionEngine, null, [toSignedHeaderEnvelope(full)]);
     if (!isRebuildMiss(result) || result.reason !== "mismatch") throw Error("expected a mismatch miss");
     expect(result.slot).toBe(10);

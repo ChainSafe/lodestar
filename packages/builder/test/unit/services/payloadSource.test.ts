@@ -1,4 +1,5 @@
 import {type Mock, beforeEach, describe, expect, it, vi} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {ForkName, type ForkPostGloas} from "@lodestar/params";
 import {type ColumnIndex, type RootHex, ssz} from "@lodestar/types";
 import {ErrorAborted, TimeoutError, toRootHex} from "@lodestar/utils";
@@ -61,7 +62,7 @@ describe("EnginePayloadSource", () => {
 
   it("supports post-Gloas forks without narrowing the fork", async () => {
     const hezePayloadAttributes = ssz.heze.PayloadAttributes.defaultValue();
-    hezePayloadAttributes.inclusionListTransactions = [Uint8Array.from([1, 2, 3])];
+    hezePayloadAttributes.inclusionListTransactions = SerializedList.fromArray([Uint8Array.from([1, 2, 3])]);
     notifyForkchoiceUpdate.mockResolvedValue(payloadId);
     getPayload.mockResolvedValue({
       executionPayload: ssz.heze.ExecutionPayload.defaultValue(),

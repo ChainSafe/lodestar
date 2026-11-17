@@ -190,6 +190,21 @@ export class BidLedger {
     }
   }
 
+  /** Marks won bids before the given slot as settled, by then their payment is reflected in the builder balance. */
+  settlePaymentsBefore(slot: Slot): void {
+    for (const [bidSlot, bidsForSlot] of this.bidsBySlot) {
+      if (bidSlot >= slot) {
+        continue;
+      }
+
+      for (const record of bidsForSlot.values()) {
+        if (record.wonBlockRoots.size > 0) {
+          record.paymentSettled = true;
+        }
+      }
+    }
+  }
+
   getUnsettledValueGwei(currentEpoch: Epoch): number {
     let total = 0;
     for (const bidsForSlot of this.bidsBySlot.values()) {

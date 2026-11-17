@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {BUILDER_INDEX_SELF_BUILD, ForkPostGloas, isForkPostGloas} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkPostGloas, ForkPreGloas, isForkPostGloas} from "@lodestar/params";
 import {IClock} from "@lodestar/state-transition";
 import {
   BLSPubkey,
@@ -9,6 +9,7 @@ import {
   BlindedBeaconBlock,
   BlockContents,
   ProducedBlockSource,
+  SignedBeaconBlock,
   SignedBlindedBeaconBlock,
   SignedBlockContents,
   Slot,
@@ -148,7 +149,9 @@ export class BlockProposingService {
       const block = blockContentsWrapper.executionPayloadBlinded
         ? blockContentsWrapper.block
         : blockContentsWrapper.blockContents.block;
-      const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot, this.logger);
+      const signedBlock = (await this.validatorStore.signBlock(pubkey, block, slot, this.logger)) as
+        | SignedBeaconBlock<ForkPreGloas>
+        | SignedBlindedBeaconBlock;
 
       const {broadcastValidation} = this.opts;
       const publishOpts = {broadcastValidation};
@@ -296,7 +299,7 @@ export class BlockProposingService {
     (
       await this.api.beacon
         .publishBlockV2({
-          signedBlockContents: {signedBlock},
+          signedBlockContents: {signedBlock} as SignedBlockContents<ForkPostGloas>,
           broadcastValidation,
           // Echo the winning builder url so any beacon node can forward the block to the builder
           builderUrl: blockMeta.builderUrl,

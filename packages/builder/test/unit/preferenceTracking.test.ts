@@ -13,6 +13,7 @@ import {BuilderStatusTracker} from "../../src/services/builderStatusTracker.js";
 import {PayloadStore} from "../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
+import {biddingOptions, createBiddingModules, getPayloadSourceStub} from "./utils/bidding.js";
 import {ClockMock} from "./utils/clock.js";
 import {getMockedLogger} from "./utils/logger.js";
 
@@ -31,6 +32,7 @@ describe("Builder preference tracking", () => {
     const blockObserver = new BlockObserver(config, logger, api);
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
     const payloadStore = new PayloadStore();
+    const payloadSource = getPayloadSourceStub();
     const opts: BuilderOptions = {
       logger,
       config,
@@ -39,6 +41,9 @@ describe("Builder preference tracking", () => {
       api,
       executionFeeRecipient: Buffer.alloc(20),
       metrics: null,
+      payloadSource,
+      bidding: biddingOptions,
+      reveal: {},
     };
     const clockStart = vi.spyOn(clock, "start");
     const builder = new Builder({
@@ -50,12 +55,27 @@ describe("Builder preference tracking", () => {
       clock,
       index: 1,
       payloadStore,
+      ...createBiddingModules({
+        api,
+        config,
+        logger,
+        clock,
+        builderSigner,
+        proposerPreferencesTracker,
+        payloadStore,
+        payloadSource,
+        signal: controller.signal,
+      }),
     });
 
     expect(clockStart).toHaveBeenCalledWith(controller.signal);
     expect(api.events.eventstream).toHaveBeenCalledOnce();
     const [{onEvent, signal, topics}] = api.events.eventstream.mock.calls[0];
-    expect(topics).toEqual([routes.events.EventType.block, routes.events.EventType.proposerPreferences]);
+    expect(topics).toEqual([
+      routes.events.EventType.block,
+      routes.events.EventType.proposerPreferences,
+      routes.events.EventType.payloadAttributes,
+    ]);
     expect(signal).toBe(controller.signal);
     const signed = ssz.gloas.SignedProposerPreferences.defaultValue();
     signed.message.proposalSlot = 4;

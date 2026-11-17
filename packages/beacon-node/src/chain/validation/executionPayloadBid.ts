@@ -1,5 +1,5 @@
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
+import {PAYLOAD_BUILDER_VERSION, isForkPostHeze} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
@@ -9,7 +9,7 @@ import {
   isStartSlotOfEpoch,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
+import {RootHex, Slot, ValidatorIndex, gloas, heze} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
@@ -83,174 +83,6 @@ function isBidCompatibleWithHead(
   return buildsOnParentPayload;
 }
 
-/**
- * Validation for bids submitted via the API by the operator's own builder.
- *
- * Only non-transient checks are applied: slot later than parent, zero execution payment, blob
- * commitment count, builder eligibility, version and balance coverage, prev_randao, and signature.
- * Transient gossip rules (head compatibility, first bid per tuple, value increment, proposer
- * preferences) are not applied, since those only limit forwarding of peers' messages and the
- * builder may legitimately bid on a branch this node does not consider head.
- * The parent-payload builder-exit rule is omitted because this endpoint only accepts bids from
- * the operator's own builder.
- *
- * Throws on any failed check. Also throws if the bid's parent block is unknown or its state is
- * unavailable, since the checks cannot be evaluated against the parent branch.
- */
-export async function validateApiExecutionPayloadBid(
-  chain: IBeaconChain,
-  signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-): Promise<void> {
-  const bid = signedExecutionPayloadBid.message;
-  const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
-
-  // [REJECT] `bid.execution_payment` is zero.
-  if (bid.executionPayment !== 0n) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT,
-      builderIndex: bid.builderIndex,
-      executionPayment: bid.executionPayment,
-    });
-  }
-
-  // [REJECT] The bid's block hash is not equal to its parent block hash -- i.e.
-  // `bid.block_hash != bid.parent_block_hash`.
-  if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH,
-      blockHash: toRootHex(bid.blockHash),
-    });
-  }
-
-  // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in the
-  // consensus layer -- i.e. validate that
-  // `len(bid.blob_kzg_commitments) <= get_blob_parameters(compute_epoch_at_slot(bid.slot)).max_blobs_per_block`.
-  const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
-  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
-  if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.TOO_MANY_KZG_COMMITMENTS,
-      blobKzgCommitmentsLen,
-      commitmentLimit: maxBlobsPerBlock,
-    });
-  }
-
-  // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
-  if (
-    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot) &&
-    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot - 1)
-  ) {
-    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
-      builderIndex: bid.builderIndex,
-      slot: bid.slot,
-    });
-  }
-
-  // [IGNORE] `bid.parent_block_root` is the hash tree root of a known beacon block in fork choice.
-  // Moved earlier than the spec ordering so we can derive the proposer dependent root for the
-  // proposer-preferences lookup below from a known fork-choice block.
-  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(bidParentBlockRoot);
-  if (parentBlock === null) {
-    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
-      parentBlockRoot: bidParentBlockRoot,
-    });
-  }
-
-  // [REJECT] The bid is for a higher slot than its parent block -- i.e.
-  // validate that `bid.slot` is greater than the slot of the block with root
-  // `bid.parent_block_root`.
-  if (bid.slot <= parentBlock.slot) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.NOT_LATER_THAN_PARENT,
-      parentSlot: parentBlock.slot,
-      slot: bid.slot,
-    });
-  }
-
-  const state = await chain.regen
-    .getBlockSlotState(parentBlock, bid.slot, {dontTransferCache: true}, RegenCaller.validateApiExecutionPayloadBid)
-    .catch(() => {
-      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-        code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
-        parentBlockRoot: bidParentBlockRoot,
-      });
-    });
-
-  if (!isStatePostGloas(state)) {
-    throw new Error(`Expected gloas+ state for execution payload bid validation, got fork=${state.forkName}`);
-  }
-
-  // [REJECT] `bid.builder_index` is within bounds -- i.e. `bid.builder_index < len(state.builders)`.
-  // `state.getBuilder` returns a lazy SSZ `getReadonly` view that is not bounds-checked eagerly; an
-  // out-of-range index only throws (`LeafNode has no right node`) on deferred field access (e.g. inside
-  // `isActiveBuilder`), escaping a try/catch around `getBuilder`. Check the length explicitly instead.
-  if (bid.builderIndex >= state.getBuildersLength()) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,
-      builderIndex: bid.builderIndex,
-    });
-  }
-
-  // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
-  // `is_active_builder(state, bid.builder_index)` returns `True`.
-  const builder = state.getBuilder(bid.builderIndex);
-  if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,
-      builderIndex: bid.builderIndex,
-    });
-  }
-
-  // [REJECT] The builder version is `PAYLOAD_BUILDER_VERSION` -- i.e.
-  // `state.builders[bid.builder_index].version == PAYLOAD_BUILDER_VERSION`.
-  if (builder.version !== PAYLOAD_BUILDER_VERSION) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.INVALID_BUILDER_VERSION,
-      builderIndex: bid.builderIndex,
-      version: builder.version,
-      expectedVersion: PAYLOAD_BUILDER_VERSION,
-    });
-  }
-
-  // [IGNORE] `bid.value` is less or equal than the builder's excess balance --
-  // i.e. `can_builder_cover_bid(state, builder_index, amount)` returns `True`.
-  if (!state.canBuilderCoverBid(bid.builderIndex, bid.value)) {
-    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH,
-      bidValue: bid.value,
-      builderBalance: builder.balance,
-    });
-  }
-
-  // [REJECT] `bid.prev_randao` is the correct RANDAO mix -- i.e. validate that
-  // `bid.prev_randao == get_randao_mix(parent_state, get_current_epoch(parent_state))`.
-  const randaoMix = state.getRandaoMix(computeEpochAtSlot(state.slot));
-  if (!byteArrayEquals(bid.prevRandao, randaoMix)) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.INVALID_PREV_RANDAO,
-      builderIndex: bid.builderIndex,
-      bidPrevRandao: toHex(bid.prevRandao),
-      expectedPrevRandao: toHex(randaoMix),
-    });
-  }
-
-  // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
-  const signatureSet = createSingleSignatureSetFromComponents(
-    builder.pubkey,
-    getExecutionPayloadBidSigningRoot(chain.config, bid),
-    signedExecutionPayloadBid.signature
-  );
-  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE,
-      builderIndex: bid.builderIndex,
-      slot: bid.slot,
-    });
-  }
-}
-
 export async function validateGossipExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
@@ -309,6 +141,18 @@ async function validateExecutionPayloadBid(
     });
   }
 
+  // [IGNORE] The bid is received after the inclusion list deadline of `bid.slot - 1`
+  if (
+    isForkPostHeze(chain.config.getForkName(bid.slot)) &&
+    chain.clock.msFromSlot(bid.slot - 1) < chain.config.getInclusionListDueMs(chain.config.getForkName(bid.slot - 1))
+  ) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BEFORE_INCLUSION_LIST_DEADLINE,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+    });
+  }
+
   // [IGNORE] The bid is compatible with the current head branch.
   const head = chain.forkChoice.getHead();
   if (!isBidCompatibleWithHead(chain, head, bid.slot, bidParentBlockRoot, bidParentBlockHash)) {
@@ -355,6 +199,32 @@ async function validateExecutionPayloadBid(
       parentSlot: parentBlock.slot,
       slot: bid.slot,
     });
+  }
+
+  // [IGNORE] bid.inclusionListBits is inclusive of our timely inclusion lists for
+  // (bid.slot - 1, get_shuffling_dependent_root(store, bid.parent_block_root, epoch)).
+  if (isForkPostHeze(chain.config.getForkName(bid.slot))) {
+    const {inclusionListBits} = bid as heze.ExecutionPayloadBid;
+    const inclusionListSlot = bid.slot - 1;
+    const inclusionListDependentRoot = getShufflingDependentRoot(
+      chain.forkChoice,
+      computeEpochAtSlot(inclusionListSlot),
+      computeEpochAtSlot(parentBlock.slot),
+      parentBlock
+    );
+    if (
+      !chain.inclusionListStore.isInclusionListBitsInclusive(
+        inclusionListSlot,
+        inclusionListDependentRoot,
+        inclusionListBits
+      )
+    ) {
+      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+        code: ExecutionPayloadBidErrorCode.INCLUSION_LIST_BITS_NOT_INCLUSIVE,
+        builderIndex: bid.builderIndex,
+        slot: bid.slot,
+      });
+    }
   }
 
   // [IGNORE] A `SignedProposerPreferences` matching `bid.slot` and the bid's branch has been

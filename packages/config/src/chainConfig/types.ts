@@ -59,6 +59,7 @@ export type ChainConfig = {
   /** @deprecated Use `SLOT_DURATION_MS` instead. */
   SECONDS_PER_SLOT: number;
   SLOT_DURATION_MS: number;
+  SLOT_DURATION_MS_HEZE: number;
   SECONDS_PER_ETH1_BLOCK: number;
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: number;
   MIN_BUILDER_WITHDRAWABILITY_DELAY: number;
@@ -117,6 +118,7 @@ export type ChainConfig = {
   MAX_REQUEST_BLOCKS_DENEB: number;
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: number;
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: number;
+  MIN_BLOB_DATA_RETENTION_MS: number;
   BLOB_SIDECAR_SUBNET_COUNT: number;
   MAX_BLOBS_PER_BLOCK: number;
   MAX_REQUEST_BLOB_SIDECARS: number;
@@ -195,6 +197,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // Time parameters
   SECONDS_PER_SLOT: "number",
   SLOT_DURATION_MS: "number",
+  SLOT_DURATION_MS_HEZE: "number",
   SECONDS_PER_ETH1_BLOCK: "number",
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: "number",
   MIN_BUILDER_WITHDRAWABILITY_DELAY: "number",
@@ -253,6 +256,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   MAX_REQUEST_BLOCKS_DENEB: "number",
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: "number",
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: "number",
+  MIN_BLOB_DATA_RETENTION_MS: "number",
   BLOB_SIDECAR_SUBNET_COUNT: "number",
   DATA_COLUMN_SIDECAR_SUBNET_COUNT: "number",
   MAX_BLOBS_PER_BLOCK: "number",

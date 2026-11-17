@@ -150,8 +150,15 @@ describe("fromHex and fromHexInto", () => {
     "should reject hex string %s with invalid characters",
     (input) => {
       expect(() => fromHex(input)).toThrow();
+      const buffer = new Uint8Array(input.replace(/^0x/, "").length / 2);
+      expect(() => fromHexInto(input, buffer)).toThrow();
     }
   );
+
+  it("should reject hex string with a length not matching the buffer", () => {
+    expect(() => fromHexInto("0x0011", new Uint8Array(1))).toThrow();
+    expect(() => fromHexInto("0x0011", new Uint8Array(3))).toThrow();
+  });
 });
 
 describe("toHexString", () => {

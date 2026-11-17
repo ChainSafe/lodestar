@@ -50,9 +50,32 @@ describe("PrepareNextSlot scheduler", () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
     vi.clearAllTimers();
+    vi.useRealTimers();
   });
+
+  it.each([6000, 24000])(
+    "prepares at the current slot offset when the next duration is %i ms",
+    async (nextDuration) => {
+      const clockSlot = 2 * SLOTS_PER_EPOCH - 1;
+      // Anchor the fake clock to the start of clockSlot, else a wall time slot event from the real clock
+      // can trigger an extra prepareForNextSlot within the test window
+      vi.setSystemTime(clockSlot * config.SLOT_DURATION_MS);
+      getForkStub.mockImplementation((slot) => (slot <= clockSlot ? ForkName.phase0 : ForkName.altair));
+      vi.spyOn(config, "getSlotDurationMs").mockImplementation((fork) =>
+        fork === ForkName.phase0 ? 12000 : nextDuration
+      );
+      chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: 0});
+
+      const preparing = scheduler.prepareForNextSlot(clockSlot);
+      await vi.advanceTimersByTimeAsync(7999);
+      expect(chainStub.recomputeForkChoiceHead).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+      await preparing;
+    }
+  );
 
   it("pre bellatrix - should not run due to not last slot of epoch", async () => {
     getForkStub.mockReturnValue(ForkName.phase0);
