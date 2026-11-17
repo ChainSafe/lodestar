@@ -361,14 +361,14 @@ pub const PeerManager = struct {
                 gossipsub.graylistThreshold(),
             ),
         };
-        if (snapshot.ban_until_ms > now.millis() or snapshot.score <= peers.reputation.ban_score)
-            input.reject = .banned;
         if (snapshot.status) |status| {
             if (!std.mem.eql(u8, &status.fork_digest, &self.local.fork.digest))
                 input.reject = .incompatible_fork;
             if (self.local.fork.fork.gte(.fulu) and status.earliest_available_slot == null)
                 input.reject = .missing_availability;
         }
+        if (snapshot.ban_until_ms > now.millis() or snapshot.score <= peers.reputation.ban_score)
+            input.reject = .banned;
         const delivery = gossipsub.deliveryStatus(conn);
         if (delivery == .send_timeout and input.reject == null) input.reject = .gossip_send_timeout;
         if (delivery == .unavailable) {
