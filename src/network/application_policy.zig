@@ -117,7 +117,7 @@ const Plan = struct { items: u32, mib: u32, execution_items: u32, execution_byte
 const plan: [topics.kind_count]Plan = blk: {
     var result: [topics.kind_count]Plan = undefined;
     const entries = .{
-        .{ Kind.beacon_block, 8, 24, 1, 32 },
+        .{ Kind.beacon_block, 32, 24, 1, 32 },
         .{ Kind.beacon_aggregate_and_proof, 2048, 8, 8, 4 },
         .{ Kind.beacon_attestation, 128, 8, 32, 8 },
         .{ Kind.proposer_slashing, 32, 1, 1, 1 },
@@ -130,7 +130,7 @@ const plan: [topics.kind_count]Plan = blk: {
         .{ Kind.bls_to_execution_change, 128, 1, 1, 1 },
         .{ Kind.blob_sidecar, 256, 8, 4, 8 },
         .{ Kind.data_column_sidecar, 256, 16, 8, 24 },
-        .{ Kind.execution_payload, 8, 24, 1, 32 },
+        .{ Kind.execution_payload, 32, 24, 1, 32 },
         .{ Kind.payload_attestation_message, 1024, 2, 4, 1 },
         .{ Kind.execution_payload_bid, 128, 4, 2, 1 },
         .{ Kind.proposer_preferences, 128, 1, 1, 1 },

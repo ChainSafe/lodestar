@@ -19,7 +19,7 @@ const protobuf = @import("protobuf.zig");
 fn publicationLimits() !Gossipsub.Options {
     var limits: gossip_limits.Limits = @splat(.{ .items = 2, .bytes = 4096 });
     limits[@intFromEnum(topic_mod.Kind.beacon_block)] = .{ .items = 8, .bytes = 24 * 1024 * 1024 };
-    var options: Gossipsub.Options = .{ .random_seed = 1, .connected_capacity = 3, .retained_capacity = 9, .retained_outbound_reserve = 1 };
+    var options: Gossipsub.Options = .{ .random_seed = 1, .connected_capacity = 5, .retained_capacity = 11, .retained_outbound_reserve = 1 };
     try options.setPayloadLimits(&limits);
     return options;
 }
@@ -35,10 +35,10 @@ test "publication uses history capacity while remote block validation is full" {
     defer inbox.deinit();
     inbox.attach(&g);
     try support.subscribe(&g, test_topic);
-    for (0..2) |index| {
+    for (0..4) |index| {
         const peer = support.addPeer(&g, .{ .index = @intCast(index), .generation = 1 }, .v1_2).?;
-        for (0..4) |item| {
-            const body = [_]u8{@intCast(index * 4 + item)};
+        for (0..2) |item| {
+            const body = [_]u8{@intCast(index * 2 + item)};
             try std.testing.expectEqual(@as(?usize, 1), try support.message(&g, peer.index, &body, 1));
         }
     }

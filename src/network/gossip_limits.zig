@@ -50,8 +50,8 @@ pub fn newestFirst(kind: Kind) bool {
     };
 }
 
-pub fn sourceItems(limit: Limit) usize {
-    return @max(1, limit.items / 2);
+pub fn sourceItems(kind: Kind, limit: Limit) usize {
+    return if (kind == .beacon_block or kind == .execution_payload) 2 else @max(1, limit.items / 2);
 }
 
 pub fn sourceBytes(limit: Limit, maximum_message: usize, inline_bytes: usize) usize {
@@ -70,4 +70,7 @@ test "gossip limits reject invalid shares and aggregate bounds" {
     }
     const valid: Limits = @splat(.{ .items = 8, .bytes = 4096 });
     try validate(&valid);
+    try std.testing.expectEqual(@as(usize, 2), sourceItems(.beacon_block, .{ .items = 32, .bytes = 4096 }));
+    try std.testing.expectEqual(@as(usize, 2), sourceItems(.execution_payload, .{ .items = 32, .bytes = 4096 }));
+    try std.testing.expectEqual(@as(usize, 16), sourceItems(.blob_sidecar, .{ .items = 32, .bytes = 4096 }));
 }

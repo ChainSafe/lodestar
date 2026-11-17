@@ -41,7 +41,7 @@ pub const Admission = struct {
             const limit = limits[k];
             const maximum = validation.Validation.chargedBytes(self.maximum_compressed);
             const bytes = limits_mod.sourceBytes(limit, maximum, storage.inline_bytes);
-            if (pending.pending_per_peer_kind[source][k] >= limits_mod.sourceItems(limit) or
+            if (pending.pending_per_peer_kind[source][k] >= limits_mod.sourceItems(self.kind(), limit) or
                 validation.Validation.chargedBytes(self.compressed.len) > bytes -| pending.bytes_per_peer_kind[source][k])
                 return self.refuse(.peer_validations);
         } else if (pending.pending_per_peer[source] >= @max(1, pending.entries.len / 2)) return self.refuse(.peer_validations);

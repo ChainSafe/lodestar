@@ -351,7 +351,7 @@ pub fn sourceRoom(self: *const GossipProcessor, source: ?Source, kind: Kind, len
     const items = if (usage.generation == peer.generation) usage.items[k] else 0;
     const bytes = if (usage.generation == peer.generation) usage.bytes[k] else 0;
     const maximum = chargedBytes(@min(self.source_maximum[k], limits[k].bytes));
-    return items < limits_mod.sourceItems(limits[k]) and chargedBytes(len) <= limits_mod.sourceBytes(limits[k], maximum, storage.inline_bytes) -| bytes;
+    return items < limits_mod.sourceItems(kind, limits[k]) and chargedBytes(len) <= limits_mod.sourceBytes(limits[k], maximum, storage.inline_bytes) -| bytes;
 }
 fn transition(self: *GossipProcessor, index: u32, state: State) void {
     const cell = &self.cells[index];
