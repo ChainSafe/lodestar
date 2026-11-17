@@ -102,7 +102,8 @@ pub fn startLookup(self: *Transport, io: std.Io, lookup: *Lookup, now_ms: u64) (
     defer std.crypto.secureZero(u8, std.mem.asBytes(&entropy));
     const started = try lookup.startNext(&self.engine, &self.output, try Transport.requestId(io), now_ms, &entropy) orelse return .{};
     self.transmit(io, started.peer.address, self.output[0..started.call.packet_length]) catch |err| {
-        std.debug.assert(lookup.onFailure(&self.engine, started.call.handle));
+        const released = lookup.onFailure(&self.engine, started.call.handle);
+        std.debug.assert(released);
         return .{ .started = true, .failure = err };
     };
     return .{ .started = true };
@@ -114,7 +115,8 @@ pub fn startMaintenance(self: *Transport, io: std.Io, maintenance: *Maintenance,
     defer std.crypto.secureZero(u8, std.mem.asBytes(&entropy));
     const started = try maintenance.startNext(&self.engine, &self.output, try Transport.requestId(io), now_ms, &entropy) orelse return .{};
     self.transmit(io, started.peer.address, self.output[0..started.call.packet_length]) catch |err| {
-        std.debug.assert(maintenance.onFailure(&self.engine, started.call.handle, now_ms, .local));
+        const released = maintenance.onFailure(&self.engine, started.call.handle, now_ms, .local);
+        std.debug.assert(released);
         return .{ .started = true, .failure = err };
     };
     return .{ .started = true };

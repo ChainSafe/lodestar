@@ -650,17 +650,20 @@ pub const NetworkCore = struct {
             const handle = self.transport.dialPeer(io, attempt.address, attempt.peer, tick) catch |err| {
                 if (err == error.DestinationUnreachable) {
                     std.log.scoped(.network_core).debug("dial_failed peer={f} endpoint={any} reason={s}", .{ logging.peer(&attempt.peer), attempt.address, @errorName(err) });
-                    std.debug.assert(self.peer_manager.dialFailed(attempt.token, tick));
+                    const recorded = self.peer_manager.dialFailed(attempt.token, tick);
+                    std.debug.assert(recorded);
                     result.dial_failed += 1;
                 } else {
                     std.log.scoped(.network_core).debug("dial_deferred peer={f} endpoint={any} reason={s}", .{ logging.peer(&attempt.peer), attempt.address, @errorName(err) });
-                    std.debug.assert(self.peer_manager.dialDeferred(attempt.token, tick));
+                    const recorded = self.peer_manager.dialDeferred(attempt.token, tick);
+                    std.debug.assert(recorded);
                     result.dial_deferred += 1;
                     result.failure = result.failure orelse err;
                 }
                 if (err == error.Canceled) {
                     for (selected[index + 1 .. count]) |pending| {
-                        std.debug.assert(self.peer_manager.dialDeferred(pending.token, tick));
+                        const recorded = self.peer_manager.dialDeferred(pending.token, tick);
+                        std.debug.assert(recorded);
                         result.dial_deferred += 1;
                     }
                     result.cancelled = true;
@@ -668,7 +671,8 @@ pub const NetworkCore = struct {
                 }
                 continue;
             };
-            std.debug.assert(self.peer_manager.dialStarted(attempt.token, handle));
+            const recorded = self.peer_manager.dialStarted(attempt.token, handle);
+            std.debug.assert(recorded);
             std.log.scoped(.network_core).debug("dial_started peer={f} endpoint={any} connection={d}:{d}", .{ logging.peer(&attempt.peer), attempt.address, handle.index, handle.generation });
             result.dial_started += 1;
         }
