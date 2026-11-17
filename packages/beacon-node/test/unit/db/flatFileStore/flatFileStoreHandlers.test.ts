@@ -45,11 +45,7 @@ describe("FlatFileStore reqresp handler integration", () => {
 
   beforeEach(async () => {
     tmpDir = await mkdtemp(path.join(os.tmpdir(), "lodestar-handlers-"));
-    store = new FlatFileStore(
-      path.join(tmpDir, "data_columns"),
-      createChainForkConfig({...defaultConfig, FULU_FORK_EPOCH: 0}),
-      testLogger
-    );
+    store = new FlatFileStore(path.join(tmpDir, "data_columns"), defaultConfig, testLogger);
     await store.init();
   });
 

@@ -222,11 +222,9 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     return slot !== null ? this.get(slot) : null;
   }
 
-  async getBinaryEntryByRoot(root: Root): Promise<KeyValue<Slot, Uint8Array> | null> {
+  async getBinaryEntryByRoot(root: Root): Promise<KeyValue<Slot, Buffer> | null> {
     const slot = await this.getSlotByRoot(root);
-    if (slot === null) return null;
-    const value = await this.getBinary(slot);
-    return value === null ? null : {key: slot, value};
+    return slot !== null ? ({key: slot, value: await this.getBinary(slot)} as KeyValue<Slot, Buffer>) : null;
   }
 
   async getByParentRoot(root: Root): Promise<SignedBeaconBlock | null> {

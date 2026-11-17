@@ -245,7 +245,6 @@ export class SyncChain {
    * Permanently remove this chain. Throws the main AsyncIterable
    */
   remove(): void {
-    this.status = SyncChainStatus.Stopped;
     this.logger.debug("SyncChain remove", {id: this.logId});
     this.clearRateLimitBackoffTimer();
     this.batchProcessor.end(new ErrorAborted("SyncChain"));
@@ -601,7 +600,7 @@ export class SyncChain {
           // Peer rate-limited us — don't count as a failed download attempt and mark peer for backoff
           this.rateLimitedPeers.set(peer.peerId, rateLimitedUntilMs);
           this.scheduleRateLimitBackoffRetry();
-          batch.downloadingDeferred();
+          batch.downloadingRateLimited();
           this.triggerBatchDownloader();
         } else {
           batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS

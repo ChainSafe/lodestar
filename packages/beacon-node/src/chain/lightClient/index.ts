@@ -302,14 +302,16 @@ export class LightClientServer {
       );
     }
 
-    const currentSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.currentSyncCommitteeRoot);
+    const [currentSyncCommittee, nextSyncCommittee] = await Promise.all([
+      this.db.syncCommittee.get(syncCommitteeWitness.currentSyncCommitteeRoot),
+      this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot),
+    ]);
     if (!currentSyncCommittee) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
         "currentSyncCommittee not available"
       );
     }
-    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
     if (!nextSyncCommittee) {
       throw new LightClientServerError(
         {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
