@@ -300,6 +300,7 @@ export type ImportExecutionPayloadResult = {
 export interface IBeaconEngineCoreApi {
   // Lifecycle
   init(): Promise<void>;
+  /** Returned metadata is read-only and may share storage with the retained anchor state. */
   prepareAnchorState(stateBytes: Uint8Array): Promise<AnchorSummary>;
   persistAnchorState(): Promise<void>;
   initializeFromAnchor(): Promise<EngineBootstrapWithChainView>;
@@ -673,6 +674,7 @@ export interface IBeaconEngineCoreApi {
     returnBytes: boolean
   ): Promise<ApiStateResultWithFork<Uint8Array | gloas.BuilderPendingWithdrawals>>;
   getHeadProposerPubkey(slot: Slot): Promise<Uint8Array>;
+  /** Returned metadata is read-only; the bid may share storage with the head state. */
   getHeadParentPayload(): Promise<HeadParentPayload | undefined>;
   getActiveOrPendingValidators(indices: ValidatorIndex[]): Promise<Set<ValidatorIndex>>;
   getLatestWeakSubjectivityCheckpointEpoch(): Promise<Epoch>;

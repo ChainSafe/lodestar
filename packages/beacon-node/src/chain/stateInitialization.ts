@@ -11,7 +11,7 @@ export type StateInitialization = {
   isFinalized: boolean;
   shouldPersist: boolean;
   validate(anchor: AnchorSummary): void;
-  /** Source: unstable@2593063a82 CLI StateInitialization; consumes detached anchor metadata. */
+  /** Source: unstable@2593063a82 CLI StateInitialization; consumes read-only anchor metadata. */
   initializeEarliestAvailableSlot(anchor: AnchorSummary): Promise<Slot>;
   log(anchor: AnchorSummary, nativeStateTransition: boolean): void;
 };

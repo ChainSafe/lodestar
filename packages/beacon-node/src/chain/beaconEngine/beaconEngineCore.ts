@@ -611,7 +611,7 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
       this.anchorState = state;
       this.anchorStateBytes = stateBytes;
       this.startupPhase = "prepared";
-      return structuredClone(anchor);
+      return anchor;
     } catch (e) {
       this.startupPhase = "failed";
       throw e;
@@ -2371,15 +2371,14 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     if (byteArrayEquals(header.stateRoot, ssz.Root.defaultValue())) header.stateRoot = headState.hashTreeRoot();
     const headRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
     const headSlot = headState.latestBlockHeader.slot;
-    // TODO - beacon engine: remove all structuredClone
-    return structuredClone({
+    return {
       blockRoot: headRoot,
       blockRootHex: toRootHex(headRoot),
       slot: headSlot,
       proposerIndex: headState.latestBlockHeader.proposerIndex,
       forkName: this.config.getForkName(headSlot),
       bid: (headState as IBeaconStateViewGloas).latestExecutionPayloadBid,
-    });
+    };
   }
 
   /** Subset of `indices` that are active-or-pending at the current epoch (builder registration filter). */
@@ -2683,8 +2682,14 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
         this.logger.warn("Failed to scrape native state-transition metrics", {}, e as Error);
       }
     }
-    // Detach prom-client samples in main-thread mode too.
-    return {metrics: structuredClone(collectedMetrics), extra: extra.filter(Boolean).join("\n\n")};
+    // prom-client returns live sample objects that subsequent observations can mutate.
+    return {
+      metrics: collectedMetrics.map((metric) => ({
+        ...metric,
+        values: metric.values.map((sample) => ({...sample, labels: {...sample.labels}})),
+      })),
+      extra: extra.filter(Boolean).join("\n\n"),
+    };
   }
 
   // DB / archive / finalization

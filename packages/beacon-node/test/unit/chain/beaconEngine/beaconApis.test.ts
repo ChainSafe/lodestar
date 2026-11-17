@@ -73,7 +73,7 @@ describe("BeaconEngineCore API response serialization", () => {
   });
 
   it.each([false, true])(
-    "returns detached parent payload metadata with header state root set=%s",
+    "returns read-only parent payload metadata with header state root set=%s",
     async (hasStateRoot) => {
       view.cachedState.latestBlockHeader.slot = view.slot - 1;
       view.cachedState.latestBlockHeader.proposerIndex = 1;
@@ -93,9 +93,7 @@ describe("BeaconEngineCore API response serialization", () => {
         bid: view.latestExecutionPayloadBid,
       });
       if (!result) throw Error("Expected parent payload");
-      result.bid.blockHash.fill(9);
-      result.blockRoot.fill(9);
-      expect(view.latestExecutionPayloadBid.blockHash).toEqual(new Uint8Array(32));
+      expect(result.bid).toBe(view.latestExecutionPayloadBid);
       expect(view.latestBlockHeader.stateRoot).toEqual(new Uint8Array(32).fill(hasStateRoot ? 7 : 0));
       expect((await engine.getHeadParentPayload())?.blockRoot).toEqual(root);
     }

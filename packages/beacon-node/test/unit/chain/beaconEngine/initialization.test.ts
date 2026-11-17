@@ -23,7 +23,7 @@ import {ApiModules} from "../../../../src/api/impl/types.js";
 import {HistoricalStateRegen} from "../../../../src/chain/archiveStore/historicalState/historicalStateRegen.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEvent} from "../../../../src/chain/beaconEngine/events.js";
-import {AnchorSummary, EngineBootstrapWithChainView} from "../../../../src/chain/beaconEngine/initialization.js";
+import {EngineBootstrapWithChainView} from "../../../../src/chain/beaconEngine/initialization.js";
 import {BeaconEngineCoreModules} from "../../../../src/chain/beaconEngine/interface.js";
 import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {toChainViewBlock, toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/utils.js";
@@ -1399,6 +1399,32 @@ describe("bytes-based engine startup", () => {
     expect(metrics.register.getSingleMetric("beacon_head_slot")).toBeDefined();
   });
 
+  it("keeps scraped samples separate from subsequent observations and the live registry", async () => {
+    modules.metrics = createMetrics({enabled: true, port: 0}, 0, [], {collectNodeMetrics: false});
+    chain = await createBeaconChain(opts, modules);
+    const metrics = getBeaconEngineCore(chain.beaconEngine).metrics;
+    if (!metrics) throw Error("Expected engine metrics");
+    const gauge = metrics.register.gauge<{source: string}>({
+      name: "test_engine_snapshot",
+      help: "Test engine snapshot",
+      labelNames: ["source"],
+    });
+    gauge.set({source: "engine"}, 3);
+    const collected = await chain.beaconEngine.scrapeMetrics();
+    const sample = collected.metrics.find((metric) => metric.name === "test_engine_snapshot")?.values[0];
+    if (!sample) throw Error("Expected scraped sample");
+
+    gauge.inc({source: "engine"}, 2);
+    expect(sample).toEqual({value: 3, labels: {source: "engine"}});
+    sample.value = 100;
+    sample.labels.source = "changed";
+
+    const next = await chain.beaconEngine.scrapeMetrics();
+    expect(next.metrics.find((metric) => metric.name === "test_engine_snapshot")?.values).toEqual([
+      {value: 5, labels: {source: "engine"}},
+    ]);
+  });
+
   it("collects pending-state counts inside the engine", async () => {
     const electraConfig = getConfig(ForkName.electra);
     const state = ssz.electra.BeaconState.deserializeToViewDU(
@@ -1834,13 +1860,11 @@ describe("bytes-based engine startup", () => {
     await expect(engine?.persistAnchorState()).rejects.toMatchObject({type: {code: "BEACON_ENGINE_STARTUP_PHASE"}});
   });
 
-  it("keeps returned summary mutations separate from the retained state and skips persistence", async () => {
+  it("initializes from read-only anchor metadata without persisting", async () => {
     modules.stateInitialization = {
       shouldPersist: false,
-      validate(anchor: AnchorSummary) {
-        anchor.stateRoot.fill(42);
-        anchor.fork.currentVersion.fill(42);
-        anchor.checkpoint.root.fill(42);
+      validate(anchor) {
+        expect(anchor.stateRoot).toEqual(stateRoot);
       },
       log() {},
     };
