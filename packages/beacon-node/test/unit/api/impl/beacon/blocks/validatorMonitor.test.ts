@@ -1,11 +1,13 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
+import {createBeaconConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
-import {BlockInputPreData, BlockInputSource} from "../../../../../../src/chain/blocks/blockInput/index.js";
+import {BlockInputColumns, BlockInputSource} from "../../../../../../src/chain/blocks/blockInput/index.js";
 import {getApiTestModules} from "../../../../../utils/api.js";
 
 afterEach(() => vi.restoreAllMocks());
@@ -15,17 +17,20 @@ describe("block API monitor forwarding", () => {
     "records receipt before publishing, including when publication succeeds=%s",
     async (success) => {
       vi.spyOn(Date, "now").mockReturnValue(12_000);
-      const modules = getApiTestModules();
-      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-      const blockRoot = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+      const config = createBeaconConfig(getConfig(ForkName.fulu), new Uint8Array(32));
+      const modules = getApiTestModules({config});
+      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+      const blockRoot = toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message));
       modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(
-        BlockInputPreData.createFromBlock({
-          forkName: ForkName.phase0,
+        BlockInputColumns.createFromBlock({
+          forkName: ForkName.fulu,
           block,
           blockRootHex: blockRoot,
           source: BlockInputSource.api,
           seenTimestampSec: 12,
           daOutOfRange: false,
+          sampledColumns: [],
+          custodyColumns: [],
         })
       );
       const observed = vi.spyOn(modules.chain.beaconEngine, "registerApiBlock");
@@ -39,7 +44,7 @@ describe("block API monitor forwarding", () => {
         return 1;
       });
       const pending = getBeaconBlockApi(defaultApiOptions, modules).publishBlockV2({
-        signedBlockContents: {signedBlock: block},
+        signedBlockContents: {signedBlock: block, blobs: [], kzgProofs: []},
         broadcastValidation: routes.beacon.BroadcastValidation.gossip,
       });
       if (success) await expect(pending).resolves.toBeUndefined();

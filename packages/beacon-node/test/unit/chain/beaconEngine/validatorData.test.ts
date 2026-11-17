@@ -13,6 +13,7 @@ import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {RegenCaller} from "../../../../src/chain/regen/index.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../../mocks/clock.js";
+import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 const root = (n: number) => toRootHex(Buffer.alloc(32, n));
@@ -60,6 +61,7 @@ describe("BeaconEngine validator data", () => {
     );
     core = Object.assign(Object.create(BeaconEngineCore.prototype) as BeaconEngineCore, {
       config,
+      logger: getMockedLogger(),
       forkChoice,
       regen,
       syncCommitteeMessagePool: {getContribution},

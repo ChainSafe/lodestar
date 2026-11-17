@@ -415,6 +415,7 @@ describe("api/validator - produceBlockV3", () => {
       ZERO_HASH_HEX,
       ZERO_HASH_HEX,
       ZERO_HASH_HEX,
+      ZERO_HASH_HEX,
       {
         timestamp: computeTimeAtSlot(modules.config, state.slot, state.genesisTime),
         prevRandao: new Uint8Array(32),
@@ -439,6 +440,7 @@ describe("api/validator - produceBlockV3", () => {
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(
       ForkName.capella,
+      ZERO_HASH_HEX,
       ZERO_HASH_HEX,
       ZERO_HASH_HEX,
       ZERO_HASH_HEX,
