@@ -722,8 +722,9 @@ pub const Store = struct {
             }
         }
         if (held) |*stale| stale.deinit(self.allocator);
-        const ahead = self.unrealized_justified_checkpoint.epoch > self.justified_checkpoint.epoch;
-        std.debug.assert((self.unrealized_justified_balances != null) == ahead);
+        if (self.unrealized_justified_balances) |kept| {
+            std.debug.assert(checkpointEql(kept.checkpoint, self.unrealized_justified_checkpoint));
+        }
     }
 
     /// Spec `update_checkpoints` with the unrealized checkpoints, at an epoch start. Their
