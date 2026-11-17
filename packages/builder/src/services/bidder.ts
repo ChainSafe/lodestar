@@ -151,7 +151,6 @@ export class Bidder {
       const bid = createExecutionPayloadBid({
         slot,
         parentBlockRoot: data.parentBlockRoot,
-        parentPayloadRoot: data.parentPayloadRoot,
         prevRandao: data.payloadAttributes.prevRandao,
         builderIndex: this.modules.builderIndex,
         feeRecipient,

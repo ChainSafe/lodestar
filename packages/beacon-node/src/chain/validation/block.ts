@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ExecutionStatus, ParentPayloadDependency} from "@lodestar/fork-choice";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName, MIN_SEED_LOOKAHEAD, isForkPostBellatrix, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -8,10 +8,9 @@ import {
   getBlockProposerSignatureSet,
   isExecutionBlockBodyType,
   isStatePostBellatrix,
-  isStatePostGloas,
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock, ssz} from "@lodestar/types";
 import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
@@ -118,24 +117,15 @@ export async function validateGossipBlock(
     });
   }
 
-  // [IGNORE] If the parent block is full (the bid builds on the parent's payload, defined by
-  // bid.parent_payload_root), the parent payload has been seen (via gossip or non-gossip sources)
-  // (a client MAY queue blocks for processing once the parent payload is retrieved).
-  // A bid which builds on neither the parent's payload nor the payload the parent built on is rejected below.
-  // A pre-gloas parent or the anchor of a state upgraded to gloas has no payload to wait for, fork choice
-  // resolves the bid to the variant which carries the last pre-gloas payload.
-  // Fork choice decides between the two, the same way as for BlockInputSync and the network processor: the
-  // fields of `parentBlock` are not those of the parent if it is a placeholder, see `ProtoBlock.isPlaceholder`
+  // [IGNORE] The block's parent execution payload (defined by bid.parent_block_hash) has been seen
+  // (via gossip or non-gossip sources) (a client MAY queue blocks for processing once the parent payload is retrieved).
   if (isGloasBeaconBlock(block)) {
-    const parentPayloadRootHex = toRootHex(block.body.signedExecutionPayloadBid.message.parentPayloadRoot);
-    if (
-      chain.forkChoice.getParentPayloadDependency(parentRoot, parentPayloadRootHex) ===
-      ParentPayloadDependency.AwaitingPayload
-    ) {
+    const parentBlockHashHex = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
+    if (chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHashHex) === null) {
       throw new BlockGossipError(GossipAction.IGNORE, {
         code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
         parentRoot,
-        parentPayloadRoot: parentPayloadRootHex,
+        parentBlockHash: parentBlockHashHex,
       });
     }
   }
@@ -292,44 +282,6 @@ export async function validateGossipBlock(
       root: blockRoot,
       proposerIndex,
     });
-  }
-
-  // [REJECT] The bid builds on the parent's execution head. `state` is the parent's post-state, possibly
-  // advanced through empty slots, which do not change the fields read here.
-  if (isGloasBeaconBlock(block)) {
-    const bid = block.body.signedExecutionPayloadBid.message;
-    let buildsOnParentExecutionHead: boolean;
-    if (isStatePostGloas(state)) {
-      const parentBid = state.latestExecutionPayloadBid;
-      const isParentFull = byteArrayEquals(bid.parentPayloadRoot, parentBid.payloadRoot);
-      buildsOnParentExecutionHead = isParentFull
-        ? byteArrayEquals(bid.parentBlockHash, parentBid.blockHash)
-        : byteArrayEquals(bid.parentBlockHash, state.latestBlockHash) &&
-          byteArrayEquals(bid.parentPayloadRoot, state.latestPayloadRoot);
-    } else if (isStatePostBellatrix(state)) {
-      // A pre-gloas state is only possible for the first gloas block. The state upgraded to gloas builds on
-      // the payload of the parent, whose header the state holds. The root of a payload equals the root of its
-      // header. Not read from fork choice, the fields of `parentBlock` are not those of the parent if it is a
-      // placeholder
-      const parentPayloadHeader = state.latestExecutionPayloadHeader;
-      buildsOnParentExecutionHead =
-        byteArrayEquals(bid.parentBlockHash, parentPayloadHeader.blockHash) &&
-        byteArrayEquals(
-          bid.parentPayloadRoot,
-          sszTypesFor(state.forkName).ExecutionPayloadHeader.hashTreeRoot(parentPayloadHeader)
-        );
-    } else {
-      buildsOnParentExecutionHead = false;
-    }
-    if (!buildsOnParentExecutionHead) {
-      throw new BlockGossipError(GossipAction.REJECT, {
-        code: BlockErrorCode.BID_PARENT_PAYLOAD_MISMATCH,
-        slot: blockSlot,
-        root: blockRoot,
-        parentBlockHash: toRootHex(bid.parentBlockHash),
-        parentPayloadRoot: toRootHex(bid.parentPayloadRoot),
-      });
-    }
   }
 
   // Simple implementation of a pending block queue. Keeping the block here recycles the queue logic, and keeps the

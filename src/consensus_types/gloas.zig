@@ -283,7 +283,6 @@ pub const SignedProposerPreferences = ssz.FixedContainerType(struct {
 
 pub const ExecutionPayloadBid = ssz.VariableProgressiveContainerType(struct {
     parent_block_hash: p.Bytes32,
-    parent_payload_root: p.Root,
     parent_block_root: p.Root,
     block_hash: p.Bytes32,
     payload_root: p.Root,
@@ -296,7 +295,7 @@ pub const ExecutionPayloadBid = ssz.VariableProgressiveContainerType(struct {
     execution_payment: p.Uint64,
     blob_kzg_commitments: BlobKzgCommitments,
     execution_requests_root: p.Root,
-}, &@as([14]u1, @splat(1)));
+}, &@as([13]u1, @splat(1)));
 
 pub const SignedExecutionPayloadBid = ssz.VariableContainerType(struct {
     message: ExecutionPayloadBid,
@@ -401,8 +400,7 @@ pub const BeaconState = ssz.VariableProgressiveContainerType(struct {
     latest_execution_payload_bid: ExecutionPayloadBid, // New in GLOAS:EIP7732
     payload_expected_withdrawals: Withdrawals, // New in GLOAS:EIP7732
     ptc_window: PtcWindow, // New in GLOAS:EIP7732
-    latest_payload_root: p.Root, // New in GLOAS:EIP7732
-}, &@as([47]u1, @splat(1)));
+}, &@as([46]u1, @splat(1)));
 
 pub const BlobSidecar = electra.BlobSidecar;
 

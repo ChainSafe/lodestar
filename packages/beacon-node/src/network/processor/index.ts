@@ -1,6 +1,5 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {routes} from "@lodestar/api";
-import {ParentPayloadDependency} from "@lodestar/fork-choice";
 import {ForkSeq, NUMBER_OF_COLUMNS, isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
@@ -17,9 +16,9 @@ import {
   getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
   getDataIndexFromSignedAggregateAndProofSerialized,
   getDataIndexFromSingleAttestationSerialized,
+  getParentBlockHashFromGloasSignedBeaconBlockSerialized,
+  getParentBlockHashFromSignedExecutionPayloadBidSerialized,
   getParentBlockRootFromSignedExecutionPayloadBidSerialized,
-  getParentPayloadRootFromGloasSignedBeaconBlockSerialized,
-  getParentPayloadRootFromSignedExecutionPayloadBidSerialized,
   getParentRootFromSignedBeaconBlockSerialized,
   getPayloadPresentFromPayloadAttestationMessageSerialized,
 } from "../../util/sszBytes.js";
@@ -555,9 +554,18 @@ export class NetworkProcessor {
         let search: SearchUnknownRootTarget | null = null;
         if (isForkPostGloas(fork)) {
           // GLOAS: also check parent envelope, same logic as execution_payload_bid
-          const parentPayloadRoot = getParentPayloadRootFromGloasSignedBeaconBlockSerialized(message.msg.data, fork);
-          if (parentPayloadRoot) {
-            search = this.getParentPayloadSearch(parentRoot, parentPayloadRoot);
+          const parentBlockHash = getParentBlockHashFromGloasSignedBeaconBlockSerialized(message.msg.data, fork);
+          if (parentBlockHash && !this.chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash)) {
+            const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+            if (protoBlock === null) {
+              search = {target: SearchTarget.Block};
+            } else if (
+              protoBlock.executionPayloadBlockHash &&
+              protoBlock.executionPayloadBlockHash !== parentBlockHash
+            ) {
+              // only search for the envelope by block root if we're sure there is one. Otherwise UnknownBlockSync will penalize the peer.
+              search = {target: SearchTarget.PayloadEnvelope, slotIsPayloadSlot: false};
+            }
           }
         } else if (!this.chain.forkChoice.hasBlockHexUnsafe(parentRoot)) {
           search = {target: SearchTarget.Block};
@@ -637,16 +645,25 @@ export class NetworkProcessor {
           // Search for the parent independently of current head compatibility. A bid may arrive
           // before its parent block, so compatibility is checked later during gossip validation.
           const parentBlockRoot = getParentBlockRootFromSignedExecutionPayloadBidSerialized(message.msg.data);
-          const parentPayloadRoot = getParentPayloadRootFromSignedExecutionPayloadBidSerialized(message.msg.data);
-          if (parentBlockRoot && parentPayloadRoot) {
-            const search = this.getParentPayloadSearch(parentBlockRoot, parentPayloadRoot);
-            if (search !== null) {
-              this.searchUnknownRoot({slot, root: parentBlockRoot}, peerId, search);
-              preprocessResult = {
-                action:
-                  search.target === SearchTarget.Block ? PreprocessAction.AwaitBlock : PreprocessAction.AwaitEnvelope,
-                root: parentBlockRoot,
-              };
+          const parentBlockHash = getParentBlockHashFromSignedExecutionPayloadBidSerialized(message.msg.data);
+          if (
+            parentBlockRoot &&
+            parentBlockHash &&
+            !this.chain.forkChoice.getBlockHexAndBlockHash(parentBlockRoot, parentBlockHash)
+          ) {
+            const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentBlockRoot);
+            if (protoBlock === null) {
+              this.searchUnknownRoot({slot, root: parentBlockRoot}, peerId, {target: SearchTarget.Block});
+              preprocessResult = {action: PreprocessAction.AwaitBlock, root: parentBlockRoot};
+            } else if (
+              protoBlock.executionPayloadBlockHash &&
+              protoBlock.executionPayloadBlockHash !== parentBlockHash
+            ) {
+              this.searchUnknownRoot({slot, root: parentBlockRoot}, peerId, {
+                target: SearchTarget.PayloadEnvelope,
+                slotIsPayloadSlot: false,
+              });
+              preprocessResult = {action: PreprocessAction.AwaitEnvelope, root: parentBlockRoot};
             }
           }
           break;
@@ -710,26 +727,6 @@ export class NetworkProcessor {
     metric?.queue.inc({topic: topicType});
     this.awaitingMessagesByBlockRoot.getOrDefault(root).getOrDefault(topicType).add(message);
     this.awaitingBlockMessageCount++;
-  }
-
-  /**
-   * What to search for before a gloas block or bid that builds on the block `parentRoot` and the payload
-   * `parentPayloadRoot` can be processed, null if nothing.
-   *
-   * The envelope of the parent is only searched if fork choice says the payload can be the one of the parent,
-   * see `getParentPayloadDependency`. Otherwise no envelope of the parent matches and BlockInputSync would
-   * penalize the peer for it. Block gossip validation and BlockInputSync take the same verdict from fork choice.
-   */
-  private getParentPayloadSearch(parentRoot: RootHex, parentPayloadRoot: RootHex): SearchUnknownRootTarget | null {
-    switch (this.chain.forkChoice.getParentPayloadDependency(parentRoot, parentPayloadRoot)) {
-      case ParentPayloadDependency.UnknownBlock:
-        return {target: SearchTarget.Block};
-      case ParentPayloadDependency.AwaitingPayload:
-        return {target: SearchTarget.PayloadEnvelope, slotIsPayloadSlot: false};
-      case ParentPayloadDependency.Ready:
-      case ParentPayloadDependency.Invalid:
-        return null;
-    }
   }
 
   /**

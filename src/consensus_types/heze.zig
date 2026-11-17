@@ -149,7 +149,6 @@ pub const InclusionListsByIndicesRequest = ssz.FixedContainerType(struct {
 
 pub const ExecutionPayloadBid = ssz.VariableProgressiveContainerType(struct {
     parent_block_hash: p.Bytes32,
-    parent_payload_root: p.Root,
     parent_block_root: p.Root,
     block_hash: p.Bytes32,
     payload_root: p.Root,
@@ -163,7 +162,7 @@ pub const ExecutionPayloadBid = ssz.VariableProgressiveContainerType(struct {
     blob_kzg_commitments: BlobKzgCommitments,
     execution_requests_root: p.Root,
     inclusion_list_bits: InclusionListBits,
-}, &@as([15]u1, @splat(1)));
+}, &@as([14]u1, @splat(1)));
 
 pub const SignedExecutionPayloadBid = ssz.VariableContainerType(struct {
     message: ExecutionPayloadBid,
@@ -240,8 +239,7 @@ pub const BeaconState = ssz.VariableProgressiveContainerType(struct {
     latest_execution_payload_bid: ExecutionPayloadBid,
     payload_expected_withdrawals: Withdrawals,
     ptc_window: PtcWindow,
-    latest_payload_root: p.Root,
-}, &.{ 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 });
+}, &.{ 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 });
 
 test {
     _ = @import("heze_test.zig");

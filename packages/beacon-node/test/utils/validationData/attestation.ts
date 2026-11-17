@@ -81,14 +81,10 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     proposerIndex: 0,
 
     executionPayloadBlockHash: null,
-
-    executionPayloadRoot: null,
     executionStatus: ExecutionStatus.PreMerge,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
-    parentPayloadRoot: null,
-    payloadRoot: null,
     payloadStatus: 2, // PayloadStatus.FULL
   };
 

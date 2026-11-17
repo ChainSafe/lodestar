@@ -93,7 +93,6 @@ describe("validateGossipExecutionPayloadEnvelope", () => {
         blockRoot: blockRootHex,
         parentRoot: toRootHex(parentRoot),
         executionPayloadGasLimit: 0,
-        payloadRoot: toRootHex(bid.payloadRoot),
       })
     );
     // the FULL variant is not in fork choice, the payload is not imported yet
@@ -167,24 +166,6 @@ describe("validateGossipExecutionPayloadEnvelope", () => {
       })
     );
     await expect(promise).rejects.toHaveProperty("action", GossipAction.REJECT);
-  });
-
-  it("accepts the envelope of a block that fork choice only holds a placeholder for", async () => {
-    // After a start from an unfinalized state the ancestors of the anchor are placeholders: the slot is an upper
-    // bound and the parent root links to the next placeholder, they are not those of the block. The
-    // PayloadEnvelopeInput is reloaded from the block in the db and has the real ones
-    chain.forkChoice.getBlockDefaultStatus.mockReturnValue(
-      generateProtoBlock({
-        isPlaceholder: true,
-        slot: slot + 3,
-        blockRoot: blockRootHex,
-        parentRoot: toRootHex(Buffer.alloc(32, 0x99)),
-        executionPayloadGasLimit: 0,
-        payloadRoot: toRootHex(Buffer.alloc(32, 0xaa)),
-      })
-    );
-
-    await expect(validateGossipExecutionPayloadEnvelope(chain, envelope)).resolves.toBeUndefined();
   });
 
   it("rejects an envelope whose slot is not the slot of the block", async () => {

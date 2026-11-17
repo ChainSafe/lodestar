@@ -119,7 +119,6 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private cachedProposerLookahead: fulu.ProposerLookahead | null = null;
   // gloas
   private cachedLatestBlockHash: Bytes32 | null = null;
-  private cachedLatestPayloadRoot: Root | null = null;
   private cachedExecutionPayloadAvailability: BitArray | null = null;
   private cachedLatestExecutionPayloadBid: ExecutionPayloadBid | null = null;
   private cachedPayloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
@@ -914,13 +913,6 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this.cachedLatestBlockHash = this.binding.latestBlockHash;
     }
     return this.cachedLatestBlockHash;
-  }
-
-  get latestPayloadRoot(): Root {
-    if (this.cachedLatestPayloadRoot === null) {
-      this.cachedLatestPayloadRoot = this.binding.latestPayloadRoot;
-    }
-    return this.cachedLatestPayloadRoot;
   }
 
   get latestExecutionPayloadBid(): ExecutionPayloadBid {

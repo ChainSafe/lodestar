@@ -52,8 +52,6 @@ export function makeBlock(
     unrealizedFinalizedEpoch: 0,
     unrealizedFinalizedRoot: ZERO_ROOT,
     parentBlockHash: null,
-    parentPayloadRoot: null,
-    payloadRoot: null,
     payloadStatus: opts.payloadStatus ?? PayloadStatus.FULL,
     timeliness: false,
     importedTimely: false,
@@ -65,7 +63,6 @@ export function makeBlock(
     return {
       ...block,
       executionPayloadBlockHash: null,
-      executionPayloadRoot: null,
       executionStatus,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     };
@@ -74,7 +71,6 @@ export function makeBlock(
   return {
     ...block,
     executionPayloadBlockHash: blockRoot,
-    executionPayloadRoot: `${blockRoot}root`,
     executionPayloadNumber: 0,
     executionPayloadGasLimit: 0,
     executionStatus,

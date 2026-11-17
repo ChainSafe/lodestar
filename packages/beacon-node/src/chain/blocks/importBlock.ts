@@ -501,9 +501,9 @@ export async function importBlock(
     this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
 
     const parentBlockSummary = isGloasBeaconBlock(block.message)
-      ? this.forkChoice.getBlockHexAndPayloadRoot(
+      ? this.forkChoice.getBlockHexAndBlockHash(
           toRootHex(checkpointState.latestBlockHeader.parentRoot),
-          toRootHex(block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot)
+          toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
         )
       : this.forkChoice.getBlockDefaultStatus(checkpointState.latestBlockHeader.parentRoot);
 

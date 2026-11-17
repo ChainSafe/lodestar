@@ -271,7 +271,7 @@ async function importPayloadEnvelopesOfKnownBlocks(
     if (
       !payloadInput.hasPayloadEnvelope() ||
       !this.forkChoice.hasBlockHex(blockRootHex) ||
-      this.forkChoice.getBlockHexAndPayloadRoot(blockRootHex, payloadInput.getPayloadRootHex()) !== null
+      this.forkChoice.getBlockHexAndBlockHash(blockRootHex, payloadInput.getBlockHashHex()) !== null
     ) {
       continue;
     }

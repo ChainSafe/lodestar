@@ -175,10 +175,8 @@ export const zeroProtoBlock: ProtoBlock = {
   ptcTimeliness: false,
   proposerIndex: 0,
 
-  ...{executionPayloadBlockHash: null, executionPayloadRoot: null, executionStatus: ExecutionStatus.PreMerge},
+  ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
   dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   payloadStatus: PayloadStatus.FULL,
   parentBlockHash: null,
-  parentPayloadRoot: null,
-  payloadRoot: null,
 };

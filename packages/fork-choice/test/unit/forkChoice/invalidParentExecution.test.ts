@@ -29,11 +29,6 @@ function payloadHash(slot: Slot): RootHex {
   return toHex(Buffer.alloc(32, slot));
 }
 
-/** Never equal to a payload block hash, so that a lookup by root can not pass by matching a hash */
-function payloadRoot(slot: Slot): RootHex {
-  return toHex(Buffer.alloc(32, 0x80 + slot));
-}
-
 function checkpoint(): {epoch: number; root: Uint8Array} {
   return {epoch: 0, root: fromHexString(getBlockRoot(genesisSlot))};
 }
@@ -49,10 +44,7 @@ const state = {
 function setup(isGloas: boolean): {forkChoice: ForkChoice; protoArray: ProtoArray} {
   const genesisRoot = getBlockRoot(genesisSlot);
   const protoArray = ProtoArray.initialize(
-    toProtoBlock(genesisSlot, genesisRoot, false, {
-      executionPayloadBlockHash: payloadHash(genesisSlot),
-      executionPayloadRoot: payloadRoot(genesisSlot),
-    }),
+    toProtoBlock(genesisSlot, genesisRoot, false, {executionPayloadBlockHash: payloadHash(genesisSlot)}),
     genesisSlot
   );
   for (const [slot, parentRoot] of [
@@ -63,13 +55,7 @@ function setup(isGloas: boolean): {forkChoice: ForkChoice; protoArray: ProtoArra
       toProtoBlock(slot, parentRoot, isGloas, {
         executionStatus: ExecutionStatus.Syncing,
         executionPayloadBlockHash: payloadHash(isGloas ? slot - 1 : slot),
-        ...(isGloas
-          ? {
-              parentBlockHash: payloadHash(slot - 1),
-              parentPayloadRoot: payloadRoot(slot - 1),
-              payloadRoot: payloadRoot(slot),
-            }
-          : {executionPayloadRoot: payloadRoot(slot)}),
+        ...(isGloas ? {parentBlockHash: payloadHash(slot - 1)} : {}),
       }),
       slot,
       null
@@ -171,7 +157,6 @@ describe("ForkChoice / invalidated parent payload chain", () => {
     block.slot = childSlot;
     block.parentRoot = fromHexString(getBlockRoot(parentSlot));
     block.body.signedExecutionPayloadBid.message.parentBlockHash = fromHexString(payloadHash(parentSlot));
-    block.body.signedExecutionPayloadBid.message.parentPayloadRoot = fromHexString(payloadRoot(parentSlot));
 
     const protoBlock = forkChoice.onBlock(
       block,

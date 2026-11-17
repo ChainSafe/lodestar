@@ -437,7 +437,7 @@ export function getParentRootFromSignedBeaconBlockSerialized(data: Uint8Array): 
 }
 
 /**
- * Extract parentPayloadRoot from a GLOAS SignedBeaconBlock by navigating the SSZ offset pointer
+ * Extract parentBlockHash from a GLOAS SignedBeaconBlock by navigating the SSZ offset pointer
  * to the embedded SignedExecutionPayloadBid.
  *
  * Layout (bytes from start of SignedBeaconBlock):
@@ -454,7 +454,7 @@ export function getParentRootFromSignedBeaconBlockSerialized(data: Uint8Array): 
  * Heze body: randaoReveal(96) + graffiti(32) + proposerSlashings(4) + attesterSlashings(4) + attestations(4) + voluntaryExits(4) + syncAggregate(SyncAggregate.minSize) + blsToExecutionChanges(4) = 308 bytes (mainnet preset)
  *
  * The 4-byte pointer at byte 568 (= 184+384) for Gloas and 492 (= 184+308) for Heze (mainnet preset) gives the offset of SignedExecutionPayloadBid
- * within BeaconBlockBody. parentPayloadRoot is at that bid's byte 132 (after offset+sig+parentBlockHash).
+ * within BeaconBlockBody. parentBlockHash is at that bid's byte 100 (after offset+sig).
  */
 // BeaconBlock body starts after: msg_offset(4) + sig(96) + slot(8) + proposer_index(8) + parent_root(32) + state_root(32) + body_offset_ptr(4)
 const GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK =
@@ -462,11 +462,11 @@ const GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK =
 const GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY = 96 + 72 + 32 + 4 + 4 + 4 + 4 + 4 + SYNC_AGGREGATE_SIZE + 4; // = 384 at mainnet preset
 // Heze removes eth1Data (72 B) and the deposits offset (4 B) from the body fixed section
 const HEZE_SIGNED_BID_OFFSET_POINTER_IN_BODY = GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY - 72 - VARIABLE_FIELD_OFFSET; // = 308
-// Within SignedExecutionPayloadBid, parentPayloadRoot is at byte 132 (msg_offset:4 + sig:96 + parentBlockHash:32)
-const PARENT_PAYLOAD_ROOT_OFFSET_IN_SIGNED_BID = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + ROOT_SIZE; // = 132
+// Within SignedExecutionPayloadBid, parentBlockHash is at byte 100 (msg_offset:4 + sig:96)
+const PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE; // = 100
 
 // CAUTION: update offsets if BeaconBlockBody fixed fields change after Heze
-export function getParentPayloadRootFromGloasSignedBeaconBlockSerialized(
+export function getParentBlockHashFromGloasSignedBeaconBlockSerialized(
   data: Uint8Array,
   fork: ForkPostGloas
 ): RootHex | null {
@@ -483,14 +483,14 @@ export function getParentPayloadRootFromGloasSignedBeaconBlockSerialized(
       (data[bidOffsetPointer + 3] << 24)) >>>
     0;
 
-  const parentPayloadRootStart =
-    GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK + bidOffset + PARENT_PAYLOAD_ROOT_OFFSET_IN_SIGNED_BID;
+  const parentBlockHashStart =
+    GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK + bidOffset + PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID;
 
-  if (data.length < parentPayloadRootStart + ROOT_SIZE) {
+  if (data.length < parentBlockHashStart + ROOT_SIZE) {
     return null;
   }
 
-  blockRootBuf.set(data.subarray(parentPayloadRootStart, parentPayloadRootStart + ROOT_SIZE));
+  blockRootBuf.set(data.subarray(parentBlockHashStart, parentBlockHashStart + ROOT_SIZE));
   return `0x${blockRootBuf.toString("hex")}`;
 }
 
@@ -731,7 +731,6 @@ export function getBlockRootFromPayloadAttestationMessageSerialized(data: Uint8A
  *
  * ExecutionPayloadBid fixed fields (in order):
  *   parentBlockHash: Bytes32      (32 bytes)
- *   parentPayloadRoot: Root       (32 bytes)
  *   parentBlockRoot: Root         (32 bytes)
  *   blockHash: Bytes32            (32 bytes)
  *   payloadRoot: Root             (32 bytes)
@@ -739,13 +738,13 @@ export function getBlockRootFromPayloadAttestationMessageSerialized(data: Uint8A
  *   feeRecipient: ExecutionAddress(20 bytes)
  *   gasLimit: UintBn64            (8 bytes)
  *   builderIndex: BuilderIndex    (8 bytes)
- *   slot: Slot                    (8 bytes)  ← absolute offset 328
+ *   slot: Slot                    (8 bytes)  ← absolute offset 296
  */
-const SIGNED_EXECUTION_PAYLOAD_BID_PARENT_PAYLOAD_ROOT_OFFSET = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + ROOT_SIZE; // 132
+const SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE; // 100
 const SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_ROOT_OFFSET =
-  SIGNED_EXECUTION_PAYLOAD_BID_PARENT_PAYLOAD_ROOT_OFFSET + ROOT_SIZE; // 164
+  SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET + ROOT_SIZE; // 132
 const SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET =
-  VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + 32 + 32 + 32 + 32 + 32 + 32 + 20 + 8 + 8; // 328
+  VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + 32 + 32 + 32 + 32 + 32 + 20 + 8 + 8; // 296
 
 export function getSlotFromSignedExecutionPayloadBidSerialized(data: Uint8Array): Slot | null {
   if (data.length < SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET + SLOT_SIZE) {
@@ -754,14 +753,14 @@ export function getSlotFromSignedExecutionPayloadBidSerialized(data: Uint8Array)
   return getSlotFromOffset(data, SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET);
 }
 
-export function getParentPayloadRootFromSignedExecutionPayloadBidSerialized(data: Uint8Array): RootHex | null {
-  if (data.length < SIGNED_EXECUTION_PAYLOAD_BID_PARENT_PAYLOAD_ROOT_OFFSET + ROOT_SIZE) {
+export function getParentBlockHashFromSignedExecutionPayloadBidSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET + ROOT_SIZE) {
     return null;
   }
   blockRootBuf.set(
     data.subarray(
-      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_PAYLOAD_ROOT_OFFSET,
-      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_PAYLOAD_ROOT_OFFSET + ROOT_SIZE
+      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET,
+      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET + ROOT_SIZE
     )
   );
   return `0x${blockRootBuf.toString("hex")}`;

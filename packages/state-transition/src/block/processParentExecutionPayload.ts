@@ -20,7 +20,7 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
   const parentBid = state.latestExecutionPayloadBid;
   const requests = block.body.parentExecutionRequests;
 
-  const isParentBlockFull = byteArrayEquals(bid.parentPayloadRoot, parentBid.payloadRoot);
+  const isParentBlockFull = byteArrayEquals(bid.parentBlockHash, parentBid.blockHash);
   if (!isParentBlockFull) {
     // Parent was EMPTY -- no execution requests expected
     assertEmptyExecutionRequests(requests);
@@ -96,10 +96,9 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
     }
   }
 
-  // Update parent payload availability, latest block hash and latest payload root
+  // Update parent payload availability and latest block hash
   state.executionPayloadAvailability.set(parentSlot % SLOTS_PER_HISTORICAL_ROOT, true);
   state.latestBlockHash = parentBid.blockHash;
-  state.latestPayloadRoot = parentBid.payloadRoot;
 }
 
 /**

@@ -35,12 +35,10 @@ describe("ProtoArray", () => {
         ptcTimeliness: false,
         proposerIndex: 0,
 
-        ...{executionPayloadBlockHash: null, executionPayloadRoot: null, executionStatus: ExecutionStatus.PreMerge},
+        ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
         parentBlockHash: null,
-        parentPayloadRoot: null,
-        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
       },
       genesisSlot
@@ -69,12 +67,10 @@ describe("ProtoArray", () => {
         ptcTimeliness: false,
         proposerIndex: 0,
 
-        ...{executionPayloadBlockHash: null, executionPayloadRoot: null, executionStatus: ExecutionStatus.PreMerge},
+        ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
         parentBlockHash: null,
-        parentPayloadRoot: null,
-        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
       },
       genesisSlot + 1,
@@ -104,12 +100,10 @@ describe("ProtoArray", () => {
         ptcTimeliness: false,
         proposerIndex: 0,
 
-        ...{executionPayloadBlockHash: null, executionPayloadRoot: null, executionStatus: ExecutionStatus.PreMerge},
+        ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
         parentBlockHash: null,
-        parentPayloadRoot: null,
-        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
       },
       genesisSlot + 1,

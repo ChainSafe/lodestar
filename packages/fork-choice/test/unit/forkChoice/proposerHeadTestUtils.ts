@@ -47,11 +47,6 @@ export function getPayloadBlockHash(slot: Slot): RootHex {
   return `0xpayload${slot}`;
 }
 
-/** The root of the execution payload of a block, keyed off its slot. Never equal to a payload block hash. */
-export function getPayloadRoot(slot: Slot): RootHex {
-  return `0xpayloadroot${slot}`;
-}
-
 /**
  * isGloasBlock() keys off parentBlockHash being non-null, so `isGloas` decides whether the block
  * carries the three payload variants (PENDING/EMPTY/FULL) or just FULL.
@@ -62,7 +57,7 @@ export function toProtoBlock(
   isGloas: boolean,
   overrides: Partial<ProtoBlock> = {}
 ): ProtoBlock {
-  const block = {
+  return {
     slot,
     blockRoot: getBlockRoot(slot),
     parentRoot,
@@ -84,31 +79,18 @@ export function toProtoBlock(
     proposerIndex: 0,
 
     executionPayloadBlockHash: getPayloadBlockHash(slot),
-    executionPayloadRoot: getPayloadRoot(slot),
     executionPayloadNumber: slot,
     executionPayloadGasLimit: 30_000_000,
     executionStatus: ExecutionStatus.Valid,
     dataAvailabilityStatus: DataAvailabilityStatus.Available,
 
     parentBlockHash: isGloas ? getPayloadBlockHash(slot - 1) : null,
-    // By default a gloas block builds on the EMPTY variant of its parent, ie. both commit to the same
-    // parent payload root. Override `parentPayloadRoot` with the parent's `payloadRoot` to build on its
-    // FULL variant
-    parentPayloadRoot: isGloas ? getPayloadRoot(genesisSlot) : null,
-    payloadRoot: isGloas ? getPayloadRoot(slot) : null,
     payloadStatus: PayloadStatus.FULL,
 
     ...overrides,
     // ProtoBlock is a union over the execution fields; spreading Partial<ProtoBlock> loses the
     // narrowing even though every base object here is the post-merge shape
   } as ProtoBlock;
-
-  // Until its payload is imported a gloas block carries the root of the payload it builds on
-  if (isGloas && overrides.executionPayloadRoot === undefined && block.parentPayloadRoot !== null) {
-    block.executionPayloadRoot = block.parentPayloadRoot;
-  }
-
-  return block;
 }
 
 /** A state whose only slot committee is every validator, so equivocators always count */

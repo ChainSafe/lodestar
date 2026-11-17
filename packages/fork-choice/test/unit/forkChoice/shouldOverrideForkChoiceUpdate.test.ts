@@ -54,8 +54,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     unrealizedFinalizedRoot: genesisRoot,
 
     executionPayloadBlockHash: null,
-
-    executionPayloadRoot: null,
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
@@ -65,8 +63,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
-    parentPayloadRoot: null,
-    payloadRoot: null,
     payloadStatus: PayloadStatus.FULL,
   };
 
@@ -87,8 +83,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     unrealizedFinalizedRoot: genesisRoot,
 
     executionPayloadBlockHash: null,
-
-    executionPayloadRoot: null,
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
@@ -100,8 +94,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
-    parentPayloadRoot: null,
-    payloadRoot: null,
     payloadStatus: PayloadStatus.FULL,
   };
 
@@ -122,8 +114,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     unrealizedFinalizedRoot: genesisRoot,
 
     executionPayloadBlockHash: null,
-
-    executionPayloadRoot: null,
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
@@ -134,8 +124,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
-    parentPayloadRoot: null,
-    payloadRoot: null,
     payloadStatus: PayloadStatus.FULL,
   };
 

@@ -976,10 +976,8 @@ export function getValidatorApi(
 
       const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
       const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
-      // The root of the same payload. A pre-gloas parent is built on in full, by the root of its own payload
-      const bidParentPayloadRoot = isBuildingOnFull ? parentBlock.executionPayloadRoot : parentBlock.parentPayloadRoot;
-      // Post-gloas every proposal parent has an execution payload hash and root
-      if (bidParentBlockHash === null || bidParentPayloadRoot === null) {
+      // Post-gloas every proposal parent has an execution payload hash
+      if (bidParentBlockHash === null) {
         throw new ApiError(500, `Unknown parent block hash for proposal parent ${parentBlockRootHex}`);
       }
       const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot, parentBlock);
@@ -1008,7 +1006,7 @@ export function getValidatorApi(
       const builderBidExpected =
         builderConfig.builders.length > 0 ||
         (!circuitBreakerActive &&
-          chain.executionPayloadBidPool.getBestBid(slot, bidParentPayloadRoot, parentBlockRootHex) !== null);
+          chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
 
       // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
       // not delay the proposal when a builder bid block is available (and vice versa)
@@ -1039,7 +1037,7 @@ export function getValidatorApi(
 
         let p2pBid: PooledExecutionPayloadBid | null = circuitBreakerActive
           ? null
-          : chain.executionPayloadBidPool.getBestBid(slot, bidParentPayloadRoot, parentBlockRootHex);
+          : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
         // Discard p2p bids below the proposer's configured floor on the total payment.
         // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
         if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
@@ -1062,7 +1060,6 @@ export function getValidatorApi(
                   slot,
                   parentBlock,
                   parentBlockHash: bidParentBlockHash,
-                  parentPayloadRoot: bidParentPayloadRoot,
                   parentBlockRoot: parentBlockRootHex,
                   entry,
                   getParentExecutionRequests: () => {

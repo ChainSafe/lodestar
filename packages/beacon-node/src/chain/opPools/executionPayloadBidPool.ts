@@ -9,7 +9,7 @@ import {pruneBySlot} from "./utils.js";
 const SLOTS_RETAINED = 2;
 
 type BlockRootHex = string;
-type PayloadRootHex = string;
+type BlockHashHex = string;
 
 export type PooledExecutionPayloadBid = {
   signedBid: gloas.SignedExecutionPayloadBid;
@@ -18,27 +18,27 @@ export type PooledExecutionPayloadBid = {
 };
 
 /**
- * Store the best signed execution payload bid per slot / (parent block root, parent payload root).
+ * Store the best signed execution payload bid per slot / (parent block root, parent block hash).
  */
 export class ExecutionPayloadBidPool {
-  private readonly bidByParentPayloadRootByParentRootBySlot = new MapDef<
+  private readonly bidByParentHashByParentRootBySlot = new MapDef<
     Slot,
-    MapDef<BlockRootHex, Map<PayloadRootHex, PooledExecutionPayloadBid>>
-  >(() => new MapDef<BlockRootHex, Map<PayloadRootHex, PooledExecutionPayloadBid>>(() => new Map()));
+    MapDef<BlockRootHex, Map<BlockHashHex, PooledExecutionPayloadBid>>
+  >(() => new MapDef<BlockRootHex, Map<BlockHashHex, PooledExecutionPayloadBid>>(() => new Map()));
   private lowestPermissibleSlot = 0;
 
   get size(): number {
     let count = 0;
-    for (const byParentRoot of this.bidByParentPayloadRootByParentRootBySlot.values()) {
-      for (const byParentPayloadRoot of byParentRoot.values()) {
-        count += byParentPayloadRoot.size;
+    for (const byParentRoot of this.bidByParentHashByParentRootBySlot.values()) {
+      for (const byParentHash of byParentRoot.values()) {
+        count += byParentHash.size;
       }
     }
     return count;
   }
 
   add(bid: gloas.SignedExecutionPayloadBid, receivedMs: number): InsertOutcome {
-    const {slot, parentBlockRoot, parentPayloadRoot, value} = bid.message;
+    const {slot, parentBlockRoot, parentBlockHash, value} = bid.message;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
     if (slot < lowestPermissibleSlot) {
@@ -46,41 +46,39 @@ export class ExecutionPayloadBidPool {
     }
 
     const parentRootHex = toRootHex(parentBlockRoot);
-    const parentPayloadRootHex = toRootHex(parentPayloadRoot);
-    const bidByParentPayloadRoot = this.bidByParentPayloadRootByParentRootBySlot
-      .getOrDefault(slot)
-      .getOrDefault(parentRootHex);
-    const existing = bidByParentPayloadRoot.get(parentPayloadRootHex);
+    const parentHashHex = toRootHex(parentBlockHash);
+    const bidByParentHash = this.bidByParentHashByParentRootBySlot.getOrDefault(slot).getOrDefault(parentRootHex);
+    const existing = bidByParentHash.get(parentHashHex);
 
     if (existing) {
       const existingValue = existing.signedBid.message.value;
       const newValue = value;
       if (newValue > existingValue) {
-        bidByParentPayloadRoot.set(parentPayloadRootHex, {signedBid: bid, receivedMs});
+        bidByParentHash.set(parentHashHex, {signedBid: bid, receivedMs});
         return InsertOutcome.NewData;
       }
       return newValue === existingValue ? InsertOutcome.AlreadyKnown : InsertOutcome.NotBetterThan;
     }
 
-    bidByParentPayloadRoot.set(parentPayloadRootHex, {signedBid: bid, receivedMs});
+    bidByParentHash.set(parentHashHex, {signedBid: bid, receivedMs});
     return InsertOutcome.NewData;
   }
 
   /**
-   * Return the highest-value signed bid matching slot, parent payload root, and parent block root.
+   * Return the highest-value signed bid matching slot, parent block hash, and parent block root.
    * Used for gossip validation and block production.
    */
   getBestBid(
     slot: Slot,
-    parentPayloadRoot: PayloadRootHex | null,
+    parentBlockHash: BlockHashHex | null,
     parentBlockRoot: BlockRootHex
   ): PooledExecutionPayloadBid | null {
-    if (parentPayloadRoot === null) return null;
-    const bidByParentPayloadRoot = this.bidByParentPayloadRootByParentRootBySlot.get(slot)?.get(parentBlockRoot);
-    return bidByParentPayloadRoot?.get(parentPayloadRoot) ?? null;
+    if (parentBlockHash === null) return null;
+    const bidByParentHash = this.bidByParentHashByParentRootBySlot.get(slot)?.get(parentBlockRoot);
+    return bidByParentHash?.get(parentBlockHash) ?? null;
   }
 
   prune(clockSlot: Slot): void {
-    this.lowestPermissibleSlot = pruneBySlot(this.bidByParentPayloadRootByParentRootBySlot, clockSlot, SLOTS_RETAINED);
+    this.lowestPermissibleSlot = pruneBySlot(this.bidByParentHashByParentRootBySlot, clockSlot, SLOTS_RETAINED);
   }
 }

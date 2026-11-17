@@ -246,7 +246,7 @@ describe("sync / range / batches", () => {
       signedBlock.message.slot = slot;
       const type =
         code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
-          ? {code, parentRoot: "0x00", parentPayloadRoot: "0x00"}
+          ? {code, parentRoot: "0x00", parentBlockHash: "0x00"}
           : {code, parentRoot: "0x00"};
       return new BlockError(signedBlock, type);
     }
@@ -271,8 +271,8 @@ describe("sync / range / batches", () => {
       signedBlock.message.slot = startSlot + 1;
       const err = new BlockError(signedBlock, {
         code: BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS,
-        parentPayloadRoot: "0x00",
-        expectedPayloadRoot: "0x11",
+        parentBlockHash: "0x00",
+        expectedBlockHash: "0x11",
       });
       expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [startSlot - 3]))).toBe(
         ProcessingFaultKind.CurrentBatch

@@ -99,7 +99,7 @@ export enum DroppedItemReason {
   elInvalid = "el_invalid",
   /** a block failed our own checks (not correct w.r.t. our chain) */
   invalidBlock = "invalid_block",
-  /** a block declares a parent payload root that conflicts with the parent's actual payload (gloas) */
+  /** a block declares a parent payload hash that conflicts with the parent's actual payload (gloas) */
   invalidParentPayload = "invalid_parent_payload",
   /** a payload envelope failed gossip verification (ENVELOPE_VERIFICATION_ERROR) */
   invalidEnvelope = "invalid_envelope",

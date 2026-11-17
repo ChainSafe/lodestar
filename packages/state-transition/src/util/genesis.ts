@@ -11,7 +11,7 @@ import {
   MIN_SEED_LOOKAHEAD,
   UNSET_DEPOSIT_REQUESTS_START_INDEX,
 } from "@lodestar/params";
-import {Bytes32, Root, TimeSeconds, ValidatorIndex, electra, phase0, ssz} from "@lodestar/types";
+import {Bytes32, Root, TimeSeconds, ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {applyDeposit, processDeposit} from "../block/processDeposit.js";
 import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
@@ -366,29 +366,6 @@ export function initializeBeaconStateFromEth1(
     const stateGloas = state as CompositeViewDU<typeof ssz.gloas.BeaconState>;
     stateGloas.fork.previousVersion = config.GLOAS_FORK_VERSION;
     stateGloas.fork.currentVersion = config.GLOAS_FORK_VERSION;
-
-    // Same as the genesis of the spec tests: the state builds on the genesis payload, which the genesis
-    // block did not deliver. `latestPayloadRoot` is the root of that payload and the genesis bid commits
-    // to no payload of its own, so that the first block builds on the EMPTY genesis block. With both roots
-    // zeroed the first block would have to treat the genesis block as FULL, a payload which does not exist.
-    // A gloas state has no `latestExecutionPayloadHeader`, the header only describes the genesis payload
-    const genesisPayload = ssz.gloas.ExecutionPayload.defaultValue();
-    if (executionPayloadHeader !== undefined) {
-      // toValue() only reads committed data
-      executionPayloadHeader.commit();
-      const {
-        transactionsRoot: _transactionsRoot,
-        withdrawalsRoot: _withdrawalsRoot,
-        ...payloadFields
-      } = executionPayloadHeader.toValue() as electra.ExecutionPayloadHeader;
-      Object.assign(genesisPayload, payloadFields);
-    }
-    stateGloas.latestBlockHash = genesisPayload.blockHash;
-    stateGloas.latestPayloadRoot = ssz.gloas.ExecutionPayload.hashTreeRoot(genesisPayload);
-    stateGloas.latestExecutionPayloadBid.parentBlockHash = genesisPayload.blockHash;
-    stateGloas.latestExecutionPayloadBid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(
-      ssz.gloas.ExecutionRequests.defaultValue()
-    );
   }
 
   if (fork >= ForkSeq.heze) {

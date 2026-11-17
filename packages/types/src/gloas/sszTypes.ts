@@ -399,7 +399,6 @@ export const SignedProposerPreferences = new ContainerType(
 export const ExecutionPayloadBid = new ProgressiveContainerType(
   {
     parentBlockHash: Bytes32,
-    parentPayloadRoot: Root,
     parentBlockRoot: Root,
     blockHash: Bytes32,
     payloadRoot: Root,
@@ -424,7 +423,7 @@ export const ExecutionPayloadBid = new ProgressiveContainerType(
     blobKzgCommitments: BlobKzgCommitments,
     executionRequestsRoot: Root,
   },
-  activeFields(14),
+  activeFields(13),
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
 );
 
@@ -713,9 +712,8 @@ export const BeaconState = new ProgressiveContainerType(
     latestExecutionPayloadBid: ExecutionPayloadBid, // New in GLOAS:EIP7732
     payloadExpectedWithdrawals: Withdrawals, // New in GLOAS:EIP7732
     ptcWindow: PayloadTimelinessCommitteeWindow, // New in GLOAS:EIP7732
-    latestPayloadRoot: Root, // New in GLOAS:EIP7732
   },
-  activeFields(47),
+  activeFields(46),
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
@@ -757,7 +755,6 @@ export const SSEPayloadAttributes = new ContainerType(
     // parentBlockNumber: UintNum64, // Removed in GLOAS:EIP7732
     parentBlockRoot: Root,
     parentBlockHash: Root,
-    parentPayloadRoot: Root, // New in GLOAS
     safeBlockHash: Root, // New in GLOAS
     finalizedBlockHash: Root, // New in GLOAS
     payloadAttributes: PayloadAttributes,

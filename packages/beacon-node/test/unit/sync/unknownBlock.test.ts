@@ -3,13 +3,13 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
-import {CheckpointWithHex, IForkChoice, ParentPayloadDependency, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
-import {defer, fromHex, notNullish, sleep, toRootHex} from "@lodestar/utils";
+import {defer, notNullish, sleep, toRootHex} from "@lodestar/utils";
 import {BlockInputNoData, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../src/chain/blocks/importExecutionPayload.js";
@@ -45,10 +45,6 @@ import {PeerIdStr} from "../../../src/util/peerId.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {getRandPeerIdStr, getRandPeerSyncMeta} from "../../utils/peer.js";
-import {
-  generateGloasBlockOnParent,
-  initForkChoiceFromUnfinalizedGloasState,
-} from "../../utils/unfinalizedForkChoice.js";
 
 vi.mock("../../../src/chain/validation/executionPayloadEnvelope.js", () => ({
   validateGossipExecutionPayloadEnvelope: vi.fn().mockResolvedValue(undefined),
@@ -149,33 +145,33 @@ function getGloasBlockRoot(block: gloas.SignedBeaconBlock): Uint8Array {
   return ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
 }
 
-function getGloasPayloadRootHex(block: gloas.SignedBeaconBlock): string {
-  return toRootHex(block.message.body.signedExecutionPayloadBid.message.payloadRoot);
+function getGloasBlockHashHex(block: gloas.SignedBeaconBlock): string {
+  return toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash);
 }
 
 function buildIncompleteGloasBlockInput({
   parentRoot,
-  parentPayloadRoot,
+  parentBlockHash,
   slot,
 }: {
   parentRoot: Uint8Array;
-  parentPayloadRoot: Uint8Array;
+  parentBlockHash: Uint8Array;
   slot: number;
 }): {
   block: gloas.SignedBeaconBlock;
   blockRootHex: string;
-  parentPayloadRootHex: string;
+  parentBlockHashHex: string;
   parentRootHex: string;
   blockInput: IBlockInput<typeof ForkName.gloas, null>;
 } {
   const block = ssz.gloas.SignedBeaconBlock.defaultValue();
   block.message.slot = slot;
   block.message.parentRoot = parentRoot;
-  block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot = parentPayloadRoot;
+  block.message.body.signedExecutionPayloadBid.message.parentBlockHash = parentBlockHash;
 
   const blockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message));
   const parentRootHex = toRootHex(parentRoot);
-  const parentPayloadRootHex = toRootHex(parentPayloadRoot);
+  const parentBlockHashHex = toRootHex(parentBlockHash);
 
   let currentBlock: SignedBeaconBlock<typeof ForkName.gloas> | undefined;
   let timeCompleteSec = 0;
@@ -246,31 +242,7 @@ function buildIncompleteGloasBlockInput({
     },
   };
 
-  return {block, blockRootHex, parentPayloadRootHex, parentRootHex, blockInput};
-}
-
-/**
- * Gives the fork choice mock of `chain` a `getParentPayloadDependency` derived from its own lookups, the way
- * `ProtoArray.getParentPayloadDependency` derives it for a block whose bid fork choice knows.
- * The real one is covered with the real fork choice in test/unit/chain/forkChoice/forkChoice.test.ts
- */
-function mockParentPayloadDependency(chain: Partial<IBeaconChain>): void {
-  const forkChoice = chain.forkChoice as Partial<IForkChoice> | undefined;
-  if (forkChoice === undefined || forkChoice.getParentPayloadDependency !== undefined) {
-    return;
-  }
-  forkChoice.getParentPayloadDependency = (parentRoot, parentPayloadRoot) => {
-    const parentBlock = forkChoice.getBlockHexDefaultStatus?.(parentRoot) ?? null;
-    if (parentBlock === null) {
-      return ParentPayloadDependency.UnknownBlock;
-    }
-    if (forkChoice.getBlockHexAndPayloadRoot?.(parentRoot, parentPayloadRoot)) {
-      return ParentPayloadDependency.Ready;
-    }
-    return parentBlock.payloadRoot === parentPayloadRoot
-      ? ParentPayloadDependency.AwaitingPayload
-      : ParentPayloadDependency.Invalid;
-  };
+  return {block, blockRootHex, parentBlockHashHex, parentRootHex, blockInput};
 }
 
 describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
@@ -375,30 +347,20 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       const blockHashA = Buffer.alloc(32, 0xa1);
       const blockHashB = Buffer.alloc(32, 0xb2);
       const blockHashC = Buffer.alloc(32, 0xc3);
-      const payloadRoot0 = Buffer.alloc(32, 0x0d);
-      const payloadRootA = Buffer.alloc(32, 0xad);
-      const payloadRootB = Buffer.alloc(32, 0xbd);
-      const payloadRootC = Buffer.alloc(32, 0xcd);
       blockA.message.parentRoot = blockRoot0;
       blockA.message.body.signedExecutionPayloadBid.message.parentBlockRoot = blockRoot0;
       blockA.message.body.signedExecutionPayloadBid.message.parentBlockHash = blockHash0;
       blockA.message.body.signedExecutionPayloadBid.message.blockHash = blockHashA;
-      blockA.message.body.signedExecutionPayloadBid.message.parentPayloadRoot = payloadRoot0;
-      blockA.message.body.signedExecutionPayloadBid.message.payloadRoot = payloadRootA;
       const blockRootA = getGloasBlockRoot(blockA);
       blockB.message.parentRoot = blockRootA;
       blockB.message.body.signedExecutionPayloadBid.message.parentBlockRoot = blockRootA;
       blockB.message.body.signedExecutionPayloadBid.message.parentBlockHash = blockHashA;
       blockB.message.body.signedExecutionPayloadBid.message.blockHash = blockHashB;
-      blockB.message.body.signedExecutionPayloadBid.message.parentPayloadRoot = payloadRootA;
-      blockB.message.body.signedExecutionPayloadBid.message.payloadRoot = payloadRootB;
       const blockRootB = getGloasBlockRoot(blockB);
       blockC.message.parentRoot = blockRootB;
       blockC.message.body.signedExecutionPayloadBid.message.parentBlockRoot = blockRootB;
       blockC.message.body.signedExecutionPayloadBid.message.parentBlockHash = blockHashB;
       blockC.message.body.signedExecutionPayloadBid.message.blockHash = blockHashC;
-      blockC.message.body.signedExecutionPayloadBid.message.parentPayloadRoot = payloadRootB;
-      blockC.message.body.signedExecutionPayloadBid.message.payloadRoot = payloadRootC;
       const blockRootC = getGloasBlockRoot(blockC);
       const blockRootHex0 = toRootHex(blockRoot0);
       const blockRootHexA = toRootHex(blockRootA);
@@ -446,11 +408,10 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       };
 
       const forkChoiceKnownRoots = new Set([blockRootHex0]);
-      // every block's payload is imported together with the block, keyed by the bid's payload root
-      const forkChoiceKnownPayloadRoots = new Map([[blockRootHex0, toRootHex(payloadRoot0)]]);
+      const forkChoiceKnownPayloadHashes = new Map([[blockRootHex0, toRootHex(blockHash0)]]);
       const forkChoice: Pick<
         IForkChoice,
-        | "getBlockHexAndPayloadRoot"
+        | "getBlockHexAndBlockHash"
         | "getBlockHexDefaultStatus"
         | "getFinalizedBlock"
         | "hasBlock"
@@ -459,13 +420,10 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       > = {
         hasBlock: (root) => forkChoiceKnownRoots.has(toRootHex(root)),
         hasBlockHex: (rootHex) => forkChoiceKnownRoots.has(rootHex),
-        getBlockHexDefaultStatus: (rootHex) =>
-          forkChoiceKnownRoots.has(rootHex)
-            ? ({slot: 0, payloadRoot: forkChoiceKnownPayloadRoots.get(rootHex) ?? null} as ProtoBlock)
-            : null,
-        hasPayloadHexUnsafe: (rootHex) => forkChoiceKnownPayloadRoots.has(rootHex),
-        getBlockHexAndPayloadRoot: (rootHex, payloadRootHex) =>
-          forkChoiceKnownPayloadRoots.get(rootHex) === payloadRootHex ? ({slot: 0} as ProtoBlock) : null,
+        getBlockHexDefaultStatus: (rootHex) => (forkChoiceKnownRoots.has(rootHex) ? ({slot: 0} as ProtoBlock) : null),
+        hasPayloadHexUnsafe: (rootHex) => forkChoiceKnownPayloadHashes.has(rootHex),
+        getBlockHexAndBlockHash: (rootHex, blockHashHex) =>
+          forkChoiceKnownPayloadHashes.get(rootHex) === blockHashHex ? ({slot: 0} as ProtoBlock) : null,
         getFinalizedBlock: () =>
           ({
             slot: finalizedSlot,
@@ -494,14 +452,14 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
           const parentRootHex = toRootHex(block.message.parentRoot);
           if (!forkChoice.hasBlockHex(parentRootHex)) throw Error("Unknown parent");
 
-          const parentPayloadRoot = toRootHex(
-            (block as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message.parentPayloadRoot
+          const parentBlockHash = toRootHex(
+            (block as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message.parentBlockHash
           );
-          if (!forkChoice.getBlockHexAndPayloadRoot(parentRootHex, parentPayloadRoot)) {
+          if (!forkChoice.getBlockHexAndBlockHash(parentRootHex, parentBlockHash)) {
             throw new BlockError(block, {
               code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
               parentRoot: parentRootHex,
-              parentPayloadRoot,
+              parentBlockHash,
             });
           }
 
@@ -513,7 +471,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
           // Simulate adding the block to the forkchoice
           const blockRootHex = toRootHex(getGloasBlockRoot(block as gloas.SignedBeaconBlock));
           forkChoiceKnownRoots.add(blockRootHex);
-          forkChoiceKnownPayloadRoots.set(blockRootHex, getGloasPayloadRootHex(block as gloas.SignedBeaconBlock));
+          forkChoiceKnownPayloadHashes.set(blockRootHex, getGloasBlockHashHex(block as gloas.SignedBeaconBlock));
           if (blockRootHex === blockRootHexC) blockCResolver();
           if (blockRootHex === blockRootHexA) blockAResolver();
         },
@@ -548,7 +506,6 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
 
       const setTimeoutSpy = vi.spyOn(global, "setTimeout");
       const processBlockSpy = vi.spyOn(chain, "processBlock");
-      mockParentPayloadDependency(chain);
       const syncService = new BlockInputSync(config, network as INetwork, chain as IBeaconChain, logger, null, {
         ...defaultSyncOptions,
         maxPendingBlocks,
@@ -911,7 +868,6 @@ describe("UnknownBlockSync", () => {
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
       } as unknown as IBeaconChain;
 
-      mockParentPayloadDependency(chainForTest);
       const svc = new BlockInputSync(minimalConfig, networkForTest, chainForTest, logger, null, defaultSyncOptions);
       svc.subscribeToNetwork();
       networkEvents.emit(NetworkEvent.peerConnected, {
@@ -1113,7 +1069,6 @@ describe("UnknownBlockSync", () => {
         ...networkOverrides,
       } as INetwork;
 
-      mockParentPayloadDependency(chain);
       service = new BlockInputSync(gloasConfig, network, chain, logger, null, defaultSyncOptions);
       service.subscribeToNetwork();
 
@@ -1682,11 +1637,11 @@ describe("UnknownBlockSync", () => {
             getBlockHexDefaultStatus: vi
               .fn()
               .mockImplementation((root: string) => (knownRoots.has(root) ? ({slot: 0} as ProtoBlock) : null)),
-            getBlockHexAndPayloadRoot: vi
+            getBlockHexAndBlockHash: vi
               .fn()
-              .mockImplementation((root: string, payloadRoot: string) =>
+              .mockImplementation((root: string, hash: string) =>
                 root === parentRootHex &&
-                payloadRoot === toRootHex(block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot)
+                hash === toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
                   ? ({slot: 0} as ProtoBlock)
                   : null
               ),
@@ -1788,11 +1743,11 @@ describe("UnknownBlockSync", () => {
             getBlockHexDefaultStatus: vi
               .fn()
               .mockImplementation((root: string) => (knownRoots.has(root) ? ({slot: 0} as ProtoBlock) : null)),
-            getBlockHexAndPayloadRoot: vi
+            getBlockHexAndBlockHash: vi
               .fn()
-              .mockImplementation((root: string, payloadRoot: string) =>
+              .mockImplementation((root: string, hash: string) =>
                 root === parentRootHex &&
-                payloadRoot === toRootHex(block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot)
+                hash === toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
                   ? ({slot: 0} as ProtoBlock)
                   : null
               ),
@@ -1895,11 +1850,11 @@ describe("UnknownBlockSync", () => {
             getBlockHexDefaultStatus: vi
               .fn()
               .mockImplementation((root: string) => (knownRoots.has(root) ? ({slot: 0} as ProtoBlock) : null)),
-            getBlockHexAndPayloadRoot: vi
+            getBlockHexAndBlockHash: vi
               .fn()
-              .mockImplementation((root: string, payloadRoot: string) =>
+              .mockImplementation((root: string, hash: string) =>
                 root === parentRootHex &&
-                payloadRoot === toRootHex(block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot)
+                hash === toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
                   ? ({slot: 0} as ProtoBlock)
                   : null
               ),
@@ -2614,7 +2569,6 @@ describe("UnknownBlockSync", () => {
       const peer = await getRandPeerIdStr();
       const parentPayloadHash = Buffer.alloc(32, 0x33);
       const {
-        block: parentBlock,
         blockRoot: parentRoot,
         blockRootHex: parentRootHex,
         payloadInput,
@@ -2625,15 +2579,12 @@ describe("UnknownBlockSync", () => {
         sampledColumns: [],
         slot: 1,
       });
-      const parentPayloadRoot = parentBlock.message.body.signedExecutionPayloadBid.message.payloadRoot;
 
       const childBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
       childBlock.message.slot = 2;
       childBlock.message.parentRoot = parentRoot;
       childBlock.message.body.signedExecutionPayloadBid.message.parentBlockRoot = parentRoot;
       childBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash = parentPayloadHash;
-      // the child builds on the parent's own payload
-      childBlock.message.body.signedExecutionPayloadBid.message.parentPayloadRoot = parentPayloadRoot;
       const childBlockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(childBlock.message));
       const childBlockInput = createGloasBlockInput({
         block: childBlock,
@@ -2668,13 +2619,11 @@ describe("UnknownBlockSync", () => {
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
             getBlockHexDefaultStatus: vi
               .fn()
-              .mockImplementation((root: string) =>
-                root === parentRootHex ? ({slot: 1, payloadRoot: toRootHex(parentPayloadRoot)} as ProtoBlock) : null
-              ),
-            getBlockHexAndPayloadRoot: vi
+              .mockImplementation((root: string) => (root === parentRootHex ? ({slot: 1} as ProtoBlock) : null)),
+            getBlockHexAndBlockHash: vi
               .fn()
-              .mockImplementation((root: string, payloadRoot: string) =>
-                root === parentRootHex && payloadRoot === toRootHex(parentPayloadRoot) && hasParentPayload
+              .mockImplementation((root: string, hash: string) =>
+                root === parentRootHex && hash === toRootHex(parentPayloadHash) && hasParentPayload
                   ? ({slot: 1} as ProtoBlock)
                   : null
               ),
@@ -2982,15 +2931,13 @@ describe("UnknownBlockSync", () => {
       expect((svc.pendingPayloads.get(rootHex) as PendingPayloadRootHex).slot).toBe(42);
     });
 
-    it("drops a child block when its parent payload root conflicts with the known parent block", async () => {
+    it("drops a child block when its parent payload hash conflicts with the known parent block", async () => {
       const peer = await getRandPeerIdStr();
 
       const parentBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
       parentBlock.message.slot = 1;
       parentBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash = Buffer.alloc(32, 0x11);
       parentBlock.message.body.signedExecutionPayloadBid.message.blockHash = Buffer.alloc(32, 0x22);
-      parentBlock.message.body.signedExecutionPayloadBid.message.parentPayloadRoot = Buffer.alloc(32, 0x1a);
-      parentBlock.message.body.signedExecutionPayloadBid.message.payloadRoot = Buffer.alloc(32, 0x2a);
       const parentRoot = ssz.gloas.BeaconBlock.hashTreeRoot(parentBlock.message);
       const parentRootHex = toRootHex(parentRoot);
       const parentPayloadInput = PayloadEnvelopeInput.createFromBlock({
@@ -3009,8 +2956,6 @@ describe("UnknownBlockSync", () => {
       childBlock.message.parentRoot = parentRoot;
       childBlock.message.body.signedExecutionPayloadBid.message.parentBlockRoot = parentRoot;
       childBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash = Buffer.alloc(32, 0x33);
-      // neither the parent's payload (0x2a) nor the payload the parent built on (0x1a)
-      childBlock.message.body.signedExecutionPayloadBid.message.parentPayloadRoot = Buffer.alloc(32, 0x3a);
       const childBlockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(childBlock.message));
       const childBlockInput = createGloasBlockInput({
         block: childBlock,
@@ -3035,21 +2980,14 @@ describe("UnknownBlockSync", () => {
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           seenBlockInputCache: {prune: seenBlockInputPrune} as unknown as SeenBlockInput,
           forkChoice: {
-            // No variant of the parent matches the child's parentPayloadRoot, and the parent's bid does not
-            // commit to it either, so no envelope of the parent can resolve it: the conflict is known from
-            // the parent block alone, whether or not the parent's payload is imported.
-            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            // Parent payload is revealed/imported (FULL) but no variant matches the child's parentBlockHash.
+            // getMissingBlockDependency defers the drop until the payload lands; only then is the conflict real.
+            hasPayloadHexUnsafe: vi.fn().mockImplementation((root: string) => root === parentRootHex),
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
-            getBlockHexDefaultStatus: vi.fn().mockImplementation((root: string) =>
-              root === parentRootHex
-                ? ({
-                    slot: 0,
-                    parentPayloadRoot: toRootHex(Buffer.alloc(32, 0x1a)),
-                    payloadRoot: toRootHex(Buffer.alloc(32, 0x2a)),
-                  } as ProtoBlock)
-                : null
-            ),
-            getBlockHexAndPayloadRoot: vi.fn().mockReturnValue(null),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === parentRootHex ? ({slot: 0} as ProtoBlock) : null)),
+            getBlockHexAndBlockHash: vi.fn().mockReturnValue(null),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
         },
@@ -3071,101 +3009,6 @@ describe("UnknownBlockSync", () => {
       expect(seenPayloadPrune).not.toHaveBeenCalled();
     });
 
-    it.each(["parentRoot", "justifiedRoot", "finalizedRoot"] as const)(
-      "after a restart from an unfinalized state, does not drop a block that forks off the placeholder %s",
-      async (ancestor) => {
-        const peer = await getRandPeerIdStr();
-        // The real fork choice of a restarted node: the ancestors of the head are placeholders that carry
-        // the bid fields of the head, not those of their blocks
-        const restarted = await initForkChoiceFromUnfinalizedGloasState();
-        const ancestorRootHex = restarted[ancestor];
-        // A valid child of the real ancestor block names the payload of that block, which is neither the
-        // `payloadRoot` nor the `parentPayloadRoot` of the placeholder
-        const parentPayloadRoot = Buffer.alloc(32, 0x3a);
-        const childBlock = generateGloasBlockOnParent(restarted.headSlot, ancestorRootHex, parentPayloadRoot);
-        const childBlockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(childBlock.message));
-        const childBlockInput = createGloasBlockInput({
-          block: childBlock,
-          blockRootHex: childBlockRootHex,
-          seenTimestampSec: Date.now() / 1000,
-          source: BlockInputSource.gossip,
-        });
-
-        // the request is observed, its response is not needed
-        const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockReturnValue(new Promise(() => {}));
-        const processBlock = vi.fn();
-        const reportPeer = vi.fn();
-        const seenBlockInputPrune = vi.fn();
-        const {emitter} = setupPayloadSyncTest({
-          chainOverrides: {
-            processBlock,
-            seenBlockInputCache: {prune: seenBlockInputPrune} as unknown as SeenBlockInput,
-            forkChoice: restarted.forkChoice,
-          },
-          networkOverrides: {sendExecutionPayloadEnvelopesByRoot, reportPeer},
-          peers: [{peerId: peer}],
-        });
-
-        expect(service["getMissingBlockDependency"](childBlockInput)).toEqual({
-          kind: "parentPayload",
-          rootHex: ancestorRootHex,
-          slot: restarted.forkChoice.getBlockHexDefaultStatus(ancestorRootHex)?.slot,
-        });
-
-        emitter.emit(ChainEvent.blockUnknownParent, {
-          blockInput: childBlockInput,
-          peer,
-          source: BlockInputSource.gossip,
-        });
-
-        await sleep(20);
-
-        // The block is kept and the envelope of its parent is fetched, as for any parent without payload
-        expect(reportPeer).not.toHaveBeenCalled();
-        expect(seenBlockInputPrune).not.toHaveBeenCalled();
-        expect(processBlock).not.toHaveBeenCalled();
-        expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledWith(peer, [fromHex(ancestorRootHex)]);
-      }
-    );
-
-    it("after a restart from an unfinalized state, still drops a block that names a payload the head does not", async () => {
-      const peer = await getRandPeerIdStr();
-      const restarted = await initForkChoiceFromUnfinalizedGloasState();
-      // The head is a real node: neither its payload nor the payload it builds on
-      const childBlock = generateGloasBlockOnParent(restarted.headSlot + 1, restarted.headRoot, Buffer.alloc(32, 0x3a));
-      const childBlockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(childBlock.message));
-      const childBlockInput = createGloasBlockInput({
-        block: childBlock,
-        blockRootHex: childBlockRootHex,
-        seenTimestampSec: Date.now() / 1000,
-        source: BlockInputSource.gossip,
-      });
-
-      const sendExecutionPayloadEnvelopesByRoot = vi.fn();
-      const seenBlockInputPrune = vi.fn();
-      const {emitter} = setupPayloadSyncTest({
-        chainOverrides: {
-          seenBlockInputCache: {prune: seenBlockInputPrune} as unknown as SeenBlockInput,
-          forkChoice: restarted.forkChoice,
-        },
-        networkOverrides: {sendExecutionPayloadEnvelopesByRoot, reportPeer: vi.fn()},
-        peers: [{peerId: peer}],
-      });
-
-      expect(service["getMissingBlockDependency"](childBlockInput).kind).toBe("invalidParentPayload");
-
-      emitter.emit(ChainEvent.blockUnknownParent, {
-        blockInput: childBlockInput,
-        peer,
-        source: BlockInputSource.gossip,
-      });
-
-      await sleep(20);
-
-      expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
-      expect(seenBlockInputPrune).toHaveBeenCalledWith(childBlockRootHex);
-    });
-
     it.each<PayloadErrorType>([
       {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
       {
@@ -3177,7 +3020,6 @@ describe("UnknownBlockSync", () => {
       const peer = await getRandPeerIdStr();
       const parentPayloadHash = Buffer.alloc(32, 0x33);
       const {
-        block: parentBlock,
         blockRoot: parentRoot,
         blockRootHex: parentRootHex,
         payloadInput,
@@ -3188,15 +3030,12 @@ describe("UnknownBlockSync", () => {
         sampledColumns: [],
         slot: 1,
       });
-      const parentPayloadRoot = parentBlock.message.body.signedExecutionPayloadBid.message.payloadRoot;
 
       const childBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
       childBlock.message.slot = 2;
       childBlock.message.parentRoot = parentRoot;
       childBlock.message.body.signedExecutionPayloadBid.message.parentBlockRoot = parentRoot;
       childBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash = parentPayloadHash;
-      // the child builds on the parent's own payload
-      childBlock.message.body.signedExecutionPayloadBid.message.parentPayloadRoot = parentPayloadRoot;
       const childBlockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(childBlock.message));
       const childBlockInput = createGloasBlockInput({
         block: childBlock,
@@ -3228,10 +3067,8 @@ describe("UnknownBlockSync", () => {
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
             getBlockHexDefaultStatus: vi
               .fn()
-              .mockImplementation((root: string) =>
-                root === parentRootHex ? ({slot: 1, payloadRoot: toRootHex(parentPayloadRoot)} as ProtoBlock) : null
-              ),
-            getBlockHexAndPayloadRoot: vi.fn().mockReturnValue(null),
+              .mockImplementation((root: string) => (root === parentRootHex ? ({slot: 1} as ProtoBlock) : null)),
+            getBlockHexAndBlockHash: vi.fn().mockReturnValue(null),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
         },
@@ -3277,10 +3114,10 @@ describe("UnknownBlockSync", () => {
     );
     const peer = await getRandPeerIdStr();
     const parentRoot = Buffer.alloc(32, 0x11);
-    const parentPayloadRoot = Buffer.alloc(32, 0x22);
-    const {block, blockInput, blockRootHex, parentPayloadRootHex, parentRootHex} = buildIncompleteGloasBlockInput({
+    const parentBlockHash = Buffer.alloc(32, 0x22);
+    const {block, blockInput, blockRootHex, parentBlockHashHex, parentRootHex} = buildIncompleteGloasBlockInput({
       parentRoot,
-      parentPayloadRoot,
+      parentBlockHash,
       slot: 1,
     });
 
@@ -3318,10 +3155,10 @@ describe("UnknownBlockSync", () => {
         getBlockHexDefaultStatus: vi
           .fn()
           .mockImplementation((rootHex: string) => (rootHex === parentRootHex ? ({slot: 0} as ProtoBlock) : null)),
-        getBlockHexAndPayloadRoot: vi
+        getBlockHexAndBlockHash: vi
           .fn()
-          .mockImplementation((rootHex: string, payloadRootHex: string) =>
-            rootHex === parentRootHex && payloadRootHex === parentPayloadRootHex ? ({} as ProtoBlock) : null
+          .mockImplementation((rootHex: string, blockHashHex: string) =>
+            rootHex === parentRootHex && blockHashHex === parentBlockHashHex ? ({} as ProtoBlock) : null
           ),
         hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
       } as unknown as IForkChoice,
@@ -3337,7 +3174,6 @@ describe("UnknownBlockSync", () => {
       } as unknown as SeenBlockProposers,
     };
 
-    mockParentPayloadDependency(chainForTest);
     service = new BlockInputSync(gloasConfig, network, chainForTest as IBeaconChain, logger, null, defaultSyncOptions);
     service.subscribeToNetwork();
 

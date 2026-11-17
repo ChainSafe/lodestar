@@ -285,7 +285,6 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   /** Removed from BeaconState in gloas. */
   payloadBlockNumber: never;
   latestBlockHash: Bytes32;
-  latestPayloadRoot: Root;
   executionPayloadAvailability: BitArray;
   latestExecutionPayloadBid: ExecutionPayloadBid;
   payloadExpectedWithdrawals: capella.Withdrawal[];

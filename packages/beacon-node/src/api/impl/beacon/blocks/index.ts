@@ -1150,7 +1150,6 @@ export function getBeaconBlockApi(
         builderIndex: bid.builderIndex,
         blockHash: toRootHex(bid.blockHash),
         parentBlockHash: toRootHex(bid.parentBlockHash),
-        parentPayloadRoot: toRootHex(bid.parentPayloadRoot),
         value: prettyGweiToEth(bid.value),
         sentPeers,
       });

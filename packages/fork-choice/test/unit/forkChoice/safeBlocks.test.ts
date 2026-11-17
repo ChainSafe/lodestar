@@ -32,19 +32,12 @@ function buildBlock(opts: {
     ptcTimeliness: false,
     proposerIndex: 0,
     payloadStatus: PayloadStatus.FULL,
-    ...(opts.parentBlockHash === null
-      ? {parentBlockHash: null, parentPayloadRoot: null, payloadRoot: null}
-      : {
-          parentBlockHash: opts.parentBlockHash,
-          parentPayloadRoot: "0xparentPayloadRoot",
-          payloadRoot: "0xpayloadRoot",
-        }),
+    parentBlockHash: opts.parentBlockHash,
   };
   if (opts.executionPayloadBlockHash === null) {
     return {
       ...common,
       executionPayloadBlockHash: null,
-      executionPayloadRoot: null,
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     };
@@ -52,7 +45,6 @@ function buildBlock(opts: {
   return {
     ...common,
     executionPayloadBlockHash: opts.executionPayloadBlockHash,
-    executionPayloadRoot: "0xexecutionPayloadRoot",
     executionPayloadNumber: 0,
     executionPayloadGasLimit: 30_000_000,
     executionStatus: ExecutionStatus.Valid,

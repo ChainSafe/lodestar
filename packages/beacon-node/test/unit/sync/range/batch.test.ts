@@ -280,7 +280,7 @@ describe("sync / range / batch", async () => {
       function buildGloasBlockWithEnvelope({
         slot,
         parentRoot,
-        parentPayloadRoot,
+        parentBlockHash,
         blobCount = 0,
         sampledColumns = [],
         addEnvelope = true,
@@ -288,7 +288,7 @@ describe("sync / range / batch", async () => {
       }: {
         slot: number;
         parentRoot?: Uint8Array;
-        parentPayloadRoot?: Uint8Array;
+        parentBlockHash?: Uint8Array;
         blobCount?: number;
         sampledColumns?: number[];
         addEnvelope?: boolean;
@@ -297,9 +297,7 @@ describe("sync / range / batch", async () => {
         const block = ssz.gloas.SignedBeaconBlock.defaultValue();
         block.message.slot = slot;
         if (parentRoot) block.message.parentRoot = parentRoot;
-        if (parentPayloadRoot) {
-          block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot = parentPayloadRoot;
-        }
+        if (parentBlockHash) block.message.body.signedExecutionPayloadBid.message.parentBlockHash = parentBlockHash;
         block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = Array.from({length: blobCount}, () =>
           Buffer.alloc(48, 0x11)
         );
@@ -354,7 +352,7 @@ describe("sync / range / batch", async () => {
 
       it("requests the dangling parent payload only if the first block builds on the FULL variant of the parent", () => {
         const parentBid = ssz.gloas.ExecutionPayloadBid.defaultValue();
-        parentBid.payloadRoot = Buffer.alloc(32, 0x22);
+        parentBid.blockHash = Buffer.alloc(32, 0x22);
         const parentRoot = Buffer.alloc(32, 0x33);
         const parentPayload: ParentPayload = {
           blockRoot: parentRoot,
@@ -367,26 +365,26 @@ describe("sync / range / batch", async () => {
         };
         const testCases = [
           {
-            name: "parent root and parent payload root match",
+            name: "parent root and parent block hash match",
             parentRoot,
-            parentPayloadRoot: parentBid.payloadRoot,
+            parentBlockHash: parentBid.blockHash,
             expected: true,
           },
           {
-            name: "parent payload root matches but parent root does not",
+            name: "parent block hash matches but parent root does not",
             parentRoot: Buffer.alloc(32, 0x44),
-            parentPayloadRoot: parentBid.payloadRoot,
+            parentBlockHash: parentBid.blockHash,
             expected: false,
           },
           {
             name: "parent root matches but the block builds on the EMPTY variant",
             parentRoot,
-            parentPayloadRoot: Buffer.alloc(32, 0x55),
+            parentBlockHash: Buffer.alloc(32, 0x55),
             expected: false,
           },
         ];
 
-        for (const {name, parentRoot, parentPayloadRoot, expected} of testCases) {
+        for (const {name, parentRoot, parentBlockHash, expected} of testCases) {
           const batch = new Batch(
             startEpoch,
             config,
@@ -400,7 +398,7 @@ describe("sync / range / batch", async () => {
           const {blockInput, payloadInput} = buildGloasBlockWithEnvelope({
             slot: batch.startSlot + 1,
             parentRoot,
-            parentPayloadRoot,
+            parentBlockHash,
           });
 
           batch.downloadingSuccess(peer, [blockInput], new Map([[blockInput.slot, payloadInput]]));

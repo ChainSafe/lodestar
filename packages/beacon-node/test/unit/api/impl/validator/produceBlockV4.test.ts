@@ -58,22 +58,7 @@ describe("api/validator - produceBlockV4", () => {
     blockRoot: "0x1111111111111111111111111111111111111111111111111111111111111111",
     slot: slot - 1,
     executionPayloadBlockHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    // The FULL variant carries the root of its own payload
-    executionPayloadRoot: "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     parentBlockHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    payloadRoot: "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    parentPayloadRoot: "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-  } as ProtoBlock;
-
-  /** The last pre-gloas block, parent of the first gloas block */
-  const preGloasParentBlock = {
-    blockRoot: "0x1111111111111111111111111111111111111111111111111111111111111111",
-    slot: slot - 1,
-    executionPayloadBlockHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    executionPayloadRoot: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-    parentBlockHash: null,
-    payloadRoot: null,
-    parentPayloadRoot: null,
   } as ProtoBlock;
 
   const randaoReveal = engineBlock.body.randaoReveal;
@@ -116,59 +101,12 @@ describe("api/validator - produceBlockV4", () => {
 
     expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalledWith(
       slot,
-      parentBlock.executionPayloadRoot,
+      parentBlock.executionPayloadBlockHash,
       parentBlock.blockRoot
     );
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
     expect(block).toEqual(bidBlock);
     expect(meta.version).toBe(ForkName.gloas);
-  });
-
-  it("selects a p2p bid building on the payload of a pre-gloas parent", async () => {
-    modules.chain.getProposerHead.mockReturnValue(preGloasParentBlock);
-    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    // Bids are pooled by the parent payload root they commit to
-    modules.chain.executionPayloadBidPool.getBestBid.mockImplementation((_slot, parentPayloadRoot) =>
-      parentPayloadRoot === preGloasParentBlock.executionPayloadRoot ? toPooledBid(builderBid) : null
-    );
-
-    const {data: block} = await api.produceBlockV4({
-      slot,
-      randaoReveal,
-      graffiti,
-      feeRecipient,
-      includePayload: false,
-      builderConfig: getBuilderConfig(),
-    });
-
-    expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalledWith(
-      slot,
-      preGloasParentBlock.executionPayloadRoot,
-      preGloasParentBlock.blockRoot
-    );
-    expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid}));
-    expect(block).toEqual(bidBlock);
-  });
-
-  it("builds on the payload the parent was built on when not building on full", async () => {
-    modules.chain.forkChoice.shouldBuildOnFull.mockReturnValue(false);
-    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
-
-    await api.produceBlockV4({
-      slot,
-      randaoReveal,
-      graffiti,
-      feeRecipient,
-      includePayload: false,
-      builderConfig: getBuilderConfig(),
-    });
-
-    expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalledWith(
-      slot,
-      parentBlock.parentPayloadRoot,
-      parentBlock.blockRoot
-    );
   });
 
   it("picks local block when local payload value is higher", async () => {
@@ -339,14 +277,6 @@ describe("api/validator - produceBlockV4", () => {
 
     expect(modules.chain.builderApiClient.getExecutionPayloadBids).toHaveBeenCalledOnce();
     expect(validateBuilderApiExecutionPayloadBid).toHaveBeenCalledOnce();
-    expect(validateBuilderApiExecutionPayloadBid).toHaveBeenCalledWith(
-      expect.anything(),
-      apiBid,
-      expect.objectContaining({
-        parentBlockHash: parentBlock.executionPayloadBlockHash,
-        parentPayloadRoot: parentBlock.executionPayloadRoot,
-      })
-    );
     // The bid block commits to the builder API bid since its boosted total (2) beats the p2p bid (1)
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: apiBid}));
     expect(block).toEqual(bidBlock);

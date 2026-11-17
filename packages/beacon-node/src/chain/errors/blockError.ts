@@ -80,15 +80,13 @@ export enum BlockErrorCode {
   BID_PARENT_ROOT_MISMATCH = "BLOCK_ERROR_BID_PARENT_ROOT_MISMATCH",
   /** The parent block's execution payload has been verified as invalid */
   PARENT_EXECUTION_INVALID = "BLOCK_ERROR_PARENT_EXECUTION_INVALID",
-  /** [gloas] The bid does not build on the parent's execution head (parent_block_hash / parent_payload_root) */
-  BID_PARENT_PAYLOAD_MISMATCH = "BLOCK_ERROR_BID_PARENT_PAYLOAD_MISMATCH",
   /**
    * [gloas] The first block of a chain segment references a parent execution payload
-   * (bid.parent_payload_root) unknown to fork-choice (segment boundary).
+   * (bid.parent_block_hash) unknown to fork-choice (segment boundary).
    */
   PARENT_PAYLOAD_UNKNOWN = "BLOCK_ERROR_PARENT_PAYLOAD_UNKNOWN",
   /**
-   * [gloas] A block in the middle of a chain segment has a bid.parent_payload_root that does not chain onto the
+   * [gloas] A block in the middle of a chain segment has a bid.parent_block_hash that does not chain onto the
    * previous block's execution payload (broken payload link inside the segment).
    */
   NON_LINEAR_PAYLOAD_ROOTS = "BLOCK_ERROR_NON_LINEAR_PAYLOAD_ROOTS",
@@ -166,15 +164,8 @@ export type BlockErrorType =
       blockParentRoot: RootHex;
     }
   | {code: BlockErrorCode.PARENT_EXECUTION_INVALID; parentRoot: RootHex}
-  | {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN; parentRoot: RootHex; parentPayloadRoot: RootHex}
-  | {code: BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS; parentPayloadRoot: RootHex; expectedPayloadRoot: RootHex}
-  | {
-      code: BlockErrorCode.BID_PARENT_PAYLOAD_MISMATCH;
-      slot: Slot;
-      root: RootHex;
-      parentBlockHash: RootHex;
-      parentPayloadRoot: RootHex;
-    };
+  | {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN; parentRoot: RootHex; parentBlockHash: RootHex}
+  | {code: BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS; parentBlockHash: RootHex; expectedBlockHash: RootHex};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 

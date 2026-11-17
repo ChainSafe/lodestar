@@ -34,8 +34,8 @@ export function processWithdrawals(
   if (fork >= ForkSeq.gloas) {
     const stateGloas = state as CachedBeaconStateGloas;
     const isParentBlockEmpty = !byteArrayEquals(
-      stateGloas.latestPayloadRoot,
-      stateGloas.latestExecutionPayloadBid.payloadRoot
+      stateGloas.latestBlockHash,
+      stateGloas.latestExecutionPayloadBid.blockHash
     );
     if (isParentBlockEmpty) {
       return;

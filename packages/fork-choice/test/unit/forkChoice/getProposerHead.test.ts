@@ -57,8 +57,6 @@ describe("Forkchoice / GetProposerHead", () => {
     unrealizedFinalizedRoot: genesisRoot,
 
     executionPayloadBlockHash: null,
-
-    executionPayloadRoot: null,
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
@@ -68,8 +66,6 @@ describe("Forkchoice / GetProposerHead", () => {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
-    parentPayloadRoot: null,
-    payloadRoot: null,
     payloadStatus: PayloadStatus.FULL,
   };
 
@@ -90,8 +86,6 @@ describe("Forkchoice / GetProposerHead", () => {
     unrealizedFinalizedRoot: genesisRoot,
 
     executionPayloadBlockHash: null,
-
-    executionPayloadRoot: null,
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
@@ -103,8 +97,6 @@ describe("Forkchoice / GetProposerHead", () => {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
-    parentPayloadRoot: null,
-    payloadRoot: null,
     payloadStatus: PayloadStatus.FULL,
   };
 
@@ -125,8 +117,6 @@ describe("Forkchoice / GetProposerHead", () => {
     unrealizedFinalizedRoot: genesisRoot,
 
     executionPayloadBlockHash: null,
-
-    executionPayloadRoot: null,
     executionStatus: ExecutionStatus.PreMerge,
 
     timeliness: false,
@@ -137,8 +127,6 @@ describe("Forkchoice / GetProposerHead", () => {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
-    parentPayloadRoot: null,
-    payloadRoot: null,
     payloadStatus: PayloadStatus.FULL,
   };
 

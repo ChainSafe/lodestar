@@ -358,8 +358,6 @@ describe("chain / blocks / processBlocks", () => {
     chain = getMockedBeaconChain({config: gloasConfig});
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = slot;
-    const payloadRoot = Buffer.alloc(32, 0x22);
-    block.message.body.signedExecutionPayloadBid.message.payloadRoot = payloadRoot;
     const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
     const blockRootHex = toRootHex(blockRoot);
     const gloasBlockInput = BlockInputNoData.createFromBlock({
@@ -387,10 +385,7 @@ describe("chain / blocks / processBlocks", () => {
     // block already imported (PENDING payload), batch only re-delivers it together with its envelope
     vi.mocked(verifyBlocksSanityChecks).mockReturnValue({relevantBlocks: [], parentSlots: [], parentBlock: null});
     vi.spyOn(chain.forkChoice, "hasBlockHex").mockReturnValue(true);
-    // the FULL variant is looked up by the payload root the bid commits to; assigned since the shared ForkChoice
-    // mock does not define this method
-    const getBlockHexAndPayloadRoot = vi.fn<typeof chain.forkChoice.getBlockHexAndPayloadRoot>().mockReturnValue(null);
-    chain.forkChoice.getBlockHexAndPayloadRoot = getBlockHexAndPayloadRoot;
+    vi.spyOn(chain.forkChoice, "getBlockHexAndBlockHash").mockReturnValue(null);
     vi.spyOn(chain.forkChoice, "getHead").mockReturnValue(
       headOnEmpty
         ? generateProtoBlock({slot: slot + 1, parentRoot: blockRootHex})
@@ -409,7 +404,6 @@ describe("chain / blocks / processBlocks", () => {
 
     expect(verifyBlocksInEpoch).not.toHaveBeenCalled();
     expect(importBlock).not.toHaveBeenCalled();
-    expect(getBlockHexAndPayloadRoot).toHaveBeenCalledWith(blockRootHex, toRootHex(payloadRoot));
     if (headOnEmpty && skipAttestations) {
       expect(importExecutionPayload).not.toHaveBeenCalled();
       expect(chain.seenPayloadEnvelopeInputCache.remove).toHaveBeenCalledExactlyOnceWith(blockRootHex);

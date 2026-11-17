@@ -41,15 +41,11 @@ describe("Forkchoice", () => {
         finalizedRoot: genesisRoot,
 
         executionPayloadBlockHash: null,
-
-        executionPayloadRoot: null,
         executionStatus: ExecutionStatus.PreMerge,
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
         // Pre-Gloas block fields (required to avoid being treated as Gloas)
         parentBlockHash: null,
-        parentPayloadRoot: null,
-        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
         timeliness: false,
         importedTimely: false,
@@ -152,8 +148,6 @@ describe("Forkchoice", () => {
       unrealizedFinalizedRoot: genesisRoot,
 
       executionPayloadBlockHash: null,
-
-      executionPayloadRoot: null,
       executionStatus: ExecutionStatus.PreMerge,
 
       timeliness: false,
@@ -163,8 +157,6 @@ describe("Forkchoice", () => {
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
       parentBlockHash: null,
-      parentPayloadRoot: null,
-      payloadRoot: null,
       payloadStatus: PayloadStatus.FULL,
     };
   };

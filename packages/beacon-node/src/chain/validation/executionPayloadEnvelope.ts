@@ -118,21 +118,14 @@ async function validateExecutionPayloadEnvelope(
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
   // it is possible that the block didn't pass the validation
 
-  // The slot and the parent root of the block are read from `payloadInput`, which is created from the block
-  // itself, and not from the fork choice node: after a start from an unfinalized state the ancestors of the anchor
-  // are placeholders whose `slot` and `parentRoot` are not those of their blocks (see `ProtoBlock.isPlaceholder`),
-  // while a `payloadInput` is still reloaded for them from the block in the db. An honest envelope would fail
-  // a comparison with these fields and its peer would be penalized for it.
-
   // [REJECT] `block.slot` equals `payload.slotNumber`.
-  const blockSlot = payloadInput.slot;
-  if (blockSlot !== payload.slotNumber) {
+  if (block.slot !== payload.slotNumber) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
       slot: payload.slotNumber,
       root: blockRootHex,
       envelopeSlot: payload.slotNumber,
-      blockSlot,
+      blockSlot: block.slot,
     });
   }
 
@@ -271,7 +264,7 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `payload.timestamp == compute_time_at_slot(state.genesis_time, block.slot)`
-  const expectedTimestamp = computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime);
+  const expectedTimestamp = computeTimeAtSlot(chain.config, block.slot, chain.genesisTime);
   if (payload.timestamp !== expectedTimestamp) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.INCORRECT_TIMESTAMP,

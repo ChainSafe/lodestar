@@ -7,10 +7,8 @@ import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
 import {LVHExecError, LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 import {
   ExecutionStatus,
-  GloasBlockBidMeta,
   HEX_ZERO_HASH,
   LVHExecResponse,
-  ParentPayloadDependency,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
@@ -255,36 +253,35 @@ export class ProtoArray {
    * Spec: gloas/fork-choice.md#new-get_parent_payload_status
    *   def get_parent_payload_status(store: Store, block: BeaconBlock) -> PayloadStatus:
    *     parent = store.blocks[block.parent_root]
-   *     parent_payload_root = block.body.signed_execution_payload_bid.message.parent_payload_root
-   *     message_payload_root = parent.body.signed_execution_payload_bid.message.payload_root
-   *     return PAYLOAD_STATUS_FULL if parent_payload_root == message_payload_root else PAYLOAD_STATUS_EMPTY
+   *     parent_block_hash = block.body.signed_execution_payload_bid.message.parent_block_hash
+   *     message_block_hash = parent.body.signed_execution_payload_bid.message.block_hash
+   *     return PAYLOAD_STATUS_FULL if parent_block_hash == message_block_hash else PAYLOAD_STATUS_EMPTY
    *
-   * In lodestar forkchoice, we don't store the full bid, so we compare parent_payload_root in child's bid with the
-   * payload roots of the parent variants, see `getNodeIndexByRootAndPayloadRoot`:
-   * - If it matches FULL variant, return FULL
+   * In lodestar forkchoice, we don't store the full bid, so we compares parent_block_hash in child's bid with executionPayloadBlockHash in parent:
    * - If it matches EMPTY variant, return EMPTY
+   * - If it matches FULL variant, return FULL
    * - If no match, throw UNKNOWN_PARENT_BLOCK error
    *
    * For pre-Gloas blocks: always returns FULL
    */
   getParentPayloadStatus(block: ProtoBlock): PayloadStatus {
     // Pre-Gloas blocks have payloads embedded, so parents are always FULL
-    if (!isGloasBlock(block)) {
+    const {parentBlockHash} = block;
+    if (parentBlockHash === null) {
       return PayloadStatus.FULL;
     }
-    const {parentPayloadRoot} = block;
 
     // Genesis block has no parent in the proto array
     if (block.parentRoot === HEX_ZERO_HASH) {
       return PayloadStatus.FULL;
     }
 
-    const parentBlock = this.getBlockHexAndPayloadRoot(block.parentRoot, parentPayloadRoot);
+    const parentBlock = this.getBlockHexAndBlockHash(block.parentRoot, parentBlockHash);
     if (parentBlock == null) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK,
         parentRoot: block.parentRoot,
-        parentPayloadRoot,
+        parentHash: parentBlockHash,
       });
     }
 
@@ -292,11 +289,11 @@ export class ProtoArray {
   }
 
   /**
-   * Return the parent `ProtoBlock` given its root and the `parent_payload_root` of the child's bid.
+   * Return the parent `ProtoBlock` given its root and block hash.
    */
-  getParent(parentRoot: RootHex, parentPayloadRoot: RootHex | null): ProtoBlock | null {
+  getParent(parentRoot: RootHex, parentBlockHash: RootHex | null): ProtoBlock | null {
     // pre-gloas
-    if (parentPayloadRoot === null) {
+    if (parentBlockHash === null) {
       const parentIndex = this.indices.get(parentRoot);
       if (parentIndex === undefined) {
         return null;
@@ -306,96 +303,14 @@ export class ProtoArray {
         throw new ProtoArrayError({
           code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK,
           parentRoot,
-          parentPayloadRoot,
+          parentHash: parentBlockHash,
         });
       }
       return this.nodes[parentIndex] ?? null;
     }
 
     // post-gloas
-    return this.getBlockHexAndPayloadRoot(parentRoot, parentPayloadRoot);
-  }
-
-  /**
-   * Returns the node index of the EMPTY or FULL variant whose latest execution payload has the given root,
-   * ie. the variant that a child block with `bid.parent_payload_root == payloadRoot` builds on.
-   * Pre-gloas: checks the single variant. Post-gloas: prefers FULL, falls back to EMPTY.
-   *
-   * Same as `getNodeIndexByRootAndBlockHash` but by `executionPayloadRoot`. Only variants that exist are
-   * compared, so a block whose payload is not imported never resolves to FULL.
-   */
-  getNodeIndexByRootAndPayloadRoot(blockRoot: RootHex, payloadRoot: RootHex): number | undefined {
-    const variantIndices = this.indices.get(blockRoot);
-    if (variantIndices === undefined) {
-      return undefined;
-    }
-
-    // Pre-Gloas
-    if (!Array.isArray(variantIndices)) {
-      const node = this.nodes[variantIndices];
-      // A pre-gloas block has a single payload and a single variant, there is nothing else a child can build on.
-      // The payload root of a placeholder is not the one of its block, so it cannot be held against the child
-      return node.isPlaceholder || node.executionPayloadRoot === payloadRoot ? variantIndices : undefined;
-    }
-
-    // Post-Gloas, prefer FULL then EMPTY
-    const fullNodeIndex = variantIndices[PayloadStatus.FULL];
-    if (fullNodeIndex !== undefined && this.nodes[fullNodeIndex].executionPayloadRoot === payloadRoot) {
-      return fullNodeIndex;
-    }
-
-    const emptyNodeIndex = variantIndices[PayloadStatus.EMPTY];
-    if (this.nodes[emptyNodeIndex].executionPayloadRoot === payloadRoot) {
-      return emptyNodeIndex;
-    }
-
-    return undefined;
-  }
-
-  /**
-   * Returns the EMPTY or FULL `ProtoBlock` that has matching block root and whose latest execution payload has
-   * the given root, see `getNodeIndexByRootAndPayloadRoot`
-   */
-  getBlockHexAndPayloadRoot(blockRoot: RootHex, payloadRoot: RootHex): ProtoBlock | null {
-    const idx = this.getNodeIndexByRootAndPayloadRoot(blockRoot, payloadRoot);
-    return idx !== undefined ? this.nodes[idx] : null;
-  }
-
-  /**
-   * What the block `parentRoot` has to offer to a block or bid that builds on it with
-   * `bid.parent_payload_root == parentPayloadRoot`. A valid child names the payload of the parent block (the
-   * parent is FULL) or the payload the parent block builds on (the parent is EMPTY), both of which the bid of
-   * the parent commits to.
-   *
-   * This is the single place that decides between "wait for the payload of the parent" and "no valid block names
-   * this payload", block gossip validation and by-root sync must not derive it from the fields of the parent.
-   * In particular the fields of a placeholder are not those of its block, see `ProtoBlock.isPlaceholder`:
-   * it never yields `Invalid`.
-   */
-  getParentPayloadDependency(parentRoot: RootHex, parentPayloadRoot: RootHex): ParentPayloadDependency {
-    const parentIndex = this.getDefaultNodeIndex(parentRoot);
-    if (parentIndex === undefined) {
-      return ParentPayloadDependency.UnknownBlock;
-    }
-    if (this.getNodeIndexByRootAndPayloadRoot(parentRoot, parentPayloadRoot) !== undefined) {
-      return ParentPayloadDependency.Ready;
-    }
-
-    const parent = this.nodes[parentIndex];
-    if (!isGloasBlock(parent)) {
-      // The single payload of a pre-gloas block is known, there is none to wait for
-      return ParentPayloadDependency.Invalid;
-    }
-    if (parent.isPlaceholder) {
-      // Neither the payload of the block nor the one it builds on is known. The EMPTY variant carries the payload
-      // the anchor builds on, anything else can only be decided with the envelope of the block
-      return ParentPayloadDependency.AwaitingPayload;
-    }
-    // The EMPTY variant, which always exists, carries `parent.parentPayloadRoot`: only the payload of the parent
-    // block itself can be missing
-    return parent.payloadRoot === parentPayloadRoot
-      ? ParentPayloadDependency.AwaitingPayload
-      : ParentPayloadDependency.Invalid;
+    return this.getBlockHexAndBlockHash(parentRoot, parentBlockHash);
   }
 
   /**
@@ -603,23 +518,6 @@ export class ProtoArray {
         root: block.blockRoot,
       });
     }
-    // The bid fields are all set (gloas) or all null (pre-gloas). The type says so, but not every caller builds
-    // the block in a way the type checks. With only some of them set the block would be handled as a pre-gloas
-    // or as a gloas block depending on the field that is read: a single FULL variant with a parent that is
-    // always FULL, or variants that are looked up by a root that is not there
-    const {parentBlockHash, parentPayloadRoot, payloadRoot} = block as {
-      [K in keyof GloasBlockBidMeta]: RootHex | null | undefined;
-    };
-    const bidFields = [parentBlockHash, parentPayloadRoot, payloadRoot];
-    if (!bidFields.every((field) => field === null) && !bidFields.every((field) => typeof field === "string")) {
-      throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.PARTIAL_BID_FIELDS,
-        root: block.blockRoot,
-        parentBlockHash: parentBlockHash ?? null,
-        parentPayloadRoot: parentPayloadRoot ?? null,
-        payloadRoot: payloadRoot ?? null,
-      });
-    }
 
     if (isGloasBlock(block)) {
       // Gloas: Create PENDING + EMPTY nodes with correct parent relationships
@@ -783,21 +681,6 @@ export class ProtoArray {
       });
     }
 
-    if (!isGloasBlock(pendingNode)) {
-      throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.PRE_GLOAS_BLOCK,
-        root: blockRoot,
-      });
-    }
-
-    if (pendingNode.isPlaceholder) {
-      // `payloadRoot` is not the one of the block's bid, the FULL variant would carry the root of another payload
-      throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.PLACEHOLDER_BLOCK,
-        root: blockRoot,
-      });
-    }
-
     // Create FULL variant as a child of PENDING (sibling to EMPTY).
     const fullNode: ProtoNode = {
       ...pendingNode,
@@ -809,8 +692,6 @@ export class ProtoArray {
       bestDescendant: undefined,
       executionStatus,
       executionPayloadBlockHash,
-      // The payload of the block itself, which its bid commits to
-      executionPayloadRoot: pendingNode.payloadRoot,
       executionPayloadNumber,
       executionPayloadGasLimit,
       dataAvailabilityStatus,
@@ -1056,7 +937,7 @@ export class ProtoArray {
    * Check if parent node is FULL
    * Spec: gloas/fork-choice.md#new-is_parent_node_full
    *
-   * Returns true if the parent payload status (determined by block.parentPayloadRoot) is FULL
+   * Returns true if the parent payload status (determined by block.parentBlockHash) is FULL
    */
   isParentNodeFull(block: ProtoBlock): boolean {
     return this.getParentPayloadStatus(block) === PayloadStatus.FULL;
@@ -2033,7 +1914,7 @@ export class ProtoArray {
       return parentBlock;
     }
 
-    // Gloas: determine which parent variant (EMPTY or FULL) based on parent_payload_root
+    // Gloas: determine which parent variant (EMPTY or FULL) based on parent_block_hash
     const parentPayloadStatus = this.getParentPayloadStatus(currentBlock);
     const parentVariantIndex = this.getNodeIndexByRootAndStatus(currentBlock.parentRoot, parentPayloadStatus);
 

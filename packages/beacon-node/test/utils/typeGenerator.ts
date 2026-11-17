@@ -80,10 +80,8 @@ export function generateProtoBlock(overrides: Partial<ProtoBlock> = {}): ProtoBl
     proposerIndex: 0,
     payloadStatus: PayloadStatus.FULL,
     parentBlockHash: null,
-    parentPayloadRoot: null,
-    payloadRoot: null,
 
-    ...{executionPayloadBlockHash: null, executionPayloadRoot: null, executionStatus: ExecutionStatus.PreMerge},
+    ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     ...overrides,
   } as ProtoBlock;

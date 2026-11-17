@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {CheckpointWithHex, ParentPayloadDependency} from "@lodestar/fork-choice";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
@@ -329,11 +329,11 @@ export class BlockInputSync {
 
         const pendingBlock = this.pendingBlocks.get(data.blockInput.blockRootHex);
         if (pendingBlock && isPendingBlockInput(pendingBlock)) {
-          this.logger.debug("Ignoring block with conflicting parent payload root", {
+          this.logger.debug("Ignoring block with conflicting parent payload hash", {
             slot: pendingBlock.blockInput.slot,
             root: pendingBlock.blockInput.blockRootHex,
             parentRoot: missingDependency.parentRootHex,
-            parentPayloadRoot: missingDependency.parentPayloadRootHex,
+            parentBlockHash: missingDependency.parentBlockHashHex,
           });
           this.removeAndDownScoreAllDescendants(pendingBlock, DroppedItemReason.invalidParentPayload);
         }
@@ -675,7 +675,7 @@ export class BlockInputSync {
     | {kind: "ready"}
     | {kind: "block" | "parentBlock"; rootHex: RootHex}
     | {kind: "parentPayload"; rootHex: RootHex; slot: Slot}
-    | {kind: "invalidParentPayload"; parentRootHex: RootHex; parentPayloadRootHex: RootHex} {
+    | {kind: "invalidParentPayload"; parentRootHex: RootHex; parentBlockHashHex: RootHex} {
     const parentRootHex = blockInput.parentRootHex;
     const parentBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRootHex);
     if (!parentBlock) {
@@ -691,23 +691,18 @@ export class BlockInputSync {
     }
 
     const block = blockInput.getBlock() as gloas.SignedBeaconBlock;
-    const parentPayloadRootHex = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot);
-    // Fork choice decides, see `getParentPayloadDependency`: it knows which of the parent's fields can be trusted
-    switch (this.chain.forkChoice.getParentPayloadDependency(parentRootHex, parentPayloadRootHex)) {
-      case ParentPayloadDependency.UnknownBlock:
-        return {kind: "parentBlock", rootHex: parentRootHex};
-
-      case ParentPayloadDependency.Ready:
-        return {kind: "ready"};
-
-      case ParentPayloadDependency.AwaitingPayload:
-        // Parent is in fork choice but its payload `parentPayloadRootHex` isn't revealed yet
-        return {kind: "parentPayload", rootHex: parentRootHex, slot: parentBlock.slot};
-
-      case ParentPayloadDependency.Invalid:
-        // `parentPayloadRootHex` is neither the parent's payload nor the payload the parent built on
-        return {kind: "invalidParentPayload", parentRootHex, parentPayloadRootHex};
+    const parentBlockHashHex = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
+    if (this.chain.forkChoice.getBlockHexAndBlockHash(parentRootHex, parentBlockHashHex) !== null) {
+      return {kind: "ready"};
     }
+
+    // The parent's payload is known but does not match `parentBlockHashHex`
+    if (this.chain.forkChoice.hasPayloadHexUnsafe(parentRootHex)) {
+      return {kind: "invalidParentPayload", parentRootHex, parentBlockHashHex};
+    }
+
+    // Parent is in fork choice but its payload `parentBlockHashHex` isn't revealed yet
+    return {kind: "parentPayload", rootHex: parentRootHex, slot: parentBlock.slot};
   }
 
   private advancePendingBlock(pendingBlock: PendingBlockInput): AdvancePendingBlockResult {
@@ -738,11 +733,11 @@ export class BlockInputSync {
       }
 
       case "invalidParentPayload":
-        this.logger.debug("Removing block with conflicting parent payload root", {
+        this.logger.debug("Removing block with conflicting parent payload hash", {
           slot: pendingBlock.blockInput.slot,
           root: pendingBlock.blockInput.blockRootHex,
           parentRoot: missingDependency.parentRootHex,
-          parentPayloadRoot: missingDependency.parentPayloadRootHex,
+          parentBlockHash: missingDependency.parentBlockHashHex,
         });
         this.removeAndDownScoreAllDescendants(pendingBlock, DroppedItemReason.invalidParentPayload);
         return "removed";
@@ -1216,7 +1211,7 @@ export class BlockInputSync {
               {
                 ...errorData,
                 parentRoot: pendingBlock.blockInput.parentRootHex,
-                parentPayloadRoot: res.err.type.parentPayloadRoot,
+                parentBlockHash: res.err.type.parentBlockHash,
               },
               res.err
             );

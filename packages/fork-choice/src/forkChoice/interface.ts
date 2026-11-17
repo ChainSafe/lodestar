@@ -3,7 +3,6 @@ import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex,
 import {
   BlockExecutionStatus,
   LVHExecResponse,
-  ParentPayloadDependency,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
@@ -280,12 +279,6 @@ export interface IForkChoice {
   getBlockDefaultStatus(blockRoot: Root): ProtoBlock | null;
   getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
-  getBlockHexAndPayloadRoot(blockRoot: RootHex, payloadRoot: RootHex): ProtoBlock | null;
-  /**
-   * What the block `parentRoot` has to offer to a block or bid with `bid.parent_payload_root == parentPayloadRoot`:
-   * the payload is there, it has to be awaited, or no valid block names it
-   */
-  getParentPayloadDependency(parentRoot: RootHex, parentPayloadRoot: RootHex): ParentPayloadDependency;
   shouldExtendPayload(blockRoot: RootHex): boolean;
   /** Spec: should_build_on_full(store, head, slot) */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean;

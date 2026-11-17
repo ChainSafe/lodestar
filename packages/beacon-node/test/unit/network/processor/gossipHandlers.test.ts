@@ -236,7 +236,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
 
     expect(payloadInput.getPayloadEnvelope()).toBe(byRootEnvelope);
     expect(onGossip).toHaveBeenCalledOnce();
-    // The stored envelope is not the one gossip validated, so its signature must be verified at import
+    // The stored envelope is not the one gossip validated, so it must be verified at import
     expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validEnvelope: false});
   });
 
@@ -455,12 +455,12 @@ describe("getGossipHandlers", () => {
   });
 
   it("imports a signature-verified REPEAT_PROPOSAL gloas block whose parent payload is known", async () => {
-    const {processBlock, threw, getBlockHexAndPayloadRoot} = await runBeaconBlockRepeatProposal(gloasConfig, {
+    const {processBlock, threw, getBlockHexAndBlockHash} = await runBeaconBlockRepeatProposal(gloasConfig, {
       recorded: true,
     });
-    expect(getBlockHexAndPayloadRoot).toHaveBeenCalledExactlyOnceWith(
+    expect(getBlockHexAndBlockHash).toHaveBeenCalledExactlyOnceWith(
       toRootHex(Buffer.alloc(32, 0)),
-      toRootHex(Buffer.alloc(32, 0xab))
+      toRootHex(Buffer.alloc(32, 0xaa))
     );
 
     expect(processBlock).toHaveBeenCalledOnce();
@@ -468,14 +468,11 @@ describe("getGossipHandlers", () => {
   });
 
   it("does not import a signature-verified REPEAT_PROPOSAL gloas block whose parent conflicts with finalization", async () => {
-    const {processBlock, threw, getByBlock, getBlockHexAndPayloadRoot} = await runBeaconBlockRepeatProposal(
-      gloasConfig,
-      {
-        recorded: true,
-        parentKnown: false,
-      }
-    );
-    expect(getBlockHexAndPayloadRoot).not.toHaveBeenCalled();
+    const {processBlock, threw, getByBlock, getBlockHexAndBlockHash} = await runBeaconBlockRepeatProposal(gloasConfig, {
+      recorded: true,
+      parentKnown: false,
+    });
+    expect(getBlockHexAndBlockHash).not.toHaveBeenCalled();
     expect(getByBlock).not.toHaveBeenCalled();
 
     expect(processBlock).not.toHaveBeenCalled();
@@ -733,7 +730,7 @@ async function runBeaconBlockRepeatProposal(
   processBlock: ReturnType<typeof vi.fn>;
   threw: boolean;
   getByBlock: ReturnType<typeof vi.fn>;
-  getBlockHexAndPayloadRoot: ReturnType<typeof vi.fn>;
+  getBlockHexAndBlockHash: ReturnType<typeof vi.fn>;
 }> {
   const logger = testLogger();
   const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
@@ -753,7 +750,6 @@ async function runBeaconBlockRepeatProposal(
     block.message.slot = 1;
     block.message.proposerIndex = 3;
     block.message.body.signedExecutionPayloadBid.message.parentBlockHash = Buffer.alloc(32, 0xaa);
-    block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot = Buffer.alloc(32, 0xab);
     blockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message));
     serializedData = ssz.gloas.SignedBeaconBlock.serialize(block);
     blockInput = BlockInputNoData.createFromBlock({...blockInputMeta, block, blockRootHex, forkName: ForkName.gloas});
@@ -799,14 +795,14 @@ async function runBeaconBlockRepeatProposal(
 
   const processBlock = vi.fn().mockResolvedValue(undefined);
   const getByBlock = vi.fn().mockReturnValue(blockInput);
-  const getBlockHexAndPayloadRoot = vi.fn().mockReturnValue(parentPayloadKnown ? {} : null);
+  const getBlockHexAndBlockHash = vi.fn().mockReturnValue(parentPayloadKnown ? {} : null);
   const chain = {
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
     emitter: new ChainEventEmitter(),
     forkChoice: {
       getBlockHexDefaultStatus: vi.fn().mockReturnValue(parentKnown ? {} : null),
-      getBlockHexAndPayloadRoot,
+      getBlockHexAndBlockHash,
     },
     getBlobsTracker: {triggerGetBlobs: vi.fn()},
     logger,
@@ -862,7 +858,7 @@ async function runBeaconBlockRepeatProposal(
   await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  return {processBlock, threw, getByBlock, getBlockHexAndPayloadRoot};
+  return {processBlock, threw, getByBlock, getBlockHexAndBlockHash};
 }
 
 function getExecutionBlockError(

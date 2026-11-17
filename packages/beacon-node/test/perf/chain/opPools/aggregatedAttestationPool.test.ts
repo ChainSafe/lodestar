@@ -65,7 +65,6 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
           unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
           unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
           executionPayloadBlockHash: null,
-          executionPayloadRoot: null,
           executionStatus: ExecutionStatus.PreMerge,
 
           timeliness: false,
@@ -75,8 +74,6 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
           dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
           parentBlockHash: null,
-          parentPayloadRoot: null,
-          payloadRoot: null,
           payloadStatus: 2, // PayloadStatus.FULL
         },
         originalState.slot
@@ -100,7 +97,6 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
             unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
             unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
             executionPayloadBlockHash: null,
-            executionPayloadRoot: null,
             executionStatus: ExecutionStatus.PreMerge,
             timeliness: false,
             importedTimely: false,
@@ -109,8 +105,6 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
             dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
             parentBlockHash: null,
-            parentPayloadRoot: null,
-            payloadRoot: null,
             payloadStatus: 2, // PayloadStatus.FULL
           },
           slot,

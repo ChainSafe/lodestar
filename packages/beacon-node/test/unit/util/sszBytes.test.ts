@@ -39,9 +39,9 @@ import {
   getDataIndexFromSignedAggregateAndProofSerialized,
   getDataIndexFromSingleAttestationSerialized,
   getLastProcessedSlotFromBeaconStateSerialized,
+  getParentBlockHashFromGloasSignedBeaconBlockSerialized,
+  getParentBlockHashFromSignedExecutionPayloadBidSerialized,
   getParentBlockRootFromSignedExecutionPayloadBidSerialized,
-  getParentPayloadRootFromGloasSignedBeaconBlockSerialized,
-  getParentPayloadRootFromSignedExecutionPayloadBidSerialized,
   getParentRootFromSignedBeaconBlockSerialized,
   getPayloadPresentFromPayloadAttestationMessageSerialized,
   getSignatureFromAttestationSerialized,
@@ -371,20 +371,18 @@ describe("signedBeaconBlock SSZ serialized picking", () => {
   });
 });
 
-describe("getParentPayloadRootFromGloasSignedBeaconBlockSerialized", () => {
+describe("getParentBlockHashFromGloasSignedBeaconBlockSerialized", () => {
   for (const fork of [ForkName.gloas, ForkName.heze] as const) {
-    it(`extracts parent payload root from a ${fork} signed beacon block`, () => {
+    it(`extracts parent block hash from a ${fork} signed beacon block`, () => {
       const signedBeaconBlockType = sszTypesFor(fork).SignedBeaconBlock;
       const signedBeaconBlock = signedBeaconBlockType.defaultValue();
-      // Distinct neighbours so reading the wrong bid field cannot pass
-      const bid = signedBeaconBlock.message.body.signedExecutionPayloadBid.message;
-      bid.parentBlockHash = Buffer.alloc(32, 0xaa);
-      bid.parentPayloadRoot = Buffer.alloc(32, 0xab);
-      bid.parentBlockRoot = Buffer.alloc(32, 0xbb);
+      signedBeaconBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash = Buffer.alloc(32, 0xaa);
       signedBeaconBlock.message.body.voluntaryExits.push(ssz.phase0.SignedVoluntaryExit.defaultValue());
       const bytes = signedBeaconBlockType.serialize(signedBeaconBlock);
 
-      expect(getParentPayloadRootFromGloasSignedBeaconBlockSerialized(bytes, fork)).toBe(toHex(bid.parentPayloadRoot));
+      expect(getParentBlockHashFromGloasSignedBeaconBlockSerialized(bytes, fork)).toBe(
+        toHex(signedBeaconBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+      );
     });
   }
 
@@ -395,7 +393,7 @@ describe("getParentPayloadRootFromGloasSignedBeaconBlockSerialized", () => {
     ] as const) {
       for (const size of sizes) {
         expect(
-          getParentPayloadRootFromGloasSignedBeaconBlockSerialized(Buffer.alloc(size), fork),
+          getParentBlockHashFromGloasSignedBeaconBlockSerialized(Buffer.alloc(size), fork),
           `${fork} ${size}`
         ).toBeNull();
       }
@@ -750,28 +748,26 @@ describe("SignedExecutionPayloadBid SSZ serialized picking", () => {
       const bytes = ssz.gloas.SignedExecutionPayloadBid.serialize(bid);
 
       expect(getSlotFromSignedExecutionPayloadBidSerialized(bytes)).toBe(bid.message.slot);
-      expect(getParentPayloadRootFromSignedExecutionPayloadBidSerialized(bytes)).toBe(
-        toHex(bid.message.parentPayloadRoot)
-      );
+      expect(getParentBlockHashFromSignedExecutionPayloadBidSerialized(bytes)).toBe(toHex(bid.message.parentBlockHash));
       expect(getParentBlockRootFromSignedExecutionPayloadBidSerialized(bytes)).toBe(toHex(bid.message.parentBlockRoot));
     });
   }
 
   it("getSlotFromSignedExecutionPayloadBidSerialized - invalid data", () => {
-    const invalidSlotDataSizes = [0, 100, 335];
+    const invalidSlotDataSizes = [0, 100, 303];
     for (const size of invalidSlotDataSizes) {
       expect(getSlotFromSignedExecutionPayloadBidSerialized(Buffer.alloc(size))).toBeNull();
     }
   });
 
-  it("getParentPayloadRootFromSignedExecutionPayloadBidSerialized - invalid data", () => {
-    for (const size of [0, 131, 163]) {
-      expect(getParentPayloadRootFromSignedExecutionPayloadBidSerialized(Buffer.alloc(size))).toBeNull();
+  it("getParentBlockHashFromSignedExecutionPayloadBidSerialized - invalid data", () => {
+    for (const size of [0, 99, 131]) {
+      expect(getParentBlockHashFromSignedExecutionPayloadBidSerialized(Buffer.alloc(size))).toBeNull();
     }
   });
 
   it("getParentBlockRootFromSignedExecutionPayloadBidSerialized - invalid data", () => {
-    for (const size of [0, 163, 195]) {
+    for (const size of [0, 99, 163]) {
       expect(getParentBlockRootFromSignedExecutionPayloadBidSerialized(Buffer.alloc(size))).toBeNull();
     }
   });
@@ -789,7 +785,6 @@ function signedExecutionPayloadBidFromValues(slot: Slot): gloas.SignedExecutionP
   bid.message.slot = slot;
   // Every root-sized field is distinct so reading the wrong field cannot pass
   bid.message.parentBlockHash = Buffer.alloc(32, 0xaa);
-  bid.message.parentPayloadRoot = Buffer.alloc(32, 0xab);
   bid.message.parentBlockRoot = Buffer.alloc(32, 0xbb);
   bid.message.blockHash = Buffer.alloc(32, 0xcc);
   bid.message.payloadRoot = Buffer.alloc(32, 0xcd);

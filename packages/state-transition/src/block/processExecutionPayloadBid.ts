@@ -76,18 +76,8 @@ export function processExecutionPayloadBid(
     );
   }
 
-  if (!byteArrayEquals(bid.parentPayloadRoot, state.latestPayloadRoot)) {
-    throw Error(
-      `Parent payload root ${toRootHex(bid.parentPayloadRoot)} of bid does not match state's latest payload root ${toRootHex(state.latestPayloadRoot)}`
-    );
-  }
-
   if (byteArrayEquals(bid.blockHash, bid.parentBlockHash)) {
     throw Error(`Block hash ${toRootHex(bid.blockHash)} of bid must not equal its parent block hash`);
-  }
-
-  if (byteArrayEquals(bid.payloadRoot, bid.parentPayloadRoot)) {
-    throw Error(`Payload root ${toRootHex(bid.payloadRoot)} of bid must not equal its parent payload root`);
   }
 
   const parentBlockRoot = getBlockRootAtSlot(state, state.slot - 1);

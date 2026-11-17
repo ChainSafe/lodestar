@@ -76,14 +76,10 @@ function setupForkChoice(): ProtoArray {
       finalizedRoot: "-",
 
       executionPayloadBlockHash: null,
-
-      executionPayloadRoot: null,
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
       parentBlockHash: null,
-      parentPayloadRoot: null,
-      payloadRoot: null,
       payloadStatus: PayloadStatus.FULL,
     } as Omit<ProtoBlock, "targetRoot">,
     0
@@ -94,13 +90,11 @@ function setupForkChoice(): ProtoArray {
       block.executionStatus === ExecutionStatus.PreMerge
         ? {
             executionPayloadBlockHash: null,
-            executionPayloadRoot: null,
             executionStatus: ExecutionStatus.PreMerge,
             dataAvailabilityStatus: DataAvailabilityStatus.PreData,
           }
         : {
             executionPayloadBlockHash: block.root,
-            executionPayloadRoot: `${block.root}root`,
             executionPayloadNumber: block.slot,
             executionPayloadGasLimit: 30000000,
             executionStatus: block.executionStatus,
@@ -133,8 +127,6 @@ function setupForkChoice(): ProtoArray {
         ...executionData,
 
         parentBlockHash: null,
-        parentPayloadRoot: null,
-        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
       },
       block.slot,
@@ -557,14 +549,11 @@ describe("executionStatus / lenient verdicts never contradict an earlier VALID",
         ptcTimeliness: false,
         proposerIndex: 0,
         executionPayloadBlockHash: "4A",
-        executionPayloadRoot: "4Aroot",
         executionPayloadNumber: 4,
         executionPayloadGasLimit: 30000000,
         executionStatus: ExecutionStatus.Syncing,
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
         parentBlockHash: null,
-        parentPayloadRoot: null,
-        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
       },
       4,

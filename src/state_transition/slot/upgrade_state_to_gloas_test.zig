@@ -108,19 +108,12 @@ test "Gloas upgrade migrates empty pending queues" {
     defer pubkeys.deinit();
     const epoch_cache = try EpochCache.createFromState(allocator, std.testing.io, &state, .{ .config = &config, .pubkey_cache = &pubkeys }, .{ .skip_sync_committee_cache = true, .skip_sync_pubkeys = true });
     defer epoch_cache.deinit();
-    var header = ct.fulu.ExecutionPayloadHeader.default_value;
-    defer ct.fulu.ExecutionPayloadHeader.deinit(allocator, &header);
-    try state.castToFork(.fulu).latestExecutionPayloadHeader(allocator, &header);
-    var payload_root: [32]u8 = undefined;
-    try ct.fulu.ExecutionPayloadHeader.hashTreeRoot(allocator, &header, &payload_root);
     const upgraded = try upgradeStateToGloas(allocator, std.testing.io, &config, epoch_cache, state.castToFork(.fulu));
     state = .{ .gloas = upgraded.inner };
-    try std.testing.expectEqualSlices(u8, &payload_root, try upgraded.inner.getFieldRoot("latest_payload_root"));
     var bid = ct.gloas.ExecutionPayloadBid.default_value;
     defer ct.gloas.ExecutionPayloadBid.deinit(allocator, &bid);
     try upgraded.inner.getValue(allocator, "latest_execution_payload_bid", &bid);
-    try std.testing.expectEqualSlices(u8, &payload_root, &bid.payload_root);
-    try std.testing.expectEqualSlices(u8, &c.ZERO_HASH, &bid.parent_payload_root);
+    try std.testing.expectEqualSlices(u8, &c.ZERO_HASH, &bid.payload_root);
     inline for (.{ "pending_deposits", "pending_partial_withdrawals", "pending_consolidations" }) |field| {
         var pending = try upgraded.inner.get(field);
         try std.testing.expectEqual(@as(usize, 0), try pending.length());

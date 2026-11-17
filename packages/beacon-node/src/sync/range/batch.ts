@@ -211,7 +211,7 @@ export class Batch {
     const firstBlockBid = (firstBlock.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message;
     return (
       byteArrayEquals(firstBlock.message.parentRoot, this.parentPayload.blockRoot) &&
-      byteArrayEquals(firstBlockBid.parentPayloadRoot, this.parentPayload.bid.payloadRoot)
+      byteArrayEquals(firstBlockBid.parentBlockHash, this.parentPayload.bid.blockHash)
     );
   }
 

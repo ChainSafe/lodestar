@@ -21,7 +21,6 @@ const builderIndex = 1;
 const dependentRoot = toRootHex(Buffer.alloc(32, 7));
 const parentBlockRoot = Buffer.alloc(32, 4);
 const parentBlockHash = Buffer.alloc(32, 5);
-const parentPayloadRoot = Buffer.alloc(32, 6);
 const prevRandao = Buffer.alloc(32, 6);
 const proposerFeeRecipient = Buffer.alloc(20, 8);
 // ClockMock is at the start of slot 0, the deadline is at 85% of that slot
@@ -97,7 +96,6 @@ describe("Bidder", () => {
     data.proposalSlot = slot;
     data.parentBlockRoot = parentBlockRoot;
     data.parentBlockHash = parentBlockHash;
-    data.parentPayloadRoot = parentPayloadRoot;
     data.safeBlockHash = Buffer.alloc(32, 2);
     data.finalizedBlockHash = Buffer.alloc(32, 3);
     data.payloadAttributes.prevRandao = prevRandao;
@@ -139,7 +137,6 @@ describe("Bidder", () => {
       builderIndex,
       parentBlockRoot,
       parentBlockHash,
-      parentPayloadRoot,
       prevRandao,
       feeRecipient: proposerFeeRecipient,
       // 90% of the 1 ETH payload value

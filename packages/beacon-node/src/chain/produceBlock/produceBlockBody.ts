@@ -24,7 +24,6 @@ import {
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
   type IBeaconStateViewBellatrix,
-  type IBeaconStateViewGloas,
   computeEpochAtSlot,
   computeTimeAtSlot,
   getExpectedGasLimit,
@@ -249,8 +248,8 @@ export async function produceBlockBody<T extends BlockType>(
     }
 
     const isExtendingPayload = byteArrayEquals(
-      builderBid.message.parentPayloadRoot,
-      currentState.latestExecutionPayloadBid.payloadRoot
+      builderBid.message.parentBlockHash,
+      currentState.latestExecutionPayloadBid.blockHash
     );
     const parentExecutionRequests = isExtendingPayload
       ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
@@ -275,7 +274,6 @@ export async function produceBlockBody<T extends BlockType>(
       builderIndex: builderBid.message.builderIndex,
       bidValue: prettyGweiToEth(builderBid.message.value),
       parentBlockHash: toRootHex(builderBid.message.parentBlockHash),
-      parentPayloadRoot: toRootHex(builderBid.message.parentPayloadRoot),
       parentBlockRoot: toRootHex(builderBid.message.parentBlockRoot),
       blockHash: toRootHex(builderBid.message.blockHash),
       isExtendingPayload,
@@ -302,7 +300,6 @@ export async function produceBlockBody<T extends BlockType>(
 
     // Get execution payload from EL
     let parentBlockHash: Bytes32;
-    let parentPayloadRoot: Root;
     let parentExecutionRequests: gloas.ExecutionRequests;
     // Apply parent payload once here as it's reused by EL prep and voluntary exit filtering below
     let stateAfterParentPayload: IBeaconStateViewBellatrix = currentState;
@@ -312,12 +309,10 @@ export async function produceBlockBody<T extends BlockType>(
     const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock, blockSlot);
     if (isBuildingOnFull) {
       parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
-      parentPayloadRoot = currentState.latestExecutionPayloadBid.payloadRoot;
       parentExecutionRequests = await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot);
       stateAfterParentPayload = currentState.withParentPayloadApplied(parentExecutionRequests);
     } else {
-      parentBlockHash = currentState.latestBlockHash;
-      parentPayloadRoot = currentState.latestPayloadRoot;
+      parentBlockHash = currentState.latestExecutionPayloadBid.parentBlockHash;
       parentExecutionRequests = ssz.gloas.ExecutionRequests.defaultValue();
     }
     const prepareRes = await prepareExecutionPayload(
@@ -339,7 +334,6 @@ export async function produceBlockBody<T extends BlockType>(
       slot: blockSlot,
       parentBlockRoot: toRootHex(parentBlockRoot),
       parentBlockHash: toRootHex(parentBlockHash),
-      parentPayloadRoot: toRootHex(parentPayloadRoot),
       feeRecipient,
       prepType,
       payloadId,
@@ -384,7 +378,6 @@ export async function produceBlockBody<T extends BlockType>(
     // Create self-build execution payload bid
     const bid: gloas.ExecutionPayloadBid = {
       parentBlockHash,
-      parentPayloadRoot,
       parentBlockRoot,
       blockHash: executionPayload.blockHash,
       // Root of the payload as it is cached below and later revealed in the envelope
@@ -915,11 +908,6 @@ export function getPayloadAttributesForSSE(
   } as SSEPayloadAttributes;
 
   if (isForkPostGloas(fork)) {
-    if (!isStatePostGloas(prepareState)) {
-      throw new Error("Expected Gloas state for Gloas payload attributes");
-    }
-    // The parent payload is the latest payload of prepareState, see preparePayloadAttributes
-    (ssePayloadAttributes as gloas.SSEPayloadAttributes).parentPayloadRoot = prepareState.latestPayloadRoot;
     (ssePayloadAttributes as gloas.SSEPayloadAttributes).safeBlockHash = fromHex(safeBlockHash);
     (ssePayloadAttributes as gloas.SSEPayloadAttributes).finalizedBlockHash = fromHex(finalizedBlockHash);
   } else {
@@ -928,19 +916,6 @@ export function getPayloadAttributesForSSE(
   }
 
   return ssePayloadAttributes;
-}
-
-/**
- * True if the latest payload of `state` is the one of its latest block, ie. a block on top of `state` extends
- * the payload of its parent block. Same condition as the withdrawals gate of the state transition:
- *
- *   state.latest_payload_root == state.latest_execution_payload_bid.payload_root
- *
- * It holds once the payload of the latest block is applied (`withParentPayloadApplied`), and for a state
- * upgraded to gloas whose bid commits to the last pre-gloas payload.
- */
-export function isExtendingParentPayload(state: IBeaconStateViewGloas): boolean {
-  return byteArrayEquals(state.latestPayloadRoot, state.latestExecutionPayloadBid.payloadRoot);
 }
 
 function preparePayloadAttributes(
@@ -977,20 +952,13 @@ function preparePayloadAttributes(
 
   let withdrawals: capella.Withdrawal[];
   if (isStatePostGloas(prepareState)) {
-    // Extending the payload of the parent block is decided by payload root, the way the state transition does
-    // (`process_withdrawals`): the callers apply the payload of the parent to prepareState when they build on it,
-    // after which the latest payload of the state is the one its bid commits to. Block hashes do not decide it,
-    // they are not unique: a dev genesis has a zero block hash for both
-    const isExtendingPayload = isExtendingParentPayload(prepareState);
-    // `parentBlockHash` is the head hash sent to the execution engine: in both cases it is the block hash of the
-    // latest payload of prepareState. A mismatch means that the caller builds on the payload of the parent
-    // without having applied it to prepareState, or the other way around
-    if (!byteArrayEquals(parentBlockHash, prepareState.latestBlockHash)) {
-      throw new Error(
-        `Expected parent block hash to be the latest block hash of the state isExtendingPayload=${isExtendingPayload} parentBlockHash=${toRootHex(parentBlockHash)} latestBlockHash=${toRootHex(prepareState.latestBlockHash)}`
-      );
-    }
+    const isExtendingPayload = byteArrayEquals(parentBlockHash, prepareState.latestExecutionPayloadBid.blockHash);
     if (isExtendingPayload) {
+      // applyParentExecutionPayload sets latestBlockHash = parentBid.blockHash, so a mismatch
+      // here means the caller did not apply parent payload to prepareState
+      if (!byteArrayEquals(prepareState.latestBlockHash, prepareState.latestExecutionPayloadBid.blockHash)) {
+        throw new Error("Expected state with parent execution payload applied for withdrawals");
+      }
       withdrawals = prepareState.getExpectedWithdrawals().expectedWithdrawals;
     } else {
       // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
@@ -1016,13 +984,11 @@ function preparePayloadAttributes(
       throw new Error("Expected Gloas state for Gloas payload attributes");
     }
     (payloadAttributes as gloas.SSEPayloadAttributes["payloadAttributes"]).slotNumber = prepareSlot;
-    // In both branches above the parent payload is the latest payload of prepareState, fork choice
-    // identifies it by its root
     (payloadAttributes as gloas.SSEPayloadAttributes["payloadAttributes"]).targetGasLimit = getProposerTargetGasLimit(
       chain,
       prepareSlot,
       parentBlockRoot,
-      prepareState.latestPayloadRoot
+      parentBlockHash
     );
   }
 
@@ -1030,14 +996,10 @@ function preparePayloadAttributes(
     // Built from the full view including untimely lists (only_timely=False in prepare_execution_payload),
     // a superset of the timely-only set every validator enforces
     const parentBlockRootHex = toRootHex(parentBlockRoot);
-    if (!isStatePostGloas(prepareState)) {
-      throw new Error("Expected Gloas state for Heze payload attributes");
-    }
-    const parentPayloadRootHex = toRootHex(prepareState.latestPayloadRoot);
-    const parentBlock = chain.forkChoice.getBlockHexAndPayloadRoot(parentBlockRootHex, parentPayloadRootHex);
+    const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, toRootHex(parentBlockHash));
     if (parentBlock === null) {
       throw new Error(
-        `Parent block not in fork choice for Heze payload attributes parentBlockRoot=${parentBlockRootHex} parentPayloadRoot=${parentPayloadRootHex}`
+        `Parent block not in fork choice for Heze payload attributes parentBlockRoot=${parentBlockRootHex} parentBlockHash=${toRootHex(parentBlockHash)}`
       );
     }
     const inclusionListSlot = prepareSlot - 1;
@@ -1066,7 +1028,7 @@ function preparePayloadAttributes(
  * unchanged (`is_gas_limit_target_compatible` then requires `gas_limit == parent_gas_limit`).
  *
  * The parent payload's gas_limit is read from fork choice — the variant matching
- * `(parentBlockRoot, parentPayloadRoot)` carries the correct value for both FULL parents
+ * `(parentBlockRoot, parentBlockHash)` carries the correct value for both FULL parents
  * (FULL.executionPayloadGasLimit = delivered payload's gas_limit) and EMPTY parents
  * (EMPTY.executionPayloadGasLimit = inherited grandparent's gas_limit).
  */
@@ -1074,7 +1036,7 @@ function getProposerTargetGasLimit(
   chain: {forkChoice: IForkChoice; proposerPreferencesPool: ProposerPreferencesPool},
   prepareSlot: Slot,
   parentBlockRoot: Root,
-  parentPayloadRoot: Root
+  parentBlockHash: Bytes32
 ): bigint {
   const parentBlockRootHex = toRootHex(parentBlockRoot);
   const preferences = getPooledProposerPreferences(chain, prepareSlot, parentBlockRootHex);
@@ -1082,13 +1044,10 @@ function getProposerTargetGasLimit(
     return preferences.targetGasLimit;
   }
 
-  const parentPayloadVariant = chain.forkChoice.getBlockHexAndPayloadRoot(
-    parentBlockRootHex,
-    toRootHex(parentPayloadRoot)
-  );
+  const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, toRootHex(parentBlockHash));
   if (parentPayloadVariant === null || parentPayloadVariant.executionPayloadBlockHash === null) {
     throw new Error(
-      `Cannot resolve parent payload gas_limit for proposer targetGasLimit fallback parentBlockRoot=${parentBlockRootHex} parentPayloadRoot=${toRootHex(parentPayloadRoot)}`
+      `Cannot resolve parent payload gas_limit for proposer targetGasLimit fallback parentBlockRoot=${parentBlockRootHex} parentBlockHash=${toRootHex(parentBlockHash)}`
     );
   }
   return BigInt(parentPayloadVariant.executionPayloadGasLimit);

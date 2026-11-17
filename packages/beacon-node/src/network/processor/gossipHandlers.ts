@@ -701,9 +701,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           // A sibling with an unknown parent cannot be imported, sync fetches it if its branch becomes relevant
           chain.forkChoice.getBlockHexDefaultStatus(toRootHex(signedBlock.message.parentRoot)) !== null &&
           (!isGloasBeaconBlock(signedBlock.message) ||
-            chain.forkChoice.getBlockHexAndPayloadRoot(
+            chain.forkChoice.getBlockHexAndBlockHash(
               toRootHex(signedBlock.message.parentRoot),
-              toRootHex(signedBlock.message.body.signedExecutionPayloadBid.message.parentPayloadRoot)
+              toRootHex(signedBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash)
             ) !== null)
         ) {
           const blockInput = cacheSignatureVerifiedBlock(

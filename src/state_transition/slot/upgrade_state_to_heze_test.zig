@@ -19,7 +19,6 @@ test "Heze upgrade preserves bid fields and initializes inclusion list bits" {
     value.eth1_deposit_index = 42;
     value.deposit_requests_start_index = 42;
     value.latest_execution_payload_bid.parent_block_hash = @splat(1);
-    value.latest_execution_payload_bid.parent_payload_root = @splat(13);
     value.latest_execution_payload_bid.parent_block_root = @splat(2);
     value.latest_execution_payload_bid.block_hash = @splat(3);
     value.latest_execution_payload_bid.payload_root = @splat(14);
@@ -33,7 +32,6 @@ test "Heze upgrade preserves bid fields and initializes inclusion list bits" {
     value.latest_execution_payload_bid.execution_requests_root = @splat(11);
     try value.latest_execution_payload_bid.blob_kzg_commitments.append(allocator, @splat(12));
     try value.balances.append(allocator, 17);
-    value.latest_payload_root = @splat(15);
 
     var source = BeaconState(.gloas){ .inner = try ct.gloas.BeaconState.TreeView.fromValue(allocator, &pool, &value) };
     var source_owned = true;
@@ -52,7 +50,6 @@ test "Heze upgrade preserves bid fields and initializes inclusion list bits" {
     try std.testing.expect(bid.inclusion_list_bits.equals(&ct.heze.InclusionListBits.default_value));
     var balances = try upgraded.balances();
     try std.testing.expectEqual(17, try balances.get(0));
-    try std.testing.expectEqualSlices(u8, &value.latest_payload_root, try upgraded.inner.getFieldRoot("latest_payload_root"));
 }
 
 test "Heze upgrade rejects undrained legacy deposits without consuming the source" {

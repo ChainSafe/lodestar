@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ExecutionStatus, PayloadStatus, isGloasBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {ForkPostDeneb, ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {BeaconState, DataColumnSidecar, DataColumnSidecars, type SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
@@ -88,7 +88,9 @@ export function getDebugApi({
               blockRoot: node.blockRoot,
               payloadStatus: toPayloadStatusName(node.payloadStatus),
               parentRoot:
-                isGloasBlock(node) && node.payloadStatus !== PayloadStatus.PENDING ? node.blockRoot : node.parentRoot,
+                node.parentBlockHash !== null && node.payloadStatus !== PayloadStatus.PENDING
+                  ? node.blockRoot
+                  : node.parentRoot,
               parentPayloadStatus: parent === undefined ? null : toPayloadStatusName(parent.payloadStatus),
               justifiedCheckpoint: {epoch: node.justifiedEpoch, root: fromHex(node.justifiedRoot)},
               finalizedCheckpoint: {epoch: node.finalizedEpoch, root: fromHex(node.finalizedRoot)},

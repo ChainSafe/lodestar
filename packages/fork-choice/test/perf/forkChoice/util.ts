@@ -45,14 +45,10 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       finalizedRoot: genesisRoot,
 
       executionPayloadBlockHash: null,
-      executionPayloadRoot: null,
-
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
       parentBlockHash: null,
-      parentPayloadRoot: null,
-      payloadRoot: null,
       payloadStatus: PayloadStatus.FULL,
     } as Omit<ProtoBlock, "targetRoot">,
     genesisSlot
@@ -163,7 +159,6 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       unrealizedFinalizedRoot: genesisRoot,
 
       executionPayloadBlockHash: gloasBoosted ? payloadHash(slot) : null,
-      executionPayloadRoot: gloasBoosted ? payloadRoot(0) : null,
       executionStatus: gloasBoosted ? ExecutionStatus.Valid : ExecutionStatus.PreMerge,
 
       timeliness: false,
@@ -172,12 +167,9 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       proposerIndex: 0,
       dataAvailabilityStatus: gloasBoosted ? DataAvailabilityStatus.Available : DataAvailabilityStatus.PreData,
 
+      // The parent's own payload hash links this block to the parent's PENDING/EMPTY variant (the
+      // FULL variant only exists once the envelope is revealed, which this harness does not simulate)
       parentBlockHash: gloasBoosted ? payloadHash(slot - 1) : null,
-      // No payload is ever revealed in this harness (the FULL variant only exists once the envelope
-      // is revealed), so every block has the same parent payload root, which links it to the
-      // parent's PENDING/EMPTY variant
-      parentPayloadRoot: gloasBoosted ? payloadRoot(0) : null,
-      payloadRoot: gloasBoosted ? payloadRoot(slot) : null,
       payloadStatus: PayloadStatus.FULL,
       // ProtoBlock is a union over the execution fields; the conditionals lose the narrowing
     } as ProtoBlock;
@@ -196,8 +188,4 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
 
 function payloadHash(slot: number): string {
   return `0xpayload${slot}`;
-}
-
-function payloadRoot(slot: number): string {
-  return `0xpayloadroot${slot}`;
 }

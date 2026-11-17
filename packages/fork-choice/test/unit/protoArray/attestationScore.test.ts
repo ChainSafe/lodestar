@@ -44,14 +44,10 @@ function toProtoBlock(slot: number, blockRoot: RootHex, parentRoot: RootHex): Pr
     proposerIndex: 0,
 
     executionPayloadBlockHash: null,
-
-    executionPayloadRoot: null,
     executionStatus: ExecutionStatus.PreMerge,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
-    parentPayloadRoot: null,
-    payloadRoot: null,
     payloadStatus: PayloadStatus.FULL,
   };
 }

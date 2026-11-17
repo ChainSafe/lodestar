@@ -99,19 +99,19 @@ export function verifyBlocksSanityChecks(
 
       parentBlock = parentBlockDefaultStatus;
       if (isGloasBeaconBlock(block.message)) {
-        const parentPayloadRoot = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot);
-        const parentBlockWithPayload = chain.forkChoice.getBlockHexAndPayloadRoot(parentRoot, parentPayloadRoot);
+        const parentBlockHash = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
+        const parentBlockWithPayload = chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash);
         if (!parentBlockWithPayload) {
           // Checkpoint sync: parent's FULL variant may not be in fork-choice yet because the
           // anchor block is initialized with PENDING+EMPTY only. The parent's payload arrives
           // in the same batch via payloadEnvelopes and will be imported by processBlocks. If
           // a matching payload is in the Map, accept the parent as known.
           const parentPayloadInput = payloadEnvelopes?.get(parentBlockDefaultStatus.slot);
-          if (parentPayloadInput?.getPayloadRootHex() !== parentPayloadRoot) {
+          if (parentPayloadInput?.getBlockHashHex() !== parentBlockHash) {
             throw new BlockError(block, {
               code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
               parentRoot,
-              parentPayloadRoot,
+              parentBlockHash,
             });
           }
         } else {

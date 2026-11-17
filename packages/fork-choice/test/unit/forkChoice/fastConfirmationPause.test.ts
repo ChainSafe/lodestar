@@ -42,14 +42,10 @@ describe("fast confirmation pause/resume", () => {
         unrealizedFinalizedRoot: genesisRoot,
 
         executionPayloadBlockHash: null,
-
-        executionPayloadRoot: null,
         executionStatus: ExecutionStatus.PreMerge,
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
         parentBlockHash: null,
-        parentPayloadRoot: null,
-        payloadRoot: null,
         payloadStatus: PayloadStatus.FULL,
         timeliness: false,
         importedTimely: false,

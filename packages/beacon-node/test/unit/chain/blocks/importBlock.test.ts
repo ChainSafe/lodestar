@@ -124,11 +124,7 @@ describe("chain / blocks / importBlock", () => {
   it("rethrows any other fork choice error", async () => {
     const error = new ForkChoiceError({
       code: ForkChoiceErrorCode.INVALID_BLOCK,
-      err: {
-        code: InvalidBlockCode.UNKNOWN_PARENT,
-        root: toRootHex(parentRoot),
-        parentPayloadRoot: toRootHex(parentBlockHash),
-      },
+      err: {code: InvalidBlockCode.UNKNOWN_PARENT, root: toRootHex(parentRoot), hash: toRootHex(parentBlockHash)},
     });
 
     await expect(importGloasBlock(error).result).rejects.toBe(error);

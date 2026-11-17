@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {Slot, isGloasBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../../errors/index.js";
@@ -20,10 +20,10 @@ export type ChainSegmentResult = {warnings: OrphanedPayloadEnvelope[] | null};
  *
  * For each block:
  * - Verifies parent root + slot linearity
- * - For gloas: verifies bid.parentPayloadRoot matches the tracked payload root; if not, the
+ * - For gloas: verifies bid.parentBlockHash matches the tracked execution hash; if not, the
  *   previous FULL envelope is treated as orphaned (segment continues as if previous slot was EMPTY)
  * - If an envelope exists for this slot (or the parent's slot): verifies it references this block's root
- * - Advances the tracked payload root (FULL if envelope present, EMPTY if not)
+ * - Advances the tracked execution hash (FULL if envelope present, EMPTY if not)
  */
 export function assertLinearChainSegment(
   config: ChainForkConfig,
@@ -37,20 +37,14 @@ export function assertLinearChainSegment(
 
   const warnings: OrphanedPayloadEnvelope[] = [];
 
-  // Track the expected execution payload root through the segment, seeded from the FIRST
+  // Track the expected execution payload block hash through the segment, seeded from the FIRST
   // block's own bid
   const firstBlockMessage = blocks[0].getBlock().message;
-  let currentPayloadRoot: string | null = isGloasBeaconBlock(firstBlockMessage)
-    ? toRootHex(firstBlockMessage.body.signedExecutionPayloadBid.message.parentPayloadRoot)
+  let currentExecHash: string | null = isGloasBeaconBlock(firstBlockMessage)
+    ? toRootHex(firstBlockMessage.body.signedExecutionPayloadBid.message.parentBlockHash)
     : null;
 
-  // Root of the latest payload of the parent variant: its own payload if FULL, the one it built on otherwise
-  let parentPayloadRoot: string | null =
-    parentBlock === null
-      ? null
-      : parentBlock.payloadStatus === PayloadStatus.FULL
-        ? parentBlock.payloadRoot
-        : parentBlock.parentPayloadRoot;
+  let parentExecHash: string | null = parentBlock?.executionPayloadBlockHash ?? null;
   if (parentBlock !== null) {
     const parentPayloadInput = payloadEnvelopes?.get(parentBlock.slot);
     if (parentPayloadInput?.hasPayloadEnvelope()) {
@@ -63,11 +57,11 @@ export function assertLinearChainSegment(
           blockRoot: parentBlock.blockRoot,
         });
       }
-      const parentInputPayloadRoot = parentPayloadInput.getPayloadRootHex();
-      if (currentPayloadRoot === parentInputPayloadRoot) {
+      const parentPayloadBlockHash = parentPayloadInput.getBlockHashHex();
+      if (currentExecHash === parentPayloadBlockHash) {
         // Checkpoint-sync first batch: the anchor is stored PENDING with the inherited (grandparent)
-        // payload root, its own payload is in this batch and is the real parent EL head
-        parentPayloadRoot = parentInputPayloadRoot;
+        // hash, its own payload is in this batch and is the real parent EL head
+        parentExecHash = parentPayloadBlockHash;
       } else {
         // First block builds on the parent's EMPTY variant, the parent's payload in this batch is orphaned
         warnings.push({slot: parentBlock.slot, payloadEnvelopeInput: parentPayloadInput});
@@ -77,18 +71,18 @@ export function assertLinearChainSegment(
 
   // First block must build on the parent's EL head. PARENT_PAYLOAD_UNKNOWN (vs the in-segment
   // NON_LINEAR_PAYLOAD_ROOTS below) tells range sync this is a parent-link problem, not an in-batch one.
-  if (parentPayloadRoot !== null && currentPayloadRoot !== null && currentPayloadRoot !== parentPayloadRoot) {
+  if (parentExecHash !== null && currentExecHash !== null && currentExecHash !== parentExecHash) {
     throw new BlockError(blocks[0].getBlock(), {
       code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
       parentRoot: toRootHex(firstBlockMessage.parentRoot),
-      parentPayloadRoot: currentPayloadRoot,
+      parentBlockHash: currentExecHash,
     });
   }
 
-  // Track the payload root before the last FULL advancement so we can recover
+  // Track the execution hash before the last FULL advancement so we can recover
   // if the next block reveals that envelope was orphaned.
-  let prevPayloadRoot: string | null = currentPayloadRoot;
-  // The slot whose envelope last advanced currentPayloadRoot (for warning context).
+  let prevExecHash: string | null = currentExecHash;
+  // The slot whose envelope last advanced currentExecHash (for warning context).
   let lastFullSlot: Slot | null = null;
 
   for (let i = 0; i < blocks.length; i++) {
@@ -113,21 +107,21 @@ export function assertLinearChainSegment(
     }
 
     if (isGloasBeaconBlock(block.message)) {
-      // currentPayloadRoot and prevPayloadRoot are only null for a pre-gloas first block (fork-transition segment); always set post-gloas.
-      if (currentPayloadRoot !== null) {
-        // Verify the bid's parentPayloadRoot matches the tracked payload root.
+      // currentExecHash and prevExecHash are only null for a pre-gloas first block (fork-transition segment); always set post-gloas.
+      if (currentExecHash !== null) {
+        // Verify the bid's parentBlockHash matches the tracked execution hash.
         // This ensures the block was built on the correct FULL or EMPTY variant of its parent.
-        const bidParentPayloadRoot = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentPayloadRoot);
-        if (bidParentPayloadRoot !== currentPayloadRoot) {
+        const bidParentHash = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
+        if (bidParentHash !== currentExecHash) {
           // Maybe the previous slot's FULL envelope was orphaned — try falling back.
-          // If even prevPayloadRoot doesn't match, the segment is non-linear.
-          if (bidParentPayloadRoot !== prevPayloadRoot) {
+          // If even prevExecHash doesn't match, the segment is non-linear.
+          if (bidParentHash !== prevExecHash) {
             // Broken link inside the segment: throw NON_LINEAR_PAYLOAD_ROOTS instead of PARENT_PAYLOAD_UNKNOWN
             // this is important for range sync to handle accordingly
             throw new BlockError(block, {
               code: BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS,
-              parentPayloadRoot: bidParentPayloadRoot,
-              expectedPayloadRoot: currentPayloadRoot,
+              parentBlockHash: bidParentHash,
+              expectedBlockHash: currentExecHash,
             });
           }
           if (lastFullSlot !== null && payloadEnvelopes !== null) {
@@ -136,7 +130,7 @@ export function assertLinearChainSegment(
               warnings.push({slot: lastFullSlot, payloadEnvelopeInput: orphanedInput});
             }
           }
-          currentPayloadRoot = prevPayloadRoot;
+          currentExecHash = prevExecHash;
         }
       }
 
@@ -155,11 +149,11 @@ export function assertLinearChainSegment(
         }
 
         // FULL variant: save state before advancing, then advance
-        prevPayloadRoot = currentPayloadRoot;
+        prevExecHash = currentExecHash;
         lastFullSlot = slot;
-        currentPayloadRoot = toRootHex(block.message.body.signedExecutionPayloadBid.message.payloadRoot);
+        currentExecHash = toRootHex(payloadEnvelope.payload.blockHash);
       }
-      // EMPTY variant: currentPayloadRoot unchanged
+      // EMPTY variant: currentExecHash unchanged
     }
   }
 

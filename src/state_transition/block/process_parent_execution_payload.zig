@@ -31,7 +31,7 @@ pub fn processParentExecutionPayload(
 
     const requests = &block.body().inner.parent_execution_requests;
     try validateExecutionRequests(fork, requests);
-    const is_parent_block_full = std.mem.eql(u8, &bid.parent_payload_root, &parent_bid.payload_root);
+    const is_parent_block_full = std.mem.eql(u8, &bid.parent_block_hash, &parent_bid.block_hash);
     if (!is_parent_block_full) {
         if (requests.deposits.items.len != 0 or
             requests.withdrawals.items.len != 0 or
@@ -108,7 +108,6 @@ pub fn applyParentExecutionPayload(
     try execution_payload_availability.set(parent_slot % preset.SLOTS_PER_HISTORICAL_ROOT, true);
     try state.inner.set("execution_payload_availability", execution_payload_availability);
     try state.inner.setValue("latest_block_hash", &parent_bid.block_hash);
-    try state.inner.setValue("latest_payload_root", &parent_bid.payload_root);
 }
 
 fn settleBuilderPayment(comptime fork: ForkSeq, allocator: Allocator, state: *BeaconState(fork), payment_index: u64) !void {
