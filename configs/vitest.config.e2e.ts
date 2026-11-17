@@ -25,6 +25,7 @@ export const e2eMinimalProject = defineProject({
       LODESTAR_PRESET: "minimal",
     },
     pool: "forks",
+    execArgv: ["--expose-gc"],
     maxWorkers: 1,
     isolate: true,
     sequence: {
@@ -43,7 +44,6 @@ export const e2eSyncProject = defineProject({
       LODESTAR_PRESET: "minimal",
     },
     pool: "forks",
-    execArgv: ["--expose-gc"],
     maxWorkers: 1,
     isolate: true,
     sequence: {
