@@ -52,7 +52,7 @@ export async function nativeNetworkProcess(
       "node_modules/vitest/vitest.mjs",
       "run",
       "--project",
-      process.env.LODESTAR_PRESET === "minimal" ? "e2e" : "e2e-mainnet",
+      "e2e-mainnet",
       "network/nativePeer.test.ts",
       "--maxWorkers=1",
     ],
