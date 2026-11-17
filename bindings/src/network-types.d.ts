@@ -3,6 +3,7 @@
  */
 import type {
   HostCapacity,
+  IpEndpoint,
   NativeConnection,
   NativeForkEntry,
   NativeIdentity,
@@ -10,6 +11,7 @@ import type {
   NativePeerObservation,
   NativeRequestProtocolId,
   NativeTopicKind,
+  PeerIdStr,
 } from "./network.js";
 
 /** One exchange's delivery, which the host owns. */
@@ -108,7 +110,7 @@ export interface NativeLogBatch {
 export interface NativeBridge {
   close(): void;
   exchange(): NativeDelivery;
-  drainLogs(maxRecords?: number): NativeLogBatch;
+  drainLogs(maxRecords: number): NativeLogBatch;
   setCapacity(capacity: HostCapacity | null): void;
   reportGossip(handle: NativeGossipHandle, verdict: NativeGossipVerdict): void;
   classifyGossip(handle: NativeGossipHandle, available: boolean): void;
