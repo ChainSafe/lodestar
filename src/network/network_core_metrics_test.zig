@@ -150,6 +150,7 @@ const contract = [_]Series{
     .{ .name = "gossipsub_data_recipients_total", .kind = "counter", .labels = &.{ "origin", "outcome" } },
     .{ .name = "gossipsub_queue_drops_total", .kind = "counter", .labels = &.{"reason"} },
     .{ .name = "gossipsub_ihave_budget_skipped_total", .kind = "counter" },
+    .{ .name = "gossipsub_malformed_rpcs_total", .kind = "counter" },
     .{ .name = "gossipsub_retention_refusals_total", .kind = "counter", .labels = &.{"topic"} },
     .{ .name = "gossipsub_iwant_rcv_dont_have_msgids_total", .kind = "counter" },
     .{ .name = "gossipsub_iwant_known_msgids_total", .kind = "counter", .labels = &.{"outcome"} },

@@ -22,6 +22,11 @@ pub fn writeCounters(g: *const Gossipsub, w: *prom.Encoder) prom.Error!void {
         .kind = .counter,
         .help = "Topic advertisements skipped because they exceeded a peer's heartbeat byte or message-ID budget",
     }, g.counters.ihave_budget_skipped);
+    try w.scalar(.{
+        .name = "gossipsub_malformed_rpcs_total",
+        .kind = .counter,
+        .help = "Inbound gossip RPCs and frames refused as malformed",
+    }, g.counters.malformed_rpcs);
     try w.enums(.{
         .name = "gossipsub_storage_refusals_total",
         .kind = .counter,
