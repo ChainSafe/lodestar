@@ -18,6 +18,7 @@ type SerializedErrorValue =
   | {kind: "array"; value: SerializedErrorValue[]}
   | {kind: "object"; value: Record<string, SerializedErrorValue>};
 
+  // TODO - beacon engine: see if we need it
 export function serializeError(error: Error): SerializedError {
   return {
     name: error.name,

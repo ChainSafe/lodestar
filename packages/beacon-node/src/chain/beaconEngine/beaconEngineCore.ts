@@ -728,35 +728,38 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     const previousJustified = this.forkChoice.getJustifiedCheckpoint();
     const previousFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
     this.updateTime(slot);
-    // TODO - beacon engine: return or pull fork-choice changes if slot maintenance fails after updating time.
-    this.attestationPool.prune(slot);
-    this.aggregatedAttestationPool.prune(slot);
-    this.proposerTracker.prune(slot);
-    this.singleAttestationPool.prune(this.proposerTracker);
-    this.syncCommitteeMessagePool.prune(slot);
-    this.seenSyncCommitteeMessages.prune(slot);
-    this.payloadAttestationPool.prune(slot);
-    this.executionPayloadBidPool.prune(slot);
-    this.inclusionListStore.prune(slot);
-    this.seenExecutionPayloadBids.prune(slot);
-    this.proposerPreferencesPool.prune(slot);
-    this.seenAttestationDatas.onSlot(slot);
+    try {
+      this.attestationPool.prune(slot);
+      this.aggregatedAttestationPool.prune(slot);
+      this.proposerTracker.prune(slot);
+      this.singleAttestationPool.prune(this.proposerTracker);
+      this.syncCommitteeMessagePool.prune(slot);
+      this.seenSyncCommitteeMessages.prune(slot);
+      this.payloadAttestationPool.prune(slot);
+      this.executionPayloadBidPool.prune(slot);
+      this.inclusionListStore.prune(slot);
+      this.seenExecutionPayloadBids.prune(slot);
+      this.proposerPreferencesPool.prune(slot);
+      this.seenAttestationDatas.onSlot(slot);
 
-    // Source: unstable@2593063a82 chain/chain.ts#onClockSlot.
-    if (this.metrics && (slot + 1) % SLOTS_PER_EPOCH === 0 && !this.signal.aborted) {
-      clearTimeout(this.validatorMonitorTimeout);
-      this.validatorMonitorTimeout = setTimeout(
-        () => {
-          this.validatorMonitorTimeout = undefined;
-          try {
-            this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState());
-          } catch (e) {
-            if (!isErrorAborted(e))
-              this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e as Error);
-          }
-        },
-        this.config.getSlotComponentDurationMs(this.config.getForkName(slot), HALF_SLOT_BPS)
-      );
+      // Source: unstable@2593063a82 chain/chain.ts#onClockSlot.
+      if (this.metrics && (slot + 1) % SLOTS_PER_EPOCH === 0 && !this.signal.aborted) {
+        clearTimeout(this.validatorMonitorTimeout);
+        this.validatorMonitorTimeout = setTimeout(
+          () => {
+            this.validatorMonitorTimeout = undefined;
+            try {
+              this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState());
+            } catch (e) {
+              if (!isErrorAborted(e))
+                this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e as Error);
+            }
+          },
+          this.config.getSlotComponentDurationMs(this.config.getForkName(slot), HALF_SLOT_BPS)
+        );
+      }
+    } catch (e) {
+      this.logger.error("Error processing slot", {slot}, e as Error);
     }
     const finalizedCheckpointChanged = this.forkChoice.getFinalizedCheckpoint().epoch !== previousFinalizedEpoch;
     const justifiedCheckpointChanged = this.forkChoice.getJustifiedCheckpoint().epoch > previousJustified.epoch;
