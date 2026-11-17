@@ -157,7 +157,7 @@ describe("native gossip handler order", () => {
     }
   });
 
-  it("ignores a duplicate exit while the first verdict still awaits forwarding", async () => {
+  it("ignores a duplicate exit once the first handler has run", async () => {
     const f = fixture();
     vi.mocked(validateGossipVoluntaryExit).mockImplementation(validateActualExit).mockResolvedValueOnce(undefined);
     const exit = message(GossipType.voluntary_exit, 1);
@@ -165,6 +165,8 @@ describe("native gossip handler order", () => {
     const duplicate = job("voluntary_exit", [{...exit, id: new Uint8Array(20).fill(2)}]);
     try {
       expect(await f.gossip.validate(held)).toEqual(["accept"]);
+      expect(f.order).toEqual([]);
+      await vi.runAllTimersAsync();
       expect(await f.gossip.validate(duplicate)).toEqual(["ignore"]);
       expect(f.chain.opPool.insertVoluntaryExit).toHaveBeenCalledOnce();
       expect(f.order).toEqual(["exit handler"]);
@@ -173,7 +175,7 @@ describe("native gossip handler order", () => {
     }
   });
 
-  it("records an accepted operation before returning its synchronous-backend verdict", async () => {
+  it("records an accepted operation after returning its synchronous-backend verdict", async () => {
     const f = fixture();
     vi.mocked(validateGossipVoluntaryExit).mockResolvedValue(undefined);
     const validate = getGossipValidatorFn(getGossipHandlers(f.modules, {}), f.modules, vi.fn());
@@ -189,6 +191,8 @@ describe("native gossip handler order", () => {
         msgSlot: null,
       });
       expect(result).toBe(TopicValidatorResult.Accept);
+      expect(f.order).toEqual([]);
+      await vi.runAllTimersAsync();
       expect(f.order).toEqual(["exit handler"]);
     } finally {
       f.executor.stop();
