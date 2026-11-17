@@ -361,6 +361,7 @@ pub const PeerManager = struct {
                 gossipsub.graylistThreshold(),
             ),
         };
+        if (!snapshot.direct and input.score <= peers.reputation.disconnect_score) input.reject = .reputation;
         if (snapshot.status) |status| {
             if (!std.mem.eql(u8, &status.fork_digest, &self.local.fork.digest))
                 input.reject = .incompatible_fork;

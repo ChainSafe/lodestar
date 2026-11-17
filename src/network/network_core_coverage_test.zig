@@ -113,6 +113,29 @@ test "core custody coverage tolerates negative gossip scores but excludes poor r
     try equal(@as(u16, 4), setup.client.peer_manager.coverageDeficits().custody_groups);
 }
 
+test "core selection disconnects a peer on its combined score unless direct" {
+    var setup: core_test.Setup = .{};
+    try init(&setup, &.{ .fork = .{ .fork = .altair } });
+    defer setup.deinit();
+    try settle(&setup);
+    const owner = &setup.client.peer_manager;
+    const g = setup.client.protocols.gossipsub;
+    var snapshots: [4]t.Snapshot = undefined;
+    try equal(@as(usize, 1), owner.snapshots(&snapshots));
+    const peer = snapshots[0];
+    _ = owner.catalog.setDirect(peer.peer, true);
+    gossip_test.penalize(g, peer.connection.?, 1e6);
+    setup.pair.advance(manager.policy_interval_ms);
+    owner.reconcile(g, setup.pair.now);
+    try equal(@as(f64, 0), owner.catalog.get(peer.peer).?.score);
+    try equal(null, owner.catalog.get(peer.peer).?.disconnect_reason);
+
+    _ = owner.catalog.setDirect(peer.peer, false);
+    setup.pair.advance(manager.policy_interval_ms);
+    owner.reconcile(g, setup.pair.now);
+    try equal(t.DisconnectReason.reputation, owner.catalog.get(peer.peer).?.disconnect_reason.?);
+}
+
 test "core coverage observes reputation recovery on the policy tick and bans immediately" {
     var setup: core_test.Setup = .{};
     const local: t.LocalState = .{ .fork = .{ .fork = .fulu, .minimum_sampling_groups = 8 }, .status = .{ .earliest_available_slot = 0 }, .metadata = .{ .custody_group_count = 4 } };
