@@ -5,8 +5,7 @@ Run with perf/tracepoint permissions:
   sudo scripts/profile-network.py PID OWNER_TID OUTPUT --seconds 120
 
 Find OWNER_TID with `ps -T -p PID -o spid,comm` (network-owner).
-Enable --network.native.traceGossip for correlated lifecycle logs and
---network.native.traceTurns for 50 ms network phase totals. All captures
+Enable --network.native.traceGossip for correlated lifecycle logs. All captures
 use CLOCK_MONOTONIC, matching nativeMonotonicMs. CPU stacks use DWARF; keep the
 matching addon and executable until `perf script`/`perf report` have symbolized
 both the application and its libraries. `perf` and its viewers own CPU analysis.
