@@ -172,10 +172,11 @@ Run every shard before committing network changes. Compile-time
 `-D<module>.filters` can omit otherwise unreachable suites; passing `--test-filter`
 to the aggregate build step does not select tests.
 
-`src/network/testdata/lodestar-revision` pins the external Lodestar revision that
-owns the score and subnet parity fixtures. To verify them, install that checkout's
-locked dependencies, build `@lodestar/beacon-node^...`, and run
-`scripts/check-network-policy.sh <reference-checkout>` from this repository.
+`src/network/testdata/lodestar-revision` pins the revision of this repository whose
+TypeScript policy generated the score and subnet parity fixtures. To verify them,
+check out that revision in a separate clean worktree, install its locked
+dependencies, build `@lodestar/beacon-node^...`, and run
+`scripts/check-network-policy.sh <reference-checkout>` from this checkout.
 Change the pin only with reviewed policy changes and regenerate fixtures with the
 reference checkout's `packages/beacon-node/test/utils/nativePolicyFixtures.ts`
 under both `LODESTAR_PRESET=mainnet` and `LODESTAR_PRESET=minimal`. Do not edit the
