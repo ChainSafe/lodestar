@@ -446,7 +446,7 @@ it("publishes copied peer observations without repeating unread notifications", 
     expect(Object.getOwnPropertyDescriptor(result.peers[0], "type")?.value).toBe(result.peers[0].type);
     const closed = result.peers.find((event) => event.type === "closed");
     expect(closed).toBeDefined();
-    if (!closed || closed.type !== "closed") throw new Error("Missing peer closed");
+    if (closed?.type !== "closed") throw new Error("Missing peer closed");
     expect(closed).not.toHaveProperty("peer");
     expect(typeof closed.identity).toBe("string");
     const retained = closed.identity.slice();
