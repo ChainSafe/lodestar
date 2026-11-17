@@ -216,14 +216,19 @@ describe("get proposers api impl", () => {
     expect(v1.meta.dependentRoot).toBe(expected);
   });
 
-  // TODO - beacon engine: historical proposer duties (epochs < currentEpoch - 1) are temporarily
-  // unsupported — the engine has no archive access until the states/archive DB moves into it (Phase 5).
-  // Restore serving + this assertion then.
-  it("should throw for historical epoch (no engine archive access yet)", async () => {
+  it("should get proposer duties for a historical epoch", async () => {
     const historicalEpoch = currentEpoch - 2;
-    initializeState(currentSlot - 2 * SLOTS_PER_EPOCH + 1);
+    initializeState(historicalEpoch * SLOTS_PER_EPOCH);
+    modules.chain.regen.getBlockSlotState.mockResolvedValue(new BeaconStateView(cachedState));
 
-    await expect(api.getProposerDutiesV2({epoch: historicalEpoch})).rejects.toThrow("not supported yet");
+    const {data} = (await api.getProposerDutiesV2({epoch: historicalEpoch})) as {
+      data: routes.validator.ProposerDutyList;
+    };
+
+    expect(data.map((duty) => duty.slot)).toEqual(
+      Array.from({length: SLOTS_PER_EPOCH}, (_, i) => historicalEpoch * SLOTS_PER_EPOCH + i)
+    );
+    expect(data.map((duty) => duty.validatorIndex)).toEqual(cachedState.epochCtx.getBeaconProposers());
   });
 
   it("should raise error for more than one epoch in the future", async () => {

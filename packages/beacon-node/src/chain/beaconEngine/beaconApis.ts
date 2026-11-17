@@ -90,7 +90,7 @@ async function resolveStateForApi(
 }
 
 /** Resolve to a state *view* (deserializing archive/checkpoint bytes engine-side onto the head state). */
-async function resolveStateViewForApi(
+export async function resolveStateViewForApi(
   this: BeaconEngineCore,
   id: ApiStateId
 ): Promise<{state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null> {

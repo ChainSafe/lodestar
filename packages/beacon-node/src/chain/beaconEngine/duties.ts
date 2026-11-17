@@ -35,6 +35,7 @@ import {ApiError} from "../../api/impl/errors.js";
 import {ZERO_HASH} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {CheckpointHex} from "../stateCache/types.js";
+import {resolveStateViewForApi} from "./beaconApis.js";
 import type {BeaconEngineCore} from "./beaconEngineCore.js";
 import {BeaconEngineCoreEvent} from "./events.js";
 import {BeaconEngineErrorCode, ProductionError, ProductionResponse} from "./interface.js";
@@ -47,7 +48,7 @@ const genesisBlockRoots = new WeakMap<BeaconEngineCore, Root>();
  * Proposer duties for `epoch`.
  * Source: unstable@551b8b0a3d packages/beacon-node/src/api/impl/validator/index.ts#getProposerDuties.
  * [beacon-engine] deviation: request checks, clock timing and response metadata remain in the API;
- * state resolution runs in the engine. Historical proposer duties are not supported here.
+ * state resolution runs in the engine.
  */
 export async function getProposerDuties(
   this: BeaconEngineCore,
@@ -75,12 +76,16 @@ export async function getProposerDuties(
   }
   if (!state) {
     if (epoch >= currentEpoch - 1) {
-      // TODO - beacon engine: not sure if we need to do this, just conform to the current unstable behavior for now
       state = await getHeadStateAtEpoch(currentEpoch, RegenCaller.getDuties);
     } else {
-      // TODO - beacon engine: currently unstable call getStateResponseWithRegen()
-      // the engine (Phase 5). Throw for now; serve it here once the engine owns the archive.
-      throw Error(`Proposer duties for past epoch ${epoch} not supported yet (engine has no archive access)`);
+      const res = await resolveStateViewForApi.call(this, startSlot);
+      if (!res) {
+        throw new ApiError(404, `State not found for id '${startSlot}'`);
+      }
+      state = res.state;
+      if (state.epoch !== epoch) {
+        throw new ApiError(500, `Loaded state epoch ${state.epoch} does not match requested epoch ${epoch}`);
+      }
     }
   }
 
