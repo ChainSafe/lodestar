@@ -67,7 +67,13 @@ export class NativeNetworkCore implements INetworkCore {
       core.intent = new NativeIntent(core.network);
       core.reports = new NativePeerReports(core.network);
       core.gossip = new NativeGossip(core.network, config, core.modules.opts, core.onOperationError, core.reports);
-      core.peers = new NativePeers(core.network, config, modules.events, core.network.limits.peerCapacity);
+      core.peers = new NativePeers(
+        core.network,
+        config,
+        modules.events,
+        core.network.limits.peerCapacity,
+        modules.logger
+      );
       void core.network.closed
         .then((result) => {
           if (result.reason === "failed" && !core.failure)

@@ -4,6 +4,7 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {NativeNetwork, NativePeerObservation, NativePeerState, NetworkStatus} from "@lodestar/native/network";
 import {Status} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 import {computeColumnsForCustodyGroup} from "../../../util/dataColumns.js";
 import {NetworkEvent, NetworkEventBus} from "../../events.js";
 import {ClientKind, getKnownClientFromAgentVersion} from "../../peers/client.js";
@@ -87,13 +88,21 @@ export class NativePeers {
     private readonly network: Pick<NativeNetwork, "disconnect">,
     private readonly config: BeaconConfig,
     private readonly events: NetworkEventBus,
-    private readonly capacity: number
+    private readonly capacity: number,
+    private readonly logger: Logger
   ) {
     nativeInteger(capacity, "peer projection capacity", 4096, 1);
   }
   deliver(events: readonly NativePeerObservation[]): void {
     if (this.closed) return;
-    for (const event of events) this.observe(event);
+    for (const event of events) {
+      try {
+        this.observe(event);
+      } catch (error) {
+        if (error instanceof NativeNetworkError) throw error;
+        this.logger.error("Native peer event listener failed", {type: event.type}, error as Error);
+      }
+    }
   }
   private observe(event: NativePeerObservation): void {
     if (event.type === "closed") {

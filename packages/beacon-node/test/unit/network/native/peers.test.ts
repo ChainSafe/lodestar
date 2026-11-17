@@ -5,6 +5,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {NativePeerObservation, NativePeerState} from "@lodestar/native/network";
 import {NativePeers, formatNativePeer} from "../../../../src/network/core/native/peers.js";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network/events.js";
+import {getMockedLogger} from "../../../mocks/loggerMock.js";
 
 async function fixture() {
   const key = await generateKeyPair("secp256k1");
@@ -44,7 +45,7 @@ async function fixture() {
   const disconnected = vi.fn();
   events.on(NetworkEvent.peerConnected, connected);
   events.on(NetworkEvent.peerDisconnected, disconnected);
-  const peers = new NativePeers(runtime, createBeaconConfig({}, new Uint8Array(32)), events, 64);
+  const peers = new NativePeers(runtime, createBeaconConfig({}, new Uint8Array(32)), events, 64, getMockedLogger());
   return {
     state,
     connected,
@@ -59,7 +60,7 @@ async function fixture() {
 }
 
 describe("native peer projection", () => {
-  it("propagates a listener failure after recording the peer and stops the remaining observations", async () => {
+  it("contains a listener failure and delivers the remaining observations", async () => {
     const node = await fixture();
     const failure = new Error("peer consumer failed");
     const laterListener = vi.fn();
@@ -69,41 +70,9 @@ describe("native peer projection", () => {
     });
     const other = {...node.state, identity: "another-peer", connection: {index: 1, generation: 1}};
     try {
-      expect(() => node.drain({type: "ready", state: node.state}, {type: "ready", state: other})).toThrow(failure);
-      expect(node.peers.connected()).toEqual([node.state.identity]);
-      expect(laterListener).not.toHaveBeenCalled();
-
-      node.drain({type: "updated", state: structuredClone(node.state)});
-      expect(node.connected).toHaveBeenCalledOnce();
-      expect(laterListener).not.toHaveBeenCalled();
-    } finally {
-      node.peers.close();
-    }
-  });
-
-  it("propagates a disconnect listener failure after removing the peer", async () => {
-    const node = await fixture();
-    const failure = new Error("peer removal failed");
-    const laterListener = vi.fn();
-    node.events.on(NetworkEvent.peerDisconnected, laterListener);
-    node.disconnected.mockImplementationOnce(() => {
-      throw failure;
-    });
-    const closed: NativePeerObservation = {
-      type: "closed",
-      identity: node.state.identity,
-      connection: {index: 0, generation: 17},
-      reason: "host",
-    };
-    try {
-      node.drain({type: "ready", state: node.state});
-      expect(() => node.drain(closed)).toThrow(failure);
-      expect(node.peers.connected()).toEqual([]);
-      expect(laterListener).not.toHaveBeenCalled();
-
-      node.drain(closed);
-      expect(node.disconnected).toHaveBeenCalledOnce();
-      expect(laterListener).not.toHaveBeenCalled();
+      node.drain({type: "ready", state: node.state}, {type: "ready", state: other});
+      expect(node.peers.connected()).toEqual([node.state.identity, other.identity]);
+      expect(laterListener).toHaveBeenCalledOnce();
     } finally {
       node.peers.close();
     }
