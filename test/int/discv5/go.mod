@@ -1,4 +1,4 @@
-module github.com/ChainSafe/lodestar-z/test/int/discv5
+module github.com/ChainSafe/lodestar/test/int/discv5
 
 go 1.24.0
 
