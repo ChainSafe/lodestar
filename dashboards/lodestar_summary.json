@@ -143,7 +143,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "(time() - lodestar_genesis_time) / 12"
+              "options": "(time() - lodestar_genesis_time_seconds) / 12"
             },
             "properties": [
               {
@@ -288,7 +288,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "(time() - lodestar_genesis_time) / 12",
+          "expr": "(time() - lodestar_genesis_time_seconds) / 12",
           "hide": false,
           "instant": false,
           "interval": "",
@@ -2902,7 +2902,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "(time() - lodestar_genesis_time) / 12 - beacon_clock_slot",
+          "expr": "(time() - lodestar_genesis_time_seconds) / 12 - beacon_clock_slot",
           "hide": false,
           "interval": "",
           "legendFormat": "clock drift",

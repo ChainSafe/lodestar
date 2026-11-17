@@ -529,7 +529,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "(time() - lodestar_genesis_time) / 12"
+              "options": "(time() - lodestar_genesis_time_seconds) / 12"
             },
             "properties": [
               {
@@ -659,7 +659,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "round((time() - lodestar_genesis_time) / 12)",
+          "expr": "round((time() - lodestar_genesis_time_seconds) / 12)",
           "hide": false,
           "instant": false,
           "interval": "",

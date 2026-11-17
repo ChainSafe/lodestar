@@ -68,7 +68,7 @@ export function createLodestarMetrics(
   if (genesisTime) {
     register
       .gauge({
-        name: "lodestar_genesis_time",
+        name: "lodestar_genesis_time_seconds",
         help: "Genesis time in seconds",
       })
       .set(genesisTime);
@@ -1595,7 +1595,7 @@ export function createLodestarMetrics(
         help: "Avg min max of all state cache items total read count",
       }),
       secondsSinceLastRead: register.avgMinMax({
-        name: "lodestar_state_cache_seconds_since_last_read",
+        name: "lodestar_state_cache_since_last_read_seconds",
         help: "Avg min max of all state cache items seconds since last reads",
       }),
       stateClonedCount: register.histogram({
@@ -1664,7 +1664,7 @@ export function createLodestarMetrics(
         help: "Avg min max of all state cache items total read count",
       }),
       secondsSinceLastRead: register.avgMinMax({
-        name: "lodestar_cp_state_epoch_seconds_since_last_read",
+        name: "lodestar_cp_state_epoch_since_last_read_seconds",
         help: "Avg min max of all state cache items seconds since last reads",
       }),
       stateClonedCount: register.histogram({
