@@ -9,7 +9,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://chainsafe.github.io/lodestar/images/favicon-512x512.png">
 <script src="https://plausible.io/js/script.js" defer="defer" data-domain="chainsafe.github.io/lodestar"></script><link rel="stylesheet" href="/lodestar/assets/css/styles.a0c064e1.css">
-<script src="/lodestar/assets/js/runtime~main.a30a7a0a.js" defer="defer"></script>
+<script src="/lodestar/assets/js/runtime~main.05791b82.js" defer="defer"></script>
 <script src="/lodestar/assets/js/main.17c12c10.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -131,7 +131,7 @@
 <p>type: <code>boolean</code></p>
 <p>default: <code>true</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--servehistoricalstate"><code>--serveHistoricalState</code><a href="#--servehistoricalstate" class="hash-link" aria-label="Direct link to --servehistoricalstate" title="Direct link to --servehistoricalstate">​</a></h4>
-<p>Regenerate finalized beacon states on demand and serve them via the REST API (e.g. <code>/eth/v2/debug/beacon/states/{state_id}</code>). Does not backfill historical data, only states the node already has (since genesis sync or <code>--checkpointState</code>) can be regenerated. Regeneration cost depends on <code>--chain.archiveStateEpochFrequency</code> and may affect validator performance.</p>
+<p>Regenerate finalized beacon states on demand and serve them via the REST API (e.g. <code>/eth/v2/debug/beacon/states/{state_id}</code>). Does not backfill historical data, only states the node already has (since genesis sync or <code>--checkpointState</code>) can be regenerated. Regeneration cost depends on <code>--chain.archiveStateEpochFrequency</code> and may affect validator performance. Disables history pruning unless <code>--chain.pruneHistory</code> is set explicitly.</p>
 <p>type: <code>boolean</code></p>
 <p>default: <code>false</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--chaindedupepayloads"><code>--chain.dedupePayloads</code><a href="#--chaindedupepayloads" class="hash-link" aria-label="Direct link to --chaindedupepayloads" title="Direct link to --chaindedupepayloads">​</a></h4>
@@ -143,16 +143,16 @@
 <p>type: <code>boolean</code></p>
 <p>default: <code>false</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--chainarchivestateepochfrequency"><code>--chain.archiveStateEpochFrequency</code><a href="#--chainarchivestateepochfrequency" class="hash-link" aria-label="Direct link to --chainarchivestateepochfrequency" title="Direct link to --chainarchivestateepochfrequency">​</a></h4>
-<p>Minimum number of epochs between archived states</p>
+<p>Minimum number of epochs between archived states. When history is pruned (the default), archived states before the finalized epoch are removed, so this only controls how often the latest finalized state is persisted, and only for values below 32</p>
 <p>type: <code>number</code></p>
 <p>default: <code>1024</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--chainarchivedataepochs"><code>--chain.archiveDataEpochs</code><a href="#--chainarchivedataepochs" class="hash-link" aria-label="Direct link to --chainarchivedataepochs" title="Direct link to --chainarchivedataepochs">​</a></h4>
 <p>Number of epochs to retain finalized data columns (minimum of the MIN_BLOB_DATA_RETENTION_MS window)</p>
 <p>type: <code>number</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--chainprunehistory"><code>--chain.pruneHistory</code><a href="#--chainprunehistory" class="hash-link" aria-label="Direct link to --chainprunehistory" title="Direct link to --chainprunehistory">​</a></h4>
-<p>Continually prune finalized blocks and execution payload envelopes older than <code>MIN_EPOCHS_FOR_BLOCK_REQUESTS</code> (33024 epochs / ~5 months on mainnet, 14299 epochs / ~2 months from gloas) and all archived states before the finalized epoch. This is useful to minimize disk usage when the node does not need to serve historical data. An existing large database is pruned gradually, up to 4096 slots of blocks on startup and on every finalized checkpoint.</p>
+<p>Continually prune finalized blocks and execution payload envelopes older than <code>MIN_EPOCHS_FOR_BLOCK_REQUESTS</code> (33024 epochs / ~5 months on mainnet, 14299 epochs / ~2 months from gloas) and all archived states before the finalized epoch. Enabled by default unless <code>--serveHistoricalState</code> is set. Set to <code>false</code> to retain historical data. An existing large database is pruned gradually, up to 4096 slots of blocks on startup and on every finalized checkpoint.</p>
 <p>type: <code>boolean</code></p>
-<p>default: <code>false</code></p>
+<p>default: <code>true</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--executionurls"><code>--execution.urls</code><a href="#--executionurls" class="hash-link" aria-label="Direct link to --executionurls" title="Direct link to --executionurls">​</a></h4>
 <p>Urls to execution client engine API</p>
 <p>type: <code>string[]</code></p>
