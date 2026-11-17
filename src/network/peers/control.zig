@@ -847,7 +847,9 @@ fn decide(row: *const ConnectionState, relevant: bool, active_request: bool, now
     const request_due = @min(row.status_due_ms, refresh_due);
     decision.wake(@max(request_due, row.retry_ms), now);
     if (now < row.retry_ms or now < request_due) return decision;
-    decision.request = if (row.status_due_ms <= refresh_due)
+    // Status wins a tie with Ping. Due metadata wins a tie so repeated Status intents cannot starve it.
+    const status_first = if (metadata_due == null) row.status_due_ms <= refresh_due else row.status_due_ms < refresh_due;
+    decision.request = if (status_first)
         .status
     else if (metadata_due != null)
         .metadata
