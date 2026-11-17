@@ -1,5 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {AttesterSlashing, capella, gloas, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {GossipActionError} from "../../errors/gossipValidation.js";
 import * as attesterSlashingValidation from "../../validation/attesterSlashing.js";
 import * as blsToExecutionChangeValidation from "../../validation/blsToExecutionChange.js";
@@ -13,7 +14,6 @@ import {deserializeGossipMessage} from "./deserialize.js";
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/proposerPreferences.ts#validateGossipProposerPreferences.
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.proposer_preferences.
- * [beacon-engine] deviation: insert into the engine pool before returning the verdict.
  */
 export async function validateGossipProposerPreferencesBytes(
   this: BeaconEngineCore,
@@ -34,14 +34,9 @@ export async function validateGossipProposerPreferences(
   signedProposerPreferences: gloas.SignedProposerPreferences
 ): Promise<GossipValidationResult<void>> {
   try {
-    const res = await runGossipValidation(() =>
+    return await runGossipValidation(() =>
       proposerPreferencesValidation.validateGossipProposerPreferences.call(this, signedProposerPreferences)
     );
-    // Insert on Accept — the pool is engine-internal, so the facade (gossip handler / API) no longer adds.
-    if (res.err === null) {
-      this.proposerPreferencesPool.add(signedProposerPreferences);
-    }
-    return res;
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
     this.logger.error("Error validating gossip proposer preferences", {code: "UNEXPECTED_ERROR"}, error as Error);
@@ -52,7 +47,7 @@ export async function validateGossipProposerPreferences(
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/attesterSlashing.ts#validateGossipAttesterSlashing.
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.attester_slashing.
- * [beacon-engine] deviation: pool/fork-choice writes precede the verdict; consume verified domains internally.
+ * [beacon-engine] deviation: defer pool/fork-choice writes in the engine; consume verified domains internally.
  */
 export async function validateGossipAttesterSlashingBytes(
   this: BeaconEngineCore,
@@ -79,13 +74,14 @@ export async function validateGossipAttesterSlashing(
       attesterSlashingValidation.validateGossipAttesterSlashing.call(this, attesterSlashing)
     );
     if (res.err === null) {
-      // Contain insert failures — a pool error must not flip the gossip verdict (matches prior handler).
-      try {
-        this.opPool.insertAttesterSlashing(fork, attesterSlashing, res.result);
-        this.forkChoice.onAttesterSlashing(attesterSlashing);
-      } catch (e) {
-        this.logger.error("Error adding attesterSlashing to pool", {}, e as Error);
-      }
+      callInNextEventLoop(() => {
+        try {
+          this.opPool.insertAttesterSlashing(fork, attesterSlashing, res.result);
+          this.forkChoice.onAttesterSlashing(attesterSlashing);
+        } catch (e) {
+          this.logger.error("Error adding attesterSlashing to pool", {}, e as Error);
+        }
+      });
     }
     return res.err === null ? {...res, result: undefined} : res;
   } catch (error) {
@@ -112,7 +108,7 @@ export async function validateApiAttesterSlashing(
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/proposerSlashing.ts#validateGossipProposerSlashing.
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.proposer_slashing.
- * [beacon-engine] deviation: pool insertion precedes the verdict; consume the verified domain internally.
+ * [beacon-engine] deviation: defer pool insertion in the engine; consume the verified domain internally.
  */
 export async function validateGossipProposerSlashingBytes(
   this: BeaconEngineCore,
@@ -137,11 +133,13 @@ export async function validateGossipProposerSlashing(
       proposerSlashingValidation.validateGossipProposerSlashing.call(this, proposerSlashing)
     );
     if (res.err === null) {
-      try {
-        this.opPool.insertProposerSlashing(proposerSlashing, res.result);
-      } catch (e) {
-        this.logger.error("Error adding proposerSlashing to pool", {}, e as Error);
-      }
+      callInNextEventLoop(() => {
+        try {
+          this.opPool.insertProposerSlashing(proposerSlashing, res.result);
+        } catch (e) {
+          this.logger.error("Error adding proposerSlashing to pool", {}, e as Error);
+        }
+      });
     }
     return res.err === null ? {...res, result: undefined} : res;
   } catch (error) {
@@ -167,7 +165,7 @@ export async function validateApiProposerSlashing(
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/voluntaryExit.ts#validateGossipVoluntaryExit.
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.voluntary_exit.
- * [beacon-engine] deviation: pool insertion precedes the verdict; API/network event handling stays outside.
+ * [beacon-engine] deviation: defer pool insertion in the engine; API/network event handling stays outside.
  */
 export async function validateGossipVoluntaryExitBytes(
   this: BeaconEngineCore,
@@ -192,11 +190,13 @@ export async function validateGossipVoluntaryExit(
       voluntaryExitValidation.validateGossipVoluntaryExit.call(this, voluntaryExit)
     );
     if (res.err === null) {
-      try {
-        this.opPool.insertVoluntaryExit(voluntaryExit);
-      } catch (e) {
-        this.logger.error("Error adding voluntaryExit to pool", {}, e as Error);
-      }
+      callInNextEventLoop(() => {
+        try {
+          this.opPool.insertVoluntaryExit(voluntaryExit);
+        } catch (e) {
+          this.logger.error("Error adding voluntaryExit to pool", {}, e as Error);
+        }
+      });
     }
     return res;
   } catch (error) {
@@ -228,7 +228,7 @@ export async function validateApiVoluntaryExit(
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/blsToExecutionChange.ts#validateGossipBlsToExecutionChange.
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.bls_to_execution_change.
- * [beacon-engine] deviation: pool insertion precedes the verdict; API/network event handling stays outside.
+ * [beacon-engine] deviation: defer pool insertion in the engine; API/network event handling stays outside.
  */
 export async function validateGossipBlsToExecutionChangeBytes(
   this: BeaconEngineCore,
@@ -256,11 +256,13 @@ export async function validateGossipBlsToExecutionChange(
       blsToExecutionChangeValidation.validateGossipBlsToExecutionChange.call(this, blsToExecutionChange)
     );
     if (res.err === null) {
-      try {
-        this.opPool.insertBlsToExecutionChange(blsToExecutionChange);
-      } catch (e) {
-        this.logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
-      }
+      callInNextEventLoop(() => {
+        try {
+          this.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+        } catch (e) {
+          this.logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
+        }
+      });
     }
     return res;
   } catch (error) {

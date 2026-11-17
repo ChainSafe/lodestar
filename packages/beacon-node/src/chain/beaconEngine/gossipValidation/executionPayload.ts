@@ -15,7 +15,7 @@ import {deserializeGossipMessage} from "./deserialize.js";
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/payloadAttestationMessage.ts#validateGossipPayloadAttestationMessage.
  * Handler source: unstable@2593063a82 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.payload_attestation_message.
- * [beacon-engine] deviation: pool/fork-choice updates precede the verdict; consume indices internally.
+ * [beacon-engine] deviation: defer pool/fork-choice updates in the engine; consume indices internally.
  */
 export async function validateGossipPayloadAttestationMessageBytes(
   this: BeaconEngineCore,
@@ -48,18 +48,20 @@ export async function validateGossipPayloadAttestationMessage(
         this,
         payloadAttestationMessage
       );
-      // Insert into the pool + notify fork choice on Accept (moved from the gossip handler). The rich result
-      // is consumed here internally; the facade only needs the Accept/Reject verdict, so nothing is returned.
-      // TODO - beacon engine: schedule these side effects after the gossip verdict, as upstream does.
-      try {
-        insertPayloadAttestationOnAccept.call(this, payloadAttestationMessage, result, "gossip");
-      } catch (e) {
-        this.logger.debug(
-          "Error handling gossip payload attestation message",
-          {slot: payloadAttestationMessage.data.slot, root: toRootHex(payloadAttestationMessage.data.beaconBlockRoot)},
-          e as Error
-        );
-      }
+      callInNextEventLoop(() => {
+        try {
+          insertPayloadAttestationOnAccept.call(this, payloadAttestationMessage, result, "gossip");
+        } catch (e) {
+          this.logger.debug(
+            "Error handling gossip payload attestation message",
+            {
+              slot: payloadAttestationMessage.data.slot,
+              root: toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+            },
+            e as Error
+          );
+        }
+      });
     });
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
@@ -211,7 +213,7 @@ export function validateApiExecutionPayloadEnvelope(
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/executionPayloadBid.ts#validateGossipExecutionPayloadBid.
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.execution_payload_bid.
- * [beacon-engine] deviation: pool insertion precedes the verdict; monitoring stays deferred.
+ * [beacon-engine] deviation: deferred pool insertion and monitoring run in the engine.
  */
 export async function validateGossipExecutionPayloadBidBytes(
   this: BeaconEngineCore,
@@ -243,35 +245,30 @@ export async function validateGossipExecutionPayloadBid(
         this,
         signedExecutionPayloadBid
       );
-      // TODO - beacon engine: reconcile deferred gossip side effects with upstream before completing this merge.
-      // Insert into the bid pool on Accept (moved from the gossip handler).
-      try {
-        const insertOutcome = this.executionPayloadBidPool.add(
-          signedExecutionPayloadBid,
-          Math.floor(this.clock.secFromSlot(signedExecutionPayloadBid.message.slot, seenTimestampSec) * 1000)
-        );
-        this.metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
-        // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#execution_payload_bid.
-        if (this.validatorMonitor) {
-          callInNextEventLoop(() => {
-            try {
-              this.validatorMonitor?.registerExecutionPayloadBid(
-                OpSource.gossip,
-                result.proposerIndex,
-                signedExecutionPayloadBid.message
-              );
-            } catch (e) {
-              this.logger.debug(
-                "Error monitoring gossip execution payload bid",
-                {slot: signedExecutionPayloadBid.message.slot},
-                e as Error
-              );
-            }
-          });
+      callInNextEventLoop(() => {
+        try {
+          const insertOutcome = this.executionPayloadBidPool.add(
+            signedExecutionPayloadBid,
+            Math.floor(this.clock.secFromSlot(signedExecutionPayloadBid.message.slot, seenTimestampSec) * 1000)
+          );
+          this.metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
+          try {
+            this.validatorMonitor?.registerExecutionPayloadBid(
+              OpSource.gossip,
+              result.proposerIndex,
+              signedExecutionPayloadBid.message
+            );
+          } catch (e) {
+            this.logger.debug(
+              "Error monitoring gossip execution payload bid",
+              {slot: signedExecutionPayloadBid.message.slot},
+              e as Error
+            );
+          }
+        } catch (e) {
+          this.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
         }
-      } catch (e) {
-        this.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
-      }
+      });
       return result;
     });
   } catch (error) {

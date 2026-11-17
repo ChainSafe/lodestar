@@ -23,6 +23,7 @@ import * as bidValidation from "../../../../src/chain/validation/executionPayloa
 import * as contributionValidation from "../../../../src/chain/validation/syncCommitteeContributionAndProof.js";
 import {OpSource, ValidatorMonitor, createValidatorMonitor} from "../../../../src/chain/validatorMonitor.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/disabled.js";
+import {callImmediate} from "../../../../src/util/eventLoop.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {getApiTestModules} from "../../../utils/api.js";
 
@@ -51,6 +52,7 @@ describe("BeaconEngineCore gossip monitoring", () => {
     });
     await engine.init();
     engine.forkChoice = modules.chain.forkChoice;
+    engine.forkChoice.onAttestation = vi.fn();
     engine.attestationPool = new AttestationPool(modules.config, engine.clock);
     engine.aggregatedAttestationPool = modules.chain.aggregatedAttestationPool;
     engine.aggregatedAttestationPool.add = vi.fn().mockReturnValue(InsertOutcome.NewData);
@@ -74,7 +76,10 @@ describe("BeaconEngineCore gossip monitoring", () => {
       block.message.slot = 1;
       const validate = vi.spyOn(blockValidation, "validateGossipBlock").mockResolvedValue({skippedSlots: 0});
       vi.spyOn(engine.seenBlockProposers, "hasBlockRoot").mockReturnValue(scenario === "sibling");
-      const observed = vi.spyOn(monitor, "registerBeaconBlock").mockImplementation(() => {});
+      const order: string[] = [];
+      const observed = vi.spyOn(monitor, "registerBeaconBlock").mockImplementation(() => {
+        order.push("monitor");
+      });
       if (scenario === "sibling" || scenario === "unobserved_sibling") {
         validate.mockRejectedValue(
           new BlockGossipError(GossipAction.IGNORE, {
@@ -118,7 +123,9 @@ describe("BeaconEngineCore gossip monitoring", () => {
         scenario === "accept" ? "accept" : scenario === "reject" ? "reject" : "ignore"
       );
       expect(observed).toHaveBeenCalledTimes(scenario === "sibling" ? 1 : 0);
+      if (scenario === "accept") callImmediate(() => order.push("import"));
       await vi.runAllTimersAsync();
+      if (scenario === "accept") expect(order).toEqual(["monitor", "import"]);
       expect(observed).toHaveBeenCalledTimes(scenario === "accept" || scenario === "sibling" ? 1 : 0);
       if (observed.mock.calls.length > 0) {
         expect(observed).toHaveBeenCalledWith(OpSource.gossip, engine.clock.secFromSlot(1, 12.5), {
@@ -197,7 +204,10 @@ describe("BeaconEngineCore gossip monitoring", () => {
     const {results} = await engine.validateGossipAttestationsSameAttData(ForkName.electra, inputs, [1, 2, 3, 4]);
     expect(results.map(({err}) => err?.status ?? "accept")).toEqual(["accept", "ignore", "reject", "accept"]);
     expect(observed).not.toHaveBeenCalled();
-    await vi.runAllTimersAsync();
+    expect(engine.forkChoice.onAttestation).not.toHaveBeenCalled();
+    await vi.runOnlyPendingTimersAsync();
+    expect(vi.getTimerCount()).toBe(0);
+    expect(engine.forkChoice.onAttestation).toHaveBeenCalledTimes(2);
     expect(observed).toHaveBeenCalledTimes(2);
     expect(observed).toHaveBeenNthCalledWith(1, 1, indexedAttestation);
     expect(observed).toHaveBeenNthCalledWith(2, 4, indexedAttestation);
@@ -227,12 +237,23 @@ describe("BeaconEngineCore gossip monitoring", () => {
     expect((await engine.validateSyncCommitteeGossipContributionAndProof(contribution)).err).toBeNull();
     expect(observedAggregate).not.toHaveBeenCalled();
     expect(observedContribution).not.toHaveBeenCalled();
-    await vi.runAllTimersAsync();
+    expect(engine.aggregatedAttestationPool.add).not.toHaveBeenCalled();
+    expect(engine.syncContributionAndProofPool.add).not.toHaveBeenCalled();
+    await vi.runOnlyPendingTimersAsync();
+    expect(vi.getTimerCount()).toBe(0);
+    expect(engine.aggregatedAttestationPool.add).toHaveBeenCalledOnce();
+    expect(engine.syncContributionAndProofPool.add).toHaveBeenCalledOnce();
     expect(observedAggregate).toHaveBeenCalledExactlyOnceWith(12.5, aggregate, indexedAttestation);
     expect(observedAggregate.mock.calls[0][1]).toBe(aggregate);
     expect(observedAggregate.mock.calls[0][2]).toBe(indexedAttestation);
     expect(observedContribution).toHaveBeenCalledExactlyOnceWith(contribution.message, participants);
     expect(observedContribution.mock.calls[0][1]).toBe(participants);
+    expect(observedAggregate.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(engine.aggregatedAttestationPool.add).mock.invocationCallOrder[0]
+    );
+    expect(observedContribution.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(engine.syncContributionAndProofPool.add).mock.invocationCallOrder[0]
+    );
   });
 
   it("preserves main-thread aggregate acceptance when pool insertion fails", async () => {
@@ -277,7 +298,10 @@ describe("BeaconEngineCore gossip monitoring", () => {
       1
     );
     expect(observed).not.toHaveBeenCalled();
-    await vi.runAllTimersAsync();
+    expect(engine.executionPayloadBidPool.add).not.toHaveBeenCalled();
+    await vi.runOnlyPendingTimersAsync();
+    expect(vi.getTimerCount()).toBe(0);
+    expect(engine.executionPayloadBidPool.add).toHaveBeenCalledOnce();
     expect(result.err).toBeNull();
     expect(observed).toHaveBeenCalledExactlyOnceWith(OpSource.gossip, 7, bid.message);
   });

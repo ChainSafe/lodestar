@@ -113,7 +113,6 @@ const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
  *   the handler function scope is hard to achieve without very hacky strategies
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
-// TODO - beacon engine: engine validation methods still combine validation and pool insertion; preserve upstream deferred mutation timing in the base-branch follow-up.
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts = {}): GossipHandlers {
   return {...getSequentialHandlers(modules, options), ...getBatchHandlers(modules, options)};
 }
@@ -1054,8 +1053,6 @@ function getSequentialHandlers(
           }
           throw e;
         }
-
-        // TODO - beacon engine: defer engine-owned pool insertion as upstream does.
       });
     },
 

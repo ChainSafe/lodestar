@@ -2,7 +2,7 @@ import {ForkName, ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, WithBytes, isGloasBeaconBlock} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
-import {callInNextEventLoop} from "../../../util/eventLoop.js";
+import {callImmediate} from "../../../util/eventLoop.js";
 import {deserializeBlock} from "../../blocks/blockSerializedCache.js";
 import {SignedBlockRoot, SignedBlockRootHex, toSignedBlockRootHex} from "../../blocks/signedBlockRoot.js";
 import {BlockErrorCode, BlockErrorType, BlockGossipError, GossipAction} from "../../errors/index.js";
@@ -150,11 +150,11 @@ async function doValidateGossipBlock(
           this.logger.debug("Error monitoring gossip block", {slot, root: blockRoot}, e as Error);
         }
       };
-      // Source: unstable@0edec865c8 network/processor/gossipHandlers.ts#handleValidBeaconBlock.
+      // Source: unstable@53c3aab4e9 network/processor/gossipHandlers.ts#handleValidBeaconBlock.
       // [beacon-engine] deviation: accepted-block monitoring has its own deferred callback, preceding
       // the facade import handler. Observed siblings are still monitored before returning IGNORE.
       if (result.err === null) {
-        callInNextEventLoop(registerBlock);
+        callImmediate(registerBlock);
       } else if (shouldProcessRepeatProposalBlock) {
         registerBlock();
       }

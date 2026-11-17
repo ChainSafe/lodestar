@@ -191,7 +191,6 @@ import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
 import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "../validation/attestation.js";
 import {verifyBlockProposerSignature} from "../validation/block.js";
 import {validateGossipExecutionPayloadEnvelopeSerialized} from "../validation/executionPayloadEnvelope.js";
-import {validateGossipInclusionList} from "../validation/inclusionList.js";
 import * as proposerSlashingValidation from "../validation/proposerSlashing.js";
 import type {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
 import {
@@ -271,6 +270,7 @@ import {
   validateGossipPayloadAttestationMessage,
   validateGossipPayloadAttestationMessageBytes,
 } from "./gossipValidation/executionPayload.js";
+import {validateGossipInclusionList, validateGossipInclusionListBytes} from "./gossipValidation/inclusionList.js";
 import {
   validateGossipLightClientFinalityUpdate,
   validateGossipLightClientFinalityUpdateBytes,
@@ -301,7 +301,7 @@ import {
   validateSyncCommitteeGossipContributionAndProof,
   validateSyncCommitteeGossipContributionAndProofBytes,
 } from "./gossipValidation/syncCommittee.js";
-import {GossipValidationResult, fromResult, ignore, runGossipValidation} from "./gossipValidationResult.js";
+import {GossipValidationResult, fromResult, runGossipValidation} from "./gossipValidationResult.js";
 import {VerifiedBlockBundle, importBlock} from "./importBlock.js";
 import {importExecutionPayload, importExecutionPayloadBytes} from "./importExecutionPayload.js";
 import {AnchorSummary, EngineBootstrap, EngineBootstrapWithChainView} from "./initialization.js";
@@ -1398,37 +1398,14 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     listBytes: Uint8Array,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{totalBytes: number}>> {
-    try {
-      const list = deserializeGossipMessage(ssz.heze.SignedInclusionList, listBytes);
-      return await this.validateGossipInclusionList(list, seenTimestampSec);
-    } catch (error) {
-      if (error instanceof GossipActionError) return fromResult({err: error});
-      this.logger.error("Error validating gossip inclusion list", {code: "UNEXPECTED_ERROR"}, error as Error);
-      return ignore("UNEXPECTED_ERROR");
-    }
+    return validateGossipInclusionListBytes.call(this, listBytes, seenTimestampSec);
   }
 
   async validateGossipInclusionList(
     list: heze.SignedInclusionList,
     seenTimestampSec: number
   ): Promise<GossipValidationResult<{totalBytes: number}>> {
-    try {
-      return await runGossipValidation(async () => {
-        const {committeeIndices, totalBytes} = await validateGossipInclusionList.call(this, list);
-        const slot = list.message.slot;
-        const secFromSlot = this.clock.secFromSlot(slot, seenTimestampSec);
-        const isTimely =
-          secFromSlot >= 0 && secFromSlot * 1000 < this.config.getInclusionListDueMs(this.config.getForkName(slot));
-        const insertOutcome = this.inclusionListStore.process(list, committeeIndices, isTimely);
-        this.metrics?.inclusionListStore.insertOutcome.inc({insertOutcome});
-        this.metrics?.inclusionListStore.size.set(this.inclusionListStore.size);
-        return {totalBytes};
-      });
-    } catch (error) {
-      if (error instanceof GossipActionError) return fromResult({err: error});
-      this.logger.error("Error validating gossip inclusion list", {code: "UNEXPECTED_ERROR"}, error as Error);
-      return ignore("UNEXPECTED_ERROR");
-    }
+    return validateGossipInclusionList.call(this, list, seenTimestampSec);
   }
 
   /** gloas: PTC duties for `validatorIndices` at `epoch`. State resolved at `currentEpoch` (passed-in clock). */

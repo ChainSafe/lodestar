@@ -548,23 +548,21 @@ describe("BeaconEngineCore gossip bytes", () => {
     });
   });
 
-  it("catches failures after validation succeeds", async () => {
+  it("does not repeat proposer preference insertion owned by validation", async () => {
     const {bytes} = createMessage(ssz.gloas.SignedProposerPreferences);
-    vi.spyOn(preferencesValidation, "validateGossipProposerPreferences").mockResolvedValue(undefined);
-    const error = new Error("pool failed");
-    vi.spyOn(engine.proposerPreferencesPool, "add").mockImplementation(() => {
-      throw error;
+    vi.spyOn(engine.proposerPreferencesPool, "add");
+    vi.spyOn(preferencesValidation, "validateGossipProposerPreferences").mockImplementation(async (preferences) => {
+      engine.proposerPreferencesPool.add(preferences);
     });
     expect(await BeaconEngineCore.prototype.validateGossipProposerPreferencesBytes.call(engine, bytes)).toEqual({
-      err: {
-        status: "ignore",
-        code: "UNEXPECTED_ERROR",
-      },
+      err: null,
+      result: undefined,
     });
-    expect(engine.logger.error).toHaveBeenCalledWith(expect.any(String), {code: "UNEXPECTED_ERROR"}, error);
+    expect(engine.proposerPreferencesPool.add).toHaveBeenCalledOnce();
   });
 
   it.each([-0.001, 0, 0.999, 1])("stores inclusion lists received %s seconds into their slot", async (secFromSlot) => {
+    vi.useFakeTimers();
     const list = ssz.heze.SignedInclusionList.defaultValue();
     list.message.transactions = SerializedList.fromArray([Uint8Array.of(1)]);
     vi.spyOn(inclusionListValidation, "validateGossipInclusionList").mockResolvedValue({
@@ -578,6 +576,8 @@ describe("BeaconEngineCore gossip bytes", () => {
       err: null,
       result: {totalBytes: 1},
     });
+    expect(engine.inclusionListStore.size).toBe(0);
+    await vi.runAllTimersAsync();
     expect(
       engine.inclusionListStore.getInclusionListTransactions(0, toRootHex(list.message.dependentRoot), true).length
     ).toBe(secFromSlot >= 0 && secFromSlot < 1 ? 1 : 0);

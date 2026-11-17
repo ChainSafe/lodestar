@@ -17,6 +17,7 @@ describe("BeaconEngineCore gossip attestation aggregation", () => {
   let engine: BeaconEngineCore;
 
   beforeEach(async () => {
+    vi.useFakeTimers();
     const config = createBeaconConfig({}, Buffer.alloc(32));
     const modules = getApiTestModules({config});
     engine = new BeaconEngineCore({
@@ -40,9 +41,14 @@ describe("BeaconEngineCore gossip attestation aggregation", () => {
     engine.forkChoice.onAttestation = vi.fn();
     engine.attestationPool = new AttestationPool(config, engine.clock);
     vi.spyOn(engine.attestationPool, "add").mockReturnValue(InsertOutcome.NewData);
+    vi.spyOn(engine.singleAttestationPool, "add").mockReturnValue(InsertOutcome.NewData);
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
 
   it("uses subscriptions registered while validation is pending", async () => {
     let finishValidation!: (result: attestationValidation.BatchResult) => void;
@@ -72,6 +78,11 @@ describe("BeaconEngineCore gossip attestation aggregation", () => {
     const {results} = await processing;
 
     expect(results.map((result) => result.err)).toEqual([null, null]);
+    expect(engine.attestationPool.add).not.toHaveBeenCalled();
+    expect(engine.singleAttestationPool.add).not.toHaveBeenCalled();
+    expect(engine.forkChoice.onAttestation).not.toHaveBeenCalled();
+    engine.proposerTracker.addProposal(5);
+    await vi.runAllTimersAsync();
     expect(engine.attestationPool.add).toHaveBeenCalledExactlyOnceWith(
       aggregator.committeeIndex,
       aggregator.attestation,
@@ -80,6 +91,7 @@ describe("BeaconEngineCore gossip attestation aggregation", () => {
       aggregator.committeeSize
     );
     expect(engine.forkChoice.onAttestation).toHaveBeenCalledTimes(2);
+    expect(engine.singleAttestationPool.add).toHaveBeenCalledTimes(2);
   });
 
   it("retains another validator's aggregator duty and excludes other slots and rejected attestations", async () => {
@@ -103,6 +115,9 @@ describe("BeaconEngineCore gossip attestation aggregation", () => {
       [1, 2, 3]
     );
 
+    expect(engine.attestationPool.add).not.toHaveBeenCalled();
+    expect(engine.forkChoice.onAttestation).not.toHaveBeenCalled();
+    await vi.runAllTimersAsync();
     expect(engine.attestationPool.add).toHaveBeenCalledOnce();
     expect(engine.attestationPool.add).toHaveBeenCalledWith(
       aggregator.committeeIndex,

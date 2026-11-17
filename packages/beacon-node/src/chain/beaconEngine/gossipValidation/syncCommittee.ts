@@ -13,7 +13,7 @@ import {deserializeGossipMessage} from "./deserialize.js";
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/syncCommittee.ts#validateGossipSyncCommittee.
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.sync_committee.
- * [beacon-engine] deviation: insert into the engine pool before returning the verdict.
+ * [beacon-engine] deviation: deferred pool insertion runs in the engine.
  */
 export async function validateGossipSyncCommitteeBytes(
   this: BeaconEngineCore,
@@ -38,16 +38,17 @@ export async function validateGossipSyncCommittee(
   try {
     return await runGossipValidation(async () => {
       const result = await syncCommitteeValidation.validateGossipSyncCommittee.call(this, syncCommittee, subnet);
-      // Insert for ALL positions this validator holds in the subcommittee (moved from the gossip handler).
-      // The subcommittee indices are consumed here internally; the facade only needs the verdict.
-      try {
-        for (const indexInSubcommittee of result.indicesInSubcommittee) {
-          const insertOutcome = this.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
-          this.metrics?.opPool.syncCommitteeMessagePoolInsertOutcome.inc({insertOutcome});
+      // Defer pool insertion so the gossip verdict propagates first.
+      callInNextEventLoop(() => {
+        try {
+          for (const indexInSubcommittee of result.indicesInSubcommittee) {
+            const insertOutcome = this.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
+            this.metrics?.opPool.syncCommitteeMessagePoolInsertOutcome.inc({insertOutcome});
+          }
+        } catch (e) {
+          this.logger.debug("Error adding to syncCommittee pool", {subnet}, e as Error);
         }
-      } catch (e) {
-        this.logger.debug("Error adding to syncCommittee pool", {subnet}, e as Error);
-      }
+      });
     });
   } catch (error) {
     if (error instanceof GossipActionError) return fromResult({err: error});
@@ -96,7 +97,7 @@ export function validateApiSyncCommittee(
 /**
  * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/syncCommitteeContributionAndProof.ts#validateSyncCommitteeGossipContributionAndProof.
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#GossipType.sync_committee_contribution_and_proof.
- * [beacon-engine] deviation: pool insertion precedes the verdict; monitoring stays deferred.
+ * [beacon-engine] deviation: deferred monitoring and pool insertion run in the engine.
  */
 export async function validateSyncCommitteeGossipContributionAndProofBytes(
   this: BeaconEngineCore,
@@ -137,29 +138,26 @@ export async function validateSyncCommitteeGossipContributionAndProof(
           signedContributionAndProof,
           skipValidationKnownParticipants
         );
-      // Insert into the pool on Accept (moved from the gossip handler).
-      insertSyncContributionOnAccept.call(
-        this,
-        signedContributionAndProof,
-        result.syncCommitteeParticipantIndices.length,
-        "gossip"
-      );
-      if (this.validatorMonitor) {
-        callInNextEventLoop(() => {
-          try {
-            this.validatorMonitor?.registerGossipSyncContributionAndProof(
-              signedContributionAndProof.message,
-              result.syncCommitteeParticipantIndices
-            );
-          } catch (e) {
-            this.logger.debug(
-              "Error monitoring gossip contribution and proof",
-              {slot: signedContributionAndProof.message.contribution.slot},
-              e as Error
-            );
-          }
-        });
-      }
+      callInNextEventLoop(() => {
+        try {
+          this.validatorMonitor?.registerGossipSyncContributionAndProof(
+            signedContributionAndProof.message,
+            result.syncCommitteeParticipantIndices
+          );
+        } catch (e) {
+          this.logger.debug(
+            "Error monitoring gossip contribution and proof",
+            {slot: signedContributionAndProof.message.contribution.slot},
+            e as Error
+          );
+        }
+        insertSyncContributionOnAccept.call(
+          this,
+          signedContributionAndProof,
+          result.syncCommitteeParticipantIndices.length,
+          "gossip"
+        );
+      });
       return result;
     });
   } catch (error) {
