@@ -289,7 +289,7 @@ async function validateAttestationNoSignatureCheck(
       // api or first time validation of a gossip attestation
       committeeIndex = attestationOrCache.attestation.committeeIndex;
 
-      if (isForkPostGloas(fork)) {
+      if (isForkPostGloas(fork) && isForkPostGloas(this.config.getForkName(attSlot))) {
         // [REJECT] `attestation.data.index < 2`.
         if (attData.index >= 2) {
           throw new AttestationError(GossipAction.REJECT, {
@@ -753,7 +753,7 @@ export function getAttestationDataSigningRoot(config: BeaconConfig, data: phase0
 }
 
 /**
- * Checks if the `attestation.data.beaconBlockRoot` is known to this chain.
+ * Checks if the `attestation.data.beaconBlockRoot` is known to this this.
  *
  * The block root may not be known for two reasons:
  *

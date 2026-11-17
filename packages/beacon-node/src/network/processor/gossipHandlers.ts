@@ -21,7 +21,6 @@ import {
   Slot,
   SubnetID,
   UintNum64,
-  deneb,
   fulu,
   gloas,
   isGloasDataColumnSidecar,
@@ -43,13 +42,11 @@ import {
 } from "../../chain/blocks/blockInput/index.js";
 import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
-import {BlobSidecarValidation, InclusionListSource} from "../../chain/blocks/types.js";
+import {InclusionListSource} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
   AttestationError,
   AttestationErrorCode,
-  BlobSidecarErrorCode,
-  BlobSidecarGossipError,
   BlockError,
   BlockErrorCode,
   BlockGossipError,
@@ -67,9 +64,8 @@ import {IBeaconChain} from "../../chain/interface.js";
 import {GossipAttestation, toElectraSingleAttestation} from "../../chain/validation/index.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
-import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {getBlobKzgCommitments, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
-import {callInNextEventLoop} from "../../util/eventLoop.js";
+import {callImmediate, callInNextEventLoop} from "../../util/eventLoop.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -299,91 +295,6 @@ function getSequentialHandlers(
       throw e;
     } finally {
       chain.seenBlockInputCache.unmarkValidatingBlock(blockRootHex);
-    }
-  }
-
-  async function validateBeaconBlob(
-    blobSidecar: deneb.BlobSidecar,
-    serializedData: Uint8Array,
-    subnet: SubnetID,
-    peerIdStr: string,
-    seenTimestampSec: number
-  ): Promise<BlockInput> {
-    const blobBlockHeader = blobSidecar.signedBlockHeader.message;
-    const slot = blobBlockHeader.slot;
-    const fork = config.getForkName(slot);
-    const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader));
-
-    const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
-    const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
-
-    try {
-      unwrapGossipResult(await chain.beaconEngine.validateGossipBlobSidecar(serializedData, blobSidecar, fork, subnet));
-      const blockInput = chain.seenBlockInputCache.getByBlob({
-        blockRootHex,
-        blobSidecar,
-        source: BlockInputSource.gossip,
-        seenTimestampSec,
-        peerIdStr,
-      });
-      const recvToValidation = Date.now() / 1000 - seenTimestampSec;
-      const validationTime = recvToValidation - recvToValLatency;
-
-      metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
-      metrics?.gossipBlob.validationTime.observe(validationTime);
-
-      if (chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
-        let versionedHash: Uint8Array;
-        if (blockInput.hasBlock()) {
-          // if block hasn't arrived yet then this will throw and need to calculate the versionedHash as a 1-off
-          versionedHash = blockInput.getVersionedHashes()[blobSidecar.index];
-        } else {
-          versionedHash = kzgCommitmentToVersionedHash(blobSidecar.kzgCommitment);
-        }
-        chain.emitter.emit(routes.events.EventType.blobSidecar, {
-          blockRoot: blockRootHex,
-          slot,
-          index: blobSidecar.index,
-          kzgCommitment: toHex(blobSidecar.kzgCommitment),
-          versionedHash: toHex(versionedHash),
-        });
-      }
-
-      logger.debug("Received gossip blob", {
-        ...blockInput.getLogMeta(),
-        currentSlot: chain.clock.currentSlot,
-        peerId: peerIdStr,
-        delaySec,
-        subnet,
-        recvToValLatency,
-        recvToValidation,
-        validationTime,
-      });
-
-      return blockInput;
-    } catch (e) {
-      if (e instanceof BlobSidecarGossipError) {
-        // Don't trigger this yet if full block and blobs haven't arrived yet
-        if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN) {
-          logger.debug("Gossip blob has error", {slot, root: blockRootHex, code: e.type.code});
-          // no need to trigger `unknownBlockParent` event here, as we already did it in `validateBeaconBlock()`
-          //
-          // TODO(fulu): is this note above correct? Could have random blob that we see that could trigger
-          //        unknownBlockSync.  And duplicate addition of a block will be deduplicated by the
-          //        BlockInputSync event handler. Check this!!
-          // events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
-        }
-
-        if (e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(
-            ssz.deneb.BlobSidecar,
-            blobSidecar,
-            `gossip_reject_slot_${slot}_index_${blobSidecar.index}`
-          );
-        }
-      }
-
-      throw e;
     }
   }
 
@@ -662,8 +573,6 @@ function getSequentialHandlers(
         ignoreIfKnown: true,
         // proposer signature already checked in validateBeaconBlock()
         validProposerSignature: true,
-        // blobSidecars already checked in validateGossipBlobSidecars()
-        validBlobSidecars: BlobSidecarValidation.Individual,
         // It's critical to keep a good number of mesh peers.
         // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
         // Gossip Job Wait Time depends on the BLS Job Wait Time
@@ -691,8 +600,8 @@ function getSequentialHandlers(
 
           // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
           // which is all the information we need so there is no reason to delay until execution payload arrives
-          // Columns fetched here feed payloadInput.addColumn, which resolves waitForAllData for any
-          // in-flight importExecutionPayload. No processExecutionPayload trigger needed from this path.
+          // Columns fetched here feed payloadInput.addColumn, which resolves the waitForAllData of a
+          // pending payload import. No processExecutionPayload trigger needed from this path.
           chain.getBlobsTracker.triggerGetBlobs(payloadInput);
         }
       })
@@ -759,8 +668,8 @@ function getSequentialHandlers(
             peerIdStr,
             seenTimestampSec
           );
-          // Handler - deferred to next event loop so the validation result propagates first
-          callInNextEventLoop(() => {
+          // Runs after the validation result is reported, except with network.useWorker=false
+          callImmediate(() => {
             try {
               handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
             } catch (e) {
@@ -800,65 +709,6 @@ function getSequentialHandlers(
           // rethrow so gossipValidatorFn maps IGNORE -> TopicValidatorResult.Ignore (message not forwarded)
           throw e;
         }
-      });
-    },
-
-    [GossipType.blob_sidecar]: async ({
-      gossipData,
-      topic,
-      peerIdStr,
-      seenTimestampSec,
-    }: GossipHandlerParamGeneric<GossipType.blob_sidecar>) => {
-      return runGossipValidation(async () => {
-        const {serializedData} = gossipData;
-        const blobSidecar = sszDeserialize(topic, serializedData, {reuseBytes: true});
-        const blobSlot = blobSidecar.signedBlockHeader.message.slot;
-        const index = blobSidecar.index;
-
-        if (config.getForkSeq(blobSlot) < ForkSeq.deneb) {
-          throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
-        }
-        const blockInput = await validateBeaconBlob(
-          blobSidecar,
-          serializedData,
-          topic.subnet,
-          peerIdStr,
-          seenTimestampSec
-        );
-        // Handler - deferred to next event loop so the validation result propagates first
-        callInNextEventLoop(() => {
-          try {
-            chain.serializedCache.set(blobSidecar, serializedData);
-            if (!blockInput.hasBlockAndAllData()) {
-              const cutoffTimeMs = getCutoffTimeMs(chain, blobSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
-              chain.logger.debug("Received gossip blob, waiting for full data availability", {
-                msToWait: cutoffTimeMs,
-                blobIndex: index,
-                ...blockInput.getLogMeta(),
-              });
-              blockInput.waitForAllData(cutoffTimeMs).catch((_e) => {
-                chain.logger.debug(
-                  "Waited for data after receiving gossip blob. Cut-off reached so attempting to fetch remainder of BlockInput",
-                  {
-                    blobIndex: index,
-                    ...blockInput.getLogMeta(),
-                  }
-                );
-                chain.emitter.emit(ChainEvent.incompleteBlockInput, {
-                  blockInput,
-                  peer: peerIdStr,
-                  source: BlockInputSource.gossip,
-                });
-              });
-            }
-          } catch (e) {
-            logger.debug(
-              "Error handling gossip blob",
-              {slot: blobSlot, root: blockInput.blockRootHex, index},
-              e as Error
-            );
-          }
-        });
       });
     },
 
@@ -927,7 +777,7 @@ function getSequentialHandlers(
               }
 
               // NOTE: we do NOT call chain.processExecutionPayload here. That is triggered only by
-              // envelope arrival (gossip or API). An in-flight importExecutionPayload is awaiting
+              // envelope arrival (gossip or API). A pending payload import is awaiting
               // payloadInput.waitForAllData(); addColumn above will resolve it once hasAllData flips.
 
               scheduleIncompletePayloadEnvelope(payloadInput, peerIdStr);
@@ -1267,6 +1117,7 @@ function getSequentialHandlers(
     }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
       return runGossipValidation(async () => {
         const {serializedData} = gossipData;
+        unwrapGossipResult(await chain.beaconEngine.validateGossipExecutionPayloadEnvelopeSerialized(serializedData));
         const signedEnvelope = sszDeserialize(topic, serializedData, {reuseBytes: true});
         const envelope = signedEnvelope.message;
 
@@ -1324,18 +1175,20 @@ function getSequentialHandlers(
           });
         }
 
+        if (!payloadInput.hasPayloadEnvelope()) {
+          chain.serializedCache.set(signedEnvelope, serializedData);
+
+          payloadInput.addPayloadEnvelope({
+            envelope: signedEnvelope,
+            source: PayloadEnvelopeInputSource.gossip,
+            seenTimestampSec,
+            peerIdStr,
+          });
+        }
+
         // Handler - deferred to next event loop so the validation result propagates first
         callInNextEventLoop(() => {
           try {
-            chain.serializedCache.set(signedEnvelope, serializedData);
-
-            payloadInput.addPayloadEnvelope({
-              envelope: signedEnvelope,
-              source: PayloadEnvelopeInputSource.gossip,
-              seenTimestampSec,
-              peerIdStr,
-            });
-
             scheduleIncompletePayloadEnvelope(payloadInput, peerIdStr);
 
             chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
@@ -1345,7 +1198,9 @@ function getSequentialHandlers(
               blockRoot: blockRootHex,
             });
 
-            chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
+            // Signature is verified above only for this envelope, one added by another source is verified at import
+            const validSignature = payloadInput.getPayloadEnvelope() === signedEnvelope;
+            chain.processExecutionPayload(payloadInput, {validSignature}).catch((e) => {
               // Adjust verbosity based on error type
               let logLevel: LogLevel;
 
@@ -1362,11 +1217,14 @@ function getSequentialHandlers(
                     // Errors might indicate an issue with our node or the connected EL client
                     logLevel = LogLevel.error;
                     break;
-                  // INVALID_SIGNATURE should not happen, signature is verified during gossip validation
+                  case PayloadErrorCode.BLOCK_EXECUTION_INVALID:
+                    logLevel = LogLevel.warn;
+                    break;
+                  // INVALID_SIGNATURE can belong to an envelope added by another source
                   case PayloadErrorCode.INVALID_SIGNATURE:
                   case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
                   case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
-                    core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+                    if (validSignature) core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
                     chain.seenPayloadEnvelopeInputCache.removeInvalid(payloadInput);
                     // Misbehaving peer, but could highlight an issue in another client
                     logLevel = LogLevel.warn;

@@ -1,11 +1,4 @@
 import {setMaxListeners} from "node:events";
-import {
-  init as initNativeMetrics,
-  registerLocalValidator as registerNativeLocalValidator,
-  scrapeMetrics as scrapeNativeMetrics,
-  unregisterLocalValidator as unregisterNativeLocalValidator,
-} from "@chainsafe/lodestar-z/metrics";
-import {type PubkeyCache, pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
@@ -13,6 +6,7 @@ import {BeaconConfig, chainConfigFromJson, createBeaconConfig} from "@lodestar/c
 import {Db} from "@lodestar/db";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {
+  AncestorStatus,
   CheckpointWithHex,
   EpochDifference,
   ExecutionStatus,
@@ -23,6 +17,13 @@ import {
   UpdateHeadOpt,
 } from "@lodestar/fork-choice";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
+import {
+  init as initNativeMetrics,
+  registerLocalValidator as registerNativeLocalValidator,
+  scrapeMetrics as scrapeNativeMetrics,
+  unregisterLocalValidator as unregisterNativeLocalValidator,
+} from "@lodestar/native/metrics";
+import {type PubkeyCache, pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   ForkName,
   ForkPostBellatrix,
@@ -35,6 +36,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   ZERO_HASH_HEX,
   isForkPostDeneb,
+  isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
 import {
@@ -52,6 +54,7 @@ import {
   isStatePostBellatrix,
   isStatePostElectra,
   isStatePostGloas,
+  proposerShufflingDecisionRoot,
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {
@@ -81,7 +84,6 @@ import {
   altair,
   bellatrix,
   capella,
-  deneb,
   electra,
   fulu,
   getValidatorStatus,
@@ -146,6 +148,7 @@ import {BlockErrorCode} from "../errors/blockError.js";
 import {GossipActionError} from "../errors/gossipValidation.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {ForkchoiceCaller, initializeForkChoice} from "../forkChoice/index.js";
+import {ForkChoiceExecutionEngine} from "../forkChoiceExecutionEngine.js";
 import {persistAnchorState} from "../initState.js";
 import {CommonBlockBody, FindHeadFnName} from "../interface.js";
 import {LightClientServer} from "../lightClient/index.js";
@@ -158,11 +161,13 @@ import {
   OpPool,
   PayloadAttestationPool,
   ProposerPreferencesPool,
+  SingleAttestationPool,
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "../opPools/index.js";
 import {InsertOutcome} from "../opPools/types.js";
 import {BlockAttributes, BlockType} from "../produceBlock/produceBlockBody.js";
+import {ProposerTracker} from "../proposerTracker.js";
 import {QueuedStateRegenerator, RegenCaller, RegenRequest} from "../regen/index.js";
 import {
   SeenAggregators,
@@ -185,6 +190,7 @@ import {PersistentCheckpointStateCache} from "../stateCache/persistentCheckpoint
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
 import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "../validation/attestation.js";
 import {verifyBlockProposerSignature} from "../validation/block.js";
+import {validateGossipExecutionPayloadEnvelopeSerialized} from "../validation/executionPayloadEnvelope.js";
 import {validateGossipInclusionList} from "../validation/inclusionList.js";
 import * as proposerSlashingValidation from "../validation/proposerSlashing.js";
 import type {ApiVoluntaryExitResult} from "../validation/voluntaryExit.js";
@@ -236,6 +242,7 @@ import {
   BeaconEngineCoreEventBus,
   BeaconEngineEvent,
   BeaconEngineEventBus,
+  ChainReorg,
   HeadUpdate,
 } from "./events.js";
 import {
@@ -245,13 +252,7 @@ import {
   validateGossipAggregateAndProofBytes,
   validateGossipAttestationsSameAttData,
 } from "./gossipValidation/attestation.js";
-import {
-  GossipBlockResult,
-  validateGossipBlobSidecar,
-  validateGossipBlobSidecarBytes,
-  validateGossipBlock,
-  validateGossipBlockBytes,
-} from "./gossipValidation/block.js";
+import {GossipBlockResult, validateGossipBlock, validateGossipBlockBytes} from "./gossipValidation/block.js";
 import {
   validateGossipFuluDataColumnSidecar,
   validateGossipFuluDataColumnSidecarBytes,
@@ -396,6 +397,9 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
   // Op pools
   attestationPool: AttestationPool;
   aggregatedAttestationPool: AggregatedAttestationPool;
+  readonly singleAttestationPool: SingleAttestationPool;
+  readonly proposerTracker: ProposerTracker;
+  private localProposalsKey: string | null = null;
   syncCommitteeMessagePool: SyncCommitteeMessagePool;
   syncContributionAndProofPool: SyncContributionAndProofPool;
   payloadAttestationPool: PayloadAttestationPool;
@@ -453,7 +457,8 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
   /** Bytes/root API candidates; never accessed by decoded object entrypoints. Slot maintenance prunes expired entries. */
   readonly blockSerializedCache: BlockSerializedCache;
 
-  readonly executionEngine: IExecutionEngine;
+  private readonly executionEngineClient: IExecutionEngine;
+  executionEngine!: ForkChoiceExecutionEngine;
   builderApiClient!: BuilderApiClient;
   builderCircuitBreaker!: BuilderCircuitBreaker;
   readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
@@ -517,13 +522,13 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     try {
       // Main-thread BeaconEngine shares the node's execution client; worker mode creates its own.
       if (modules.executionEngine !== undefined) {
-        this.executionEngine = modules.executionEngine;
+        this.executionEngineClient = modules.executionEngine;
       } else {
         const {executionEngineOpts} = modules;
         if (executionEngineOpts === undefined) {
           throw new LodestarError({code: "EXECUTION_ENGINE_OPTIONS_REQUIRED"});
         }
-        this.executionEngine = initializeExecutionEngine(
+        this.executionEngineClient = initializeExecutionEngine(
           executionEngineOpts.mode === "mock" ? {...executionEngineOpts, config} : executionEngineOpts,
           {
             signal,
@@ -538,6 +543,8 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
 
       this.attestationPool = new AttestationPool(config, clock, opts.preaggregateSlotDistance, metrics);
       this.aggregatedAttestationPool = new AggregatedAttestationPool(config, metrics, logger);
+      this.singleAttestationPool = new SingleAttestationPool(metrics);
+      this.proposerTracker = new ProposerTracker(opts.singleAttestationIgnoreProposalDuty ?? false, metrics);
       this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, opts.preaggregateSlotDistance);
       this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
       this.inclusionListStore = new InclusionListStore(this.config);
@@ -725,6 +732,8 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     // TODO - beacon engine: return or pull fork-choice changes if slot maintenance fails after updating time.
     this.attestationPool.prune(slot);
     this.aggregatedAttestationPool.prune(slot);
+    this.proposerTracker.prune(slot);
+    this.singleAttestationPool.prune(this.proposerTracker);
     this.syncCommitteeMessagePool.prune(slot);
     this.seenSyncCommitteeMessages.prune(slot);
     this.payloadAttestationPool.prune(slot);
@@ -1444,6 +1453,10 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     for (const validatorIndex of validatorIndices) {
       if (this.beaconProposerCache.track(epoch, validatorIndex)) hasNewValidators = true;
     }
+    if (hasNewValidators) {
+      this.localProposalsKey = null;
+      this.refreshLocalProposals();
+    }
     return hasNewValidators;
   }
 
@@ -1453,7 +1466,12 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     for (const proposer of proposers) {
       this.beaconProposerCache.add(epoch, proposer);
     }
-    return this.beaconProposerCache.getValidatorIndices().length > previousValidatorCount;
+    const hasNewValidators = this.beaconProposerCache.getValidatorIndices().length > previousValidatorCount;
+    if (hasNewValidators) {
+      this.localProposalsKey = null;
+      this.refreshLocalProposals();
+    }
+    return hasNewValidators;
   }
 
   /** Validator indices with proposer preparation registered (attached validators). */
@@ -1654,22 +1672,6 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     return validateApiSyncCommitteeContributionAndProof.call(this, signedContributionAndProof);
   }
 
-  validateGossipBlobSidecarBytes(
-    blobBytes: Uint8Array,
-    fork: ForkName,
-    subnet: SubnetID
-  ): Promise<GossipValidationResult<void>> {
-    return validateGossipBlobSidecarBytes.call(this, blobBytes, fork, subnet);
-  }
-
-  validateGossipBlobSidecar(
-    blobSidecar: deneb.BlobSidecar,
-    fork: ForkName,
-    subnet: SubnetID
-  ): Promise<GossipValidationResult<void>> {
-    return validateGossipBlobSidecar.call(this, blobSidecar, fork, subnet);
-  }
-
   validateGossipFuluDataColumnSidecarBytes(
     dataColumnBytes: Uint8Array,
     gossipSubnet: SubnetID
@@ -1729,6 +1731,10 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ): Promise<GossipValidationResult<void>> {
     return validateApiPayloadAttestationMessage.call(this, payloadAttestationMessage);
+  }
+
+  validateGossipExecutionPayloadEnvelopeSerialized(envelopeBytes: Uint8Array): Promise<GossipValidationResult<void>> {
+    return runGossipValidation(async () => validateGossipExecutionPayloadEnvelopeSerialized(this, envelopeBytes));
   }
 
   validateGossipExecutionPayloadEnvelopeBytes(
@@ -2946,6 +2952,100 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     }
   }
 
+  /** Source: unstable@53c3aab4e9 chain/chain.ts#onHeadChanged; the facade emits returned reorg metadata. */
+  onHeadChanged(oldHead: ProtoBlock, newHead: ProtoBlock, maybeHeadState?: IBeaconStateView): ChainReorg<Root> | null {
+    this.regen.updateHeadState(newHead, maybeHeadState);
+    const delaySec = this.clock.secFromSlot(newHead.slot);
+    this.logger.verbose("New chain head", {
+      slot: newHead.slot,
+      root: newHead.blockRoot,
+      payloadStatus: newHead.payloadStatus,
+      delaySec,
+    });
+    this.syncContributionAndProofPool.prune(newHead.slot);
+    this.seenContributionAndProof.prune(newHead.slot);
+    this.refreshLocalProposals();
+    this.metrics?.forkChoice.changedHead.inc();
+    const ancestorResult = this.forkChoice.getCommonAncestorDepth(oldHead, newHead);
+    if (ancestorResult.code !== AncestorStatus.CommonAncestor) return null;
+    const reorg: ChainReorg = {
+      depth: ancestorResult.depth,
+      epoch: computeEpochAtSlot(newHead.slot),
+      slot: newHead.slot,
+      newHeadBlock: newHead.blockRoot,
+      oldHeadBlock: oldHead.blockRoot,
+      newHeadState: newHead.stateRoot,
+      oldHeadState: oldHead.stateRoot,
+      executionOptimistic: isOptimisticBlock(newHead),
+    };
+    this.logger.verbose("Chain reorg", reorg);
+    this.metrics?.forkChoice.reorg.inc();
+    this.metrics?.forkChoice.reorgDistance.observe(ancestorResult.depth);
+    return {
+      ...reorg,
+      newHeadBlock: fromHex(reorg.newHeadBlock),
+      oldHeadBlock: fromHex(reorg.oldHeadBlock),
+      newHeadState: fromHex(reorg.newHeadState),
+      oldHeadState: fromHex(reorg.oldHeadState),
+    };
+  }
+
+  /** Source: unstable@53c3aab4e9 chain/chain.ts#recomputeHeadAfterELInvalidResponse. */
+  private recomputeHeadAfterELInvalidResponse(): void {
+    const oldHead = this.forkChoice.getHead();
+    const {headUpdate} = this.recomputeForkChoiceHeadSync(ForkchoiceCaller.executionInvalid);
+    if (!headUpdate) return;
+    const reorg = this.onHeadChanged(oldHead, this.forkChoice.getHead());
+    this.emitter.emit(BeaconEngineEvent.executionInvalidated, {
+      previousHead: {blockRoot: fromHex(oldHead.blockRoot), payloadStatus: oldHead.payloadStatus},
+      reorg,
+      version: this.forkChoiceVersion,
+    });
+  }
+
+  /** Source: unstable@53c3aab4e9 chain/chain.ts#refreshLocalProposals. */
+  private refreshLocalProposals(): void {
+    const clockSlot = this.clock.currentSlot;
+    try {
+      const headState = this.getHeadState();
+      const headFork = this.config.getForkName(headState.slot);
+      // post-fulu, the head state knows proposers of its epoch and the next one thanks to the proposer lookahead,
+      // a pre-fulu state only predicts next epoch proposers
+      if (!isForkPostFulu(headFork) || headState.epoch < computeEpochAtSlot(clockSlot) - 1) {
+        return;
+      }
+
+      const decisionRoot = proposerShufflingDecisionRoot(headFork, headState, headState.epoch + 1);
+      if (decisionRoot === null) {
+        return;
+      }
+      const localProposalsKey = `${headState.epoch}_${toRootHex(decisionRoot)}`;
+      if (localProposalsKey === this.localProposalsKey) {
+        return;
+      }
+      this.localProposalsKey = localProposalsKey;
+
+      const startSlot = computeStartSlotAtEpoch(headState.epoch);
+      const newProposalSlots: Slot[] = [];
+      for (const [i, proposerIndex] of [...headState.currentProposers, ...headState.nextProposers].entries()) {
+        const proposalSlot = startSlot + i;
+        if (
+          proposalSlot >= clockSlot &&
+          this.beaconProposerCache.has(proposerIndex) &&
+          this.proposerTracker.addProposal(proposalSlot)
+        ) {
+          newProposalSlots.push(proposalSlot);
+        }
+      }
+
+      if (newProposalSlots.length > 0) {
+        this.emitter.emit(BeaconEngineEvent.localProposalSlots, newProposalSlots);
+      }
+    } catch (e) {
+      this.logger.debug("Error refreshing local proposals", {slot: clockSlot}, e as Error);
+    }
+  }
+
   getHeadUpdate(prevHead: Pick<ProtoBlock, "blockRoot" | "payloadStatus">, head: ProtoBlock): HeadUpdate | null {
     const headRootChanged = head.blockRoot !== prevHead.blockRoot;
 
@@ -3207,6 +3307,14 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
       metrics,
       logger
     );
+
+    // Source: unstable@53c3aab4e9 chain/chain.ts; EL verdicts mutate engine-owned fork choice.
+    this.executionEngine = new ForkChoiceExecutionEngine(this.executionEngineClient, {
+      forkChoice: this.forkChoice,
+      recomputeHeadAfterELInvalidResponse: () => this.recomputeHeadAfterELInvalidResponse(),
+      logger,
+      metrics,
+    });
 
     this.seenPayloadEnvelopeInputCache = new SeenEnginePayloadEnvelopeInput({config, forkChoice: this.forkChoice, db});
     if (isStatePostGloas(anchorState) && anchorState.latestBlockHeader.slot > 0) {

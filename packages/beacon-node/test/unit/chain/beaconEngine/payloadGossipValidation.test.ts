@@ -1,8 +1,8 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {PayloadStatus} from "@lodestar/fork-choice";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";

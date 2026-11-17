@@ -1,9 +1,9 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BitArray, SerializedList, Type} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {SecretKey} from "@lodestar/native/blst";
 import {ForkName, INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import {ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -18,7 +18,6 @@ import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregate
 import * as aggregateValidation from "../../../../src/chain/validation/aggregateAndProof.js";
 import * as attestationValidation from "../../../../src/chain/validation/attestation.js";
 import * as attesterSlashingValidation from "../../../../src/chain/validation/attesterSlashing.js";
-import * as blobValidation from "../../../../src/chain/validation/blobSidecar.js";
 import * as blsChangeValidation from "../../../../src/chain/validation/blsToExecutionChange.js";
 import * as columnValidation from "../../../../src/chain/validation/dataColumnSidecar.js";
 import * as bidValidation from "../../../../src/chain/validation/executionPayloadBid.js";
@@ -76,7 +75,6 @@ describe("BeaconEngineCore gossip bytes", () => {
       "validateGossipProposerSlashingBytes",
       "validateGossipVoluntaryExitBytes",
       "validateGossipBlsToExecutionChangeBytes",
-      "validateGossipBlobSidecarBytes",
       "validateGossipFuluDataColumnSidecarBytes",
       "validateGossipGloasDataColumnSidecarBytes",
       "validateGossipExecutionPayloadEnvelopeBytes",
@@ -353,18 +351,6 @@ describe("BeaconEngineCore gossip bytes", () => {
       validate: () => vi.spyOn(blsChangeValidation, "validateGossipBlsToExecutionChange"),
       invoke: (bytes: Uint8Array) =>
         BeaconEngineCore.prototype.validateGossipBlsToExecutionChangeBytes.call(engine, bytes),
-    },
-    {
-      name: "blob sidecar",
-      createMessage: () =>
-        createObjectMessage(
-          ssz.deneb.BlobSidecar,
-          (value) => BeaconEngineCore.prototype.validateGossipBlobSidecar.call(engine, value, ForkName.deneb, 0),
-          (facade, value, bytes) => facade.validateGossipBlobSidecar(bytes, value, ForkName.deneb, 0)
-        ),
-      validate: () => vi.spyOn(blobValidation, "validateGossipBlobSidecar"),
-      invoke: (bytes: Uint8Array) =>
-        BeaconEngineCore.prototype.validateGossipBlobSidecarBytes.call(engine, bytes, ForkName.deneb, 0),
     },
     {
       name: "fulu data column",

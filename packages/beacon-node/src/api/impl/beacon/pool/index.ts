@@ -121,6 +121,7 @@ export function getBeaconPoolApi({
               logger.debug("Error adding unaggregated attestation to pool", {subnet}, e as Error);
             }
 
+            // [beacon-engine] Single-attestation collection is part of Core API validation.
             if (isForkPostElectra(fork)) {
               chain.emitter.emit(
                 routes.events.EventType.singleAttestation,

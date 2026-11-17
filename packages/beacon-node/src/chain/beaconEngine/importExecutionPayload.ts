@@ -1,6 +1,9 @@
 import {SerializedList} from "@chainsafe/ssz";
 import {
   ExecutionStatus,
+  ForkChoiceError,
+  ForkChoiceErrorCode,
+  InvalidBlockCode,
   PayloadExecutionStatus,
   PayloadStatus,
   getFinalizedExecutionBlockHash,
@@ -43,6 +46,7 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
 
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@1bf214377e packages/beacon-node/src/chain/blocks/importExecutionPayload.ts#importExecutionPayload.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function importExecutionPayloadBytes(
@@ -76,6 +80,10 @@ export async function importExecutionPayload(
   const protoBlock = this.forkChoice.getBlockHexDefaultStatus(blockRootHex);
   if (!protoBlock) {
     throw new PayloadError({code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE, blockRootHex});
+  }
+
+  if (protoBlock.executionStatus === ExecutionStatus.Invalid) {
+    throw new PayloadError({code: PayloadErrorCode.BLOCK_EXECUTION_INVALID, blockRootHex});
   }
 
   // Regenerate state for envelope verification.
@@ -260,14 +268,26 @@ export async function importExecutionPayload(
     }
   }
 
-  this.forkChoice.onExecutionPayload(
-    blockRootHex,
-    blockHashHex,
-    envelope.payload.blockNumber,
-    envelope.payload.gasLimit,
-    execStatus,
-    dataAvailabilityStatus
-  );
+  try {
+    this.forkChoice.onExecutionPayload(
+      blockRootHex,
+      blockHashHex,
+      envelope.payload.blockNumber,
+      envelope.payload.gasLimit,
+      execStatus,
+      dataAvailabilityStatus
+    );
+  } catch (e) {
+    // The payload chain can be invalidated by a forkchoiceUpdated verdict while the engine was awaited
+    if (
+      e instanceof ForkChoiceError &&
+      e.type.code === ForkChoiceErrorCode.INVALID_BLOCK &&
+      e.type.err.code === InvalidBlockCode.PARENT_EXECUTION_INVALID
+    ) {
+      throw new PayloadError({code: PayloadErrorCode.BLOCK_EXECUTION_INVALID, blockRootHex});
+    }
+    throw e;
+  }
 
   // Read retained metadata even if finalization advanced during asynchronous verification.
   const importedBlock = this.forkChoice.getBlockHexAndBlockHash(blockRootHex, blockHashHex);
@@ -288,11 +308,13 @@ export async function importExecutionPayload(
   ) {
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
-    this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
-      if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-        this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
-      }
-    });
+    this.executionEngine
+      .notifyForkchoiceUpdate(fork, blockRootHex, blockHashHex, safeBlockHash, finalizedBlockHash)
+      .catch((e) => {
+        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+          this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
+        }
+      });
   }
 
   return result;

@@ -40,7 +40,13 @@ type INetworkDebug = Pick<INetwork, "connectToPeer" | "disconnectPeer" | "getNet
 
 export async function connect(netDial: INetworkDebug, netServer: INetworkDebug, signal?: AbortSignal): Promise<void> {
   const netServerId = await netServer.getNetworkIdentity();
-  await netDial.connectToPeer(netServerId.peerId, netServerId.p2pAddresses);
+  const loopbackAddresses = netServerId.p2pAddresses.filter(
+    (address) => address.startsWith("/ip4/127.0.0.1/") || address.startsWith("/ip6/::1/")
+  );
+  await netDial.connectToPeer(
+    netServerId.peerId,
+    loopbackAddresses.length > 0 ? loopbackAddresses : netServerId.p2pAddresses
+  );
 
   // We see a lot of "Muxer already closed" in e2e tests on CI
   // This is a way to give a grace period for connections to open and exchange metadata

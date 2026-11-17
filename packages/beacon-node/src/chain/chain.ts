@@ -1,10 +1,10 @@
 import path from "node:path";
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {EFFECTIVE_BALANCE_INCREMENT, type ForkPostFulu, type ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {
   BeaconBlock,
@@ -27,7 +27,6 @@ import {Logger, fromHex, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconChainDb, IBeaconDb} from "../db/index.js";
-import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
 import {decodeArchivedEnvelope} from "../db/repositories/index.js";
 import {BuilderApiClient, BuilderApiClientOpts} from "../execution/builder/apiClient.js";
 import {IExecutionEngine} from "../execution/index.js";
@@ -42,7 +41,7 @@ import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {EngineBootstrap} from "./beaconEngine/initialization.js";
 import type {FinalizedCheckpointSnapshot} from "./beaconEngine/interface.js";
-import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
+import {IBlockInput, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
@@ -438,43 +437,11 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null> {
-    const blockInput = this.seenBlockInputCache.get(blockRootHex);
-    if (blockInput) {
-      if (!isBlockInputBlobs(blockInput)) {
-        throw new Error(`Expected block input to have blobs: slot=${blockSlot} root=${blockRootHex}`);
-      }
-      if (!blockInput.hasAllData()) {
-        return null;
-      }
-      return blockInput.getBlobs();
-    }
     const unfinalizedBlobSidecars = (await this.db.blobSidecars.get(fromHex(blockRootHex)))?.blobSidecars ?? null;
     if (unfinalizedBlobSidecars) {
       return unfinalizedBlobSidecars;
     }
     return (await this.db.blobSidecarsArchive.get(blockSlot))?.blobSidecars ?? null;
-  }
-
-  async getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
-    const blockInput = this.seenBlockInputCache.get(blockRootHex);
-    if (blockInput) {
-      if (!isBlockInputBlobs(blockInput)) {
-        throw new Error(`Expected block input to have blobs: slot=${blockSlot} root=${blockRootHex}`);
-      }
-      if (!blockInput.hasAllData()) {
-        return null;
-      }
-      return ssz.deneb.BlobSidecars.serialize(blockInput.getBlobs());
-    }
-    const unfinalizedBlobSidecarsWrapper = await this.db.blobSidecars.getBinary(fromHex(blockRootHex));
-    if (unfinalizedBlobSidecarsWrapper) {
-      return unfinalizedBlobSidecarsWrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
-    }
-    const finalizedBlobSidecarsWrapper = await this.db.blobSidecarsArchive.getBinary(blockSlot);
-    if (finalizedBlobSidecarsWrapper) {
-      return finalizedBlobSidecarsWrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
-    }
-    return null;
   }
 
   async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
@@ -831,6 +798,7 @@ export class BeaconChain implements IBeaconChain {
     this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
   }
 
+  // [beacon-engine] Local proposal tracking lives in BeaconEngineCore.refreshLocalProposals.
   private onClockEpoch(epoch: Epoch): void {
     this.metrics?.clockEpoch.set(epoch);
     this.beaconEngine.onEpoch(epoch).catch((e) => {

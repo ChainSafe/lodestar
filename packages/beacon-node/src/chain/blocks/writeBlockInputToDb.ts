@@ -1,25 +1,11 @@
 import {ForkPostFulu} from "@lodestar/params";
-import {fromHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
-import {IBlockInput, IDataColumnsInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
+import {IBlockInput, IDataColumnsInput, isBlockInputColumns} from "./blockInput/index.js";
 import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
 
-/** Persists blob sidecars and data columns. Beacon blocks are persisted during engine import. */
+/** Persists data columns. Beacon blocks are persisted during engine import. */
 export async function writeBlockInputToDb(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
-  if (isBlockInputBlobs(blockInput)) {
-    if (!blockInput.hasAllData()) {
-      await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
-    }
-    const {slot} = blockInput;
-    const blockRoot = fromHex(blockInput.blockRootHex);
-    const blobSidecars = blockInput.getBlobs();
-    await this.db.blobSidecars.add({blockRoot, slot, blobSidecars});
-    this.logger.debug("Persisted blobSidecars to hot DB", {
-      slot,
-      root: blockInput.blockRootHex,
-      numBlobs: blobSidecars.length,
-    });
-  } else if (isBlockInputColumns(blockInput)) {
+  if (isBlockInputColumns(blockInput)) {
     await writeDataColumnsToDb.call(this, blockInput);
   }
 }

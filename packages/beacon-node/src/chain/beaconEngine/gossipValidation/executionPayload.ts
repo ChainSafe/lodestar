@@ -138,6 +138,7 @@ export async function validateGossipExecutionPayloadEnvelopeBytes(
   source: SourceMeta
 ): Promise<GossipValidationResult<void>> {
   try {
+    executionPayloadEnvelopeValidation.validateGossipExecutionPayloadEnvelopeSerialized(this, envelopeBytes);
     const executionPayloadEnvelope = deserializeGossipMessage(ssz.gloas.SignedExecutionPayloadEnvelope, envelopeBytes);
     return await validateGossipExecutionPayloadEnvelope.call(this, executionPayloadEnvelope, source);
   } catch (error) {

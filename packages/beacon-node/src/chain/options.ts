@@ -22,8 +22,6 @@ export type IChainOptions = IBeaconEngineOptions &
     persistProducedPayloadEnvelopes?: boolean;
     skipCreateStateCacheIfAvailable?: boolean;
     graffitiAppend?: boolean;
-    /** Max number of produced blobs by local validators to cache */
-    maxCachedBlobSidecars?: number;
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */
     maxCachedProducedRoots?: number;
     initialCustodyGroupCount?: number;

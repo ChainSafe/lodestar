@@ -483,11 +483,6 @@ export interface IBeaconEngineCoreApi {
   validateApiSyncCommitteeContributionAndProofBytes(
     contributionBytes: Uint8Array
   ): Promise<GossipValidationResult<void>>;
-  validateGossipBlobSidecarBytes(
-    blobBytes: Uint8Array,
-    fork: ForkName,
-    subnet: SubnetID
-  ): Promise<GossipValidationResult<void>>;
   validateGossipFuluDataColumnSidecarBytes(
     dataColumnBytes: Uint8Array,
     gossipSubnet: SubnetID
@@ -500,6 +495,7 @@ export interface IBeaconEngineCoreApi {
     payloadAttestationBytes: Uint8Array
   ): Promise<GossipValidationResult<void>>;
   validateApiPayloadAttestationMessageBytes(payloadAttestationBytes: Uint8Array): Promise<GossipValidationResult<void>>;
+  validateGossipExecutionPayloadEnvelopeSerialized(envelopeBytes: Uint8Array): Promise<GossipValidationResult<void>>;
   validateGossipExecutionPayloadEnvelopeBytes(
     envelopeBytes: Uint8Array,
     source: SourceMeta

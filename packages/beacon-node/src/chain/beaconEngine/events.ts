@@ -1,12 +1,14 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {Epoch, RootHex, Slot, phase0} from "@lodestar/types";
+import {Epoch, Root, RootHex, Slot, phase0} from "@lodestar/types";
 import type {SerializedLightClientData} from "./interface.js";
 
 // TODO - beacon engine: apply pull model, ie core should not emit events with data
 export enum BeaconEngineEvent {
   fatalError = "fatalError",
+  localProposalSlots = "localProposalSlots",
+  executionInvalidated = "executionInvalidated",
   proposerSlashingProduced = "proposerSlashingProduced",
   fastConfirmation = "fastConfirmation",
   lightClientOptimisticUpdate = "lightClientOptimisticUpdate",
@@ -43,7 +45,15 @@ export type ChainReorg<TRoot = RootHex> = {
 
 export type FastConfirmation = {block: RootHex; slot: Slot; currentSlot: Slot};
 
+export type ExecutionInvalidation = {
+  previousHead: {blockRoot: Root; payloadStatus: PayloadStatus};
+  reorg: ChainReorg<Root> | null;
+  version: number;
+};
+
 export type BeaconEngineEventData = {
+  [BeaconEngineEvent.localProposalSlots]: Slot[];
+  [BeaconEngineEvent.executionInvalidated]: ExecutionInvalidation;
   [BeaconEngineEvent.fatalError]: Error;
   [BeaconEngineEvent.proposerSlashingProduced]: phase0.ProposerSlashing;
   [BeaconEngineEvent.fastConfirmation]: FastConfirmation;

@@ -2,7 +2,6 @@ import {readFile} from "node:fs/promises";
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {WireFormat, routes} from "@lodestar/api";
 import {getClient} from "@lodestar/api/builder";
 import {chainConfigToJson, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
@@ -13,6 +12,7 @@ import {PayloadStatus} from "@lodestar/fork-choice";
 import {TimestampFormatCode} from "@lodestar/logger";
 import * as nodeLogger from "@lodestar/logger/node";
 import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {DOMAIN_BEACON_PROPOSER, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as stateTransition from "@lodestar/state-transition";
 import {ensureInteropPubkeyCache} from "@lodestar/state-transition/test-utils";
@@ -645,11 +645,12 @@ describe("bytes-based engine startup", () => {
     const createExecution = vi.spyOn(execution, "initializeExecutionEngine");
     engine = new BeaconEngineCore(workerData);
     expect(engine.config).not.toBe(mainConfig);
+    const executionClient = createExecution.mock.results[0].value;
 
     for (const slot of [2 * SLOTS_PER_EPOCH - 1, 2 * SLOTS_PER_EPOCH]) {
       const fork = engine.config.getForkName(slot);
       const timestamp = 1 + slot * 6;
-      const payloadId = await engine.executionEngine.notifyForkchoiceUpdate(fork, blockHash, blockHash, blockHash, {
+      const {payloadId} = await executionClient.notifyForkchoiceUpdate(fork, blockHash, blockHash, blockHash, {
         timestamp,
         prevRandao: new Uint8Array(32),
         suggestedFeeRecipient: `0x${"00".repeat(20)}`,
@@ -657,7 +658,7 @@ describe("bytes-based engine startup", () => {
       });
       expect(payloadId, `payload ID at slot ${slot}`).not.toBeNull();
       if (payloadId === null) throw Error(`Missing payload ID at slot ${slot}`);
-      const {executionPayload} = await engine.executionEngine.getPayload(fork, payloadId);
+      const {executionPayload} = await executionClient.getPayload(fork, payloadId);
       expect(executionPayload.timestamp, `payload timestamp at slot ${slot}`).toBe(timestamp);
       expect("withdrawals" in executionPayload, `payload fork at slot ${slot}`).toBe(fork === ForkName.capella);
     }

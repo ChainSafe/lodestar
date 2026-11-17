@@ -1,7 +1,8 @@
 import {SYNC_COMMITTEE_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {IBeaconStateView, isStatePostAltair} from "@lodestar/state-transition";
-import {SubnetID, altair} from "@lodestar/types";
+import {RootHex, Slot, SubnetID, ValidatorIndex, altair} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {BeaconEngineMetrics} from "../../metrics/beaconEngineMetrics.js";
 import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
 import {getSyncCommitteeSignatureSet} from "./signatureSets/index.js";
@@ -32,16 +33,43 @@ export async function validateGossipSyncCommittee(
 
   // [IGNORE] There has been no other valid sync committee signature for the declared slot for the validator referenced
   // by sync_committee_signature.validator_index.
-  const prevRoot = this.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex);
+  assertSyncCommitteeMessageNotKnown(this, slot, subnet, validatorIndex, messageRoot, this.metrics);
+
+  // [REJECT] The subnet_id is valid for the given validator, i.e. subnet_id in compute_subnets_for_sync_committee(state, sync_committee_signature.validator_index).
+  // Note this validation implies the validator is part of the broader current sync committee along with the correct subcommittee.
+  // > Checked in validateGossipSyncCommitteeExceptSig()
+
+  // [REJECT] The signature is valid for the message beacon_block_root for the validator referenced by validator_index.
+  await validateSyncCommitteeSigOnly.call(this, headState, syncCommittee);
+
+  // Re-check after the await: concurrent messages from the same validator all pass the check above.
+  // Metrics were already counted by the first check.
+  assertSyncCommitteeMessageNotKnown(this, slot, subnet, validatorIndex, messageRoot, null);
+
+  // Register this valid item as seen
+  this.seenSyncCommitteeMessages.add(slot, subnet, validatorIndex, messageRoot);
+
+  return {indicesInSubcommittee};
+}
+
+function assertSyncCommitteeMessageNotKnown(
+  chain: BeaconEngineCore,
+  slot: Slot,
+  subnet: SubnetID,
+  validatorIndex: ValidatorIndex,
+  messageRoot: RootHex,
+  metrics: BeaconEngineMetrics | null
+): void {
+  const prevRoot = chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex);
   if (prevRoot) {
     let shouldIgnore = false;
     if (prevRoot === messageRoot) {
       shouldIgnore = true;
     } else {
-      const headRoot = this.forkChoice.getHeadRoot();
-      this.metrics?.gossipSyncCommittee.equivocationCount.inc();
+      const headRoot = chain.forkChoice.getHeadRoot();
+      metrics?.gossipSyncCommittee.equivocationCount.inc();
       if (messageRoot === headRoot) {
-        this.metrics?.gossipSyncCommittee.equivocationToHeadCount.inc();
+        metrics?.gossipSyncCommittee.equivocationToHeadCount.inc();
       } else {
         shouldIgnore = true;
       }
@@ -57,18 +85,6 @@ export async function validateGossipSyncCommittee(
       });
     }
   }
-
-  // [REJECT] The subnet_id is valid for the given validator, i.e. subnet_id in compute_subnets_for_sync_committee(state, sync_committee_signature.validator_index).
-  // Note this validation implies the validator is part of the broader current sync committee along with the correct subcommittee.
-  // > Checked in validateGossipSyncCommitteeExceptSig()
-
-  // [REJECT] The signature is valid for the message beacon_block_root for the validator referenced by validator_index.
-  await validateSyncCommitteeSigOnly.call(this, headState, syncCommittee);
-
-  // Register this valid item as seen
-  this.seenSyncCommitteeMessages.add(slot, subnet, validatorIndex, messageRoot);
-
-  return {indicesInSubcommittee};
 }
 
 export async function validateApiSyncCommittee(

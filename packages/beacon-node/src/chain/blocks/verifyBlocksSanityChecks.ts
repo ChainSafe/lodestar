@@ -126,6 +126,7 @@ export function verifyBlocksSanityChecks(
           parentBlock = parentBlockWithPayload;
         }
       }
+      // [beacon-engine] Execution validity is checked by Core before verification and fork-choice import.
       // Parent is known to the fork-choice
       parentBlockSlot = parentBlock.slot;
     }

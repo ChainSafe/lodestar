@@ -1,11 +1,11 @@
 import {BitArray} from "@chainsafe/ssz";
 import {
-  AncestorStatus,
   BlockExecutionStatus,
-  ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
+  InvalidBlockCode,
   NotReorgedReason,
+  ProtoBlock,
   getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
@@ -51,7 +51,9 @@ import {BlockSerializedCache} from "../blocks/blockSerializedCache.js";
 import {computeSignedBlockRoot, toSignedBlockRootHex} from "../blocks/signedBlockRoot.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../blocks/types.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
+import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
+import {IncludedAttesters} from "../opPools/singleAttestationPool.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {BeaconEngineCore} from "./beaconEngineCore.js";
 import {BeaconEngineCoreEvent, ChainReorg} from "./events.js";
@@ -63,6 +65,7 @@ export type VerifiedBlockBundle = {
   postState: IBeaconStateView;
   block: SignedBeaconBlock;
   blockBytes: Uint8Array;
+  /** Attesting indices stay in committee order, as in upstream FullyVerifiedBlock. */
   indexedAttestations: IndexedAttestation[];
   proposerBalanceDelta: number;
   parentBlockSlot: number;
@@ -71,7 +74,7 @@ export type VerifiedBlockBundle = {
 
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#importBlock.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function importBlock(
@@ -85,7 +88,7 @@ export async function importBlock(
   const fullyVerifiedBlock = {...v, dataAvailabilityStatus};
   const {block, postState, parentBlockSlot, indexedAttestations} = fullyVerifiedBlock;
 
-  let {executionStatus} = fullyVerifiedBlock;
+  const {executionStatus} = fullyVerifiedBlock;
 
   const {slot: blockSlot} = block.message;
 
@@ -124,35 +127,29 @@ export async function importBlock(
   // Should compute checkpoint balances before forkchoice.onBlock
   this.checkpointBalancesCache.processState(blockRootHex, postState);
 
-  if (isGloasBeaconBlock(block.message)) {
-    // A gloas block has no payload of its own, it inherits the status of the payload it builds on,
-    // i.e. the parent variant matching the bid's parent block hash. The parent's default (PENDING)
-    // variant does not reflect a SYNCING parent payload, and onBlock would then mark that payload VALID.
-    const parentRootHex = toRootHex(block.message.parentRoot);
-    const parentBlockHashHex = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
-    const parentBlock = this.forkChoice.getBlockHexAndBlockHash(parentRootHex, parentBlockHashHex);
-    if (parentBlock === null) {
-      throw Error(
-        `Parent block not found in forkChoice, parentRoot=${parentRootHex} parentBlockHash=${parentBlockHashHex}`
-      );
-    }
-    if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
-      throw Error(`Parent block has invalid execution status, parentRoot=${parentRootHex}`);
-    }
-    executionStatus = parentBlock.executionStatus;
-  }
-
   const importDelayMs = this.clock.msFromSlot(blockSlot);
-
-  const blockSummary = this.forkChoice.onBlock(
-    block.message,
-    postState,
-    receiveDelayMs,
-    importDelayMs,
-    currentSlot,
-    executionStatus,
-    dataAvailabilityStatus
-  );
+  let blockSummary: ProtoBlock;
+  try {
+    blockSummary = this.forkChoice.onBlock(
+      block.message,
+      postState,
+      receiveDelayMs,
+      importDelayMs,
+      currentSlot,
+      executionStatus,
+      dataAvailabilityStatus
+    );
+  } catch (e) {
+    // The parent can be invalidated by a forkchoiceUpdated verdict after verifyBlocksSanityChecks passed
+    if (
+      e instanceof ForkChoiceError &&
+      e.type.code === ForkChoiceErrorCode.INVALID_BLOCK &&
+      e.type.err.code === InvalidBlockCode.PARENT_EXECUTION_INVALID
+    ) {
+      throw new BlockError(block, {code: BlockErrorCode.PARENT_EXECUTION_INVALID, parentRoot: e.type.err.root});
+    }
+    throw e;
+  }
 
   if (isGloasBeaconBlock(block.message)) {
     this.seenPayloadEnvelopeInputCache.add({
@@ -177,6 +174,9 @@ export async function importBlock(
   // Only process attestations of blocks with relevant attestations for the fork-choice:
   // If current epoch is N, and block is epoch X, block may include attestations for epoch X or X - 1.
   // The latest block that is useful is at epoch N - 1 which may include attestations for epoch N - 1 or N - 2.
+  // the pool is empty outside the slots before a local block proposal, nothing to prune then
+  const pruneSingleAttestations = fork >= ForkSeq.electra && !this.singleAttestationPool.isEmpty();
+  const includedAttesters: IncludedAttesters[] = [];
   if (importsBlockAttestations(opts, blockEpoch, currentEpoch)) {
     const attestations = block.message.body.attestations;
     const rootCache = new RootCache(postState);
@@ -191,6 +191,14 @@ export async function importBlock(
         const {target, beaconBlockRoot} = attestation.data;
 
         const attDataRoot = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
+        // the block includes these attesters even if fork choice below rejects the vote
+        if (pruneSingleAttestations) {
+          includedAttesters.push({
+            slot: attestation.data.slot,
+            attDataRootHex: attDataRoot,
+            attestingIndices: indexedAttestation.attestingIndices,
+          });
+        }
         addAttestation.call(
           this,
           postState,
@@ -321,17 +329,17 @@ export async function importBlock(
 
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
+  if (pruneSingleAttestations && newHead.blockRoot === blockRootHex) {
+    callInNextEventLoop(() => {
+      const deleted = this.singleAttestationPool.onHead(blockRootHex, newHead.parentRoot, includedAttesters);
+      this.metrics?.opPool.singleAttestationPool.deletedByBlock.inc(deleted);
+    });
+  }
+
   if (newHead.blockRoot !== oldHead.blockRoot) {
-    // Set head state as strong reference
-    this.regen.updateHeadState(newHead, postState);
+    reorg = this.onHeadChanged(oldHead, newHead, postState);
 
     const delaySec = this.clock.secFromSlot(newHead.slot);
-    this.logger.verbose("New chain head", {
-      slot: newHead.slot,
-      root: newHead.blockRoot,
-      delaySec,
-    });
-
     // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
     // We want to track recent blocks coming from gossip, unknown block sync, and API.
     if (
@@ -343,39 +351,6 @@ export async function importBlock(
       if (delaySec > cutOffSec) {
         this.metrics.importBlock.setHeadAfterCutoff.inc();
       }
-    }
-
-    this.syncContributionAndProofPool.prune(newHead.slot);
-    this.seenContributionAndProof.prune(newHead.slot);
-
-    this.metrics?.forkChoice.changedHead.inc();
-
-    const ancestorResult = this.forkChoice.getCommonAncestorDepth(oldHead, newHead);
-    if (ancestorResult.code === AncestorStatus.CommonAncestor) {
-      // CommonAncestor = chain reorg, old head and new head not direct descendants
-
-      const forkChoiceReorgEventData: ChainReorg = {
-        depth: ancestorResult.depth,
-        epoch: computeEpochAtSlot(newHead.slot),
-        slot: newHead.slot,
-        newHeadBlock: newHead.blockRoot,
-        oldHeadBlock: oldHead.blockRoot,
-        newHeadState: newHead.stateRoot,
-        oldHeadState: oldHead.stateRoot,
-        executionOptimistic: isOptimisticBlock(newHead),
-      };
-
-      reorg = {
-        ...forkChoiceReorgEventData,
-        newHeadBlock: fromHex(newHead.blockRoot),
-        oldHeadBlock: fromHex(oldHead.blockRoot),
-        newHeadState: fromHex(newHead.stateRoot),
-        oldHeadState: fromHex(oldHead.stateRoot),
-      };
-      this.logger.verbose("Chain reorg", forkChoiceReorgEventData);
-
-      this.metrics?.forkChoice.reorg.inc();
-      this.metrics?.forkChoice.reorgDistance.observe(ancestorResult.depth);
     }
 
     // Lightclient server support (only after altair)
@@ -475,7 +450,13 @@ export async function importBlock(
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine
-        .notifyForkchoiceUpdate(this.config.getForkName(fcuHead.slot), headBlockHash, safeBlockHash, finalizedBlockHash)
+        .notifyForkchoiceUpdate(
+          this.config.getForkName(fcuHead.slot),
+          fcuHead.blockRoot,
+          headBlockHash,
+          safeBlockHash,
+          finalizedBlockHash
+        )
         .catch((e) => {
           if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
             this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
@@ -582,7 +563,7 @@ export async function importBlock(
 
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#addAttestationPreElectra.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function addAttestationPreElectra(
@@ -605,7 +586,7 @@ export function addAttestationPreElectra(
 
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/chain/blocks/importBlock.ts#addAttestationPostElectra.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function addAttestationPostElectra(

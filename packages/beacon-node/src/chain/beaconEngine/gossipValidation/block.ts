@@ -1,25 +1,21 @@
 import {ForkName, ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, SubnetID, WithBytes, deneb, isGloasBeaconBlock, ssz} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, WithBytes, isGloasBeaconBlock} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {deserializeBlock} from "../../blocks/blockSerializedCache.js";
 import {SignedBlockRoot, SignedBlockRootHex, toSignedBlockRootHex} from "../../blocks/signedBlockRoot.js";
-import {GossipActionError} from "../../errors/gossipValidation.js";
 import {BlockErrorCode, BlockErrorType, BlockGossipError, GossipAction} from "../../errors/index.js";
-import * as blobSidecarValidation from "../../validation/blobSidecar.js";
 import * as blockValidation from "../../validation/block.js";
 import {OpSource} from "../../validatorMonitor.js";
 import type {BeaconEngineCore} from "../beaconEngineCore.js";
 import {
   GossipValidationResult,
   GossipValidationStatus,
-  fromResult,
   ignore,
   reject,
   runGossipValidation,
 } from "../gossipValidationResult.js";
-import {deserializeGossipMessage} from "./deserialize.js";
 
 export type GossipBlockResult = GossipValidationResult<blockValidation.GossipBlockValidationResult> & {
   blockErrorType?: BlockErrorType;
@@ -203,41 +199,4 @@ function gossipBlockError(
   // [beacon-engine] deviation: internal failures return a verdict without penalizing the peer.
   this.logger.error("Error validating gossip block", {root: blockRootForLog, code: "UNEXPECTED_ERROR"}, error as Error);
   return {...ignore("UNEXPECTED_ERROR"), shouldProcessRepeatProposalBlock: false};
-}
-
-/**
- * Validation source: unstable@551b8b0a3d packages/beacon-node/src/chain/validation/blobSidecar.ts#validateGossipBlobSidecar.
- * [beacon-engine] deviation: invoke validation with engine state and convert gossip errors to verdicts.
- */
-export async function validateGossipBlobSidecarBytes(
-  this: BeaconEngineCore,
-  blobBytes: Uint8Array,
-  fork: ForkName,
-  subnet: SubnetID
-): Promise<GossipValidationResult<void>> {
-  try {
-    const blobSidecar = deserializeGossipMessage(ssz.deneb.BlobSidecar, blobBytes);
-    return await validateGossipBlobSidecar.call(this, blobSidecar, fork, subnet);
-  } catch (error) {
-    if (error instanceof GossipActionError) return fromResult({err: error});
-    this.logger.error("Error validating gossip blob sidecar", {code: "UNEXPECTED_ERROR"}, error as Error);
-    return ignore("UNEXPECTED_ERROR");
-  }
-}
-
-export async function validateGossipBlobSidecar(
-  this: BeaconEngineCore,
-  blobSidecar: deneb.BlobSidecar,
-  fork: ForkName,
-  subnet: SubnetID
-): Promise<GossipValidationResult<void>> {
-  try {
-    return await runGossipValidation(() =>
-      blobSidecarValidation.validateGossipBlobSidecar.call(this, fork, blobSidecar, subnet)
-    );
-  } catch (error) {
-    if (error instanceof GossipActionError) return fromResult({err: error});
-    this.logger.error("Error validating gossip blob sidecar", {code: "UNEXPECTED_ERROR"}, error as Error);
-    return ignore("UNEXPECTED_ERROR");
-  }
 }

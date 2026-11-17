@@ -1,7 +1,7 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import type {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
+import type {PubkeyCache} from "@lodestar/native/pubkeys";
 import type {ForkName, ForkPostBellatrix, ForkPreGloas} from "@lodestar/params";
 import type {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {
@@ -154,7 +154,6 @@ export interface IBeaconChain {
   getSerializedBlockByRoot(root: Uint8Array): Promise<{block: Uint8Array; slot: Slot} | null>;
   getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null>;
   getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
-  getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
   getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]>;
   getSerializedDataColumnSidecars(
     blockSlot: Slot,
@@ -250,7 +249,6 @@ export interface IBeaconEngine
     | "validateApiSyncCommitteeBytes"
     | "validateSyncCommitteeGossipContributionAndProofBytes"
     | "validateApiSyncCommitteeContributionAndProofBytes"
-    | "validateGossipBlobSidecarBytes"
     | "validateGossipFuluDataColumnSidecarBytes"
     | "validateGossipGloasDataColumnSidecarBytes"
     | "validateGossipPayloadAttestationMessageBytes"
@@ -384,12 +382,6 @@ export interface IBeaconEngine
   validateApiSyncCommitteeContributionAndProof(
     contributionBytes: Uint8Array,
     signedContributionAndProof: altair.SignedContributionAndProof
-  ): Promise<GossipValidationResult<void>>;
-  validateGossipBlobSidecar(
-    blobBytes: Uint8Array,
-    blobSidecar: deneb.BlobSidecar,
-    fork: ForkName,
-    subnet: SubnetID
   ): Promise<GossipValidationResult<void>>;
   validateGossipFuluDataColumnSidecar(
     dataColumnBytes: Uint8Array,

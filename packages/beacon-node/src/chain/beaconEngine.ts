@@ -26,7 +26,6 @@ import {
   altair,
   bellatrix,
   capella,
-  deneb,
   electra,
   fulu,
   gloas,
@@ -45,7 +44,13 @@ import {SerializedCache} from "../util/serializedCache.js";
 import {deserializeError} from "../util/serializedError.js";
 import {Result} from "../util/wrapError.js";
 import type {BeaconEngineCore} from "./beaconEngine/beaconEngineCore.js";
-import {BeaconEngineEvent, FastConfirmation, HeadUpdate, IBeaconEngineEventBus} from "./beaconEngine/events.js";
+import {
+  BeaconEngineEvent,
+  ExecutionInvalidation,
+  FastConfirmation,
+  HeadUpdate,
+  IBeaconEngineEventBus,
+} from "./beaconEngine/events.js";
 import {GossipBlockResult} from "./beaconEngine/gossipValidation/block.js";
 import {GossipValidationResult} from "./beaconEngine/gossipValidationResult.js";
 import {AnchorSummary, EngineBootstrap} from "./beaconEngine/initialization.js";
@@ -140,6 +145,8 @@ export class BeaconEngine implements IBeaconEngine {
     this.serializedCache = serializedCache;
     this.logger = logger;
     this.coreEmitter.on(BeaconEngineEvent.fatalError, this.onFatalError);
+    this.coreEmitter.on(BeaconEngineEvent.localProposalSlots, this.onLocalProposalSlots);
+    this.coreEmitter.on(BeaconEngineEvent.executionInvalidated, this.onExecutionInvalidated);
     this.coreEmitter.on(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
     this.coreEmitter.on(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
     this.coreEmitter.on(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
@@ -175,6 +182,8 @@ export class BeaconEngine implements IBeaconEngine {
       await this.coreApi.close();
     } finally {
       this.coreEmitter.off(BeaconEngineEvent.fatalError, this.onFatalError);
+      this.coreEmitter.off(BeaconEngineEvent.localProposalSlots, this.onLocalProposalSlots);
+      this.coreEmitter.off(BeaconEngineEvent.executionInvalidated, this.onExecutionInvalidated);
       this.coreEmitter.off(BeaconEngineEvent.proposerSlashingProduced, this.onProposerSlashingProduced);
       this.coreEmitter.off(BeaconEngineEvent.fastConfirmation, this.onFastConfirmation);
       this.coreEmitter.off(BeaconEngineEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
@@ -691,17 +700,6 @@ export class BeaconEngine implements IBeaconEngine {
       : this.core.validateApiSyncCommitteeContributionAndProof(signedContributionAndProof);
   }
 
-  validateGossipBlobSidecar(
-    blobBytes: Uint8Array,
-    blobSidecar: deneb.BlobSidecar,
-    fork: ForkName,
-    subnet: SubnetID
-  ): Promise<GossipValidationResult<void>> {
-    return this.core === null
-      ? this.coreApi.validateGossipBlobSidecarBytes(blobBytes, fork, subnet)
-      : this.core.validateGossipBlobSidecar(blobSidecar, fork, subnet);
-  }
-
   validateGossipFuluDataColumnSidecar(
     dataColumnBytes: Uint8Array,
     dataColumnSidecar: fulu.DataColumnSidecar,
@@ -738,6 +736,10 @@ export class BeaconEngine implements IBeaconEngine {
     return this.core === null
       ? this.coreApi.validateApiPayloadAttestationMessageBytes(payloadAttestationBytes)
       : this.core.validateApiPayloadAttestationMessage(payloadAttestationMessage);
+  }
+
+  validateGossipExecutionPayloadEnvelopeSerialized(envelopeBytes: Uint8Array): Promise<GossipValidationResult<void>> {
+    return this.coreApi.validateGossipExecutionPayloadEnvelopeSerialized(envelopeBytes);
   }
 
   validateGossipExecutionPayloadEnvelope(
@@ -1379,9 +1381,10 @@ export class BeaconEngine implements IBeaconEngine {
    */
   private readonly onForkChoiceChanged = async (
     changes: ForkChoiceChanges,
-    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">
-  ): Promise<void> => {
-    if (!changes.headUpdate && !changes.justifiedCheckpointChanged) return;
+    previousHead: Pick<ChainViewBlock, "blockRoot" | "payloadStatus">,
+    expectedVersion?: number
+  ): Promise<boolean> => {
+    if (!changes.headUpdate && !changes.justifiedCheckpointChanged) return false;
     let headUpdate: HeadUpdate<Root> | null = null;
     if (this.chainView.onChainViewUpdate || changes.headUpdate) {
       const snapshot = await this.coreApi.getHeadSnapshot(
@@ -1389,6 +1392,12 @@ export class BeaconEngine implements IBeaconEngine {
           ? {blockRoot: fromHex(previousHead.blockRoot), payloadStatus: previousHead.payloadStatus}
           : undefined
       );
+      if (
+        expectedVersion !== undefined &&
+        (snapshot.version !== expectedVersion || this.chainView.version > snapshot.version)
+      ) {
+        return false;
+      }
       const head = fromChainViewBlockBytes(snapshot.head);
       const shouldEmitHeadUpdate =
         this.chainView.onChainViewUpdate?.({
@@ -1407,6 +1416,7 @@ export class BeaconEngine implements IBeaconEngine {
       this.emitter.emit(ChainEvent.forkChoiceJustified, this.chainView.getJustifiedCheckpoint());
     }
     if (headUpdate) this.emitHeadUpdate(headUpdate);
+    return headUpdate !== null;
   };
 
   private readonly onNewFinalizedCheckpoint = async (): Promise<void> => {
@@ -1433,6 +1443,30 @@ export class BeaconEngine implements IBeaconEngine {
     } catch (e) {
       this.logger?.error("Error pulling finalized checkpoint", {}, e as Error);
     }
+  };
+
+  private readonly onLocalProposalSlots = (slots: Slot[]): void => {
+    this.emitter.emit(ChainEvent.localProposalSlots, slots);
+  };
+
+  private readonly onExecutionInvalidated = (update: ExecutionInvalidation): void => {
+    this.onForkChoiceChanged(
+      {headUpdate: true, justifiedCheckpointChanged: false},
+      {...update.previousHead, blockRoot: toRootHex(update.previousHead.blockRoot)},
+      update.version
+    )
+      .then((applied) => {
+        if (applied && update.reorg && this.chainView.version === update.version) {
+          this.emitter.emit(routes.events.EventType.chainReorg, {
+            ...update.reorg,
+            newHeadBlock: toRootHex(update.reorg.newHeadBlock),
+            oldHeadBlock: toRootHex(update.reorg.oldHeadBlock),
+            newHeadState: toRootHex(update.reorg.newHeadState),
+            oldHeadState: toRootHex(update.reorg.oldHeadState),
+          });
+        }
+      })
+      .catch((error) => this.logger?.error("Error applying execution invalidation", {}, error));
   };
 
   private readonly onFatalError = (error: Error): void => {

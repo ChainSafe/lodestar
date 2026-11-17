@@ -9,7 +9,7 @@ export {FileCPStateDatastore} from "./chain/stateCache/datastore/file.js";
 export type {StateInitialization} from "./chain/stateInitialization.js";
 export {BeaconDb, type IBeaconDb} from "./db/index.js";
 // Export execution engine to make it usable by builder
-export {initializeExecutionEngine} from "./execution/index.js";
+export {ExecutionPayloadStatus, initializeExecutionEngine} from "./execution/index.js";
 // Export metrics utilities to de-duplicate validator metrics
 export {
   type HttpMetricsServer,

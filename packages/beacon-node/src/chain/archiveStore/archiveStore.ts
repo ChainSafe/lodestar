@@ -76,7 +76,6 @@ export class ArchiveStore {
 
   async init(): Promise<void> {
     if (this.opts.pruneHistory) {
-      // prune ALL stale data before starting
       this.logger.info("Pruning historical data");
       // Block, state and envelope DB writes are engine-owned; prune through the engine.
       const blockCutoffSlot = await callFnWhenAwait(

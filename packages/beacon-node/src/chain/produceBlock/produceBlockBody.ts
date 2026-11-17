@@ -72,12 +72,13 @@ import {
 } from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
-import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
+import {IExecutionBuilder, PayloadAttributes, PayloadId} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
+import {ForkChoiceExecutionEngine} from "../forkChoiceExecutionEngine.js";
 import {CommonBlockBody} from "../interface.js";
 import {InclusionListStore, ProposerPreferencesPool} from "../opPools/index.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
@@ -184,7 +185,7 @@ export type ProduceResult =
  */
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#maybeFilterInvalidatedVoluntaryExits.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 function maybeFilterInvalidatedVoluntaryExits(
@@ -203,7 +204,7 @@ function maybeFilterInvalidatedVoluntaryExits(
 
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#produceBlockBody.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceBlockBody<T extends BlockType>(
@@ -752,12 +753,12 @@ export async function produceBlockBody<T extends BlockType>(
  */
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#prepareExecutionPayload.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function prepareExecutionPayload(
   chain: {
-    executionEngine: IExecutionEngine;
+    executionEngine: ForkChoiceExecutionEngine;
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
@@ -822,6 +823,7 @@ export async function prepareExecutionPayload(
 
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
+      toRootHex(parentBlockRoot),
       toRootHex(parentBlockHash),
       safeBlockHash,
       finalizedBlockHash,
@@ -851,7 +853,7 @@ export async function prepareExecutionPayload(
 
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#prepareExecutionPayloadHeader.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 async function prepareExecutionPayloadHeader(
@@ -878,7 +880,7 @@ async function prepareExecutionPayloadHeader(
 
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#getPayloadAttributesForSSE.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export function getPayloadAttributesForSSE(
@@ -940,7 +942,7 @@ export function getPayloadAttributesForSSE(
 
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#preparePayloadAttributes.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 function preparePayloadAttributes(
@@ -1059,7 +1061,7 @@ function preparePayloadAttributes(
  */
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#getProposerTargetGasLimit.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 function getProposerTargetGasLimit(
@@ -1134,7 +1136,7 @@ export function getPooledProposerPreferences(
 
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@551b8b0a3d packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts#produceCommonBlockBody.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceCommonBlockBody<T extends BlockType>(
@@ -1165,11 +1167,13 @@ export async function produceCommonBlockBody<T extends BlockType>(
     this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
 
   const endAttestations = stepsMetrics?.startTimer();
+  // TODO: extract to a separate BeaconChain method to coordinate the 2 op-pools
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
     fork,
     this.forkChoice,
     this.shufflingCache,
-    currentState
+    currentState,
+    this.singleAttestationPool
   );
   endAttestations?.({
     step: BlockProductionStep.attestations,

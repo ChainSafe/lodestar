@@ -5,11 +5,11 @@ import {EpochDifference, ExecutionStatus, PayloadStatus, ProtoBlock} from "@lode
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
-import {BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
+import {BeaconEngineEvent, BeaconEngineEventBus} from "../../../../src/chain/beaconEngine/events.js";
 import {toChainViewBlock} from "../../../../src/chain/beaconEngine/utils.js";
 import {BeaconEngine} from "../../../../src/chain/beaconEngine.js";
 import {ReplicateChainView} from "../../../../src/chain/chainView/replicateChainView.js";
-import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
+import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {ForkchoiceCaller} from "../../../../src/chain/forkChoice/index.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../../mocks/clock.js";
@@ -66,11 +66,14 @@ describe("BeaconEngine head notifications", () => {
     events = new BeaconEngineEventBus();
     core = Object.assign(Object.create(BeaconEngineCore.prototype) as BeaconEngineCore, {
       config,
+      forkChoiceVersion: 0,
       emitter: events,
       logger: getMockedLogger(),
       close,
       attestationPool: {prune: vi.fn()},
       aggregatedAttestationPool: {prune: vi.fn()},
+      proposerTracker: {prune: vi.fn()},
+      singleAttestationPool: {prune: vi.fn()},
       syncCommitteeMessagePool: {prune: vi.fn()},
       seenSyncCommitteeMessages: {prune: vi.fn()},
       payloadAttestationPool: {prune: vi.fn()},
@@ -157,6 +160,52 @@ describe("BeaconEngine head notifications", () => {
         executionOptimistic: true,
       },
     });
+  });
+
+  it("applies execution invalidation before publishing head and reorg events", async () => {
+    const reorg = vi.fn((_event: {oldHeadBlock: string; newHeadBlock: string}) => order.push("reorg"));
+    emitter.on(routes.events.EventType.chainReorg, reorg);
+    const {headUpdate} = core.recomputeForkChoiceHeadSync(ForkchoiceCaller.executionInvalid);
+    expect(headUpdate).toBe(true);
+    events.emit(BeaconEngineEvent.executionInvalidated, {
+      previousHead: {blockRoot: fromHex(previous.blockRoot), payloadStatus: previous.payloadStatus},
+      version: core.forkChoiceVersion,
+      reorg: {
+        depth: 1,
+        epoch: 1,
+        slot: next.slot,
+        oldHeadBlock: fromHex(previous.blockRoot),
+        newHeadBlock: fromHex(next.blockRoot),
+        oldHeadState: fromHex(previous.stateRoot),
+        newHeadState: fromHex(next.stateRoot),
+        executionOptimistic: true,
+      },
+    });
+    await vi.waitFor(() => expect(reorg).toHaveBeenCalledOnce());
+    expect(order).toEqual(["view", "head", "head_v2", "reorg"]);
+    expect(reorg.mock.calls[0][0]).toMatchObject({oldHeadBlock: previous.blockRoot, newHeadBlock: next.blockRoot});
+  });
+
+  it("ignores an invalidation notification superseded before its head pull", async () => {
+    core.recomputeForkChoiceHeadSync(ForkchoiceCaller.executionInvalid);
+    const pull = vi.spyOn(core, "getHeadSnapshot");
+    events.emit(BeaconEngineEvent.executionInvalidated, {
+      previousHead: {blockRoot: fromHex(previous.blockRoot), payloadStatus: previous.payloadStatus},
+      version: core.forkChoiceVersion - 1,
+      reorg: null,
+    });
+    await pull.mock.results[0].value;
+    expect(order).toEqual([]);
+  });
+
+  it("forwards local proposal slots until the engine closes", async () => {
+    const proposals = vi.fn();
+    emitter.on(ChainEvent.localProposalSlots, proposals);
+    events.emit(BeaconEngineEvent.localProposalSlots, [33, 35]);
+    expect(proposals).toHaveBeenCalledExactlyOnceWith([33, 35]);
+    await engine.close();
+    events.emit(BeaconEngineEvent.localProposalSlots, [37]);
+    expect(proposals).toHaveBeenCalledOnce();
   });
 
   it.each([

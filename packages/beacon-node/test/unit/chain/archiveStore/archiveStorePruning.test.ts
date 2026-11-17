@@ -1,9 +1,14 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
+import {ArchiveMode, ArchiveStore} from "../../../../src/chain/archiveStore/index.js";
+import {MAX_PRUNE_BLOCK_SLOTS_PER_RUN} from "../../../../src/chain/archiveStore/utils/pruneHistory.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
+import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {BeaconDb} from "../../../../src/db/index.js";
+import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
 
 describe("engine / state pruning progress", () => {
@@ -87,5 +92,52 @@ describe("engine / state pruning progress", () => {
       [{gte: previousSlot, lt: nextSlot}],
     ]);
     expect(await db.stateArchive.keys()).toEqual([nextSlot]);
+  });
+});
+
+describe("chain / archiveStore / startup block pruning", () => {
+  it("limits the blocks pruned on startup", async () => {
+    const {db, close} = await startIsolatedTmpBeaconDb(config, "lodestar-archive-store-startup-pruning-");
+    const controller = new AbortController();
+    const chain = getMockedBeaconChain();
+    const engine = Object.assign(Object.create(BeaconEngineCore.prototype) as BeaconEngineCore, {
+      config: chain.config,
+      db,
+      logger: testLogger(),
+      metrics: null,
+    });
+    chain.beaconEngine.pruneHistory = engine.pruneHistory.bind(engine);
+    const currentEpoch = config.MIN_EPOCHS_FOR_BLOCK_REQUESTS + 2 * computeEpochAtSlot(MAX_PRUNE_BLOCK_SLOTS_PER_RUN);
+    vi.spyOn(chain.clock, "currentEpoch", "get").mockReturnValue(currentEpoch);
+    const slots = [0, MAX_PRUNE_BLOCK_SLOTS_PER_RUN - 1, MAX_PRUNE_BLOCK_SLOTS_PER_RUN];
+    await db.blockArchive.batchPut(
+      slots.map((slot) => {
+        const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+        block.message.slot = slot;
+        return {key: slot, value: block};
+      })
+    );
+    const store = new ArchiveStore(
+      {chain, db, logger: testLogger(), metrics: null},
+      {
+        archiveMode: ArchiveMode.Frequency,
+        archiveStateEpochFrequency: 1024,
+        anchorState: {finalizedCheckpoint: {epoch: currentEpoch - 2, root: ZERO_HASH}},
+        dbName: "test",
+        dataColumnDir: "data_columns",
+        pruneHistory: true,
+      },
+      controller.signal
+    );
+
+    try {
+      await store.init();
+
+      expect(await db.blockArchive.keys()).toEqual([MAX_PRUNE_BLOCK_SLOTS_PER_RUN]);
+    } finally {
+      controller.abort();
+      vi.restoreAllMocks();
+      await close();
+    }
   });
 });

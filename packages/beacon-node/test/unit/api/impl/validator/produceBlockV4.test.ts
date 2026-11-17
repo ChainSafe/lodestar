@@ -8,7 +8,6 @@ import {EngineBlockSelectionReason, getValidatorApi} from "../../../../../src/ap
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {BeaconEngineCore} from "../../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BlockAttributes, BlockType, ProduceFullGloas} from "../../../../../src/chain/produceBlock/index.js";
-import {BUILDER_BID_DEADLINE_MS} from "../../../../../src/execution/builder/apiClient.js";
 import {validateBuilderApiExecutionPayloadBid} from "../../../../../src/execution/builder/validateBid.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
@@ -105,8 +104,9 @@ describe("api/validator - produceBlockV4", () => {
     api = getValidatorApi(defaultApiOptions, {...modules, config});
 
     vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
-    // Move past the bid deadline so the p2p bid is selected without waiting
-    vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(BUILDER_BID_DEADLINE_MS);
+    // Zero bid deadline so the p2p bid is selected without waiting
+    (modules.chain.builderApiClient as {bidDeadline: number}).bidDeadline = 0;
+    vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(0);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
     modules.chain.getProposerHead.mockReturnValue(parentBlock);
     modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(zeroProtoBlock);
@@ -315,6 +315,80 @@ describe("api/validator - produceBlockV4", () => {
     expect(produceFull).toHaveBeenCalledWith(expect.objectContaining({builderBid: apiBid}));
     expect(block).toEqual(bidBlock);
     expect(modules.chain.builderApiClient.registerAuthenticatedBuilder).toHaveBeenCalledExactlyOnceWith(builderUrl);
+  });
+
+  it("considers a p2p bid pooled while the builder API bid requests were still pending", async () => {
+    const builderUrl = "https://builder.example.com";
+    const entry = {
+      url: new TextEncoder().encode(builderUrl),
+      auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+      builderPubkeys: [],
+      maxExecutionPayment: 0n,
+      minBid: 0n,
+      builderBoostFactor: 100n,
+    };
+    const apiBidsDeferred = defer<never[]>();
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
+    modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
+    vi.spyOn(modules.chain.pubkeyCache, "getPubkeyBytesOrThrow").mockReturnValue(new Uint8Array(48));
+    modules.chain.builderApiClient.getExecutionPayloadBids.mockReturnValue(apiBidsDeferred.promise);
+
+    const blockPromise = api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderConfig: {minBid: 0n, builderBoostFactor: 100n, builders: [entry]},
+    });
+
+    await vi.waitFor(() => expect(modules.chain.builderApiClient.getExecutionPayloadBids).toHaveBeenCalledOnce());
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
+    apiBidsDeferred.resolve([]);
+
+    const {data: block} = await blockPromise;
+
+    expect(produceFull).toHaveBeenCalledWith(expect.objectContaining({builderBid}));
+    expect(block).toEqual(bidBlock);
+  });
+
+  it("falls back to a pooled p2p bid past the race cutoff while builder API requests are pending", async () => {
+    const entry = {
+      url: new TextEncoder().encode("https://builder.example.com"),
+      auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+      builderPubkeys: [],
+      maxExecutionPayment: 0n,
+      minBid: 0n,
+      builderBoostFactor: 100n,
+    };
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(toPooledBid(builderBid));
+    modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
+    vi.spyOn(modules.chain.pubkeyCache, "getPubkeyBytesOrThrow").mockReturnValue(new Uint8Array(48));
+    modules.chain.builderApiClient.getExecutionPayloadBids.mockReturnValue(defer<never[]>().promise);
+    // Block production requested after the race cutoff and the local block fails
+    vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(3000);
+    produceFull.mockImplementation(async (attrs: {builderBid?: unknown}) => {
+      if (attrs.builderBid === undefined) {
+        throw Error("local block failed");
+      }
+      return {block: bidBlock, executionPayloadValue: 0n, consensusBlockValue: 0n};
+    });
+
+    const {data: block} = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderConfig: {minBid: 0n, builderBoostFactor: 100n, builders: [entry]},
+    });
+
+    expect(produceFull).toHaveBeenCalledWith(expect.objectContaining({builderBid}));
+    expect(block).toEqual(bidBlock);
   });
 
   it("counts a builder API bid's execution payment only up to its entry cap", async () => {

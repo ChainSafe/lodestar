@@ -1,5 +1,5 @@
-import {ForkName} from "@lodestar/params";
-import {IndexedAttestation, SignedAggregateAndProof, WithBytes, sszTypesFor} from "@lodestar/types";
+import {ForkName, ForkPostElectra, isForkPostElectra} from "@lodestar/params";
+import {IndexedAttestation, SignedAggregateAndProof, SingleAttestation, WithBytes, sszTypesFor} from "@lodestar/types";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {GossipActionError} from "../../errors/gossipValidation.js";
 import * as aggregateAndProofValidation from "../../validation/aggregateAndProof.js";
@@ -53,6 +53,31 @@ export async function validateGossipAttestationsSameAttData(
           this.logger.error("Error adding unaggregated attestation to pool", {subnet: value.subnet}, e as Error);
         }
       }
+      // Source: unstable@53c3aab4e9 network/processor/gossipHandlers.ts#getBatchHandlers.
+      if (isForkPostElectra(fork) && this.proposerTracker.shouldCollect(value.indexedAttestation.data.slot)) {
+        try {
+          const insertOutcome = this.singleAttestationPool.add(
+            value.attestation as SingleAttestation<ForkPostElectra>,
+            value.attDataRootHex,
+            value.validatorCommitteeIndex,
+            value.committeeSize
+          );
+          this.metrics?.opPool.singleAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+        } catch (e) {
+          this.logger.debug(
+            "Error adding gossip single attestation to pool",
+            {
+              slot: value.indexedAttestation.data.slot,
+              committeeIndex: value.committeeIndex,
+              validatorCommitteeIndex: value.validatorCommitteeIndex,
+              validatorIndex: (value.attestation as SingleAttestation<ForkPostElectra>).attesterIndex,
+              subnet: value.subnet,
+              attDataRoot: value.attDataRootHex,
+            },
+            e as Error
+          );
+        }
+      }
       if (!this.opts.dontSendGossipAttestationsToForkchoice) {
         try {
           this.forkChoice.onAttestation(value.indexedAttestation, value.attDataRootHex);
@@ -97,12 +122,44 @@ export async function validateGossipAttestationsSameAttData(
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/api/impl/beacon/pool/index.ts#submitPoolAttestationsV2.
  * [beacon-engine] deviation: return a validation result; the API retains pool insertion and publication.
  */
-export function validateApiAttestation(
+export async function validateApiAttestation(
   this: BeaconEngineCore,
   fork: ForkName,
   attestationOrBytes: attestationValidation.ApiAttestation
 ): Promise<GossipValidationResult<attestationValidation.AttestationValidationResult>> {
-  return runGossipValidation(() => attestationValidation.validateApiAttestation.call(this, fork, attestationOrBytes));
+  const result = await runGossipValidation(() =>
+    attestationValidation.validateApiAttestation.call(this, fork, attestationOrBytes)
+  );
+  if (
+    result.err === null &&
+    isForkPostElectra(fork) &&
+    this.proposerTracker.shouldCollect(result.result.indexedAttestation.data.slot)
+  ) {
+    const value = result.result;
+    try {
+      const insertOutcome = this.singleAttestationPool.add(
+        value.attestation as SingleAttestation<ForkPostElectra>,
+        value.attDataRootHex,
+        value.validatorCommitteeIndex,
+        value.committeeSize
+      );
+      this.metrics?.opPool.singleAttestationPool.apiInsertOutcome.inc({insertOutcome});
+    } catch (e) {
+      this.logger.debug(
+        "Error adding API single attestation to pool",
+        {
+          slot: value.indexedAttestation.data.slot,
+          committeeIndex: value.committeeIndex,
+          validatorCommitteeIndex: value.validatorCommitteeIndex,
+          validatorIndex: (value.attestation as SingleAttestation<ForkPostElectra>).attesterIndex,
+          subnet: value.subnet,
+          attDataRoot: value.attDataRootHex,
+        },
+        e as Error
+      );
+    }
+  }
+  return result;
 }
 
 /**

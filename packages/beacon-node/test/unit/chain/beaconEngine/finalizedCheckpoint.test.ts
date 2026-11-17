@@ -51,6 +51,8 @@ async function setup() {
     close: vi.fn().mockResolvedValue(undefined),
     attestationPool: {prune: vi.fn()},
     aggregatedAttestationPool: {prune: vi.fn()},
+    proposerTracker: {prune: vi.fn()},
+    singleAttestationPool: {prune: vi.fn()},
     syncCommitteeMessagePool: {prune: vi.fn()},
     seenSyncCommitteeMessages: {prune: vi.fn()},
     payloadAttestationPool: {prune: vi.fn()},

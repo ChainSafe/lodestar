@@ -1,4 +1,4 @@
-import {PayloadStatus} from "@lodestar/fork-choice";
+import {PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {
   computeStartSlotAtEpoch,
   getExecutionPayloadEnvelopeSignatureSet,
@@ -6,9 +6,15 @@ import {
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
+import {
+  getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
+  getSlotFromExecutionPayloadEnvelopeSerialized,
+  getTransactionCountFromExecutionPayloadEnvelopeSerialized,
+} from "../../util/sszBytes.js";
 import type {BeaconEngineCore} from "../beaconEngine/beaconEngineCore.js";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
+import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 
 export async function validateApiExecutionPayloadEnvelope(
   this: BeaconEngineCore,
@@ -22,6 +28,40 @@ export async function validateGossipExecutionPayloadEnvelope(
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
   return validateExecutionPayloadEnvelope.call(this, executionPayloadEnvelope);
+}
+
+/**
+ * Applies the transaction count check to the serialized envelope so that an oversized envelope is dropped
+ * before it is deserialized. Defers to validateGossipExecutionPayloadEnvelope if the data is malformed
+ * or the block is not known.
+ */
+export function validateGossipExecutionPayloadEnvelopeSerialized(
+  chain: BeaconEngineCore,
+  serializedData: Uint8Array
+): void {
+  const blockRootHex = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(serializedData);
+  const slot = getSlotFromExecutionPayloadEnvelopeSerialized(serializedData);
+  const transactionCount = getTransactionCountFromExecutionPayloadEnvelopeSerialized(serializedData);
+  if (blockRootHex === null || slot === null || transactionCount === null) {
+    return;
+  }
+
+  const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+  const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+  if (!block || !payloadInput) {
+    return;
+  }
+
+  const maxTransactionCount = getMaxTransactionCount(chain, block, payloadInput);
+  if (BigInt(transactionCount) > maxTransactionCount) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
+      slot,
+      root: blockRootHex,
+      transactionCount,
+      maxTransactionCount: Number(maxTransactionCount),
+    });
+  }
 }
 
 async function validateExecutionPayloadEnvelope(
@@ -126,6 +166,20 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
+  // [IGNORE] The number of transactions is within the limit implied by the parent payload's gas limit
+  // TODO GLOAS: [REJECT] once https://github.com/ethereum/consensus-specs/pull/5802 is released,
+  // also in validateGossipExecutionPayloadEnvelopeSerialized
+  const maxTransactionCount = getMaxTransactionCount(this, block, payloadInput);
+  if (BigInt(payload.transactions.length) > maxTransactionCount) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      transactionCount: payload.transactions.length,
+      maxTransactionCount: Number(maxTransactionCount),
+    });
+  }
+
   // Get the block state to verify the builder's signature.
   const blockState = await this.regen.getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope).catch(() => {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
@@ -154,4 +208,21 @@ async function validateExecutionPayloadEnvelope(
       root: blockRootHex,
     });
   }
+}
+
+/**
+ * The bid's gas limit is only tied to the parent payload by bid gossip, so the bound is the gas limit the
+ * EIP-1559 rule allows on top of the parent payload's. The bid is the only bound if that gas limit is unknown.
+ */
+function getMaxTransactionCount(
+  chain: BeaconEngineCore,
+  block: ProtoBlock,
+  payloadInput: Pick<PayloadEnvelopeInput, "getBid">
+): bigint {
+  const parentGasLimit = block.executionPayloadBlockHash === null ? 0n : BigInt(block.executionPayloadGasLimit);
+  const maxGasLimit =
+    parentGasLimit === 0n
+      ? payloadInput.getBid().gasLimit
+      : parentGasLimit + (parentGasLimit / 1024n > 1n ? parentGasLimit / 1024n : 1n) - 1n;
+  return maxGasLimit / BigInt(chain.config.MIN_TRANSACTION_GAS);
 }

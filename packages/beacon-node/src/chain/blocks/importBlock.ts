@@ -8,7 +8,7 @@ import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockImportData} from "../interface.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS} from "../reprocess.js";
-import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
+import {IBlockInput, isBlockInputColumns} from "./blockInput/index.js";
 import {ImportBlockOpts} from "./types.js";
 
 /**
@@ -53,10 +53,6 @@ export async function importBlock(
   if (isBlockInputColumns(blockInput)) {
     for (const {source} of blockInput.getSampledColumnsWithSource()) {
       this.metrics?.dataColumns.bySource.inc({source});
-    }
-  } else if (isBlockInputBlobs(blockInput)) {
-    for (const {source} of blockInput.getAllBlobsWithSource()) {
-      this.metrics?.importBlock.blobsBySource.inc({blobsSource: source});
     }
   }
 

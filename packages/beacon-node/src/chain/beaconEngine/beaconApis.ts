@@ -1,7 +1,7 @@
-import type {PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
+import type {PubkeyCache} from "@lodestar/native/pubkeys";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
   ForkName,

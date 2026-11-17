@@ -7,7 +7,7 @@ import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot, gloas, ssz} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {BeaconEngineMode} from "../chain/beaconEngine/options.js";
-import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
+import {isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
 import {PayloadError, PayloadErrorCode} from "../chain/blocks/payloadError.js";
@@ -1931,13 +1931,6 @@ export class BlockInputSync {
 
     if (!cacheItem.blockInput.hasBlock()) {
       throw new Error(`${message} Block was not found.`);
-    }
-
-    if (isBlockInputBlobs(cacheItem.blockInput)) {
-      const missing = cacheItem.blockInput.getMissingBlobMeta().map((b) => b.index);
-      if (missing.length) {
-        throw new Error(`${message} Missing blob indices=${prettyPrintIndices(missing)}.`);
-      }
     }
 
     if (isBlockInputColumns(cacheItem.blockInput)) {

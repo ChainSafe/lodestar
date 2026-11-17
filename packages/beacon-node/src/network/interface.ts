@@ -29,18 +29,17 @@ import {
   SubnetID,
   altair,
   capella,
-  deneb,
   fulu,
   gloas,
   heze,
   phase0,
 } from "@lodestar/types";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
+import {GoodByeReasonCode} from "../constants/index.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {
   BeaconBlocksByRootRequest,
-  BlobSidecarsByRootRequest,
   BlockWithBytes,
   DataColumnSidecarsByRootRequest,
   ExecutionPayloadEnvelopesByRootRequest,
@@ -73,14 +72,13 @@ export interface INetwork extends INetworkCorePublic {
   isSubscribedToGossipCoreTopics(): boolean;
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
+  goodbyeAndDisconnect(peer: PeerIdStr, reason: GoodByeReasonCode): Promise<void>;
   searchUnknownBlock(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void;
   searchUnknownEnvelope(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void;
   // ReqResp
   sendBeaconBlocksByRange(peerId: PeerIdStr, request: phase0.BeaconBlocksByRangeRequest): Promise<BlockWithBytes[]>;
   sendBeaconBlocksByRoot(peerId: PeerIdStr, request: BeaconBlocksByRootRequest): Promise<BlockWithBytes[]>;
   sendBeaconBlocksByHead(peerId: PeerIdStr, request: fulu.BeaconBlocksByHeadRequest): Promise<BlockWithBytes[]>;
-  sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
-  sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
   sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
     request: fulu.DataColumnSidecarsByRangeRequest
@@ -100,7 +98,6 @@ export interface INetwork extends INetworkCorePublic {
 
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
-  publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number>;
   publishDataColumnSidecar(

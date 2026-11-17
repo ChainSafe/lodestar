@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState, proposerShufflingDecisionRoot} from "@lodestar/state-transition";
 import {ApiError} from "../../../../src/api/impl/errors.js";

@@ -41,7 +41,7 @@ import {
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {ApiError, NodeIsSyncing} from "../../api/impl/errors.js";
 import {selectBlockProductionSource, selectBlockProductionSourceByBoostFactor} from "../../api/impl/validator/utils.js";
-import {BUILDER_BID_DEADLINE_MS, BuilderApiBid} from "../../execution/builder/apiClient.js";
+import {BuilderApiBid} from "../../execution/builder/apiClient.js";
 import {BuilderStatus, NoBidReceived} from "../../execution/builder/http.js";
 import {getBuilderBidTotalGwei, validateBuilderApiExecutionPayloadBid} from "../../execution/builder/validateBid.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -61,10 +61,10 @@ import {produceBlindedBlock, produceBlock as produceSelfBlock} from "./produceBl
  * A cutoff of 1667 BPS (2 seconds for 12s slots) gives enough time and if there are unexpected delays
  * it ensures we publish in time as proposals after the attestation deadline will likely be orphaned
  * due to proposer boost reorg.
- *
- * TODO GLOAS: re-evaluate cutoff timing
  */
 const BLOCK_PRODUCTION_RACE_CUTOFF_BPS = 1667;
+/** Source: unstable@53c3aab4e9 api/impl/validator/index.ts; Gloas block production runs in Core. */
+export const BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS = 1667;
 
 // [beacon-engine] deviation: selected results include DA artifacts for the facade cache.
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
@@ -124,7 +124,7 @@ export type BlockSelectionResult =
 
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#getBlockValueLogInfo.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 function getBlockValueLogInfo(
@@ -157,7 +157,7 @@ function getBlockValueLogInfo(
 }
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#produceBuilderBlindedBlock.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceBuilderBlindedBlock(
@@ -230,7 +230,7 @@ export async function produceBuilderBlindedBlock(
 
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#produceEngineBlockContents.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceEngineBlockContents(
@@ -330,7 +330,7 @@ export async function produceEngineBlockContents(
 
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@6fb6c0bad4 packages/beacon-node/src/api/impl/validator/index.ts#produceEngineOrBuilderBlock.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceEngineOrBuilderBlock(
@@ -624,7 +624,7 @@ export async function produceEngineOrBuilderBlock(
 }
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@ba0411b482 packages/beacon-node/src/api/impl/validator/index.ts#produceBlockV4.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function produceBlockV4(
@@ -700,32 +700,49 @@ export async function produceBlockV4(
     (!circuitBreakerActive &&
       this.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
 
-  // Select the p2p bid once builders had time to bid up, matching the deadline advertised
-  // on builder API bid requests, unless the circuit breaker is active
-  const p2pBidPromise: Promise<PooledExecutionPayloadBid | null> = circuitBreakerActive
-    ? Promise.resolve(null)
-    : sleep(Math.max(0, BUILDER_BID_DEADLINE_MS - this.clock.msFromSlot(slot))).then(() => {
-        const p2pBid = this.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
-        // Discard p2p bids below the proposer's configured floor on the total payment.
-        // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
-        if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
-          logger.info("Best p2p bid below configured minimum", {
-            slot,
-            bidValue: prettyGweiToEth(p2pBid.signedBid.message.value),
-            minBid: prettyGweiToEth(builderConfig.minBid),
-          });
-          return null;
-        }
-        return p2pBid;
-      });
+  // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
+  // not delay the proposal when a builder bid block is available (and vice versa)
+  const cutoffMs = Math.max(
+    0,
+    config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS) - this.clock.msFromSlot(slot)
+  );
+
+  // Give p2p bids the same time to bid up as granted to builder API bid requests via the advertised
+  // deadline, the pool is read once the deadline passed and the bid requests settled. A late request
+  // does not wait past the race cutoff, a pooled bid is still the fastest fallback if the local block fails
+  const bidDeadlinePromise = circuitBreakerActive
+    ? Promise.resolve()
+    : sleep(Math.min(this.builderApiClient.bidDeadline, cutoffMs));
 
   // Candidates are ranked by their boosted counted total payment, the p2p bid is governed
   // by the top-level factors and each builder API bid by its own entry. Ties prefer the
   // earliest received builder API bid, so the signed block can be routed back to its
   // builder directly.
   const bestBidPromise: Promise<BidCandidate | null> = (async () => {
-    const [builderApiBids, p2pBid] = await Promise.all([builderApiBidsPromise, p2pBidPromise]);
+    // Past the race cutoff a pooled p2p bid is used right away rather than waiting for pending
+    // builder API requests, the local block is selected at the cutoff anyway if it is ready
+    let [builderApiBids] = await Promise.all([
+      Promise.race([builderApiBidsPromise, sleep(cutoffMs).then(() => null)]),
+      bidDeadlinePromise,
+    ]);
     let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
+
+    let p2pBid: PooledExecutionPayloadBid | null = circuitBreakerActive
+      ? null
+      : this.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+    // Discard p2p bids below the proposer's configured floor on the total payment.
+    // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
+    if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
+      logger.info("Best p2p bid below configured minimum", {
+        slot,
+        bidValue: prettyGweiToEth(p2pBid.signedBid.message.value),
+        minBid: prettyGweiToEth(builderConfig.minBid),
+      });
+      p2pBid = null;
+    }
+    if (builderApiBids === null) {
+      builderApiBids = p2pBid !== null ? [] : await builderApiBidsPromise;
+    }
 
     const candidates = (
       await Promise.all(
@@ -812,13 +829,6 @@ export async function produceBlockV4(
     const t = metrics?.blockProductionTime.startTimer();
     return fn().finally(() => t?.({source}));
   };
-
-  // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
-  // not delay the proposal when a builder bid block is available (and vice versa)
-  const cutoffMs = Math.max(
-    0,
-    config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_BPS) - this.clock.msFromSlot(slot)
-  );
 
   // use abort controller to stop waiting for the bid block if the engine block will be selected
   const controller = new AbortController();

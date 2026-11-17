@@ -1,8 +1,8 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
 import {FrequencyStateArchiveStrategy} from "../../../../src/chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";

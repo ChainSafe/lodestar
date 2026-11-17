@@ -1,9 +1,9 @@
 import {MessageChannel, receiveMessageOnPort} from "node:worker_threads";
 import {beforeEach, describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {FAR_FUTURE_EPOCH, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateGloas, BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";

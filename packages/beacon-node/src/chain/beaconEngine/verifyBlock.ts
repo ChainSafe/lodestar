@@ -3,7 +3,7 @@ import {ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   computeEpochAtSlot,
-  getIndexedAttestation,
+  getAttestingIndices,
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, SignedBeaconBlock, WithBytes, isGloasBeaconBlock} from "@lodestar/types";
@@ -15,6 +15,7 @@ import {SegmentExecStatus, verifyBlocksExecutionPayload} from "../blocks/verifyB
 import {verifyBlocksSignatures} from "../blocks/verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "../blocks/verifyBlocksStateTransitionOnly.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
+import {ExecutionInvalidSource} from "../forkChoice/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {BeaconEngineCore} from "./beaconEngineCore.js";
 import {VerifiedBlockBundle} from "./importBlock.js";
@@ -22,7 +23,7 @@ import {VerifyBlocksOpts, VerifyBlocksSuccess} from "./interface.js";
 
 /**
  * Runs inside BeaconEngineCore. Moved from unstable@ba0411b482 packages/beacon-node/src/chain/blocks/verifyBlock.ts#verifyBlocksInEpoch.
- * Synced through unstable@2593063a82.
+ * Synced through unstable@53c3aab4e9.
  * Sync with that source on unstable merges; differences are tagged `[beacon-engine] deviation`.
  */
 export async function verifyBlocksBytes(
@@ -81,6 +82,9 @@ export async function verifyBlocks(
     const parentBlockHash = toRootHex(block0.message.body.signedExecutionPayloadBid.message.parentBlockHash);
     parentBlock = this.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash) ?? parentBlock;
   }
+  if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
+    throw new BlockError(block0, {code: BlockErrorCode.PARENT_EXECUTION_INVALID, parentRoot});
+  }
   const block0Epoch = computeEpochAtSlot(block0.message.slot);
   const fork = this.config.getForkSeq(block0.message.slot);
 
@@ -103,7 +107,11 @@ export async function verifyBlocks(
       const shuffling =
         this.shufflingCache.getSync(attEpoch, preState0.getShufflingDecisionRoot(attEpoch)) ??
         preState0.getShufflingAtEpoch(attEpoch);
-      return getIndexedAttestation(shuffling, fork, attestation);
+      return {
+        attestingIndices: getAttestingIndices(shuffling, fork, attestation),
+        data: attestation.data,
+        signature: attestation.signature,
+      };
     });
   }
 
@@ -126,9 +134,21 @@ export async function verifyBlocks(
             executionStatuses: blocks.map(() => ExecutionStatus.Syncing),
             executionTime: Date.now(),
           });
-    const [segmentExecStatus, {postStates, proposerBalanceDeltas, verifyStateTime}, {verifySignaturesTime}] =
+    const [segmentExecStatus, {verifySignaturesTime}, {postStates, proposerBalanceDeltas, verifyStateTime}] =
       await Promise.all([
         verifyExecutionPayloadsPromise,
+        opts.validSignatures !== true
+          ? verifyBlocksSignatures(
+              this.config,
+              this.bls,
+              this.logger,
+              this.metrics,
+              preState0,
+              blocks,
+              indexedAttestationsByBlock,
+              stfOpts
+            )
+          : Promise.resolve({verifySignaturesTime: Date.now()}),
         verifyBlocksStateTransitionOnly(
           this.config,
           preState0,
@@ -143,19 +163,14 @@ export async function verifyBlocks(
           abortController.signal,
           stfOpts
         ),
-        opts.validSignatures !== true
-          ? verifyBlocksSignatures(
-              this.config,
-              this.bls,
-              this.logger,
-              this.metrics,
-              preState0,
-              blocks,
-              indexedAttestationsByBlock,
-              stfOpts
-            )
-          : Promise.resolve({verifySignaturesTime: Date.now()}),
       ]);
+
+    if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
+      const consensusVerifiedTime = Math.max(verifyStateTime, verifySignaturesTime);
+      this.metrics?.gossipBlock.receivedToConsensusVerifiedTime.observe(
+        consensusVerifiedTime / 1000 - opts.seenTimestampSec
+      );
+    }
 
     // Source: unstable@708700cdf6 packages/beacon-node/src/chain/blocks/verifyBlock.ts#verifyBlocksInEpoch, proposer observation loop.
     // [beacon-engine] deviation: authenticated headers are retained independently of the facade DA wait.
@@ -173,7 +188,10 @@ export async function verifyBlocks(
     // [beacon-engine] deviation: keep invalid-ancestor propagation engine-owned after consensus verification.
     if (segmentExecStatus.execAborted !== null) {
       if (segmentExecStatus.invalidSegmentLVH !== undefined) {
-        this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLVH);
+        this.executionEngine.invalidateExecutionPayloads(
+          segmentExecStatus.invalidSegmentLVH,
+          ExecutionInvalidSource.blockSegment
+        );
       }
       throw segmentExecStatus.execAborted.execError;
     }

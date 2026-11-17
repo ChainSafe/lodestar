@@ -139,7 +139,7 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
     if ("signedBlockRoot" in bundle) throw Error("Expected an object verification bundle");
     expect(bundle.postState).toBe(preState);
     expect(bundle.indexedAttestations).toEqual([
-      {data: attestation.data, signature: attestation.signature, attestingIndices: [10, 30]},
+      {data: attestation.data, signature: attestation.signature, attestingIndices: [30, 10]},
     ]);
     expect(chain.beaconEngine.verifiedBlocks.size).toBe(0);
     expect(result).not.toHaveProperty("verifiedBlocks");

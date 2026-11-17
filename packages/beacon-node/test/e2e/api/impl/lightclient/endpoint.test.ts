@@ -1,4 +1,4 @@
-import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {HttpHeader, getClient, routes} from "@lodestar/api";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
@@ -16,10 +16,12 @@ import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
 // TODO: Re-enable once lightclient E2E timing is stabilized
 // https://github.com/ChainSafe/lodestar/issues/8937
 describe.skipIf(process.env.CI)("lightclient api", () => {
-  const SLOT_DURATION_MS = 1000;
+  vi.setConfig({testTimeout: 30_000});
+  // Sync messages are due at one third of the slot, after the 500 ms payload generation wait.
+  const SLOT_DURATION_MS = 3000;
   const restPort = 9596;
   const ELECTRA_FORK_EPOCH = 0;
-  const FULU_FORK_EPOCH = 1;
+  const FULU_FORK_EPOCH = 0;
   const testParams: Partial<ChainConfig> = {
     SLOT_DURATION_MS,
     ALTAIR_FORK_EPOCH: ELECTRA_FORK_EPOCH,
@@ -84,7 +86,7 @@ describe.skipIf(process.env.CI)("lightclient api", () => {
   const waitForBestUpdate = async (): Promise<void> => {
     // should see this event in 5 slots
     await waitForEvent(bn.chain.emitter, routes.events.EventType.lightClientOptimisticUpdate, 5 * SLOT_DURATION_MS);
-    // wait for 1 slot to persist the best update
+    // wait for 2 slots to persist the best update
     await sleep(2 * SLOT_DURATION_MS);
   };
 
@@ -96,7 +98,7 @@ describe.skipIf(process.env.CI)("lightclient api", () => {
     expect(updates.length).toBe(1);
     // best update could be any slots
     // version is set
-    expect(res.meta().versions[0]).toBe(ForkName.electra);
+    expect(res.meta().versions[0]).toBe(ForkName.fulu);
   });
 
   it("getLightClientOptimisticUpdate()", async () => {
@@ -108,7 +110,7 @@ describe.skipIf(process.env.CI)("lightclient api", () => {
     // at slot 2 we got attestedHeader for slot 1
     expect(update.attestedHeader.beacon.slot).toBe(slot - 1);
     // version is set
-    expect(res.meta().version).toBe(ForkName.electra);
+    expect(res.meta().version).toBe(ForkName.fulu);
     // Ensure version header is made available to scripts running in the browser
     expect(res.headers.get(HttpHeader.ExposeHeaders)?.includes("Eth-Consensus-Version")).toBe(true);
   });

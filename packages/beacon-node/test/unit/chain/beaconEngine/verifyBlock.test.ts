@@ -10,7 +10,7 @@ import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineC
 import {BeaconEngineMode} from "../../../../src/chain/beaconEngine/options.js";
 import {verifyBlocksBytes as verifyEngineBlocks} from "../../../../src/chain/beaconEngine/verifyBlock.js";
 import {
-  BlockInputBlobs,
+  BlockInputColumns,
   BlockInputNoData,
   BlockInputPreData,
 } from "../../../../src/chain/blocks/blockInput/blockInput.js";
@@ -28,6 +28,8 @@ import * as stf from "../../../../src/chain/blocks/verifyBlocksStateTransitionOn
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {ChainEvent} from "../../../../src/chain/emitter.js";
 import {BlockError, BlockErrorCode, BlockGossipError, GossipAction} from "../../../../src/chain/errors/index.js";
+import {ForkchoiceCaller} from "../../../../src/chain/forkChoice/index.js";
+import {ForkChoiceExecutionEngine} from "../../../../src/chain/forkChoiceExecutionEngine.js";
 import * as blockValidation from "../../../../src/chain/validation/block.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/engine/interface.js";
 import {kzgCommitmentToVersionedHash} from "../../../../src/util/blobs.js";
@@ -78,6 +80,15 @@ describe("BeaconEngineCore block execution verification", () => {
     state = new BeaconStateView(cachedState);
     Object.defineProperty(core, "verifiedBlocks", {value: new Map(), configurable: true});
     chain.forkChoice.validateLatestHash = vi.fn();
+    const wrappedExecution = new ForkChoiceExecutionEngine(chain.executionEngine, {
+      forkChoice: chain.forkChoice,
+      recomputeHeadAfterELInvalidResponse: vi.fn(),
+      logger: chain.logger,
+      metrics: null,
+    });
+    chain.executionEngine.invalidateExecutionPayloads = vi.fn(
+      wrappedExecution.invalidateExecutionPayloads.bind(wrappedExecution)
+    );
     chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(zeroProtoBlock);
     chain.regen.getPreState.mockResolvedValue(state);
     core.verifyBlocksBytes = vi.fn(BeaconEngineCore.prototype.verifyBlocksBytes.bind(core));
@@ -947,15 +958,17 @@ describe("BeaconEngineCore block execution verification", () => {
     expect(chain.executionEngine.notifyNewPayload).toHaveBeenCalledOnce();
   });
 
-  it("derives Deneb hashes from the block even when facade hashes differ", async () => {
-    vi.spyOn(chain.config, "getForkName").mockReturnValue(ForkName.deneb);
-    const block = ssz.deneb.SignedBeaconBlock.defaultValue();
+  it("derives Fulu hashes from the block even when facade hashes differ", async () => {
+    vi.spyOn(chain.config, "getForkName").mockReturnValue(ForkName.fulu);
+    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
     block.message.body.executionPayload.blockHash = Buffer.alloc(32, 1);
     block.message.body.blobKzgCommitments = [Buffer.alloc(48, 2)];
-    const input = BlockInputBlobs.createFromBlock({
+    const input = BlockInputColumns.createFromBlock({
       block,
-      blockRootHex: toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message)),
-      forkName: ForkName.deneb,
+      blockRootHex: toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message)),
+      forkName: ForkName.fulu,
+      sampledColumns: [0],
+      custodyColumns: [0],
       daOutOfRange: false,
       source: BlockInputSource.gossip,
       seenTimestampSec: 0,
@@ -963,11 +976,11 @@ describe("BeaconEngineCore block execution verification", () => {
     const facadeHashes = vi.spyOn(input, "getVersionedHashes").mockReturnValue([Buffer.alloc(32, 3)]);
     await verifyBlockExecutionPayload(core, input.getBlock(), state);
     expect(chain.executionEngine.notifyNewPayload).toHaveBeenCalledExactlyOnceWith(
-      ForkName.deneb,
+      ForkName.fulu,
       block.message.body.executionPayload,
       block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
       block.message.parentRoot,
-      undefined
+      block.message.body.executionRequests
     );
     expect(facadeHashes).not.toHaveBeenCalled();
   });
@@ -1088,7 +1101,8 @@ describe("BeaconEngineCore block execution verification", () => {
       err: {type: {code: BlockErrorCode.EXECUTION_ENGINE_INVALID}},
     });
     expect(chain.forkChoice.validateLatestHash).toHaveBeenCalledWith(
-      expect.objectContaining({latestValidExecHash: latestValidHash})
+      expect.objectContaining({latestValidExecHash: latestValidHash}),
+      {strict: true}
     );
     expect(core.seenBlockProposers.hasBlockRoot(0, 0, input.blockRootHex)).toBe(true);
     expect(core.seenBlockProposers.isKnown(0, 0)).toBe(false);
@@ -1126,7 +1140,7 @@ describe("BeaconEngineCore block execution verification", () => {
       ([ExecutionStatus.Syncing, ExecutionStatus.Valid] as const).map((parentStatus) => ({method, parentStatus}))
     )
   )(
-    "handles $method invalidation of a $parentStatus parent without publishing structural metadata",
+    "handles $method invalidation of a $parentStatus parent and recomputes the canonical head",
     async ({method, parentStatus}) => {
       const {ForkChoice, ForkChoiceStore, ProtoArray} =
         await vi.importActual<typeof import("@lodestar/fork-choice")>("@lodestar/fork-choice");
@@ -1173,6 +1187,17 @@ describe("BeaconEngineCore block execution verification", () => {
       );
       const forkChoice = new ForkChoice(core.config, store, protoArray, 0, null);
       core.forkChoice = forkChoice;
+      const wrappedExecution = new ForkChoiceExecutionEngine(chain.executionEngine, {
+        forkChoice,
+        recomputeHeadAfterELInvalidResponse: () => {
+          BeaconEngineCore.prototype.recomputeForkChoiceHeadSync.call(core, ForkchoiceCaller.executionInvalid);
+        },
+        logger: chain.logger,
+        metrics: null,
+      });
+      chain.executionEngine.invalidateExecutionPayloads = vi.fn(
+        wrappedExecution.invalidateExecutionPayloads.bind(wrappedExecution)
+      );
       chain.opts.beaconEngineMode = method === "verifyBlocks" ? BeaconEngineMode.MainThread : BeaconEngineMode.Worker;
       facade = withBeaconEngineFacade(chain);
       const onFatal = vi.fn();
@@ -1207,10 +1232,11 @@ describe("BeaconEngineCore block execution verification", () => {
       expect(core[method]).toHaveBeenCalledOnce();
       expect(getAllNodes).not.toHaveBeenCalled();
       expect(core.verifiedBlocks.size).toBe(0);
-      expect(forkChoice.getHead().blockRoot).toBe(descendant.blockRoot);
-      expect(await BeaconEngineCore.prototype.getChainViewSnapshot.call(core)).toEqual(snapshot);
-
       if (parentStatus === ExecutionStatus.Syncing) {
+        expect(forkChoice.getHead().blockRoot).toBe(anchor.blockRoot);
+        expect((await BeaconEngineCore.prototype.getChainViewSnapshot.call(core)).version).toBeGreaterThan(
+          snapshot.version
+        );
         expect(protoArray.nodes.map((node) => node.executionStatus)).toEqual([
           ExecutionStatus.Valid,
           ExecutionStatus.Invalid,
@@ -1219,6 +1245,8 @@ describe("BeaconEngineCore block execution verification", () => {
         expect(protoArray.findHead(anchor.blockRoot, 3).blockRoot).toBe(anchor.blockRoot);
         expect(onFatal).not.toHaveBeenCalled();
       } else {
+        expect(forkChoice.getHead().blockRoot).toBe(descendant.blockRoot);
+        expect(await BeaconEngineCore.prototype.getChainViewSnapshot.call(core)).toEqual(snapshot);
         const error = forkChoice.irrecoverableError;
         expect(error).toBeInstanceOf(Error);
         expect(onFatal).toHaveBeenCalledExactlyOnceWith(error);
@@ -1232,13 +1260,15 @@ describe("BeaconEngineCore block execution verification", () => {
   );
 
   it.each([false, true])("aborts the facade DA wait on an EL failure (typed: %s)", async (typed) => {
-    const block = ssz.deneb.SignedBeaconBlock.defaultValue();
+    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
     block.message.body.executionPayload.blockHash = Buffer.alloc(32, 1);
     block.message.body.blobKzgCommitments = [Buffer.alloc(48, 2)];
-    const input = BlockInputBlobs.createFromBlock({
+    const input = BlockInputColumns.createFromBlock({
       block,
-      blockRootHex: toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message)),
-      forkName: ForkName.deneb,
+      blockRootHex: toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message)),
+      forkName: ForkName.fulu,
+      sampledColumns: [0],
+      custodyColumns: [0],
       daOutOfRange: false,
       source: BlockInputSource.gossip,
       seenTimestampSec: 0,
@@ -1276,17 +1306,19 @@ describe("BeaconEngineCore block execution verification", () => {
     async ({beaconEngineMode, engineStatus}) => {
       chain.opts.beaconEngineMode = beaconEngineMode;
       facade = withBeaconEngineFacade(chain);
-      vi.spyOn(chain.config, "getForkName").mockReturnValue(ForkName.deneb);
+      vi.spyOn(chain.config, "getForkName").mockReturnValue(ForkName.fulu);
       vi.spyOn(chain.config, "getForkTypes").mockReturnValue(
-        createBeaconConfig(getConfig(ForkName.deneb), Buffer.alloc(32)).getForkTypes(0)
+        createBeaconConfig(getConfig(ForkName.fulu), Buffer.alloc(32)).getForkTypes(0)
       );
-      const block = ssz.deneb.SignedBeaconBlock.defaultValue();
+      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
       block.message.body.executionPayload.blockHash = Buffer.alloc(32, 1);
       block.message.body.blobKzgCommitments = [Buffer.alloc(48, 2)];
-      const input = BlockInputBlobs.createFromBlock({
+      const input = BlockInputColumns.createFromBlock({
         block,
-        blockRootHex: toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message)),
-        forkName: ForkName.deneb,
+        blockRootHex: toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message)),
+        forkName: ForkName.fulu,
+        sampledColumns: [0],
+        custodyColumns: [0],
         daOutOfRange: false,
         source: BlockInputSource.gossip,
         seenTimestampSec: 0,

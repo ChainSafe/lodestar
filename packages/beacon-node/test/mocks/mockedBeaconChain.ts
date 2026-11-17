@@ -1,8 +1,8 @@
 import {Mock, Mocked, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -16,15 +16,18 @@ import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {IChainView} from "../../src/chain/chainView/interface.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
+import {ForkChoiceExecutionEngine} from "../../src/chain/forkChoiceExecutionEngine.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {ExecutionPayloadBidPool} from "../../src/chain/opPools/executionPayloadBidPool.js";
 import {
   AggregatedAttestationPool,
   InclusionListStore,
   OpPool,
+  SingleAttestationPool,
   SyncContributionAndProofPool,
 } from "../../src/chain/opPools/index.js";
 import {ProposerPreferencesPool} from "../../src/chain/opPools/proposerPreferencesPool.js";
+import {ProposerTracker} from "../../src/chain/proposerTracker.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {
   SeenAggregators,
@@ -39,9 +42,8 @@ import {SeenAggregatedAttestations} from "../../src/chain/seenCache/seenAggregat
 import {SeenAttestationDatas} from "../../src/chain/seenCache/seenAttestationData.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
-import {BuilderApiClient} from "../../src/execution/builder/apiClient.js";
+import {BuilderApiClient, DEFAULT_BUILDER_BID_DEADLINE_MS} from "../../src/execution/builder/apiClient.js";
 import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
-import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
 import {Clock} from "../../src/util/clock.js";
 import {SerializedCache} from "../../src/util/serializedCache.js";
 import {getMockedClock} from "./clock.js";
@@ -64,7 +66,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   updateBuilderStatus: Mock<(slot: Slot) => void>;
   predictProposerHead: Mock<() => ProtoBlock>;
   getProposerHead: Mock<() => ProtoBlock>;
-  executionEngine: Mocked<ExecutionEngineHttp>;
+  executionEngine: Mocked<ForkChoiceExecutionEngine>;
   executionBuilder: Mocked<ExecutionBuilderHttp>;
   builderCircuitBreaker: Mocked<BuilderCircuitBreaker>;
   proposerPreferencesPool: ProposerPreferencesPool;
@@ -199,6 +201,7 @@ vi.mock("../../src/chain/opPools/index.js", async (importActual) => {
   const SyncContributionAndProofPool = vi.fn().mockImplementation(function MockedSyncContributionAndProofPool() {
     return {
       getAggregate: vi.fn(),
+      prune: vi.fn(),
     };
   });
 
@@ -250,6 +253,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         getBestBid: vi.fn(),
       },
       builderApiClient: {
+        bidDeadline: DEFAULT_BUILDER_BID_DEADLINE_MS,
         getExecutionPayloadBids: vi.fn().mockResolvedValue([]),
         submitBuilderPreferences: vi.fn(),
         submitSignedBeaconBlock: vi.fn(),
@@ -259,6 +263,8 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       opPool: new OpPool(config as BeaconConfig),
       inclusionListStore: new InclusionListStore(config as BeaconConfig),
       aggregatedAttestationPool: new AggregatedAttestationPool(config as BeaconConfig),
+      singleAttestationPool: new SingleAttestationPool(),
+      proposerTracker: new ProposerTracker(),
       syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
       // Engine-internal gossip seen-caches; the flat mock doubles as the engine, so validators read
       // these via `engine.seenX` and tests reach them via `chain.beaconEngine.seenX`.
@@ -290,6 +296,9 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         removeInvalid: vi.fn(),
       },
       seenPayloadEnvelope: vi.fn(),
+      seenBlock: vi.fn().mockReturnValue(false),
+      resumeFastConfirmation: vi.fn().mockResolvedValue(undefined),
+      pauseFastConfirmation: vi.fn().mockResolvedValue(undefined),
       getParentExecutionRequests: vi.fn(),
       shufflingCache: new ShufflingCache(),
       pubkeyCache,
@@ -390,7 +399,9 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "validateApiSyncCommittee",
     "validateSyncCommitteeGossipContributionAndProof",
     "validateApiSyncCommitteeContributionAndProof",
-    "validateGossipBlobSidecar",
+    "onHeadChanged",
+    "refreshLocalProposals",
+    "validateGossipExecutionPayloadEnvelopeSerialized",
     "validateGossipFuluDataColumnSidecar",
     "validateGossipGloasDataColumnSidecar",
     "validateGossipPayloadAttestationMessage",

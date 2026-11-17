@@ -8,7 +8,10 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {LogLevel} from "@lodestar/utils";
-import {archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
+import {
+  MAX_PRUNE_DATA_COLUMN_SLOTS_PER_RUN,
+  archiveBlocks,
+} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineCore.js";
 import type {IBeaconEngine} from "../../../../src/chain/interface.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
@@ -558,7 +561,10 @@ describe("block archiver task", () => {
       const columnsPruneSlot = computeStartSlotAtEpoch(
         currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
       );
-      expect(dbStub.dataColumns.pruneBefore).toHaveBeenCalledWith(columnsPruneSlot);
+      expect(dbStub.dataColumns.pruneBefore).toHaveBeenCalledWith(
+        columnsPruneSlot,
+        MAX_PRUNE_DATA_COLUMN_SLOTS_PER_RUN
+      );
       if (prunedSlots.length > 0) {
         expect(verbose).toHaveBeenCalledWith(
           "dataColumnSidecars prune",

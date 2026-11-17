@@ -1,10 +1,10 @@
 import {Mock, MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ProtoBlock} from "@lodestar/fork-choice";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
@@ -49,6 +49,7 @@ describe("PrepareNextSlot scheduler", () => {
 
     getForkStub = vi.spyOn(config, "getForkName");
     executionEngineStub = chainStub.executionEngine;
+    executionEngineStub.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
     vi.spyOn(chainStub, "opts", "get").mockReturnValue({emitPayloadAttributes} as IChainOptions);
 
     scheduler = new PrepareNextSlotScheduler(chainStub, config, null, loggerStub, abortController.signal);
@@ -218,6 +219,7 @@ describe("PrepareNextSlot scheduler", () => {
           expect.any(String),
           expect.any(String),
           expect.any(String),
+          expect.any(String),
           expect.objectContaining({withdrawals: [], parentBeaconBlockRoot: expect.any(Uint8Array)})
         );
       }
@@ -236,7 +238,7 @@ describe("PrepareNextSlot scheduler", () => {
             executionEngineStub.notifyForkchoiceUpdate.mock.invocationCallOrder[0]
           );
           // attributes computed for the event are reused for the EL payload preparation
-          expect(executionEngineStub.notifyForkchoiceUpdate.mock.calls[0][4]).toBe(
+          expect(executionEngineStub.notifyForkchoiceUpdate.mock.calls[0][5]).toBe(
             spy.mock.calls[0][0].data.payloadAttributes
           );
         }
@@ -320,6 +322,7 @@ describe("PrepareNextSlot scheduler", () => {
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledWith(
       ForkName.gloas,
       expect.any(String),
+      expect.any(String),
       safeBlockHash,
       finalizedBlockHash,
       spy.mock.calls[0][0].data.payloadAttributes
@@ -378,6 +381,7 @@ describe("PrepareNextSlot scheduler", () => {
     });
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledWith(
       ForkName.gloas,
+      expect.any(String),
       expect.any(String),
       expect.any(String),
       expect.any(String),

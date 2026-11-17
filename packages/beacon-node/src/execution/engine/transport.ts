@@ -1,23 +1,16 @@
 import {ForkName} from "@lodestar/params";
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix} from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {ClientVersion, ExecutionPayloadStatus, PayloadAttributes, PayloadId, VersionedHashes} from "./interface.js";
+import {
+  ClientVersion,
+  ForkchoiceUpdatedResult,
+  PayloadAttributes,
+  PayloadId,
+  PayloadStatusResult,
+  VersionedHashes,
+} from "./interface.js";
 import {JsonRpcHttpClientEventEmitter} from "./jsonRpcHttpClient.js";
 import {ExecutionPayloadBodyV2} from "./types.js";
-
-export type PayloadStatusResult = {
-  status: ExecutionPayloadStatus;
-  latestValidHash: RootHex | null;
-  validationError: string | null;
-  /** PayloadStatusV2: whether a VALID payload satisfied the inclusion list constraints, null otherwise */
-  inclusionListSatisfied?: boolean | null;
-};
-
-export type ForkchoiceUpdatedResult = {
-  payloadStatus: PayloadStatusResult;
-  payloadId: PayloadId | null;
-};
 
 export type GetPayloadResult = {
   executionPayload: ExecutionPayload;
@@ -55,8 +48,6 @@ export interface IEngineTransport {
   getPayload(fork: ForkName, payloadId: PayloadId): Promise<GetPayloadResult>;
 
   getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]>;
-
-  getBlobsV1(versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]>;
 
   getBlobsV2(versionedHashes: VersionedHashes, buffers?: Uint8Array[]): Promise<BlobAndProofV2[] | null>;
 

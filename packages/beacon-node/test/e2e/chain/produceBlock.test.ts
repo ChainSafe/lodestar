@@ -3,12 +3,12 @@ import {tmpdir} from "node:os";
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   BeaconStateView,

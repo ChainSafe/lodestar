@@ -27,7 +27,7 @@ import {ensureDir, writeIfNotExist} from "../../util/file.js";
 import {toSignedHeaderEnvelope} from "../../util/headerEnvelope.js";
 import {BlockRootHex} from "../../util/sszBytes.js";
 import {StateArchiveStrategy} from "../archiveStore/interface.js";
-import {pruneHistory as pruneHistoryFromDb} from "../archiveStore/utils/pruneHistory.js";
+import {MAX_PRUNE_BLOCK_SLOTS_PER_RUN, pruneHistory as pruneHistoryFromDb} from "../archiveStore/utils/pruneHistory.js";
 import type {BeaconEngineCore} from "./beaconEngineCore.js";
 import {FinalizedProtoSummary, LateCanonicalBlockReason} from "./interface.js";
 
@@ -221,7 +221,7 @@ export async function completeFinalization(
  * Sources: unstable@0edec865c8 chain/archiveStore/archiveStore.ts#ArchiveStore.init / processFinalizedCheckpoint
  * and chain/archiveStore/utils/pruneHistory.ts#pruneHistory.
  * [beacon-engine] The pruning cursor stays private on BeaconEngineCore and advances only after this succeeds.
- * Synced through unstable@2593063a82: persist the serving floor before deleting any history.
+ * Synced through unstable@53c3aab4e9: persist the serving floor before deletion and bound each pruning run.
  * [beacon-engine] The beforePrune callback stays engine-local; callers apply the returned block cutoff slot.
  */
 export async function pruneHistory(
@@ -242,7 +242,8 @@ export async function pruneHistory(
       const stored = await this.db.earliestAvailableSlot.get();
       const earliestAvailableSlot = Math.max(stored ?? 0, blockCutoffSlot);
       if (stored !== earliestAvailableSlot) await this.db.earliestAvailableSlot.set(earliestAvailableSlot);
-    }
+    },
+    MAX_PRUNE_BLOCK_SLOTS_PER_RUN
   );
   await this.db.executionPayloadEnvelopeArchive.batchDelete(
     await this.db.executionPayloadEnvelopeArchive.keys({gte: 0, lt: blockCutoffSlot})

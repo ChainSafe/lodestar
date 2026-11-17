@@ -24,6 +24,8 @@ export type PoolOpts = {
    * Only preaggregate attestation/sync committee message since clockSlot - preaggregateSlotDistance
    */
   preaggregateSlotDistance?: number;
+  /** Collect single attestations for every proposal slot, for development only. */
+  singleAttestationIgnoreProposalDuty?: boolean;
 };
 
 export type SeenCacheOpts = {

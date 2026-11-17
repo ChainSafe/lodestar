@@ -10,7 +10,7 @@ import {BeaconEngineCore} from "../../../../src/chain/beaconEngine/beaconEngineC
 import {VerifiedBlockBundle, importBlock} from "../../../../src/chain/beaconEngine/importBlock.js";
 import {SeenEnginePayloadEnvelopeInput} from "../../../../src/chain/beaconEngine/seenEnginePayloadEnvelopeInput.js";
 import {toChainViewBlockBytes} from "../../../../src/chain/beaconEngine/utils.js";
-import {BlockInputBlobs, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputColumns, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
 import {computeSignedBlockRoot, toSignedBlockRootHex} from "../../../../src/chain/blocks/signedBlockRoot.js";
 import {writeBlockInputToDb} from "../../../../src/chain/blocks/writeBlockInputToDb.js";
@@ -347,21 +347,24 @@ describe("BeaconEngine block persistence", () => {
     expect(chain.beaconEngine.blockSerializedCache.get(replacementRoot)?.block).toBe(replacement);
   });
 
-  it("persists blob data without writing a beacon block", async () => {
-    const blobSidecars = {add: vi.fn().mockResolvedValue(undefined)};
-    Object.assign(chain.beaconEngine.db, {blobSidecars});
-    const blobBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
-    const blobBlockRoot = ssz.deneb.BeaconBlock.hashTreeRoot(blobBlock.message);
-    const input = BlockInputBlobs.createFromBlock({
-      block: blobBlock,
-      blockRootHex: toRootHex(blobBlockRoot),
-      forkName: ForkName.deneb,
+  it("persists data columns without writing a beacon block", async () => {
+    const dataColumns = {putManyBinary: vi.fn().mockResolvedValue(undefined)};
+    Object.assign(chain.beaconEngine.db, {dataColumns});
+    Object.assign(chain, {custodyConfig: {custodyColumns: []}});
+    const columnBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    const columnBlockRoot = toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(columnBlock.message));
+    const input = BlockInputColumns.createFromBlock({
+      block: columnBlock,
+      blockRootHex: columnBlockRoot,
+      forkName: ForkName.fulu,
       daOutOfRange: false,
       source: BlockInputSource.gossip,
       seenTimestampSec: 0,
+      sampledColumns: [],
+      custodyColumns: [],
     });
     await writeBlockInputToDb.call(chain, input);
-    expect(blobSidecars.add).toHaveBeenCalledExactlyOnceWith({blockRoot: blobBlockRoot, slot: 0, blobSidecars: []});
+    expect(dataColumns.putManyBinary).toHaveBeenCalledExactlyOnceWith({blockRoot: columnBlockRoot, slot: 0}, []);
     expect(putBinary).not.toHaveBeenCalled();
   });
 
