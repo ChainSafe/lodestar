@@ -1,4 +1,5 @@
 const std = @import("std");
+const getValidatorIndex = @import("../utils/electra.zig").getValidatorIndex;
 const ForkSeq = @import("config").ForkSeq;
 const BeaconConfig = @import("config").BeaconConfig;
 const BeaconState = @import("fork_types").BeaconState;
@@ -37,7 +38,7 @@ pub fn processWithdrawalRequest(
 
     // bail out if validator is not in beacon state
     // note that we don't need to check for 6110 unfinalized vals as they won't be eligible for withdraw/exit anyway
-    const validator_index = epoch_cache.pubkey_cache.get(io, withdrawal_request.validator_pubkey) orelse return;
+    const validator_index = (try getValidatorIndex(fork, io, epoch_cache.pubkey_cache, state, withdrawal_request.validator_pubkey)) orelse return;
 
     var validators = try state.validators();
     if (validator_index >= try validators.length()) return;

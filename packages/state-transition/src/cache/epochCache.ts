@@ -54,6 +54,7 @@ import {
 } from "../util/shuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
+import {getValidatorIndexInState} from "../util/validator.js";
 import {BuilderDepositSignatureCache} from "./builderDepositSignatureCache.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {EpochTransitionCache} from "./epochTransitionCache.js";
@@ -927,12 +928,13 @@ export class EpochCache {
     return this.pubkeyCache.get(index);
   }
 
-  getValidatorIndex(pubkey: Uint8Array): ValidatorIndex | null {
-    return this.pubkeyCache.getIndex(pubkey);
-  }
-
-  addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    this.pubkeyCache.append(index, pubkey);
+  getValidatorIndex(state: BeaconStateAllForks, pubkey: Uint8Array): ValidatorIndex | null {
+    const {validators} = state;
+    return getValidatorIndexInState(
+      this.pubkeyCache,
+      {validatorCount: validators.length, getValidator: (index) => validators.getReadonly(index)},
+      pubkey
+    );
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {

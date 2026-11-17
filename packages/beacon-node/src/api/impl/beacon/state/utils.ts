@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {GENESIS_SLOT} from "@lodestar/params";
-import {IBeaconStateView, IBeaconStateViewGloas} from "@lodestar/state-transition";
+import {IBeaconStateView, IBeaconStateViewGloas, getValidatorIndexInState} from "@lodestar/state-transition";
 import {
   BLSPubkey,
   BuilderIndex,
@@ -222,12 +222,9 @@ export function getStateValidatorIndex(
   }
 
   // typeof id === Uint8Array
-  const validatorIndex = pubkeyCache.getIndex(id);
+  const validatorIndex = getValidatorIndexInState(pubkeyCache, state, id);
   if (validatorIndex === null) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
-  }
-  if (validatorIndex >= state.validatorCount) {
-    return {valid: false, code: 404, reason: "Validator pubkey from future state"};
   }
   return {valid: true, validatorIndex};
 }

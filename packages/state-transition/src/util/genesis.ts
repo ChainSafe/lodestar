@@ -128,6 +128,17 @@ export function applyTimestamp(config: ChainForkConfig, state: CachedBeaconState
 }
 
 /**
+ * Genesis is finalized by definition, so its validators go straight into the shared pubkey cache. Without this,
+ * every genesis deposit lookup would scan all validators added before it.
+ */
+function appendGenesisPubkey(state: CachedBeaconStateAllForks): void {
+  const index = state.validators.length - 1;
+  if (index >= state.epochCtx.pubkeyCache.size) {
+    state.epochCtx.pubkeyCache.append(index, state.validators.getReadonly(index).pubkey);
+  }
+}
+
+/**
  * Apply deposits to state.
  * For spec test, fullDepositDataRootList is undefined.
  * For genesis builder, fullDepositDataRootList is full list of deposit data root from index 0.
@@ -151,6 +162,7 @@ export function applyDeposits(
     // Genesis deposits do not use the removed legacy deposit tree.
     for (const deposit of newDeposits) {
       applyDeposit(fork, state, deposit.data);
+      appendGenesisPubkey(state);
     }
   } else {
     const statePreHeze = state as CachedBeaconStatePreHeze;
@@ -181,6 +193,7 @@ export function applyDeposits(
 
       statePreHeze.eth1Data.depositCount += 1n;
       processDeposit(fork, statePreHeze, deposit);
+      appendGenesisPubkey(state);
     }
   }
 
@@ -189,7 +202,7 @@ export function applyDeposits(
     const stateElectra = state as CachedBeaconStateElectra;
     stateElectra.commit();
     for (const {pubkey, amount} of stateElectra.pendingDeposits.getAllReadonly()) {
-      const validatorIndex = state.epochCtx.getValidatorIndex(pubkey);
+      const validatorIndex = state.epochCtx.getValidatorIndex(state, pubkey);
       if (validatorIndex === null) {
         // Should not happen if the gensis state is correct
         continue;

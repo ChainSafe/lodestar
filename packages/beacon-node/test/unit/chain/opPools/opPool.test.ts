@@ -135,7 +135,9 @@ function makeAttesterSlashing(
     slashing.attestation2.data.source.epoch = 1n;
   }
   slashing.attestation2.data.beaconBlockRoot = Buffer.alloc(32, 1);
-  const sets = getAttesterSlashingSignatureSets(beaconConfig, signingStateSlot, slashing);
+  const sets = getAttesterSlashingSignatureSets(beaconConfig, signingStateSlot, slashing, (index) => {
+    throw Error(`unexpected state pubkey lookup ${index}`);
+  });
   const secretKey = SecretKey.fromBytes(Buffer.alloc(32, validatorIndex + 1));
   slashing.attestation1.signature = secretKey.sign(sets[0].signingRoot).toBytes();
   slashing.attestation2.signature = secretKey.sign(sets[1].signingRoot).toBytes();
@@ -169,11 +171,25 @@ describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConf
 
     const after = makeState(afterSlot, beaconConfig);
     expect(() =>
-      assertValidAttesterSlashing(beaconConfig, after.slot, after.validatorCount, slashing, false)
+      assertValidAttesterSlashing(
+        beaconConfig,
+        after.slot,
+        after.validatorCount,
+        slashing,
+        false,
+        (index) => after.getValidator(index).pubkey
+      )
     ).not.toThrow();
-    expect(() => assertValidAttesterSlashing(beaconConfig, after.slot, after.validatorCount, slashing)).toThrow(
-      "AttesterSlashing attestation0 is invalid"
-    );
+    expect(() =>
+      assertValidAttesterSlashing(
+        beaconConfig,
+        after.slot,
+        after.validatorCount,
+        slashing,
+        true,
+        (index) => after.getValidator(index).pubkey
+      )
+    ).toThrow("AttesterSlashing attestation0 is invalid");
     expect(pool.getAllAttesterSlashings()).toEqual([slashing]);
     expect(pool.getSlashingsAndExits(after, BlockType.Full, null)[0]).toHaveLength(0);
     expect(pool.attesterSlashingsSize).toBe(0);
@@ -202,7 +218,14 @@ describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConf
       assertValidProposerSlashing(beaconConfig, after.slot, proposerSlashings[0], after.getValidator(0))
     ).not.toThrow();
     expect(() =>
-      assertValidAttesterSlashing(beaconConfig, after.slot, after.validatorCount, attesterSlashings[0])
+      assertValidAttesterSlashing(
+        beaconConfig,
+        after.slot,
+        after.validatorCount,
+        attesterSlashings[0],
+        true,
+        (index) => after.getValidator(index).pubkey
+      )
     ).not.toThrow();
   });
 
@@ -282,7 +305,12 @@ describe("slashing verification context", () => {
 
     const after = makeState(6 * SLOTS_PER_EPOCH, beaconConfig);
     const bls = new BlsSingleThreadVerifier({metrics: null});
-    const sets = getAttesterSlashingSignatureSets(beaconConfig, after.slot, slashing);
+    const sets = getAttesterSlashingSignatureSets(
+      beaconConfig,
+      after.slot,
+      slashing,
+      (index) => after.getValidator(index).pubkey
+    );
     expect(await bls.verifySignatureSets([sets[0]])).toBe(true);
     expect(await bls.verifySignatureSets([sets[1]])).toBe(false);
     expect(pool.getSlashingsAndExits(after, BlockType.Full, null)[0]).toHaveLength(0);
@@ -346,7 +374,14 @@ describe("persisted slashings", () => {
         assertValidProposerSlashing(config, head.slot, proposerSlashings[0], head.getValidator(0))
       ).not.toThrow();
       expect(() =>
-        assertValidAttesterSlashing(config, head.slot, head.validatorCount, attesterSlashings[0])
+        assertValidAttesterSlashing(
+          config,
+          head.slot,
+          head.validatorCount,
+          attesterSlashings[0],
+          true,
+          (index) => head.getValidator(index).pubkey
+        )
       ).not.toThrow();
     } finally {
       await close();
@@ -472,7 +507,14 @@ describe("persisted slashings", () => {
           assertValidProposerSlashing(config, after.slot, proposerSlashings[0], after.getValidator(0))
         ).not.toThrow();
         expect(() =>
-          assertValidAttesterSlashing(config, after.slot, after.validatorCount, attesterSlashings[0])
+          assertValidAttesterSlashing(
+            config,
+            after.slot,
+            after.validatorCount,
+            attesterSlashings[0],
+            true,
+            (index) => after.getValidator(index).pubkey
+          )
         ).not.toThrow();
 
         await restored.toPersisted(db);

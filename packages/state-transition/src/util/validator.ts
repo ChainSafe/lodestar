@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import type {PubkeyCache} from "@lodestar/native/pubkeys";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkSeq,
@@ -8,7 +9,8 @@ import {
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
 import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
-import {intDiv} from "@lodestar/utils";
+import {byteArrayEquals, intDiv} from "@lodestar/utils";
+import type {IBeaconStateView} from "../stateView/interface.js";
 import {BeaconStateAllForks, CachedBeaconStateElectra, CachedBeaconStateGloas, EpochCache} from "../types.js";
 import {hasEth1WithdrawalCredential} from "./capella.js";
 import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "./electra.js";
@@ -220,4 +222,45 @@ export function getPendingBalanceToWithdraw(
   }
 
   return total;
+}
+
+type StateValidatorsView = Pick<IBeaconStateView, "finalizedCheckpoint" | "getValidator" | "validatorCount">;
+
+/**
+ * Append validators whose activation eligibility is finalized in `state` to the shared pubkey cache.
+ *
+ * Eligibility epoch E is set while processing the end of epoch E - 1, so a validator eligible at or before the
+ * finalized epoch was added in finalized history and has the same index on every branch. Validators before it in the
+ * registry were added earlier still. Validators that never become eligible stay out until a later one does.
+ */
+export function promoteFinalizedPubkeys(pubkeyCache: PubkeyCache, state: StateValidatorsView): void {
+  const finalizedEpoch = state.finalizedCheckpoint.epoch;
+  const cachedCount = pubkeyCache.size;
+  for (let last = state.validatorCount - 1; last >= cachedCount; last--) {
+    if (state.getValidator(last).activationEligibilityEpoch <= finalizedEpoch) {
+      for (let index = cachedCount; index <= last; index++) {
+        pubkeyCache.append(index, state.getValidator(index).pubkey);
+      }
+      return;
+    }
+  }
+}
+
+/**
+ * The shared pubkey cache holds only the finalized registry prefix, which every state the node processes shares.
+ * Validators added after it can differ between branches, so they are read from `state`. That suffix grows by at most
+ * MAX_PENDING_DEPOSITS_PER_EPOCH validators per unfinalized epoch.
+ */
+export function getValidatorIndexInState(
+  pubkeyCache: PubkeyCache,
+  state: {readonly validatorCount: number; getValidator(index: ValidatorIndex): {pubkey: Uint8Array}},
+  pubkey: Uint8Array
+): ValidatorIndex | null {
+  const validatorCount = state.validatorCount;
+  const index = pubkeyCache.getIndex(pubkey);
+  if (index !== null) return index < validatorCount ? index : null;
+  for (let i = pubkeyCache.size; i < validatorCount; i++) {
+    if (byteArrayEquals(state.getValidator(i).pubkey, pubkey)) return i;
+  }
+  return null;
 }

@@ -56,11 +56,8 @@ export function queueExcessActiveBalance(
   }
 }
 
-/**
- * Since we share pubkey2index, pubkey maybe added by other epoch transition but we don't have that validator in this state
- */
 export function isPubkeyKnown(state: CachedBeaconStateElectra | CachedBeaconStateGloas, pubkey: Uint8Array): boolean {
-  return isValidatorKnown(state, state.epochCtx.getValidatorIndex(pubkey));
+  return isValidatorKnown(state, state.epochCtx.getValidatorIndex(state, pubkey));
 }
 
 /**

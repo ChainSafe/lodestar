@@ -118,6 +118,7 @@ fn initCachedState(
     state: *AnyBeaconState,
     beacon_config: *const c.BeaconConfig,
     deposit_cache: ?*st.BuilderDepositSignatureCacheRc,
+    sync_pubkeys: bool,
 ) !void {
     try cached_state.init(
         allocator,
@@ -128,7 +129,10 @@ fn initCachedState(
             .pubkey_cache = &pubkey.state.cache,
             .builder_deposit_signature_cache = deposit_cache,
         },
-        null,
+        if (sync_pubkeys) null else .{
+            .skip_sync_committee_cache = state.forkSeq().lt(.altair),
+            .skip_sync_pubkeys = true,
+        },
     );
 }
 
@@ -160,7 +164,7 @@ pub fn createFromBytes(bytes: js.Uint8Array, config: *const BeaconConfig) !Beaco
     errdefer allocator.destroy(cached_state);
 
     const io = js.io();
-    try initCachedState(allocator, cached_state, io, state, &config_rc.instance.config, null);
+    try initCachedState(allocator, cached_state, io, state, &config_rc.instance.config, null, true);
 
     return .{
         .cached_state = cached_state,
@@ -1304,6 +1308,8 @@ pub fn loadOtherState(
         new_state,
         old_cached_state.config,
         old_cached_state.epoch_cache.builder_deposit_signature_cache,
+        // Loaded states can be unfinalized; only the finalized anchor populates the cache.
+        false,
     );
     new_cached_state_initialized = true;
 

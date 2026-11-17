@@ -25,6 +25,7 @@ import {
   getBeaconCommittees,
   isStatePostAltair,
   isStatePostBellatrix,
+  promoteFinalizedPubkeys,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -316,6 +317,11 @@ export async function importBlock(
   const oldHead = this.forkChoice.getHead();
   const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
+  // Validators enter the shared pubkey cache only once finalized, so their index is the same on every branch.
+  // Activation follows finalized eligibility by MAX_SEED_LOOKAHEAD + 1 epochs, so signers are always cached.
+  if (currFinalizedEpoch > prevFinalizedEpoch) {
+    promoteFinalizedPubkeys(this.pubkeyCache, postState);
+  }
 
   // Prune the gloas payload-envelope cache below the new head's parent so it stays bounded during
   // syncing. On a synced node, cache holds just 2 entries — head (parent for

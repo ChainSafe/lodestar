@@ -47,15 +47,15 @@ describe("CachedBeaconState", () => {
     const index2 = index1 + 1;
     const [pubkey1, pubkey2] = interopPubkeysCached(index2 + 1).slice(index1);
 
-    state1.epochCtx.addPubkey(index1, pubkey1);
+    state1.epochCtx.pubkeyCache.append(index1, pubkey1);
 
     const state2 = state1.clone();
-    state2.epochCtx.addPubkey(index2, pubkey2);
+    state2.epochCtx.pubkeyCache.append(index2, pubkey2);
 
-    expect(state1.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
-    expect(state2.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
-    expect(state1.epochCtx.getValidatorIndex(pubkey2)).toBe(index2);
-    expect(state2.epochCtx.getValidatorIndex(pubkey2)).toBe(index2);
+    expect(state1.epochCtx.pubkeyCache.getIndex(pubkey1)).toBe(index1);
+    expect(state2.epochCtx.pubkeyCache.getIndex(pubkey1)).toBe(index1);
+    expect(state1.epochCtx.pubkeyCache.getIndex(pubkey2)).toBe(index2);
+    expect(state2.epochCtx.pubkeyCache.getIndex(pubkey2)).toBe(index2);
   });
 
   it("Auto-commit on hashTreeRoot", () => {
@@ -286,7 +286,9 @@ describe("CachedBeaconState", () => {
 
         // confirm loadCachedBeaconState() result
         for (let i = 0; i < newCachedState.validators.length; i++) {
-          expect(newCachedState.epochCtx.getValidatorIndex(newCachedState.validators.get(i).pubkey)).toBe(i);
+          expect(
+            newCachedState.epochCtx.getValidatorIndex(newCachedState, newCachedState.validators.get(i).pubkey)
+          ).toBe(i);
           expect(newCachedState.epochCtx.pubkeyCache.get(i)?.toBytes()).toEqual(pubkeys[i]);
         }
       });

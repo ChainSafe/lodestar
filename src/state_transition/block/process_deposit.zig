@@ -1,4 +1,5 @@
 const std = @import("std");
+const getValidatorIndex = @import("../utils/electra.zig").getValidatorIndex;
 const BeaconConfig = @import("config").BeaconConfig;
 const ForkSeq = @import("config").ForkSeq;
 const BeaconState = @import("fork_types").BeaconState;
@@ -102,13 +103,13 @@ pub fn applyDeposit(
     const amount = deposit.amount();
     const signature = deposit.signature();
 
-    const cached_index = epoch_cache.pubkey_cache.get(io, pubkey.*);
-    const is_new_validator = cached_index == null or cached_index.? >= try state.validatorsCount();
+    const cached_index = try getValidatorIndex(fork, io, epoch_cache.pubkey_cache, state, pubkey.*);
+    const is_new_validator = cached_index == null;
 
     if (comptime fork.lt(.electra)) {
         if (is_new_validator) {
             if (validateDepositSignature(config, pubkey, withdrawal_credentials, amount, signature)) {
-                try addValidatorToRegistry(fork, io, epoch_cache, state, pubkey, withdrawal_credentials, amount);
+                try addValidatorToRegistry(fork, epoch_cache, state, pubkey, withdrawal_credentials, amount);
             } else |_| {
                 // invalid deposit signature, ignore the deposit
                 // TODO may be a useful metric to track
@@ -130,7 +131,7 @@ pub fn applyDeposit(
         var pending_deposits = try state.pendingDeposits();
         if (is_new_validator) {
             if (validateDepositSignature(config, pubkey, withdrawal_credentials, amount, signature)) {
-                try addValidatorToRegistry(fork, io, epoch_cache, state, pubkey, withdrawal_credentials, 0);
+                try addValidatorToRegistry(fork, epoch_cache, state, pubkey, withdrawal_credentials, 0);
                 try pending_deposits.pushValue(&pending_deposit);
             } else |_| {
                 // invalid deposit signature, ignore the deposit
@@ -144,7 +145,6 @@ pub fn applyDeposit(
 
 pub fn addValidatorToRegistry(
     comptime fork: ForkSeq,
-    io: std.Io,
     epoch_cache: *EpochCache,
     state: *BeaconState(fork),
     pubkey: *const BLSPubkey,
@@ -178,8 +178,6 @@ pub fn addValidatorToRegistry(
     // - Keep related code together to reduce risk of breaking this cache
     // - Should have equal performance since it sets a value in a flat array
     try epoch_cache.effectiveBalanceIncrementsAppend(validator_index, effective_balance);
-
-    try epoch_cache.pubkey_cache.append(io, pubkey.*, validator_index);
 
     // Only after altair:
     if (comptime fork.gte(.altair)) {

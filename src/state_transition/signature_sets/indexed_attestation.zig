@@ -47,22 +47,37 @@ pub fn getAttestationWithIndicesSignatureSet(
     return createAggregateSignatureSetFromComponents(pubkeys, signing_root, signature);
 }
 
-/// Consumer need to free the returned pubkeys array
+/// Consumer need to free the returned pubkeys array.
+/// Attester slashings may name validators that are not active yet, whose keys can be past the
+/// finalized pubkey cache prefix, so pubkeys are resolved against `state`.
 pub fn getIndexedAttestationSignatureSet(
     comptime fork: ForkSeq,
     allocator: Allocator,
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
+    state: anytype,
     indexed_attestation: *const ForkTypes(fork).IndexedAttestation.Type,
 ) !AggregatedSignatureSet {
-    return try getAttestationWithIndicesSignatureSet(
-        allocator,
-        io,
-        config,
-        epoch_cache,
-        &indexed_attestation.data,
-        indexed_attestation.signature,
-        indexed_attestation.attesting_indices.items,
-    );
+    const attesting_indices = indexed_attestation.attesting_indices.items;
+    const pubkeys = try allocator.alloc(PublicKey, attesting_indices.len);
+    errdefer allocator.free(pubkeys);
+    const validators_count = try state.validatorsCount();
+    for (attesting_indices, pubkeys) |index, *pubkey| {
+        if (epoch_cache.pubkey_cache.getPubkey(io, index)) |cached| {
+            pubkey.* = cached;
+            continue;
+        }
+        if (index >= validators_count) return error.PubkeyNotFound;
+        var validators = try state.validators();
+        var validator = try validators.get(index);
+        var pubkey_bytes: [48]u8 = undefined;
+        try validator.getValue(undefined, "pubkey", &pubkey_bytes);
+        pubkey.* = try PublicKey.uncompress(&pubkey_bytes);
+    }
+
+    var signing_root: Root = undefined;
+    try getAttestationDataSigningRoot(config, epoch_cache.epoch, &indexed_attestation.data, &signing_root);
+
+    return createAggregateSignatureSetFromComponents(pubkeys, signing_root, indexed_attestation.signature);
 }

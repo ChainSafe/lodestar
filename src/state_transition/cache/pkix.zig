@@ -5,7 +5,8 @@ const pubkey_cache = @import("pubkey_cache.zig");
 const PubkeyCache = pubkey_cache.PubkeyCache;
 
 const magic = "PKIX".*;
-const format_version: u32 = 5;
+// 6: saved caches hold only finalized validators. Older files can hold unfinalized ones.
+const format_version: u32 = 6;
 const payload_checksum_seed: u64 = 0;
 const header_checksum_seed: u64 = 0x504b495848445235;
 

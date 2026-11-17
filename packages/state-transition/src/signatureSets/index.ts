@@ -48,7 +48,7 @@ export function getBlockSignatureSets(
   const signatureSets = [
     getRandaoRevealSignatureSet(config, signedBlock.message),
     ...getProposerSlashingsSignatureSets(config, signedBlock),
-    ...getAttesterSlashingsSignatureSets(config, signedBlock),
+    ...getAttesterSlashingsSignatureSets(config, signedBlock, (index) => state.getValidator(index).pubkey),
     ...getAttestationsSignatureSets(config, signedBlock, indexedAttestations),
     ...signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
       getVoluntaryExitSignatureSet(config, state, voluntaryExit)

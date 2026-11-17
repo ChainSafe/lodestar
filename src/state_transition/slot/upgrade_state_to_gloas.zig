@@ -1,4 +1,5 @@
 const std = @import("std");
+const getValidatorIndex = @import("../utils/electra.zig").getValidatorIndex;
 const Allocator = std.mem.Allocator;
 const BeaconConfig = @import("config").BeaconConfig;
 const BeaconState = @import("fork_types").BeaconState;
@@ -105,7 +106,7 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
         const result = try lookup.getOrPutContext(allocator, deposit.pubkey, context);
         if (!result.found_existing) result.value_ptr.* = .{};
         const entry = result.value_ptr;
-        const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
+        const validator_index = (try getValidatorIndex(.gloas, io, epoch_cache.pubkey_cache, state, deposit.pubkey));
         const known_validator = try isValidatorKnown(.gloas, state, validator_index);
         if (!known_validator) {
             if (entry.builder_index) |builder_index| {

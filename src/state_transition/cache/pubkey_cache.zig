@@ -81,7 +81,11 @@ pub const max_capacity: usize = @min(
     dense_capacity_limit / 2,
 );
 
-/// Append-only pubkey cache.
+/// Append-only pubkey cache of the finalized validator registry prefix.
+///
+/// Validator indices past finality can differ between branches, so only
+/// finalized validators are appended. Lookups for later validators must read
+/// the requesting state.
 ///
 /// ArrayHashMap storage may move when it grows, so every access is protected by
 /// the cache-owned read/write lock. Readers copy values out before releasing

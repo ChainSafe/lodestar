@@ -7,6 +7,7 @@ const cache_module = @import("../cache/builder_deposit_signature_cache.zig");
 const deposit_module = @import("../block/process_deposit.zig");
 const isBuilderWithdrawalCredential = @import("gloas.zig").isBuilderWithdrawalCredential;
 const isValidatorKnown = @import("electra.zig").isValidatorKnown;
+const getValidatorIndex = @import("electra.zig").getValidatorIndex;
 const PubkeyHashContext = @import("../cache/pubkey_cache.zig").PubkeyHashContext;
 
 pub const max_scanned_deposits_per_call = 100_000;
@@ -91,7 +92,7 @@ pub fn preVerifyBuilderDepositsPreGloas(
                 !try isValidatorKnown(
                     .fulu,
                     state.state.castToFork(.fulu),
-                    state.epoch_cache.pubkey_cache.get(io, deposit.pubkey),
+                    try getValidatorIndex(.fulu, io, state.epoch_cache.pubkey_cache, state.state.castToFork(.fulu), deposit.pubkey),
                 ))
             {
                 // then find from cache,
