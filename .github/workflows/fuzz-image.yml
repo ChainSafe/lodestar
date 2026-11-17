@@ -30,6 +30,7 @@ on:
       - "test/fuzz/**"
       - "build.zig"
       - "build.zig.zon"
+      - "rust-toolchain.toml"
       - "Dockerfile.fuzz"
       - "Dockerfile.fuzz.dockerignore"
       - ".github/workflows/fuzz-image.yml"
