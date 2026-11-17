@@ -68,6 +68,7 @@ const CLIArgs = struct {
     late_max: ?u32 = null,
     // Scripted faults, repeatable
     sleep: Repeat(NodeWindow) = .{},
+    crash: Repeat(NodeWindow) = .{},
     pause: Repeat(NodeWindow) = .{},
     storage_fail: Repeat(NodeWindow) = .{},
     partition: Repeat(Partition) = .{},
@@ -114,7 +115,8 @@ const help_text =
     \\  --drop-rate, --late-rate, --mutation-rate   per mille      100, 200, 500
     \\  --late-max D              greatest late delay, instants   max(delta+1, 32)
     \\Scripted faults
-    \\  --sleep NODE@FROM-UNTIL          crash and restart (AC restart on wake)
+    \\  --sleep NODE@FROM-UNTIL          no ticks or reception; memory kept, AC restarts on wake
+    \\  --crash NODE@FROM-UNTIL          as sleep, but memory is lost and rebuilt from storage
     \\  --pause NODE@FROM-UNTIL          late host, catches up on resume
     \\  --storage-fail NODE@FROM-UNTIL   durable writes fail
     \\  --partition 0,1:2,3@FROM-UNTIL   cut listed groups from each other
@@ -407,6 +409,7 @@ fn resolve(seed: u64, cli: *const CLIArgs) !Resolved {
     };
     const nodes = n + twins;
     for (cli.sleep.slice()) |window| try checkWindow(window, nodes, end);
+    for (cli.crash.slice()) |window| try checkWindow(window, nodes, end);
     for (cli.pause.slice()) |window| try checkWindow(window, nodes, end);
     for (cli.storage_fail.slice()) |window| try checkWindow(window, nodes, end);
     for (cli.partition.slice()) |partition| {
@@ -474,6 +477,10 @@ fn runWith(allocator: std.mem.Allocator, resolved: *const Resolved, cli: *const 
 fn script(sim: *Simulator, cli: *const CLIArgs, nodes: u32) !void {
     for (cli.sleep.slice()) |window| {
         try sim.schedule(window.from, .{ .sleep = window.node });
+        try sim.schedule(window.until, .{ .wake = window.node });
+    }
+    for (cli.crash.slice()) |window| {
+        try sim.schedule(window.from, .{ .crash = window.node });
         try sim.schedule(window.until, .{ .wake = window.node });
     }
     for (cli.pause.slice()) |window| {

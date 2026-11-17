@@ -286,6 +286,61 @@ test "simulation: a child refused for a missing parent is kept and accepted when
     }
 }
 
+test "simulation: a crashed node rebuilt from storage equals the node that only slept" {
+    var digests: [2][4]types.Root = undefined;
+    for ([_]bool{ false, true }, 0..) |crash, run| {
+        const sim = try Simulator.create(testing.allocator, &config);
+        defer sim.destroy();
+        try sim.schedule(200, if (crash) .{ .crash = 2 } else .{ .sleep = 2 });
+        try sim.schedule(264, .{ .wake = 2 });
+        try sim.runUntil(200);
+        // The node goes down with blocks, pool entries, a signing record and a moved AC record.
+        const storage = &sim.replicas[2].storage;
+        try testing.expect(sim.node(2).fg.T.count > 8);
+        try testing.expect(storage.journal.count > sim.node(2).fg.T.count);
+        try testing.expect(storage.record.sent.count > 0);
+        try testing.expect(storage.ac != null);
+        try testing.expectEqual(crash, sim.replicas[2].crashed);
+        try sim.runUntil(264);
+        try testing.expect(!sim.replicas[2].crashed);
+        try testing.expect(sim.node(2).awake);
+        try sim.runUntil(450);
+        for (0..4) |v| {
+            const node = sim.node(@intCast(v));
+            try testing.expect(!node.stopped);
+            try testing.expect(slot(node, &node.fg.F.root) > 12);
+            digests[run][v] = Hash.nodeDigest(node);
+        }
+    }
+    for (0..4) |v| try testing.expectEqual(digests[0][v], digests[1][v]);
+}
+
+test "simulation: a restore replays the journal in order and loses only kept orphans" {
+    const sim = try Simulator.create(testing.allocator, &config);
+    defer sim.destroy();
+    var parent: FG.Block = .{ .root = undefined, .parent = config.protocol.B_gen, .slot = 1, .proposer = 1 };
+    parent.root = Hash.blockRoot(&parent);
+    var child: FG.Block = .{ .root = undefined, .parent = parent.root, .slot = 2, .proposer = 2 };
+    child.root = Hash.blockRoot(&child);
+    // Node 0 misses the parent, so it keeps the child and never accepts it.
+    _ = try sim.injectBlock(32, 2, 1, &child, true);
+    try sim.schedule(100, .{ .crash = 0 });
+    try sim.schedule(104, .{ .wake = 0 });
+    try sim.runUntil(100);
+    try testing.expectEqual(@as(u32, 1), sim.node(0).orphans.count);
+    const blocks = sim.node(0).fg.T.count;
+    const pool = sim.node(0).pool.entries.count;
+    const finalized = sim.node(0).fg.F.root;
+    try testing.expect(blocks > 4);
+    try sim.runUntil(104);
+    const node = sim.node(0);
+    try testing.expectEqual(@as(u32, 0), node.orphans.count);
+    try testing.expectEqual(blocks, node.fg.T.count);
+    try testing.expectEqual(pool, node.pool.entries.count);
+    try testing.expectEqual(finalized, node.fg.F.root);
+    try testing.expectEqual(sim.replicas[0].storage.record.sent.count, node.Lambda.sent.count);
+}
+
 test "simulation: seeded delivery and controls replay protocol snapshots and complete event order" {
     var options = config;
     options.blocks_votes = .{ .min = 0, .max = 4 };
@@ -408,16 +463,20 @@ test "simulation: signature witnesses do not authenticate forged or malformed at
     try testing.expectEqual(@as(u32, 1), sim.node(1).pool.entries.count);
 }
 
-test "simulation: a failed durable write stops the run before attestation broadcast" {
+test "simulation: a failed durable write stops the node before that tick sends anything" {
     const sim = try Simulator.create(testing.allocator, &config);
     defer sim.destroy();
-    try sim.schedule(55, .{ .storage_failure = .{ .node = 0, .enabled = true } });
+    try sim.schedule(56, .{ .storage_failure = .{ .node = 0, .enabled = true } });
     try testing.expectError(error.PersistenceFailed, sim.runUntil(56));
     try testing.expect(sim.failed);
     try testing.expect(sim.node(0).stopped);
-    try testing.expectEqual(@as(u32, 1), sim.node(0).Lambda.sent.count);
+    // The tick's first write is the AC record, ahead of the vote and of the attestation.
+    try testing.expect(!sim.node(0).ac.durable().eql(&sim.node(0).ac_saved));
     try testing.expectEqual(@as(u32, 0), sim.replicas[0].storage.record.sent.count);
-    for (sim.packets.constSlice()) |*packet| try testing.expect(packet.body != .attestation);
+    for (sim.packets.constSlice()) |*packet| {
+        try testing.expect(packet.body != .attestation);
+        try testing.expect(packet.sender != 0 or packet.created != 56);
+    }
     try testing.expectError(error.IncompleteRun, sim.runUntil(60));
 }
 

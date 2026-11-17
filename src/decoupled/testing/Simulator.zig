@@ -171,6 +171,8 @@ pub const Verdict = enum { passed, property_failure, incomplete };
 pub const Link = struct { from: u32, to: u32, channel: Channel, connected: bool };
 pub const Control = union(enum) {
     sleep: u32,
+    /// A sleep that also loses the node's memory: the next wake rebuilds the Node from Storage.
+    crash: u32,
     wake: u32,
     link: Link,
     storage_failure: struct { node: u32, enabled: bool },
@@ -201,6 +203,7 @@ pub const Kind = enum {
     /// The answer to a request: node is the peer asked, peer the requester. value is 1 with the
     /// parent's packet when served, 0 with the request's packet when the peer lacks the parent.
     block_response,
+    crash,
 };
 pub const Trace = struct {
     time: Time,
@@ -254,6 +257,8 @@ const Replica = struct {
     validator: u32,
     /// Set by a host_pause control until the resume instant.
     paused_until: ?Time,
+    /// Set by a crash control until the wake that restores the node.
+    crashed: bool,
 };
 const Block = struct {
     root: Root,
@@ -394,6 +399,7 @@ pub fn create(allocator: std.mem.Allocator, config: *const Config) Error!*Simula
         replica.h_max_seen = replica.node.fg.h_max;
         replica.last_finalization = 0;
         replica.paused_until = null;
+        replica.crashed = false;
     }
     return self;
 }
@@ -448,7 +454,7 @@ pub fn all(self: *const Simulator) u64 {
 pub fn schedule(self: *Simulator, time: Time, action: Control) Error!void {
     try self.checkInput(time);
     switch (action) {
-        .sleep, .wake => |v| try self.checkNode(v),
+        .sleep, .crash, .wake => |v| try self.checkNode(v),
         .storage_failure => |f| try self.checkNode(f.node),
         .host_pause => |pause| {
             try self.checkNode(pause.node);
@@ -528,7 +534,8 @@ pub fn digest(self: *const Simulator) Root {
         h.add(&replica.state_source);
         h.add(&replica.storage.record);
         h.add(.{ replica.storage.fail_writes, replica.previous_F, replica.h_max_seen, replica.last_finalization, replica.validator });
-        h.add(.{ replica.paused_until, replica.node.late_ticks });
+        h.add(.{ replica.paused_until, replica.node.late_ticks, replica.crashed });
+        h.add(.{ &replica.storage.journal, &replica.storage.ac });
     }
     h.add(self.trace.constSlice());
     return h.finish();
@@ -661,7 +668,7 @@ fn descends(self: *const Simulator, ancestor: *const Root, descendant: *const Ro
     return false;
 }
 
-fn findBlock(self: *const Simulator, root: *const Root) ?u32 {
+pub fn findBlock(self: *const Simulator, root: *const Root) ?u32 {
     for (self.blocks.constSlice(), 0..) |*B, i| {
         if (std.mem.eql(u8, &B.root, root)) return @intCast(i);
     }
@@ -767,8 +774,9 @@ fn applyControl(self: *Simulator, action: Control, index: u32) Error!void {
             }
             try self.log(.{ .time = self.now, .kind = .host_pause, .node = pause.node, .value = pause.until });
         },
-        .sleep => |v| {
+        .sleep, .crash => |v| {
             try self.replicas[v].node.sleep();
+            self.replicas[v].crashed = action == .crash;
             if (!self.isFaulty(self.replicas[v].validator)) self.last_honest_churn = self.now;
             for (self.pending.slice()) |*p| {
                 if (p.to == v and p.due != null) {
@@ -782,10 +790,10 @@ fn applyControl(self: *Simulator, action: Control, index: u32) Error!void {
                     });
                 }
             }
-            try self.log(.{ .time = self.now, .kind = .sleep, .node = v });
+            try self.log(.{ .time = self.now, .kind = if (action == .crash) .crash else .sleep, .node = v });
         },
         .wake => |v| {
-            try self.replicas[v].node.wake();
+            if (self.replicas[v].crashed) try self.restoreReplica(v) else try self.replicas[v].node.wake();
             if (!self.isFaulty(self.replicas[v].validator)) self.last_honest_churn = self.now;
             for (self.pending.slice()) |*p| {
                 if (p.to == v and p.due == null) {
@@ -804,6 +812,29 @@ fn applyControl(self: *Simulator, action: Control, index: u32) Error!void {
             if (self.now % self.config.protocol.ac.delta != 0) try self.observe(v);
         },
     }
+}
+
+/// Nothing of the crashed Node survives: it and its chain states are rebuilt from Storage.
+fn restoreReplica(self: *Simulator, v: u32) Error!void {
+    const replica = &self.replicas[v];
+    const protocol_config = &self.config.protocol;
+    replica.node = undefined;
+    try replica.state_source.init(&.{
+        .B_gen = protocol_config.B_gen,
+        .n = protocol_config.n,
+        .K_W = protocol_config.fg.K_W,
+        .delta_t = protocol_config.fg.delta_t,
+    });
+    var protocol = protocol_config.*;
+    protocol.val_index = replica.validator;
+    replica.node.restore(&protocol, &.{
+        .clock = &replica.clock,
+        .transport = &replica.transport,
+        .storage = &replica.storage,
+        .signer = &replica.signer,
+        .state_source = &replica.state_source,
+    }) catch |err| return self.failure orelse err;
+    replica.crashed = false;
 }
 
 /// The paused host calls advance at the resume instant, before this instant's deliveries, and then
@@ -1406,6 +1437,12 @@ fn emit(self: *Simulator, sender: u32, body: Body) Error!void {
         .body = body,
     });
     try self.multicast(index, self.all() & ~bit(sender));
+}
+/// A block some Node accepted, as its Storage returns it. Acceptance verified every carried vote.
+pub fn acceptedBlock(self: *Simulator, index: u32) FG.Block {
+    const stored = &self.blocks.buffer[index];
+    for (stored.votes.slice()) |*v| v.authenticated = true;
+    return stored.view();
 }
 fn storeBlock(self: *Simulator, B: *const FG.Block) Error!u32 {
     if (B.ac_payload.votes.len > limits.max_vote_set or

@@ -29,9 +29,10 @@ is scheduled yet:
 - **State transition:** use upstream Lodestar's Zig state transition as the production
   `StateSource` once it has the Goldilocks fork. Weights and proposer assignment then come from
   the state instead of `Signer`. This workspace must first move onto Lodestar's `src/`.
-- **Crash and restart:** sleep keeps the whole `Node` in memory, and only the signing record goes
-  through `Storage`. Model a crash that drops the `Node`, loses unsynced writes, and rebuilds from
-  `Storage`.
+- **Crash and restart:** a crash now drops the `Node` and `restore()` rebuilds it from `Storage`
+  ([NODE.md](./NODE.md)). Still missing: a crash inside a call, between a write and the send that
+  follows it; writes that are lost or torn because they were not yet synced; and a checkpoint, so
+  that restore does not replay from genesis.
 - **Client-visible checks:** make the cluster checks read a per-tick history of each node's
   finalized, confirmed and head roots, not `node.fg` and `node.ac` fields.
 - **Wire encoding:** the transport passes Zig structs by pointer, so no codec runs in simulation.
@@ -45,26 +46,26 @@ is scheduled yet:
 
 ## Current module
 
-| Component                                                  | Status                                                                                       |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `ac/available_chain.zig` and sibling tests                 | Section 3 AC, all nine interface calls, moving-frame tests                                   |
-| `ac/VoteSet.zig` and sibling tests                         | Derived vote/support storage used by the AC                                                  |
-| `fg/FinalityGadget.zig` and sibling tests                  | Owned accepted blocks, block summaries, caches, and real frames                              |
-| `fg/AttestationPool.zig` and sibling tests                 | Ordered deduplicated pool and proposal selection                                             |
-| `fg/FinalityFrame.zig` and sibling tests                   | Borrowed FG projection and domain-local viability                                            |
-| `fg/ChainState.zig` and sibling tests                      | Figure 5 block transition and height events                                                  |
-| `fg/SigningRecord.zig` and sibling tests                   | Figure 4 validator client and durable record rules                                           |
-| `fg/finality_types.zig` and sibling tests                  | FG parameters, attestation shape, full block inputs, and references                          |
-| `Node.zig`                                                 | Shared coordinator, generic over Clock, Transport, Storage, Signer, and StateSource          |
-| `testing/Simulator.zig`                                    | Seeded clock, bounded network, scripts, replay, cross-node checks, and the seeded fuzz plan  |
-| `testing/{Clock,Transport,Storage,Signer,StateSource}.zig` | Concrete simulation dependencies; StateSource runs ChainState per block                      |
-| `testing/simulator_test.zig`                               | Composed scenarios: progress, stalls, recovery, scripted faults, checks, and fuzz sweeps     |
-| `testing/Hash.zig`                                         | Comptime semantic hashing, not native-memory or production wire encoding                     |
-| `testing/determinism.zig` and sibling tests                | Fails the build when node code reads a clock, randomness, threads, I/O or a hash map         |
-| `roguestar.zig`                                            | Roguestar, the seeded executable: every knob an option, swarm defaults, `--sweep` over seeds |
-| `types.zig`                                                | Shared roots, time, slot, validator index, and vote tuple                                    |
-| `limits.zig`                                               | Explicit supported-run storage bounds                                                        |
-| `root.zig`                                                 | Public exports and test collection                                                           |
+| Component                                                  | Status                                                                                                                           |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `ac/available_chain.zig` and sibling tests                 | Section 3 AC, all nine interface calls, moving-frame tests                                                                       |
+| `ac/VoteSet.zig` and sibling tests                         | Derived vote/support storage used by the AC                                                                                      |
+| `fg/FinalityGadget.zig` and sibling tests                  | Owned accepted blocks, block summaries, caches, and real frames                                                                  |
+| `fg/AttestationPool.zig` and sibling tests                 | Ordered deduplicated pool and proposal selection                                                                                 |
+| `fg/FinalityFrame.zig` and sibling tests                   | Borrowed FG projection and domain-local viability                                                                                |
+| `fg/ChainState.zig` and sibling tests                      | Figure 5 block transition and height events                                                                                      |
+| `fg/SigningRecord.zig` and sibling tests                   | Figure 4 validator client and durable record rules                                                                               |
+| `fg/finality_types.zig` and sibling tests                  | FG parameters, attestation shape, full block inputs, and references                                                              |
+| `Node.zig`                                                 | Shared coordinator, generic over Clock, Transport, Storage, Signer, and StateSource                                              |
+| `testing/Simulator.zig`                                    | Seeded clock, bounded network, scripts, replay, cross-node checks, and the seeded fuzz plan                                      |
+| `testing/{Clock,Transport,Storage,Signer,StateSource}.zig` | Concrete simulation dependencies; StateSource runs ChainState per block; Storage holds the signing record, journal and AC record |
+| `testing/simulator_test.zig`                               | Composed scenarios: progress, stalls, recovery, scripted faults, checks, and fuzz sweeps                                         |
+| `testing/Hash.zig`                                         | Comptime semantic hashing, not native-memory or production wire encoding                                                         |
+| `testing/determinism.zig` and sibling tests                | Fails the build when node code reads a clock, randomness, threads, I/O or a hash map                                             |
+| `roguestar.zig`                                            | Roguestar, the seeded executable: every knob an option, swarm defaults, `--sweep` over seeds                                     |
+| `types.zig`                                                | Shared roots, time, slot, validator index, and vote tuple                                                                        |
+| `limits.zig`                                               | Explicit supported-run storage bounds                                                                                            |
+| `root.zig`                                                 | Public exports and test collection                                                                                               |
 
 See [NODE.md](./NODE.md), [ac/README.md](./ac/README.md), [fg/README.md](./fg/README.md), and
 [testing/README.md](./testing/README.md) for APIs, source mappings, bounds, and coverage.

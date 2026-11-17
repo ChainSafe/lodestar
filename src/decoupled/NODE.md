@@ -27,6 +27,9 @@ The dependency interfaces are the methods Node calls:
 - `Transport.Peer` names the sender of a delivery. `Transport.forwardBlock` passes on a block Node
   accepted from a peer; `requestBlock(peer, root)` and `sendBlock(peer, B)` address one peer.
 - `Storage.persist(Lambda)` returns success only after the validator record is durable.
+- `Storage.appendBlock(B)` and `appendAttestation(a)` add one entry to the journal, and
+  `persistAC(record)` replaces the AC record. Each is durable when it returns.
+- `Storage.loadRecord`, `journalEntry(i)` and `loadAC` read these back for `restore()`.
 - `Signer.proposer(slot)` supplies the fixed proposer assignment.
 - `Signer.verifyVote`, `verifyAttestation`, and `verifyBlock` authenticate their exact inputs.
 - `Signer.prepareBlock` sets the content root and prepares the local proposer signature.
@@ -58,7 +61,8 @@ entry point. A signature result must belong to the exact tuple, signer, and slot
 message. The simulation uses signature witnesses, not real BLS. A client must retain real signatures.
 
 `init` creates a new genesis instance and a fresh signing record. Never use `init` to restart an
-existing validator. Sleep/wake keeps FG and signing state. Disk restoration is separate client work.
+existing validator. Sleep/wake keeps FG and signing state. `restore()` rebuilds a Node from Storage
+after its memory was lost.
 
 ## Order and validation
 
@@ -104,6 +108,28 @@ There is no timer and no retry: a request goes out only when a block arrives, to
 it. A repeat delivery of a kept block asks its own sender. Kept blocks are not protocol state. A
 refused object changes no protocol state; its processing may advance Node's
 clock. `tips()` returns copied roots with the same clock discipline. Direct native FG/AC callers must establish Node's premises.
+
+## Durable state and restore
+
+A Node writes to Storage everything that sleep would have kept, before it acts on it:
+
+- The journal holds, in acceptance order, every accepted block and every attestation admitted to
+  the pool on its own. A block is appended before FG accepts it, an attestation before the pool
+  takes it. Attestations that arrive inside a block are not journaled; replaying the block pools
+  them again.
+- The AC record holds the locks and the confirmation record. Node writes it after a tick changes
+  it and before that tick's vote is sent.
+- The signing record is written before an attestation is sent, as before.
+
+`restore(config, dependencies)` starts from genesis, loads the signing record, replays the journal
+through the state transition, FG and the pool, loads the AC record, and then joins exactly as
+`wake()` does. The caller supplies a StateSource initialized as for `init`. The result equals the
+Node that `wake()` would have resumed, with one difference: kept orphan blocks are gone, because
+they are a cache and are never written.
+
+Limits of this model: every write is atomic and durable on return, so a write that is lost or torn
+by the crash is not modelled; a crash happens between calls, never inside one; and replay starts
+from genesis, with no checkpoint.
 
 ## Lifecycle and errors
 

@@ -248,6 +248,31 @@ workspace does not have, and the rule should travel with the module. The check d
 the named modules the node code may import (`std`, `bounded_array`), and it cannot catch a
 dependency that itself behaves differently between runs.
 
+## A crash loses memory; restore rebuilds from Storage (2026-11-17)
+
+Sleep kept the whole `Node` in memory, so nothing tested what a real restart needs on disk. A
+crash is now a sleep that also discards the `Node` and its chain states. The next wake calls
+`Node.restore`, which rebuilds both from `Storage`.
+
+We made the durable set exactly what the paper keeps across sleep: the FG store, the attestation
+pool, the signing record, and the AC locks with the confirmation record. Storage holds them as a
+journal of accepted blocks and admitted attestations in acceptance order, plus two small records.
+Replaying the journal reproduces the pool's order, which proposals depend on, without storing the
+pool itself. Every write precedes the action that depends on it: the block entry before FG accepts
+the block, the AC record before the tick's vote, the signing record before the attestation.
+
+The test for the durable set is an equivalence. Two runs with the same seed take one node down
+over the same window, one by sleep and one by crash, and every node must end with the same state
+digest. Dropping attestations from the journal makes that test fail, so it is not vacuous.
+
+We rejected storing a snapshot of the pool and FG caches: a snapshot can disagree with the blocks
+it was derived from, and a journal cannot. We also rejected persisting kept orphans; they are a
+cache that block requests refill.
+
+Not modelled yet: a write lost or torn by the crash, a crash between a write and the send that
+follows it, and a checkpoint to avoid replay from genesis. The first two need storage calls that
+complete on a later tick.
+
 Cut/heal controls record their times between public ticks. Consecutive fuzz partitions clear the
 previous partition before applying the next. Queue occupancy and per-instant delivery work have
 separate limits; work exhaustion returns an incomplete-run error. Replay hashes include checker

@@ -63,9 +63,14 @@ pub const Admission = enum {
     unauthenticated,
 };
 pub const Tips = struct { finalized: types.Root, confirmed: types.Root, head: types.Root };
+/// One durable input, in the order Node accepted it. A block borrows Storage's memory until the
+/// next Storage call.
+pub const JournalEntry = union(enum) { block: FG.Block, attestation: FG.Attestation };
 
 /// Clock.now supplies processing time. Signer supplies fixed proposer assignments and authentication.
 /// Transport broadcasts synchronously borrowed objects; Storage.persist completes before send.
+/// Storage also holds the journal and the AC record that restore() rebuilds a Node from; each
+/// write is durable when it returns.
 /// Transport.Peer names the sender of a delivery; requestBlock and sendBlock address one peer.
 /// StateSource runs the chain-state transition (Figure 5) and answers chain-relative attestation
 /// validity; the store reads only its BlockSummary.
@@ -81,7 +86,7 @@ pub fn NodeType(
         const Node = @This();
         pub const Error = FG.Error || AC.Error || AttestationPool.Error || SigningRecord.Error ||
             StateSource.Error || Transport.Error || Storage.Error || Signer.Error ||
-            error{ TimeReversed, HorizonExceeded, TickRequired, TickOrder, Asleep, AlreadyAwake, AlreadyAsleep, Stopped, Reentrant, InvalidProposer, InvalidLocalBlock };
+            error{ TimeReversed, HorizonExceeded, TickRequired, TickOrder, Asleep, AlreadyAwake, AlreadyAsleep, Stopped, Reentrant, InvalidProposer, InvalidLocalBlock, InvalidJournal };
         pub const Dependencies = struct {
             clock: *Clock,
             transport: *Transport,
@@ -102,6 +107,8 @@ pub fn NodeType(
         ac: AC,
         pool: AttestationPool,
         Lambda: SigningRecord,
+        /// The AC record last written to Storage.
+        ac_saved: AC.Durable,
         /// Authenticated blocks refused for an unknown parent, kept until the parent is accepted.
         /// Not protocol state: the paper only permits a later delivery to try again. When full,
         /// the oldest is dropped; a later delivery of one of its descendants asks for it again.
@@ -138,6 +145,7 @@ pub fn NodeType(
                 .R = config.ac.R,
                 .k = config.ac.k,
             });
+            self.ac_saved = self.ac.durable();
             self.fg.init(&.{ .B_gen = config.B_gen });
             self.pool.init();
             try self.Lambda.init(.{ .n = config.n, .val_index = config.val_index });
@@ -192,8 +200,13 @@ pub fn NodeType(
         /// Figure 2, lines 1-7: AC schedule, assigned non-genesis proposal, then FG action.
         fn duties(self: *Node, tick: Time, on_time: bool) Error!void {
             const Phi = try self.fg.toAC(&self.frame_buffer);
-            if (!on_time) return self.ac.onTickLate(&Phi, tick);
-            if (try self.ac.onTick(&Phi, tick)) |vote| try self.transport.broadcastVote(&vote);
+            if (!on_time) {
+                try self.ac.onTickLate(&Phi, tick);
+                return self.saveAC();
+            }
+            const vote = try self.ac.onTick(&Phi, tick);
+            try self.saveAC();
+            if (vote) |v| try self.transport.broadcastVote(&v);
             const s = self.slot();
             if (s > 0 and tick == 4 * self.ac.config.delta * s) {
                 if (try self.proposer(s) == self.Lambda.val_index) try self.proposeBlock();
@@ -250,7 +263,7 @@ pub fn NodeType(
             defer self.busy = false;
             errdefer self.stopped = true;
             if (!a.valid(self.validatorCount()) or !self.signer.verifyAttestation(a)) return false;
-            return self.pool.add(a);
+            return self.admit(a);
         }
 
         /// Sleep may replace a boundary-time tick, but cannot skip an earlier awake tick.
@@ -271,12 +284,63 @@ pub fn NodeType(
             self.busy = true;
             defer self.busy = false;
             errdefer self.stopped = true;
+            try self.join(t);
+        }
+
+        /// Rebuild a Node whose memory was lost from what Storage holds, then join as wake()
+        /// does. The result equals the Node that wake() would have resumed, except that kept
+        /// orphans are gone. The caller supplies a StateSource initialized as for init.
+        pub fn restore(self: *Node, config: *const Config, dependencies: *const Dependencies) Error!void {
+            try self.init(config, dependencies);
+            const t = self.clock.now();
+            try self.checkTime(t);
+            self.busy = true;
+            defer self.busy = false;
+            errdefer self.stopped = true;
+            try self.storage.loadRecord(&self.Lambda);
+            for (0..limits.max_journal) |i| {
+                const entry = self.storage.journalEntry(@intCast(i)) orelse break;
+                switch (entry) {
+                    .block => |*B| {
+                        const assigned = try self.proposer(B.slot);
+                        const summary = try self.state_source.transition(B, assigned) orelse
+                            return error.InvalidJournal;
+                        try self.pool.checkCapacity(B.attestations);
+                        if (!try self.fg.onBlock(B, &summary)) return error.InvalidJournal;
+                        self.pool.absorb(B.attestations);
+                    },
+                    .attestation => |*a| _ = try self.pool.add(a),
+                }
+            }
+            if (self.storage.loadAC()) |saved| {
+                self.ac.restoreDurable(&saved);
+                self.ac_saved = saved;
+            }
+            try self.join(t);
+        }
+
+        fn join(self: *Node, t: Time) Error!void {
             const Phi = try self.fg.toAC(&self.frame_buffer);
             try self.ac.restart(&Phi, t);
             self.t = t;
             const remainder = t % self.ac.config.delta;
             self.next_tick = if (remainder == 0) t else t + self.ac.config.delta - remainder;
             self.awake = true;
+        }
+
+        /// Locks and the confirmation record reach Storage before the tick's vote is sent.
+        fn saveAC(self: *Node) Error!void {
+            const current = self.ac.durable();
+            if (current.eql(&self.ac_saved)) return;
+            try self.storage.persistAC(&current);
+            self.ac_saved = current;
+        }
+
+        /// The journal entry comes first, so a restart rebuilds the pool in the same order.
+        fn admit(self: *Node, a: *const FG.Attestation) Error!bool {
+            if (self.pool.contains(a)) return false;
+            try self.storage.appendAttestation(a);
+            return self.pool.add(a);
         }
 
         /// Queries obey the same tick boundary. An asleep node has no output.
@@ -306,6 +370,7 @@ pub fn NodeType(
             const assigned = try self.proposer(B.slot);
             const summary = try self.state_source.transition(B, assigned) orelse return false;
             try self.pool.checkCapacity(B.attestations);
+            try self.storage.appendBlock(B);
             const accepted = try self.fg.onBlock(B, &summary);
             assert(accepted);
             self.pool.absorb(B.attestations);
@@ -395,7 +460,7 @@ pub fn NodeType(
             const a = try self.Lambda.createAttestation(&input) orelse return;
             try self.storage.persist(&self.Lambda);
             try self.transport.broadcastAttestation(&a);
-            _ = try self.pool.add(&a);
+            _ = try self.admit(&a);
         }
 
         fn checkTime(self: *const Node, t: Time) Error!void {

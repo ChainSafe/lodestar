@@ -92,6 +92,20 @@ pub const AvailableChain = struct {
         equivocator_limit,
     };
     pub const Lock = struct { block: Root, deadline: Time };
+    /// What a restart keeps of A: the locks and the confirmation record.
+    pub const Durable = struct {
+        locks: BoundedArray(Lock, limits.max_slots),
+        latest_confirmed: Root,
+
+        pub fn eql(a: *const Durable, b: *const Durable) bool {
+            if (!rootsEqual(&a.latest_confirmed, &b.latest_confirmed)) return false;
+            if (a.locks.count != b.locks.count) return false;
+            for (a.locks.constSlice(), b.locks.constSlice()) |*x, *y| {
+                if (x.deadline != y.deadline or !rootsEqual(&x.block, &y.block)) return false;
+            }
+            return true;
+        }
+    };
     pub const VoteList = BoundedArray(SignedVote, max_payload_votes);
     pub const SupportList = BoundedArray(Vote, max_payload_votes);
     pub const Proposal = struct {
@@ -286,6 +300,16 @@ pub const AvailableChain = struct {
             candidate = frame.parent(candidate);
         }
         unreachable;
+    }
+
+    pub fn durable(self: *const AvailableChain) Durable {
+        return .{ .locks = self.locks, .latest_confirmed = self.latest_confirmed };
+    }
+
+    /// For a node rebuilt from storage: call after init and before restart.
+    pub fn restoreDurable(self: *AvailableChain, saved: *const Durable) void {
+        self.locks = saved.locks;
+        self.latest_confirmed = saved.latest_confirmed;
     }
 
     /// Wake/restart may skip sleeping ticks. Locks and latest_confirmed retain their old values.

@@ -18,8 +18,9 @@ Roguestar (`roguestar.zig`) is the executable: one seed, every knob an option.
   Without a seed one is drawn at random and printed.
 - A pinned run: `zig build run:roguestar -- 7 --n 4 --delta 4 --byzantine 0 --network 0 --twins 0`.
   Pinned options narrow the swarm without shifting the other draws of the same seed.
-- Scripted faults, repeatable, `NODE@FROM-UNTIL` in instants: `--sleep 2@0-128` (crash and
-  restart), `--pause 1@15-30` (late host), `--storage-fail 0@50-60`, and
+- Scripted faults, repeatable, `NODE@FROM-UNTIL` in instants: `--sleep 2@0-128` (no ticks or
+  reception, memory kept), `--crash 2@0-128` (the same, but memory is lost and the node is
+  rebuilt from its storage at the end), `--pause 1@15-30` (late host), `--storage-fail 0@50-60`, and
   `--partition 0,1:2,3@32-160` (listed groups lose both channels to each other).
 - A sweep over seeds: `zig build run:roguestar -- 1 --sweep 64`. It prints each seed's verdict
   and resolved options and the first failing seed. It exits with an error if a seed fails, is
@@ -65,7 +66,8 @@ Dependencies live beside the simulator:
 
 - `Clock.zig` reads the virtual clock, which advances even while a node sleeps.
 - `Transport.zig` queues copied outgoing objects. It never calls a receiver from a broadcast.
-- `Storage.zig` retains the validator record in memory. Scripted write failures test record-before-send.
+- `Storage.zig` retains the validator record, the journal and the AC record in memory. They are
+  all a crashed node keeps. Scripted write failures stop the node at its next write.
 - `Signer.zig` supplies proposer assignments and checks simulation signature witnesses and roots.
 
 These types implement the methods used by Node. A production dependency is a different concrete

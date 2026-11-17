@@ -21,6 +21,9 @@ pub const max_heights: u32 = max_slots + 1;
 pub const max_attestations_per_block: u32 = 256;
 /// Retained FG pool entries. Section 1.3 forbids age/per-validator eviction; exhaustion ends a run.
 pub const max_attestations: u32 = 2048;
+/// Entries in a node's durable journal: every accepted non-genesis block, and every attestation
+/// admitted to the pool on its own.
+pub const max_journal: u32 = (max_blocks - 1) + max_attestations;
 /// Retained contents in one validator's signing record. Exhaustion must not discard old records.
 pub const max_sent_attestations: u32 = 1024;
 
