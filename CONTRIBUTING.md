@@ -156,37 +156,6 @@ zig build test:spec_tests -Dpreset=mainnet
 The spec test version is pinned in `build.zig.zon`. To run the full Zig test suite,
 use `zig build test`.
 
-### Network Tests and Policy Fixtures
-
-Compile the full module before selecting tests. `network` and `discv5` use a runtime
-filter, so compilation still covers tests outside the selected subset:
-
-```sh
-zig build build-test:network
-scripts/test-shards.sh network --filter="reqresp" --filter="gossip"
-scripts/test-shards.sh network
-scripts/test-shards.sh discv5
-```
-
-Run every shard before committing network changes. Compile-time
-`-D<module>.filters` can omit otherwise unreachable suites; passing `--test-filter`
-to the aggregate build step does not select tests.
-
-`src/network/testdata/lodestar-revision` pins the revision of this repository whose
-TypeScript policy generated the score and subnet parity fixtures. To verify them,
-check out that revision in a separate clean worktree, install its locked
-dependencies, build `@lodestar/beacon-node^...`, and run
-`scripts/check-network-policy.sh <reference-checkout>` from this checkout.
-Change the pin only with reviewed policy changes and regenerate fixtures with the
-reference checkout's `packages/beacon-node/test/utils/nativePolicyFixtures.ts`
-under both `LODESTAR_PRESET=mainnet` and `LODESTAR_PRESET=minimal`. Do not edit the
-fixtures manually. Native resource limits and peer selection are separate policy.
-
-Independent libp2p peers and the published response decoder are pinned in the
-private `test/interop` workspace, not substituted with local Lodestar packages.
-Run `pnpm test:network-interop`, `pnpm test:network-core-interop`, and
-`pnpm test:network-identify-interop` for the loopback suites.
-
 ### Native Bindings
 
 Rebuild the addon before running binding tests:
