@@ -288,116 +288,24 @@ pub fn unshuffleList(comptime T: type, out: []T, seed: []const u8, rounds: i32) 
     return innerShuffleList(T, out, seed, rounds, false);
 }
 
-/// `compute_shuffled_index` for single indices, caching per-round pivots and
-/// source hashes across calls.
-pub const ComputeShuffledIndex = struct {
-    /// The caches below are written until `deinit` and never freed piecemeal,
-    /// so an arena keeps their many small allocations to one teardown.
-    arena: std.heap.ArenaAllocator,
-    /// Lazily computed pivot per round; there are at most `rounds` values.
-    pivot_by_round: []?u32,
-    /// Unmanaged: a managed map would capture a pointer to init's stack frame.
-    source_by_position_by_round: []std.AutoHashMapUnmanaged(u32, [32]u8),
-    /// 32 bytes seed + 1 byte round
-    pivot_buffer: [PIVOT_VIEW_SIZE]u8,
-    /// 32 bytes seed + 1 byte round + 4 bytes position_div
-    source_buffer: [TOTAL_SIZE]u8,
-    index_count: u32,
-    rounds: u32,
-
-    pub fn init(parent_allocator: Allocator, seed: []const u8, index_count: u32, rounds: u32) !ComputeShuffledIndex {
-        if (seed.len != SEED_SIZE) {
-            return error.InvalidSeedLength;
-        }
-
-        var arena = std.heap.ArenaAllocator.init(parent_allocator);
-        errdefer arena.deinit();
-        const allocator = arena.allocator();
-
-        const pivot_by_round = try allocator.alloc(?u32, rounds);
-        @memset(pivot_by_round, null);
-
-        const source_by_position_by_round = try allocator.alloc(std.AutoHashMapUnmanaged(u32, [32]u8), rounds);
-        @memset(source_by_position_by_round, .empty);
-
-        var pivot_buffer = [_]u8{0} ** PIVOT_VIEW_SIZE;
-        var source_buffer = [_]u8{0} ** TOTAL_SIZE;
-        @memcpy(pivot_buffer[0..SEED_SIZE], seed);
-        @memcpy(source_buffer[0..SEED_SIZE], seed);
-
-        return .{
-            .arena = arena,
-            .pivot_by_round = pivot_by_round,
-            .source_by_position_by_round = source_by_position_by_round,
-            .pivot_buffer = pivot_buffer,
-            .source_buffer = source_buffer,
-            .index_count = index_count,
-            .rounds = rounds,
-        };
-    }
-
-    pub fn deinit(self: *ComputeShuffledIndex) void {
-        // pivot_by_round and source_by_position_by_round are arena-owned
-        self.arena.deinit();
-    }
-
-    pub fn get(self: *ComputeShuffledIndex, index: u32) !u32 {
-        // u32 wrapping arithmetic mirrors the reference's release-mode u32
-        // arithmetic: for valid inputs (index < index_count) this is
-        // arithmetically identical to non-wrapping math, so out-of-range
-        // indices produce the same (garbage but deterministic) values as the
-        // reference instead of panicking.
-        const index_count: u32 = self.index_count;
-        var permuted: u32 = index;
-
-        for (0..self.rounds) |round| {
-            const pivot: u32 = self.pivot_by_round[round] orelse blk: {
-                self.pivot_buffer[SEED_SIZE] = @intCast(round % 256);
-                var digest: [sha256.digest_length]u8 = undefined;
-                sha256.hash(&self.pivot_buffer, &digest);
-                const pivot: u32 = @intCast(std.mem.readInt(u64, digest[0..8], .little) % index_count);
-                self.pivot_by_round[round] = pivot;
-                break :blk pivot;
-            };
-
-            const flip = (pivot +% index_count -% permuted) % index_count;
-            const position = @max(permuted, flip);
-            const position_div: u32 = @intCast(position / 256);
-
-            const source = try self.source_by_position_by_round[round].getOrPut(self.arena.allocator(), position_div);
-            if (!source.found_existing) {
-                self.source_buffer[SEED_SIZE] = @intCast(round % 256);
-                std.mem.writeInt(u32, self.source_buffer[PIVOT_VIEW_SIZE..][0..POSITION_WINDOW_SIZE], position_div, .little);
-                sha256.hash(&self.source_buffer, source.value_ptr);
-            }
-
-            const byte = source.value_ptr[@intCast(position % 256 / 8)];
-            const bit = (byte >> @intCast(position % 8)) & 1;
-            permuted = if (bit == 1) flip else permuted;
-        }
-
-        return permuted;
-    }
-};
-
-/// `compute_shuffled_index` without `ComputeShuffledIndex`'s source cache, for callers that look
-/// up only a few indices per seed, such as proposer selection, where that cache almost never hits.
+/// `compute_shuffled_index` for single indices of one seed. Each round's pivot is computed once;
+/// the source hashes are not cached, because callers look up too few indices for them to repeat.
 /// It allocates nothing, so each thread can use its own copy.
-pub const ComputeShuffledIndexUncached = struct {
-    pub const max_rounds = 256;
+pub const ComputeShuffledIndex = struct {
+    /// A round hashes only its low byte, so the pivots repeat every 256 rounds.
+    const distinct_rounds = 256;
 
-    pivots: [max_rounds]u32,
+    pivots: [distinct_rounds]u32,
     /// 32 bytes seed + 1 byte round + 4 bytes position_div
     source_buffer: [TOTAL_SIZE]u8,
     index_count: u32,
     rounds: u32,
 
-    pub fn init(seed: []const u8, index_count: u32, rounds: u32) ShufflingError!ComputeShuffledIndexUncached {
+    pub fn init(seed: []const u8, index_count: u32, rounds: u32) ShufflingError!ComputeShuffledIndex {
         if (seed.len != SEED_SIZE) return error.InvalidSeedLength;
         if (index_count == 0) return error.InvalidActiveIndicesLength;
-        if (rounds > max_rounds) return error.InvalidNumberOfRounds;
 
-        var self: ComputeShuffledIndexUncached = .{
+        var self: ComputeShuffledIndex = .{
             .pivots = undefined,
             .source_buffer = undefined,
             .index_count = index_count,
@@ -405,7 +313,7 @@ pub const ComputeShuffledIndexUncached = struct {
         };
         var pivot_buffer: [PIVOT_VIEW_SIZE]u8 = undefined;
         @memcpy(pivot_buffer[0..SEED_SIZE], seed);
-        for (self.pivots[0..rounds], 0..) |*pivot, round| {
+        for (self.pivots[0..@min(rounds, distinct_rounds)], 0..) |*pivot, round| {
             pivot_buffer[SEED_SIZE] = @intCast(round);
             var digest: [sha256.digest_length]u8 = undefined;
             sha256.hash(&pivot_buffer, &digest);
@@ -415,14 +323,18 @@ pub const ComputeShuffledIndexUncached = struct {
         return self;
     }
 
-    /// Same arithmetic as `ComputeShuffledIndex.get`.
-    pub fn get(self: *ComputeShuffledIndexUncached, index: u32) u32 {
+    /// u32 wrapping arithmetic mirrors the reference's release-mode u32 arithmetic: for valid
+    /// inputs (index < index_count) it is identical to non-wrapping math, so out-of-range indices
+    /// produce the same (garbage but deterministic) values as the reference instead of panicking.
+    pub fn get(self: *ComputeShuffledIndex, index: u32) u32 {
         const index_count = self.index_count;
         var permuted: u32 = index;
-        for (self.pivots[0..self.rounds], 0..) |pivot, round| {
+        for (0..self.rounds) |round| {
+            const round_byte: u8 = @truncate(round);
+            const pivot = self.pivots[round_byte];
             const flip = (pivot +% index_count -% permuted) % index_count;
             const position = @max(permuted, flip);
-            self.source_buffer[SEED_SIZE] = @intCast(round);
+            self.source_buffer[SEED_SIZE] = round_byte;
             std.mem.writeInt(u32, self.source_buffer[PIVOT_VIEW_SIZE..][0..POSITION_WINDOW_SIZE], position / 256, .little);
             var source: [sha256.digest_length]u8 = undefined;
             sha256.hash(&self.source_buffer, &source);
@@ -443,7 +355,6 @@ pub const ByteCount = enum(u8) {
 /// Fills caller-owned `out` with indices weighted by effective balance.
 /// `out` must not alias the inputs. An error may leave it partially written.
 pub fn getCommitteeIndices(
-    allocator: Allocator,
     seed: []const u8,
     active_indices: []const u32,
     effective_balance_increments: []const u16,
@@ -471,11 +382,7 @@ pub fn getCommitteeIndices(
     };
     const max_effective_balance_increment = @divTrunc(max_effective_balance, effective_balance_increment);
 
-    var compute_shuffled_index = try ComputeShuffledIndex.init(allocator, seed, @intCast(active_indices.len), rounds);
-    defer compute_shuffled_index.deinit();
-
-    var shuffled_result = std.AutoHashMap(u32, u32).init(allocator);
-    defer shuffled_result.deinit();
+    var compute_shuffled_index = try ComputeShuffledIndex.init(seed, @intCast(active_indices.len), rounds);
 
     var i: u32 = 0;
     var count: usize = 0;
@@ -488,12 +395,7 @@ pub fn getCommitteeIndices(
 
     while (count < out.len) {
         const index: u32 = @intCast(i % active_indices.len);
-        const shuffled = try shuffled_result.getOrPut(index);
-        if (!shuffled.found_existing) {
-            shuffled.value_ptr.* = try compute_shuffled_index.get(index);
-        }
-        const shuffled_index = shuffled.value_ptr.*;
-        const candidate_index = active_indices[shuffled_index];
+        const candidate_index = active_indices[compute_shuffled_index.get(index)];
 
         if (i % hash_increment == 0) {
             std.mem.writeInt(u32, cached_hash_input[SEED_SIZE..][0..4], i / hash_increment, .little);
@@ -525,7 +427,6 @@ pub fn getCommitteeIndices(
 }
 
 pub fn computeProposerIndex(
-    allocator: Allocator,
     seed: []const u8,
     active_indices: []const u32,
     effective_balance_increments: []const u16,
@@ -536,7 +437,6 @@ pub fn computeProposerIndex(
 ) !u32 {
     var indices: [1]u32 = undefined;
     try getCommitteeIndices(
-        allocator,
         seed,
         active_indices,
         effective_balance_increments,
@@ -550,7 +450,6 @@ pub fn computeProposerIndex(
 }
 
 pub fn computeProposerIndexElectra(
-    allocator: Allocator,
     seed: []const u8,
     active_indices: []const u32,
     effective_balance_increments: []const u16,
@@ -559,7 +458,6 @@ pub fn computeProposerIndexElectra(
     rounds: u32,
 ) !u32 {
     return computeProposerIndex(
-        allocator,
         seed,
         active_indices,
         effective_balance_increments,
@@ -653,7 +551,6 @@ pub fn computeSyncCommitteeIndicesInto(
         );
     }
     return getCommitteeIndices(
-        allocator,
         seed,
         active_indices,
         effective_balance_increments,

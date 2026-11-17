@@ -29,7 +29,7 @@ fn ProposerSlots(comptime fork_seq: ForkSeq) type {
         active_indices: []const u32,
         effective_balance_increments: []const u16,
         out: []ValidatorIndex,
-        errors: []?ComputeIndexUtils.ComputeProposerIndexError,
+        errors: []?ComputeIndexUtils.ComputeCommitteeIndicesError,
 
         // Runs on several threads at once and writes only slot `i` of `out` and `errors`.
         fn computeSlot(self: *const @This(), i: usize) void {
@@ -70,7 +70,7 @@ pub fn computeProposers(
     out: []ValidatorIndex,
 ) !void {
     std.debug.assert(out.len == preset.SLOTS_PER_EPOCH);
-    var errors: [preset.SLOTS_PER_EPOCH]?ComputeIndexUtils.ComputeProposerIndexError = .{null} ** preset.SLOTS_PER_EPOCH;
+    var errors: [preset.SLOTS_PER_EPOCH]?ComputeIndexUtils.ComputeCommitteeIndicesError = .{null} ** preset.SLOTS_PER_EPOCH;
     const slots: ProposerSlots(fork_seq) = .{
         .epoch_seed = epoch_seed,
         .start_slot = computeStartSlotAtEpoch(epoch),
@@ -106,7 +106,6 @@ pub fn getNextSyncCommitteeIndices(comptime fork: ForkSeq, allocator: Allocator,
         for (indices, out) |index, *dest| dest.* = index;
     } else {
         try computeSyncCommitteeIndices(
-            allocator,
             &seed,
             active_indices,
             effective_balance_increments.items,

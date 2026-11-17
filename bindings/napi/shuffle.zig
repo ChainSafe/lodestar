@@ -56,7 +56,6 @@ pub fn computeProposerIndex(
     rounds: js.Number,
 ) !js.Number {
     const result = try sons.computeProposerIndex(
-        allocator,
         try seed.toSlice(),
         try active_indices.toSlice(),
         try effective_balance_increments.toSlice(),
