@@ -6,6 +6,7 @@ const Control = @import("control.zig").Control;
 const support = @import("control_test_support.zig");
 const rr = @import("../reqresp/root.zig");
 const Now = @import("../types.zig").Now;
+const spe = @import("preset").preset.SLOTS_PER_EPOCH;
 
 test "control disconnect returns the original closing state and refuses stale connections" {
     const a = std.testing.allocator;
@@ -92,29 +93,57 @@ test "peer control relevance boundary roots forks and availability" {
     var io: support.Io = .{};
     try io.init();
     defer io.deinit();
+    const slot = 6 * spe;
     var local: t.LocalState = .{};
     local.status.finalized_epoch = 4;
     local.status.finalized_root = @splat(1);
     var remote = local.status;
-    remote.head_slot = 11;
-    try std.testing.expectEqual(@as(?t.DisconnectReason, null), try statusVerdict(&io, &local, &remote, 10));
-    remote.head_slot = 12;
-    try std.testing.expectEqual(t.DisconnectReason.future_head, (try statusVerdict(&io, &local, &remote, 10)).?);
-    remote.head_slot = 10;
+    remote.head_slot = slot + 1;
+    try std.testing.expectEqual(@as(?t.DisconnectReason, null), try statusVerdict(&io, &local, &remote, slot));
+    remote.head_slot = slot + 2;
+    try std.testing.expectEqual(t.DisconnectReason.future_head, (try statusVerdict(&io, &local, &remote, slot)).?);
+    remote.head_slot = slot;
     remote.fork_digest[0] = 1;
-    try std.testing.expectEqual(t.DisconnectReason.incompatible_fork, (try statusVerdict(&io, &local, &remote, 10)).?);
+    try std.testing.expectEqual(t.DisconnectReason.incompatible_fork, (try statusVerdict(&io, &local, &remote, slot)).?);
     remote.fork_digest[0] = 0;
     remote.finalized_root = @splat(2);
-    try std.testing.expectEqual(t.DisconnectReason.finalized_mismatch, (try statusVerdict(&io, &local, &remote, 10)).?);
+    try std.testing.expectEqual(t.DisconnectReason.finalized_mismatch, (try statusVerdict(&io, &local, &remote, slot)).?);
     remote.finalized_epoch = 3;
-    try std.testing.expect(try statusVerdict(&io, &local, &remote, 10) == null);
+    try std.testing.expect(try statusVerdict(&io, &local, &remote, slot) == null);
     remote.finalized_epoch = 4;
     remote.finalized_root = @splat(0);
-    try std.testing.expect(try statusVerdict(&io, &local, &remote, 10) == null);
+    try std.testing.expectEqual(t.DisconnectReason.finalized_mismatch, (try statusVerdict(&io, &local, &remote, slot)).?);
+    remote.finalized_epoch = 3;
+    try std.testing.expectEqual(t.DisconnectReason.finalized_mismatch, (try statusVerdict(&io, &local, &remote, slot)).?);
+    remote.finalized_epoch = 0;
+    try std.testing.expect(try statusVerdict(&io, &local, &remote, slot) == null);
+    remote.finalized_epoch = 4;
+    remote.finalized_root = @splat(2);
+    local.status.finalized_root = @splat(0);
+    try std.testing.expect(try statusVerdict(&io, &local, &remote, slot) == null);
+    local.status.finalized_root = @splat(1);
+    remote.finalized_root = @splat(1);
     local.fork.fork = .fulu;
-    try std.testing.expectEqual(t.DisconnectReason.missing_availability, (try statusVerdict(&io, &local, &remote, 10)).?);
+    try std.testing.expectEqual(t.DisconnectReason.missing_availability, (try statusVerdict(&io, &local, &remote, slot)).?);
     remote.earliest_available_slot = 0;
-    try std.testing.expect(try statusVerdict(&io, &local, &remote, 10) == null);
+    try std.testing.expect(try statusVerdict(&io, &local, &remote, slot) == null);
+}
+
+test "peer control relevance bounds the remote finalized epoch by the clock" {
+    var io: support.Io = .{};
+    try io.init();
+    defer io.deinit();
+    const local: t.LocalState = .{};
+    var remote = local.status;
+    remote.finalized_root = @splat(1);
+    remote.finalized_epoch = 1;
+    try std.testing.expectEqual(t.DisconnectReason.future_head, (try statusVerdict(&io, &local, &remote, 0)).?);
+    try std.testing.expectEqual(t.DisconnectReason.future_head, (try statusVerdict(&io, &local, &remote, 3 * spe - 2)).?);
+    try std.testing.expect(try statusVerdict(&io, &local, &remote, 3 * spe - 1) == null);
+    remote.finalized_epoch = 2;
+    try std.testing.expectEqual(t.DisconnectReason.future_head, (try statusVerdict(&io, &local, &remote, 3 * spe - 1)).?);
+    remote.finalized_epoch = std.math.maxInt(u64);
+    try std.testing.expectEqual(t.DisconnectReason.future_head, (try statusVerdict(&io, &local, &remote, std.math.maxInt(u64))).?);
 }
 
 /// Delivers the remote Status as an inbound request on a fresh connection and returns the close

@@ -16,6 +16,7 @@ const types = @import("../types.zig");
 const time = @import("../time.zig");
 const Router = @import("../router.zig").Router;
 const Engine = @import("../quic/Engine.zig");
+const preset = @import("preset").preset;
 
 const health_probe_count = @typeInfo(Control.HealthProbe).@"enum".fields.len;
 const ConnectionState = struct {
@@ -873,9 +874,13 @@ fn relevance(
     if (remote.head_slot > current_slot +| 1) return .future_head;
     if (local.fork.fork.gte(.fulu) and remote.earliest_available_slot == null)
         return .missing_availability;
+    // A checkpoint finalizes no earlier than the start of its epoch + 2.
+    const finalized_epoch_max = ((current_slot +| 1) / preset.SLOTS_PER_EPOCH) -| 2;
+    if (remote.finalized_epoch > finalized_epoch_max) return .future_head;
     const zero: [32]u8 = @splat(0);
+    const remote_root_zero = std.mem.eql(u8, &remote.finalized_root, &zero);
+    if (remote.finalized_epoch > 0 and remote_root_zero) return .finalized_mismatch;
     if (remote.finalized_epoch == local.status.finalized_epoch and
-        !std.mem.eql(u8, &remote.finalized_root, &zero) and
         !std.mem.eql(u8, &local.status.finalized_root, &zero) and
         !std.mem.eql(u8, &remote.finalized_root, &local.status.finalized_root))
         return .finalized_mismatch;
