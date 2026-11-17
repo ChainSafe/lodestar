@@ -98,35 +98,40 @@ zig build run-bls_aggregate_sig
 
 ### Running targets in a loop
 
-`fuzz-loop.sh` runs fuzzers in parallel, [minimizes the corpus]()
-with `afl-cmin` after each round, and repeats indefinitely:
+`fuzz-loop.sh` keeps afl-fuzz running for each target: a main instance plus
+optional secondaries that share `afl-out/<target>`. Restarting resumes the
+existing instances.
 
 ```sh
 ./fuzz-loop.sh --help
-Usage: ./fuzz-loop.sh [targets...]
+Usage: ./fuzz-loop.sh [--status | --stop | --cmin] [target[=instances]...]
 
-Groups:  all, ssz, bls
-Targets: ssz_basic ssz_bitlist ssz_bitvector ssz_bytelist ssz_containers ssz_lists bls_public_key bls_signature bls_aggregate_pk bls_aggregate_sig
+Groups:  all, ssz, bls, discv5, network
+
+Options:
+  --status   print per-instance statistics for the selected targets
+  --stop     stop the running instances of the selected targets
+  --cmin     minimize the selected targets' queues into corpus/<target>-cmin
 
 Examples:
-  ./fuzz-loop.sh                    # fuzz all targets
-  ./fuzz-loop.sh ssz                # fuzz all SSZ targets
-  ./fuzz-loop.sh bls                # fuzz all BLS targets
-  ./fuzz-loop.sh ssz bls_signature  # mix groups and individual targets
-
-Environment:
-  ROUND_DURATION=3600               # seconds per round (default: 3600)
+  ./fuzz-loop.sh network                                  # one instance per network target
+  ./fuzz-loop.sh network_quic_session=3 network_wire=2    # per-target instance counts
+  INSTANCES=2 ./fuzz-loop.sh ssz                          # default count for every target
+  TIMEOUT_MS=1000 ./fuzz-loop.sh network_gossip_sessions  # fixed per-run timeout
+  ./fuzz-loop.sh --status network                         # statistics without stopping
+  ./fuzz-loop.sh --stop                                   # stop everything under afl-out
 ```
 
-Logs are written to `logs/<target>.log`. Crashes are reported at the end of
-each round; run `./replay-crashes.sh` to inspect them.
+Logs are written to `logs/<target>.<instance>.log`; run `./replay-crashes.sh`
+to inspect crashes.
 
 ## Finding Crashes and Hangs
 
-After (or during) a run, results are written to `afl-out/<target>/default/`:
+After (or during) a run, results are written to `afl-out/<target>/<instance>/`
+(`main`, `s1`, ... from `fuzz-loop.sh`; `default` for a run started by hand):
 
 ```
-afl-out/ssz_basic/default/
+afl-out/ssz_basic/main/
 ├── crashes/ # Inputs that triggered crashes
 ├── hangs/   # Inputs that triggered hangs/timeouts
 └── queue/   # All interesting inputs (the evolved corpus)
@@ -141,7 +146,7 @@ issue. The filename encodes metadata about how it was found (e.g.
 Replay any crashing input by piping it into the harness:
 
 ```sh
-cat afl-out/ssz_basic/default/crashes/<filename> | __AFL_DEFER_FORKSRV=1 zig-out/bin/fuzz-ssz_basic
+cat afl-out/ssz_basic/main/crashes/<filename> | __AFL_DEFER_FORKSRV=1 zig-out/bin/fuzz-ssz_basic
 ```
 
 `__AFL_DEFER_FORKSRV=1` is required outside `afl-fuzz`: the harness starts the
@@ -150,7 +155,7 @@ already up" before reading any input.
 
 ## Corpus Management
 
-After a fuzzing run, the queue in `afl-out/<target>/default/queue/` typically
+After a fuzzing run, the queue in `afl-out/<target>/<instance>/queue/` typically
 contains many redundant inputs. Use `afl-cmin` to find the smallest
 subset that preserves full edge coverage, and `afl-tmin` to shrink
 individual test cases.
@@ -176,7 +181,7 @@ Reduce the evolved queue to a minimal set covering all discovered edges:
 
 ```sh
 AFL_NO_FORKSRV=1 afl-cmin.bash \
-  -i afl-out/ssz_basic/default/queue \
+  -i afl-out/ssz_basic/main/queue \
   -o corpus/ssz_basic-cmin \
   -- zig-out/bin/fuzz-ssz_basic
 ```
