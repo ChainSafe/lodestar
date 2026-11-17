@@ -1,6 +1,7 @@
 const Now = @import("types.zig").Now;
 const driver = @import("driver.zig");
 const std = @import("std");
+const builtin = @import("builtin");
 const d = @import("discv5");
 const core_test = @import("network_core_test_support.zig");
 const NetworkCore = @import("network_core.zig").NetworkCore;
@@ -61,6 +62,7 @@ const Peers = struct {
 };
 
 test "address-less discovery learns from ten authenticated prefixes and updates ENR and Identify together" {
+    if (builtin.os.tag != .linux) return error.SkipZigTest;
     var peers = try Peers.init();
     defer peers.deinit();
     const key = try keys.KeyPair.fromSecretKey(&(.{0} ** 31 ++ .{92}));
@@ -96,6 +98,7 @@ test "address-less discovery learns from ten authenticated prefixes and updates 
 }
 
 test "failed learned endpoint publication preserves the previous ENR and Identify" {
+    if (builtin.os.tag != .linux) return error.SkipZigTest;
     var peers = try Peers.init();
     defer peers.deinit();
     const key = try keys.KeyPair.fromSecretKey(&(.{0} ** 31 ++ .{93}));

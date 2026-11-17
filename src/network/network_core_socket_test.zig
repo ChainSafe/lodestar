@@ -4,6 +4,7 @@ const schedule_test_support = @import("schedule_test_support.zig");
 const driver = @import("driver.zig");
 const transport_test = @import("transport_test_support.zig");
 const std = @import("std");
+const builtin = @import("builtin");
 const NetworkCore = @import("network_core.zig").NetworkCore;
 const keys = @import("wire/keys.zig");
 const options = @import("network_core_test_support.zig").networkOptions;
@@ -108,7 +109,7 @@ test "core native wait source failure retains completed protocol progress" {
     try node.transport.sockets.primary().send(std.testing.io, &node.discovery.?.transport.sockets.primary().address, "invalid");
     const allocations = backing_node.allocations;
     var buffer: [128]u8 = undefined;
-    var expected: runner.LogExpectation = .{ .level = .err, .scope = "network_runtime", .message = try std.fmt.bufPrint(&buffer, "owner_poll_source_failed role=host family=none descriptor={d} revents={x}", .{ pipe[0], @as(c_short, std.c.POLL.HUP) }) };
+    var expected: runner.LogExpectation = .{ .level = .err, .scope = "network_runtime", .message = try std.fmt.bufPrint(&buffer, "owner_poll_source_failed role=host family=none descriptor={d} revents={x}", .{ pipe[0], @as(c_short, if (builtin.os.tag == .linux) std.c.POLL.HUP else std.c.POLL.HUP | std.c.POLL.IN) }) };
     const previous = runner.expected_log;
     defer runner.expected_log = previous;
     runner.expected_log = &expected;

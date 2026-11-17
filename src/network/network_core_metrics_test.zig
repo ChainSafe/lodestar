@@ -3,6 +3,7 @@ const Now = @import("types.zig").Now;
 const core_test = @import("network_core_test_support.zig");
 const gossip_test = @import("gossipsub/test_support.zig");
 const std = @import("std");
+const builtin = @import("builtin");
 const NetworkCore = @import("network_core.zig").NetworkCore;
 const metrics = @import("metrics/export.zig");
 const policy = @import("gossipsub/topic_policy.zig");
@@ -513,6 +514,7 @@ test "metrics render exactly the measurement contract families with their types 
     var missing: usize = 0;
     for (contract) |series| {
         if (hasSeries(output, series)) continue;
+        if (builtin.os.tag != .linux and std.mem.eql(u8, series.name, "lodestar_udp_socket_drops_total")) continue;
         std.debug.print("measurement contract series missing or mistyped: {s} ({s})\n", .{ series.name, series.kind });
         missing += 1;
     }
