@@ -180,7 +180,11 @@ describe("signatureSets", () => {
       ),
       committeesPerSlot,
     };
-    shuffling.committeePubkeysId = await computeCommitteePubkeys(shuffling.shuffling, committeesPerSlot);
+    shuffling.committeePubkeysId = await computeCommitteePubkeys(
+      shuffling.shuffling,
+      SLOTS_PER_EPOCH,
+      committeesPerSlot
+    );
 
     const electraConfig = createBeaconConfig(
       createChainForkConfig({

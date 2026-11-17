@@ -109,7 +109,7 @@ const State = struct {
         io: std.Io,
         pubkey_cache: *const PubkeyCache,
         id: u32,
-        slot_in_epoch: u64,
+        slot: u64,
         committee_indices: []const u32,
         bits: []const u8,
         bit_len: usize,
@@ -118,7 +118,7 @@ const State = struct {
         defer self.lock.unlockShared(io);
         for (&self.entries) |*entry| {
             if (entry.state == .ready and entry.id == id) {
-                return try entry.committeePubkeys.?.aggregateParticipants(io, pubkey_cache, slot_in_epoch, committee_indices, bits, bit_len);
+                return try entry.committeePubkeys.?.aggregateParticipants(io, pubkey_cache, slot, committee_indices, bits, bit_len);
             }
         }
         return null;
@@ -151,6 +151,7 @@ pub var state: State = .{};
 const ComputeTask = struct {
     io: std.Io,
     shuffling: ?[]u32,
+    slots_per_epoch: u32,
     committees_per_slot: u32,
     entryIndex: usize,
     reserved: bool = true,
@@ -161,6 +162,7 @@ const ComputeTask = struct {
             self.io,
             &pubkeys.state.cache,
             self.shuffling.?,
+            self.slots_per_epoch,
             self.committees_per_slot,
             state.entries[self.entryIndex].storage[0..],
         );
@@ -183,10 +185,11 @@ const ComputeTask = struct {
 /// thread. `shuffling` is copied before this returns. Throws when the cache and
 /// the computations in flight already hold `MAX_ENTRIES`.
 ///
-/// JS: committeePubkeys.compute(shuffling, committeesPerSlot) → Promise<number>
-pub fn compute(shuffling: js.Uint32Array, committees_per_slot: js.Number) !js.Value {
+/// JS: committeePubkeys.compute(shuffling, slotsPerEpoch, committeesPerSlot) → Promise<number>
+pub fn compute(shuffling: js.Uint32Array, slots_per_epoch: js.Number, committees_per_slot: js.Number) !js.Value {
     if (!pubkeys.state.initialized) return error.PubkeyIndexNotInitialized;
     const io = js.io();
+    const slots = try slots_per_epoch.toU32Exact();
     const count = try committees_per_slot.toU32Exact();
 
     const entryIndex = try state.reserve(io);
@@ -197,6 +200,7 @@ pub fn compute(shuffling: js.Uint32Array, committees_per_slot: js.Number) !js.Va
     return js.spawn(ComputeTask, .{
         .io = io,
         .shuffling = owned,
+        .slots_per_epoch = slots,
         .committees_per_slot = count,
         .entryIndex = entryIndex,
     }, "committeePubkeys.compute");

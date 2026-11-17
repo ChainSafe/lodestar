@@ -1,5 +1,5 @@
 import {computeCommitteePubkeys, releaseCommitteePubkeys} from "@lodestar/native/committee-pubkeys";
-import {ForkSeq, GENESIS_EPOCH} from "@lodestar/params";
+import {ForkSeq, GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   EpochShuffling,
   IBeaconStateView,
@@ -291,7 +291,7 @@ export class ShufflingCache {
 
     let promise: Promise<number>;
     try {
-      promise = computeCommitteePubkeys(shuffling.shuffling, shuffling.committeesPerSlot);
+      promise = computeCommitteePubkeys(shuffling.shuffling, SLOTS_PER_EPOCH, shuffling.committeesPerSlot);
     } catch (e) {
       onError(e);
       return;

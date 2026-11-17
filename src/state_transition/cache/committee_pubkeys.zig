@@ -18,6 +18,7 @@ pub const Participants = struct {
 
 pub const CommitteePubkeys = struct {
     allocator: std.mem.Allocator,
+    slots_per_epoch: u32,
     committees_per_slot: u32,
     /// Shuffled active validator indices. Committees split it as in the spec's
     /// `compute_committee`.
@@ -33,19 +34,22 @@ pub const CommitteePubkeys = struct {
         io: std.Io,
         pubkey_cache: *const PubkeyCache,
         shuffling: []const u32,
+        slots_per_epoch: u32,
         committees_per_slot: u32,
         aggregate_pks: []bls.AggregatePublicKey,
     ) !CommitteePubkeys {
+        if (slots_per_epoch == 0) return error.InvalidSlotsPerEpoch;
         if (committees_per_slot == 0 or committees_per_slot > preset.MAX_COMMITTEES_PER_SLOT) {
             return error.InvalidCommitteesPerSlot;
         }
 
-        const num_aggregates = preset.SLOTS_PER_EPOCH * committees_per_slot;
+        const num_aggregates = @as(usize, slots_per_epoch) * committees_per_slot;
         if (aggregate_pks.len < num_aggregates) return error.AggregateStorageTooSmall;
         const aggregate_pks_slice = aggregate_pks[0..num_aggregates];
 
         var self: CommitteePubkeys = .{
             .allocator = allocator,
+            .slots_per_epoch = slots_per_epoch,
             .committees_per_slot = committees_per_slot,
             .shuffling = shuffling,
             .aggregate_pks_slice = aggregate_pks_slice,
@@ -73,18 +77,18 @@ pub const CommitteePubkeys = struct {
     }
 
     /// Aggregate the participants of an attestation in the committees
-    /// `committee_indices` of `slot_in_epoch`. Their aggregation bits are
+    /// `committee_indices` of `slot`. Their aggregation bits are
     /// concatenated in that order, as in an Electra attestation.
     pub fn aggregateParticipants(
         self: *const CommitteePubkeys,
         io: std.Io,
         pubkey_cache: *const PubkeyCache,
-        slot_in_epoch: u64,
+        slot: u64,
         committee_indices: []const u32,
         bits: []const u8,
         bit_len: usize,
     ) !Participants {
-        if (slot_in_epoch >= preset.SLOTS_PER_EPOCH) return error.InvalidSlot;
+        const slot_in_epoch = slot % self.slots_per_epoch;
         if (committee_indices.len == 0) return error.EmptyCommitteeIndices;
         if (bit_len > bits.len * 8) return error.InvalidBitLength;
 

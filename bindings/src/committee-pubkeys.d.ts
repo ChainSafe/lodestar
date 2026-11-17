@@ -11,7 +11,11 @@ export declare const COMMITTEE_PUBKEYS_MAX_ENTRIES: number;
  * `shuffling` is the shuffled active validator indices, and it is copied before this returns. Throws when
  * `COMMITTEE_PUBKEYS_MAX_ENTRIES` entries are cached or being computed.
  */
-export declare function computeCommitteePubkeys(shuffling: Uint32Array, committeesPerSlot: number): Promise<number>;
+export declare function computeCommitteePubkeys(
+  shuffling: Uint32Array,
+  slotsPerEpoch: number,
+  committeesPerSlot: number
+): Promise<number>;
 
 /**
  * Free an entry. Returns false if `id` is unknown. A signature set that still references it falls back to its

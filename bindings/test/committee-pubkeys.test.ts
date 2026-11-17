@@ -9,8 +9,8 @@ import {
 } from "../src/committee-pubkeys.js";
 import {pubkeyCache} from "../src/pubkeys.js";
 
-// The addon is built for the mainnet preset
-const SLOTS_PER_EPOCH = 32;
+// Differs from the preset the addon is built for
+const SLOTS_PER_EPOCH = 8;
 const COMMITTEES_PER_SLOT = 2;
 const MEMBERS_PER_COMMITTEE = 8;
 const VALIDATOR_COUNT = SLOTS_PER_EPOCH * COMMITTEES_PER_SLOT * MEMBERS_PER_COMMITTEE;
@@ -77,7 +77,7 @@ describe("committee pubkeys", () => {
   });
 
   async function compute(): Promise<number> {
-    const id = await computeCommitteePubkeys(shuffling, COMMITTEES_PER_SLOT);
+    const id = await computeCommitteePubkeys(shuffling, SLOTS_PER_EPOCH, COMMITTEES_PER_SLOT);
     ids.push(id);
     return id;
   }
@@ -90,7 +90,7 @@ describe("committee pubkeys", () => {
       committeeSet(id, 0, [0], () => true),
       committeeSet(id, 3, [1], (bit) => bit !== 2),
       committeeSet(id, 7, [0, 1], (bit) => bit % 5 !== 0),
-      committeeSet(id, 31, [0, 1], (bit) => bit === 4 || bit === 11),
+      committeeSet(id, SLOTS_PER_EPOCH - 1, [0, 1], (bit) => bit === 4 || bit === 11),
     ];
     expect(verifySignatureSets(sets)).toBe(true);
 
@@ -100,7 +100,7 @@ describe("committee pubkeys", () => {
 
   it("falls back to the participant indices when the entry is not cached", async () => {
     const id = await compute();
-    const set = committeeSet(id, 9, [0, 1], (bit) => bit !== 6);
+    const set = committeeSet(id, 4, [0, 1], (bit) => bit !== 6);
     expect(releaseCommitteePubkeys(id)).toBe(true);
     expect(releaseCommitteePubkeys(id)).toBe(false);
 
@@ -164,14 +164,16 @@ describe("committee pubkeys", () => {
 
   it("rejects an invalid committee count and bounds the number of entries", async () => {
     expect(COMMITTEE_PUBKEYS_MAX_ENTRIES).toBe(16);
-    await expect(computeCommitteePubkeys(shuffling, 0)).rejects.toThrow("InvalidCommitteesPerSlot");
+    await expect(computeCommitteePubkeys(shuffling, SLOTS_PER_EPOCH, 0)).rejects.toThrow("InvalidCommitteesPerSlot");
     const recoveredId = await compute();
     expect(committeePubkeysCount()).toBe(1);
     expect(releaseCommitteePubkeys(recoveredId)).toBe(true);
 
     // Computations in flight count too
     const pending = Array.from({length: COMMITTEE_PUBKEYS_MAX_ENTRIES}, () => compute());
-    expect(() => computeCommitteePubkeys(shuffling, COMMITTEES_PER_SLOT)).toThrow("TooManyCommitteePubkeys");
+    expect(() => computeCommitteePubkeys(shuffling, SLOTS_PER_EPOCH, COMMITTEES_PER_SLOT)).toThrow(
+      "TooManyCommitteePubkeys"
+    );
     await Promise.all(pending);
     expect(committeePubkeysCount()).toBe(COMMITTEE_PUBKEYS_MAX_ENTRIES);
   });

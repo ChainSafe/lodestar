@@ -9,9 +9,11 @@ const CommitteePubkeys = @import("committee_pubkeys.zig").CommitteePubkeys;
 const testing = std.testing;
 const interop = @import("../test_utils/interop_pubkeys.zig");
 
+// Differs from every preset, so committees must not depend on the compiled one
+const slots_per_epoch = 4;
 const committees_per_slot = 2;
 const members_per_committee = 12;
-const validator_count = preset.SLOTS_PER_EPOCH * committees_per_slot * members_per_committee;
+const validator_count = slots_per_epoch * committees_per_slot * members_per_committee;
 
 const Fixture = struct {
     cache: PubkeyCache,
@@ -48,6 +50,7 @@ const Fixture = struct {
             testing.io,
             &cache,
             shuffling,
+            slots_per_epoch,
             committees_per_slot,
             aggregate_storage,
         );
@@ -72,7 +75,8 @@ const Fixture = struct {
         defer participants.deinit(testing.allocator);
         var bit: usize = 0;
         for (committee_indices) |committee_index| {
-            const members = self.committees.committee(@intCast(slot * committees_per_slot + committee_index));
+            const global_index = (slot % slots_per_epoch) * committees_per_slot + committee_index;
+            const members = self.committees.committee(@intCast(global_index));
             for (members) |member| {
                 if (getBit(bits, bit)) try participants.append(testing.allocator, member);
                 bit += 1;
@@ -94,7 +98,7 @@ const Fixture = struct {
 };
 
 test "committees preserve shuffled order across uneven boundaries" {
-    const committee_count = preset.SLOTS_PER_EPOCH * committees_per_slot;
+    const committee_count = slots_per_epoch * committees_per_slot;
     var fixture = try Fixture.init(committee_count + 1);
     defer fixture.deinit();
 
@@ -119,11 +123,12 @@ test "aggregateParticipants matches summing the participants" {
     const low = [_]u8{ 0x01, 0x08 };
     try fixture.expectMatchesParticipants(0, &.{0}, &full, members_per_committee);
     try fixture.expectMatchesParticipants(0, &.{1}, &high, members_per_committee);
-    try fixture.expectMatchesParticipants(preset.SLOTS_PER_EPOCH - 1, &.{0}, &low, members_per_committee);
+    try fixture.expectMatchesParticipants(slots_per_epoch - 1, &.{0}, &low, members_per_committee);
+    try fixture.expectMatchesParticipants(5 * slots_per_epoch + 1, &.{1}, &high, members_per_committee);
 
     // The second committee starts halfway through a byte and has only two signers.
     const multi = [_]u8{ 0xfe, 0x1f, 0x80 };
-    try fixture.expectMatchesParticipants(preset.SLOTS_PER_EPOCH - 1, &.{ 0, 1 }, &multi, 2 * members_per_committee);
+    try fixture.expectMatchesParticipants(slots_per_epoch - 1, &.{ 0, 1 }, &multi, 2 * members_per_committee);
 }
 
 test "aggregateParticipants rejects inconsistent input" {
@@ -136,7 +141,6 @@ test "aggregateParticipants rejects inconsistent input" {
     const io = testing.io;
     const one = members_per_committee;
 
-    try testing.expectError(error.InvalidSlot, f.aggregateParticipants(io, cache, preset.SLOTS_PER_EPOCH, &.{0}, &bits, one));
     try testing.expectError(error.EmptyCommitteeIndices, f.aggregateParticipants(io, cache, 0, &.{}, &bits, 0));
     try testing.expectError(error.InvalidCommitteeIndex, f.aggregateParticipants(io, cache, 0, &.{committees_per_slot}, &bits, one));
     try testing.expectError(error.UnsortedCommitteeIndices, f.aggregateParticipants(io, cache, 0, &.{ 1, 0 }, &bits, 2 * one));
@@ -155,11 +159,15 @@ test "init rejects invalid committee counts and undersized aggregate storage" {
     const shuffling = [_]u32{};
     try testing.expectError(
         error.AggregateStorageTooSmall,
-        CommitteePubkeys.init(testing.allocator, testing.io, &cache, &shuffling, 1, &.{}),
+        CommitteePubkeys.init(testing.allocator, testing.io, &cache, &shuffling, slots_per_epoch, 1, &.{}),
+    );
+    try testing.expectError(
+        error.InvalidSlotsPerEpoch,
+        CommitteePubkeys.init(testing.allocator, testing.io, &cache, &shuffling, 0, 1, &.{}),
     );
     try testing.expectError(
         error.InvalidCommitteesPerSlot,
-        CommitteePubkeys.init(testing.allocator, testing.io, &cache, &shuffling, 0, &.{}),
+        CommitteePubkeys.init(testing.allocator, testing.io, &cache, &shuffling, slots_per_epoch, 0, &.{}),
     );
     try testing.expectError(
         error.InvalidCommitteesPerSlot,
@@ -168,6 +176,7 @@ test "init rejects invalid committee counts and undersized aggregate storage" {
             testing.io,
             &cache,
             &shuffling,
+            slots_per_epoch,
             preset.MAX_COMMITTEES_PER_SLOT + 1,
             &.{},
         ),
