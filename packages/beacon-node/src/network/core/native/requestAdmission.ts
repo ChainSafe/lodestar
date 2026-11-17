@@ -3,12 +3,12 @@ import {NativeNetwork, NativeResponseChunk} from "@lodestar/native/network";
 import {ErrorAborted} from "@lodestar/utils";
 import {NativeNetworkError, NativeNetworkErrorCode} from "./errors.js";
 
-const ADMISSION_TIMEOUT_MS = 60000;
+const ADMISSION_TIMEOUT = 60000;
 
 /** Retries only native admission refusals, which cannot have sent a request or delivered a response. */
 export class NativeRequestAdmission implements AsyncIterableIterator<NativeResponseChunk> {
   private readonly controller = new AbortController();
-  private readonly deadline = performance.now() + ADMISSION_TIMEOUT_MS;
+  private readonly deadline = performance.now() + ADMISSION_TIMEOUT;
   private iterator: AsyncIterableIterator<NativeResponseChunk> | undefined;
   private token: string | undefined;
   private received = false;

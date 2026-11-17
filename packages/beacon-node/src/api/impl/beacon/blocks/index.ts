@@ -112,8 +112,7 @@ export function getBeaconBlockApi(
     if (!isForkPostFulu(fork)) {
       throw new ApiError(400, `Publishing blocks is not supported for pre-fulu fork=${fork}`);
     }
-    // A block above the p2p payload limit cannot propagate, and no stored block may exceed it. Every local publish
-    // path, full, engine-reconstructed or builder-unblinded, reaches this check before caching or importing.
+    // A block above MAX_PAYLOAD_SIZE cannot propagate over gossip or req/resp, so reject it before caching or importing
     const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.value_serializedSize(signedBlock);
     if (blockBytes > config.MAX_PAYLOAD_SIZE) {
       throw new ApiError(

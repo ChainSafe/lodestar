@@ -123,10 +123,10 @@ export class NativeGossip {
     for (;;) {
       if (this.closed)
         throw new NativeNetworkError({code: NativeNetworkErrorCode.CLOSED, resource: "gossip publication"});
-      const maxQueueMs = Math.floor(deadline - performance.now());
-      if (maxQueueMs < 1) throw publicationExpired();
+      const maxQueue = Math.floor(deadline - performance.now());
+      if (maxQueue < 1) throw publicationExpired();
       try {
-        return (await this.network.publish(topic, data, {...options, maxQueueMs})).queued;
+        return (await this.network.publish(topic, data, {...options, maxQueueMs: maxQueue})).queued;
       } catch (error) {
         if (!(error instanceof Error) || !("code" in error) || error.code !== "NetworkGossipPublishFailed") throw error;
         if (!("reason" in error)) throw error;
@@ -139,10 +139,10 @@ export class NativeGossip {
   }
 
   private async waitForPublication(token: string, deadline: number): Promise<void> {
-    const timeoutMs = Math.floor(deadline - performance.now());
-    if (timeoutMs < 1) throw publicationExpired();
+    const timeout = Math.floor(deadline - performance.now());
+    if (timeout < 1) throw publicationExpired();
     try {
-      await this.network.waitForPublicationCapacity(token, {signal: this.publicationAbort.signal, timeoutMs});
+      await this.network.waitForPublicationCapacity(token, {signal: this.publicationAbort.signal, timeoutMs: timeout});
     } catch (error) {
       if (error instanceof Error && "code" in error && error.code === "NetworkPublicationCapacityTimeout")
         throw publicationExpired();

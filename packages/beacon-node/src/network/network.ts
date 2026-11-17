@@ -188,7 +188,6 @@ export class Network implements INetwork {
       logger.info("running libp2p instance in worker thread");
     }
 
-    // Native construction and consumer attachment stay together after any optional collector barrier.
     let core: INetworkCore;
     if (opts.backend === "native") {
       core = await NativeNetworkCore.init({
