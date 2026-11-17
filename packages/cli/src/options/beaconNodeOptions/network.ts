@@ -310,6 +310,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
     choices: ["libp2p", "native"],
     default: "libp2p",
     group: "network",
+    hidden: true,
     description:
       "Networking backend. Native requires TCP disabled and QUIC enabled, supports one listener per IP family, and remembers qualified peers when a peer store is configured.",
   },

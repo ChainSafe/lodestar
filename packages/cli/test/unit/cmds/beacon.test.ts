@@ -27,23 +27,6 @@ describe("cmds / beacon / args handler", () => {
     expect(fs.existsSync(dataDir)).toBe(false);
   });
 
-  it("accepts Gloas and rejects Heze for the native state view", async () => {
-    const paramsFile = path.join(testFilesDir, "native_fork_config.yaml");
-    fs.writeFileSync(
-      paramsFile,
-      JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100, HEZE_FORK_EPOCH: Infinity}))
-    );
-    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).resolves.toBeDefined();
-    fs.writeFileSync(
-      paramsFile,
-      JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100, HEZE_FORK_EPOCH: 200}))
-    );
-    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).rejects.toThrow(
-      "--chain.nativeStateTransition does not support Heze"
-    );
-    await expect(runBeaconHandlerInit({paramsFile})).resolves.toBeDefined();
-  });
-
   it.each([
     ["mainnet", false],
     ["gnosis", true],

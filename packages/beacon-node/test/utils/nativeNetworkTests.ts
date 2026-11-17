@@ -398,7 +398,7 @@ describe("native Lodestar integration", () => {
       config.CUSTODY_REQUIREMENT,
       16
     );
-    application.local.status.finalizedEpoch = (1n << 64n) - 1n;
+    application.local.status.earliestAvailableSlot = (1n << 64n) - 1n;
     const remote = await nativeBindingProcess(application, config);
     application.identitySecretKey.fill(0);
     try {
