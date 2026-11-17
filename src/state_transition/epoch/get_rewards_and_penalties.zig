@@ -130,7 +130,8 @@ const RewardsScan = struct {
     non_target_counts: []usize,
 };
 
-fn rewardsChunk(scan: *const RewardsScan, chunk: validator_chunks.Chunk) void {
+fn rewardsChunk(scan_ptr: *const RewardsScan, chunk: validator_chunks.Chunk) void {
+    const scan = scan_ptr.*;
     var non_target_count: usize = 0;
     for (
         scan.flags[chunk.start..chunk.end],

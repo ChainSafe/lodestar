@@ -25,7 +25,8 @@ const InactivityScan = struct {
     changed_counts: []usize,
 };
 
-fn updateChunk(scan: *const InactivityScan, chunk: validator_chunks.Chunk) void {
+fn updateChunk(scan_ptr: *const InactivityScan, chunk: validator_chunks.Chunk) void {
+    const scan = scan_ptr.*;
     var changed_count: usize = 0;
     for (
         scan.flags[chunk.start..chunk.end],
