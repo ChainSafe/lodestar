@@ -52,32 +52,18 @@ pub fn processPendingDeposits(
     else
         false;
 
-    // The deposits this epoch can reach, in queue order. Only the churn check below can stop
-    // earlier, and it does not depend on signatures, so their checks can run up front.
-    var candidates: [preset.MAX_PENDING_DEPOSITS_PER_EPOCH]PendingDeposit = undefined;
-    var candidate_count: usize = 0;
-    while (candidate_count < @min(pending_deposits_len, preset.MAX_PENDING_DEPOSITS_PER_EPOCH)) {
+    // The queue is walked before any deposit is applied, so that signatures are checked together
+    // and only for deposits this epoch applies. Applying a deposit cannot change how a later one
+    // is handled: at most it tops up a balance or adds a validator that is neither exited nor
+    // withdrawn, which consumes churn just like the unknown pubkey it was.
+    var deposits_to_apply: [preset.MAX_PENDING_DEPOSITS_PER_EPOCH]PendingDeposit = undefined;
+    var deposits_to_apply_count: usize = 0;
+    while (next_deposit_index < @min(pending_deposits_len, preset.MAX_PENDING_DEPOSITS_PER_EPOCH)) {
         const deposit = try pending_deposits_it.nextValue();
         if (eth1_bridge_pending and deposit.slot > GENESIS_SLOT) break;
         // Check if deposit has been finalized, otherwise, stop processing.
         if (deposit.slot > finalized_slot) break;
-        candidates[candidate_count] = deposit;
-        candidate_count += 1;
-    }
-    var signature_valid: [preset.MAX_PENDING_DEPOSITS_PER_EPOCH]?bool = @splat(null);
-    const reachable = candidates[0..candidate_count];
-    const reachable_signature_valid = signature_valid[0..candidate_count];
-    try checkNewValidatorSignatures(
-        fork,
-        io,
-        config,
-        epoch_cache,
-        state,
-        reachable,
-        reachable_signature_valid,
-    );
 
-    for (reachable, reachable_signature_valid) |deposit, deposit_signature_valid| {
         // Read validator state
         var is_validator_exited = false;
         var is_validator_withdrawn = false;
@@ -92,7 +78,8 @@ pub fn processPendingDeposits(
 
         if (is_validator_withdrawn) {
             // Deposited balance will never become active. Increase balance but do not consume churn
-            try applyPendingDeposit(fork, io, epoch_cache, state, deposit, deposit_signature_valid, cache);
+            deposits_to_apply[deposits_to_apply_count] = deposit;
+            deposits_to_apply_count += 1;
         } else if (is_validator_exited) {
             // Validator is exiting, postpone the deposit until after withdrawable epoch
             try deposits_to_postpone.append(allocator, deposit);
@@ -104,11 +91,37 @@ pub fn processPendingDeposits(
             }
             // Consume churn and apply deposit.
             processed_amount += deposit.amount;
-            try applyPendingDeposit(fork, io, epoch_cache, state, deposit, deposit_signature_valid, cache);
+            deposits_to_apply[deposits_to_apply_count] = deposit;
+            deposits_to_apply_count += 1;
         }
 
         // Regardless of how the deposit was handled, we move on in the queue.
         next_deposit_index += 1;
+    }
+
+    var signature_valid: [preset.MAX_PENDING_DEPOSITS_PER_EPOCH]?bool = @splat(null);
+    const to_apply = deposits_to_apply[0..deposits_to_apply_count];
+    const to_apply_signature_valid = signature_valid[0..deposits_to_apply_count];
+    try checkNewValidatorSignatures(
+        fork,
+        io,
+        config,
+        epoch_cache,
+        state,
+        to_apply,
+        to_apply_signature_valid,
+    );
+
+    for (to_apply, to_apply_signature_valid) |deposit, deposit_signature_valid| {
+        try applyPendingDeposit(
+            fork,
+            io,
+            epoch_cache,
+            state,
+            deposit,
+            deposit_signature_valid,
+            cache,
+        );
     }
 
     if (next_deposit_index > 0) {
@@ -129,8 +142,7 @@ pub fn processPendingDeposits(
 }
 
 /// Records the compounding flag when this flow adds a validator.
-/// `signature_valid` is the deposit's signature check, made by `checkNewValidatorSignatures`
-/// whenever its pubkey was unknown at the start of the epoch.
+/// `signature_valid` is the deposit's result from `checkNewValidatorSignatures`.
 fn applyPendingDeposit(
     comptime fork: ForkSeq,
     io: std.Io,
@@ -149,7 +161,7 @@ fn applyPendingDeposit(
 
     if (!is_validator_known) {
         if (comptime fork.gte(.heze)) {
-            if (withdrawal_credentials[0] == @import("constants").BLS_WITHDRAWAL_PREFIX) return;
+            if (withdrawal_credentials[0] == c.BLS_WITHDRAWAL_PREFIX) return;
         }
         // Validators are only ever added, so an unknown pubkey now was unknown at the start too.
         if (signature_valid orelse return error.MissingDepositSignatureCheck) {
@@ -199,7 +211,7 @@ const SignatureChecks = struct {
 };
 
 /// Checks, concurrently on `io`, the signature of every deposit whose pubkey is not yet a
-/// validator, so the queue walk does not verify one BLS signature at a time. Each result goes
+/// validator, so applying them does not verify one BLS signature at a time. Each result goes
 /// to the same index of `valid`; the others stay null.
 fn checkNewValidatorSignatures(
     comptime fork: ForkSeq,
@@ -211,11 +223,13 @@ fn checkNewValidatorSignatures(
     valid: []?bool,
 ) !void {
     std.debug.assert(deposits.len == valid.len);
-    // Read before any task starts: an error between `async` and `await` would return while
-    // tasks still use `checks` and the caller's arrays.
     const validators_count = try state.validatorsCount();
     const checks: SignatureChecks = .{ .config = config, .deposits = deposits, .valid = valid };
+
+    // Tasks use `checks` and the caller's arrays, so none may outlive this call.
     var group: std.Io.Group = .init;
+    defer group.cancel(io);
+
     for (deposits, 0..) |deposit, index| {
         const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
         if (validator_index != null and validator_index.? < validators_count) continue;
