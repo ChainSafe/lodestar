@@ -669,7 +669,7 @@ export interface NativeNetwork {
 
 /**
  * Initialize from the owning thread using config.beaconConfig. One native runtime is live per process; a replacement
- * requires the previous runtime to be fully released, including garbage collection after close.
+ * requires the previous runtime's close() to settle.
  * Copies configuration and returns a running network drained for `host`. Failure is terminal.
  * The application must call close(); dropping references does not request shutdown. Environment teardown stops
  * native work even when JavaScript cannot run. Invokes no host callback synchronously.

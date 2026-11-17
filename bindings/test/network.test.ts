@@ -15,7 +15,6 @@ import {
   localIntent,
   requestForks,
   runChild,
-  runtimeReleased,
   setSlot,
   settleOnly,
   startRuntime,
@@ -195,14 +194,12 @@ it.each([
   expect(() => startRuntime(config, () => undefined)).toThrow(code);
 });
 
-it("rejects another initialization while one is live and accepts one after release", async () => {
-  let runtime: ReturnType<typeof startRuntime> | null = startRuntime(applicationConfig());
+it("rejects another initialization while one is live and accepts one after close", async () => {
+  const runtime = startRuntime(applicationConfig());
   expect(typeof runtime.identity.peerId).toBe("string");
   expect(() => startRuntime(applicationConfig())).toThrow("NetworkAlreadyInitialized");
   expect((await runtime.observeIdentity()).peerId).toEqual(runtime.identity.peerId);
   await runtime.close();
-  runtime = null;
-  await runtimeReleased();
   const next = startRuntime(applicationConfig());
   await next.close();
 });

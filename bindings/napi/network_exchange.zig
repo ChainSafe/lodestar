@@ -187,6 +187,7 @@ fn settle(runtime: *Runtime, host: anytype) !bool {
     settleStreams(runtime, host) catch |err| return fail(host, host.classify(err), err);
     if (closing) {
         runtime.join();
+        runtime.unclaim();
         runtime.lock();
         var promise = runtime.closed;
         runtime.closed = .{};

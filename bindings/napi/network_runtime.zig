@@ -24,7 +24,7 @@ pub const Notify = napi.ThreadSafeFunction(Runtime, void);
 const processor_metrics = n.metrics.processor;
 var runtime_live = std.atomic.Value(bool).init(false);
 
-/// Claims the one live runtime per process. The last `Runtime.release` returns the claim, also after a failed initialization.
+/// Claims the one live runtime per process. A settled close or the last `Runtime.release` returns the claim, also after a failed initialization.
 pub fn create(env: napi.Env) !*Runtime {
     if (runtime_live.swap(true, .acq_rel)) return error.NetworkAlreadyInitialized;
     errdefer runtime_live.store(false, .release);
@@ -89,6 +89,7 @@ pub const Runtime = struct {
     hook_live: bool = false,
     env: napi.Env,
     closed: Promise = .{},
+    claimed: bool = true,
 
     // Network thread scheduling and counters, read after joining at teardown.
     closing_deadline: ?u64 = null,
@@ -184,11 +185,15 @@ pub const Runtime = struct {
             if (self.bridge.gossip) |*gossip| gossip.deinit();
             std.debug.assert(self.bridge.payload_budget.used == 0);
             for (self.bridge.payload_budget.owned) |owned| std.debug.assert(owned == 0);
+            self.unclaim();
             std.crypto.secureZero(u8, std.mem.asBytes(self));
             allocator.destroy(self);
-            const claimed = runtime_live.swap(false, .release);
-            std.debug.assert(claimed);
         }
+    }
+    pub fn unclaim(self: *Runtime) void {
+        if (!self.claimed) return;
+        self.claimed = false;
+        runtime_live.store(false, .release);
     }
 
     pub fn requestStop(self: *Runtime) void {
