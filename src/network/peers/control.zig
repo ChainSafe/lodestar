@@ -847,7 +847,7 @@ fn decide(row: *const ConnectionState, relevant: bool, active_request: bool, now
     const request_due = @min(row.status_due_ms, refresh_due);
     decision.wake(@max(request_due, row.retry_ms), now);
     if (now < row.retry_ms or now < request_due) return decision;
-    decision.request = if (row.status_due_ms < refresh_due)
+    decision.request = if (row.status_due_ms <= refresh_due)
         .status
     else if (metadata_due != null)
         .metadata

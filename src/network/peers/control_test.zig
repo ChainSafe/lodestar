@@ -51,6 +51,27 @@ test "control repeated Status intent preserves the first due time" {
     }
 }
 
+test "control sends Status first when an inbound peer's Status and Ping fall due together" {
+    const a = std.testing.allocator;
+    var catalog = try Catalog.init(a, .{ .capacity = 1, .outbound_reserve = 0, .target_peers = 1, .max_peers = 1, .min_outbound = 0 }, 1, 0);
+    defer catalog.deinit(a);
+    var control = try Control.init(a, .{}, 1);
+    defer control.deinit(a);
+    var io: support.Io = .{};
+    try io.init();
+    defer io.deinit();
+    const local: t.LocalState = .{};
+    const connected: Now = Now.fromMilliseconds(.{ .mono_ms = 10, .unix_s = 0 });
+    const conn = io.pair.shared.handles.client;
+    const peer = catalog.admit(&.{ .bytes = @splat(1) }, &.{ .bytes = @splat(0) }, conn, &.{ .direction = .inbound, .endpoint = .unspecified, .now_ms = connected.millis() }).admitted.peer;
+    control.connected(&catalog, peer, conn, .inbound, connected);
+    const row = &control.connections[peer.index];
+    try std.testing.expectEqual(row.status_due_ms, row.ping_due_ms);
+    try io.maintain(&control, &catalog, &local, Now.fromMilliseconds(.{ .mono_ms = row.status_due_ms, .unix_s = 0 }));
+    try std.testing.expect(row.request != null);
+    try std.testing.expectEqual(w.statusProtocol(local.fork), row.protocol);
+}
+
 test "control start quota and cursor preserve order across Identify and RPC starts" {
     const a = std.testing.allocator;
     var catalog = try Catalog.init(a, .{ .capacity = 4, .outbound_reserve = 0, .target_peers = 4, .max_peers = 4, .min_outbound = 0 }, 4, 0);
