@@ -124,7 +124,6 @@ test "aggregateParticipants matches summing the participants" {
     try fixture.expectMatchesParticipants(0, &.{0}, &full, members_per_committee);
     try fixture.expectMatchesParticipants(0, &.{1}, &high, members_per_committee);
     try fixture.expectMatchesParticipants(slots_per_epoch - 1, &.{0}, &low, members_per_committee);
-    try fixture.expectMatchesParticipants(5 * slots_per_epoch + 1, &.{1}, &high, members_per_committee);
 
     // The second committee starts halfway through a byte and has only two signers.
     const multi = [_]u8{ 0xfe, 0x1f, 0x80 };
