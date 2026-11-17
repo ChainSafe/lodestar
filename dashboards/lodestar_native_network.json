@@ -430,7 +430,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "discv5_kad_table_size",
+          "expr": "lodestar_discv5_kad_table_size",
           "interval": "",
           "legendFormat": "ENR count",
           "refId": "A"
