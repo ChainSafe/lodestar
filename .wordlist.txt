@@ -126,7 +126,6 @@ api
 args
 async
 auth
-backend
 backfill
 beaconcha
 blockRoot
