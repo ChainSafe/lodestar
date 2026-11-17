@@ -880,8 +880,9 @@ pub const Store = struct {
         try self.importBlock(&summary, &.{});
     }
 
-    /// Every check and fallible load runs before the first write: a failed import leaves
-    /// the store as it was, so a retry is not skipped as a known block.
+    /// Every check and fallible load runs before the block's row is written, and
+    /// `markChainValid` writes nothing when it fails: a failed import leaves the store as
+    /// it was, so a retry is not skipped as a known block.
     fn importBlock(self: *Store, summary: *const BlockSummary, ptc_messages: []const PtcMessage) !void {
         try self.validateSummary(summary);
         try checkExecutionStatus(summary);
@@ -890,7 +891,6 @@ pub const Store = struct {
         const head = try self.getHead();
         const parent_node: ForkChoiceNode = .{ .block = parent, .payload_status = self.parentPayloadStatus(summary, parent) };
         if (self.head_cache.execution.items[head_mod.nodeId(parent_node)] == .invalid) return error.ParentPayloadInvalid;
-        const chain_validation: ?ChainValidation = if (summary.execution_status == .valid) try self.checkChainValid(parent_node) else null;
 
         // Spec `update_checkpoints` for the block, then `compute_pulled_up_tip`:
         // `update_unrealized_checkpoints`, and `update_checkpoints` again for a block from a
@@ -905,6 +905,7 @@ pub const Store = struct {
         defer checkpoints.deinit(self.allocator);
 
         try self.reserveBlock();
+        if (summary.execution_status == .valid) try self.markChainValid(parent_node);
 
         const index: BlockIndex = @intCast(self.blocks.len);
         self.appendBlockAssumeCapacity(.{
@@ -925,7 +926,6 @@ pub const Store = struct {
             .payload_verified = false,
             .inclusion_list_satisfaction = .unknown,
         });
-        if (chain_validation) |validation| self.applyChainValid(parent_node, validation);
         for (ptc_messages) |*message| {
             const votes = &self.ptc_votes.items[message.block];
             var positions = message.positions.iterator(.{});
@@ -1265,27 +1265,23 @@ pub const Store = struct {
     /// Spec `on_execution_payload_envelope` after the caller verified the envelope and
     /// data availability. `execution_status` is the engine's verdict on the payload,
     /// `.valid` or `.syncing`; `inclusion_list_satisfied` carries the Heze engine verdict.
-    /// `error.PayloadInvalidToValid` means the engine contradicted an earlier verdict, which
-    /// optimistic sync leaves to manual intervention. The store may then be partly updated,
-    /// so the caller must stop the node.
+    /// `error.PayloadInvalidToValid` means the engine contradicted an earlier verdict; the
+    /// store is unchanged.
     pub fn onExecutionPayloadEnvelope(self: *Store, beacon_block_root: Root, execution_status: ExecutionStatus, inclusion_list_satisfied: ?bool) Error!void {
         const block = self.blockIndex(beacon_block_root) orelse return error.UnknownBlock;
         if (execution_status != .valid and execution_status != .syncing) return error.ExecutionStatusMismatch;
         const statuses = self.blocks.items(.execution_status);
-        switch (statuses[block]) {
-            .invalid => return error.PayloadInvalidToValid,
-            .valid => {},
-            .syncing, .pre_merge => statuses[block] = execution_status,
+        if (statuses[block] == .invalid) return error.PayloadInvalidToValid;
+        const parent = self.blocks.items(.parent)[block];
+        if (execution_status == .valid and parent != NO_BLOCK) {
+            try self.markChainValid(.{ .block = parent, .payload_status = self.blocks.items(.parent_payload_status)[block] });
         }
+        if (statuses[block] != .valid) statuses[block] = execution_status;
         if (inclusion_list_satisfied) |satisfied| {
             self.blocks.items(.inclusion_list_satisfaction)[block] = if (satisfied) .satisfied else .unsatisfied;
         }
         self.blocks.items(.payload_verified)[block] = true;
         self.head_cache.dirty = true;
-        const parent = self.blocks.items(.parent)[block];
-        if (execution_status == .valid and parent != NO_BLOCK) {
-            try self.markChainValid(.{ .block = parent, .payload_status = self.blocks.items(.parent_payload_status)[block] });
-        }
     }
 
     // --- optimistic sync --------------------------------------------------------------
@@ -1315,9 +1311,9 @@ pub const Store = struct {
 
     /// Optimistic sync `NOT_VALIDATED -> VALID` for the payload with `block_hash`, in every
     /// block carrying it, and, as the spec requires, every not yet validated payload below it.
-    /// `error.PayloadInvalidToValid` means the engine contradicted an earlier verdict, which
-    /// optimistic sync leaves to manual intervention. The store may then be partly updated,
-    /// so the caller must stop the node.
+    /// `error.PayloadInvalidToValid` means the engine contradicted an earlier verdict. Carriers
+    /// share one payload chain, so in practice it fails before any write; otherwise the
+    /// carriers already marked keep `.valid`, which the engine vouched for and the head ignores.
     pub fn onPayloadValid(self: *Store, block_hash: Root) Error!void {
         const hashes = self.blocks.items(.payload_block_hash);
         var found = false;
@@ -1335,16 +1331,6 @@ pub const Store = struct {
     /// already `.valid` or `.pre_merge`. Writes nothing when an `.invalid` payload comes first.
     /// A payload just marked `.valid` passes the node it hangs from, not its own.
     fn markChainValid(self: *Store, node: ForkChoiceNode) Error!void {
-        self.applyChainValid(node, try self.checkChainValid(node));
-    }
-
-    const ChainValidation = struct {
-        syncing_count: usize,
-        validates_root_base: bool,
-    };
-
-    /// The read-only half of `markChainValid`.
-    fn checkChainValid(self: *const Store, node: ForkChoiceNode) Error!ChainValidation {
         const statuses = self.blocks.items(.execution_status);
         var count: usize = 0;
         var chain = self.payloadChain(node);
@@ -1360,17 +1346,11 @@ pub const Store = struct {
             }
         }
         if (reached_root and self.root_base_status == .invalid) return error.PayloadInvalidToValid;
-        return .{ .syncing_count = count, .validates_root_base = reached_root and self.root_base_status == .syncing };
-    }
-
-    /// `validation` is `checkChainValid(node)` with no status on `node`'s payload chain
-    /// written since.
-    fn applyChainValid(self: *Store, node: ForkChoiceNode, validation: ChainValidation) void {
-        if (validation.syncing_count == 0 and !validation.validates_root_base) return;
-        const statuses = self.blocks.items(.execution_status);
-        var chain = self.payloadChain(node);
-        for (0..validation.syncing_count) |_| statuses[chain.next().?] = .valid;
-        if (validation.validates_root_base) self.root_base_status = .valid;
+        const validates_root_base = reached_root and self.root_base_status == .syncing;
+        if (count == 0 and !validates_root_base) return;
+        chain = self.payloadChain(node);
+        while (count > 0) : (count -= 1) statuses[chain.next().?] = .valid;
+        if (validates_root_base) self.root_base_status = .valid;
         self.head_cache.dirty = true;
     }
 
