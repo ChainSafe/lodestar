@@ -48,10 +48,10 @@
     "test": "NODE_OPTIONS='--expose-gc' vitest run",
     "benchmark": "NODE_OPTIONS='--import tsx' benchmark 'perf/**/*.test.ts' --isolate --config .benchrc.yaml --defaultBranch unstable",
     "build": "pnpm run prepare-mainnet && pnpm run prepare-minimal && pnpm run prepare-gnosis",
-    "build:watch": "pnpm run build --watch",
+    "build:watch": "preset=${LODESTAR_PRESET:-mainnet} && mkdir -p zig-out/lib && ln -sf bindings.node zig-out/lib/bindings-$preset.node && cd .. && zig build build-lib:bindings -Doptimize=ReleaseSafe -Dcpu=baseline -Dpreset=$preset --prefix bindings/zig-out --watch",
     "build:release": "pnpm clean && pnpm build",
     "clean": "rm -rf zig-out",
-    "check-build": "node -e \"import('./src/index.js')\"",
+    "check-build": "for preset in mainnet minimal gnosis; do LODESTAR_PRESET=$preset node -e \"import('./src/index.js')\" || exit 1; done",
     "prepack": "zapi prepublish --main-only"
   },
   "keywords": [],
