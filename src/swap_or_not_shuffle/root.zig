@@ -4,7 +4,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const sha256 = @import("sha256.zig");
-pub const diag = @import("diag.zig");
 
 pub const SHUFFLE_ROUNDS_MINIMAL: u32 = 10;
 pub const SHUFFLE_ROUNDS_MAINNET: u32 = 90;
@@ -173,12 +172,9 @@ pub const pairs_per_task: usize = if (builtin.is_test) 1 << 10 else 1 << 16;
 
 fn SwapPairsTask(comptime T: type) type {
     return struct {
-        fn run(out: []T, manager: ShufflingManager, low_first: usize, high_first: usize, pair_count: usize, spawn_ns: u64) void {
-            const start_ns = diag.monoNs();
-            const before = diag.usage(diag.thread_usage);
+        fn run(out: []T, manager: ShufflingManager, low_first: usize, high_first: usize, pair_count: usize) void {
             var task_manager = manager;
             swapOrNotPairs(T, out, &task_manager, low_first, high_first, pair_count);
-            diag.stats.task(spawn_ns, start_ns, diag.monoNs(), diag.usage(diag.thread_usage).sub(before));
         }
     };
 }
@@ -200,7 +196,7 @@ fn swapOrNotPairsOnGroup(
     var start: usize = 0;
     while (start < pair_count) : (start += pairs_per_task) {
         const task_pair_count = @min(pairs_per_task, pair_count - start);
-        group.async(io, SwapPairsTask(T).run, .{ out, manager.*, low_first + start, high_first - start, task_pair_count, diag.monoNs() });
+        group.async(io, SwapPairsTask(T).run, .{ out, manager.*, low_first + start, high_first - start, task_pair_count });
     }
 }
 
@@ -251,7 +247,6 @@ fn shuffleRounds(
 
         if (io) |task_io| {
             const high_pair_count = mirror_high - (pivot + 1);
-            const round_start_ns = diag.monoNs();
             var group: std.Io.Group = .init;
             // The smaller range may run inline, so spawn the larger one's tasks first.
             if (mirror_low >= high_pair_count) {
@@ -262,7 +257,6 @@ fn shuffleRounds(
                 swapOrNotPairsOnGroup(T, task_io, &group, out, &manager, 0, pivot, mirror_low);
             }
             try group.await(task_io);
-            diag.stats.round(diag.monoNs() - round_start_ns);
         } else {
             swapOrNotPairs(T, out, &manager, 0, pivot, mirror_low);
             swapOrNotPairs(T, out, &manager, pivot + 1, list_size - 1, mirror_high - (pivot + 1));
