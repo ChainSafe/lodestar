@@ -6,6 +6,8 @@ const std = @import("std");
 const assert = std.debug.assert;
 const BoundedArray = @import("bounded_array").BoundedArray;
 const FG = @import("fg/FinalityGadget.zig");
+const BlockRef = @import("fg/finality_types.zig").BlockRef;
+const Height = @import("fg/finality_types.zig").Height;
 const AttestationPool = @import("fg/AttestationPool.zig");
 const SigningRecord = @import("fg/SigningRecord.zig");
 const AC = @import("ac/available_chain.zig").AvailableChain;
@@ -62,7 +64,15 @@ pub const Admission = enum {
     equivocator_limit,
     unauthenticated,
 };
-pub const Tips = struct { finalized: types.Root, confirmed: types.Root, head: types.Root };
+/// What a client is told: the node's whole promise to the outside.
+pub const Tips = struct {
+    finalized: BlockRef,
+    /// The greatest justification extending the finalized block: an FG height and its target.
+    justified: Checkpoint,
+    confirmed: BlockRef,
+    head: BlockRef,
+};
+pub const Checkpoint = struct { height: Height, block: BlockRef };
 /// One durable input, in the order Node accepted it. A block borrows Storage's memory until the
 /// next Storage call.
 pub const JournalEntry = union(enum) { block: FG.Block, attestation: FG.Attestation };
@@ -343,17 +353,26 @@ pub fn NodeType(
             return self.pool.add(a);
         }
 
-        /// Queries obey the same tick boundary. An asleep node has no output.
-        pub fn tips(self: *Node) Error!Tips {
-            try self.enter();
-            defer self.busy = false;
-            errdefer self.stopped = true;
-            const Phi = try self.fg.toAC(&self.frame_buffer);
+        /// The answer as of the last processed instant: the finalized block, the justified
+        /// checkpoint, the confirmed block and the head. It changes nothing, so a client may ask
+        /// at any time between calls. An asleep or stopped node has no output. `scratch` holds
+        /// the frame the answer is computed from.
+        pub fn tips(self: *const Node, scratch: *FG.FrameBuffer) Error!Tips {
+            if (self.stopped) return error.Stopped;
+            if (self.busy) return error.Reentrant;
+            if (!self.awake) return error.Asleep;
+            const Phi = try self.fg.toAC(scratch);
             return .{
-                .finalized = self.fg.F.root,
-                .confirmed = try self.ac.confirmed(&Phi, self.t),
-                .head = try self.ac.head(&Phi, self.t),
+                .finalized = self.fg.F,
+                .justified = .{ .height = self.fg.h_j, .block = self.fg.J },
+                .confirmed = try self.ref(&try self.ac.confirmed(&Phi, self.t)),
+                .head = try self.ref(&try self.ac.head(&Phi, self.t)),
             };
+        }
+
+        fn ref(self: *const Node, root: *const types.Root) Error!BlockRef {
+            const index = self.fg.find(root) orelse return error.UnknownBlock;
+            return .{ .root = root.*, .slot = self.fg.T.buffer[index].slot };
         }
 
         /// Store admission, ingress validation, state transition, then store and AC publication.

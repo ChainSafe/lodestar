@@ -273,6 +273,46 @@ Not modelled yet: a write lost or torn by the crash, a crash between a write and
 follows it, and a checkpoint to avoid replay from genesis. The first two need storage calls that
 complete on a later tick.
 
+## Cluster checks read what a client sees (2026-11-18)
+
+The cluster checks used to read each node's internals: `fg.F`, `ac.confirmed`, `fg.h_max`. That
+tied them to the current layout, and it let a check pass on internal state that no client can
+observe. `Node.tips` is now a pure read that returns the finalized block, the justified
+checkpoint, the confirmed block and the head. The simulator records each node's answer in a
+history when it changes, and all four cluster checks read only that history, the shared block
+store and the simulator's own fault record.
+
+The height-progress check was the hard one, because `fg.h_max` is internal. We measured four
+signals against the three seeds that stall with block requests off (8, 15 and 28) and against the
+896 seeds of the standard sweeps. The confirmed-slot signal was dropped after 192 seeds:
+
+| Signal                  | Bound    | Stalls caught | Failures in 896  |
+| ----------------------- | -------- | ------------- | ---------------- |
+| `fg.h_max` (internal)   | 4 rounds | 3             | 0                |
+| later confirmed slot    | 4 rounds | 0             | 0 of the 192 run |
+| later finalized slot    | 4 rounds | 3             | 13               |
+| higher justified height | 4 rounds | 3             | 1                |
+| higher justified height | 5 rounds | 2             | 0                |
+
+Confirmation keeps advancing on one side of a split while finality is stuck, so it sees nothing.
+Finality needs at least four rounds to start, so a four-round bound has no margin, and at eight
+rounds the runs end before the bound. The justified checkpoint is one stage earlier than finality
+and is client-visible in the same way Ethereum's justified checkpoint is. We chose it.
+
+Its bound is five rounds, not four. `fg.h_max` also advances by timeout, with no justification,
+and a justification after a partition can need that timeout path first. In seed 83 three
+partitions end at instant 152 and the next justification is reported at 224, just after the fifth
+FG action following the heal. The cost is seed 8 with block requests off: it recovers within the
+fifth round, so it is no longer flagged. It was a slowdown, not a permanent stall.
+
+Two reads of a Node remain on purpose. The per-node assertions that relate tips to FG's internals
+stay next to the recording. The premises read whether a node is awake or stopped, which the
+simulator itself caused through its controls.
+
+This closes two of the three gaps listed under "Writes are messages, reads are queries":
+`tips()` no longer moves processing time, and the cluster checks no longer read `node.fg` or
+`node.ac`.
+
 Cut/heal controls record their times between public ticks. Consecutive fuzz partitions clear the
 previous partition before applying the next. Queue occupancy and per-instant delivery work have
 separate limits; work exhaustion returns an incomplete-run error. Replay hashes include checker

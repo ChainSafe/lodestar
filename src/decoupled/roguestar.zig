@@ -121,7 +121,7 @@ const help_text =
     \\  --storage-fail NODE@FROM-UNTIL   durable writes fail
     \\  --partition 0,1:2,3@FROM-UNTIL   cut listed groups from each other
     \\Checks
-    \\  --height-progress-bound B   instants; default 4 rounds when faults are planned
+    \\  --height-progress-bound B   instants; default 5 rounds when faults are planned
     \\  --finalization-bound B      instants; default off
     \\  --no-finality, --no-confirmation
     \\
@@ -397,8 +397,10 @@ fn resolve(seed: u64, cli: *const CLIArgs) !Resolved {
             .checks = .{
                 .finality = !cli.no_finality,
                 .confirmation = !cli.no_confirmation,
+                // Five rounds: after a partition a new justification can need the timeout path,
+                // and in seed 83 it arrived just after the fifth FG action following the heal.
                 .height_progress_bound = cli.height_progress_bound orelse
-                    (if (planned) 4 * (4 * delta * rounds) else null),
+                    (if (planned) 5 * (4 * delta * rounds) else null),
                 .finalization_bound = cli.finalization_bound,
             },
             .fuzz = fuzz,

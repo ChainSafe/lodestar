@@ -36,6 +36,9 @@ pub const max_trace = 262144;
 pub const max_time = 4096;
 /// Upper bound on fault slots of each kind in a fuzz plan.
 pub const max_fault_slots = 8;
+/// At most one observation per node per instant: a later answer in the same instant replaces the
+/// earlier one.
+pub const max_history = max_nodes * max_time;
 
 pub const Error = Node.Error || error{
     OutOfMemory,
@@ -141,8 +144,9 @@ pub const Checks = struct {
     /// Compare confirmed tips while confirmationPremises holds: 2 * faulty < n, and within
     /// the last k + 2 slots no honest cut or honest sleep/wake.
     confirmation: bool = true,
-    /// Bound aggregate h_max inactivity under heightProgressPremises. This is not finalization
-    /// or recovery. Fault inputs, honest cuts/churn, and any honest height advance reset the timer.
+    /// Under heightProgressPremises, some honest node must report a higher justified height within
+    /// this bound. This is not finalization or recovery. Fault inputs, honest cuts/churn, and any
+    /// such advance reset the timer. A height that advances by timeout alone does not count.
     height_progress_bound: ?Time = null,
     /// Caller-selected per-node finalization inactivity bound, starting at genesis.
     /// Applies only to fault-free, continuously awake/connected runs with strict block/vote delay.
@@ -168,6 +172,9 @@ pub const Coverage = struct {
     finalization: CheckCoverage = .{},
 };
 pub const Verdict = enum { passed, property_failure, incomplete };
+/// What a node told its clients, recorded when the answer changes. The cluster checks read this
+/// history, the shared block store and the simulator's own fault record, never a Node's fields.
+pub const Observation = struct { time: Time, node: u32, tips: node_module.Tips };
 pub const Link = struct { from: u32, to: u32, channel: Channel, connected: bool };
 pub const Control = union(enum) {
     sleep: u32,
@@ -248,9 +255,10 @@ const Replica = struct {
     storage: Storage,
     signer: Signer,
     state_source: StateSource,
-    previous_F: Root,
-    /// Greatest fg.h_max observed by the cluster checks; progress raises it.
-    h_max_seen: u32,
+    /// Index in the history of this node's latest observation; null only during creation.
+    reported: ?u32,
+    /// Greatest justified height this node reported at a cluster check; progress raises it.
+    justified_height_seen: u32,
     /// Time of the latest observed finalized-root advance; zero starts the genesis deadline.
     last_finalization: Time,
     /// The validator identity this replica signs as. Equal to the replica index unless it is a twin.
@@ -314,7 +322,8 @@ last_fault: Time,
 last_honest_cut: ?Time,
 last_honest_churn: ?Time,
 last_height_progress: Time,
-/// First observed height advance after the latest fault input. Not evidence of recovery.
+/// First time after the latest fault input that an honest node reported a higher justified
+/// height. Not evidence of recovery.
 first_height_progress_after_fault: ?Time,
 coverage: Coverage,
 plan: Plan,
@@ -324,6 +333,7 @@ packets: BoundedArray(Packet, max_packets),
 pending: BoundedArray(Pending, max_pending),
 commands: BoundedArray(Command, max_commands),
 trace: BoundedArray(Trace, max_trace),
+history: BoundedArray(Observation, max_history),
 links: [2][max_nodes][max_nodes]bool,
 
 pub fn create(allocator: std.mem.Allocator, config: *const Config) Error!*Simulator {
@@ -363,6 +373,7 @@ pub fn create(allocator: std.mem.Allocator, config: *const Config) Error!*Simula
     self.pending = .{};
     self.commands = .{};
     self.trace = .{};
+    self.history = .{};
     self.links = @splat(@splat(@splat(true)));
     if (config.fuzz) |fuzz| {
         self.drawPlan(&fuzz);
@@ -395,12 +406,13 @@ pub fn create(allocator: std.mem.Allocator, config: *const Config) Error!*Simula
             .state_source = &replica.state_source,
         });
         replica.storage.record = replica.node.Lambda;
-        replica.previous_F = protocol.B_gen;
-        replica.h_max_seen = replica.node.fg.h_max;
+        replica.reported = null;
+        replica.justified_height_seen = 0;
         replica.last_finalization = 0;
         replica.paused_until = null;
         replica.crashed = false;
     }
+    for (0..self.replicas.len) |v| try self.record(@intCast(v));
     return self;
 }
 
@@ -422,8 +434,8 @@ fn twinIdentity(self: *const Simulator, i: u32) u32 {
     return i;
 }
 
-/// Instants from the latest fault input to the first height advance after it, or null when no
-/// honest node advanced after the latest fault. With no faults it is the time to first progress.
+/// Instants from the latest fault input to the first higher justified height an honest node
+/// reported after it, or null when none did. With no faults it is the time to first progress.
 pub fn firstHeightProgressDelay(self: *const Simulator) ?Time {
     const progress = self.first_height_progress_after_fault orelse return null;
     if (progress < self.last_fault) return null;
@@ -533,11 +545,12 @@ pub fn digest(self: *const Simulator) Root {
         h.add(Hash.nodeDigest(&replica.node));
         h.add(&replica.state_source);
         h.add(&replica.storage.record);
-        h.add(.{ replica.storage.fail_writes, replica.previous_F, replica.h_max_seen, replica.last_finalization, replica.validator });
+        h.add(.{ replica.storage.fail_writes, replica.reported, replica.justified_height_seen, replica.last_finalization, replica.validator });
         h.add(.{ replica.paused_until, replica.node.late_ticks, replica.crashed });
         h.add(.{ &replica.storage.journal, &replica.storage.ac });
     }
     h.add(self.trace.constSlice());
+    h.add(self.history.constSlice());
     return h.finish();
 }
 
@@ -593,17 +606,17 @@ fn checkCluster(self: *Simulator) Error!void {
     const checks = self.config.checks;
     const n = self.config.protocol.n;
     const faulty_count: u32 = @popCount(self.faulty);
-    var buffer: FG.FrameBuffer = undefined;
     var finalized: [max_nodes]?Root = @splat(null);
     var confirmed: [max_nodes]?Root = @splat(null);
     var awake_honest: u32 = 0;
     for (self.replicas, 0..) |*replica, i| {
         if (self.isFaulty(replica.validator)) continue;
-        finalized[i] = replica.previous_F;
+        const reported = self.tips(@intCast(i));
+        finalized[i] = reported.finalized.root;
         if (!replica.node.awake) continue;
         awake_honest += 1;
-        if (replica.node.fg.h_max > replica.h_max_seen) {
-            replica.h_max_seen = replica.node.fg.h_max;
+        if (reported.justified.height > replica.justified_height_seen) {
+            replica.justified_height_seen = reported.justified.height;
             self.last_height_progress = self.now;
             if (self.first_height_progress_after_fault == null or
                 self.first_height_progress_after_fault.? < self.last_fault)
@@ -611,8 +624,7 @@ fn checkCluster(self: *Simulator) Error!void {
                 self.first_height_progress_after_fault = self.now;
             }
         }
-        const Phi = try replica.node.fg.toAC(&buffer);
-        confirmed[i] = try replica.node.ac.confirmed(&Phi, self.now);
+        confirmed[i] = reported.confirmed.root;
     }
     if (checks.finality and self.coverage.finality.record(3 * faulty_count < n, true)) {
         try self.pairwiseCompatible(&finalized, error.FinalityConflict);
@@ -1333,20 +1345,15 @@ fn enqueue(self: *Simulator, packet: u32, from: u32, to: u32, kind: Kind) Error!
 
 fn observe(self: *Simulator, index: u32) Error!void {
     const replica = &self.replicas[index];
-    const tips = try replica.node.tips();
+    try self.record(index);
+    const reported = self.tips(index);
     const fg = &replica.node.fg;
-    const F = fg.find(&tips.finalized) orelse return error.InvariantViolation;
-    const C = fg.find(&tips.confirmed) orelse return error.InvariantViolation;
-    const H = fg.find(&tips.head) orelse return error.InvariantViolation;
-    const old = fg.find(&replica.previous_F) orelse return error.InvariantViolation;
+    const F = fg.find(&reported.finalized.root) orelse return error.InvariantViolation;
+    const C = fg.find(&reported.confirmed.root) orelse return error.InvariantViolation;
+    const H = fg.find(&reported.head.root) orelse return error.InvariantViolation;
     const Phi = try fg.toAC(&replica.node.frame_buffer);
-    if (!fg.isAncestor(old, F) or !fg.isAncestor(F, C) or !fg.isAncestor(C, H) or
+    if (!fg.isAncestor(F, C) or !fg.isAncestor(C, H) or
         !fg.isAncestor(fg.find(&Phi.fc_root).?, H)) return error.InvariantViolation;
-    if (!std.mem.eql(u8, &replica.previous_F, &tips.finalized)) {
-        replica.last_finalization = self.now;
-        replica.previous_F = tips.finalized;
-        try self.checkFinalityHistory(index);
-    }
     const first = 6 * self.config.protocol.ac.delta;
     const period = 4 * self.config.protocol.ac.delta * self.config.protocol.ac.R;
     if (self.now >= first and (self.now - first) % period == 0) {
@@ -1371,13 +1378,48 @@ fn observe(self: *Simulator, index: u32) Error!void {
     });
 }
 
+/// The latest answer node `v` gave its clients. A sleeping node's last answer stands.
+pub fn tips(self: *const Simulator, v: u32) node_module.Tips {
+    return self.history.buffer[self.replicas[v].reported.?].tips;
+}
+
+/// Ask the node what it reports and append the answer when it changed. A node's finalized block
+/// only moves to a descendant, and a new one must agree with every honest node's latest.
+fn record(self: *Simulator, v: u32) Error!void {
+    const replica = &self.replicas[v];
+    var scratch: FG.FrameBuffer = undefined;
+    const answer = try replica.node.tips(&scratch);
+    var finalized_moved = false;
+    if (replica.reported) |latest| {
+        const previous = &self.history.buffer[latest];
+        if (std.meta.eql(previous.tips, answer)) return;
+        finalized_moved = !std.mem.eql(u8, &previous.tips.finalized.root, &answer.finalized.root);
+        if (finalized_moved and !self.descends(&previous.tips.finalized.root, &answer.finalized.root)) {
+            return error.InvariantViolation;
+        }
+        if (previous.time == self.now) {
+            previous.tips = answer;
+        } else {
+            replica.reported = self.history.count;
+            self.history.push(.{ .time = self.now, .node = v, .tips = answer });
+        }
+    } else {
+        replica.reported = self.history.count;
+        self.history.push(.{ .time = self.now, .node = v, .tips = answer });
+    }
+    if (finalized_moved) {
+        replica.last_finalization = self.now;
+        try self.checkFinalityHistory(v);
+    }
+}
+
 fn checkFinalityHistory(self: *const Simulator, index: u32) Error!void {
-    const replica = &self.replicas[index];
-    if (!self.config.checks.finality or self.isFaulty(replica.validator)) return;
+    if (!self.config.checks.finality or self.isFaulty(self.replicas[index].validator)) return;
     if (3 * @as(u32, @popCount(self.faulty)) >= self.config.protocol.n) return;
-    for (self.replicas) |*other| {
+    const finalized = self.tips(index).finalized.root;
+    for (self.replicas, 0..) |*other, i| {
         if (self.isFaulty(other.validator)) continue;
-        if (!self.compatible(&replica.previous_F, &other.previous_F)) return error.FinalityConflict;
+        if (!self.compatible(&finalized, &self.tips(@intCast(i)).finalized.root)) return error.FinalityConflict;
     }
 }
 

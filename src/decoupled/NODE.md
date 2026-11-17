@@ -107,7 +107,10 @@ recovers the parent itself:
 There is no timer and no retry: a request goes out only when a block arrives, to the peer that sent
 it. A repeat delivery of a kept block asks its own sender. Kept blocks are not protocol state. A
 refused object changes no protocol state; its processing may advance Node's
-clock. `tips()` returns copied roots with the same clock discipline. Direct native FG/AC callers must establish Node's premises.
+clock. `tips(scratch)` is the node's answer to a client: its finalized, confirmed and head blocks, each
+with its slot, and its justified checkpoint (an FG height and its target block), as of the last
+processed instant. It reads only, so it may be called at any time
+between calls; an asleep or stopped node has no answer. Direct native FG/AC callers must establish Node's premises.
 
 ## Durable state and restore
 

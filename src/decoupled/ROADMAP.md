@@ -33,8 +33,6 @@ is scheduled yet:
   ([NODE.md](./NODE.md)). Still missing: a crash inside a call, between a write and the send that
   follows it; writes that are lost or torn because they were not yet synced; and a checkpoint, so
   that restore does not replay from genesis.
-- **Client-visible checks:** make the cluster checks read a per-tick history of each node's
-  finalized, confirmed and head roots, not `node.fg` and `node.ac` fields.
 - **Wire encoding:** the transport passes Zig structs by pointer, so no codec runs in simulation.
   Carry encoded messages once the wire types exist.
 - **Slow dependencies:** `StateSource.transition` and `Storage.persist` are synchronous. Turn each

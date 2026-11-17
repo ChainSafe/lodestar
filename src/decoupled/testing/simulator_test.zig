@@ -874,7 +874,7 @@ test "checks: finality compares historical outputs while an honest node sleeps" 
     sim.replicas[1].node.fg.F = A.ref();
     sim.replicas[1].node.fg.J = A.ref();
     try sim.runUntil(21);
-    try testing.expectEqual(A.root, sim.replicas[1].previous_F);
+    try testing.expectEqual(A.root, sim.tips(1).finalized.root);
     sim.replicas[2].node.fg.F = B.ref();
     sim.replicas[2].node.fg.J = B.ref();
     _ = try sim.injectVote(22, 0, 4, &.{ .val_index = 0, .slot = 1, .head = B.root }, true);
@@ -882,6 +882,50 @@ test "checks: finality compares historical outputs while an honest node sleeps" 
     try testing.expectEqual(@as(u32, 22), sim.now);
     try testing.expect(!sim.node(1).awake);
     try testing.expectEqual(Simulator.Verdict.property_failure, sim.verdict());
+}
+
+test "checks: a finalized block that moves back fails that node's own history" {
+    const sim = try Simulator.create(testing.allocator, &config);
+    defer sim.destroy();
+    try sim.runUntil(200);
+    try testing.expect(sim.tips(1).finalized.slot > 0);
+    // Negative control: simulate faulty finalization code without changing shared transitions.
+    sim.replicas[1].node.fg.F = .{ .root = config.protocol.B_gen, .slot = 0 };
+    try testing.expectError(error.InvariantViolation, sim.runUntil(204));
+    try testing.expectEqual(Simulator.Verdict.property_failure, sim.verdict());
+}
+
+test "history: one answer per node per instant, and asking changes nothing" {
+    const sim = try Simulator.create(testing.allocator, &config);
+    defer sim.destroy();
+    // Every node's genesis answer is recorded at creation.
+    try testing.expectEqual(@as(u32, 4), sim.history.count);
+    try sim.runUntil(257);
+    var latest: [4]?Simulator.Observation = @splat(null);
+    for (sim.history.constSlice()) |entry| {
+        if (latest[entry.node]) |previous| {
+            try testing.expect(entry.time > previous.time);
+            try testing.expect(entry.tips.finalized.slot >= previous.tips.finalized.slot);
+        }
+        latest[entry.node] = entry;
+    }
+    for (0..4) |v| try testing.expectEqual(latest[v].?.tips, sim.tips(@intCast(v)));
+    // Far fewer entries than one per node per instant: unchanged answers are not recorded.
+    try testing.expect(sim.history.count < 4 * 64);
+
+    const node = sim.node(0);
+    const before = Hash.nodeDigest(node);
+    var scratch: FG.FrameBuffer = undefined;
+    const answer = try node.tips(&scratch);
+    try testing.expectEqual(sim.tips(0), answer);
+    try testing.expectEqual(before, Hash.nodeDigest(node));
+
+    // An asleep node answers nothing, and its last answer stands for the finality check.
+    try sim.schedule(258, .{ .sleep = 0 });
+    try sim.runUntil(300);
+    try testing.expectError(error.Asleep, sim.node(0).tips(&scratch));
+    try testing.expectEqual(answer.finalized, sim.tips(0).finalized);
+    try testing.expect(sim.tips(1).finalized.slot > answer.finalized.slot);
 }
 
 test "checks: warmup comparisons do not count as active confirmation samples" {
@@ -998,9 +1042,9 @@ test "checks: replay digest includes progress history coverage and failure class
     const sim = try Simulator.create(testing.allocator, &config);
     defer sim.destroy();
     const initial = sim.digest();
-    sim.replicas[0].h_max_seen += 1;
+    sim.replicas[0].justified_height_seen += 1;
     try testing.expect(!std.mem.eql(u8, &initial, &sim.digest()));
-    sim.replicas[0].h_max_seen -= 1;
+    sim.replicas[0].justified_height_seen -= 1;
     sim.replicas[0].last_finalization = 1;
     try testing.expect(!std.mem.eql(u8, &initial, &sim.digest()));
     sim.replicas[0].last_finalization = 0;

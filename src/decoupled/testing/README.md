@@ -176,8 +176,19 @@ simulator's, not a specified one.
 
 ### Checks, coverage, and verdicts
 
+The cluster checks judge a node only by what it tells a client. After every tick and delivery the
+simulator asks the node for its tips (`Node.tips`: finalized, justified, confirmed and head) and appends the
+answer to `history` when it changed, at most one entry per node per instant. The checks read that
+history, the simulator's global block store for ancestry, and the simulator's own record of faults.
+They do not read a Node's fields, so they keep their meaning when the internals change.
+`Simulator.tips(v)` is node `v`'s latest answer; a sleeping node's last answer stands.
+
+Two claims are checked when an answer is recorded: a node's finalized block only moves to a
+descendant (`InvariantViolation` otherwise), and a new finalized block agrees with every honest
+node's latest. The per-node relations between tips and FG's internals (finalized is an ancestor of
+confirmed, confirmed of head) remain internal assertions in the same place.
+
 `Config.checks` selects four checks, with coverage sampled once per public tick after deliveries.
-Finality also compares each new finalized output immediately, including between public ticks.
 The premises are explicit experimental assumptions, not theorems supplied by the PDF.
 Compatibility means equal roots or ancestry in the simulator's global block store.
 
@@ -189,10 +200,11 @@ Compatibility means equal roots or ancestry in the simulator's global block stor
   `confirmationPremises()` holds: `2 * faulty < n`, and within the last `k + 2` slots no honest
   cut or honest sleep/wake. Conflicts return `ConfirmationConflict`.
   This premise is experimental; do not remove it merely to make a campaign exercise the check.
-- `height_progress_bound` (default null): the previous height-progress property, now named
-  explicitly. Under `heightProgressPremises()` (fewer than a third faulty, an awake honest quorum,
-  no current honest cut), fail with `HeightProgressStall` after the bound without any honest
-  `h_max` advance. Fault inputs, cuts, churn, and height advances reset its aggregate timer.
+- `height_progress_bound` (default null): under `heightProgressPremises()` (fewer than a third
+  faulty, an awake honest quorum, no current honest cut), fail with `HeightProgressStall` when no
+  honest node reports a higher justified height within the bound. Fault inputs, cuts, churn, and
+  each such advance reset its aggregate timer. A height that advances by timeout alone does not
+  count. Roguestar's default is five rounds; see DESIGN.md, 2026-11-18.
 - `finalization_bound` (default null): under `finalizationPremises()`, every node must advance
   its finalized root within the caller's bound, measured from genesis or that node's latest
   advance. Another node's progress cannot reset its timer. Failure returns `FinalizationStall`.
@@ -272,7 +284,7 @@ Packets carry both the publishing node and the signing validator; witness checks
 ### First height-progress delay
 
 `firstHeightProgressDelay()` is the number of instants from the latest fault input to the first
-observed honest height advance after it, or null when none occurred. With no faults, it measures
+higher justified height that an honest node reported after it, or null when none occurred. With no faults, it measures
 from genesis. It replaces `healingTime()` because the metric establishes neither finalization nor
 per-node recovery. Sweeps report `height_progressed` and the mean/maximum delay, not healed seeds.
 
