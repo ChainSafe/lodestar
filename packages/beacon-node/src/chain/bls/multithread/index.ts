@@ -127,7 +127,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     timeout: NodeJS.Timeout;
   } | null = null;
   private blsVerifyAllMultiThread: boolean;
-  private closed = false;
   private closePromise: Promise<void> | undefined;
   private workersBusy = 0;
   private readonly onCapacity: (() => void) | undefined;
@@ -153,7 +152,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
   canAcceptWork(): boolean {
     return (
-      !this.closed &&
+      this.closePromise === undefined &&
       this.workersBusy < blsPoolSize &&
       // TODO: Should also bound the jobs queue?
       this.jobs.length < MAX_JOBS_CAN_ACCEPT_WORK
@@ -161,7 +160,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   }
 
   async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
-    if (this.closed) throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
+    if (this.closePromise !== undefined) throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
     this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
     this.metrics?.blsThreadPool.totalSigSets.inc(sets.length);
     if (opts.priority) {
@@ -214,7 +213,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     message: Uint8Array,
     opts: Omit<VerifySignatureOpts, "verifyOnMainThread"> = {}
   ): Promise<boolean[]> {
-    if (this.closed) throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
+    if (this.closePromise !== undefined) throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
     const promises: Promise<boolean[]>[] = [];
     for (const setsChunk of chunkSameMessageSignatureSets(sets)) {
       promises.push(
@@ -238,7 +237,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
   close(): Promise<void> {
     if (this.closePromise !== undefined) return this.closePromise;
-    this.closed = true;
     if (this.bufferedJobs) {
       clearTimeout(this.bufferedJobs.timeout);
       for (const jobs of [this.bufferedJobs.jobs, this.bufferedJobs.prioritizedJobs]) {
@@ -314,7 +312,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
    * Register BLS work to be done eventually in a worker
    */
   private queueBlsWork(job: JobQueueItem): void {
-    if (this.closed) {
+    if (this.closePromise !== undefined) {
       throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
     }
 
@@ -373,7 +371,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
    * Potentially submit jobs to an idle worker, only if there's a worker and jobs
    */
   private runJob = async (): Promise<void> => {
-    if (this.closed) {
+    if (this.closePromise !== undefined) {
       return;
     }
 
@@ -514,7 +512,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       }
     } catch (e) {
       // Worker communications should never reject
-      if (!this.closed) {
+      if (this.closePromise === undefined) {
         this.logger.error("BlsMultiThreadWorkerPool error", {}, e as Error);
       }
       // Reject jobs that were not already completed
@@ -531,7 +529,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     worker.status = {code: WorkerStatusCode.idle, workerApi};
     const wasReadyAtCompletion = this.canAcceptWork();
     this.workersBusy--;
-    if (!this.closed && !wasReadyAtCompletion && this.canAcceptWork()) this.onCapacity?.();
+    if (!wasReadyAtCompletion && this.canAcceptWork()) this.onCapacity?.();
 
     // Potentially run a new job
     callInNextEventLoop(() => void this.runJob());

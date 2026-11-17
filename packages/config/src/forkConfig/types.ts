@@ -58,6 +58,8 @@ export type ForkConfig = {
   getBlobParameters(epoch: Epoch): BlobParameters;
   /** Get the scheduled gas limit at a post-Gloas epoch, if an entry is active */
   getScheduledGasLimit(epoch: Epoch): number | undefined;
+  /** Get the minimum epoch range over which blocks must be retained and served at a given epoch */
+  getMinEpochsForBlockRequests(epoch: Epoch): number;
 
   getAttestationDueMs(fork: ForkName): number;
   getAggregateDueMs(fork: ForkName): number;

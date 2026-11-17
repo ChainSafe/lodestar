@@ -72,7 +72,7 @@ async function validateAggregateAndProof(
   const attSlot = attData.slot;
 
   let committeeIndex: number | null;
-  if (ForkSeq[fork] >= ForkSeq.gloas) {
+  if (ForkSeq[fork] >= ForkSeq.gloas && chain.config.getForkSeq(attSlot) >= ForkSeq.gloas) {
     // [REJECT] `aggregate.data.index < 2`.
     if (attData.index >= 2) {
       throw new AttestationError(GossipAction.REJECT, {

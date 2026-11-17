@@ -160,7 +160,7 @@ jobs:
         run: scripts/run_e2e_env.sh start
 
       - name: E2E tests
-        run: pnpm test:e2e
+        run: pnpm vitest run --project e2e --project e2e-mainnet
         env:
           GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL!=0 && secrets.GOERLI_RPC_URL || env.GOERLI_RPC_DEFAULT_URL }}
 
@@ -173,6 +173,24 @@ jobs:
         with:
           name: debug-e2e-test-logs-node-${{matrix.node}}
           path: test-logs/e2e-test-env
+
+  e2e-sync-tests:
+    name: E2E Sync Tests
+    runs-on: warp-ubuntu-2204-x64-4x
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [26]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: "./.github/actions/restore-build"
+        with:
+          node: ${{ matrix.node }}
+
+      - name: E2E sync tests
+        run: pnpm vitest run --project e2e-sync
 
   browser-tests:
     name: Browser Tests

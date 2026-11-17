@@ -25,7 +25,7 @@ import {getSlotDurations} from "@lodestar/state-transition";
 import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
-import {callInNextEventLoop} from "../../util/eventLoop.js";
+import {callImmediate, callInNextEventLoop} from "../../util/eventLoop.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
 import {Libp2p} from "../interface.js";
 import {NetworkConfig} from "../networkConfig.js";
@@ -414,10 +414,7 @@ export class Eth2Gossipsub {
     const clientAgent = this.peersData.getPeerKind(peerIdStr) ?? "Unknown";
     const clientVersion = this.peersData.getAgentVersion(peerIdStr);
 
-    // Use setTimeout to yield to the macro queue
-    // Without this we'll have huge event loop lag
-    // See https://github.com/ChainSafe/lodestar/issues/5604
-    callInNextEventLoop(() => {
+    const emitPendingMessage = (): void => {
       this.events.emit(NetworkEvent.pendingGossipsubMessage, {
         topic,
         msg,
@@ -429,7 +426,17 @@ export class Eth2Gossipsub {
         seenTimestampSec,
         startProcessUnixSec: null,
       });
-    });
+    };
+
+    // Use setTimeout to yield to the macro queue
+    // Without this we'll have huge event loop lag
+    // See https://github.com/ChainSafe/lodestar/issues/5604
+    // A block arrives once per slot and cannot cause that lag, so it skips the 1ms timer delay
+    if (topic.type === GossipType.beacon_block) {
+      callImmediate(emitPendingMessage);
+    } else {
+      callInNextEventLoop(emitPendingMessage);
+    }
   }
 
   private onValidationResult(data: NetworkEventData[NetworkEvent.gossipMessageValidationResult]): void {

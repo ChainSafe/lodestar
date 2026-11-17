@@ -1,16 +1,19 @@
 import path from "node:path";
 import {defineProject} from "vitest/config";
 
+const setupFiles = [
+  path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
+  path.join(__dirname, "../scripts/vitest/setupFiles/dotenv.ts"),
+  path.join(__dirname, "../scripts/vitest/setupFiles/lodestarPreset.ts"),
+  path.join(__dirname, "../packages/beacon-node/test/setupFiles/hashtreeHasher.ts"),
+];
+
 export const specProjectMinimal = defineProject({
   test: {
     name: "spec-minimal",
     include: ["**/test/spec/**/*.test.ts"],
     exclude: ["**/test/spec/comptest/**"],
-    setupFiles: [
-      path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
-      path.join(__dirname, "../scripts/vitest/setupFiles/dotenv.ts"),
-      path.join(__dirname, "../scripts/vitest/setupFiles/lodestarPreset.ts"),
-    ],
+    setupFiles,
     // There are tests which is taking over 10 minutes.
     //  ✓ test/spec/presets/epoch_processing.test.ts > electra/epoch_processing/rewards_and_penalties/pyspec_tests > electra/epoch_processing/rewards_and_penalties/pyspec_tests/full_attestations_one_validaor_one_gwei 572377ms
     // So I have to increase these values to such extreme
@@ -28,11 +31,7 @@ export const specProjectMainnet = defineProject({
     name: "spec-mainnet",
     include: ["**/test/spec/**/*.test.ts"],
     exclude: ["**/test/spec/comptest/**"],
-    setupFiles: [
-      path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
-      path.join(__dirname, "../scripts/vitest/setupFiles/dotenv.ts"),
-      path.join(__dirname, "../scripts/vitest/setupFiles/lodestarPreset.ts"),
-    ],
+    setupFiles,
     // There are tests which is taking over 10 minutes.
     //  ✓ test/spec/presets/epoch_processing.test.ts > electra/epoch_processing/rewards_and_penalties/pyspec_tests > electra/epoch_processing/rewards_and_penalties/pyspec_tests/full_attestations_one_validaor_one_gwei 572377ms
     // So I have to increase these values to such extreme
@@ -52,11 +51,7 @@ export const specProjectComptest = defineProject({
   test: {
     name: "comptest",
     include: ["**/test/spec/comptest/**/*.test.ts"],
-    setupFiles: [
-      path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
-      path.join(__dirname, "../scripts/vitest/setupFiles/dotenv.ts"),
-      path.join(__dirname, "../scripts/vitest/setupFiles/lodestarPreset.ts"),
-    ],
+    setupFiles,
     testTimeout: 1000 * 60 * 15,
     hookTimeout: 1000 * 60 * 15,
     pool: "forks",
