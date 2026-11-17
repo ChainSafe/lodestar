@@ -532,13 +532,8 @@ test "core native Goodbye immediately removes relevance and delayed Status canno
     try std.testing.expectEqual(@as(u16, 0), setup.client.peer_manager.peerCounts().relevant);
     try std.testing.expectEqual(@as(u16, 1), setup.client.peer_manager.peerCounts().connected);
     for (0..20) |_| try setup.step(0);
-    try std.testing.expectEqual(@as(u16, 0), setup.client.peer_manager.peerCounts().relevant);
-    var event: [1]t.Event = undefined;
-    try std.testing.expectEqual(@as(usize, 1), setup.client.peer_manager.catalog.pollEvents(&event));
-    try std.testing.expect(!event[0].updated.relevant);
-    setup.pair.advance(2_000);
-    for (0..4) |_| try setup.step(0);
     try std.testing.expectEqual(@as(u16, 0), setup.client.peer_manager.peerCounts().connected);
+    var event: [1]t.Event = undefined;
     try std.testing.expectEqual(@as(usize, 1), setup.client.peer_manager.catalog.pollEvents(&event));
     try std.testing.expectEqual(t.DisconnectReason.reputation, event[0].closed.reason);
     const fault = @intFromEnum(goodbye.Reason.bad_score);

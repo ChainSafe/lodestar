@@ -837,6 +837,7 @@ test "application transport borrow authenticates while remote Status remains una
             try std.testing.expect(event.connected.peer_id.eql(&b.peerId()));
             authenticated = true;
         };
+        if (authenticated) break;
         _ = driver.step(&b, std.testing.io, tick, .{}, .deadlineOnly(time.optionalMilliseconds(tick.millis() +| 1)));
     }
     try std.testing.expect(authenticated);

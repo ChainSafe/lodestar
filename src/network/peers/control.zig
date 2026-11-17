@@ -627,7 +627,10 @@ pub const Control = struct {
                 std.debug.assert(event.bytes.len == 8);
                 const code = wire.decodeScalar(event.bytes) catch unreachable;
                 self.receivedGoodbye(catalog, peer, event.conn, code, false);
-                if (self.disconnect(catalog, peer, event.conn, .remote_goodbye, now)) |closing| closing.sent = true;
+                if (self.disconnect(catalog, peer, event.conn, .remote_goodbye, now)) |closing| {
+                    closing.sent = true;
+                    closing.deadline_ms = now.millis();
+                }
             },
             else => unreachable,
         }
@@ -710,7 +713,10 @@ pub const Control = struct {
         }
     }
     fn complete(self: *Control, catalog: *Catalog, row: *ConnectionState, event: rr.ReqResp.Event, now: Now) void {
-        if (row.closing != null) return;
+        if (row.closing) |*closing| {
+            if (row.protocol == .goodbye_v1) closing.deadline_ms = now.millis();
+            return;
+        }
         switch (event) {
             .failed => |failed| switch (failed.reason) {
                 .cancelled, .host_timeout, .quota_timeout => {

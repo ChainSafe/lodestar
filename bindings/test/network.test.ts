@@ -444,15 +444,15 @@ it("publishes copied peer observations without repeating unread notifications", 
     });
     expect(Object.getOwnPropertyDescriptor(result.peers, "0")?.value).toBe(result.peers[0]);
     expect(Object.getOwnPropertyDescriptor(result.peers[0], "type")?.value).toBe(result.peers[0].type);
-    const ready = result.peers.find((event) => event.type === "ready");
-    expect(ready).toBeDefined();
-    if (!ready || ready.type !== "ready") throw new Error("Missing peerReady");
-    expect(ready.state).not.toHaveProperty("peer");
-    expect(typeof ready.state.identity).toBe("string");
-    const retained = ready.state.identity.slice();
+    const closed = result.peers.find((event) => event.type === "closed");
+    expect(closed).toBeDefined();
+    if (!closed || closed.type !== "closed") throw new Error("Missing peer closed");
+    expect(closed).not.toHaveProperty("peer");
+    expect(typeof closed.identity).toBe("string");
+    const retained = closed.identity.slice();
     holdSettling(runtime, false);
     await runtime.close();
-    expect(ready.state.identity).toEqual(retained);
+    expect(closed.identity).toEqual(retained);
   } finally {
     await remote.stop();
     holdSettling(runtime, false);

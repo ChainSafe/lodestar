@@ -302,7 +302,6 @@ test "core review early native close preserves selected reason and counts it onc
         _ = setup.client.peer_manager.snapshots(&snapshots);
         if (reason) |typed| {
             try std.testing.expect(setup.client.peer_manager.disconnect(snapshots[0].peer, typed, setup.pair.now));
-            for (0..8) |_| try setup.step(0);
         }
         try std.testing.expect(setup.pair.server.close(remote_conn, 0));
         for (0..8) |_| try setup.step(0);
