@@ -46,7 +46,10 @@ became past. `prune` renumbers only the table's entries, never a validator's vot
 and the table compacts itself once it doubles, so it stays small without finality.
 Equivocators are a bitset. Justified balances arrive through
 a `StateProvider` callback when the justified checkpoint changes and are kept as raw
-effective-balance increments plus an active-and-unslashed bitset.
+effective-balance increments plus an active-and-unslashed bitset. Block import also
+loads the balances of an unrealized justified checkpoint that gets ahead of the
+justified one, and the store holds them until an epoch start pulls the checkpoint up,
+so `onTick` never loads and cannot fail after genesis.
 
 Only the vote accounting is carried between calls: the per-node vote totals, the
 target each validator's vote is counted on, and a bitset with a count of the
@@ -161,7 +164,10 @@ The boundary:
 - `executionStatus(node)` and `isOptimistic(node)` answer from the head cache, for
   `execution_optimistic` in API responses and for block production.
 - `StateProvider` supplies justified balances and, for `is_head_weak` with
-  equivocators, the beacon committee members of a slot. Two optional hooks serve the
+  equivocators, the beacon committee members of a slot. A missing checkpoint state
+  must not fail the balances: the provider falls back to the closest state it still
+  holds. An error fails the call that asked (`init`, a block import,
+  `updateCheckpoints`) and leaves the store unchanged. Two optional hooks serve the
   fast confirmation rule: the balance source at a checkpoint and the pulled-up head
   state's. A caller that does not run the rule leaves them null.
 

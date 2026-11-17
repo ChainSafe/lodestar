@@ -299,13 +299,19 @@ const LoadedBalances = struct {
     }
 };
 
-/// What `update_checkpoints` will write, prepared before the handler's first write.
+/// The checkpoints `update_checkpoints` and `update_unrealized_checkpoints` will leave,
+/// with the balances the store does not hold yet, prepared before the handler's first write.
 const CheckpointUpdate = struct {
-    justified: ?LoadedBalances = null,
-    finalized: ?Checkpoint = null,
+    justified: Checkpoint,
+    finalized: Checkpoint,
+    unrealized_justified: Checkpoint,
+    unrealized_finalized: Checkpoint,
+    justified_balances: ?LoadedBalances = null,
+    unrealized_justified_balances: ?LoadedBalances = null,
 
     fn deinit(self: *CheckpointUpdate, allocator: Allocator) void {
-        if (self.justified) |*loaded| loaded.deinit(allocator);
+        if (self.justified_balances) |*loaded| loaded.deinit(allocator);
+        if (self.unrealized_justified_balances) |*loaded| loaded.deinit(allocator);
         self.* = undefined;
     }
 };
@@ -332,7 +338,11 @@ pub const StateProvider = struct {
     vtable: *const VTable,
 
     pub const VTable = struct {
-        /// Balances of the state at `checkpoint`, allocated with `allocator`.
+        /// Balances of the state at `checkpoint`, allocated with `allocator`. Must not fail
+        /// because that state is gone: fall back to the closest state still held. A later
+        /// state of the same epoch on its chain differs only in validators slashed or added
+        /// since the epoch start. An error fails the call that asked (`init`, a block import,
+        /// `updateCheckpoints`) and leaves the store unchanged.
         justifiedBalances: *const fn (ctx: *anyopaque, allocator: Allocator, checkpoint: Checkpoint) anyerror!JustifiedBalances,
         /// Members of every beacon committee of `slot`, taken from the state of block `root`
         /// (spec `is_head_weak`). Appended to `out`.
@@ -404,6 +414,10 @@ pub const Store = struct {
     justified_vote_increments: []u16,
     /// Sum of `justified_vote_increments` in Gwei (`get_total_balance` of the active unslashed set).
     justified_total_balance: u64,
+    /// Balances of `unrealized_justified_checkpoint`, held while it is ahead of
+    /// `justified_checkpoint`. Block import loads them, so the epoch start that pulls the
+    /// checkpoint up has nothing to load.
+    unrealized_justified_balances: ?LoadedBalances,
     provider: StateProvider,
     head_cache: head_mod.Cache,
     /// The status of the node the root block hangs from. `.pre_merge` for an anchor,
@@ -463,6 +477,7 @@ pub const Store = struct {
             .justified_balances = .empty,
             .justified_vote_increments = &.{},
             .justified_total_balance = 0,
+            .unrealized_justified_balances = null,
             .provider = provider,
             .head_cache = .empty,
             .root_base_status = .pre_merge,
@@ -494,6 +509,7 @@ pub const Store = struct {
 
     pub fn deinit(self: *Store) void {
         self.head_cache.deinit(self.allocator);
+        if (self.unrealized_justified_balances) |*loaded| loaded.deinit(self.allocator);
         self.allocator.free(self.justified_vote_increments);
         self.justified_balances.deinit(self.allocator);
         self.latest_votes.deinit(self.allocator);
@@ -637,42 +653,89 @@ pub const Store = struct {
 
     /// Spec `update_checkpoints`.
     pub fn updateCheckpoints(self: *Store, justified: Checkpoint, finalized: Checkpoint) !void {
-        var update = try self.prepareCheckpoints(justified, finalized);
+        var update = try self.prepareCheckpoints(justified, finalized, self.unrealized_justified_checkpoint, self.unrealized_finalized_checkpoint);
         defer update.deinit(self.allocator);
         self.commitCheckpoints(&update);
     }
 
-    /// The fallible half of `update_checkpoints`: loads the balances of a newer justified
-    /// checkpoint. Writes nothing, so a handler calls it before its first write.
-    fn prepareCheckpoints(self: *const Store, justified: Checkpoint, finalized: Checkpoint) !CheckpointUpdate {
-        var update: CheckpointUpdate = .{};
-        if (justified.epoch > self.justified_checkpoint.epoch) {
-            update.justified = try self.loadJustifiedBalances(justified);
+    /// The fallible half of `update_checkpoints` followed by `update_unrealized_checkpoints`:
+    /// loads the balances of a newer justified checkpoint, and of a newer unrealized one
+    /// that stays ahead of it, unless the store holds them. Writes nothing, so a handler
+    /// calls it before its first write.
+    fn prepareCheckpoints(
+        self: *const Store,
+        justified: Checkpoint,
+        finalized: Checkpoint,
+        unrealized_justified: Checkpoint,
+        unrealized_finalized: Checkpoint,
+    ) !CheckpointUpdate {
+        var update: CheckpointUpdate = .{
+            .justified = newerCheckpoint(self.justified_checkpoint, justified),
+            .finalized = newerCheckpoint(self.finalized_checkpoint, finalized),
+            .unrealized_justified = newerCheckpoint(self.unrealized_justified_checkpoint, unrealized_justified),
+            .unrealized_finalized = newerCheckpoint(self.unrealized_finalized_checkpoint, unrealized_finalized),
+        };
+        errdefer update.deinit(self.allocator);
+        if (update.justified.epoch > self.justified_checkpoint.epoch and !self.holdsUnrealizedBalances(update.justified)) {
+            update.justified_balances = try self.loadJustifiedBalances(update.justified);
         }
-        if (finalized.epoch > self.finalized_checkpoint.epoch) update.finalized = finalized;
+        if (update.unrealized_justified.epoch > update.justified.epoch and !self.holdsUnrealizedBalances(update.unrealized_justified)) {
+            update.unrealized_justified_balances = try self.loadJustifiedBalances(update.unrealized_justified);
+        }
         return update;
     }
 
-    /// Moves the balances out of `update`, which stays safe to `deinit`.
-    fn commitCheckpoints(self: *Store, update: *CheckpointUpdate) void {
-        if (update.justified) |loaded| {
-            self.installJustifiedBalances(loaded);
-            update.justified = null;
-        }
-        if (update.finalized) |finalized| {
-            self.finalized_checkpoint = finalized;
-            self.head_cache.dirty = true;
-        }
+    fn holdsUnrealizedBalances(self: *const Store, checkpoint: Checkpoint) bool {
+        const held = self.unrealized_justified_balances orelse return false;
+        return checkpointEql(held.checkpoint, checkpoint);
     }
 
-    /// Spec `update_unrealized_checkpoints`.
-    pub fn updateUnrealizedCheckpoints(self: *Store, justified: Checkpoint, finalized: Checkpoint) void {
-        if (justified.epoch > self.unrealized_justified_checkpoint.epoch) {
-            self.unrealized_justified_checkpoint = justified;
+    /// Moves the balances out of `update`, which stays safe to `deinit`. Balances `update`
+    /// does not carry come from `unrealized_justified_balances`.
+    fn commitCheckpoints(self: *Store, update: *CheckpointUpdate) void {
+        var held = self.unrealized_justified_balances;
+        self.unrealized_justified_balances = null;
+        if (update.justified.epoch > self.justified_checkpoint.epoch) {
+            if (update.justified_balances) |loaded| {
+                self.installJustifiedBalances(loaded);
+                update.justified_balances = null;
+            } else {
+                std.debug.assert(checkpointEql(held.?.checkpoint, update.justified));
+                self.installJustifiedBalances(held.?);
+                held = null;
+            }
         }
-        if (finalized.epoch > self.unrealized_finalized_checkpoint.epoch) {
-            self.unrealized_finalized_checkpoint = finalized;
+        if (update.finalized.epoch > self.finalized_checkpoint.epoch) {
+            self.finalized_checkpoint = update.finalized;
+            self.head_cache.dirty = true;
         }
+        self.unrealized_justified_checkpoint = update.unrealized_justified;
+        self.unrealized_finalized_checkpoint = update.unrealized_finalized;
+        if (update.unrealized_justified.epoch > self.justified_checkpoint.epoch) {
+            if (update.unrealized_justified_balances) |loaded| {
+                self.unrealized_justified_balances = loaded;
+                update.unrealized_justified_balances = null;
+            } else {
+                std.debug.assert(checkpointEql(held.?.checkpoint, update.unrealized_justified));
+                self.unrealized_justified_balances = held;
+                held = null;
+            }
+        }
+        if (held) |*stale| stale.deinit(self.allocator);
+        const ahead = self.unrealized_justified_checkpoint.epoch > self.justified_checkpoint.epoch;
+        std.debug.assert((self.unrealized_justified_balances != null) == ahead);
+    }
+
+    /// Spec `update_checkpoints` with the unrealized checkpoints, at an epoch start. Their
+    /// balances are held, so the pull-up cannot fail.
+    fn pullUpCheckpoints(self: *Store) void {
+        var update: CheckpointUpdate = .{
+            .justified = newerCheckpoint(self.justified_checkpoint, self.unrealized_justified_checkpoint),
+            .finalized = newerCheckpoint(self.finalized_checkpoint, self.unrealized_finalized_checkpoint),
+            .unrealized_justified = self.unrealized_justified_checkpoint,
+            .unrealized_finalized = self.unrealized_finalized_checkpoint,
+        };
+        self.commitCheckpoints(&update);
     }
 
     fn loadJustifiedBalances(self: *const Store, checkpoint: Checkpoint) !LoadedBalances {
@@ -714,37 +777,30 @@ pub const Store = struct {
 
     // --- on_tick ----------------------------------------------------------------------
 
-    /// Spec `on_tick`. On error the time stays at the last slot whose tick completed, and
-    /// calling again resumes from there. While the justified balances fail to load at an epoch
-    /// start, the time stays before that epoch, so none of its blocks import (`FutureBlock`).
-    pub fn onTick(self: *Store, time_ms: u64) !void {
+    /// Spec `on_tick`. Fails only before genesis: the epoch start pulls up balances that
+    /// block import loaded when it raised the unrealized justified checkpoint.
+    pub fn onTick(self: *Store, time_ms: u64) error{PreGenesisTime}!void {
         if (time_ms < self.genesis_time_ms) return error.PreGenesisTime;
         const tick_slot = self.timing.slotAtTimeMs(time_ms);
         while (self.currentSlot() < tick_slot) {
             const next_slot = self.currentSlot() + 1;
-            try self.onTickPerSlot(self.timing.timeAtSlotMs(next_slot));
+            self.onTickPerSlot(self.timing.timeAtSlotMs(next_slot));
         }
-        try self.onTickPerSlot(time_ms);
+        self.onTickPerSlot(time_ms);
     }
 
     /// Spec `on_tick_per_slot`.
-    fn onTickPerSlot(self: *Store, time_ms: u64) !void {
+    fn onTickPerSlot(self: *Store, time_ms: u64) void {
         const previous_slot = self.currentSlot();
-        const current_slot = self.timing.slotAtTimeMs(time_ms);
-        // A retry of a failed tick finds the time not yet advanced, so it reaches the epoch
-        // boundary again.
-        var checkpoints: CheckpointUpdate = .{};
-        if (current_slot > previous_slot and computeSlotsSinceEpochStart(current_slot) == 0) {
-            checkpoints = try self.prepareCheckpoints(self.unrealized_justified_checkpoint, self.unrealized_finalized_checkpoint);
-        }
-        defer checkpoints.deinit(self.allocator);
-
         self.time_ms = time_ms;
         self.head_cache.dirty = true;
+        const current_slot = self.currentSlot();
         if (current_slot > previous_slot) {
             self.proposer_boost_root = constants.ZERO_HASH;
         }
-        self.commitCheckpoints(&checkpoints);
+        if (current_slot > previous_slot and computeSlotsSinceEpochStart(current_slot) == 0) {
+            self.pullUpCheckpoints();
+        }
         if (current_slot > previous_slot) self.drainQueuedMessages(current_slot);
     }
 
@@ -835,15 +891,16 @@ pub const Store = struct {
         if (self.head_cache.execution.items[head_mod.nodeId(parent_node)] == .invalid) return error.ParentPayloadInvalid;
         const chain_validation: ?ChainValidation = if (summary.execution_status == .valid) try self.checkChainValid(parent_node) else null;
 
-        // Spec `update_checkpoints` for the block, then again in `compute_pulled_up_tip`
-        // for a block from a past epoch; only the net result needs its balances.
-        var justified = newerCheckpoint(self.justified_checkpoint, summary.justified_checkpoint);
-        var finalized = newerCheckpoint(self.finalized_checkpoint, summary.finalized_checkpoint);
+        // Spec `update_checkpoints` for the block, then `compute_pulled_up_tip`:
+        // `update_unrealized_checkpoints`, and `update_checkpoints` again for a block from a
+        // past epoch. Only the net result needs balances.
+        var justified = summary.justified_checkpoint;
+        var finalized = summary.finalized_checkpoint;
         if (computeEpochAtSlot(summary.slot) < self.currentEpoch()) {
             justified = newerCheckpoint(justified, summary.unrealized_justified_checkpoint);
             finalized = newerCheckpoint(finalized, summary.unrealized_finalized_checkpoint);
         }
-        var checkpoints = try self.prepareCheckpoints(justified, finalized);
+        var checkpoints = try self.prepareCheckpoints(justified, finalized, summary.unrealized_justified_checkpoint, summary.unrealized_finalized_checkpoint);
         defer checkpoints.deinit(self.allocator);
 
         try self.reserveBlock();
@@ -878,8 +935,6 @@ pub const Store = struct {
         self.recordBlockTimeliness(index, summary.arrival_ms_into_slot orelse self.timeIntoSlotMs());
         self.updateProposerBoostRoot(head.block, index);
         self.commitCheckpoints(&checkpoints);
-        // Spec `compute_pulled_up_tip`
-        self.updateUnrealizedCheckpoints(summary.unrealized_justified_checkpoint, summary.unrealized_finalized_checkpoint);
     }
 
     /// Spec `get_parent_payload_status`; `.pending` when either side predates Gloas.

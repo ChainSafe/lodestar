@@ -719,7 +719,7 @@ test "checkpoints: a block from a past epoch installs the newer of its two check
     try testing.expectEqual(loads + 1, provider.loads);
 }
 
-test "checkpoints: a provider failure at an epoch boundary holds the time so a retry pulls up the checkpoints" {
+test "checkpoints: block import loads the unrealized balances, so the epoch start cannot fail" {
     var provider: FlakyProvider = .{};
     const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge });
     var store = try Store.initFromSummary(testing.allocator, &@import("config").minimal.config, 0, anchor, .{ .ctx = &provider, .vtable = &FlakyProvider.vtable });
@@ -727,17 +727,48 @@ test "checkpoints: a provider failure at an epoch boundary holds the time so a r
     try store.onTick(store.timing.timeAtSlotMs(1));
     var block = optimisticSummary(.{ .tag = 2, .parent = 1, .slot = 1, .status = .pre_merge });
     block.unrealized_justified_checkpoint = .{ .epoch = 1, .root = tagRoot(1) };
-    try store.onBlockSummary(block);
-    const previous = store.justified_checkpoint;
+    const previous = store.unrealized_justified_checkpoint;
 
     provider.fail = true;
-    try testing.expectError(error.StateUnavailable, store.onTick(store.timing.timeAtSlotMs(preset.SLOTS_PER_EPOCH)));
-    try testing.expectEqual(@as(u64, preset.SLOTS_PER_EPOCH - 1), store.currentSlot());
-    try testing.expectEqual(previous, store.justified_checkpoint);
+    try testing.expectError(error.StateUnavailable, store.onBlockSummary(block));
+    try testing.expect(!store.hasBlock(block.root));
+    try testing.expectEqual(previous, store.unrealized_justified_checkpoint);
 
     provider.fail = false;
+    try store.onBlockSummary(block);
+    try testing.expectEqual(block.unrealized_justified_checkpoint, store.unrealized_justified_checkpoint);
+    const loads = provider.loads;
+
+    provider.fail = true;
     try store.onTick(store.timing.timeAtSlotMs(preset.SLOTS_PER_EPOCH));
     try testing.expectEqual(block.unrealized_justified_checkpoint, store.justified_checkpoint);
+    try testing.expectEqual(loads, provider.loads);
+    try testing.expect(store.unrealized_justified_balances == null);
+}
+
+test "checkpoints: held unrealized balances are replaced by a newer checkpoint and reused when it is realized" {
+    var provider: FlakyProvider = .{};
+    const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge });
+    var store = try Store.initFromSummary(testing.allocator, &@import("config").minimal.config, 0, anchor, .{ .ctx = &provider, .vtable = &FlakyProvider.vtable });
+    defer store.deinit();
+    try store.onTick(store.timing.timeAtSlotMs(2 * preset.SLOTS_PER_EPOCH + 2));
+    const loads = provider.loads;
+
+    var first = optimisticSummary(.{ .tag = 2, .parent = 1, .slot = 2 * preset.SLOTS_PER_EPOCH + 1, .status = .pre_merge });
+    first.unrealized_justified_checkpoint = .{ .epoch = 1, .root = tagRoot(1) };
+    try store.onBlockSummary(first);
+    var second = optimisticSummary(.{ .tag = 3, .parent = 2, .slot = 2 * preset.SLOTS_PER_EPOCH + 2, .status = .pre_merge });
+    second.unrealized_justified_checkpoint = .{ .epoch = 2, .root = tagRoot(1) };
+    try store.onBlockSummary(second);
+    try testing.expectEqual(loads + 2, provider.loads);
+    try testing.expectEqual(second.unrealized_justified_checkpoint, store.unrealized_justified_balances.?.checkpoint);
+
+    var past = optimisticSummary(.{ .tag = 4, .parent = 1, .slot = 1, .status = .pre_merge });
+    past.unrealized_justified_checkpoint = second.unrealized_justified_checkpoint;
+    try store.onBlockSummary(past);
+    try testing.expectEqual(second.unrealized_justified_checkpoint, store.justified_checkpoint);
+    try testing.expectEqual(loads + 2, provider.loads);
+    try testing.expect(store.unrealized_justified_balances == null);
 }
 
 test "fast confirmation: a run without balances keeps the slot's variable update" {
