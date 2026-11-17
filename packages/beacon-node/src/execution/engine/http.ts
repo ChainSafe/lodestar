@@ -588,9 +588,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
-    const clientVersions = await this.withTransport(undefined, undefined, (transport) =>
-      transport.getClientVersion(clientVersion)
-    );
+    // Bypasses withTransport and the transports set skipEvents, so the EL's answer to this optional
+    // call never drives the engine state
+    const transport = await this.getTransport();
+    this.metrics?.engineApiRequests.inc({transport: transport === this.rest ? "ssz" : "json-rpc"});
+    const clientVersions = await transport.getClientVersion(clientVersion);
 
     if (clientVersions.length === 0) {
       throw Error("Received empty client versions array");
