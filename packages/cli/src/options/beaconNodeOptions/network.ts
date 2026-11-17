@@ -195,7 +195,9 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const quicMu6 = listenAddress6 && quic ? `${muArgs.listenAddress6}${muArgs.quicPort6}` : undefined;
 
   const targetPeers = args.targetPeers;
-  const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
+  const maxPeers =
+    args["network.maxPeers"] ??
+    (targetPeers !== undefined ? Math.max(Math.floor(targetPeers * 1.1), targetPeers + 1) : undefined);
   // Set discv5 opts to null to disable only if explicitly disabled
   const enableDiscv5 = args.discv5 ?? true;
 
