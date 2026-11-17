@@ -7,6 +7,7 @@ import {
   IJsonRpcHttpClient,
   JsonRpcHttpClientEvent,
   JsonRpcHttpClientEventEmitter,
+  ReqOpts,
 } from "./jsonRpcHttpClient.js";
 import {EngineRestError, EngineRestResponseError} from "./restHttpClient.js";
 
@@ -127,26 +128,27 @@ export class ExecutionEngineMockJsonRpcClient implements IJsonRpcHttpClient {
 
   constructor(private readonly backend: JsonRpcBackend) {}
 
-  async fetch<R, P = IJson[]>(payload: RpcPayload<P>): Promise<R> {
-    return this.wrapWithEvents(async () => {
+  async fetch<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
+    return this.wrapWithEvents(payload, opts, async () => {
       const handler = this.backend.handlers[payload.method];
       if (handler === undefined) {
         throw Error(`Unknown method ${payload.method}`);
       }
       // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
       return handler(...(payload.params as any[])) as R;
-    }, payload);
+    });
   }
 
-  fetchWithRetries<R, P = IJson[]>(payload: RpcPayload<P>): Promise<R> {
-    return this.fetch(payload);
+  fetchWithRetries<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
+    return this.fetch(payload, opts);
   }
 
-  fetchBatch<R>(rpcPayloadArr: RpcPayload<IJson[]>[]): Promise<R[]> {
-    return Promise.all(rpcPayloadArr.map((payload) => this.fetch<R>(payload)));
+  fetchBatch<R>(rpcPayloadArr: RpcPayload<IJson[]>[], opts?: ReqOpts): Promise<R[]> {
+    return Promise.all(rpcPayloadArr.map((payload) => this.fetch<R>(payload, opts)));
   }
 
-  private async wrapWithEvents<T>(func: () => Promise<T>, payload?: unknown): Promise<T> {
+  private async wrapWithEvents<T>(payload: unknown, opts: ReqOpts | undefined, func: () => Promise<T>): Promise<T> {
+    if (opts?.skipEvents) return func();
     try {
       const response = await func();
       this.emitter.emit(JsonRpcHttpClientEvent.RESPONSE, {payload, response});
