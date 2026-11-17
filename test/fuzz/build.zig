@@ -73,6 +73,7 @@ pub fn build(b: *std.Build) void {
     seeds_module.addImport("network_fixture", network_fixture);
     seeds_module.addImport("network", lodestar_z.module("network"));
     seeds_module.addImport("discv5", lodestar_z.module("discv5"));
+    if (quiche_sancov) seeds_module.addCSourceFile(.{ .file = b.path("tools/sancov_stubs.c") });
     const seeds = b.addRunArtifact(b.addExecutable(.{ .name = "network_corpus", .root_module = seeds_module }));
     seeds.setCwd(b.path("."));
     if (b.args) |args| seeds.addArgs(args);
