@@ -442,7 +442,6 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
   private readonly dbName: string;
   private readonly dataColumnDir: string;
   private readonly abortController = new AbortController();
-  // TODO - beacon engine: internal helper context; keep this off the worker-facing interface.
   readonly signal = this.abortController.signal;
   lightClientServer?: LightClientServer;
   /**

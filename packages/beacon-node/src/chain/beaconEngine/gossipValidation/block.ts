@@ -28,7 +28,6 @@ export type GossipBlockResult = GossipValidationResult<blockValidation.GossipBlo
  * Handler source: unstable@2593063a82 packages/beacon-node/src/network/processor/gossipHandlers.ts#validateBeaconBlock.
  * Handler source: unstable@0edec865c8 packages/beacon-node/src/network/processor/gossipHandlers.ts#handleValidBeaconBlock.
  * [beacon-engine] deviation: validation/cache updates run in the engine; the facade retains block import.
- * // TODO - beacon engine: re-review this function
  */
 export async function validateGossipBlockBytes(
   this: BeaconEngineCore,

@@ -55,7 +55,6 @@ type ProposerSlashingCached = {
   verifiedDomain: Domain;
 };
 
-// TODO - beacon engine: This is owned by BeaconEngine, make sure this is populated by BeaconEngine during gossip validation
 export class OpPool {
   /** Map of uniqueId(AttesterSlashing) -> AttesterSlashing */
   private readonly attesterSlashings = new Map<HexRoot, AttesterSlashingCached>();

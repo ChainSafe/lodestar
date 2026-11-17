@@ -58,7 +58,6 @@ export async function archiveBlocks(
   persistOrphanedBlocks?: boolean,
   persistOrphanedBlocksDir?: string
 ): Promise<void> {
-  // TODO - beacon engine: review this, may let BeaconEngine lead this
   const {canonical: finalizedCanonicalBlocks, nonCanonical: finalizedNonCanonicalBlocks} = snapshot;
 
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous

@@ -139,7 +139,6 @@ export class BeaconChain implements IBeaconChain {
   readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
 
   // Global state caches
-  // TODO - beacon engine: should this be moved to BeaconEngine?
   readonly pubkeyCache: PubkeyCache;
 
   /**

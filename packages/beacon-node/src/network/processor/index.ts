@@ -526,9 +526,6 @@ export class NetworkProcessor {
     // this determines whether this message needs to wait for a Block or Envelope
     // a message should only wait for what it voted for, hence we don't want to put it on both queues.
     let preprocessResult: PreprocessResult = {action: PreprocessAction.PushToQueue};
-    // TODO - beacon engine: hot path (per gossip message) — the beaconEngine membership reads below
-    // (hasBlockHexUnsafe / hasPayloadHexUnsafe / getBlockHexAndBlockHash / getBlockHexDefaultStatus) are
-    // cached in NativeBeaconEngine so they don't cross FFI. See BLK-1 plan §2b.
     // no need to check if root is a descendant of the current finalized block, it will be checked once we validate the message if needed
     if (root && !this.chain.beaconEngine.chainView.hasBlockHexUnsafe(root)) {
       // starting from GLOAS, unknown root from data_column_sidecar also falls into this case
