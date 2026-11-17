@@ -62,7 +62,8 @@ fn EffectiveBalanceScan(comptime fork: ForkSeq) type {
         updates: []u32,
         chunk_results: []EffectiveBalanceChunk,
 
-        fn scanChunk(scan: *const @This(), chunk: validator_chunks.Chunk) void {
+        fn scanChunk(scan_ptr: *const @This(), chunk: validator_chunks.Chunk) void {
+            const scan = scan_ptr.*;
             const is_active_next_epoch = scan.cache.is_active_next_epoch;
             var next_epoch_total_active_balance_by_increment: u64 = 0;
             var update_count: usize = 0;

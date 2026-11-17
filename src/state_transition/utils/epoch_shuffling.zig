@@ -7,7 +7,6 @@ const BeaconState = @import("fork_types").BeaconState;
 const ForkSeq = @import("config").ForkSeq;
 const getSeed = @import("./seed.zig").getSeed;
 const c = @import("constants");
-const innerShuffleList = @import("swap_or_not_shuffle").innerShuffleList;
 const unshuffleListParallel = @import("swap_or_not_shuffle").unshuffleListParallel;
 const Epoch = types.primitive.Epoch.Type;
 const computeStartSlotAtEpoch = @import("./epoch.zig").computeStartSlotAtEpoch;
@@ -136,19 +135,6 @@ pub fn computeEpochShufflingForFork(
     var seed = [_]u8{0} ** 32;
     try getSeed(fork, state, epoch, c.DOMAIN_BEACON_ATTESTER, &seed);
     return EpochShuffling.init(allocator, io, seed, epoch, active_indices);
-}
-
-/// Unshuffle validator indices in place synchronously.
-fn unshuffleList(indices: []u32, seed: []const u8, rounds: u8) !void {
-    const forwards = false;
-    return innerShuffleList(u32, indices, seed, rounds, forwards);
-}
-
-test unshuffleList {
-    var active_indices: [5]u32 = .{ 0, 1, 2, 3, 4 };
-    const seed: [32]u8 = [_]u8{0} ** 32;
-
-    try unshuffleList(&active_indices, &seed, 32);
 }
 
 fn computeCommitteeCount(active_validator_count: usize) usize {

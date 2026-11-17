@@ -25,7 +25,8 @@ const InactivityScan = struct {
     changed_counts: []usize,
 };
 
-fn updateChunk(scan: *const InactivityScan, chunk: validator_chunks.Chunk) void {
+fn updateChunk(scan_ptr: *const InactivityScan, chunk: validator_chunks.Chunk) void {
+    const scan = scan_ptr.*;
     var changed_count: usize = 0;
     for (
         scan.flags[chunk.start..chunk.end],
@@ -69,9 +70,7 @@ pub fn processInactivityUpdates(
     const scores = try inactivity_scores.getAllInto(cache.validator_scratch);
     std.debug.assert(flags.len <= scores.len);
 
-    const changed_counts = try cache.allocator.alloc(usize, validator_chunks.count(flags.len));
-    defer cache.allocator.free(changed_counts);
-
+    const changed_counts = cache.chunk_counts[0..validator_chunks.count(flags.len)];
     const scan: InactivityScan = .{
         .flags = flags,
         .scores = scores,

@@ -3,6 +3,10 @@
 //! A task must write only state owned by its chunk: its own index range of shared slices, and its
 //! own slot (`Chunk.index`) of a per-chunk result array the caller sizes with `count`. Work that is
 //! not thread-safe, such as tree view reads and writes, is recorded by index and done afterwards.
+//!
+//! Copy `context.*` into a local at the top of a task. Read through the pointer, its fields are
+//! reloaded after every store to a shared slice, because LLVM cannot prove the store left the
+//! context unchanged.
 
 const std = @import("std");
 const builtin = @import("builtin");
