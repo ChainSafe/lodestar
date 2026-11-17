@@ -318,6 +318,103 @@ test "deposit preverify covers a late builder trigger and skips recoverable top-
     );
 }
 
+fn metricValue(text: []const u8, line_prefix: []const u8) !u64 {
+    const start = (std.mem.find(u8, text, line_prefix) orelse return error.MetricNotFound) + line_prefix.len;
+    const end = std.mem.findScalarPos(u8, text, start, '\n') orelse return error.MetricNotFound;
+    return std.fmt.parseInt(u64, text[start..end], 10);
+}
+
+test "deposit preverify caches builder deposits that reuse a known validator pubkey" {
+    const allocator = std.testing.allocator;
+    var nodes = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
+    defer nodes.deinit();
+    var fixture = try fuluState(allocator, &nodes);
+    defer fixture.deinit();
+    const state = fixture.cached_state;
+    var validators = try state.state.validators();
+    var known: ct.phase0.Validator.Type = undefined;
+    try validators.getValue(undefined, 0, &known);
+
+    // Well-formed signatures from another key: each deposit fails proof of possession for the
+    // validator's pubkey, so none registers a builder and every one is checked at the fork.
+    const deposit_count = 8;
+    var pending = try state.state.castToFork(.fulu).pendingDeposits();
+    for (0..deposit_count) |index| {
+        var deposit = try signedDeposit(state.config, @intCast(60 + index), c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000);
+        deposit.pubkey = known.pubkey;
+        try pending.pushValue(&deposit);
+    }
+    try state.state.commit();
+    const pool = try bls.ThreadPool.init(allocator, std.testing.io, .{ .n_workers = 4 });
+    defer pool.deinit(std.testing.io);
+    const pre = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+    try std.testing.expectEqual(@as(usize, deposit_count), pre.invalid_builder_signatures_count);
+
+    try metrics.init(allocator, std.testing.io, .{});
+    defer metrics.deinit();
+    const upgraded = try upgradeStateToGloas(allocator, std.testing.io, state.config, state.epoch_cache, state.state.castToFork(.fulu));
+    state.state.* = .{ .gloas = upgraded.inner };
+    var builders = try upgraded.inner.get("builders");
+    try std.testing.expectEqual(@as(usize, 0), try builders.length());
+    var remaining = try state.state.castToFork(.gloas).pendingDeposits();
+    try std.testing.expectEqual(@as(usize, deposit_count), try remaining.length());
+
+    var output: std.Io.Writer.Allocating = .init(allocator);
+    defer output.deinit();
+    try metrics.write(&output.writer);
+    const inline_bls = try metricValue(output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} ");
+    const from_cache = try metricValue(output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} ");
+    try std.testing.expectEqual(@as(u64, 0), inline_bls);
+    try std.testing.expectEqual(@as(u64, deposit_count), from_cache);
+}
+
+test "deposit preverify caches a builder deposit queued after a valid same-pubkey validator deposit" {
+    const allocator = std.testing.allocator;
+    var nodes = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
+    defer nodes.deinit();
+    var fixture = try fuluState(allocator, &nodes);
+    defer fixture.deinit();
+    const state = fixture.cached_state;
+    var invalid_builder = try signedDeposit(state.config, 70, c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000);
+    invalid_builder.amount += 1;
+    const validator = try signedDeposit(state.config, 70, c.COMPOUNDING_WITHDRAWAL_PREFIX, 1_000_000_000);
+    const builder = try signedDeposit(state.config, 70, c.BUILDER_WITHDRAWAL_PREFIX, 2_000_000_000);
+    var pending = try state.state.castToFork(.fulu).pendingDeposits();
+    try pending.pushValue(&invalid_builder);
+    try pending.pushValue(&validator);
+    try state.state.commit();
+    const pool = try bls.ThreadPool.init(allocator, std.testing.io, .{ .n_workers = 4 });
+    defer pool.deinit(std.testing.io);
+    const first = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+    try std.testing.expectEqual(@as(usize, 1), first.valid_validator_signatures_count);
+
+    // The builder deposit arrives after the validator deposit is already cached as valid.
+    try pending.pushValue(&builder);
+    try state.state.commit();
+    const second = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+    try std.testing.expectEqual(@as(usize, 1), second.valid_builder_signatures_count);
+
+    try metrics.init(allocator, std.testing.io, .{});
+    defer metrics.deinit();
+    const upgraded = try upgradeStateToGloas(allocator, std.testing.io, state.config, state.epoch_cache, state.state.castToFork(.fulu));
+    state.state.* = .{ .gloas = upgraded.inner };
+    var builders = try upgraded.inner.get("builders");
+    try std.testing.expectEqual(@as(usize, 1), try builders.length());
+    var builder_value: ct.gloas.Builder.Type = undefined;
+    try builders.getValue(undefined, 0, &builder_value);
+    try std.testing.expectEqual(builder.amount, builder_value.balance);
+    var remaining = try state.state.castToFork(.gloas).pendingDeposits();
+    try std.testing.expectEqual(@as(usize, 1), try remaining.length());
+
+    var output: std.Io.Writer.Allocating = .init(allocator);
+    defer output.deinit();
+    try metrics.write(&output.writer);
+    const inline_bls = try metricValue(output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} ");
+    const from_cache = try metricValue(output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} ");
+    try std.testing.expectEqual(@as(u64, 0), inline_bls);
+    try std.testing.expectEqual(@as(u64, 2), from_cache);
+}
+
 test "deposit preverify valid validator prefix suppresses later signatures at the fork" {
     const allocator = std.testing.allocator;
     var nodes = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
