@@ -322,6 +322,7 @@ export interface IBeaconEngineCoreApi {
   getChainViewSnapshot(): Promise<ChainViewSnapshot>;
   getFinalizedCheckpointSnapshot(): Promise<FinalizedCheckpointSnapshot<Root>>;
   getPayloadExecutionOptimistic(blockRoot: Root): Promise<boolean | null>;
+  getHead(): Promise<Readonly<ProtoBlock>>;
   isHeadOptimistic(): Promise<boolean>;
   getHeadExecutionStateInfo(): Promise<HeadExecutionStateInfo>;
   pauseFastConfirmation(): Promise<void>;

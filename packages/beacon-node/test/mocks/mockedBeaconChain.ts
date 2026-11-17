@@ -451,6 +451,7 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "produceSyncCommitteeContribution",
     "getPayloadAttestationBlock",
     "getBlockRoot",
+    "getHead",
     "isHeadOptimistic",
     "getPoolPayloadAttestations",
     "getPoolProposerPreferences",

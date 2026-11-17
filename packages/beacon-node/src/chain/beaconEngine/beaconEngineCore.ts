@@ -883,6 +883,10 @@ export class BeaconEngineCore implements IBeaconEngineCoreApi {
     return payload === null ? null : isOptimisticBlock(payload);
   }
 
+  async getHead(): Promise<Readonly<ProtoBlock>> {
+    return this.forkChoice.getHead();
+  }
+
   async isHeadOptimistic(): Promise<boolean> {
     return isOptimisticBlock(this.forkChoice.getHead());
   }

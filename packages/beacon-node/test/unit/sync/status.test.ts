@@ -3,6 +3,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {BeaconEngineCore} from "../../../src/chain/beaconEngine/beaconEngineCore.js";
 import {BeaconEngineEventBus} from "../../../src/chain/beaconEngine/events.js";
+import {BeaconEngineMode} from "../../../src/chain/beaconEngine/options.js";
 import {BeaconEngine} from "../../../src/chain/beaconEngine.js";
 import {ChainEventEmitter} from "../../../src/chain/emitter.js";
 import {ExecutionEngineState} from "../../../src/execution/engine/interface.js";
@@ -12,9 +13,10 @@ import {SerializedCache} from "../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {generateProtoBlock} from "../../utils/typeGenerator.js";
 
-describe("BeaconSync.getSyncStatus", () => {
+describe.each([BeaconEngineMode.MainThread, BeaconEngineMode.Worker])("BeaconSync.getSyncStatus (%s)", (mode) => {
   let sync: BeaconSync;
   let core: BeaconEngineCore;
+  let viewHead: ReturnType<typeof generateProtoBlock>;
   const head = generateProtoBlock({slot: 100, executionStatus: ExecutionStatus.Syncing});
   const clock = new ClockStopped(105);
   const executionEngine = {state: ExecutionEngineState.ONLINE};
@@ -23,6 +25,7 @@ describe("BeaconSync.getSyncStatus", () => {
   beforeEach(() => {
     head.slot = 100;
     head.executionStatus = ExecutionStatus.Syncing;
+    viewHead = head;
     clock.setSlot(105);
     executionEngine.state = ExecutionEngineState.ONLINE;
     rangeSync.state.status = RangeSyncStatus.Idle;
@@ -36,8 +39,9 @@ describe("BeaconSync.getSyncStatus", () => {
       clock,
       emitter: new ChainEventEmitter(),
       serializedCache: new SerializedCache(),
+      ...(mode === BeaconEngineMode.Worker ? {coreEmitter: core.emitter} : {}),
     });
-    Object.assign(beaconEngine, {chainView: {getHead: () => head}});
+    Object.assign(beaconEngine, {chainView: {getHead: () => viewHead}});
     sync = Object.assign(Object.create(BeaconSync.prototype) as BeaconSync, {
       chain: {clock, executionEngine, beaconEngine},
       opts: {},
@@ -75,6 +79,26 @@ describe("BeaconSync.getSyncStatus", () => {
     }
   );
 
+  it.each([
+    {viewSlot: 10, headSlot: 100, isOptimistic: false, isSyncing: false, syncDistance: 0},
+    {viewSlot: 100, headSlot: 10, isOptimistic: true, isSyncing: true, syncDistance: 95},
+  ])("reports one authoritative head when ChainView is at slot $viewSlot", async (expected) => {
+    viewHead = generateProtoBlock({slot: expected.viewSlot, executionStatus: ExecutionStatus.Valid});
+    head.slot = expected.headSlot;
+    head.executionStatus = expected.isOptimistic ? ExecutionStatus.Syncing : ExecutionStatus.Valid;
+    const read = vi.spyOn(core.forkChoice, "getHead");
+
+    expect(await sync.getSyncStatus()).toEqual({
+      headSlot: expected.headSlot,
+      syncDistance: expected.syncDistance,
+      isSyncing: expected.isSyncing,
+      isOptimistic: expected.isOptimistic,
+      elOffline: false,
+    });
+    expect(read).toHaveBeenCalledOnce();
+    expect(sync.isSynced()).toBe(expected.viewSlot === 100);
+  });
+
   it.each([ExecutionEngineState.OFFLINE, ExecutionEngineState.AUTH_FAILED])(
     "preserves execution-client availability reporting for %s",
     async (state) => {
@@ -83,9 +107,9 @@ describe("BeaconSync.getSyncStatus", () => {
     }
   );
 
-  it("keeps the genesis response without requesting head optimism", async () => {
+  it("keeps the genesis response without requesting the head", async () => {
     clock.setSlot(0);
-    const read = vi.spyOn(core, "isHeadOptimistic");
+    const read = vi.spyOn(core.forkChoice, "getHead");
     expect(await sync.getSyncStatus()).toEqual({
       headSlot: 0,
       syncDistance: 0,
@@ -98,7 +122,7 @@ describe("BeaconSync.getSyncStatus", () => {
 
   it("propagates an engine read failure to the caller", async () => {
     const failure = Error("engine unavailable");
-    vi.spyOn(core, "isHeadOptimistic").mockImplementationOnce(() => {
+    vi.spyOn(core.forkChoice, "getHead").mockImplementationOnce(() => {
       throw failure;
     });
     await expect(sync.getSyncStatus()).rejects.toBe(failure);

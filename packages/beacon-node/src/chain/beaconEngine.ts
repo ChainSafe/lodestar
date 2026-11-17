@@ -220,6 +220,10 @@ export class BeaconEngine implements IBeaconEngine {
     return this.coreApi.getPayloadExecutionOptimistic(blockRoot);
   }
 
+  getHead(): Promise<Readonly<ProtoBlock>> {
+    return this.coreApi.getHead();
+  }
+
   async isHeadOptimistic(): Promise<boolean> {
     return this.coreApi.isHeadOptimistic();
   }

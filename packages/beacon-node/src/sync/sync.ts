@@ -10,6 +10,7 @@ import {ExecutionEngineState} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
 import {ClockEvent} from "../util/clock.js";
+import {isOptimisticBlock} from "../util/forkChoice.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
 import {IBeaconSync, SyncChainDebugState, SyncModules, SyncState, SyncingStatus, syncStateMetric} from "./interface.js";
@@ -119,10 +120,9 @@ export class BeaconSync implements IBeaconSync {
       };
     }
 
-    // TODO - beacon engine: may pull the full head from BeaconEngine with head execution status
-    const head = this.chain.beaconEngine.chainView.getHead();
+    const head = await this.chain.beaconEngine.getHead();
 
-    switch (this.state) {
+    switch (this.getSyncState(currentSlot, head.slot)) {
       case SyncState.SyncingFinalized:
       case SyncState.SyncingHead:
       case SyncState.Stalled:
@@ -130,7 +130,7 @@ export class BeaconSync implements IBeaconSync {
           headSlot: head.slot,
           syncDistance: currentSlot - head.slot,
           isSyncing: true,
-          isOptimistic: await this.chain.beaconEngine.isHeadOptimistic(),
+          isOptimistic: isOptimisticBlock(head),
           elOffline,
         };
       case SyncState.Synced:
@@ -138,7 +138,7 @@ export class BeaconSync implements IBeaconSync {
           headSlot: head.slot,
           syncDistance: 0,
           isSyncing: false,
-          isOptimistic: await this.chain.beaconEngine.isHeadOptimistic(),
+          isOptimistic: isOptimisticBlock(head),
           elOffline,
         };
       default:
@@ -158,7 +158,10 @@ export class BeaconSync implements IBeaconSync {
   get state(): SyncState {
     const currentSlot = this.chain.clock.currentSlot;
     const headSlot = this.chain.beaconEngine.chainView.getHead().slot;
+    return this.getSyncState(currentSlot, headSlot);
+  }
 
+  private getSyncState(currentSlot: Slot, headSlot: Slot): SyncState {
     if (
       // Consider node synced IF
       // Before genesis OR
