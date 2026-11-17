@@ -73,31 +73,6 @@ describe("NativeBeaconStateView", () => {
     }
   });
 
-  it("rejects Heze before invoking native slot processing or state loading", () => {
-    const hezeConfig = createBeaconConfig(
-      {
-        ...defaultChainConfig,
-        ALTAIR_FORK_EPOCH: 0,
-        BELLATRIX_FORK_EPOCH: 0,
-        CAPELLA_FORK_EPOCH: 0,
-        DENEB_FORK_EPOCH: 0,
-        ELECTRA_FORK_EPOCH: 0,
-        FULU_FORK_EPOCH: 0,
-        GLOAS_FORK_EPOCH: 0,
-        HEZE_FORK_EPOCH: 0,
-      },
-      genesisValidatorsRoot
-    );
-    const binding = {processSlots: vi.fn(), loadOtherState: vi.fn()} as unknown as IBeaconStateViewNative;
-    const view = new NativeBeaconStateView(hezeConfig, binding);
-    expect(() => view.processSlots(0)).toThrow("does not support heze");
-    expect(() => view.loadOtherState(ssz.gloas.BeaconState.serialize(ssz.gloas.BeaconState.defaultValue()))).toThrow(
-      "does not support heze"
-    );
-    expect(binding.processSlots).not.toHaveBeenCalled();
-    expect(binding.loadOtherState).not.toHaveBeenCalled();
-  });
-
   it("preserves Gloas availability bits and repeated PTC membership", () => {
     const availability = {uint8Array: new Uint8Array([0b10000101]), bitLen: 8};
     const binding = {

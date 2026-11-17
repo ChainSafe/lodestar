@@ -97,19 +97,14 @@ const UnslashedStakes = struct {
 
     const FLAG_CURR_TARGET_UNSLASHED = FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED;
 
-    fn add(self: *UnslashedStakes, flag: u8, effective_balance_by_increment: u64) void {
-        if (hasMarkers(flag, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
-            self.prev_source += effective_balance_by_increment;
-        }
-        if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
-            self.prev_target += effective_balance_by_increment;
-        }
-        if (hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
-            self.prev_head += effective_balance_by_increment;
-        }
-        if (hasMarkers(flag, FLAG_CURR_TARGET_UNSLASHED)) {
-            self.curr_target += effective_balance_by_increment;
-        }
+    /// Wrapping adds keep the per-validator loop branch-free and vectorizable. They never wrap:
+    /// `init` caps the validator count at 2^32, so each sum of u16 increments stays below 2^48.
+    fn add(self: *UnslashedStakes, flag: u8, effective_balance_by_increment: u16) void {
+        const increment: u64 = effective_balance_by_increment;
+        self.prev_source +%= increment * @intFromBool(hasMarkers(flag, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED));
+        self.prev_target +%= increment * @intFromBool(hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED));
+        self.prev_head +%= increment * @intFromBool(hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_UNSLASHED));
+        self.curr_target +%= increment * @intFromBool(hasMarkers(flag, FLAG_CURR_TARGET_UNSLASHED));
     }
 };
 
@@ -379,6 +374,12 @@ pub const EpochTransitionCache = struct {
             try reused_cache.is_compounding_validator_arr.resize(reused_cache.allocator, validator_count);
         }
         const cached_fields = validator_flat_cache.fields.slice();
+        const is_active_prev_arr = reused_cache.is_active_prev_epoch.items[0..validator_count];
+        const is_active_curr_arr = reused_cache.is_active_current_epoch.items[0..validator_count];
+        const is_active_next_arr = reused_cache.is_active_next_epoch.items[0..validator_count];
+        const flags_arr = reused_cache.flags.items[0..validator_count];
+        const next_active_arr = reused_cache.next_epoch_shuffling_active_validator_indices.items;
+        const is_compounding_arr = reused_cache.is_compounding_validator_arr.items;
         for (0..validator_count) |i| {
             const validator = cached_fields.get(i);
             var flag: u8 = 0;
@@ -398,7 +399,7 @@ pub const EpochTransitionCache = struct {
             const is_active_next: bool = activation_epoch <= next_epoch and next_epoch < exit_epoch;
             const is_active_next_2: bool = activation_epoch <= next_epoch_2 and next_epoch_2 < exit_epoch;
 
-            reused_cache.is_active_prev_epoch.items[i] = is_active_prev;
+            is_active_prev_arr[i] = is_active_prev;
 
             // Both active validators and slashed-but-not-yet-withdrawn validators are eligible to receive penalties.
             // This is done to prevent self-slashing from being a way to escape inactivity leaks.
@@ -407,13 +408,13 @@ pub const EpochTransitionCache = struct {
                 flag |= FLAG_ELIGIBLE_ATTESTER;
             }
 
-            reused_cache.flags.items[i] = flag;
+            flags_arr[i] = flag;
 
             if (fork_seq.gte(.electra)) {
-                reused_cache.is_compounding_validator_arr.items[i] = validator.bits.compounding;
+                is_compounding_arr[i] = validator.bits.compounding;
             }
 
-            reused_cache.is_active_current_epoch.items[i] = is_active_curr;
+            is_active_curr_arr[i] = is_active_curr;
             if (is_active_curr) {
                 total_active_stake_by_increment += effective_balances_by_increments[i];
             }
@@ -461,10 +462,10 @@ pub const EpochTransitionCache = struct {
                 try indices_to_eject.append(allocator, i);
             }
 
-            reused_cache.is_active_next_epoch.items[i] = is_active_next;
+            is_active_next_arr[i] = is_active_next;
 
             if (is_active_next_2) {
-                reused_cache.next_epoch_shuffling_active_validator_indices.items[next_epoch_shuffling_active_indices_length] = @intCast(i);
+                next_active_arr[next_epoch_shuffling_active_indices_length] = @intCast(i);
                 next_epoch_shuffling_active_indices_length += 1;
             }
         } // end validator loop
@@ -564,15 +565,25 @@ pub const EpochTransitionCache = struct {
             var current_epoch_participation_view = try state.currentEpochParticipation();
             _ = try current_epoch_participation_view.getAllInto(reused_cache.current_epoch_participation.items);
 
-            for (0..validator_count) |i| {
-                reused_cache.flags.items[i] |=
+            // Multi-object `for`: lengths are checked once at loop entry. Indexing through
+            // `reused_cache` instead reloads every slice header after each `flag` store (a u8
+            // store may alias them) and bounds-checks every access.
+            for (
+                flags_arr,
+                is_active_prev_arr,
+                is_active_curr_arr,
+                reused_cache.previous_epoch_participation.items[0..validator_count],
+                reused_cache.current_epoch_participation.items[0..validator_count],
+                effective_balances_by_increments[0..validator_count],
+            ) |*flag, is_prev, is_curr, prev_participation, curr_participation, increments| {
+                flag.* |=
                     // checking active status first is required to pass random spec tests in altair
                     // in practice, inactive validators will have 0 participation
                     // FLAG_PREV are indexes [0,1,2]
-                    (if (reused_cache.is_active_prev_epoch.items[i]) reused_cache.previous_epoch_participation.items[i] else 0) |
+                    (if (is_prev) prev_participation else 0) |
                     // FLAG_CURR are indexes [3,4,5], so shift by 3
-                    (if (reused_cache.is_active_current_epoch.items[i]) reused_cache.current_epoch_participation.items[i] << 3 else 0);
-                unslashed_stakes.add(reused_cache.flags.items[i], effective_balances_by_increments[i]);
+                    (if (is_curr) curr_participation << 3 else 0);
+                unslashed_stakes.add(flag.*, increments);
             }
         }
 
