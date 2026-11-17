@@ -213,6 +213,7 @@ export class NativeNetworkCore implements INetworkCore {
     return this.intent.custody(count);
   }
   reportPeer(peer: string, action: PeerAction, actionName: string, context?: NativePeerReportContext): void {
+    if (this.closed) return;
     this.reports.report(peer, action, actionName, context);
   }
   reStatusPeers(peers: string[]): Promise<void> {
