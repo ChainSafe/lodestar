@@ -787,7 +787,7 @@ test "fast confirmation: a run without balances keeps the slot's variable update
     try testing.expectError(error.FastConfirmationUnsupported, fcr.onFastConfirmation(&store));
     try testing.expectEqual(tagRoot(2), fcr.previous_slot_head);
     try testing.expectEqual(tagRoot(3), fcr.current_slot_head);
-    try testing.expectEqual(tagRoot(2), fcr.confirmed_root);
+    try testing.expectEqual(store.finalized_checkpoint.root, fcr.confirmed_root);
 }
 
 test "optimistic sync: valid walks down to the merge boundary, invalid removes the branch" {
@@ -1025,6 +1025,9 @@ test "optimistic sync: a valid envelope over an invalidated payload returns Payl
     try store.onPayloadInvalid(tagRoot(0x20), tagHash(0x20), tagHash(1));
 
     try testing.expectError(error.PayloadInvalidToValid, store.onExecutionPayloadEnvelope(tagRoot(0x21), .valid, null));
+    const block = store.blockIndex(tagRoot(0x21)).?;
+    try testing.expectEqual(.syncing, store.blocks.items(.execution_status)[block]);
+    try testing.expect(!store.blocks.items(.payload_verified)[block]);
 }
 
 test "get_ancestor: a Gloas walk takes each link's payload status from the child" {

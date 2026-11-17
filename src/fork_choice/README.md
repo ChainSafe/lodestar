@@ -111,10 +111,10 @@ to exit there and proto-array does the same. Two entry points change the facts:
 
 Both walks follow the payload chain: `full` nodes and pre-Gloas blocks contribute
 their own payload, `empty` links skip the parent's. Both check the whole walk before
-writing it. A `valid` to `invalid` transition is reported with nothing changed. An
-`invalid` to `valid` transition can come after `onExecutionPayloadEnvelope` wrote the
-block's row or `onPayloadValid` marked another carrier's chain, so the caller stops the
-node; optimistic sync leaves this case to manual intervention.
+writing it, so a `valid` to `invalid` or `invalid` to `valid` transition is reported
+with nothing changed. The one exception is `onPayloadValid` across carriers: they share
+a payload chain, so a later carrier failing after an earlier one passed needs a
+contradicting engine, and the marks already made are ones the engine vouched for.
 
 The root block hangs from nothing, so the store keeps the status of the node it hung
 from in `root_base_status`: `pre_merge` for an anchor, whose ancestors count as
