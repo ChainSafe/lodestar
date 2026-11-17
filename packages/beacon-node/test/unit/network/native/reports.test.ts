@@ -26,7 +26,7 @@ it("counts accepted submissions, including repeats, using bounded reason labels"
   reports.report("peer", PeerAction.LowToleranceError, "BadGossipBlock");
   reports.report("peer", PeerAction.Fatal, "unrecognized reason");
   const metrics = reports.metrics();
-  expect(metrics).toContain("# TYPE lodestar_peers_report_peer_count gauge\n");
+  expect(metrics).toContain("# TYPE lodestar_peers_report_peer_count counter\n");
   expect(metrics).toContain('lodestar_peers_report_peer_count{reason="BadGossipBlock"} 2\n');
   expect(metrics).toContain('lodestar_peers_report_peer_count{reason="other"} 1\n');
   expect(metrics).not.toContain('reason="unrecognized reason"');

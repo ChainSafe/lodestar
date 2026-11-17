@@ -57,11 +57,11 @@ export class NativePeerReports {
       });
   }
 
-  /** The report count in exposition format, typed as the libp2p backend registers it. */
+  /** The report counter in exposition format. */
   metrics(): string {
     return [
       `# HELP ${NAME} Peer misbehaviour reports by reason, before native coalescing; unrecognized reasons count as other`,
-      `# TYPE ${NAME} gauge`,
+      `# TYPE ${NAME} counter`,
       ...Array.from(this.counts, ([reason, count]) => `${NAME}{reason="${reason}"} ${count}`),
       "",
     ].join("\n");
