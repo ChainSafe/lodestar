@@ -62,12 +62,12 @@ const Extra = struct {
 };
 
 /// Moves the preloaded process clock (pkg/afl++/fuzz_clock.c) with the pair's logical clock so
-/// quiche's timers track the harness; without the shim the symbol is null and only the pair moves.
+/// quiche's timers track the harness; without the shim the symbol's address is zero and only the pair moves.
 const clock_advance = @extern(?*const fn (i64) callconv(.c) void, .{ .name = "fuzz_clock_advance", .linkage = .weak });
 
 fn advanceTime(ms: u64) void {
     pair.advance(ms);
-    if (clock_advance) |advance| advance(@intCast(ms * std.time.ns_per_ms));
+    if (@intFromPtr(clock_advance) != 0) clock_advance.?(@intCast(ms * std.time.ns_per_ms));
 }
 
 const Streams = struct {
