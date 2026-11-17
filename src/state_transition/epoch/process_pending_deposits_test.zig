@@ -55,3 +55,49 @@ test "a deposit after the one adding its validator is a top-up despite its check
     var queued_deposits = try state.pendingDeposits();
     try std.testing.expectEqual(0, try queued_deposits.length());
 }
+
+test "a pubkey cached beyond the state's validators is added as a new validator" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 400_000 });
+    defer pool.deinit();
+
+    const validator_count = 256;
+    var test_state = try TestCachedBeaconState.init(allocator, &pool, validator_count);
+    defer test_state.deinit();
+    const cached_state = test_state.cached_state;
+    const state = cached_state.state.castToFork(.electra);
+
+    var pubkeys: [validator_count + 1]BLSPubkey = undefined;
+    try interop.interopPubkeysCached(pubkeys.len, &pubkeys);
+    const new_validator = validator_count;
+    const amount = 2_000_000_000;
+
+    // The pubkey cache is shared between states, so it can already hold a pubkey that this
+    // state has not added yet.
+    const pubkey_cache = cached_state.epoch_cache.pubkey_cache;
+    try pubkey_cache.append(std.testing.io, pubkeys[new_validator], new_validator);
+
+    var pending_deposits = try state.pendingDeposits();
+    const deposit = try interop.interopPendingDeposit(
+        cached_state.config.chain.GENESIS_FORK_VERSION,
+        &pubkeys[new_validator],
+        amount,
+        new_validator,
+    );
+    try pending_deposits.pushValue(&deposit);
+    try cached_state.state.commit();
+
+    try processPendingDeposits(
+        .electra,
+        allocator,
+        std.testing.io,
+        cached_state.config,
+        cached_state.epoch_cache,
+        state,
+        test_state.epoch_transition_cache,
+    );
+
+    try std.testing.expectEqual(validator_count + 1, try state.validatorsCount());
+    var balances = try state.balances();
+    try std.testing.expectEqual(amount, try balances.get(new_validator));
+}
