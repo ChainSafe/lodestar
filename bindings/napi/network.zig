@@ -221,11 +221,6 @@ fn resolvedLimits(env: napi.Env, runtime: *const Runtime) !Value {
     return object;
 }
 
-/// The gossip SHA-256 implementation this process selected, for packaged qualification records.
-pub fn gossipSha256Backend() js.String {
-    return js.String.from(@tagName(network.gossipsub.sha256.backend()));
-}
-
 pub fn getMetrics(self: *@This()) !js.Value {
     return .{ .val = try command_js.submit(js.env(), try self.owner(), .getMetrics, &.{}) };
 }
