@@ -321,6 +321,9 @@ const ReusedEpochTransitionCache = struct {
     /// Per-validator index scratch for the chunked epoch steps, with the same spare tail as
     /// balances_buffer for validators that processPendingDeposits appends.
     index_scratch: std.ArrayList(u32),
+    /// One count per validator chunk for the chunked epoch steps, with the same spare tail as
+    /// index_scratch.
+    chunk_counts: UsizeArray,
 
     is_compounding_validator_arr: BoolArray,
 
@@ -355,6 +358,11 @@ const ReusedEpochTransitionCache = struct {
             validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH,
         );
         errdefer self.index_scratch.deinit(allocator);
+        self.chunk_counts = try UsizeArray.initCapacity(
+            allocator,
+            validator_chunks.count(validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH),
+        );
+        errdefer self.chunk_counts.deinit(allocator);
         self.is_compounding_validator_arr = .empty;
         self.previous_epoch_participation = .empty;
         self.current_epoch_participation = .empty;
@@ -379,6 +387,10 @@ const ReusedEpochTransitionCache = struct {
             self.allocator,
             validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH,
         );
+        try self.chunk_counts.resize(
+            self.allocator,
+            validator_chunks.count(validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH),
+        );
         try self.validator_scratch.resize(self.allocator, validator_count);
         try self.penalties.resize(self.allocator, validator_count);
         try self.balances_buffer.resize(
@@ -397,6 +409,7 @@ const ReusedEpochTransitionCache = struct {
         self.flags.deinit(self.allocator);
         self.next_epoch_shuffling_active_validator_indices.deinit(self.allocator);
         self.index_scratch.deinit(self.allocator);
+        self.chunk_counts.deinit(self.allocator);
         self.is_compounding_validator_arr.deinit(self.allocator);
         self.previous_epoch_participation.deinit(self.allocator);
         self.current_epoch_participation.deinit(self.allocator);
@@ -470,6 +483,9 @@ pub const EpochTransitionCache = struct {
     /// Index scratch for the chunked epoch steps, overwritten by each step like validator_scratch.
     /// Covers the validators processPendingDeposits appends.
     index_scratch: []u32,
+    /// One count per validator chunk, overwritten by each step like index_scratch. Covers the
+    /// validators processPendingDeposits appends.
+    chunk_counts: []usize,
     penalties: []u64,
     slashing_penalties: []u64,
     balances_buffer: []u64,
@@ -756,6 +772,7 @@ pub const EpochTransitionCache = struct {
             .compounding_validator_flags = .{ .base = reused_cache.is_compounding_validator_arr.items },
             .validator_scratch = reused_cache.validator_scratch.items,
             .index_scratch = reused_cache.index_scratch.items,
+            .chunk_counts = reused_cache.chunk_counts.items,
             .penalties = reused_cache.penalties.items,
             .slashing_penalties = reused_cache.slashing_penalties.items,
             .balances_buffer = reused_cache.balances_buffer.items,

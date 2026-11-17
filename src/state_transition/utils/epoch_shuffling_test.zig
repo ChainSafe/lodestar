@@ -7,6 +7,7 @@ const computeEpochShuffling = @import("epoch_shuffling.zig").computeEpochShuffli
 const Node = @import("persistent_merkle_tree").Node;
 const TestCachedBeaconState = @import("../test_utils/root.zig").TestCachedBeaconState;
 const innerShuffleList = @import("swap_or_not_shuffle").innerShuffleList;
+const pairs_per_task = @import("swap_or_not_shuffle").pairs_per_task;
 
 test "memory_safety: computeEpochShuffling retains caller ownership on allocation failure" {
     const allocator = std.testing.allocator;
@@ -89,4 +90,32 @@ test "memory_safety: EpochShuffling.init should free partial allocations on OOM"
             defer shuffling.deinit();
         }
     }.run, .{});
+}
+
+// Waits for the cancel request and re-arms it, so the first round still waiting on its tasks
+// returns error.Canceled.
+fn initAfterCancelRequest(allocator: std.mem.Allocator, io: std.Io, active_indices: []const u32) !*EpochShuffling {
+    while (true) io.checkCancel() catch break;
+    io.recancel();
+    return EpochShuffling.init(allocator, io, [_]u8{0} ** 32, 0, active_indices);
+}
+
+test "memory_safety: EpochShuffling.init frees the shuffle output when canceled" {
+    const allocator = std.testing.allocator;
+    const io = std.testing.io;
+    // Long enough that every round splits into tasks. Awaiting them is the only cancelation point.
+    const active_indices = try allocator.alloc(u32, 8 * pairs_per_task);
+    for (active_indices, 0..) |*index, i| index.* = @intCast(i);
+
+    var future = io.concurrent(initAfterCancelRequest, .{ allocator, io, active_indices }) catch {
+        allocator.free(active_indices);
+        return error.SkipZigTest;
+    };
+    const shuffling = future.cancel(io) catch |err| {
+        allocator.free(active_indices);
+        return try std.testing.expectEqual(error.Canceled, err);
+    };
+    // No round was still waiting on its tasks, so nothing observed the cancel.
+    shuffling.deinit();
+    return error.SkipZigTest;
 }

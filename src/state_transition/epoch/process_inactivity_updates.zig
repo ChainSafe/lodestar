@@ -70,9 +70,7 @@ pub fn processInactivityUpdates(
     const scores = try inactivity_scores.getAllInto(cache.validator_scratch);
     std.debug.assert(flags.len <= scores.len);
 
-    const changed_counts = try cache.allocator.alloc(usize, validator_chunks.count(flags.len));
-    defer cache.allocator.free(changed_counts);
-
+    const changed_counts = cache.chunk_counts[0..validator_chunks.count(flags.len)];
     const scan: InactivityScan = .{
         .flags = flags,
         .scores = scores,

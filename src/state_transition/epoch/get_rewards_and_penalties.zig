@@ -88,9 +88,7 @@ pub fn getRewardsAndPenaltiesAltair(
     var reward_penalty_items: [max_increment]RewardPenaltyItem = undefined;
     for (&reward_penalty_items, 0..) |*item, increment| item.* = computeRewardPenaltyItem(cache, increment);
 
-    const non_target_counts = try cache.allocator.alloc(usize, validator_chunks.count(validator_count));
-    defer cache.allocator.free(non_target_counts);
-
+    const non_target_counts = cache.chunk_counts[0..validator_chunks.count(validator_count)];
     const effective_balance_increments = epoch_cache.getEffectiveBalanceIncrements().items[0..validator_count];
     const scan: RewardsScan = .{
         .flags = cache.flags,
