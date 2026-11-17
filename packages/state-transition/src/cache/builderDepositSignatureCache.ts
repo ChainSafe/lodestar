@@ -4,15 +4,15 @@ import {PubkeyHex, electra} from "@lodestar/types";
  * Caches deposit signature-verification results — passes (`true`) and failures (`false`) — so the
  * Fulu → Gloas fork transition can skip the bulk verification cost AND skip re-verifying deposits
  * already proven invalid. Covers both builder-prefix deposits (onboarding) and validator deposits
- * that share a pubkey with a builder deposit (the ones `hasPendingValidator` checks at the fork).
+ * that share a pubkey with an invalid builder deposit (the ones `hasPendingValidator` checks at the fork).
  *
  * Keyed by the deposit's struct **value object** — `electra.PendingDeposit` is a
  * `ContainerNodeStructType`, so its `node.value` is a stable object reused across
  * prepareNextSlot-derived states and carried by reference through the gloas pendingDeposits
  * migration. No merkle-root computation, no slot bucketing.
  *
- * Also tracks builder pubkeys seen so the scanner knows which validator deposits to pre-verify (only
- * those sharing a pubkey with a builder deposit ever reach `hasPendingValidator`). The mapped boolean
+ * Also tracks the pubkeys of invalid builder deposits without a validator so the scanner knows which
+ * validator deposits to pre-verify (only those ever reach `hasPendingValidator`). The mapped boolean
  * records whether a *valid* validator deposit for that pubkey has been found: once true, the scanner
  * stops pre-verifying further validator deposits for it — `hasPendingValidator` short-circuits on the
  * first valid signature at the fork, so the rest would never be read.
@@ -26,7 +26,7 @@ import {PubkeyHex, electra} from "@lodestar/types";
  */
 export class BuilderDepositSignatureCache {
   private validityByDeposit = new Map<electra.PendingDeposit, boolean>();
-  /** builder pubkey → whether a valid validator deposit sharing it has already been pre-verified. */
+  /** invalid builder deposit pubkey → whether a valid validator deposit sharing it has already been pre-verified. */
   private builderPubkeys = new Map<PubkeyHex, boolean>();
 
   setSignatureValidity(deposit: electra.PendingDeposit, isValid: boolean): void {
@@ -41,7 +41,7 @@ export class BuilderDepositSignatureCache {
     return this.validityByDeposit.has(deposit);
   }
 
-  /** Record a builder deposit's pubkey so the scanner pre-verifies validator deposits for it.
+  /** Record an invalid builder deposit's pubkey so the scanner pre-verifies validator deposits for it.
    *  Idempotent; never downgrades a pubkey already marked as having a valid validator deposit. */
   addBuilderPubkey(pubkeyHex: PubkeyHex): void {
     if (!this.builderPubkeys.has(pubkeyHex)) {
@@ -69,7 +69,7 @@ export class BuilderDepositSignatureCache {
     return this.validityByDeposit.size;
   }
 
-  /** Distinct builder pubkeys tracked this window. */
+  /** Distinct pubkeys of invalid builder deposits tracked this window. */
   get builderPubkeyCount(): number {
     return this.builderPubkeys.size;
   }
