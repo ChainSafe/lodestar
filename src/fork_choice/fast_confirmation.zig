@@ -11,7 +11,6 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const preset = @import("preset").preset;
 const store_mod = @import("store.zig");
-const head_mod = @import("head.zig");
 const vote_targets_mod = @import("vote_targets.zig");
 const Store = store_mod.Store;
 const BalanceSource = store_mod.BalanceSource;
@@ -299,7 +298,7 @@ const Run = struct {
     /// Spec `get_node_support_between_slots`.
     fn nodeSupportBetweenSlots(self: *Run, balances: *const BalanceSource, node: ForkChoiceNode, start_slot: Slot, end_slot: Slot) !u64 {
         if (start_slot > end_slot) return 0;
-        const node_id = head_mod.nodeId(node);
+        const node_id = store_mod.nodeId(node);
         const target_nodes = self.store.vote_targets.nodes.items;
         var support: u64 = 0;
         for (self.store.latest_votes.items, 0..) |target, validator| {
