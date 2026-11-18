@@ -2,7 +2,6 @@ import {BeaconConfig, ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {PublicKey} from "@lodestar/native/blst";
 import {type PubkeyCache, pubkeyCache as defaultPubkeyCache} from "@lodestar/native/pubkeys";
 import {
-  ATTESTATION_SUBNET_COUNT,
   DOMAIN_BEACON_PROPOSER,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
@@ -45,6 +44,7 @@ import {
   isActiveValidator,
   isAggregatorFromCommitteeLength,
 } from "../util/index.js";
+import {getAttestationSubnetCount} from "../util/pq.js";
 import {
   AttesterDuty,
   calculateCommitteeAssignments,
@@ -809,7 +809,7 @@ export class EpochCache {
     const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
     const committeesPerSlot = this.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
     const committeesSinceEpochStart = committeesPerSlot * slotsSinceEpochStart;
-    return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
+    return (committeesSinceEpochStart + committeeIndex) % getAttestationSubnetCount(this.config, slot);
   }
 
   /**

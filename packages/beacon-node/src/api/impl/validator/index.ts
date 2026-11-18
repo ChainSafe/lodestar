@@ -2074,7 +2074,7 @@ export function getValidatorApi(
       await network.prepareBeaconCommitteeSubnets(
         subscriptions.map(({validatorIndex, slot, isAggregator, committeesAtSlot, committeeIndex}) => ({
           validatorIndex: validatorIndex,
-          subnet: computeSubnetForCommitteesAtSlot(slot, committeesAtSlot, committeeIndex),
+          subnet: computeSubnetForCommitteesAtSlot(config, slot, committeesAtSlot, committeeIndex),
           slot: slot,
           isAggregator: isAggregator,
         }))

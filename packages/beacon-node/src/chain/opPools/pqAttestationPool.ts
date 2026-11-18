@@ -120,6 +120,11 @@ export class PqAttestationPool {
     const committee = dataAttestations?.byCommittee.get(committeeIndex);
     if (!dataAttestations || !committee || committee.signed.size === 0) return null;
 
+    // Another aggregator of the committee, or a retry, may have had the same signatures proven
+    const bits = signedBits(committee);
+    const proven = committee.aggregates.find(({aggregationBits}) => isSameBits(aggregationBits, bits));
+    if (proven) return {data: dataAttestations.data, aggregate: proven};
+
     const aggregate = await proveSigned(committee);
     committee.aggregates.push(aggregate);
     return {data: dataAttestations.data, aggregate};
@@ -253,6 +258,10 @@ function bestAggregate(committee: CommitteeAttestations): PqAggregate | null {
     }
   }
   return best;
+}
+
+function isSameBits(a: BitArray, b: BitArray): boolean {
+  return a.bitLen === b.bitLen && Buffer.compare(a.uint8Array, b.uint8Array) === 0;
 }
 
 function isSuperset(a: BitArray, b: BitArray): boolean {

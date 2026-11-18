@@ -1,8 +1,7 @@
 import {BitArray} from "@chainsafe/ssz";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {
-  ATTESTATION_SUBNET_COUNT,
   DOMAIN_BEACON_ATTESTER,
   ForkName,
   ForkPostElectra,
@@ -22,6 +21,7 @@ import {
   computeStartSlotAtEpoch,
   computeXmssAttestationLeafIndex,
   createIndexedSignatureSetFromComponents,
+  getAttestationSubnetCount,
 } from "@lodestar/state-transition";
 import {
   CommitteeIndex,
@@ -461,7 +461,7 @@ async function validateAttestationNoSignatureCheck(
     // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
     committeeValidatorIndices = getCommitteeValidatorIndices(shuffling, attSlot, committeeIndex);
     getSigningRoot = () => getAttestationDataSigningRoot(chain.config, attData);
-    expectedSubnet = computeSubnetForSlot(shuffling, attSlot, committeeIndex);
+    expectedSubnet = computeSubnetForSlot(chain.config, shuffling, attSlot, committeeIndex);
   }
 
   let validatorIndex: number;
@@ -875,10 +875,15 @@ export function getCommitteeValidatorIndices(
 /**
  * Compute the correct subnet for a slot/committee index
  */
-export function computeSubnetForSlot(shuffling: EpochShuffling, slot: number, committeeIndex: number): SubnetID {
+export function computeSubnetForSlot(
+  config: ChainForkConfig,
+  shuffling: EpochShuffling,
+  slot: number,
+  committeeIndex: number
+): SubnetID {
   const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
   const committeesSinceEpochStart = shuffling.committeesPerSlot * slotsSinceEpochStart;
-  return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
+  return (committeesSinceEpochStart + committeeIndex) % getAttestationSubnetCount(config, slot);
 }
 
 /**

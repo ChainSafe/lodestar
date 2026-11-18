@@ -1,18 +1,24 @@
 import {routes} from "@lodestar/api";
-import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
-import {IBeaconStateView, computeSlotsSinceEpochStart, toApiPubkey} from "@lodestar/state-transition";
+import {ChainForkConfig} from "@lodestar/config";
+import {
+  IBeaconStateView,
+  computeSlotsSinceEpochStart,
+  getAttestationSubnetCount,
+  toApiPubkey,
+} from "@lodestar/state-transition";
 import {BLSPubkey, CommitteeIndex, ProducedBlockSource, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {BlockSelectionResult, BuilderBlockSelectionReason, EngineBlockSelectionReason} from "./index.js";
 
 export function computeSubnetForCommitteesAtSlot(
+  config: ChainForkConfig,
   slot: Slot,
   committeesAtSlot: number,
   committeeIndex: CommitteeIndex
 ): SubnetID {
   const slotsSinceEpochStart = computeSlotsSinceEpochStart(slot);
   const committeesSinceEpochStart = committeesAtSlot * slotsSinceEpochStart;
-  return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
+  return (committeesSinceEpochStart + committeeIndex) % getAttestationSubnetCount(config, slot);
 }
 
 /**

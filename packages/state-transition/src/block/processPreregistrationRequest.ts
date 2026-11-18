@@ -88,7 +88,9 @@ export function processValidatorPreregistrationRequest(
   const {pubkey} = request;
 
   if (getActivePreregistration(state, "validator", pubkey) !== null) return;
-  if (state.epochCtx.getValidatorIndex(pubkey) !== null) return;
+  // The pubkey cache is shared between states: only an index inside this state's registry counts
+  const validatorIndex = state.epochCtx.getValidatorIndex(pubkey);
+  if (validatorIndex !== null && validatorIndex < state.validators.length) return;
   if (isPendingValidator(state, pubkey)) return;
   if (!hasCapacity(state, "validator")) return;
 

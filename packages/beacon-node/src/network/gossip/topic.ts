@@ -119,7 +119,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.beacon_attestation:
       return sszTypesFor(fork).SingleAttestation;
     case GossipType.proposer_slashing:
-      return ssz.phase0.ProposerSlashing;
+      return fork === ForkName.pq ? ssz.pq.ProposerSlashing : ssz.phase0.ProposerSlashing;
     case GossipType.attester_slashing:
       return sszTypesFor(fork).AttesterSlashing;
     case GossipType.voluntary_exit:

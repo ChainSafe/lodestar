@@ -103,4 +103,13 @@ describe("computeSubscribedSubnet", () => {
       expect(computeSubscribedSubnet(config, bigIntToBytes(BigInt(nodeId), 32, "be"), epoch)).toEqual(expected);
     });
   }
+
+  it("stays within the pq subnets from the pq fork", () => {
+    const pqConfig = {...config, PQ_FORK_EPOCH: 0};
+    for (const nodeId of nodeIds) {
+      for (const subnet of computeSubscribedSubnet(pqConfig, bigIntToBytes(BigInt(nodeId), 32, "be"), 54321)) {
+        expect(subnet).toBeLessThan(pqConfig.ATTESTATION_SUBNET_COUNT_PQ);
+      }
+    }
+  });
 });

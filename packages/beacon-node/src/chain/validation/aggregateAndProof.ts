@@ -1,9 +1,9 @@
-import {XMSS_CLAIM_SIZE} from "@lodestar/native/leanvm";
 import {ForkBls, ForkName, ForkSeq} from "@lodestar/params";
 import {
   IBeaconStateViewGloas,
   computeEpochAtSlot,
   createAggregateSignatureSetFromComponents,
+  getAttestationClaims,
   getXmssAggregateAndProofSignatureSet,
   isAggregatorFromCommitteeLength,
 } from "@lodestar/state-transition";
@@ -294,11 +294,7 @@ async function validateAggregateAndProof(
   if ("proof" in indexedAttestation) {
     // [REJECT] The aggregator signature is valid, at the leaf of the aggregate's slot.
     // [REJECT] The proof covers a signature of every attester.
-    const claims = new Uint8Array(attestingIndices.length * XMSS_CLAIM_SIZE);
-    for (let i = 0; i < attestingIndices.length; i++) {
-      claims.set(getXmssPubkey(attestingIndices[i]), i * XMSS_CLAIM_SIZE);
-      claims.set(signingRoot, i * XMSS_CLAIM_SIZE + 32);
-    }
+    const claims = getAttestationClaims(chain.config, attSlot, getXmssPubkey, attData, attestingIndices);
     const [signatureValid, proofValid] = await Promise.all([
       chain.pq.verifySignatureSets([
         getXmssAggregateAndProofSignatureSet(

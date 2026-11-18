@@ -270,11 +270,11 @@ export async function produceBlockBody<T extends BlockType>(
         parentBlock.blockRoot,
         blockSlot - 1
       );
+      gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(commonBlockBody, isExtendingPayload, () =>
+        currentState.withParentPayloadApplied(parentExecutionRequests)
+      );
     }
     gloasBody.parentExecutionRequests = parentExecutionRequests;
-    gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(commonBlockBody, isExtendingPayload, () =>
-      currentState.withParentPayloadApplied(parentExecutionRequests)
-    );
     blockBody = gloasBody as AssembledBodyType<T>;
 
     this.logger.verbose("Produced block with builder bid", {
@@ -433,13 +433,13 @@ export async function produceBlockBody<T extends BlockType>(
         parentBlock.blockRoot,
         blockSlot - 1
       );
+      gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(
+        commonBlockBody,
+        isBuildingOnFull,
+        () => stateAfterParentPayload
+      );
     }
     gloasBody.parentExecutionRequests = parentExecutionRequests;
-    gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(
-      commonBlockBody,
-      isBuildingOnFull,
-      () => stateAfterParentPayload
-    );
     blockBody = gloasBody as AssembledBodyType<T>;
 
     // Store execution payload data required to construct execution payload envelope later

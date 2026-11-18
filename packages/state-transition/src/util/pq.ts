@@ -4,6 +4,7 @@ import {verifyXmssSignature} from "@lodestar/native/leanvm";
 import {computePtcIndices} from "@lodestar/native/shuffle";
 import {
   AGGREGATORS_PER_COMMITTEE,
+  ATTESTATION_SUBNET_COUNT,
   DOMAIN_SELECTION_PROOF,
   EFFECTIVE_BALANCE_INCREMENT,
   ForkName,
@@ -27,6 +28,11 @@ import {getActiveValidatorIndices} from "./validator.js";
 const XMSS_REQUEST_PREFIX_SIZE = 16;
 const LEGACY_XMSS_PUBKEY_DOMAIN = 0x00;
 const LEGACY_VRF_ROOT_DOMAIN = 0x01;
+
+/** The number of attestation subnets at `slot`: fewer from pq */
+export function getAttestationSubnetCount(config: ChainForkConfig, slot: Slot): number {
+  return config.getForkName(slot) === ForkName.pq ? config.ATTESTATION_SUBNET_COUNT_PQ : ATTESTATION_SUBNET_COUNT;
+}
 
 /** The leaf at which an attestation is signed for target `epoch` */
 export function computeXmssAttestationLeafIndex(epoch: Epoch): number {

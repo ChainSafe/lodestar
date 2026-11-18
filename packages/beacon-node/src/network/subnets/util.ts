@@ -25,21 +25,25 @@ export function computeSubscribedSubnetByIndex(
   epoch: Epoch,
   index: number
 ): number {
-  const nodeIdPrefix = getNodeIdPrefix(nodeId);
+  // From pq there are fewer subnets, so the prefix that picks one is shorter
+  const isPq = epoch >= config.PQ_FORK_EPOCH && epoch < config.HEZE_FORK_EPOCH;
+  const subnetCount = isPq ? config.ATTESTATION_SUBNET_COUNT_PQ : ATTESTATION_SUBNET_COUNT;
+  const prefixBits = ATTESTATION_SUBNET_PREFIX_BITS - Math.log2(ATTESTATION_SUBNET_COUNT / subnetCount);
+  const nodeIdPrefix = getNodeIdPrefix(nodeId, prefixBits);
   const nodeOffset = getNodeOffset(nodeId);
   const permutationSeed = digest(
     ssz.UintNum64.serialize(Math.floor((epoch + nodeOffset) / config.EPOCHS_PER_SUBNET_SUBSCRIPTION))
   );
-  const permutatedPrefix = computeShuffledIndex(nodeIdPrefix, 1 << ATTESTATION_SUBNET_PREFIX_BITS, permutationSeed);
-  return (permutatedPrefix + index) % ATTESTATION_SUBNET_COUNT;
+  const permutatedPrefix = computeShuffledIndex(nodeIdPrefix, 1 << prefixBits, permutationSeed);
+  return (permutatedPrefix + index) % subnetCount;
 }
 
 /**
  * Should return node_id >> (NODE_ID_BITS - int(ATTESTATION_SUBNET_PREFIX_BITS))
  * Ideally we should use bigint here but since these constants are not likely to change we can use number
  */
-export function getNodeIdPrefix(nodeId: NodeId): number {
-  const totalShiftedBits = NODE_ID_BITS - ATTESTATION_SUBNET_PREFIX_BITS;
+export function getNodeIdPrefix(nodeId: NodeId, prefixBits = ATTESTATION_SUBNET_PREFIX_BITS): number {
+  const totalShiftedBits = NODE_ID_BITS - prefixBits;
   const shiftedBytes = Math.floor(totalShiftedBits / 8);
   const shiftedBits = totalShiftedBits % 8;
   const prefixBytes = nodeId.slice(0, nodeId.length - shiftedBytes);

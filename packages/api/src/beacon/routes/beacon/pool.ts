@@ -1,6 +1,6 @@
 import {ProgressiveListCompositeType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, PTC_SIZE, isForkPostElectra} from "@lodestar/params";
+import {ForkName, PTC_SIZE, XMSS_SIGNATURE_SIZE, isForkPostElectra} from "@lodestar/params";
 import {
   ArrayOf,
   AttesterSlashing,
@@ -23,7 +23,7 @@ import {
 } from "../../../utils/codecs.js";
 import {toForkName} from "../../../utils/fork.js";
 import {fromHeaders} from "../../../utils/headers.js";
-import {Endpoint, RouteDefinitions, Schema} from "../../../utils/index.js";
+import {Endpoint, ResponseDataCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../../../utils/metadata.js";
 
 const SingleAttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
@@ -52,6 +52,48 @@ function attesterSlashingType(fork: ForkName): Type<AttesterSlashing> {
 const AttesterSlashingListTypePhase0 = ArrayOf(ssz.phase0.AttesterSlashing);
 const AttesterSlashingListTypeElectra = ArrayOf(ssz.electra.AttesterSlashing);
 const ProposerSlashingListType = ArrayOf(ssz.phase0.ProposerSlashing);
+const ProposerSlashingListTypePq = ArrayOf(ssz.pq.ProposerSlashing);
+
+// The proposer slashing endpoints name no fork. From pq a slashing's signatures are leanXMSS ones,
+// which are longer, so its size says which type it is.
+const proposerSlashingCodec = {
+  toJson: (slashing: phase0.ProposerSlashing): unknown =>
+    (slashing.signedHeader1.signature.length === XMSS_SIGNATURE_SIZE
+      ? ssz.pq.ProposerSlashing
+      : ssz.phase0.ProposerSlashing
+    ).toJson(slashing),
+  fromJson: (json: unknown): phase0.ProposerSlashing => {
+    const signature = (json as {signed_header_1?: {signature?: string}}).signed_header_1?.signature;
+    const isPq = typeof signature === "string" && signature.length === 2 + 2 * XMSS_SIGNATURE_SIZE;
+    return (isPq ? ssz.pq.ProposerSlashing : ssz.phase0.ProposerSlashing).fromJson(json);
+  },
+  serialize: (slashing: phase0.ProposerSlashing): Uint8Array =>
+    (slashing.signedHeader1.signature.length === XMSS_SIGNATURE_SIZE
+      ? ssz.pq.ProposerSlashing
+      : ssz.phase0.ProposerSlashing
+    ).serialize(slashing),
+  deserialize: (bytes: Uint8Array): phase0.ProposerSlashing =>
+    (bytes.length === ssz.pq.ProposerSlashing.fixedSize
+      ? ssz.pq.ProposerSlashing
+      : ssz.phase0.ProposerSlashing
+    ).deserialize(bytes),
+};
+
+/** A pool holds slashings of one kind. A length that fits both sizes is read as BLS. */
+const proposerSlashingListCodec: ResponseDataCodec<ProposerSlashingList, EmptyMeta> = {
+  toJson: (slashings) => slashings.map(proposerSlashingCodec.toJson),
+  fromJson: (json) => (json as unknown[]).map(proposerSlashingCodec.fromJson),
+  serialize: (slashings) =>
+    (slashings[0]?.signedHeader1.signature.length === XMSS_SIGNATURE_SIZE
+      ? ProposerSlashingListTypePq
+      : ProposerSlashingListType
+    ).serialize(slashings),
+  deserialize: (bytes: Uint8Array) =>
+    (bytes.length % (ssz.phase0.ProposerSlashing.fixedSize as number) !== 0
+      ? ProposerSlashingListTypePq
+      : ProposerSlashingListType
+    ).deserialize(bytes),
+};
 const SignedVoluntaryExitListType = ArrayOf(ssz.phase0.SignedVoluntaryExit);
 const SignedBLSToExecutionChangeListType = ArrayOf(ssz.capella.SignedBLSToExecutionChange);
 const SyncCommitteeMessageListType = ArrayOf(ssz.altair.SyncCommitteeMessage);
@@ -299,7 +341,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: EmptyRequestCodec,
       resp: {
-        data: ProposerSlashingListType,
+        data: proposerSlashingListCodec,
         meta: EmptyMetaCodec,
       },
     },
@@ -399,10 +441,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/pool/proposer_slashings",
       method: "POST",
       req: {
-        writeReqJson: ({proposerSlashing}) => ({body: ssz.phase0.ProposerSlashing.toJson(proposerSlashing)}),
-        parseReqJson: ({body}) => ({proposerSlashing: ssz.phase0.ProposerSlashing.fromJson(body)}),
-        writeReqSsz: ({proposerSlashing}) => ({body: ssz.phase0.ProposerSlashing.serialize(proposerSlashing)}),
-        parseReqSsz: ({body}) => ({proposerSlashing: ssz.phase0.ProposerSlashing.deserialize(body)}),
+        writeReqJson: ({proposerSlashing}) => ({body: proposerSlashingCodec.toJson(proposerSlashing)}),
+        parseReqJson: ({body}) => ({proposerSlashing: proposerSlashingCodec.fromJson(body)}),
+        writeReqSsz: ({proposerSlashing}) => ({body: proposerSlashingCodec.serialize(proposerSlashing)}),
+        parseReqSsz: ({body}) => ({proposerSlashing: proposerSlashingCodec.deserialize(body)}),
         schema: {
           body: Schema.Object,
         },
