@@ -14,6 +14,7 @@ pub const blst = @import("./blst.zig");
 pub const blsVerifier = @import("./bls_verifier.zig");
 pub const NativeNetworkRuntime = @import("./network.zig");
 pub const pubkeys = @import("./pubkeys.zig");
+pub const committeePubkeys = @import("./committee_pubkeys.zig");
 pub const executionProofVerifier = @import("./execution_proof_verifier.zig");
 
 const options = @import("bls_options");
@@ -29,6 +30,8 @@ fn init(old_ref_count: u32) !void {
     if (old_ref_count == 0) {
         if (!pinned) try pinImage();
         // First environment — initialize shared state in your threadpool init.
+        committeePubkeys.state.init();
+
         var cpu_count: u64 = options.thread_count;
         if (options.thread_count == 0) {
             cpu_count = @max(try detectCpuCount(), 2) - 1;
@@ -96,6 +99,7 @@ fn cleanup(new_ref_count: u32) void {
     if (new_ref_count == 0) {
         // Last environment — tear down shared state.
         blst.state.deinit();
+        committeePubkeys.state.deinit();
         pubkeys.state.deinit();
         executionProofVerifier.state.deinit();
     }

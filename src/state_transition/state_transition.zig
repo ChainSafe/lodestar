@@ -76,6 +76,7 @@ pub fn processSlots(
             var timer = time.start(io);
             var epoch_transition_cache = try EpochTransitionCache.init(
                 allocator,
+                io,
                 config,
                 epoch_cache,
                 state,
@@ -107,7 +108,7 @@ pub fn processSlots(
             try state.setSlot(next_slot);
 
             timer = time.start(io);
-            try epoch_cache.afterProcessEpoch(state, &epoch_transition_cache);
+            try epoch_cache.afterProcessEpoch(io, state, &epoch_transition_cache);
             try observeEpochTransitionStep(.{ .step = .after_process_epoch }, @as(u64, @intCast(time.since(io, timer).nanoseconds)));
             // state.commit
 
@@ -140,7 +141,7 @@ pub fn processSlots(
             }
             if (state_epoch == config.chain.FULU_FORK_EPOCH) {
                 const electra_state = try state.tryCastToFork(.electra);
-                const upgraded = try upgradeStateToFulu(allocator, config, epoch_cache, electra_state);
+                const upgraded = try upgradeStateToFulu(io, config, epoch_cache, electra_state);
                 state.* = .{ .fulu = upgraded.inner };
             }
 
@@ -156,7 +157,7 @@ pub fn processSlots(
                 state.* = .{ .heze = upgraded.inner };
             }
 
-            try epoch_cache.finalProcessEpoch(state);
+            try epoch_cache.finalProcessEpoch(io, state);
 
             const commit_timer = time.start(io);
             try state.commit();

@@ -135,6 +135,7 @@ pub fn generateElectraState(allocator: Allocator, pool: *Node.Pool, chain_config
     try getNextSyncCommitteeIndices(
         .electra,
         allocator,
+        std.testing.io,
         beacon_state.castToFork(.electra),
         active_validator_indices.items,
         effective_balance_increments,
@@ -253,6 +254,7 @@ pub const TestCachedBeaconState = struct {
         errdefer allocator.destroy(epoch_transition_cache);
         epoch_transition_cache.* = try state_transition.EpochTransitionCache.init(
             allocator,
+            std.testing.io,
             cached_state.config,
             cached_state.epoch_cache,
             cached_state.state,
