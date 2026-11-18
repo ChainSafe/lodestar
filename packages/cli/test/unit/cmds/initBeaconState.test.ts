@@ -124,6 +124,7 @@ describe("initBeaconState", () => {
   async function init(db: BeaconDb, args: Partial<BeaconArgs & GlobalArgs>): Promise<AnchorSummary> {
     const {anchorState, isFinalized} = await initBeaconState(
       {network: "dev", ...args} as BeaconArgs & GlobalArgs,
+      false,
       fixturesDir,
       path.join(fixturesDir, "pubkeys"),
       config,
@@ -180,6 +181,7 @@ describe("initBeaconState", () => {
     const logger = getMockedLogger();
     const {earliestAvailableSlot} = await initBeaconState(
       {network: "dev", genesisStateFile: genesis.file} as BeaconArgs & GlobalArgs,
+      false,
       fixturesDir,
       path.join(fixturesDir, "pubkeys"),
       config,

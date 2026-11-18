@@ -19,7 +19,6 @@ export type StateInitializationOptions = Pick<
   | "ignoreWeakSubjectivityCheck"
   | "network"
   | "chain.nHistoricalStatesFileDataStore"
-  | "chain.nativeStateTransition"
 >;
 
 export type StatePreparationContext = {

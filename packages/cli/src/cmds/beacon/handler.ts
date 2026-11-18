@@ -88,7 +88,8 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       isFinalized,
       earliestAvailableSlot,
     } = await initBeaconState(
-      {...args, "chain.nativeStateTransition": options.chain.nativeStateTransition},
+      args,
+      options.chain.nativeStateTransition ?? false,
       beaconPaths.dataDir,
       beaconPaths.pubkeysFile,
       config,
