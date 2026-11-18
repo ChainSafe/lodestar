@@ -43,7 +43,7 @@ test "capabilities iteration returns every protocol exactly once" {
 test "capabilities fork sets match every implemented host protocol in both directions" {
     const common = [_]rr.Protocol{ .goodbye_v1, .ping_v1, .metadata_v3, .blocks_by_range_v2, .blocks_by_root_v2 };
     const light_client = [_]rr.Protocol{ .light_client_bootstrap_v1, .light_client_updates_by_range_v1, .light_client_finality_update_v1, .light_client_optimistic_update_v1 };
-    for ([_]ForkSeq{ .phase0, .altair, .bellatrix, .capella, .deneb, .electra, .fulu, .gloas }) |fork| {
+    for ([_]ForkSeq{ .phase0, .altair, .bellatrix, .capella, .deneb, .electra, .fulu, .gloas, .heze }) |fork| {
         for ([_]bool{ false, true }) |serve| {
             const active = try capabilities.forFork(fork, serve, &.{ .v1_2, .v1_1 });
             var expected: capabilities.Set = .initEmpty();
@@ -63,6 +63,7 @@ test "capabilities fork sets match every implemented host protocol in both direc
                 expected.insert(.{ .reqresp = .execution_payload_envelopes_by_range_v1 });
                 expected.insert(.{ .reqresp = .execution_payload_envelopes_by_root_v1 });
             }
+            if (fork.gte(.heze)) expected.insert(.{ .reqresp = .inclusion_lists_by_indices_v1 });
             expected.insert(.{ .meshsub = .v1_2 });
             expected.insert(.{ .meshsub = .v1_1 });
             var receive = expected;

@@ -29,6 +29,7 @@ pub const Kind = enum(u8) {
     payload_attestation_message,
     execution_payload_bid,
     proposer_preferences,
+    inclusion_list,
 
     pub fn countMax(self: Kind) u16 {
         return switch (self) {

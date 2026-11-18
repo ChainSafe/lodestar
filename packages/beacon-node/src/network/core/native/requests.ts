@@ -22,7 +22,7 @@ import {PeerAction} from "../../peers/score/index.js";
 import {onOutgoingReqRespError} from "../../reqresp/score.js";
 import {GetReqRespHandlerFn, OutgoingRequestArgs, ResponseIncoming} from "../../reqresp/types.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
-import {NativeProtocol, nativeFork, nativeProtocols} from "./protocols.js";
+import {NativeProtocol, nativeProtocols} from "./protocols.js";
 import {NativeRequestAdmission} from "./requestAdmission.js";
 
 function requestError(error: unknown): unknown {
@@ -191,7 +191,7 @@ export async function serveNativeRequest(
         if (result.done) return await request.finish();
         const {boundary} = result.value;
         const submission = request.respond(result.value.data, {
-          fork: nativeFork(boundary.fork),
+          fork: boundary.fork,
           digest: config.forkBoundary2ForkDigest(boundary),
         });
         result = undefined;

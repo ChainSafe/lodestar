@@ -75,6 +75,7 @@ pub fn forFork(fork: ForkSeq, serve_light_clients: bool, meshsub_versions: []con
         common.insert(.{ .reqresp = .execution_payload_envelopes_by_range_v1 });
         common.insert(.{ .reqresp = .execution_payload_envelopes_by_root_v1 });
     }
+    if (fork.gte(.heze)) common.insert(.{ .reqresp = .inclusion_lists_by_indices_v1 });
     var active: Directional = .{ .receive = common, .request = common };
     // Control applies the established peer's fixed revalidation deadline to old Status bytes.
     if (fork.gte(.fulu)) active.receive.insert(.{ .reqresp = .status_v1 });

@@ -391,6 +391,28 @@
           "invalid_weight": -2849.9999999999986,
           "invalid_decay": 0.9885530946569389
         }
+      },
+      {
+        "mesh_delivery_start_slot": 0,
+        "params": {
+          "weight": 0,
+          "time_in_mesh_weight": 1,
+          "time_in_mesh_cap": 3600,
+          "time_in_mesh_quantum_ms": 1,
+          "first_delivery_weight": 1,
+          "first_delivery_cap": 2000,
+          "first_delivery_decay": 0.5,
+          "mesh_delivery_weight": -1,
+          "mesh_delivery_threshold": 20,
+          "mesh_delivery_cap": 100,
+          "mesh_delivery_decay": 0.5,
+          "mesh_delivery_activation_ms": 5000,
+          "mesh_delivery_window_ms": 10,
+          "mesh_failure_weight": -1,
+          "mesh_failure_decay": 0.5,
+          "invalid_weight": -1,
+          "invalid_decay": 0.3
+        }
       }
     ],
     "slots_per_epoch": 8
@@ -786,6 +808,28 @@
           "mesh_failure_decay": 0,
           "invalid_weight": -2849.9999999999986,
           "invalid_decay": 0.9885530946569389
+        }
+      },
+      {
+        "mesh_delivery_start_slot": 0,
+        "params": {
+          "weight": 0,
+          "time_in_mesh_weight": 1,
+          "time_in_mesh_cap": 3600,
+          "time_in_mesh_quantum_ms": 1,
+          "first_delivery_weight": 1,
+          "first_delivery_cap": 2000,
+          "first_delivery_decay": 0.5,
+          "mesh_delivery_weight": -1,
+          "mesh_delivery_threshold": 20,
+          "mesh_delivery_cap": 100,
+          "mesh_delivery_decay": 0.5,
+          "mesh_delivery_activation_ms": 5000,
+          "mesh_delivery_window_ms": 10,
+          "mesh_failure_weight": -1,
+          "mesh_failure_decay": 0.5,
+          "invalid_weight": -1,
+          "invalid_decay": 0.3
         }
       }
     ],
@@ -1183,6 +1227,28 @@
           "invalid_weight": -2849.9999999999986,
           "invalid_decay": 0.9885530946569389
         }
+      },
+      {
+        "mesh_delivery_start_slot": 0,
+        "params": {
+          "weight": 0,
+          "time_in_mesh_weight": 1,
+          "time_in_mesh_cap": 3600,
+          "time_in_mesh_quantum_ms": 1,
+          "first_delivery_weight": 1,
+          "first_delivery_cap": 2000,
+          "first_delivery_decay": 0.5,
+          "mesh_delivery_weight": -1,
+          "mesh_delivery_threshold": 20,
+          "mesh_delivery_cap": 100,
+          "mesh_delivery_decay": 0.5,
+          "mesh_delivery_activation_ms": 5000,
+          "mesh_delivery_window_ms": 10,
+          "mesh_failure_weight": -1,
+          "mesh_failure_decay": 0.5,
+          "invalid_weight": -1,
+          "invalid_decay": 0.3
+        }
       }
     ],
     "slots_per_epoch": 8
@@ -1578,6 +1644,28 @@
           "mesh_failure_decay": 0,
           "invalid_weight": -2849.9999999999986,
           "invalid_decay": 0.9885530946569389
+        }
+      },
+      {
+        "mesh_delivery_start_slot": 0,
+        "params": {
+          "weight": 0,
+          "time_in_mesh_weight": 1,
+          "time_in_mesh_cap": 3600,
+          "time_in_mesh_quantum_ms": 1,
+          "first_delivery_weight": 1,
+          "first_delivery_cap": 2000,
+          "first_delivery_decay": 0.5,
+          "mesh_delivery_weight": -1,
+          "mesh_delivery_threshold": 20,
+          "mesh_delivery_cap": 100,
+          "mesh_delivery_decay": 0.5,
+          "mesh_delivery_activation_ms": 5000,
+          "mesh_delivery_window_ms": 10,
+          "mesh_failure_weight": -1,
+          "mesh_failure_decay": 0.5,
+          "invalid_weight": -1,
+          "invalid_decay": 0.3
         }
       }
     ],
@@ -1975,6 +2063,28 @@
           "invalid_weight": -2849.9999999999986,
           "invalid_decay": 0.9885530946569389
         }
+      },
+      {
+        "mesh_delivery_start_slot": 0,
+        "params": {
+          "weight": 0,
+          "time_in_mesh_weight": 1,
+          "time_in_mesh_cap": 3600,
+          "time_in_mesh_quantum_ms": 1,
+          "first_delivery_weight": 1,
+          "first_delivery_cap": 2000,
+          "first_delivery_decay": 0.5,
+          "mesh_delivery_weight": -1,
+          "mesh_delivery_threshold": 20,
+          "mesh_delivery_cap": 100,
+          "mesh_delivery_decay": 0.5,
+          "mesh_delivery_activation_ms": 5000,
+          "mesh_delivery_window_ms": 10,
+          "mesh_failure_weight": -1,
+          "mesh_failure_decay": 0.5,
+          "invalid_weight": -1,
+          "invalid_decay": 0.3
+        }
       }
     ],
     "slots_per_epoch": 8
@@ -2371,6 +2481,28 @@
           "invalid_weight": -2849.9999999999986,
           "invalid_decay": 0.9885530946569389
         }
+      },
+      {
+        "mesh_delivery_start_slot": 0,
+        "params": {
+          "weight": 0,
+          "time_in_mesh_weight": 1,
+          "time_in_mesh_cap": 3600,
+          "time_in_mesh_quantum_ms": 1,
+          "first_delivery_weight": 1,
+          "first_delivery_cap": 2000,
+          "first_delivery_decay": 0.5,
+          "mesh_delivery_weight": -1,
+          "mesh_delivery_threshold": 20,
+          "mesh_delivery_cap": 100,
+          "mesh_delivery_decay": 0.5,
+          "mesh_delivery_activation_ms": 5000,
+          "mesh_delivery_window_ms": 10,
+          "mesh_failure_weight": -1,
+          "mesh_failure_decay": 0.5,
+          "invalid_weight": -1,
+          "invalid_decay": 0.3
+        }
       }
     ],
     "slots_per_epoch": 8
@@ -2766,6 +2898,28 @@
           "mesh_failure_decay": 0,
           "invalid_weight": -2849.9999999999986,
           "invalid_decay": 0.9885530946569389
+        }
+      },
+      {
+        "mesh_delivery_start_slot": 0,
+        "params": {
+          "weight": 0,
+          "time_in_mesh_weight": 1,
+          "time_in_mesh_cap": 3600,
+          "time_in_mesh_quantum_ms": 1,
+          "first_delivery_weight": 1,
+          "first_delivery_cap": 2000,
+          "first_delivery_decay": 0.5,
+          "mesh_delivery_weight": -1,
+          "mesh_delivery_threshold": 20,
+          "mesh_delivery_cap": 100,
+          "mesh_delivery_decay": 0.5,
+          "mesh_delivery_activation_ms": 5000,
+          "mesh_delivery_window_ms": 10,
+          "mesh_failure_weight": -1,
+          "mesh_failure_decay": 0.5,
+          "invalid_weight": -1,
+          "invalid_decay": 0.3
         }
       }
     ],

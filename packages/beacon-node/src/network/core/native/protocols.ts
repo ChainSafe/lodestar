@@ -1,7 +1,5 @@
-import {NativeRequestProtocolId, NetworkFork} from "@lodestar/native/network";
-import {ForkName, isForkPostHeze} from "@lodestar/params";
+import {NativeRequestProtocolId} from "@lodestar/native/network";
 import {ReqRespMethod} from "../../reqresp/types.js";
-import {NativeNetworkError, NativeNetworkErrorCode} from "./errors.js";
 
 export type NativeProtocol = {
   id: NativeRequestProtocolId;
@@ -15,6 +13,7 @@ const applicationProtocols = [
   {method: ReqRespMethod.BeaconBlocksByHead, version: 1},
   {method: ReqRespMethod.ExecutionPayloadEnvelopesByRange, version: 1},
   {method: ReqRespMethod.ExecutionPayloadEnvelopesByRoot, version: 1},
+  {method: ReqRespMethod.InclusionListsByIndices, version: 1},
   {method: ReqRespMethod.DataColumnSidecarsByRange, version: 1},
   {method: ReqRespMethod.DataColumnSidecarsByRoot, version: 1},
   {method: ReqRespMethod.LightClientBootstrap, version: 1},
@@ -32,12 +31,3 @@ export const nativeProtocols: ReadonlyMap<string, NativeProtocol> = new Map(
     return [id, {id, method, version}];
   })
 );
-
-export function nativeFork(fork: ForkName): NetworkFork {
-  if (isForkPostHeze(fork))
-    throw new NativeNetworkError({
-      code: NativeNetworkErrorCode.CONFIGURATION,
-      resource: `Unsupported native fork ${fork}`,
-    });
-  return fork;
-}

@@ -32,6 +32,7 @@ test "gossip full pending kind refuses admission without evicting history" {
         "/eth2/01020304/payload_attestation_message/ssz_snappy",
         "/eth2/01020304/execution_payload_bid/ssz_snappy",
         "/eth2/01020304/proposer_preferences/ssz_snappy",
+        "/eth2/01020304/inclusion_list/ssz_snappy",
     };
     const limits: gossip_limits.Limits = @splat(.{ .items = 2, .bytes = 1024 * 1024 });
     var store = try storage.Store.init(std.testing.allocator, 2 * gossip_limits.items(&limits), 2 * gossip_limits.bytes(&limits));

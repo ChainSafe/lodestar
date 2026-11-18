@@ -284,6 +284,14 @@ test "reqresp Gloas payload requests enforce configured roots counts and host in
     try std.testing.expectError(error.UnsupportedBounds, policy.inspect(roots, &bytes, .gloas));
     try std.testing.expectError(error.MalformedSsz, policy.inspect(roots, bytes[0..31], .gloas));
     try std.testing.expectEqual(@as(u32, 0), (try policy.inspect(roots, &.{}, .gloas)).chunks_max);
+    const lists: Protocol = .inclusion_lists_by_indices_v1;
+    put(&bytes, 0, cfg.host_integer_max.? + 1);
+    try std.testing.expectError(error.HostIntegerRange, policy.inspect(lists, bytes[0..42], .heze));
+    put(&bytes, 0, 1);
+    const inspected = try policy.inspect(lists, bytes[0..42], .heze);
+    try std.testing.expectEqual(@as(u128, 1), inspected.charged_cost);
+    try std.testing.expectEqual(@as(u32, 16), inspected.chunks_max);
+    try std.testing.expectError(error.MalformedSsz, policy.inspect(lists, bytes[0..41], .heze));
     cfg.payloads = c.MAX_REQUEST_PAYLOADS + 1;
     try std.testing.expectError(error.InvalidPolicy, p.Policy.init(&cfg));
 }

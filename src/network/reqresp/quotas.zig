@@ -68,6 +68,7 @@ fn sourceQuota(policy: *const request_policy.Policy, which: Protocol, fork: Fork
         .metadata_v1, .metadata_v2, .metadata_v3 => .{ .tokens = 2, .period_ms = 5_000 },
         .blocks_by_range_v2, .blocks_by_root_v2 => .{ .tokens = policy.blocks(fork), .period_ms = ten_seconds_ms },
         .execution_payload_envelopes_by_range_v1, .execution_payload_envelopes_by_root_v1 => .{ .tokens = policy.config.payloads, .period_ms = ten_seconds_ms },
+        .inclusion_lists_by_indices_v1 => .{ .tokens = 5, .period_ms = policy.config.slot_duration_ms_heze },
         .blocks_by_head_v1 => .{ .tokens = policy.config.blocks_deneb, .period_ms = ten_seconds_ms },
         .blob_sidecars_by_range_v1, .blob_sidecars_by_root_v1 => .{ .tokens = policy.blobs(fork), .period_ms = ten_seconds_ms },
         .data_column_sidecars_by_range_v1, .data_column_sidecars_by_root_v1 => .{ .tokens = policy.config.column_chunks, .period_ms = ten_seconds_ms },

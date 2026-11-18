@@ -292,8 +292,8 @@ describe("native Lodestar integration", () => {
     }
   }, 15000);
   it.each([false, true])(
-    "initializes current fork state or fails before starting: unsupported=%s",
-    async (unsupported) => {
+    "initializes current fork state: heze=%s",
+    async (heze) => {
       const config = createBeaconConfig(
         {
           ALTAIR_FORK_EPOCH: 0,
@@ -301,9 +301,9 @@ describe("native Lodestar integration", () => {
           CAPELLA_FORK_EPOCH: 0,
           DENEB_FORK_EPOCH: 0,
           ELECTRA_FORK_EPOCH: 0,
-          FULU_FORK_EPOCH: unsupported ? 0 : 1,
-          GLOAS_FORK_EPOCH: unsupported ? 0 : Infinity,
-          HEZE_FORK_EPOCH: unsupported ? 1 : Infinity,
+          FULU_FORK_EPOCH: heze ? 0 : 1,
+          GLOAS_FORK_EPOCH: heze ? 0 : Infinity,
+          HEZE_FORK_EPOCH: heze ? 1 : Infinity,
           BLOB_SCHEDULE: [],
         },
         new Uint8Array(32)
@@ -317,18 +317,15 @@ describe("native Lodestar integration", () => {
       });
       let node: Awaited<ReturnType<typeof nativeNetworkFixture>> | undefined;
       try {
-        if (unsupported) await expect(nativeNetworkFixture(config)).rejects.toThrow("UnsupportedNetworkFork");
-        else {
-          node = await nativeNetworkFixture(config);
-          const initial = await node.network.getNetworkIdentity();
-          expect(initial.metadata.attnets.uint8Array.some((byte) => byte !== 0)).toBe(true);
-          await Promise.all([node.network.subscribeGossipCoreTopics(), node.network.unsubscribeGossipCoreTopics()]);
-          expect(node.network.isSubscribedToGossipCoreTopics()).toBe(false);
-          await node.network.subscribeGossipCoreTopics();
-          expect(node.network.isSubscribedToGossipCoreTopics()).toBe(true);
-          expect(node.network.closed).toBe(false);
-          expect((await node.network.getNetworkIdentity()).metadata.custodyGroupCount).toBeGreaterThan(0);
-        }
+        node = await nativeNetworkFixture(config);
+        const initial = await node.network.getNetworkIdentity();
+        expect(initial.metadata.attnets.uint8Array.some((byte) => byte !== 0)).toBe(true);
+        await Promise.all([node.network.subscribeGossipCoreTopics(), node.network.unsubscribeGossipCoreTopics()]);
+        expect(node.network.isSubscribedToGossipCoreTopics()).toBe(false);
+        await node.network.subscribeGossipCoreTopics();
+        expect(node.network.isSubscribedToGossipCoreTopics()).toBe(true);
+        expect(node.network.closed).toBe(false);
+        expect((await node.network.getNetworkIdentity()).metadata.custodyGroupCount).toBeGreaterThan(0);
         expect(init).toHaveBeenCalledOnce();
       } finally {
         await node?.close();

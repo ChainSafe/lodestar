@@ -169,10 +169,7 @@ export function configureChain(config: NativeApplicationConfig, overrides: Parti
 
 export const requestForks: NativeForkEntry[] = testChain.forkBoundariesAscendingEpochOrder
   .filter((boundary, index, all) => boundary.epoch !== Infinity && boundary.epoch !== all[index + 1]?.epoch)
-  .map((boundary) => {
-    assert(boundary.fork !== "heze");
-    return {digest: testChain.forkBoundary2ForkDigest(boundary), fork: boundary.fork};
-  });
+  .map((boundary) => ({digest: testChain.forkBoundary2ForkDigest(boundary), fork: boundary.fork}));
 
 export function topicName(kind = "beacon_block", boundary = 0): string {
   return `/eth2/${Buffer.from(requestForks[boundary].digest).toString("hex")}/${kind}/ssz_snappy`;

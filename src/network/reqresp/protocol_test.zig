@@ -84,6 +84,7 @@ test "reqresp active light client range allows an exact empty stream" {
 test "reqresp active literal ids shapes and application partition" {
     const cases = .{
         .{ Protocol.blocks_by_head_v1, "/eth2/beacon_chain/req/beacon_blocks_by_head/1/ssz_snappy", 40 },
+        .{ Protocol.inclusion_lists_by_indices_v1, "/eth2/beacon_chain/req/inclusion_lists_by_indices/1/ssz_snappy", 42 },
         .{ Protocol.light_client_bootstrap_v1, "/eth2/beacon_chain/req/light_client_bootstrap/1/ssz_snappy", 32 },
         .{ Protocol.light_client_updates_by_range_v1, "/eth2/beacon_chain/req/light_client_updates_by_range/1/ssz_snappy", 16 },
         .{ Protocol.light_client_finality_update_v1, "/eth2/beacon_chain/req/light_client_finality_update/1/ssz_snappy", 0 },

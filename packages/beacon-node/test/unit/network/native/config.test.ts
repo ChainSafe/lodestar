@@ -77,25 +77,24 @@ describe("native configuration boundary", () => {
     expect(node.create({native: {receiveBudgetBytes: 1024 ** 3}}).resources.receiveBudgetBytes).toBe(1024 ** 3);
   });
 
-  it.each([0, 1, 1_000_000])("rejects an active unsupported fork at epoch %s before startup", async (epoch) => {
+  it.each([0, 1, 1_000_000])("starts with Heze active at epoch %s", async (epoch) => {
     const {key} = await fixture();
     const scheduled = createBeaconConfig(
       {...config, GLOAS_FORK_EPOCH: 0, HEZE_FORK_EPOCH: epoch},
       config.genesisValidatorsRoot
     );
-    expect(() =>
-      createSettlingNetwork(
-        createNativeConfig(
-          {...defaultNetworkOptions, tcp: false, localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"]},
-          scheduled,
-          key,
-          Math.floor(Date.now() / 1000) - epoch * SLOTS_PER_EPOCH * (config.SLOT_DURATION_MS / 1000),
-          ssz.fulu.Status.defaultValue(),
-          scheduled.CUSTODY_REQUIREMENT,
-          16
-        ).application
-      )
-    ).toThrow("UnsupportedNetworkFork");
+    const network = createSettlingNetwork(
+      createNativeConfig(
+        {...defaultNetworkOptions, tcp: false, localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"]},
+        scheduled,
+        key,
+        Math.floor(Date.now() / 1000) - epoch * SLOTS_PER_EPOCH * (config.SLOT_DURATION_MS / 1000),
+        ssz.fulu.Status.defaultValue(),
+        scheduled.CUSTODY_REQUIREMENT,
+        16
+      ).application
+    );
+    await network.close();
   });
 
   it("fits the fixed native plan at maximum gossip work capacity", async () => {

@@ -134,7 +134,9 @@ test "application clock reconciles fork overlap and BPO after skipped slots" {
     try std.testing.expect(!f.subscribed(1, .beacon_block, 0));
     try std.testing.expect(f.subscribed(2, .beacon_block, 0));
     try std.testing.expectEqualDeep(f.chain.boundaries[2].digest, f.core.localState().fork.digest);
-    try std.testing.expectError(error.UnsupportedNetworkFork, f.advance(20 * p.SLOTS_PER_EPOCH));
+    try f.advance(20 * p.SLOTS_PER_EPOCH);
+    try std.testing.expectEqual(.heze, f.core.localState().fork.fork);
+    try std.testing.expect(f.subscribed(3, .inclusion_list, 0));
 }
 
 test "application keeps subscribe-all and custody subscriptions independent of core topics" {

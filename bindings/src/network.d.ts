@@ -3,7 +3,16 @@ import type {BeaconConfig} from "./state-transition.js";
 /** Canonical unprefixed base58btc secp256k1 identity multihash, equal to libp2p PeerId.toString(). */
 export type PeerIdStr = string;
 
-export type NetworkFork = "phase0" | "altair" | "bellatrix" | "capella" | "deneb" | "electra" | "fulu" | "gloas";
+export type NetworkFork =
+  | "phase0"
+  | "altair"
+  | "bellatrix"
+  | "capella"
+  | "deneb"
+  | "electra"
+  | "fulu"
+  | "gloas"
+  | "heze";
 
 /** IPv4 uses four address bytes; IPv6 uses sixteen and excludes IPv4-mapped addresses. */
 export type IpEndpoint =
@@ -93,7 +102,8 @@ export type NativeTopicKind =
   | "execution_payload"
   | "payload_attestation_message"
   | "execution_payload_bid"
-  | "proposer_preferences";
+  | "proposer_preferences"
+  | "inclusion_list";
 
 export interface NativeRuntimeConfig {
   activeValidatorCount: number;
@@ -220,7 +230,8 @@ export type NativeRequestProtocolId =
   | "/eth2/beacon_chain/req/light_client_finality_update/1/ssz_snappy"
   | "/eth2/beacon_chain/req/light_client_optimistic_update/1/ssz_snappy"
   | "/eth2/beacon_chain/req/execution_payload_envelopes_by_range/1/ssz_snappy"
-  | "/eth2/beacon_chain/req/execution_payload_envelopes_by_root/1/ssz_snappy";
+  | "/eth2/beacon_chain/req/execution_payload_envelopes_by_root/1/ssz_snappy"
+  | "/eth2/beacon_chain/req/inclusion_lists_by_indices/1/ssz_snappy";
 
 export type NativePeerAction = "fatal" | "low_tolerance" | "mid_tolerance" | "high_tolerance";
 export type NativeDisconnectReason =

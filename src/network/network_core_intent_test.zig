@@ -803,7 +803,7 @@ test "core local intent three boundaries fit and all-column overlap refuses atom
     const union_topics = try std.testing.allocator.create(BoundaryUnion);
     defer std.testing.allocator.destroy(union_topics);
     try union_topics.fill(64);
-    try std.testing.expectEqual(@as(usize, 435), union_topics.len);
+    try std.testing.expectEqual(@as(usize, 438), union_topics.len);
     var desired = intentFor(&node);
     desired.subscriptions = &union_topics.entries;
     desired.update.local.metadata.attnets[0] = 1;
@@ -812,7 +812,7 @@ test "core local intent three boundaries fit and all-column overlap refuses atom
     const g = node.protocols.gossipsub;
     const old_demand = node.peer_manager.demand;
     try union_topics.fill(128);
-    try std.testing.expectEqual(@as(usize, 627), union_topics.len);
+    try std.testing.expectEqual(@as(usize, 630), union_topics.len);
     desired.subscriptions = &union_topics.entries;
     desired.update.local.metadata.attnets[0] = 2;
     desired.demand = .{ .attnets = 3 };
@@ -823,7 +823,7 @@ test "core local intent three boundaries fit and all-column overlap refuses atom
     for (g.overlay.rows) |row| if (row.subscribed) {
         count += 1;
     };
-    try std.testing.expectEqual(@as(usize, 435), count);
+    try std.testing.expectEqual(@as(usize, 438), count);
     try std.testing.expect(g.overlay.findTopic("/eth2/05060708/data_column_sidecar_127/ssz_snappy") == null);
 }
 

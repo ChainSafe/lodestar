@@ -252,14 +252,21 @@ it.each([0, 129])("rejects chain custody group bound %s", (groups) => {
   expect(() => startRuntime(config, () => undefined)).toThrow("InvalidNetworkChain");
 });
 
-it.each([0, 1, 1_000_000])("rejects an active unsupported fork at epoch %s before owner allocation", (epoch) => {
+it.each([0, 1, 1_000_000])("starts with Heze active at epoch %s", async (epoch) => {
   const config = applicationConfig();
   configureChain(config, {ELECTRA_FORK_EPOCH: 0, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0, HEZE_FORK_EPOCH: epoch});
   setSlot(config, BigInt(epoch) * 32n);
-  expect(() => startRuntime(config)).toThrow("UnsupportedNetworkFork");
+  const runtime = startRuntime(config);
+  try {
+    await runtime.applyIntent({coreTopics: true});
+    const topics = (await runtime.getGossipDiagnostics()).topics.filter((topic) => topic.subscribed);
+    expect(topics.some((topic) => topic.topic.endsWith("/inclusion_list/ssz_snappy"))).toBe(true);
+  } finally {
+    await runtime.close();
+  }
 });
 
-it("starts with a future unsupported fork scheduled", async () => {
+it("starts with a future Heze fork scheduled", async () => {
   const config = applicationConfig();
   configureChain(config, {GLOAS_FORK_EPOCH: 1_000_000, HEZE_FORK_EPOCH: 2_000_000});
   const runtime = startRuntime(config);

@@ -35,6 +35,7 @@ pub const Protocol = enum(u8) {
     light_client_optimistic_update_v1,
     execution_payload_envelopes_by_range_v1,
     execution_payload_envelopes_by_root_v1,
+    inclusion_lists_by_indices_v1,
 
     pub const count: u8 = @intCast(@typeInfo(Protocol).@"enum".fields.len);
 
@@ -86,7 +87,7 @@ pub const Protocol = enum(u8) {
     pub fn isControl(self: Protocol) bool {
         return switch (self) {
             .status_v1, .status_v2, .goodbye_v1, .ping_v1, .metadata_v1, .metadata_v2, .metadata_v3 => true,
-            .execution_payload_envelopes_by_range_v1, .execution_payload_envelopes_by_root_v1 => false,
+            .execution_payload_envelopes_by_range_v1, .execution_payload_envelopes_by_root_v1, .inclusion_lists_by_indices_v1 => false,
             .blocks_by_range_v2, .blocks_by_root_v2, .blob_sidecars_by_range_v1, .blob_sidecars_by_root_v1, .data_column_sidecars_by_range_v1, .data_column_sidecars_by_root_v1, .blocks_by_head_v1, .light_client_bootstrap_v1, .light_client_updates_by_range_v1, .light_client_finality_update_v1, .light_client_optimistic_update_v1 => false,
         };
     }
@@ -102,6 +103,7 @@ pub const Protocol = enum(u8) {
             .blob_sidecars_by_range_v1, .blob_sidecars_by_root_v1 => .blob,
             .data_column_sidecars_by_range_v1, .data_column_sidecars_by_root_v1 => .column,
             .execution_payload_envelopes_by_range_v1, .execution_payload_envelopes_by_root_v1 => .execution_payload,
+            .inclusion_lists_by_indices_v1 => .inclusion_list,
             .light_client_bootstrap_v1 => .light_client_bootstrap,
             .light_client_updates_by_range_v1 => .light_client_update,
             .light_client_finality_update_v1 => .light_client_finality_update,
@@ -147,6 +149,7 @@ fn name(comptime protocol: Protocol) []const u8 {
         .light_client_optimistic_update_v1 => "light_client_optimistic_update",
         .execution_payload_envelopes_by_range_v1 => "execution_payload_envelopes_by_range",
         .execution_payload_envelopes_by_root_v1 => "execution_payload_envelopes_by_root",
+        .inclusion_lists_by_indices_v1 => "inclusion_lists_by_indices",
     };
 }
 
@@ -184,6 +187,7 @@ fn entry(comptime protocol: Protocol) Info {
         .blocks_by_head_v1 => chunked(40, 40, consensus.MAX_REQUEST_BLOCKS_DENEB),
         .execution_payload_envelopes_by_range_v1 => chunked(16, 16, consensus.MAX_REQUEST_PAYLOADS),
         .execution_payload_envelopes_by_root_v1 => chunked(0, 32 * consensus.MAX_REQUEST_PAYLOADS, consensus.MAX_REQUEST_PAYLOADS),
+        .inclusion_lists_by_indices_v1 => chunked(ct.heze.InclusionListsByIndicesRequest.fixed_size, ct.heze.InclusionListsByIndicesRequest.fixed_size, preset.preset.INCLUSION_LIST_COMMITTEE_SIZE),
         .light_client_bootstrap_v1 => contextualSingle(32),
         .light_client_updates_by_range_v1 => chunked(16, 16, consensus.MAX_REQUEST_LIGHT_CLIENT_UPDATES),
         .light_client_finality_update_v1, .light_client_optimistic_update_v1 => contextualSingle(0),
@@ -291,7 +295,7 @@ pub fn payloadMaxControl() usize {
 
 comptime {
     @setEvalBranchQuota(2000);
-    assert(Protocol.count == 20);
+    assert(Protocol.count == 21);
     for (table) |bounds| {
         assert(bounds.request_min <= bounds.request_max);
         assert(bounds.request_max <= constants.MAX_PAYLOAD_SIZE);

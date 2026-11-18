@@ -141,7 +141,7 @@ if (mode === "open") {
   // No other I/O or timer keeps this process alive while the public pump drains several completion batches.
   const config = applicationConfig();
   config.resources.bridgeBudgetBytes = 512 * 1024 * 1024;
-  config.resources.nativeBudgetBytes = 512 * 1024 * 1024;
+  config.resources.nativeBudgetBytes = 640 * 1024 * 1024;
   const settlements = new Settlements();
   const batches = [];
   function closePending() {
@@ -221,7 +221,7 @@ if (mode === "open") {
   // the close.
   const config = applicationConfig();
   config.resources.bridgeBudgetBytes = 512 * 1024 * 1024;
-  config.resources.nativeBudgetBytes = 512 * 1024 * 1024;
+  config.resources.nativeBudgetBytes = 640 * 1024 * 1024;
   const runtime = startRuntime(config);
   await runtime.applyIntent(localIntent(config));
   holdSettling(runtime, true);

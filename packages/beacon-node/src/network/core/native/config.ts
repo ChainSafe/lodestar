@@ -36,6 +36,7 @@ export const kinds: readonly NativeTopicKind[] = [
   "payload_attestation_message",
   "execution_payload_bid",
   "proposer_preferences",
+  "inclusion_list",
 ];
 
 export function nativeStatus(status: Status): NetworkStatusUpdate {

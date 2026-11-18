@@ -81,12 +81,12 @@ test "protocol subsets partition receive storage without duplicating buffers" {
     const control = ReceiveLayout.init(&policy, .control);
     const application = ReceiveLayout.init(&policy, .application);
     try std.testing.expectEqual(14, control.slots_per_connection);
-    try std.testing.expectEqual(26, application.slots_per_connection);
+    try std.testing.expectEqual(28, application.slots_per_connection);
     try std.testing.expectEqual(all.slots_per_connection, control.slots_per_connection + application.slots_per_connection);
     try std.testing.expectEqual(all.sink_bytes, control.sink_bytes + application.sink_bytes);
     try std.testing.expectEqual(all.io_bytes, control.io_bytes + application.io_bytes);
     try std.testing.expectEqual(0, application.first(0, .blocks_by_range_v2));
-    try std.testing.expectEqual(26, application.first(1, .blocks_by_range_v2));
+    try std.testing.expectEqual(28, application.first(1, .blocks_by_range_v2));
     for ([_]ReceiveLayout{ control, application }) |layout| {
         const sinks = try std.testing.allocator.alloc(u8, 2 * layout.sink_bytes);
         defer std.testing.allocator.free(sinks);

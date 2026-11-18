@@ -622,7 +622,7 @@ test "metrics export stock per-topic gossipsub peer gauges under full topic stri
     try contains(output, "gossipsub_topic_peer_count{topicStr=\"" ++ column ++ "\"} 1\n");
     try contains(output, "gossipsub_mesh_peer_count{topicStr=\"" ++ column ++ "\"} 0\n");
     try contains(output, "gossipsub_mesh_peer_count{topicStr=\"/eth2/00000000/beacon_attestation_63/ssz_snappy\"} 0\n");
-    try std.testing.expectEqual(@as(usize, 337), std.mem.count(u8, output, "gossipsub_topic_peer_count{topicStr=\"/eth2/00000000/"));
+    try std.testing.expectEqual(@as(usize, 338), std.mem.count(u8, output, "gossipsub_topic_peer_count{topicStr=\"/eth2/00000000/"));
     try std.testing.expect(std.mem.find(u8, output, "/eth2/01010101/") == null);
     const future = "/eth2/01010101/beacon_block/ssz_snappy";
     try gossip_test.subscribe(g, future);

@@ -28,14 +28,15 @@ test "reqresp quotas preserve every protocol rate across chain configurations an
         .{ .protocol = .light_client_optimistic_update_v1, .tokens = .{ 2, 2, 2 }, .period_ms = null },
         .{ .protocol = .execution_payload_envelopes_by_range_v1, .tokens = .{ 128, 128, 128 }, .period_ms = 10_000 },
         .{ .protocol = .execution_payload_envelopes_by_root_v1, .tokens = .{ 128, 128, 128 }, .period_ms = 10_000 },
+        .{ .protocol = .inclusion_lists_by_indices_v1, .tokens = .{ 5, 5, 5 }, .period_ms = null },
     };
     try std.testing.expectEqual(Protocol.count, cases.len);
     for ([_]*const config.BeaconConfig{ &config.mainnet.config, &config.minimal.config }) |chain| {
         var points: [request_policy.schedule_max]request_policy.BlobLimit = undefined;
         const policy = try request_policy.Config.fromBeaconConfig(chain, &points);
         const limits = try Options.defaults(&policy, 8);
-        try std.testing.expectEqual(@as(u32, 320), limits.global_starts.tokens);
-        try std.testing.expectEqual(@as(u32, 40), limits.starts.tokens);
+        try std.testing.expectEqual(@as(u32, 336), limits.global_starts.tokens);
+        try std.testing.expectEqual(@as(u32, 42), limits.starts.tokens);
         try std.testing.expectEqual(@as(u64, 10_000), limits.starts.period_ms);
         for (std.enums.values(config.ForkSeq)) |fork| {
             const era: usize = if (fork.gte(.electra)) 2 else if (fork.gte(.deneb)) 1 else 0;

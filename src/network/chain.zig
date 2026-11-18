@@ -19,7 +19,6 @@ pub const Boundary = struct { epoch: u64, fork: config.ForkSeq, digest: [4]u8, v
 pub const Config = struct {
     boundaries: [boundary_max]Boundary = undefined,
     boundary_count: u8 = 0,
-    unsupported_fork: ?struct { epoch: u64, version: [4]u8, digest: [4]u8 } = null,
     forks: [boundary_max]ForkEntry = undefined,
     topics: [boundary_max]topics.Boundary = undefined,
     policy: policy.Policy,
@@ -43,14 +42,13 @@ pub const Config = struct {
         for (cfg.forks_ascending_epoch_order, 0..) |fork, i| {
             if (i > 0 and fork.epoch < cfg.forks_ascending_epoch_order[i - 1].epoch) return error.InvalidNetworkChain;
             if (fork.epoch == constants.FAR_FUTURE_EPOCH) continue;
-            if (fork.epoch >= chain.HEZE_FORK_EPOCH) continue;
             epochs[count] = fork.epoch;
             count += 1;
         }
         for (chain.BLOB_SCHEDULE, 0..) |entry, i| {
             if (entry.MAX_BLOBS_PER_BLOCK == 0 or entry.MAX_BLOBS_PER_BLOCK > preset.preset.MAX_BLOB_COMMITMENTS_PER_BLOCK or
                 (i > 0 and entry.EPOCH <= chain.BLOB_SCHEDULE[i - 1].EPOCH)) return error.InvalidNetworkChain;
-            if (entry.EPOCH < chain.FULU_FORK_EPOCH or entry.EPOCH >= chain.HEZE_FORK_EPOCH) continue;
+            if (entry.EPOCH < chain.FULU_FORK_EPOCH) continue;
             epochs[count] = entry.EPOCH;
             count += 1;
         }
@@ -66,16 +64,10 @@ pub const Config = struct {
             .custody_requirement = @intCast(chain.CUSTODY_REQUIREMENT),
             .serve_light_clients = serve_light_clients,
         };
-        if (chain.HEZE_FORK_EPOCH != constants.FAR_FUTURE_EPOCH) result.unsupported_fork = .{
-            .epoch = chain.HEZE_FORK_EPOCH,
-            .version = chain.HEZE_FORK_VERSION,
-            .digest = config.fork_digest.computeForkDigestForVersion(cfg, chain.HEZE_FORK_EPOCH, chain.HEZE_FORK_VERSION),
-        };
         for (epochs[0..count]) |epoch| {
             if (result.boundary_count > 0 and result.boundaries[result.boundary_count - 1].epoch == epoch) continue;
             _ = std.math.mul(u64, epoch, preset.preset.SLOTS_PER_EPOCH) catch return error.InvalidNetworkChain;
             const fork = cfg.forkInfoAtEpoch(epoch);
-            if (epoch >= chain.HEZE_FORK_EPOCH) continue;
             const digest = config.fork_digest.computeForkDigest(cfg, epoch);
             result.boundaries[result.boundary_count] = .{ .epoch = epoch, .fork = fork.fork_seq, .version = fork.version, .digest = digest };
             for (result.forks[0..result.boundary_count]) |prior| {
@@ -88,7 +80,6 @@ pub const Config = struct {
             result.boundary_count += 1;
             if (fork.fork_seq == .phase0) result.phase0_digest = digest;
         }
-        if (result.boundary_count == 0) return error.UnsupportedNetworkFork;
         _ = try topics.validate(result.topics[0..result.boundary_count]);
         try result.validateScheduledTopicDemand();
         return result;
@@ -127,7 +118,6 @@ pub const Config = struct {
 
     pub fn update(self: *const Config, local: values.LocalState, endpoints: ?advertisement.Endpoints, slot: u64) !values.LocalUpdate {
         const epoch = slot / preset.preset.SLOTS_PER_EPOCH;
-        if (self.unsupported_fork) |fork| if (epoch >= fork.epoch) return error.UnsupportedNetworkFork;
         var index: usize = 0;
         for (self.boundaries[0..self.boundary_count], 0..) |boundary, i| {
             if (boundary.epoch > epoch) break;
@@ -150,10 +140,6 @@ pub const Config = struct {
         result.local.status.fork_digest = current.digest;
         if (index + 1 < self.boundary_count) {
             const next = self.boundaries[index + 1];
-            result.schedule.next_version = next.version;
-            result.schedule.next_epoch = next.epoch;
-            result.schedule.next_digest = next.digest;
-        } else if (self.unsupported_fork) |next| {
             result.schedule.next_version = next.version;
             result.schedule.next_epoch = next.epoch;
             result.schedule.next_digest = next.digest;
@@ -192,6 +178,7 @@ fn topicBoundary(cfg: *const config.BeaconConfig, fork: config.ForkSeq, digest: 
                 r[@intFromEnum(topics.Kind.light_client_optimistic_update)] = try rule(types.LightClientOptimisticUpdate, 1, max);
             }
             if (comptime selected.gte(.capella)) r[@intFromEnum(topics.Kind.bls_to_execution_change)] = try rule(ct.capella.SignedBLSToExecutionChange, 1, max);
+            if (comptime selected.gte(.heze)) r[@intFromEnum(topics.Kind.inclusion_list)] = try rule(types.SignedInclusionList, 1, @min(max, preset.preset.MAX_SIGNED_INCLUSION_LIST_SIZE));
             if (comptime selected.gte(.gloas)) {
                 r[@intFromEnum(topics.Kind.execution_payload)] = try rule(types.SignedExecutionPayloadEnvelope, 1, max);
                 r[@intFromEnum(topics.Kind.payload_attestation_message)] = try rule(types.PayloadAttestationMessage, 1, max);

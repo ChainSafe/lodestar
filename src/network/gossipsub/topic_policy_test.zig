@@ -24,7 +24,7 @@ fn canonical() !void {
         .{ "blob_sidecar_127", 204 },            .{ "data_column_sidecar_0", 205 },
         .{ "data_column_sidecar_127", 332 },     .{ "execution_payload", 333 },
         .{ "payload_attestation_message", 334 }, .{ "execution_payload_bid", 335 },
-        .{ "proposer_preferences", 336 },
+        .{ "proposer_preferences", 336 },        .{ "inclusion_list", 337 },
     };
     inline for (cases) |case| {
         const first = ns.lookup("/eth2/01020304/" ++ case[0] ++ "/ssz_snappy").?;
@@ -58,9 +58,9 @@ test "topic namespace validates descriptors before allocation" {
     try std.testing.expectError(error.InvalidTopicPolicy, p.Namespace.init(a, &excessive));
     var maximum = try p.Namespace.init(a, excessive[0..64]);
     defer maximum.deinit(a);
-    try std.testing.expectEqual(@as(u16, 21568), maximum.topic_count);
+    try std.testing.expectEqual(@as(u16, 21632), maximum.topic_count);
     var name: [root.topic.topic_max_len]u8 = undefined;
-    try std.testing.expectEqual(@as(u16, 21567), maximum.lookup(root.topic.buildCanonical(maximum.topicAt(21567), &name)).?.ordinal);
+    try std.testing.expectEqual(@as(u16, 21631), maximum.lookup(root.topic.buildCanonical(maximum.topicAt(21631), &name)).?.ordinal);
     inline for (.{ 0, 2, 7, 11, 12 }) |kind| {
         boundary = full(.{ 1, 2, 3, 4 });
         boundary.rules[kind].count += 1;
@@ -90,7 +90,7 @@ test "topic namespace storage matches its plan and frees every allocation prefix
     const boundaries = hoodi();
     var ledger: CountingAllocator = .{ .backing = std.testing.allocator };
     var ns = try root.topic_policy.Namespace.init(ledger.allocator(), &boundaries);
-    try std.testing.expectEqual(@as(u16, 804), ns.topic_count);
+    try std.testing.expectEqual(@as(u16, 809), ns.topic_count);
     try std.testing.expectEqual(root.topic_policy.Namespace.backingBytes(&boundaries), ledger.bytes);
     ns.deinit(ledger.allocator());
     try std.testing.expectEqual(@as(usize, 0), ledger.bytes);

@@ -134,6 +134,7 @@ const plan: [topics.kind_count]Plan = blk: {
         .{ Kind.payload_attestation_message, 1024, 2, 4, 1 },
         .{ Kind.execution_payload_bid, 128, 4, 2, 1 },
         .{ Kind.proposer_preferences, 128, 1, 1, 1 },
+        .{ Kind.inclusion_list, 128, 2, 2, 1 },
     };
     for (entries) |entry| result[@intFromEnum(entry[0])] = .{ .items = entry[1], .mib = entry[2], .execution_items = entry[3], .execution_bytes = entry[4] };
     break :blk result;
