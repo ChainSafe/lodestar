@@ -135,6 +135,7 @@ for (const rootSource of ["archive index", "head state"] as const) {
           getFinalizedBlock: () => headChain[64],
           getHead: () => headChain[0],
           getAllAncestorBlocks: () => headChain,
+          iterateAncestorBlocks: () => headChain.slice(1).values(),
         },
         seenBlockInputCache: {get: () => undefined},
         seenPayloadEnvelopeInputCache: {get: () => undefined},
