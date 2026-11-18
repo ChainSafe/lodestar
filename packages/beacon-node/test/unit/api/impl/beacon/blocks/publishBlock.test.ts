@@ -52,6 +52,8 @@ describe("api - beacon - publishBlockV2", () => {
       root: Buffer.alloc(32),
       rootHex: "",
     });
+    vi.mocked(testModules.chain.clock.slotWithFutureTolerance).mockReturnValue(Infinity);
+    Object.defineProperty(testModules.chain, "pubkeyCache", {value: {size: Infinity}, configurable: true});
     return testModules;
   }
 
@@ -457,6 +459,47 @@ describe("api - beacon - publishBlockV2", () => {
         expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
       }
     );
+
+    it.each([
+      routes.beacon.BroadcastValidation.gossip,
+      routes.beacon.BroadcastValidation.consensus,
+      routes.beacon.BroadcastValidation.consensusAndEquivocation,
+    ])(
+      "does not cache a non-local block from a future slot with broadcast_validation=%s",
+      async (broadcastValidation) => {
+        const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+        signedBlock.message.slot = 11;
+        vi.mocked(modules.chain.clock.slotWithFutureTolerance).mockReturnValue(10);
+        modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(null);
+
+        const api = getBeaconBlockApi(defaultApiOptions, modules);
+        await expect(api.publishBlockV2({signedBlockContents: {signedBlock}, broadcastValidation})).rejects.toThrow(
+          BlockGossipError
+        );
+
+        expect(modules.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
+        expect(modules.chain.bls.verifySignatureSets).not.toHaveBeenCalled();
+        expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+      }
+    );
+
+    it("rejects a non-local block with an unknown proposer index before verifying its signature", async () => {
+      const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+      signedBlock.message.slot = 1;
+      signedBlock.message.proposerIndex = 2 ** 32;
+      Object.defineProperty(modules.chain, "pubkeyCache", {value: {size: 8}});
+
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      await expect(
+        api.publishBlockV2({
+          signedBlockContents: {signedBlock},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).rejects.toThrow(BlockGossipError);
+
+      expect(modules.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
+      expect(modules.chain.bls.verifySignatureSets).not.toHaveBeenCalled();
+    });
 
     it("removes a block this call cached when gossip validation rejects it", async () => {
       const {signedBlock, blockRoot} = cacheSubmittedBlock();

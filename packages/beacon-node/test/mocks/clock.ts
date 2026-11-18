@@ -87,6 +87,7 @@ export function getMockedClock(): Mocked<IClock> {
     },
     currentSlotWithGossipDisparity: vi.fn(),
     isCurrentSlotGivenGossipDisparity: vi.fn(),
+    slotWithFutureTolerance: vi.fn(),
     slotWithPastTolerance: vi.fn(),
     secFromSlot: vi.fn(),
     msFromSlot: vi.fn(),

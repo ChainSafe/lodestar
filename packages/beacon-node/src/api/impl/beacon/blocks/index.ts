@@ -125,12 +125,30 @@ export function getBeaconBlockApi(
     // A block handed to unknown parent sync stays in the seen caches, so authenticate non-local blocks before
     // caching them. Anyone can replay a finalized block with its valid signature, so check the slot as well
     if (!chain.blockProductionCache.has(blockRoot)) {
+      // The seen cache prunes the lowest slots first, so it would never drop a block from a far-future slot
+      if (slot > chain.clock.slotWithFutureTolerance(MAX_API_CLOCK_DISPARITY_MS / 1000)) {
+        throw new BlockGossipError(GossipAction.IGNORE, {
+          code: BlockErrorCode.FUTURE_SLOT,
+          blockSlot: slot,
+          currentSlot: chain.clock.currentSlot,
+        });
+      }
       const finalizedSlot = computeStartSlotAtEpoch(chain.forkChoice.getFinalizedCheckpoint().epoch);
       if (slot <= finalizedSlot) {
         throw new BlockGossipError(GossipAction.IGNORE, {
           code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT,
           blockSlot: slot,
           finalizedSlot,
+        });
+      }
+      // The BLS verifier throws on a validator index that is not in the pubkey cache
+      const proposerIndex = signedBlock.message.proposerIndex;
+      if (proposerIndex >= chain.pubkeyCache.size) {
+        throw new BlockGossipError(GossipAction.REJECT, {
+          code: BlockErrorCode.UNKNOWN_PROPOSER,
+          slot,
+          root: blockRoot,
+          proposerIndex,
         });
       }
       await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
