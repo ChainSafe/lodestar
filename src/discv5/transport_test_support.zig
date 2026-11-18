@@ -1,6 +1,5 @@
 const std = @import("std");
 const net = std.Io.net;
-const CallTable = @import("CallTable.zig");
 const Engine = @import("Engine.zig");
 const Transport = @import("Transport.zig");
 const RoutingTable = @import("RoutingTable.zig");
@@ -13,14 +12,6 @@ const keyPair = support.keyPair;
 const endpoint = support.endpoint;
 const address4 = support.address4;
 const fakeRecord = support.fakeRecord;
-
-pub fn step(transport: *Transport, io: std.Io, expired: []CallTable.Expired) !Transport.AdvanceResult {
-    const input: Transport.Input = if (transport.sockets.receiveDatagram(io, &transport.receive_buffer, .{ .duration = .{
-        .raw = .fromMilliseconds(10),
-        .clock = .awake,
-    } })) |packet| packet else |err| err;
-    return transport.advance(io, try Transport.monotonicMilliseconds(io), expired, input);
-}
 
 pub const Pair = struct {
     io: std.Io,
