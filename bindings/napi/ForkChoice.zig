@@ -7,7 +7,9 @@
 //!
 //! Beacon states stay in JavaScript: the `provider` callbacks answer from them and run
 //! synchronously inside whichever call needs them, so they must not throw for a
-//! checkpoint or block the store was just told about.
+//! checkpoint or block the store was just told about. The store holds them weakly so a
+//! provider that captures its owner does not keep the owner alive; `fork-choice.js`
+//! keeps them reachable for the life of the instance.
 
 const std = @import("std");
 const napi = @import("zapi:zapi").napi;
@@ -126,7 +128,13 @@ pub fn deinit(self: *ForkChoice) void {
 fn functionRef(env: napi.Env, object: napi.Value, comptime name: [:0]const u8) !napi.Ref {
     const function = try object.getNamedProperty(name);
     if (try function.typeof() != .function) return error.InvalidProvider;
-    return env.createReference(function, 1);
+    return env.createReference(function, 0);
+}
+
+fn callbackValue(ref: napi.Ref) !napi.Value {
+    const value = try ref.getValue();
+    if (value.value == null) return error.ProviderCollected;
+    return value;
 }
 
 const provider_vtable: fork_choice.StateProvider.VTable = .{
@@ -139,7 +147,7 @@ const provider_vtable: fork_choice.StateProvider.VTable = .{
 fn providerJustifiedBalances(ctx: *anyopaque, gpa: std.mem.Allocator, checkpoint: Checkpoint) anyerror!fork_choice.JustifiedBalances {
     const inner: *Inner = @ptrCast(@alignCast(ctx));
     const env = js.env();
-    const result = try env.callFunction(try inner.justified_balances.getValue(), try env.getUndefined(), .{
+    const result = try env.callFunction(try callbackValue(inner.justified_balances), try env.getUndefined(), .{
         try env.createDouble(@floatFromInt(checkpoint.epoch)),
         js.Uint8Array.from(&checkpoint.root).toValue(),
     });
@@ -157,7 +165,7 @@ fn providerJustifiedBalances(ctx: *anyopaque, gpa: std.mem.Allocator, checkpoint
 fn providerSlotCommitteeMembers(ctx: *anyopaque, gpa: std.mem.Allocator, root: Root, slot: Slot, out: *std.ArrayList(ValidatorIndex)) anyerror!void {
     const inner: *Inner = @ptrCast(@alignCast(ctx));
     const env = js.env();
-    const result = try env.callFunction(try inner.slot_committee_members.getValue(), try env.getUndefined(), .{
+    const result = try env.callFunction(try callbackValue(inner.slot_committee_members), try env.getUndefined(), .{
         js.Uint8Array.from(&root).toValue(),
         try env.createDouble(@floatFromInt(slot)),
     });
@@ -172,7 +180,7 @@ fn providerCheckpointBalanceSource(ctx: *anyopaque, gpa: std.mem.Allocator, chec
     const inner: *Inner = @ptrCast(@alignCast(ctx));
     const ref = inner.checkpoint_balance_source orelse return error.FastConfirmationUnsupported;
     const env = js.env();
-    const result = try env.callFunction(try ref.getValue(), try env.getUndefined(), .{
+    const result = try env.callFunction(try callbackValue(ref), try env.getUndefined(), .{
         try env.createDouble(@floatFromInt(checkpoint.epoch)),
         js.Uint8Array.from(&checkpoint.root).toValue(),
     });
@@ -183,7 +191,7 @@ fn providerPulledUpBalanceSource(ctx: *anyopaque, gpa: std.mem.Allocator, root: 
     const inner: *Inner = @ptrCast(@alignCast(ctx));
     const ref = inner.pulled_up_balance_source orelse return error.FastConfirmationUnsupported;
     const env = js.env();
-    const result = try env.callFunction(try ref.getValue(), try env.getUndefined(), .{
+    const result = try env.callFunction(try callbackValue(ref), try env.getUndefined(), .{
         js.Uint8Array.from(&root).toValue(),
         try env.createDouble(@floatFromInt(epoch)),
     });

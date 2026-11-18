@@ -1,6 +1,19 @@
 import bindings from "./index.js";
 
-export const ForkChoice = bindings.ForkChoice;
+/** The native store holds the provider callbacks weakly, so each instance keeps them alive */
+export class ForkChoice extends bindings.ForkChoice {
+  #callbacks;
+
+  constructor(config, genesisTime, anchor, provider) {
+    super(config, genesisTime, anchor, provider);
+    this.#callbacks = [
+      provider.justifiedBalances,
+      provider.slotCommitteeMembers,
+      provider.checkpointBalanceSource,
+      provider.pulledUpBalanceSource,
+    ];
+  }
+}
 
 /** Spec `PayloadStatus`; a node id is `blockIndex * 3 + payloadStatus`. */
 export const PayloadStatus = Object.freeze({Empty: 0, Full: 1, Pending: 2});
