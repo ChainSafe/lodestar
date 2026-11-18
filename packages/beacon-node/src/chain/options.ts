@@ -117,7 +117,7 @@ export const defaultChainOptions: IChainOptions = {
   serveHistoricalState: false,
   archiveStateEpochFrequency: 1024,
   archiveMode: DEFAULT_ARCHIVE_MODE,
-  pruneHistory: false,
+  pruneHistory: true,
   emitPayloadAttributes: false,
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time

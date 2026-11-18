@@ -9,6 +9,7 @@ import {
   ForkChoiceError,
   ForkChoiceErrorCode,
   InvalidBlockCode,
+  LVHInvalidJudged,
   PayloadStatus,
   ProtoArray,
 } from "../../../src/index.js";
@@ -84,16 +85,14 @@ function setup(isGloas: boolean): {forkChoice: ForkChoice; protoArray: ProtoArra
 }
 
 function invalidateHead(forkChoice: ForkChoice, isGloas: boolean): void {
-  const applied = forkChoice.validateLatestHash(
-    {
-      executionStatus: ExecutionStatus.Invalid,
-      latestValidExecHash: null,
-      invalidateFromParentBlockRoot: getBlockRoot(headSlot),
-      invalidateFromParentBlockHash: payloadHash(isGloas ? headSlot - 1 : headSlot),
-    },
-    {strict: false}
-  );
-  expect(applied).toBe(true);
+  const applied = forkChoice.validateLatestHash({
+    executionStatus: ExecutionStatus.Invalid,
+    latestValidExecHash: null,
+    invalidateFromBlockRoot: getBlockRoot(headSlot),
+    invalidateFromBlockHash: payloadHash(isGloas ? headSlot - 1 : headSlot),
+    judged: LVHInvalidJudged.FromBlock,
+  });
+  expect(applied).toEqual({applied: true});
 }
 
 function expectParentExecutionInvalid(fn: () => void): void {
