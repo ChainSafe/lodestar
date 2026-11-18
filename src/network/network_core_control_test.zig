@@ -742,11 +742,11 @@ test "core native inbound application per connection cap protects control from e
     const protocols = [_]rr.Protocol{
         .blocks_by_range_v2,
         .blocks_by_root_v2,
-        .blob_sidecars_by_range_v1,
-        .blob_sidecars_by_root_v1,
+        .data_column_sidecars_by_range_v1,
         .data_column_sidecars_by_root_v1,
+        .light_client_finality_update_v1,
     };
-    const bytes = [_]u8{0} ** 8 ++ [_]u8{1} ++ [_]u8{0} ** 15;
+    const bytes = [_]u8{0} ** 8 ++ [_]u8{1} ++ [_]u8{0} ** 7 ++ [_]u8{20} ++ [_]u8{0} ** 7;
     for (0..9) |index| {
         const protocol = protocols[index / 2];
         _ = try setup.client.protocols.request(

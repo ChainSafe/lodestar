@@ -20,20 +20,20 @@ test "reqresp decoder captures configured root byte bounds before reading a body
     var router = try Router.init(std.testing.allocator, .{});
     defer router.deinit();
     var options = try applicationOptions();
-    options.admission.policy.blob_identifiers_deneb = 2;
-    options.admission.policy.blob_identifiers_electra = 3;
+    options.admission.policy.blocks_pre_deneb = 4;
+    options.admission.policy.blocks_deneb = 2;
     options.request_fork = .deneb;
     var requests = try rr.init(std.testing.allocator, options);
     defer requests.deinit();
     defer requests.cancelAll(&pair.server, &router, pair.now);
     const first = try requests.accept(&pair.server, try inboundStream(&pair, handles.client), .{
-        .protocol = .{ .reqresp = .blob_sidecars_by_root_v1 },
+        .protocol = .{ .reqresp = .blocks_by_root_v2 },
         .leftover = &.{},
         .fin = false,
     }, pair.now);
-    requests.setRequestFork(.electra);
+    requests.setRequestFork(.capella);
     const second = try requests.accept(&pair.server, try inboundStream(&pair, handles.client), .{
-        .protocol = .{ .reqresp = .blob_sidecars_by_root_v1 },
+        .protocol = .{ .reqresp = .blocks_by_root_v2 },
         .leftover = &.{},
         .fin = false,
     }, pair.now);

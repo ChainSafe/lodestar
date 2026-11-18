@@ -146,7 +146,6 @@ const BoundaryUnion = struct {
             for (0..topic_policy.kind_count) |k| {
                 const kind: topic_mod.Kind = @enumFromInt(k);
                 const count: u16 = switch (kind) {
-                    .blob_sidecar => 0,
                     .data_column_sidecar => columns,
                     else => kind.countMax(),
                 };

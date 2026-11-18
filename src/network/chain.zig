@@ -53,8 +53,7 @@ pub const Config = struct {
             count += 1;
         }
         std.sort.insertion(u64, epochs[0..count], {}, std.sort.asc(u64));
-        var blob_storage: [policy.schedule_max]policy.BlobLimit = undefined;
-        var request = try policy.Config.fromBeaconConfig(cfg, &blob_storage);
+        var request = try policy.Config.fromBeaconConfig(cfg);
         request.host_integer_max = 9007199254740991;
         var result: Config = .{
             .policy = try policy.Policy.init(&request),
@@ -111,9 +110,7 @@ pub const Config = struct {
     }
 
     pub fn requestPolicy(self: *const Config) policy.Config {
-        var result = self.policy.config;
-        result.blob_schedule = self.policy.points[0..self.policy.point_count];
-        return result;
+        return self.policy.config;
     }
 
     pub fn update(self: *const Config, local: values.LocalState, endpoints: ?advertisement.Endpoints, slot: u64) !values.LocalUpdate {
@@ -190,8 +187,6 @@ fn topicBoundary(cfg: *const config.BeaconConfig, fork: config.ForkSeq, digest: 
                 const per_blob = ct.fulu.Cell.fixed_size + ct.primitive.KZGCommitment.fixed_size + ct.primitive.KZGProof.fixed_size;
                 const column_max = types.DataColumnSidecar.min_size +| cfg.getMaxBlobsPerBlock(epoch) *| per_blob;
                 r[@intFromEnum(topics.Kind.data_column_sidecar)] = try rule(types.DataColumnSidecar, chain.DATA_COLUMN_SIDECAR_SUBNET_COUNT, @min(max, column_max));
-            } else if (comptime selected.gte(.deneb)) {
-                r[@intFromEnum(topics.Kind.blob_sidecar)] = try rule(ct.deneb.BlobSidecar, if (selected.gte(.electra)) chain.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA else chain.BLOB_SIDECAR_SUBNET_COUNT, max);
             }
         },
     }

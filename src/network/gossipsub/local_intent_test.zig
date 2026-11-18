@@ -38,9 +38,10 @@ test "local intent exact capacity excess and namespace refusal" {
     var names: [513][topic.topic_max_len]u8 = undefined;
     var desired: [513][]const u8 = undefined;
     for (&desired, 0..) |*entry, i| {
-        const digest: u32 = if (i < 256) 0x01020304 else if (i < 512) 0x05060708 else 0x090a0b0c;
-        const kind: []const u8 = if (i % 256 < 128) "blob_sidecar" else "data_column_sidecar";
-        entry.* = try std.fmt.bufPrint(&names[i], "/eth2/{x:0>8}/{s}_{d}/ssz_snappy", .{ digest, kind, i % 128 });
+        const group = i % 192;
+        const digest: u32 = ([_]u32{ 0x01020304, 0x05060708, 0x090a0b0c })[i / 192];
+        const kind: []const u8 = if (group < 128) "data_column_sidecar" else "beacon_attestation";
+        entry.* = try std.fmt.bufPrint(&names[i], "/eth2/{x:0>8}/{s}_{d}/ssz_snappy", .{ digest, kind, if (group < 128) group else group - 128 });
     }
     const calls = backing.allocations;
     try std.testing.expectError(error.TopicCapacity, apply(&g, w, &desired));

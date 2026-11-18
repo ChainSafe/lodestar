@@ -55,10 +55,6 @@ test "capabilities fork sets match every implemented host protocol in both direc
             } else {
                 for ([_]rr.Protocol{ .status_v2, .blocks_by_head_v1, .data_column_sidecars_by_range_v1, .data_column_sidecars_by_root_v1 }) |protocol| expected.insert(.{ .reqresp = protocol });
             }
-            if (fork.gte(.deneb)) {
-                expected.insert(.{ .reqresp = .blob_sidecars_by_range_v1 });
-                expected.insert(.{ .reqresp = .blob_sidecars_by_root_v1 });
-            }
             if (fork.gte(.gloas)) {
                 expected.insert(.{ .reqresp = .execution_payload_envelopes_by_range_v1 });
                 expected.insert(.{ .reqresp = .execution_payload_envelopes_by_root_v1 });
@@ -86,7 +82,7 @@ test "capabilities fork sets match every implemented host protocol in both direc
         }
     }
     const fulu = try capabilities.forFork(.fulu, true, &.{.v1_0});
-    try std.testing.expectEqual(17, fulu.receive.count());
+    try std.testing.expectEqual(15, fulu.receive.count());
     const active = try capabilities.forFork(.fulu, false, &.{ .v1_2, .v1_1 });
     try std.testing.expect(!active.receive.contains(.{ .reqresp = .light_client_bootstrap_v1 }));
     try std.testing.expect(active.request.contains(.{ .reqresp = .light_client_bootstrap_v1 }));

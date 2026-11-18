@@ -299,7 +299,7 @@ test "core native saturated app requests retain partitioned borrows while contro
     var snapshots: [4]t.Snapshot = undefined;
     _ = setup.client.peer_manager.snapshots(&snapshots);
     const server_id = setup.server.peerId();
-    const bytes = [_]u8{0} ** 8 ++ [_]u8{1} ++ [_]u8{0} ** 15;
+    const bytes = [_]u8{0} ** 8 ++ [_]u8{1} ++ [_]u8{0} ** 7 ++ [_]u8{20} ++ [_]u8{0} ** 7;
     const sink_size = rr.Protocol.blocks_by_range_v2.info().response_max;
     const sinks = try std.testing.allocator.alloc(u8, sink_size * 8);
     defer std.testing.allocator.free(sinks);
@@ -307,8 +307,8 @@ test "core native saturated app requests retain partitioned borrows while contro
     const protocols = [_]rr.Protocol{
         .blocks_by_range_v2,
         .blocks_by_root_v2,
-        .blob_sidecars_by_range_v1,
-        .blob_sidecars_by_root_v1,
+        .data_column_sidecars_by_range_v1,
+        .data_column_sidecars_by_root_v1,
     };
     for (0..8) |index| {
         const protocol = protocols[index / 2];

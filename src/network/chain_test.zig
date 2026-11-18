@@ -114,11 +114,9 @@ test "network chain activates Gloas and Heze" {
     try std.testing.expectEqual(consensus_types.heze.SignedInclusionList.min_size, (try requests.responseBounds(.inclusion_lists_by_indices_v1, .heze)).min);
 }
 
-test "network chain derives fixed request storage and historical blob limits independently of BPO" {
+test "network chain derives fixed request storage independently of BPO" {
     const cfg = config.BeaconConfig.init(fixture(), @splat(0));
     const chain_config = try chain.Config.init(&cfg, true);
-    try std.testing.expectEqual(@as(usize, 768 * 40), chain_config.policy.requestBounds(.blob_sidecars_by_root_v1, .deneb).request_max);
-    try std.testing.expectEqual(@as(usize, 1152 * 40), chain_config.policy.requestBounds(.blob_sidecars_by_root_v1, .fulu).request_max);
     const maximum = 128 * (40 + 8 * preset.NUMBER_OF_COLUMNS);
     try std.testing.expectEqual(@as(usize, maximum), chain_config.policy.requestMax());
     const policy = chain_config.requestPolicy();
@@ -129,12 +127,7 @@ test "network chain derives fixed request storage and historical blob limits ind
         requests.setRequestFork(fork);
         try std.testing.expectEqual(bytes, requests.memoryPlan().total_bytes);
     }
-    var range = [_]u8{0} ** 16;
-    std.mem.writeInt(u64, range[0..8], 3 * preset.preset.SLOTS_PER_EPOCH, .little);
-    std.mem.writeInt(u64, range[8..16], 128, .little);
-    try std.testing.expectEqual(@as(u32, 0), (try chain_config.policy.inspect(.blob_sidecars_by_range_v1, &range, .fulu)).chunks_max);
     const fulu_topics = chain_config.topics[2].rules;
-    try std.testing.expectEqual(@as(u16, 0), fulu_topics[@intFromEnum(topics.Kind.blob_sidecar)].count);
     try std.testing.expectEqual(@as(u16, 128), fulu_topics[@intFromEnum(topics.Kind.data_column_sidecar)].count);
 }
 
@@ -160,8 +153,6 @@ test "network chain honors configured wire limits and requires complete metadata
     input.BLOB_SCHEDULE = &.{};
     input.MAX_REQUEST_BLOCKS = 16;
     input.MAX_REQUEST_BLOCKS_DENEB = 8;
-    input.MAX_REQUEST_BLOB_SIDECARS = 2;
-    input.MAX_REQUEST_BLOB_SIDECARS_ELECTRA = 3;
     input.MAX_PAYLOAD_SIZE = 1024 * 1024;
     const cfg = config.BeaconConfig.init(input, @splat(0));
     const chain_config = try chain.Config.init(&cfg, false);
@@ -176,10 +167,6 @@ test "network chain honors configured wire limits and requires complete metadata
     var requests = try rr.init(std.testing.allocator, .{ .forks = chain_config.forks[0..chain_config.boundary_count], .admission = try rr.Options.Admission.defaults(&policy, 16) });
     defer requests.deinit();
     try std.testing.expectEqual(@as(usize, 1024 * 1024), (try requests.responseBounds(.blocks_by_root_v2, .deneb)).max);
-    requests.setRequestFork(.deneb);
-    try std.testing.expectEqual(@as(usize, 80), requests.requestBounds(.blob_sidecars_by_root_v1).request_max);
-    requests.setRequestFork(.electra);
-    try std.testing.expectEqual(@as(usize, 120), requests.requestBounds(.blob_sidecars_by_root_v1).request_max);
     input.MAX_REQUEST_BLOCKS_DENEB = 128;
     input.MAX_PAYLOAD_SIZE = consensus_types.deneb.BlobSidecar.fixed_size;
     const small_cfg = config.BeaconConfig.init(input, @splat(0));
@@ -205,28 +192,6 @@ test "network chain rejects dense supported BPO demand before the future overlap
     input.BLOB_SCHEDULE = &.{ .{ .EPOCH = 3, .MAX_BLOBS_PER_BLOCK = 33 }, .{ .EPOCH = 5, .MAX_BLOBS_PER_BLOCK = 40 } };
     const cfg = config.BeaconConfig.init(input, @splat(0));
     try std.testing.expectError(error.UnsupportedTopicOverlap, chain.Config.init(&cfg, true));
-}
-
-test "network chain scheduled topic demand accepts exact capacity and rejects one extra" {
-    for ([_]bool{ false, true }) |light_clients| {
-        var input = fuluSchedule();
-        input.ELECTRA_FORK_EPOCH = 10;
-        input.FULU_FORK_EPOCH = 10;
-        input.BLOB_SIDECAR_SUBNET_COUNT = if (light_clients) 25 else 31;
-        var cfg = config.BeaconConfig.init(input, @splat(0));
-        const chain_config = try chain.Config.init(&cfg, light_clients);
-        try std.testing.expectEqual(@as(u8, 3), chain_config.boundary_count);
-        var demand: usize = 0;
-        for (chain_config.topics[0..chain_config.boundary_count]) |boundary| for (boundary.rules, 0..) |rule, k| {
-            const kind: topics.Kind = @enumFromInt(k);
-            if (!light_clients and (kind == .light_client_finality_update or kind == .light_client_optimistic_update)) continue;
-            demand += rule.count;
-        };
-        try std.testing.expectEqual(@as(usize, 512), demand);
-        input.BLOB_SIDECAR_SUBNET_COUNT += 1;
-        cfg = config.BeaconConfig.init(input, @splat(0));
-        try std.testing.expectError(error.UnsupportedTopicOverlap, chain.Config.init(&cfg, light_clients));
-    }
 }
 
 test "network chain live demand permits replacements at the same removal epoch" {
@@ -291,22 +256,6 @@ fn applyScheduled(g: *gossip.Gossipsub, chain_config: *const chain.Config, epoch
     const slot = epoch * preset.preset.SLOTS_PER_EPOCH;
     if (try g.prepareSubscriptions(desired[0..count], &workspace, Now.fromMilliseconds(.{ .mono_ms = slot * 12_000, .unix_s = 0 }), slot)) g.commitSubscriptions(&workspace);
     return workspace.desired.count();
-}
-
-test "network chain exact capacity schedule advances into the supported three digest overlap" {
-    for ([_]bool{ false, true }) |light_clients| {
-        var input = fuluSchedule();
-        input.ELECTRA_FORK_EPOCH = 10;
-        input.FULU_FORK_EPOCH = 10;
-        input.BLOB_SIDECAR_SUBNET_COUNT = if (light_clients) 25 else 31;
-        const cfg = config.BeaconConfig.init(input, @splat(0));
-        const chain_config = try chain.Config.init(&cfg, light_clients);
-        var g = try initScheduledGossip(&chain_config);
-        defer g.deinit();
-        try std.testing.expectEqual(@as(usize, if (light_clients) 102 else 106), try applyScheduled(&g, &chain_config, 0));
-        try std.testing.expectEqual(@as(usize, if (light_clients) 307 else 309), try applyScheduled(&g, &chain_config, 8));
-        try std.testing.expectEqual(@as(usize, 512), try applyScheduled(&g, &chain_config, 9));
-    }
 }
 
 test "network chain namespace capacity preserves retired scores and backoffs across transitions" {

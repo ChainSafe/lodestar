@@ -26,7 +26,6 @@ test "gossip full pending kind refuses admission without evicting history" {
         "/eth2/01020304/light_client_finality_update/ssz_snappy",
         "/eth2/01020304/light_client_optimistic_update/ssz_snappy",
         "/eth2/01020304/bls_to_execution_change/ssz_snappy",
-        "/eth2/01020304/blob_sidecar_0/ssz_snappy",
         "/eth2/01020304/data_column_sidecar_0/ssz_snappy",
         "/eth2/01020304/execution_payload/ssz_snappy",
         "/eth2/01020304/payload_attestation_message/ssz_snappy",

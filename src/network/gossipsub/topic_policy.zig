@@ -5,7 +5,7 @@ const assert = std.debug.assert;
 const ForkSeq = @import("config").ForkSeq;
 
 pub const boundary_max = 64;
-pub const topics_per_boundary_max = 338;
+pub const topics_per_boundary_max = 210;
 pub const topic_max = boundary_max * topics_per_boundary_max;
 pub const Kind = topic.Kind;
 pub const kind_count = @typeInfo(Kind).@"enum".fields.len;

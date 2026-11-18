@@ -135,7 +135,7 @@ test "reqresp request start waiters take one refill each in arrival order, not s
     defer setup.deinit();
     var exchange: Exchange = .{ .setup = &setup };
     const owner = &setup.shared.server.reqresp;
-    const methods = [_]Protocol{ .blocks_by_root_v2, .blob_sidecars_by_root_v1, .blob_sidecars_by_root_v1, .blocks_by_root_v2, .blob_sidecars_by_root_v1, .blocks_by_root_v2 };
+    const methods = [_]Protocol{ .blocks_by_root_v2, .data_column_sidecars_by_root_v1, .data_column_sidecars_by_root_v1, .blocks_by_root_v2, .data_column_sidecars_by_root_v1, .blocks_by_root_v2 };
     var sinks: [methods.len][]u8 = undefined;
     for (methods, &sinks) |which, *sink| sink.* = try std.testing.allocator.alloc(u8, which.info().response_max);
     defer for (sinks) |sink| std.testing.allocator.free(sink);
@@ -178,12 +178,12 @@ test "reqresp request start a request arriving as a refill falls due cannot take
     const owner = &setup.shared.server.reqresp;
     const blocks = try std.testing.allocator.alloc(u8, Protocol.blocks_by_root_v2.info().response_max);
     defer std.testing.allocator.free(blocks);
-    const blobs = try std.testing.allocator.alloc(u8, Protocol.blob_sidecars_by_root_v1.info().response_max);
+    const blobs = try std.testing.allocator.alloc(u8, Protocol.data_column_sidecars_by_root_v1.info().response_max);
     defer std.testing.allocator.free(blobs);
     const start = setup.shared.pair.now.millis();
     for (0..2) |_| _ = try request(&setup, .blocks_by_root_v2, blocks);
     try exchange.pumps(20);
-    _ = try request(&setup, .blob_sidecars_by_root_v1, blobs);
+    _ = try request(&setup, .data_column_sidecars_by_root_v1, blobs);
     try exchange.pumps(20);
     try std.testing.expectEqual(@as(usize, 1), waitingStarts(owner));
     // The fresh stream and the waiter's due key reach the server in one turn, the stream first.
@@ -194,7 +194,7 @@ test "reqresp request start a request arriving as a refill falls due cannot take
     var control: [4]rr.Event = undefined;
     const counts = setup.shared.processServer(.{ .application = &application, .control = &control });
     try std.testing.expectEqual(@as(usize, 1), counts.application);
-    try std.testing.expectEqual(Protocol.blob_sidecars_by_root_v1, application[0].request.protocol);
+    try std.testing.expectEqual(Protocol.data_column_sidecars_by_root_v1, application[0].request.protocol);
     try exchange.serve(owner, application[0..counts.application]);
     const deferred = try waiterAt(owner, start + refill_ms);
     try std.testing.expectEqual(Protocol.blocks_by_root_v2, owner.inbound[deferred].request.protocol);
@@ -321,7 +321,7 @@ test "reqresp request start preserves distinct protocol and connection capacity 
     const owner = &setup.shared.server.reqresp;
     const blocks = try std.testing.allocator.alloc(u8, Protocol.blocks_by_root_v2.info().response_max);
     defer std.testing.allocator.free(blocks);
-    const blobs = try std.testing.allocator.alloc(u8, Protocol.blob_sidecars_by_root_v1.info().response_max);
+    const blobs = try std.testing.allocator.alloc(u8, Protocol.data_column_sidecars_by_root_v1.info().response_max);
     defer std.testing.allocator.free(blobs);
     const start = setup.shared.pair.now.millis();
     for (0..2) |_| _ = try request(&setup, .blocks_by_root_v2, blocks);
@@ -334,7 +334,7 @@ test "reqresp request start preserves distinct protocol and connection capacity 
     _ = try setup.openRaw(.blocks_by_root_v2);
     try exchange.pumps(10);
     try std.testing.expectEqual(@as(u64, 1), refusals(owner, .blocks_by_root_v2, .protocol_concurrency));
-    _ = try request(&setup, .blob_sidecars_by_root_v1, blobs);
+    _ = try request(&setup, .data_column_sidecars_by_root_v1, blobs);
     try exchange.pumps(10);
     try std.testing.expectEqual(@as(usize, 3), waitingStarts(owner));
     _ = try setup.openRaw(.blocks_by_range_v2);
@@ -354,7 +354,7 @@ test "reqresp request start a slow waiter retains source accounting after debt e
     const owner = &setup.shared.server.reqresp;
     const blocks = try std.testing.allocator.alloc(u8, Protocol.blocks_by_root_v2.info().response_max);
     defer std.testing.allocator.free(blocks);
-    const blobs = try std.testing.allocator.alloc(u8, Protocol.blob_sidecars_by_root_v1.info().response_max);
+    const blobs = try std.testing.allocator.alloc(u8, Protocol.data_column_sidecars_by_root_v1.info().response_max);
     defer std.testing.allocator.free(blobs);
     const start = setup.shared.pair.now.millis();
     for (0..2) |_| _ = try request(&setup, .blocks_by_root_v2, blocks);
@@ -368,7 +368,7 @@ test "reqresp request start a slow waiter retains source accounting after debt e
     const stranger = owner.admission.limiter.retain(&.{ .address = .{ .ip4 = .{ 192, 0, 2, 1 } } }, setup.shared.pair.now.millis());
     try std.testing.expectEqual(.allowed, owner.admission.limiter.start(stranger, setup.shared.pair.now.millis()));
     owner.admission.limiter.release(stranger);
-    _ = try request(&setup, .blob_sidecars_by_root_v1, blobs);
+    _ = try request(&setup, .data_column_sidecars_by_root_v1, blobs);
     try exchange.pumps(20);
     try std.testing.expectEqual(@as(?rr.Failure, null), exchange.client_failure);
     try std.testing.expectEqual(@as(usize, 3), exchange.delivered_len);
@@ -542,11 +542,11 @@ test "reqresp request start hard capacity refusal preserves an available start w
         const held = owner.inbound[held_index].request.handle(held_index);
         try std.testing.expectEqual(@as(usize, 0), waitingStarts(owner));
         var exchange: Exchange = .{ .setup = &setup };
-        const blobs = try std.testing.allocator.alloc(u8, Protocol.blob_sidecars_by_root_v1.info().response_max);
+        const blobs = try std.testing.allocator.alloc(u8, Protocol.data_column_sidecars_by_root_v1.info().response_max);
         defer std.testing.allocator.free(blobs);
-        _ = try request(&setup, .blob_sidecars_by_root_v1, blobs);
+        _ = try request(&setup, .data_column_sidecars_by_root_v1, blobs);
         try exchange.pumps(20);
-        try std.testing.expectEqual(@as(u64, 1), refusals(owner, .blob_sidecars_by_root_v1, .connection_capacity));
+        try std.testing.expectEqual(@as(u64, 1), refusals(owner, .data_column_sidecars_by_root_v1, .connection_capacity));
         try std.testing.expectEqual(@as(?rr.Failure, .{ .peer_error = .{ .code = 139, .message_len = "Rate limited: connection receive capacity exhausted".len } }), exchange.client_failure);
         try std.testing.expect(owner.cancel(&setup.shared.pair.server, &setup.shared.server.router, held, setup.shared.pair.now));
         try exchange.pumps(10);
@@ -568,8 +568,8 @@ test "reqresp connection capacity refusal preserves selection and finishes the e
     try setup.init(.{}, .{ .inbound_per_connection_max = 1, .admission = limits() });
     defer setup.deinit();
     const owner = &setup.shared.server.reqresp;
-    const held = try setup.openRaw(.blob_sidecars_by_root_v1);
-    try setup.awaitRawSelection(held, .blob_sidecars_by_root_v1);
+    const held = try setup.openRaw(.data_column_sidecars_by_root_v1);
+    try setup.awaitRawSelection(held, .data_column_sidecars_by_root_v1);
     const refused = try setup.openRaw(.blocks_by_root_v2);
     try expectRateLimitResponse(&setup, refused, "Rate limited: connection receive capacity exhausted");
     try std.testing.expectEqual(@as(u64, 1), refusals(owner, .blocks_by_root_v2, .connection_capacity));

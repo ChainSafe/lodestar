@@ -144,7 +144,6 @@ test "reqresp active light client bounds select each actual fork type before dec
             }
         }
     }
-    try std.testing.expectError(error.InvalidResponseContext, response_bounds.forFork(.blob, .capella));
     try std.testing.expectError(error.InvalidResponseContext, response_bounds.forFork(.column, .electra));
     try std.testing.expectError(error.InvalidResponseContext, protocol.Protocol.ping_v1.responseBounds(.fulu));
 }
@@ -463,9 +462,9 @@ test "reqresp request admission empty success quota waiting malformed attempts a
     try emptyExchange(&setup, .ping_v1, bytes[0..8], true, 0);
     const status = harness.statusBytes(1);
     try emptyExchange(&setup, .status_v1, &status, true, 0);
-    try emptyExchange(&setup, .blob_sidecars_by_root_v1, &.{0}, false, 1);
-    try emptyExchange(&setup, .blob_sidecars_by_root_v1, &.{}, true, 0);
-    try emptyExchange(&setup, .blob_sidecars_by_root_v1, &.{}, false, 139);
+    try emptyExchange(&setup, .data_column_sidecars_by_root_v1, &.{0}, false, 1);
+    try emptyExchange(&setup, .data_column_sidecars_by_root_v1, &.{}, true, 0);
+    try emptyExchange(&setup, .data_column_sidecars_by_root_v1, &.{}, false, 139);
     std.mem.writeInt(u32, bytes[16..20], 20, .little);
     try emptyExchange(&setup, .data_column_sidecars_by_range_v1, bytes[0..20], true, 0);
     try emptyExchange(&setup, .data_column_sidecars_by_range_v1, bytes[0..20], true, 0);
@@ -480,7 +479,7 @@ test "reqresp permits an empty contextual response below its payload minimum" {
     const options: harness.Overrides = .{ .admission = .{ .policy = policy, .limits = .{ .source = admission_quotas(2, 1000), .global = admission_quotas(2, 1000) } } };
     try setup.init(options, options);
     defer setup.deinit();
-    try emptyExchange(&setup, .blob_sidecars_by_root_v1, &.{}, true, 0);
+    try emptyExchange(&setup, .data_column_sidecars_by_root_v1, &.{}, true, 0);
 }
 
 test "reqresp malformed requests without a paid source or global start cannot retain protocol debt" {
@@ -634,10 +633,10 @@ test "reqresp identity rotation preserves the source's protocol usage" {
     });
     defer setup.deinit();
     try emptyExchange(&setup, .blocks_by_root_v2, &.{}, true, 0);
-    try emptyExchange(&setup, .blob_sidecars_by_root_v1, &.{}, true, 0);
+    try emptyExchange(&setup, .data_column_sidecars_by_root_v1, &.{}, true, 0);
     try changeClientIdentity(&setup, 3);
     try waitExchange(&setup, .blocks_by_root_v2, &.{});
-    try waitExchange(&setup, .blob_sidecars_by_root_v1, &.{});
+    try waitExchange(&setup, .data_column_sidecars_by_root_v1, &.{});
     try std.testing.expectEqual(@as(u64, 0), refusals(&setup.shared.server.reqresp, .address_quota));
     try std.testing.expectEqual(@as(u64, 0), refusals(&setup.shared.server.reqresp, .global_quota));
 }

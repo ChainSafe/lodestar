@@ -67,10 +67,6 @@ pub fn forFork(fork: ForkSeq, serve_light_clients: bool, meshsub_versions: []con
     } else {
         for ([_]reqresp.Protocol{ .status_v2, .blocks_by_head_v1, .data_column_sidecars_by_range_v1, .data_column_sidecars_by_root_v1 }) |protocol| common.insert(.{ .reqresp = protocol });
     }
-    if (fork.gte(.deneb)) {
-        common.insert(.{ .reqresp = .blob_sidecars_by_range_v1 });
-        common.insert(.{ .reqresp = .blob_sidecars_by_root_v1 });
-    }
     if (fork.gte(.gloas)) {
         common.insert(.{ .reqresp = .execution_payload_envelopes_by_range_v1 });
         common.insert(.{ .reqresp = .execution_payload_envelopes_by_root_v1 });

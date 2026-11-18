@@ -231,7 +231,7 @@ test "topic policy real wire receives only bounded SSZ and keeps borrowed payloa
     try std.testing.expectEqual(@as(usize, 2), seen);
 }
 
-test "topic policy all 809 resident names keep the live subscription limit at 512" {
+test "topic policy all 794 resident names keep the live subscription limit at 512" {
     const boundaries = topic_fixture.hoodi();
     var g = try support.init(std.testing.allocator, options(&boundaries));
     defer g.deinit();
@@ -255,8 +255,8 @@ test "topic policy all 809 resident names keep the live subscription limit at 51
             }
         }
     }
-    try std.testing.expectEqual(@as(usize, 809), names);
-    try std.testing.expectEqual(@as(usize, 809), live(&g));
+    try std.testing.expectEqual(@as(usize, 794), names);
+    try std.testing.expectEqual(@as(usize, 794), live(&g));
     for (g.overlay.rows, 0..) |row, i| {
         try std.testing.expectEqual(i < 512, row.subscribed);
     }
@@ -280,5 +280,5 @@ fn startup(a: std.mem.Allocator) !void {
     const boundaries = topic_fixture.hoodi();
     var g = try support.init(a, options(&boundaries));
     defer g.deinit();
-    try std.testing.expectEqual(@as(u16, 809), g.overlay.namespace.topic_count);
+    try std.testing.expectEqual(@as(u16, 794), g.overlay.namespace.topic_count);
 }

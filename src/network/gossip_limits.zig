@@ -28,7 +28,7 @@ pub fn bytes(limits: *const Limits) usize {
     return total;
 }
 
-pub const priority = [_]Kind{ .beacon_block, .execution_payload, .blob_sidecar, .data_column_sidecar, .beacon_aggregate_and_proof, .voluntary_exit, .bls_to_execution_change, .beacon_attestation, .proposer_slashing, .attester_slashing, .sync_committee_contribution_and_proof, .sync_committee, .light_client_finality_update, .light_client_optimistic_update, .payload_attestation_message, .execution_payload_bid, .proposer_preferences, .inclusion_list };
+pub const priority = [_]Kind{ .beacon_block, .execution_payload, .data_column_sidecar, .beacon_aggregate_and_proof, .voluntary_exit, .bls_to_execution_change, .beacon_attestation, .proposer_slashing, .attester_slashing, .sync_committee_contribution_and_proof, .sync_committee, .light_client_finality_update, .light_client_optimistic_update, .payload_attestation_message, .execution_payload_bid, .proposer_preferences, .inclusion_list };
 
 comptime {
     std.debug.assert(priority.len == kind_count);
@@ -40,7 +40,7 @@ comptime {
 }
 
 pub fn urgent(kind: Kind) bool {
-    return kind == .beacon_block or kind == .execution_payload or kind == .blob_sidecar or kind == .data_column_sidecar;
+    return kind == .beacon_block or kind == .execution_payload or kind == .data_column_sidecar;
 }
 
 pub fn newestFirst(kind: Kind) bool {
@@ -72,5 +72,5 @@ test "gossip limits reject invalid shares and aggregate bounds" {
     try validate(&valid);
     try std.testing.expectEqual(@as(usize, 2), sourceItems(.beacon_block, .{ .items = 32, .bytes = 4096 }));
     try std.testing.expectEqual(@as(usize, 2), sourceItems(.execution_payload, .{ .items = 32, .bytes = 4096 }));
-    try std.testing.expectEqual(@as(usize, 16), sourceItems(.blob_sidecar, .{ .items = 32, .bytes = 4096 }));
+    try std.testing.expectEqual(@as(usize, 16), sourceItems(.data_column_sidecar, .{ .items = 32, .bytes = 4096 }));
 }

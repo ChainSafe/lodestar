@@ -438,7 +438,7 @@ test "a command queued after wait planning executes in the turn whose poll obser
         .gossip = .{ .topic_policy = owner.config.chain.topics[0..owner.config.chain.boundary_count], .mcache_capacity = 8, .validation_capacity = 2 },
         .forks = owner.config.chain.forks[0..owner.config.chain.boundary_count],
         .router = .{ .capabilities = initial.capabilities },
-        .admission_policy = .{ .deneb_start_slot = 0, .blocks_pre_deneb = 1024, .blocks_deneb = 128, .blob_identifiers_deneb = 768, .blob_identifiers_electra = 1152, .number_of_columns = 128, .column_chunks = 16384, .blob_schedule = &.{.{ .start_slot = 0, .max_blobs = 6 }} },
+        .admission_policy = .{ .deneb_start_slot = 0, .blocks_pre_deneb = 1024, .blocks_deneb = 128, .number_of_columns = 128, .column_chunks = 16384 },
     });
     try owner.core.init(testing, io, &resolved, .{
         .clock = try n.SlotClock.init(&beacon.chain, 1000),
@@ -546,7 +546,7 @@ test "queued request and disconnect share the protocol turn clock while latency 
         .seed = 1,
         .gossip = .{ .topic_policy = &test_support.topic_policy },
         .forks = &.{.{ .digest = @splat(0), .fork = .phase0 }},
-        .admission_policy = .{ .deneb_start_slot = 0, .blocks_pre_deneb = 1024, .blocks_deneb = 128, .blob_identifiers_deneb = 768, .blob_identifiers_electra = 1152, .number_of_columns = 128, .column_chunks = 16384, .blob_schedule = &.{.{ .start_slot = 0, .max_blobs = 6 }} },
+        .admission_policy = .{ .deneb_start_slot = 0, .blocks_pre_deneb = 1024, .blocks_deneb = 128, .number_of_columns = 128, .column_chunks = 16384 },
     });
     try owner.core.init(testing, std.testing.io, &resolved, .{
         .clock = try n.SlotClock.init(&config.mainnet.chain_config, 0),

@@ -621,7 +621,7 @@ test "metrics export stock per-topic gossipsub peer gauges under full topic stri
     try contains(output, "gossipsub_topic_peer_count{topicStr=\"" ++ column ++ "\"} 1\n");
     try contains(output, "gossipsub_mesh_peer_count{topicStr=\"" ++ column ++ "\"} 0\n");
     try contains(output, "gossipsub_mesh_peer_count{topicStr=\"/eth2/00000000/beacon_attestation_63/ssz_snappy\"} 0\n");
-    try std.testing.expectEqual(@as(usize, 338), std.mem.count(u8, output, "gossipsub_topic_peer_count{topicStr=\"/eth2/00000000/"));
+    try std.testing.expectEqual(@as(usize, 210), std.mem.count(u8, output, "gossipsub_topic_peer_count{topicStr=\"/eth2/00000000/"));
     try std.testing.expect(std.mem.find(u8, output, "/eth2/01010101/") == null);
     const future = "/eth2/01010101/beacon_block/ssz_snappy";
     try gossip_test.subscribe(g, future);
@@ -726,7 +726,7 @@ test "core metrics aggregate subnets and count distinct mesh peers" {
     try pair.initOwnersWithOptions(&.{}, opts);
     defer pair.deinit();
     var a_intent = core_test.intent(&pair.client, &.{});
-    a_intent.subscriptions = topic_fixture.subscriptions(&.{ "/eth2/00000000/beacon_block/ssz_snappy", "/eth2/00000000/blob_sidecar_0/ssz_snappy", "/eth2/00000000/blob_sidecar_1/ssz_snappy" });
+    a_intent.subscriptions = topic_fixture.subscriptions(&.{ "/eth2/00000000/beacon_block/ssz_snappy", "/eth2/00000000/data_column_sidecar_0/ssz_snappy", "/eth2/00000000/data_column_sidecar_1/ssz_snappy" });
     var b_intent = core_test.intent(&pair.server, &.{});
     b_intent.subscriptions = a_intent.subscriptions;
     try std.testing.expect(try pair.client.applyIntent(&a_intent, pair.client.last_now));

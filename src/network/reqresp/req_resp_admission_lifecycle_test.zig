@@ -92,9 +92,9 @@ test "reqresp admission lifecycle cancellation retains execution until host reti
     const owner = &setup.shared.server.reqresp;
     const serving = owner.retainServing(incoming.request) orelse return error.TestUnexpectedResult;
     try std.testing.expect(owner.retainServing(incoming.request) == null);
-    const extra = try std.testing.allocator.alloc(u8, Protocol.blob_sidecars_by_root_v1.info().response_max);
+    const extra = try std.testing.allocator.alloc(u8, Protocol.data_column_sidecars_by_root_v1.info().response_max);
     defer std.testing.allocator.free(extra);
-    _ = try application(&setup, .blob_sidecars_by_root_v1, &.{}, extra);
+    _ = try application(&setup, .data_column_sidecars_by_root_v1, &.{}, extra);
     for (0..30) |_| {
         try setup.pumpOnce();
         for (setup.serverEvents()) |event| try std.testing.expect(event != .request);
@@ -115,7 +115,7 @@ test "reqresp admission lifecycle cancellation retains execution until host reti
     try std.testing.expect(owner.releaseServing(serving));
     try std.testing.expect(!owner.releaseServing(serving));
     const resumed = try receive(&setup);
-    try std.testing.expectEqual(Protocol.blob_sidecars_by_root_v1, resumed.protocol);
+    try std.testing.expectEqual(Protocol.data_column_sidecars_by_root_v1, resumed.protocol);
     try std.testing.expectEqual(@as(usize, 0), owner.resourceSnapshot().retiring);
 }
 

@@ -20,11 +20,10 @@ fn canonical() !void {
         .{ "voluntary_exit", 68 },               .{ "sync_committee_contribution_and_proof", 69 },
         .{ "sync_committee_0", 70 },             .{ "sync_committee_3", 73 },
         .{ "light_client_finality_update", 74 }, .{ "light_client_optimistic_update", 75 },
-        .{ "bls_to_execution_change", 76 },      .{ "blob_sidecar_0", 77 },
-        .{ "blob_sidecar_127", 204 },            .{ "data_column_sidecar_0", 205 },
-        .{ "data_column_sidecar_127", 332 },     .{ "execution_payload", 333 },
-        .{ "payload_attestation_message", 334 }, .{ "execution_payload_bid", 335 },
-        .{ "proposer_preferences", 336 },        .{ "inclusion_list", 337 },
+        .{ "bls_to_execution_change", 76 },      .{ "data_column_sidecar_0", 77 },
+        .{ "data_column_sidecar_127", 204 },     .{ "execution_payload", 205 },
+        .{ "payload_attestation_message", 206 }, .{ "execution_payload_bid", 207 },
+        .{ "proposer_preferences", 208 },        .{ "inclusion_list", 209 },
     };
     inline for (cases) |case| {
         const first = ns.lookup("/eth2/01020304/" ++ case[0] ++ "/ssz_snappy").?;
@@ -37,7 +36,7 @@ fn canonical() !void {
         "/eth2/01020304/beacon_attestation_64/ssz_snappy",   "/eth2/01020304/beacon_attestation_00/ssz_snappy",
         "/eth2/01020304/beacon_attestation_+1/ssz_snappy",   "/eth2/01020304/beacon_attestation_-1/ssz_snappy",
         "/eth2/01020304/beacon_attestation/ssz_snappy",      "/eth2/01020304/beacon_block_0/ssz_snappy",
-        "/eth2/01020304/sync_committee_4/ssz_snappy",        "/eth2/01020304/blob_sidecar_128/ssz_snappy",
+        "/eth2/01020304/sync_committee_4/ssz_snappy",        "/eth2/01020304/blob_sidecar_0/ssz_snappy",
         "/eth2/01020304/data_column_sidecar_128/ssz_snappy", "/eth2/01020304/Beacon_block/ssz_snappy",
         "/eth2/01020304/beacon_block/ssz",                   "/eth2/01020304/beacon_block/ssz_snappy/",
         "",
@@ -58,10 +57,10 @@ test "topic namespace validates descriptors before allocation" {
     try std.testing.expectError(error.InvalidTopicPolicy, p.Namespace.init(a, &excessive));
     var maximum = try p.Namespace.init(a, excessive[0..64]);
     defer maximum.deinit(a);
-    try std.testing.expectEqual(@as(u16, 21632), maximum.topic_count);
+    try std.testing.expectEqual(@as(u16, 13440), maximum.topic_count);
     var name: [root.topic.topic_max_len]u8 = undefined;
-    try std.testing.expectEqual(@as(u16, 21631), maximum.lookup(root.topic.buildCanonical(maximum.topicAt(21631), &name)).?.ordinal);
-    inline for (.{ 0, 2, 7, 11, 12 }) |kind| {
+    try std.testing.expectEqual(@as(u16, 13439), maximum.lookup(root.topic.buildCanonical(maximum.topicAt(13439), &name)).?.ordinal);
+    inline for (.{ 0, 2, 7, 11 }) |kind| {
         boundary = full(.{ 1, 2, 3, 4 });
         boundary.rules[kind].count += 1;
         try std.testing.expectError(error.InvalidTopicPolicy, p.Namespace.init(a, &.{boundary}));
@@ -90,7 +89,7 @@ test "topic namespace storage matches its plan and frees every allocation prefix
     const boundaries = hoodi();
     var ledger: CountingAllocator = .{ .backing = std.testing.allocator };
     var ns = try root.topic_policy.Namespace.init(ledger.allocator(), &boundaries);
-    try std.testing.expectEqual(@as(u16, 809), ns.topic_count);
+    try std.testing.expectEqual(@as(u16, 794), ns.topic_count);
     try std.testing.expectEqual(root.topic_policy.Namespace.backingBytes(&boundaries), ledger.bytes);
     ns.deinit(ledger.allocator());
     try std.testing.expectEqual(@as(usize, 0), ledger.bytes);

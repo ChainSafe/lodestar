@@ -23,7 +23,6 @@ pub const Kind = enum(u8) {
     light_client_finality_update,
     light_client_optimistic_update,
     bls_to_execution_change,
-    blob_sidecar,
     data_column_sidecar,
     execution_payload,
     payload_attestation_message,
@@ -35,7 +34,7 @@ pub const Kind = enum(u8) {
         return switch (self) {
             .beacon_attestation => 64,
             .sync_committee => 4,
-            .blob_sidecar, .data_column_sidecar => 128,
+            .data_column_sidecar => 128,
             else => 1,
         };
     }

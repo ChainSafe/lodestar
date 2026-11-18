@@ -35,7 +35,6 @@ export const kinds: readonly NativeTopicKind[] = [
   "light_client_finality_update",
   "light_client_optimistic_update",
   "bls_to_execution_change",
-  "blob_sidecar",
   "data_column_sidecar",
   "execution_payload",
   "payload_attestation_message",
@@ -168,8 +167,6 @@ function nativeListeners(addresses: readonly string[], quic: boolean): IpEndpoin
 function validateChainConfig(config: BeaconConfig): void {
   nativeInteger(config.SUBNETS_PER_NODE, "long lived subnets", ATTESTATION_SUBNET_COUNT, 1);
   nativeInteger(config.EPOCHS_PER_SUBNET_SUBSCRIPTION, "subnet subscription epochs", Number.MAX_SAFE_INTEGER, 1);
-  nativeInteger(config.BLOB_SIDECAR_SUBNET_COUNT, "blob subnets", 128, 1);
-  nativeInteger(config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA, "electra blob subnets", 128, 1);
   nativeInteger(config.DATA_COLUMN_SIDECAR_SUBNET_COUNT, "column subnets", 128, 1);
   nativeInteger(config.forkBoundariesAscendingEpochOrder.length, "fork boundaries", 64, 1);
 }

@@ -15,7 +15,6 @@ pub fn extract(kind: Kind, fork: ForkSeq, data: []const u8) Metadata {
         .beacon_block => 100,
         .beacon_attestation => if (fork.gte(.electra)) 16 else 4,
         .beacon_aggregate_and_proof => 212,
-        .blob_sidecar => 8 + 131072 + 96,
         .data_column_sidecar => if (fork.gte(.gloas)) 16 else 20,
         .execution_payload => 712,
         .payload_attestation_message => 40,

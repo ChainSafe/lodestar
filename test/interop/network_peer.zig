@@ -318,8 +318,7 @@ pub fn main(init: std.process.Init) !void {
     const a = gpa.allocator();
     const args = try init.minimal.args.toSlice(init.arena.allocator());
     const application = args.len == 2 and std.mem.eql(u8, args[1], "--application");
-    var blob_schedule: [network.reqresp.request_policy.schedule_max]network.reqresp.request_policy.BlobLimit = undefined;
-    const policy = try network.reqresp.request_policy.Config.fromBeaconConfig(&config.mainnet.config, &blob_schedule);
+    const policy = try network.reqresp.request_policy.Config.fromBeaconConfig(&config.mainnet.config);
     const admission = try ReqResp.Options.Admission.defaults(&policy, 1);
     var control_admission = try ReqResp.Options.Admission.defaults(&policy, 4);
     control_admission.scope = .peer;

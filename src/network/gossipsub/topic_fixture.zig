@@ -7,7 +7,6 @@ pub fn full(digest: [4]u8) topic_policy.Boundary {
     boundary.rules[2].count = 64;
     boundary.rules[7].count = 4;
     boundary.rules[11].count = 128;
-    boundary.rules[12].count = 128;
     return boundary;
 }
 
@@ -31,10 +30,11 @@ pub const churn = [_]topic_policy.Boundary{ bytes(.{ 1, 2, 3, 4 }), bytes(.{ 5, 
 
 pub fn churnTopic(index: usize, out: []u8) ![]const u8 {
     std.debug.assert(index < constants.topics_cap);
+    const group = index % 192;
     return std.fmt.bufPrint(out, "/eth2/{x:0>8}/{s}_{d}/ssz_snappy", .{
-        @as(u32, if (index < 256) 0x01020304 else 0x05060708),
-        @as([]const u8, if (index % 256 < 128) "blob_sidecar" else "data_column_sidecar"),
-        index % 128,
+        @as(u32, ([_]u32{ 0x01020304, 0x05060708, 0x090a0b0c })[index / 192]),
+        @as([]const u8, if (group < 128) "data_column_sidecar" else "beacon_attestation"),
+        if (group < 128) group else group - 128,
     });
 }
 
@@ -43,8 +43,7 @@ pub fn hoodi() [5]topic_policy.Boundary {
     const digests = [_][4]u8{ .{ 0xd2, 0xf1, 0x99, 0x7f }, .{ 0x82, 0x55, 0x6a, 0x32 }, .{ 0xe2, 0xab, 0xcc, 0xa4 }, .{ 0xae, 0x9f, 0x70, 0xa0 }, .{ 0xc6, 0xec, 0xb7, 0x6c } };
     for (&out, digests, 0..) |*b, digest, i| {
         b.* = full(digest);
-        b.rules[11] = if (i < 2) .{ .count = if (i == 0) 6 else 9, .ssz_min = 10, .ssz_max = 100 } else .{};
-        if (i < 2) b.rules[12] = .{};
+        if (i < 2) b.rules[11] = .{};
     }
     return out;
 }

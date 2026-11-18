@@ -354,7 +354,7 @@ test "inbound admission delayed decode and equal timestamps retain acceptance th
     defer owner.deinit();
     const identity: PeerId = .{ .bytes = @splat(1) };
     const late = readySlot(&owner, 0, .blocks_by_root_v2, 0, identity, 10);
-    const early = readySlot(&owner, 0, .blob_sidecars_by_root_v1, 0, identity, 9);
+    const early = readySlot(&owner, 0, .data_column_sidecars_by_root_v1, 0, identity, 9);
     try std.testing.expect(late < early);
     // The older request decodes after the newer one has joined admission.
     deferStart(&owner, late, 10);
@@ -368,7 +368,7 @@ test "inbound admission delayed decode and equal timestamps retain acceptance th
     var ties = try rr.init(std.testing.allocator, options(1));
     defer ties.deinit();
     const low = readySlot(&ties, 0, .blocks_by_root_v2, 0, identity, 20);
-    const high = readySlot(&ties, 0, .blob_sidecars_by_root_v1, 0, identity, 20);
+    const high = readySlot(&ties, 0, .data_column_sidecars_by_root_v1, 0, identity, 20);
     // Reverse readiness order and start the round-robin scan at the higher slot.
     deferStart(&ties, high, 20);
     deferStart(&ties, low, 20);
@@ -385,7 +385,7 @@ test "inbound admission keeps an incomplete older request out of the ready start
     const early = readySlot(&owner, 0, .blocks_by_root_v2, 0, identity, 1);
     owner.inbound[early].state = .receiving_request;
     deferStart(&owner, early, 2);
-    const complete = readySlot(&owner, 0, .blob_sidecars_by_root_v1, 0, identity, 2);
+    const complete = readySlot(&owner, 0, .data_column_sidecars_by_root_v1, 0, identity, 2);
     deferStart(&owner, complete, 2);
     owner.admission.promoteReady(&owner, Now.fromMilliseconds(.{ .mono_ms = 2, .unix_s = 0 }));
     try std.testing.expect(owner.inbound[complete].request.pendingEvent() != null);

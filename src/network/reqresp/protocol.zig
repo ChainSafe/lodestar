@@ -23,8 +23,6 @@ pub const Protocol = enum(u8) {
     metadata_v3,
     blocks_by_range_v2,
     blocks_by_root_v2,
-    blob_sidecars_by_range_v1,
-    blob_sidecars_by_root_v1,
     data_column_sidecars_by_range_v1,
     data_column_sidecars_by_root_v1,
 
@@ -88,7 +86,7 @@ pub const Protocol = enum(u8) {
         return switch (self) {
             .status_v1, .status_v2, .goodbye_v1, .ping_v1, .metadata_v1, .metadata_v2, .metadata_v3 => true,
             .execution_payload_envelopes_by_range_v1, .execution_payload_envelopes_by_root_v1, .inclusion_lists_by_indices_v1 => false,
-            .blocks_by_range_v2, .blocks_by_root_v2, .blob_sidecars_by_range_v1, .blob_sidecars_by_root_v1, .data_column_sidecars_by_range_v1, .data_column_sidecars_by_root_v1, .blocks_by_head_v1, .light_client_bootstrap_v1, .light_client_updates_by_range_v1, .light_client_finality_update_v1, .light_client_optimistic_update_v1 => false,
+            .blocks_by_range_v2, .blocks_by_root_v2, .data_column_sidecars_by_range_v1, .data_column_sidecars_by_root_v1, .blocks_by_head_v1, .light_client_bootstrap_v1, .light_client_updates_by_range_v1, .light_client_finality_update_v1, .light_client_optimistic_update_v1 => false,
         };
     }
 
@@ -100,7 +98,6 @@ pub const Protocol = enum(u8) {
     fn responseFamily(self: Protocol) ?response_bounds.Family {
         return switch (self) {
             .blocks_by_range_v2, .blocks_by_root_v2, .blocks_by_head_v1 => .block,
-            .blob_sidecars_by_range_v1, .blob_sidecars_by_root_v1 => .blob,
             .data_column_sidecars_by_range_v1, .data_column_sidecars_by_root_v1 => .column,
             .execution_payload_envelopes_by_range_v1, .execution_payload_envelopes_by_root_v1 => .execution_payload,
             .inclusion_lists_by_indices_v1 => .inclusion_list,
@@ -138,8 +135,6 @@ fn name(comptime protocol: Protocol) []const u8 {
         .metadata_v1, .metadata_v2, .metadata_v3 => "metadata",
         .blocks_by_range_v2 => "beacon_blocks_by_range",
         .blocks_by_root_v2 => "beacon_blocks_by_root",
-        .blob_sidecars_by_range_v1 => "blob_sidecars_by_range",
-        .blob_sidecars_by_root_v1 => "blob_sidecars_by_root",
         .data_column_sidecars_by_range_v1 => "data_column_sidecars_by_range",
         .data_column_sidecars_by_root_v1 => "data_column_sidecars_by_root",
         .blocks_by_head_v1 => "beacon_blocks_by_head",
@@ -207,16 +202,6 @@ fn entry(comptime protocol: Protocol) Info {
             0,
             ct.phase0.BeaconBlockRoots.max_size,
             consensus.MAX_REQUEST_BLOCKS,
-        ),
-        .blob_sidecars_by_range_v1 => chunked(
-            ct.deneb.BlobSidecarsByRangeRequest.fixed_size,
-            ct.deneb.BlobSidecarsByRangeRequest.fixed_size,
-            constants.blob_identifiers_capacity,
-        ),
-        .blob_sidecars_by_root_v1 => chunked(
-            0,
-            ct.deneb.BlobIdentifier.fixed_size * constants.blob_identifiers_capacity,
-            constants.blob_identifiers_capacity,
         ),
         .data_column_sidecars_by_range_v1 => chunked(
             ct.fulu.DataColumnSidecarsByRangeRequest.min_size,
@@ -295,7 +280,7 @@ pub fn payloadMaxControl() usize {
 
 comptime {
     @setEvalBranchQuota(2000);
-    assert(Protocol.count == 21);
+    assert(Protocol.count == 19);
     for (table) |bounds| {
         assert(bounds.request_min <= bounds.request_max);
         assert(bounds.request_max <= constants.MAX_PAYLOAD_SIZE);
@@ -307,7 +292,6 @@ comptime {
         for (ids[0..index]) |earlier| assert(!std.mem.eql(u8, candidate, earlier));
         assert(candidate.len <= id_length_max);
     }
-    assert(requestMaxAll() >= ct.deneb.BlobIdentifier.fixed_size * constants.blob_identifiers_capacity);
 }
 
 test {

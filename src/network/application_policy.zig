@@ -100,7 +100,6 @@ fn maximumSizes(boundaries: []const topics.Boundary) [topics.kind_count]u32 {
 
 fn activeSendItems() [topics.kind_count]u16 {
     var result: [topics.kind_count]u16 = @splat(8);
-    result[@intFromEnum(Kind.blob_sidecar)] = 32;
     result[@intFromEnum(Kind.data_column_sidecar)] = 256;
     return result;
 }
@@ -120,7 +119,6 @@ const plan: [topics.kind_count]Plan = blk: {
         .{ Kind.light_client_finality_update, 8, 2, 1, 2 },
         .{ Kind.light_client_optimistic_update, 8, 2, 1, 2 },
         .{ Kind.bls_to_execution_change, 128, 1, 1, 1 },
-        .{ Kind.blob_sidecar, 256, 8, 4, 8 },
         .{ Kind.data_column_sidecar, 256, 16, 8, 24 },
         .{ Kind.execution_payload, 32, 24, 1, 32 },
         .{ Kind.payload_attestation_message, 1024, 2, 4, 1 },

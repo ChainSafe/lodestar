@@ -114,7 +114,7 @@ export function networkConfig(): NativeRuntimeConfig & {
     genesisTime: BigInt(Math.floor(Date.now() / 1000)) - 1200n,
     gossipPolicy: {
       activeSendItems: Object.fromEntries(
-        topicKinds.map((kind) => [kind, kind === "data_column_sidecar" ? 256 : kind === "blob_sidecar" ? 32 : 8])
+        topicKinds.map((kind) => [kind, kind === "data_column_sidecar" ? 256 : 8])
       ) as Record<NativeTopicKind, number>,
       activeSendTimeoutMs: 6000n,
       largeFrameTimeoutMs: 6000n,
@@ -287,7 +287,6 @@ export const topicKinds: readonly NativeTopicKind[] = [
   "light_client_finality_update",
   "light_client_optimistic_update",
   "bls_to_execution_change",
-  "blob_sidecar",
   "data_column_sidecar",
 ];
 

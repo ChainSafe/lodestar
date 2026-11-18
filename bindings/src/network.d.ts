@@ -128,7 +128,6 @@ export type NativeTopicKind =
   | "light_client_finality_update"
   | "light_client_optimistic_update"
   | "bls_to_execution_change"
-  | "blob_sidecar"
   | "data_column_sidecar"
   | "execution_payload"
   | "payload_attestation_message"
@@ -251,8 +250,6 @@ export type NativeProtocolId =
 export type NativeRequestProtocolId =
   | "/eth2/beacon_chain/req/beacon_blocks_by_range/2/ssz_snappy"
   | "/eth2/beacon_chain/req/beacon_blocks_by_root/2/ssz_snappy"
-  | "/eth2/beacon_chain/req/blob_sidecars_by_range/1/ssz_snappy"
-  | "/eth2/beacon_chain/req/blob_sidecars_by_root/1/ssz_snappy"
   | "/eth2/beacon_chain/req/data_column_sidecars_by_range/1/ssz_snappy"
   | "/eth2/beacon_chain/req/data_column_sidecars_by_root/1/ssz_snappy"
   | "/eth2/beacon_chain/req/beacon_blocks_by_head/1/ssz_snappy"

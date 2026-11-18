@@ -17,8 +17,6 @@ test "reqresp quotas preserve every protocol rate across chain configurations an
         .{ .protocol = .metadata_v3, .tokens = .{ 2, 2, 2 }, .period_ms = 5_000 },
         .{ .protocol = .blocks_by_range_v2, .tokens = .{ 1024, 128, 128 }, .period_ms = 10_000 },
         .{ .protocol = .blocks_by_root_v2, .tokens = .{ 1024, 128, 128 }, .period_ms = 10_000 },
-        .{ .protocol = .blob_sidecars_by_range_v1, .tokens = .{ 768, 768, 1152 }, .period_ms = 10_000 },
-        .{ .protocol = .blob_sidecars_by_root_v1, .tokens = .{ 768, 768, 1152 }, .period_ms = 10_000 },
         .{ .protocol = .data_column_sidecars_by_range_v1, .tokens = .{ 16_384, 16_384, 16_384 }, .period_ms = 10_000 },
         .{ .protocol = .data_column_sidecars_by_root_v1, .tokens = .{ 16_384, 16_384, 16_384 }, .period_ms = 10_000 },
         .{ .protocol = .blocks_by_head_v1, .tokens = .{ 128, 128, 128 }, .period_ms = 10_000 },
@@ -32,11 +30,10 @@ test "reqresp quotas preserve every protocol rate across chain configurations an
     };
     try std.testing.expectEqual(Protocol.count, cases.len);
     for ([_]*const config.BeaconConfig{ &config.mainnet.config, &config.minimal.config }) |chain| {
-        var points: [request_policy.schedule_max]request_policy.BlobLimit = undefined;
-        const policy = try request_policy.Config.fromBeaconConfig(chain, &points);
+        const policy = try request_policy.Config.fromBeaconConfig(chain);
         const limits = try Options.defaults(&policy, 8);
-        try std.testing.expectEqual(@as(u32, 336), limits.global_starts.tokens);
-        try std.testing.expectEqual(@as(u32, 42), limits.starts.tokens);
+        try std.testing.expectEqual(@as(u32, 304), limits.global_starts.tokens);
+        try std.testing.expectEqual(@as(u32, 38), limits.starts.tokens);
         try std.testing.expectEqual(@as(u64, 10_000), limits.starts.period_ms);
         for (std.enums.values(config.ForkSeq)) |fork| {
             const era: usize = if (fork.gte(.electra)) 2 else if (fork.gte(.deneb)) 1 else 0;
@@ -59,8 +56,7 @@ test "reqresp light client quotas use chain slot durations across forks" {
         for ([_]u64{ 1, 1000, 5000, 6000, 12000, 24000, 86_400_000 }) |slot_ms| {
             const chain = base.chain.merge(.{ .SLOT_DURATION_MS_HEZE = slot_ms });
             const beacon = config.BeaconConfig.init(chain, @splat(0));
-            var points: [request_policy.schedule_max]request_policy.BlobLimit = undefined;
-            const policy = try request_policy.Config.fromBeaconConfig(&beacon, &points);
+            const policy = try request_policy.Config.fromBeaconConfig(&beacon);
             const limits = try Options.defaults(&policy, 8);
             for (std.enums.values(config.ForkSeq)) |fork| {
                 for ([_]Protocol{ .light_client_finality_update_v1, .light_client_optimistic_update_v1 }) |which| {
@@ -84,8 +80,7 @@ test "reqresp quota derivation rejects invalid slot durations" {
             var chain = config.mainnet.chain_config;
             @field(chain, field) = duration;
             const beacon = config.BeaconConfig.init(chain, @splat(0));
-            var points: [request_policy.schedule_max]request_policy.BlobLimit = undefined;
-            try std.testing.expectError(error.InvalidPolicy, request_policy.Config.fromBeaconConfig(&beacon, &points));
+            try std.testing.expectError(error.InvalidPolicy, request_policy.Config.fromBeaconConfig(&beacon));
         }
     }
 }
@@ -94,15 +89,12 @@ test "reqresp quotas follow configured request bounds and scale the instance glo
     var policy = fixture.config();
     policy.blocks_pre_deneb = 16;
     policy.blocks_deneb = 8;
-    policy.blob_identifiers_deneb = 24;
-    policy.blob_identifiers_electra = 48;
     policy.column_chunks = 96;
     for ([_]u16{ 1, 2, 3, 8, 210 }) |scale| {
         const limits = try Options.defaults(&policy, scale);
         for (std.enums.values(config.ForkSeq)) |fork| {
             try std.testing.expectEqual(@as(u32, if (fork.gte(.deneb)) 8 else 16), limits.source.get(.blocks_by_root_v2, fork).tokens);
             try std.testing.expectEqual(@as(u32, 8), limits.source.get(.blocks_by_head_v1, fork).tokens);
-            try std.testing.expectEqual(@as(u32, if (fork.gte(.electra)) 48 else 24), limits.source.get(.blob_sidecars_by_root_v1, fork).tokens);
             try std.testing.expectEqual(@as(u32, 96 * scale), limits.global.get(.data_column_sidecars_by_range_v1, fork).tokens);
             try std.testing.expectEqual(@as(u32, 2) * scale, limits.global.get(.ping_v1, fork).tokens);
         }

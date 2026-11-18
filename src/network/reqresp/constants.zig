@@ -40,6 +40,3 @@ comptime {
     std.debug.assert(result_resource_unavailable < result_reserved_max);
     std.debug.assert(app_error_timeout > 4);
 }
-
-/// Implementation capacity, independent of a chain's fork-specific request limits.
-pub const blob_identifiers_capacity = 4096;

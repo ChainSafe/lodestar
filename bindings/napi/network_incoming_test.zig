@@ -173,7 +173,7 @@ test "sent responses wait for next-chunk credit and can close while waiting" {
             .seed = 1,
             .gossip = .{ .topic_policy = &test_support.topic_policy },
             .forks = &pair.forks,
-            .admission_policy = .{ .deneb_start_slot = 0, .blocks_pre_deneb = 1024, .blocks_deneb = 128, .blob_identifiers_deneb = 768, .blob_identifiers_electra = 1152, .number_of_columns = 128, .column_chunks = 16384, .blob_schedule = &.{.{ .start_slot = 0, .max_blobs = 6 }} },
+            .admission_policy = .{ .deneb_start_slot = 0, .blocks_pre_deneb = 1024, .blocks_deneb = 128, .number_of_columns = 128, .column_chunks = 16384 },
         });
         try pair.shared.pair.init(resolved.limits, resolved.limits);
         defer pair.shared.pair.deinit();

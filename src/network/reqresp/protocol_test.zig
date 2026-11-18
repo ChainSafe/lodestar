@@ -52,9 +52,7 @@ test "protocol info sizes follow the consensus types" {
     try std.testing.expect(blocks.context_bytes);
     try std.testing.expectEqual(@as(u32, consensus.MAX_REQUEST_BLOCKS), blocks.chunks_max);
     try std.testing.expectEqual(ct.phase0.BeaconBlockRoots.max_size, Protocol.blocks_by_root_v2.info().request_max);
-    try std.testing.expectEqual(ct.deneb.BlobSidecar.fixed_size, Protocol.blob_sidecars_by_root_v1.info().response_min);
     try std.testing.expectEqual(@as(u32, preset.MAX_REQUEST_DATA_COLUMN_SIDECARS), Protocol.data_column_sidecars_by_range_v1.info().chunks_max);
-    try std.testing.expectEqual(protocol.requestMaxAll(), Protocol.blob_sidecars_by_root_v1.info().request_max);
 }
 
 test "reqresp active head request bounds count before admission" {

@@ -6,7 +6,6 @@ const constants = @import("constants.zig");
 
 pub const Family = enum {
     block,
-    blob,
     column,
     execution_payload,
     inclusion_list,
@@ -29,7 +28,6 @@ pub fn forFork(family: Family, fork: config.ForkSeq) error{InvalidResponseContex
             const types = @field(ct, @tagName(selected));
             return switch (family) {
                 .block => typeBounds(types.SignedBeaconBlock),
-                .blob => if (comptime selected.gte(.deneb)) typeBounds(types.BlobSidecar) else error.InvalidResponseContext,
                 .column => if (comptime selected.gte(.fulu)) typeBounds(types.DataColumnSidecar) else error.InvalidResponseContext,
                 .execution_payload => if (comptime selected.gte(.gloas)) typeBounds(types.SignedExecutionPayloadEnvelope) else error.InvalidResponseContext,
                 .inclusion_list => if (comptime selected.gte(.heze)) typeBounds(types.SignedInclusionList) else error.InvalidResponseContext,
