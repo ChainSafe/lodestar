@@ -156,7 +156,7 @@ test.each(["absent", "undefined", "empty"] as const)("derives default gossip pol
   const runtime = startRuntime(config);
   try {
     const metrics = await runtime.getMetrics();
-    expect(metrics).toContain('lodestar_gossip_validation_concurrency_limit{topic="beacon_block"} 8\n');
+    expect(metrics).toContain('lodestar_gossip_validation_concurrency_limit{topic="beacon_block"} 32\n');
     expect(metrics).toContain('lodestar_gossip_validation_concurrency_limit{topic="beacon_attestation"} 128\n');
   } finally {
     await runtime.close();
