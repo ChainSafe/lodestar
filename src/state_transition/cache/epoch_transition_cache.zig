@@ -36,6 +36,7 @@ const computeBaseRewardPerIncrement = @import("../utils/sync_committee.zig").com
 const processPendingAttestations = @import("../epoch/process_pending_attestations.zig").processPendingAttestations;
 const Node = @import("persistent_merkle_tree").Node;
 const vfc = @import("./validator_flat_cache.zig");
+const validator_chunks = @import("../utils/validator_chunks.zig");
 const ValidatorFlatCache = vfc.ValidatorFlatCache;
 const EpochShufflingRc = @import("../utils/epoch_shuffling.zig").EpochShufflingRc;
 const EpochShuffling = @import("../utils/epoch_shuffling.zig").EpochShuffling;
@@ -106,10 +107,167 @@ const UnslashedStakes = struct {
         self.prev_head +%= increment * @intFromBool(hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_UNSLASHED));
         self.curr_target +%= increment * @intFromBool(hasMarkers(flag, FLAG_CURR_TARGET_UNSLASHED));
     }
+
+    fn merge(self: *UnslashedStakes, other: UnslashedStakes) void {
+        self.prev_source +%= other.prev_source;
+        self.prev_target +%= other.prev_target;
+        self.prev_head +%= other.prev_head;
+        self.curr_target +%= other.curr_target;
+    }
 };
 
+/// Inputs and per-validator outputs of the validator scan in `EpochTransitionCache.init`. Chunk
+/// tasks run on several threads at once, so each writes only its own index range of the slices.
+const ValidatorScan = struct {
+    fields: std.MultiArrayList(vfc.ValidatorFields).Slice,
+    effective_balance_increments: []const u16,
+    /// Null before altair, where participation comes from pending attestations instead.
+    previous_epoch_participation: ?[]const u8,
+    current_epoch_participation: ?[]const u8,
+    prev_epoch: Epoch,
+    current_epoch: Epoch,
+    slashings_epoch: Epoch,
+    ejection_balance: u64,
+    is_active_prev: []bool,
+    is_active_curr: []bool,
+    is_active_next: []bool,
+    /// Empty before electra.
+    is_compounding: []bool,
+    flags: []u8,
+    /// A chunk writes its active indices for `current_epoch + 2` from its own start onward.
+    next_active: []u32,
+    /// A chunk writes the indices that `classifyRegistryCandidate` selects from its own start
+    /// onward, so the tasks allocate nothing and the lists are built afterwards in index order.
+    registry_candidates: []u32,
+    chunk_results: []ValidatorScanChunk,
+};
+
+const ValidatorScanChunk = struct {
+    total_active_stake_by_increment: u64 = 0,
+    unslashed_stakes: UnslashedStakes = .{},
+    next_active_count: usize = 0,
+    registry_candidate_count: usize = 0,
+};
+
+const RegistryCandidate = struct {
+    to_slash: bool,
+    list: enum { none, activation_queue, activation, eject },
+};
+
+inline fn classifyRegistryCandidate(scan: *const ValidatorScan, validator: vfc.ValidatorFields, is_active_curr: bool) RegistryCandidate {
+    return .{
+        .to_slash = validator.bits.slashed and scan.slashings_epoch == validator.withdrawable_epoch,
+        // To optimize process_registry_updates():
+        // ```python
+        // def is_eligible_for_activation_queue(validator: Validator) -> bool:
+        //   return (
+        //     validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
+        //     and validator.effective_balance >= MAX_EFFECTIVE_BALANCE # [Modified in Electra]
+        //   )
+        // ```
+        .list = if (validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH and validator.effective_balance >= MIN_ACTIVATION_BALANCE)
+            .activation_queue
+            // To optimize process_registry_updates():
+            // ```python
+            // def is_eligible_for_activation(state: BeaconState, validator: Validator) -> bool:
+            //   return (
+            //     validator.activation_eligibility_epoch <= state.finalized_checkpoint.epoch  # Placement in queue is finalized
+            //     and validator.activation_epoch == FAR_FUTURE_EPOCH                          # Has not yet been activated
+            //   )
+            // ```
+            // Here we have to check if `activationEligibilityEpoch <= currentEpoch` instead of finalized checkpoint, because the finalized
+            // checkpoint may change during epoch processing at processJustificationAndFinalization(), which is called before processRegistryUpdates().
+            // Then in processRegistryUpdates() we will check `activationEligibilityEpoch <= finalityEpoch`. This is to keep the array small.
+            //
+            // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation are mutually exclusive
+        else if (validator.activation_epoch == FAR_FUTURE_EPOCH and validator.activation_eligibility_epoch <= scan.current_epoch)
+            .activation
+            // To optimize process_registry_updates():
+            // ```python
+            // if is_active_validator(validator, get_current_epoch(state)) and validator.effective_balance <= EJECTION_BALANCE:
+            // ```
+            // Adding extra condition `exitEpoch === FAR_FUTURE_EPOCH` to keep the array as small as possible. initiateValidatorExit() will ignore them anyway
+            //
+            // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation + indicesToEject are mutually exclusive
+        else if (is_active_curr and validator.exit_epoch == FAR_FUTURE_EPOCH and validator.effective_balance <= scan.ejection_balance)
+            .eject
+        else
+            .none,
+    };
+}
+
+fn scanValidatorChunk(scan_ptr: *const ValidatorScan, chunk: validator_chunks.Chunk) void {
+    const scan = scan_ptr.*;
+    const prev_epoch = scan.prev_epoch;
+    const current_epoch = scan.current_epoch;
+    const next_epoch = current_epoch + 1;
+    // active validator indices for nextShuffling is ready, we want to precalculate for the one after that
+    const next_epoch_2 = current_epoch + 2;
+
+    var total_active_stake_by_increment: u64 = 0;
+    var unslashed_stakes: UnslashedStakes = .{};
+    var next_active_count: usize = 0;
+    var registry_candidate_count: usize = 0;
+    for (chunk.start..chunk.end) |i| {
+        const validator = scan.fields.get(i);
+        const activation_epoch = validator.activation_epoch;
+        const exit_epoch = validator.exit_epoch;
+        const is_active_prev: bool = activation_epoch <= prev_epoch and prev_epoch < exit_epoch;
+        const is_active_curr: bool = activation_epoch <= current_epoch and current_epoch < exit_epoch;
+        const is_active_next: bool = activation_epoch <= next_epoch and next_epoch < exit_epoch;
+        const is_active_next_2: bool = activation_epoch <= next_epoch_2 and next_epoch_2 < exit_epoch;
+
+        var flag: u8 = 0;
+        if (!validator.bits.slashed) flag |= FLAG_UNSLASHED;
+        // Both active validators and slashed-but-not-yet-withdrawn validators are eligible to receive penalties.
+        // This is done to prevent self-slashing from being a way to escape inactivity leaks.
+        // TODO: Consider using an array of `eligible ValidatorIndex: number[]`
+        if (is_active_prev or (validator.bits.slashed and prev_epoch + 1 < validator.withdrawable_epoch)) {
+            flag |= FLAG_ELIGIBLE_ATTESTER;
+        }
+        if (scan.previous_epoch_participation) |previous_epoch_participation| {
+            flag |=
+                // checking active status first is required to pass random spec tests in altair
+                // in practice, inactive validators will have 0 participation
+                // FLAG_PREV are indexes [0,1,2]
+                (if (is_active_prev) previous_epoch_participation[i] else 0) |
+                // FLAG_CURR are indexes [3,4,5], so shift by 3
+                (if (is_active_curr) scan.current_epoch_participation.?[i] << 3 else 0);
+            unslashed_stakes.add(flag, scan.effective_balance_increments[i]);
+        }
+
+        scan.flags[i] = flag;
+        scan.is_active_prev[i] = is_active_prev;
+        scan.is_active_curr[i] = is_active_curr;
+        scan.is_active_next[i] = is_active_next;
+        if (scan.is_compounding.len > 0) scan.is_compounding[i] = validator.bits.compounding;
+
+        if (is_active_curr) {
+            total_active_stake_by_increment += scan.effective_balance_increments[i];
+        }
+
+        const candidate = classifyRegistryCandidate(&scan, validator, is_active_curr);
+        if (candidate.to_slash or candidate.list != .none) {
+            scan.registry_candidates[chunk.start + registry_candidate_count] = @intCast(i);
+            registry_candidate_count += 1;
+        }
+
+        if (is_active_next_2) {
+            scan.next_active[chunk.start + next_active_count] = @intCast(i);
+            next_active_count += 1;
+        }
+    }
+
+    scan.chunk_results[chunk.index] = .{
+        .total_active_stake_by_increment = total_active_stake_by_increment,
+        .unslashed_stakes = unslashed_stakes,
+        .next_active_count = next_active_count,
+        .registry_candidate_count = registry_candidate_count,
+    };
+}
+
 const ShufflingJob = struct {
-    const Error = Allocator.Error || @import("swap_or_not_shuffle").ShufflingError;
+    const Error = Allocator.Error || @import("swap_or_not_shuffle").ShufflingError || std.Io.Cancelable;
 
     io: std.Io,
     future: std.Io.Future(Error!Result),
@@ -123,7 +281,7 @@ const ShufflingJob = struct {
         errdefer allocator.free(active_indices);
 
         const timer = time.start(io);
-        const shuffling = try EpochShuffling.init(allocator, seed, epoch, active_indices);
+        const shuffling = try EpochShuffling.init(allocator, io, seed, epoch, active_indices);
         return .{ .shuffling = shuffling, .duration = time.since(io, timer) };
     }
 
@@ -160,6 +318,12 @@ const ReusedEpochTransitionCache = struct {
     flags: U8Array,
 
     next_epoch_shuffling_active_validator_indices: std.ArrayList(u32),
+    /// Per-validator index scratch for the chunked epoch steps, with the same spare tail as
+    /// balances_buffer for validators that processPendingDeposits appends.
+    index_scratch: std.ArrayList(u32),
+    /// One count per validator chunk for the chunked epoch steps, with the same spare tail as
+    /// index_scratch.
+    chunk_counts: UsizeArray,
 
     is_compounding_validator_arr: BoolArray,
 
@@ -189,6 +353,16 @@ const ReusedEpochTransitionCache = struct {
         errdefer self.flags.deinit(allocator);
         self.next_epoch_shuffling_active_validator_indices = try std.ArrayList(u32).initCapacity(allocator, validator_count);
         errdefer self.next_epoch_shuffling_active_validator_indices.deinit(allocator);
+        self.index_scratch = try std.ArrayList(u32).initCapacity(
+            allocator,
+            validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH,
+        );
+        errdefer self.index_scratch.deinit(allocator);
+        self.chunk_counts = try UsizeArray.initCapacity(
+            allocator,
+            validator_chunks.count(validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH),
+        );
+        errdefer self.chunk_counts.deinit(allocator);
         self.is_compounding_validator_arr = .empty;
         self.previous_epoch_participation = .empty;
         self.current_epoch_participation = .empty;
@@ -209,6 +383,14 @@ const ReusedEpochTransitionCache = struct {
         try self.is_active_next_epoch.resize(self.allocator, validator_count);
         try self.flags.resize(self.allocator, validator_count);
         try self.next_epoch_shuffling_active_validator_indices.resize(self.allocator, validator_count);
+        try self.index_scratch.resize(
+            self.allocator,
+            validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH,
+        );
+        try self.chunk_counts.resize(
+            self.allocator,
+            validator_chunks.count(validator_count + preset.MAX_PENDING_DEPOSITS_PER_EPOCH),
+        );
         try self.validator_scratch.resize(self.allocator, validator_count);
         try self.penalties.resize(self.allocator, validator_count);
         try self.balances_buffer.resize(
@@ -226,6 +408,8 @@ const ReusedEpochTransitionCache = struct {
         self.inclusion_delays.deinit(self.allocator);
         self.flags.deinit(self.allocator);
         self.next_epoch_shuffling_active_validator_indices.deinit(self.allocator);
+        self.index_scratch.deinit(self.allocator);
+        self.chunk_counts.deinit(self.allocator);
         self.is_compounding_validator_arr.deinit(self.allocator);
         self.previous_epoch_participation.deinit(self.allocator);
         self.current_epoch_participation.deinit(self.allocator);
@@ -296,6 +480,12 @@ pub const EpochTransitionCache = struct {
     /// Shared by processInactivityUpdates() and getRewardsAndPenalties(). Holds the previous step's
     /// values, so each step overwrites it before reading.
     validator_scratch: []u64,
+    /// Index scratch for the chunked epoch steps, overwritten by each step like validator_scratch.
+    /// Covers the validators processPendingDeposits appends.
+    index_scratch: []u32,
+    /// One count per validator chunk, overwritten by each step like index_scratch. Covers the
+    /// validators processPendingDeposits appends.
+    chunk_counts: []usize,
     penalties: []u64,
     slashing_penalties: []u64,
     balances_buffer: []u64,
@@ -321,6 +511,7 @@ pub const EpochTransitionCache = struct {
     // this is the same to beforeProcessEpoch in typesript version
     pub fn init(
         allocator: Allocator,
+        io: std.Io,
         config: *const BeaconConfig,
         epoch_cache: *EpochCache,
         state: *AnyBeaconState,
@@ -328,9 +519,6 @@ pub const EpochTransitionCache = struct {
         const fork_seq = state.forkSeq();
         const current_epoch = epoch_cache.epoch;
         const prev_epoch = epoch_cache.getPreviousShuffling().epoch;
-        const next_epoch = current_epoch + 1;
-        // active validator indices for nextShuffling is ready, we want to precalculate for the one after that
-        const next_epoch_2 = current_epoch + 2;
 
         const slashings_epoch = current_epoch + @divFloor(preset.EPOCHS_PER_SLASHINGS_VECTOR, 2);
 
@@ -368,107 +556,74 @@ pub const EpochTransitionCache = struct {
 
         const effective_balances_by_increments = epoch_cache.getEffectiveBalanceIncrements().items;
 
-        var next_epoch_shuffling_active_indices_length: usize = 0;
-
         if (fork_seq.gte(.electra)) {
             try reused_cache.is_compounding_validator_arr.resize(reused_cache.allocator, validator_count);
         }
+        if (fork_seq.gte(.altair)) {
+            try reused_cache.previous_epoch_participation.resize(reused_cache.allocator, validator_count);
+            try reused_cache.current_epoch_participation.resize(reused_cache.allocator, validator_count);
+
+            var previous_epoch_participation_view = try state.previousEpochParticipation();
+            _ = try previous_epoch_participation_view.getAllInto(reused_cache.previous_epoch_participation.items);
+            var current_epoch_participation_view = try state.currentEpochParticipation();
+            _ = try current_epoch_participation_view.getAllInto(reused_cache.current_epoch_participation.items);
+        }
+
+        const chunk_results = try allocator.alloc(ValidatorScanChunk, validator_chunks.count(validator_count));
+        defer allocator.free(chunk_results);
+
         const cached_fields = validator_flat_cache.fields.slice();
-        const is_active_prev_arr = reused_cache.is_active_prev_epoch.items[0..validator_count];
-        const is_active_curr_arr = reused_cache.is_active_current_epoch.items[0..validator_count];
-        const is_active_next_arr = reused_cache.is_active_next_epoch.items[0..validator_count];
-        const flags_arr = reused_cache.flags.items[0..validator_count];
-        const next_active_arr = reused_cache.next_epoch_shuffling_active_validator_indices.items;
-        const is_compounding_arr = reused_cache.is_compounding_validator_arr.items;
-        for (0..validator_count) |i| {
-            const validator = cached_fields.get(i);
-            var flag: u8 = 0;
+        const scan: ValidatorScan = .{
+            .fields = cached_fields,
+            .effective_balance_increments = effective_balances_by_increments[0..validator_count],
+            .previous_epoch_participation = if (fork_seq.gte(.altair)) reused_cache.previous_epoch_participation.items[0..validator_count] else null,
+            .current_epoch_participation = if (fork_seq.gte(.altair)) reused_cache.current_epoch_participation.items[0..validator_count] else null,
+            .prev_epoch = prev_epoch,
+            .current_epoch = current_epoch,
+            .slashings_epoch = slashings_epoch,
+            .ejection_balance = config.chain.EJECTION_BALANCE,
+            .is_active_prev = reused_cache.is_active_prev_epoch.items[0..validator_count],
+            .is_active_curr = reused_cache.is_active_current_epoch.items[0..validator_count],
+            .is_active_next = reused_cache.is_active_next_epoch.items[0..validator_count],
+            .is_compounding = if (fork_seq.gte(.electra)) reused_cache.is_compounding_validator_arr.items[0..validator_count] else &.{},
+            .flags = reused_cache.flags.items[0..validator_count],
+            .next_active = reused_cache.next_epoch_shuffling_active_validator_indices.items[0..validator_count],
+            .registry_candidates = reused_cache.index_scratch.items[0..validator_count],
+            .chunk_results = chunk_results,
+        };
 
-            if (validator.bits.slashed) {
-                if (slashings_epoch == validator.withdrawable_epoch) {
-                    try indices_to_slash.append(allocator, i);
+        try validator_chunks.run(io, validator_count, &scan, scanValidatorChunk);
+
+        // Merging in chunk order keeps every list in ascending validator index order.
+        var scan_unslashed_stakes: UnslashedStakes = .{};
+        var next_epoch_shuffling_active_indices_length: usize = 0;
+        for (chunk_results, 0..) |result, chunk_index| {
+            const chunk = validator_chunks.at(validator_count, chunk_index);
+            total_active_stake_by_increment += result.total_active_stake_by_increment;
+            scan_unslashed_stakes.merge(result.unslashed_stakes);
+
+            std.mem.copyForwards(
+                u32,
+                scan.next_active[next_epoch_shuffling_active_indices_length..][0..result.next_active_count],
+                scan.next_active[chunk.start..][0..result.next_active_count],
+            );
+            next_epoch_shuffling_active_indices_length += result.next_active_count;
+
+            for (scan.registry_candidates[chunk.start..][0..result.registry_candidate_count]) |index| {
+                const validator = cached_fields.get(index);
+                const candidate = classifyRegistryCandidate(&scan, validator, scan.is_active_curr[index]);
+                if (candidate.to_slash) try indices_to_slash.append(allocator, index);
+                switch (candidate.list) {
+                    .none => {},
+                    .activation_queue => try indices_eligible_for_activation_queue.append(allocator, index),
+                    .activation => try validator_activation_list.append(allocator, .{
+                        .validator_index = index,
+                        .activation_eligibility_epoch = validator.activation_eligibility_epoch,
+                    }),
+                    .eject => try indices_to_eject.append(allocator, index),
                 }
-            } else {
-                flag |= FLAG_UNSLASHED;
             }
-
-            const activation_epoch = validator.activation_epoch;
-            const exit_epoch = validator.exit_epoch;
-            const is_active_prev: bool = activation_epoch <= prev_epoch and prev_epoch < exit_epoch;
-            const is_active_curr: bool = activation_epoch <= current_epoch and current_epoch < exit_epoch;
-            const is_active_next: bool = activation_epoch <= next_epoch and next_epoch < exit_epoch;
-            const is_active_next_2: bool = activation_epoch <= next_epoch_2 and next_epoch_2 < exit_epoch;
-
-            is_active_prev_arr[i] = is_active_prev;
-
-            // Both active validators and slashed-but-not-yet-withdrawn validators are eligible to receive penalties.
-            // This is done to prevent self-slashing from being a way to escape inactivity leaks.
-            // TODO: Consider using an array of `eligible ValidatorIndex: number[]`
-            if (is_active_prev or (validator.bits.slashed and prev_epoch + 1 < validator.withdrawable_epoch)) {
-                flag |= FLAG_ELIGIBLE_ATTESTER;
-            }
-
-            flags_arr[i] = flag;
-
-            if (fork_seq.gte(.electra)) {
-                is_compounding_arr[i] = validator.bits.compounding;
-            }
-
-            is_active_curr_arr[i] = is_active_curr;
-            if (is_active_curr) {
-                total_active_stake_by_increment += effective_balances_by_increments[i];
-            }
-
-            // To optimize process_registry_updates():
-            // ```python
-            // def is_eligible_for_activation_queue(validator: Validator) -> bool:
-            //   return (
-            //     validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
-            //     and validator.effective_balance >= MAX_EFFECTIVE_BALANCE # [Modified in Electra]
-            //   )
-            // ```
-            if (validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH and validator.effective_balance >= MIN_ACTIVATION_BALANCE) {
-                try indices_eligible_for_activation_queue.append(allocator, i);
-            }
-
-            // To optimize process_registry_updates():
-            // ```python
-            // def is_eligible_for_activation(state: BeaconState, validator: Validator) -> bool:
-            //   return (
-            //     validator.activation_eligibility_epoch <= state.finalized_checkpoint.epoch  # Placement in queue is finalized
-            //     and validator.activation_epoch == FAR_FUTURE_EPOCH                          # Has not yet been activated
-            //   )
-            // ```
-            // Here we have to check if `activationEligibilityEpoch <= currentEpoch` instead of finalized checkpoint, because the finalized
-            // checkpoint may change during epoch processing at processJustificationAndFinalization(), which is called before processRegistryUpdates().
-            // Then in processRegistryUpdates() we will check `activationEligibilityEpoch <= finalityEpoch`. This is to keep the array small.
-            //
-            // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation are mutually exclusive
-            else if (validator.activation_epoch == FAR_FUTURE_EPOCH and validator.activation_eligibility_epoch <= current_epoch) {
-                try validator_activation_list.append(allocator, .{
-                    .validator_index = i,
-                    .activation_eligibility_epoch = validator.activation_eligibility_epoch,
-                });
-            }
-
-            // To optimize process_registry_updates():
-            // ```python
-            // if is_active_validator(validator, get_current_epoch(state)) and validator.effective_balance <= EJECTION_BALANCE:
-            // ```
-            // Adding extra condition `exitEpoch === FAR_FUTURE_EPOCH` to keep the array as small as possible. initiateValidatorExit() will ignore them anyway
-            //
-            // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation + indicesToEject are mutually exclusive
-            else if (is_active_curr and validator.exit_epoch == FAR_FUTURE_EPOCH and validator.effective_balance <= config.chain.EJECTION_BALANCE) {
-                try indices_to_eject.append(allocator, i);
-            }
-
-            is_active_next_arr[i] = is_active_next;
-
-            if (is_active_next_2) {
-                next_active_arr[next_epoch_shuffling_active_indices_length] = @intCast(i);
-                next_epoch_shuffling_active_indices_length += 1;
-            }
-        } // end validator loop
+        }
 
         // no need to trigger async build as zig should be fast enough
 
@@ -557,34 +712,7 @@ pub const EpochTransitionCache = struct {
                 unslashed_stakes.add(reused_cache.flags.items[i], effective_balances_by_increments[i]);
             }
         } else {
-            try reused_cache.previous_epoch_participation.resize(reused_cache.allocator, validator_count);
-            try reused_cache.current_epoch_participation.resize(reused_cache.allocator, validator_count);
-
-            var previous_epoch_participation_view = try state.previousEpochParticipation();
-            _ = try previous_epoch_participation_view.getAllInto(reused_cache.previous_epoch_participation.items);
-            var current_epoch_participation_view = try state.currentEpochParticipation();
-            _ = try current_epoch_participation_view.getAllInto(reused_cache.current_epoch_participation.items);
-
-            // Multi-object `for`: lengths are checked once at loop entry. Indexing through
-            // `reused_cache` instead reloads every slice header after each `flag` store (a u8
-            // store may alias them) and bounds-checks every access.
-            for (
-                flags_arr,
-                is_active_prev_arr,
-                is_active_curr_arr,
-                reused_cache.previous_epoch_participation.items[0..validator_count],
-                reused_cache.current_epoch_participation.items[0..validator_count],
-                effective_balances_by_increments[0..validator_count],
-            ) |*flag, is_prev, is_curr, prev_participation, curr_participation, increments| {
-                flag.* |=
-                    // checking active status first is required to pass random spec tests in altair
-                    // in practice, inactive validators will have 0 participation
-                    // FLAG_PREV are indexes [0,1,2]
-                    (if (is_prev) prev_participation else 0) |
-                    // FLAG_CURR are indexes [3,4,5], so shift by 3
-                    (if (is_curr) curr_participation << 3 else 0);
-                unslashed_stakes.add(flag.*, increments);
-            }
+            unslashed_stakes = scan_unslashed_stakes;
         }
 
         if (fork_seq.gte(.altair)) {
@@ -643,6 +771,8 @@ pub const EpochTransitionCache = struct {
             .flags = reused_cache.flags.items,
             .compounding_validator_flags = .{ .base = reused_cache.is_compounding_validator_arr.items },
             .validator_scratch = reused_cache.validator_scratch.items,
+            .index_scratch = reused_cache.index_scratch.items,
+            .chunk_counts = reused_cache.chunk_counts.items,
             .penalties = reused_cache.penalties.items,
             .slashing_penalties = reused_cache.slashing_penalties.items,
             .balances_buffer = reused_cache.balances_buffer.items,
@@ -683,4 +813,5 @@ pub const EpochTransitionCache = struct {
 test {
     _ = @import("epoch_transition_cache_test.zig");
     _ = @import("validator_flat_cache.zig");
+    _ = @import("../utils/validator_chunks.zig");
 }
