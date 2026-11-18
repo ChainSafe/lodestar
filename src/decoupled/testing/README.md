@@ -22,6 +22,9 @@ Roguestar (`roguestar.zig`) is the executable: one seed, every knob an option.
   reception, memory kept), `--crash 2@0-128` (the same, but memory is lost and the node is
   rebuilt from its storage at the end), `--pause 1@15-30` (late host), `--storage-fail 0@50-60`, and
   `--partition 0,1:2,3@32-160` (listed groups lose both channels to each other).
+- Crashes inside a write: `--crash-writes 3` draws three crash points from the seed. Each kills a
+  node at one of its next storage writes, before or after the write takes effect, and the node is
+  rebuilt from its storage at the next slot start. The default is 0, so a bare seed is unchanged.
 - A sweep over seeds: `zig build run:roguestar -- 1 --sweep 64`. It prints each seed's verdict
   and resolved options and the first failing seed. It exits with an error if a seed fails, is
   incomplete, or has an enabled check with no mature active sample. A sweep runs with snapshots
@@ -67,7 +70,8 @@ Dependencies live beside the simulator:
 - `Clock.zig` reads the virtual clock, which advances even while a node sleeps.
 - `Transport.zig` queues copied outgoing objects. It never calls a receiver from a broadcast.
 - `Storage.zig` retains the validator record, the journal and the AC record in memory. They are
-  all a crashed node keeps. Scripted write failures stop the node at its next write.
+  all a crashed node keeps. Scripted write failures stop the node at its next write. An armed
+  crash point makes one later write fail with `Crashed`, before or after it takes effect.
 - `Signer.zig` supplies proposer assignments and checks simulation signature witnesses and roots.
 
 These types implement the methods used by Node. A production dependency is a different concrete
@@ -262,7 +266,9 @@ logic and not only the drop path:
 A mutated object is stored as a new packet, created at mutation time, signed by the same Byzantine
 sender, so witness checks accept it, and later honest blocks may carry it. Every fuzz outcome is a
 `fuzz` trace entry: `node` is the receiver, `peer` the sender, `value` the `Mutation` tag or one of
-`fuzz_drop`, `fuzz_late`, `fuzz_partition`, `fuzz_heal`. Each outcome also counts as a fault input
+`fuzz_drop`, `fuzz_late`, `fuzz_partition`, `fuzz_heal`, `fuzz_crash` (a crash point is armed on
+`node`). A node that dies inside a write logs a `crash` entry whose value is the instant it is
+rebuilt. Each outcome also counts as a fault input
 for the height-progress check, so its bound runs from the last fault.
 
 The sweep is the search: `run:roguestar -- <seed> fuzz --sweep N` runs seven validators with

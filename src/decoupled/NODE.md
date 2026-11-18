@@ -130,9 +130,12 @@ through the state transition, FG and the pool, loads the AC record, and then joi
 Node that `wake()` would have resumed, with one difference: kept orphan blocks are gone, because
 they are a cache and are never written.
 
+A crash can also strike inside a call: Storage fails at one write, either before or after that
+write takes effect, and the Node stops there. Everything it sends depends only on writes that
+already returned, so the durable state it leaves is one that `restore()` accepts.
+
 Limits of this model: every write is atomic and durable on return, so a write that is lost or torn
-by the crash is not modelled; a crash happens between calls, never inside one; and replay starts
-from genesis, with no checkpoint.
+by the crash is not modelled; and replay starts from genesis, with no checkpoint.
 
 ## Lifecycle and errors
 

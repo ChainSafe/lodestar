@@ -2,6 +2,7 @@ const std = @import("std");
 const testing = std.testing;
 const Simulator = @import("Simulator.zig");
 const Hash = @import("Hash.zig");
+const Storage = @import("Storage.zig");
 const FG = @import("../fg/FinalityGadget.zig");
 const types = @import("../types.zig");
 
@@ -339,6 +340,91 @@ test "simulation: a restore replays the journal in order and loses only kept orp
     try testing.expectEqual(pool, node.pool.entries.count);
     try testing.expectEqual(finalized, node.fg.F.root);
     try testing.expectEqual(sim.replicas[0].storage.record.sent.count, node.Lambda.sent.count);
+}
+
+test "simulation: a node that dies inside any write is rebuilt and rejoins" {
+    var kinds = std.enums.EnumSet(Storage.Write).initEmpty();
+    // Nine consecutive writes cover a slot: four ticks, a block, and four attestations.
+    for (0..9) |skip| {
+        for ([_]bool{ false, true }) |applied| {
+            var options = config;
+            options.snapshots = false;
+            const sim = try Simulator.create(testing.allocator, &options);
+            defer sim.destroy();
+            try sim.schedule(200, .{ .crash_at_write = .{
+                .node = 2,
+                .point = .{ .skip = @intCast(skip), .applied = applied },
+            } });
+            try sim.runUntil(450);
+            try testing.expect(!sim.failed);
+            var crashes: u32 = 0;
+            for (sim.trace.constSlice()) |entry| {
+                if (entry.kind != .crash) continue;
+                try testing.expectEqual(@as(u32, 2), entry.node);
+                try testing.expect(entry.time >= 200);
+                // The node is rebuilt at the start of the next slot.
+                try testing.expectEqual(@as(u64, (entry.time / 16 + 1) * 16), entry.value);
+                crashes += 1;
+            }
+            try testing.expectEqual(@as(u32, 1), crashes);
+            try testing.expect(sim.replicas[2].storage.crash == null);
+            try testing.expect(!sim.replicas[2].crashed);
+            kinds.insert(sim.replicas[2].storage.died_in.?);
+            for (0..4) |v| {
+                const node = sim.node(@intCast(v));
+                try testing.expect(node.awake and !node.stopped);
+                try testing.expect(sim.tips(@intCast(v)).finalized.slot > 12);
+            }
+            // Nothing is on the wire that the durable signing record lacks.
+            const record = &sim.replicas[2].storage.record;
+            try testing.expectEqual(record.sent.count, sim.node(2).Lambda.sent.count);
+            for (sim.packets.constSlice()) |*packet| {
+                if (packet.body != .attestation or packet.validator != 2) continue;
+                const sent = for (record.sent.constSlice()) |*held| {
+                    if (held.contentEql(&packet.body.attestation)) break true;
+                } else false;
+                try testing.expect(sent);
+            }
+        }
+    }
+    // The nine points reach every kind of write the node makes.
+    try testing.expectEqual(@as(usize, 4), kinds.count());
+}
+
+test "fuzz: crash points are drawn after the rest of the plan and leave it unchanged" {
+    var options = fuzz_config;
+    options.snapshots = false;
+    const plain = try Simulator.create(testing.allocator, &options);
+    defer plain.destroy();
+    options.fuzz.?.crash_writes = 3;
+    const sim = try Simulator.create(testing.allocator, &options);
+    defer sim.destroy();
+    try testing.expectEqual(plain.plan.byzantine, sim.plan.byzantine);
+    try testing.expectEqual(plain.plan.process_slots, sim.plan.process_slots);
+    try testing.expectEqual(plain.plan.network_slots, sim.plan.network_slots);
+    try testing.expectEqual(plain.plan.groups, sim.plan.groups);
+    for (plain.plan.crashes) |crash| try testing.expect(crash == null);
+    var planned: u32 = 0;
+    for (sim.plan.crashes) |crash| {
+        const point = crash orelse continue;
+        try testing.expect(point.slot >= options.fuzz.?.first_slot and point.slot <= options.fuzz.?.last_slot);
+        try testing.expect(point.node < sim.replicas.len);
+        planned += 1;
+    }
+    try testing.expectEqual(@as(u32, 3), planned);
+    try sim.runUntil(fuzz_end);
+    try testing.expect(!sim.failed);
+    var armed: u32 = 0;
+    var died: u32 = 0;
+    var woke: u32 = 0;
+    for (sim.trace.constSlice()) |entry| {
+        if (entry.kind == .fuzz and entry.value == Simulator.fuzz_crash) armed += 1;
+        if (entry.kind == .crash) died += 1;
+        if (entry.kind == .wake) woke += 1;
+    }
+    try testing.expectEqual(@as(u32, 3), armed);
+    try testing.expect(died > 0);
+    try testing.expectEqual(died, woke);
 }
 
 test "simulation: seeded delivery and controls replay protocol snapshots and complete event order" {

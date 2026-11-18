@@ -61,6 +61,7 @@ const CLIArgs = struct {
     twins: ?u32 = null,
     process: ?u32 = null,
     network: ?u32 = null,
+    crash_writes: ?u32 = null,
     fault_slots: ?Range = null,
     drop_rate: ?u32 = null,
     late_rate: ?u32 = null,
@@ -111,6 +112,7 @@ const help_text =
     \\  --twins T                 extra replicas sharing a Byzantine identity   swarm 0..1 with Byzantine
     \\  --process P               process-fault slots             swarm 1..4 with Byzantine, else 0
     \\  --network Q               partition slots                 swarm 0..4
+    \\  --crash-writes C          crashes inside a storage write  0
     \\  --fault-slots A-B         slot span for both              swarm 1-(slots-n-k-3)
     \\  --drop-rate, --late-rate, --mutation-rate   per mille      100, 200, 500
     \\  --late-max D              greatest late delay, instants   max(delta+1, 32)
@@ -366,7 +368,8 @@ fn resolve(seed: u64, cli: *const CLIArgs) !Resolved {
     const network = swarm.draw(cli.network, 0, 4);
     // Leave a fault-free suffix longer than the confirmation window so the check samples at the end.
     const fault_slots: Range = cli.fault_slots orelse .{ .min = 1, .max = @max(1, slots -| (k + 3)) };
-    const planned = byzantine + process + network > 0;
+    const crash_writes = cli.crash_writes orelse 0;
+    const planned = byzantine + process + network + crash_writes > 0;
     const fuzz: ?Simulator.Fuzz = if (planned) .{
         .byzantine = byzantine,
         .process_fault_slots = process,
@@ -377,6 +380,7 @@ fn resolve(seed: u64, cli: *const CLIArgs) !Resolved {
         .late_rate = cli.late_rate orelse 200,
         .mutation_rate = cli.mutation_rate orelse 500,
         .late_max = cli.late_max orelse @max(delta + 1, 32),
+        .crash_writes = crash_writes,
     } else null;
 
     const end = 4 * delta * slots - 1;
@@ -441,11 +445,11 @@ fn printResolved(resolved: *const Resolved, seed: u64) void {
     );
     if (c.fuzz) |fuzz| {
         std.debug.print(
-            "  faults byzantine={d} process={d} network={d} fault_slots={d}-{d} drop_rate={d} late_rate={d} mutation_rate={d} late_max={d}\n",
+            "  faults byzantine={d} process={d} network={d} fault_slots={d}-{d} drop_rate={d} late_rate={d} mutation_rate={d} late_max={d} crash_writes={d}\n",
             .{
                 fuzz.byzantine, fuzz.process_fault_slots, fuzz.network_fault_slots, fuzz.first_slot,
                 fuzz.last_slot, fuzz.drop_rate,           fuzz.late_rate,           fuzz.mutation_rate,
-                fuzz.late_max,
+                fuzz.late_max,  fuzz.crash_writes,
             },
         );
     } else {

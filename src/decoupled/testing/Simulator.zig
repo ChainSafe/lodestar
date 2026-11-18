@@ -102,6 +102,10 @@ pub const Fuzz = struct {
     mutation_rate: u32 = 500,
     /// Greatest late delay in instants; a late delay is drawn from [delta + 1, late_max].
     late_max: Time = 32,
+    /// Crashes inside a storage write. Each is drawn after the rest of the plan, so a seed keeps
+    /// its Byzantine set and fault slots whatever this count is: a slot from [first_slot,
+    /// last_slot], any node, one of that node's next writes, and whether the write takes effect.
+    crash_writes: u32 = 0,
 };
 /// Small-scope mutations: one step away from the honest object, and still well formed.
 pub const Mutation = enum(u8) {
@@ -125,6 +129,8 @@ pub const fuzz_drop: u64 = 100;
 pub const fuzz_late: u64 = 101;
 pub const fuzz_partition: u64 = 200;
 pub const fuzz_heal: u64 = 201;
+pub const fuzz_crash: u64 = 202;
+pub const PlannedCrash = struct { slot: u32, node: u32, skip: u32, applied: bool };
 /// The drawn plan. Public for tests and reports; the digest covers it.
 pub const Plan = struct {
     byzantine: u64 = 0,
@@ -135,6 +141,7 @@ pub const Plan = struct {
     groups: [max_fault_slots][max_nodes]u8 = @splat(@splat(0)),
     group_count: [max_fault_slots]u8 = @splat(0),
     channels: [max_fault_slots]u8 = @splat(0),
+    crashes: [max_fault_slots]?PlannedCrash = @splat(null),
 };
 /// Experimental checker premises, not safety theorems or deadlines supplied by the PDF.
 pub const Checks = struct {
@@ -180,6 +187,8 @@ pub const Control = union(enum) {
     sleep: u32,
     /// A sleep that also loses the node's memory: the next wake rebuilds the Node from Storage.
     crash: u32,
+    /// The node dies inside a later storage write and is rebuilt at the next slot start.
+    crash_at_write: struct { node: u32, point: Storage.CrashPoint },
     wake: u32,
     link: Link,
     storage_failure: struct { node: u32, enabled: bool },
@@ -267,6 +276,8 @@ const Replica = struct {
     paused_until: ?Time,
     /// Set by a crash control until the wake that restores the node.
     crashed: bool,
+    /// Set when the node died inside a write: the instant it is rebuilt.
+    restore_at: ?Time,
 };
 const Block = struct {
     root: Root,
@@ -411,6 +422,7 @@ pub fn create(allocator: std.mem.Allocator, config: *const Config) Error!*Simula
         replica.last_finalization = 0;
         replica.paused_until = null;
         replica.crashed = false;
+        replica.restore_at = null;
     }
     for (0..self.replicas.len) |v| try self.record(@intCast(v));
     return self;
@@ -467,6 +479,7 @@ pub fn schedule(self: *Simulator, time: Time, action: Control) Error!void {
     try self.checkInput(time);
     switch (action) {
         .sleep, .crash, .wake => |v| try self.checkNode(v),
+        .crash_at_write => |c| try self.checkNode(c.node),
         .storage_failure => |f| try self.checkNode(f.node),
         .host_pause => |pause| {
             try self.checkNode(pause.node);
@@ -546,7 +559,8 @@ pub fn digest(self: *const Simulator) Root {
         h.add(&replica.state_source);
         h.add(&replica.storage.record);
         h.add(.{ replica.storage.fail_writes, replica.reported, replica.justified_height_seen, replica.last_finalization, replica.validator });
-        h.add(.{ replica.paused_until, replica.node.late_ticks, replica.crashed });
+        h.add(.{ replica.paused_until, replica.node.late_ticks, replica.crashed, replica.restore_at });
+        h.add(.{ replica.storage.crash, replica.storage.died_in });
         h.add(.{ &replica.storage.journal, &replica.storage.ac });
     }
     h.add(self.trace.constSlice());
@@ -573,12 +587,22 @@ pub fn tick(self: *Simulator) Error!void {
     }
     if (self.config.fuzz != null and self.now % (4 * self.config.protocol.ac.delta) == 0) {
         try self.applyFuzzNetwork(self.slotOf(self.now));
+        try self.armPlannedCrashes(self.slotOf(self.now));
+    }
+    for (self.replicas, 0..) |*replica, v| {
+        const at = replica.restore_at orelse continue;
+        if (at > self.now) continue;
+        self.last_fault = self.now;
+        try self.wakeReplica(@intCast(v));
     }
     if (self.now % self.config.protocol.ac.delta == 0) {
         for (self.replicas, 0..) |*replica, v| {
             if (!replica.node.awake or replica.paused_until != null) continue;
             try self.log(.{ .time = self.now, .kind = .tick, .node = @intCast(v) });
-            replica.node.onTick() catch |err| return self.failure orelse err;
+            replica.node.onTick() catch |err| {
+                try self.nodeError(@intCast(v), err);
+                continue;
+            };
             try self.observe(@intCast(v));
         }
     }
@@ -790,39 +814,77 @@ fn applyControl(self: *Simulator, action: Control, index: u32) Error!void {
             try self.replicas[v].node.sleep();
             self.replicas[v].crashed = action == .crash;
             if (!self.isFaulty(self.replicas[v].validator)) self.last_honest_churn = self.now;
-            for (self.pending.slice()) |*p| {
-                if (p.to == v and p.due != null) {
-                    p.due = null;
-                    try self.log(.{
-                        .time = self.now,
-                        .kind = .retained,
-                        .node = v,
-                        .peer = p.from,
-                        .packet = p.packet,
-                    });
-                }
-            }
+            try self.retainDeliveries(v);
             try self.log(.{ .time = self.now, .kind = if (action == .crash) .crash else .sleep, .node = v });
         },
-        .wake => |v| {
-            if (self.replicas[v].crashed) try self.restoreReplica(v) else try self.replicas[v].node.wake();
-            if (!self.isFaulty(self.replicas[v].validator)) self.last_honest_churn = self.now;
-            for (self.pending.slice()) |*p| {
-                if (p.to == v and p.due == null) {
-                    p.due = @max(p.sent, self.now) + p.delay;
-                    try self.log(.{
-                        .time = self.now,
-                        .kind = .queued,
-                        .node = v,
-                        .peer = p.from,
-                        .packet = p.packet,
-                        .value = p.due.?,
-                    });
-                }
-            }
-            try self.log(.{ .time = self.now, .kind = .wake, .node = v });
-            if (self.now % self.config.protocol.ac.delta != 0) try self.observe(v);
-        },
+        .crash_at_write => |c| self.replicas[c.node].storage.crash = c.point,
+        .wake => |v| try self.wakeReplica(v),
+    }
+}
+
+/// Deliveries to a node that is asleep or down wait for its wake.
+fn retainDeliveries(self: *Simulator, v: u32) Error!void {
+    for (self.pending.slice()) |*p| {
+        if (p.to == v and p.due != null) {
+            p.due = null;
+            try self.log(.{ .time = self.now, .kind = .retained, .node = v, .peer = p.from, .packet = p.packet });
+        }
+    }
+}
+
+/// Wake a sleeping node, or rebuild a crashed one, and release what was retained for it.
+fn wakeReplica(self: *Simulator, v: u32) Error!void {
+    const replica = &self.replicas[v];
+    if (replica.crashed) try self.restoreReplica(v) else try replica.node.wake();
+    replica.restore_at = null;
+    if (!self.isFaulty(replica.validator)) self.last_honest_churn = self.now;
+    for (self.pending.slice()) |*p| {
+        if (p.to == v and p.due == null) {
+            p.due = @max(p.sent, self.now) + p.delay;
+            try self.log(.{
+                .time = self.now,
+                .kind = .queued,
+                .node = v,
+                .peer = p.from,
+                .packet = p.packet,
+                .value = p.due.?,
+            });
+        }
+    }
+    try self.log(.{ .time = self.now, .kind = .wake, .node = v });
+    if (self.now % self.config.protocol.ac.delta != 0) try self.observe(v);
+}
+
+/// A Node call failed. A crash injected by Storage takes that node down and the run goes on;
+/// any other error ends the run.
+fn nodeError(self: *Simulator, v: u32, err: Error) Error!void {
+    if (err != error.Crashed) return self.failure orelse err;
+    const replica = &self.replicas[v];
+    // The Node died inside a call. Its memory is discarded at restore; until then it only has to
+    // read as not awake.
+    replica.node.awake = false;
+    replica.crashed = true;
+    const slot_length = 4 * self.config.protocol.ac.delta;
+    replica.restore_at = (self.slotOf(self.now) + 1) * slot_length;
+    self.last_fault = self.now;
+    if (!self.isFaulty(replica.validator)) self.last_honest_churn = self.now;
+    try self.retainDeliveries(v);
+    try self.log(.{ .time = self.now, .kind = .crash, .node = v, .value = replica.restore_at.? });
+}
+
+fn armPlannedCrashes(self: *Simulator, s: u32) Error!void {
+    for (self.plan.crashes) |planned| {
+        const crash = planned orelse continue;
+        if (crash.slot != s) continue;
+        self.replicas[crash.node].storage.crash = .{ .skip = crash.skip, .applied = crash.applied };
+        self.last_fault = self.now;
+        try self.log(.{
+            .time = self.now,
+            .kind = .fuzz,
+            .node = crash.node,
+            .value = fuzz_crash,
+            .state = Hash.of(crash),
+        });
     }
 }
 
@@ -857,7 +919,7 @@ fn resumeHost(self: *Simulator, v: u32) Error!void {
     if (!self.isFaulty(replica.validator)) self.last_honest_churn = self.now;
     self.last_fault = self.now;
     try self.log(.{ .time = self.now, .kind = .host_resume, .node = v, .value = replica.node.late_ticks });
-    replica.node.advance() catch |err| return self.failure orelse err;
+    replica.node.advance() catch |err| return self.nodeError(v, err);
     for (self.pending.slice()) |*p| {
         if (p.to == v and p.due == null) {
             p.due = self.now;
@@ -1138,6 +1200,17 @@ fn drawPlan(self: *Simulator, fuzz: *const Fuzz) void {
         for (0..self.replicas.len) |v| self.plan.groups[i][v] = @intCast(self.random() % count);
         self.plan.channels[i] = @intCast(1 + self.random() % 3);
     }
+    const span = fuzz.last_slot - fuzz.first_slot + 1;
+    for (0..fuzz.crash_writes) |i| {
+        self.plan.crashes[i] = .{
+            .slot = fuzz.first_slot + @as(u32, @intCast(self.random() % span)),
+            .node = @intCast(self.random() % self.replicas.len),
+            // One slot of writes: four ticks can each write the AC record, and a block and up
+            // to n attestations can arrive.
+            .skip = @intCast(self.random() % (n + 5)),
+            .applied = self.random() % 2 == 1,
+        };
+    }
 }
 
 /// Partial Fisher-Yates over [first_slot, last_slot]: distinct slots, bounded work.
@@ -1157,6 +1230,7 @@ fn drawSlots(self: *Simulator, slots: *[max_fault_slots]?u32, count: u32, fuzz: 
 fn validFuzz(fuzz: Fuzz, n: u32, delta: Time) bool {
     if (fuzz.byzantine >= n) return false;
     if (fuzz.process_fault_slots > max_fault_slots or fuzz.network_fault_slots > max_fault_slots) return false;
+    if (fuzz.crash_writes > max_fault_slots) return false;
     if (fuzz.first_slot > fuzz.last_slot or fuzz.last_slot >= limits.max_slots) return false;
     const span = fuzz.last_slot - fuzz.first_slot + 1;
     if (span < fuzz.process_fault_slots or span < fuzz.network_fault_slots) return false;
@@ -1200,14 +1274,7 @@ fn deliver(self: *Simulator, delivery: *const Pending) Error!void {
     if (delivery.request) return self.deliverRequest(delivery);
     self.delivery_packet = delivery.packet;
     defer self.delivery_packet = null;
-    const outcome: u64 = switch (p.body) {
-        .vote => |vote| @intFromEnum(try replica.node.onACMessage(&.{
-            .vote = vote,
-            .authenticated = p.authenticated and p.validator == vote.val_index,
-        })),
-        .attestation => |a| @intFromBool(try replica.node.onAttestation(&a)),
-        .block => @intFromBool(try self.offerBlock(delivery)),
-    };
+    const outcome = self.receive(delivery) catch |err| return self.nodeError(delivery.to, err);
     try self.log(.{
         .time = self.now,
         .kind = .deliver,
@@ -1219,14 +1286,24 @@ fn deliver(self: *Simulator, delivery: *const Pending) Error!void {
     try self.observe(delivery.to);
 }
 
-fn offerBlock(self: *Simulator, delivery: *const Pending) Error!bool {
+fn receive(self: *Simulator, delivery: *const Pending) Node.Error!u64 {
+    const p = &self.packets.buffer[delivery.packet];
     const replica = &self.replicas[delivery.to];
-    const stored = &self.blocks.buffer[self.packets.buffer[delivery.packet].body.block];
-    for (stored.votes.slice()) |*v| {
-        v.authenticated = replica.signer.hasVoteWitness(&v.vote);
+    switch (p.body) {
+        .vote => |vote| return @intFromEnum(try replica.node.onACMessage(&.{
+            .vote = vote,
+            .authenticated = p.authenticated and p.validator == vote.val_index,
+        })),
+        .attestation => |a| return @intFromBool(try replica.node.onAttestation(&a)),
+        .block => |block| {
+            const stored = &self.blocks.buffer[block];
+            for (stored.votes.slice()) |*v| {
+                v.authenticated = replica.signer.hasVoteWitness(&v.vote);
+            }
+            const B = stored.view();
+            return @intFromBool(try replica.node.onBlock(delivery.from, &B));
+        },
     }
-    const B = stored.view();
-    return replica.node.onBlock(delivery.from, &B) catch |err| return self.failure orelse err;
 }
 
 fn deliverRequest(self: *Simulator, request: *const Pending) Error!void {

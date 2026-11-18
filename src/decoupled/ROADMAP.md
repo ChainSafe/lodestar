@@ -28,11 +28,11 @@ is scheduled yet:
 
 - **State transition:** use upstream Lodestar's Zig state transition as the production
   `StateSource` once it has the Goldilocks fork. Weights and proposer assignment then come from
-  the state instead of `Signer`. This workspace must first move onto Lodestar's `src/`.
+  the state instead of `Signer`.
 - **Crash and restart:** a crash now drops the `Node` and `restore()` rebuilds it from `Storage`
-  ([NODE.md](./NODE.md)). Still missing: a crash inside a call, between a write and the send that
-  follows it; writes that are lost or torn because they were not yet synced; and a checkpoint, so
-  that restore does not replay from genesis.
+  ([NODE.md](./NODE.md)), including a crash inside a storage write. Still missing: writes that
+  are lost or torn because they were not yet synced, and a checkpoint, so that restore does not
+  replay from genesis.
 - **Wire encoding:** the transport passes Zig structs by pointer, so no codec runs in simulation.
   Carry encoded messages once the wire types exist.
 - **Slow dependencies:** `StateSource.transition` and `Storage.persist` are synchronous. Turn each

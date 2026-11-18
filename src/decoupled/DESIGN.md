@@ -313,6 +313,27 @@ This closes two of the three gaps listed under "Writes are messages, reads are q
 `tips()` no longer moves processing time, and the cluster checks no longer read `node.fg` or
 `node.ac`.
 
+## A node can die inside a write (2026-11-18)
+
+A crash could only happen between calls, so no run ever stopped a node after a write and before
+the send that depends on it. Storage can now be armed with a crash point: the node's write number
+`skip` from now fails with `Crashed`, either before it takes effect or after. The Node stops, as
+it does for any storage error. The simulator takes it down, discards its memory and rebuilds it
+from Storage at the next slot start.
+
+Crash points come from two places. A control names the node and the point. The fuzz plan draws
+`crash_writes` of them after the rest of the plan, so the same seed keeps its Byzantine set and
+fault slots with or without crashes. The skip is drawn below `n + 5`, the writes a node makes in
+one slot: four ticks that can each write the AC record, one block, and `n` attestations.
+
+A test walks nine consecutive points in both variants and checks that all four kinds of write
+are hit: the signing record, a block, an attestation and the AC record. After each, the node
+rejoins, finality continues, and no attestation is on the wire that the durable record lacks.
+
+We did this before making storage calls complete on a later tick. That change needs the Node to
+hold back its outputs until its writes are durable, which is a larger design. This one needed no
+change to `Node`.
+
 Cut/heal controls record their times between public ticks. Consecutive fuzz partitions clear the
 previous partition before applying the next. Queue occupancy and per-instant delivery work have
 separate limits; work exhaustion returns an incomplete-run error. Replay hashes include checker
