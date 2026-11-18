@@ -2,8 +2,8 @@ import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkPostGloas, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock} from "@lodestar/types";
-import {Logger, fromHex} from "@lodestar/utils";
+import {RootHex, SignedBeaconBlock, Slot, gloas} from "@lodestar/types";
+import {Logger, fromHex, pruneSetToMax, toHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
@@ -26,6 +26,10 @@ export {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 
 // Bound this cache by this max size, this is the same to SeenBlockInput
 const MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE = (MAX_LOOK_AHEAD_EPOCHS + 1) * SLOTS_PER_EPOCH;
+
+const MAX_EXECUTION_INVALID_ENVELOPES = SLOTS_PER_EPOCH;
+// The engine is asked again after this many slots, so a wrong INVALID verdict does not stick until restart
+const EXECUTION_INVALID_ENVELOPE_RETRY_SLOTS = SLOTS_PER_EPOCH;
 
 export type SeenPayloadEnvelopeInputModules = {
   config: ChainForkConfig;
@@ -66,6 +70,8 @@ export class SeenPayloadEnvelopeInput {
   private payloadInputs = new Map<RootHex, PayloadEnvelopeInput>();
   // Dedup concurrent DB reloads of the same root so callers share one reconstructed object.
   private readonly reloading = new Map<RootHex, Promise<PayloadEnvelopeInput | undefined>>();
+  // Envelope signature to the slot the execution engine declared that envelope INVALID
+  private readonly executionInvalidEnvelopes = new Map<string, Slot>();
 
   constructor({
     config,
@@ -274,6 +280,27 @@ export class SeenPayloadEnvelopeInput {
     if (this.payloadInputs.get(payloadInput.blockRootHex) === payloadInput) {
       this.evictPayloadInput(payloadInput, "invalid");
     }
+  }
+
+  /**
+   * Remembers an envelope the execution engine declared INVALID. `removeInvalid()` lets sync fetch another envelope
+   * for the block, and peers may serve the same one again.
+   *
+   * Keyed by the envelope signature, a block root or block hash would also cover a different envelope the builder
+   * signed for the same block, which may be valid. Only call for an envelope with a verified signature, no other
+   * envelope can then carry the same signature and be valid.
+   */
+  markExecutionInvalid(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): void {
+    const signatureHex = toHex(signedEnvelope.signature);
+    // Re-insert to keep the map ordered by verdict slot for pruning
+    this.executionInvalidEnvelopes.delete(signatureHex);
+    this.executionInvalidEnvelopes.set(signatureHex, this.clock.currentSlot);
+    pruneSetToMax(this.executionInvalidEnvelopes, MAX_EXECUTION_INVALID_ENVELOPES);
+  }
+
+  isExecutionInvalid(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): boolean {
+    const invalidSlot = this.executionInvalidEnvelopes.get(toHex(signedEnvelope.signature));
+    return invalidSlot !== undefined && this.clock.currentSlot - invalidSlot < EXECUTION_INVALID_ENVELOPE_RETRY_SLOTS;
   }
 
   pruneBelowParent(parentBlock: ProtoBlock): void {
