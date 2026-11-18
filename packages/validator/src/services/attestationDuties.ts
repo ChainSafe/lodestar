@@ -6,7 +6,7 @@ import {
   isAggregatorFromCommitteeLength,
   isStartSlotOfEpoch,
 } from "@lodestar/state-transition";
-import {BLSSignature, Epoch, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
+import {BLSSignature, Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
@@ -261,11 +261,18 @@ export class AttestationDutiesService {
     const priorDependentRoot = dutiesAtEpoch?.dependentRoot;
     const dependentRootChanged = priorDependentRoot !== undefined && priorDependentRoot !== dependentRoot;
 
+    // From pq aggregators do not select themselves: the state names each committee's
+    let aggregators: Set<ValidatorIndex> | null = null;
+    if (this.validatorStore.isPqEpoch(epoch)) {
+      const aggregatorDuties = (await this.api.validator.getAggregatorDuties({epoch, indices: indexArr})).value();
+      aggregators = new Set(aggregatorDuties.map((duty) => duty.validatorIndex));
+    }
+
     if (!priorDependentRoot || dependentRootChanged) {
       const dutiesByIndex = new Map<ValidatorIndex, AttDutyAndProof>();
       for (const duty of relevantDuties) {
         try {
-          dutiesByIndex.set(duty.validatorIndex, await this.getDutyAndProof(duty));
+          dutiesByIndex.set(duty.validatorIndex, await this.getDutyAndProof(duty, aggregators));
         } catch (e) {
           this.logger.error(
             "Error signing attestation selection proof",
@@ -290,7 +297,7 @@ export class AttestationDutiesService {
       for (const duty of relevantDuties) {
         if (!existingDuties.has(duty.validatorIndex)) {
           try {
-            existingDuties.set(duty.validatorIndex, await this.getDutyAndProof(duty));
+            existingDuties.set(duty.validatorIndex, await this.getDutyAndProof(duty, aggregators));
           } catch (e) {
             this.logger.error(
               "Error signing attestation selection proof",
@@ -431,7 +438,15 @@ export class AttestationDutiesService {
     }
   }
 
-  private async getDutyAndProof(duty: routes.validator.AttesterDuty): Promise<AttDutyAndProof> {
+  private async getDutyAndProof(
+    duty: routes.validator.AttesterDuty,
+    aggregators: Set<ValidatorIndex> | null
+  ): Promise<AttDutyAndProof> {
+    // An aggregator from pq has no selection proof. An empty one marks it as an aggregator.
+    if (aggregators !== null) {
+      return {duty, selectionProof: aggregators.has(duty.validatorIndex) ? new Uint8Array(0) : null};
+    }
+
     const selectionProof = await this.validatorStore.signAttestationSelectionProof(duty.pubkey, duty.slot);
 
     if (this.opts?.distributedAggregationSelection) {
@@ -440,12 +455,6 @@ export class AttestationDutiesService {
       // Before subscribing to beacon committee subnets, aggregators are determined by exchanging
       // partial for combined selection proofs retrieved from distributed validator middleware client.
       return {duty, selectionProof: null, partialSelectionProof: selectionProof};
-    }
-
-    // From pq, whether a validator aggregates depends on the finalized root at the time it
-    // aggregates, so every duty keeps its proof and `AttestationService` decides then
-    if (selectionProof.length === ssz.pq.VRFProof.fixedSize) {
-      return {duty, selectionProof};
     }
 
     const isAggregator = isAggregatorFromCommitteeLength(duty.committeeLength, selectionProof);

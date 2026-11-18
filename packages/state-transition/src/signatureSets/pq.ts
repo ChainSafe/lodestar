@@ -5,12 +5,9 @@ import {
   DOMAIN_BEACON_PROPOSER,
   LEAF_OFFSET_AGGREGATE_AND_PROOF,
   LEAF_OFFSET_BEACON_PROPOSER,
-  LEAF_OFFSET_EXECUTION_PAYLOAD_BID,
-  RESERVED_LEAF_VOLUNTARY_EXIT,
 } from "@lodestar/params";
 import {Slot, ValidatorIndex, phase0, pq, ssz} from "@lodestar/types";
-import {computeStartSlotAtEpoch} from "../util/epoch.js";
-import {computeXmssAttestationLeafIndex, computeXmssLeafIndex, verifyXmss} from "../util/pq.js";
+import {computeXmssAttestationLeafIndex, computeXmssLeafIndex, getXmssBidLeafIndex, verifyXmss} from "../util/pq.js";
 import {computeSigningRoot} from "../util/signingRoot.js";
 import {getExecutionPayloadBidSigningRoot} from "./executionPayloadBid.js";
 import {getAttestationDataSigningRoot} from "./indexedAttestation.js";
@@ -75,22 +72,6 @@ export function getXmssProposerSlashingSignatureSets(
   });
 }
 
-export function getXmssVoluntaryExitSignatureSet(
-  config: BeaconConfig,
-  stateSlot: Slot,
-  getPubkey: XmssPubkeyGetter,
-  signedVoluntaryExit: pq.SignedVoluntaryExit
-): XmssSignatureSet {
-  const messageSlot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
-  const domain = config.getDomainForVoluntaryExit(stateSlot, messageSlot);
-  return {
-    pubkey: getPubkey(signedVoluntaryExit.message.validatorIndex),
-    leafIndex: RESERVED_LEAF_VOLUNTARY_EXIT,
-    signingRoot: computeSigningRoot(ssz.phase0.VoluntaryExit, signedVoluntaryExit.message, domain),
-    signature: signedVoluntaryExit.signature,
-  };
-}
-
 export function getXmssExecutionPayloadBidSignatureSet(
   config: BeaconConfig,
   builderPubkey: pq.XMSSPubkey,
@@ -98,7 +79,7 @@ export function getXmssExecutionPayloadBidSignatureSet(
 ): XmssSignatureSet {
   return {
     pubkey: builderPubkey,
-    leafIndex: computeXmssLeafIndex(signedBid.message.slot, LEAF_OFFSET_EXECUTION_PAYLOAD_BID),
+    leafIndex: getXmssBidLeafIndex(signedBid.signature),
     signingRoot: getExecutionPayloadBidSigningRoot(config, signedBid.message),
     signature: signedBid.signature,
   };
@@ -170,7 +151,7 @@ export function getIndexedAttestationProofSet(
 
 /**
  * Everything of a pq block that a verifier checks outside the state transition. The state
- * transition itself checks only preregistrations, whose validity decides the post-state.
+ * transition itself checks none of it.
  *
  * `attestingIndices` holds the attesters of each of the block's attestations, in order.
  */
@@ -202,9 +183,6 @@ export function getPqBlockSignatureSets(
   for (const attesterSlashing of body.attesterSlashings) {
     proofs.push(getIndexedAttestationProofSet(config, block.slot, getPubkey, attesterSlashing.attestation1));
     proofs.push(getIndexedAttestationProofSet(config, block.slot, getPubkey, attesterSlashing.attestation2));
-  }
-  for (const voluntaryExit of body.voluntaryExits) {
-    signatures.push(getXmssVoluntaryExitSignatureSet(config, block.slot, getPubkey, voluntaryExit));
   }
 
   const bid = body.signedExecutionPayloadBid;

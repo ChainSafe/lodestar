@@ -989,6 +989,10 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this.binding.getPayloadTimelinessCommittee(slot);
   }
 
+  getAggregationCommittee(_slot: Slot, _index: CommitteeIndex): ValidatorIndex[] {
+    throw new Error("The native state view does not support pq");
+  }
+
   getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[] {
     return this.binding.getIndicesInPayloadTimelinessCommittee(validatorIndex, slot);
   }

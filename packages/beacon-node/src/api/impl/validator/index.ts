@@ -12,7 +12,7 @@ import {
   ForkPreGloas,
   ForkSeq,
   GENESIS_SLOT,
-  MAX_COMMITTEES_PER_SLOT,
+  MAX_COMMITTEES_PER_SLOT_PQ,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
@@ -26,6 +26,7 @@ import {
 import {
   DataAvailabilityStatus,
   IBeaconStateView,
+  IBeaconStateViewGloas,
   beaconBlockToBlinded,
   calculateCommitteeAssignments,
   computeEpochAtSlot,
@@ -1743,6 +1744,42 @@ export function getValidatorApi(
       };
     },
 
+    async getAggregatorDuties({epoch, indices}) {
+      notWhileSyncing(chain, sync.state);
+
+      const startSlot = computeStartSlotAtEpoch(epoch);
+      if (config.getForkName(startSlot) !== ForkName.pq) {
+        throw new ApiError(400, "Before pq aggregators select themselves");
+      }
+
+      await waitForNextClosestEpoch();
+
+      if (epoch > chain.clock.currentEpoch + 1) {
+        throw new ApiError(400, "Cannot get aggregator duties for epoch more than one ahead");
+      }
+
+      const head = chain.forkChoice.getHead();
+      const state = (await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties)) as IBeaconStateViewGloas;
+      const wanted = new Set(indices);
+      const committeesPerSlot = state.getShufflingAtEpoch(epoch).committeesPerSlot;
+      const duties: routes.validator.AggregatorDuty[] = [];
+      for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
+        for (let committeeIndex = 0; committeeIndex < committeesPerSlot; committeeIndex++) {
+          for (const validatorIndex of state.getAggregationCommittee(slot, committeeIndex)) {
+            if (wanted.has(validatorIndex)) duties.push({validatorIndex, committeeIndex, slot});
+          }
+        }
+      }
+
+      return {
+        data: duties,
+        meta: {
+          dependentRoot: state.getShufflingDecisionRoot(epoch),
+          executionOptimistic: isOptimisticBlock(head),
+        },
+      };
+    },
+
     async getPtcDuties({epoch, indices}) {
       notWhileSyncing(chain, sync.state);
 
@@ -1873,7 +1910,7 @@ export function getValidatorApi(
         }
         const {aggregationBits, aggregate} = proven.aggregate;
         metrics?.production.producedAggregateParticipants.observe(aggregationBits.getTrueBitIndexes().length);
-        const committeeBits = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, committeeIndex);
+        const committeeBits = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT_PQ, committeeIndex);
         const data: pq.AttestationWithProof = {
           aggregationBits,
           data: proven.data,

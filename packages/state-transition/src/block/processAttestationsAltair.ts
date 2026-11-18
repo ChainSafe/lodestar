@@ -2,7 +2,6 @@ import {BitArray} from "@chainsafe/ssz";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkSeq,
-  MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -23,7 +22,12 @@ import {CachedBeaconStateAltair, CachedBeaconStateGloas} from "../types.js";
 import {isAttestationSameSlotRootCache} from "../util/gloas.js";
 import {increaseBalance, verifySignatureSet} from "../util/index.js";
 import {RootCache} from "../util/rootCache.js";
-import {checkpointToStr, isTimelyTarget, validateAttestation} from "./processAttestationPhase0.js";
+import {
+  checkpointToStr,
+  getMinAttestationInclusionDelay,
+  isTimelyTarget,
+  validateAttestation,
+} from "./processAttestationPhase0.js";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
 
@@ -237,8 +241,12 @@ export function getAttestationParticipationStatus(
         throw new Error(`data index must be 0 or 1 index=${data.index}`);
       }
 
+      const blockSlot =
+        fork === ForkSeq.pq
+          ? getLatestBlockSlot(rootCache, data.slot, parentSlot, data.slot + inclusionDelay)
+          : parentSlot;
       isMatchingPayload =
-        Boolean(data.index) === executionPayloadAvailability.get(parentSlot % SLOTS_PER_HISTORICAL_ROOT);
+        Boolean(data.index) === executionPayloadAvailability.get(blockSlot % SLOTS_PER_HISTORICAL_ROOT);
     }
 
     isMatchingHead = isMatchingHead && isMatchingPayload;
@@ -247,9 +255,28 @@ export function getAttestationParticipationStatus(
   let flags = 0;
   if (isMatchingSource && inclusionDelay <= SLOTS_PER_EPOCH_SQRT) flags |= TIMELY_SOURCE;
   if (isMatchingTarget && isTimelyTarget(fork, inclusionDelay)) flags |= TIMELY_TARGET;
-  if (isMatchingHead && inclusionDelay === MIN_ATTESTATION_INCLUSION_DELAY) flags |= TIMELY_HEAD;
+  if (isMatchingHead && inclusionDelay === getMinAttestationInclusionDelay(fork)) flags |= TIMELY_HEAD;
 
   return {flags, isSameSlotAttestation};
+}
+
+/**
+ * The slot of the latest block at or before `slot`, where `parentSlot` is that of the parent of the
+ * block being processed. With an inclusion delay of two slots, the block an attestation votes for
+ * may be the grandparent.
+ */
+function getLatestBlockSlot(rootCache: RootCache, slot: Slot, parentSlot: Slot, stateSlot: Slot): Slot {
+  if (parentSlot <= slot) return parentSlot;
+  const blockRoot = rootCache.getBlockRootAtSlot(slot);
+  let blockSlot = slot;
+  while (
+    blockSlot > 0 &&
+    blockSlot + SLOTS_PER_HISTORICAL_ROOT > stateSlot &&
+    byteArrayEquals(rootCache.getBlockRootAtSlot(blockSlot - 1), blockRoot)
+  ) {
+    blockSlot--;
+  }
+  return blockSlot;
 }
 
 export function checkpointValueEquals(cp1: phase0.Checkpoint, cp2: phase0.Checkpoint): boolean {

@@ -1,4 +1,4 @@
-import {ForkPreHeze, ForkSeq} from "@lodestar/params";
+import {ForkBls, ForkPreHeze, ForkSeq} from "@lodestar/params";
 import {BeaconBlockBody, Slot, capella, electra, gloas} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {
@@ -82,9 +82,10 @@ export function processOperations(
     timer?.();
   }
 
-  {
+  // From pq a voluntary exit is an execution layer request
+  if (fork !== ForkSeq.pq) {
     const timer = metrics?.processOperationsStepTime.startTimer({step: ProcessOperationsStep.processVoluntaryExit});
-    for (const voluntaryExit of body.voluntaryExits) {
+    for (const voluntaryExit of (body as BeaconBlockBody<ForkBls>).voluntaryExits) {
       processVoluntaryExit(fork, state, voluntaryExit, opts.verifySignatures);
     }
     timer?.();

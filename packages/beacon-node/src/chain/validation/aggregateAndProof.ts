@@ -1,14 +1,22 @@
 import {XMSS_CLAIM_SIZE} from "@lodestar/native/leanvm";
 import {ForkBls, ForkName, ForkSeq} from "@lodestar/params";
 import {
+  IBeaconStateViewGloas,
   computeEpochAtSlot,
   createAggregateSignatureSetFromComponents,
   getXmssAggregateAndProofSignatureSet,
   isAggregatorFromCommitteeLength,
-  isPqAggregator,
-  isValidVrfProof,
 } from "@lodestar/state-transition";
-import {IndexedAttestation, RootHex, SignedAggregateAndProof, electra, pq, ssz} from "@lodestar/types";
+import {
+  AggregateAndProof,
+  IndexedAttestation,
+  RootHex,
+  SignedAggregateAndProof,
+  ValidatorIndex,
+  electra,
+  pq,
+  ssz,
+} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
@@ -251,26 +259,23 @@ async function validateAggregateAndProof(
   // [REJECT] aggregate_and_proof.selection_proof selects the validator as an aggregator for the slot
   // -- i.e. is_aggregator(state, aggregate.data.slot, aggregate.data.index, aggregate_and_proof.selection_proof) returns True.
   if (fork === ForkName.pq) {
-    // The selection proof is the aggregator's VRF proof for the slot. Whether it selects the
-    // aggregator depends on the head state's finalized root.
-    const selectionProof = (aggregateAndProof as pq.AggregateAndProof).selectionProof;
-    const headState = chain.getHeadState();
-    if (
-      !isPqAggregator(
-        committeeValidatorIndices.length,
-        aggregatorIndex,
-        selectionProof,
-        headState.finalizedCheckpoint.root
-      )
-    ) {
+    // From pq aggregators do not select themselves: the state names each committee's
+    const headState = chain.getHeadState() as IBeaconStateViewGloas;
+    let aggregators: ValidatorIndex[];
+    try {
+      aggregators = headState.getAggregationCommittee(attSlot, committeeIndex);
+    } catch (_e) {
+      // The head is too far from the aggregate's epoch to know its aggregators
+      throw new AttestationError(GossipAction.IGNORE, {code: AttestationErrorCode.INVALID_AGGREGATOR});
+    }
+    if (!aggregators.includes(aggregatorIndex)) {
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_AGGREGATOR});
     }
-    const aggregator = headState.getValidator(aggregatorIndex) as unknown as pq.Validator;
-    if (!isValidVrfProof(aggregator.vrfRoot, attSlot, selectionProof)) {
-      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
-    }
   } else if (
-    !isAggregatorFromCommitteeLength(committeeValidatorIndices.length, aggregateAndProof.selectionProof as Uint8Array)
+    !isAggregatorFromCommitteeLength(
+      committeeValidatorIndices.length,
+      (aggregateAndProof as AggregateAndProof<ForkBls>).selectionProof
+    )
   ) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_AGGREGATOR});
   }

@@ -1,5 +1,6 @@
 import {beforeAll, describe, expect, it} from "vitest";
 import {XMSS_CLAIM_SIZE, XMSS_SIGNED_SIZE, XmssSecretKey} from "@lodestar/native/leanvm";
+import {MIN_ATTESTATION_INCLUSION_DELAY_PQ} from "@lodestar/params";
 import {computeXmssAttestationLeafIndex} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {PqAttestationPool} from "../../../../src/chain/opPools/pqAttestationPool.js";
@@ -79,18 +80,21 @@ describe("PqAttestationPool", () => {
     ).toBe(InsertOutcome.Aggregated);
 
     const none = () => () => false;
-    const excluded = await pool.getAttestationsForBlock(data.slot + 1, () => false, none);
+    const tooSoon = await pool.getAttestationsForBlock(data.slot + 1, () => true, none);
+    expect(tooSoon.attestations).toHaveLength(0);
+
+    const excluded = await pool.getAttestationsForBlock(data.slot + MIN_ATTESTATION_INCLUSION_DELAY_PQ, () => false, none);
     expect(excluded).toEqual({attestations: [], proof: new Uint8Array(0)});
 
     // Committee 1's attesters are on chain already, so only committee 0 is worth a block's space
     const onlyNew = await pool.getAttestationsForBlock(
-      data.slot + 1,
+      data.slot + MIN_ATTESTATION_INCLUSION_DELAY_PQ,
       () => true,
       (_data, committeeIndex) => () => committeeIndex === 1
     );
     expect(onlyNew.attestations[0].committeeBits.getTrueBitIndexes()).toEqual([0]);
 
-    const {attestations, proof} = await pool.getAttestationsForBlock(data.slot + 1, () => true, none);
+    const {attestations, proof} = await pool.getAttestationsForBlock(data.slot + MIN_ATTESTATION_INCLUSION_DELAY_PQ, () => true, none);
     expect(attestations.length).toBe(1);
     expect(attestations[0].committeeBits.getTrueBitIndexes()).toEqual([0, 1]);
     expect(attestations[0].aggregationBits.toBoolArray()).toEqual([true, true, true, true]);

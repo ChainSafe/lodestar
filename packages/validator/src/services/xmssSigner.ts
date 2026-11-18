@@ -7,7 +7,6 @@ import {
   LEAF_OFFSET_EXECUTION_PAYLOAD_ENVELOPE,
   LEAF_OFFSET_PROPOSER_PREFERENCES,
   LEAF_OFFSET_PTC_ATTESTER,
-  RESERVED_LEAF_VOLUNTARY_EXIT,
 } from "@lodestar/params";
 import {computeEpochAtSlot, computeXmssAttestationLeafIndex, computeXmssLeafIndex} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
@@ -26,7 +25,6 @@ export type XmssSigningTarget = {leafIndex: number} | {vrfSlot: Slot};
 export function getXmssSigningTarget(signableMessage: SignableMessage, signingSlot: Slot): XmssSigningTarget {
   switch (signableMessage.type) {
     case SignableMessageType.RANDAO_REVEAL:
-    case SignableMessageType.AGGREGATION_SLOT:
       return {vrfSlot: signingSlot};
     case SignableMessageType.ATTESTATION:
       return {leafIndex: computeXmssAttestationLeafIndex(signableMessage.data.target.epoch)};
@@ -44,8 +42,6 @@ export function getXmssSigningTarget(signableMessage: SignableMessage, signingSl
       };
     case SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE:
       return {leafIndex: computeXmssLeafIndex(signingSlot, LEAF_OFFSET_EXECUTION_PAYLOAD_ENVELOPE)};
-    case SignableMessageType.VOLUNTARY_EXIT:
-      return {leafIndex: RESERVED_LEAF_VOLUNTARY_EXIT};
     default:
       throw Error(`A pq validator does not sign ${signableMessage.type}`);
   }

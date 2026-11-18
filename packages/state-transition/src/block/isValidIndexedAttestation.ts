@@ -1,5 +1,11 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkBls, ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
+import {
+  ForkBls,
+  ForkSeq,
+  MAX_COMMITTEES_PER_SLOT,
+  MAX_COMMITTEES_PER_SLOT_PQ,
+  MAX_VALIDATORS_PER_COMMITTEE,
+} from "@lodestar/params";
 import {IndexedAttestation, IndexedAttestationBigint, Slot} from "@lodestar/types";
 import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
 import {verifySignatureSet} from "../util/index.js";
@@ -51,10 +57,13 @@ export function isValidIndexedAttestationIndices(
   indices: number[]
 ): boolean {
   // verify max number of indices
+  const fork = config.getForkSeq(stateSlot);
   const maxIndices =
-    config.getForkSeq(stateSlot) >= ForkSeq.electra
-      ? MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
-      : MAX_VALIDATORS_PER_COMMITTEE;
+    fork === ForkSeq.pq
+      ? MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT_PQ
+      : fork >= ForkSeq.electra
+        ? MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
+        : MAX_VALIDATORS_PER_COMMITTEE;
   if (!(indices.length > 0 && indices.length <= maxIndices)) {
     return false;
   }

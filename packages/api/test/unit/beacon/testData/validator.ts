@@ -63,6 +63,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
     },
   },
+  getAggregatorDuties: {
+    args: {epoch: 1000, indices: [1, 2, 3]},
+    res: {
+      data: [{validatorIndex: 2, committeeIndex: 1, slot: 3}],
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
+    },
+  },
   produceBlockV3: {
     args: {
       slot: 32000,

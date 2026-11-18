@@ -8,6 +8,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStatePq,
   CachedBeaconStatePreHeze,
   EpochTransitionCache,
   beforeProcessEpoch,
@@ -58,6 +59,9 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
     epochFns.processPtcWindow(state as CachedBeaconStateGloas, epochTransitionCache);
   },
   builder_pending_payments: epochFns.processBuilderPendingPayments as EpochTransitionFn,
+  aggregation_committee_window: (state, epochTransitionCache) => {
+    epochFns.processAggregationCommitteeWindow(state as CachedBeaconStatePq, epochTransitionCache);
+  },
   preregistration_expiry: epochFns.processPreregistrationExpiry as EpochTransitionFn,
 };
 

@@ -1,9 +1,12 @@
 import {FAR_FUTURE_EPOCH, ForkSeq, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {gloas} from "@lodestar/types";
+import {byteArrayEquals} from "@lodestar/utils";
+import {CachedBeaconStatePq} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
 import {initiateBuilderExit, isBuilderWithdrawalCredential, isValidBuilderDepositSignature} from "../util/gloas.js";
 import {computeDepositPubkey, isLegacyPubkey} from "../util/pq.js";
 import {IndexedBuilderState} from "./indexedBuilderState.js";
+import {getActivePreregistration, removePreregistration} from "./processPreregistrationRequest.js";
 
 /**
  * Process a builder deposit request from the execution layer: register a new builder
@@ -27,6 +30,17 @@ export function processBuilderDepositRequest(
   // key, is for the leanXMSS key derived from it
   const isPq = state.config.getForkSeq(state.slot) === ForkSeq.pq;
   const builderPubkey = isPq ? computeDepositPubkey(pubkey) : pubkey;
+
+  // While a preregistration binds the key, only a deposit that matches the binding is accepted,
+  // and it consumes the binding
+  if (isPq) {
+    const statePq = state as unknown as CachedBeaconStatePq;
+    const preregistration = getActivePreregistration(statePq, "builder", builderPubkey);
+    if (preregistration !== null) {
+      if (!byteArrayEquals(withdrawalCredentials, preregistration.withdrawalCredentials)) return;
+      removePreregistration(statePq, "builder", builderPubkey);
+    }
+  }
   const builderIndex = indexedState.findBuilderIndexByPubkey(builderPubkey);
 
   if (builderIndex === null) {

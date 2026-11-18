@@ -839,8 +839,8 @@ export class ValidatorStore {
 
     this.assertDoppelgangerSafe(duty.pubkey);
 
-    // From pq the beacon node proves the signatures of the aggregate's attesters, and the
-    // selection proof is this validator's VRF proof for the slot
+    // From pq the beacon node proves the signatures of the aggregate's attesters, and there is no
+    // selection proof
     const aggregateAndProof: AggregateAndProof =
       "proof" in aggregate
         ? {
@@ -850,7 +850,6 @@ export class ValidatorStore {
               data: aggregate.data,
               committeeBits: aggregate.committeeBits,
             },
-            selectionProof: ssz.pq.VRFProof.deserialize(selectionProof),
             proof: aggregate.proof,
           }
         : ({
@@ -1026,6 +1025,10 @@ export class ValidatorStore {
       message: inclusionList,
       signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
     };
+  }
+
+  isPqEpoch(epoch: Epoch): boolean {
+    return this.config.getForkSeqAtEpoch(epoch) === ForkSeq.pq;
   }
 
   async signAttestationSelectionProof(pubkey: BLSPubkeyMaybeHex, slot: Slot): Promise<BLSSignature> {

@@ -164,8 +164,28 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     );
   },
 
-  preregistration_request: (state, testCase: {preregistration_request: pq.PreregistrationRequest}) => {
-    blockFns.processPreregistrationRequest(state as CachedBeaconStatePq, testCase.preregistration_request);
+  validator_preregistration_request: (
+    state,
+    testCase: {validator_preregistration_request: pq.ValidatorPreregistrationRequest}
+  ) => {
+    blockFns.processValidatorPreregistrationRequest(
+      state as CachedBeaconStatePq,
+      testCase.validator_preregistration_request
+    );
+  },
+
+  builder_preregistration_request: (
+    state,
+    testCase: {builder_preregistration_request: pq.BuilderPreregistrationRequest}
+  ) => {
+    blockFns.processBuilderPreregistrationRequest(
+      state as CachedBeaconStatePq,
+      testCase.builder_preregistration_request
+    );
+  },
+
+  voluntary_exit_request: (state, testCase: {voluntary_exit_request: pq.VoluntaryExitRequest}) => {
+    blockFns.processVoluntaryExitRequest(state as CachedBeaconStatePq, testCase.voluntary_exit_request);
   },
 
   randao: (state, testCase: {body: pq.BeaconBlockBody}) => {
@@ -230,8 +250,10 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         body: ssz[fork].BeaconBlockBody,
         deposit: ssz.phase0.Deposit,
         proposer_slashing: fork === ForkName.pq ? ssz.pq.ProposerSlashing : ssz.phase0.ProposerSlashing,
-        voluntary_exit: fork === ForkName.pq ? ssz.pq.SignedVoluntaryExit : ssz.phase0.SignedVoluntaryExit,
-        preregistration_request: ssz.pq.PreregistrationRequest,
+        voluntary_exit: ssz.phase0.SignedVoluntaryExit,
+        validator_preregistration_request: ssz.pq.ValidatorPreregistrationRequest,
+        builder_preregistration_request: ssz.pq.BuilderPreregistrationRequest,
+        voluntary_exit_request: ssz.pq.VoluntaryExitRequest,
         // Altair
         sync_aggregate: ssz.altair.SyncAggregate,
         // Bellatrix

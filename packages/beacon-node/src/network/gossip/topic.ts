@@ -290,10 +290,14 @@ export function getCoreTopicsAtFork(
   const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [
     {type: GossipType.beacon_block},
     {type: GossipType.beacon_aggregate_and_proof},
-    {type: GossipType.voluntary_exit},
     {type: GossipType.proposer_slashing},
     {type: GossipType.attester_slashing},
   ];
+
+  // From pq a voluntary exit is an execution layer request
+  if (fork !== ForkName.pq) {
+    topics.push({type: GossipType.voluntary_exit});
+  }
 
   if (ForkSeq[fork] >= ForkSeq.gloas) {
     topics.push({type: GossipType.execution_payload});
@@ -324,7 +328,7 @@ export function getCoreTopicsAtFork(
   }
 
   // capella
-  if (ForkSeq[fork] >= ForkSeq.capella) {
+  if (ForkSeq[fork] >= ForkSeq.capella && fork !== ForkName.pq) {
     topics.push({type: GossipType.bls_to_execution_change});
   }
 

@@ -3,7 +3,7 @@ import {electra, ssz} from "@lodestar/types";
 import {byteArrayEquals} from "@lodestar/utils";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas, CachedBeaconStatePq} from "../types.js";
 import {computeDepositPubkey} from "../util/pq.js";
-import {getActivePreregistration, removeStoredPreregistration} from "./processPreregistrationRequest.js";
+import {getActivePreregistration, removePreregistration} from "./processPreregistrationRequest.js";
 
 export function processDepositRequest(
   fork: ForkSeq,
@@ -17,11 +17,11 @@ export function processDepositRequest(
   if (fork === ForkSeq.pq) {
     const statePq = state as unknown as CachedBeaconStatePq;
     const xmssPubkey = computeDepositPubkey(pubkey);
-    const preregistration = getActivePreregistration(statePq, xmssPubkey);
+    const preregistration = getActivePreregistration(statePq, "validator", xmssPubkey);
     if (preregistration !== null) {
       if (!byteArrayEquals(withdrawalCredentials, preregistration.withdrawalCredentials)) return;
       if (!byteArrayEquals(signature.subarray(0, 32), preregistration.vrfRoot)) return;
-      removeStoredPreregistration(statePq, xmssPubkey);
+      removePreregistration(statePq, "validator", xmssPubkey);
     }
   }
 

@@ -9,6 +9,7 @@ import {
   ForkPostGloas,
   ForkSeq,
   MAX_COMMITTEES_PER_SLOT,
+  MAX_COMMITTEES_PER_SLOT_PQ,
   VRF_TREE_DEPTH,
   XMSS_SIGNATURE_SIZE,
   isForkPostElectra,
@@ -308,8 +309,8 @@ export function getSignatureFromSingleAttestationSerialized(data: Uint8Array): B
 const AGGREGATE_AND_PROOF_OFFSET = 4 + 96;
 const AGGREGATE_OFFSET = AGGREGATE_AND_PROOF_OFFSET + 8 + 4 + 96;
 
-// From pq the signature is a leanXMSS one, the selection proof is a VRF proof, the message gains a
-// `proof` and the aggregate loses its signature:
+// From pq the signature is a leanXMSS one, the message has a `proof` where the selection proof was,
+// and the aggregate loses its signature and has fewer committee bits:
 //
 // class SignedAggregateAndProof(Container):
 //    message: AggregateAndProof - offset 4
@@ -318,10 +319,10 @@ const AGGREGATE_OFFSET = AGGREGATE_AND_PROOF_OFFSET + 8 + 4 + 96;
 // class AggregateAndProof(Container)
 //    aggregatorIndex: ValidatorIndex - data 8
 //    aggregate: Attestation          - offset 4
-//    selectionProof: VRFProof        - data 1024
 //    proof: AttestationProof         - offset 4
 const AGGREGATE_AND_PROOF_OFFSET_PQ = 4 + XMSS_SIGNATURE_SIZE;
-const AGGREGATE_OFFSET_PQ = AGGREGATE_AND_PROOF_OFFSET_PQ + 8 + 4 + 32 * (VRF_TREE_DEPTH + 1) + 4;
+const AGGREGATE_OFFSET_PQ = AGGREGATE_AND_PROOF_OFFSET_PQ + 8 + 4 + 4;
+const COMMITTEE_BITS_SIZE_PQ = Math.ceil(MAX_COMMITTEES_PER_SLOT_PQ / 8);
 
 /** The message's offset is the first field, and tells the two layouts apart */
 function isPqSignedAggregateAndProof(data: Uint8Array): boolean {
@@ -388,8 +389,8 @@ export function getAttDataFromSignedAggregateAndProofElectra(data: Uint8Array): 
   const startIndex = signedAggregateAndProofDataOffset(data);
   const endIndex = startIndex + ATTESTATION_DATA_SIZE;
 
-  const signatureSize = isPqSignedAggregateAndProof(data) ? 0 : SIGNATURE_SIZE;
-  if (data.length < endIndex + signatureSize + COMMITTEE_BITS_SIZE) {
+  const afterData = isPqSignedAggregateAndProof(data) ? COMMITTEE_BITS_SIZE_PQ : SIGNATURE_SIZE + COMMITTEE_BITS_SIZE;
+  if (data.length < endIndex + afterData) {
     return null;
   }
   attDataBuf.set(data.subarray(startIndex, endIndex));
@@ -401,14 +402,17 @@ export function getAttDataFromSignedAggregateAndProofElectra(data: Uint8Array): 
  * Return null if data is not long enough
  */
 export function getCommitteeBitsFromSignedAggregateAndProofElectra(data: Uint8Array): CommitteeBitsBase64 | null {
-  const signatureSize = isPqSignedAggregateAndProof(data) ? 0 : SIGNATURE_SIZE;
-  const startIndex = signedAggregateAndProofDataOffset(data) + ATTESTATION_DATA_SIZE + signatureSize;
-  const endIndex = startIndex + COMMITTEE_BITS_SIZE;
+  const isPq = isPqSignedAggregateAndProof(data);
+  const startIndex = signedAggregateAndProofDataOffset(data) + ATTESTATION_DATA_SIZE + (isPq ? 0 : SIGNATURE_SIZE);
+  const endIndex = startIndex + (isPq ? COMMITTEE_BITS_SIZE_PQ : COMMITTEE_BITS_SIZE);
 
   if (data.length < endIndex) {
     return null;
   }
 
+  if (isPq) {
+    return Buffer.from(data.buffer, data.byteOffset + startIndex, COMMITTEE_BITS_SIZE_PQ).toString("base64");
+  }
   committeeBitsDataBuf.set(data.subarray(startIndex, endIndex));
   return committeeBitsDataBuf.toString("base64");
 }
@@ -498,9 +502,10 @@ const HEZE_SIGNED_BID_OFFSET_POINTER_IN_BODY = GLOAS_SIGNED_BID_OFFSET_POINTER_I
 // Within SignedExecutionPayloadBid, parentBlockHash is at byte 100 (msg_offset:4 + sig:96)
 const PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE; // = 100
 
-// A pq body opens with a VRF proof where the RANDAO reveal was and has no sync aggregate and no
-// BLS to execution changes: randaoReveal + eth1Data(72) + graffiti(32) + five list offsets
-const PQ_SIGNED_BID_OFFSET_POINTER_IN_BODY = (VRF_TREE_DEPTH + 1) * ROOT_SIZE + 72 + 32 + 5 * VARIABLE_FIELD_OFFSET;
+// A pq body opens with a VRF proof where the RANDAO reveal was and has no voluntary exits, no sync
+// aggregate and no BLS to execution changes: randaoReveal + eth1Data(72) + graffiti(32) + four list
+// offsets
+const PQ_SIGNED_BID_OFFSET_POINTER_IN_BODY = (VRF_TREE_DEPTH + 1) * ROOT_SIZE + 72 + 32 + 4 * VARIABLE_FIELD_OFFSET;
 
 // CAUTION: update offsets if BeaconBlockBody fixed fields change after Heze
 export function getParentBlockHashFromGloasSignedBeaconBlockSerialized(

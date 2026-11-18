@@ -55,6 +55,7 @@ export type ChainConfig = {
   PQ_FORK_VERSION: Uint8Array;
   PQ_FORK_EPOCH: number;
   ATTESTATION_SUBNET_COUNT_PQ: number;
+  UNREGISTERED_VALIDATOR_WITHDRAWABILITY_DELAY: number;
   // HEZE
   HEZE_FORK_VERSION: Uint8Array;
   HEZE_FORK_EPOCH: number;
@@ -198,6 +199,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   PQ_FORK_VERSION: "bytes",
   PQ_FORK_EPOCH: "number",
   ATTESTATION_SUBNET_COUNT_PQ: "number",
+  UNREGISTERED_VALIDATOR_WITHDRAWABILITY_DELAY: "number",
   // HEZE
   HEZE_FORK_VERSION: "bytes",
   HEZE_FORK_EPOCH: "number",

@@ -40,6 +40,7 @@ import {
   CachedBeaconStateExecutions,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStatePq,
   CachedBeaconStatePreHeze,
   createCachedBeaconState,
   isStateValidatorsNodesPopulated,
@@ -65,6 +66,7 @@ import {
 } from "../util/execution.js";
 import {canBuilderCoverBid} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
+import {getAggregationCommittee} from "../util/pq.js";
 import {PreVerifyBuilderDepositsResult, preVerifyBuilderDepositsPreGloas} from "../util/preVerifyBuilderDeposits.js";
 import {getRandaoMix} from "../util/seed.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
@@ -485,6 +487,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       return epochCtx.nextPayloadTimelinessCommittees;
     }
     throw new Error(`PTC committees are not available for epoch=${epoch}`);
+  }
+
+  getAggregationCommittee(slot: Slot, index: CommitteeIndex): ValidatorIndex[] {
+    if (this.config.getForkSeq(this.cachedState.slot) !== ForkSeq.pq) {
+      throw new Error("Aggregation committees are a pq feature");
+    }
+    const state = this.cachedState as CachedBeaconStatePq;
+    return getAggregationCommittee(state.aggregationCommitteeWindow, state.epochCtx.epoch, slot, index);
   }
 
   /**

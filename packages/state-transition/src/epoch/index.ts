@@ -19,6 +19,7 @@ import {
   CachedBeaconStatePreHeze,
   EpochTransitionCache,
 } from "../types.js";
+import {processAggregationCommitteeWindow} from "./processAggregationCommitteeWindow.js";
 import {processBuilderPendingPayments} from "./processBuilderPendingPayments.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
@@ -43,6 +44,7 @@ export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
 // For spec tests
 export {getRewardsAndPenalties} from "./processRewardsAndPenalties.js";
 export {
+  processAggregationCommitteeWindow,
   processBuilderPendingPayments,
   processEffectiveBalanceUpdates,
   processEth1DataReset,
@@ -228,6 +230,7 @@ export function processEpoch(
   }
 
   if (fork === ForkSeq.pq) {
+    processAggregationCommitteeWindow(state as CachedBeaconStatePq, cache);
     processPreregistrationExpiry(state as CachedBeaconStatePq);
   }
 }

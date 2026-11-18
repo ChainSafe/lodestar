@@ -1,10 +1,10 @@
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {LEAF_OFFSET_EXECUTION_PAYLOAD_BID, PAYLOAD_BUILDER_VERSION, isForkPostHeze} from "@lodestar/params";
+import {PAYLOAD_BUILDER_VERSION, isForkPostHeze} from "@lodestar/params";
 import {
   computeEpochAtSlot,
-  computeXmssLeafIndex,
   createSingleSignatureSetFromComponents,
   getExecutionPayloadBidSigningRoot,
+  getXmssBidLeafIndex,
   isActiveBuilder,
   isGasLimitTargetCompatible,
   isStartSlotOfEpoch,
@@ -425,7 +425,7 @@ async function validateExecutionPayloadBid(
       chain,
       chain.config.getForkName(bid.slot),
       [signatureSet],
-      [computeXmssLeafIndex(bid.slot, LEAF_OFFSET_EXECUTION_PAYLOAD_BID)]
+      [getXmssBidLeafIndex(signedExecutionPayloadBid.signature)]
     ))
   ) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {

@@ -386,7 +386,13 @@ describe("getParentBlockHashFromGloasSignedBeaconBlockSerialized", () => {
       const signedBeaconBlockType = sszTypesFor(fork).SignedBeaconBlock;
       const signedBeaconBlock = signedBeaconBlockType.defaultValue();
       signedBeaconBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash = Buffer.alloc(32, 0xaa);
-      signedBeaconBlock.message.body.voluntaryExits.push(ssz.phase0.SignedVoluntaryExit.defaultValue());
+      // A variable-size field ahead of the bid moves it. From pq the body has no voluntary exits.
+      const {body} = signedBeaconBlock.message;
+      if ("voluntaryExits" in body) {
+        body.voluntaryExits.push(ssz.phase0.SignedVoluntaryExit.defaultValue());
+      } else {
+        body.attestations.push(ssz.pq.Attestation.defaultValue());
+      }
       const bytes = signedBeaconBlockType.serialize(signedBeaconBlock);
 
       expect(getParentBlockHashFromGloasSignedBeaconBlockSerialized(bytes, fork)).toBe(

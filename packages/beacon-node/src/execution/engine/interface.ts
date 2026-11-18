@@ -2,12 +2,14 @@ import {routes} from "@lodestar/api";
 import {
   BUILDER_DEPOSIT_REQUEST_TYPE,
   BUILDER_EXIT_REQUEST_TYPE,
+  BUILDER_PREREGISTRATION_REQUEST_TYPE,
   CONSOLIDATION_REQUEST_TYPE,
   DEPOSIT_REQUEST_TYPE,
   ForkName,
   ForkPostFulu,
   ForkPreFulu,
-  PREREGISTRATION_REQUEST_TYPE,
+  VALIDATOR_PREREGISTRATION_REQUEST_TYPE,
+  VOLUNTARY_EXIT_REQUEST_TYPE,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
 import {
@@ -66,7 +68,9 @@ export type ExecutionRequestType =
   | typeof CONSOLIDATION_REQUEST_TYPE
   | typeof BUILDER_DEPOSIT_REQUEST_TYPE
   | typeof BUILDER_EXIT_REQUEST_TYPE
-  | typeof PREREGISTRATION_REQUEST_TYPE;
+  | typeof VALIDATOR_PREREGISTRATION_REQUEST_TYPE
+  | typeof BUILDER_PREREGISTRATION_REQUEST_TYPE
+  | typeof VOLUNTARY_EXIT_REQUEST_TYPE;
 
 export function isExecutionRequestType(type: number): type is ExecutionRequestType {
   return (
@@ -75,7 +79,9 @@ export function isExecutionRequestType(type: number): type is ExecutionRequestTy
     type === CONSOLIDATION_REQUEST_TYPE ||
     type === BUILDER_DEPOSIT_REQUEST_TYPE ||
     type === BUILDER_EXIT_REQUEST_TYPE ||
-    type === PREREGISTRATION_REQUEST_TYPE
+    type === VALIDATOR_PREREGISTRATION_REQUEST_TYPE ||
+    type === BUILDER_PREREGISTRATION_REQUEST_TYPE ||
+    type === VOLUNTARY_EXIT_REQUEST_TYPE
   );
 }
 

@@ -7,7 +7,7 @@ import {encodeKey} from "@lodestar/db";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
-import {ssz, sszTypesFor} from "@lodestar/types";
+import {gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconDb} from "../../../../../src/db/beacon.js";
 import {Bucket} from "../../../../../src/db/buckets.js";
@@ -301,7 +301,7 @@ describe("block archive repository", () => {
     const block = forkTypes.SignedBeaconBlock.defaultValue();
     block.message.slot = 10;
     block.message.parentRoot.fill(1);
-    block.message.body.voluntaryExits.push(ssz.phase0.SignedVoluntaryExit.defaultValue());
+    (block.message.body as gloas.BeaconBlockBody).voluntaryExits.push(ssz.phase0.SignedVoluntaryExit.defaultValue());
     const root = forkTypes.BeaconBlock.hashTreeRoot(block.message);
 
     await blockArchive.putBinary(10, forkTypes.SignedBeaconBlock.serialize(block));

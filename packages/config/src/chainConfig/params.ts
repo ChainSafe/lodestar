@@ -151,6 +151,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     PQ_FORK_VERSION: pqForkRelevant,
     PQ_FORK_EPOCH: pqForkRelevant,
     ATTESTATION_SUBNET_COUNT_PQ: pqForkRelevant,
+    UNREGISTERED_VALIDATOR_WITHDRAWABILITY_DELAY: pqForkRelevant,
     // heze
     HEZE_FORK_VERSION: hezeForkRelevant,
     HEZE_FORK_EPOCH: hezeForkRelevant,
@@ -348,7 +349,11 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // PQ
     MAX_STARK_PROOF_SIZE: pqForkRelevant,
     MAX_ATTESTATIONS_PQ: pqForkRelevant,
-    MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD: pqForkRelevant,
+    MAX_COMMITTEES_PER_SLOT_PQ: pqForkRelevant,
+    MIN_ATTESTATION_INCLUSION_DELAY_PQ: pqForkRelevant,
+    MAX_VALIDATOR_PREREGISTRATION_REQUESTS_PER_PAYLOAD: pqForkRelevant,
+    MAX_BUILDER_PREREGISTRATION_REQUESTS_PER_PAYLOAD: pqForkRelevant,
+    MAX_VOLUNTARY_EXIT_REQUESTS_PER_PAYLOAD: pqForkRelevant,
     PREREGISTRATIONS_LIMIT: pqForkRelevant,
     PREREGISTRATION_EXPIRY_SLOTS: pqForkRelevant,
     MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE_PQ: false,

@@ -27,6 +27,7 @@ export function getApiClientStub(): ApiClientStub {
       produceInclusionList: vi.fn(),
       publishInclusionList: vi.fn(),
       getPtcDuties: vi.fn(),
+      getAggregatorDuties: vi.fn(),
       prepareBeaconCommitteeSubnet: vi.fn(),
       produceBlockV3: vi.fn(),
       produceBlockV4: vi.fn(),

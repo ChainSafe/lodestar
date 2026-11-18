@@ -296,6 +296,8 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   getEpochPTCs(epoch: Epoch): Uint32Array[];
   getPayloadTimelinessCommittee(slot: Slot): Uint32Array;
   getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[];
+  /** From pq: the aggregators of the beacon committee at `slot` for `index`, in the previous, current or next epoch */
+  getAggregationCommittee(slot: Slot, index: CommitteeIndex): ValidatorIndex[];
   /**
    * Clone the state and apply parent execution payload effects.
    * Used during block production and prepareNextSlot so that withdrawals and
@@ -338,6 +340,7 @@ export type IBeaconStateViewNative = Omit<
   IBeaconStateViewLatestFork,
   | "computeAttestationsRewards"
   | "computeBlockRewards"
+  | "getAggregationCommittee"
   | "computeNewStateRoot"
   | "computeSyncCommitteeRewards"
   | "currentSyncCommitteeValidatorIndices"

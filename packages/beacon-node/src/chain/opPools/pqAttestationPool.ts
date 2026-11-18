@@ -5,7 +5,12 @@ import {
   XmssAggregate,
   aggregateXmssSignatures,
 } from "@lodestar/native/leanvm";
-import {MAX_ATTESTATIONS_PQ, MAX_COMMITTEES_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  MAX_ATTESTATIONS_PQ,
+  MAX_COMMITTEES_PER_SLOT_PQ,
+  MIN_ATTESTATION_INCLUSION_DELAY_PQ,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {CommitteeIndex, Epoch, RootHex, Slot, phase0, pq} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {canonicalClaims} from "../pq/verifier.js";
@@ -139,7 +144,7 @@ export class PqAttestationPool {
 
     // Newest first: recent attestations earn the proposer more
     const slots = Array.from(this.byRootBySlot.keys())
-      .filter((slot) => slot < blockSlot && slot + SLOTS_PER_EPOCH >= blockSlot)
+      .filter((slot) => slot + MIN_ATTESTATION_INCLUSION_DELAY_PQ <= blockSlot && slot + SLOTS_PER_EPOCH >= blockSlot)
       .sort((a, b) => b - a);
 
     for (const slot of slots) {
@@ -148,7 +153,7 @@ export class PqAttestationPool {
         if (!isIncludable(data)) continue;
 
         // An on chain aggregate covers the committees of one attestation data, in committee order
-        const committeeBits = BitArray.fromBitLen(MAX_COMMITTEES_PER_SLOT);
+        const committeeBits = BitArray.fromBitLen(MAX_COMMITTEES_PER_SLOT_PQ);
         const bits: boolean[] = [];
         for (const committeeIndex of Array.from(byCommittee.keys()).sort((a, b) => a - b)) {
           const committee = byCommittee.get(committeeIndex) as CommitteeAttestations;

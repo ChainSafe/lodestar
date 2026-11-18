@@ -10,6 +10,7 @@ import {
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {
+  ForkBls,
   ForkPostAltair,
   ForkPostElectra,
   ForkSeq,
@@ -29,6 +30,7 @@ import {
 import {
   Attestation,
   BeaconBlock,
+  BeaconBlockBody,
   Epoch,
   altair,
   capella,
@@ -550,7 +552,7 @@ export async function importBlock(
         });
       }
       if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {
-        for (const voluntaryExit of block.message.body.voluntaryExits) {
+        for (const voluntaryExit of (block.message.body as BeaconBlockBody<ForkBls>).voluntaryExits ?? []) {
           this.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
         }
       }

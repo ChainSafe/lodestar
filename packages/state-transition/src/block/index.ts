@@ -31,6 +31,7 @@ export * from "./processBuilderExitRequest.js";
 export * from "./processDepositRequest.js";
 export * from "./processOperations.js";
 export * from "./processPreregistrationRequest.js";
+export * from "./processVoluntaryExitRequest.js";
 // Spec tests
 export {
   processBlockHeader,

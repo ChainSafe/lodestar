@@ -4,6 +4,7 @@ import {
   DOMAIN_BEACON_ATTESTER,
   GENESIS_SLOT,
   MAX_COMMITTEES_PER_SLOT,
+  MAX_COMMITTEES_PER_SLOT_PQ,
   SHUFFLE_ROUND_COUNT,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
@@ -56,15 +57,18 @@ export type EpochShuffling = {
   committeesPerSlot: number;
 };
 
-export function computeCommitteeCount(activeValidatorCount: number): number {
+export function computeCommitteeCount(
+  activeValidatorCount: number,
+  maxCommitteesPerSlot = MAX_COMMITTEES_PER_SLOT
+): number {
   const validatorsPerSlot = intDiv(activeValidatorCount, SLOTS_PER_EPOCH);
   const committeesPerSlot = intDiv(validatorsPerSlot, TARGET_COMMITTEE_SIZE);
-  return Math.max(1, Math.min(MAX_COMMITTEES_PER_SLOT, committeesPerSlot));
+  return Math.max(1, Math.min(maxCommitteesPerSlot, committeesPerSlot));
 }
 
-function buildCommitteesFromShuffling(shuffling: Uint32Array): Uint32Array[][] {
+function buildCommitteesFromShuffling(shuffling: Uint32Array, maxCommitteesPerSlot: number): Uint32Array[][] {
   const activeValidatorCount = shuffling.length;
-  const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
+  const committeesPerSlot = computeCommitteeCount(activeValidatorCount, maxCommitteesPerSlot);
   const committeeCount = committeesPerSlot * SLOTS_PER_EPOCH;
 
   const committees = new Array<Uint32Array[]>(SLOTS_PER_EPOCH);
@@ -95,7 +99,12 @@ export function computeEpochShuffling(
 ): EpochShuffling {
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
   const shuffling = unshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
-  const committees = buildCommitteesFromShuffling(shuffling);
+  // From pq a slot has fewer, larger committees
+  const isPq = (state.type as unknown) === ssz.pq.BeaconState;
+  const committees = buildCommitteesFromShuffling(
+    shuffling,
+    isPq ? MAX_COMMITTEES_PER_SLOT_PQ : MAX_COMMITTEES_PER_SLOT
+  );
   return {
     epoch,
     activeIndices,

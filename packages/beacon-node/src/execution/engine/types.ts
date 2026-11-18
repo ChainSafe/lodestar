@@ -2,6 +2,7 @@ import {SerializedList, Type} from "@chainsafe/ssz";
 import {
   BUILDER_DEPOSIT_REQUEST_TYPE,
   BUILDER_EXIT_REQUEST_TYPE,
+  BUILDER_PREREGISTRATION_REQUEST_TYPE,
   BYTES_PER_FIELD_ELEMENT,
   BYTES_PER_LOGS_BLOOM,
   CELLS_PER_EXT_BLOB,
@@ -11,7 +12,8 @@ import {
   ForkName,
   ForkPostElectra,
   ForkSeq,
-  PREREGISTRATION_REQUEST_TYPE,
+  VALIDATOR_PREREGISTRATION_REQUEST_TYPE,
+  VOLUNTARY_EXIT_REQUEST_TYPE,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
 import {
@@ -591,11 +593,28 @@ export function serializeExecutionRequestsToBytes(fork: ForkName, executionReque
   }
 
   if (fork === ForkName.pq) {
-    const {preregistrations} = executionRequests as pq.ExecutionRequests;
-    if (preregistrations.length !== 0) {
+    const {validatorPreregistrations, builderPreregistrations, voluntaryExits} =
+      executionRequests as pq.ExecutionRequests;
+    if (validatorPreregistrations.length !== 0) {
       result.push(
-        serializePrefixedRequests(ssz.pq.PreregistrationRequests, preregistrations, PREREGISTRATION_REQUEST_TYPE)
+        serializePrefixedRequests(
+          ssz.pq.ValidatorPreregistrationRequests,
+          validatorPreregistrations,
+          VALIDATOR_PREREGISTRATION_REQUEST_TYPE
+        )
       );
+    }
+    if (builderPreregistrations.length !== 0) {
+      result.push(
+        serializePrefixedRequests(
+          ssz.pq.BuilderPreregistrationRequests,
+          builderPreregistrations,
+          BUILDER_PREREGISTRATION_REQUEST_TYPE
+        )
+      );
+    }
+    if (voluntaryExits.length !== 0) {
+      result.push(serializePrefixedRequests(ssz.pq.VoluntaryExitRequests, voluntaryExits, VOLUNTARY_EXIT_REQUEST_TYPE));
     }
   }
 
@@ -613,7 +632,7 @@ export function deserializeExecutionRequestsFromBytes(fork: ForkName, serialized
       : {deposits: [], withdrawals: [], consolidations: []};
 
   if (fork === ForkName.pq) {
-    (result as pq.ExecutionRequests).preregistrations = [];
+    Object.assign(result, {validatorPreregistrations: [], builderPreregistrations: [], voluntaryExits: []});
   }
 
   let prevRequestType: ExecutionRequestType | undefined;
@@ -670,11 +689,20 @@ export function deserializeExecutionRequestsFromBytes(fork: ForkName, serialized
         (result as gloas.ExecutionRequests).builderExits = ssz.gloas.BuilderExitRequests.deserialize(requests);
         break;
       }
-      case PREREGISTRATION_REQUEST_TYPE: {
+      case VALIDATOR_PREREGISTRATION_REQUEST_TYPE:
+      case BUILDER_PREREGISTRATION_REQUEST_TYPE:
+      case VOLUNTARY_EXIT_REQUEST_TYPE: {
         if (fork !== ForkName.pq) {
-          throw Error(`Preregistration request is not supported at fork=${fork}`);
+          throw Error(`Request type ${currentRequestType} is not supported at fork=${fork}`);
         }
-        (result as pq.ExecutionRequests).preregistrations = ssz.pq.PreregistrationRequests.deserialize(requests);
+        const pqResult = result as pq.ExecutionRequests;
+        if (currentRequestType === VALIDATOR_PREREGISTRATION_REQUEST_TYPE) {
+          pqResult.validatorPreregistrations = ssz.pq.ValidatorPreregistrationRequests.deserialize(requests);
+        } else if (currentRequestType === BUILDER_PREREGISTRATION_REQUEST_TYPE) {
+          pqResult.builderPreregistrations = ssz.pq.BuilderPreregistrationRequests.deserialize(requests);
+        } else {
+          pqResult.voluntaryExits = ssz.pq.VoluntaryExitRequests.deserialize(requests);
+        }
         break;
       }
     }

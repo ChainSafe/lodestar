@@ -7,6 +7,7 @@ import {
 } from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
+  ForkBls,
   ForkName,
   ForkPostBellatrix,
   ForkPostCapella,
@@ -712,12 +713,12 @@ export async function produceBlockBody<T extends BlockType>(
     executionPayloadValue = BigInt(0);
   }
 
-  const {graffiti, attestations, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
+  const {graffiti, attestations, attesterSlashings, proposerSlashings} = blockBody;
 
   Object.assign(logMeta, {
     graffiti: fromGraffitiBytes(graffiti),
     attestations: attestations.length,
-    voluntaryExits: voluntaryExits.length,
+    voluntaryExits: (blockBody as BeaconBlockBody<ForkBls>).voluntaryExits?.length ?? 0,
     attesterSlashings: attesterSlashings.length,
     proposerSlashings: proposerSlashings.length,
   });
@@ -1118,12 +1119,14 @@ export function getPooledProposerPreferences(
 }
 
 /**
- * A pq body has no sync aggregate, no BLS to execution changes and no payload attestations, which
- * reach fork choice from gossip only. The common body builder leaves the first two behind.
+ * A pq body has no voluntary exits, which are execution layer requests, no sync aggregate, no BLS
+ * to execution changes and no payload attestations, which reach fork choice from gossip only. The
+ * common body builder leaves the first three behind.
  */
 function toPqBody(body: Partial<gloas.BeaconBlockBody>): void {
   // The validator client sends its VRF proof for the slot where a RANDAO reveal went
   (body as Partial<pq.BeaconBlockBody>).randaoReveal = ssz.pq.VRFProof.deserialize(body.randaoReveal as Uint8Array);
+  delete body.voluntaryExits;
   delete body.syncAggregate;
   delete body.blsToExecutionChanges;
   delete body.payloadAttestations;

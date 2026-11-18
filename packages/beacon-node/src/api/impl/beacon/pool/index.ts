@@ -198,6 +198,9 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolVoluntaryExit({signedVoluntaryExit}) {
+      if (chain.config.getForkName(chain.clock.currentSlot) === ForkName.pq) {
+        throw new ApiError(400, "From pq a voluntary exit is an execution layer request");
+      }
       const result = await validateApiVoluntaryExit(chain, signedVoluntaryExit);
 
       if (result.status === "deferred") {

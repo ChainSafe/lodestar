@@ -14,6 +14,7 @@ import {
   CachedBeaconStateFulu,
   createCachedBeaconState,
   createEmptyEpochCacheImmutableData,
+  initializeAggregationCommitteeWindow,
   initializeProposerLookahead,
   initializePtcWindow,
 } from "@lodestar/state-transition";
@@ -110,7 +111,8 @@ export function initDevStatePq(
     state.executionPayloadAvailability.set(i, true);
   }
 
-  // The lookahead and the PTC window come from the shufflings, which the cached state computes
+  // The lookahead and the PTC and aggregation committee windows come from the shufflings, which
+  // the cached state computes
   const cachedState = createCachedBeaconState(state, createEmptyEpochCacheImmutableData(config, state), {
     skipSyncCommitteeCache: true,
   });
@@ -119,6 +121,9 @@ export function initDevStatePq(
   );
   cachedState.ptcWindow = ssz.gloas.PayloadTimelinessCommitteeWindow.toViewDU(
     initializePtcWindow(cachedState as unknown as CachedBeaconStateFulu)
+  );
+  cachedState.aggregationCommitteeWindow = ssz.pq.AggregationCommitteeWindow.toViewDU(
+    initializeAggregationCommitteeWindow(cachedState)
   );
   cachedState.commit();
   return cachedState;

@@ -1,25 +1,30 @@
 import {
+  BitVectorType,
   ByteListType,
   ByteVectorType,
   ContainerNodeStructType,
   ContainerType,
   ProgressiveContainerType,
+  ProgressiveListBasicType,
   ProgressiveListCompositeType,
   VectorCompositeType,
 } from "@chainsafe/ssz";
 import {
   MAX_ATTESTATIONS_PQ,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
-  MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDER_PREREGISTRATION_REQUESTS_PER_PAYLOAD,
+  MAX_COMMITTEES_PER_SLOT_PQ,
   MAX_PROPOSER_SLASHINGS,
   MAX_STARK_PROOF_SIZE,
-  MAX_VOLUNTARY_EXITS,
+  MAX_VALIDATOR_PREREGISTRATION_REQUESTS_PER_PAYLOAD,
+  MAX_VOLUNTARY_EXIT_REQUESTS_PER_PAYLOAD,
+  MIN_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
   VALIDATOR_REGISTRY_LIMIT,
   VRF_TREE_DEPTH,
   XMSS_SIGNATURE_SIZE,
 } from "@lodestar/params";
 import {ssz as denebSsz} from "../deneb/index.js";
-import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as fuluSsz} from "../fulu/index.js";
 import {ssz as gloasSsz} from "../gloas/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -103,19 +108,6 @@ export const ProposerSlashings = new ProgressiveListCompositeType(ProposerSlashi
   limit: MAX_PROPOSER_SLASHINGS,
 });
 
-export const SignedVoluntaryExit = new ContainerType(
-  {
-    message: phase0Ssz.VoluntaryExit,
-    signature: XMSSSignature,
-  },
-  {typeName: "SignedVoluntaryExit", jsonCase: "eth2"}
-);
-
-export const VoluntaryExits = new ProgressiveListCompositeType(SignedVoluntaryExit, {
-  typeName: "VoluntaryExits",
-  limit: MAX_VOLUNTARY_EXITS,
-});
-
 export const SingleAttestation = new ContainerType(
   {
     committeeIndex: CommitteeIndex,
@@ -126,12 +118,15 @@ export const SingleAttestation = new ContainerType(
   {typeName: "SingleAttestation", jsonCase: "eth2"}
 );
 
+/** Which committees of a slot an attestation covers. A slot has fewer, larger committees. */
+export const CommitteeBits = new BitVectorType(MAX_COMMITTEES_PER_SLOT_PQ);
+
 // `signature` is removed: a proof covers the signatures of every attestation of a block or an aggregate
 export const Attestation = new ProgressiveContainerType(
   {
     aggregationBits: gloasSsz.AggregationBits,
     data: phase0Ssz.AttestationData,
-    committeeBits: electraSsz.CommitteeBits,
+    committeeBits: CommitteeBits,
   },
   activeFields(4, [2]),
   {typeName: "Attestation", jsonCase: "eth2"}
@@ -193,7 +188,6 @@ export const AggregateAndProof = new ContainerType(
   {
     aggregatorIndex: ValidatorIndex,
     aggregate: Attestation,
-    selectionProof: VRFProof,
     proof: AttestationProof,
   },
   {typeName: "AggregateAndProof", jsonCase: "eth2", cachePermanentRootStruct: true}
@@ -246,53 +240,98 @@ export const SignedExecutionPayloadBid = new ContainerType(
   {typeName: "SignedExecutionPayloadBid", jsonCase: "eth2"}
 );
 
-/** The signing container of a preregistration */
+// The system contracts verify the signature of a preregistration and of a voluntary exit, so
+// their requests carry none.
+export const ValidatorPreregistrationRequest = new ContainerType(
+  {
+    pubkey: XMSSPubkey,
+    withdrawalCredentials: Bytes32,
+    vrfRoot: Root,
+  },
+  {typeName: "ValidatorPreregistrationRequest", jsonCase: "eth2"}
+);
+
 export const ValidatorPreregistration = new ContainerType(
-  {
-    pubkey: XMSSPubkey,
-    withdrawalCredentials: Bytes32,
-    vrfRoot: Root,
-  },
-  {typeName: "ValidatorPreregistration", jsonCase: "eth2"}
-);
-
-export const PreregistrationRequest = new ContainerType(
-  {
-    pubkey: XMSSPubkey,
-    withdrawalCredentials: Bytes32,
-    vrfRoot: Root,
-    signature: XMSSSignature,
-  },
-  {typeName: "PreregistrationRequest", jsonCase: "eth2"}
-);
-
-export const StoredPreregistration = new ContainerType(
   {
     pubkey: XMSSPubkey,
     withdrawalCredentials: Bytes32,
     vrfRoot: Root,
     expirySlot: Slot,
   },
-  {typeName: "StoredPreregistration", jsonCase: "eth2"}
+  {typeName: "ValidatorPreregistration", jsonCase: "eth2"}
 );
 
-export const PreregistrationRequests = new ProgressiveListCompositeType(PreregistrationRequest, {
-  typeName: "PreregistrationRequests",
-  limit: MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD,
+export const BuilderPreregistrationRequest = new ContainerType(
+  {
+    pubkey: XMSSPubkey,
+    withdrawalCredentials: Bytes32,
+  },
+  {typeName: "BuilderPreregistrationRequest", jsonCase: "eth2"}
+);
+
+export const BuilderPreregistration = new ContainerType(
+  {
+    pubkey: XMSSPubkey,
+    withdrawalCredentials: Bytes32,
+    expirySlot: Slot,
+  },
+  {typeName: "BuilderPreregistration", jsonCase: "eth2"}
+);
+
+export const VoluntaryExitRequest = new ContainerType(
+  {
+    pubkey: XMSSPubkey,
+  },
+  {typeName: "VoluntaryExitRequest", jsonCase: "eth2"}
+);
+
+export const ValidatorPreregistrationRequests = new ProgressiveListCompositeType(ValidatorPreregistrationRequest, {
+  typeName: "ValidatorPreregistrationRequests",
+  limit: MAX_VALIDATOR_PREREGISTRATION_REQUESTS_PER_PAYLOAD,
+});
+
+export const BuilderPreregistrationRequests = new ProgressiveListCompositeType(BuilderPreregistrationRequest, {
+  typeName: "BuilderPreregistrationRequests",
+  limit: MAX_BUILDER_PREREGISTRATION_REQUESTS_PER_PAYLOAD,
+});
+
+export const VoluntaryExitRequests = new ProgressiveListCompositeType(VoluntaryExitRequest, {
+  typeName: "VoluntaryExitRequests",
+  limit: MAX_VOLUNTARY_EXIT_REQUESTS_PER_PAYLOAD,
 });
 
 // Unbounded: `PREREGISTRATIONS_LIMIT` caps the active records, and expired ones stay until swept
-export const ValidatorPreregistrations = new ProgressiveListCompositeType(StoredPreregistration, {
+export const ValidatorPreregistrations = new ProgressiveListCompositeType(ValidatorPreregistration, {
   typeName: "ValidatorPreregistrations",
 });
+
+export const BuilderPreregistrations = new ProgressiveListCompositeType(BuilderPreregistration, {
+  typeName: "BuilderPreregistrations",
+});
+
+/** The aggregators of a beacon committee */
+export const AggregationCommittee = new ProgressiveListBasicType(ValidatorIndex, {typeName: "AggregationCommittee"});
+
+/** The aggregation committee of each beacon committee of a slot, in committee order */
+export const AggregationCommittees = new ProgressiveListCompositeType(AggregationCommittee, {
+  typeName: "AggregationCommittees",
+});
+
+/** The aggregation committees of the previous, current and lookahead epochs */
+export const AggregationCommitteeWindow = new VectorCompositeType(
+  AggregationCommittees,
+  (MIN_SEED_LOOKAHEAD + 2) * SLOTS_PER_EPOCH
+);
 
 // Indices 5 and 6 held the EIP-8483 registration requests
 export const ExecutionRequests = new ProgressiveContainerType(
   {
     ...gloasSsz.ExecutionRequests.fields,
-    preregistrations: PreregistrationRequests,
+    validatorPreregistrations: ValidatorPreregistrationRequests,
+    builderPreregistrations: BuilderPreregistrationRequests,
+    voluntaryExits: VoluntaryExitRequests,
   },
-  activeFields(8, [5, 6]),
+  activeFields(10, [5, 6]),
   {typeName: "ExecutionRequests", jsonCase: "eth2"}
 );
 
@@ -354,13 +393,14 @@ export const SignedExecutionPayloadEnvelopeContents = new ContainerType(
 );
 
 const {
+  voluntaryExits: _voluntaryExits,
   syncAggregate: _syncAggregate,
   blsToExecutionChanges: _blsToExecutionChanges,
   payloadAttestations: _payloadAttestations,
   ...bodyFields
 } = gloasSsz.BeaconBlockBody.fields;
 
-// Removed: syncAggregate (8), blsToExecutionChanges (9), payloadAttestations (11)
+// Removed: voluntaryExits (7), syncAggregate (8), blsToExecutionChanges (9), payloadAttestations (11)
 export const BeaconBlockBody = new ProgressiveContainerType(
   {
     ...bodyFields,
@@ -368,12 +408,11 @@ export const BeaconBlockBody = new ProgressiveContainerType(
     proposerSlashings: ProposerSlashings,
     attesterSlashings: AttesterSlashings,
     attestations: Attestations,
-    voluntaryExits: VoluntaryExits,
     signedExecutionPayloadBid: SignedExecutionPayloadBid,
     parentExecutionRequests: ExecutionRequests,
     proof: AttestationProof,
   },
-  activeFields(14, [8, 9, 11]),
+  activeFields(14, [7, 8, 9, 11]),
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
@@ -416,7 +455,9 @@ export const BeaconState = new ProgressiveContainerType(
     validators: Validators,
     builders: Builders,
     validatorPreregistrations: ValidatorPreregistrations,
+    builderPreregistrations: BuilderPreregistrations,
+    aggregationCommitteeWindow: AggregationCommitteeWindow,
   },
-  activeFields(49, [22, 23, 46, 47]),
+  activeFields(51, [22, 23, 46, 47]),
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

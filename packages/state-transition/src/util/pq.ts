@@ -1,17 +1,28 @@
 import {digest} from "@chainsafe/as-sha256";
 import {ChainForkConfig} from "@lodestar/config";
 import {verifyXmssSignature} from "@lodestar/native/leanvm";
+import {computePtcIndices} from "@lodestar/native/shuffle";
 import {
+  AGGREGATORS_PER_COMMITTEE,
   DOMAIN_SELECTION_PROOF,
+  EFFECTIVE_BALANCE_INCREMENT,
   ForkName,
-  TARGET_AGGREGATORS_PER_COMMITTEE_PQ,
+  MAX_EFFECTIVE_BALANCE_ELECTRA,
+  MIN_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
   VRF_TREE_DEPTH,
   XMSS_ATTESTATION_LEAVES,
+  XMSS_BUILDER_BID_LEAVES,
   XMSS_LEAVES_PER_SLOT,
   XMSS_RESERVED_LEAVES,
   XMSS_SIGNATURE_SIZE,
 } from "@lodestar/params";
-import {Epoch, Slot, pq, ssz} from "@lodestar/types";
+import {Epoch, Slot, ValidatorIndex, pq, ssz} from "@lodestar/types";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
+import {computeEpochShuffling} from "./epochShuffling.js";
+import {getSeed} from "./seed.js";
+import {getActiveValidatorIndices} from "./validator.js";
 
 const XMSS_REQUEST_PREFIX_SIZE = 16;
 const LEGACY_XMSS_PUBKEY_DOMAIN = 0x00;
@@ -24,7 +35,21 @@ export function computeXmssAttestationLeafIndex(epoch: Epoch): number {
 
 /** The leaf at which the message of the type `leafOffset` is signed for `slot` */
 export function computeXmssLeafIndex(slot: Slot, leafOffset: number): number {
-  return XMSS_RESERVED_LEAVES + XMSS_ATTESTATION_LEAVES + slot * XMSS_LEAVES_PER_SLOT + leafOffset;
+  return (
+    XMSS_RESERVED_LEAVES + XMSS_ATTESTATION_LEAVES + XMSS_BUILDER_BID_LEAVES + slot * XMSS_LEAVES_PER_SLOT + leafOffset
+  );
+}
+
+/** A builder signs each bid at a leaf of its own choosing among those reserved for bids */
+export function isBuilderBidLeafIndex(leafIndex: number): boolean {
+  const start = XMSS_RESERVED_LEAVES + XMSS_ATTESTATION_LEAVES;
+  return start <= leafIndex && leafIndex < start + XMSS_BUILDER_BID_LEAVES;
+}
+
+/** The leaf a bid's signature must be at: the one it carries if reserved for bids, otherwise none */
+export function getXmssBidLeafIndex(signature: Uint8Array): number {
+  const leafIndex = getXmssSignatureLeafIndex(signature);
+  return isBuilderBidLeafIndex(leafIndex) ? leafIndex : -1;
 }
 
 /** The leaf a signature says it was made at. `verifyXmss` proves it. */
@@ -113,25 +138,98 @@ export function isValidVrfProof(vrfRoot: Uint8Array, slot: Slot, proof: pq.VRFPr
 }
 
 /**
- * Whether the validator whose VRF proof for the slot is `selectionProof` aggregates for a committee
- * of `committeeLength`. `finalizedRoot` is the root of the head state's finalized checkpoint: it is
- * unknown when a VRF tree is registered, so a validator cannot fill its tree with leaves that
- * always select it.
+ * The aggregators of `committee`, the beacon committee at `slot` for `index`: sampled by effective
+ * balance, without duplicates. `epochSeed` is the epoch's seed for `DOMAIN_SELECTION_PROOF`.
  */
-export function isPqAggregator(
-  committeeLength: number,
-  validatorIndex: number,
-  selectionProof: pq.VRFProof,
-  finalizedRoot: Uint8Array
-): boolean {
-  const modulo = Math.max(1, Math.floor(committeeLength / TARGET_AGGREGATORS_PER_COMMITTEE_PQ));
-  const input = new Uint8Array(32 + 4 + 8 + 32);
-  input.set(selectionProof[0], 0);
-  input.set(DOMAIN_SELECTION_PROOF, 32);
-  new DataView(input.buffer).setBigUint64(36, BigInt(validatorIndex), true);
-  input.set(finalizedRoot, 44);
-  const selection = digest(input);
-  return new DataView(selection.buffer, selection.byteOffset, 8).getBigUint64(0, true) % BigInt(modulo) === 0n;
+export function computeAggregationCommittee(
+  epochSeed: Uint8Array,
+  slot: Slot,
+  index: number,
+  committee: Uint32Array,
+  effectiveBalanceIncrements: Uint16Array
+): ValidatorIndex[] {
+  const seedInput = new Uint8Array(48);
+  seedInput.set(epochSeed);
+  const seedInputView = new DataView(seedInput.buffer);
+  seedInputView.setBigUint64(32, BigInt(slot), true);
+  seedInputView.setBigUint64(40, BigInt(index), true);
+  const pickInput = new Uint8Array(40);
+  pickInput.set(digest(seedInput));
+
+  const aggregators: ValidatorIndex[] = [];
+  let candidates = committee;
+  while (aggregators.length < AGGREGATORS_PER_COMMITTEE && candidates.length > 0) {
+    pickInput[32] = aggregators.length;
+    const aggregator = computePtcIndices(
+      digest(pickInput),
+      candidates,
+      effectiveBalanceIncrements,
+      1,
+      MAX_EFFECTIVE_BALANCE_ELECTRA,
+      EFFECTIVE_BALANCE_INCREMENT
+    )[0];
+    aggregators.push(aggregator);
+    candidates = candidates.filter((candidate) => candidate !== aggregator);
+  }
+  return aggregators;
+}
+
+/** The aggregation committee of each beacon committee of each slot of `epoch`, whose committees are `committees` */
+export function computeAggregationCommitteesForEpoch(
+  state: BeaconStateAllForks,
+  epoch: Epoch,
+  committees: Uint32Array[][],
+  effectiveBalanceIncrements: Uint16Array
+): pq.AggregationCommittees[] {
+  const epochSeed = getSeed(state, epoch, DOMAIN_SELECTION_PROOF);
+  const startSlot = computeStartSlotAtEpoch(epoch);
+  return committees.map((slotCommittees, slotOffset) =>
+    slotCommittees.map((committee, index) =>
+      computeAggregationCommittee(epochSeed, startSlot + slotOffset, index, committee, effectiveBalanceIncrements)
+    )
+  );
+}
+
+/**
+ * The window of a state at the start of its epoch, as at genesis: the previous epoch has no
+ * aggregation committees.
+ */
+export function initializeAggregationCommitteeWindow(state: CachedBeaconStateAllForks): pq.AggregationCommittees[] {
+  const window: pq.AggregationCommittees[] = Array.from({length: SLOTS_PER_EPOCH}, () => []);
+  for (let epochOffset = 0; epochOffset <= MIN_SEED_LOOKAHEAD; epochOffset++) {
+    const epoch = state.epochCtx.epoch + epochOffset;
+    const shuffling =
+      state.epochCtx.getShufflingAtEpochOrNull(epoch) ??
+      computeEpochShuffling(state, getActiveValidatorIndices(state, epoch), epoch);
+    window.push(
+      ...computeAggregationCommitteesForEpoch(
+        state,
+        epoch,
+        shuffling.committees,
+        state.epochCtx.effectiveBalanceIncrements
+      )
+    );
+  }
+  return window;
+}
+
+/**
+ * The aggregation committee of the beacon committee at `slot` for `index`, from the window of a
+ * state at `stateEpoch`. Throws for a slot outside the previous, current and lookahead epochs.
+ */
+export function getAggregationCommittee(
+  window: {getReadonly(index: number): {getReadonly(index: number): {getAll(): ValidatorIndex[]}; length: number}},
+  stateEpoch: Epoch,
+  slot: Slot,
+  index: number
+): ValidatorIndex[] {
+  const epoch = computeEpochAtSlot(slot);
+  if (epoch + 1 < stateEpoch || epoch > stateEpoch + MIN_SEED_LOOKAHEAD) {
+    throw Error(`No aggregation committees for epoch ${epoch} in a state at epoch ${stateEpoch}`);
+  }
+  const committees = window.getReadonly((epoch + 1 - stateEpoch) * SLOTS_PER_EPOCH + (slot % SLOTS_PER_EPOCH));
+  if (index >= committees.length) throw Error(`No committee ${index} at slot ${slot}`);
+  return committees.getReadonly(index).getAll();
 }
 
 type GloasMessageTypes = Pick<

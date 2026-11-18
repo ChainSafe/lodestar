@@ -1,4 +1,9 @@
-import {ForkSeq, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  ForkSeq,
+  MIN_ATTESTATION_INCLUSION_DELAY,
+  MIN_ATTESTATION_INCLUSION_DELAY_PQ,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {Attestation, Slot, electra, phase0, ssz} from "@lodestar/types";
 import {assert, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateAllForks, CachedBeaconStatePhase0} from "../types.js";
@@ -84,8 +89,8 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
   }
 
   // post deneb, the attestations are valid till end of next epoch
-  if (!(data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= slot && isTimelyTarget(fork, slot - data.slot))) {
-    const windowStart = data.slot + MIN_ATTESTATION_INCLUSION_DELAY;
+  const windowStart = data.slot + getMinAttestationInclusionDelay(fork);
+  if (!(windowStart <= slot && isTimelyTarget(fork, slot - data.slot))) {
     const windowEnd = fork >= ForkSeq.deneb ? computeEndSlotAtEpoch(computedEpoch + 1) : data.slot + SLOTS_PER_EPOCH;
 
     throw new Error(
@@ -157,6 +162,14 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
 }
 
 // Modified https://github.com/ethereum/consensus-specs/pull/3360
+/**
+ * From pq a block includes attestations a slot later, which gives its proposer a slot to receive
+ * aggregates and merge their proofs.
+ */
+export function getMinAttestationInclusionDelay(fork: ForkSeq): number {
+  return fork === ForkSeq.pq ? MIN_ATTESTATION_INCLUSION_DELAY_PQ : MIN_ATTESTATION_INCLUSION_DELAY;
+}
+
 export function isTimelyTarget(fork: ForkSeq, inclusionDistance: Slot): boolean {
   // post deneb attestation is valid till end of next epoch for target
   if (fork >= ForkSeq.deneb) {

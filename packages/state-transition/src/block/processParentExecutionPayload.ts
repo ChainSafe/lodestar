@@ -8,7 +8,11 @@ import {processBuilderDepositRequest} from "./processBuilderDepositRequest.js";
 import {processBuilderExitRequest} from "./processBuilderExitRequest.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
 import {processDepositRequest} from "./processDepositRequest.js";
-import {processPreregistrationRequest} from "./processPreregistrationRequest.js";
+import {
+  processBuilderPreregistrationRequest,
+  processValidatorPreregistrationRequest,
+} from "./processPreregistrationRequest.js";
+import {processVoluntaryExitRequest} from "./processVoluntaryExitRequest.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 
 /**
@@ -101,13 +105,21 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
     }
   }
 
-  // Update parent payload availability and latest block hash
   if (fork === ForkSeq.pq) {
-    for (const preregistration of (requests as pq.ExecutionRequests).preregistrations) {
-      processPreregistrationRequest(state as unknown as CachedBeaconStatePq, preregistration);
+    const statePq = state as unknown as CachedBeaconStatePq;
+    const {validatorPreregistrations, builderPreregistrations, voluntaryExits} = requests as pq.ExecutionRequests;
+    for (const request of validatorPreregistrations) {
+      processValidatorPreregistrationRequest(statePq, request);
+    }
+    for (const request of builderPreregistrations) {
+      processBuilderPreregistrationRequest(statePq, request);
+    }
+    for (const request of voluntaryExits) {
+      processVoluntaryExitRequest(statePq, request);
     }
   }
 
+  // Update parent payload availability and latest block hash
   state.executionPayloadAvailability.set(parentSlot % SLOTS_PER_HISTORICAL_ROOT, true);
   state.latestBlockHash = parentBid.blockHash;
 }
@@ -138,7 +150,9 @@ function assertEmptyExecutionRequests(requests: gloas.ExecutionRequests): void {
     requests.consolidations.length !== 0 ||
     requests.builderDeposits.length !== 0 ||
     requests.builderExits.length !== 0 ||
-    ((requests as pq.ExecutionRequests).preregistrations?.length ?? 0) !== 0
+    ((requests as pq.ExecutionRequests).validatorPreregistrations?.length ?? 0) !== 0 ||
+    ((requests as pq.ExecutionRequests).builderPreregistrations?.length ?? 0) !== 0 ||
+    ((requests as pq.ExecutionRequests).voluntaryExits?.length ?? 0) !== 0
   ) {
     throw new Error("Parent execution requests must be empty when parent block is EMPTY");
   }
