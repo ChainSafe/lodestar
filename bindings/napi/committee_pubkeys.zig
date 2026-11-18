@@ -32,16 +32,26 @@ const EntryState = enum { free, computing, ready };
 // Workers exclusively own entries being computed. The locked transition to ready
 // publishes their data; readers and clear only access ready entries.
 const CacheEntry = struct {
-    state: EntryState = .free,
-    id: u32 = 0,
-    committeePubkeys: ?CommitteePubkeys = null,
-    storage: [MAX_AGGREGATES]bls.AggregatePublicKey = undefined,
+    state: EntryState,
+    id: u32,
+    committeePubkeys: ?CommitteePubkeys,
+    storage: [MAX_AGGREGATES]bls.AggregatePublicKey,
 };
 
 const State = struct {
-    lock: std.Io.RwLock = .init,
-    entries: [MAX_ENTRIES]CacheEntry = [_]CacheEntry{.{}} ** MAX_ENTRIES,
-    next_id: u32 = 1,
+    lock: std.Io.RwLock,
+    entries: [MAX_ENTRIES]CacheEntry,
+    next_id: u32,
+
+    pub fn init(self: *State) void {
+        self.lock = .init;
+        self.next_id = 1;
+        for (&self.entries) |*entry| {
+            entry.state = .free;
+            entry.id = 0;
+            entry.committeePubkeys = null;
+        }
+    }
 
     fn reserve(self: *State, io: std.Io) !usize {
         try self.lock.lock(io);
@@ -142,11 +152,11 @@ const State = struct {
         for (&self.entries) |*entry| {
             if (entry.committeePubkeys) |*committeePubkeys| committeePubkeys.deinit();
         }
-        self.* = .{};
+        self.init();
     }
 };
 
-pub var state: State = .{};
+pub var state: State = undefined;
 
 const ComputeTask = struct {
     io: std.Io,

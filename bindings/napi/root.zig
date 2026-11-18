@@ -23,6 +23,8 @@ const allocator = if (builtin.mode == .Debug) gpa.allocator() else std.heap.c_al
 fn init(old_ref_count: u32) !void {
     if (old_ref_count == 0) {
         // First environment — initialize shared state in your threadpool init.
+        committeePubkeys.state.init();
+
         var cpu_count: u64 = options.thread_count;
         if (options.thread_count == 0) {
             cpu_count = @max(try detectCpuCount(), 2) - 1;
