@@ -5,8 +5,8 @@
 
 use std::alloc::{GlobalAlloc, Layout};
 
-use leanvm::lean_xmss::{self, LeanXmssPublicKey, LeanXmssSecretKey, LeanXmssSignature};
-use leanvm::{AggregateVerifyError, AggregationError, EthereumClaims, EthereumProof};
+use lean_vm::lean_xmss::{self, LeanXmssExpandedSecretKey, LeanXmssPublicKey, LeanXmssSignature};
+use lean_vm::{AggregateClaims, AggregateError, AggregateProof, OutputClaims};
 
 unsafe extern "C" {
     fn lodestar_leanvm_alloc(size: usize, align: usize) -> *mut u8;
@@ -31,33 +31,23 @@ static ALLOCATOR: ZigAllocator = ZigAllocator;
 
 // `root.zig` repeats these sizes and limits, so a leanVM that changes one must not build.
 const _: () = {
-    assert!(lean_xmss::SEED_LEN == 32);
+    assert!(lean_xmss::SECRET_KEY_LEN == 32);
     assert!(lean_xmss::MESSAGE_LEN == 32);
     assert!(lean_xmss::PUB_KEY_SIZE == 32);
     assert!(lean_xmss::SIG_SIZE == 2404);
-    assert!(leanvm::MAX_RECURSIONS == 16);
-    assert!(leanvm::MAX_KEYS == 1 << 16);
-    assert!(leanvm::MIN_LOG_INV_RATE == 1);
-    assert!(leanvm::MAX_LOG_INV_RATE == 4);
+    assert!(lean_xmss::MAX_CACHED_BOTTOM_TREES == 8);
+    assert!(lean_vm::MAX_RECURSIONS == 16);
+    assert!(lean_vm::MIN_LOG_INV_RATE == 1);
+    assert!(lean_vm::MAX_LOG_INV_RATE == 4);
 };
 
 const OK: i32 = 0;
-const ERR_SIGN: i32 = 1;
-const ERR_INVALID_SIGNATURE: i32 = 2;
-const ERR_MALFORMED_SIGNER_SET: i32 = 3;
-const ERR_MALFORMED_CLAIM: i32 = 4;
-const ERR_MALFORMED_ENCODING: i32 = 5;
-const ERR_SNARK: i32 = 6;
-const ERR_INVALID_CHILD: i32 = 7;
-const ERR_EMPTY: i32 = 8;
-const ERR_NOT_COVERED: i32 = 9;
-const ERR_MALFORMED_RAW_SIGNATURE: i32 = 10;
-const ERR_TOO_LARGE: i32 = 11;
-const ERR_INVALID_RATE: i32 = 12;
-const ERR_CHILD_OUT_OF_RANGE: i32 = 13;
-const ERR_PROVE: i32 = 14;
-/// A LeanDA error. No blobs go in, so `root.zig` has no name for it.
-const ERR_DA: i32 = 15;
+const ERR_INVALID_SIGNATURE: i32 = 1;
+const ERR_MALFORMED_ENCODING: i32 = 2;
+const ERR_INVALID_PROOF: i32 = 3;
+const ERR_INVALID_INPUT: i32 = 4;
+const ERR_INVALID_CHILD: i32 = 5;
+const ERR_PROVE: i32 = 6;
 
 #[repr(C)]
 pub struct Claim {
@@ -72,8 +62,16 @@ pub struct Signed {
     signature: [u8; lean_xmss::SIG_SIZE],
 }
 
-pub struct SecretKey(LeanXmssSecretKey);
-pub struct Proof(EthereumProof);
+pub struct SecretKey {
+    seed: lean_xmss::SecretKey,
+    expanded: LeanXmssExpandedSecretKey,
+}
+
+/// A proof with the claims it is for, which leanVM keeps apart.
+pub struct Proof {
+    claims: AggregateClaims,
+    proof: AggregateProof,
+}
 
 /// `root.zig` lets handles be shared across threads.
 const _: () = {
@@ -104,9 +102,9 @@ fn boxed<T>(value: T) -> *mut T {
     Box::into_raw(Box::new(value))
 }
 
-fn claims_of(claims: &[Claim]) -> EthereumClaims {
-    EthereumClaims {
-        xmss: claims
+fn claims_of(claims: &[Claim]) -> AggregateClaims {
+    AggregateClaims {
+        lean_xmss: claims
             .iter()
             .map(|claim| (LeanXmssPublicKey::from_bytes(&claim.public_key), claim.message))
             .collect(),
@@ -115,45 +113,25 @@ fn claims_of(claims: &[Claim]) -> EthereumClaims {
     }
 }
 
-fn verify_status(error: AggregateVerifyError) -> i32 {
+fn aggregate_status(error: AggregateError) -> i32 {
     match error {
-        AggregateVerifyError::MalformedSignerSet => ERR_MALFORMED_SIGNER_SET,
-        AggregateVerifyError::MalformedClaim => ERR_MALFORMED_CLAIM,
-        AggregateVerifyError::MalformedEncoding => ERR_MALFORMED_ENCODING,
-        AggregateVerifyError::Snark(_) => ERR_SNARK,
-    }
-}
-
-fn aggregation_status(error: AggregationError) -> i32 {
-    match error {
-        AggregationError::InvalidChild(_) => ERR_INVALID_CHILD,
-        AggregationError::Empty => ERR_EMPTY,
-        AggregationError::NotCovered => ERR_NOT_COVERED,
-        AggregationError::MalformedRawSignature => ERR_MALFORMED_RAW_SIGNATURE,
-        AggregationError::TooLarge => ERR_TOO_LARGE,
-        AggregationError::InvalidRate { .. } => ERR_INVALID_RATE,
-        AggregationError::ChildOutOfRange { .. } => ERR_CHILD_OUT_OF_RANGE,
-        AggregationError::ProofError(_) => ERR_PROVE,
-        AggregationError::InvalidBlobSize { .. }
-        | AggregationError::BlobNotCovered
-        | AggregationError::BlobsUnpublished => ERR_DA,
+        AggregateError::InvalidInput(_) => ERR_INVALID_INPUT,
+        AggregateError::InvalidSignature => ERR_INVALID_SIGNATURE,
+        AggregateError::InvalidChild => ERR_INVALID_CHILD,
+        AggregateError::ProvingFailed => ERR_PROVE,
     }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn leanvm_setup() {
-    leanvm::setup();
+    lean_vm::setup();
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn leanvm_xmss_key_gen() -> *mut SecretKey {
-    let (key, _) = lean_xmss::key_gen();
-    boxed(SecretKey(key))
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn leanvm_xmss_key_gen_from_seed(seed: *const [u8; lean_xmss::SEED_LEN]) -> *mut SecretKey {
-    boxed(SecretKey(LeanXmssSecretKey::from_bytes(unsafe { &*seed })))
+pub unsafe extern "C" fn leanvm_xmss_key_gen(seed: *const lean_xmss::SecretKey) -> *mut SecretKey {
+    let seed = unsafe { *seed };
+    let (expanded, _) = lean_xmss::key_gen(&seed);
+    boxed(SecretKey { seed, expanded })
 }
 
 #[unsafe(no_mangle)]
@@ -162,8 +140,8 @@ pub unsafe extern "C" fn leanvm_xmss_secret_key_free(key: *mut SecretKey) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn leanvm_xmss_secret_key_seed(key: *const SecretKey, out_seed: *mut [u8; lean_xmss::SEED_LEN]) {
-    unsafe { out_seed.write((*key).0.to_bytes()) };
+pub unsafe extern "C" fn leanvm_xmss_secret_key_seed(key: *const SecretKey, out_seed: *mut lean_xmss::SecretKey) {
+    unsafe { out_seed.write((*key).seed) };
 }
 
 #[unsafe(no_mangle)]
@@ -171,12 +149,12 @@ pub unsafe extern "C" fn leanvm_xmss_secret_key_public_key(
     key: *const SecretKey,
     out_public_key: *mut [u8; lean_xmss::PUB_KEY_SIZE],
 ) {
-    unsafe { out_public_key.write((*key).0.public_key().to_bytes()) };
+    unsafe { out_public_key.write((*key).expanded.public_key().to_bytes()) };
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn leanvm_xmss_secret_key_prepare(key: *const SecretKey, leaf_index: u32) -> i32 {
-    status(|| unsafe { &*key }.0.prepare(leaf_index).map_err(|_| ERR_SIGN))
+pub unsafe extern "C" fn leanvm_xmss_secret_key_prepare(key: *const SecretKey, leaf_index: u32) {
+    unsafe { &*key }.expanded.prepare(leaf_index);
 }
 
 #[unsafe(no_mangle)]
@@ -185,13 +163,10 @@ pub unsafe extern "C" fn leanvm_xmss_sign(
     message: *const [u8; lean_xmss::MESSAGE_LEN],
     leaf_index: u32,
     out_signature: *mut [u8; lean_xmss::SIG_SIZE],
-) -> i32 {
-    status(|| {
-        let (key, message) = unsafe { (&*key, &*message) };
-        let signature = lean_xmss::sign(&key.0, message, leaf_index).map_err(|_| ERR_SIGN)?;
-        unsafe { out_signature.write(signature.to_bytes()) };
-        Ok(())
-    })
+) {
+    let (key, message) = unsafe { (&*key, &*message) };
+    let signature = lean_xmss::sign(&key.expanded, message, leaf_index);
+    unsafe { out_signature.write(signature.to_bytes()) };
 }
 
 #[unsafe(no_mangle)]
@@ -203,7 +178,11 @@ pub unsafe extern "C" fn leanvm_xmss_verify(
     let (public_key, message, signature) = unsafe { (&*public_key, &*message, &*signature) };
     let public_key = LeanXmssPublicKey::from_bytes(public_key);
     let signature = LeanXmssSignature::from_bytes(signature);
-    status(|| lean_xmss::verify(&public_key, message, &signature).map_err(|_| ERR_INVALID_SIGNATURE))
+    if lean_xmss::verify(&public_key, message, &signature) {
+        OK
+    } else {
+        ERR_INVALID_SIGNATURE
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -219,10 +198,13 @@ pub unsafe extern "C" fn leanvm_aggregate(
     out_proof: *mut *mut Proof,
 ) -> i32 {
     status(|| {
-        // `aggregate` takes a slice of proofs, not of pointers to them.
+        // `aggregate` takes a slice of proofs with their claims, not of pointers to them.
         let children: Vec<_> = unsafe { slice(children, children_len) }
             .iter()
-            .map(|&child| unsafe { &*child }.0.clone())
+            .map(|&child| {
+                let child = unsafe { &*child };
+                (child.claims.clone(), child.proof.clone())
+            })
             .collect();
         let signed = unsafe { slice(signed, signed_len) }
             .iter()
@@ -235,16 +217,10 @@ pub unsafe extern "C" fn leanvm_aggregate(
             })
             .collect();
         let declare = has_declare.then(|| claims_of(unsafe { slice(declare, declare_len) }));
-        let proof = leanvm::aggregate(
-            &children,
-            signed,
-            Vec::new(),
-            &[],
-            declare.as_ref(),
-            log_inv_rate as usize,
-        )
-        .map_err(aggregation_status)?;
-        unsafe { out_proof.write(boxed(Proof(proof))) };
+        let output = declare.as_ref().map_or(OutputClaims::All, OutputClaims::Only);
+        let (claims, proof) = lean_vm::aggregate(&children, signed, Vec::new(), None, output, log_inv_rate as usize)
+            .map_err(aggregate_status)?;
+        unsafe { out_proof.write(boxed(Proof { claims, proof })) };
         Ok(())
     })
 }
@@ -259,8 +235,9 @@ pub unsafe extern "C" fn leanvm_proof_from_bytes(
 ) -> i32 {
     status(|| {
         let (bytes, claims) = unsafe { (slice(bytes, bytes_len), slice(claims, claims_len)) };
-        let proof = EthereumProof::from_proof_bytes(bytes, claims_of(claims)).map_err(verify_status)?;
-        unsafe { out_proof.write(boxed(Proof(proof))) };
+        let proof = AggregateProof::from_bytes(bytes).ok_or(ERR_MALFORMED_ENCODING)?;
+        let claims = claims_of(claims);
+        unsafe { out_proof.write(boxed(Proof { claims, proof })) };
         Ok(())
     })
 }
@@ -272,12 +249,13 @@ pub unsafe extern "C" fn leanvm_proof_free(proof: *mut Proof) {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn leanvm_proof_verify(proof: *const Proof) -> i32 {
-    status(|| unsafe { &*proof }.0.verify().map_err(verify_status))
+    let Proof { claims, proof } = unsafe { &*proof };
+    if proof.verify(claims) { OK } else { ERR_INVALID_PROOF }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn leanvm_proof_to_bytes(proof: *const Proof, out_bytes: *mut *mut u8, out_len: *mut usize) {
-    let bytes = unsafe { &*proof }.0.proof_bytes().into_boxed_slice();
+    let bytes = unsafe { &*proof }.proof.to_bytes().into_boxed_slice();
     unsafe {
         out_len.write(bytes.len());
         out_bytes.write(Box::into_raw(bytes).cast());
@@ -291,12 +269,12 @@ pub unsafe extern "C" fn leanvm_bytes_free(bytes: *mut u8, len: usize) {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn leanvm_proof_claims_len(proof: *const Proof) -> usize {
-    unsafe { &*proof }.0.claims().xmss.len()
+    unsafe { &*proof }.claims.lean_xmss.len()
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn leanvm_proof_claims(proof: *const Proof, out_claims: *mut Claim) {
-    for (i, (public_key, message)) in unsafe { &*proof }.0.claims().xmss.iter().enumerate() {
+    for (i, (public_key, message)) in unsafe { &*proof }.claims.lean_xmss.iter().enumerate() {
         let claim = Claim {
             public_key: public_key.to_bytes(),
             message: *message,

@@ -14,7 +14,7 @@ test "sign, aggregate, verify" {
     // Three signatures by two keys over two messages.
     const first = try xmss.SecretKey.fromSeed(&@splat(1));
     defer first.deinit();
-    const second = try xmss.SecretKey.generate();
+    const second = try xmss.SecretKey.fromSeed(&@splat(2));
     defer second.deinit();
     try std.testing.expectEqual(@as(xmss.Seed, @splat(1)), try first.seed());
     try first.prepare(7);
@@ -56,11 +56,10 @@ test "sign, aggregate, verify" {
     // The same bytes do not prove one claim fewer.
     const fewer = try leanvm.Proof.fromBytes(bytes, claims[1..]);
     defer fewer.deinit();
-    try std.testing.expectError(error.Snark, fewer.verify());
-    try std.testing.expectError(
-        error.MalformedSignerSet,
-        leanvm.Proof.fromBytes(bytes, &.{ claims[1], claims[0] }),
-    );
+    try std.testing.expectError(error.InvalidProof, fewer.verify());
+    const unsorted = try leanvm.Proof.fromBytes(bytes, &.{ claims[1], claims[0], claims[2] });
+    defer unsorted.deinit();
+    try std.testing.expectError(error.InvalidProof, unsorted.verify());
 
     // Narrowing to the claims on one message.
     var on_a: [2]xmss.Claim = undefined;
@@ -76,6 +75,6 @@ test "sign, aggregate, verify" {
     defer allocator.free(kept);
     try std.testing.expectEqualSlices(xmss.Claim, &on_a, kept);
 
-    try std.testing.expectError(error.Empty, leanvm.aggregate(.{}, 2));
-    try std.testing.expectError(error.NotCovered, leanvm.aggregate(.{ .signed = signed[2..], .declare = &on_a }, 2));
+    try std.testing.expectError(error.InvalidInput, leanvm.aggregate(.{}, 2));
+    try std.testing.expectError(error.InvalidInput, leanvm.aggregate(.{ .signed = signed[2..], .declare = &on_a }, 2));
 }

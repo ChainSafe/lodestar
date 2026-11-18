@@ -11,7 +11,6 @@ export const XMSS_SIGNATURE_SIZE = leanvm.SIGNATURE_SIZE;
 export const XMSS_CLAIM_SIZE = leanvm.CLAIM_SIZE;
 export const XMSS_SIGNED_SIZE = leanvm.SIGNED_SIZE;
 export const XMSS_AGGREGATE_MAX_CHILDREN = leanvm.MAX_RECURSIONS;
-export const XMSS_AGGREGATE_MAX_CLAIMS = leanvm.MAX_KEYS;
 export const XMSS_AGGREGATE_MIN_LOG_INV_RATE = leanvm.MIN_LOG_INV_RATE;
 export const XMSS_AGGREGATE_MAX_LOG_INV_RATE = leanvm.MAX_LOG_INV_RATE;
 
@@ -19,13 +18,15 @@ export const XmssSecretKey = leanvm.XmssSecretKey;
 
 // The native methods throw on a malformed argument before they return a promise: reject instead.
 for (const target of [XmssSecretKey, XmssSecretKey.prototype]) {
-  for (const name of target === XmssSecretKey ? ["generate", "fromSeed"] : ["prepare", "sign"]) {
+  for (const name of target === XmssSecretKey ? ["fromSeed"] : ["prepare", "sign"]) {
     const native = target[name];
     target[name] = async function (...args) {
       return native.apply(this, args);
     };
   }
 }
+
+XmssSecretKey.generate = async () => XmssSecretKey.fromSeed(crypto.getRandomValues(new Uint8Array(XMSS_SEED_SIZE)));
 
 export const verifyXmssSignature = leanvm.verify;
 

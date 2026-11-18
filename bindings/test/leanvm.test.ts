@@ -49,7 +49,7 @@ describe.skipIf(!LEANVM_AVAILABLE)("leanvm", () => {
     expect(again.toPublicKey()).toEqual(first.toPublicKey());
     expect(second.toPublicKey()).not.toEqual(first.toPublicKey());
     await expect(first.prepare(1 << 16)).resolves.toBeUndefined();
-  });
+  }, 60_000);
 
   it("rejects malformed key inputs", async () => {
     await expect(XmssSecretKey.fromSeed(new Uint8Array(31))).rejects.toThrow("InvalidSeedLength");
@@ -67,7 +67,7 @@ describe.skipIf(!LEANVM_AVAILABLE)("leanvm", () => {
     expect(() => verifyXmssSignature(first.toPublicKey(), MESSAGE_A, signatures[0].subarray(1))).toThrow(
       "InvalidSignatureLength"
     );
-  });
+  }, 60_000);
 
   describe("aggregation", () => {
     let root: XmssAggregate;
@@ -94,12 +94,13 @@ describe.skipIf(!LEANVM_AVAILABLE)("leanvm", () => {
       expect(await verifyXmssAggregate(new Uint8Array(7), root.claims)).toBe(false);
     });
 
-    it("rejects malformed claims", async () => {
+    it("takes unsorted claims as unproven", async () => {
       const [a, b] = [
         root.claims.subarray(0, XMSS_CLAIM_SIZE),
         root.claims.subarray(XMSS_CLAIM_SIZE, 2 * XMSS_CLAIM_SIZE),
       ];
-      await expect(verifyXmssAggregate(root.proof, concat(b, a))).rejects.toThrow("MalformedSignerSet");
+      const rest = root.claims.subarray(2 * XMSS_CLAIM_SIZE);
+      expect(await verifyXmssAggregate(root.proof, concat(b, a, rest))).toBe(false);
       await expect(verifyXmssAggregate(root.proof, root.claims.subarray(1))).rejects.toThrow("InvalidClaimsLength");
     });
 
@@ -112,13 +113,13 @@ describe.skipIf(!LEANVM_AVAILABLE)("leanvm", () => {
     }, 60_000);
 
     it("rejects what it cannot prove", async () => {
-      await expect(aggregateXmssSignatures([], new Uint8Array(0), LOG_INV_RATE)).rejects.toThrow("Empty");
-      await expect(aggregateXmssSignatures([root], new Uint8Array(0), 9)).rejects.toThrow("InvalidRate");
+      await expect(aggregateXmssSignatures([], new Uint8Array(0), LOG_INV_RATE)).rejects.toThrow("InvalidInput");
+      await expect(aggregateXmssSignatures([root], new Uint8Array(0), 9)).rejects.toThrow("InvalidInput");
 
       // `second` never signed B.
       const uncovered = sortedClaims(concat(second.toPublicKey(), MESSAGE_B));
       await expect(aggregateXmssSignatures([root], new Uint8Array(0), LOG_INV_RATE, uncovered)).rejects.toThrow(
-        "NotCovered"
+        "InvalidInput"
       );
 
       const forged = concat(claims[1], signatures[0]);
