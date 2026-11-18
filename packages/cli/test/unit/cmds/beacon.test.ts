@@ -124,6 +124,13 @@ describe("cmds / beacon / args handler", () => {
     expect(options.network.advertiseVersion).toBe(true);
   });
 
+  it("uses the native state transition by default", async () => {
+    const defaultResult = await runBeaconHandlerInit({});
+    expect(defaultResult.options.chain.nativeStateTransition).toBe(true);
+    const optOut = await runBeaconHandlerInit({"chain.nativeStateTransition": false});
+    expect(optOut.options.chain.nativeStateTransition).toBe(false);
+  });
+
   it("resolves the data column directory independently of the database directory", async () => {
     const customDbDir = path.join(testFilesDir, "custom-db");
     const defaultResult = await runBeaconHandlerInit({dbDir: customDbDir});

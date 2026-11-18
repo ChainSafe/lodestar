@@ -47,6 +47,11 @@ pub fn processEffectiveBalanceUpdates(
         current_epoch_participation = try state.currentEpochParticipation();
     }
 
+    // Hoisted because the rare tree updates in the loop would otherwise force a reload of these
+    // slices through `cache` on every iteration.
+    const is_active_next_epoch = cache.is_active_next_epoch;
+    const compounding_flags_base = cache.compounding_validator_flags.base;
+
     var num_update: usize = 0;
     for (balances, 0..) |balance, i| {
         var effective_balance_increment = effective_balance_increments[i];
@@ -54,8 +59,14 @@ pub fn processEffectiveBalanceUpdates(
         const effective_balance_limit: u64 = if (comptime fork.lt(.electra))
             preset.MAX_EFFECTIVE_BALANCE
         else blk: {
+            // Same as `cache.isCompoundingValidator(i)`, but existing validators read the hoisted
+            // base slice; only those appended this epoch go through `cache`.
+            const is_compounding = if (i < compounding_flags_base.len)
+                compounding_flags_base[i]
+            else
+                cache.isCompoundingValidator(i);
             // from electra, effectiveBalanceLimit is per validator
-            if (cache.isCompoundingValidator(i)) {
+            if (is_compounding) {
                 break :blk preset.MAX_EFFECTIVE_BALANCE_ELECTRA;
             } else {
                 break :blk preset.MIN_ACTIVATION_BALANCE;
@@ -106,10 +117,10 @@ pub fn processEffectiveBalanceUpdates(
 
         // TODO: Do this in afterEpochTransitionCache, looping a Uint8Array should be very cheap
         // post-electra we may add new validator to registry in processPendingDeposits()
-        if (i < cache.is_active_next_epoch.len and cache.is_active_next_epoch[i]) {
-            // We track nextEpochTotalActiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
-            next_epoch_total_active_balance_by_increment += effective_balance_increment;
-        }
+        // We track nextEpochTotalActiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits).
+        // The wrapping add cannot wrap: at most 2^32 validators of u16 increments sum below 2^48.
+        const is_active_next = i < is_active_next_epoch.len and is_active_next_epoch[i];
+        next_epoch_total_active_balance_by_increment +%= @as(u64, effective_balance_increment) * @intFromBool(is_active_next);
     }
 
     cache.next_epoch_total_active_balance_by_increment = next_epoch_total_active_balance_by_increment;

@@ -6,7 +6,7 @@ import {expect} from "vitest";
 import snappyWasm from "@chainsafe/snappy-wasm";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, LVHInvalidJudged} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
@@ -310,8 +310,9 @@ function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, pare
   chain.forkChoice.validateLatestHash({
     executionStatus: ExecutionStatus.Invalid,
     latestValidExecHash: parentBlock.executionPayloadBlockHash,
-    invalidateFromParentBlockRoot: blockRootHex,
-    invalidateFromParentBlockHash: block.executionPayloadBlockHash,
+    invalidateFromBlockRoot: blockRootHex,
+    invalidateFromBlockHash: block.executionPayloadBlockHash,
+    judged: LVHInvalidJudged.FromBlock,
   });
 }
 
