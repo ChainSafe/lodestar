@@ -243,7 +243,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     beaconNodeOptions.set({executionEngine: {commit, version}});
   }
 
-  const nativeUnsupported = getNativeStateTransitionUnsupported(config, args);
+  const nativeUnsupported = getNativeStateTransitionUnsupported(config);
   if (nativeUnsupported !== null) {
     if (args["chain.nativeStateTransition"]) {
       throw Error(`--chain.nativeStateTransition does not support ${nativeUnsupported}`);
@@ -276,13 +276,9 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
 }
 
 /**
- * The native addon is compiled for a single preset.
- * Returns what the config requires that it cannot provide, or null if it can run this config.
+ * Returns the reason the native addon cannot run this config, or null if it can.
  */
-function getNativeStateTransitionUnsupported(config: ChainForkConfig, args: BeaconArgs & GlobalArgs): string | null {
-  if (args.presetFile) {
-    return "a custom preset file";
-  }
+function getNativeStateTransitionUnsupported(config: ChainForkConfig): string | null {
   try {
     new nativeBindings.BeaconConfig(config, ZERO_HASH);
   } catch (e) {
