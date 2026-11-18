@@ -7,11 +7,16 @@ import {
   IpEndpoint,
   NativeApplicationConfig,
   NativeDiscoveryConfig,
+  NativeGossipScoreParams,
   NativeTopicKind,
+  NativeTopicScoreParams,
   NetworkStatusUpdate,
 } from "@lodestar/native/network";
 import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
+import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Status} from "@lodestar/types";
+import {computeGossipPeerScoreParams} from "../../gossip/scoringParameters.js";
+import {parseGossipTopic} from "../../gossip/topic.js";
 import {NetworkOptions} from "../../options.js";
 import {NativePeerAddress, parseNativeEndpoint, parseNativePeerAddress} from "./addresses.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
@@ -163,10 +168,27 @@ function nativeListeners(addresses: readonly string[], quic: boolean): IpEndpoin
 function validateChainConfig(config: BeaconConfig): void {
   nativeInteger(config.SUBNETS_PER_NODE, "long lived subnets", ATTESTATION_SUBNET_COUNT, 1);
   nativeInteger(config.EPOCHS_PER_SUBNET_SUBSCRIPTION, "subnet subscription epochs", Number.MAX_SAFE_INTEGER, 1);
-  nativeInteger(config.DATA_COLUMN_SIDECAR_SUBNET_COUNT, "column subnets", 128, 1);
   nativeInteger(config.BLOB_SIDECAR_SUBNET_COUNT, "blob subnets", 128, 1);
   nativeInteger(config.BLOB_SIDECAR_SUBNET_COUNT_ELECTRA, "electra blob subnets", 128, 1);
+  nativeInteger(config.DATA_COLUMN_SIDECAR_SUBNET_COUNT, "column subnets", 128, 1);
   nativeInteger(config.forkBoundariesAscendingEpochOrder.length, "fork boundaries", 64, 1);
+}
+
+function gossipScore(config: BeaconConfig, genesisTime: number, activeValidatorCount: number): NativeGossipScoreParams {
+  const currentSlot = getCurrentSlot(config, genesisTime);
+  const {
+    IPColocationFactorWeight = 0,
+    behaviourPenaltyWeight = 0,
+    behaviourPenaltyDecay = 0,
+    topicScoreCap = 0,
+    topics: byTopic = {},
+  } = computeGossipPeerScoreParams({
+    config,
+    eth2Context: {activeValidatorCount, currentSlot, currentEpoch: computeEpochAtSlot(currentSlot)},
+  });
+  const topics: Partial<Record<NativeTopicKind, NativeTopicScoreParams>> = {};
+  for (const [topic, params] of Object.entries(byTopic)) topics[`${parseGossipTopic(config, topic).type}`] = params;
+  return {IPColocationFactorWeight, behaviourPenaltyWeight, behaviourPenaltyDecay, topicScoreCap, topics};
 }
 
 export function createNativeConfig(
@@ -230,7 +252,10 @@ export function createNativeConfig(
       maxPeers: opts.maxPeers,
       receiveBudgetBytes: opts.native?.receiveBudgetBytes,
     },
-    gossipPolicy: {topicConcurrency: opts.maxGossipTopicConcurrency},
+    gossipPolicy: {
+      topicConcurrency: opts.maxGossipTopicConcurrency,
+      score: gossipScore(config, genesisTime, activeValidatorCount),
+    },
     identitySecretKey: Uint8Array.from(key.raw),
   };
   return {application, directPeers, bootPeers};

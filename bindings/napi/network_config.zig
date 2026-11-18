@@ -112,7 +112,7 @@ pub fn parse(value: Value, beacon: *const BeaconConfig, out: *Config) !void {
 
 fn parseGossip(value: Value, beacon: *const BeaconConfig, out: *Config) !void {
     const validators = try decode.integer(try decode.get(value, "activeValidatorCount"), 9007199254740991);
-    out.gossip = try n.application_policy.gossip(&beacon.chain, validators);
+    out.gossip = try n.application_policy.gossip(&beacon.chain);
     out.gossip.message_id_policy = .{ .phase0_digest = out.chain.phase0_digest };
     const boundaries = out.chain.topics[0..out.chain.boundary_count];
     out.processor_limits = try n.application_policy.processor(boundaries, validators);
@@ -122,7 +122,7 @@ fn parseGossip(value: Value, beacon: *const BeaconConfig, out: *Config) !void {
         out.execution_limits = try n.application_policy.execution(boundaries, &out.processor_limits, .{});
         return;
     }
-    try decode.object(policy, &.{ "activeSendTimeoutMs", "activeSendItems", "largeFrameTimeoutMs", "receiveBufferBytes", "hostItems", "hostBytes", "topicConcurrency" });
+    try decode.object(policy, &.{ "activeSendTimeoutMs", "activeSendItems", "largeFrameTimeoutMs", "receiveBufferBytes", "hostItems", "hostBytes", "topicConcurrency", "score" });
     var budget: n.application_policy.Execution = .{};
     inline for (.{
         .{ "hostItems", "items", 16384 },
@@ -140,6 +140,8 @@ fn parseGossip(value: Value, beacon: *const BeaconConfig, out: *Config) !void {
         const override = try decode.get(policy, field[0]);
         if (try override.typeof() != .undefined) @field(out.gossip, field[1]) = try decode.bigint(override);
     }
+    const score = try decode.get(policy, "score");
+    if (try score.typeof() != .undefined) try parseScore(score, &out.gossip);
     const receive = try decode.get(policy, "receiveBufferBytes");
     if (try receive.typeof() != .undefined) out.gossip.receive_arena_bytes = @intCast(try decode.integer(receive, 1024 * 1024 * 1024));
     if (try (try decode.get(policy, "activeSendItems")).typeof() != .undefined) {
@@ -147,6 +149,49 @@ fn parseGossip(value: Value, beacon: *const BeaconConfig, out: *Config) !void {
         try decode.object(active_items, &topic_kind_names);
         inline for (std.meta.fields(n.gossipsub.topic.Kind), 0..) |field, index| {
             if (try active_items.hasNamedProperty(field.name)) out.gossip.active_send_items[index] = @intCast(try decode.integer(try decode.get(active_items, field.name), n.gossipsub.constants.peers_cap));
+        }
+    }
+}
+
+const score_fields = .{
+    .{ "IPColocationFactorWeight", "ip_colocation_weight" },
+    .{ "behaviourPenaltyWeight", "behaviour_weight" },
+    .{ "behaviourPenaltyDecay", "behaviour_decay" },
+    .{ "topicScoreCap", "topic_cap" },
+};
+const topic_score_fields = .{
+    .{ "topicWeight", "weight" },
+    .{ "timeInMeshWeight", "time_in_mesh_weight" },
+    .{ "timeInMeshCap", "time_in_mesh_cap" },
+    .{ "timeInMeshQuantum", "time_in_mesh_quantum_ms" },
+    .{ "firstMessageDeliveriesWeight", "first_delivery_weight" },
+    .{ "firstMessageDeliveriesCap", "first_delivery_cap" },
+    .{ "firstMessageDeliveriesDecay", "first_delivery_decay" },
+    .{ "meshMessageDeliveriesWeight", "mesh_delivery_weight" },
+    .{ "meshMessageDeliveriesThreshold", "mesh_delivery_threshold" },
+    .{ "meshMessageDeliveriesCap", "mesh_delivery_cap" },
+    .{ "meshMessageDeliveriesDecay", "mesh_delivery_decay" },
+    .{ "meshMessageDeliveriesActivation", "mesh_delivery_activation_ms" },
+    .{ "meshMessageDeliveriesWindow", "mesh_delivery_window_ms" },
+    .{ "meshFailurePenaltyWeight", "mesh_failure_weight" },
+    .{ "meshFailurePenaltyDecay", "mesh_failure_decay" },
+    .{ "invalidMessageDeliveriesWeight", "invalid_weight" },
+    .{ "invalidMessageDeliveriesDecay", "invalid_decay" },
+};
+
+fn parseScore(value: Value, out: *n.gossipsub.Gossipsub.Options) !void {
+    try decode.completeObject(value, &.{ "IPColocationFactorWeight", "behaviourPenaltyWeight", "behaviourPenaltyDecay", "topicScoreCap", "topics" });
+    inline for (score_fields) |field| @field(out.score_params, field[1]) = try decode.number(try decode.get(value, field[0]));
+    const topics = try decode.get(value, "topics");
+    try decode.object(topics, &topic_kind_names);
+    inline for (std.meta.fields(n.gossipsub.topic.Kind), 0..) |kind, index| {
+        if (try topics.hasNamedProperty(kind.name)) {
+            const row = try decode.get(topics, kind.name);
+            const params = &out.topic_params.?[index].params;
+            inline for (topic_score_fields) |field| {
+                const entry = try decode.get(row, field[0]);
+                @field(params, field[1]) = if (@FieldType(n.gossipsub.score.TopicParams, field[1]) == u64) try decode.integer(entry, 86_400_000) else try decode.number(entry);
+            }
         }
     }
 }

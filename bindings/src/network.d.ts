@@ -69,7 +69,38 @@ export interface NativeDiscoveryConfig {
   fixed: AdvertisedEndpoints;
 }
 
+export interface NativeTopicScoreParams {
+  topicWeight: number;
+  timeInMeshWeight: number;
+  timeInMeshCap: number;
+  timeInMeshQuantum: number;
+  firstMessageDeliveriesWeight: number;
+  firstMessageDeliveriesCap: number;
+  firstMessageDeliveriesDecay: number;
+  meshMessageDeliveriesWeight: number;
+  meshMessageDeliveriesThreshold: number;
+  meshMessageDeliveriesCap: number;
+  meshMessageDeliveriesDecay: number;
+  meshMessageDeliveriesActivation: number;
+  meshMessageDeliveriesWindow: number;
+  meshFailurePenaltyWeight: number;
+  meshFailurePenaltyDecay: number;
+  invalidMessageDeliveriesWeight: number;
+  invalidMessageDeliveriesDecay: number;
+}
+
+export interface NativeGossipScoreParams {
+  IPColocationFactorWeight: number;
+  behaviourPenaltyWeight: number;
+  behaviourPenaltyDecay: number;
+  topicScoreCap: number;
+  /** Kinds left out are not scored. */
+  topics: Readonly<Partial<Record<NativeTopicKind, NativeTopicScoreParams>>>;
+}
+
 export interface NativeGossipStartupPolicy {
+  /** Uses the gossipsub defaults with every kind unscored when omitted. */
+  score?: NativeGossipScoreParams;
   /** Total host execution allowance. Uses the native default when omitted. */
   hostItems?: number;
   hostBytes?: number;

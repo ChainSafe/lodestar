@@ -154,7 +154,6 @@ test "application keeps subscribe-all and custody subscriptions independent of c
     }
 }
 
-// Generated from Lodestar's production subnet and custody formulas by test/utils/nativePolicyFixtures.ts.
 test "application subscriptions match Lodestar across identities and long-lived rotations" {
     const Case = struct {
         secret: u8,
