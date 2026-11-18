@@ -13,24 +13,28 @@ test.each([
   [129, "Client has too many peers"],
   [250, "Peer score too low"],
   [251, "Peer banned this node"],
-] as const)("disconnect sends Goodbye %s before closing", async (reason, label) => {
-  const pair = await incomingPair();
-  try {
-    await pair.right.disconnect(pair.identity.peerId, reason);
-    await expect
-      .poll(
-        async () =>
-          metricValue(await pair.left.getMetrics(), `lodestar_peer_goodbye_received_total{reason="${label}"}`),
-        {
-          timeout: 5000,
-        }
-      )
-      .toBe(1);
-    await expect.poll(() => pair.right.observePeers().counts.connected, {timeout: 5000}).toBe(0);
-  } finally {
-    await Promise.allSettled([pair.left.stop(), pair.right.close()]);
-  }
-}, 15_000);
+] as const)(
+  "disconnect sends Goodbye %s before closing",
+  async (reason, label) => {
+    const pair = await incomingPair();
+    try {
+      await pair.right.disconnect(pair.identity.peerId, reason);
+      await expect
+        .poll(
+          async () =>
+            metricValue(await pair.left.getMetrics(), `lodestar_peer_goodbye_received_total{reason="${label}"}`),
+          {
+            timeout: 5000,
+          }
+        )
+        .toBe(1);
+      await expect.poll(() => pair.right.observePeers().counts.connected, {timeout: 5000}).toBe(0);
+    } finally {
+      await Promise.allSettled([pair.left.stop(), pair.right.close()]);
+    }
+  },
+  15_000
+);
 
 test("rejects invalid Goodbye reasons", async () => {
   const runtime = startRuntime(applicationConfig());
