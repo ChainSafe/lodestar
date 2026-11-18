@@ -269,6 +269,12 @@
         },
     },
     .executables = .{
+        .roguestar = .{
+            .root_module = .{
+                .root_source_file = "src/decoupled/roguestar.zig",
+                .imports = .{.decoupled},
+            },
+        },
         .download_era_files = .{
             .root_module = .{
                 .root_source_file = "scripts/download_era_files.zig",
