@@ -811,6 +811,18 @@ pub fn getValidator(self: *BeaconStateView, index_arg: js.Number) !js_types.Vali
     return js_types.wrap(js_types.Validator, try sszValueToNapiValue(env, ct.phase0.Validator, &validator));
 }
 
+/// Get the index of the validator with the given pubkey in this state.
+/// Returns: number | null
+pub fn getValidatorIndex(self: *BeaconStateView, pubkey_arg: js.Uint8Array) !js.Value {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    const pubkey_bytes = try pubkey_arg.toSlice();
+    if (pubkey_bytes.len != 48) return error.InvalidPubkeyLength;
+    const index = (try cached_state.epoch_cache.getValidatorIndex(js.io(), cached_state.state, pubkey_bytes[0..48].*)) orelse
+        return jsNull();
+    return js_types.wrap(js.Value, js.Number.from(index).toValue());
+}
+
 /// Get the status of a validator by index.
 /// Returns: status string
 pub fn getValidatorStatus(self: *BeaconStateView, index_arg: js.Number) !js.String {

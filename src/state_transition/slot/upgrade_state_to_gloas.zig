@@ -1,5 +1,4 @@
 const std = @import("std");
-const getValidatorIndex = @import("../utils/electra.zig").getValidatorIndex;
 const Allocator = std.mem.Allocator;
 const BeaconConfig = @import("config").BeaconConfig;
 const BeaconState = @import("fork_types").BeaconState;
@@ -18,7 +17,7 @@ const metrics = @import("../metrics.zig");
 const time = @import("time");
 
 /// Consumes fulu_state only on success. Compatible element roots remain shared.
-pub fn upgradeStateToGloas(allocator: Allocator, io: std.Io, config: *const BeaconConfig, epoch_cache: *const EpochCache, fulu_state: *BeaconState(.fulu)) !BeaconState(.gloas) {
+pub fn upgradeStateToGloas(allocator: Allocator, io: std.Io, config: *const BeaconConfig, epoch_cache: *EpochCache, fulu_state: *BeaconState(.fulu)) !BeaconState(.gloas) {
     try fulu_state.commit();
     var state = try fulu_state.upgradeUnsafe();
     errdefer state.deinit();
@@ -75,7 +74,7 @@ fn migrateComposite(comptime Before: type, comptime After: type, allocator: Allo
     return After.TreeView.init(view_allocator, pool, root);
 }
 
-fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig, epoch_cache: *const EpochCache, state: *BeaconState(.gloas)) !void {
+fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig, epoch_cache: *EpochCache, state: *BeaconState(.gloas)) !void {
     const started = time.start(io);
     var checks: SignatureChecks = .{};
     var onboarded: u64 = 0;
@@ -106,7 +105,7 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
         const result = try lookup.getOrPutContext(allocator, deposit.pubkey, context);
         if (!result.found_existing) result.value_ptr.* = .{};
         const entry = result.value_ptr;
-        const validator_index = (try getValidatorIndex(.gloas, io, epoch_cache.pubkey_cache, state, deposit.pubkey));
+        const validator_index = try epoch_cache.getValidatorIndex(io, state, deposit.pubkey);
         const known_validator = try isValidatorKnown(.gloas, state, validator_index);
         if (!known_validator) {
             if (entry.builder_index) |builder_index| {

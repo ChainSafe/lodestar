@@ -9,7 +9,7 @@ import {
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
 import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
-import {byteArrayEquals, intDiv} from "@lodestar/utils";
+import {intDiv} from "@lodestar/utils";
 import type {IBeaconStateView} from "../stateView/interface.js";
 import {BeaconStateAllForks, CachedBeaconStateElectra, CachedBeaconStateGloas, EpochCache} from "../types.js";
 import {hasEth1WithdrawalCredential} from "./capella.js";
@@ -244,23 +244,4 @@ export function promoteFinalizedPubkeys(pubkeyCache: PubkeyCache, state: StateVa
       return;
     }
   }
-}
-
-/**
- * The shared pubkey cache holds only the finalized registry prefix, which every state the node processes shares.
- * Validators added after it can differ between branches, so they are read from `state`. That suffix grows by at most
- * MAX_PENDING_DEPOSITS_PER_EPOCH validators per unfinalized epoch.
- */
-export function getValidatorIndexInState(
-  pubkeyCache: PubkeyCache,
-  state: {readonly validatorCount: number; getValidator(index: ValidatorIndex): {pubkey: Uint8Array}},
-  pubkey: Uint8Array
-): ValidatorIndex | null {
-  const validatorCount = state.validatorCount;
-  const index = pubkeyCache.getIndex(pubkey);
-  if (index !== null) return index < validatorCount ? index : null;
-  for (let i = pubkeyCache.size; i < validatorCount; i++) {
-    if (byteArrayEquals(state.getValidator(i).pubkey, pubkey)) return i;
-  }
-  return null;
 }

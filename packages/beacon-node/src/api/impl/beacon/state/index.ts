@@ -103,14 +103,13 @@ export function getBeaconStateApi({
     async getStateValidators({stateId, validatorIds = [], statuses = []}) {
       const {state, executionOptimistic, finalized} = await getState(stateId);
       const currentEpoch = getCurrentEpoch(state);
-      const {pubkeyCache} = chain;
 
       const validatorResponses: routes.beacon.ValidatorResponse[] = [];
       if (validatorIds.length) {
         assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
 
         for (const id of validatorIds) {
-          const resp = getStateValidatorIndex(id, state, pubkeyCache);
+          const resp = getStateValidatorIndex(id, state);
           if (resp.valid) {
             const validatorIndex = resp.validatorIndex;
             const validator = state.getValidator(validatorIndex);
@@ -136,7 +135,7 @@ export function getBeaconStateApi({
       if (statuses.length) {
         assertUniqueItems(statuses, "Duplicate statuses provided");
 
-        const validatorsByStatus = filterStateValidatorsByStatus(statuses, state, pubkeyCache, currentEpoch);
+        const validatorsByStatus = filterStateValidatorsByStatus(statuses, state, currentEpoch);
         return {
           data: validatorsByStatus,
           meta: {executionOptimistic, finalized},
@@ -219,7 +218,6 @@ export function getBeaconStateApi({
 
     async postStateValidatorIdentities({stateId, validatorIds = []}) {
       const {state, executionOptimistic, finalized} = await getState(stateId);
-      const {pubkeyCache} = chain;
 
       let validatorIdentities: routes.beacon.ValidatorIdentities;
 
@@ -228,7 +226,7 @@ export function getBeaconStateApi({
 
         validatorIdentities = [];
         for (const id of validatorIds) {
-          const resp = getStateValidatorIndex(id, state, pubkeyCache);
+          const resp = getStateValidatorIndex(id, state);
           if (resp.valid) {
             const index = resp.validatorIndex;
             const {pubkey, activationEpoch} = state.getValidator(index);
@@ -252,9 +250,8 @@ export function getBeaconStateApi({
 
     async getStateValidator({stateId, validatorId}) {
       const {state, executionOptimistic, finalized} = await getState(stateId);
-      const {pubkeyCache} = chain;
 
-      const resp = getStateValidatorIndex(validatorId, state, pubkeyCache);
+      const resp = getStateValidatorIndex(validatorId, state);
       if (!resp.valid) {
         throw new ApiError(resp.code, resp.reason);
       }
@@ -279,7 +276,7 @@ export function getBeaconStateApi({
 
         const balances: routes.beacon.ValidatorBalance[] = [];
         for (const id of validatorIds) {
-          const resp = getStateValidatorIndex(id, state, chain.pubkeyCache);
+          const resp = getStateValidatorIndex(id, state);
 
           if (resp.valid) {
             balances.push({

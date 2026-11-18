@@ -30,7 +30,6 @@ import {
   computeTimeAtSlot,
   getCurrentSlot,
   getInclusionListCommittee,
-  getValidatorIndexInState,
   isStatePostAltair,
   isStatePostGloas,
   proposerShufflingDecisionRoot,
@@ -2112,7 +2111,7 @@ export function getValidatorApi(
 
       const filteredRegistrations = registrations.filter((registration) => {
         const {pubkey} = registration.message;
-        const validatorIndex = getValidatorIndexInState(chain.pubkeyCache, headState, pubkey);
+        const validatorIndex = headState.getValidatorIndex(pubkey);
         if (validatorIndex === null) return false;
 
         const validator = headState.getValidator(validatorIndex);

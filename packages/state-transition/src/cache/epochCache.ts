@@ -25,7 +25,7 @@ import {
   ValidatorIndex,
   gloas,
 } from "@lodestar/types";
-import {LodestarError} from "@lodestar/utils";
+import {LodestarError, toPubkeyHex} from "@lodestar/utils";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
 import {
   EpochShuffling,
@@ -54,7 +54,6 @@ import {
 } from "../util/shuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
-import {getValidatorIndexInState} from "../util/validator.js";
 import {BuilderDepositSignatureCache} from "./builderDepositSignatureCache.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {EpochTransitionCache} from "./epochTransitionCache.js";
@@ -121,6 +120,15 @@ export class EpochCache {
    * can skip the bulk verification cost. There should only exist one for the entire application.
    */
   builderDepositSignatureCache: BuilderDepositSignatureCache;
+  /**
+   * Pubkey to index of this state's validators past the shared pubkey cache, which holds only the finalized
+   * registry prefix. Later validators can differ between branches, so each state indexes its own on the first
+   * lookup that misses the shared cache. clone() does not copy it: a clone can add different validators at the
+   * same indices.
+   */
+  private unfinalizedPubkey2index: Map<string, ValidatorIndex> | null = null;
+  /** Registry length covered by `unfinalizedPubkey2index` */
+  private unfinalizedIndexedCount = 0;
   /**
    * Indexes of the block proposers for the current epoch.
    * For pre-fulu, this is computed and cached from the current shuffling.
@@ -928,13 +936,27 @@ export class EpochCache {
     return this.pubkeyCache.get(index);
   }
 
+  /**
+   * Index of the validator with `pubkey` in `state`, which must be the state this cache belongs to.
+   */
   getValidatorIndex(state: BeaconStateAllForks, pubkey: Uint8Array): ValidatorIndex | null {
     const {validators} = state;
-    return getValidatorIndexInState(
-      this.pubkeyCache,
-      {validatorCount: validators.length, getValidator: (index) => validators.getReadonly(index)},
-      pubkey
-    );
+    const validatorCount = validators.length;
+    // Read before the lookup. Other threads append to the shared cache, so a pubkey promoted in between is
+    // either found by the lookup or indexed below.
+    const cachedCount = this.pubkeyCache.size;
+    const cachedIndex = this.pubkeyCache.getIndex(pubkey);
+    if (cachedIndex !== null) return cachedIndex < validatorCount ? cachedIndex : null;
+
+    if (this.unfinalizedPubkey2index === null) {
+      this.unfinalizedPubkey2index = new Map();
+      this.unfinalizedIndexedCount = cachedCount;
+    }
+    for (; this.unfinalizedIndexedCount < validatorCount; this.unfinalizedIndexedCount++) {
+      const index = this.unfinalizedIndexedCount;
+      this.unfinalizedPubkey2index.set(toPubkeyHex(validators.getReadonly(index).pubkey), index);
+    }
+    return this.unfinalizedPubkey2index.get(toPubkeyHex(pubkey)) ?? null;
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {

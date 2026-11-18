@@ -75,6 +75,23 @@ describe("finalized-only pubkey cache", () => {
     expect(branchA.epochCtx.getValidatorIndex(branchA, pubkeyQ)).toBeNull();
   });
 
+  it("indexes later validators per state without sharing them with clones", () => {
+    const pubkeyCache = createTestPubkeyCache();
+    const state = createAnchor(pubkeyCache).clone();
+    const finalizedCount = pubkeyCache.size;
+
+    expect(state.epochCtx.getValidatorIndex(state, pubkeyP)).toBeNull();
+    addValidatorToRegistry(ForkSeq.electra, state, pubkeyP, credentials, 0);
+    expect(state.epochCtx.getValidatorIndex(state, pubkeyP)).toBe(finalizedCount);
+
+    state.commit();
+    const child = state.clone();
+    addValidatorToRegistry(ForkSeq.electra, child, pubkeyQ, credentials, 0);
+    expect(child.epochCtx.getValidatorIndex(child, pubkeyP)).toBe(finalizedCount);
+    expect(child.epochCtx.getValidatorIndex(child, pubkeyQ)).toBe(finalizedCount + 1);
+    expect(state.epochCtx.getValidatorIndex(state, pubkeyQ)).toBeNull();
+  });
+
   it("promotes a validator once its activation eligibility is finalized", () => {
     const pubkeyCache = createTestPubkeyCache();
     const anchor = createAnchor(pubkeyCache);

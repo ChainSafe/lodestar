@@ -122,6 +122,7 @@ export interface IBeaconStateView {
   getBalance(index: number): number;
   // readonly
   getValidator(index: ValidatorIndex): phase0.Validator;
+  getValidatorIndex(pubkey: Uint8Array): ValidatorIndex | null;
   getValidatorsByStatus(statuses: Set<string>, currentEpoch: Epoch): phase0.Validator[];
   validatorCount: number;
   // this get number of active validators in the current shuffling

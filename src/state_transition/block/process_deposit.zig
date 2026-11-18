@@ -1,5 +1,4 @@
 const std = @import("std");
-const getValidatorIndex = @import("../utils/electra.zig").getValidatorIndex;
 const BeaconConfig = @import("config").BeaconConfig;
 const ForkSeq = @import("config").ForkSeq;
 const BeaconState = @import("fork_types").BeaconState;
@@ -103,7 +102,7 @@ pub fn applyDeposit(
     const amount = deposit.amount();
     const signature = deposit.signature();
 
-    const cached_index = try getValidatorIndex(fork, io, epoch_cache.pubkey_cache, state, pubkey.*);
+    const cached_index = try epoch_cache.getValidatorIndex(io, state, pubkey.*);
     const is_new_validator = cached_index == null;
 
     if (comptime fork.lt(.electra)) {

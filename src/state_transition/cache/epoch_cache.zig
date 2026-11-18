@@ -12,6 +12,7 @@ const ValidatorIndex = types.primitive.ValidatorIndex.Type;
 const CommitteeIndex = types.primitive.CommitteeIndex.Type;
 const BeaconConfig = @import("config").BeaconConfig;
 const PubkeyCache = @import("./pubkey_cache.zig").PubkeyCache;
+const PubkeyHashContext = @import("./pubkey_cache.zig").PubkeyHashContext;
 const BuilderDepositSignatureCacheRc = @import("builder_deposit_signature_cache.zig").BuilderDepositSignatureCacheRc;
 const EpochShuffling = @import("../utils//epoch_shuffling.zig").EpochShuffling;
 const EpochShufflingRc = @import("../utils/epoch_shuffling.zig").EpochShufflingRc;
@@ -61,6 +62,12 @@ const proposer_weight: f64 = @floatFromInt(c.PROPOSER_WEIGHT);
 const weight_denominator: f64 = @floatFromInt(c.WEIGHT_DENOMINATOR);
 
 pub const proposer_weight_factor: f64 = proposer_weight / (weight_denominator - proposer_weight);
+
+const UnfinalizedIndexByPubkey = struct {
+    map: std.array_hash_map.Custom([48]u8, ValidatorIndex, PubkeyHashContext, true) = .empty,
+    /// Registry length covered by `map`.
+    indexed_count: usize,
+};
 
 pub const EpochCache = struct {
     allocator: Allocator,
@@ -128,6 +135,12 @@ pub const EpochCache = struct {
     sync_period: SyncPeriod,
 
     epoch: Epoch,
+
+    /// Pubkey to index of this state's validators past the shared pubkey cache, which holds only
+    /// the finalized registry prefix. Later validators can differ between branches, so each state
+    /// indexes its own on the first lookup that misses the shared cache. `clone` does not copy it:
+    /// a clone can add different validators at the same indices.
+    unfinalized_index_by_pubkey: ?UnfinalizedIndexByPubkey = null,
 
     fn initEffectiveBalanceIncrementsRc(allocator: Allocator, validator_count: usize) !*EffectiveBalanceIncrementsRc {
         var effective_balance_increments = try effectiveBalanceIncrementsInit(allocator, validator_count);
@@ -500,7 +513,32 @@ pub const EpochCache = struct {
         // unref the sync committee caches
         self.current_sync_committee_indexed.unref();
         self.next_sync_committee_indexed.unref();
+        if (self.unfinalized_index_by_pubkey) |*unfinalized| unfinalized.map.deinit(self.allocator);
         self.allocator.destroy(self);
+    }
+
+    /// Index of the validator with `pubkey` in `state`, which must be the state this cache belongs to.
+    pub fn getValidatorIndex(self: *EpochCache, io: std.Io, state: anytype, pubkey: [48]u8) !?ValidatorIndex {
+        const validators_count = try state.validatorsCount();
+        // Read before the lookup. Other threads append to the shared cache, so a pubkey promoted
+        // in between is either found by the lookup or indexed below.
+        const cached_count = self.pubkey_cache.count(io);
+        if (self.pubkey_cache.get(io, pubkey)) |index| return if (index < validators_count) index else null;
+
+        const context = self.pubkey_cache.hashContext();
+        if (self.unfinalized_index_by_pubkey == null) self.unfinalized_index_by_pubkey = .{ .indexed_count = cached_count };
+        const unfinalized = &self.unfinalized_index_by_pubkey.?;
+        if (unfinalized.indexed_count < validators_count) {
+            try unfinalized.map.ensureUnusedCapacityContext(self.allocator, validators_count - unfinalized.indexed_count, context);
+            var validators = try state.validators();
+            while (unfinalized.indexed_count < validators_count) : (unfinalized.indexed_count += 1) {
+                var validator = try validators.getReadonly(unfinalized.indexed_count);
+                var validator_pubkey: [48]u8 = undefined;
+                try validator.getValue(undefined, "pubkey", &validator_pubkey);
+                unfinalized.map.putAssumeCapacityContext(validator_pubkey, @intCast(unfinalized.indexed_count), context);
+            }
+        }
+        return unfinalized.map.getContext(pubkey, context);
     }
 
     pub fn clone(self: *const EpochCache, allocator: Allocator) !*EpochCache {

@@ -1,5 +1,4 @@
 const std = @import("std");
-const getValidatorIndex = @import("../utils/electra.zig").getValidatorIndex;
 const ForkSeq = @import("config").ForkSeq;
 const BeaconConfig = @import("config").BeaconConfig;
 const BeaconState = @import("fork_types").BeaconState;
@@ -25,7 +24,7 @@ pub fn processConsolidationRequest(
     comptime fork: ForkSeq,
     io: std.Io,
     config: *const BeaconConfig,
-    epoch_cache: *const EpochCache,
+    epoch_cache: *EpochCache,
     state: *BeaconState(fork),
     consolidation: *const ConsolidationRequest,
 ) !void {
@@ -33,8 +32,8 @@ pub fn processConsolidationRequest(
     const target_pubkey = consolidation.target_pubkey;
     const source_address = consolidation.source_address;
 
-    const source_index = (try getValidatorIndex(fork, io, epoch_cache.pubkey_cache, state, source_pubkey)) orelse return;
-    const target_index = (try getValidatorIndex(fork, io, epoch_cache.pubkey_cache, state, target_pubkey)) orelse return;
+    const source_index = (try epoch_cache.getValidatorIndex(io, state, source_pubkey)) orelse return;
+    const target_index = (try epoch_cache.getValidatorIndex(io, state, target_pubkey)) orelse return;
     const validator_count = try state.validatorsCount();
     if (source_index >= validator_count or target_index >= validator_count) return;
 

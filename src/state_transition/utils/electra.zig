@@ -1,4 +1,3 @@
-const std = @import("std");
 const c = @import("constants");
 const COMPOUNDING_WITHDRAWAL_PREFIX = c.COMPOUNDING_WITHDRAWAL_PREFIX;
 const MIN_ACTIVATION_BALANCE = @import("preset").preset.MIN_ACTIVATION_BALANCE;
@@ -11,7 +10,6 @@ pub const WithdrawalCredentials = ct.primitive.Root.Type;
 const ValidatorIndex = ct.primitive.ValidatorIndex.Type;
 
 const hasEth1WithdrawalCredential = @import("./capella.zig").hasEth1WithdrawalCredential;
-const PubkeyCache = @import("../cache/pubkey_cache.zig").PubkeyCache;
 const G2_POINT_AT_INFINITY = @import("constants").G2_POINT_AT_INFINITY;
 
 pub fn hasCompoundingWithdrawalCredential(withdrawal_credentials: *const WithdrawalCredentials) bool {
@@ -70,29 +68,6 @@ pub fn queueExcessActiveBalance(
         var pending_deposits = try state.pendingDeposits();
         try pending_deposits.pushValue(&pending_deposit);
     }
-}
-
-/// The shared pubkey cache holds only the finalized registry prefix, which every state the node
-/// processes shares. Validators added after it can differ between branches, so they are read from
-/// `state`. That suffix grows by at most MAX_PENDING_DEPOSITS_PER_EPOCH validators per unfinalized epoch.
-pub fn getValidatorIndex(
-    comptime fork: ForkSeq,
-    io: std.Io,
-    pubkey_cache: *const PubkeyCache,
-    state: *BeaconState(fork),
-    pubkey: [48]u8,
-) !?ValidatorIndex {
-    const validators_count = try state.validatorsCount();
-    if (pubkey_cache.get(io, pubkey)) |index| return if (index < validators_count) index else null;
-    var validators = try state.validators();
-    var index: ValidatorIndex = pubkey_cache.count(io);
-    while (index < validators_count) : (index += 1) {
-        var validator = try validators.get(index);
-        var candidate: [48]u8 = undefined;
-        try validator.getValue(undefined, "pubkey", &candidate);
-        if (std.mem.eql(u8, &candidate, &pubkey)) return index;
-    }
-    return null;
 }
 
 pub fn isValidatorKnown(comptime fork: ForkSeq, state: *BeaconState(fork), index: ?ValidatorIndex) !bool {

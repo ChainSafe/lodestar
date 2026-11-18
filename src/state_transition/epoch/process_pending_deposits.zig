@@ -1,5 +1,4 @@
 const std = @import("std");
-const getValidatorIndex = @import("../utils/electra.zig").getValidatorIndex;
 const types = @import("consensus_types");
 const Allocator = std.mem.Allocator;
 const ForkSeq = @import("config").ForkSeq;
@@ -76,7 +75,7 @@ pub fn processPendingDeposits(
         // Read validator state
         var is_validator_exited = false;
         var is_validator_withdrawn = false;
-        const validator_index = (try getValidatorIndex(fork, io, epoch_cache.pubkey_cache, state, deposit.pubkey));
+        const validator_index = try epoch_cache.getValidatorIndex(io, state, deposit.pubkey);
 
         if (try isValidatorKnown(fork, state, validator_index)) {
             var validators = try state.validators();
@@ -133,7 +132,7 @@ fn applyPendingDeposit(
     deposit: PendingDeposit,
     cache: *EpochTransitionCache,
 ) !void {
-    const validator_index = (try getValidatorIndex(fork, io, epoch_cache.pubkey_cache, state, deposit.pubkey));
+    const validator_index = try epoch_cache.getValidatorIndex(io, state, deposit.pubkey);
     const pubkey = &deposit.pubkey;
 
     const withdrawal_credentials = &deposit.withdrawal_credentials;

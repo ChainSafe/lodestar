@@ -653,6 +653,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this.cachedState.validators.getReadonly(index).toValue();
   }
 
+  getValidatorIndex(pubkey: Uint8Array): ValidatorIndex | null {
+    return this.cachedState.epochCtx.getValidatorIndex(this.cachedState, pubkey);
+  }
+
   getValidatorsByStatus(statuses: Set<string>, currentEpoch: Epoch): phase0.Validator[] {
     const validators: phase0.Validator[] = [];
     const validatorsArr = this.cachedState.validators.getAllReadonlyValues();
