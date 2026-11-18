@@ -285,9 +285,15 @@ LODESTAR_NATIVE_FORK_CHOICE=true pnpm vitest run --project spec-minimal test/spe
 
 Behaviour that differs from proto-array under the flag:
 
-- The anchor is both the justified and the finalized checkpoint, as in
+- A finalized anchor is both the justified and the finalized checkpoint, as in
   `get_forkchoice_store`. Proto-array starts with the justified epoch one ahead.
-- Only a finalized anchor state is supported; starting from an unfinalized state throws.
+- An unfinalized anchor (`--unsafeCheckpointState`, `--lastPersistedCheckpointState`)
+  starts at its state's own checkpoints (`Store.initFromUnfinalizedSummary`). The
+  finalized block, the justified block and the anchor's parent enter the store as
+  ancestors known by root only, so the anchor can still be reorged. As with proto-array,
+  the justified balances are the anchor state's. Unlike proto-array, those ancestors
+  carry no payload, so the finalized block hash sent to the engine is zero until the
+  chain finalizes a block the store imported.
 - `shouldOverrideForkChoiceUpdate` never overrides and `predictProposerHead` returns the
   head (see Deviations).
 - `prune` drops every block that does not descend from the finalized block, not only
