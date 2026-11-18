@@ -18,6 +18,7 @@ test.each([
   async (reason, label) => {
     const pair = await incomingPair();
     try {
+      await expect.poll(() => pair.right.observePeers().counts.connected, {timeout: 5000}).toBe(1);
       await pair.right.disconnect(pair.identity.peerId, reason);
       await expect
         .poll(
