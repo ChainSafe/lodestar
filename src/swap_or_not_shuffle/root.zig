@@ -154,7 +154,7 @@ fn swapOrNotPairs(
 /// `T` is `u32` for the JS binding and `ValidatorIndex`/`u64` for Zig callers.
 pub fn innerShuffleList(comptime T: type, out: []T, seed: []const u8, rounds: i32, forwards: bool) ShufflingError!void {
     shuffleRounds(T, null, out, seed, rounds, forwards) catch |err| switch (err) {
-        // Only a task group on an io can be canceled, and there is none without one.
+        // `Canceled` only comes from awaiting tasks on an io, and the io here is null.
         error.Canceled => unreachable,
         else => |e| return e,
     };
@@ -289,7 +289,7 @@ pub fn unshuffleList(comptime T: type, out: []T, seed: []const u8, rounds: i32) 
 }
 
 /// `compute_shuffled_index` for single indices of one seed. Each round's pivot is computed once;
-/// the source hashes are not cached, because callers look up too few indices for them to repeat.
+/// the source hashes repeat too rarely across lookups for a cache to pay off.
 /// It allocates nothing, so each thread can use its own copy.
 pub const ComputeShuffledIndex = struct {
     /// A round hashes only its low byte, so the pivots repeat every 256 rounds.
