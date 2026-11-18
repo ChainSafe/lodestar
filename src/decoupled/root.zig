@@ -1,5 +1,5 @@
 //! Goldilocks reference implementation for fgsa-spec.pdf.
-//! fg/ holds the finality gadget.
+//! fg/ holds the finality gadget and ac/ the available chain.
 
 const std = @import("std");
 
@@ -13,8 +13,13 @@ pub const fg = struct {
     pub const FinalityFrame = @import("fg/FinalityFrame.zig");
     pub const types = @import("fg/finality_types.zig");
 };
+pub const ac = struct {
+    pub const available_chain = @import("ac/available_chain.zig");
+    pub const VoteSet = @import("ac/VoteSet.zig");
+};
 
 test {
     std.testing.refAllDecls(@This());
     std.testing.refAllDecls(fg);
+    std.testing.refAllDecls(ac);
 }
