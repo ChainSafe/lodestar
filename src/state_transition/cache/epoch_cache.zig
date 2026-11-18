@@ -520,8 +520,6 @@ pub const EpochCache = struct {
     /// Index of the validator with `pubkey` in `state`, which must be the state this cache belongs to.
     pub fn getValidatorIndex(self: *EpochCache, io: std.Io, state: anytype, pubkey: [48]u8) !?ValidatorIndex {
         const validators_count = try state.validatorsCount();
-        // Read before the lookup. Other threads append to the shared cache, so a pubkey promoted
-        // in between is either found by the lookup or indexed below.
         const cached_count = self.pubkey_cache.count(io);
         if (self.pubkey_cache.get(io, pubkey)) |index| return if (index < validators_count) index else null;
 
