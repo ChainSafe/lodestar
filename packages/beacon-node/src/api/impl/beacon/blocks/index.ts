@@ -125,7 +125,7 @@ export function getBeaconBlockApi(
     // A block handed to unknown parent sync stays in the seen caches, so authenticate non-local blocks before
     // caching them. Anyone can replay a finalized block with its valid signature, so check the slot as well
     if (!chain.blockProductionCache.has(blockRoot)) {
-      // The seen cache prunes the lowest slots first, so it would never drop a block from a far-future slot
+      // The seen cache never prunes far-future slots. The tolerance matches the early-block hold below
       if (slot > chain.clock.slotWithFutureTolerance(MAX_API_CLOCK_DISPARITY_MS / 1000)) {
         throw new BlockGossipError(GossipAction.IGNORE, {
           code: BlockErrorCode.FUTURE_SLOT,
