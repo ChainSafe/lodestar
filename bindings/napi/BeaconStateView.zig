@@ -111,6 +111,12 @@ pub fn release(self: *BeaconStateView) void {
     if (self.active_calls == 0) self.deinit();
 }
 
+const CachedStateOpts = struct {
+    /// Append this state's validators to the shared pubkey cache. Only for a finalized state:
+    /// the cache holds finalized validators only.
+    sync_pubkeys: bool = true,
+};
+
 fn initCachedState(
     allocator: std.mem.Allocator,
     cached_state: *CachedBeaconState,
@@ -118,7 +124,7 @@ fn initCachedState(
     state: *AnyBeaconState,
     beacon_config: *const c.BeaconConfig,
     deposit_cache: ?*st.BuilderDepositSignatureCacheRc,
-    sync_pubkeys: bool,
+    opts: CachedStateOpts,
 ) !void {
     try cached_state.init(
         allocator,
@@ -129,7 +135,7 @@ fn initCachedState(
             .pubkey_cache = &pubkey.state.cache,
             .builder_deposit_signature_cache = deposit_cache,
         },
-        if (sync_pubkeys) null else .{
+        if (opts.sync_pubkeys) null else .{
             .skip_sync_committee_cache = state.forkSeq().lt(.altair),
             .skip_sync_pubkeys = true,
         },
@@ -164,7 +170,7 @@ pub fn createFromBytes(bytes: js.Uint8Array, config: *const BeaconConfig) !Beaco
     errdefer allocator.destroy(cached_state);
 
     const io = js.io();
-    try initCachedState(allocator, cached_state, io, state, &config_rc.instance.config, null, true);
+    try initCachedState(allocator, cached_state, io, state, &config_rc.instance.config, null, .{});
 
     return .{
         .cached_state = cached_state,
@@ -1321,7 +1327,7 @@ pub fn loadOtherState(
         old_cached_state.config,
         old_cached_state.epoch_cache.builder_deposit_signature_cache,
         // Loaded states can be unfinalized; only the finalized anchor populates the cache.
-        false,
+        .{ .sync_pubkeys = false },
     );
     new_cached_state_initialized = true;
 
