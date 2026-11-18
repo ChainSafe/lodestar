@@ -83,9 +83,12 @@ test "application clock expires duties and preserves committed state through wal
     const subnet: u6 = @intCast(@ctz(~f.state.long_lived));
     const bit = @as(u64, 1) << subnet;
     var update: application.Update = .{ .core_topics = true, .attester_count = 1, .sync_until = .{ null, 2, null, null } };
-    update.attesters[0] = .{ .slot = 2, .subnets = bit, .aggregators = bit };
+    const unpeered: u6 = @intCast(@ctz(~(f.state.long_lived | bit)));
+    update.attesters[0] = .{ .slot = 2, .subnets = bit, .aggregators = bit | @as(u64, 1) << unpeered };
     try f.apply(&update, 0);
     try std.testing.expect(f.subscribed(0, .beacon_attestation, subnet));
+    try std.testing.expect(f.subscribed(0, .beacon_attestation, unpeered));
+    try std.testing.expect(f.core.peer_manager.demand.attnets & @as(u64, 1) << unpeered == 0);
     try std.testing.expect(f.subscribed(0, .sync_committee, 1));
     try std.testing.expectEqual(f.state.long_lived, std.mem.readInt(u64, &f.core.localState().metadata.attnets, .little));
     try f.advance(3);

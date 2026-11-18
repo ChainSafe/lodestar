@@ -1,7 +1,7 @@
 import {NativeLocalIntent, NativeNetwork} from "@lodestar/native/network";
 import {Status} from "@lodestar/types";
 import {CommitteeSubscription} from "../../subnets/interface.js";
-import {normalizeCommitteeSubscriptions} from "./committee.js";
+import {Attesters, normalizeCommitteeSubscriptions} from "./committee.js";
 import {nativeStatus} from "./config.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
@@ -30,6 +30,9 @@ export class NativeIntent {
       attesters: [...demand.attesters.values()],
       syncCommittees: [...demand.sync].map(([subnet, untilSlot]) => ({subnet, untilSlot})),
     });
+  }
+  proposals(attesters: Attesters[]): Promise<void> {
+    return this.enqueue({attesters});
   }
   private enqueue(patch: NativeLocalIntent): Promise<void> {
     const next = this.pending.then(async () => {

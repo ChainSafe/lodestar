@@ -179,7 +179,7 @@ export interface NativeLocalIntent {
   status?: NetworkStatusUpdate;
   coreTopics?: boolean;
   custodyGroupCount?: bigint;
-  /** Fold validator duties by slot into 64-bit subnet masks; aggregators must be a subset of subnets.
+  /** Fold validator duties by slot into 64-bit subnet masks.
    * At most four epochs of rows; native checks the current/next epoch horizon and discards expired duties.
    */
   attesters?: readonly {slot: number; subnets: bigint; aggregators: bigint}[];

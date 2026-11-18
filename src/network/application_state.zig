@@ -123,7 +123,7 @@ pub const State = struct {
             };
         }
         for (update.attesters[0..update.attester_count]) |row| {
-            if (row.slot > latest or row.aggregators & ~row.subnets != 0) return error.InvalidCommitteeDuty;
+            if (row.slot > latest) return error.InvalidCommitteeDuty;
             if (row.slot + 1 >= current) for (&self.att_until, 0..) |*expiry, subnet| {
                 if (row.subnets & (@as(u64, 1) << @intCast(subnet)) != 0) expiry.* = @max(expiry.* orelse 0, row.slot + 1);
             };

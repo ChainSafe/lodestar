@@ -1,9 +1,10 @@
 import {NativeLocalIntent} from "@lodestar/native/network";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {Slot} from "@lodestar/types";
 import {CommitteeSubscription} from "../../subnets/interface.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
 
-type Attesters = NonNullable<NativeLocalIntent["attesters"]>[number];
+export type Attesters = NonNullable<NativeLocalIntent["attesters"]>[number];
 type CommitteeDemand = {attesters: Map<number, Attesters>; sync: Map<number, number>};
 
 export function normalizeCommitteeSubscriptions(
@@ -28,4 +29,22 @@ export function normalizeCommitteeSubscriptions(
     }
   }
   return demand;
+}
+
+export function proposalSubscriptions(
+  proposalSlots: Slot[],
+  currentSlot: Slot,
+  proposalLead: number,
+  aggregatorLead: number
+): Attesters[] {
+  if (proposalLead === 0) return [];
+  const rows = new Map<Slot, Attesters>();
+  const aggregators = (1n << BigInt(ATTESTATION_SUBNET_COUNT)) - 1n;
+  for (const proposalSlot of proposalSlots) {
+    const first = proposalSlot - proposalLead + Math.min(aggregatorLead, proposalLead - 1);
+    for (let slot = Math.max(currentSlot, first); slot < proposalSlot; slot++) {
+      rows.set(slot, {slot, subnets: 0n, aggregators});
+    }
+  }
+  return [...rows.values()];
 }

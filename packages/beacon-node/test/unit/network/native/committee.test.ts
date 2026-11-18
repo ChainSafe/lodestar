@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {normalizeCommitteeSubscriptions} from "../../../../src/network/core/native/committee.js";
+import {normalizeCommitteeSubscriptions, proposalSubscriptions} from "../../../../src/network/core/native/committee.js";
 
 const duty = {slot: 0, subnet: 0, validatorIndex: 0, isAggregator: true};
 
@@ -28,6 +28,14 @@ describe("native committee inputs", () => {
       false
     );
     expect(demand.attesters.get(2)).toEqual({slot: 2, subnets: (1n << 63n) | 2n, aggregators: 1n << 63n});
+  });
+  it("subscribes to all subnets ahead of local proposals without peer demand", () => {
+    const aggregators = (1n << BigInt(ATTESTATION_SUBNET_COUNT)) - 1n;
+    const row = (slot: number) => ({slot, subnets: 0n, aggregators});
+    expect(proposalSubscriptions([20, 22], 0, 8, 2)).toEqual([14, 15, 16, 17, 18, 19, 20, 21].map(row));
+    expect(proposalSubscriptions([20], 18, 8, 2)).toEqual([18, 19].map(row));
+    expect(proposalSubscriptions([20], 0, 2, 2)).toEqual([row(19)]);
+    expect(proposalSubscriptions([20], 0, 0, 2)).toEqual([]);
   });
   it("retains absolute sync expiries without interpreting a host clock", () => {
     const demand = normalizeCommitteeSubscriptions(

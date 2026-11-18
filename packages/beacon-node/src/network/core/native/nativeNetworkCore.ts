@@ -13,6 +13,7 @@ import {CommitteeSubscription} from "../../subnets/interface.js";
 import {BaseNetworkInit} from "../networkCore.js";
 import {INetworkCore} from "../types.js";
 import {NativePeerAddress, nativeMultiaddr, parseNativeEndpoint, parseNativePeerAddress} from "./addresses.js";
+import {proposalSubscriptions} from "./committee.js";
 import {createNativeConfig} from "./config.js";
 import {dumpNativeGossipScores, dumpNativeMeshPeers, dumpNativePeerScores} from "./diagnostics.js";
 import {NativeNetworkError, NativeNetworkErrorCode, nativeInteger} from "./errors.js";
@@ -201,8 +202,17 @@ export class NativeNetworkCore implements INetworkCore {
   prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     return this.intent.committee(subscriptions, true);
   }
-  // TODO: the native backend does not yet subscribe to all attestation subnets ahead of local proposals
-  async addLocalProposalSlots(_slots: Slot[]): Promise<void> {}
+  addLocalProposalSlots(slots: Slot[]): Promise<void> {
+    const {slotsToSubscribeBeforeProposalDuty, slotsToSubscribeBeforeAggregatorDuty} = this.modules.opts;
+    return this.intent.proposals(
+      proposalSubscriptions(
+        slots,
+        this.modules.clock.currentSlot,
+        slotsToSubscribeBeforeProposalDuty,
+        slotsToSubscribeBeforeAggregatorDuty
+      )
+    );
+  }
   isSubscribedToGossipCoreTopics(): boolean {
     return this.intent.isSubscribedToCoreTopics();
   }

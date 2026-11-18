@@ -19,7 +19,6 @@ test("sparse intents derive subscriptions and reject invalid changes atomically"
     const before = await runtime.observeIdentity();
     for (const [patch, error] of [
       [{custodyGroupCount: 0n}, "InvalidCustodyCount"],
-      [{attesters: [{aggregators: 2n, slot: 100, subnets: 1n}]}, "InvalidCommitteeDuty"],
       [{attesters: [{aggregators: 1n, slot: 10000, subnets: 1n}]}, "InvalidCommitteeDuty"],
       [{syncCommittees: [{subnet: 4, untilSlot: 200}]}, "InvalidNetworkInteger"],
     ] as const) {
