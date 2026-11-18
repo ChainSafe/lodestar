@@ -81,6 +81,8 @@ export type NetworkArgs = {
   "network.rateLimitMultiplier"?: number;
   "network.maxGossipTopicConcurrency"?: number;
   "network.useWorker"?: boolean;
+  "network.xrayAddress"?: string;
+  "network.xrayWaitForAttach"?: boolean;
   "network.maxYoungGenerationSizeMb"?: number;
   "network.targetGroupPeers"?: number;
 
@@ -257,6 +259,8 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     rateLimitMultiplier: args["network.rateLimitMultiplier"],
     maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
     useWorker: args["network.useWorker"],
+    xrayAddress: args["network.xrayAddress"],
+    xrayWaitForAttach: args["network.xrayWaitForAttach"],
     maxYoungGenerationSizeMb: args["network.maxYoungGenerationSizeMb"],
     targetGroupPeers: args["network.targetGroupPeers"] ?? defaultOptions.network.targetGroupPeers,
     directPeers: args.directPeers,
@@ -303,6 +307,18 @@ export const options: CliCommandOptions<NetworkArgs> = {
     group: "network",
     description: "Maximum native QUIC datagrams received per network turn (1-256)",
     defaultDescription: "32",
+    hidden: true,
+  },
+  "network.xrayAddress": {
+    description: "Xray collector ingest address (Unix socket path or host:port). Requires the native backend",
+    type: "string",
+    group: "network",
+    hidden: true,
+  },
+  "network.xrayWaitForAttach": {
+    description: "Wait up to 30 seconds for the Xray collector before starting networking",
+    type: "boolean",
+    group: "network",
     hidden: true,
   },
   "network.backend": {

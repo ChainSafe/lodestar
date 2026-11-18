@@ -33,6 +33,8 @@ export interface NetworkOptions
   private?: boolean;
   /** Runs libp2p in a JavaScript worker. Native networking always uses its own network thread. */
   useWorker?: boolean;
+  xrayAddress?: string;
+  xrayWaitForAttach?: boolean;
   maxYoungGenerationSizeMb?: number;
   disableLightClientServer?: boolean;
   /**

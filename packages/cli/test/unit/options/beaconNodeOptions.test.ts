@@ -479,6 +479,12 @@ describe("options / network / hasGlobalIPv6Address", () => {
   });
 });
 
+it("passes Xray options through the CLI", () => {
+  expect(
+    parseNetworkArgs({"network.xrayAddress": "/tmp/xray.sock", "network.xrayWaitForAttach": true})
+  ).toMatchObject({xrayAddress: "/tmp/xray.sock", xrayWaitForAttach: true});
+});
+
 it("passes native transport knobs through the CLI", () => {
   expect(
     parseNetworkArgs({
