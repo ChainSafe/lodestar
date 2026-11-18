@@ -37,6 +37,17 @@ describe("options / beaconNodeOptions", () => {
     });
   });
 
+  it.each([
+    [-1, undefined],
+    [-0.5, undefined],
+    [-100, undefined],
+    [-1, 2],
+  ])("rejects targetPeers=%s with maxPeers=%s", (targetPeers, maxPeers) => {
+    expect(() => parseNetworkArgs({targetPeers, "network.maxPeers": maxPeers, listenAddress: "127.0.0.1"})).toThrow(
+      "targetPeers must be greater than or equal to 0"
+    );
+  });
+
   it("still rejects an explicit maxPeers below targetPeers", () => {
     expect(() => parseNetworkArgs({targetPeers: 2, "network.maxPeers": 1, listenAddress: "127.0.0.1"})).toThrow(
       "network.maxPeers must be greater than or equal to targetPeers"
