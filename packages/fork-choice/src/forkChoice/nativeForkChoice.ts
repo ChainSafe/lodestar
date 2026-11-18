@@ -1336,7 +1336,8 @@ export class NativeForkChoice implements IForkChoice {
 
   /**
    * `nonAncestors` are the EMPTY, FULL and pre-Gloas variants of every block imported up to the
-   * start block that are not on its chain, the root block aside.
+   * start block that are not on its chain, the root block aside. A PENDING start block's own
+   * EMPTY and FULL are left out: its payload is undecided, and the archiver deletes FULL non-ancestors.
    */
   getAllAncestorAndNonAncestorBlocks(
     blockRoot: RootHex,
@@ -1357,8 +1358,10 @@ export class NativeForkChoice implements IForkChoice {
     }
     const ancestors = Array.from(ancestorIds, (id) => this.nodes[id] as ProtoBlock);
 
+    const startBlock = Math.floor(startId / 3);
+    const firstBlock = this.nodes[startId]?.payloadStatus === PayloadStatus.PENDING ? startBlock - 1 : startBlock;
     const nonAncestors: ProtoBlock[] = [];
-    for (let blockIndex = Math.floor(startId / 3); blockIndex > 0; blockIndex--) {
+    for (let blockIndex = firstBlock; blockIndex > 0; blockIndex--) {
       for (const status of [SPEC_FULL, SPEC_EMPTY, SPEC_PENDING]) {
         const id = blockIndex * 3 + status;
         const node = this.nodes[id];
