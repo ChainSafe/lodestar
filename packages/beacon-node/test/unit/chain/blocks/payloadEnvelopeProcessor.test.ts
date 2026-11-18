@@ -16,7 +16,7 @@ async function waitUntil(condition: () => boolean): Promise<void> {
 }
 
 function dataAvailable(status = DataAvailabilityStatus.Available): ReturnType<typeof verifyPayloadsDataAvailability> {
-  return Promise.resolve({dataAvailabilityStatuses: [status], availableTime: 0});
+  return Promise.resolve({dataAvailabilityStatuses: [status], availableTimeMs: 0});
 }
 
 describe("chain / blocks / PayloadEnvelopeProcessor", () => {
@@ -123,7 +123,7 @@ describe("chain / blocks / PayloadEnvelopeProcessor", () => {
       if (input === stuckInput) {
         return new Promise((resolve) => {
           resolveStuckData = () =>
-            resolve({dataAvailabilityStatuses: [DataAvailabilityStatus.Available], availableTime: 0});
+            resolve({dataAvailabilityStatuses: [DataAvailabilityStatus.Available], availableTimeMs: 0});
         });
       }
       return dataAvailable();
@@ -165,7 +165,7 @@ describe("chain / blocks / PayloadEnvelopeProcessor", () => {
       () =>
         new Promise((resolve) => {
           resolveData.push(() =>
-            resolve({dataAvailabilityStatuses: [DataAvailabilityStatus.Available], availableTime: 0})
+            resolve({dataAvailabilityStatuses: [DataAvailabilityStatus.Available], availableTimeMs: 0})
           );
         })
     );

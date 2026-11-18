@@ -43,7 +43,7 @@ runs:
       shell: bash
       # This build cache will be reused among different jobs for the same commit
       run: |
-        echo "key=build-cache-v2-${{ runner.os }}-${{ runner.arch }}-libc-${{ steps.host.outputs.libc }}-node-$(node --version)-zig-$(zig version)-preset-${{ env.LODESTAR_PRESET || 'mainnet' }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+        echo "key=build-cache-v3-${{ runner.os }}-${{ runner.arch }}-libc-${{ steps.host.outputs.libc }}-node-$(node --version)-zig-$(zig version)-${{ github.sha }}" >> $GITHUB_OUTPUT
 
     - name: Restore build
       uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
