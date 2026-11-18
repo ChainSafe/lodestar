@@ -1,5 +1,6 @@
 //! Goldilocks reference implementation for fgsa-spec.pdf.
-//! fg/ holds the finality gadget and ac/ the available chain.
+//! fg/ holds the finality gadget, ac/ the available chain, and Node.zig the coordinator.
+//! See NODE.md.
 
 const std = @import("std");
 
@@ -17,6 +18,8 @@ pub const ac = struct {
     pub const available_chain = @import("ac/available_chain.zig");
     pub const VoteSet = @import("ac/VoteSet.zig");
 };
+pub const NodeType = @import("Node.zig").NodeType;
+pub const NodeConfig = @import("Node.zig").Config;
 
 test {
     std.testing.refAllDecls(@This());
