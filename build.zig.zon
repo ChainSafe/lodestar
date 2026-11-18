@@ -295,12 +295,6 @@
                 .imports = .{ .network, .config },
             },
         },
-        .core_interop_peer = .{
-            .root_module = .{
-                .root_source_file = "test/interop/core_peer.zig",
-                .imports = .{ .network, .config },
-            },
-        },
         .download_era_files = .{
             .root_module = .{
                 .root_source_file = "scripts/download_era_files.zig",

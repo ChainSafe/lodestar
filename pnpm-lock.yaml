@@ -952,9 +952,6 @@ importers:
       '@libp2p/identify':
         specifier: 4.1.14
         version: 4.1.14
-      '@libp2p/peer-id':
-        specifier: 6.0.15
-        version: 6.0.15
       '@lodestar/reqresp':
         specifier: 1.46.0
         version: 1.46.0(libp2p@3.3.10)

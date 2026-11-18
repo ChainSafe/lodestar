@@ -8,7 +8,6 @@
     "@libp2p/crypto": "5.1.23",
     "@libp2p/gossipsub": "17.1.1",
     "@libp2p/identify": "4.1.14",
-    "@libp2p/peer-id": "6.0.15",
     "@lodestar/reqresp": "1.46.0",
     "@multiformats/multiaddr": "13.0.3",
     "it-length-prefixed": "11.0.1",
