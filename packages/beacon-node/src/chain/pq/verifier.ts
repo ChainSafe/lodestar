@@ -67,11 +67,6 @@ export class PqVerifier implements IPqVerifier {
     // There is no proof of nothing: a block without attestations carries an empty proof
     if (claims.length === 0) return set.proof.length === 0;
     if (set.proof.length === 0) return false;
-    try {
-      return await verifyXmssAggregate(set.proof, claims);
-    } catch (_e) {
-      // Malformed proof bytes or more claims than a proof can hold
-      return false;
-    }
+    return verifyXmssAggregate(set.proof, claims);
   }
 }

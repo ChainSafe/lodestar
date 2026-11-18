@@ -13,6 +13,7 @@ import {
   UpdateHeadOpt,
 } from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
+import {setupXmssAggregation} from "@lodestar/native/leanvm";
 import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -504,6 +505,10 @@ export class BeaconChain implements IBeaconChain {
     this.clock = clock;
     this.regen = regen;
     this.bls = bls;
+    if (config.PQ_FORK_EPOCH !== Infinity) {
+      // Otherwise the first proof to verify pays for compiling leanVM's aggregation program
+      setupXmssAggregation().catch((e) => logger.error("Error setting up leanVM", {}, e as Error));
+    }
     this.emitter = emitter;
 
     this.getBlobsTracker = new GetBlobsTracker({
