@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {ApiError} from "@lodestar/api/server";
-import {createBeaconConfig} from "@lodestar/config";
+import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, ForkName} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -42,12 +42,23 @@ describe("api - beacon - publishBlockV2", () => {
     },
     Buffer.alloc(32, 1)
   );
+  const forkBeaconConfig = createBeaconConfig(forkConfig, Buffer.alloc(32, 1));
   let modules: ApiTestModules;
+
+  function getModules(modulesConfig: BeaconConfig): ApiTestModules {
+    const testModules = getApiTestModules({config: modulesConfig});
+    testModules.chain.forkChoice.getFinalizedCheckpoint.mockReturnValue({
+      epoch: 0,
+      root: Buffer.alloc(32),
+      rootHex: "",
+    });
+    return testModules;
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(verifyBlocksInEpoch).mockResolvedValue({} as Awaited<ReturnType<typeof verifyBlocksInEpoch>>);
-    modules = getApiTestModules({config});
+    modules = getModules(config);
     Object.defineProperty(modules.chain, "blockProductionCache", {value: new Map()});
     Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
     modules.network.publishBeaconBlock = vi.fn();
@@ -58,6 +69,7 @@ describe("api - beacon - publishBlockV2", () => {
   describe("broadcast_validation=gossip", () => {
     it("returns successfully for an already-known block", async () => {
       const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+      signedBlock.message.slot = 1;
       const blockRoot = toRootHex(
         modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
       );
@@ -89,37 +101,37 @@ describe("api - beacon - publishBlockV2", () => {
       expect(modules.chain.processBlock).not.toHaveBeenCalled();
     });
 
-    it("returns successfully without publishing a block that is already imported", async () => {
-      const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
-      const blockRoot = toRootHex(
-        modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
-      );
-      modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(
-        BlockInputColumns.createFromBlock({
-          forkName: ForkName.fulu,
-          block: signedBlock,
-          blockRootHex: blockRoot,
-          source: BlockInputSource.api,
-          seenTimestampSec: 0,
-          daOutOfRange: false,
-          sampledColumns: [0],
-          custodyColumns: [0],
-        })
-      );
-      modules.chain.forkChoice.hasBlockHex.mockReturnValue(true);
+    it.each([
+      {slot: 1, finalizedEpoch: 0},
+      {slot: computeStartSlotAtEpoch(1), finalizedEpoch: 1},
+    ])(
+      "returns successfully without caching or publishing an imported block at slot=$slot",
+      async ({slot, finalizedEpoch}) => {
+        const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+        signedBlock.message.slot = slot;
+        const blockRoot = toRootHex(modules.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+        modules.chain.forkChoice.hasBlockHex.mockReturnValue(true);
+        modules.chain.forkChoice.getFinalizedCheckpoint.mockReturnValue({
+          epoch: finalizedEpoch,
+          root: Buffer.alloc(32),
+          rootHex: "",
+        });
 
-      const api = getBeaconBlockApi(defaultApiOptions, modules);
-      await expect(
-        api.publishBlockV2({
-          signedBlockContents: {signedBlock},
-          broadcastValidation: routes.beacon.BroadcastValidation.consensus,
-        })
-      ).resolves.toBeUndefined();
+        const api = getBeaconBlockApi(defaultApiOptions, modules);
+        await expect(
+          api.publishBlockV2({
+            signedBlockContents: {signedBlock},
+            broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+          })
+        ).resolves.toBeUndefined();
 
-      expect(modules.chain.forkChoice.hasBlockHex).toHaveBeenCalledWith(blockRoot);
-      expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
-      expect(modules.chain.processBlock).not.toHaveBeenCalled();
-    });
+        expect(modules.chain.forkChoice.hasBlockHex).toHaveBeenCalledWith(blockRoot);
+        expect(modules.chain.bls.verifySignatureSets).not.toHaveBeenCalled();
+        expect(modules.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
+        expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+        expect(modules.chain.processBlock).not.toHaveBeenCalled();
+      }
+    );
 
     it("returns successfully for a locally produced block imported while publishing", async () => {
       const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
@@ -157,6 +169,7 @@ describe("api - beacon - publishBlockV2", () => {
 
     it("rejects a repeat proposal", async () => {
       const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+      signedBlock.message.slot = 1;
       const blockRoot = toRootHex(
         modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
       );
@@ -314,7 +327,7 @@ describe("api - beacon - publishBlockV2", () => {
   it("rejects a pre-fulu block", async () => {
     const signedBlock = ssz.electra.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH);
-    modules = getApiTestModules({config: forkConfig});
+    modules = getModules(forkBeaconConfig);
 
     const api = getBeaconBlockApi(defaultApiOptions, modules);
     await expect(
@@ -349,7 +362,7 @@ describe("api - beacon - publishBlockV2", () => {
       custodyColumns: [0],
     });
 
-    modules = getApiTestModules({config: forkConfig});
+    modules = getModules(forkBeaconConfig);
     Object.defineProperty(modules.chain, "blockProductionCache", {value: new Map()});
     Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
     modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
@@ -395,6 +408,55 @@ describe("api - beacon - publishBlockV2", () => {
       expect(modules.chain.seenBlockInputCache.prune).not.toHaveBeenCalledWith(blockRoot);
       expect(modules.chain.seenPayloadEnvelopeInputCache.remove).not.toHaveBeenCalled();
     }
+
+    it.each([
+      routes.beacon.BroadcastValidation.gossip,
+      routes.beacon.BroadcastValidation.consensus,
+      routes.beacon.BroadcastValidation.consensusAndEquivocation,
+    ])(
+      "does not cache a non-local block with an invalid proposer signature with broadcast_validation=%s",
+      async (broadcastValidation) => {
+        const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+        signedBlock.message.slot = 1;
+        modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(null);
+        modules.chain.bls.verifySignatureSets.mockResolvedValueOnce(false);
+
+        const api = getBeaconBlockApi(defaultApiOptions, modules);
+        await expect(api.publishBlockV2({signedBlockContents: {signedBlock}, broadcastValidation})).rejects.toThrow(
+          BlockGossipError
+        );
+
+        expect(modules.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
+        expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+      }
+    );
+
+    it.each([
+      routes.beacon.BroadcastValidation.gossip,
+      routes.beacon.BroadcastValidation.consensus,
+      routes.beacon.BroadcastValidation.consensusAndEquivocation,
+    ])(
+      "does not cache a replayed non-local block at or below the finalized slot with broadcast_validation=%s",
+      async (broadcastValidation) => {
+        const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+        signedBlock.message.slot = computeStartSlotAtEpoch(1);
+        modules.chain.forkChoice.getFinalizedCheckpoint.mockReturnValue({
+          epoch: 1,
+          root: Buffer.alloc(32),
+          rootHex: "",
+        });
+        modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(null);
+
+        const api = getBeaconBlockApi(defaultApiOptions, modules);
+        await expect(api.publishBlockV2({signedBlockContents: {signedBlock}, broadcastValidation})).rejects.toThrow(
+          BlockGossipError
+        );
+
+        expect(modules.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
+        expect(modules.chain.bls.verifySignatureSets).not.toHaveBeenCalled();
+        expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+      }
+    );
 
     it("removes a block this call cached when gossip validation rejects it", async () => {
       const {signedBlock, blockRoot} = cacheSubmittedBlock();
@@ -455,7 +517,7 @@ describe("api - beacon - publishBlockV2", () => {
     });
 
     it("keeps a post-gloas payload entry this call created when the parent is unknown", async () => {
-      modules = getApiTestModules({config: forkConfig});
+      modules = getModules(forkBeaconConfig);
       Object.defineProperty(modules.chain, "blockProductionCache", {value: new Map()});
       Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
       Object.defineProperty(modules.chain, "custodyConfig", {value: {sampledColumns: [], custodyColumns: []}});
@@ -626,7 +688,7 @@ describe("api - beacon - publishBlockV2", () => {
     });
 
     it("removes a post-gloas payload entry this call created when gossip validation rejects the block", async () => {
-      modules = getApiTestModules({config: forkConfig});
+      modules = getModules(forkBeaconConfig);
       Object.defineProperty(modules.chain, "blockProductionCache", {value: new Map()});
       Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
       Object.defineProperty(modules.chain, "custodyConfig", {value: {sampledColumns: [], custodyColumns: []}});
@@ -672,7 +734,7 @@ describe("api - beacon - publishBlockV2", () => {
     });
 
     it("does not remove a post-gloas payload entry that was already cached", async () => {
-      modules = getApiTestModules({config: forkConfig});
+      modules = getModules(forkBeaconConfig);
       Object.defineProperty(modules.chain, "blockProductionCache", {value: new Map()});
       Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
       Object.defineProperty(modules.chain, "custodyConfig", {value: {sampledColumns: [], custodyColumns: []}});

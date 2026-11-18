@@ -17,6 +17,7 @@ import {
 } from "@lodestar/params";
 import {
   computeEpochAtSlot,
+  computeStartSlotAtEpoch,
   computeTimeAtSlot,
   isStatePostGloas,
   reconstructSignedBlockContents,
@@ -52,6 +53,7 @@ import {
   EnvelopeReconstructionErrorCode,
   ExecutionPayloadEnvelopeError,
   ExecutionPayloadEnvelopeErrorCode,
+  GossipAction,
 } from "../../../../chain/errors/index.js";
 import {
   BlockType,
@@ -113,6 +115,26 @@ export function getBeaconBlockApi(
       throw new ApiError(400, `Publishing blocks is not supported for pre-fulu fork=${fork}`);
     }
     const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+
+    if (chain.forkChoice.hasBlockHex(blockRoot)) {
+      // Block was already imported, e.g. published again by the validator client or received via gossip
+      chain.logger.debug("Ignoring already-known block during publishing", {slot, blockRoot});
+      return;
+    }
+
+    // A block handed to unknown parent sync stays in the seen caches, so authenticate non-local blocks before
+    // caching them. Anyone can replay a finalized block with its valid signature, so check the slot as well
+    if (!chain.blockProductionCache.has(blockRoot)) {
+      const finalizedSlot = computeStartSlotAtEpoch(chain.forkChoice.getFinalizedCheckpoint().epoch);
+      if (slot <= finalizedSlot) {
+        throw new BlockGossipError(GossipAction.IGNORE, {
+          code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT,
+          blockSlot: slot,
+          finalizedSlot,
+        });
+      }
+      await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
+    }
 
     // remove() drops this root only. prune() also deletes cached ancestors.
     const blockInputExisted = chain.seenBlockInputCache.get(blockRoot) !== undefined;
@@ -199,12 +221,6 @@ export function getBeaconBlockApi(
       );
       const blockLocallyProduced = chain.blockProductionCache.has(blockRoot);
       valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
-
-      if (chain.forkChoice.hasBlockHex(blockRoot)) {
-        // Block was already imported, e.g. published again by the validator client or received via gossip
-        chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
-        return;
-      }
 
       switch (broadcastValidation) {
         case routes.beacon.BroadcastValidation.gossip: {
