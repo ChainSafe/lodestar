@@ -47,7 +47,10 @@ entries, never a validator's vote, and the table compacts itself once it doubles
 it stays small without finality.
 Equivocators are a bitset. Justified balances arrive through
 a `StateProvider` callback when the justified checkpoint changes and are kept as raw
-effective-balance increments plus an active-and-unslashed bitset.
+effective-balance increments plus an active-and-unslashed bitset. Block import also
+loads the balances of an unrealized justified checkpoint that gets ahead of the
+justified one, and the store holds them until an epoch start pulls the checkpoint up,
+so `onTick` never loads and cannot fail after genesis.
 
 Only the vote accounting is carried between calls: the per-node vote totals, the
 target each validator's vote is counted on, and a bitset with a count of the
@@ -109,8 +112,10 @@ to exit there and proto-array does the same. Two entry points change the facts:
 
 Both walks follow the payload chain: `full` nodes and pre-Gloas blocks contribute
 their own payload, `empty` links skip the parent's. Both check the whole walk before
-writing, so a `valid` to `invalid` or `invalid` to `valid` transition is reported as a
-consensus failure with nothing changed.
+writing it, so a `valid` to `invalid` or `invalid` to `valid` transition is reported
+with nothing changed. The one exception is `onPayloadValid` across carriers: they share
+a payload chain, so a later carrier failing after an earlier one passed needs a
+contradicting engine, and the marks already made are ones the engine vouched for.
 
 The root block hangs from nothing, so the store keeps the status of the node it hung
 from in `root_base_status`: `pre_merge` for an anchor, whose ancestors count as
@@ -160,7 +165,10 @@ The boundary:
 - `executionStatus(node)` and `isOptimistic(node)` answer from the head cache, for
   `execution_optimistic` in API responses and for block production.
 - `StateProvider` supplies justified balances and, for `is_head_weak` with
-  equivocators, the beacon committee members of a slot. Two optional hooks serve the
+  equivocators, the beacon committee members of a slot. A missing checkpoint state
+  must not fail the balances: the provider falls back to the closest state it still
+  holds. An error fails the call that asked (`init`, a block import,
+  `updateCheckpoints`) and leaves the store unchanged. Two optional hooks serve the
   fast confirmation rule: the balance source at a checkpoint and the pulled-up head
   state's. A caller that does not run the rule leaves them null.
 

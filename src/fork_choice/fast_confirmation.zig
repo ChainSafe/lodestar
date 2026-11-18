@@ -53,7 +53,11 @@ pub const FastConfirmation = struct {
     }
 
     /// Spec `on_fast_confirmation`. Call once per slot, after the past slots' attestations.
+    /// A failed call may already have updated the slot's variables, so do not call again in
+    /// the same slot: a second update would shift them again. On failure `confirmed_root`
+    /// falls back to the finalized root.
     pub fn onFastConfirmation(self: *FastConfirmation, store: *Store) !void {
+        errdefer self.confirmed_root = store.finalized_checkpoint.root;
         try self.updateFastConfirmationVariables(store);
         var arena = std.heap.ArenaAllocator.init(store.allocator);
         defer arena.deinit();
@@ -63,8 +67,9 @@ pub const FastConfirmation = struct {
 
     /// Spec `update_fast_confirmation_variables`.
     fn updateFastConfirmationVariables(self: *FastConfirmation, store: *Store) !void {
+        const head_root = store.blockRoot((try store.getHead()).block);
         self.previous_slot_head = self.current_slot_head;
-        self.current_slot_head = store.blockRoot((try store.getHead()).block);
+        self.current_slot_head = head_root;
         const current_slot = store.currentSlot();
         if (isStartSlotAtEpoch(current_slot + 1)) {
             self.previous_epoch_greatest_unrealized_checkpoint = store.unrealized_justified_checkpoint;
