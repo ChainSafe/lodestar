@@ -63,7 +63,6 @@ export async function nativeNetworkFixture(
     const clock = new ClockStopped(0);
     clock.genesisTime = state.genesisTime;
     metrics = createMetrics({enabled: true, port: 0}, state.genesisTime, [], {
-      includeNetworkJsMetrics: backend !== "native",
       collectNodeMetrics: false,
     });
     chain = new BeaconChain(

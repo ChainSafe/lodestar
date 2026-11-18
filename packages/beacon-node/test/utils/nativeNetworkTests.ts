@@ -119,9 +119,8 @@ describe("native Lodestar integration", () => {
       const names = [...text.matchAll(/^# TYPE (\S+) /gm)].map((match) => match[1]);
       expect(names.length).toBe(new Set(names).size);
       for (const name of [
-        "lodestar_gossip_validation_queue_length",
-        "lodestar_gossip_validation_queue_concurrency",
-        "lodestar_awaiting_block_gossip_messages_per_slot_total",
+        "lodestar_gossip_validation_queued_count",
+        "lodestar_gossip_validation_executing_count",
         "lodestar_gossip_validation_waiting_block_count",
         "lodestar_gossip_validation_queue_job_time_seconds",
         "gossipsub_topic_subscription_status",
@@ -136,9 +135,6 @@ describe("native Lodestar integration", () => {
         expect(names, name).toContain(name);
       }
       expect(text).not.toContain("lodestar_native_");
-      expect(text).not.toContain("lodestar_network_processor_execute_work_calls_total");
-      expect(text).not.toContain("lodestar_network_worker_");
-      expect(node.metrics.networkJs).toBeNull();
     } finally {
       await node.close();
     }

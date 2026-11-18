@@ -174,11 +174,10 @@ const contract = [_]Series{
     .{ .name = "lodestar_gossip_mesh_score_avg_min_max_min", .kind = "gauge" },
     .{ .name = "lodestar_gossip_mesh_score_avg_min_max_max", .kind = "gauge" },
     // Gossip processor
-    .{ .name = "lodestar_awaiting_block_gossip_messages_per_slot_total", .kind = "gauge" },
-    .{ .name = "lodestar_gossip_validation_queue_length", .kind = "gauge", .labels = &.{"topic"} },
+    .{ .name = "lodestar_gossip_validation_queued_count", .kind = "gauge", .labels = &.{"topic"} },
     .{ .name = "lodestar_gossip_validation_waiting_block_count", .kind = "gauge", .labels = &.{"topic"} },
     .{ .name = "lodestar_gossip_validation_dependency_checks_count", .kind = "gauge", .labels = &.{"topic"} },
-    .{ .name = "lodestar_gossip_validation_queue_concurrency", .kind = "gauge", .labels = &.{"topic"} },
+    .{ .name = "lodestar_gossip_validation_executing_count", .kind = "gauge", .labels = &.{"topic"} },
     .{ .name = "lodestar_gossip_validation_concurrency_limit", .kind = "gauge", .labels = &.{"topic"} },
     .{ .name = "lodestar_gossip_validation_execution_limit_bytes", .kind = "gauge", .labels = &.{"topic"} },
     .{ .name = "lodestar_gossip_validation_refusals_total", .kind = "counter", .labels = &.{ "topic", "reason" } },

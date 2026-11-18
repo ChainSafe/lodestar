@@ -194,7 +194,6 @@ export class BeaconNode {
 
       metrics = createMetrics(opts.metrics, anchorState.genesisTime, metricsRegistries, {
         includeStateTransitionMetrics: !opts.chain.nativeStateTransition,
-        includeNetworkJsMetrics: opts.network.backend !== "native",
       });
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards

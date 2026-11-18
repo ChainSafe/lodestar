@@ -455,7 +455,7 @@ for (const hoodi of [false, true]) {
           await expect
             .poll(
               async () =>
-                metricValue(await active.getMetrics(), 'lodestar_gossip_validation_queue_length{topic="beacon_block"}'),
+                metricValue(await active.getMetrics(), 'lodestar_gossip_validation_queued_count{topic="beacon_block"}'),
               {timeout: 5000}
             )
             .toBe(held);

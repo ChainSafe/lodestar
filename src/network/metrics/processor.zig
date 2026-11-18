@@ -22,23 +22,16 @@ pub const empty: Snapshot = .{};
 
 pub fn write(snapshot: *const Snapshot, w: *prom.Encoder) prom.Error!void {
     inline for (.{
-        .{ "lodestar_gossip_validation_queue_length", .queued, "Gossip messages queued for validation" },
+        .{ "lodestar_gossip_validation_queued_count", .queued, "Gossip messages queued for validation" },
         .{ "lodestar_gossip_validation_waiting_block_count", .waiting, "Gossip messages waiting for an unknown block" },
         .{ "lodestar_gossip_validation_dependency_checks_count", .checking, "Gossip messages awaiting a host dependency check" },
-        .{ "lodestar_gossip_validation_queue_concurrency", .executing, "Gossip messages executing on the host" },
+        .{ "lodestar_gossip_validation_executing_count", .executing, "Gossip messages executing on the host" },
     }) |metric| {
         const items = try w.family(.{ .name = metric[0], .kind = .gauge, .help = metric[2], .labels = &.{"topic"} });
         for (snapshot.items, 0..) |states, k| {
             try items.sample(.{@tagName(@as(Kind, @enumFromInt(k)))}, states[@intFromEnum(@as(processor.GossipProcessor.Occupancy, metric[1]))]);
         }
     }
-    var waiting: u64 = 0;
-    for (snapshot.items) |states| waiting += states[@intFromEnum(processor.GossipProcessor.Occupancy.waiting)];
-    try w.scalar(.{
-        .name = "lodestar_awaiting_block_gossip_messages_per_slot_total",
-        .kind = .gauge,
-        .help = "Current gossip messages waiting for an unknown block",
-    }, waiting);
     const refusals = try w.family(.{ .name = "lodestar_gossip_validation_refusals_total", .kind = .counter, .help = "Gossip messages refused by topic and admission reason", .labels = &.{ "topic", "reason" } });
     for (snapshot.refusals, 0..) |reasons, k| for (reasons, 0..) |count, reason| {
         try refusals.sample(.{ @tagName(@as(Kind, @enumFromInt(k))), @tagName(@as(processor.GossipProcessor.Refusal, @enumFromInt(reason))) }, count);
@@ -69,11 +62,10 @@ test "processor snapshot renders occupancy, refusals and execution limits" {
     try write(&snapshot, &encoder);
     const output = writer.buffered();
     for ([_][]const u8{
-        "lodestar_gossip_validation_queue_length{topic=\"beacon_attestation\"} 3\n",
+        "lodestar_gossip_validation_queued_count{topic=\"beacon_attestation\"} 3\n",
         "lodestar_gossip_validation_waiting_block_count{topic=\"beacon_attestation\"} 5\n",
-        "lodestar_awaiting_block_gossip_messages_per_slot_total 5\n",
         "lodestar_gossip_validation_dependency_checks_count{topic=\"beacon_attestation\"} 7\n",
-        "lodestar_gossip_validation_queue_concurrency{topic=\"beacon_attestation\"} 2\n",
+        "lodestar_gossip_validation_executing_count{topic=\"beacon_attestation\"} 2\n",
         "lodestar_gossip_validation_refusals_total{topic=\"data_column_sidecar\",reason=\"source_full\"} 2\n",
         "lodestar_gossip_validation_concurrency_limit{topic=\"data_column_sidecar\"} 2\n",
         "lodestar_gossip_validation_execution_limit_bytes{topic=\"data_column_sidecar\"} 4096\n",
