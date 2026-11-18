@@ -938,7 +938,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"0.5\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_seconds_bucket{le=\"0.5\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_seconds_count[$rate_interval]))",
           "interval": "",
           "legendFormat": "<=0.5s",
           "range": true,
@@ -950,7 +950,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"1.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_seconds_bucket{le=\"1.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_seconds_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=1s",
           "range": true,
@@ -962,7 +962,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"2.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_seconds_bucket{le=\"2.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_seconds_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=2s",
           "range": true,
@@ -974,7 +974,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"4.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_seconds_bucket{le=\"4.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_seconds_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=4s",
           "range": true,
@@ -986,7 +986,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"6.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_seconds_bucket{le=\"6.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_seconds_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=6s",
           "range": true,
@@ -998,7 +998,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_bucket{le=\"12.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_seconds_bucket{le=\"12.0\"}[$rate_interval]))\n/\nsum(rate(lodestar_sync_unknown_block_elapsed_time_till_received_seconds_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "<=12s",
           "range": true,

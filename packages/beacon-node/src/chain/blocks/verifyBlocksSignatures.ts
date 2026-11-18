@@ -1,5 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {
+  EpochShuffling,
   IBeaconStateView,
   SyncCommitteeCacheEmpty,
   getBlockSignatureSets,
@@ -28,6 +29,7 @@ export async function verifyBlocksSignatures(
   preState0: IBeaconStateView,
   blocks: SignedBeaconBlock[],
   indexedAttestationsByBlock: IndexedAttestation[][],
+  attestationShufflingsByBlock: EpochShuffling[][],
   opts: ImportBlockOpts
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
@@ -49,11 +51,15 @@ export async function verifyBlocksSignatures(
         bls.verifySignatureSets(
           getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
             skipProposerSignature: opts.validProposerSignature,
+            attestationShufflings: attestationShufflingsByBlock[i],
           }),
           // Prioritize block verification over attestations, since
           // attestations already buffer up to `MAX_BUFFER_WAIT_MS`
           {priority: true}
         );
+    // Handlers are attached after the loop, which yields. A rejection in between, e.g. the verifier closing,
+    // must not be unhandled. `rejectFirstInvalidResolveAllValid()` still observes it.
+    isValidPromises[i].catch(() => {});
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks
     // segments it will block the event loop for 1400 ms, which is too much. This call will allow the event loop to

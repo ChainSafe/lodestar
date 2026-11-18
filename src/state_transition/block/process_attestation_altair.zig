@@ -73,6 +73,11 @@ pub fn processAttestationsAltair(
     const attesting_indices_buffer = try allocator.alloc(ValidatorIndex, buffer_len);
     defer allocator.free(attesting_indices_buffer);
 
+    var current_participation = try (try state.currentEpochParticipation()).editor();
+    defer current_participation.deinit();
+    var previous_participation = try (try state.previousEpochParticipation()).editor();
+    defer previous_participation.deinit();
+
     for (attestations) |*attestation| {
         const data = &attestation.data;
         try validateAttestation(fork, epoch_cache, state, attestation);
@@ -101,7 +106,8 @@ pub fn processAttestationsAltair(
         }
 
         const in_current_epoch = data.target.epoch == current_epoch;
-        var epoch_participation = if (in_current_epoch) try state.currentEpochParticipation() else try state.previousEpochParticipation();
+        const epoch_participation =
+            if (in_current_epoch) &current_participation else &previous_participation;
         const flags_attestation = try getAttestationParticipationStatus(fork, data, state_slot - data.slot, current_epoch, root_cache, parent_slot);
         const same_slot = if (comptime fork.gte(.gloas)) try isAttestationSameSlotRootCache(fork, root_cache, data) else false;
 

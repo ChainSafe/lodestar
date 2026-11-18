@@ -161,13 +161,14 @@ export class FlatFileStore implements IFlatFileStore {
     }
   }
 
-  async pruneBefore(minSlot: Slot): Promise<Slot[]> {
+  async pruneBefore(minSlot: Slot, maxSlots = Infinity): Promise<Slot[]> {
     return observeFlatFileStoreOperation(this.metrics, FlatFileStoreOperation.prune, async () => {
       this.minRetainedSlot = Math.max(this.minRetainedSlot, minSlot);
-      const slotsToPrune = new Set(this.slotIndex.getBefore(this.minRetainedSlot));
+      const expiredSlots = new Set(this.slotIndex.getBefore(this.minRetainedSlot));
       for (const slot of this.mutationLocks.keys()) {
-        if (slot < this.minRetainedSlot) slotsToPrune.add(slot);
+        if (slot < this.minRetainedSlot) expiredSlots.add(slot);
       }
+      const slotsToPrune = [...expiredSlots].sort((a, b) => a - b).slice(0, maxSlots);
 
       for (const slot of slotsToPrune) {
         const release = await this.acquireMutationLock(slot);
@@ -179,7 +180,7 @@ export class FlatFileStore implements IFlatFileStore {
           release();
         }
       }
-      return [...slotsToPrune].sort((a, b) => a - b);
+      return slotsToPrune;
     });
   }
 

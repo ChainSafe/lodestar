@@ -31,7 +31,7 @@ test "computeAttestationsRewards - participation, slashing, eligibility, filters
     try state.state.commit();
     const root_before = (try state.state.hashTreeRoot()).*;
 
-    const rewards = try computeAttestationsRewards(allocator, state, null);
+    const rewards = try computeAttestationsRewards(allocator, std.testing.io, state, null);
     defer rewards.deinit(allocator);
     try std.testing.expectEqual(preset.MAX_EFFECTIVE_BALANCE_ELECTRA / preset.EFFECTIVE_BALANCE_INCREMENT + 1, rewards.ideal_rewards.len);
     try std.testing.expectEqual(@as(u64, 0), rewards.ideal_rewards[0].effective_balance);
@@ -61,12 +61,12 @@ test "computeAttestationsRewards - participation, slashing, eligibility, filters
     try std.testing.expectEqual(@as(i64, 0), rewards.total_rewards[3].head);
     try std.testing.expectEqual(root_before, (try state.state.hashTreeRoot()).*);
 
-    const selected = try computeAttestationsRewards(allocator, state, &.{ 1, 1, 4, 255, 999 });
+    const selected = try computeAttestationsRewards(allocator, std.testing.io, state, &.{ 1, 1, 4, 255, 999 });
     defer selected.deinit(allocator);
     try std.testing.expectEqual(@as(usize, 2), selected.total_rewards.len);
     try std.testing.expectEqual(@as(u64, 1), selected.total_rewards[0].validator_index);
     try std.testing.expectEqual(@as(u64, 255), selected.total_rewards[1].validator_index);
-    const empty = try computeAttestationsRewards(allocator, state, &.{});
+    const empty = try computeAttestationsRewards(allocator, std.testing.io, state, &.{});
     defer empty.deinit(allocator);
     try std.testing.expectEqual(@as(usize, 0), empty.total_rewards.len);
     try std.testing.expectEqualDeep(rewards.ideal_rewards, empty.ideal_rewards);
@@ -74,7 +74,7 @@ test "computeAttestationsRewards - participation, slashing, eligibility, filters
     try state.state.setFinalizedCheckpoint(&.{ .epoch = 0, .root = [_]u8{0} ** 32 });
     try state.state.setPreviousJustifiedCheckpoint(&.{ .epoch = 0, .root = [_]u8{0} ** 32 });
     try state.state.setCurrentJustifiedCheckpoint(&.{ .epoch = 0, .root = [_]u8{0} ** 32 });
-    const leak = try computeAttestationsRewards(allocator, state, &.{ 0, 2 });
+    const leak = try computeAttestationsRewards(allocator, std.testing.io, state, &.{ 0, 2 });
     defer leak.deinit(allocator);
     try std.testing.expectEqual(@as(u64, 0), leak.ideal_rewards[32].source);
     try std.testing.expectEqual(missed.source, leak.total_rewards[0].source);
@@ -95,20 +95,20 @@ test "memory_safety: computeAttestationsRewards releases scratch state and rewar
     const root_before = (try state.state.hashTreeRoot()).*;
 
     var counting_allocator = std.testing.FailingAllocator.init(allocator, .{});
-    const rewards = try computeAttestationsRewards(counting_allocator.allocator(), state, null);
+    const rewards = try computeAttestationsRewards(counting_allocator.allocator(), std.testing.io, state, null);
     rewards.deinit(counting_allocator.allocator());
     try std.testing.expectEqual(counting_allocator.allocated_bytes, counting_allocator.freed_bytes);
     try std.testing.expect(counting_allocator.alloc_index >= 2);
 
     for (0..counting_allocator.alloc_index) |fail_index| {
         var failing_allocator = std.testing.FailingAllocator.init(allocator, .{ .fail_index = fail_index });
-        try std.testing.expectError(error.OutOfMemory, computeAttestationsRewards(failing_allocator.allocator(), state, null));
+        try std.testing.expectError(error.OutOfMemory, computeAttestationsRewards(failing_allocator.allocator(), std.testing.io, state, null));
         try std.testing.expect(failing_allocator.has_induced_failure);
         try std.testing.expectEqual(failing_allocator.allocated_bytes, failing_allocator.freed_bytes);
         try std.testing.expectEqual(root_before, (try state.state.hashTreeRoot()).*);
     }
 
-    const retry = try computeAttestationsRewards(allocator, state, null);
+    const retry = try computeAttestationsRewards(allocator, std.testing.io, state, null);
     defer retry.deinit(allocator);
     try std.testing.expectEqual(@as(usize, 256), retry.total_rewards.len);
 }
@@ -125,7 +125,7 @@ test "computeAttestationsRewards - phase0 unsupported" {
         break :blk try TestCachedBeaconState.initFromState(allocator, &pool, state, .phase0, 0);
     };
     defer test_state.deinit();
-    try std.testing.expectError(error.AttestationsRewardsUnsupportedFork, computeAttestationsRewards(allocator, test_state.cached_state, null));
+    try std.testing.expectError(error.AttestationsRewardsUnsupportedFork, computeAttestationsRewards(allocator, std.testing.io, test_state.cached_state, null));
 }
 
 test "computeAttestationsRewards - finalization ends leak before inactivity updates" {
@@ -142,7 +142,7 @@ test "computeAttestationsRewards - finalization ends leak before inactivity upda
     try inactivity.set(0, 1000);
     const root_before = (try state.state.hashTreeRoot()).*;
 
-    const rewards = try computeAttestationsRewards(allocator, state, &.{ 0, 1 });
+    const rewards = try computeAttestationsRewards(allocator, std.testing.io, state, &.{ 0, 1 });
     defer rewards.deinit(allocator);
     try std.testing.expect(rewards.ideal_rewards[32].source > 0);
     try std.testing.expect(rewards.total_rewards[1].source > 0);

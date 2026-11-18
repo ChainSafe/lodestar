@@ -31,8 +31,8 @@ addon in `bindings/`. Run Zig commands from the repository root.
 - Run `zig fmt --check .`, `zig build test:tidy`, binding lint, and relevant module,
   binding, or spec tests before pushing Zig or binding changes.
 - Use `pnpm --filter @lodestar/native prepare-mainnet` to rebuild the addon before binding tests.
-  `prepare-minimal` and `prepare-gnosis` select other presets. Do not share one output
-  directory between concurrent builds for different presets.
+  `prepare-minimal` and `prepare-gnosis` rebuild the other presets, and `LODESTAR_PRESET`
+  selects which addon is loaded. Do not run builds for different presets concurrently.
 - Verify trust assumptions against the actual or planned call path.
   If code and documentation conflict, report both the behavior and the documentation gap.
 - Document enduring preconditions beside their owning API.

@@ -119,7 +119,7 @@ describe("state environment ownership", () => {
     const metrics = bindings.metrics.scrapeMetrics();
     const expectedRoot = state.processSlots(state.slot + 33).hashTreeRoot();
     const beforeWorker = bindings.metrics.scrapeMetrics();
-    expect(beforeWorker).toMatch(/validator_monitor_prev_epoch_on_chain_balance [1-9]\d*/);
+    expect(beforeWorker).toMatch(/lodestar_validator_monitor_prev_epoch_on_chain_balance [1-9]\d*/);
     const root = await runWorker<Uint8Array>("isolated metrics");
     expect(root).toEqual(expectedRoot);
     expect(bindings.metrics.scrapeMetrics()).toBe(beforeWorker);

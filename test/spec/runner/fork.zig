@@ -146,7 +146,7 @@ pub fn TestCase(comptime target_fork: ForkSeq) type {
                 },
                 .fulu => {
                     const upgraded = try upgradeStateToFulu(
-                        self.pre.allocator,
+                        std.testing.io,
                         config,
                         epoch_cache,
                         try cached_state.state.tryCastToFork(.electra),

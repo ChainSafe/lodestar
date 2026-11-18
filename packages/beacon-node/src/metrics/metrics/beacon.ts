@@ -160,7 +160,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
 
     blockPayload: {
       payloadAdvancePrepTime: register.histogram({
-        name: "beacon_block_payload_prepare_time",
+        name: "beacon_block_payload_prepare_time_seconds",
         help: "Time for preparing payload in advance",
         buckets: [0.1, 1, 3, 5, 10],
       }),
@@ -170,7 +170,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         buckets: [0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1],
       }),
       payloadFetchedTime: register.histogram<{prepType: PayloadPreparationType}>({
-        name: "beacon_block_payload_fetched_time",
+        name: "beacon_block_payload_fetched_time_seconds",
         help: "Time to fetch the payload from EL",
         labelNames: ["prepType"],
         buckets: [0.1, 0.2, 0.3, 0.5, 0.7, 1, 2],
@@ -333,6 +333,15 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_data_column_sidecar_computation_seconds",
         help: "Time taken to compute data column sidecars, including cells and inclusion proof",
         buckets: [0.1, 0.25, 0.5, 0.75, 1, 2, 5],
+      }),
+      dataColumnSidecarProposerSignatureChecks: register.counter<{result: "cache_hit" | "verification"}>({
+        name: "beacon_data_column_sidecar_proposer_signature_checks_total",
+        help: "Gossip data column proposer signature checks answered by the cache or by a started verification",
+        labelNames: ["result"],
+      }),
+      dataColumnSidecarProposerSignatureBlocks: register.counter({
+        name: "beacon_data_column_sidecar_proposer_signature_blocks_total",
+        help: "Blocks whose proposer signature a gossip data column verified and cached first",
       }),
       dataColumnSidecarInclusionProofVerificationTime: register.histogram({
         name: "beacon_data_column_sidecar_inclusion_proof_verification_seconds",

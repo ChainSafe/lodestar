@@ -3,10 +3,10 @@ const AnyBeaconState = @import("fork_types").AnyBeaconState;
 const preset = @import("preset").preset;
 const ZERO_HASH = @import("constants").ZERO_HASH;
 
-pub fn processSlot(state: *AnyBeaconState) !void {
+pub fn processSlot(io: std.Io, state: *AnyBeaconState) !void {
 
     // Cache state root
-    const previous_state_root = try state.hashTreeRoot();
+    const previous_state_root = try state.hashTreeRootParallel(io);
     var state_roots = try state.stateRoots();
     try state_roots.setValue(try state.slot() % preset.SLOTS_PER_HISTORICAL_ROOT, previous_state_root);
 
@@ -46,7 +46,7 @@ test "Gloas slot processing clears only the next circular payload availability e
     try availability.set(0, true);
     try availability.set(preset.SLOTS_PER_HISTORICAL_ROOT - 1, true);
     const before = (try state.hashTreeRoot()).*;
-    try processSlot(&state);
+    try processSlot(std.testing.io, &state);
     try std.testing.expect(!try availability.get(0));
     try std.testing.expect(try availability.get(preset.SLOTS_PER_HISTORICAL_ROOT - 1));
     var roots = try state.stateRoots();
