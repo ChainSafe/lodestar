@@ -4,8 +4,9 @@
 //! `available` is false on a target with no library: every function that would
 //! call it then fails with `error.Unavailable`.
 //!
-//! Key generation, `prepare`, signing and `aggregate` block and fan out over
-//! leanVM's own thread pool. Verification is single-threaded.
+//! `aggregate` blocks and fans out over leanVM's own thread pool. Everything
+//! else runs on the calling thread: key generation and `prepare` take seconds,
+//! and signing grinds for a fraction of one.
 //!
 //! [leanVM]: https://github.com/leanEthereum/leanVM
 
@@ -25,54 +26,34 @@ comptime {
 
 // `rust/leanvm` asserts these sizes and limits against leanVM's.
 pub const max_recursions = 16;
-/// Exclusive cap on an aggregate's claims.
-pub const max_keys = 1 << 16;
 pub const min_log_inv_rate = 1;
 pub const max_log_inv_rate = 4;
 
 pub const Error = error{
     Unavailable,
-    /// The leaf index is outside the key's lifetime, or no nonce encodes the message.
-    Sign,
+    /// A signature that does not verify, or a raw one `aggregate` refused.
     InvalidSignature,
-    /// Claims not strictly sorted, or `max_keys` or more of them.
-    MalformedSignerSet,
-    MalformedClaim,
     /// Bytes that do not decode as a proof.
     MalformedEncoding,
-    /// The proof does not prove its claims.
-    Snark,
+    /// The proof does not prove its claims, or they are not strictly sorted.
+    InvalidProof,
+    /// A request `aggregate` cannot serve: nothing to publish, a declared claim that no child or
+    /// signature backs, more than `max_recursions` children, or a rate out of range.
+    InvalidInput,
     /// A child `aggregate` could not walk.
     InvalidChild,
-    /// Nothing to aggregate.
-    Empty,
-    /// A declared claim that no child or signature backs.
-    NotCovered,
-    MalformedRawSignature,
-    /// More than `max_recursions` children, or `max_keys` or more claims.
-    TooLarge,
-    InvalidRate,
-    ChildOutOfRange,
-    /// Proving failed, as it does on an invalid child or signature.
+    /// Proving failed, as it does on an invalid child or signature, or on too many claims.
     Prove,
     Unknown,
 };
 
 const Status = enum(i32) {
     ok,
-    sign,
     invalid_signature,
-    malformed_signer_set,
-    malformed_claim,
     malformed_encoding,
-    snark,
+    invalid_proof,
+    invalid_input,
     invalid_child,
-    empty,
-    not_covered,
-    malformed_raw_signature,
-    too_large,
-    invalid_rate,
-    child_out_of_range,
     prove,
     _,
 };
@@ -80,19 +61,11 @@ const Status = enum(i32) {
 fn check(status: Status) Error!void {
     return switch (status) {
         .ok => {},
-        .sign => error.Sign,
         .invalid_signature => error.InvalidSignature,
-        .malformed_signer_set => error.MalformedSignerSet,
-        .malformed_claim => error.MalformedClaim,
         .malformed_encoding => error.MalformedEncoding,
-        .snark => error.Snark,
+        .invalid_proof => error.InvalidProof,
+        .invalid_input => error.InvalidInput,
         .invalid_child => error.InvalidChild,
-        .empty => error.Empty,
-        .not_covered => error.NotCovered,
-        .malformed_raw_signature => error.MalformedRawSignature,
-        .too_large => error.TooLarge,
-        .invalid_rate => error.InvalidRate,
-        .child_out_of_range => error.ChildOutOfRange,
         .prove => error.Prove,
         _ => error.Unknown,
     };
@@ -102,18 +75,17 @@ fn check(status: Status) Error!void {
 /// A slice's pointer may be anything when its length is zero.
 const c = struct {
     extern fn leanvm_setup() void;
-    extern fn leanvm_xmss_key_gen() *xmss.SecretKey;
-    extern fn leanvm_xmss_key_gen_from_seed(seed: *const xmss.Seed) *xmss.SecretKey;
+    extern fn leanvm_xmss_key_gen(seed: *const xmss.Seed) *xmss.SecretKey;
     extern fn leanvm_xmss_secret_key_free(key: *xmss.SecretKey) void;
     extern fn leanvm_xmss_secret_key_seed(key: *const xmss.SecretKey, out_seed: *xmss.Seed) void;
     extern fn leanvm_xmss_secret_key_public_key(key: *const xmss.SecretKey, out_public_key: *xmss.PublicKey) void;
-    extern fn leanvm_xmss_secret_key_prepare(key: *const xmss.SecretKey, leaf_index: u32) Status;
+    extern fn leanvm_xmss_secret_key_prepare(key: *const xmss.SecretKey, leaf_index: u32) void;
     extern fn leanvm_xmss_sign(
         key: *const xmss.SecretKey,
         message: *const xmss.Message,
         leaf_index: u32,
         out_signature: *xmss.Signature,
-    ) Status;
+    ) void;
     extern fn leanvm_xmss_verify(
         public_key: *const xmss.PublicKey,
         message: *const xmss.Message,
@@ -196,6 +168,8 @@ pub const xmss = struct {
     pub const message_len = 32;
     pub const public_key_size = 32;
     pub const signature_size = 2404;
+    /// Bottom trees a key keeps, the ones it used last.
+    pub const cached_bottom_trees = 8;
 
     /// All of a key's secret material.
     pub const Seed = [seed_len]u8;
@@ -225,16 +199,11 @@ pub const xmss = struct {
 
     /// May be shared across threads. `deinit` must not overlap another call.
     pub const SecretKey = opaque {
-        /// A fresh key, its seed from the operating system's randomness.
-        pub fn generate() Error!*SecretKey {
-            if (!available) return error.Unavailable;
-            return c.leanvm_xmss_key_gen();
-        }
-
-        /// Regenerates the key's top tree, as key generation does.
+        /// Builds the key's top tree. `key_seed` is the whole secret: for a fresh key, fill it
+        /// from the operating system's randomness.
         pub fn fromSeed(key_seed: *const Seed) Error!*SecretKey {
             if (!available) return error.Unavailable;
-            return c.leanvm_xmss_key_gen_from_seed(key_seed);
+            return c.leanvm_xmss_key_gen(key_seed);
         }
 
         pub fn deinit(self: *SecretKey) void {
@@ -258,10 +227,11 @@ pub const xmss = struct {
         }
 
         /// Builds the bottom tree `leaf_index` is in, ahead of `sign`: the first
-        /// signature in a bottom tree otherwise pays for it.
+        /// signature in a bottom tree otherwise pays for it. A key keeps the
+        /// `cached_bottom_trees` it used last.
         pub fn prepare(self: *const SecretKey, leaf_index: LeafIndex) Error!void {
             if (!available) return error.Unavailable;
-            try check(c.leanvm_xmss_secret_key_prepare(self, leaf_index));
+            c.leanvm_xmss_secret_key_prepare(self, leaf_index);
         }
 
         /// Deterministic. NEVER sign two different messages with the same key
@@ -269,7 +239,7 @@ pub const xmss = struct {
         pub fn sign(self: *const SecretKey, message: *const Message, leaf_index: LeafIndex) Error!Signature {
             if (!available) return error.Unavailable;
             var out: Signature = undefined;
-            try check(c.leanvm_xmss_sign(self, message, leaf_index, &out));
+            c.leanvm_xmss_sign(self, message, leaf_index, &out);
             return out;
         }
     };
@@ -284,9 +254,8 @@ pub const xmss = struct {
 /// An aggregate: a proof that each of its claims is backed by a valid leanXMSS
 /// signature, at a leaf index nothing reveals.
 ///
-/// Its claims are strictly sorted by `xmss.Claim.lessThan` and number fewer
-/// than `max_keys`. They count claims, not signers: one key may hold a claim
-/// per message.
+/// Its claims are strictly sorted by `xmss.Claim.lessThan`. They count claims,
+/// not signers: one key may hold a claim per message.
 ///
 /// May be shared across threads. `deinit` must not overlap another call.
 pub const Proof = opaque {
@@ -306,7 +275,7 @@ pub const Proof = opaque {
         c.leanvm_proof_free(self);
     }
 
-    /// Fails with `error.Snark` when the proof does not prove its claims.
+    /// Fails with `error.InvalidProof`.
     pub fn verify(self: *const Proof) Error!void {
         if (!available) return error.Unavailable;
         try check(c.leanvm_proof_verify(self));
@@ -342,20 +311,15 @@ pub const Inputs = struct {
     declare: ?[]const xmss.Claim = null,
 };
 
-// libc's, which `build.zig` links anyway: `std.Io.Mutex` would need an `Io`.
-var aggregate_mutex: std.c.pthread_mutex_t = std.c.PTHREAD_MUTEX_INITIALIZER;
-
 /// Proves the claims it publishes. `log_inv_rate` is in
 /// `min_log_inv_rate..=max_log_inv_rate`: higher is a smaller proof and a
 /// slower prover.
 ///
 /// Neither the children nor the signatures are verified first. An invalid one
 /// usually fails with `error.Prove`, and never yields a proof of a false
-/// claim. Calls are serialized here: leanVM must not run two at once.
+/// claim. leanVM runs one call at a time: a second waits for the first.
 pub fn aggregate(inputs: Inputs, log_inv_rate: u32) Error!*Proof {
     if (!available) return error.Unavailable;
-    _ = std.c.pthread_mutex_lock(&aggregate_mutex);
-    defer _ = std.c.pthread_mutex_unlock(&aggregate_mutex);
     const declare = inputs.declare orelse &.{};
     var proof: *Proof = undefined;
     try check(c.leanvm_aggregate(

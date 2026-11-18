@@ -1,8 +1,8 @@
 //! NAPI bindings for leanXMSS signatures and their aggregation into leanVM proofs.
 //!
-//! Everything slower than a signature check runs on the libuv pool. Key
-//! generation, signing and aggregation fan out from there over leanVM's own
-//! thread pool, which outlives the addon.
+//! Everything slower than a signature check runs on the libuv pool.
+//! Aggregation fans out from there over leanVM's own thread pool, which
+//! outlives the addon.
 //!
 //! Claims and signed claims cross the boundary packed: `CLAIM_SIZE` bytes of
 //! public key then message, and `SIGNED_SIZE` bytes of the same then signature.
@@ -21,7 +21,6 @@ pub const SIGNATURE_SIZE: u32 = xmss.signature_size;
 pub const CLAIM_SIZE: u32 = @sizeOf(xmss.Claim);
 pub const SIGNED_SIZE: u32 = @sizeOf(xmss.Signed);
 pub const MAX_RECURSIONS: u32 = leanvm.max_recursions;
-pub const MAX_KEYS: u32 = leanvm.max_keys;
 pub const MIN_LOG_INV_RATE: u32 = leanvm.min_log_inv_rate;
 pub const MAX_LOG_INV_RATE: u32 = leanvm.max_log_inv_rate;
 
@@ -72,12 +71,11 @@ const SharedKey = struct {
 };
 
 const KeyTask = struct {
-    /// Null generates a key from the operating system's randomness.
-    seed: ?xmss.Seed,
+    seed: xmss.Seed,
     key: ?*xmss.SecretKey = null,
 
     pub fn compute(self: *KeyTask) !void {
-        self.key = if (self.seed) |*seed| try xmss.SecretKey.fromSeed(seed) else try xmss.SecretKey.generate();
+        self.key = try xmss.SecretKey.fromSeed(&self.seed);
     }
 
     pub fn resolve(self: *KeyTask, env: napi.Env) !napi.Value {
@@ -91,7 +89,7 @@ const KeyTask = struct {
     }
 
     pub fn deinit(self: *KeyTask) void {
-        if (self.seed) |*seed| std.crypto.secureZero(u8, seed);
+        std.crypto.secureZero(u8, &self.seed);
         if (self.key) |key| key.deinit();
     }
 };
@@ -130,8 +128,8 @@ const SignTask = struct {
     }
 };
 
-/// A leanXMSS secret key. Instances come from `generate` and `fromSeed`: one
-/// built with `new` holds no key and every method throws `KeyNotLoaded`.
+/// A leanXMSS secret key. Instances come from `fromSeed`: one built with `new`
+/// holds no key and every method throws `KeyNotLoaded`.
 pub const XmssSecretKey = struct {
     pub const js_meta = js.class(.{});
 
@@ -144,12 +142,6 @@ pub const XmssSecretKey = struct {
     pub fn deinit(self: *XmssSecretKey) void {
         if (self.shared) |shared| shared.release();
         self.shared = null;
-    }
-
-    /// Resolves with a fresh key, its seed from the operating system's randomness.
-    pub fn generate() !js.Value {
-        try ensureAvailable();
-        return js.spawn(KeyTask, .{ .seed = null }, "leanvm.XmssSecretKey.generate");
     }
 
     /// Resolves with the key of `seed`, which is all of its secret material.
@@ -233,15 +225,14 @@ const VerifyAggregateTask = struct {
     valid: bool = false,
 
     /// A proof that does not decode or does not prove the claims is invalid.
-    /// Anything else, malformed claims included, is the caller's error.
     pub fn compute(self: *VerifyAggregateTask) !void {
         const proof = leanvm.Proof.fromBytes(self.proof, self.claims) catch |err| switch (err) {
-            error.MalformedEncoding, error.MalformedClaim => return,
+            error.MalformedEncoding => return,
             else => return err,
         };
         defer proof.deinit();
         proof.verify() catch |err| switch (err) {
-            error.Snark, error.MalformedClaim => return,
+            error.InvalidProof => return,
             else => return err,
         };
         self.valid = true;
@@ -257,7 +248,7 @@ const VerifyAggregateTask = struct {
 };
 
 /// Resolves with whether `proof` proves exactly `claims`: packed, strictly
-/// sorted. Rejects with `MalformedSignerSet` when they are not.
+/// sorted. Claims that are not sorted are proven by no proof.
 pub fn verifyAggregate(proof: js.Uint8Array, claims: js.Uint8Array) !js.Value {
     try ensureAvailable();
     var arena: std.heap.ArenaAllocator = .init(js.allocator());
@@ -297,7 +288,7 @@ const AggregateTask = struct {
         defer for (decoded[0..count]) |child| child.deinit();
         for (self.children) |child| {
             decoded[count] = leanvm.Proof.fromBytes(child.proof, child.claims) catch |err| switch (err) {
-                error.MalformedEncoding, error.MalformedClaim, error.MalformedSignerSet => return error.InvalidChild,
+                error.MalformedEncoding => return error.InvalidChild,
                 else => return err,
             };
             count += 1;

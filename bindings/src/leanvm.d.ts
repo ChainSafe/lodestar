@@ -21,8 +21,6 @@ export declare const XMSS_CLAIM_SIZE: 64;
 export declare const XMSS_SIGNED_SIZE: 2468;
 /** The most children one `aggregateXmssSignatures` call takes. */
 export declare const XMSS_AGGREGATE_MAX_CHILDREN: 16;
-/** Exclusive cap on an aggregate's claims. */
-export declare const XMSS_AGGREGATE_MAX_CLAIMS: 65536;
 export declare const XMSS_AGGREGATE_MIN_LOG_INV_RATE: 1;
 export declare const XMSS_AGGREGATE_MAX_LOG_INV_RATE: 4;
 
@@ -30,7 +28,7 @@ export declare const XMSS_AGGREGATE_MAX_LOG_INV_RATE: 4;
  * A leanXMSS secret key. Obtain one from `generate` or `fromSeed`: an instance made with `new`
  * holds no key, and its methods throw `KeyNotLoaded`.
  *
- * Generating a key and signing run off the JS thread, on leanVM's own thread pool.
+ * Generating a key, `prepare` and signing each run off the JS thread, on one thread.
  */
 export declare class XmssSecretKey {
   /** A fresh key, its seed from the operating system's randomness. */
@@ -42,7 +40,8 @@ export declare class XmssSecretKey {
   toPublicKey(): Uint8Array;
   /**
    * Builds the bottom tree `leafIndex` is in: the 2^16 leaf indices that share its top 16 bits.
-   * The first `sign` in a bottom tree otherwise pays for it.
+   * The first `sign` in a bottom tree otherwise pays for it. A key keeps the 8 bottom trees it
+   * used last.
    */
   prepare(leafIndex: number): Promise<void>;
   /**
@@ -89,8 +88,8 @@ export declare function setupXmssAggregation(): Promise<void>;
  *
  * Takes seconds and gigabytes, off the JS thread. Aggregations run one at a time.
  *
- * Rejects with `InvalidChild`, `Empty`, `NotCovered`, `MalformedRawSignature`, `TooLarge`,
- * `InvalidRate`, `ChildOutOfRange` or `Prove`.
+ * Rejects with `InvalidInput` (nothing to prove, a declared claim nothing covers, a rate out of
+ * range), `InvalidSignature`, `InvalidChild` or `Prove`.
  */
 export declare function aggregateXmssSignatures(
   children: XmssAggregate[],
@@ -100,9 +99,7 @@ export declare function aggregateXmssSignatures(
 ): Promise<XmssAggregate>;
 
 /**
- * Resolves with whether `proof` proves exactly `claims`, off the JS thread.
- *
- * Rejects with `MalformedSignerSet` when the claims are not strictly sorted or number
- * `XMSS_AGGREGATE_MAX_CLAIMS` or more.
+ * Resolves with whether `proof` proves exactly `claims`, off the JS thread. No proof proves claims
+ * that are not strictly sorted.
  */
 export declare function verifyXmssAggregate(proof: Uint8Array, claims: Uint8Array): Promise<boolean>;
