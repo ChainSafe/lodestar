@@ -3,7 +3,7 @@ import {routes} from "@lodestar/api";
 import {ApiError} from "@lodestar/api/server";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
-import {ForkName} from "@lodestar/params";
+import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, ForkName} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -236,6 +236,8 @@ describe("api - beacon - publishBlockV2", () => {
       expect(verifyBlocksInEpoch).toHaveBeenCalledOnce();
       expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
       expect(modules.chain.processBlock).not.toHaveBeenCalled();
+      expect(modules.chain.seenBlockInputCache.remove).toHaveBeenCalledExactlyOnceWith(blockRoot);
+      expect(modules.chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
     });
   });
 
@@ -413,6 +415,27 @@ describe("api - beacon - publishBlockV2", () => {
 
       expect(modules.chain.seenBlockInputCache.remove).toHaveBeenCalledExactlyOnceWith(blockRoot);
       expect(modules.chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
+    });
+
+    it("removes a block this call cached when a malformed blob fails cell computation", async () => {
+      const {signedBlock, blockRoot} = cacheSubmittedBlock();
+      // Each 32-byte limb is above the BLS modulus, so computeCells rejects it before validation.
+      const malformedBlob = new Uint8Array(FIELD_ELEMENTS_PER_BLOB * BYTES_PER_FIELD_ELEMENT);
+      malformedBlob.fill(0xff);
+      expect(modules.chain.blockProductionCache.has(blockRoot)).toBe(false);
+
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      await expect(
+        api.publishBlockV2({
+          signedBlockContents: {signedBlock, blobs: [malformedBlob], kzgProofs: []},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).rejects.toThrow(/CouldNotDeserializeScalar/);
+
+      expect(modules.chain.seenBlockInputCache.remove).toHaveBeenCalledExactlyOnceWith(blockRoot);
+      expect(modules.chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
+      expect(validateGossipBlock).not.toHaveBeenCalled();
+      expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
     });
 
     it("keeps a block this call cached when the parent is unknown", async () => {
