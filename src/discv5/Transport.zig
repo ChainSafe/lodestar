@@ -1,5 +1,5 @@
 //! Owns discovery protocol state and bounded datagram I/O. The owner supplies time and received
-//! input to advance; the standalone driver owns waiting and clock reads.
+//! input to advance.
 
 const std = @import("std");
 const CallTable = @import("CallTable.zig");

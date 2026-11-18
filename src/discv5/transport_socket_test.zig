@@ -7,10 +7,10 @@ const message = @import("wire/message.zig");
 const Sockets = @import("udp").Sockets;
 const test_support = @import("test_support.zig");
 const Pair = @import("transport_test_support.zig").Pair;
+const step = @import("transport_test_support.zig").step;
 const types = @import("types.zig");
 const endpoint = test_support.endpoint;
 const keyPair = test_support.keyPair;
-const driver = @import("driver.zig");
 const constants = @import("wire/constants.zig");
 const fault_io = @import("fault_io");
 const waitForDatagram = @import("socket_test_support").waitForDatagram;
@@ -29,9 +29,9 @@ test "maintenance retains a routing incumbent that answers through Transport" {
     const started = (try controller.startNext(&pair.transport_a.engine, &out, try .init(&.{1}), now_ms, &test_support.sealEntropy(10))).?;
     try pair.transport_a.transmit(std.testing.io, started.peer.address, out[0..started.call.packet_length]);
     var expired: [4]CallTable.Expired = undefined;
-    const answered = try driver.step(&pair.transport_b, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) });
+    const answered = try step(&pair.transport_b, std.testing.io, &expired);
     try std.testing.expectEqual(@as(u8, 1), answered.standard_responses);
-    const completed = try driver.step(&pair.transport_a, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) });
+    const completed = try step(&pair.transport_a, std.testing.io, &expired);
     try std.testing.expect(completed.event == .response);
     try std.testing.expect(controller.onEvent(&pair.transport_a.engine, &completed.event, completed.now_ms).consumed);
     try std.testing.expectEqual(@as(usize, 0), pair.transport_a.engine.routing.pendingCount());
@@ -51,11 +51,11 @@ test "transport completes a cold call through challenge and handshake" {
     } };
     const handle = try pair.transport_a.startCall(std.testing.io, endpoint(&pair.record_b), &pair.record_b, &request, try Transport.monotonicMilliseconds(std.testing.io));
     var expired: [4]CallTable.Expired = undefined;
-    try std.testing.expect((try driver.step(&pair.transport_b, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) })).event == .none);
-    try std.testing.expect((try driver.step(&pair.transport_a, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) })).event == .none);
-    const request_step = try driver.step(&pair.transport_b, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) });
+    try std.testing.expect((try step(&pair.transport_b, std.testing.io, &expired)).event == .none);
+    try std.testing.expect((try step(&pair.transport_a, std.testing.io, &expired)).event == .none);
+    const request_step = try step(&pair.transport_b, std.testing.io, &expired);
     try std.testing.expectEqual(@as(u8, 1), request_step.standard_responses);
-    const response_step = try driver.step(&pair.transport_a, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) });
+    const response_step = try step(&pair.transport_a, std.testing.io, &expired);
     try std.testing.expect(response_step.event == .response);
     try std.testing.expectEqual(handle, response_step.event.response.matched.handle);
     try std.testing.expect(response_step.event.response.matched.response == .pong);
@@ -75,7 +75,7 @@ test "transport leaves TALK response policy with the application" {
     } };
     const handle = try pair.transport_a.startCall(std.testing.io, endpoint(&pair.record_b), &pair.record_b, &request, try Transport.monotonicMilliseconds(std.testing.io));
     var expired: [4]CallTable.Expired = undefined;
-    const received = try driver.step(&pair.transport_b, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) });
+    const received = try step(&pair.transport_b, std.testing.io, &expired);
     try std.testing.expect(received.event == .request);
     try std.testing.expect(received.event.request.message == .talk_request);
     try std.testing.expectEqual(@as(u8, 0), received.standard_responses);
@@ -85,7 +85,7 @@ test "transport leaves TALK response policy with the application" {
         .response = "response",
     } };
     try pair.transport_b.sendResponse(std.testing.io, endpoint(&pair.record_a), &response, try Transport.monotonicMilliseconds(std.testing.io));
-    const completed = try driver.step(&pair.transport_a, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) });
+    const completed = try step(&pair.transport_a, std.testing.io, &expired);
     try std.testing.expect(completed.event == .response);
     try std.testing.expectEqual(handle, completed.event.response.matched.handle);
     try std.testing.expectEqualStrings(
@@ -106,7 +106,7 @@ test "transport releases a malformed datagram before the next step" {
         constants.packet_size_max,
     );
     var expired: [4]CallTable.Expired = undefined;
-    const rejected = try driver.step(&pair.transport_a, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) });
+    const rejected = try step(&pair.transport_a, std.testing.io, &expired);
     try std.testing.expect(rejected.datagram == .rejected);
     try std.testing.expectEqual(types.RejectReason.malformed_packet, rejected.datagram.rejected);
 
@@ -115,9 +115,9 @@ test "transport releases a malformed datagram before the next step" {
         .enr_sequence = pair.record_b.sequence,
     } };
     const handle = try pair.transport_b.startCall(std.testing.io, endpoint(&pair.record_a), &pair.record_a, &request, try Transport.monotonicMilliseconds(std.testing.io));
-    const answered = try driver.step(&pair.transport_a, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) });
+    const answered = try step(&pair.transport_a, std.testing.io, &expired);
     try std.testing.expectEqual(@as(u8, 1), answered.standard_responses);
-    const completed = try driver.step(&pair.transport_b, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) });
+    const completed = try step(&pair.transport_b, std.testing.io, &expired);
     try std.testing.expect(completed.event == .response);
     try std.testing.expectEqual(handle, completed.event.response.matched.handle);
 }
@@ -145,7 +145,7 @@ test "transport drops replies its destination refuses and keeps the step's expir
         // A challenge answers the cold request and a PONG the established one.
         var host = fault_io{ .send = .{ .socket = pair.transport_a.sockets.primary().handle } };
         var expired: [4]CallTable.Expired = undefined;
-        const result = try driver.step(&pair.transport_a, host.io(), &expired, .{ .wait_max = .fromMilliseconds(10) });
+        const result = try step(&pair.transport_a, host.io(), &expired);
         try std.testing.expectEqual(@as(?Transport.Failure, null), result.failure);
         try std.testing.expect(result.datagram == .accepted);
         try std.testing.expect(result.event == .none);
@@ -173,10 +173,10 @@ test "transport fails a call whose handshake is not sent so maintenance keeps th
         try std.testing.expectEqual(endpoint(&pair.record_b), started.peer);
         try pair.transport_a.transmit(std.testing.io, started.peer.address, out[0..started.call.packet_length]);
         var expired: [4]CallTable.Expired = undefined;
-        const challenged = try driver.step(&pair.transport_b, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) });
+        const challenged = try step(&pair.transport_b, std.testing.io, &expired);
         try std.testing.expect(challenged.failure == null and challenged.datagram == .accepted);
         var host = fault_io{ .send = .{ .socket = pair.transport_a.sockets.primary().handle }, .send_failure = send_failure };
-        const unsent = try driver.step(&pair.transport_a, host.io(), &expired, .{ .wait_max = .fromMilliseconds(10) });
+        const unsent = try step(&pair.transport_a, host.io(), &expired);
         try std.testing.expectEqual(if (send_failure == error.SystemResources) @as(?Transport.Error, error.SystemResources) else null, @as(?Transport.Error, if (unsent.failure) |failure| failure.cause else null));
         const dropped = &pair.transport_a.send_drops;
         const pressure = @intFromEnum(Sockets.SendDrops.Reason.system_resources);

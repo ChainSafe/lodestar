@@ -7,7 +7,6 @@ pub const CallTable = @import("CallTable.zig");
 pub const Admission = @import("Admission.zig");
 pub const address_policy = @import("address_policy.zig");
 pub const Channel = @import("Channel.zig");
-pub const driver = @import("driver.zig");
 pub const Transport = @import("Transport.zig");
 pub const Engine = @import("Engine.zig");
 pub const Lookup = @import("Lookup.zig");
@@ -26,7 +25,6 @@ test {
     _ = CallTable;
     _ = Channel;
     _ = Transport;
-    _ = driver;
     _ = Engine;
     _ = Lookup;
     _ = Maintenance;

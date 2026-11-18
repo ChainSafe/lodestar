@@ -463,9 +463,7 @@ jobs:
       - name: Run discovery and network tests
         run: |
           zig build test:discv5
-          zig build test:discv5_crawl_batch
           zig build test:discv5 -Doptimize=ReleaseSafe
-          zig build test:discv5_crawl_batch -Doptimize=ReleaseSafe
           zig build test:fault_io
           zig build test:udp
           zig build test:network

@@ -21,7 +21,7 @@ pub fn build(b: *std.Build) !void {
     network.addImport("quiche_send_info_layout", send_info_layout.createModule());
 
     const network_tools = b.step("check:network-tools", "Compile network examples, interoperability peers, and benchmark");
-    for ([_][]const u8{ "discv5_interop", "discv5_crawl", "network_interop_peer", "core_interop_peer", "bench_network" }) |name| {
+    for ([_][]const u8{ "network_interop_peer", "core_interop_peer" }) |name| {
         network_tools.dependOn(&result.executable(name).?.step);
     }
 

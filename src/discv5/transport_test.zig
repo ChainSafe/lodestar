@@ -5,10 +5,10 @@ const Maintenance = @import("Maintenance.zig");
 const message = @import("wire/message.zig");
 const test_support = @import("test_support.zig");
 const Pair = @import("transport_test_support.zig").Pair;
+const step = @import("transport_test_support.zig").step;
 const types = @import("types.zig");
 const address4 = test_support.address4;
 const endpoint = test_support.endpoint;
-const driver = @import("driver.zig");
 const fault_io = @import("fault_io");
 const Sockets = @import("udp").Sockets;
 
@@ -30,7 +30,7 @@ test "transport refuses exhausted packet admission before entropy or decoding" {
     setup_io.datagram = .{ .from = pair.transport_b.localAddress(), .bytes = &([_]u8{0} ** 63) };
     var host = fault_io{ .base = setup_io.io(), .entropy = .{} };
     var expired: [4]CallTable.Expired = undefined;
-    const result = try driver.step(&pair.transport_a, host.io(), &expired, .{ .wait_max = .fromMilliseconds(10) });
+    const result = try step(&pair.transport_a, host.io(), &expired);
     try std.testing.expect(result.failure == null);
     try std.testing.expectEqual(types.RejectReason.admission_limited, result.datagram.rejected);
     try std.testing.expectEqual(@as(usize, 0), host.entropy_calls);
@@ -55,7 +55,7 @@ test "maintenance bounds local replacement probe retries without blocking transp
     setup_io.now_ms = 999;
     setup_io.datagram = .{ .from = pair.transport_b.localAddress(), .bytes = &.{0xff}, .truncated = true };
     var expired: [4]CallTable.Expired = undefined;
-    const received = try driver.step(&pair.transport_a, setup_io.io(), &expired, .{ .wait_max = .fromMilliseconds(10) });
+    const received = try step(&pair.transport_a, setup_io.io(), &expired);
     try std.testing.expectEqual(types.RejectReason.oversized_datagram, received.datagram.rejected);
     try std.testing.expect(received.failure == null);
     const retry = (try controller.startNext(&pair.transport_a.engine, &out, try .init(&.{2}), 1_000, &test_support.sealEntropy(11))).?;
@@ -90,12 +90,12 @@ test "transport reports truncation alongside already produced expiries" {
         .datagram = .{ .from = pair.transport_b.localAddress(), .bytes = &.{0xff}, .truncated = true },
     };
     var expired: [4]CallTable.Expired = undefined;
-    const result = try driver.step(&pair.transport_a, host.io(), &expired, .{ .wait_max = .fromMilliseconds(10) });
+    const result = try step(&pair.transport_a, host.io(), &expired);
     try std.testing.expectEqual(@as(?Transport.Failure, null), result.failure);
     try std.testing.expect(result.datagram == .rejected);
     try std.testing.expectEqual(@as(usize, 1), result.calls_expired);
     try std.testing.expectEqual(started.handle, expired[0].handle);
-    const next = try driver.step(&pair.transport_a, host.io(), &expired, .{ .wait_max = .fromMilliseconds(10) });
+    const next = try step(&pair.transport_a, host.io(), &expired);
     try std.testing.expectEqual(@as(usize, 0), next.calls_expired);
 }
 
@@ -119,12 +119,12 @@ test "transport preserves expiry delivery when the host cannot receive" {
     );
     var host: test_support.ManualIo = .{ .now_ms = 100, .receive_failure = error.ConcurrencyUnavailable };
     var expired: [4]CallTable.Expired = undefined;
-    const result = try driver.step(&pair.transport_a, host.io(), &expired, .{ .wait_max = .fromMilliseconds(10) });
+    const result = try step(&pair.transport_a, host.io(), &expired);
     try std.testing.expectEqual(error.ConcurrencyUnavailable, result.failure.?.cause);
     try std.testing.expectEqual(Transport.FailureStage.receive, result.failure.?.stage);
     try std.testing.expectEqual(@as(usize, 1), result.calls_expired);
     try std.testing.expectEqual(started.handle, expired[0].handle);
-    const next = try driver.step(&pair.transport_a, host.io(), &expired, .{ .wait_max = .fromMilliseconds(10) });
+    const next = try step(&pair.transport_a, host.io(), &expired);
     try std.testing.expectEqual(@as(usize, 0), next.calls_expired);
 }
 

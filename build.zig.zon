@@ -9,7 +9,6 @@
         "build.zig.zon",
         "bench",
         "bindings",
-        "examples",
         "rust-toolchain.toml",
         "scripts",
         "src",
@@ -290,18 +289,6 @@
         },
     },
     .executables = .{
-        .discv5_interop = .{
-            .root_module = .{
-                .root_source_file = "test/int/discv5/interop.zig",
-                .imports = .{ .discv5, .udp },
-            },
-        },
-        .discv5_crawl = .{
-            .root_module = .{
-                .root_source_file = "examples/discv5_crawl.zig",
-                .imports = .{ .discv5, .udp },
-            },
-        },
         .network_interop_peer = .{
             .root_module = .{
                 .root_source_file = "test/interop/network_peer.zig",
@@ -360,12 +347,6 @@
             .root_module = .{
                 .root_source_file = "test/spec/bls/write_spec_tests.zig",
                 .imports = .{.spec_test_options},
-            },
-        },
-        .bench_network = .{
-            .root_module = .{
-                .root_source_file = "bench/network.zig",
-                .imports = .{ .network, .config, .preset },
             },
         },
         .bench_ssz_attestation = .{
@@ -498,12 +479,6 @@
         .discv5 = .{
             .root_module = .discv5,
             .test_runner = .{ .path = "test/test_runner.zig", .mode = .server },
-        },
-        .discv5_crawl_batch = .{
-            .root_module = .{
-                .root_source_file = "examples/discv5/lookup_batch.zig",
-                .imports = .{ .discv5, .udp, .socket_test_support },
-            },
         },
         .network = .{
             .root_module = .network,
