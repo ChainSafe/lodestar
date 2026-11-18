@@ -446,8 +446,8 @@ for (const hoodi of [false, true]) {
             topic,
           });
         }
-        // One peer holds at most half of a kind's processor items pending validation.
-        const held = 4;
+        // One peer holds at most two blocks pending validation.
+        const held = 2;
         if (!hoodi) {
           for (let i = 0; i < 64; i++)
             await peer.command("gossipPublish", {length: 4000, seed: 900 + i, slot, topic: firstTopic});

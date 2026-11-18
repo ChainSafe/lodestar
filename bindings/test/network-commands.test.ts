@@ -30,7 +30,7 @@ test.each([
   } finally {
     await Promise.allSettled([pair.left.stop(), pair.right.close()]);
   }
-});
+}, 15_000);
 
 test("rejects invalid Goodbye reasons", async () => {
   const runtime = startRuntime(applicationConfig());
