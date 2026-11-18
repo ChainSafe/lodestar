@@ -27,4 +27,5 @@ test {
     std.testing.refAllDecls(@This());
     std.testing.refAllDecls(fg);
     std.testing.refAllDecls(ac);
+    _ = @import("testing/determinism.zig");
 }
