@@ -111,6 +111,20 @@ pub const ForkChoiceNode = struct {
     }
 };
 
+/// Index of a `ForkChoiceNode` into the per-node arrays: `block * NODES_PER_BLOCK + status`.
+pub const NodeId = u32;
+pub const NO_NODE: NodeId = std.math.maxInt(NodeId);
+/// One node per `PayloadStatus`.
+pub const NODES_PER_BLOCK: comptime_int = @typeInfo(PayloadStatus).@"enum".fields.len;
+
+pub fn nodeId(node: ForkChoiceNode) NodeId {
+    return node.block * NODES_PER_BLOCK + @intFromEnum(node.payload_status);
+}
+
+pub fn nodeAt(id: NodeId) ForkChoiceNode {
+    return .{ .block = id / NODES_PER_BLOCK, .payload_status = @enumFromInt(id % NODES_PER_BLOCK) };
+}
+
 /// Spec `LatestMessage`. The attestation slot is kept for every fork; pre-Gloas
 /// comparisons use its epoch, which `validateOnAttestation` ties to the target epoch.
 /// `block` is `NO_BLOCK` once `prune` dropped the voted block; the slot still gates
@@ -747,7 +761,7 @@ pub const Store = struct {
 
         const head = try self.getHead();
         const parent_node: ForkChoiceNode = .{ .block = parent, .payload_status = self.parentPayloadStatus(&summary, parent) };
-        if (self.head_cache.execution.items[head_mod.nodeId(parent_node)] == .invalid) return error.ParentPayloadInvalid;
+        if (head_mod.execution(self, parent_node) == .invalid) return error.ParentPayloadInvalid;
 
         const index: BlockIndex = @intCast(self.blocks.len);
         try self.appendBlock(.{
@@ -908,7 +922,7 @@ pub const Store = struct {
         if (self.vote_targets.needsCompaction()) {
             try self.vote_targets.compact(self.allocator, &.{ self.latest_votes.items, self.queued_votes.items, self.head_cache.applied_votes.items });
         }
-        return self.vote_targets.getOrInsert(self.allocator, message, head_mod.nodeId(head_mod.supportedNode(self, message)));
+        return self.vote_targets.getOrInsert(self.allocator, message, nodeId(head_mod.supportedNode(self, message)));
     }
 
     /// The replacement rule of spec `update_latest_messages` for one validator: a later
@@ -1240,7 +1254,7 @@ pub const Store = struct {
     /// The worst engine verdict on the payloads `node` stands on, valid after `getHead`.
     pub fn executionStatus(self: *Store, node: ForkChoiceNode) !ExecutionStatus {
         try head_mod.ensureComputed(self);
-        return self.head_cache.execution.items[head_mod.nodeId(node)];
+        return head_mod.execution(self, node);
     }
 
     /// Spec `is_optimistic`: some payload below `node` is still `NOT_VALIDATED`.
@@ -1337,7 +1351,7 @@ pub const Store = struct {
         self.head_cache.remapVoteWeight(remap, kept);
         if (parents[finalized] != NO_BLOCK) {
             const hung_from: ForkChoiceNode = .{ .block = parents[finalized], .payload_status = self.blocks.items(.parent_payload_status)[finalized] };
-            self.root_base_status = self.head_cache.execution.items[head_mod.nodeId(hung_from)];
+            self.root_base_status = head_mod.execution(self, hung_from);
         }
         for (0..n) |i| {
             const target = remap[i];
