@@ -24,11 +24,11 @@ test "shuffling job records completed builds" {
         const cache = test_state.epoch_transition_cache;
         const seed = [_]u8{0} ** 32;
         const epoch = cache.current_epoch + 2;
-        try cache.startShuffling(allocator, std.testing.io, seed, epoch);
+        try cache.startShuffling(allocator, std.testing.io, seed, epoch, preset.MAX_COMMITTEES_PER_SLOT);
         const shuffling = try cache.joinShuffling();
         shuffling.deinit();
 
-        try cache.startShuffling(allocator, std.testing.io, seed, epoch);
+        try cache.startShuffling(allocator, std.testing.io, seed, epoch, preset.MAX_COMMITTEES_PER_SLOT);
     }
 
     var aw: std.Io.Writer.Allocating = .init(allocator);

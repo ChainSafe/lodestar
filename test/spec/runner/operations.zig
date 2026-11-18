@@ -27,6 +27,7 @@ pub const Operation = enum {
     bls_to_execution_change,
     builder_deposit_request,
     builder_exit_request,
+    builder_preregistration_request,
     consolidation_request,
     deposit,
     deposit_request,
@@ -34,13 +35,14 @@ pub const Operation = enum {
     execution_payload_bid,
     parent_execution_payload,
     payload_attestation,
-    preregistration_request,
     proposer_slashing,
     randao,
     sync_aggregate,
     sync_aggregate_random,
     voluntary_exit,
     voluntary_exit_churn,
+    voluntary_exit_request,
+    validator_preregistration_request,
     withdrawal_request,
     withdrawals,
 
@@ -64,6 +66,7 @@ pub const Operation = enum {
             .bls_to_execution_change => "SignedBLSToExecutionChange",
             .builder_deposit_request => "BuilderDepositRequest",
             .builder_exit_request => "BuilderExitRequest",
+            .builder_preregistration_request => "BuilderPreregistrationRequest",
             .consolidation_request => "ConsolidationRequest",
             .deposit => "Deposit",
             .deposit_request => "DepositRequest",
@@ -71,10 +74,11 @@ pub const Operation = enum {
             .execution_payload_bid => "SignedExecutionPayloadBid",
             .parent_execution_payload => "BeaconBlock",
             .payload_attestation => "PayloadAttestation",
-            .preregistration_request => "PreregistrationRequest",
             .proposer_slashing => "ProposerSlashing",
             .sync_aggregate, .sync_aggregate_random => "SyncAggregate",
             .voluntary_exit, .voluntary_exit_churn => "SignedVoluntaryExit",
+            .voluntary_exit_request => "VoluntaryExitRequest",
+            .validator_preregistration_request => "ValidatorPreregistrationRequest",
             .withdrawal_request => "WithdrawalRequest",
             .withdrawals => "ExecutionPayload",
         };
@@ -258,7 +262,9 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                 // Standalone payload-attestation vectors include invalid signatures
                 // without bls_setting metadata, matching Lodestar's operation runner.
                 .payload_attestation => try state_transition.processPayloadAttestation(fork, io, cached_state.config, cached_state.epoch_cache, state, &self.op, true),
-                .preregistration_request => try state_transition.processPreregistrationRequest(fork, allocator, io, cached_state.config, cached_state.epoch_cache, state, &self.op),
+                .validator_preregistration_request => try state_transition.processValidatorPreregistrationRequest(fork, io, cached_state.epoch_cache, state, &self.op),
+                .builder_preregistration_request => try state_transition.processBuilderPreregistrationRequest(fork, allocator, state, &self.op),
+                .voluntary_exit_request => try state_transition.processVoluntaryExitRequest(fork, io, cached_state.config, cached_state.epoch_cache, state, &self.op),
                 .randao => {
                     const body = BeaconBlockBody(.full, fork){ .inner = self.op };
                     const proposer = try cached_state.epoch_cache.getBeaconProposer(try state.slot());

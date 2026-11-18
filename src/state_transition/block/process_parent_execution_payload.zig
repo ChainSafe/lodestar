@@ -14,7 +14,8 @@ const processBuilderDepositRequest = @import("./process_builder_deposit_request.
 const processBuilderExitRequest = @import("./process_builder_exit_request.zig").processBuilderExitRequestWithIndex;
 const computeEpochAtSlot = @import("../utils/epoch.zig").computeEpochAtSlot;
 const IndexedBuilderState = @import("indexed_builder_state.zig").IndexedBuilderState;
-const processPreregistrationRequest = @import("process_preregistration_request.zig").processPreregistrationRequest;
+const preregistrations = @import("process_preregistration_request.zig");
+const processVoluntaryExitRequest = @import("process_voluntary_exit_request.zig").processVoluntaryExitRequest;
 
 pub fn processParentExecutionPayload(
     comptime fork: ForkSeq,
@@ -43,7 +44,12 @@ pub fn processParentExecutionPayload(
             return error.ParentExecutionRequestsNotEmpty;
         }
         if (comptime fork == .pq) {
-            if (requests.preregistrations.items.len != 0) return error.ParentExecutionRequestsNotEmpty;
+            if (requests.validator_preregistrations.items.len != 0 or
+                requests.builder_preregistrations.items.len != 0 or
+                requests.voluntary_exits.items.len != 0)
+            {
+                return error.ParentExecutionRequestsNotEmpty;
+            }
         }
         return;
     }
@@ -109,8 +115,14 @@ pub fn applyParentExecutionPayload(
     }
 
     if (comptime fork == .pq) {
-        for (requests.preregistrations.items) |*request| {
-            try processPreregistrationRequest(fork, allocator, io, config, epoch_cache, state, request);
+        for (requests.validator_preregistrations.items) |*request| {
+            try preregistrations.processValidatorPreregistrationRequest(fork, io, epoch_cache, state, request);
+        }
+        for (requests.builder_preregistrations.items) |*request| {
+            try preregistrations.processBuilderPreregistrationRequest(fork, allocator, state, request);
+        }
+        for (requests.voluntary_exits.items) |*request| {
+            try processVoluntaryExitRequest(fork, io, config, epoch_cache, state, request);
         }
     }
 
@@ -145,7 +157,12 @@ pub fn validateExecutionRequests(comptime fork: ForkSeq, requests: *const ForkTy
         return error.TooManyExecutionRequests;
     }
     if (comptime fork == .pq) {
-        if (requests.preregistrations.items.len > preset.MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD) return error.TooManyExecutionRequests;
+        if (requests.validator_preregistrations.items.len > preset.MAX_VALIDATOR_PREREGISTRATION_REQUESTS_PER_PAYLOAD or
+            requests.builder_preregistrations.items.len > preset.MAX_BUILDER_PREREGISTRATION_REQUESTS_PER_PAYLOAD or
+            requests.voluntary_exits.items.len > preset.MAX_VOLUNTARY_EXIT_REQUESTS_PER_PAYLOAD)
+        {
+            return error.TooManyExecutionRequests;
+        }
     }
 }
 

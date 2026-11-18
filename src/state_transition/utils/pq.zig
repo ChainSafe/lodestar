@@ -18,7 +18,13 @@ pub fn computeXmssAttestationLeafIndex(epoch: u64) u64 {
 
 pub fn computeXmssLeafIndex(slot: u64, leaf_offset: u64) u64 {
     std.debug.assert(leaf_offset < c.XMSS_LEAVES_PER_SLOT);
-    return c.XMSS_RESERVED_LEAVES + c.XMSS_ATTESTATION_LEAVES +| slot *| c.XMSS_LEAVES_PER_SLOT +| leaf_offset;
+    return c.XMSS_RESERVED_LEAVES + c.XMSS_ATTESTATION_LEAVES + c.XMSS_BUILDER_BID_LEAVES +| slot *| c.XMSS_LEAVES_PER_SLOT +| leaf_offset;
+}
+
+/// A builder signs each bid at a leaf of its own choosing among those reserved for bids.
+pub fn isBuilderBidLeafIndex(leaf_index: u64) bool {
+    const start = c.XMSS_RESERVED_LEAVES + c.XMSS_ATTESTATION_LEAVES;
+    return start <= leaf_index and leaf_index < start + c.XMSS_BUILDER_BID_LEAVES;
 }
 
 /// The leaf a signature says it was made at. `xmssVerify` proves it.

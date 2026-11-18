@@ -40,6 +40,7 @@ pub const chain_config = ChainConfig{
     .PQ_FORK_VERSION = b(4, "0xe0000064"),
     .PQ_FORK_EPOCH = std.math.maxInt(u64),
     .ATTESTATION_SUBNET_COUNT_PQ = 16,
+    .UNREGISTERED_VALIDATOR_WITHDRAWABILITY_DELAY = 16384,
     .HEZE_FORK_VERSION = b(4, "0x08000064"),
     .HEZE_FORK_EPOCH = std.math.maxInt(u64),
     .INCLUSION_LIST_DUE_BPS = 6667,

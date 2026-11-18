@@ -9,6 +9,7 @@ const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
 const verifyAggregatedSignatureSet = @import("../utils/signature_sets.zig").verifyAggregatedSignatureSet;
 const appendAttestationClaims = @import("../signature_sets/indexed_attestation.zig").appendAttestationClaims;
 const pq = @import("../utils/pq.zig");
+const maxCommitteesPerSlot = @import("../utils/epoch_shuffling.zig").maxCommitteesPerSlot;
 const getIndexedAttestationSignatureSet = @import("../signature_sets/indexed_attestation.zig").getIndexedAttestationSignatureSet;
 
 pub fn isValidIndexedAttestation(
@@ -55,7 +56,7 @@ pub fn isValidIndexedAttestationIndices(
 ) !bool {
     // verify max number of indices
     const max_indices: usize = if (fork.gte(.electra))
-        preset.MAX_VALIDATORS_PER_COMMITTEE * preset.MAX_COMMITTEES_PER_SLOT
+        preset.MAX_VALIDATORS_PER_COMMITTEE * maxCommitteesPerSlot(fork)
     else
         preset.MAX_VALIDATORS_PER_COMMITTEE;
 

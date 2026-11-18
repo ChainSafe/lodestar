@@ -9,6 +9,7 @@ const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
 const EpochTransitionCache = @import("../cache/epoch_transition_cache.zig").EpochTransitionCache;
 const EpochShufflingRc = @import("../utils/epoch_shuffling.zig").EpochShufflingRc;
 const computeEpochShufflingForFork = @import("../utils/epoch_shuffling.zig").computeEpochShufflingForFork;
+const maxCommitteesPerSlot = @import("../utils/epoch_shuffling.zig").maxCommitteesPerSlot;
 const ValidatorIndex = ssz.primitive.ValidatorIndex.Type;
 const computeEpochAtSlot = @import("../utils/epoch.zig").computeEpochAtSlot;
 const seed_utils = @import("../utils/seed.zig");
@@ -30,7 +31,7 @@ pub fn startProposerLookaheadShuffling(
     const new_epoch = current_epoch + preset.MIN_SEED_LOOKAHEAD + 1;
     var seed: [32]u8 = undefined;
     try getSeed(fork, state, new_epoch, c.DOMAIN_BEACON_ATTESTER, &seed);
-    try epoch_transition_cache.startShuffling(epoch_cache.allocator, io, seed, new_epoch);
+    try epoch_transition_cache.startShuffling(epoch_cache.allocator, io, seed, new_epoch, maxCommitteesPerSlot(fork));
 }
 
 pub fn processProposerLookahead(

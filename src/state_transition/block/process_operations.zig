@@ -42,8 +42,7 @@ pub fn processOperations(
     if (comptime fork == .pq) {
         if (body.inner.proposer_slashings.items.len > preset.MAX_PROPOSER_SLASHINGS or
             body.inner.attester_slashings.items.len > preset.MAX_ATTESTER_SLASHINGS_ELECTRA or
-            body.inner.attestations.items.len > preset.MAX_ATTESTATIONS_PQ or
-            body.inner.voluntary_exits.items.len > preset.MAX_VOLUNTARY_EXITS)
+            body.inner.attestations.items.len > preset.MAX_ATTESTATIONS_PQ)
         {
             return error.TooManyBlockOperations;
         }
@@ -124,7 +123,7 @@ pub fn processOperations(
         );
     }
 
-    {
+    if (comptime fork != .pq) {
         const timer = time.start(io);
         for (body.inner.voluntary_exits.items) |*voluntary_exit| {
             try processVoluntaryExit(fork, io, config, epoch_cache, state, voluntary_exit, opts.verify_signature);

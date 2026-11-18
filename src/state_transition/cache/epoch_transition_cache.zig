@@ -96,18 +96,18 @@ const ShufflingJob = struct {
         duration: std.Io.Duration,
     };
 
-    fn worker(allocator: Allocator, io: std.Io, seed: [32]u8, epoch: Epoch, active_indices: []u32) Error!Result {
+    fn worker(allocator: Allocator, io: std.Io, seed: [32]u8, epoch: Epoch, active_indices: []u32, max_committees_per_slot: usize) Error!Result {
         errdefer allocator.free(active_indices);
 
         const timer = time.start(io);
-        const shuffling = try EpochShuffling.init(allocator, seed, epoch, active_indices);
+        const shuffling = try EpochShuffling.init(allocator, seed, epoch, active_indices, max_committees_per_slot);
         return .{ .shuffling = shuffling, .duration = time.since(io, timer) };
     }
 
-    fn start(allocator: Allocator, io: std.Io, seed: [32]u8, epoch: Epoch, active_indices: []u32) @This() {
+    fn start(allocator: Allocator, io: std.Io, seed: [32]u8, epoch: Epoch, active_indices: []u32, max_committees_per_slot: usize) @This() {
         return .{
             .io = io,
-            .future = std.Io.async(io, worker, .{ allocator, io, seed, epoch, active_indices }),
+            .future = std.Io.async(io, worker, .{ allocator, io, seed, epoch, active_indices, max_committees_per_slot }),
         };
     }
 
@@ -651,11 +651,11 @@ pub const EpochTransitionCache = struct {
         };
     }
 
-    pub fn startShuffling(self: *EpochTransitionCache, allocator: Allocator, io: std.Io, seed: [32]u8, epoch: Epoch) !void {
+    pub fn startShuffling(self: *EpochTransitionCache, allocator: Allocator, io: std.Io, seed: [32]u8, epoch: Epoch, max_committees_per_slot: usize) !void {
         std.debug.assert(self.shuffling_job == null);
         const active_indices = try allocator.alloc(u32, self.next_shuffling_active_indices.len);
         std.mem.copyForwards(u32, active_indices, self.next_shuffling_active_indices);
-        self.shuffling_job = ShufflingJob.start(allocator, io, seed, epoch, active_indices);
+        self.shuffling_job = ShufflingJob.start(allocator, io, seed, epoch, active_indices, max_committees_per_slot);
     }
 
     pub fn joinShuffling(self: *EpochTransitionCache) !*EpochShuffling {

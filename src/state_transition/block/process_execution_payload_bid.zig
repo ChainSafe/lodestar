@@ -96,7 +96,8 @@ fn verifyExecutionPayloadBidSignature(
 ) !bool {
     const signing_root = try getExecutionPayloadBidSigningRoot(fork, allocator, config, &signed_bid.message);
     if (comptime fork == .pq) {
-        const leaf_index = pq.computeXmssLeafIndex(signed_bid.message.slot, c.LEAF_OFFSET_EXECUTION_PAYLOAD_BID);
+        const leaf_index = pq.signatureLeafIndex(&signed_bid.signature);
+        if (!pq.isBuilderBidLeafIndex(leaf_index)) return false;
         return pq.xmssVerify(pubkey, leaf_index, &signing_root, &signed_bid.signature);
     }
 

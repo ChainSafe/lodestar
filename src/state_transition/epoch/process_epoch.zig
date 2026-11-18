@@ -4,6 +4,7 @@ const observeEpochTransitionStep = metrics.observeEpochTransitionStep;
 const time = @import("time");
 const processBuilderPendingPayments = @import("process_builder_pending_payments.zig").processBuilderPendingPayments;
 const processPtcWindow = @import("process_ptc_window.zig").processPtcWindow;
+const processAggregationCommitteeWindow = @import("process_aggregation_committee_window.zig").processAggregationCommitteeWindow;
 const processPreregistrationExpiry = @import("../block/process_preregistration_request.zig").processPreregistrationExpiry;
 
 const ForkSeq = @import("config").ForkSeq;
@@ -120,6 +121,7 @@ pub fn processEpoch(
         try processPtcWindow(fork, allocator, epoch_cache, state, cache);
     }
     if (comptime fork == .pq) {
+        try processAggregationCommitteeWindow(fork, allocator, epoch_cache, state, cache);
         try processPreregistrationExpiry(fork, allocator, state);
     }
 }

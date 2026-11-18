@@ -493,7 +493,7 @@ pub fn VariableVectorType(comptime ST: type, comptime _length: comptime_int) typ
         else
             ArrayCompositeTreeView(@This());
         pub const min_size: usize = Element.min_size * length + 4 * length;
-        pub const max_size: usize = Element.max_size * length + 4 * length;
+        pub const max_size: usize = Element.max_size *| length +| 4 * length;
         pub const chunk_count: usize = length;
         pub const chunk_depth: u8 = maxChunksToDepth(chunk_count);
 

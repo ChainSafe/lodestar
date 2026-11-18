@@ -1,7 +1,6 @@
 import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
-import {phase0, pq} from "@lodestar/types";
+import {phase0} from "@lodestar/types";
 import {verifyVoluntaryExitSignature} from "../signatureSets/index.js";
-import {getXmssVoluntaryExitSignatureSet, verifyXmssSignatureSet} from "../signatureSets/pq.js";
 import {BeaconStateView} from "../stateView/beaconStateView.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
@@ -25,7 +24,7 @@ export enum VoluntaryExitValidity {
 export function processVoluntaryExit(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  signedVoluntaryExit: phase0.SignedVoluntaryExit | pq.SignedVoluntaryExit,
+  signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): void {
   const validity = getVoluntaryExitValidity(fork, state, signedVoluntaryExit, verifySignature);
@@ -40,7 +39,7 @@ export function processVoluntaryExit(
 export function getVoluntaryExitValidity(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  signedVoluntaryExit: phase0.SignedVoluntaryExit | pq.SignedVoluntaryExit,
+  signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): VoluntaryExitValidity {
   const currentEpoch = state.epochCtx.epoch;
@@ -57,7 +56,7 @@ export function getVoluntaryExitValidity(
 function getValidatorVoluntaryExitValidity(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  signedVoluntaryExit: phase0.SignedVoluntaryExit | pq.SignedVoluntaryExit,
+  signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature: boolean
 ): VoluntaryExitValidity {
   const {config, epochCtx} = state;
@@ -94,19 +93,8 @@ function getValidatorVoluntaryExitValidity(
   }
 
   // Verify signature
-  if (verifySignature) {
-    const isValid =
-      fork === ForkSeq.pq
-        ? verifyXmssSignatureSet(
-            getXmssVoluntaryExitSignatureSet(
-              config,
-              state.slot,
-              () => (validator as pq.Validator).pubkey,
-              signedVoluntaryExit
-            )
-          )
-        : verifyVoluntaryExitSignature(config, new BeaconStateView(state), signedVoluntaryExit);
-    if (!isValid) return VoluntaryExitValidity.invalidSignature;
+  if (verifySignature && !verifyVoluntaryExitSignature(config, new BeaconStateView(state), signedVoluntaryExit)) {
+    return VoluntaryExitValidity.invalidSignature;
   }
 
   return VoluntaryExitValidity.valid;
@@ -115,7 +103,7 @@ function getValidatorVoluntaryExitValidity(
 export function isValidVoluntaryExit(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  signedVoluntaryExit: phase0.SignedVoluntaryExit | pq.SignedVoluntaryExit,
+  signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): boolean {
   return getVoluntaryExitValidity(fork, state, signedVoluntaryExit, verifySignature) === VoluntaryExitValidity.valid;

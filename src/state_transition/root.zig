@@ -146,7 +146,10 @@ test {
 
 pub const processExecutionPayloadBid = @import("block/process_execution_payload_bid.zig").processExecutionPayloadBid;
 pub const processParentExecutionPayload = @import("block/process_parent_execution_payload.zig").processParentExecutionPayload;
-pub const processPreregistrationRequest = @import("block/process_preregistration_request.zig").processPreregistrationRequest;
+pub const processValidatorPreregistrationRequest = @import("block/process_preregistration_request.zig").processValidatorPreregistrationRequest;
+pub const processBuilderPreregistrationRequest = @import("block/process_preregistration_request.zig").processBuilderPreregistrationRequest;
+pub const processVoluntaryExitRequest = @import("block/process_voluntary_exit_request.zig").processVoluntaryExitRequest;
+pub const processAggregationCommitteeWindow = @import("epoch/process_aggregation_committee_window.zig").processAggregationCommitteeWindow;
 pub const processPreregistrationExpiry = @import("block/process_preregistration_request.zig").processPreregistrationExpiry;
 pub const processStark = @import("block/process_stark.zig").processStark;
 pub const pq = @import("utils/pq.zig");

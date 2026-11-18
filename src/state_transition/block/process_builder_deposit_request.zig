@@ -9,6 +9,7 @@ const c = @import("constants");
 const computeEpochAtSlot = @import("../utils/epoch.zig").computeEpochAtSlot;
 const gloas_utils = @import("../utils/gloas.zig");
 const pq = @import("../utils/pq.zig");
+const preregistrations = @import("process_preregistration_request.zig");
 const addBuilderToRegistry = gloas_utils.addBuilderToRegistry;
 const findBuilderIndexByPubkey = gloas_utils.findBuilderIndexByPubkey;
 const isValidBuilderDepositSignature = gloas_utils.isValidBuilderDepositSignature;
@@ -36,6 +37,16 @@ pub fn processBuilderDepositRequestWithIndex(
 
     // From PQ a legacy request, which names a BLS public key, is for the key derived from it.
     const pubkey = if (comptime fork == .pq) pq.requestPubkey(&pq.computeDepositPubkey(&request.pubkey)) else request.pubkey;
+
+    // While a preregistration binds the key, only a deposit that matches the binding is
+    // accepted, and it consumes the binding.
+    if (comptime fork == .pq) {
+        const xmss_pubkey = pubkey[16..48];
+        if (try preregistrations.getActivePreregistration(.builder, state, xmss_pubkey)) |preregistration| {
+            if (!std.mem.eql(u8, &request.withdrawal_credentials, &preregistration.withdrawal_credentials)) return;
+            try preregistrations.removePreregistration(.builder, allocator, state, xmss_pubkey);
+        }
+    }
 
     const builder_index = if (indexed) |cache| cache.find(&pubkey) else try findBuilderIndexByPubkey(fork, allocator, state, &pubkey);
     if (builder_index) |idx| {

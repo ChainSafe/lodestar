@@ -17,7 +17,6 @@ pub const DepositData = gloas.DepositData;
 pub const BeaconBlockHeader = gloas.BeaconBlockHeader;
 pub const SigningData = gloas.SigningData;
 pub const Deposit = gloas.Deposit;
-pub const VoluntaryExit = gloas.VoluntaryExit;
 pub const Eth1Block = gloas.Eth1Block;
 pub const HistoricalBlockRoots = gloas.HistoricalBlockRoots;
 pub const HistoricalStateRoots = gloas.HistoricalStateRoots;
@@ -110,12 +109,6 @@ pub const ProposerSlashing = ssz.FixedContainerType(struct {
 });
 pub const ProposerSlashings = ssz.FixedProgressiveListType(ProposerSlashing, .{});
 
-pub const SignedVoluntaryExit = ssz.FixedContainerType(struct {
-    message: VoluntaryExit,
-    signature: XMSSSignature,
-});
-pub const VoluntaryExits = ssz.FixedProgressiveListType(SignedVoluntaryExit, .{});
-
 pub const SingleAttestation = ssz.FixedContainerType(struct {
     committee_index: p.CommitteeIndex,
     attester_index: p.ValidatorIndex,
@@ -125,7 +118,7 @@ pub const SingleAttestation = ssz.FixedContainerType(struct {
 pub const Attestation = ssz.VariableProgressiveContainerType(struct {
     aggregation_bits: AggregationBits,
     data: AttestationData,
-    committee_bits: ssz.BitVectorType(preset.MAX_COMMITTEES_PER_SLOT),
+    committee_bits: ssz.BitVectorType(preset.MAX_COMMITTEES_PER_SLOT_PQ),
 }, &.{ 1, 1, 0, 1 });
 pub const Attestations = ssz.VariableProgressiveListType(Attestation, .{});
 pub const IndexedAttestation = ssz.VariableProgressiveContainerType(struct {
@@ -141,7 +134,6 @@ pub const AttesterSlashings = ssz.VariableProgressiveListType(AttesterSlashing, 
 pub const AggregateAndProof = ssz.VariableContainerType(struct {
     aggregator_index: p.ValidatorIndex,
     aggregate: Attestation,
-    selection_proof: VRFProof,
     proof: AttestationProof,
 });
 pub const SignedAggregateAndProof = ssz.VariableContainerType(struct {
@@ -173,26 +165,43 @@ pub const SignedExecutionPayloadBid = ssz.VariableContainerType(struct {
     signature: XMSSSignature,
 });
 
-/// The signing container of a preregistration.
+// The system contracts verify the signature of a preregistration and of a
+// voluntary exit, so their requests carry none.
+pub const ValidatorPreregistrationRequest = ssz.FixedContainerType(struct {
+    pubkey: XMSSPubkey,
+    withdrawal_credentials: p.Bytes32,
+    vrf_root: p.Root,
+});
 pub const ValidatorPreregistration = ssz.FixedContainerType(struct {
-    pubkey: XMSSPubkey,
-    withdrawal_credentials: p.Bytes32,
-    vrf_root: p.Root,
-});
-pub const PreregistrationRequest = ssz.FixedContainerType(struct {
-    pubkey: XMSSPubkey,
-    withdrawal_credentials: p.Bytes32,
-    vrf_root: p.Root,
-    signature: XMSSSignature,
-});
-pub const StoredPreregistration = ssz.FixedContainerType(struct {
     pubkey: XMSSPubkey,
     withdrawal_credentials: p.Bytes32,
     vrf_root: p.Root,
     expiry_slot: p.Slot,
 });
-pub const PreregistrationRequests = ssz.FixedProgressiveListType(PreregistrationRequest, .{});
-pub const ValidatorPreregistrations = ssz.FixedProgressiveListType(StoredPreregistration, .{});
+pub const BuilderPreregistrationRequest = ssz.FixedContainerType(struct {
+    pubkey: XMSSPubkey,
+    withdrawal_credentials: p.Bytes32,
+});
+pub const BuilderPreregistration = ssz.FixedContainerType(struct {
+    pubkey: XMSSPubkey,
+    withdrawal_credentials: p.Bytes32,
+    expiry_slot: p.Slot,
+});
+pub const VoluntaryExitRequest = ssz.FixedContainerType(struct {
+    pubkey: XMSSPubkey,
+});
+pub const ValidatorPreregistrationRequests = ssz.FixedProgressiveListType(ValidatorPreregistrationRequest, .{});
+pub const BuilderPreregistrationRequests = ssz.FixedProgressiveListType(BuilderPreregistrationRequest, .{});
+pub const ValidatorPreregistrations = ssz.FixedProgressiveListType(ValidatorPreregistration, .{});
+pub const BuilderPreregistrations = ssz.FixedProgressiveListType(BuilderPreregistration, .{});
+pub const VoluntaryExitRequests = ssz.FixedProgressiveListType(VoluntaryExitRequest, .{});
+
+/// The aggregators of a beacon committee.
+pub const AggregationCommittee = ssz.FixedProgressiveListType(p.ValidatorIndex, .{});
+/// The aggregation committee of each beacon committee of a slot.
+pub const AggregationCommittees = ssz.VariableProgressiveListType(AggregationCommittee, .{});
+/// The aggregation committees of the previous, current and lookahead epochs.
+pub const AggregationCommitteeWindow = ssz.VariableVectorType(AggregationCommittees, (preset.MIN_SEED_LOOKAHEAD + 2) * preset.SLOTS_PER_EPOCH);
 
 // Indices 5 and 6 held the EIP-8483 registration requests.
 pub const ExecutionRequests = ssz.VariableProgressiveContainerType(struct {
@@ -201,8 +210,10 @@ pub const ExecutionRequests = ssz.VariableProgressiveContainerType(struct {
     consolidations: ConsolidationRequests,
     builder_deposits: BuilderDepositRequests,
     builder_exits: BuilderExitRequests,
-    preregistrations: PreregistrationRequests,
-}, &.{ 1, 1, 1, 1, 1, 0, 0, 1 });
+    validator_preregistrations: ValidatorPreregistrationRequests,
+    builder_preregistrations: BuilderPreregistrationRequests,
+    voluntary_exits: VoluntaryExitRequests,
+}, &.{ 1, 1, 1, 1, 1, 0, 0, 1, 1, 1 });
 
 pub const NewPayloadRequest = ssz.VariableProgressiveContainerType(struct {
     execution_payload: ExecutionPayload,
@@ -223,7 +234,7 @@ pub const SignedExecutionPayloadEnvelope = ssz.VariableContainerType(struct {
     signature: XMSSSignature,
 });
 
-// Removed: sync_aggregate (8), bls_to_execution_changes (9), payload_attestations (11).
+// Removed: voluntary_exits (7), sync_aggregate (8), bls_to_execution_changes (9), payload_attestations (11).
 pub const BeaconBlockBody = ssz.VariableProgressiveContainerType(struct {
     randao_reveal: VRFProof,
     eth1_data: Eth1Data,
@@ -232,11 +243,10 @@ pub const BeaconBlockBody = ssz.VariableProgressiveContainerType(struct {
     attester_slashings: AttesterSlashings,
     attestations: Attestations,
     deposits: Deposits,
-    voluntary_exits: VoluntaryExits,
     signed_execution_payload_bid: SignedExecutionPayloadBid,
     parent_execution_requests: ExecutionRequests,
     proof: AttestationProof,
-}, &.{ 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1 });
+}, &.{ 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1 });
 
 pub const BeaconBlock = ssz.VariableContainerType(struct {
     slot: p.Slot,
@@ -297,7 +307,9 @@ pub const BeaconState = ssz.VariableProgressiveContainerType(struct {
     payload_expected_withdrawals: Withdrawals,
     ptc_window: PtcWindow,
     validator_preregistrations: ValidatorPreregistrations,
-}, &(@as([22]u1, @splat(1)) ++ .{ 0, 0 } ++ @as([22]u1, @splat(1)) ++ .{ 0, 0, 1 }));
+    builder_preregistrations: BuilderPreregistrations,
+    aggregation_committee_window: AggregationCommitteeWindow,
+}, &(@as([22]u1, @splat(1)) ++ .{ 0, 0 } ++ @as([22]u1, @splat(1)) ++ .{ 0, 0, 1, 1, 1 }));
 
 test {
     _ = @import("pq_test.zig");

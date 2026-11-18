@@ -38,14 +38,16 @@ pub const EpochShuffling = struct {
     committees_per_slot: usize,
 
     /// Takes ownership of `active_indices` on success; the caller retains ownership on failure.
-    pub fn init(allocator: Allocator, seed: [32]u8, epoch: Epoch, active_indices: []const u32) !*EpochShuffling {
+    /// `max_committees_per_slot` is the fork's, see `maxCommitteesPerSlot`.
+    pub fn init(allocator: Allocator, seed: [32]u8, epoch: Epoch, active_indices: []const u32, max_committees_per_slot: usize) !*EpochShuffling {
         if (active_indices.len > std.math.maxInt(u32)) return error.InvalidActiveIndicesLength;
 
         const shuffling = try allocator.dupe(u32, active_indices);
         errdefer allocator.free(shuffling);
         try unshuffleList(shuffling, seed[0..], preset.SHUFFLE_ROUND_COUNT);
 
-        const committees = try buildCommitteesFromShuffling(allocator, shuffling);
+        const committees_per_slot = computeCommitteeCount(active_indices.len, max_committees_per_slot);
+        const committees = try buildCommitteesFromShuffling(allocator, shuffling, committees_per_slot);
         errdefer for (committees) |slot_committees| {
             allocator.free(slot_committees);
         };
@@ -57,7 +59,7 @@ pub const EpochShuffling = struct {
             .active_indices = active_indices,
             .shuffling = shuffling,
             .committees = committees,
-            .committees_per_slot = computeCommitteeCount(active_indices.len),
+            .committees_per_slot = committees_per_slot,
         };
 
         return epoch_shuffling_ptr;
@@ -74,9 +76,8 @@ pub const EpochShuffling = struct {
         self.allocator.destroy(self);
     }
 
-    fn buildCommitteesFromShuffling(allocator: Allocator, shuffling: []const u32) !EpochCommittees {
+    fn buildCommitteesFromShuffling(allocator: Allocator, shuffling: []const u32, committees_per_slot: usize) !EpochCommittees {
         const active_validator_count = shuffling.len;
-        const committees_per_slot = computeCommitteeCount(active_validator_count);
         const committee_count = committees_per_slot * preset.SLOTS_PER_EPOCH;
 
         var epoch_committees: [preset.SLOTS_PER_EPOCH]SlotCommittees = undefined;
@@ -111,7 +112,7 @@ test EpochShuffling {
             active_indices[i] = @intCast(i);
         }
 
-        var epoch_shuffling = try EpochShuffling.init(allocator, seed, 0, active_indices);
+        var epoch_shuffling = try EpochShuffling.init(allocator, seed, 0, active_indices, preset.MAX_COMMITTEES_PER_SLOT);
         defer epoch_shuffling.deinit();
     }
 }
@@ -133,7 +134,7 @@ pub fn computeEpochShufflingForFork(
 ) !*EpochShuffling {
     var seed = [_]u8{0} ** 32;
     try getSeed(fork, state, epoch, c.DOMAIN_BEACON_ATTESTER, &seed);
-    return EpochShuffling.init(allocator, seed, epoch, active_indices);
+    return EpochShuffling.init(allocator, seed, epoch, active_indices, maxCommitteesPerSlot(fork));
 }
 
 /// Unshuffle validator indices in place synchronously.
@@ -149,16 +150,22 @@ test unshuffleList {
     try unshuffleList(&active_indices, &seed, 32);
 }
 
-fn computeCommitteeCount(active_validator_count: usize) usize {
+/// From PQ a slot has fewer, larger committees.
+pub fn maxCommitteesPerSlot(fork: ForkSeq) usize {
+    return if (fork == .pq) preset.MAX_COMMITTEES_PER_SLOT_PQ else preset.MAX_COMMITTEES_PER_SLOT;
+}
+
+fn computeCommitteeCount(active_validator_count: usize, max_committees_per_slot: usize) usize {
     const validators_per_slot = @divFloor(active_validator_count, preset.SLOTS_PER_EPOCH);
     const committees_per_slot = @divFloor(validators_per_slot, preset.TARGET_COMMITTEE_SIZE);
-    return @max(1, @min(preset.MAX_COMMITTEES_PER_SLOT, committees_per_slot));
+    return @max(1, @min(max_committees_per_slot, committees_per_slot));
 }
 
 test computeCommitteeCount {
-    const committee_count = computeCommitteeCount(2_000_000);
+    const committee_count = computeCommitteeCount(2_000_000, preset.MAX_COMMITTEES_PER_SLOT);
     try std.testing.expectEqual(preset.MAX_COMMITTEES_PER_SLOT, committee_count);
-    try std.testing.expectEqual(1, computeCommitteeCount(0));
+    try std.testing.expectEqual(1, computeCommitteeCount(0, preset.MAX_COMMITTEES_PER_SLOT));
+    try std.testing.expectEqual(preset.MAX_COMMITTEES_PER_SLOT_PQ, computeCommitteeCount(2_000_000, preset.MAX_COMMITTEES_PER_SLOT_PQ));
 }
 
 /// Calculate the decision root for a given epoch.

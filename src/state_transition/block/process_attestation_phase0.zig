@@ -89,7 +89,7 @@ pub fn validateAttestation(
     }
 
     // post deneb, the attestations are valid till end of next epoch
-    if (!(data.slot + preset.MIN_ATTESTATION_INCLUSION_DELAY <= state_slot and isTimelyTarget(fork, state_slot - data.slot))) {
+    if (!(data.slot + minAttestationInclusionDelay(fork) <= state_slot and isTimelyTarget(fork, state_slot - data.slot))) {
         return error.InvalidAttestationSlotNotWithInInclusionWindow;
     }
 
@@ -153,6 +153,12 @@ pub fn validateAttestation(
             return error.InvalidAttestationInvalidAggregationBitLen;
         }
     }
+}
+
+/// From PQ a block includes attestations a slot later, which gives its proposer
+/// a slot to receive aggregates and merge their proofs.
+pub fn minAttestationInclusionDelay(fork: ForkSeq) u64 {
+    return if (fork == .pq) preset.MIN_ATTESTATION_INCLUSION_DELAY_PQ else preset.MIN_ATTESTATION_INCLUSION_DELAY;
 }
 
 pub fn isTimelyTarget(comptime fork: ForkSeq, inclusion_distance: Slot) bool {

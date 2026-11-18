@@ -19,6 +19,7 @@ const verifyAggregatedSignatureSet = @import("../utils/signature_sets.zig").veri
 const getBeaconProposer = @import("../cache/get_beacon_proposer.zig").getBeaconProposer;
 const Checkpoint = types.phase0.Checkpoint.Type;
 const isTimelyTarget = @import("./process_attestation_phase0.zig").isTimelyTarget;
+const minAttestationInclusionDelay = @import("./process_attestation_phase0.zig").minAttestationInclusionDelay;
 const increaseBalance = @import("../utils/balance.zig").increaseBalance;
 const isAttestationSameSlotRootCache = @import("../utils/gloas.zig").isAttestationSameSlotRootCache;
 
@@ -198,16 +199,34 @@ pub fn getAttestationParticipationStatus(
         } else {
             if (data.index > 1) return error.InvalidAttestationPayloadIndex;
             const parent = parent_slot orelse try root_cache.state.latestBlockHeaderSlot();
+            const block_slot = if (comptime fork == .pq) try getLatestBlockSlot(fork, root_cache, data.slot, parent) else parent;
             var availability = try root_cache.state.inner.getReadonly("execution_payload_availability");
-            is_matching_head = is_matching_head and ((data.index == 1) == try availability.get(parent % preset.SLOTS_PER_HISTORICAL_ROOT));
+            is_matching_head = is_matching_head and ((data.index == 1) == try availability.get(block_slot % preset.SLOTS_PER_HISTORICAL_ROOT));
         }
     }
 
     var flags: u8 = 0;
     if (is_matching_source and inclusion_delay <= SLOTS_PER_EPOCH_SQRT) flags |= TIMELY_SOURCE;
     if (is_matching_target and isTimelyTarget(fork, inclusion_delay)) flags |= TIMELY_TARGET;
-    if (is_matching_head and inclusion_delay == preset.MIN_ATTESTATION_INCLUSION_DELAY) flags |= TIMELY_HEAD;
+    if (is_matching_head and inclusion_delay == minAttestationInclusionDelay(fork)) flags |= TIMELY_HEAD;
     return flags;
+}
+
+/// The slot of the latest block at or before `slot`, where `parent_slot` is that
+/// of the parent of the block being processed. With an inclusion delay of two
+/// slots, the block an attestation votes for may be the grandparent.
+fn getLatestBlockSlot(comptime fork: ForkSeq, root_cache: *RootCache(fork), slot: u64, parent_slot: u64) !u64 {
+    if (parent_slot <= slot) return parent_slot;
+    const state_slot = try root_cache.state.slot();
+    const block_root = (try root_cache.getBlockRootAtSlot(slot)).*;
+    var block_slot = slot;
+    while (block_slot > 0 and
+        block_slot + preset.SLOTS_PER_HISTORICAL_ROOT > state_slot and
+        std.mem.eql(u8, try root_cache.getBlockRootAtSlot(block_slot - 1), &block_root))
+    {
+        block_slot -= 1;
+    }
+    return block_slot;
 }
 
 pub fn checkpointValueEquals(cp1: *const Checkpoint, cp2: *const Checkpoint) bool {

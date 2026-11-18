@@ -6,7 +6,11 @@ const Sha256 = std.crypto.hash.sha2.Sha256;
 test "leaf ranges do not overlap" {
     try std.testing.expectEqual(c.XMSS_RESERVED_LEAVES, pq.computeXmssAttestationLeafIndex(0));
     const last_attestation = pq.computeXmssAttestationLeafIndex(c.XMSS_ATTESTATION_LEAVES - 1);
-    try std.testing.expectEqual(last_attestation + 1, pq.computeXmssLeafIndex(0, c.LEAF_OFFSET_BEACON_PROPOSER));
+    try std.testing.expect(!pq.isBuilderBidLeafIndex(last_attestation));
+    try std.testing.expect(pq.isBuilderBidLeafIndex(last_attestation + 1));
+    const first_slot_leaf = pq.computeXmssLeafIndex(0, c.LEAF_OFFSET_BEACON_PROPOSER);
+    try std.testing.expect(pq.isBuilderBidLeafIndex(first_slot_leaf - 1));
+    try std.testing.expect(!pq.isBuilderBidLeafIndex(first_slot_leaf));
     try std.testing.expectEqual(
         pq.computeXmssLeafIndex(0, c.XMSS_LEAVES_PER_SLOT - 1) + 1,
         pq.computeXmssLeafIndex(1, c.LEAF_OFFSET_BEACON_PROPOSER),
