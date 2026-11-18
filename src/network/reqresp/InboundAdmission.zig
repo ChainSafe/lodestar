@@ -304,6 +304,7 @@ fn chargeStart(self: *InboundAdmission, slots: []Server, index: u16, now: Now) b
     state.eligible_ms = limiter.startAt(source, now.millis());
     // A start due now goes to the longer waiter, so this one stays due an admission attempt.
     state.wait = if (state.eligible_ms > now.millis()) .start else .none;
+    if (state.wait == .none) self.pending = true;
     return false;
 }
 

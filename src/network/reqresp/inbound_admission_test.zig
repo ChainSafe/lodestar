@@ -546,6 +546,11 @@ test "inbound admission shares start ordering across identities in one source" {
     owner.admission.promoteReady(&owner, Now.fromMilliseconds(.{ .mono_ms = 500, .unix_s = 0 }));
     try std.testing.expect(owner.inbound[early].request.pendingEvent() != null);
     try std.testing.expect(owner.inbound[late].admission.start_pending);
+    try std.testing.expect(owner.admission.due());
+    owner.admission.checkSlot(&owner.inbound[late], late);
+    owner.admission.promoteReady(&owner, Now.fromMilliseconds(.{ .mono_ms = 500, .unix_s = 0 }));
+    try std.testing.expectEqual(.start, owner.inbound[late].admission.wait);
+    try std.testing.expect(!owner.admission.due());
     owner.admission.waitEnded(&owner.inbound[late]);
     owner.admission.promoteReady(&owner, Now.fromMilliseconds(.{ .mono_ms = 1000, .unix_s = 0 }));
     try std.testing.expect(owner.inbound[late].request.pendingEvent() != null);
