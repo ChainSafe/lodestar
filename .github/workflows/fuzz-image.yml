@@ -30,7 +30,6 @@ on:
       - "test/fuzz/**"
       - "build.zig"
       - "build.zig.zon"
-      - "rust-toolchain.toml"
       - "Dockerfile.fuzz"
       - "Dockerfile.fuzz.dockerignore"
       - ".github/workflows/fuzz-image.yml"
@@ -78,7 +77,7 @@ jobs:
       # starts from a single zero byte, so that is replayed instead.
       - name: Every target replays all its seeds without crashing
         run: |
-          docker run --rm -e LD_PRELOAD=/opt/fuzz/lib/libfuzz_clock.so --entrypoint sh lodestar-fuzz:ci -c '
+          docker run --rm --entrypoint sh lodestar-fuzz:ci -c '
             rc=0
             for bin in /opt/fuzz/bin/fuzz-*; do
               t=${bin#/opt/fuzz/bin/fuzz-}
