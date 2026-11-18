@@ -276,6 +276,15 @@ export class ValidatorStore {
     return validatorStore;
   }
 
+  /** Has every leanXMSS key ready to sign at `slot` without building a bottom tree first */
+  async prepareXmssSigners(slot: Slot): Promise<void> {
+    const prepared: Promise<void>[] = [];
+    for (const {signer} of this.validators.values()) {
+      if (signer.type === SignerType.Xmss) prepared.push(signer.signer.prepare(slot));
+    }
+    await Promise.all(prepared);
+  }
+
   /** Return all known indices from the validatorStore pubkeys */
   getAllLocalIndices(): ValidatorIndex[] {
     return this.indicesService.getAllLocalIndices();

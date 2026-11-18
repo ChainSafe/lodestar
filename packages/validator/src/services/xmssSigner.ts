@@ -8,10 +8,8 @@ import {
   LEAF_OFFSET_PROPOSER_PREFERENCES,
   LEAF_OFFSET_PTC_ATTESTER,
   RESERVED_LEAF_VOLUNTARY_EXIT,
-  XMSS_ATTESTATION_LEAVES,
-  XMSS_RESERVED_LEAVES,
 } from "@lodestar/params";
-import {computeXmssAttestationLeafIndex, computeXmssLeafIndex} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeXmssAttestationLeafIndex, computeXmssLeafIndex} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {SignableMessage, SignableMessageType} from "../util/externalSignerClient.js";
 
@@ -53,19 +51,11 @@ export function getXmssSigningTarget(signableMessage: SignableMessage, signingSl
   }
 }
 
-/**
- * A pq validator's secrets: its leanXMSS key and its VRF tree.
- *
- * A leanXMSS key keeps the last bottom tree it signed in, 2^16 leaves, and rebuilds one on a
- * miss. Attestations and per-slot messages have leaves in different bottom trees, so one instance
- * of the key would rebuild on every switch between them. Two instances of the same key, one for
- * each range, each stay in their tree.
- */
+/** A pq validator's secrets: its leanXMSS key and its VRF tree */
 export class XmssSigner {
   private constructor(
     readonly publicKey: Uint8Array,
-    private readonly attestationKey: XmssSecretKey,
-    private readonly slotKey: XmssSecretKey,
+    private readonly key: XmssSecretKey,
     private readonly vrfTree: VrfTree
   ) {}
 
@@ -74,12 +64,8 @@ export class XmssSigner {
    * networks only.
    */
   static async init(seed: Uint8Array, vrfSeed: Uint8Array, vrfPopulatedDepth: number): Promise<XmssSigner> {
-    const [attestationKey, slotKey, vrfTree] = await Promise.all([
-      XmssSecretKey.fromSeed(seed),
-      XmssSecretKey.fromSeed(seed),
-      VrfTree.build(vrfSeed, vrfPopulatedDepth),
-    ]);
-    return new XmssSigner(attestationKey.toPublicKey(), attestationKey, slotKey, vrfTree);
+    const [key, vrfTree] = await Promise.all([XmssSecretKey.fromSeed(seed), VrfTree.build(vrfSeed, vrfPopulatedDepth)]);
+    return new XmssSigner(key.toPublicKey(), key, vrfTree);
   }
 
   get vrfRoot(): Uint8Array {
@@ -92,12 +78,23 @@ export class XmssSigner {
   }
 
   /**
+   * Builds the two bottom trees of the key that hold the leaves of `slot`, one for its attestation
+   * and one for its other messages. The first signature in a bottom tree otherwise waits seconds
+   * for it. The key keeps the trees it used last.
+   */
+  async prepare(slot: Slot): Promise<void> {
+    await Promise.all([
+      this.key.prepare(computeXmssAttestationLeafIndex(computeEpochAtSlot(slot))),
+      this.key.prepare(computeXmssLeafIndex(slot, 0)),
+    ]);
+  }
+
+  /**
    * A leaf must sign one message only: a second exposes its one-time key. The caller keeps the
    * record of what each leaf signed.
    */
   async sign(signingRoot: Uint8Array, leafIndex: number): Promise<Uint8Array> {
-    const key = leafIndex < XMSS_RESERVED_LEAVES + XMSS_ATTESTATION_LEAVES ? this.attestationKey : this.slotKey;
-    return key.sign(signingRoot, leafIndex);
+    return this.key.sign(signingRoot, leafIndex);
   }
 }
 
@@ -114,11 +111,23 @@ function interopSeed(label: string, index: number): Uint8Array {
   return createHash("sha256").update(input).digest();
 }
 
-/** TEST NETWORKS ONLY: the pq validator whose secrets derive from `index` alone */
+const interopSigners = new Map<number, Promise<XmssSigner>>();
+
+/**
+ * TEST NETWORKS ONLY: the pq validator whose secrets derive from `index` alone.
+ *
+ * Kept once built: `lodestar dev` needs each for its genesis state and again for its validator
+ * client, and a key takes seconds to generate.
+ */
 export function interopXmssSigner(index: number): Promise<XmssSigner> {
-  return XmssSigner.init(
-    interopSeed("lodestar interop xmss", index),
-    interopSeed("lodestar interop vrf", index),
-    INTEROP_VRF_POPULATED_DEPTH
-  );
+  let signer = interopSigners.get(index);
+  if (!signer) {
+    signer = XmssSigner.init(
+      interopSeed("lodestar interop xmss", index),
+      interopSeed("lodestar interop vrf", index),
+      INTEROP_VRF_POPULATED_DEPTH
+    );
+    interopSigners.set(index, signer);
+  }
+  return signer;
 }

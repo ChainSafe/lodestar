@@ -11,6 +11,7 @@ import {
   ClockOptions,
   IClock,
   computeEpochAtSlot,
+  computeStartSlotAtEpoch,
   getCurrentSlot,
   getSlotDurations,
 } from "@lodestar/state-transition";
@@ -250,6 +251,8 @@ export class Validator {
       signers,
       valProposerConfig
     );
+    await validatorStore.prepareXmssSigners(Math.max(getCurrentSlot(config, clock.genesisTime), 0));
+    clock.runEveryEpoch((epoch) => validatorStore.prepareXmssSigners(computeStartSlotAtEpoch(epoch + 1)));
     pollPrepareBeaconProposer(config, loggerVc, api, clock, validatorStore, metrics);
     pollBuilderValidatorRegistration(config, loggerVc, api, clock, validatorStore, metrics);
     pollExternalSignerPubkeys(config, loggerVc, controller.signal, validatorStore, opts.externalSigner);

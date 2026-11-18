@@ -19,19 +19,25 @@ describe("PqAttestationPool", () => {
   const claims: Uint8Array[] = [];
 
   beforeAll(async () => {
-    for (let i = 0; i < committeeSize; i++) {
-      const key = await XmssSecretKey.fromSeed(new Uint8Array(32).fill(i + 1));
-      const claim = new Uint8Array(XMSS_CLAIM_SIZE);
-      claim.set(key.toPublicKey(), 0);
-      claim.set(signingRoot, 32);
-      const signature = await key.sign(signingRoot, computeXmssAttestationLeafIndex(data.target.epoch));
-      const signedClaim = new Uint8Array(XMSS_SIGNED_SIZE);
-      signedClaim.set(claim, 0);
-      signedClaim.set(signature, XMSS_CLAIM_SIZE);
+    // At once: a key and its first signature each take seconds on one thread
+    const made = await Promise.all(
+      Array.from({length: committeeSize}, async (_, i) => {
+        const key = await XmssSecretKey.fromSeed(new Uint8Array(32).fill(i + 1));
+        const claim = new Uint8Array(XMSS_CLAIM_SIZE);
+        claim.set(key.toPublicKey(), 0);
+        claim.set(signingRoot, 32);
+        const signature = await key.sign(signingRoot, computeXmssAttestationLeafIndex(data.target.epoch));
+        const signedClaim = new Uint8Array(XMSS_SIGNED_SIZE);
+        signedClaim.set(claim, 0);
+        signedClaim.set(signature, XMSS_CLAIM_SIZE);
+        return {claim, signedClaim};
+      })
+    );
+    for (const {claim, signedClaim} of made) {
       claims.push(claim);
       signed.push(signedClaim);
     }
-  }, 60_000);
+  }, 120_000);
 
   it("proves a committee's single attestations for an aggregator", async () => {
     const pool = new PqAttestationPool();

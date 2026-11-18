@@ -60,13 +60,18 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
   } else {
     // Generate and write state to disk
     const validatorCount = args.genesisValidators ?? 8;
+    // Generating leanXMSS keys takes seconds each, so before the genesis time is set
+    const pqValidators = config.PQ_FORK_EPOCH === 0 ? await interopPqValidators(validatorCount) : null;
+    if (pqValidators && args.startValidators) {
+      // The validator client would otherwise build these bottom trees during the first slots
+      await Promise.all(args.startValidators.map(async (index) => (await interopXmssSigner(index)).prepare(0)));
+    }
     const genesisTime = args.genesisTime ?? Math.floor(Date.now() / 1000) + 5;
     const eth1BlockHash = fromHex(args.genesisEth1Hash ?? toHex(Buffer.alloc(32, 0x0b)));
 
-    const state =
-      config.PQ_FORK_EPOCH === 0
-        ? nodeUtils.initDevStatePq(config, await interopPqValidators(validatorCount), {genesisTime, eth1BlockHash})
-        : nodeUtils.initDevState(config, validatorCount, {genesisTime, eth1BlockHash});
+    const state = pqValidators
+      ? nodeUtils.initDevStatePq(config, pqValidators, {genesisTime, eth1BlockHash})
+      : nodeUtils.initDevState(config, validatorCount, {genesisTime, eth1BlockHash});
 
     args.genesisStateFile = "genesis.ssz";
     fs.writeFileSync(args.genesisStateFile, state.serialize());
@@ -93,11 +98,6 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
 
 /** The registry entries of the validators that `interopXmssSigner` gives the validator client */
 async function interopPqValidators(count: number): Promise<nodeUtils.PqGenesisValidator[]> {
-  const validators: nodeUtils.PqGenesisValidator[] = [];
-  // One at a time: generating a key already uses every core
-  for (let index = 0; index < count; index++) {
-    const signer = await interopXmssSigner(index);
-    validators.push({pubkey: signer.publicKey, vrfRoot: signer.vrfRoot});
-  }
-  return validators;
+  const signers = await Promise.all(Array.from({length: count}, (_, index) => interopXmssSigner(index)));
+  return signers.map((signer) => ({pubkey: signer.publicKey, vrfRoot: signer.vrfRoot}));
 }
