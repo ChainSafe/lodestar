@@ -1,6 +1,6 @@
 //! Goldilocks reference implementation for fgsa-spec.pdf.
-//! fg/ holds the finality gadget, ac/ the available chain, and Node.zig the coordinator.
-//! See NODE.md.
+//! fg/ holds the finality gadget, ac/ the available chain, Node.zig the coordinator, and testing/
+//! the deterministic simulator with seeded Byzantine faults. See NODE.md and ROADMAP.md.
 
 const std = @import("std");
 
@@ -20,6 +20,8 @@ pub const ac = struct {
 };
 pub const NodeType = @import("Node.zig").NodeType;
 pub const NodeConfig = @import("Node.zig").Config;
+pub const Simulator = @import("testing/Simulator.zig");
+pub const StateSource = @import("testing/StateSource.zig");
 
 test {
     std.testing.refAllDecls(@This());
