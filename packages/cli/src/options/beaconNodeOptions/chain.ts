@@ -37,6 +37,7 @@ export type ChainArgs = {
   "chain.archiveMode": ArchiveMode;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
   "chain.nativeStateTransition"?: boolean;
+  "chain.nativeForkChoice"?: boolean;
   "chain.maxBlockStates"?: number;
   "chain.maxCPStateEpochsInMemory"?: number;
   "chain.maxCPStateEpochsOnDisk"?: number;
@@ -82,6 +83,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     nHistoricalStatesFileDataStore:
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
     nativeStateTransition: args["chain.nativeStateTransition"] ?? defaultOptions.chain.nativeStateTransition,
+    nativeForkChoice: args["chain.nativeForkChoice"] ?? defaultOptions.chain.nativeForkChoice,
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
@@ -331,6 +333,14 @@ Will double processing times. Use only for debugging purposes.",
     description: "Use native (Zig) state transition instead of JS implementation",
     type: "boolean",
     default: defaultOptions.chain.nativeStateTransition,
+    group: "chain",
+  },
+
+  "chain.nativeForkChoice": {
+    hidden: true,
+    description: "Use native (Zig) fork choice instead of JS implementation",
+    type: "boolean",
+    default: defaultOptions.chain.nativeForkChoice,
     group: "chain",
   },
 

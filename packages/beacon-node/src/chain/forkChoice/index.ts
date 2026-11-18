@@ -5,7 +5,9 @@ import {
   ForkChoice,
   ForkChoiceStateGetter,
   ForkChoiceStore,
+  IForkChoice,
   JustifiedBalancesGetter,
+  NativeForkChoice,
   PayloadStatus,
   ProtoArray,
   ProtoBlock,
@@ -27,6 +29,8 @@ import {Metrics} from "../../metrics/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
 export type ForkChoiceOpts = RawForkChoiceOpts & {
+  /** Use the native (Zig) fork choice store instead of the proto-array */
+  nativeForkChoice?: boolean;
   // for testing only
   forkchoiceConstructor?: typeof ForkChoice;
 };
@@ -61,7 +65,24 @@ export function initializeForkChoice(
   stateGetter: ForkChoiceStateGetter,
   metrics: Metrics | null,
   logger?: Logger
-): ForkChoice {
+): IForkChoice {
+  if (opts.nativeForkChoice) {
+    if (!isFinalizedState) {
+      throw Error("The native fork choice can only be initialized from a finalized state");
+    }
+    return initializeNativeForkChoice(
+      config,
+      emitter,
+      currentSlot,
+      state,
+      opts,
+      justifiedBalancesGetter,
+      stateGetter,
+      metrics,
+      logger
+    );
+  }
+
   return isFinalizedState
     ? initializeForkChoiceFromFinalizedState(
         config,
@@ -180,6 +201,108 @@ export function initializeForkChoiceFromFinalizedState(
       currentSlot
     ),
     state.validatorCount,
+    metrics,
+    opts,
+    logger
+  );
+}
+
+/**
+ * Initialize the native fork choice from a finalized state. As in the spec's
+ * `get_forkchoice_store`, the anchor is both the justified and the finalized checkpoint.
+ */
+export function initializeNativeForkChoice(
+  config: ChainForkConfig,
+  emitter: ChainEventEmitter,
+  currentSlot: Slot,
+  state: IBeaconStateView,
+  opts: ForkChoiceOpts,
+  justifiedBalancesGetter: JustifiedBalancesGetter,
+  stateGetter: ForkChoiceStateGetter,
+  metrics: Metrics | null,
+  logger?: Logger
+): NativeForkChoice {
+  const {blockHeader, checkpoint} = state.computeAnchorCheckpoint();
+  const anchorRoot = toRootHex(checkpoint.root);
+  const anchorCheckpoint = {epoch: computeEpochAtSlot(state.slot), root: checkpoint.root};
+  const isPostGloas = isStatePostGloas(state);
+  const bid = isPostGloas ? state.latestExecutionPayloadBid : null;
+  const hasPayload = isStatePostBellatrix(state) && state.isExecutionStateType && state.isMergeTransitionComplete;
+  // The state caches the bid of its latest block, except at genesis: the genesis block carries no bid
+  const anchorBid = blockHeader.slot === GENESIS_SLOT ? null : bid;
+
+  const store = new ForkChoiceStore(
+    currentSlot,
+    anchorCheckpoint,
+    anchorCheckpoint,
+    state.getEffectiveBalanceIncrementsZeroInactive(),
+    justifiedBalancesGetter,
+    stateGetter,
+    {
+      onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
+      onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
+      onFastConfirmation: ({block, slot, currentSlot}) =>
+        emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
+      onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
+    }
+  );
+
+  const block: ProtoBlock = {
+    slot: blockHeader.slot,
+    parentRoot: toRootHex(blockHeader.parentRoot),
+    stateRoot: toRootHex(blockHeader.stateRoot),
+    blockRoot: anchorRoot,
+    targetRoot: anchorRoot,
+    timeliness: true,
+    ptcTimeliness: true,
+    importedTimely: true,
+    proposerIndex: blockHeader.proposerIndex,
+
+    justifiedEpoch: anchorCheckpoint.epoch,
+    justifiedRoot: anchorRoot,
+    finalizedEpoch: anchorCheckpoint.epoch,
+    finalizedRoot: anchorRoot,
+    unrealizedJustifiedEpoch: anchorCheckpoint.epoch,
+    unrealizedJustifiedRoot: anchorRoot,
+    unrealizedFinalizedEpoch: anchorCheckpoint.epoch,
+    unrealizedFinalizedRoot: anchorRoot,
+
+    ...(hasPayload
+      ? {
+          executionPayloadBlockHash: isPostGloas
+            ? toRootHex(state.latestBlockHash)
+            : toRootHex(state.latestExecutionPayloadHeader.blockHash),
+          // TODO GLOAS: not tracked in BeaconState post-gloas, see initializeForkChoiceFromFinalizedState
+          executionPayloadNumber: isPostGloas ? 0 : state.payloadBlockNumber,
+          executionPayloadGasLimit: isPostGloas ? 0 : state.latestExecutionPayloadHeader.gasLimit,
+          // A Gloas payload is judged when its envelope arrives, the genesis one included
+          executionStatus:
+            blockHeader.slot === GENESIS_SLOT && !isPostGloas ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
+        }
+      : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
+
+    dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+    payloadStatus: isPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
+    parentBlockHash: bid === null ? null : toRootHex(bid.parentBlockHash),
+  };
+
+  return new NativeForkChoice(
+    config,
+    store,
+    {
+      block,
+      stateSlot: state.slot,
+      genesisTime: state.genesisTime,
+      genesisValidatorsRoot: state.genesisValidatorsRoot,
+      justifiedCheckpoint: state.currentJustifiedCheckpoint,
+      finalizedCheckpoint: state.finalizedCheckpoint,
+      payloadBlockHash: !hasPayload
+        ? null
+        : isPostGloas
+          ? (anchorBid?.blockHash ?? null)
+          : state.latestExecutionPayloadHeader.blockHash,
+      bidParentBlockHash: anchorBid?.parentBlockHash ?? null,
+    },
     metrics,
     opts,
     logger

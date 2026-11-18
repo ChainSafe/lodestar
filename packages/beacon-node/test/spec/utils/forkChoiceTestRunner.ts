@@ -80,6 +80,9 @@ const logger = testLogger("spec-test");
 const executionEngineLogger = testLogger("executionEngine");
 const mockedDb = getMockedBeaconDb();
 
+/** `LODESTAR_NATIVE_FORK_CHOICE=true` runs the vectors against the native (Zig) fork choice */
+const nativeForkChoice = process.env.LODESTAR_NATIVE_FORK_CHOICE === "true";
+
 export const forkChoiceTestRunner =
   (opts: {onlyPredefinedResponses: boolean}): TestRunnerFn<ForkChoiceTestCase, void> =>
   (fork) => {
@@ -138,6 +141,7 @@ export const forkChoiceTestRunner =
             disablePrepareNextSlot: true,
             proposerBoost: true,
             proposerBoostReorg: true,
+            nativeForkChoice,
           },
           {
             privateKey: await generateKeyPair("secp256k1"),

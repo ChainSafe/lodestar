@@ -28,6 +28,7 @@ export {
   NotReorgedReason,
   type PtcQuorumEvent,
 } from "./forkChoice/interface.js";
+export {NativeForkChoice, type NativeForkChoiceAnchor} from "./forkChoice/nativeForkChoice.js";
 export * from "./forkChoice/safeBlocks.js";
 export {
   type CheckpointWithHex,

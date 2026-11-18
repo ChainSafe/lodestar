@@ -157,6 +157,7 @@ describe("options / beaconNodeOptions", () => {
         graffitiAppend: false,
         nHistoricalStatesFileDataStore: true,
         nativeStateTransition: false,
+        nativeForkChoice: false,
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
         maxCPStateEpochsOnDisk: 1000,
