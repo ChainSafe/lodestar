@@ -53,7 +53,7 @@ describe("network / gossip / topic", () => {
       [10, 33],
     ]) {
       const topic = {type: GossipType.data_column_sidecar, subnet: 0, boundary: {fork: ForkName.fulu, epoch}} as const;
-      expect(getGossipSSZMaxSize(topic, config, ssz.fulu.DataColumnSidecar)).toBe(
+      expect(getGossipSSZMaxSize(topic, config, ssz.fulu.DataColumnSidecar), `epoch ${epoch}, blobs ${blobs}`).toBe(
         ssz.fulu.DataColumnSidecar.minSize + blobs * (BYTES_PER_CELL + 96)
       );
     }
