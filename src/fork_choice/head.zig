@@ -18,8 +18,6 @@
 //! status is the worst verdict on the payloads it stands on, derived here in one forward
 //! pass. A node derived invalid is treated as removed: no weight reaches its parent and
 //! it is never viable.
-//!
-//! Node ids are `block * 3 + payload_status`.
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -32,6 +30,11 @@ const PayloadStatus = store_mod.PayloadStatus;
 const ExecutionStatus = store_mod.ExecutionStatus;
 const BlockIndex = store_mod.BlockIndex;
 const NO_BLOCK = store_mod.NO_BLOCK;
+const NodeId = store_mod.NodeId;
+const NO_NODE = store_mod.NO_NODE;
+const NODES_PER_BLOCK = store_mod.NODES_PER_BLOCK;
+const nodeId = store_mod.nodeId;
+const nodeAt = store_mod.nodeAt;
 const LatestMessage = store_mod.LatestMessage;
 const Root = store_mod.Root;
 const Epoch = store_mod.Epoch;
@@ -40,8 +43,6 @@ const computeStartSlotAtEpoch = store_mod.computeStartSlotAtEpoch;
 const vote_targets = @import("vote_targets.zig");
 const TargetId = vote_targets.TargetId;
 const NO_TARGET = vote_targets.NO_TARGET;
-
-const NO_NODE: u32 = std.math.maxInt(u32);
 
 const NodeFlags = packed struct(u8) {
     exists: bool = false,
@@ -100,7 +101,7 @@ pub const Cache = struct {
     /// Moves the counted votes from the `old` to the `new` per-validator vote increments.
     /// A validator whose weight changed is marked, so the next run re-checks whether its
     /// vote counts at all. `target_nodes` is `VoteTargets.nodes`.
-    pub fn applyBalanceChange(self: *Cache, target_nodes: []const u32, old: []const u16, new: []const u16) void {
+    pub fn applyBalanceChange(self: *Cache, target_nodes: []const NodeId, old: []const u16, new: []const u16) void {
         if (self.rescan_votes) return;
         const validator_count = self.applied_votes.items.len;
         const shared = @min(validator_count, old.len, new.len);
@@ -119,7 +120,7 @@ pub const Cache = struct {
         }
     }
 
-    fn moveVoteWeight(self: *Cache, target_nodes: []const u32, validator_index: usize, old_increment: u64, new_increment: u64) void {
+    fn moveVoteWeight(self: *Cache, target_nodes: []const NodeId, validator_index: usize, old_increment: u64, new_increment: u64) void {
         if (old_increment == new_increment) return;
         const node = target_nodes[self.applied_votes.items[validator_index]];
         if (node != NO_NODE) {
@@ -133,13 +134,13 @@ pub const Cache = struct {
     /// `NO_BLOCK` when dropped; the weight on dropped blocks goes with them. The cache
     /// must be up to date.
     pub fn remapVoteWeight(self: *Cache, remap: []const BlockIndex, kept: usize) void {
-        std.debug.assert(!self.rescan_votes and self.vote_weight.items.len == remap.len * 3);
+        std.debug.assert(!self.rescan_votes and self.vote_weight.items.len == remap.len * NODES_PER_BLOCK);
         const vote_weight = self.vote_weight.items;
         for (remap, 0..) |target, block| {
             if (target == NO_BLOCK) continue;
-            std.mem.copyForwards(u64, vote_weight[target * 3 ..][0..3], vote_weight[block * 3 ..][0..3]);
+            std.mem.copyForwards(u64, vote_weight[target * NODES_PER_BLOCK ..][0..NODES_PER_BLOCK], vote_weight[block * NODES_PER_BLOCK ..][0..NODES_PER_BLOCK]);
         }
-        self.vote_weight.shrinkRetainingCapacity(kept * 3);
+        self.vote_weight.shrinkRetainingCapacity(kept * NODES_PER_BLOCK);
     }
 
     /// Validators past the end of `applied_votes` are counted as new on the next run.
@@ -152,14 +153,6 @@ pub const Cache = struct {
     }
 };
 
-pub fn nodeId(node: ForkChoiceNode) u32 {
-    return node.block * 3 + @intFromEnum(node.payload_status);
-}
-
-fn nodeAt(id: u32) ForkChoiceNode {
-    return .{ .block = id / 3, .payload_status = @enumFromInt(id % 3) };
-}
-
 pub fn ensureComputed(store: *Store) !void {
     if (!store.head_cache.dirty) return;
     try compute(store);
@@ -169,7 +162,7 @@ fn compute(store: *Store) !void {
     const allocator = store.allocator;
     const cache = &store.head_cache;
     const n: usize = store.blocks.len;
-    const node_count = n * 3;
+    const node_count = n * NODES_PER_BLOCK;
     try cache.weight.resize(allocator, node_count);
     try cache.flags.resize(allocator, node_count);
     try cache.execution.resize(allocator, node_count);
@@ -401,7 +394,7 @@ fn leafViable(store: *const Store, block: BlockIndex, current_epoch: Epoch, fina
     return correct_justified and finalized_ok;
 }
 
-fn offerChild(store: *Store, parent_id: u32, child: ForkChoiceNode) !void {
+fn offerChild(store: *Store, parent_id: NodeId, child: ForkChoiceNode) !void {
     const cache = &store.head_cache;
     const current = cache.best_child.items[parent_id];
     if (current == NO_NODE or try childGreater(store, child, nodeAt(current))) {
@@ -435,6 +428,11 @@ pub fn weight(store: *const Store, node: ForkChoiceNode) u64 {
 /// Spec `get_attestation_score`, valid after `ensureComputed`.
 pub fn attestationScore(store: *const Store, node: ForkChoiceNode) u64 {
     return store.head_cache.weight.items[nodeId(node)];
+}
+
+/// The worst engine verdict on the payloads `node` stands on, valid after `ensureComputed`.
+pub fn execution(store: *const Store, node: ForkChoiceNode) ExecutionStatus {
+    return store.head_cache.execution.items[nodeId(node)];
 }
 
 /// Spec `get_payload_status_tiebreaker`, plus consensus-specs#5769: during its own slot a
