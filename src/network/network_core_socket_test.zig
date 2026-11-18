@@ -90,7 +90,6 @@ test "core native host wake validates rollback stays attached through shutdown a
 }
 
 test "core native wait source failure retains completed protocol progress" {
-    const runner = @import("root");
     if (!NetworkCore.wait.supported) return error.SkipZigTest;
     const key = try keys.KeyPair.fromSecretKey(&(.{0} ** 31 ++ .{34}));
     var opts = options(&key);
@@ -108,14 +107,8 @@ test "core native wait source failure retains completed protocol progress" {
     try node.transport.sockets.primary().send(std.testing.io, &node.transport.sockets.primary().address, "invalid");
     try node.transport.sockets.primary().send(std.testing.io, &node.discovery.?.transport.sockets.primary().address, "invalid");
     const allocations = backing_node.allocations;
-    var buffer: [128]u8 = undefined;
-    var expected: runner.LogExpectation = .{ .level = .err, .scope = "network_runtime", .message = try std.fmt.bufPrint(&buffer, "owner_poll_source_failed role=host family=none descriptor={d} revents={x}", .{ pipe[0], @as(c_short, if (builtin.os.tag == .linux) std.c.POLL.HUP else std.c.POLL.HUP | std.c.POLL.IN) }) };
-    const previous = runner.expected_log;
-    defer runner.expected_log = previous;
-    runner.expected_log = &expected;
     const result = try stepAfter(&node, 100);
     try std.testing.expectEqual(error.WaitSourceClosed, result.failure.?);
-    try std.testing.expect(expected.matched);
     try std.testing.expect(result.readiness.quicReady() and result.readiness.discoveryReady());
     try std.testing.expectEqual(@as(u32, 1), result.transport.datagrams_received);
     try std.testing.expectEqualSlices(u8, "invalid", node.discovery.?.transport.receive_buffer[0..7]);

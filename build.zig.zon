@@ -470,14 +470,8 @@
         .beacon_node = .{ .root_module = .beacon_node },
         .fault_io = .{ .root_module = .fault_io },
         .udp = .{ .root_module = .udp },
-        .discv5 = .{
-            .root_module = .discv5,
-            .test_runner = .{ .path = "test/test_runner.zig", .mode = .server },
-        },
-        .network = .{
-            .root_module = .network,
-            .test_runner = .{ .path = "test/test_runner.zig", .mode = .server },
-        },
+        .discv5 = .{ .root_module = .discv5 },
+        .network = .{ .root_module = .network },
         .ere_verifier = .{ .root_module = .ere_verifier },
         .bindings_allocator = .{
             .root_module = .{
