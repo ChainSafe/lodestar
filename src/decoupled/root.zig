@@ -1,0 +1,20 @@
+//! Goldilocks reference implementation for fgsa-spec.pdf.
+//! fg/ holds the finality gadget.
+
+const std = @import("std");
+
+pub const limits = @import("limits.zig");
+pub const types = @import("types.zig");
+pub const fg = struct {
+    pub const FinalityGadget = @import("fg/FinalityGadget.zig");
+    pub const ChainState = @import("fg/ChainState.zig");
+    pub const SigningRecord = @import("fg/SigningRecord.zig");
+    pub const AttestationPool = @import("fg/AttestationPool.zig");
+    pub const FinalityFrame = @import("fg/FinalityFrame.zig");
+    pub const types = @import("fg/finality_types.zig");
+};
+
+test {
+    std.testing.refAllDecls(@This());
+    std.testing.refAllDecls(fg);
+}

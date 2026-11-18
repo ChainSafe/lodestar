@@ -453,6 +453,9 @@ jobs:
       - name: Run ere_verifier tests
         run: |
           zig build test:ere_verifier
+      - name: Run decoupled tests
+        run: |
+          zig build test:decoupled
 
       - name: Build benchmarks
         run: |
