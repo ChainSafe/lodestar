@@ -2,7 +2,7 @@ import {describe, expect, it} from "vitest";
 import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
-import {BUILDER_INDEX_SELF_BUILD, FAR_FUTURE_EPOCH, ForkName} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, FAR_FUTURE_EPOCH, ForkName, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {CachedBeaconStateFulu, createCachedBeaconState} from "../../src/cache/stateCache.js";
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
@@ -157,6 +157,11 @@ describe("upgradeState", () => {
     expect(latestBid.executionRequestsRoot).toEqual(
       ssz.gloas.ExecutionRequests.hashTreeRoot(ssz.gloas.ExecutionRequests.defaultValue())
     );
+    const forkSlotIndex = fuluStateView.slot % SLOTS_PER_HISTORICAL_ROOT;
+    const availability = gloasState.executionPayloadAvailability.toBoolArray();
+    for (let i = 0; i < SLOTS_PER_HISTORICAL_ROOT; i++) {
+      expect(availability[i]).toBe(i !== forkSlotIndex);
+    }
     // Full state still merkleizes and round-trips
     expect(() => gloasState.hashTreeRoot()).not.toThrow();
     expect(() => gloasState.toValue()).not.toThrow();

@@ -54,7 +54,9 @@ pub fn upgradeStateToGloas(allocator: Allocator, io: std.Io, config: *const Beac
     try state.inner.setValue("latest_execution_payload_bid", &bid);
     try state.inner.setValue("latest_block_hash", &header.block_hash);
     var availability = try state.inner.get("execution_payload_availability");
-    for (0..preset.SLOTS_PER_HISTORICAL_ROOT) |slot| try availability.set(slot, true);
+    for (0..preset.SLOTS_PER_HISTORICAL_ROOT) |i| try availability.set(i, true);
+    // process_slot of the last pre-fork slot ran with Fulu rules and did not unset the fork slot
+    try availability.set(@intCast((try state.slot()) % preset.SLOTS_PER_HISTORICAL_ROOT), false);
     const ptc_window = try gloas.initializePtcWindow(.fulu, allocator, epoch_cache, fulu_state);
     try state.inner.setValue("ptc_window", &ptc_window);
     try onboardBuilders(allocator, io, config, epoch_cache, &state);
