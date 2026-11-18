@@ -124,18 +124,10 @@ describe("cmds / beacon / args handler", () => {
     expect(options.network.advertiseVersion).toBe(true);
   });
 
-  it("uses the native state transition by default, including with Heze scheduled", async () => {
-    const paramsFile = path.join(testFilesDir, "heze_config.yaml");
-    fs.writeFileSync(
-      paramsFile,
-      JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100, HEZE_FORK_EPOCH: 200}))
-    );
-
+  it("uses the native state transition by default", async () => {
     const defaultResult = await runBeaconHandlerInit({});
     expect(defaultResult.options.chain.nativeStateTransition).toBe(true);
-    const hezeResult = await runBeaconHandlerInit({paramsFile});
-    expect(hezeResult.options.chain.nativeStateTransition).toBe(true);
-    const optOut = await runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": false});
+    const optOut = await runBeaconHandlerInit({"chain.nativeStateTransition": false});
     expect(optOut.options.chain.nativeStateTransition).toBe(false);
   });
 

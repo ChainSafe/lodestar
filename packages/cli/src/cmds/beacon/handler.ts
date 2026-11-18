@@ -11,9 +11,8 @@ import {
 import {ChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
-import nativeBindings from "@lodestar/native";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
-import {ACTIVE_PRESET, PresetName, ZERO_HASH, isForkPostGloas} from "@lodestar/params";
+import {ACTIVE_PRESET, PresetName, isForkPostGloas} from "@lodestar/params";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
@@ -87,15 +86,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       config: beaconConfig,
       isFinalized,
       earliestAvailableSlot,
-    } = await initBeaconState(
-      args,
-      options.chain.nativeStateTransition ?? false,
-      beaconPaths.dataDir,
-      beaconPaths.pubkeysFile,
-      config,
-      db,
-      logger
-    );
+    } = await initBeaconState(args, beaconPaths.dataDir, beaconPaths.pubkeysFile, config, db, logger);
 
     const node = await BeaconNode.init({
       opts: options,
@@ -244,17 +235,6 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     beaconNodeOptions.set({executionEngine: {commit, version}});
   }
 
-  const nativeUnsupported = getNativeStateTransitionUnsupported(config);
-  if (nativeUnsupported !== null) {
-    if (args["chain.nativeStateTransition"]) {
-      throw Error(`--chain.nativeStateTransition does not support ${nativeUnsupported}`);
-    }
-    if (args["chain.nativeStateTransition"] === undefined) {
-      logger.warn(`Native state transition does not support ${nativeUnsupported}, using JS state transition`);
-    }
-    beaconNodeOptions.set({chain: {nativeStateTransition: false}});
-  }
-
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
@@ -274,18 +254,6 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   }
 
   return {config, options, beaconPaths, network, version, commit, privateKey, logger};
-}
-
-/**
- * Returns the reason the native addon cannot run this config, or null if it can.
- */
-function getNativeStateTransitionUnsupported(config: ChainForkConfig): string | null {
-  try {
-    new nativeBindings.BeaconConfig(config, ZERO_HASH);
-  } catch (e) {
-    return `this config with the ${ACTIVE_PRESET} preset (${(e as Error).message})`;
-  }
-  return null;
 }
 
 export function initLogger(

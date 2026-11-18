@@ -42,7 +42,6 @@ type InitBeaconStateResult = {
  */
 export async function initBeaconState(
   args: BeaconArgs & GlobalArgs,
-  nativeStateTransition: boolean,
   dataDir: string,
   pubkeysFile: string,
   chainForkConfig: ChainForkConfig,
@@ -50,6 +49,7 @@ export async function initBeaconState(
   logger: Logger
 ): Promise<InitBeaconStateResult> {
   const options: StateInitializationOptions = args;
+  const nativeStateTransition = options["chain.nativeStateTransition"] ?? false;
   if (
     options.forceCheckpointSync &&
     !(options.checkpointState || options.checkpointSyncUrl || options.unsafeCheckpointState)
