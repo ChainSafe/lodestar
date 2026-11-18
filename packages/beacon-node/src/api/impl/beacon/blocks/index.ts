@@ -160,7 +160,7 @@ export function getBeaconBlockApi(
       });
     }
 
-    // Rejected publishes drop entries this call inserted. Unknown-parent sync keeps the ones it was handed.
+    // If a publish is rejected, remove the entries that this call inserted.
     let handedToUnknownParentSync = false;
     let dataColumnSidecars: fulu.DataColumnSidecar[] = [];
     let valLogMeta: {
