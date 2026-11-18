@@ -1,5 +1,5 @@
 name: Setup native build dependencies
-description: Install LLVM, CMake, libclang, and the pinned Rust toolchain
+description: Install LLVM, CMake, libclang, and the Rust toolchain
 runs:
   using: composite
   steps:
@@ -17,6 +17,6 @@ runs:
         brew list cmake >/dev/null 2>&1 || brew install cmake
         brew list llvm >/dev/null 2>&1 || brew install llvm
         echo "LIBCLANG_PATH=$(brew --prefix llvm)/lib" >> "$GITHUB_ENV"
-    - name: Install the pinned Rust toolchain
+    - name: Install the Rust toolchain
       shell: bash
       run: rustup toolchain install
