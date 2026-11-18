@@ -20,6 +20,7 @@ Generated files:
 1. Run `zig build run:write_spec_tests` to generate test files from spec test data.
 
 - Spec tests can be re-downloaded by running `zig build run:download_spec_tests`
+- The fork choice compliance vectors download separately with `zig build run:download_spec_tests -- comptests`
 
 2. Execute tests with `zig build test:spec_tests`.
 
