@@ -244,25 +244,135 @@ test "batch lookups preserve order and validate inputs" {
         const compressed = affine.compress();
         try testing.expectEqualSlices(u8, &pubkeys[1], &compressed);
     }
+}
 
-    const requested_pubkeys = [_][48]u8{ pubkeys[3], pubkeys[0], pubkeys[3] };
-    var validator_indices: [requested_pubkeys.len]u64 = undefined;
-    try cache.getValidatorIndices(testing.io, &requested_pubkeys, &validator_indices);
-    try testing.expectEqualSlices(u64, &.{ 3, 0, 3 }, &validator_indices);
-    try testing.expectError(
-        error.InvalidLength,
-        cache.getValidatorIndices(
-            testing.io,
-            &requested_pubkeys,
-            validator_indices[0..2],
-        ),
-    );
-    try testing.expectError(
-        error.PubkeyNotFound,
-        cache.getValidatorIndices(
-            testing.io,
-            &.{ pubkeys[0], pubkeys[4], pubkeys[1] },
-            &validator_indices,
-        ),
-    );
+test "candidates are deduplicated without decoding and pruned by finalized index" {
+    var pubkeys: [3]types.primitive.BLSPubkey.Type = undefined;
+    try interop.interopPubkeysCached(pubkeys.len, &pubkeys);
+    var cache = PubkeyCache.init(testing.allocator, testing.io);
+    defer cache.deinit();
+
+    try cache.addCandidate(testing.io, pubkeys[1], 0);
+    try cache.addCandidate(testing.io, pubkeys[1], 2);
+    try cache.addCandidate(testing.io, pubkeys[1], 0);
+    try cache.addCandidate(testing.io, pubkeys[1], 2);
+    try cache.addCandidate(testing.io, pubkeys[2], 1);
+    try cache.addCandidate(testing.io, @splat(0), 9);
+    {
+        const indices = try cache.getCandidates(testing.allocator, testing.io, pubkeys[1]);
+        defer testing.allocator.free(indices);
+        try testing.expectEqualSlices(u32, &.{ 0, 2 }, indices);
+    }
+    try testing.expectEqual(@as(u32, 0), cache.count(testing.io));
+    try testing.expectEqual(@as(?u64, null), cache.get(testing.io, pubkeys[1]));
+
+    try cache.append(testing.io, pubkeys[0], 0);
+    try cache.append(testing.io, pubkeys[2], 1);
+    try cache.pruneCandidates(testing.io);
+    {
+        const retained = try cache.getCandidates(testing.allocator, testing.io, pubkeys[1]);
+        defer testing.allocator.free(retained);
+        try testing.expectEqualSlices(u32, &.{2}, retained);
+        const pruned = try cache.getCandidates(testing.allocator, testing.io, pubkeys[2]);
+        defer testing.allocator.free(pruned);
+        try testing.expectEqual(@as(usize, 0), pruned.len);
+    }
+    try cache.addCandidate(testing.io, pubkeys[2], 1);
+    try testing.expectEqual(@as(usize, 2), cache.candidates.count());
+    try cache.clear(testing.io);
+    try testing.expectEqual(@as(usize, 0), cache.candidates.count());
+    try testing.expectError(error.CapacityOverflow, cache.addCandidate(testing.io, pubkeys[0], cache_module.max_capacity));
+}
+
+test "state-aware candidates resolve conflicting branches and bound historical dense lookups" {
+    const Node = @import("persistent_merkle_tree").Node;
+    const Validators = types.phase0.Validators;
+    var pool = try Node.Pool.init(.{ .page_allocator = testing.allocator, .allocator = testing.allocator, .pool_size = 4096 });
+    defer pool.deinit();
+    var pubkeys: [3]types.primitive.BLSPubkey.Type = undefined;
+    try interop.interopPubkeysCached(pubkeys.len, &pubkeys);
+    var canonical = try Validators.TreeView.fromValue(testing.allocator, &pool, &Validators.default_value);
+    defer canonical.deinit();
+    var side = try Validators.TreeView.fromValue(testing.allocator, &pool, &Validators.default_value);
+    defer side.deinit();
+    for (pubkeys, 0..) |pubkey, index| {
+        var validator = types.phase0.Validator.default_value;
+        validator.pubkey = pubkey;
+        try side.pushValue(&validator);
+        if (index != 1) try canonical.pushValue(&validator);
+    }
+    var cache = PubkeyCache.init(testing.allocator, testing.io);
+    defer cache.deinit();
+    try cache.append(testing.io, pubkeys[0], 0);
+    try cache.addCandidate(testing.io, pubkeys[1], 1);
+    try cache.addCandidate(testing.io, pubkeys[2], 2);
+    try cache.addCandidate(testing.io, pubkeys[2], 1);
+    try testing.expectEqual(@as(?u64, 1), try cache.getValidatorIndex(testing.io, side, pubkeys[1]));
+    try testing.expectEqual(@as(?u64, 2), try cache.getValidatorIndex(testing.io, side, pubkeys[2]));
+    try testing.expectEqual(@as(?u64, null), try cache.getValidatorIndex(testing.io, canonical, pubkeys[1]));
+    try testing.expectEqual(@as(?u64, 1), try cache.getValidatorIndex(testing.io, canonical, pubkeys[2]));
+    try testing.expectEqual(@as(u32, 1), cache.count(testing.io));
+    try cache.append(testing.io, pubkeys[2], 1);
+    try cache.pruneCandidates(testing.io);
+    try testing.expectEqual(@as(?u64, 1), try cache.getValidatorIndex(testing.io, canonical, pubkeys[2]));
+    var historical = try canonical.sliceTo(0);
+    defer historical.deinit();
+    try testing.expectEqual(@as(?u64, null), try cache.getValidatorIndex(testing.io, historical, pubkeys[2]));
+}
+
+test "truncate removes both dense lookup directions and permits a different suffix" {
+    var pubkeys: [3]types.primitive.BLSPubkey.Type = undefined;
+    try interop.interopPubkeysCached(pubkeys.len, &pubkeys);
+    var cache = PubkeyCache.init(testing.allocator, testing.io);
+    defer cache.deinit();
+    for (pubkeys, 0..) |pubkey, index| try cache.append(testing.io, pubkey, index);
+    const capacity = cache.capacity(testing.io);
+    try cache.truncate(testing.io, 1);
+    try testing.expectEqual(@as(u32, 1), cache.count(testing.io));
+    try testing.expectEqual(capacity, cache.capacity(testing.io));
+    try testing.expectEqual(@as(?u64, 0), cache.get(testing.io, pubkeys[0]));
+    try testing.expectEqual(@as(?u64, null), cache.get(testing.io, pubkeys[1]));
+    try testing.expectEqual(@as(?[48]u8, null), cache.getPubkeyBytes(testing.io, 1));
+    try cache.append(testing.io, pubkeys[2], 1);
+    try testing.expectEqual(@as(?u64, 1), cache.get(testing.io, pubkeys[2]));
+    try testing.expectError(error.InvalidIndex, cache.truncate(testing.io, 3));
+    try cache.truncate(testing.io, 0);
+    try testing.expectEqual(@as(u32, 0), cache.count(testing.io));
+}
+
+test "matchesValidators checks the entire retained prefix" {
+    var pubkeys: [4]types.primitive.BLSPubkey.Type = undefined;
+    try interop.interopPubkeysCached(pubkeys.len, &pubkeys);
+    var cache = PubkeyCache.init(testing.allocator, testing.io);
+    defer cache.deinit();
+    const validator_size = types.phase0.Validator.fixed_size;
+    var bytes: [pubkeys.len * validator_size]u8 = @splat(0);
+    for (pubkeys, 0..) |pubkey, index| {
+        try cache.append(testing.io, pubkey, index);
+        @memcpy(bytes[index * validator_size ..][0..48], &pubkey);
+    }
+    try testing.expect(try cache.matchesValidators(testing.io, &bytes));
+    @memcpy(bytes[validator_size..][0..48], &pubkeys[2]);
+    @memcpy(bytes[2 * validator_size ..][0..48], &pubkeys[1]);
+    try testing.expect(!try cache.matchesValidators(testing.io, &bytes));
+    try testing.expect(try cache.matchesValidators(testing.io, bytes[0..validator_size]));
+    try testing.expect(try cache.matchesValidators(testing.io, &.{}));
+    try testing.expectError(error.InvalidLength, cache.matchesValidators(testing.io, bytes[0 .. bytes.len - 1]));
+    try cache.truncate(testing.io, 1);
+    try testing.expect(try cache.matchesValidators(testing.io, &bytes));
+}
+
+test "candidate allocation failures release all memory" {
+    try testing.checkAllAllocationFailures(testing.allocator, struct {
+        fn run(allocator: std.mem.Allocator) !void {
+            var cache = PubkeyCache.init(allocator, testing.io);
+            defer cache.deinit();
+            try cache.addCandidate(testing.io, @splat(0), 0);
+            try cache.addCandidate(testing.io, @splat(0), 1);
+            try cache.addCandidate(testing.io, @splat(1), 2);
+            const candidates = try cache.getCandidates(allocator, testing.io, @splat(0));
+            defer allocator.free(candidates);
+            try cache.pruneCandidates(testing.io);
+        }
+    }.run, .{});
 }

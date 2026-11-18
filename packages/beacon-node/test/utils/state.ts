@@ -13,7 +13,9 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateElectra,
   DataAvailabilityStatus,
+  IBeaconStateView,
   createCachedBeaconState,
+  interopSecretKey,
 } from "@lodestar/state-transition";
 import {BeaconState, altair, bellatrix, electra, ssz} from "@lodestar/types";
 import {ZERO_HASH_HEX} from "../../src/constants/constants.js";
@@ -180,3 +182,20 @@ export const zeroProtoBlock: ProtoBlock = {
   payloadStatus: PayloadStatus.FULL,
   parentBlockHash: null,
 };
+
+export function interopPubkeys(count: number): Uint8Array[] {
+  return Array.from({length: count}, (_, index) => interopSecretKey(index).toPublicKey().toBytes());
+}
+
+export function fakeStateView(pubkeys: Uint8Array[]): IBeaconStateView {
+  return {
+    validatorCount: pubkeys.length,
+    getValidator: (index: number) => ({
+      ...ssz.phase0.Validator.defaultValue(),
+      pubkey: pubkeys[index],
+      activationEligibilityEpoch: FAR_FUTURE_EPOCH,
+      activationEpoch: FAR_FUTURE_EPOCH,
+      exitEpoch: FAR_FUTURE_EPOCH,
+    }),
+  } as IBeaconStateView;
+}

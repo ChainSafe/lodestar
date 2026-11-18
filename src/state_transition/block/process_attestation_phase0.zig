@@ -25,7 +25,6 @@ pub fn processAttestationPhase0(
     verify_signature: bool,
 ) !void {
     const slot = try state.slot();
-    const validators_count = try state.validatorsCount();
 
     const data = attestation.data;
 
@@ -63,7 +62,7 @@ pub fn processAttestationPhase0(
         io,
         config,
         epoch_cache,
-        validators_count,
+        try state.validators(),
         &indexed_attestation,
         verify_signature,
     )) {

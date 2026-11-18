@@ -11,6 +11,7 @@ import {
   assertValidProposerSlashing,
   createCachedBeaconState,
   getAttesterSlashingSignatureSets,
+  getIndexedAttestationBigintSignatureSet,
   getProposerSlashingSignatureSets,
 } from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
@@ -135,7 +136,9 @@ function makeAttesterSlashing(
     slashing.attestation2.data.source.epoch = 1n;
   }
   slashing.attestation2.data.beaconBlockRoot = Buffer.alloc(32, 1);
-  const sets = getAttesterSlashingSignatureSets(beaconConfig, signingStateSlot, slashing);
+  const sets = [slashing.attestation1, slashing.attestation2].map((attestation) =>
+    getIndexedAttestationBigintSignatureSet(beaconConfig, signingStateSlot, attestation)
+  );
   const secretKey = SecretKey.fromBytes(Buffer.alloc(32, validatorIndex + 1));
   slashing.attestation1.signature = secretKey.sign(sets[0].signingRoot).toBytes();
   slashing.attestation2.signature = secretKey.sign(sets[1].signingRoot).toBytes();
@@ -168,10 +171,8 @@ describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConf
     pool.insertAttesterSlashing(beaconConfig.getForkName(beforeSlot), slashing, verifiedDomains);
 
     const after = makeState(afterSlot, beaconConfig);
-    expect(() =>
-      assertValidAttesterSlashing(beaconConfig, after.slot, after.validatorCount, slashing, false)
-    ).not.toThrow();
-    expect(() => assertValidAttesterSlashing(beaconConfig, after.slot, after.validatorCount, slashing)).toThrow(
+    expect(() => assertValidAttesterSlashing(beaconConfig, after.slot, after, slashing, false)).not.toThrow();
+    expect(() => assertValidAttesterSlashing(beaconConfig, after.slot, after, slashing)).toThrow(
       "AttesterSlashing attestation0 is invalid"
     );
     expect(pool.getAllAttesterSlashings()).toEqual([slashing]);
@@ -201,9 +202,7 @@ describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConf
     expect(() =>
       assertValidProposerSlashing(beaconConfig, after.slot, proposerSlashings[0], after.getValidator(0))
     ).not.toThrow();
-    expect(() =>
-      assertValidAttesterSlashing(beaconConfig, after.slot, after.validatorCount, attesterSlashings[0])
-    ).not.toThrow();
+    expect(() => assertValidAttesterSlashing(beaconConfig, after.slot, after, attesterSlashings[0])).not.toThrow();
   });
 
   it("does not let an invalid proposer slashing exclude a valid attester slashing", async () => {
@@ -282,7 +281,7 @@ describe("slashing verification context", () => {
 
     const after = makeState(6 * SLOTS_PER_EPOCH, beaconConfig);
     const bls = new BlsSingleThreadVerifier({metrics: null});
-    const sets = getAttesterSlashingSignatureSets(beaconConfig, after.slot, slashing);
+    const sets = getAttesterSlashingSignatureSets(beaconConfig, after.slot, after, slashing);
     expect(await bls.verifySignatureSets([sets[0]])).toBe(true);
     expect(await bls.verifySignatureSets([sets[1]])).toBe(false);
     expect(pool.getSlashingsAndExits(after, BlockType.Full, null)[0]).toHaveLength(0);
@@ -345,9 +344,7 @@ describe("persisted slashings", () => {
       expect(() =>
         assertValidProposerSlashing(config, head.slot, proposerSlashings[0], head.getValidator(0))
       ).not.toThrow();
-      expect(() =>
-        assertValidAttesterSlashing(config, head.slot, head.validatorCount, attesterSlashings[0])
-      ).not.toThrow();
+      expect(() => assertValidAttesterSlashing(config, head.slot, head, attesterSlashings[0])).not.toThrow();
     } finally {
       await close();
     }
@@ -471,9 +468,7 @@ describe("persisted slashings", () => {
         expect(() =>
           assertValidProposerSlashing(config, after.slot, proposerSlashings[0], after.getValidator(0))
         ).not.toThrow();
-        expect(() =>
-          assertValidAttesterSlashing(config, after.slot, after.validatorCount, attesterSlashings[0])
-        ).not.toThrow();
+        expect(() => assertValidAttesterSlashing(config, after.slot, after, attesterSlashings[0])).not.toThrow();
 
         await restored.toPersisted(db);
         expect(await db.proposerSlashing.keys()).toEqual([0]);

@@ -44,5 +44,5 @@ export function createNative(deposits: electra.PendingDeposit[]) {
   pubkeyCache.ensureCapacity(value.validators.length);
   const config = new bindings.BeaconConfig(chainConfig, value.genesisValidatorsRoot);
   const bytes = ssz.fulu.BeaconState.serialize(value);
-  return {bytes, state: bindings.BeaconStateView.createFromBytes(bytes, config), value};
+  return {bytes, state: bindings.BeaconStateView.createFromBytes(bytes, config, {pubkeyMode: "trusted"}), value};
 }

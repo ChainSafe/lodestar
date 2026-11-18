@@ -475,3 +475,32 @@ test "getAttestingIndicesInto should map bits across committee boundaries" {
     };
     try std.testing.expectEqualSlices(ValidatorIndex, &expected, selected);
 }
+
+test "skip_sync_pubkeys registers candidates instead of syncing the trusted registry" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 200_000 });
+    defer pool.deinit();
+    var fixture = try TestCachedBeaconState.init(allocator, &pool, 64);
+    defer fixture.deinit();
+    try std.testing.expectEqual(@as(u32, 64), fixture.pubkey_cache.count(std.testing.io));
+    try fixture.pubkey_cache.clear(std.testing.io);
+    const immutable = @import("epoch_cache.zig").EpochCacheImmutableData{
+        .config = fixture.config,
+        .pubkey_cache = fixture.pubkey_cache,
+    };
+    const candidates = try EpochCache.createFromState(allocator, std.testing.io, fixture.cached_state.state, immutable, .{
+        .skip_sync_committee_cache = false,
+        .skip_sync_pubkeys = true,
+    });
+    defer candidates.deinit();
+    try std.testing.expectEqual(@as(u32, 0), fixture.pubkey_cache.count(std.testing.io));
+    const validators = try fixture.cached_state.state.validators();
+    const key = try @import("pubkey_cache.zig").statePubkeyBytes(validators, 63);
+    try std.testing.expectEqual(@as(?u64, 63), try fixture.pubkey_cache.getValidatorIndex(std.testing.io, validators, key));
+    const trusted = try EpochCache.createFromState(allocator, std.testing.io, fixture.cached_state.state, immutable, null);
+    defer trusted.deinit();
+    try std.testing.expectEqual(@as(u32, 64), fixture.pubkey_cache.count(std.testing.io));
+    const remaining = try fixture.pubkey_cache.getCandidates(allocator, std.testing.io, key);
+    defer allocator.free(remaining);
+    try std.testing.expectEqual(@as(usize, 0), remaining.len);
+}

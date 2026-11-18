@@ -21,11 +21,14 @@ switch (workerData) {
   }
   case "pubkeys": {
     const {pubkeyCache} = await import("../../src/pubkeys.js");
+    pubkeyCache.addCandidate(2, new Uint8Array(48));
     parentPort.postMessage({
+      candidates: pubkeyCache.getCandidates(new Uint8Array(48)),
       load: capture(() => pubkeyCache.load("", 1)),
       pubkey: pubkeyCache.getOrThrow(0).toBytes(),
       reset: capture(() => pubkeyCache.reset()),
       save: capture(() => pubkeyCache.save("")),
+      truncate: capture(() => pubkeyCache.truncate(0)),
     });
     break;
   }

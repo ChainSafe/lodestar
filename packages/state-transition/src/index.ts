@@ -26,6 +26,7 @@ export {
   createEmptyEpochCacheImmutableData,
 } from "./cache/epochCache.js";
 export {type EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
+export {getValidatorIndex, getValidatorPubkeyBytes, promoteFinalizedPubkeys} from "./cache/pubkeyCache.js";
 // Main state caches
 export {
   type BeaconStateCache,

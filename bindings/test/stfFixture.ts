@@ -1,6 +1,7 @@
 import {mainnetChainConfig} from "@lodestar/config/configs";
 import {ssz} from "@lodestar/types";
 import {SecretKey} from "../src/blst.js";
+import {pubkeyCache} from "../src/pubkeys.js";
 
 export const stfConfig = {...mainnetChainConfig, GLOAS_FORK_EPOCH: Infinity};
 
@@ -30,5 +31,6 @@ export function createStfState() {
   state.inactivityScores = state.validators.map(() => 0);
   state.currentSyncCommittee.pubkeys.fill(state.validators[0].pubkey);
   state.nextSyncCommittee.pubkeys.fill(state.validators[0].pubkey);
+  pubkeyCache.syncPubkeys(state.validators);
   return state;
 }

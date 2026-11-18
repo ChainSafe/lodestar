@@ -102,8 +102,8 @@ pub fn applyDeposit(
     const amount = deposit.amount();
     const signature = deposit.signature();
 
-    const cached_index = epoch_cache.pubkey_cache.get(io, pubkey.*);
-    const is_new_validator = cached_index == null or cached_index.? >= try state.validatorsCount();
+    const cached_index = try epoch_cache.pubkey_cache.getValidatorIndex(io, try state.validators(), pubkey.*);
+    const is_new_validator = cached_index == null;
 
     if (comptime fork.lt(.electra)) {
         if (is_new_validator) {
@@ -179,7 +179,7 @@ pub fn addValidatorToRegistry(
     // - Should have equal performance since it sets a value in a flat array
     try epoch_cache.effectiveBalanceIncrementsAppend(validator_index, effective_balance);
 
-    try epoch_cache.pubkey_cache.append(io, pubkey.*, validator_index);
+    try epoch_cache.pubkey_cache.addCandidate(io, pubkey.*, validator_index);
 
     // Only after altair:
     if (comptime fork.gte(.altair)) {

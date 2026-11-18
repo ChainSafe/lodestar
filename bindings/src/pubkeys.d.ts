@@ -1,7 +1,7 @@
 import type {PublicKey} from "./blst.js";
 
 /**
- * Append-only validator public-key cache.
+ * Finalized validator public-key cache with unfinalized lookup candidates.
  *
  * Throws when encountering:
  * - An existing index with a different public key.
@@ -24,7 +24,7 @@ export interface PubkeyCache {
   getIndex(pubkey: Uint8Array): number | null;
   /**
    * Append a trusted public key at the next index. Before calling this method,
-   * the caller must cryptographically validate the public key.
+   * the caller must establish finality and cryptographically validate the public key.
    *
    * The method throws if:
    *
@@ -32,11 +32,21 @@ export interface PubkeyCache {
    * - Entries are sparse.
    */
   append(index: number, pubkey: Uint8Array): void;
+  /** Register an unfinalized index without decompressing the public key. */
+  addCandidate(index: number, pubkey: Uint8Array): void;
+  /** Return candidates which must be checked against the requesting state's validators. */
+  getCandidates(pubkey: Uint8Array): number[];
+  /** Discard candidates below the finalized cache size. */
+  pruneCandidates(): void;
+  /** Startup-only truncation from the control environment while no workers use the cache. */
+  truncate(size: number): void;
   /**
-   * Populate the cache from the missing suffix of a trusted validator list.
+   * Populate the cache from the missing suffix of a trusted anchor validator list.
    * This method decodes public keys but does not validate.
    */
   syncPubkeys(validators: {pubkey: Uint8Array}[]): void;
+  /** Compare every overlapping key against the serialized validator registry, excluding any non-overlapping suffix. */
+  matchesValidators(serializedValidators: Uint8Array): boolean;
   /** Current number of cached entries. */
   readonly size: number;
   /** Number of entries the current native allocation can hold without growing. */

@@ -32,10 +32,9 @@ pub fn processConsolidationRequest(
     const target_pubkey = consolidation.target_pubkey;
     const source_address = consolidation.source_address;
 
-    const source_index = epoch_cache.pubkey_cache.get(io, source_pubkey) orelse return;
-    const target_index = epoch_cache.pubkey_cache.get(io, target_pubkey) orelse return;
-    const validator_count = try state.validatorsCount();
-    if (source_index >= validator_count or target_index >= validator_count) return;
+    var validators = try state.validators();
+    const source_index = (try epoch_cache.pubkey_cache.getValidatorIndex(io, validators, source_pubkey)) orelse return;
+    const target_index = (try epoch_cache.pubkey_cache.getValidatorIndex(io, validators, target_pubkey)) orelse return;
 
     if (try isValidSwitchToCompoundRequest(fork, epoch_cache, state, consolidation, source_index, target_index)) {
         try switchToCompoundingValidator(fork, state, source_index);
@@ -59,7 +58,6 @@ pub fn processConsolidationRequest(
         return;
     }
 
-    var validators = try state.validators();
     var source_validator = try validators.get(@intCast(source_index));
     var target_validator = try validators.get(@intCast(target_index));
     const source_withdrawal_credentials = try source_validator.getFieldRoot("withdrawal_credentials");
