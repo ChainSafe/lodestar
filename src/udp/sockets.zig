@@ -527,5 +527,6 @@ test {
     _ = @import("sockets_test.zig");
     _ = @import("sockets_operations_test.zig");
     _ = @import("sockets_native_test.zig");
+    _ = @import("sockets_source_test.zig");
     _ = @import("linux_test_support.zig");
 }
