@@ -185,6 +185,7 @@ describe("CachedBeaconState", () => {
         validatorCountDelta
       )} validators`;
       it(testName, () => {
+        const cachedCount = pubkeyCache.size;
         const state = modifyStateSameValidator(stateView);
         for (let i = 0; i < state.validators.length; i++) {
           // only modify some validators
@@ -277,8 +278,9 @@ describe("CachedBeaconState", () => {
             config,
             pubkeyCache,
           },
-          {skipSyncCommitteeCache: true, shufflingGetter}
+          {skipSyncCommitteeCache: true, skipSyncPubkeys: true, shufflingGetter}
         );
+        expect(pubkeyCache.size).toBe(cachedCount);
         // validatorCountDelta < 0 is unrealistic and shuffling computation results in a different result
         if (validatorCountDelta >= 0) {
           expect(newCachedState.epochCtx).toEqual(cachedState.epochCtx);
@@ -289,7 +291,9 @@ describe("CachedBeaconState", () => {
           expect(
             newCachedState.epochCtx.getValidatorIndex(newCachedState, newCachedState.validators.get(i).pubkey)
           ).toBe(i);
-          expect(newCachedState.epochCtx.pubkeyCache.get(i)?.toBytes()).toEqual(pubkeys[i]);
+          expect(newCachedState.epochCtx.pubkeyCache.get(i)?.toBytes()).toEqual(
+            i < cachedCount ? pubkeys[i] : undefined
+          );
         }
       });
     }

@@ -137,6 +137,7 @@ export function addValidatorToRegistry(
   // - Keep related code together to reduce risk of breaking this cache
   // - Should have equal performance since it sets a value in a flat array
   epochCtx.effectiveBalanceIncrementsSet(validatorIndex, effectiveBalance);
+  epochCtx.addPubkey(validatorIndex, pubkey);
 
   // Only after altair:
   if (fork >= ForkSeq.altair) {

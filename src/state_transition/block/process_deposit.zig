@@ -177,6 +177,7 @@ pub fn addValidatorToRegistry(
     // - Keep related code together to reduce risk of breaking this cache
     // - Should have equal performance since it sets a value in a flat array
     try epoch_cache.effectiveBalanceIncrementsAppend(validator_index, effective_balance);
+    try epoch_cache.addPubkey(validator_index, pubkey.*);
 
     // Only after altair:
     if (comptime fork.gte(.altair)) {

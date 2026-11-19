@@ -1,11 +1,11 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import type {PubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {toHex} from "@lodestar/utils";
 import {addValidatorToRegistry} from "../../../src/block/processDeposit.js";
-import {createCachedBeaconState} from "../../../src/cache/stateCache.js";
+import {createCachedBeaconState, loadCachedBeaconState} from "../../../src/cache/stateCache.js";
 import {BeaconStateView} from "../../../src/stateView/beaconStateView.js";
 import {BeaconStateElectra, CachedBeaconStateElectra} from "../../../src/types.js";
 import {promoteFinalizedPubkeys} from "../../../src/util/validator.js";
@@ -90,6 +90,39 @@ describe("finalized-only pubkey cache", () => {
     expect(child.epochCtx.getValidatorIndex(child, pubkeyP)).toBe(finalizedCount);
     expect(child.epochCtx.getValidatorIndex(child, pubkeyQ)).toBe(finalizedCount + 1);
     expect(state.epochCtx.getValidatorIndex(state, pubkeyQ)).toBeNull();
+  });
+
+  it("updates pubkey indexes during registration without reading validators during lookup", () => {
+    const pubkeyCache = createTestPubkeyCache();
+    const state = createAnchor(pubkeyCache);
+    const index = state.validators.length;
+    addValidatorToRegistry(ForkSeq.electra, state, pubkeyP, credentials, 0);
+    state.commit();
+    const child = state.clone(true);
+    addValidatorToRegistry(ForkSeq.electra, child, pubkeyQ, credentials, 0);
+    const stateRead = vi.spyOn(state.validators, "getReadonly");
+    const childRead = vi.spyOn(child.validators, "getReadonly");
+
+    expect(state.epochCtx.getValidatorIndex(state, pubkeyP)).toBe(index);
+    expect(state.epochCtx.getValidatorIndex(state, pubkeyQ)).toBeNull();
+    expect(child.epochCtx.getValidatorIndex(child, pubkeyP)).toBe(index);
+    expect(child.epochCtx.getValidatorIndex(child, pubkeyQ)).toBe(index + 1);
+    expect(stateRead).not.toHaveBeenCalled();
+    expect(childRead).not.toHaveBeenCalled();
+  });
+
+  it("initializes local indexes from a loaded state's registry", () => {
+    const pubkeyCache = createTestPubkeyCache();
+    const anchor = createAnchor(pubkeyCache);
+    const index = anchor.validators.length;
+    const source = anchor.clone();
+    addValidatorToRegistry(ForkSeq.electra, source, pubkeyP, credentials, 0);
+    const loaded = loadCachedBeaconState(anchor, source.serialize());
+    const read = vi.spyOn(loaded.validators, "getReadonly");
+
+    expect(loaded.epochCtx.getValidatorIndex(loaded, pubkeyP)).toBe(index);
+    expect(pubkeyCache.size).toBe(index);
+    expect(read).not.toHaveBeenCalled();
   });
 
   it("promotes a validator once its activation eligibility is finalized", () => {

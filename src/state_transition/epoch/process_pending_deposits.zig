@@ -44,6 +44,7 @@ pub fn processPendingDeposits(
     var pending_deposits = try state.pendingDeposits();
     var pending_deposits_it = pending_deposits.iteratorReadonly(0);
     const pending_deposits_len = try pending_deposits.length();
+    try epoch_cache.ensureUnfinalizedMapUnusedCapacity(@min(pending_deposits_len, preset.MAX_PENDING_DEPOSITS_PER_EPOCH));
 
     for (0..pending_deposits_len) |_| {
         const deposit = try pending_deposits_it.nextValue();

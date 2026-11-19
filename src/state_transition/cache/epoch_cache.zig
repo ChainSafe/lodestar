@@ -63,11 +63,7 @@ const weight_denominator: f64 = @floatFromInt(c.WEIGHT_DENOMINATOR);
 
 pub const proposer_weight_factor: f64 = proposer_weight / (weight_denominator - proposer_weight);
 
-const UnfinalizedIndexByPubkey = struct {
-    map: std.array_hash_map.Custom([48]u8, ValidatorIndex, PubkeyHashContext, true) = .empty,
-    /// Registry length covered by `map`.
-    indexed_count: usize,
-};
+const UnfinalizedIndexByPubkey = std.array_hash_map.Custom([48]u8, ValidatorIndex, PubkeyHashContext, true);
 
 pub const EpochCache = struct {
     allocator: Allocator,
@@ -136,11 +132,8 @@ pub const EpochCache = struct {
 
     epoch: Epoch,
 
-    /// Pubkey to index of this state's validators past the shared pubkey cache, which holds only
-    /// the finalized registry prefix. Later validators can differ between branches, so each state
-    /// indexes its own on the first lookup that misses the shared cache. `clone` does not copy it:
-    /// a clone can add different validators at the same indices.
-    unfinalized_index_by_pubkey: ?UnfinalizedIndexByPubkey = null,
+    /// State-local index for validators outside the shared finalized prefix. Clones own independent copies.
+    unfinalized_index_by_pubkey: UnfinalizedIndexByPubkey = .empty,
 
     fn initEffectiveBalanceIncrementsRc(allocator: Allocator, validator_count: usize) !*EffectiveBalanceIncrementsRc {
         var effective_balance_increments = try effectiveBalanceIncrementsInit(allocator, validator_count);
@@ -234,6 +227,17 @@ pub const EpochCache = struct {
         const skip_sync_pubkeys = if (option) |opt| opt.skip_sync_pubkeys else false;
         if (!skip_sync_pubkeys) {
             try pubkey_cache.syncPubkeys(allocator, io, validators);
+        }
+
+        var unfinalized_index_by_pubkey: UnfinalizedIndexByPubkey = .empty;
+        errdefer unfinalized_index_by_pubkey.deinit(allocator);
+        const cached_count = pubkey_cache.count(io);
+        if (cached_count < validator_count) {
+            const context = pubkey_cache.hashContext();
+            try unfinalized_index_by_pubkey.ensureTotalCapacityContext(allocator, validator_count - cached_count, context);
+            for (validators[cached_count..], cached_count..) |validator, index| {
+                unfinalized_index_by_pubkey.putAssumeCapacityContext(validator.pubkey, @intCast(index), context);
+            }
         }
 
         const effective_balance_increments_rc = try initEffectiveBalanceIncrementsRc(allocator, validator_count);
@@ -467,6 +471,7 @@ pub const EpochCache = struct {
             .allocator = allocator,
             .config = config,
             .pubkey_cache = pubkey_cache,
+            .unfinalized_index_by_pubkey = unfinalized_index_by_pubkey,
             .builder_deposit_signature_cache = builder_deposit_signature_cache,
             .proposers = proposers,
             // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
@@ -514,51 +519,44 @@ pub const EpochCache = struct {
         // unref the sync committee caches
         self.current_sync_committee_indexed.unref();
         self.next_sync_committee_indexed.unref();
-        if (self.unfinalized_index_by_pubkey) |*unfinalized| unfinalized.map.deinit(self.allocator);
+        self.unfinalized_index_by_pubkey.deinit(self.allocator);
         self.allocator.destroy(self);
     }
 
     /// Index of the validator with `pubkey` in `state`, which must be the state this cache belongs to.
-    pub fn getValidatorIndex(self: *EpochCache, io: std.Io, state: anytype, pubkey: [48]u8) !?ValidatorIndex {
-        const validators_count = try state.validatorsCount();
-        const cached_count = self.pubkey_cache.count(io);
-        if (self.pubkey_cache.get(io, pubkey)) |index|
-            return if (index < validators_count) index else null;
+    pub fn getValidatorIndex(self: *const EpochCache, io: std.Io, state: anytype, pubkey: [48]u8) !?ValidatorIndex {
+        const index = self.pubkey_cache.get(io, pubkey) orelse
+            self.unfinalized_index_by_pubkey.getContext(pubkey, self.pubkey_cache.hashContext()) orelse return null;
+        return if (index < try state.validatorsCount()) index else null;
+    }
 
-        const context = self.pubkey_cache.hashContext();
-        if (self.unfinalized_index_by_pubkey == null)
-            self.unfinalized_index_by_pubkey = .{ .indexed_count = cached_count };
-        const unfinalized = &self.unfinalized_index_by_pubkey.?;
-        if (unfinalized.indexed_count < validators_count) {
-            try unfinalized.map.ensureUnusedCapacityContext(
-                self.allocator,
-                validators_count - unfinalized.indexed_count,
-                context,
-            );
-            var validators = try state.validators();
-            for (unfinalized.indexed_count..validators_count) |index| {
-                var validator = try validators.getReadonly(index);
-                var validator_pubkey: [48]u8 = undefined;
-                try validator.getValue(undefined, "pubkey", &validator_pubkey);
-                unfinalized.map.putAssumeCapacityContext(
-                    validator_pubkey,
-                    @intCast(index),
-                    context,
-                );
-                unfinalized.indexed_count = index + 1;
-            }
-        }
-        return unfinalized.map.getContext(pubkey, context);
+    pub fn ensureUnfinalizedMapUnusedCapacity(
+        self: *EpochCache,
+        additional_count: usize,
+    ) !void {
+        try self.unfinalized_index_by_pubkey.ensureUnusedCapacityContext(
+            self.allocator,
+            additional_count,
+            self.pubkey_cache.hashContext(),
+        );
+    }
+
+    pub fn addPubkey(self: *EpochCache, index: ValidatorIndex, pubkey: [48]u8) !void {
+        try self.unfinalized_index_by_pubkey.putContext(self.allocator, pubkey, index, self.pubkey_cache.hashContext());
     }
 
     pub fn clone(self: *const EpochCache, allocator: Allocator) !*EpochCache {
         const epoch_cache_ptr = try allocator.create(EpochCache);
+        errdefer allocator.destroy(epoch_cache_ptr);
+        var unfinalized_index_by_pubkey = try self.unfinalized_index_by_pubkey.cloneContext(allocator, self.pubkey_cache.hashContext());
+        errdefer unfinalized_index_by_pubkey.deinit(allocator);
 
         epoch_cache_ptr.* = .{
             .allocator = allocator,
             .config = self.config,
             // Common append-only structures shared with all states, no need to clone
             .pubkey_cache = self.pubkey_cache,
+            .unfinalized_index_by_pubkey = unfinalized_index_by_pubkey,
             .builder_deposit_signature_cache = self.builder_deposit_signature_cache.ref(),
             // Immutable data
             .proposers = self.proposers,
@@ -675,6 +673,14 @@ pub const EpochCache = struct {
         self.current_target_unslashed_balance_increments = 0;
         self.epoch = computeEpochAtSlot(slot);
         self.sync_period = computeSyncPeriodAtEpoch(self.epoch);
+
+        const cached_count = self.pubkey_cache.count(io);
+        const unfinalized_count = self.unfinalized_index_by_pubkey.count();
+        for (0..unfinalized_count) |offset| {
+            const index = unfinalized_count - offset - 1;
+            if (self.unfinalized_index_by_pubkey.values()[index] < cached_count)
+                self.unfinalized_index_by_pubkey.swapRemoveAt(index);
+        }
     }
 
     /// At fork boundary, this runs post-fork logic and after `upgradeState*`.
