@@ -522,19 +522,29 @@ pub const EpochCache = struct {
     pub fn getValidatorIndex(self: *EpochCache, io: std.Io, state: anytype, pubkey: [48]u8) !?ValidatorIndex {
         const validators_count = try state.validatorsCount();
         const cached_count = self.pubkey_cache.count(io);
-        if (self.pubkey_cache.get(io, pubkey)) |index| return if (index < validators_count) index else null;
+        if (self.pubkey_cache.get(io, pubkey)) |index|
+            return if (index < validators_count) index else null;
 
         const context = self.pubkey_cache.hashContext();
-        if (self.unfinalized_index_by_pubkey == null) self.unfinalized_index_by_pubkey = .{ .indexed_count = cached_count };
+        if (self.unfinalized_index_by_pubkey == null)
+            self.unfinalized_index_by_pubkey = .{ .indexed_count = cached_count };
         const unfinalized = &self.unfinalized_index_by_pubkey.?;
         if (unfinalized.indexed_count < validators_count) {
-            try unfinalized.map.ensureUnusedCapacityContext(self.allocator, validators_count - unfinalized.indexed_count, context);
+            try unfinalized.map.ensureUnusedCapacityContext(
+                self.allocator,
+                validators_count - unfinalized.indexed_count,
+                context,
+            );
             var validators = try state.validators();
             while (unfinalized.indexed_count < validators_count) : (unfinalized.indexed_count += 1) {
                 var validator = try validators.getReadonly(unfinalized.indexed_count);
                 var validator_pubkey: [48]u8 = undefined;
                 try validator.getValue(undefined, "pubkey", &validator_pubkey);
-                unfinalized.map.putAssumeCapacityContext(validator_pubkey, @intCast(unfinalized.indexed_count), context);
+                unfinalized.map.putAssumeCapacityContext(
+                    validator_pubkey,
+                    @intCast(unfinalized.indexed_count),
+                    context,
+                );
             }
         }
         return unfinalized.map.getContext(pubkey, context);
