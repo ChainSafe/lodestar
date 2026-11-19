@@ -6,6 +6,15 @@ pub fn build(b: *std.Build) !void {
     @setEvalBranchQuota(200_000);
     const manifest = @import("build.zig.zon");
     const result = try zbuild.configureBuild(b, manifest, .{});
+    // binding.zig checks its quiche_send_info against the C compiler's layout for the target.
+    const network = result.module("network").?;
+    const send_info_layout = b.addTranslateC(.{
+        .root_source_file = b.path("src/network/quic/send_info_layout.h"),
+        .target = network.resolved_target.?,
+        .optimize = network.optimize.?,
+    });
+    send_info_layout.addIncludePath(result.dependency("quiche_zig").?.builder.dependency("quiche", .{}).path("include"));
+    network.addImport("quiche_send_info_layout", send_info_layout.createModule());
 
     zapi.addAddonIdentity(
         b,

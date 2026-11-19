@@ -461,6 +461,7 @@ jobs:
           zig build test:discv5 -Doptimize=ReleaseSafe
           zig build test:fault_io
           zig build test:udp
+          zig build test:network
 
       - name: Build benchmarks
         run: |
