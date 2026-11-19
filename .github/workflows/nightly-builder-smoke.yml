@@ -36,10 +36,10 @@ jobs:
 
       - name: Set up Kurtosis
         run: |
-          # from the GitHub release, the sdk.kurtosis.com apt repository answers 503 often enough to fail jobs
-          curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/kurtosis-cli.deb" \
-            "https://github.com/kurtosis-tech/kurtosis-cli-release-artifacts/releases/download/${KURTOSIS_VERSION}/kurtosis-cli_${KURTOSIS_VERSION}_linux_amd64.deb"
-          sudo dpkg -i "$RUNNER_TEMP/kurtosis-cli.deb"
+          echo "deb [trusted=yes] https://sdk.kurtosis.com/kurtosis-cli-release-artifacts/ /" \
+            | sudo tee /etc/apt/sources.list.d/kurtosis.list
+          sudo apt-get update -o Acquire::Retries=5
+          sudo apt-get install -y "kurtosis-cli=${KURTOSIS_VERSION}"
           kurtosis analytics disable
 
       - name: Setup Zig
