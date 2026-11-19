@@ -139,7 +139,6 @@ pub const Options = struct {
     /// Engine owns this context after init succeeds; the caller retains it on failure.
     tls: TlsContext,
     limits: Limits = .{},
-    local: [2]?Address,
     /// Uniform startup secret from a cryptographic random source; borrowed only during init.
     seed: *const [std.Random.DefaultCsprng.secret_seed_length]u8,
 };
@@ -150,7 +149,6 @@ allocator: std.mem.Allocator,
 tls: TlsContext,
 config: binding.Config,
 limits: Limits,
-local: [2]?Address,
 registry: Registry,
 connection_window: u64,
 stream_window: u64,
@@ -183,9 +181,6 @@ pub fn resourceSnapshot(self: *const Engine) Resources {
 }
 
 pub fn init(allocator: std.mem.Allocator, options: Options) Error!Engine {
-    std.debug.assert(options.local[0] != null or options.local[1] != null);
-    if (options.local[0]) |address| std.debug.assert(address == .ip4);
-    if (options.local[1]) |address| std.debug.assert(address == .ip6);
     const wanted = options.limits;
     try wanted.validate();
 
@@ -219,7 +214,6 @@ pub fn init(allocator: std.mem.Allocator, options: Options) Error!Engine {
         .tls = options.tls,
         .config = config,
         .limits = wanted,
-        .local = options.local,
         .registry = registry,
         .connection_window = connection_window,
         .stream_window = stream_window,
@@ -271,9 +265,11 @@ pub fn memoryPlan(self: *const Engine) MemoryPlan {
     };
 }
 
+/// `local` is the address this host reaches `peer` from. It stays the connection's local address.
 pub fn dial(
     self: *Engine,
     peer: *const Address,
+    local: *const Address,
     expected: peer_id.PeerId,
     now: Now,
 ) DialError!Handle {
@@ -282,13 +278,13 @@ pub fn dial(
     assert(self.registry.dialing <= self.registry.outbound);
     if (self.registry.dialing >= self.limits.dialing_max) return error.DialLimit;
     if (self.registry.outbound >= self.outbound_max) return error.DialLimit;
-    const local = self.localFor(peer.*) orelse return error.AddressFamilyUnsupported;
+    if (std.meta.activeTag(local.*) != std.meta.activeTag(peer.*)) return error.AddressFamilyUnsupported;
     const index = self.registry.claim() orelse return error.TableFull;
     assert(index < self.registry.slots.len);
     const slot = &self.registry.slots[index];
     slot.open(&self.tls, &self.config, .{
         .direction = .outbound,
-        .local = local,
+        .local = local.*,
         .peer = peer.*,
         .scid = self.connectionId(),
         .expected_peer_id = expected,
@@ -386,6 +382,12 @@ pub fn receiveEndpoint(self: *const Engine, conn: Handle) ?Address {
     const slot = self.liveView(conn) orelse return null;
     if (slot.peer_id == null or !slot.receive_endpoint_known) return null;
     return slot.peer;
+}
+
+/// Fixed for the connection's lifetime.
+pub fn localAddress(self: *const Engine, conn: Handle) ?Address {
+    const slot = self.liveView(conn) orelse return null;
+    return slot.local;
 }
 
 pub fn peerAddress(self: *const Engine, conn: Handle) ?Address {
@@ -530,9 +532,9 @@ pub fn pollEvents(self: *Engine, events: []Event) usize {
     if (self.stream_capture) |capture| for (events[0..count]) |event| switch (event) {
         .connected => |connected| {
             const slot = &slots[connected.conn.index];
-            capture.connected(connected.conn, &connected.peer_id, slot.peer, self.localFor(slot.peer).?, connected.direction);
+            capture.connected(connected.conn, &connected.peer_id, slot.peer, slot.local, connected.direction);
         },
-        .path_changed => |changed| capture.pathChanged(changed.conn, changed.peer, self.localFor(changed.peer).?),
+        .path_changed => |changed| capture.pathChanged(changed.conn, changed.peer, slots[changed.conn.index].local),
         .stream_closed => |closed| capture.streamClosed(closed.stream, closed.reset_code != null),
         .closed => |closed| capture.disconnected(closed.conn),
         else => {},
@@ -566,20 +568,23 @@ pub fn nextDeadlineNs(self: *const Engine) ?u64 {
     return top.deadline;
 }
 
+/// `to` is the local address the datagram was sent to. A datagram for a connection with another
+/// local address is dropped: quiche would open a path for it and migrate.
 pub fn receive(
     self: *Engine,
     datagram: []u8,
     from: *const Address,
+    to: *const Address,
     now: Now,
     out: []u8,
 ) ReceiveOutcome {
     assert(datagram.len <= out.len);
     assert(self.registry.slots.len > 0);
-    const local = self.localFor(from.*) orelse return .dropped;
+    if (std.meta.activeTag(to.*) != std.meta.activeTag(from.*)) return .dropped;
     const header = binding.Header.parse(datagram, &self.header_token) catch
         return .dropped;
     if (self.registry.findRoute(&header.dcid)) |index| {
-        _ = self.feed(index, datagram, from, false);
+        if (!self.feed(index, datagram, from, to, false)) return .dropped;
         return .{ .accepted = self.toHandle(index) };
     }
     if (header.packet_type == .short) {
@@ -587,7 +592,7 @@ pub fn receive(
         // from a live peer's address marks nothing.
         const index = self.slotForPeer(from) orelse
             return .dropped;
-        if (!self.feed(index, datagram, from, true)) return .dropped;
+        if (!self.feed(index, datagram, from, to, true)) return .dropped;
         return .{ .accepted = self.toHandle(index) };
     }
     if (!self.admission_open) return .dropped;
@@ -625,7 +630,7 @@ pub fn receive(
     slot.open(&self.tls, &self.config, .{
         .direction = .inbound,
         .original_dcid = original,
-        .local = local,
+        .local = to.*,
         .peer = from.*,
         .scid = scid,
         .expected_peer_id = null,
@@ -641,7 +646,7 @@ pub fn receive(
     assert(slot.scid.eql(&header.dcid));
     self.registry.handshaking += 1;
     assert(self.registry.handshaking <= self.limits.handshaking_max);
-    _ = self.feed(index, datagram, from, false);
+    _ = self.feed(index, datagram, from, to, false);
     self.rekey(index, now);
     return .{ .accepted = self.toHandle(index) };
 }
@@ -934,28 +939,19 @@ fn toHandle(self: *const Engine, index: u16) Handle {
     return .{ .index = index, .generation = self.registry.slots[index].generation };
 }
 
-fn localFor(self: *const Engine, peer: Address) ?Address {
-    return self.local[
-        switch (peer) {
-            .ip4 => @as(usize, 0),
-            .ip6 => 1,
-        }
-    ];
-}
-
-/// Returns false only when progress was required and quiche neither processed a packet nor
-/// started closing.
-fn feed(self: *Engine, index: u16, datagram: []u8, from: *const Address, require_progress: bool) bool {
+/// Returns false when the datagram was sent to another local address, or when progress was
+/// required and quiche neither processed a packet nor started closing.
+fn feed(self: *Engine, index: u16, datagram: []u8, from: *const Address, to: *const Address, require_progress: bool) bool {
     assert(index < self.registry.slots.len);
     assert(datagram.len > 0);
     const slot = &self.registry.slots[index];
     assert(slot.state != .free);
+    if (!to.eql(slot.local)) return false;
     if (slot.state == .closed) return !require_progress;
     const different_source = !from.eql(slot.peer);
     const received_before = if (require_progress or different_source) slot.receivedPackets() else 0;
     const source = binding.SockAddr.fromAddress(from.*);
-    const destination = binding.SockAddr.fromAddress(self.localFor(from.*).?);
-    const received = if (slot.recv(datagram, &source, &destination)) |_| true else |_| false;
+    const received = if (slot.recv(datagram, &source, &slot.local_sockaddr)) |_| true else |_| false;
     if (different_source and slot.receivedPackets() != received_before) slot.receive_endpoint_known = false;
     if (require_progress and slot.receivedPackets() == received_before and !slot.isFinished()) return false;
     if (received) slot.answered = true;
@@ -1096,6 +1092,7 @@ test {
     _ = @import("engine_admission_test.zig");
     _ = @import("engine_close_test.zig");
     _ = @import("engine_handshake_test.zig");
+    _ = @import("engine_local_test.zig");
     _ = @import("engine_notifications_test.zig");
     _ = @import("engine_path_test.zig");
     _ = @import("engine_readiness_test.zig");

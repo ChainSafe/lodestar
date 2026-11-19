@@ -607,7 +607,6 @@ fn changeClientIdentity(setup: *harness.Pair, seed: u8) !void {
     const replacement = Engine.init(std.testing.allocator, .{
         .tls = ctx,
         .limits = .{},
-        .local = .{ support.client_address, null },
         .seed = &@as([32]u8, @splat(seed)),
     }) catch |err| {
         var failed_context = ctx;

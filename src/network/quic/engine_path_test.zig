@@ -127,6 +127,7 @@ test "engine survives an undecryptable packet routed to a live slot" {
     const outcome = pair.client.receive(
         &garbage,
         &server_address,
+        &client_address,
         pair.now,
         &response,
     );
@@ -151,6 +152,7 @@ test "engine routes a replayed client Initial to the existing connection" {
     const outcome = pair.server.receive(
         replay[0..pair.first_initial_len],
         &client_address,
+        &server_address,
         pair.now,
         &response,
     );
@@ -209,6 +211,7 @@ test "engine junk short header from a live peer's address marks nothing" {
     const outcome = pair.client.receive(
         &reset,
         &server_address,
+        &client_address,
         pair.now,
         &response,
     );
@@ -225,6 +228,7 @@ test "engine junk short header from a live peer's address marks nothing" {
         pair.client.receive(
             &reset,
             &stranger,
+            &client_address,
             pair.now,
             &response,
         ),

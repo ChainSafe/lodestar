@@ -80,6 +80,7 @@ handshake: tls.HandshakeState = .{},
 peer: types.Address = .unspecified,
 receive_endpoint_known: bool = true,
 peer_sockaddr: binding.SockAddr = .unspecified,
+local: types.Address = .unspecified,
 local_sockaddr: binding.SockAddr = .unspecified,
 expected_peer_id: ?PeerId = null,
 peer_id: ?PeerId = null,
@@ -121,6 +122,7 @@ pub fn open(
     self.peer = params.peer;
     self.receive_endpoint_known = true;
     self.peer_sockaddr = binding.SockAddr.fromAddress(params.peer);
+    self.local = params.local;
     self.local_sockaddr = binding.SockAddr.fromAddress(params.local);
     self.expected_peer_id = params.expected_peer_id;
     self.peer_id = null;
@@ -185,7 +187,7 @@ pub fn send(self: *Connection, now_ms: u64, out: []u8) Error!?Sent {
     self.last_send_ms = now_ms;
     const destination = binding.SockAddr.fromStorage(&info.to, info.to_len);
     const to = if (destination) |addr| addr.toAddress() orelse self.peer else self.peer;
-    return .{ .bytes = out[0..length], .to = to, .transmit_at_ns = info.transmitDeadline() };
+    return .{ .bytes = out[0..length], .to = to, .from = self.local, .transmit_at_ns = info.transmitDeadline() };
 }
 
 pub fn drainPathEvents(self: *Connection) ?types.Address {

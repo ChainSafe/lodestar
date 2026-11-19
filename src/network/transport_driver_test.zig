@@ -31,7 +31,7 @@ test "transport progress early clock failure does not begin or publish a turn" {
     try node.init(39);
     defer node.deinit();
     const now = try Now.read(std.testing.io);
-    const failed = try node.transport.engine.dial(&quic_test.server_address, node.transport.peerId(), now);
+    const failed = try node.transport.engine.dial(&quic_test.server_address, &node.transport.localAddress(), node.transport.peerId(), now);
     try std.testing.expect(node.transport.engine.failSend(failed));
     var faults: FaultIo = .{ .clock = .{} };
     const io = faults.io();
@@ -77,7 +77,7 @@ test "transport schedule waits for event capacity but always retires delivered e
     try node.init(41);
     defer node.deinit();
     const now = try Now.read(std.testing.io);
-    const handle = try node.transport.engine.dial(&quic_test.server_address, node.transport.peerId(), now);
+    const handle = try node.transport.engine.dial(&quic_test.server_address, &node.transport.localAddress(), node.transport.peerId(), now);
     try std.testing.expect(node.transport.engine.failSend(handle));
     const before = node.transport.engine.resourceSnapshot();
     const visits = node.transport.engine.visits;
