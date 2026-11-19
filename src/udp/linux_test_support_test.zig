@@ -63,8 +63,8 @@ test "UDP send filter selects descriptor and flags and ends with its thread" {
         }
 
         fn send(filtered: *const udp.Sockets, unfiltered: *const udp.Sockets) !void {
-            try std.testing.expectError(error.AccessDenied, filtered.sendTo(std.testing.io, filtered.localAddress(), "denied", 16));
-            try unfiltered.sendTo(std.testing.io, unfiltered.localAddress(), "other", 16);
+            try std.testing.expectError(error.AccessDenied, filtered.sendTo(std.testing.io, filtered.localAddress(), null, "denied", 16));
+            try unfiltered.sendTo(std.testing.io, unfiltered.localAddress(), null, "other", 16);
             try filtered.primary().send(std.testing.io, &filtered.primary().address, "blocking");
         }
     };
@@ -73,7 +73,7 @@ test "UDP send filter selects descriptor and flags and ends with its thread" {
     thread.join();
     try worker.installation.require();
     try worker.result;
-    try selected.sendTo(std.testing.io, selected.localAddress(), "parent", 16);
+    try selected.sendTo(std.testing.io, selected.localAddress(), null, "parent", 16);
     var buffer: [16]u8 = undefined;
     const timeout: std.Io.Timeout = .{ .duration = .{ .raw = .fromMilliseconds(1_000), .clock = .awake } };
     for ([_][]const u8{ "blocking", "parent" }) |expected| {

@@ -36,6 +36,8 @@ pub const AdvanceResult = struct {
     now_ms: u64 = 0,
     event: Engine.Event = .none,
     datagram: DatagramResult = .timeout,
+    /// The local address the processed datagram was sent to. Replies leave from it.
+    local: ?types.Address = null,
     calls_expired: usize = 0,
     standard_responses: u8 = 0,
     cancelled: bool = false,
@@ -88,7 +90,7 @@ pub fn startCall(
         now_ms,
         &entropy,
     );
-    self.transmit(io, peer.address, self.output[0..started.packet_length]) catch |err| {
+    self.transmit(io, peer.address, null, self.output[0..started.packet_length]) catch |err| {
         const cancelled = self.engine.cancelCall(started.handle);
         std.debug.assert(cancelled);
         return err;
@@ -101,7 +103,7 @@ pub fn startLookup(self: *Transport, io: std.Io, lookup: *Lookup, now_ms: u64) (
     try io.randomSecure(std.mem.asBytes(&entropy));
     defer std.crypto.secureZero(u8, std.mem.asBytes(&entropy));
     const started = try lookup.startNext(&self.engine, &self.output, try Transport.requestId(io), now_ms, &entropy) orelse return .{};
-    self.transmit(io, started.peer.address, self.output[0..started.call.packet_length]) catch |err| {
+    self.transmit(io, started.peer.address, null, self.output[0..started.call.packet_length]) catch |err| {
         std.debug.assert(lookup.onFailure(&self.engine, started.call.handle));
         return .{ .started = true, .failure = err };
     };
@@ -113,7 +115,7 @@ pub fn startMaintenance(self: *Transport, io: std.Io, maintenance: *Maintenance,
     try io.randomSecure(std.mem.asBytes(&entropy));
     defer std.crypto.secureZero(u8, std.mem.asBytes(&entropy));
     const started = try maintenance.startNext(&self.engine, &self.output, try Transport.requestId(io), now_ms, &entropy) orelse return .{};
-    self.transmit(io, started.peer.address, self.output[0..started.call.packet_length]) catch |err| {
+    self.transmit(io, started.peer.address, null, self.output[0..started.call.packet_length]) catch |err| {
         std.debug.assert(maintenance.onFailure(&self.engine, started.call.handle, now_ms, .local));
         return .{ .started = true, .failure = err };
     };
@@ -124,6 +126,7 @@ pub fn sendResponse(
     self: *Transport,
     io: std.Io,
     peer: types.Endpoint,
+    from: ?types.Address,
     response: *const message.Message,
     now_ms: u64,
 ) Error!void {
@@ -136,17 +139,19 @@ pub fn sendResponse(
         now_ms,
         &entropy,
     );
-    try self.transmit(io, peer.address, self.output[0..packet_length]);
+    try self.transmit(io, peer.address, from, self.output[0..packet_length]);
 }
 
-/// Failures tied to the destination collapse into `DestinationUnreachable`.
+/// Failures tied to the destination collapse into `DestinationUnreachable`. A reply passes the
+/// local address its request arrived on as `from`; a request passes null.
 pub fn transmit(
     self: *Transport,
     io: std.Io,
     destination: types.Address,
+    from: ?types.Address,
     bytes: []const u8,
 ) Error!void {
-    return self.sockets.sendTo(io, destination, bytes, constants.packet_size_max) catch |err| {
+    return self.sockets.sendTo(io, destination, from, bytes, constants.packet_size_max) catch |err| {
         if (Sockets.SendDrops.Reason.fromError(err)) |reason| self.send_drops.add(reason, bytes.len);
         std.log.scoped(.network_discovery).debug("discovery_send_failed endpoint={any} bytes={d} reason={s}", .{ destination, bytes.len, @errorName(err) });
         return if (Sockets.destinationUnreachable(err)) error.DestinationUnreachable else err;
@@ -170,7 +175,7 @@ pub fn advance(self: *Transport, io: std.Io, now_ms: u64, expired_calls: []CallT
     result.calls_expired = expired.calls;
     const datagram = input catch |err| switch (err) {
         error.Timeout => null,
-        error.InvalidSourceAddress => blk: {
+        error.InvalidSourceAddress, error.InvalidDestinationAddress => blk: {
             result.datagram = .{ .rejected = .malformed_packet };
             break :blk null;
         },
@@ -221,27 +226,29 @@ fn processDatagram(
         },
     };
     result.datagram = .accepted;
+    result.local = datagram.to;
     result.event = accepted.event;
     const packet = self.output[0..accepted.packet_length];
     if (accepted.call) |handle| {
         std.debug.assert(packet.len > 0 and accepted.event == .none);
         // An unsent handshake fails its call now, so the owner records a local failure rather
         // than a remote timeout later. A local fault still fails the step.
-        const sent = self.reply(io, datagram.from, packet) catch |err| {
+        const sent = self.reply(io, datagram.from, datagram.to, packet) catch |err| {
             result.event = self.engine.failCall(handle, error.HandshakeUnsent);
             return err;
         };
         if (!sent) result.event = self.engine.failCall(handle, error.HandshakeUnsent);
         return;
     }
-    if (packet.len > 0) _ = try self.reply(io, datagram.from, packet);
-    result.event = try self.handleEvent(io, accepted.event, result);
+    if (packet.len > 0) _ = try self.reply(io, datagram.from, datagram.to, packet);
+    result.event = try self.handleEvent(io, accepted.event, datagram.to, result);
 }
 
 fn handleEvent(
     self: *Transport,
     io: std.Io,
     event: Engine.Event,
+    local: types.Address,
     result: *AdvanceResult,
 ) Error!Engine.Event {
     const request = switch (event) {
@@ -263,7 +270,7 @@ fn handleEvent(
             &entropy,
         ) orelse break;
         // The destination refuses the remaining fragments too.
-        if (!try self.reply(io, request.peer.address, self.output[0..packet_length])) return .none;
+        if (!try self.reply(io, request.peer.address, local, self.output[0..packet_length])) return .none;
         result.standard_responses += 1;
     }
     std.debug.assert(self.response.complete());
@@ -272,8 +279,8 @@ fn handleEvent(
 
 /// Sends a packet this step produced and returns false when its destination refuses it. The
 /// refusal fails only that destination: a requester retries a dropped reply.
-fn reply(self: *Transport, io: std.Io, destination: types.Address, bytes: []const u8) Error!bool {
-    self.transmit(io, destination, bytes) catch |err| switch (err) {
+fn reply(self: *Transport, io: std.Io, destination: types.Address, from: types.Address, bytes: []const u8) Error!bool {
+    self.transmit(io, destination, from, bytes) catch |err| switch (err) {
         error.DestinationUnreachable => return false,
         else => return err,
     };
@@ -313,4 +320,5 @@ comptime {
 test {
     _ = @import("transport_test.zig");
     _ = @import("transport_socket_test.zig");
+    _ = @import("transport_source_test.zig");
 }
