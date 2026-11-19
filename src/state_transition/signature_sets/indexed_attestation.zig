@@ -62,22 +62,44 @@ pub fn getIndexedAttestationSignatureSet(
     const attesting_indices = indexed_attestation.attesting_indices.items;
     const pubkeys = try allocator.alloc(PublicKey, attesting_indices.len);
     errdefer allocator.free(pubkeys);
-    const validators_count = try state.validatorsCount();
-    for (attesting_indices, pubkeys) |index, *pubkey| {
-        if (epoch_cache.pubkey_cache.getPubkey(io, index)) |cached| {
-            pubkey.* = cached;
-            continue;
-        }
-        if (index >= validators_count) return error.PubkeyNotFound;
-        var validators = try state.validators();
-        var validator = try validators.get(index);
-        var pubkey_bytes: [48]u8 = undefined;
-        try validator.getValue(undefined, "pubkey", &pubkey_bytes);
-        pubkey.* = try PublicKey.uncompress(&pubkey_bytes);
-    }
+    epoch_cache.pubkey_cache.getPubkeys(io, attesting_indices, pubkeys) catch |err| switch (err) {
+        error.InvalidIndex => {
+            const cached_count = epoch_cache.pubkey_cache.count(io);
+            var cached_len: usize = 0;
+            for (attesting_indices) |index| {
+                if (index >= cached_count) break;
+                cached_len += 1;
+            }
+            epoch_cache.pubkey_cache.getPubkeys(
+                io,
+                attesting_indices[0..cached_len],
+                pubkeys[0..cached_len],
+            ) catch |batch_err| switch (batch_err) {
+                error.InvalidIndex => return error.PubkeyNotFound,
+                else => return batch_err,
+            };
+
+            if (cached_len < attesting_indices.len) {
+                const validators_count = try state.validatorsCount();
+                var validators = try state.validators();
+                for (attesting_indices[cached_len..], pubkeys[cached_len..]) |index, *pubkey| {
+                    if (index >= validators_count) return error.PubkeyNotFound;
+                    var validator = try validators.getReadonly(index);
+                    var pubkey_bytes: [48]u8 = undefined;
+                    try validator.getValue(undefined, "pubkey", &pubkey_bytes);
+                    pubkey.* = try PublicKey.uncompress(&pubkey_bytes);
+                }
+            }
+        },
+        else => return err,
+    };
 
     var signing_root: Root = undefined;
     try getAttestationDataSigningRoot(config, epoch_cache.epoch, &indexed_attestation.data, &signing_root);
 
     return createAggregateSignatureSetFromComponents(pubkeys, signing_root, indexed_attestation.signature);
+}
+
+test {
+    _ = @import("indexed_attestation_test.zig");
 }
