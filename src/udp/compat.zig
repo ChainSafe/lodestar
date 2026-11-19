@@ -35,18 +35,9 @@ pub fn bindIp6(io: std.Io, ip: net.Ip6Address) BindError!net.Socket {
         // Zig 0.16 Threaded sets IPV6_V6ONLY to zero for ip6_only. Set it before
         // binding its native sockets; other I/O providers retain their own bind contract.
         if (threaded(io)) {
-            try io.checkCancel();
             const p = std.posix;
-            const flags = p.SOCK.DGRAM | if (os == .linux) p.SOCK.CLOEXEC else 0;
-            const opened = p.system.socket(p.AF.INET6, flags, p.IPPROTO.UDP);
-            try checkBindError(p.errno(opened));
-            const fd: net.Socket.Handle = @intCast(opened);
+            const fd = try open(io, address);
             errdefer io.vtable.netClose(io.userdata, &.{fd});
-            if (os != .linux) try checkBindError(p.errno(p.system.fcntl(fd, p.F.SETFD, @as(usize, p.FD_CLOEXEC))));
-            const enabled: c_int = 1;
-            // Darwin's IPV6_V6ONLY from netinet6/in6.h is absent in Zig 0.16.
-            const ipv6_only = if (os == .macos) 27 else p.IPV6.V6ONLY;
-            try checkBindError(p.errno(p.system.setsockopt(fd, p.IPPROTO.IPV6, ipv6_only, std.mem.asBytes(&enabled), @sizeOf(c_int))));
             var storage: std.Io.Threaded.PosixAddress = undefined;
             var len = std.Io.Threaded.addressToPosix(&address, &storage);
             try checkBindError(p.errno(p.system.bind(fd, &storage.any, len)));
@@ -55,6 +46,25 @@ pub fn bindIp6(io: std.Io, ip: net.Ip6Address) BindError!net.Socket {
         }
     }
     return address.bind(io, .{ .mode = .dgram, .protocol = .udp, .ip6_only = true });
+}
+
+/// An unbound native UDP socket of `address`'s family. IPv6 sockets accept IPv6 only.
+pub fn open(io: std.Io, address: net.IpAddress) BindError!net.Socket.Handle {
+    try io.checkCancel();
+    const p = std.posix;
+    const flags = p.SOCK.DGRAM | if (os == .linux) p.SOCK.CLOEXEC else 0;
+    const opened = p.system.socket(if (address == .ip4) p.AF.INET else p.AF.INET6, flags, p.IPPROTO.UDP);
+    try checkBindError(p.errno(opened));
+    const fd: net.Socket.Handle = @intCast(opened);
+    errdefer io.vtable.netClose(io.userdata, &.{fd});
+    if (os != .linux) try checkBindError(p.errno(p.system.fcntl(fd, p.F.SETFD, @as(usize, p.FD_CLOEXEC))));
+    if (address == .ip6) {
+        const enabled: c_int = 1;
+        // Darwin's IPV6_V6ONLY from netinet6/in6.h is absent in Zig 0.16.
+        const ipv6_only = if (os == .macos) 27 else p.IPV6.V6ONLY;
+        try checkBindError(p.errno(p.system.setsockopt(fd, p.IPPROTO.IPV6, ipv6_only, std.mem.asBytes(&enabled), @sizeOf(c_int))));
+    }
+    return fd;
 }
 
 pub fn checkBindError(err: std.posix.E) BindError!void {
