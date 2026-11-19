@@ -1198,6 +1198,18 @@ export class ForkChoice implements IForkChoice {
       const previousSlot = this.fcStore.currentSlot;
       // Note: we are relying upon `onTick` to update `fcStore.time` to ensure we don't get stuck in a loop.
       const didUpdateCheckpoints = this.onTick(previousSlot + 1);
+      if (didUpdateCheckpoints) {
+        // The pull-up realizes the unrealized justified checkpoint regardless of its execution status. Throw before
+        // fast confirmation, which swallows head computation errors
+        const justified = this.fcStore.justified.checkpoint;
+        if (this.getBlockHexDefaultStatus(justified.rootHex)?.executionStatus === ExecutionStatus.Invalid) {
+          throw new ForkChoiceError({
+            code: ForkChoiceErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS,
+            epoch: justified.epoch,
+            root: justified.rootHex,
+          });
+        }
+      }
       this.queuedAttestationsPreviousSlot = 0;
       // Process any attestations that might now be eligible before running FCR for this slot.
       this.processAttestationQueue();

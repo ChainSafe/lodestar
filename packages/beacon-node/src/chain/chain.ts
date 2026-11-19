@@ -7,7 +7,6 @@ import {
   AncestorStatus,
   CheckpointWithHex,
   EpochDifference,
-  ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
   ForkChoiceStateGetter,
@@ -1863,17 +1862,10 @@ export class BeaconChain implements IBeaconChain {
     try {
       this.forkChoice.updateTime(slot);
     } catch (e) {
-      // The pull-up realizes the unrealized justified checkpoint regardless of its execution status. Per optimistic
-      // sync the node MAY exit once the justified checkpoint is INVALIDATED, fork choice has no head until then
-      const justified = this.forkChoice.getJustifiedCheckpoint();
-      if (this.forkChoice.getBlockHexDefaultStatus(justified.rootHex)?.executionStatus === ExecutionStatus.Invalid) {
-        const error = new ForkChoiceError({
-          code: ForkChoiceErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS,
-          epoch: justified.epoch,
-          root: justified.rootHex,
-        });
-        this.logger.error("Justified checkpoint has an invalid execution payload, shutting down", {slot}, error);
-        this.processShutdownCallback(error);
+      // Per optimistic sync the node MAY exit once the justified checkpoint is INVALIDATED, fork choice has no head
+      if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS) {
+        this.logger.error("Justified checkpoint has an invalid execution payload, shutting down", {slot}, e);
+        this.processShutdownCallback(e);
         return;
       }
       throw e;
