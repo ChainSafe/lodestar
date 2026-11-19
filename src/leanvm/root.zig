@@ -150,7 +150,8 @@ fn hostHasBaseline() bool {
         const hwcap_aes = 1 << 3;
         const hwcap_pmull = 1 << 4;
         const wanted = hwcap_aes | hwcap_pmull;
-        return std.os.linux.getauxval(std.elf.AT_HWCAP) & wanted == wanted;
+        // libc's: Zig's own reads a vector only its startup code sets, which a library never runs
+        return std.c.getauxval(std.elf.AT_HWCAP) & wanted == wanted;
     }
     const host = std.zig.system.resolveTargetQuery(std.Io.Threaded.global_single_threaded.io(), .{}) catch return false;
     return switch (builtin.cpu.arch) {
