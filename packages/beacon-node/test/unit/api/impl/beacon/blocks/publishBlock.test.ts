@@ -4,7 +4,7 @@ import {ApiError} from "@lodestar/api/server";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {BeaconStateView, computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
@@ -14,12 +14,14 @@ import {verifyBlocksInEpoch} from "../../../../../../src/chain/blocks/verifyBloc
 import {BlockError, BlockErrorCode, BlockGossipError, GossipAction} from "../../../../../../src/chain/errors/index.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
 import {validateAndCacheBeaconBlock} from "../../../../../../src/chain/validation/block.js";
+import {Clock} from "../../../../../../src/util/clock.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {
   ELECTRA_FORK_EPOCH,
   config as forkConfig,
   generateBlockWithColumnSidecars,
 } from "../../../../../utils/blocksAndData.js";
+import {generateCachedState} from "../../../../../utils/state.js";
 import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 
 vi.mock("../../../../../../src/chain/blocks/verifyBlock.js");
@@ -86,6 +88,92 @@ describe("api - beacon - publishBlockV2", () => {
     expect(validateAndCacheBeaconBlock).not.toHaveBeenCalled();
     expect(modules.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
     expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {earlyMs: 1001, validationDelay: null},
+    {earlyMs: 1000, validationDelay: 500},
+    {earlyMs: 750, validationDelay: 250},
+    {earlyMs: 500, validationDelay: 0},
+    {earlyMs: 0, validationDelay: 0},
+  ])("handles a block submitted $earlyMs ms before its slot", async ({earlyMs, validationDelay}) => {
+    const actual = await vi.importActual<typeof import("../../../../../../src/chain/validation/block.js")>(
+      "../../../../../../src/chain/validation/block.js"
+    );
+    vi.mocked(validateAndCacheBeaconBlock).mockImplementation(actual.validateAndCacheBeaconBlock);
+    const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    signedBlock.message.slot = 1;
+    const blockRoot = toRootHex(config.getForkTypes(1).BeaconBlock.hashTreeRoot(signedBlock.message));
+    const parent = generateProtoBlock({slot: 0});
+    modules.chain.forkChoice.getFinalizedCheckpoint.mockReturnValue({
+      epoch: 0,
+      root: signedBlock.message.parentRoot,
+      rootHex: parent.blockRoot,
+    });
+    modules.chain.forkChoice.getBlockHexDefaultStatus.mockImplementation((root) =>
+      root === blockRoot ? null : parent
+    );
+    const state = new BeaconStateView(generateCachedState());
+    vi.spyOn(state.cachedState.epochCtx, "getBeaconProposer").mockReturnValue(signedBlock.message.proposerIndex);
+    modules.chain.regen.getState.mockResolvedValue(state);
+    modules.chain.bls.verifySignatureSets.mockResolvedValue(true);
+    modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(
+      BlockInputColumns.createFromBlock({
+        forkName: ForkName.fulu,
+        block: signedBlock,
+        blockRootHex: blockRoot,
+        source: BlockInputSource.api,
+        seenTimestampSec: 0,
+        daOutOfRange: false,
+        sampledColumns: [0],
+        custodyColumns: [0],
+      })
+    );
+
+    const slotStart = computeTimeAtSlot(config, signedBlock.message.slot, modules.chain.genesisTime) * 1000;
+    vi.useFakeTimers({now: slotStart - earlyMs});
+    const controller = new AbortController();
+    Object.defineProperty(modules.chain, "clock", {
+      value: new Clock({config, genesisTime: modules.chain.genesisTime, signal: controller.signal}),
+    });
+    try {
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      const publication = api.publishBlockV2({signedBlockContents: {signedBlock}});
+      if (validationDelay === null) {
+        await expect(publication).rejects.toMatchObject({type: {code: BlockErrorCode.FUTURE_SLOT}});
+        expect(modules.chain.bls.verifySignatureSets).not.toHaveBeenCalled();
+        expect(modules.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
+        expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+        return;
+      }
+
+      publication.catch(() => undefined);
+      if (validationDelay > 0) {
+        await vi.advanceTimersByTimeAsync(validationDelay - 1);
+        expect(validateAndCacheBeaconBlock).not.toHaveBeenCalled();
+        expect(modules.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1);
+      } else {
+        await vi.advanceTimersByTimeAsync(0);
+      }
+      expect(modules.chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
+
+      const remainingMs = earlyMs - validationDelay;
+      if (remainingMs > 0) {
+        await vi.advanceTimersByTimeAsync(remainingMs - 1);
+        expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1);
+      }
+      await expect(publication).resolves.toBeUndefined();
+      expect(modules.network.publishBeaconBlock).toHaveBeenCalledWith(signedBlock);
+      expect(Date.now()).toBe(slotStart);
+      expect(vi.mocked(validateAndCacheBeaconBlock).mock.calls[0][3].seenTimestampSec).toBe(
+        (slotStart - earlyMs) / 1000
+      );
+    } finally {
+      controller.abort();
+      vi.useRealTimers();
+    }
   });
 
   describe("broadcast_validation=gossip", () => {

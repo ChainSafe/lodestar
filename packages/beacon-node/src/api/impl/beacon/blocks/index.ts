@@ -181,6 +181,13 @@ export function getBeaconBlockApi(
       }
     };
 
+    // Enter the gossip clock tolerance. validateGossipBlock() currently waits until slot start before returning.
+    // Blocks more than MAX_API_CLOCK_DISPARITY_MS early skip this wait and fail gossip validation as future blocks.
+    const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
+    if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
+      await sleep(msToBlockSlot - config.MAXIMUM_GOSSIP_CLOCK_DISPARITY);
+    }
+
     // Gossip validation runs for every block and broadcast validation level, and the block is only cached once it
     // passes. Locally produced blocks are included: the block production cache is keyed by root, which does not
     // cover the signature
@@ -274,14 +281,6 @@ export function getBeaconBlockApi(
         chain.logger.debug("Consensus validated while publishing block", valLogMeta);
         break;
       }
-    }
-
-    // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
-    // REST request promise without any extra infrastructure.
-    const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
-    if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
-      // If block is a bit early, hold it in a promise. Equivalent to a pending queue.
-      await sleep(msToBlockSlot);
     }
 
     if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
