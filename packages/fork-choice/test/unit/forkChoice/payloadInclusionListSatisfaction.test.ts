@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {ExecutionStatus, ForkChoice, ForkChoiceMetrics, PayloadStatus, ProtoArray} from "../../../src/index.js";
+import {ExecutionStatus, ForkChoice, ForkChoiceMetrics, PayloadStatus} from "../../../src/index.js";
 import {getPayloadBlockHash, gloasConfig, headSlot, hezeConfig, makeStore, setup} from "./proposerHeadTestUtils.js";
 
 /** Deliver the execution payload envelope for a block, creating its FULL variant. */
@@ -65,34 +65,9 @@ describe("ForkChoice payload inclusion list satisfaction", () => {
       expect(forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false)).toBe(false);
       expect(inc).toHaveBeenCalledTimes(1);
 
-      const protoArray = (forkChoice as unknown as {protoArray: ProtoArray}).protoArray;
-      expect(protoArray.shouldExtendPayload(headRoot, null)).toBe(false);
-      expect(protoArray.shouldExtendPayload(headRoot, null)).toBe(false);
+      expect(forkChoice.updateHead().payloadStatus).toBe(PayloadStatus.EMPTY);
+      expect(forkChoice.updateHead().payloadStatus).toBe(PayloadStatus.EMPTY);
       expect(inc).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe("protoArray wiring", () => {
-    it("gates variant selection in protoArray", () => {
-      const {forkChoice, headRoot} = setup({isGloas: true, config: hezeConfig});
-      deliverPayload(forkChoice, headRoot);
-      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
-
-      // Exercise protoArray directly: ForkChoice.shouldExtendPayload is not what production calls,
-      // getParentPayloadStatus reaches protoArray.shouldExtendPayload on its own.
-      const protoArray = (forkChoice as unknown as {protoArray: ProtoArray}).protoArray;
-      expect(protoArray.shouldExtendPayload(headRoot, null)).toBe(false);
-
-      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, true);
-      expect(protoArray.shouldExtendPayload(headRoot, null)).toBe(true);
-    });
-
-    it("leaves the gate open pre-heze", () => {
-      const {forkChoice, headRoot} = setup({isGloas: true, config: gloasConfig});
-      deliverPayload(forkChoice, headRoot);
-
-      const protoArray = (forkChoice as unknown as {protoArray: ProtoArray}).protoArray;
-      expect(protoArray.shouldExtendPayload(headRoot, null)).toBe(true);
     });
   });
 
@@ -110,19 +85,46 @@ describe("ForkChoice payload inclusion list satisfaction", () => {
     });
   });
 
-  describe("shouldExtendPayload", () => {
-    it("refuses to extend a heze payload that did not satisfy the constraints", () => {
+  describe("head during the next slot", () => {
+    it("stays on the EMPTY variant while the payload is recorded unsatisfied", () => {
       const {forkChoice, headRoot} = setup({isGloas: true, config: hezeConfig});
       deliverPayload(forkChoice, headRoot);
       forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
+      expect(forkChoice.updateHead().payloadStatus).toBe(PayloadStatus.EMPTY);
 
-      expect(forkChoice.shouldExtendPayload(headRoot)).toBe(false);
+      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, true);
+      const head = forkChoice.updateHead();
+      expect(head.blockRoot).toBe(headRoot);
+      expect(head.payloadStatus).toBe(PayloadStatus.FULL);
     });
 
     it("does not apply the inclusion list gate pre-heze", () => {
       const {forkChoice, headRoot} = setup({isGloas: true, config: gloasConfig});
       deliverPayload(forkChoice, headRoot);
-      // Nothing recorded, which post-heze would block extension
+
+      expect(forkChoice.updateHead().payloadStatus).toBe(PayloadStatus.FULL);
+    });
+  });
+
+  describe("head after the next slot", () => {
+    it("returns to the FULL variant of a payload recorded unsatisfied", () => {
+      const store = {...makeStore(), currentSlot: headSlot + 2};
+      const {forkChoice, headRoot} = setup({isGloas: true, config: hezeConfig, store});
+      deliverPayload(forkChoice, headRoot);
+      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
+
+      const head = forkChoice.updateHead();
+      expect(head.blockRoot).toBe(headRoot);
+      expect(head.payloadStatus).toBe(PayloadStatus.FULL);
+    });
+  });
+
+  describe("shouldExtendPayload", () => {
+    it("does not consider the inclusion list verdict", () => {
+      const {forkChoice, headRoot} = setup({isGloas: true, config: hezeConfig});
+      deliverPayload(forkChoice, headRoot);
+      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
+
       expect(forkChoice.shouldExtendPayload(headRoot)).toBe(true);
     });
   });
