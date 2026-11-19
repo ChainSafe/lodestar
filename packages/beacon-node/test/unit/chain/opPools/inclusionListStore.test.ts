@@ -207,6 +207,7 @@ describe("chain / opPools / InclusionListStore", () => {
 
       store.prune(slot + 2);
       expect(store.size).toBe(1);
+      expect(store.getInclusionListTransactions(slot, dependentRootHex).toArray()).toEqual([txA]);
 
       store.prune(slot + 3);
       expect(store.size).toBe(0);
