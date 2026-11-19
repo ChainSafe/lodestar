@@ -586,3 +586,7 @@ pub const Negotiator = struct {
         assert(2 * multistream.message_length_max <= outbox_capacity);
     }
 };
+
+test {
+    _ = @import("negotiate_test.zig");
+}
