@@ -1,6 +1,14 @@
+import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {ForkName, MIN_SEED_LOOKAHEAD, isForkPostBellatrix, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostGloas,
+  MIN_SEED_LOOKAHEAD,
+  isForkPostBellatrix,
+  isForkPostDeneb,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -11,7 +19,11 @@ import {
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock, ssz} from "@lodestar/types";
-import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
+import {Metrics} from "../../metrics/index.js";
+import {BlockInput, BlockInputSource} from "../blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../blocks/payloadEnvelopeInput/index.js";
+import {ChainEvent} from "../emitter.js";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
@@ -332,4 +344,167 @@ export async function verifyBlockProposerSignature(
   }
 
   chain.seenBlockInputCache.markVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature);
+}
+
+export type ValidateAndCacheBlockModules = {
+  chain: IBeaconChain;
+  config: ChainForkConfig;
+  metrics: Metrics | null;
+  logger: Logger;
+};
+
+export type BlockOrigin = {
+  source: BlockInputSource.gossip | BlockInputSource.api;
+  peerIdStr: string;
+  seenTimestampSec: number;
+};
+
+/**
+ * Add a block to the seen caches. The proposer signature of the block MUST be verified.
+ */
+export function cacheSignatureVerifiedBlock(
+  chain: IBeaconChain,
+  signedBlock: SignedBeaconBlock,
+  blockRootHex: RootHex,
+  fork: ForkName,
+  {source, peerIdStr, seenTimestampSec}: BlockOrigin
+): BlockInput {
+  const blockInput = chain.seenBlockInputCache.getByBlock({
+    block: signedBlock,
+    blockRootHex,
+    source,
+    seenTimestampSec,
+    peerIdStr,
+  });
+
+  // Also seed the payload-envelope cache, so we have PayloadEnvelopeInput even through "PARENT_BLOCK_UNKNOWN" error
+  // see https://github.com/ChainSafe/lodestar/issues/9475
+  if (isForkPostGloas(fork)) {
+    chain.seenPayloadEnvelopeInputCache.add({
+      blockRootHex,
+      block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+      forkName: fork,
+      sampledColumns: chain.custodyConfig.sampledColumns,
+      custodyColumns: chain.custodyConfig.custodyColumns,
+      seenTimestampSec,
+      source: source === BlockInputSource.gossip ? PayloadEnvelopeInputSource.gossip : PayloadEnvelopeInputSource.api,
+    });
+  }
+
+  return blockInput;
+}
+
+/**
+ * Gossip-validate a block and only then add it to the seen caches, so a rejected block never stays cached.
+ * A block with an unknown parent is authenticated, cached and handed to unknown parent sync, then the error is rethrown.
+ */
+export async function validateAndCacheBeaconBlock(
+  {chain, config, metrics, logger}: ValidateAndCacheBlockModules,
+  signedBlock: SignedBeaconBlock,
+  fork: ForkName,
+  origin: BlockOrigin
+): Promise<BlockInput> {
+  const {source, peerIdStr, seenTimestampSec} = origin;
+  const isGossip = source === BlockInputSource.gossip;
+  const slot = signedBlock.message.slot;
+  const forkTypes = config.getForkTypes(slot);
+  const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+  const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+  const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
+
+  const logCtx = {
+    slot,
+    root: blockRootHex,
+    currentSlot: chain.clock.currentSlot,
+    peerId: peerIdStr,
+    source,
+    delaySec,
+    recvToValLatency,
+  };
+
+  logger.debug("Received block for validation", {...logCtx});
+
+  chain.seenBlockInputCache.markValidatingBlock(blockRootHex);
+
+  try {
+    const {skippedSlots} = await validateGossipBlock(config, chain, signedBlock, fork);
+    const blockInput = cacheSignatureVerifiedBlock(chain, signedBlock, blockRootHex, fork, origin);
+
+    const recvToValidation = Date.now() / 1000 - seenTimestampSec;
+    const validationTime = recvToValidation - recvToValLatency;
+
+    if (isGossip) {
+      metrics?.gossipBlock.gossipValidation.recvToValidation.observe(recvToValidation);
+      metrics?.gossipBlock.gossipValidation.validationTime.observe(validationTime);
+      metrics?.gossipBlock.skippedSlots.observe(skippedSlots);
+    }
+
+    logger.debug("Validated block", {
+      ...blockInput.getLogMeta(),
+      ...logCtx,
+      recvToValidation,
+      validationTime,
+      skippedSlots,
+    });
+
+    if (isGossip) {
+      chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
+    }
+
+    return blockInput;
+  } catch (e) {
+    if (e instanceof BlockGossipError) {
+      logger.debug("Block has validation error", {slot, root: blockRootHex, source, code: e.type.code});
+      if (
+        e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
+        e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
+      ) {
+        // The block is retained for unknown parent sync without full validation. Authenticate it first, this
+        // does not need the parent state
+        const proposerIndex = signedBlock.message.proposerIndex;
+        await verifyBlockProposerSignature(chain, signedBlock, blockRootHex);
+        chain.seenBlockProposers.observeBlockRoot(
+          slot,
+          proposerIndex,
+          blockRootHex,
+          signedBlockToSignedHeader(config, signedBlock)
+        );
+
+        // Check again after the signature verification so concurrent proposals cannot both be retained
+        if (chain.seenBlockProposers.isKnown(slot, proposerIndex)) {
+          if (chain.seenBlockProposers.isRepeatProposal(slot, proposerIndex, blockRootHex)) {
+            throw new BlockGossipError(GossipAction.IGNORE, {
+              code: BlockErrorCode.REPEAT_PROPOSAL,
+              proposerIndex,
+              root: blockRootHex,
+            });
+          }
+          throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRootHex});
+        }
+        chain.seenBlockProposers.add(slot, proposerIndex, blockRootHex);
+
+        const blockInput = cacheSignatureVerifiedBlock(chain, signedBlock, blockRootHex, fork, origin);
+        chain.emitter.emit(ChainEvent.blockUnknownParent, {blockInput, peer: peerIdStr, source});
+        throw e;
+      }
+
+      if (isGossip && e.action === GossipAction.REJECT) {
+        chain.persistInvalidSszValue(
+          forkTypes.SignedBeaconBlock,
+          signedBlock,
+          `gossip_reject_slot_${slot}`,
+          blockRootHex
+        );
+      }
+    }
+    throw e;
+  } finally {
+    chain.seenBlockInputCache.unmarkValidatingBlock(blockRootHex);
+    // The block may have established an equivocation, either by conflicting with a previously observed block root
+    // (REPEAT_PROPOSAL) or with a root observed during validation
+    const proposerIndex = signedBlock.message.proposerIndex;
+    if (chain.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
+      chain.processProposerEquivocation(slot, proposerIndex);
+    }
+  }
 }

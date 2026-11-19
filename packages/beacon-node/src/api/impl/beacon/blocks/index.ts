@@ -37,7 +37,12 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, prettyGweiToEth, sleep, toHex, toRootHex} from "@lodestar/utils";
-import {BlockInputSource, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
+import {
+  BlockInput,
+  BlockInputSource,
+  IBlockInput,
+  isBlockInputColumns,
+} from "../../../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
@@ -61,7 +66,7 @@ import {
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../../chain/regen/index.js";
-import {validateGossipBlock, verifyBlockProposerSignature} from "../../../../chain/validation/block.js";
+import {validateAndCacheBeaconBlock} from "../../../../chain/validation/block.js";
 import {validateGossipExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
@@ -114,23 +119,20 @@ export function getBeaconBlockApi(
     }
     const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
 
-    const blockForImport = chain.seenBlockInputCache.getByBlock({
-      block: signedBlock,
-      source: BlockInputSource.api,
-      seenTimestampSec,
-      blockRootHex: blockRoot,
-    });
+    // check what validations have been requested before broadcasting and publishing the block
+    // TODO: add validation time to metrics
+    broadcastValidation = broadcastValidation ?? routes.beacon.BroadcastValidation.gossip;
+    // if block is locally produced, full or blinded, it already is 'consensus' validated as it went through
+    // state transition to produce the stateRoot
+    // bodyRoot should be the same to produced block
+    const bodyRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
+    const blockLocallyProduced = chain.blockProductionCache.has(blockRoot);
+    const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
 
-    if (isForkPostGloas(fork)) {
-      chain.seenPayloadEnvelopeInputCache.add({
-        blockRootHex: blockRoot,
-        block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
-        forkName: fork,
-        sampledColumns: chain.custodyConfig.sampledColumns,
-        custodyColumns: chain.custodyConfig.custodyColumns,
-        seenTimestampSec,
-        source: PayloadEnvelopeInputSource.api,
-      });
+    if (chain.forkChoice.hasBlockHex(blockRoot)) {
+      // Block was already imported, e.g. published again by the validator client or received via gossip
+      chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+      return;
     }
 
     // After gloas, data columns are not published with the block but when publishing the execution payload envelope.
@@ -155,9 +157,12 @@ export function getBeaconBlockApi(
       timer?.();
     }
 
-    if (isBlockInputColumns(blockForImport)) {
+    const addDataColumns = (blockInput: IBlockInput): void => {
+      if (!isBlockInputColumns(blockInput)) {
+        return;
+      }
       for (const dataColumnSidecar of dataColumnSidecars) {
-        blockForImport.addColumn(
+        blockInput.addColumn(
           {
             blockRootHex: blockRoot,
             columnSidecar: dataColumnSidecar,
@@ -170,52 +175,64 @@ export function getBeaconBlockApi(
           {throwOnDuplicateAdd: false}
         );
       }
-    }
+    };
 
-    // check what validations have been requested before broadcasting and publishing the block
-    // TODO: add validation time to metrics
-    broadcastValidation = broadcastValidation ?? routes.beacon.BroadcastValidation.gossip;
-    // if block is locally produced, full or blinded, it already is 'consensus' validated as it went through
-    // state transition to produce the stateRoot
-    // bodyRoot should be the same to produced block
-    const bodyRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
-    const blockLocallyProduced = chain.blockProductionCache.has(blockRoot);
-    const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
-
-    if (chain.forkChoice.hasBlockHex(blockRoot)) {
-      // Block was already imported, e.g. published again by the validator client or received via gossip
-      chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
-      return;
-    }
-
-    switch (broadcastValidation) {
-      case routes.beacon.BroadcastValidation.gossip: {
-        if (!blockLocallyProduced) {
-          try {
-            await validateGossipBlock(config, chain, signedBlock, fork);
-          } catch (error) {
-            if (error instanceof BlockGossipError) {
-              switch (error.type.code) {
-                case BlockErrorCode.ALREADY_KNOWN:
-                  // Block has already been seen, e.g. via gossip racing the publish API. Benign.
-                  chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
-                  return;
-              }
+    // Gossip validation runs for every block and broadcast validation level, and the block is only cached once it
+    // passes. Locally produced blocks are included: the block production cache is keyed by root, which does not
+    // cover the signature
+    let blockForImport: BlockInput;
+    try {
+      blockForImport = await validateAndCacheBeaconBlock(
+        {chain, config, metrics, logger: chain.logger},
+        signedBlock,
+        fork,
+        {
+          source: BlockInputSource.api,
+          peerIdStr: IDENTITY_PEER_ID,
+          seenTimestampSec,
+        }
+      );
+    } catch (error) {
+      if (error instanceof BlockGossipError) {
+        switch (error.type.code) {
+          case BlockErrorCode.ALREADY_KNOWN:
+            // Block has already been seen, e.g. via gossip racing the publish API. Benign.
+            chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+            return;
+          case BlockErrorCode.PARENT_BLOCK_UNKNOWN:
+          case BlockErrorCode.PARENT_PAYLOAD_UNKNOWN: {
+            // The authenticated block was cached and handed to unknown parent sync, it needs its columns for import
+            const blockInput = chain.seenBlockInputCache.get(blockRoot);
+            if (blockInput !== undefined) {
+              addDataColumns(blockInput);
             }
-
-            chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
+            chain.logger.debug("Parent unknown while publishing the block", valLogMeta, error);
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_gossip_failure",
+              "api_reject_parent_unknown",
               blockRoot
             );
             throw error;
           }
         }
-        chain.logger.debug("Gossip checks validated while publishing the block", valLogMeta);
-        break;
       }
+
+      chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
+      chain.persistInvalidSszValue(
+        chain.config.getForkTypes(slot).SignedBeaconBlock,
+        signedBlock,
+        "api_reject_gossip_failure",
+        blockRoot
+      );
+      throw error;
+    }
+    addDataColumns(blockForImport);
+    chain.logger.debug("Gossip checks validated while publishing the block", valLogMeta);
+
+    switch (broadcastValidation) {
+      case routes.beacon.BroadcastValidation.gossip:
+        break;
 
       case routes.beacon.BroadcastValidation.consensusAndEquivocation:
       case routes.beacon.BroadcastValidation.consensus: {
@@ -223,17 +240,7 @@ export function getBeaconBlockApi(
         if (!blockLocallyProduced) {
           const parentBlock = chain.forkChoice.getBlockDefaultStatus(signedBlock.message.parentRoot);
           if (parentBlock === null) {
-            chain.emitter.emit(ChainEvent.blockUnknownParent, {
-              blockInput: blockForImport,
-              peer: IDENTITY_PEER_ID,
-              source: BlockInputSource.api,
-            });
-            chain.persistInvalidSszValue(
-              chain.config.getForkTypes(slot).SignedBeaconBlock,
-              signedBlock,
-              "api_reject_parent_unknown",
-              blockRoot
-            );
+            // Gossip validation already checked the parent, it can only be pruned in between
             throw new BlockError(signedBlock, {
               code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
               parentRoot: toRootHex(signedBlock.message.parentRoot),
@@ -245,6 +252,7 @@ export function getBeaconBlockApi(
               ...opts,
               verifyOnly: true,
               skipVerifyExecutionPayload: true,
+              validProposerSignature: true,
               seenTimestampSec,
             });
           } catch (error) {
@@ -260,34 +268,6 @@ export function getBeaconBlockApi(
         }
 
         chain.logger.debug("Consensus validated while publishing block", valLogMeta);
-
-        // Non-local blocks had their proposer and block-body signatures checked by verifyBlocksInEpoch above
-        // Locally produced blocks already passed block production validation, so only their proposer signature is unchecked
-        // Verify that signature and observe the block root here
-        if (blockLocallyProduced) {
-          try {
-            await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
-            chain.seenBlockProposers.observeBlockRoot(
-              slot,
-              signedBlock.message.proposerIndex,
-              blockRoot,
-              signedBlockToSignedHeader(config, signedBlock)
-            );
-          } catch (e) {
-            chain.logger.error(
-              "Proposer signature validation failed while publishing the block",
-              valLogMeta,
-              e as Error
-            );
-            chain.persistInvalidSszValue(
-              chain.config.getForkTypes(slot).SignedBeaconBlock,
-              signedBlock,
-              "api_reject_consensus_failure",
-              blockRoot
-            );
-            throw e;
-          }
-        }
         break;
       }
 

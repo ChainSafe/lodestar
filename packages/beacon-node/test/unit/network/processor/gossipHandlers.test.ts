@@ -23,7 +23,7 @@ import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../src/chain
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {validateGossipExecutionPayloadEnvelope} from "../../../../src/chain/validation/executionPayloadEnvelope.js";
-import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
+import {validateAndCacheBeaconBlock} from "../../../../src/chain/validation/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NetworkEventBus} from "../../../../src/network/events.js";
@@ -35,11 +35,11 @@ import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../../src/util/peerId.js";
 import {ClockStopped} from "../../../mocks/clock.js";
 
-vi.mock("../../../../src/chain/validation/index.js", async (importActual) => {
-  const mod = await importActual<typeof import("../../../../src/chain/validation/index.js")>();
+vi.mock("../../../../src/chain/validation/block.js", async (importActual) => {
+  const mod = await importActual<typeof import("../../../../src/chain/validation/block.js")>();
   return {
     ...mod,
-    validateGossipBlock: vi.fn(),
+    validateAndCacheBeaconBlock: vi.fn(),
   };
 });
 
@@ -391,10 +391,6 @@ describe("getGossipHandlers", () => {
     Buffer.alloc(32, 0)
   );
 
-  beforeEach(() => {
-    vi.mocked(validateGossipBlock).mockResolvedValue({skippedSlots: 0});
-  });
-
   it("does not report the gossip peer when block processing hits an execution engine error", async () => {
     const {core} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.EXECUTION_ENGINE_ERROR);
 
@@ -663,6 +659,7 @@ async function runBeaconBlockProcessingError(
     seenTimestampSec: 0,
     peerIdStr,
   });
+  vi.mocked(validateAndCacheBeaconBlock).mockResolvedValue(blockInput);
   const error = getExecutionBlockError(signedBlock, code);
   const core = {reportPeer: vi.fn()} as Pick<INetworkCore, "reportPeer">;
   const chain = {
@@ -770,7 +767,7 @@ async function runBeaconBlockRepeatProposal(
 
   // gossip validation rejects the 2nd distinct block for this (proposer, slot) with REPEAT_PROPOSAL,
   // or the block outright when `reject` is set
-  vi.mocked(validateGossipBlock).mockRejectedValue(
+  vi.mocked(validateAndCacheBeaconBlock).mockRejectedValue(
     reject
       ? new BlockGossipError(GossipAction.REJECT, {
           code: BlockErrorCode.INCORRECT_PROPOSER,
