@@ -45,6 +45,16 @@ jobs:
           # Key prefix to separate benchmark data from multiple repositories
           S3_KEY_PREFIX: ${{ github.repository }}/${{ runner.os }}
 
+      # A single sample against a single baseline sample trips on unchanged code, a second sample shows whether it holds
+      # Without BENCHMARK_S3 the re-run neither compares against nor updates the stored baseline
+      - name: Re-run regressed benchmarks
+        if: failure() && steps.benchmarks.outcome == 'failure'
+        shell: bash
+        run: |
+          node scripts/ci/benchmark_regressions.mjs files "$RUNNER_TEMP/benchmark.log" | while read -r file; do
+            pnpm benchmark:files "$file" --noThrow --skipPostComment 2>&1 | tee -a "$RUNNER_TEMP/rerun.log" || true
+          done
+
       - name: Report failed benchmarks in the job summary
         if: failure() && steps.benchmarks.outcome == 'failure'
         # pipefail lets the gh fallbacks below take effect
@@ -59,9 +69,8 @@ jobs:
           {
             echo "### Failed benchmarks"
             echo
-            echo '```'
-            grep -E '^\s*(!|✖) ' <<< "$log" || echo "No failed benchmarks found, see the job log"
-            echo '```'
+            node scripts/ci/benchmark_regressions.mjs table "$RUNNER_TEMP/benchmark.log" "$RUNNER_TEMP/rerun.log" \
+              || echo "No failed benchmarks found, see the job log"
             echo
             if [ -z "$baseline" ]; then
               echo "No previous benchmark found"
