@@ -223,13 +223,12 @@ fn checkNewValidatorSignatures(
     valid: []?bool,
 ) !void {
     std.debug.assert(deposits.len == valid.len);
+    std.debug.assert(deposits.len <= preset.MAX_PENDING_DEPOSITS_PER_EPOCH);
     const validators_count = try state.validatorsCount();
     const checks: SignatureChecks = .{ .config = config, .deposits = deposits, .valid = valid };
 
-    // Tasks use `checks` and the caller's arrays, so none may outlive this call.
-    var group: std.Io.Group = .init;
-    defer group.cancel(io);
-
+    var to_check: [preset.MAX_PENDING_DEPOSITS_PER_EPOCH]usize = undefined;
+    var to_check_count: usize = 0;
     for (deposits, 0..) |deposit, index| {
         const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
         if (validator_index != null and validator_index.? < validators_count) continue;
@@ -237,8 +236,21 @@ fn checkNewValidatorSignatures(
         if (comptime fork.gte(.heze)) {
             if (deposit.withdrawal_credentials[0] == c.BLS_WITHDRAWAL_PREFIX) continue;
         }
+        to_check[to_check_count] = index;
+        to_check_count += 1;
+    }
+    if (to_check_count == 0) return;
+
+    // Tasks use `checks` and the caller's arrays, so none may outlive this call.
+    var group: std.Io.Group = .init;
+    defer group.cancel(io);
+
+    for (to_check[1..to_check_count]) |index| {
         group.async(io, SignatureChecks.check, .{ &checks, index });
     }
+    // The calling thread checks one deposit itself rather than wait idle, so a single check
+    // never pays for a task.
+    checks.check(to_check[0]);
     try group.await(io);
 }
 
