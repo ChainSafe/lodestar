@@ -20,6 +20,8 @@ pub const Sockets = struct {
     drop_counts: [2]DropCount = @splat(.{}),
     cursor: u1 = 0,
     native: [2]bool = @splat(false),
+    /// Unbound sockets per wildcard-bound native family, connected only to ask the kernel for a route.
+    probes: [2]?net.Socket.Handle = .{ null, null },
     control: Control align(8) = undefined,
 
     pub const Mode = enum {
@@ -50,6 +52,7 @@ pub const Sockets = struct {
     pub const BindError = net.IpAddress.BindError;
     pub const ReceiveError = net.Socket.ReceiveTimeoutError || error{IncompatibleProvider};
     pub const DatagramError = ReceiveError || error{ DatagramTooLarge, InvalidSourceAddress, InvalidDestinationAddress };
+    pub const SourceError = std.Io.Cancelable || error{ AddressFamilyUnsupported, SourceUnavailable };
     pub const SendError = net.Socket.SendError || error{
         IncompatibleProvider,
         DatagramTooLarge,
@@ -172,8 +175,11 @@ pub const Sockets = struct {
         }
         for (result.values, &result.native) |socket, *native| native.* = socket != null and native_sockets and compat.threaded(io);
         if (native_sockets) {
-            for (result.values, result.native) |socket, native| {
-                if (native) try compat.checkBindError(native_io.reportDestination(socket.?.handle, socket.?.address));
+            for (result.values, result.native, &result.probes) |socket, native, *probe| {
+                if (!native) continue;
+                const address = socket.?.address;
+                try compat.checkBindError(native_io.reportDestination(socket.?.handle, address));
+                if (unspecified(address)) probe.* = try compat.open(io, address);
             }
         }
         return result;
@@ -225,6 +231,7 @@ pub const Sockets = struct {
 
     pub fn close(self: *Sockets, io: std.Io) void {
         for (self.values) |socket| if (socket) |value| value.close(io);
+        for (self.probes) |probe| if (probe) |handle| io.vtable.netClose(io.userdata, &.{handle});
         self.* = .{};
     }
 
@@ -247,6 +254,26 @@ pub const Sockets = struct {
             result[i] = Address.fromNetwork(value.address);
         };
         return result;
+    }
+
+    /// The source address the kernel would choose to reach `peer`, with the bound port. A socket
+    /// bound to a specific address answers without a system call. Where no route can be asked
+    /// for, the answer is the bound address, which may be unspecified.
+    pub fn sourceFor(self: *const Sockets, io: std.Io, peer: Address) SourceError!Address {
+        const family: usize = if (peer == .ip4) 0 else 1;
+        const socket = self.values[family] orelse return error.AddressFamilyUnsupported;
+        const bound = Address.fromNetwork(socket.address);
+        if (native_sockets) {
+            if (self.probes[family]) |probe| {
+                assert(unspecified(socket.address));
+                var source = try native_io.route(io, probe, &peer.toNetwork());
+                switch (source) {
+                    inline else => |*ip| ip.port = bound.port(),
+                }
+                return source;
+            }
+        }
+        return bound;
     }
 
     pub fn handles(self: *const Sockets) [2]?net.Socket.Handle {
@@ -417,6 +444,12 @@ pub const Sockets = struct {
     fn passed(io: std.Io, deadline: std.Io.Timeout) bool {
         const duration = deadline.toDurationFromNow(io) orelse return false;
         return duration.raw.nanoseconds <= 0;
+    }
+
+    fn unspecified(address: net.IpAddress) bool {
+        return switch (address) {
+            inline else => |ip| std.mem.allEqual(u8, &ip.bytes, 0),
+        };
     }
 
     fn sameFamily(to: Address, from: ?Address) bool {

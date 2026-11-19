@@ -183,6 +183,26 @@ pub fn send(
     };
 }
 
+/// The source address the kernel routes `peer` from. Connecting a UDP socket sends nothing, and
+/// disconnecting makes the next call resolve afresh.
+pub fn route(io: std.Io, probe: net.Socket.Handle, peer: *const net.IpAddress) Sockets.SourceError!Address {
+    const p = std.posix;
+    var storage: compat.PosixAddress = undefined;
+    var length = compat.addressToPosix(peer, &storage);
+    try io.checkCancel();
+    if (p.errno(p.system.connect(probe, &storage.any, length)) != .SUCCESS) return error.SourceUnavailable;
+    length = @sizeOf(compat.PosixAddress);
+    const named = p.errno(p.system.getsockname(probe, &storage.any, &length));
+    var unspecified = std.mem.zeroes(p.sockaddr);
+    unspecified.family = p.AF.UNSPEC;
+    const disconnected = p.errno(p.system.connect(probe, &unspecified, @sizeOf(p.sockaddr)));
+    // Darwin disconnects and then reports the unspecified family as unsupported.
+    if (named != .SUCCESS or (disconnected != .SUCCESS and (os == .linux or disconnected != .AFNOSUPPORT))) return error.SourceUnavailable;
+    var source = Address.fromNetwork(compat.addressFromPosix(&storage));
+    if (source == .ip6 and !linkLocal(source.ip6.octets)) source.ip6.interface = 0;
+    return source;
+}
+
 pub const SendScratch = if (os == .linux) struct {
     headers: [Sockets.BatchScratch.capacity]linux.mmsghdr,
     addresses: [Sockets.BatchScratch.capacity]compat.PosixAddress,
