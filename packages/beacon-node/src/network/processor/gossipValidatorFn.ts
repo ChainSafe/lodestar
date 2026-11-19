@@ -21,7 +21,6 @@ import {
 } from "../../chain/errors/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {INetworkCore} from "../core/index.js";
 import {
   BatchGossipHandlerFn,
   GossipHandlerFn,
@@ -38,7 +37,6 @@ export type ValidatorFnModules = {
   config: ChainForkConfig;
   logger: Logger;
   metrics: Metrics | null;
-  core: INetworkCore;
 };
 
 export type OnFatalPeerFn = (peer: PeerIdStr) => void;
@@ -129,7 +127,7 @@ export function getGossipValidatorBatchFn(
   modules: ValidatorFnModules,
   onFatalPeer: OnFatalPeerFn
 ): GossipValidatorBatchFn {
-  const {logger, metrics, core} = modules;
+  const {logger, metrics} = modules;
 
   return async function gossipValidatorBatchFn(messageInfos: GossipMessageInfo[]) {
     // all messageInfos have same topic type
@@ -145,6 +143,7 @@ export function getGossipValidatorBatchFn(
           topic: messageInfo.topic,
           peerIdStr: messageInfo.propagationSource,
           seenTimestampSec: messageInfo.seenTimestampSec,
+          reportPeer: messageInfo.reportPeer,
         }))
       );
 
@@ -176,7 +175,7 @@ export function getGossipValidatorBatchFn(
             // only beacon_attestation topic is validated in batch
             metrics?.networkProcessor.gossipAttestationRejectByReason.inc({reason: e.type.code});
             const peerAction = rejectPeerAction(type, e.type.code);
-            core.reportPeer(propagationSource, peerAction, e.type.code);
+            messageInfos[i].reportPeer(peerAction, e.type.code);
             if (peerAction === PeerAction.Fatal) onFatalPeer(propagationSource);
             logger.debug(
               `Gossip validation ${type} rejected`,
@@ -218,7 +217,7 @@ export function getGossipValidatorFn(
   modules: ValidatorFnModules,
   onFatalPeer: OnFatalPeerFn
 ): GossipValidatorFn {
-  const {logger, metrics, core} = modules;
+  const {logger, metrics} = modules;
 
   return async function gossipValidatorFn({
     topic,
@@ -228,6 +227,7 @@ export function getGossipValidatorFn(
     clientVersion,
     seenTimestampSec,
     msgSlot,
+    reportPeer,
   }) {
     const type = topic.type;
 
@@ -237,6 +237,7 @@ export function getGossipValidatorFn(
         topic,
         peerIdStr: propagationSource,
         seenTimestampSec,
+        reportPeer,
       });
 
       metrics?.networkProcessor.gossipValidationAccept.inc({topic: type});
@@ -268,7 +269,7 @@ export function getGossipValidatorFn(
         case GossipAction.REJECT: {
           metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
           const peerAction = rejectPeerAction(type, e.type.code);
-          core.reportPeer(propagationSource, peerAction, e.type.code);
+          reportPeer(peerAction, e.type.code);
           if (peerAction === PeerAction.Fatal) onFatalPeer(propagationSource);
           logger.debug(
             `Gossip validation ${type} rejected`,

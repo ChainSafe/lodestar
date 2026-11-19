@@ -4,7 +4,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {defer, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../src/chain/interface.js";
 import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../../../../src/network/events.js";
@@ -15,6 +15,7 @@ import {
   GossipTopic,
   GossipType,
 } from "../../../../src/network/gossip/interface.js";
+import {PeerAction} from "../../../../src/network/peers/index.js";
 import {AggregatorTracker} from "../../../../src/network/processor/aggregatorTracker.js";
 import {NetworkProcessor} from "../../../../src/network/processor/index.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
@@ -158,6 +159,26 @@ describe("NetworkProcessor lifecycle", () => {
     expect(f.processor.dumpGossipQueue(GossipType.voluntary_exit)).toEqual([]);
     expect(f.single).not.toHaveBeenCalled();
     expect(f.results).toEqual([]);
+  });
+
+  it("attaches the delivery's reporter after worker transfer and retains it through deferred work", async () => {
+    const f = setup();
+    const held = defer<void>();
+    f.single.mockImplementation(async ({reportPeer}) => {
+      await held.promise;
+      reportPeer(PeerAction.LowToleranceError, "BadGossipBlock");
+    });
+    const incoming = message(1);
+    const transferred = structuredClone(incoming);
+    f.dispatch(transferred);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.single).toHaveBeenCalledOnce();
+    expect(structuredClone(transferred)).toEqual(incoming);
+    transferred.propagationSource = "replacement";
+    held.resolve();
+    await vi.runAllTimersAsync();
+    expect(f.core.reportPeer).toHaveBeenCalledExactlyOnceWith(source, PeerAction.LowToleranceError, "BadGossipBlock");
+    expect(f.results[0].propagationSource).toBe(source);
   });
 
   it.each(["stop", "dropAllJobs"] as const)(
