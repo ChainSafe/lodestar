@@ -283,6 +283,8 @@ export interface IForkChoice {
   shouldExtendPayload(blockRoot: RootHex): boolean;
   /** Spec: should_build_on_full(store, head, slot) */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean;
+  /** Spec: is_proposer_equivocation(store, root) */
+  isProposerEquivocation(block: ProtoBlock): boolean;
   /** Inclusion list verdict for the payload of `blockRoot`, as reported by the execution engine. True if it changed */
   recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): boolean;
   /** True once the payload is delivered and not recorded unsatisfied */

@@ -46,8 +46,9 @@ function getMinBidValue(currentHighestBid: number): number {
 /**
  * Check whether a bid builds on one of the paths compatible with the local head branch.
  *
- * Building directly on the parent is allowed for proposer-boost reorgs, including at epoch
- * boundaries when the head is weak enough that a reorg onto the strong parent is predicted.
+ * Building directly on the parent is allowed for the slot after the head if the head was late or
+ * its proposer equivocated, the conditions under which a proposer may re-org the head. At epoch
+ * boundaries the parent must also be the predicted proposer head.
  * Otherwise the bid must build on the local head's full or empty payload variant, as selected for its slot.
  */
 function isBidCompatibleWithHead(
@@ -61,6 +62,11 @@ function isBidCompatibleWithHead(
   const buildsOnParentPayload = bidParentBlockHash === head.parentBlockHash;
 
   if (buildsOnParentBlock && buildsOnParentPayload) {
+    const bidSlotOk = head.slot + 1 === bidSlot;
+    const headLate = !head.timeliness;
+    if (!bidSlotOk || !(headLate || chain.forkChoice.isProposerEquivocation(head))) {
+      return false;
+    }
     if (!isStartSlotOfEpoch(bidSlot)) {
       return true;
     }
@@ -136,6 +142,21 @@ async function validateExecutionPayloadBid(
   ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+    });
+  }
+
+  // [IGNORE] The bid is received after the payload attestation deadline of `bid.slot - 1`
+  if (
+    chain.clock.msFromSlot(bid.slot - 1) <
+    chain.config.getSlotComponentDurationMs(
+      chain.config.getForkName(bid.slot - 1),
+      chain.config.PAYLOAD_ATTESTATION_DUE_BPS
+    )
+  ) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BEFORE_PAYLOAD_ATTESTATION_DEADLINE,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
     });
