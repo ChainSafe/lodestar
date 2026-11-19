@@ -1471,7 +1471,7 @@ pub const Store = struct {
                 break;
             };
             const conflict = statuses[block] != .syncing;
-            const protected = if (justified) |j| block < j or (block == j and forks[block].lt(.gloas)) else false;
+            const protected = if (justified) |j| self.payloadProtected(&hashes[block], j) else false;
             if (!conflict and !protected) continue;
             if (judged == .child_payload and conflict) return .contradiction;
             count = if (judged == .from_block) @min(i, 1) else i;
@@ -1493,6 +1493,18 @@ pub const Store = struct {
         }
         self.head_cache.dirty = true;
         return .applied;
+    }
+
+    /// Whether a block carrying `hash` is the justified block or below it. The INVALID write
+    /// covers every carrier, so one protected carrier protects the payload.
+    fn payloadProtected(self: *const Store, hash: *const Root, justified: BlockIndex) bool {
+        const hashes = self.blocks.items(.payload_block_hash);
+        const forks = self.blocks.items(.fork);
+        for (hashes[0 .. justified + 1], forks[0 .. justified + 1], 0..) |*carrier, fork, block| {
+            if (!std.mem.eql(u8, carrier, hash)) continue;
+            if (block < justified or fork.lt(.gloas)) return true;
+        }
+        return false;
     }
 
     /// The worst engine verdict on the payloads `node` stands on, read from the payloads

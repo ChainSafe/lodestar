@@ -906,6 +906,18 @@ test "optimistic sync: an INVALID verdict never crosses the justified block or a
     try testing.expectEqual(pendingOf(&store, 0x20), try store.getHead());
     try testing.expectEqual(VerdictResult.already_applied, try store.onPayloadInvalid(tagRoot(0x31), tagHash(0x31), ZERO, .child_payload));
 
+    // 0x50 carries the justified 0x40's payload: invalidating it would invalidate 0x40.
+    var carried = try Store.initFromSummary(allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
+    defer carried.deinit();
+    try carried.onTick(carried.timing.timeAtSlotMs(8));
+    try carried.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
+    try carried.onBlockSummary(optimisticSummary(.{ .tag = 0x40, .parent = 0x20, .slot = 2 }));
+    try carried.onBlockSummary(optimisticSummary(.{ .tag = 0x50, .parent = 0x20, .slot = 2, .payload = 0x40 }));
+    carried.justified_checkpoint.root = tagRoot(0x40);
+    try testing.expectEqual(VerdictResult.nothing_to_invalidate, try carried.onPayloadInvalid(tagRoot(0x50), tagHash(0x40), null, .from_block));
+    try testing.expectEqual(ExecutionStatus.syncing, try carried.executionStatus(pendingOf(&carried, 0x40)));
+    try testing.expectEqual(ExecutionStatus.syncing, try carried.executionStatus(pendingOf(&carried, 0x50)));
+
     var resolved = try Store.initFromSummary(allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
     defer resolved.deinit();
     try resolved.onTick(resolved.timing.timeAtSlotMs(8));
