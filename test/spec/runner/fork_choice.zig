@@ -357,7 +357,7 @@ pub fn TestCase(comptime fork: ForkSeq) type {
                 .valid => return .valid,
                 .syncing, .accepted => return .syncing,
                 .invalid => {
-                    try self.store.onPayloadInvalid(block.parentRoot().*, payload.parentHash().*, verdict.latest_valid_hash);
+                    _ = try self.store.onPayloadInvalid(block.parentRoot().*, payload.parentHash().*, verdict.latest_valid_hash, .child_payload);
                     return error.InvalidExecutionPayload;
                 },
                 .invalid_block_hash => return error.InvalidExecutionPayload,

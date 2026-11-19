@@ -75,11 +75,32 @@ pub const Error = error{
     ExecutionStatusMismatch,
     ParentPayloadInvalid,
     InvalidJustifiedPayload,
-    UnknownPayload,
-    UnknownLatestValidHash,
     PayloadInvalidToValid,
-    PayloadValidToInvalid,
 } || Allocator.Error;
+
+/// Which payload the engine judged `INVALID`, relative to the node the walk starts from.
+pub const InvalidJudged = enum {
+    /// The from node's own payload, as the head in `forkchoiceUpdated`.
+    from_block,
+    /// A payload built on the from node that is not in the store, as one `newPayload` rejected.
+    child_payload,
+};
+
+/// Whether an engine verdict changed the store, and if not, why. Mirrors proto-array's
+/// `LVHNotAppliedReason`.
+pub const VerdictResult = enum {
+    applied,
+    /// A `VALID` verdict whose latest valid hash is not in the store.
+    unknown_lvh,
+    /// The store already holds the verdict.
+    already_applied,
+    /// The verdict contradicts a status the engine already resolved.
+    contradiction,
+    /// An `INVALID` verdict on a payload not in the store, with a null or unknown latest valid hash.
+    unusable_lvh,
+    /// An `INVALID` verdict that covers no payload above the latest valid hash or the justified block.
+    nothing_to_invalidate,
+};
 
 /// Spec `PayloadStatus` values; the numeric values are what the spec test vectors report.
 pub const PayloadStatus = enum(u8) {
@@ -1346,93 +1367,157 @@ pub const Store = struct {
 
     /// Optimistic sync `NOT_VALIDATED -> VALID` for the payload with `block_hash`, in every
     /// block carrying it, and, as the spec requires, every not yet validated payload below it.
-    /// `error.PayloadInvalidToValid` means the engine contradicted an earlier verdict. Carriers
-    /// share one payload chain, so in practice it fails before any write; otherwise the
-    /// carriers already marked keep `.valid`, which the engine vouched for and the head ignores.
-    pub fn onPayloadValid(self: *Store, block_hash: Root) Error!void {
+    /// Every carrier's walk is checked before any write.
+    pub fn onPayloadValid(self: *Store, block_hash: Root) VerdictResult {
         const hashes = self.blocks.items(.payload_block_hash);
         var found = false;
+        var changes = false;
         for (hashes, 0..) |*hash, i| {
             if (!std.mem.eql(u8, hash, &block_hash)) continue;
             found = true;
-            const index: BlockIndex = @intCast(i);
-            const node: ForkChoiceNode = if (self.blocks.items(.fork)[i].gte(.gloas)) .{ .block = index, .payload_status = .full } else pendingNode(index);
-            try self.markChainValid(node);
+            const walk = self.validWalk(self.ownPayloadNode(@intCast(i))) catch return .contradiction;
+            if (walk.count > 0 or walk.validates_root_base) changes = true;
         }
-        if (!found) return error.UnknownPayload;
+        if (!found) return .unknown_lvh;
+        if (!changes) return .already_applied;
+        for (hashes, 0..) |*hash, i| {
+            if (!std.mem.eql(u8, hash, &block_hash)) continue;
+            self.markChainValid(self.ownPayloadNode(@intCast(i))) catch unreachable;
+        }
+        return .applied;
+    }
+
+    /// The node whose payload chain starts with `block`'s own payload.
+    fn ownPayloadNode(self: *const Store, block: BlockIndex) ForkChoiceNode {
+        return if (self.blocks.items(.fork)[block].gte(.gloas)) .{ .block = block, .payload_status = .full } else pendingNode(block);
+    }
+
+    const ValidWalk = struct { count: usize, validates_root_base: bool };
+
+    /// The `.syncing` payloads from `node` down to the first `.valid` or `.pre_merge` one,
+    /// and whether the walk reaches the root's still open base.
+    fn validWalk(self: *const Store, node: ForkChoiceNode) error{PayloadInvalidToValid}!ValidWalk {
+        const statuses = self.blocks.items(.execution_status);
+        var count: usize = 0;
+        var chain = self.payloadChain(node);
+        while (chain.next()) |block| {
+            switch (statuses[block]) {
+                .invalid => return error.PayloadInvalidToValid,
+                .valid, .pre_merge => return .{ .count = count, .validates_root_base = false },
+                .syncing => count += 1,
+            }
+        }
+        if (self.root_base_status == .invalid) return error.PayloadInvalidToValid;
+        return .{ .count = count, .validates_root_base = self.root_base_status == .syncing };
     }
 
     /// Marks the `.syncing` payloads from `node` down `.valid`, stopping at the first payload
     /// already `.valid` or `.pre_merge`. Writes nothing when an `.invalid` payload comes first.
     /// A payload just marked `.valid` passes the node it hangs from, not its own.
-    fn markChainValid(self: *Store, node: ForkChoiceNode) Error!void {
+    fn markChainValid(self: *Store, node: ForkChoiceNode) error{PayloadInvalidToValid}!void {
+        const walk = try self.validWalk(node);
+        if (walk.count == 0 and !walk.validates_root_base) return;
         const statuses = self.blocks.items(.execution_status);
-        var count: usize = 0;
         var chain = self.payloadChain(node);
-        var reached_root = true;
-        while (chain.next()) |block| {
-            switch (statuses[block]) {
-                .invalid => return error.PayloadInvalidToValid,
-                .valid, .pre_merge => {
-                    reached_root = false;
-                    break;
-                },
-                .syncing => count += 1,
-            }
-        }
-        if (reached_root and self.root_base_status == .invalid) return error.PayloadInvalidToValid;
-        const validates_root_base = reached_root and self.root_base_status == .syncing;
-        if (count == 0 and !validates_root_base) return;
-        chain = self.payloadChain(node);
-        while (count > 0) : (count -= 1) statuses[chain.next().?] = .valid;
-        if (validates_root_base) self.root_base_status = .valid;
+        for (0..walk.count) |_| statuses[chain.next().?] = .valid;
+        if (walk.validates_root_base) self.root_base_status = .valid;
         self.head_cache.dirty = true;
     }
 
-    /// Optimistic sync `NOT_VALIDATED -> INVALIDATED` from an engine `INVALID` verdict on
-    /// a block that is not in the store: `parent_root` and `parent_block_hash` are the
-    /// rejected block's parent and its payload's `parent_hash`. Every payload from the
-    /// parent down to `latest_valid_hash` (exclusive) is invalidated in every block carrying
-    /// it, as equivocating blocks can share a payload; a zero hash
-    /// invalidates through the merge block. A null or unknown hash names the rejected
-    /// block itself, so nothing changes. Descendants of an invalidated payload are
-    /// derived invalid by `getHead`.
-    pub fn onPayloadInvalid(self: *Store, parent_root: Root, parent_block_hash: Root, latest_valid_hash: ?Root) Error!void {
-        const parent = self.blockIndex(parent_root) orelse return error.UnknownParent;
-        const lvh = latest_valid_hash orelse return;
+    /// Optimistic sync `NOT_VALIDATED -> INVALIDATED` from an engine `INVALID` verdict, the
+    /// `validateLatestHash` of proto-array. The walk starts at the node `from_root` and
+    /// `from_block_hash` name and marks payloads `invalid` down to `latest_valid_hash`,
+    /// exclusive, in every block carrying them, as equivocating blocks can share a payload;
+    /// a zero hash invalidates through the merge block. Descendants are derived invalid by
+    /// `getHead`.
+    ///
+    /// A verdict never flips a payload the engine already resolved and never reaches the
+    /// payloads the justified block stands on. A null or unknown hash leaves only the claim
+    /// about the judged payload: with `.from_block` the from node's own payload is
+    /// invalidated, with `.child_payload` the judged payload is not in the store and the
+    /// verdict is dropped.
+    pub fn onPayloadInvalid(self: *Store, from_root: Root, from_block_hash: Root, latest_valid_hash: ?Root, judged: InvalidJudged) Error!VerdictResult {
+        const from = self.blockIndex(from_root) orelse return error.UnknownBlock;
         const hashes = self.blocks.items(.payload_block_hash);
         const statuses = self.blocks.items(.execution_status);
-        const start: ForkChoiceNode = if (self.blocks.items(.fork)[parent].lt(.gloas))
-            pendingNode(parent)
+        const forks = self.blocks.items(.fork);
+        const start: ForkChoiceNode = if (forks[from].lt(.gloas))
+            pendingNode(from)
         else
-            .{ .block = parent, .payload_status = if (std.mem.eql(u8, &hashes[parent], &parent_block_hash)) .full else .empty };
-        var count: usize = 0;
-        var found = false;
-        var chain = self.payloadChain(start);
-        while (chain.next()) |block| {
-            if (std.mem.eql(u8, &hashes[block], &lvh)) {
-                found = true;
-                break;
-            }
-            count += 1;
+            .{ .block = from, .payload_status = if (std.mem.eql(u8, &hashes[from], &from_block_hash)) .full else .empty };
+        switch (self.payloadChainStatus(start)) {
+            .syncing => {},
+            .invalid => return .already_applied,
+            .valid, .pre_merge => return .contradiction,
         }
-        if (!found) return error.UnknownLatestValidHash;
+
+        var count: usize = 0;
+        var chain = self.payloadChain(start);
+        const lvh_found = if (latest_valid_hash) |lvh| while (chain.next()) |block| {
+            if (std.mem.eql(u8, &hashes[block], &lvh)) break true;
+            count += 1;
+        } else false else false;
+        if (!lvh_found) {
+            if (judged == .child_payload) return .unusable_lvh;
+            count = 1;
+        }
+
+        // Indices are topological; a Gloas justified block's own payload is not in the checkpoint.
+        const justified = self.blockIndex(self.justified_checkpoint.root);
+        chain = self.payloadChain(start);
+        for (0..count) |i| {
+            const block = chain.next() orelse {
+                count = i;
+                break;
+            };
+            const conflict = statuses[block] != .syncing;
+            const protected = if (justified) |j| self.payloadProtected(&hashes[block], j) else false;
+            if (!conflict and !protected) continue;
+            if (judged == .child_payload and conflict) return .contradiction;
+            count = if (judged == .from_block) @min(i, 1) else i;
+            break;
+        }
+        if (count == 0) return .nothing_to_invalidate;
+
         var invalid_hashes: std.AutoHashMapUnmanaged(Root, void) = .empty;
         defer invalid_hashes.deinit(self.allocator);
+        try invalid_hashes.ensureTotalCapacity(self.allocator, @intCast(count));
         chain = self.payloadChain(start);
-        for (0..count) |_| try invalid_hashes.put(self.allocator, hashes[chain.next().?], {});
-        if (invalid_hashes.count() == 0) return;
+        for (0..count) |_| invalid_hashes.putAssumeCapacity(hashes[chain.next().?], {});
         for (hashes, statuses) |*hash, status| {
             if (!invalid_hashes.contains(hash.*)) continue;
-            switch (status) {
-                .valid, .pre_merge => return error.PayloadValidToInvalid,
-                .syncing, .invalid => {},
-            }
+            if (status == .valid or status == .pre_merge) return .contradiction;
         }
         for (hashes, statuses) |*hash, *status| {
             if (invalid_hashes.contains(hash.*)) status.* = .invalid;
         }
         self.head_cache.dirty = true;
+        return .applied;
+    }
+
+    /// Whether a block carrying `hash` is the justified block or below it. The INVALID write
+    /// covers every carrier, so one protected carrier protects the payload.
+    fn payloadProtected(self: *const Store, hash: *const Root, justified: BlockIndex) bool {
+        const hashes = self.blocks.items(.payload_block_hash);
+        const forks = self.blocks.items(.fork);
+        for (hashes[0 .. justified + 1], forks[0 .. justified + 1], 0..) |*carrier, fork, block| {
+            if (!std.mem.eql(u8, carrier, hash)) continue;
+            if (block < justified or fork.lt(.gloas)) return true;
+        }
+        return false;
+    }
+
+    /// The worst engine verdict on the payloads `node` stands on, read from the payloads
+    /// themselves, so it needs no head computation.
+    fn payloadChainStatus(self: *const Store, node: ForkChoiceNode) ExecutionStatus {
+        const statuses = self.blocks.items(.execution_status);
+        var status = self.root_base_status;
+        var chain = self.payloadChain(node);
+        while (chain.next()) |block| {
+            if (statuses[block] == .invalid) return .invalid;
+            status = status.worst(statuses[block]);
+        }
+        return status;
     }
 
     /// The worst engine verdict on the payloads `node` stands on, valid after `getHead`.

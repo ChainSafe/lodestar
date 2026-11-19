@@ -103,19 +103,21 @@ to exit there and proto-array does the same. Two entry points change the facts:
 - `onPayloadValid(block_hash)` and a `.valid` verdict on `onBlock` or
   `onExecutionPayloadEnvelope` mark every `syncing` payload below the node `valid`,
   stopping at the first `valid` or `pre_merge` one.
-- `onPayloadInvalid(parent_root, parent_block_hash, latest_valid_hash)` is the
-  `validateLatestHash` of proto-array: the rejected block is never in the store, so
-  the walk starts at its parent node and marks payloads `invalid` down to the latest
-  valid hash, exclusive. A zero hash stops at the merge boundary; a null or unknown
-  hash names the rejected block itself and changes nothing. Descendants need no walk,
-  the derivation covers them.
+- `onPayloadInvalid(from_root, from_block_hash, latest_valid_hash, judged)` is the
+  `validateLatestHash` of proto-array: the walk starts at the from node and marks
+  payloads `invalid` down to the latest valid hash, exclusive. `judged` names the
+  payload the engine rejected: the from node's own (`.from_block`, a `forkchoiceUpdated`
+  head) or a child not in the store (`.child_payload`, a `newPayload` block or
+  envelope). A zero hash stops at the merge boundary. A null or unknown hash
+  invalidates only the from node's own payload for `.from_block` and drops a
+  `.child_payload` verdict. Descendants need no walk, the derivation covers them.
 
 Both walks follow the payload chain: `full` nodes and pre-Gloas blocks contribute
-their own payload, `empty` links skip the parent's. Both check the whole walk before
-writing it, so a `valid` to `invalid` or `invalid` to `valid` transition is reported
-with nothing changed. The one exception is `onPayloadValid` across carriers: they share
-a payload chain, so a later carrier failing after an earlier one passed needs a
-contradicting engine, and the marks already made are ones the engine vouched for.
+their own payload, `empty` links skip the parent's. Both check the whole walk, in
+every block carrying the payload, before writing. A verdict never flips a payload the
+engine already resolved, and an invalid walk never reaches the payloads the justified
+block stands on; both return a `VerdictResult` that says why nothing changed.
+`onBlock` and `onExecutionPayloadEnvelope` fail with `error.PayloadInvalidToValid` instead.
 
 The root block hangs from nothing, so the store keeps the status of the node it hung
 from in `root_base_status`: `pre_merge` for an anchor, whose ancestors count as
