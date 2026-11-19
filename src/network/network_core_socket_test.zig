@@ -106,6 +106,8 @@ test "core native wait source failure retains completed protocol progress" {
     try std.testing.expectEqual(@as(c_int, 0), std.c.close(pipe[1]));
     try node.transport.sockets.primary().send(std.testing.io, &node.transport.sockets.primary().address, "invalid");
     try node.transport.sockets.primary().send(std.testing.io, &node.discovery.?.transport.sockets.primary().address, "invalid");
+    try transport_test.awaitDatagrams(node.transport.sockets.primary(), 1);
+    try transport_test.awaitDatagrams(node.discovery.?.transport.sockets.primary(), 1);
     const allocations = backing_node.allocations;
     const result = try stepAfter(&node, 100);
     try std.testing.expectEqual(error.WaitSourceClosed, result.failure.?);
