@@ -150,10 +150,7 @@ async function validateExecutionPayloadBid(
   // [IGNORE] The bid is received after the payload attestation deadline of `bid.slot - 1`
   if (
     chain.clock.msFromSlot(bid.slot - 1) <
-    chain.config.getSlotComponentDurationMs(
-      chain.config.getForkName(bid.slot - 1),
-      chain.config.PAYLOAD_ATTESTATION_DUE_BPS
-    )
+    chain.config.getPayloadAttestationDueMs(chain.config.getForkName(bid.slot - 1))
   ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BEFORE_PAYLOAD_ATTESTATION_DEADLINE,
