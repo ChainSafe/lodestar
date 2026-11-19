@@ -4,7 +4,7 @@ import {DataAvailabilityStatus, computeEpochAtSlot, computeStartSlotAtEpoch} fro
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {bitCount, toRootHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
-import {LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
+import {ExecutionStatusTransition, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 import {
   ExecutionStatus,
   HEX_ZERO_HASH,
@@ -1289,11 +1289,11 @@ export class ProtoArray {
       invalidNode.executionStatus === ExecutionStatus.PreMerge
     ) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
-        lvhCode:
+        code: ProtoArrayErrorCode.INVALID_EXECUTION_STATUS_TRANSITION,
+        transition:
           invalidNode.executionStatus === ExecutionStatus.Valid
-            ? LVHExecErrorCode.ValidToInvalid
-            : LVHExecErrorCode.PreMergeToInvalid,
+            ? ExecutionStatusTransition.ValidToInvalid
+            : ExecutionStatusTransition.PreMergeToInvalid,
         blockRoot: invalidNode.blockRoot,
         execHash: invalidNode.executionPayloadBlockHash ?? ZERO_HASH_HEX,
       });
@@ -1317,8 +1317,8 @@ export class ProtoArray {
     const validNode = this.getNodeFromIndex(nodeIndex);
     if (validNode.executionStatus === ExecutionStatus.Invalid) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
-        lvhCode: LVHExecErrorCode.InvalidToValid,
+        code: ProtoArrayErrorCode.INVALID_EXECUTION_STATUS_TRANSITION,
+        transition: ExecutionStatusTransition.InvalidToValid,
         blockRoot: validNode.blockRoot,
         execHash: validNode.executionPayloadBlockHash,
       });
