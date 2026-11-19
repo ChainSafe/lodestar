@@ -77,7 +77,7 @@ if (cmd === "files") {
         const ratio = again.ratio ?? again.ns / baselineNs;
         rerunCell = `${formatTime(again.ns)} (x${ratio.toFixed(3)})${again.regressed ? " still regressed" : ""}`;
       }
-      const name = r.name.replace(/\|/g, "\\|");
+      const name = r.name.replace(/[\\|]/g, "\\$&");
       console.log(`| \`${name}\` | ${formatTime(baselineNs)} | ${formatTime(r.ns)} (x${r.ratio.toFixed(3)}) | ${rerunCell} |`);
     }
     console.log();
