@@ -124,20 +124,11 @@ describe("cmds / beacon / args handler", () => {
     expect(options.network.advertiseVersion).toBe(true);
   });
 
-  it("accepts native Gloas and rejects a scheduled unsupported Heze fork", async () => {
-    const paramsFile = path.join(testFilesDir, "gloas_config.yaml");
-    fs.writeFileSync(paramsFile, JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100})));
-
-    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).resolves.toBeDefined();
-    fs.writeFileSync(
-      paramsFile,
-      JSON.stringify(chainConfigToJson({...chainConfig, GLOAS_FORK_EPOCH: 100, HEZE_FORK_EPOCH: 200}))
-    );
-    await expect(runBeaconHandlerInit({paramsFile, "chain.nativeStateTransition": true})).rejects.toThrow(
-      "--chain.nativeStateTransition does not support Heze"
-    );
-    await expect(runBeaconHandlerInit({paramsFile})).resolves.toBeDefined();
-    await expect(runBeaconHandlerInit({"chain.nativeStateTransition": true})).resolves.toBeDefined();
+  it("uses the native state transition by default", async () => {
+    const defaultResult = await runBeaconHandlerInit({});
+    expect(defaultResult.options.chain.nativeStateTransition).toBe(true);
+    const optOut = await runBeaconHandlerInit({"chain.nativeStateTransition": false});
+    expect(optOut.options.chain.nativeStateTransition).toBe(false);
   });
 
   it("resolves the data column directory independently of the database directory", async () => {

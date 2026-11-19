@@ -1,7 +1,6 @@
 //! Tests for `list_basic.zig`.
 
 const std = @import("std");
-const ArmOnSizeAllocator = @import("testing_allocators").ArmOnSizeAllocator;
 const hashing = @import("hashing");
 const Depth = hashing.Depth;
 const pmt = @import("persistent_merkle_tree");
@@ -1572,10 +1571,8 @@ test "memory_safety: ListBasicTreeView non-chunked_leaf: sliceTo doesn't leak po
 test "memory_safety: ListBasicTreeView chunked_leaf: set OOM in setChildNode reclaims the CoW chunked_leaf (no leak)" {
     const allocator = std.testing.allocator;
     var view_failing = std.testing.FailingAllocator.init(allocator, .{});
-    // Arm the view allocator to OOM on the CoW blob alloc → fails setChildNode's changed.put.
-    var armer = ArmOnSizeAllocator{ .backing = allocator, .target = &view_failing, .trigger_len = @sizeOf(ChunkedLeafType) };
 
-    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = armer.allocator(), .pool_size = 4096 });
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 4096 });
     defer pool.deinit();
 
     const ListT = FixedListType(UintType(64), 1 << 20, .{ .chunked_leaf = true });
@@ -1590,15 +1587,25 @@ test "memory_safety: ListBasicTreeView chunked_leaf: set OOM in setChildNode rec
     defer view.deinit();
 
     const baseline = pool.getNodesInUse();
+    const storage_baseline = pool.chunkedLeafBytesInUse();
 
-    // The first set copies the committed chunked_leaf (shared, rc>=1).
-    armer.armed = true;
-    try std.testing.expectError(error.OutOfMemory, view.set(0, 999));
+    // The first set copies the committed chunked_leaf (shared, rc>=1). Fail each view allocation
+    // of the set in turn, which includes setChildNode's changed.put right after the copy.
+    var failures: usize = 0;
+    for (0..32) |skipped| {
+        view_failing.fail_index = view_failing.alloc_index + skipped;
+        view.set(0, 999) catch |err| {
+            try std.testing.expectEqual(error.OutOfMemory, err);
+            failures += 1;
+            // The freshly-CoW'd node + its 2KB blob were reclaimed, not leaked.
+            try std.testing.expectEqual(baseline, pool.getNodesInUse());
+            try std.testing.expectEqual(storage_baseline, pool.chunkedLeafBytesInUse());
+            continue;
+        };
+        break;
+    } else return error.TestUnexpectedResult;
     view_failing.fail_index = std.math.maxInt(usize); // disarm for cleanup
-    armer.armed = false;
-
-    // The freshly-CoW'd node + its 2KB blob were reclaimed, not leaked.
-    try std.testing.expectEqual(baseline, pool.getNodesInUse());
+    try std.testing.expect(failures > 0);
 }
 
 test "ListBasicTreeView chunked_leaf: packed edits agree with plain trees for every basic type" {

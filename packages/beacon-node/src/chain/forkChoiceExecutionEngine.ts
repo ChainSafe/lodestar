@@ -1,8 +1,15 @@
-import {ExecutionStatus, IForkChoice, LVHInvalidResponse} from "@lodestar/fork-choice";
+import {
+  ExecutionStatus,
+  IForkChoice,
+  LVHInvalidJudged,
+  LVHInvalidResponse,
+  LVHNotAppliedReason,
+  LVHVerdictResult,
+} from "@lodestar/fork-choice";
 import {ForkName, ForkPostFulu} from "@lodestar/params";
 import {RootHex, bellatrix} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {Logger} from "@lodestar/utils";
+import {LogDataBasic, Logger} from "@lodestar/utils";
 import {ExecutionPayloadBodyV2} from "../execution/engine/types.js";
 import {DATA} from "../execution/engine/utils.js";
 import {
@@ -119,18 +126,25 @@ export class ForkChoiceExecutionEngine {
   }
 
   /**
-   * Apply an execution engine INVALID verdict to fork choice and move the chain head off the invalid chain
+   * Apply an execution engine INVALID verdict to fork choice and move the chain head off the invalid chain.
+   * `judgedLogCtx` identifies the judged payload in logs when it is not the from node.
    */
-  invalidateExecutionPayloads(lvh: LVHInvalidResponse, source: ExecutionInvalidSource): void {
+  invalidateExecutionPayloads(
+    lvh: LVHInvalidResponse,
+    source: ExecutionInvalidSource,
+    judgedLogCtx?: Record<string, LogDataBasic>
+  ): void {
     const logCtx = {
+      ...judgedLogCtx,
       source,
-      blockRoot: lvh.invalidateFromParentBlockRoot,
-      blockHash: lvh.invalidateFromParentBlockHash,
+      judged: lvh.judged,
+      fromBlockRoot: lvh.invalidateFromBlockRoot,
+      fromBlockHash: lvh.invalidateFromBlockHash,
       latestValidHash: lvh.latestValidExecHash ?? "null",
     };
-    const applied = this.forkChoice.validateLatestHash(lvh, {strict: source === ExecutionInvalidSource.blockSegment});
-    if (!applied) {
-      this.logger.warn("Execution engine INVALID verdict not applied to fork choice", logCtx);
+    const result = this.forkChoice.validateLatestHash(lvh);
+    if (!result.applied) {
+      this.logNotApplied(result, logCtx);
       return;
     }
     this.metrics?.forkChoice.executionInvalidations.inc({source});
@@ -140,6 +154,20 @@ export class ForkChoiceExecutionEngine {
       this.recomputeHeadAfterELInvalidResponse();
     } catch (e) {
       this.logger.error("Error recomputing head after execution payload invalidation", logCtx, e as Error);
+    }
+  }
+
+  private logNotApplied(
+    result: Exclude<LVHVerdictResult, {applied: true}>,
+    logCtx: Record<string, LogDataBasic>
+  ): void {
+    const message = "Execution engine verdict not applied to fork choice";
+    if (result.reason === LVHNotAppliedReason.Error) {
+      this.logger.error(message, {...logCtx, reason: result.reason}, result.error);
+    } else if (result.reason === LVHNotAppliedReason.AlreadyApplied) {
+      this.logger.debug(message, {...logCtx, reason: result.reason});
+    } else {
+      this.logger.warn(message, {...logCtx, reason: result.reason});
     }
   }
 
@@ -165,16 +193,21 @@ export class ForkChoiceExecutionEngine {
           {
             executionStatus: ExecutionStatus.Invalid,
             latestValidExecHash: latestValidHash,
-            invalidateFromParentBlockRoot: headBlockRoot,
-            invalidateFromParentBlockHash: headBlockHash,
+            invalidateFromBlockRoot: headBlockRoot,
+            invalidateFromBlockHash: headBlockHash,
+            judged: LVHInvalidJudged.FromBlock,
           },
           ExecutionInvalidSource.forkchoiceUpdated
         );
       } else if (status === ExecutionPayloadStatus.VALID && executionStatus === ExecutionStatus.Syncing) {
-        this.forkChoice.validateLatestHash(
-          {executionStatus: ExecutionStatus.Valid, latestValidExecHash: headBlockHash, blockRoot: headBlockRoot},
-          {strict: false}
-        );
+        const result = this.forkChoice.validateLatestHash({
+          executionStatus: ExecutionStatus.Valid,
+          latestValidExecHash: headBlockHash,
+          blockRoot: headBlockRoot,
+        });
+        if (!result.applied) {
+          this.logNotApplied(result, {source: ExecutionInvalidSource.forkchoiceUpdated, headBlockRoot, headBlockHash});
+        }
       }
     } catch (e) {
       this.logger.error("Error applying forkchoice update result", {headBlockRoot, headBlockHash, status}, e as Error);

@@ -30,7 +30,7 @@ pub fn getNextSyncCommittee(
     out: *SyncCommitteeInfo,
 ) !void {
     const indices = &out.indices;
-    try getNextSyncCommitteeIndices(fork, allocator, state, active_validator_indices, effective_balance_increments, indices);
+    try getNextSyncCommitteeIndices(fork, allocator, io, state, active_validator_indices, effective_balance_increments, indices);
 
     for (indices, &out.sync_committee.pubkeys) |index, *pubkey| {
         pubkey.* = pubkey_cache.getPubkeyBytes(io, index) orelse return error.PubkeyNotFound;

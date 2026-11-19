@@ -36,6 +36,7 @@ pub fn startProposerLookaheadShuffling(
 pub fn processProposerLookahead(
     comptime fork: ForkSeq,
     allocator: Allocator,
+    io: std.Io,
     epoch_cache: *EpochCache,
     state: *BeaconState(fork),
     epoch_transition_cache: *EpochTransitionCache,
@@ -77,7 +78,7 @@ pub fn processProposerLookahead(
 
     try computeProposers(
         fork,
-        allocator,
+        io,
         seed,
         new_epoch,
         if (comptime fork.gte(.gloas)) eligible_proposers.items else active_indices,
@@ -99,6 +100,7 @@ pub fn processProposerLookahead(
         break :blk try computeEpochShufflingForFork(
             fork,
             epoch_cache.allocator,
+            io,
             state,
             shuffling_active_indices,
             new_epoch,

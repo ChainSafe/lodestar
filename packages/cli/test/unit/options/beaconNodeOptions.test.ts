@@ -156,12 +156,13 @@ describe("options / beaconNodeOptions", () => {
         archiveMode: ArchiveMode.Frequency,
         graffitiAppend: false,
         nHistoricalStatesFileDataStore: true,
-        nativeStateTransition: false,
+        nativeStateTransition: true,
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
         maxCPStateEpochsOnDisk: 1000,
         faultInspectionWindow: 32,
         allowedFaults: 8,
+        pruneHistory: true,
       },
       executionEngine: {
         urls: ["http://localhost:8551"],
@@ -234,6 +235,16 @@ describe("options / beaconNodeOptions", () => {
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
     expect(options).toEqual(expectedOptions);
+  });
+
+  it("should prune history by default unless serving historical state", () => {
+    expect(parseBeaconNodeArgs({} as BeaconNodeArgs).chain?.pruneHistory).toBe(true);
+    expect(parseBeaconNodeArgs({serveHistoricalState: true} as BeaconNodeArgs).chain?.pruneHistory).toBe(false);
+    expect(
+      parseBeaconNodeArgs({serveHistoricalState: true, "chain.pruneHistory": true} as BeaconNodeArgs).chain
+        ?.pruneHistory
+    ).toBe(true);
+    expect(parseBeaconNodeArgs({"chain.pruneHistory": false} as BeaconNodeArgs).chain?.pruneHistory).toBe(false);
   });
 });
 

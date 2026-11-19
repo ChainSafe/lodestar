@@ -21,6 +21,7 @@
 
 const std = @import("std");
 const bls = @import("bls");
+const getBit = @import("bit_array").getBit;
 const types = @import("consensus_types");
 const Validator = types.phase0.Validator.Type;
 
@@ -263,13 +264,60 @@ pub const PubkeyCache = struct {
         defer self.unlockShared(io);
 
         const values = self.entries.values();
-        if (indices[0] >= values.len) return error.InvalidIndex;
-        var aggregate_pubkey = values[@intCast(indices[0])].toAggregate();
-        for (indices[1..]) |index| {
+        var aggregate_pubkey: bls.AggregatePublicKey = .{};
+        var adder = bls.AggregatePublicKey.BatchAdder.init(&aggregate_pubkey);
+        for (indices) |index| {
             if (index >= values.len) return error.InvalidIndex;
-            aggregate_pubkey.add(&values[@intCast(index)]);
+            adder.add(&values[@intCast(index)]);
         }
+        adder.finish();
         return aggregate_pubkey.toPublicKey();
+    }
+
+    /// Add the pubkeys at `indices` to `sum`.
+    pub fn sumIndices(
+        self: *const PubkeyCache,
+        io: std.Io,
+        indices: []const u32,
+        sum: *bls.AggregatePublicKey,
+    ) !void {
+        self.lockShared(io);
+        defer self.unlockShared(io);
+
+        const values = self.entries.values();
+        var adder = bls.AggregatePublicKey.BatchAdder.init(sum);
+        for (indices) |index| {
+            if (index >= values.len) return error.InvalidIndex;
+            adder.add(&values[index]);
+        }
+        adder.finish();
+    }
+
+    /// Add to `sum` the pubkeys of the `members` whose bit at `bit_offset + i`
+    /// in `bits` equals `participating`. `bits` must cover every member.
+    pub fn sumMembersByBit(
+        self: *const PubkeyCache,
+        io: std.Io,
+        members: []const u32,
+        bits: []const u8,
+        bit_offset: usize,
+        participating: bool,
+        sum: *bls.AggregatePublicKey,
+    ) !void {
+        std.debug.assert(bit_offset + members.len <= bits.len * 8);
+
+        self.lockShared(io);
+        defer self.unlockShared(io);
+
+        const values = self.entries.values();
+        var adder = bls.AggregatePublicKey.BatchAdder.init(sum);
+        for (members, bit_offset..) |index, bit| {
+            const is_set = getBit(bits, bit);
+            if (is_set != participating) continue;
+            if (index >= values.len) return error.InvalidIndex;
+            adder.add(&values[index]);
+        }
+        adder.finish();
     }
 
     /// Append a compressed pubkey at the next validator index. Supplying an

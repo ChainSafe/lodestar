@@ -42,6 +42,7 @@ const AttestationsPenalty = struct {
 /// while an empty slice selects none. Serialize with other EpochTransitionCache borrowers.
 pub fn computeAttestationsRewards(
     allocator: std.mem.Allocator,
+    io: std.Io,
     pre_state: *CachedBeaconState,
     validator_indices: ?[]const u64,
 ) !AttestationsRewards {
@@ -56,7 +57,7 @@ pub fn computeAttestationsRewards(
         allocator.destroy(state);
     }
 
-    var cache = try EpochTransitionCache.init(allocator, state.config, state.epoch_cache, state.state);
+    var cache = try EpochTransitionCache.init(allocator, io, state.config, state.epoch_cache, state.state);
     defer cache.deinit();
 
     // Epoch rewards use the finality and inactivity scores after these updates.
@@ -65,7 +66,7 @@ pub fn computeAttestationsRewards(
         inline else => |_, state_fork| {
             const fork_state = state.state.castToFork(state_fork);
             try processJustificationAndFinalization(state_fork, fork_state, &cache);
-            try processInactivityUpdates(state_fork, state.config, state.epoch_cache, fork_state, &cache);
+            try processInactivityUpdates(state_fork, io, state.config, state.epoch_cache, fork_state, &cache);
         },
     }
 
