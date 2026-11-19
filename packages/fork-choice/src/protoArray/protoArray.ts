@@ -1246,7 +1246,13 @@ export class ProtoArray {
       const parent = node.parent !== undefined ? this.getNodeByIndex(node.parent) : undefined;
       // Only invalidate if this is post merge, and either parent is invalid or the
       // consensus has failed
-      if (parent?.executionStatus === ExecutionStatus.Invalid) {
+      if (parent?.executionStatus === ExecutionStatus.Invalid && node.executionStatus !== ExecutionStatus.Valid) {
+        // Gloas: a PENDING node may already be Valid because an earlier VALID
+        // verdict for a sibling payload flipped it through
+        // validatePayloadDependents, while its own parent payload is now
+        // Invalid (see #10652). Leave it Valid: it cannot become head once
+        // its parent is Invalid, and throwing here would abort the pass and
+        // skip applyScoreChanges, leaving the tree half-updated.
         // check and flip node status to invalid
         this.invalidateNodeByIndex(nodeIndex);
       }
