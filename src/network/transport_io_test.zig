@@ -160,6 +160,7 @@ test "transport surfaces a send failure to an unreachable destination" {
     const now = try Now.read(std.testing.io);
     _ = try node.transport.engine.dial(
         &unreachable_peer,
+        &node.transport.localAddress(),
         node.transport.peerId(),
         now,
     );
@@ -326,7 +327,7 @@ test "transport rotates dirty connections under one aggregate send allowance" {
     const destination = sink.localAddress();
     const now = try Now.read(std.testing.io);
     for (0..3) |_| {
-        _ = try node.transport.engine.dial(&destination, node.transport.peerId(), now);
+        _ = try node.transport.engine.dial(&destination, &node.transport.localAddress(), node.transport.peerId(), now);
     }
     var events: [8]Engine.Event = undefined;
     var served: [3]u16 = undefined;
@@ -408,11 +409,13 @@ test "transport isolates a failing destination in a mixed-owner batch" {
     const now = try Now.read(std.testing.io);
     const failing = try node.transport.engine.dial(
         &failing_address,
+        &node.transport.localAddress(),
         node.transport.peerId(),
         now,
     );
     const healthy = try node.transport.engine.dial(
         &healthy_address,
+        &node.transport.localAddress(),
         node.transport.peerId(),
         now,
     );
@@ -463,9 +466,9 @@ test "transport fails only the connection whose destination the host refuses and
             try std.testing.expectEqual(@as(u16, 0), node.engine.registry.active_len);
             try std.testing.expectEqual(@as(u16, 0), node.engine.registry.outbound);
             const now = try Now.read(io);
-            const first = try node.engine.dial(&remotes[0].transport.localAddress(), expected, now);
-            const refused = try node.engine.dial(&refused_address, expected, now);
-            const second = try node.engine.dial(&remotes[1].transport.localAddress(), remotes[1].transport.peerId(), now);
+            const first = try node.engine.dial(&remotes[0].transport.localAddress(), &node.localAddress(), expected, now);
+            const refused = try node.engine.dial(&refused_address, &node.sockets.localAddresses()[1].?, expected, now);
+            const second = try node.engine.dial(&remotes[1].transport.localAddress(), &node.localAddress(), remotes[1].transport.peerId(), now);
             var events: [8]Engine.Event = undefined;
             // One Initial each: the IPv4 prefix goes out, the refused one ends only its connection
             // and the rest of the batch follows.
@@ -481,7 +484,7 @@ test "transport fails only the connection whose destination the host refuses and
             try std.testing.expectEqual(@as(u16, 2), node.engine.registry.outbound);
             // The next turn releases the slot; a new generation there is refused on its own.
             _ = try support.step(node, io, &events, turn);
-            const again = try node.engine.dial(&refused_address, expected, now);
+            const again = try node.engine.dial(&refused_address, &node.sockets.localAddresses()[1].?, expected, now);
             try std.testing.expectEqual(refused.index, again.index);
             try std.testing.expect(again.generation != refused.generation);
             try std.testing.expect(!node.engine.close(refused, 0));
@@ -517,7 +520,7 @@ test "transport bounds each turn's receive drain without active connections" {
     var source = try udp_mod.Sockets.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer source.close(std.testing.io);
     const destination = node.transport.localAddress();
-    for (0..3) |_| try source.sendTo(std.testing.io, destination, &.{0}, constants.datagram_size_max);
+    for (0..3) |_| try source.sendTo(std.testing.io, destination, null, &.{0}, constants.datagram_size_max);
     var events: [4]Engine.Event = undefined;
     const result = try support.step(&node.transport, std.testing.io, &events, .{ .wait_max = .fromMilliseconds(10) });
     try std.testing.expectEqual(@as(u32, 2), result.datagrams_received);
@@ -543,6 +546,7 @@ test "transport drains dirty connections across small send budgets" {
     for (0..3) |_| {
         _ = try node.transport.engine.dial(
             &destination,
+            &node.transport.localAddress(),
             node.transport.peerId(),
             now,
         );
@@ -677,8 +681,8 @@ test "transport receive cancellation retains progress and events while deferring
     defer sink.close(std.testing.io);
     const destination = sink.localAddress();
     const now = try Now.read(std.testing.io);
-    _ = try node.transport.engine.dial(&destination, node.transport.peerId(), now);
-    const failed = try node.transport.engine.dial(&destination, node.transport.peerId(), now);
+    _ = try node.transport.engine.dial(&destination, &node.transport.localAddress(), node.transport.peerId(), now);
+    const failed = try node.transport.engine.dial(&destination, &node.transport.localAddress(), node.transport.peerId(), now);
     try std.testing.expect(node.transport.engine.failSend(failed));
     try sink.primary().send(std.testing.io, &node.transport.sockets.primary().address, "invalid");
     var faults: FaultIo = .{ .receive = .{ .at = 2 } };
@@ -810,7 +814,7 @@ test "transport drops a pressure suffix once and preserves every connection and 
         defer node.deinit();
         const now = try Now.read(std.testing.io);
         var handles: [3]Engine.Handle = undefined;
-        for (&handles) |*handle| handle.* = try node.transport.engine.dial(&node.transport.localAddress(), node.transport.peerId(), now);
+        for (&handles) |*handle| handle.* = try node.transport.engine.dial(&node.transport.localAddress(), &node.transport.localAddress(), node.transport.peerId(), now);
         Prefix.count = prefix;
         Prefix.calls = 0;
         Prefix.dropped_bytes = 0;
@@ -889,7 +893,7 @@ test "transport pressure drops later families with exact cumulative accounting" 
     const now = try Now.read(std.testing.io);
     const local = node.sockets.localAddresses();
     var owners: [3]Engine.Handle = undefined;
-    for (&owners, [_]usize{ 0, 1, 0 }) |*owner, family| owner.* = try node.engine.dial(&local[family].?, node.peerId(), now);
+    for (&owners, [_]usize{ 0, 1, 0 }) |*owner, family| owner.* = try node.engine.dial(&local[family].?, &local[family].?, node.peerId(), now);
     var faults: FaultIo = .{ .send = .{ .socket = node.sockets.values[1].?.handle }, .send_failure = error.SystemResources };
     var result: Transport.Progress = .{ .now = now };
     try node.flush(faults.io(), now, &result);
@@ -933,7 +937,7 @@ test "transport cancellation stops final and capacity flushes without failing ow
             defer node.deinit(std.testing.io);
             const now = try Now.read(std.testing.io);
             var owners: [17]Engine.Handle = undefined;
-            for (owners[0..count]) |*owner| owner.* = try node.engine.dial(&node.localAddress(), node.peerId(), now);
+            for (owners[0..count]) |*owner| owner.* = try node.engine.dial(&node.localAddress(), &node.localAddress(), node.peerId(), now);
             var vtable = std.testing.io.vtable.*;
             vtable.netSend = Canceled.send;
             const io: std.Io = .{ .userdata = std.testing.io.userdata, .vtable = &vtable };
@@ -975,7 +979,7 @@ test "transport canceled step retains accepted progress and canceled dial releas
     try std.testing.expectError(error.Canceled, node.transport.dialPeer(io, node.transport.localAddress(), node.transport.peerId(), try Now.read(io)));
     try std.testing.expectEqual(@as(u16, 0), node.transport.engine.registry.active_len);
     const now = try Now.read(std.testing.io);
-    for (0..3) |_| _ = try node.transport.engine.dial(&node.transport.localAddress(), node.transport.peerId(), now);
+    for (0..3) |_| _ = try node.transport.engine.dial(&node.transport.localAddress(), &node.transport.localAddress(), node.transport.peerId(), now);
     var events: [8]Engine.Event = undefined;
     const result = transport_driver.step(&node.transport, io, &events, .{ .wait_max = .fromMilliseconds(0) });
     try std.testing.expect(result.cancelled);
@@ -1035,9 +1039,9 @@ test "transport wait cancellation publishes existing events without flushing new
     try node.init(127);
     defer node.deinit();
     const now = try Now.read(std.testing.io);
-    const failed = try node.transport.engine.dial(&node.transport.localAddress(), node.transport.peerId(), now);
+    const failed = try node.transport.engine.dial(&node.transport.localAddress(), &node.transport.localAddress(), node.transport.peerId(), now);
     try std.testing.expect(node.transport.engine.failSend(failed));
-    _ = try node.transport.engine.dial(&node.transport.localAddress(), node.transport.peerId(), now);
+    _ = try node.transport.engine.dial(&node.transport.localAddress(), &node.transport.localAddress(), node.transport.peerId(), now);
     var events: [4]Engine.Event = undefined;
     const result = node.transport.advance(std.testing.io, .{ .now = now, .cancelled = true }, &events);
     try std.testing.expect(result.cancelled);

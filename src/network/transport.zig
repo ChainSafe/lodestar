@@ -75,7 +75,7 @@ pub const Transport = struct {
     };
 
     pub const AdvanceError = Sockets.DatagramError;
-    pub const DialError = Sockets.SendError || Engine.DialError || error{ DestinationUnreachable, MissingPeerId };
+    pub const DialError = Sockets.SendError || Engine.DialError || error{ DestinationUnreachable, MissingPeerId, SourceUnavailable };
 
     pub const Progress = struct {
         now: Engine.Now,
@@ -132,7 +132,6 @@ pub const Transport = struct {
         target.engine = try Engine.init(allocator, .{
             .tls = context,
             .limits = options.limits,
-            .local = target.sockets.localAddresses(),
             .seed = &seed_bytes,
         });
         context_owned = false;
@@ -184,7 +183,8 @@ pub const Transport = struct {
     }
 
     /// Produces the first flight before returning. Local pressure drops it for QUIC loss recovery;
-    /// other send failures are dial errors.
+    /// other send failures are dial errors. The connection keeps the source address the kernel
+    /// routes `peer` from now.
     pub fn dialPeer(
         self: *Transport,
         io: std.Io,
@@ -192,7 +192,11 @@ pub const Transport = struct {
         expected: peer_id.PeerId,
         now: Engine.Now,
     ) DialError!Engine.Handle {
-        const handle = self.engine.dial(&peer, expected, now) catch |err| switch (err) {
+        const local = self.sockets.sourceFor(io, peer) catch |err| switch (err) {
+            error.AddressFamilyUnsupported => return error.DestinationUnreachable,
+            else => |source| return source,
+        };
+        const handle = self.engine.dial(&peer, &local, expected, now) catch |err| switch (err) {
             error.AddressFamilyUnsupported => return error.DestinationUnreachable,
             else => return err,
         };
@@ -317,7 +321,7 @@ pub const Transport = struct {
             const at = self.batch_len;
             const sent = self.engine.sendOne(index, now, &self.batch.buffers[at]) orelse return true;
             assert(sent.bytes.len <= constants.datagram_size_max);
-            self.batch.outgoing[at] = .{ .to = sent.to, .bytes = sent.bytes };
+            self.batch.outgoing[at] = .{ .to = sent.to, .bytes = sent.bytes, .from = sent.from };
             self.batch.release_times[at] = sent.transmit_at_ns;
             self.batch.owners[at] = owner;
             self.batch_len += 1;
@@ -407,11 +411,11 @@ pub const Transport = struct {
     fn receivePacket(self: *Transport, io: std.Io, result: *Progress, datagram: *const Sockets.Datagram) AdvanceError!void {
         result.datagrams_received += 1;
         // Version negotiation and retry replies use the idle send batch buffer.
-        const outcome = self.engine.receive(datagram.bytes, &datagram.from, result.now, &self.batch.buffers[0]);
+        const outcome = self.engine.receive(datagram.bytes, &datagram.from, &datagram.to, result.now, &self.batch.buffers[0]);
         switch (outcome) {
             .accepted => result.datagrams_accepted += 1,
             .version_negotiation, .retry => |bytes| {
-                self.sendReply(io, datagram.from, bytes) catch |err| {
+                self.sendReply(io, datagram.from, datagram.to, bytes) catch |err| {
                     if (err == error.Canceled) return error.Canceled;
                 };
                 if (outcome == .version_negotiation) result.version_negotiations += 1;
@@ -424,6 +428,7 @@ pub const Transport = struct {
         switch (err) {
             error.DatagramTooLarge,
             error.InvalidSourceAddress,
+            error.InvalidDestinationAddress,
             error.PortUnreachable,
             error.ConnectionResetByPeer,
             error.NetworkDown,
@@ -436,8 +441,8 @@ pub const Transport = struct {
         }
     }
 
-    fn sendReply(self: *Transport, io: std.Io, destination: types.Address, bytes: []const u8) Sockets.SendError!void {
-        self.sockets.sendTo(io, destination, bytes, constants.datagram_size_max) catch |err| {
+    fn sendReply(self: *Transport, io: std.Io, destination: types.Address, from: types.Address, bytes: []const u8) Sockets.SendError!void {
+        self.sockets.sendTo(io, destination, from, bytes, constants.datagram_size_max) catch |err| {
             if (Sockets.SendDrops.Reason.fromError(err)) |reason| self.send_drops.add(reason, bytes.len);
             return err;
         };
@@ -460,5 +465,6 @@ pub const Transport = struct {
 
 test {
     _ = @import("transport_io_test.zig");
+    _ = @import("transport_source_test.zig");
     _ = @import("transport_test.zig");
 }
