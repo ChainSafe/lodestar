@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 2 * * *" # 2 am UTC
+  pull_request:
+    paths:
+      - ".github/workflows/nightly-builder-smoke.yml"
 
 concurrency:
   group: builder-nightly

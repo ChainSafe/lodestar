@@ -13,6 +13,9 @@ on:
         required: true
   schedule:
     - cron: "23 5 * * *" # after the ethpandaops images are rebuilt and the engine API interop run, off the full hour since those queue
+  pull_request:
+    paths:
+      - ".github/workflows/cl-interop.yml"
 
 permissions:
   contents: read
