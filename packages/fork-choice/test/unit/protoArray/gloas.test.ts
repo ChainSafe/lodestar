@@ -887,6 +887,75 @@ describe("Gloas Fork Choice", () => {
       expect(payloadStatus("0x0b", PayloadStatus.EMPTY)).toBe(ExecutionStatus.Syncing);
       expect(payloadStatus("0x0a", PayloadStatus.FULL)).toBe(ExecutionStatus.Syncing);
     });
+
+    it("VALID for an equivocating block's payload validates the other block carrying it", () => {
+      protoArray.onExecutionPayload(
+        "0x0b",
+        gloasForkSlot + 1,
+        "0xb1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+      protoArray.onBlock(
+        {
+          ...createTestBlock(gloasForkSlot + 2, "0x0c", "0x0b", "0xb1"),
+          executionPayloadBlockHash: "0xb1",
+          executionStatus: ExecutionStatus.Syncing,
+        } as ProtoBlock,
+        gloasForkSlot + 2,
+        null
+      );
+      // 0x0d equivocates 0x0b: same slot, parent and payload
+      protoArray.onBlock(
+        {
+          ...createTestBlock(gloasForkSlot + 1, "0x0d", "0x0a", "0xa1"),
+          executionPayloadBlockHash: "0xa1",
+          executionStatus: ExecutionStatus.Syncing,
+        } as ProtoBlock,
+        gloasForkSlot + 1,
+        null
+      );
+      protoArray.onExecutionPayload(
+        "0x0d",
+        gloasForkSlot + 1,
+        "0xb1",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+
+      expect(
+        protoArray.validateLatestHash(
+          {executionStatus: ExecutionStatus.Valid, latestValidExecHash: "0xb1", blockRoot: "0x0d"},
+          gloasForkSlot + 2
+        )
+      ).toEqual({applied: true});
+      expect(payloadStatus("0x0d", PayloadStatus.FULL)).toBe(ExecutionStatus.Valid);
+      expect(payloadStatus("0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Valid);
+      expect(payloadStatus("0x0c", PayloadStatus.PENDING)).toBe(ExecutionStatus.Valid);
+      expect(payloadStatus("0x0c", PayloadStatus.EMPTY)).toBe(ExecutionStatus.Valid);
+
+      // A later INVALID for the same payload contradicts the VALID and is dropped before mutating the tree
+      expect(
+        protoArray.validateLatestHash(
+          {
+            executionStatus: ExecutionStatus.Invalid,
+            latestValidExecHash: "0xa1",
+            invalidateFromBlockRoot: "0x0b",
+            invalidateFromBlockHash: "0xb1",
+            judged: LVHInvalidJudged.FromBlock,
+          },
+          gloasForkSlot + 2
+        )
+      ).toEqual({applied: false, reason: LVHNotAppliedReason.Contradiction});
+      expect(payloadStatus("0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Valid);
+      expect(payloadStatus("0x0c", PayloadStatus.PENDING)).toBe(ExecutionStatus.Valid);
+    });
   });
 
   describe("validateLatestHash() lenient policies on gloas variants", () => {

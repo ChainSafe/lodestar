@@ -1198,16 +1198,16 @@ export class ProtoArray {
   }
 
   /**
-   * Gloas PENDING and EMPTY variants have no payload of their own, they inherit the execution status of
-   * the payload they build on, which is their `executionPayloadBlockHash`. Once that payload is VALID, all
-   * of them are, not only the ones on the chain the validation walked up (e.g. siblings, or blocks
-   * building on a sibling's EMPTY variant).
+   * A node's execution status is that of the payload in its `executionPayloadBlockHash`: its own for FULL, the
+   * inherited parent payload for gloas PENDING and EMPTY. Once that payload is VALID every node carrying it is, not
+   * only the chain the validation walked up (e.g. siblings, blocks on a sibling's EMPTY variant, or an equivocating
+   * block with the same payload). A parent has a lower index than its children, so the scan flips a node carrying
+   * the payload before its descendants that inherit it.
    */
   private validatePayloadDependents(payloadHashes: Set<RootHex>): void {
     for (let nodeIndex = 0; nodeIndex < this.nodes.length; nodeIndex++) {
       const node = this.nodes[nodeIndex];
       if (
-        node.payloadStatus === PayloadStatus.PENDING &&
         node.executionStatus === ExecutionStatus.Syncing &&
         node.executionPayloadBlockHash !== null &&
         payloadHashes.has(node.executionPayloadBlockHash)
