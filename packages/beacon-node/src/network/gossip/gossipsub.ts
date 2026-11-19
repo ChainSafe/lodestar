@@ -25,12 +25,15 @@ import {getSlotDurations} from "@lodestar/state-transition";
 import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
+import {IClock} from "../../util/clock.js";
 import {callImmediate, callInNextEventLoop} from "../../util/eventLoop.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
 import {Libp2p} from "../interface.js";
 import {NetworkConfig} from "../networkConfig.js";
 import {ClientKind} from "../peers/client.js";
 import {PeersData} from "../peers/peersData.js";
+import {offerGossip} from "../processor/nativeIngress.js";
+import {PendingGossipsubMessage} from "../processor/types.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
 import {GossipTopic, GossipType} from "./interface.js";
 import {Eth2GossipsubMetrics, createEth2GossipsubMetrics} from "./metrics.js";
@@ -76,11 +79,13 @@ export type Eth2GossipsubModules = {
   logger: Logger;
   metricsRegister: RegistryMetricCreator | null;
   eth2Context: Eth2Context;
+  clock: Pick<IClock, "currentSlot" | "currentSlotWithGossipDisparity">;
   peersData: PeersData;
   events: NetworkEventBus;
 };
 
 export type Eth2GossipsubOpts = {
+  gossipQueueId?: number;
   allowPublishToZeroPeers?: boolean;
   gossipsubD?: number;
   gossipsubDLow?: number;
@@ -143,7 +148,16 @@ export class Eth2Gossipsub {
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
 
+  private readonly offerNative?: (message: PendingGossipsubMessage) => void;
+
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
+    const id = opts.gossipQueueId;
+    if (id !== undefined) {
+      const clock = modules.clock;
+      this.offerNative = (message) => {
+        if (offerGossip(id, clock, message)) modules.events.emit(NetworkEvent.gossipQueueReady, null);
+      };
+    }
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
     const {networkConfig, logger, metricsRegister, peersData, events} = modules;
     const {config} = networkConfig;
@@ -414,18 +428,23 @@ export class Eth2Gossipsub {
     const clientAgent = this.peersData.getPeerKind(peerIdStr) ?? "Unknown";
     const clientVersion = this.peersData.getAgentVersion(peerIdStr);
 
+    const pending: PendingGossipsubMessage = {
+      topic,
+      msg,
+      msgId,
+      // Hot path, use cached .toString() version
+      propagationSource: peerIdStr,
+      clientVersion,
+      clientAgent,
+      seenTimestampSec,
+      startProcessUnixSec: null,
+    };
+    if (this.offerNative) {
+      this.offerNative(pending);
+      return;
+    }
     const emitPendingMessage = (): void => {
-      this.events.emit(NetworkEvent.pendingGossipsubMessage, {
-        topic,
-        msg,
-        msgId,
-        // Hot path, use cached .toString() version
-        propagationSource: peerIdStr,
-        clientVersion,
-        clientAgent,
-        seenTimestampSec,
-        startProcessUnixSec: null,
-      });
+      this.events.emit(NetworkEvent.pendingGossipsubMessage, pending);
     };
 
     // Use setTimeout to yield to the macro queue

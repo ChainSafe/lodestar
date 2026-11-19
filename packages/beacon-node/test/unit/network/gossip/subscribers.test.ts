@@ -39,6 +39,7 @@ describe("gossip subnet subscribers", async () => {
     gossip = new Eth2Gossipsub(
       {skipParamsLog: true},
       {
+        clock: {currentSlot: 0, currentSlotWithGossipDisparity: 0},
         networkConfig,
         libp2p: {services: {components: {}}} as unknown as Libp2p,
         logger: getMockedLogger(),

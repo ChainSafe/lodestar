@@ -2,7 +2,7 @@ import {afterEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {sleep} from "@lodestar/utils";
+import {defer, sleep} from "@lodestar/utils";
 import {GossipHandlerParamGeneric, GossipHandlers, GossipType} from "../../../src/network/gossip/index.js";
 import {Network} from "../../../src/network/index.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
@@ -288,3 +288,74 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 async function hasSomeMeshPeer(net: Network): Promise<boolean> {
   return Object.values(await net.dumpMeshPeers()).some((peers) => peers.length > 0);
 }
+
+it.each([false, true])(
+  "forwards through native queues after chain validation (worker=%s)",
+  async (useWorker) => {
+    const config = createChainForkConfig(defaultChainConfig);
+    const close: (() => Promise<void>)[] = [];
+    const validate = defer<void>();
+    const validating = defer<void>();
+    const received = defer<Uint8Array>();
+    const passed = defer<void>();
+    const deliveries: number[] = [];
+    try {
+      const [publisher, stopPublisher] = await getNetworkForTest("publisher", config, {opts: {useWorker: false}});
+      close.push(stopPublisher);
+      const [relay, stopRelay] = await getNetworkForTest("relay", config, {
+        opts: {useWorker, nativeGossipQueues: true},
+        gossipHandlersPartial: {
+          voluntary_exit: async ({gossipData}: GossipHandlerParamGeneric<GossipType.voluntary_exit>) => {
+            if (ssz.phase0.SignedVoluntaryExit.deserialize(gossipData.serializedData).message.validatorIndex !== 0)
+              return;
+            validating.resolve();
+            await validate.promise;
+          },
+        },
+      });
+      close.push(stopRelay);
+      const [subscriber, stopSubscriber] = await getNetworkForTest("subscriber", config, {
+        opts: {useWorker: false},
+        gossipHandlersPartial: {
+          voluntary_exit: async ({gossipData, peerIdStr}: GossipHandlerParamGeneric<GossipType.voluntary_exit>) => {
+            if (peerIdStr !== relay.peerId.toString()) return;
+            const index = ssz.phase0.SignedVoluntaryExit.deserialize(gossipData.serializedData).message.validatorIndex;
+            deliveries.push(index);
+            if (index === 1) passed.resolve();
+            else received.resolve(gossipData.serializedData);
+          },
+        },
+      });
+      close.push(stopSubscriber);
+      await connect(publisher, relay);
+      await connect(relay, subscriber);
+      await Promise.all([publisher, relay, subscriber].map((node) => node.subscribeGossipCoreTopics()));
+      await vi.waitFor(
+        async () => {
+          const mesh = Object.entries(await relay.dumpMeshPeers()).find(([topic]) =>
+            topic.includes("/voluntary_exit/")
+          );
+          expect(mesh?.[1]).toEqual(
+            expect.arrayContaining([publisher.peerId.toString(), subscriber.peerId.toString()])
+          );
+        },
+        {timeout: 10000}
+      );
+      const exit = ssz.phase0.SignedVoluntaryExit.defaultValue();
+      await publisher.publishVoluntaryExit(exit);
+      await validating.promise;
+      const second = ssz.phase0.SignedVoluntaryExit.defaultValue();
+      second.message.validatorIndex = 1;
+      await publisher.publishVoluntaryExit(second);
+      await passed.promise;
+      expect(deliveries).toEqual([1]);
+      validate.resolve();
+      expect(Buffer.from(await received.promise)).toEqual(Buffer.from(ssz.phase0.SignedVoluntaryExit.serialize(exit)));
+      expect(deliveries).toEqual([1, 0]);
+    } finally {
+      validate.resolve();
+      await Promise.all(close.map((stop) => stop()));
+    }
+  },
+  30000
+);

@@ -196,6 +196,7 @@ export class NetworkCore implements INetworkCore {
     );
 
     const gossip = new Eth2Gossipsub(opts, {
+      clock,
       networkConfig,
       libp2p,
       logger,
