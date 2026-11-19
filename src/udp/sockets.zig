@@ -20,6 +20,7 @@ pub const Sockets = struct {
     drop_counts: [2]DropCount = @splat(.{}),
     cursor: u1 = 0,
     native: [2]bool = @splat(false),
+    control: Control align(8) = undefined,
 
     pub const Mode = enum {
         ip4,
@@ -48,7 +49,7 @@ pub const Sockets = struct {
 
     pub const BindError = net.IpAddress.BindError;
     pub const ReceiveError = net.Socket.ReceiveTimeoutError || error{IncompatibleProvider};
-    pub const DatagramError = ReceiveError || error{ DatagramTooLarge, InvalidSourceAddress };
+    pub const DatagramError = ReceiveError || error{ DatagramTooLarge, InvalidSourceAddress, InvalidDestinationAddress };
     pub const SendError = net.Socket.SendError || error{
         IncompatibleProvider,
         DatagramTooLarge,
@@ -111,16 +112,21 @@ pub const Sockets = struct {
 
         pub const capacity = 16;
     };
-    pub const Datagram = struct { from: Address, bytes: []u8 };
+    /// `to` is the local address the datagram was sent to, with the receiving socket's port. Where
+    /// the provider reports no destination it is the socket's bound address, which may be unspecified.
+    pub const Datagram = struct { from: Address, to: Address, bytes: []u8 };
+    pub const Control = native_io.Control;
     pub const receive_batch_max = 16;
     pub const ReceiveScratch = native_io.ReceiveScratch;
     /// The caller owns buffer. Only slots in ReceiveOutcome.received have a message.
     pub const ReceiveSlot = struct {
         buffer: []u8,
         message: net.IncomingMessage = undefined,
+        bound: net.IpAddress = undefined,
+        control: Control align(8) = undefined,
 
         pub fn datagram(self: *const ReceiveSlot) DatagramError!Datagram {
-            return checkedDatagram(self.message, self.buffer);
+            return checkedDatagram(self.message, self.buffer, self.bound);
         }
     };
     /// Received slots remain valid even when a later receive fails.
@@ -162,6 +168,11 @@ pub const Sockets = struct {
             },
         }
         for (result.values, &result.native) |socket, *native| native.* = socket != null and native_sockets and compat.threaded(io);
+        if (native_sockets) {
+            for (result.values, result.native) |socket, native| {
+                if (native) try compat.checkBindError(native_io.reportDestination(socket.?.handle, socket.?.address));
+            }
+        }
         return result;
     }
 
@@ -257,7 +268,7 @@ pub const Sockets = struct {
             if (try self.receiveReady(io, buffer, &ready)) |message| return message;
             if (passed(io, deadline)) return error.Timeout;
         }
-        if (!dual) return self.primary().receiveTimeout(io, buffer, timeout);
+        if (!dual) return receiveProvider(io, self.primary(), buffer, &self.control, timeout);
         {
             const Ready = union(enum) { ip4: ReceiveError!void, ip6: ReceiveError!void };
             var completions: [2]Ready = undefined;
@@ -283,19 +294,21 @@ pub const Sockets = struct {
             self.cursor +%= 1;
             if (!ready[at]) continue;
             const socket = self.values[at] orelse continue;
-            if (try receiveNow(io, socket, buffer, self.native[at])) |message| return message;
+            if (try receiveNow(io, socket, buffer, &self.control, self.native[at])) |message| return message;
             ready[at] = false;
         }
         return null;
     }
 
     pub fn receiveDatagram(self: *Sockets, io: std.Io, buffer: []u8, timeout: std.Io.Timeout) DatagramError!Datagram {
-        return checkedDatagram(try self.receiveTimeout(io, buffer, timeout), buffer);
+        const message = try self.receiveTimeout(io, buffer, timeout);
+        return checkedDatagram(message, buffer, self.boundFor(message.from));
     }
 
     /// `receiveReady` as a datagram.
     pub fn receiveReadyDatagram(self: *Sockets, io: std.Io, buffer: []u8, ready: *[2]bool) DatagramError!?Datagram {
-        return try checkedDatagram((try self.receiveReady(io, buffer, ready)) orelse return null, buffer);
+        const message = (try self.receiveReady(io, buffer, ready)) orelse return null;
+        return try checkedDatagram(message, buffer, self.boundFor(message.from));
     }
 
     /// Nonblocking receive into independent caller-owned buffers. Ready families alternate
@@ -323,11 +336,13 @@ pub const Sockets = struct {
             if (os == .linux and self.native[family] and compat.threadedReceive(io)) {
                 const count = native_io.receiveMany(io, socket.handle, slots, scratch) catch |err|
                     return .{ .failure = err };
+                for (slots[0..count]) |*slot| slot.bound = socket.address;
                 if (count > 0) return .{ .received = count };
                 ready[family] = false;
             } else {
                 for (slots, 0..) |*slot, count| {
-                    const received = receiveNow(io, socket, slot.buffer, self.native[family]) catch |err|
+                    slot.bound = socket.address;
+                    const received = receiveNow(io, socket, slot.buffer, &slot.control, self.native[family]) catch |err|
                         return .{ .received = count, .failure = err };
                     slot.message = received orelse {
                         ready[family] = false;
@@ -397,22 +412,43 @@ pub const Sockets = struct {
         return duration.raw.nanoseconds <= 0;
     }
 
-    fn checkedDatagram(incoming: net.IncomingMessage, buffer: []u8) DatagramError!Datagram {
+    fn boundFor(self: *const Sockets, from: net.IpAddress) net.IpAddress {
+        const family: usize = if (from == .ip4) 0 else 1;
+        return (self.values[family] orelse self.primary()).address;
+    }
+
+    fn checkedDatagram(incoming: net.IncomingMessage, buffer: []u8, bound: net.IpAddress) DatagramError!Datagram {
         if (incoming.from.getPort() == 0) return error.InvalidSourceAddress;
         if (incoming.flags.trunc) return error.DatagramTooLarge;
         assert(incoming.data.len <= buffer.len);
-        return .{ .from = Address.fromNetwork(incoming.from), .bytes = buffer[0..incoming.data.len] };
+        const reported: ?Address = if (native_sockets) try native_io.destination(incoming.control, bound.getPort()) else null;
+        return .{
+            .from = Address.fromNetwork(incoming.from),
+            .to = reported orelse Address.fromNetwork(bound),
+            .bytes = buffer[0..incoming.data.len],
+        };
     }
 
-    fn receiveNow(io: std.Io, socket: net.Socket, buffer: []u8, native: bool) ReceiveError!?net.IncomingMessage {
+    fn receiveNow(io: std.Io, socket: net.Socket, buffer: []u8, control: *align(8) Control, native: bool) ReceiveError!?net.IncomingMessage {
         if (!native and compat.threadedReceive(io)) return error.IncompatibleProvider;
         if (native_sockets) {
-            if (native and compat.threadedReceive(io)) return native_io.receive(io, socket.handle, buffer);
+            if (native and compat.threadedReceive(io)) return native_io.receive(io, socket.handle, buffer, control);
         }
-        return socket.receiveTimeout(io, buffer, .{ .duration = .{ .raw = .zero, .clock = .awake } }) catch |err| switch (err) {
+        return receiveProvider(io, socket, buffer, control, .{ .duration = .{ .raw = .zero, .clock = .awake } }) catch |err| switch (err) {
             error.Timeout => null,
             else => err,
         };
+    }
+
+    /// A provider that reports no control data leaves the zeroed buffer, which names no destination.
+    fn receiveProvider(io: std.Io, socket: net.Socket, buffer: []u8, control: *align(8) Control, timeout: std.Io.Timeout) ReceiveError!net.IncomingMessage {
+        @memset(control, 0);
+        var message: [1]net.IncomingMessage = .{.init};
+        message[0].control = control;
+        const failure, const count = socket.receiveManyTimeout(io, &message, buffer, .{}, timeout);
+        if (failure) |err| return err;
+        assert(count == 1);
+        return message[0];
     }
 
     fn waitReadable(io: std.Io, socket: net.Socket, timeout: std.Io.Timeout) ReceiveError!void {

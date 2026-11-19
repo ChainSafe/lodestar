@@ -3,6 +3,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const compat = @import("compat.zig");
 const Sockets = @import("sockets.zig").Sockets;
+const Address = @import("address.zig").Address;
 const net = std.Io.net;
 const assert = std.debug.assert;
 const SendError = Sockets.SendError;
@@ -12,10 +13,72 @@ const os = builtin.os.tag;
 const linux = std.os.linux;
 const gso_payload_max = 65_507;
 
+const ControlHeader = if (os == .linux) linux.cmsghdr else extern struct { len: u32, level: i32, type: i32 };
+const control_alignment = if (os == .linux) @sizeOf(usize) else @sizeOf(u32);
+const control_data = std.mem.alignForward(usize, @sizeOf(ControlHeader), control_alignment);
+// Darwin's values from netinet/in.h and netinet6/in6.h are absent from std.posix in Zig 0.16.
+const ip_pktinfo = if (os == .linux) linux.IP.PKTINFO else 26;
+const ipv6_recvpktinfo = if (os == .linux) linux.IPV6.RECVPKTINFO else 61;
+const ipv6_pktinfo = if (os == .linux) linux.IPV6.PKTINFO else 46;
+pub const control_size = 64;
+pub const Control = [control_size]u8;
+comptime {
+    assert(controlSpace(@sizeOf(std.posix.in6_pktinfo)) + controlSpace(@sizeOf(u16)) <= control_size);
+    assert(@sizeOf(std.posix.in_pktinfo) <= @sizeOf(std.posix.in6_pktinfo));
+}
+
+fn controlSpace(len: usize) usize {
+    return control_data + std.mem.alignForward(usize, len, control_alignment);
+}
+
+pub fn linkLocal(octets: [16]u8) bool {
+    return octets[0] == 0xfe and octets[1] & 0xc0 == 0x80;
+}
+
+/// Asks the kernel to report each datagram's destination address.
+pub fn reportDestination(handle: net.Socket.Handle, family: std.meta.Tag(net.IpAddress)) std.posix.E {
+    const p = std.posix;
+    const enabled: c_int = 1;
+    const level: i32, const option: u32 = switch (family) {
+        .ip4 => .{ p.IPPROTO.IP, ip_pktinfo },
+        .ip6 => .{ p.IPPROTO.IPV6, ipv6_recvpktinfo },
+    };
+    return p.errno(p.system.setsockopt(handle, level, option, std.mem.asBytes(&enabled), @sizeOf(c_int)));
+}
+
+/// The local address a datagram was sent to, with `port`. Null when the control data names none.
+pub fn destination(control: []const u8, port: u16) error{InvalidDestinationAddress}!?Address {
+    const p = std.posix;
+    var offset: usize = 0;
+    while (control.len - offset >= @sizeOf(ControlHeader)) {
+        const header = std.mem.bytesToValue(ControlHeader, control[offset..][0..@sizeOf(ControlHeader)]);
+        if (header.len < control_data or header.len > control.len - offset) return null;
+        const data = control[offset + control_data .. offset + header.len];
+        if (header.level == p.IPPROTO.IP and header.type == ip_pktinfo and data.len >= @sizeOf(p.in_pktinfo)) {
+            const info = std.mem.bytesToValue(p.in_pktinfo, data[0..@sizeOf(p.in_pktinfo)]);
+            const octets: [4]u8 = @bitCast(info.addr);
+            // Linux reports the receiving interface's address as spec_dst for broadcast and multicast.
+            if (os == .linux and info.addr != info.spec_dst) return error.InvalidDestinationAddress;
+            if (octets[0] >= 224 or info.addr == 0) return error.InvalidDestinationAddress;
+            return .{ .ip4 = .{ .octets = octets, .port = port } };
+        }
+        if (header.level == p.IPPROTO.IPV6 and header.type == ipv6_pktinfo and data.len >= @sizeOf(p.in6_pktinfo)) {
+            const info = std.mem.bytesToValue(p.in6_pktinfo, data[0..@sizeOf(p.in6_pktinfo)]);
+            if (info.addr[0] == 0xff or std.mem.allEqual(u8, &info.addr, 0)) return error.InvalidDestinationAddress;
+            const interface: u32 = if (linkLocal(info.addr)) @intCast(info.ifindex) else 0;
+            return .{ .ip6 = .{ .octets = info.addr, .port = port, .interface = interface } };
+        }
+        offset += std.mem.alignForward(usize, header.len, control_alignment);
+        if (offset > control.len) return null;
+    }
+    return null;
+}
+
 pub fn receive(
     io: std.Io,
     handle: net.Socket.Handle,
     buffer: []u8,
+    control: *align(8) Control,
 ) ReceiveError!?net.IncomingMessage {
     const p = std.posix;
     var storage: compat.PosixAddress = undefined;
@@ -25,8 +88,8 @@ pub fn receive(
         .namelen = @sizeOf(compat.PosixAddress),
         .iov = (&vector)[0..1],
         .iovlen = 1,
-        .control = null,
-        .controllen = 0,
+        .control = control,
+        .controllen = control_size,
         .flags = 0,
     };
     try io.checkCancel();
@@ -35,7 +98,7 @@ pub fn receive(
         .SUCCESS => .{
             .from = compat.addressFromPosix(&storage),
             .data = buffer[0..@intCast(received)],
-            .control = &.{},
+            .control = control[0..@intCast(header.controllen)],
             .flags = .{
                 .eor = (header.flags & p.MSG.EOR) != 0,
                 .trunc = (header.flags & p.MSG.TRUNC) != 0,
@@ -205,15 +268,15 @@ pub fn receiveMany(
     scratch: *ReceiveScratch,
 ) ReceiveError!usize {
     assert(slots.len > 0 and slots.len <= Sockets.receive_batch_max);
-    for (slots, 0..) |slot, i| {
+    for (slots, 0..) |*slot, i| {
         scratch.vectors[i] = .{ .base = slot.buffer.ptr, .len = slot.buffer.len };
         scratch.headers[i] = .{ .hdr = .{
             .name = &scratch.addresses[i].any,
             .namelen = @sizeOf(compat.PosixAddress),
             .iov = scratch.vectors[i..].ptr,
             .iovlen = 1,
-            .control = null,
-            .controllen = 0,
+            .control = &slots[i].control,
+            .controllen = control_size,
             .flags = 0,
         }, .len = 0 };
     }
@@ -234,7 +297,7 @@ pub fn receiveMany(
                 slot.message = .{
                     .from = compat.addressFromPosix(&scratch.addresses[i]),
                     .data = slot.buffer[0..header.len],
-                    .control = &.{},
+                    .control = slot.control[0..header.hdr.controllen],
                     .flags = .{
                         .eor = (header.hdr.flags & linux.MSG.EOR) != 0,
                         .trunc = (header.hdr.flags & linux.MSG.TRUNC) != 0,
