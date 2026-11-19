@@ -115,6 +115,8 @@ export function upgradeStateToGloas(
   for (let i = 0; i < SLOTS_PER_HISTORICAL_ROOT; i++) {
     stateGloasView.executionPayloadAvailability.set(i, true);
   }
+  // Fulu's preceding slot did not clear the first Gloas slot's availability.
+  stateGloasView.executionPayloadAvailability.set(stateGloasView.slot % SLOTS_PER_HISTORICAL_ROOT, false);
   stateGloasView.latestBlockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
 
   const stateGloas = getCachedBeaconState(stateGloasView, stateFulu);
