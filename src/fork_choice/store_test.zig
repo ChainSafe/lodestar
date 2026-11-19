@@ -1049,3 +1049,149 @@ test "optimistic sync: pruning keeps the status a Gloas root inherited from drop
     try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(fullOf(&store, 0x40)));
     try testing.expectEqual(ExecutionStatus.syncing, try store.executionStatus(fullOf(&store, 0x30)));
 }
+
+const unfinalized_anchor_slot = 3 * preset.SLOTS_PER_EPOCH + 2;
+const unfinalized_finalized: Checkpoint = .{ .epoch = 1, .root = tagRoot(0x0f) };
+const unfinalized_justified: Checkpoint = .{ .epoch = 2, .root = tagRoot(0x0a) };
+const unfinalized_ancestors = [_]store_mod.AnchorAncestor{
+    .{ .root = unfinalized_finalized.root, .slot = preset.SLOTS_PER_EPOCH },
+    .{ .root = unfinalized_justified.root, .slot = 2 * preset.SLOTS_PER_EPOCH },
+    .{ .root = tagRoot(0x0b), .slot = unfinalized_anchor_slot - 1 },
+};
+
+fn unfinalizedSummary(block: OptimisticBlock) store_mod.BlockSummary {
+    var summary = optimisticSummary(block);
+    summary.justified_checkpoint = unfinalized_justified;
+    summary.finalized_checkpoint = unfinalized_finalized;
+    summary.unrealized_justified_checkpoint = unfinalized_justified;
+    summary.unrealized_finalized_checkpoint = unfinalized_finalized;
+    return summary;
+}
+
+test "unfinalized anchor: the store keeps the state's checkpoints and the anchor can be reorged" {
+    const allocator = testing.allocator;
+    const config = &@import("config").mainnet.config;
+    const anchor = unfinalizedSummary(.{ .tag = 1, .parent = 0x0b, .slot = unfinalized_anchor_slot, .status = .pre_merge });
+    var store = try Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &unfinalized_ancestors, Provider.stateProvider());
+    defer store.deinit();
+
+    try testing.expectEqual(@as(usize, 4), store.blockCount());
+    try testing.expectEqual(unfinalized_justified, store.justified_checkpoint);
+    try testing.expectEqual(unfinalized_finalized, store.finalized_checkpoint);
+    try testing.expectEqual(unfinalized_anchor_slot, store.currentSlot());
+    try testing.expectEqual(pendingOf(&store, 1), try store.getHead());
+    try testing.expectEqual(@as(usize, 0), try store.prune());
+
+    // A sibling of the anchor takes the head once it has the votes: the anchor is not final.
+    try store.onTick(store.timing.timeAtSlotMs(unfinalized_anchor_slot + 2));
+    try store.onBlockSummary(unfinalizedSummary(.{ .tag = 0x20, .parent = 1, .slot = unfinalized_anchor_slot + 1, .status = .pre_merge }));
+    try store.onBlockSummary(unfinalizedSummary(.{ .tag = 0x21, .parent = 0x0b, .slot = unfinalized_anchor_slot + 1, .status = .pre_merge }));
+    var voters = [_]u64{ 0, 1, 2 };
+    const data: ct.phase0.AttestationData.Type = .{
+        .slot = unfinalized_anchor_slot + 1,
+        .index = 0,
+        .beacon_block_root = tagRoot(0x21),
+        .source = unfinalized_justified,
+        .target = .{ .epoch = 3, .root = unfinalized_justified.root },
+    };
+    try store.onAttestationData(&data, &voters, false);
+    try testing.expectEqual(pendingOf(&store, 0x21), try store.getHead());
+
+    // Finality moves with the chain and prunes the ancestors below it.
+    var finalizing = unfinalizedSummary(.{ .tag = 0x22, .parent = 0x21, .slot = unfinalized_anchor_slot + 2, .status = .pre_merge });
+    finalizing.justified_checkpoint = .{ .epoch = 3, .root = tagRoot(0x21) };
+    finalizing.finalized_checkpoint = unfinalized_justified;
+    finalizing.unrealized_justified_checkpoint = finalizing.justified_checkpoint;
+    finalizing.unrealized_finalized_checkpoint = finalizing.finalized_checkpoint;
+    try store.onBlockSummary(finalizing);
+    try testing.expectEqual(unfinalized_justified, store.finalized_checkpoint);
+    try testing.expectEqual(@as(usize, 1), try store.prune());
+    try testing.expectEqual(@as(?store_mod.BlockIndex, 0), store.blockIndex(unfinalized_justified.root));
+    try testing.expectEqual(pendingOf(&store, 0x22), try store.getHead());
+}
+
+test "unfinalized anchor: the chain can justify the checkpoint block of the anchor's epoch" {
+    const allocator = testing.allocator;
+    const config = &@import("config").mainnet.config;
+    const epoch_checkpoint: Checkpoint = .{ .epoch = 3, .root = tagRoot(0x0c) };
+    const ancestors = [_]store_mod.AnchorAncestor{
+        unfinalized_ancestors[0],
+        unfinalized_ancestors[1],
+        .{ .root = epoch_checkpoint.root, .slot = 3 * preset.SLOTS_PER_EPOCH },
+        unfinalized_ancestors[2],
+    };
+    const anchor = unfinalizedSummary(.{ .tag = 1, .parent = 0x0b, .slot = unfinalized_anchor_slot, .status = .pre_merge });
+    var store = try Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &ancestors, Provider.stateProvider());
+    defer store.deinit();
+
+    try store.onTick(store.timing.timeAtSlotMs(unfinalized_anchor_slot + 2));
+    var justifying = unfinalizedSummary(.{ .tag = 0x20, .parent = 1, .slot = unfinalized_anchor_slot + 1, .status = .pre_merge });
+    justifying.justified_checkpoint = epoch_checkpoint;
+    justifying.unrealized_justified_checkpoint = epoch_checkpoint;
+    try store.onBlockSummary(justifying);
+    try testing.expectEqual(epoch_checkpoint, store.justified_checkpoint);
+    try testing.expectEqual(pendingOf(&store, 0x20), try store.getHead());
+
+    var voters = [_]u64{ 0, 1, 2 };
+    const data: ct.phase0.AttestationData.Type = .{
+        .slot = unfinalized_anchor_slot + 1,
+        .index = 0,
+        .beacon_block_root = tagRoot(0x20),
+        .source = unfinalized_justified,
+        .target = epoch_checkpoint,
+    };
+    try store.onAttestationData(&data, &voters, false);
+    try testing.expectEqual(pendingOf(&store, 0x20), try store.getHead());
+}
+
+test "unfinalized anchor: ancestors must be ordered, distinct and hold both checkpoints" {
+    const allocator = testing.allocator;
+    const config = &@import("config").mainnet.config;
+    const provider = Provider.stateProvider();
+    const anchor = unfinalizedSummary(.{ .tag = 1, .parent = 0x0b, .slot = unfinalized_anchor_slot, .status = .pre_merge });
+
+    try testing.expectError(error.AnchorCheckpointNotAncestor, Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, unfinalized_ancestors[0..1], provider));
+    try testing.expectError(error.AnchorCheckpointNotAncestor, Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, unfinalized_ancestors[1..], provider));
+
+    var ancestors = unfinalized_ancestors;
+    ancestors[2].root = ZERO;
+    try testing.expectError(error.InvalidAnchorAncestor, Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &ancestors, provider));
+    ancestors[2].root = ancestors[1].root;
+    try testing.expectError(error.InvalidAnchorAncestor, Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &ancestors, provider));
+    ancestors[2] = .{ .root = tagRoot(0x0b), .slot = ancestors[1].slot };
+    try testing.expectError(error.InvalidAnchorAncestor, Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &ancestors, provider));
+    ancestors[2].slot = unfinalized_anchor_slot;
+    try testing.expectError(error.InvalidAnchorAncestor, Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &ancestors, provider));
+
+    const too_many = unfinalized_ancestors ++ unfinalized_ancestors;
+    try testing.expectError(error.TooManyAnchorAncestors, Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &too_many, provider));
+}
+
+test "unfinalized anchor: a Gloas anchor hangs from its ancestors' empty nodes" {
+    const allocator = testing.allocator;
+    const config_mod = @import("config");
+    const chain_config = config_mod.mainnet.chain_config.merge(.{
+        .ALTAIR_FORK_EPOCH = 0,
+        .BELLATRIX_FORK_EPOCH = 0,
+        .CAPELLA_FORK_EPOCH = 0,
+        .DENEB_FORK_EPOCH = 0,
+        .ELECTRA_FORK_EPOCH = 0,
+        .FULU_FORK_EPOCH = 0,
+        .GLOAS_FORK_EPOCH = 0,
+    });
+    const config = config_mod.BeaconConfig.init(chain_config, config_mod.mainnet.genesis_validators_root);
+    const anchor = unfinalizedSummary(.{ .tag = 1, .parent = 0x0b, .slot = unfinalized_anchor_slot, .fork = .gloas, .bid_parent = 0x0b });
+    var store = try Store.initFromUnfinalizedSummary(allocator, &config, 0, anchor, &unfinalized_ancestors, Provider.stateProvider());
+    defer store.deinit();
+
+    const parent: store_mod.ForkChoiceNode = .{ .block = store.blockIndex(tagRoot(0x0b)).?, .payload_status = .empty };
+    try testing.expectEqual(parent, store.getAncestor(pendingOf(&store, 1), unfinalized_anchor_slot - 1));
+    try testing.expectEqual(store.blockIndex(tagRoot(1)).?, (try store.getHead()).block);
+    try testing.expectEqual(ExecutionStatus.pre_merge, try store.executionStatus(pendingOf(&store, 1)));
+
+    try store.onTick(store.timing.timeAtSlotMs(unfinalized_anchor_slot + 1));
+    try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
+    try store.onBlockSummary(unfinalizedSummary(.{ .tag = 0x20, .parent = 1, .slot = unfinalized_anchor_slot + 1, .fork = .gloas, .bid_parent = 1 }));
+    try testing.expectEqual(store.blockIndex(tagRoot(0x20)).?, (try store.getHead()).block);
+    try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(pendingOf(&store, 0x20)));
+}

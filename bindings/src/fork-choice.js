@@ -4,8 +4,8 @@ import bindings from "./index.js";
 export class ForkChoice extends bindings.ForkChoice {
   #callbacks;
 
-  constructor(config, genesisTime, anchor, provider) {
-    super(config, genesisTime, anchor, provider);
+  constructor(config, genesisTime, anchor, provider, unfinalizedAncestors) {
+    super(config, genesisTime, anchor, provider, unfinalizedAncestors);
     this.#callbacks = [
       provider.justifiedBalances,
       provider.slotCommitteeMembers,
