@@ -462,6 +462,7 @@ jobs:
           zig build test:fault_io
           zig build test:udp
           zig build test:network
+          zig build check:network-tools
 
       - name: Build benchmarks
         run: |

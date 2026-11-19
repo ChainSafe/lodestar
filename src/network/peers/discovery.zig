@@ -457,3 +457,8 @@ pub fn relayAllowed(source: d.types.Address, candidate: types.Address) bool {
     if (candidate == .ip6 and candidate.ip6.octets[0] == 0xfe and candidate.ip6.octets[1] & 0xc0 == 0x80) return false;
     return d.address_policy.relayAllowed(source, candidate);
 }
+
+test {
+    _ = @import("discovery_test.zig");
+    _ = @import("discovery_socket_test.zig");
+}
