@@ -1,4 +1,0 @@
-# The Rust toolchain used to build quiche.
-[toolchain]
-channel = "stable"
-profile = "minimal"

@@ -184,15 +184,6 @@ pub const BlobSidecar = electra.BlobSidecar;
 // Req/resp messages
 // =================
 
-pub const Status = phase0.Status;
-pub const Goodbye = phase0.Goodbye;
-pub const Ping = phase0.Ping;
-pub const BeaconBlocksByRangeRequest = phase0.BeaconBlocksByRangeRequest;
-pub const ErrorMessage = phase0.ErrorMessage;
-pub const MetaDataV2 = altair.MetaDataV2;
-pub const BeaconBlockRootsDeneb = deneb.BeaconBlockRootsDeneb;
-pub const BlobSidecarsByRangeRequest = deneb.BlobSidecarsByRangeRequest;
-
 pub const StatusV2 = ssz.FixedContainerType(struct {
     fork_digest: p.ForkDigest,
     finalized_root: p.Root,
@@ -219,3 +210,10 @@ pub const DataColumnsByRootIdentifiers = ssz.VariableListType(
     DataColumnsByRootIdentifier,
     c.MAX_REQUEST_BLOCKS_DENEB,
 );
+
+comptime {
+    const assert = @import("std").debug.assert;
+    assert(StatusV2.fixed_size == 92);
+    assert(MetaDataV3.fixed_size == 25);
+    assert(DataColumnSidecarsByRangeRequest.min_size == 20);
+}
