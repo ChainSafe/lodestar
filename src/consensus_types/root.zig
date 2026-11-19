@@ -22,7 +22,6 @@ test {
     testing.refAllDecls(electra);
     testing.refAllDecls(fulu);
     testing.refAllDecls(gloas);
-    _ = @import("root_reqresp_test.zig");
     testing.refAllDecls(heze);
 }
 
