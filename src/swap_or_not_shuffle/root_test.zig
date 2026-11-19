@@ -7,6 +7,7 @@
 //!    v1.2.1 (see the test)
 //!  - validation-order and error-path cases: written for this port; the
 //!    reference crashes on those inputs, so it has no equivalent
+//!  - parallel unshuffle: checked against the serial unshuffle
 
 const std = @import("std");
 const shuffle = @import("./root.zig");
@@ -35,12 +36,11 @@ test "innerShuffleList generic over u64" {
     var seed: [SEED_SIZE]u8 = undefined;
     for (0..SEED_SIZE) |i| seed[i] = @intCast(i * 7 % 256);
 
-    var reference = try shuffle.ComputeShuffledIndex.init(std.testing.allocator, &seed, input.len, 90);
-    defer reference.deinit();
+    var reference = try shuffle.ComputeShuffledIndex.init(&seed, input.len, 90);
 
     try shuffle.shuffleList(u64, &actual, &seed, 90);
     for (input, 0..) |value, i| {
-        try std.testing.expectEqual(value, actual[try reference.get(@intCast(i))]);
+        try std.testing.expectEqual(value, actual[reference.get(@intCast(i))]);
     }
     try shuffle.unshuffleList(u64, &actual, &seed, 90);
     try std.testing.expectEqualSlices(u64, &input, &actual);
@@ -63,8 +63,7 @@ test "list shuffle matches ComputeShuffledIndex across pair and source hash boun
         [_]u32{ 255, 256, 257, 511, 512, 513, 1023, 1024, 1025 };
 
     for (list_sizes) |list_size| {
-        var reference = try shuffle.ComputeShuffledIndex.init(allocator, &seed, list_size, rounds);
-        defer reference.deinit();
+        var reference = try shuffle.ComputeShuffledIndex.init(&seed, list_size, rounds);
 
         const positions = try allocator.alloc(u32, list_size);
         defer allocator.free(positions);
@@ -72,7 +71,7 @@ test "list shuffle matches ComputeShuffledIndex across pair and source hash boun
         for (positions, 0..) |*position, i| position.* = @intCast(i);
         try shuffle.unshuffleList(u32, positions, &seed, rounds);
         for (positions, 0..) |position, i| {
-            try std.testing.expectEqual(try reference.get(@intCast(i)), position);
+            try std.testing.expectEqual(reference.get(@intCast(i)), position);
         }
 
         try shuffle.shuffleList(u32, positions, &seed, rounds);
@@ -132,20 +131,18 @@ test "innerShuffleList no-op conditions match reference validation order" {
 }
 
 test "ComputeShuffledIndex matches reference vector" {
-    const allocator = std.testing.allocator;
     const seed = [_]u8{1} ** SEED_SIZE;
     const index_count = 1000;
     const rounds = 90;
 
-    var instance = try shuffle.ComputeShuffledIndex.init(allocator, seed[0..], index_count, rounds);
-    defer instance.deinit();
+    var instance = try shuffle.ComputeShuffledIndex.init(seed[0..], index_count, rounds);
 
     const expected = [_]u32{
         789, 161, 541, 509, 498, 445, 270, 2,   505, 621, 947, 550, 338, 814, 285, 597,
         169, 819, 644, 638, 751, 514, 750, 523, 303, 231, 391, 982, 409, 396, 641, 837,
     };
     for (expected, 0..) |want, i| {
-        try std.testing.expectEqual(want, try instance.get(@intCast(i)));
+        try std.testing.expectEqual(want, instance.get(@intCast(i)));
     }
 }
 
@@ -153,25 +150,36 @@ test "ComputeShuffledIndex rejects invalid seed" {
     const bad_seed = [_]u8{1} ** 31;
     try std.testing.expectError(
         error.InvalidSeedLength,
-        shuffle.ComputeShuffledIndex.init(std.testing.allocator, bad_seed[0..], 1000, 90),
+        shuffle.ComputeShuffledIndex.init(bad_seed[0..], 1000, 90),
     );
 }
 
 test "ComputeShuffledIndex.get wraps like the reference for out-of-range indices" {
-    const allocator = std.testing.allocator;
     const seed = [_]u8{1} ** SEED_SIZE;
     const index_count = 10;
     const rounds = 90;
 
-    var instance = try shuffle.ComputeShuffledIndex.init(allocator, seed[0..], index_count, rounds);
-    defer instance.deinit();
+    var instance = try shuffle.ComputeShuffledIndex.init(seed[0..], index_count, rounds);
 
     // checked against @chainsafe/swap-or-not-shuffle:
     // node -e "const r = require('@chainsafe/swap-or-not-shuffle');
     //   const c = new r.ComputeShuffledIndex(new Uint8Array(32).fill(1), 10, 90);
     //   console.log(c.get(100))"
-    const result = try instance.get(100);
+    const result = instance.get(100);
     try std.testing.expectEqual(@as(u32, 1), result);
+}
+
+test "ComputeShuffledIndex repeats its rounds every 256 rounds" {
+    const seed = [_]u8{0x3c} ** SEED_SIZE;
+    const index_count = 1000;
+
+    // A round hashes only its low byte, so rounds 256..511 apply rounds 0..255 again.
+    var once = try shuffle.ComputeShuffledIndex.init(&seed, index_count, 256);
+    var twice = try shuffle.ComputeShuffledIndex.init(&seed, index_count, 512);
+    for (0..index_count) |i| {
+        const index: u32 = @intCast(i);
+        try std.testing.expectEqual(once.get(once.get(index)), twice.get(index));
+    }
 }
 
 const MAX_EFFECTIVE_BALANCE: i64 = 32_000_000_000;
@@ -189,13 +197,11 @@ fn testBalances(comptime vc: usize) struct { indices: [vc]u32, increments: [vc]u
 }
 
 test "computeProposerIndex matches reference vectors" {
-    const allocator = std.testing.allocator;
     const seed = [_]u8{1} ** SEED_SIZE;
     const data = testBalances(1000);
     const rounds = 90;
 
     const phase0_index = try shuffle.computeProposerIndex(
-        allocator,
         seed[0..],
         data.indices[0..],
         data.increments[0..],
@@ -207,7 +213,6 @@ test "computeProposerIndex matches reference vectors" {
     try std.testing.expectEqual(@as(u32, 789), phase0_index);
 
     const electra_index = try shuffle.computeProposerIndexElectra(
-        allocator,
         seed[0..],
         data.indices[0..],
         data.increments[0..],
@@ -230,6 +235,7 @@ test "computeSyncCommitteeIndices matches reference vectors" {
     var phase0: [32]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         seed[0..],
         data.indices[0..],
         data.increments[0..],
@@ -249,6 +255,7 @@ test "computeSyncCommitteeIndices matches reference vectors" {
     var electra: [32]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         seed[0..],
         data.indices[0..],
         data.increments[0..],
@@ -277,7 +284,6 @@ fn expectSyncCommitteeMatchesGetCommitteeIndices(
 
     var expected: [committee_size]u32 = undefined;
     try shuffle.getCommitteeIndices(
-        allocator,
         seed,
         active_indices,
         effective_balance_increments,
@@ -291,6 +297,7 @@ fn expectSyncCommitteeMatchesGetCommitteeIndices(
     var actual: [committee_size]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         seed,
         active_indices,
         effective_balance_increments,
@@ -384,6 +391,7 @@ test "computeSyncCommitteeIndicesInto reports the same input errors as getCommit
     // A one-entry list is never shuffled, so the seed length has to be checked separately.
     try std.testing.expectError(error.InvalidSeedLength, shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         &short_seed,
         &one_index,
         &one_increment,
@@ -399,6 +407,7 @@ test "computeSyncCommitteeIndicesInto reports the same input errors as getCommit
         error.EffectiveBalanceIncrementsOutOfBounds,
         shuffle.computeSyncCommitteeIndicesInto(
             allocator,
+            std.testing.io,
             &seed,
             &out_of_bounds_index,
             &one_increment,
@@ -414,6 +423,7 @@ test "computeSyncCommitteeIndicesInto reports the same input errors as getCommit
         error.EmptyActiveIndices,
         shuffle.computeSyncCommitteeIndicesInto(
             allocator,
+            std.testing.io,
             &seed,
             &[_]u32{},
             &one_increment,
@@ -429,6 +439,7 @@ test "computeSyncCommitteeIndicesInto reports the same input errors as getCommit
         error.InvalidEffectiveBalanceIncrement,
         shuffle.computeSyncCommitteeIndicesInto(
             allocator,
+            std.testing.io,
             &seed,
             &one_index,
             &one_increment,
@@ -450,7 +461,6 @@ test "computeSyncCommitteeIndices with one random byte matches getCommitteeIndic
 
     var expected: [32]u32 = undefined;
     try shuffle.getCommitteeIndices(
-        allocator,
         &seed,
         &active_indices,
         &effective_balance_increments,
@@ -464,6 +474,7 @@ test "computeSyncCommitteeIndices with one random byte matches getCommitteeIndic
     var actual: [32]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         &seed,
         &active_indices,
         &effective_balance_increments,
@@ -488,7 +499,6 @@ test "computeSyncCommitteeIndicesInto wraps like getCommitteeIndices on an overs
 
     var expected: [32]u32 = undefined;
     try shuffle.getCommitteeIndices(
-        allocator,
         &seed,
         &active_indices,
         &effective_balance_increments,
@@ -502,6 +512,7 @@ test "computeSyncCommitteeIndicesInto wraps like getCommitteeIndices on an overs
     var actual: [32]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         &seed,
         &active_indices,
         &effective_balance_increments,
@@ -524,7 +535,6 @@ test "computeSyncCommitteeIndicesInto matches getCommitteeIndices on a negative 
 
     var expected: [32]u32 = undefined;
     try shuffle.getCommitteeIndices(
-        allocator,
         &seed,
         &active_indices,
         &effective_balance_increments,
@@ -538,6 +548,7 @@ test "computeSyncCommitteeIndicesInto matches getCommitteeIndices on a negative 
     var actual: [32]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         &seed,
         &active_indices,
         &effective_balance_increments,
@@ -559,6 +570,7 @@ fn sampleLowBalanceSyncCommittee(allocator: std.mem.Allocator) !void {
     var committee: [32]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
         allocator,
+        std.testing.io,
         &seed,
         &active_indices,
         &effective_balance_increments,
@@ -578,7 +590,7 @@ test "memory_safety: computeSyncCommitteeIndicesInto frees everything when an al
     );
 }
 
-test "computeSyncCommitteeIndicesInto uses only shuffle scratch for low and high balances" {
+test "computeSyncCommitteeIndicesInto allocates only shuffle scratch from its allocator for low and high balances" {
     const seed = [_]u8{0x5a} ** SEED_SIZE;
     var active_indices: [4097]u32 = undefined;
     for (&active_indices, 0..) |*index, i| index.* = @intCast(i);
@@ -588,7 +600,6 @@ test "computeSyncCommitteeIndicesInto uses only shuffle scratch for low and high
         var out: [32]u32 = undefined;
         var expected: [out.len]u32 = undefined;
         try shuffle.getCommitteeIndices(
-            std.testing.allocator,
             &seed,
             &active_indices,
             &effective_balance_increments,
@@ -602,6 +613,7 @@ test "computeSyncCommitteeIndicesInto uses only shuffle scratch for low and high
         var counting = std.testing.FailingAllocator.init(std.testing.allocator, .{});
         try shuffle.computeSyncCommitteeIndicesInto(
             counting.allocator(),
+            std.testing.io,
             &seed,
             &active_indices,
             &effective_balance_increments,
@@ -617,14 +629,12 @@ test "computeSyncCommitteeIndicesInto uses only shuffle scratch for low and high
 }
 
 test "getCommitteeIndices rejects empty active indices" {
-    const allocator = std.testing.allocator;
     var out: [1]u32 = undefined;
     const seed = [_]u8{1} ** SEED_SIZE;
     const active_indices = [_]u32{};
     const increments = [_]u16{};
 
     try std.testing.expectError(error.EmptyActiveIndices, shuffle.getCommitteeIndices(
-        allocator,
         seed[0..],
         active_indices[0..],
         increments[0..],
@@ -637,14 +647,12 @@ test "getCommitteeIndices rejects empty active indices" {
 }
 
 test "getCommitteeIndices rejects zero effective balance increment" {
-    const allocator = std.testing.allocator;
     var out: [1]u32 = undefined;
     const seed = [_]u8{1} ** SEED_SIZE;
     const active_indices = [_]u32{0};
     const increments = [_]u16{32};
 
     try std.testing.expectError(error.InvalidEffectiveBalanceIncrement, shuffle.getCommitteeIndices(
-        allocator,
         seed[0..],
         active_indices[0..],
         increments[0..],
@@ -657,7 +665,6 @@ test "getCommitteeIndices rejects zero effective balance increment" {
 }
 
 test "getCommitteeIndices rejects out-of-bounds candidate index" {
-    const allocator = std.testing.allocator;
     var out: [1]u32 = undefined;
     const seed = [_]u8{1} ** SEED_SIZE;
     // a single active index >= effective_balance_increments.len (1) triggers
@@ -666,7 +673,6 @@ test "getCommitteeIndices rejects out-of-bounds candidate index" {
     const increments = [_]u16{32};
 
     try std.testing.expectError(error.EffectiveBalanceIncrementsOutOfBounds, shuffle.getCommitteeIndices(
-        allocator,
         seed[0..],
         active_indices[0..],
         increments[0..],
@@ -881,4 +887,29 @@ test "computePtcIndicesForEpochInto rejects invalid inputs gracefully" {
         EFFECTIVE_BALANCE_INCREMENT,
         out[0 .. out.len - 1],
     ));
+}
+
+test "unshuffleListParallel matches unshuffleList" {
+    const allocator = std.testing.allocator;
+    // 2 * pairs_per_task keeps each range in one task, 2 * pairs_per_task + 3 can split off a
+    // one-pair task, and the larger sizes split each range into several tasks whose starts fall
+    // on and off the 8-pair blocks.
+    const sizes = [_]usize{ 2, 3, 2 * shuffle.pairs_per_task, 2 * shuffle.pairs_per_task + 3, 8 * shuffle.pairs_per_task + 3, 20_011 };
+    for (sizes) |size| {
+        for (0..8) |seed_byte| {
+            const seed = [_]u8{@intCast(seed_byte)} ** SEED_SIZE;
+            const expected = try allocator.alloc(u32, size);
+            defer allocator.free(expected);
+            const actual = try allocator.alloc(u32, size);
+            defer allocator.free(actual);
+            for (expected, actual, 0..) |*e, *a, i| {
+                e.* = @intCast(i);
+                a.* = @intCast(i);
+            }
+
+            try shuffle.unshuffleList(u32, expected, &seed, 90);
+            try shuffle.unshuffleListParallel(u32, std.testing.io, actual, &seed, 90);
+            try std.testing.expectEqualSlices(u32, expected, actual);
+        }
+    }
 }
