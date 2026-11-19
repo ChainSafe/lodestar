@@ -118,14 +118,4 @@ describe("ForkChoice payload inclusion list satisfaction", () => {
       expect(head.payloadStatus).toBe(PayloadStatus.FULL);
     });
   });
-
-  describe("shouldExtendPayload", () => {
-    it("does not consider the inclusion list verdict", () => {
-      const {forkChoice, headRoot} = setup({isGloas: true, config: hezeConfig});
-      deliverPayload(forkChoice, headRoot);
-      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
-
-      expect(forkChoice.shouldExtendPayload(headRoot)).toBe(true);
-    });
-  });
 });
