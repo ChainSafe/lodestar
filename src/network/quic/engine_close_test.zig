@@ -93,6 +93,7 @@ test "engine closes on peer id mismatch" {
     const wrong = pair.client_ctx.local_peer_id;
     const handle = try pair.client.dial(
         &server_address,
+        &client_address,
         wrong,
         pair.now,
     );
@@ -151,7 +152,7 @@ test "engine delivers a close requested before the establishing flight leaves" {
         for (0..4) |_| {
             const datagram = pair.sendOne(&pair.client, handle.index, &out) orelse break;
             var response: [constants.datagram_size_max]u8 = undefined;
-            try std.testing.expect(pair.server.receive(datagram, &client_address, pair.now, &response) == .accepted);
+            try std.testing.expect(pair.server.receive(datagram, &client_address, &server_address, pair.now, &response) == .accepted);
             datagrams += 1;
         }
         pair.client.sent(handle.index, pair.now, true);
@@ -457,7 +458,7 @@ test "engine deferred host close delays peer claims until the final flight drain
     var packet: [constants.datagram_size_max]u8 = undefined;
     const flight = pair.sendOne(&pair.client, handle.index, &packet).?;
     var reply: [constants.datagram_size_max]u8 = undefined;
-    try std.testing.expect(pair.server.receive(flight, &client_address, pair.now, &reply) == .accepted);
+    try std.testing.expect(pair.server.receive(flight, &client_address, &server_address, pair.now, &reply) == .accepted);
     pair.settle(&pair.server);
     var storage: [8]Event = undefined;
     const server = try expectConnected(pair.events(&pair.server, &storage)[0], .inbound, &pair.client_ctx);

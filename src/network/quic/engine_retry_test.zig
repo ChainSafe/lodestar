@@ -22,7 +22,7 @@ test "QUIC Retry does not allocate a connection for repeated unvalidated Initial
     const initial = pair.sendOne(&pair.client, handle.index, &packet).?;
     var out: [packet.len]u8 = undefined;
     for (0..4) |_| {
-        const outcome = pair.server.receive(initial, &support.client_address, pair.now, &out);
+        const outcome = pair.server.receive(initial, &support.client_address, &support.server_address, pair.now, &out);
         try std.testing.expect(outcome == .retry);
         try std.testing.expect(outcome.retry.len <= initial.len);
         try std.testing.expectEqual(@as(usize, 0), pair.server.registry.active_len);
@@ -43,7 +43,7 @@ test "QUIC cached tokens of bounded wire lengths get Retry without connection al
         var token: [binding.Header.token_max]u8 = undefined;
         const header = try binding.Header.parse(initial, &token);
         try std.testing.expectEqual(length, header.token.len);
-        const outcome = pair.server.receive(initial, &support.client_address, pair.now, &output);
+        const outcome = pair.server.receive(initial, &support.client_address, &support.server_address, pair.now, &output);
         try std.testing.expect(outcome == .retry);
         try std.testing.expect(outcome.retry.len <= initial.len);
         try std.testing.expectEqual(@as(usize, 0), pair.server.registry.active_len);
@@ -63,12 +63,12 @@ test "QUIC invalid local Retry tokens do not receive another Retry" {
     var packet: [constants.datagram_size_max]u8 = undefined;
     var output: [packet.len]u8 = undefined;
     for ([_]usize{ 8, 9, issued.len }) |length| {
-        const outcome = pair.server.receive(initialWithToken(&packet, issued[0..length]), &support.client_address, pair.now, &output);
+        const outcome = pair.server.receive(initialWithToken(&packet, issued[0..length]), &support.client_address, &support.server_address, pair.now, &output);
         try std.testing.expect(outcome == .dropped);
     }
     token[8] ^= 1;
     try std.testing.expect(retry.isLocal(issued));
-    try std.testing.expect(pair.server.receive(initialWithToken(&packet, issued), &support.client_address, pair.now, &output) == .dropped);
+    try std.testing.expect(pair.server.receive(initialWithToken(&packet, issued), &support.client_address, &support.server_address, pair.now, &output) == .dropped);
     try std.testing.expectEqual(@as(usize, 0), pair.server.registry.active_len);
 }
 
@@ -79,7 +79,7 @@ test "QUIC Retry validates a token received after a longer foreign token" {
     var packet: [constants.datagram_size_max]u8 = undefined;
     var output: [packet.len]u8 = undefined;
     const cached: [1024]u8 = @splat(0xa5);
-    try std.testing.expect(pair.server.receive(initialWithToken(&packet, &cached), &support.client_address, pair.now, &output) == .retry);
+    try std.testing.expect(pair.server.receive(initialWithToken(&packet, &cached), &support.client_address, &support.server_address, pair.now, &output) == .retry);
     _ = try support.connectPair(&pair);
     try std.testing.expectEqual(@as(usize, 1), pair.server.registry.active_len);
 }
@@ -103,13 +103,13 @@ test "QUIC Retry keys an admitted handshake before its first advance" {
     var packet: [constants.datagram_size_max]u8 = undefined;
     var out: [packet.len]u8 = undefined;
     const unvalidated = pair.sendOne(&pair.client, handle.index, &packet).?;
-    const answer = pair.server.receive(unvalidated, &support.client_address, pair.now, &out);
+    const answer = pair.server.receive(unvalidated, &support.client_address, &support.server_address, pair.now, &out);
     try std.testing.expect(answer == .retry);
     var token_reply: [packet.len]u8 = undefined;
     @memcpy(token_reply[0..answer.retry.len], answer.retry);
-    _ = pair.client.receive(token_reply[0..answer.retry.len], &support.server_address, pair.now, &out);
+    _ = pair.client.receive(token_reply[0..answer.retry.len], &support.server_address, &support.client_address, pair.now, &out);
     const validated = pair.sendOne(&pair.client, handle.index, &packet).?;
-    const outcome = pair.server.receive(validated, &support.client_address, pair.now, &out);
+    const outcome = pair.server.receive(validated, &support.client_address, &support.server_address, pair.now, &out);
     try std.testing.expect(outcome == .accepted);
     try std.testing.expectEqual(@as(u16, 1), pair.server.registry.handshaking);
     try std.testing.expect(pair.server.nextDeadlineNs() != null);

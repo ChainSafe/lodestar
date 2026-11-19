@@ -233,7 +233,7 @@ pub const Discovery = struct {
                 .request_id = incoming.message.talk_request.request_id,
                 .response = &.{},
             } };
-            self.transport.sendResponse(io, incoming.peer, &response, now_ms) catch |err| {
+            self.transport.sendResponse(io, incoming.peer, progress.local, &response, now_ms) catch |err| {
                 consumed.cancelled = consumed.cancelled or err == error.Canceled;
                 if (err != error.DestinationUnreachable and consumed.failure == null) {
                     consumed.failure = .{ .cause = err, .stage = .process };

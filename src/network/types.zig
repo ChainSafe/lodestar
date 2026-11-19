@@ -55,6 +55,8 @@ pub const CloseReason = union(enum) {
 pub const Sent = struct {
     bytes: []u8,
     to: Address,
+    /// The connection's local address.
+    from: Address,
     transmit_at_ns: u64 = 0,
 };
 
