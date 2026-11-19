@@ -185,12 +185,12 @@ export class Network implements INetwork {
     const gossipQueueId = opts.nativeGossipQueues
       ? gossipQueues.create(activeValidatorCount, opts.maxGossipTopicConcurrency ?? 16384)
       : undefined;
-    opts = {...opts, gossipQueueId};
     let core: INetworkCore | undefined;
     let networkProcessor: NetworkModules["networkProcessor"];
     try {
       core = opts.useWorker
         ? await WorkerNetworkCore.init({
+            gossipQueueId,
             opts: {
               ...opts,
               peerStoreDir,
@@ -208,6 +208,7 @@ export class Network implements INetwork {
             getReqRespHandler,
           })
         : await NetworkCore.init({
+            gossipQueueId,
             opts,
             config,
             privateKey,

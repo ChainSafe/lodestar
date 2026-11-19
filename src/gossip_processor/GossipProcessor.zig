@@ -1,3 +1,10 @@
+//! Each cell holds one gossip receipt. Admission moves a free cell to queued, or to
+//! needs_check if it has a dependency. The chain claims it as checking, then queues it
+//! for validation or parks it in waiting. A root notification sends it back to needs_check.
+//! Delivery claims a queued cell as copying while the binding takes its buffers. The
+//! delivered cell holds its execution reservation until completion. Reuse increments
+//! its generation so an old token cannot settle a later receipt.
+
 const std = @import("std");
 pub const ForkSeq = @import("config").ForkSeq;
 

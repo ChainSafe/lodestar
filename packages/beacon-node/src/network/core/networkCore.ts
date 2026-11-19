@@ -57,6 +57,7 @@ type Mods = {
 };
 
 export type BaseNetworkInit = {
+  gossipQueueId?: number;
   opts: NetworkOptions;
   config: BeaconConfig;
   privateKey: PrivateKey;
@@ -140,6 +141,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   static async init({
+    gossipQueueId,
     opts,
     config,
     privateKey,
@@ -196,6 +198,7 @@ export class NetworkCore implements INetworkCore {
     );
 
     const gossip = new Eth2Gossipsub(opts, {
+      gossipQueueId,
       clock,
       networkConfig,
       libp2p,

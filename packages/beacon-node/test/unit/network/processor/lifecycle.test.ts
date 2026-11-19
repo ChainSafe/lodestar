@@ -142,6 +142,15 @@ function fixture(native = false) {
   };
 }
 
+it("supports exactly the beacon node gossip topics in the native queue", () => {
+  const id = gossipQueues.create(0, 1);
+  try {
+    expect(new Set(Object.keys(gossipQueues.stats(id).topics))).toEqual(new Set(Object.values(GossipType)));
+  } finally {
+    gossipQueues.close(id);
+  }
+});
+
 describe("NetworkProcessor lifecycle", () => {
   const processors: (NetworkProcessor | NativeGossipProcessor)[] = [];
   function setup() {

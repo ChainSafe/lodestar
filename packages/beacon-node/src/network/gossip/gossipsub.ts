@@ -3,7 +3,7 @@ import {
   type GossipSubEvents,
   type PublishResult,
   StrictNoSign,
-  type TopicValidatorResult,
+  TopicValidatorResult,
   gossipsub,
 } from "@libp2p/gossipsub";
 import type {MetricsRegister, TopicLabel, TopicStrToLabel} from "@libp2p/gossipsub/metrics";
@@ -74,6 +74,7 @@ export type Eth2Context = {
 };
 
 export type Eth2GossipsubModules = {
+  gossipQueueId?: number;
   networkConfig: NetworkConfig;
   libp2p: Libp2p;
   logger: Logger;
@@ -85,7 +86,6 @@ export type Eth2GossipsubModules = {
 };
 
 export type Eth2GossipsubOpts = {
-  gossipQueueId?: number;
   allowPublishToZeroPeers?: boolean;
   gossipsubD?: number;
   gossipsubDLow?: number;
@@ -148,16 +148,11 @@ export class Eth2Gossipsub {
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
 
-  private readonly offerNative?: (message: PendingGossipsubMessage) => void;
+  private readonly offerNative?: (message: PendingGossipsubMessage) => boolean;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
-    const id = opts.gossipQueueId;
-    if (id !== undefined) {
-      const clock = modules.clock;
-      this.offerNative = (message) => {
-        if (offerGossip(id, clock, message)) modules.events.emit(NetworkEvent.gossipQueueReady, null);
-      };
-    }
+    const {gossipQueueId, clock} = modules;
+    if (gossipQueueId !== undefined) this.offerNative = (message) => offerGossip(gossipQueueId, clock, message);
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
     const {networkConfig, logger, metricsRegister, peersData, events} = modules;
     const {config} = networkConfig;
@@ -440,7 +435,19 @@ export class Eth2Gossipsub {
       startProcessUnixSec: null,
     };
     if (this.offerNative) {
-      this.offerNative(pending);
+      let wake: boolean;
+      try {
+        wake = this.offerNative(pending);
+      } catch (error) {
+        this.logger.error(
+          "Failed to enqueue gossip for validation",
+          {topic: topic.type, peer: peerIdStr},
+          error as Error
+        );
+        this.onValidationResult({msgId, propagationSource: peerIdStr, acceptance: TopicValidatorResult.Ignore});
+        return;
+      }
+      if (wake) this.events.emit(NetworkEvent.gossipQueueReady, null);
       return;
     }
     const emitPendingMessage = (): void => {

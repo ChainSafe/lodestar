@@ -44,6 +44,7 @@ export type WorkerNetworkCoreOpts = NetworkOptions & {
 };
 
 export type WorkerNetworkCoreInitModules = {
+  gossipQueueId?: number;
   opts: WorkerNetworkCoreOpts;
   config: BeaconConfig;
   logger: LoggerNode;
@@ -122,6 +123,7 @@ export class WorkerNetworkCore implements INetworkCore {
     } = opts;
 
     const workerData: NetworkWorkerData = {
+      gossipQueueId: modules.gossipQueueId,
       opts,
       chainConfigJson: chainConfigToJson(config),
       genesisValidatorsRoot: config.genesisValidatorsRoot,
