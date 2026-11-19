@@ -819,6 +819,7 @@ test {
     _ = @import("network_core_lifecycle_test.zig");
     _ = @import("network_core_identify_test.zig");
     _ = @import("network_core_socket_test.zig");
+    _ = @import("network_core_source_test.zig");
     _ = @import("network_core_control_test.zig");
     _ = @import("network_core_coverage_test.zig");
 }
