@@ -274,6 +274,10 @@
             .root_source_file = "src/discv5/root.zig",
             .imports = .{ .udp, .fault_io, .socket_test_support },
         },
+        .network = .{
+            .root_source_file = "src/network/root.zig",
+            .imports = .{ "quiche_zig:quiche", .consensus_types, .config, .constants, .preset, .snappy, .discv5, .udp, .fault_io, .clock, .swap_or_not_shuffle },
+        },
         .ere_verifier = .{
             .root_source_file = "src/ere_verifier/root.zig",
             .imports = .{.ere},
@@ -448,6 +452,7 @@
         .fault_io = .{ .root_module = .fault_io },
         .udp = .{ .root_module = .udp },
         .discv5 = .{ .root_module = .discv5 },
+        .network = .{ .root_module = .network },
         .ere_verifier = .{ .root_module = .ere_verifier },
         .bindings_allocator = .{
             .root_module = .{
