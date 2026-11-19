@@ -36,8 +36,11 @@ pub const logging = @import("logging.zig");
 pub const stream_trace = @import("stream_trace.zig");
 pub const identify = @import("identify/root.zig");
 pub const capabilities = @import("capabilities.zig");
+pub const peer_manager = @import("peer_manager.zig");
+pub const PeerManager = peer_manager.PeerManager;
 pub const transport_driver = @import("transport_driver.zig");
 pub const Schedule = types.Schedule;
+pub const peers = @import("peers/root.zig");
 pub const advertisement = @import("advertisement.zig");
 pub const local_state = @import("local_state.zig");
 pub const control_wire = @import("control_wire.zig");
@@ -70,6 +73,7 @@ pub const Multiaddr = wire.multiaddr.Multiaddr;
 pub const KeyPair = wire.keys.KeyPair;
 
 test {
+    _ = peers;
     _ = local_state;
     _ = control_wire;
     _ = constants;
