@@ -124,7 +124,8 @@ fn aggregate_status(error: AggregateError) -> i32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn leanvm_setup() {
-    lean_vm::setup();
+    // One thread per core.
+    lean_vm::setup(0);
 }
 
 #[unsafe(no_mangle)]
