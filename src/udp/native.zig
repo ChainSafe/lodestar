@@ -3,6 +3,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const compat = @import("compat.zig");
 const Sockets = @import("sockets.zig").Sockets;
+const Address = @import("address.zig").Address;
 const net = std.Io.net;
 const assert = std.debug.assert;
 const SendError = Sockets.SendError;
@@ -12,10 +13,105 @@ const os = builtin.os.tag;
 const linux = std.os.linux;
 const gso_payload_max = 65_507;
 
+const ControlHeader = if (os == .linux) linux.cmsghdr else extern struct { len: u32, level: i32, type: i32 };
+const control_alignment = if (os == .linux) @sizeOf(usize) else @sizeOf(u32);
+const control_data = std.mem.alignForward(usize, @sizeOf(ControlHeader), control_alignment);
+// Darwin's values from netinet/in.h and netinet6/in6.h are absent from std.posix in Zig 0.16.
+const ip_pktinfo = if (os == .linux) linux.IP.PKTINFO else 26;
+const ipv6_recvpktinfo = if (os == .linux) linux.IPV6.RECVPKTINFO else 61;
+const ipv6_pktinfo = if (os == .linux) linux.IPV6.PKTINFO else 46;
+pub const control_size = 64;
+pub const Control = [control_size]u8;
+comptime {
+    assert(controlSpace(@sizeOf(std.posix.in6_pktinfo)) + controlSpace(@sizeOf(u16)) <= control_size);
+    assert(@sizeOf(std.posix.in_pktinfo) <= @sizeOf(std.posix.in6_pktinfo));
+}
+
+fn controlSpace(len: usize) usize {
+    return control_data + std.mem.alignForward(usize, len, control_alignment);
+}
+
+fn putControl(control: []align(8) u8, level: i32, kind: i32, value: anytype) usize {
+    const space = controlSpace(@sizeOf(@TypeOf(value)));
+    @memset(control[0..space], 0);
+    const header: *ControlHeader = @ptrCast(control.ptr);
+    header.* = .{ .len = @intCast(control_data + @sizeOf(@TypeOf(value))), .level = level, .type = kind };
+    @memcpy(control[control_data..][0..@sizeOf(@TypeOf(value))], std.mem.asBytes(&value));
+    return space;
+}
+
+pub fn linkLocal(octets: [16]u8) bool {
+    return octets[0] == 0xfe and octets[1] & 0xc0 == 0x80;
+}
+
+/// Asks the kernel to report each datagram's destination address.
+pub fn reportDestination(handle: net.Socket.Handle, family: std.meta.Tag(net.IpAddress)) std.posix.E {
+    const p = std.posix;
+    const enabled: c_int = 1;
+    const level: i32, const option: u32 = switch (family) {
+        .ip4 => .{ p.IPPROTO.IP, ip_pktinfo },
+        .ip6 => .{ p.IPPROTO.IPV6, ipv6_recvpktinfo },
+    };
+    return p.errno(p.system.setsockopt(handle, level, option, std.mem.asBytes(&enabled), @sizeOf(c_int)));
+}
+
+/// The local address a datagram was sent to, with `port`. Null when the control data names none.
+pub fn destination(control: []const u8, port: u16) error{InvalidDestinationAddress}!?Address {
+    const p = std.posix;
+    var offset: usize = 0;
+    while (control.len - offset >= @sizeOf(ControlHeader)) {
+        const header = std.mem.bytesToValue(ControlHeader, control[offset..][0..@sizeOf(ControlHeader)]);
+        if (header.len < control_data or header.len > control.len - offset) return null;
+        const data = control[offset + control_data .. offset + header.len];
+        if (header.level == p.IPPROTO.IP and header.type == ip_pktinfo and data.len >= @sizeOf(p.in_pktinfo)) {
+            const info = std.mem.bytesToValue(p.in_pktinfo, data[0..@sizeOf(p.in_pktinfo)]);
+            const octets: [4]u8 = @bitCast(info.addr);
+            // Linux reports the receiving interface's address as spec_dst for broadcast and multicast.
+            if (os == .linux and info.addr != info.spec_dst) return error.InvalidDestinationAddress;
+            if (octets[0] >= 224 or info.addr == 0) return error.InvalidDestinationAddress;
+            return .{ .ip4 = .{ .octets = octets, .port = port } };
+        }
+        if (header.level == p.IPPROTO.IPV6 and header.type == ipv6_pktinfo and data.len >= @sizeOf(p.in6_pktinfo)) {
+            const info = std.mem.bytesToValue(p.in6_pktinfo, data[0..@sizeOf(p.in6_pktinfo)]);
+            if (info.addr[0] == 0xff or std.mem.allEqual(u8, &info.addr, 0)) return error.InvalidDestinationAddress;
+            const interface: u32 = if (linkLocal(info.addr)) @intCast(info.ifindex) else 0;
+            return .{ .ip6 = .{ .octets = info.addr, .port = port, .interface = interface } };
+        }
+        offset += std.mem.alignForward(usize, header.len, control_alignment);
+        if (offset > control.len) return null;
+    }
+    return null;
+}
+
+pub fn pinned(from: ?Address) ?Address {
+    const source = from orelse return null;
+    return switch (source) {
+        inline else => |ip| if (std.mem.allEqual(u8, &ip.octets, 0)) null else source,
+    };
+}
+
+/// Writes the packet-info message pinning `from` as the source and returns its length. A non-zero
+/// IPv4 interface index would override the address on Darwin.
+pub fn pinSource(control: []align(8) u8, from: Address) usize {
+    const p = std.posix;
+    return switch (from) {
+        .ip4 => |ip| putControl(control, p.IPPROTO.IP, ip_pktinfo, p.in_pktinfo{
+            .ifindex = 0,
+            .spec_dst = @bitCast(ip.octets),
+            .addr = 0,
+        }),
+        .ip6 => |ip| putControl(control, p.IPPROTO.IPV6, ipv6_pktinfo, p.in6_pktinfo{
+            .addr = ip.octets,
+            .ifindex = if (linkLocal(ip.octets)) @intCast(ip.interface) else 0,
+        }),
+    };
+}
+
 pub fn receive(
     io: std.Io,
     handle: net.Socket.Handle,
     buffer: []u8,
+    control: *align(8) Control,
 ) ReceiveError!?net.IncomingMessage {
     const p = std.posix;
     var storage: compat.PosixAddress = undefined;
@@ -25,8 +121,8 @@ pub fn receive(
         .namelen = @sizeOf(compat.PosixAddress),
         .iov = (&vector)[0..1],
         .iovlen = 1,
-        .control = null,
-        .controllen = 0,
+        .control = control,
+        .controllen = control_size,
         .flags = 0,
     };
     try io.checkCancel();
@@ -35,7 +131,7 @@ pub fn receive(
         .SUCCESS => .{
             .from = compat.addressFromPosix(&storage),
             .data = buffer[0..@intCast(received)],
-            .control = &.{},
+            .control = control[0..@intCast(header.controllen)],
             .flags = .{
                 .eor = (header.flags & p.MSG.EOR) != 0,
                 .trunc = (header.flags & p.MSG.TRUNC) != 0,
@@ -53,13 +149,27 @@ pub fn send(
     io: std.Io,
     handle: net.Socket.Handle,
     address: *const net.IpAddress,
+    from: ?Address,
     bytes: []const u8,
 ) SendError!void {
     const p = std.posix;
     var storage: compat.PosixAddress = undefined;
     const length = compat.addressToPosix(address, &storage);
     try io.checkCancel();
-    const sent = p.system.sendto(
+    const sent = if (pinned(from)) |source| blk: {
+        var control: Control align(8) = undefined;
+        var vector: p.iovec_const = .{ .base = bytes.ptr, .len = bytes.len };
+        const header: p.msghdr_const = .{
+            .name = &storage.any,
+            .namelen = length,
+            .iov = (&vector)[0..1],
+            .iovlen = 1,
+            .control = &control,
+            .controllen = @intCast(pinSource(&control, source)),
+            .flags = 0,
+        };
+        break :blk p.system.sendmsg(handle, &header, p.MSG.NOSIGNAL | p.MSG.DONTWAIT);
+    } else p.system.sendto(
         handle,
         bytes.ptr,
         bytes.len,
@@ -73,18 +183,33 @@ pub fn send(
     };
 }
 
+/// The source address the kernel routes `peer` from. Connecting a UDP socket sends nothing, and
+/// disconnecting makes the next call resolve afresh.
+pub fn route(io: std.Io, probe: net.Socket.Handle, peer: *const net.IpAddress) Sockets.SourceError!Address {
+    const p = std.posix;
+    var storage: compat.PosixAddress = undefined;
+    var length = compat.addressToPosix(peer, &storage);
+    try io.checkCancel();
+    if (p.errno(p.system.connect(probe, &storage.any, length)) != .SUCCESS) return error.SourceUnavailable;
+    length = @sizeOf(compat.PosixAddress);
+    const named = p.errno(p.system.getsockname(probe, &storage.any, &length));
+    var unspecified = std.mem.zeroes(p.sockaddr);
+    unspecified.family = p.AF.UNSPEC;
+    const disconnected = p.errno(p.system.connect(probe, &unspecified, @sizeOf(p.sockaddr)));
+    // Darwin disconnects and then reports the unspecified family as unsupported.
+    if (named != .SUCCESS or (disconnected != .SUCCESS and (os == .linux or disconnected != .AFNOSUPPORT))) return error.SourceUnavailable;
+    var source = Address.fromNetwork(compat.addressFromPosix(&storage));
+    if (source == .ip6 and !linkLocal(source.ip6.octets)) source.ip6.interface = 0;
+    return source;
+}
+
 pub const SendScratch = if (os == .linux) struct {
     headers: [Sockets.BatchScratch.capacity]linux.mmsghdr,
     addresses: [Sockets.BatchScratch.capacity]compat.PosixAddress,
     vectors: [Sockets.BatchScratch.capacity]std.posix.iovec,
-    controls: [Sockets.BatchScratch.capacity]Segmentation,
+    controls: [Sockets.BatchScratch.capacity]Control align(8),
     groups: [Sockets.BatchScratch.capacity]struct { end: usize, bytes: usize },
 } else struct {};
-
-const Segmentation = extern struct {
-    header: linux.cmsghdr,
-    size: u16,
-};
 
 /// Positive sendmmsg results hide the next group's errno. Retry only the unsent suffix.
 pub fn sendMany(
@@ -97,7 +222,7 @@ pub fn sendMany(
     if (comptime os != .linux) {
         for (messages, 0..) |message, sent| {
             const address = message.to.toNetwork();
-            send(io, handle, &address, message.bytes) catch |err|
+            send(io, handle, &address, message.from, message.bytes) catch |err|
                 return .{ .sent = sent, .failure = err };
         }
         return .{ .sent = messages.len, .failure = null };
@@ -157,7 +282,7 @@ fn prepareSend(messages: []const Sockets.Outgoing, scratch: *SendScratch, segmen
         if (segment and bytes > 0 and bytes <= gso_payload_max) {
             while (end < messages.len) {
                 const next = messages[end];
-                if (!first.to.eql(next.to) or next.bytes.len == 0 or
+                if (!first.to.eql(next.to) or !std.meta.eql(first.from, next.from) or next.bytes.len == 0 or
                     next.bytes.len > first.bytes.len or bytes + next.bytes.len > gso_payload_max) break;
                 bytes += next.bytes.len;
                 end += 1;
@@ -174,17 +299,15 @@ fn prepareSend(messages: []const Sockets.Outgoing, scratch: *SendScratch, segmen
             .controllen = 0,
             .flags = 0,
         }, .len = 0 };
+        const control: []align(8) u8 = &scratch.controls[groups];
+        var control_len: usize = if (pinned(first.from)) |from| pinSource(control, from) else 0;
         if (end - begin > 1) {
-            const control = &scratch.controls[groups];
-            control.* = std.mem.zeroes(Segmentation);
-            control.header = .{
-                .len = @offsetOf(Segmentation, "size") + @sizeOf(u16),
-                .level = linux.IPPROTO.UDP,
-                .type = linux.UDP.SEGMENT,
-            };
-            control.size = @intCast(first.bytes.len);
-            scratch.headers[groups].hdr.control = control;
-            scratch.headers[groups].hdr.controllen = @sizeOf(Segmentation);
+            const segment_size: u16 = @intCast(first.bytes.len);
+            control_len += putControl(@alignCast(control[control_len..]), linux.IPPROTO.UDP, linux.UDP.SEGMENT, segment_size);
+        }
+        if (control_len > 0) {
+            scratch.headers[groups].hdr.control = control.ptr;
+            scratch.headers[groups].hdr.controllen = control_len;
         }
         scratch.groups[groups] = .{ .end = end, .bytes = bytes };
         begin = end;
@@ -205,15 +328,15 @@ pub fn receiveMany(
     scratch: *ReceiveScratch,
 ) ReceiveError!usize {
     assert(slots.len > 0 and slots.len <= Sockets.receive_batch_max);
-    for (slots, 0..) |slot, i| {
+    for (slots, 0..) |*slot, i| {
         scratch.vectors[i] = .{ .base = slot.buffer.ptr, .len = slot.buffer.len };
         scratch.headers[i] = .{ .hdr = .{
             .name = &scratch.addresses[i].any,
             .namelen = @sizeOf(compat.PosixAddress),
             .iov = scratch.vectors[i..].ptr,
             .iovlen = 1,
-            .control = null,
-            .controllen = 0,
+            .control = &slots[i].control,
+            .controllen = control_size,
             .flags = 0,
         }, .len = 0 };
     }
@@ -234,7 +357,7 @@ pub fn receiveMany(
                 slot.message = .{
                     .from = compat.addressFromPosix(&scratch.addresses[i]),
                     .data = slot.buffer[0..header.len],
-                    .control = &.{},
+                    .control = slot.control[0..header.hdr.controllen],
                     .flags = .{
                         .eor = (header.hdr.flags & linux.MSG.EOR) != 0,
                         .trunc = (header.hdr.flags & linux.MSG.TRUNC) != 0,

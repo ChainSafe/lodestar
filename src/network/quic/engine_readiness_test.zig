@@ -81,7 +81,7 @@ test "engine writable event re-arms only when send capacity grows" {
     for (0..2) |_| {
         var replay: [constants.datagram_size_max]u8 = undefined;
         @memcpy(replay[0..ping.bytes.len], copy[0..ping.bytes.len]);
-        _ = pair.client.receive(replay[0..ping.bytes.len], &support.server_address, pair.now, &response);
+        _ = pair.client.receive(replay[0..ping.bytes.len], &support.server_address, &support.client_address, pair.now, &response);
         pair.settle(&pair.client);
         try std.testing.expectEqual(@as(usize, 0), countWritable(&pair, stream));
     }
@@ -212,7 +212,7 @@ test "engine advances a received burst and its due timer once" {
     var reply: [constants.datagram_size_max]u8 = undefined;
     for (0..32) |_| {
         const sent = pair.client.sendOne(handles.client.index, pair.now, &buffer) orelse return error.TestUnexpectedResult;
-        try std.testing.expectEqual(handles.server, pair.server.receive(sent.bytes, &support.client_address, pair.now, &reply).accepted);
+        try std.testing.expectEqual(handles.server, pair.server.receive(sent.bytes, &support.client_address, &support.server_address, pair.now, &reply).accepted);
     }
     try std.testing.expectEqualDeep(before, pair.server.visits);
     try std.testing.expectEqual(pair.now.nanos(), pair.server.registry.timers.get(handles.server.index).?);

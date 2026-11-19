@@ -306,11 +306,11 @@ test "UDP native single batch and ready receive check cancellation before I/O" {
     const io: std.Io = .{ .userdata = std.testing.io.userdata, .vtable = &vtable };
     const destination = sockets.primary().address;
     const message: Sockets.Outgoing = .{ .to = Address.fromNetwork(destination), .bytes = "canceled" };
-    try std.testing.expectError(error.Canceled, sockets.sendTo(io, message.to, message.bytes, 16));
+    try std.testing.expectError(error.Canceled, sockets.sendTo(io, message.to, null, message.bytes, 16));
     try std.testing.expectEqual(Sockets.SendOutcome{ .sent = 0, .failure = error.Canceled }, sendMany(&sockets, io, (&message)[0..1]));
     var buffer: [16]u8 = undefined;
     try std.testing.expectEqual(null, try readAny(&sockets, std.testing.io, &buffer));
-    try sockets.sendTo(std.testing.io, message.to, "retained", 16);
+    try sockets.sendTo(std.testing.io, message.to, null, "retained", 16);
     try waitForDatagram(sockets.primary());
     var ready: [2]bool = .{ true, false };
     try std.testing.expectError(error.Canceled, sockets.receiveReady(io, &buffer, &ready));
@@ -353,7 +353,7 @@ test "UDP leaves sends to a provider that replaces them" {
     defer sockets.close(std.testing.io);
     var faults: fault_io = .{ .send = .{} };
     const destination = Address.fromNetwork(sockets.primary().address);
-    try std.testing.expectError(error.AddressFamilyUnsupported, sockets.sendTo(faults.io(), destination, "provider", 16));
+    try std.testing.expectError(error.AddressFamilyUnsupported, sockets.sendTo(faults.io(), destination, null, "provider", 16));
     try std.testing.expectEqual(@as(usize, 1), faults.send_calls);
     const message: Sockets.Outgoing = .{ .to = Address.fromNetwork(sockets.primary().address), .bytes = "provider" };
     try std.testing.expectEqual(Sockets.SendOutcome{ .sent = 0, .failure = error.AddressFamilyUnsupported }, sendMany(&sockets, faults.io(), (&message)[0..1]));

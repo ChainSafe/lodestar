@@ -27,7 +27,7 @@ test "maintenance retains a routing incumbent that answers through Transport" {
     try std.testing.expectEqual(@as(?u64, 0), controller.nextDeadlineMs(&pair.transport_a.engine));
     var out: [1_280]u8 = undefined;
     const started = (try controller.startNext(&pair.transport_a.engine, &out, try .init(&.{1}), now_ms, &test_support.sealEntropy(10))).?;
-    try pair.transport_a.transmit(std.testing.io, started.peer.address, out[0..started.call.packet_length]);
+    try pair.transport_a.transmit(std.testing.io, started.peer.address, null, out[0..started.call.packet_length]);
     var expired: [4]CallTable.Expired = undefined;
     const answered = try driver.step(&pair.transport_b, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) });
     try std.testing.expectEqual(@as(u8, 1), answered.standard_responses);
@@ -84,7 +84,7 @@ test "transport leaves TALK response policy with the application" {
         .request_id = request_id,
         .response = "response",
     } };
-    try pair.transport_b.sendResponse(std.testing.io, endpoint(&pair.record_a), &response, try Transport.monotonicMilliseconds(std.testing.io));
+    try pair.transport_b.sendResponse(std.testing.io, endpoint(&pair.record_a), received.local, &response, try Transport.monotonicMilliseconds(std.testing.io));
     const completed = try driver.step(&pair.transport_a, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) });
     try std.testing.expect(completed.event == .response);
     try std.testing.expectEqual(handle, completed.event.response.matched.handle);
@@ -102,6 +102,7 @@ test "transport releases a malformed datagram before the next step" {
     try pair.transport_b.sockets.sendTo(
         std.testing.io,
         pair.transport_a.localAddress(),
+        null,
         &.{0xff},
         constants.packet_size_max,
     );
@@ -171,7 +172,7 @@ test "transport fails a call whose handshake is not sent so maintenance keeps th
         var out: [1_280]u8 = undefined;
         const started = (try controller.startNext(&pair.transport_a.engine, &out, try .init(&.{1}), now_ms, &test_support.sealEntropy(10))).?;
         try std.testing.expectEqual(endpoint(&pair.record_b), started.peer);
-        try pair.transport_a.transmit(std.testing.io, started.peer.address, out[0..started.call.packet_length]);
+        try pair.transport_a.transmit(std.testing.io, started.peer.address, null, out[0..started.call.packet_length]);
         var expired: [4]CallTable.Expired = undefined;
         const challenged = try driver.step(&pair.transport_b, std.testing.io, &expired, .{ .wait_max = .fromMilliseconds(10) });
         try std.testing.expect(challenged.failure == null and challenged.datagram == .accepted);
@@ -219,7 +220,7 @@ test "discovery ready steps expire calls with no eligible socket and preserve la
     try std.testing.expectEqual(@as(usize, 1), result.calls_expired);
     try std.testing.expectEqual(started.handle, expired[0].handle);
     try std.testing.expectEqual(@as(usize, 0), faults.receive_calls);
-    try pair.transport_b.sockets.sendTo(std.testing.io, pair.transport_a.localAddress(), &.{0xff}, 1280);
+    try pair.transport_b.sockets.sendTo(std.testing.io, pair.transport_a.localAddress(), null, &.{0xff}, 1280);
     const late = try pair.transport_a.advance(faults.io(), try Transport.monotonicMilliseconds(faults.io()), &expired, pair.transport_a.receive(faults.io(), &eligible));
     try std.testing.expect(late.datagram == .timeout and late.failure == null);
     try std.testing.expectEqual(@as(usize, 0), faults.receive_calls);
@@ -242,7 +243,7 @@ test "discovery ready steps retain one family mask through the drain" {
     defer transport.deinit(std.testing.allocator, std.testing.io);
     const addresses = transport.sockets.localAddresses();
     for (addresses, transport.sockets.values) |address, socket| {
-        try transport.sockets.sendTo(std.testing.io, address.?, &.{0xff}, 1280);
+        try transport.sockets.sendTo(std.testing.io, address.?, null, &.{0xff}, 1280);
         try waitForDatagram(socket.?);
     }
     var faults: fault_io = .{ .receive = .{ .socket = transport.sockets.values[1].?.handle } };
