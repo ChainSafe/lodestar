@@ -17,6 +17,8 @@ pub fn build(b: *std.Build) !void {
     send_info_layout.addIncludePath(result.dependency("quiche_zig").?.builder.dependency("quiche", .{}).path("include"));
     network.addImport("quiche_send_info_layout", send_info_layout.createModule());
 
+    b.step("check:network-tools", "Compile the network interoperability peer").dependOn(&result.executable("network_interop_peer").?.step);
+
     zapi.addAddonIdentity(
         b,
         result.library("bindings").?,
