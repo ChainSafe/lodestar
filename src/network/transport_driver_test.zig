@@ -52,6 +52,7 @@ test "transport driver keeps receive progress when the post-wait clock read fail
     try node.init(40);
     defer node.deinit();
     try node.transport.sockets.primary().send(std.testing.io, &node.transport.sockets.primary().address, "invalid");
+    try support.awaitDatagrams(node.transport.sockets.primary(), 1);
     var vtable = std.testing.io.vtable.*;
     vtable.now = ReceiveClockFault.clock;
     const io: std.Io = .{ .userdata = std.testing.io.userdata, .vtable = &vtable };
