@@ -108,12 +108,3 @@ fn exerciseAdmission(allocator: std.mem.Allocator) !void {
     try std.testing.expect(accepted);
     try std.testing.expectEqual(2, table.occupied);
 }
-
-test "post-Electra attestation count and byte limits accommodate the same slot burst" {
-    for ([_]u32{ 0, 1_000_000, std.math.maxInt(u32) }) |validators| {
-        const budgets = limits.queueLimits(validators);
-        try limits.validate(&budgets);
-        const att = budgets[@intFromEnum(Processor.Kind.beacon_attestation)];
-        try std.testing.expect(att.bytes >= att.items * (limits.single_attestation_bytes + limits.context_max));
-    }
-}

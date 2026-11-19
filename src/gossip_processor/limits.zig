@@ -68,23 +68,6 @@ pub fn sourceItems(kind: Kind, limit: Limit) usize {
     return if (kind == .beacon_block or kind == .execution_payload) 2 else @max(1, limit.items / 2);
 }
 
-test "gossip limits reject invalid shares and aggregate bounds" {
-    for ([_]Limit{
-        .{ .items = 1, .bytes = 4096 },
-        .{ .items = 8, .bytes = 4097 },
-        .{ .items = 65535, .bytes = 4096 },
-        .{ .items = 8, .bytes = 32 * 1024 * 1024 },
-    }) |limit| {
-        const invalid: Limits = @splat(limit);
-        try std.testing.expectError(error.InvalidGossipProcessorLimits, validate(&invalid));
-    }
-    const valid: Limits = @splat(.{ .items = 8, .bytes = 4096 });
-    try validate(&valid);
-    try std.testing.expectEqual(@as(usize, 2), sourceItems(.beacon_block, .{ .items = 32, .bytes = 4096 }));
-    try std.testing.expectEqual(@as(usize, 2), sourceItems(.execution_payload, .{ .items = 32, .bytes = 4096 }));
-    try std.testing.expectEqual(@as(usize, 16), sourceItems(.data_column_sidecar, .{ .items = 32, .bytes = 4096 }));
-}
-
 pub const Plan = struct { items: u32, mib: u32, execution_items: u32, execution_bytes: u32 };
 pub const plan: [kind_count]Plan = blk: {
     var result: [kind_count]Plan = undefined;
@@ -137,4 +120,8 @@ pub fn executionLimits(limits: *const Limits, concurrency: u32) Limits {
         .bytes = @intCast(@as(u64, 64 * 1024 * 1024) * entry.execution_bytes / total_bytes),
     };
     return result;
+}
+
+test {
+    _ = @import("limits_test.zig");
 }

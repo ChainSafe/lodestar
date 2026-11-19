@@ -577,7 +577,8 @@ pub fn deadline(self: *const GossipProcessor) ?u64 {
     }
     return result;
 }
+
 test {
     _ = metadata_mod;
-    _ = @import("GossipProcessor_test.zig");
+    _ = @import("gossip_processor_test.zig");
 }
