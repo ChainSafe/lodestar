@@ -1,16 +1,5 @@
-import {createHash} from "node:crypto";
 import {describe, expect, it} from "vitest";
-import {VRF_PROOF_SIZE, VRF_SEED_SIZE, VRF_TREE_DEPTH, VrfTree} from "../src/vrf-tree.js";
-
-function rootOf(proof: Uint8Array, slot: number): Uint8Array {
-  let value = proof.subarray(0, 32);
-  for (let level = 0; level < VRF_TREE_DEPTH; level++) {
-    const sibling = proof.subarray(32 * (level + 1), 32 * (level + 2));
-    const pair = Math.floor(slot / 2 ** level) % 2 === 1 ? [sibling, value] : [value, sibling];
-    value = createHash("sha256").update(pair[0]).update(pair[1]).digest();
-  }
-  return value;
-}
+import {VRF_PROOF_SIZE, VRF_SEED_SIZE, VRF_TREE_DEPTH, VrfTree, isValidVrfProof} from "../src/vrf-tree.js";
 
 describe("VrfTree", () => {
   it("proves the leaf of a slot under its root", async () => {
@@ -19,7 +8,9 @@ describe("VrfTree", () => {
     for (const slot of [0, 1, 65535, 65536, 2 ** 17 - 1]) {
       const proof = tree.proof(slot);
       expect(proof.length).toBe(VRF_PROOF_SIZE);
-      expect(rootOf(proof, slot)).toEqual(Buffer.from(root));
+      expect(isValidVrfProof(root, slot, proof)).toBe(true);
+      expect(isValidVrfProof(root, slot ^ 1, proof)).toBe(false);
+      expect(isValidVrfProof(root, slot, proof.subarray(32))).toBe(false);
     }
     expect(() => tree.proof(2 ** 17)).toThrow("SlotNotPopulated");
   });

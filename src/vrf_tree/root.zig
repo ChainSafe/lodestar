@@ -1,16 +1,17 @@
-//! A validator's VRF tree: a Merkle tree of depth `depth` whose leaves are
-//! secret values, one per slot. The validator registers the root, and reveals
-//! the leaf of a slot with its Merkle branch as its RANDAO reveal or its
-//! aggregator selection proof.
+//! A validator's VRF tree: a Merkle tree of depth `depth`, hashed with
+//! Keccak-256, whose leaves are secret values, one per slot. The validator
+//! registers the root, and reveals the leaf of a slot with its Merkle branch as
+//! its RANDAO reveal.
 //!
-//! The leaves derive from a seed, which is the tree's whole secret. The tree
+//! The leaf of a slot is the hash of a seed and the slot, so the seed is the
+//! tree's whole secret (the spec's `compute_vrf_leaf`). The tree
 //! itself is too large to keep, so `VrfTree` holds only its layers above
 //! subtrees of `2^subtree_depth` leaves and rebuilds the subtree a proof needs.
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const c = @import("constants");
-const hashing = @import("hashing");
+const Keccak256 = std.crypto.hash.sha3.Keccak256;
 
 pub const depth = c.VRF_TREE_DEPTH;
 pub const subtree_depth = 16;
@@ -38,37 +39,29 @@ pub const VrfTree = struct {
     /// One subtree as a binary heap: nodes `subtree_leaves..` are its leaves.
     const Subtree = struct {
         nodes: [][32]u8,
-        /// Hash inputs of the leaves.
-        preimages: [][2][32]u8,
 
         fn init(allocator: Allocator) !Subtree {
-            const nodes = try allocator.alloc([32]u8, 2 * subtree_leaves);
-            errdefer allocator.free(nodes);
-            return .{ .nodes = nodes, .preimages = try allocator.alloc([2][32]u8, subtree_leaves) };
+            return .{ .nodes = try allocator.alloc([32]u8, 2 * subtree_leaves) };
         }
 
         fn deinit(self: Subtree, allocator: Allocator) void {
             allocator.free(self.nodes);
-            allocator.free(self.preimages);
         }
 
         /// Fills the heap for subtree `index`. Leaves from `populated` on are zero.
         fn build(self: Subtree, seed: *const Seed, index: u32, populated: u64) void {
             const first: u64 = @as(u64, index) << subtree_depth;
             const count: usize = @intCast(@min(populated -| first, subtree_leaves));
-            for (self.preimages[0..count], first..) |*preimage, slot| {
-                preimage[0] = seed.*;
-                preimage[1] = @splat(0);
-                std.mem.writeInt(u64, preimage[1][0..8], slot, .little);
-            }
             const leaves = self.nodes[subtree_leaves..];
-            hashing.hash(leaves[0..count], @ptrCast(self.preimages[0..count])) catch unreachable;
-            @memset(leaves[count..], @splat(0));
-
-            var width: usize = subtree_leaves;
-            while (width > 1) : (width /= 2) {
-                hashing.hash(self.nodes[width / 2 .. width], self.nodes[width .. 2 * width]) catch unreachable;
+            var preimage: [@sizeOf(Seed) + 8]u8 = undefined;
+            defer std.crypto.secureZero(u8, &preimage);
+            @memcpy(preimage[0..@sizeOf(Seed)], seed);
+            for (leaves[0..count], first..) |*leaf, slot| {
+                std.mem.writeInt(u64, preimage[@sizeOf(Seed)..], slot, .little);
+                Keccak256.hash(&preimage, leaf, .{});
             }
+            @memset(leaves[count..], @splat(0));
+            hashLayers(self.nodes);
         }
     };
 
@@ -81,7 +74,7 @@ pub const VrfTree = struct {
 
         const top = try allocator.alloc([32]u8, 2 * subtree_count);
         errdefer allocator.free(top);
-        @memset(top[subtree_count..], hashing.getZeroHash(subtree_depth).*);
+        @memset(top[subtree_count..], zeroSubtreeRoot());
 
         const populated_subtrees: u32 = @intCast((populated - 1) / subtree_leaves + 1);
         var build: Build = .{ .seed = seed, .populated = populated, .roots = top[subtree_count..][0..populated_subtrees] };
@@ -96,10 +89,7 @@ pub const VrfTree = struct {
         for (workers[0..spawned]) |worker| worker.join();
         if (build.failed.load(.acquire)) return error.OutOfMemory;
 
-        var width: usize = subtree_count;
-        while (width > 1) : (width /= 2) {
-            try hashing.hash(top[width / 2 .. width], top[width .. 2 * width]);
-        }
+        hashLayers(top);
 
         return .{
             .allocator = allocator,
@@ -132,7 +122,6 @@ pub const VrfTree = struct {
     pub fn deinit(self: *VrfTree) void {
         std.crypto.secureZero(u8, &self.seed);
         std.crypto.secureZero(u8, std.mem.sliceAsBytes(self.subtree.nodes));
-        std.crypto.secureZero(u8, std.mem.sliceAsBytes(self.subtree.preimages));
         self.subtree.deinit(self.allocator);
         self.allocator.free(self.top);
         self.* = undefined;
@@ -167,6 +156,32 @@ pub const VrfTree = struct {
         return out;
     }
 };
+
+/// Fills the inner nodes of a binary heap from its leaves, the second half of `nodes`.
+fn hashLayers(nodes: [][32]u8) void {
+    var node = nodes.len / 2;
+    while (node > 1) {
+        node -= 1;
+        Keccak256.hash(std.mem.asBytes(nodes[2 * node ..][0..2]), &nodes[node], .{});
+    }
+}
+
+/// The root of a subtree whose leaves are all zero.
+fn zeroSubtreeRoot() [32]u8 {
+    var value: [32]u8 = @splat(0);
+    for (0..subtree_depth) |_| Keccak256.hash(&(value ++ value), &value, .{});
+    return value;
+}
+
+/// Checks that `proof` opens the leaf of `slot` under `root`.
+pub fn isValidProof(root: *const Root, slot: u64, proof: *const Proof) bool {
+    var value = proof[0];
+    for (proof[1..], 0..) |*sibling, height| {
+        const pair = if ((slot >> @intCast(height)) & 1 == 1) sibling.* ++ value else value ++ sibling.*;
+        Keccak256.hash(&pair, &value, .{});
+    }
+    return std.mem.eql(u8, &value, root);
+}
 
 test {
     _ = @import("root_test.zig");

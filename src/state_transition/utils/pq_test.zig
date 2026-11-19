@@ -38,7 +38,7 @@ test "VRF proof opens the leaf of its slot" {
     var root = proof[0];
     for (proof[1..], 0..) |sibling, depth| {
         const pair = if ((slot >> @intCast(depth)) & 1 == 1) sibling ++ root else root ++ sibling;
-        Sha256.hash(&pair, &root, .{});
+        std.crypto.hash.sha3.Keccak256.hash(&pair, &root, .{});
     }
     try std.testing.expect(pq.isValidVrfProof(&root, slot, &proof));
     try std.testing.expect(!pq.isValidVrfProof(&root, slot + 1, &proof));

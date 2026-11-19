@@ -2,6 +2,7 @@ import {digest} from "@chainsafe/as-sha256";
 import {ChainForkConfig} from "@lodestar/config";
 import {verifyXmssSignature} from "@lodestar/native/leanvm";
 import {computePtcIndices} from "@lodestar/native/shuffle";
+import {isValidVrfProof as isValidNativeVrfProof} from "@lodestar/native/vrf-tree";
 import {
   AGGREGATORS_PER_COMMITTEE,
   ATTESTATION_SUBNET_COUNT,
@@ -123,24 +124,10 @@ export function computeDepositVrfRoot(pubkey: Uint8Array, signature: Uint8Array)
   return isLegacyPubkey(pubkey) ? legacyDigest(pubkey, LEGACY_VRF_ROOT_DOMAIN) : signature.subarray(0, 32);
 }
 
-/** Checks that `proof` opens the leaf for `slot` under `vrfRoot` */
+/** Checks that `proof` opens the leaf for `slot` under `vrfRoot`, in a tree hashed with Keccak-256 */
 export function isValidVrfProof(vrfRoot: Uint8Array, slot: Slot, proof: pq.VRFProof): boolean {
   if (proof.length !== VRF_TREE_DEPTH + 1) return false;
-  let value = proof[0];
-  const pair = new Uint8Array(64);
-  for (let depth = 0; depth < VRF_TREE_DEPTH; depth++) {
-    const sibling = proof[depth + 1];
-    // Slots exceed 2**32, so no bitwise shift
-    if (Math.floor(slot / 2 ** depth) % 2 === 1) {
-      pair.set(sibling, 0);
-      pair.set(value, 32);
-    } else {
-      pair.set(value, 0);
-      pair.set(sibling, 32);
-    }
-    value = digest(pair);
-  }
-  return Buffer.compare(value, vrfRoot) === 0;
+  return isValidNativeVrfProof(vrfRoot, slot, Buffer.concat(proof));
 }
 
 /**

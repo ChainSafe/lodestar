@@ -39,6 +39,16 @@ const BuildTask = struct {
     }
 };
 
+/// JS: vrfTree.isValidProof(root, slot, proof) → boolean
+pub fn isValidProof(root: js.Uint8Array, slot: js.Number, proof: js.Uint8Array) !js.Boolean {
+    const root_slice = try root.toSlice();
+    const proof_slice = try proof.toSlice();
+    if (root_slice.len != @sizeOf(vrf_tree.Root) or proof_slice.len != PROOF_SIZE) return js.Boolean.from(false);
+    var decoded: vrf_tree.Proof = undefined;
+    @memcpy(std.mem.asBytes(&decoded), proof_slice);
+    return js.Boolean.from(vrf_tree.isValidProof(root_slice[0..@sizeOf(vrf_tree.Root)], try slot.toU64Exact(), &decoded));
+}
+
 /// A VRF tree. Instances come from `build`: one built with `new` holds no tree
 /// and every method throws `TreeNotLoaded`.
 pub const VrfTree = struct {

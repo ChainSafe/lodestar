@@ -79,7 +79,7 @@ pub fn isValidVrfProof(vrf_root: *const [32]u8, slot: u64, proof: *const VrfProo
     var value = proof[0];
     for (proof[1..], 0..) |*sibling, depth| {
         const pair = if ((slot >> @intCast(depth)) & 1 == 1) sibling.* ++ value else value ++ sibling.*;
-        Sha256.hash(&pair, &value, .{});
+        std.crypto.hash.sha3.Keccak256.hash(&pair, &value, .{});
     }
     return std.mem.eql(u8, &value, vrf_root);
 }

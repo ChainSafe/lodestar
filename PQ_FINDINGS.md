@@ -1,6 +1,6 @@
 # PQ fork findings
 
-Working notes from implementing the consensus-specs `pq` feature (commit `a4d16c5`) in Lodestar with leanVM (`1e674918a`, experimental prover) as the prover. Three kinds of finding: spec deficiencies, implementation difficulties, and measurements.
+Working notes from implementing the consensus-specs `pq` feature (commit `2f43bc0`) in Lodestar with leanVM (`283686575`, experimental prover) as the prover. The leanXMSS and aggregation measurements were taken at leanVM `1e674918a`. Three kinds of finding: spec deficiencies, implementation difficulties, and measurements.
 
 Measurements are from one machine, an AMD Threadripper 1950X (16 cores, 32 threads, no AVX-512), with `zig build build-exe:bench_pq_signer -Doptimize=ReleaseFast`. They are single runs.
 
@@ -11,11 +11,11 @@ Measurements are from one machine, an AMD Threadripper 1950X (16 cores, 32 threa
 3. **`MAX_STARK_PROOF_SIZE` and the claim count are unrelated to the prover.** leanVM caps a merge at 16 children, and proving fails once a node holds more claims than one proof can. A block holds up to `MAX_ATTESTATIONS_PQ = 16` attestations, each spanning many committees, so a mainnet block's proof can need more claims than fit, and merging its aggregates is a tree of recursive proofs. The 1 MiB size cap is loose by comparison: proofs measured here are 160 to 205 KiB.
 4. **An empty proof for no attestations is implicit.** The reference accepts empty bytes when there are no statements. A real prover has no proof of nothing, so the spec should state that a block without attestations carries an empty `proof`.
 5. **The leaf layout splits a validator's leaves over two bottom trees.** Attestations use leaves from `2^15` and per-slot messages use leaves from `2^15 + 2^29 + 2^30`, after those reserved for builder bids, so the two are always in different bottom trees of a leanXMSS key (two layers of `2^16`). A signer must keep both built: leanVM keeps the eight a key used last, and building one takes 5 to 6 s on one thread. A per-slot tree lasts 8,192 slots, so a validator client has to build the next one ahead of the boundary or miss duties while it does.
-6. **A VRF tree costs far more than the key it accompanies.** Depth 31 means `2^32` SHA-256 calls per validator before it can register: 14.5 s on 32 threads, about 7.7 core-minutes, against 5 core-seconds for the leanXMSS key. It cannot be built lazily, since the root commits to every leaf. An operator with 1,000 validators needs about 5 core-days. The slot index also wraps at `2^31`, since `is_valid_merkle_branch` reads only the low bits.
+6. **A VRF tree costs far more than the key it accompanies.** Depth 31 means `2^32` Keccak-256 calls per validator before it can register: 98 s on 32 threads with a scalar Keccak, against 5 s on one thread for the leanXMSS key. With SHA-256, which the spec used until `2f43bc0` and for which this client has a vectorized hasher, it was 14.5 s. It cannot be built lazily, since the root commits to every leaf. An operator with 1,000 validators needs about 27 hours of this machine. The slot index also wraps at `2^31`, since `is_valid_vrf_proof` reads only its low bits.
 7. **`IndexedAttestation` reuses a removed field's index.** `Attestation` leaves a gap where `signature` was (`active_fields(width=4, gaps=(2,))`), while `IndexedAttestation` puts the new `proof` at the index `signature` had (`width=3`, no gap). Probably unintended.
 8. **Builder exit requests ignore the public key's prefix.** Withdrawal and consolidation requests return early on a legacy (BLS) public key. `process_builder_exit_request` slices `pubkey[16:]` without checking the prefix, so any 16 bytes in front of a builder's key match it. The branch tests this (`builder_exit_request_ignores_pubkey_prefix`), so it is deliberate, and harmless since `source_address` authorizes the request, but it is inconsistent with the other requests.
 9. **Linear scans in the hot path.** `get_validator_preregistration_index` scans up to `PREREGISTRATIONS_LIMIT` (524,288) records for every deposit request, of which a payload holds up to 8,192, and `get_builder_preregistration_index` does the same for every builder deposit. `is_pending_validator` scans every pending deposit for every validator preregistration request, and `process_voluntary_exit_request` looks its public key up in the whole registry. A client needs indexes the spec's state does not provide.
-10. **The branch's own tests fail.** `make test fork=pq preset=minimal` ends with 39 failures, all in `phase0/fast_confirmation/` (`test_previous_epoch.py` 24, `test_is_one_confirmed.py` 8, `test_restart_gu.py` 4, `test_revert_finality.py` 2, `test_reconfirmation.py` 1). At `4dabe73` it was 3. Most failing assertions are on how far justification has advanced. The cause was not looked into.
+10. **The fast confirmation tests do not cover PQ.** At `a4d16c5` `make test fork=pq preset=minimal` ended with 39 failures, all in `phase0/fast_confirmation/`. `2f43bc0` skips the tests that assume a one-slot inclusion delay, and the suite passes. Fast confirmation under a two-slot delay is untested rather than shown to work.
 11. **No real-signature vectors.** The generated vectors run with XMSS switched off: stub signatures, every proof accepted. They exercise the state logic and nothing of the cryptography, and there are no SSZ static vectors for the new containers. Lodestar has no such switch, so it runs them with signature checks skipped, as a caller that verified them beforehand would. Five vectors cannot run that way: they store a preregistration, whose signature block processing must always check because its validity decides the post-state.
 12. **The state names the aggregators, and the beacon API cannot say who they are.** Each beacon committee has an aggregation committee of `AGGREGATORS_PER_COMMITTEE` (4) validators, sampled by effective balance and kept in `aggregation_committee_window` for the previous, current and next epochs. A validator client holds no state, and attester duties do not say whether a validator aggregates. Here a Lodestar-only endpoint does, `POST /eth/v1/validator/duties/aggregator/{epoch}`. The count is fixed where it was an expectation: a committee whose four aggregators are offline or late has no aggregate, and its attestations reach a block only if the proposer saw the single ones on their subnet and proves them itself.
 13. **There is no genesis for a PQ chain.** `upgrade_to_pq` and the test helper are the only ways to a PQ state. A network that starts at PQ needs a specified genesis: validators with leanXMSS keys and VRF roots, the previous fork version, and the genesis bid.
@@ -47,8 +47,8 @@ Measurements are from one machine, an AMD Threadripper 1950X (16 cores, 32 threa
 | First signature in a bottom tree          | 5.9 s   |
 | Later signatures in that tree, mean of 64 | 0.29 s  |
 | Signature verification                    | 0.07 ms |
-| VRF tree, depth 31                        | 14.5 s  |
-| VRF proof after a subtree rebuild         | 10 ms   |
+| VRF tree, depth 31                        | 98 s    |
+| VRF proof after a subtree rebuild         | 47 ms   |
 
 leanXMSS runs on one thread. Signing grinds a randomizer, so single signatures vary widely around the mean.
 
@@ -63,7 +63,7 @@ Aggregation at `log_inv_rate = 2`:
 
 Merging two aggregates into one takes 0.4 to 0.6 s whatever their size, more than proving 64 signatures from scratch. Through the Node addon 1,400 signatures take 2.9 s. leanVM's own CLI proves them in 2.6 s on this machine, and a 16-to-1 merge of such aggregates in 2.9 s.
 
-Memory: about 2 MiB per loaded key, and 2 MiB more once it has signed. A VRF tree keeps 10 MiB, of which 2 MiB is needed between proofs.
+Memory: about 2 MiB per loaded key, and 2 MiB more once it has signed. A VRF tree keeps 6 MiB, of which 2 MiB is needed between proofs.
 
 On the devnet below (8 validators, one per committee, minimal preset, node and validator client on this machine) a block was published a median of 0.76 s into its slot and at most 1.5 s, over 47 blocks. That includes proving the block's attestations. It finalized epoch 3 in 47 slots, with two blocks orphaned by the slow signature described above.
 
