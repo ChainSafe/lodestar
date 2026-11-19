@@ -475,3 +475,7 @@ comptime {
     assert(frame_scratch_max >= checksum_length + constants.frame_uncompressed_max);
     assert(header_max == 25);
 }
+
+test {
+    _ = @import("codec_test.zig");
+}
