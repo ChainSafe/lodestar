@@ -125,8 +125,10 @@ export declare class ForkChoice {
    * Without `unfinalizedAncestors` the anchor is the justified and the finalized checkpoint, as in
    * spec `get_forkchoice_store`. With them the anchor is not finalized and the store starts at the
    * anchor's checkpoints instead. The ancestors run oldest first from the finalized block to the
-   * anchor, at most three, with distinct non-zero roots and ascending slots, and must contain the
-   * justified and the finalized checkpoint blocks unless the anchor is that block itself.
+   * anchor, at most five, with distinct non-zero roots and ascending slots, and must contain the
+   * justified and the finalized checkpoint blocks unless the anchor is that block itself. They
+   * should also hold the checkpoint blocks of the anchor's epoch and the one before: the head
+   * cannot be computed once the chain justifies a block the store does not hold.
    */
   constructor(
     config: BeaconConfig,

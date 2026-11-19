@@ -1110,6 +1110,40 @@ test "unfinalized anchor: the store keeps the state's checkpoints and the anchor
     try testing.expectEqual(pendingOf(&store, 0x22), try store.getHead());
 }
 
+test "unfinalized anchor: the chain can justify the checkpoint block of the anchor's epoch" {
+    const allocator = testing.allocator;
+    const config = &@import("config").mainnet.config;
+    const epoch_checkpoint: Checkpoint = .{ .epoch = 3, .root = tagRoot(0x0c) };
+    const ancestors = [_]store_mod.AnchorAncestor{
+        unfinalized_ancestors[0],
+        unfinalized_ancestors[1],
+        .{ .root = epoch_checkpoint.root, .slot = 3 * preset.SLOTS_PER_EPOCH },
+        unfinalized_ancestors[2],
+    };
+    const anchor = unfinalizedSummary(.{ .tag = 1, .parent = 0x0b, .slot = unfinalized_anchor_slot, .status = .pre_merge });
+    var store = try Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &ancestors, Provider.stateProvider());
+    defer store.deinit();
+
+    try store.onTick(store.timing.timeAtSlotMs(unfinalized_anchor_slot + 2));
+    var justifying = unfinalizedSummary(.{ .tag = 0x20, .parent = 1, .slot = unfinalized_anchor_slot + 1, .status = .pre_merge });
+    justifying.justified_checkpoint = epoch_checkpoint;
+    justifying.unrealized_justified_checkpoint = epoch_checkpoint;
+    try store.onBlockSummary(justifying);
+    try testing.expectEqual(epoch_checkpoint, store.justified_checkpoint);
+    try testing.expectEqual(pendingOf(&store, 0x20), try store.getHead());
+
+    var voters = [_]u64{ 0, 1, 2 };
+    const data: ct.phase0.AttestationData.Type = .{
+        .slot = unfinalized_anchor_slot + 1,
+        .index = 0,
+        .beacon_block_root = tagRoot(0x20),
+        .source = unfinalized_justified,
+        .target = epoch_checkpoint,
+    };
+    try store.onAttestationData(&data, &voters, false);
+    try testing.expectEqual(pendingOf(&store, 0x20), try store.getHead());
+}
+
 test "unfinalized anchor: ancestors must be ordered, distinct and hold both checkpoints" {
     const allocator = testing.allocator;
     const config = &@import("config").mainnet.config;
@@ -1129,7 +1163,7 @@ test "unfinalized anchor: ancestors must be ordered, distinct and hold both chec
     ancestors[2].slot = unfinalized_anchor_slot;
     try testing.expectError(error.InvalidAnchorAncestor, Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &ancestors, provider));
 
-    const too_many = unfinalized_ancestors ++ [_]store_mod.AnchorAncestor{.{ .root = tagRoot(0x0c), .slot = unfinalized_anchor_slot - 1 }};
+    const too_many = unfinalized_ancestors ++ unfinalized_ancestors;
     try testing.expectError(error.TooManyAnchorAncestors, Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &too_many, provider));
 }
 

@@ -261,8 +261,9 @@ pub const AnchorAncestor = struct {
     slot: Slot,
 };
 
-/// The finalized block, the justified block and the anchor's parent.
-pub const MAX_ANCHOR_ANCESTORS = 3;
+/// The finalized block, the justified block, the checkpoint blocks of the anchor's epoch
+/// and the one before, and the anchor's parent.
+pub const MAX_ANCHOR_ANCESTORS = 5;
 
 /// Balances of the justified checkpoint state (spec `store.checkpoint_states[store.justified_checkpoint]`).
 /// Owned by the store once returned from `StateProvider`.
@@ -423,7 +424,9 @@ pub const Store = struct {
     /// the store starts at the anchor state's own checkpoints, so the anchor can still be
     /// reorged and finality only moves with the chain. `ancestors` run oldest first from
     /// the finalized block to the anchor and must contain the justified and the finalized
-    /// checkpoint blocks, unless the anchor is that block itself. `provider.justifiedBalances`
+    /// checkpoint blocks, unless the anchor is that block itself. A checkpoint the chain can
+    /// still justify must be among them too: `get_head` fails once the justified block is
+    /// one the store does not hold. `provider.justifiedBalances`
     /// is asked for the justified checkpoint, whose state the caller usually does not have;
     /// the anchor state's balances are the closest substitute.
     pub fn initFromUnfinalizedSummary(

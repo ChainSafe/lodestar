@@ -272,6 +272,17 @@ export function initializeNativeForkChoice(
     }
   );
 
+  const checkpoints = {
+    justifiedEpoch: justifiedCheckpoint.epoch,
+    justifiedRoot,
+    finalizedEpoch: finalizedCheckpoint.epoch,
+    finalizedRoot,
+    unrealizedJustifiedEpoch: justifiedCheckpoint.epoch,
+    unrealizedJustifiedRoot: justifiedRoot,
+    unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
+    unrealizedFinalizedRoot: finalizedRoot,
+  };
+
   const block: ProtoBlock = {
     slot: blockHeader.slot,
     parentRoot: toRootHex(blockHeader.parentRoot),
@@ -282,15 +293,7 @@ export function initializeNativeForkChoice(
     ptcTimeliness: true,
     importedTimely: true,
     proposerIndex: blockHeader.proposerIndex,
-
-    justifiedEpoch: justifiedCheckpoint.epoch,
-    justifiedRoot,
-    finalizedEpoch: finalizedCheckpoint.epoch,
-    finalizedRoot,
-    unrealizedJustifiedEpoch: justifiedCheckpoint.epoch,
-    unrealizedJustifiedRoot: justifiedRoot,
-    unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
-    unrealizedFinalizedRoot: finalizedRoot,
+    ...checkpoints,
 
     ...(hasPayload
       ? {
@@ -311,25 +314,40 @@ export function initializeNativeForkChoice(
     parentBlockHash: bid === null ? null : toRootHex(bid.parentBlockHash),
   };
 
-  // The finalized block, the justified block and the anchor's parent, known by root only. Their
-  // slots are upper bounds and their payloads unknown, so they carry none.
+  // Ancestors of the anchor known by root only: the finalized block, the justified block, the
+  // anchor's parent, and the checkpoint blocks of the anchor's epoch and the one before, which
+  // the chain can still justify and which current votes target. Their slots are upper bounds and
+  // their payloads unknown, so they carry none.
   const unfinalizedAncestors: ProtoBlock[] = [];
   if (!isFinalizedState) {
+    const anchorEpoch = computeEpochAtSlot(state.slot);
+    const epochBoundaries: [string, Slot][] = [];
+    for (const epoch of [anchorEpoch - 1, anchorEpoch]) {
+      const slot = computeStartSlotAtEpoch(epoch);
+      if (epoch > justifiedCheckpoint.epoch && slot < blockHeader.slot) {
+        epochBoundaries.push([toRootHex(state.getBlockRootAtSlot(slot)), slot]);
+      }
+    }
     for (const [blockRoot, slot] of [
       [finalizedRoot, computeStartSlotAtEpoch(finalizedCheckpoint.epoch)],
       [justifiedRoot, computeStartSlotAtEpoch(justifiedCheckpoint.epoch)],
+      ...epochBoundaries,
       [block.parentRoot, blockHeader.slot - 1],
     ] as const) {
       const isKnown = blockRoot === anchorRoot || unfinalizedAncestors.some((b) => b.blockRoot === blockRoot);
       if (isKnown || blockRoot === ZERO_HASH_HEX) continue;
       const isGloas = config.getForkSeq(slot) >= ForkSeq.gloas;
       unfinalizedAncestors.push({
-        ...block,
         slot,
         blockRoot,
         parentRoot: unfinalizedAncestors.at(-1)?.blockRoot ?? ZERO_HASH_HEX,
         stateRoot: ZERO_HASH_HEX,
         targetRoot: blockRoot,
+        timeliness: false,
+        ptcTimeliness: false,
+        importedTimely: false,
+        proposerIndex: 0,
+        ...checkpoints,
         executionPayloadBlockHash: null,
         executionStatus: ExecutionStatus.PreMerge,
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,

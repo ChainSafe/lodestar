@@ -19,14 +19,23 @@ describe("native fork choice from an unfinalized state", () => {
   const finalizedCheckpoint = {epoch: 1, root: new Uint8Array(32).fill(0x0f)};
   const justifiedCheckpoint = {epoch: 2, root: new Uint8Array(32).fill(0x0a)};
   const parentRoot = new Uint8Array(32).fill(0x0b);
+  const epochCheckpointRoot = new Uint8Array(32).fill(0x0c);
 
   function initialize(isFinalizedState: boolean) {
     const latestBlockHeader = ssz.phase0.BeaconBlockHeader.defaultValue();
     latestBlockHeader.slot = anchorSlot;
     latestBlockHeader.parentRoot = parentRoot;
+    const blockRoots = ssz.phase0.BeaconState.defaultValue().blockRoots;
+    blockRoots[3 * SLOTS_PER_EPOCH] = epochCheckpointRoot;
     const cachedState = createCachedBeaconStateTest(
       generateState(
-        {slot: anchorSlot, latestBlockHeader, finalizedCheckpoint, currentJustifiedCheckpoint: justifiedCheckpoint},
+        {
+          slot: anchorSlot,
+          latestBlockHeader,
+          blockRoots,
+          finalizedCheckpoint,
+          currentJustifiedCheckpoint: justifiedCheckpoint,
+        },
         config
       ),
       config
@@ -57,9 +66,11 @@ describe("native fork choice from an unfinalized state", () => {
     expect(forkChoice.forwarditerateAncestorBlocks().map((block) => block.blockRoot)).toEqual([
       toRootHex(finalizedCheckpoint.root),
       toRootHex(justifiedCheckpoint.root),
+      toRootHex(epochCheckpointRoot),
       toRootHex(parentRoot),
       anchorRoot,
     ]);
+    expect(forkChoice.getAncestor(anchorRoot, 3 * SLOTS_PER_EPOCH).blockRoot).toBe(toRootHex(epochCheckpointRoot));
     expect(forkChoice.getAncestor(anchorRoot, SLOTS_PER_EPOCH).blockRoot).toBe(toRootHex(finalizedCheckpoint.root));
     expect(forkChoice.prune(toRootHex(finalizedCheckpoint.root))).toEqual([]);
   });
