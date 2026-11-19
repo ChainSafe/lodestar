@@ -31,6 +31,15 @@ fn controlSpace(len: usize) usize {
     return control_data + std.mem.alignForward(usize, len, control_alignment);
 }
 
+fn putControl(control: []align(8) u8, level: i32, kind: i32, value: anytype) usize {
+    const space = controlSpace(@sizeOf(@TypeOf(value)));
+    @memset(control[0..space], 0);
+    const header: *ControlHeader = @ptrCast(control.ptr);
+    header.* = .{ .len = @intCast(control_data + @sizeOf(@TypeOf(value))), .level = level, .type = kind };
+    @memcpy(control[control_data..][0..@sizeOf(@TypeOf(value))], std.mem.asBytes(&value));
+    return space;
+}
+
 pub fn linkLocal(octets: [16]u8) bool {
     return octets[0] == 0xfe and octets[1] & 0xc0 == 0x80;
 }
@@ -72,6 +81,30 @@ pub fn destination(control: []const u8, port: u16) error{InvalidDestinationAddre
         if (offset > control.len) return null;
     }
     return null;
+}
+
+pub fn pinned(from: ?Address) ?Address {
+    const source = from orelse return null;
+    return switch (source) {
+        inline else => |ip| if (std.mem.allEqual(u8, &ip.octets, 0)) null else source,
+    };
+}
+
+/// Writes the packet-info message pinning `from` as the source and returns its length. A non-zero
+/// IPv4 interface index would override the address on Darwin.
+pub fn pinSource(control: []align(8) u8, from: Address) usize {
+    const p = std.posix;
+    return switch (from) {
+        .ip4 => |ip| putControl(control, p.IPPROTO.IP, ip_pktinfo, p.in_pktinfo{
+            .ifindex = 0,
+            .spec_dst = @bitCast(ip.octets),
+            .addr = 0,
+        }),
+        .ip6 => |ip| putControl(control, p.IPPROTO.IPV6, ipv6_pktinfo, p.in6_pktinfo{
+            .addr = ip.octets,
+            .ifindex = if (linkLocal(ip.octets)) @intCast(ip.interface) else 0,
+        }),
+    };
 }
 
 pub fn receive(
@@ -116,13 +149,27 @@ pub fn send(
     io: std.Io,
     handle: net.Socket.Handle,
     address: *const net.IpAddress,
+    from: ?Address,
     bytes: []const u8,
 ) SendError!void {
     const p = std.posix;
     var storage: compat.PosixAddress = undefined;
     const length = compat.addressToPosix(address, &storage);
     try io.checkCancel();
-    const sent = p.system.sendto(
+    const sent = if (pinned(from)) |source| blk: {
+        var control: Control align(8) = undefined;
+        var vector: p.iovec_const = .{ .base = bytes.ptr, .len = bytes.len };
+        const header: p.msghdr_const = .{
+            .name = &storage.any,
+            .namelen = length,
+            .iov = (&vector)[0..1],
+            .iovlen = 1,
+            .control = &control,
+            .controllen = @intCast(pinSource(&control, source)),
+            .flags = 0,
+        };
+        break :blk p.system.sendmsg(handle, &header, p.MSG.NOSIGNAL | p.MSG.DONTWAIT);
+    } else p.system.sendto(
         handle,
         bytes.ptr,
         bytes.len,
@@ -140,14 +187,9 @@ pub const SendScratch = if (os == .linux) struct {
     headers: [Sockets.BatchScratch.capacity]linux.mmsghdr,
     addresses: [Sockets.BatchScratch.capacity]compat.PosixAddress,
     vectors: [Sockets.BatchScratch.capacity]std.posix.iovec,
-    controls: [Sockets.BatchScratch.capacity]Segmentation,
+    controls: [Sockets.BatchScratch.capacity]Control align(8),
     groups: [Sockets.BatchScratch.capacity]struct { end: usize, bytes: usize },
 } else struct {};
-
-const Segmentation = extern struct {
-    header: linux.cmsghdr,
-    size: u16,
-};
 
 /// Positive sendmmsg results hide the next group's errno. Retry only the unsent suffix.
 pub fn sendMany(
@@ -160,7 +202,7 @@ pub fn sendMany(
     if (comptime os != .linux) {
         for (messages, 0..) |message, sent| {
             const address = message.to.toNetwork();
-            send(io, handle, &address, message.bytes) catch |err|
+            send(io, handle, &address, message.from, message.bytes) catch |err|
                 return .{ .sent = sent, .failure = err };
         }
         return .{ .sent = messages.len, .failure = null };
@@ -220,7 +262,7 @@ fn prepareSend(messages: []const Sockets.Outgoing, scratch: *SendScratch, segmen
         if (segment and bytes > 0 and bytes <= gso_payload_max) {
             while (end < messages.len) {
                 const next = messages[end];
-                if (!first.to.eql(next.to) or next.bytes.len == 0 or
+                if (!first.to.eql(next.to) or !std.meta.eql(first.from, next.from) or next.bytes.len == 0 or
                     next.bytes.len > first.bytes.len or bytes + next.bytes.len > gso_payload_max) break;
                 bytes += next.bytes.len;
                 end += 1;
@@ -237,17 +279,15 @@ fn prepareSend(messages: []const Sockets.Outgoing, scratch: *SendScratch, segmen
             .controllen = 0,
             .flags = 0,
         }, .len = 0 };
+        const control: []align(8) u8 = &scratch.controls[groups];
+        var control_len: usize = if (pinned(first.from)) |from| pinSource(control, from) else 0;
         if (end - begin > 1) {
-            const control = &scratch.controls[groups];
-            control.* = std.mem.zeroes(Segmentation);
-            control.header = .{
-                .len = @offsetOf(Segmentation, "size") + @sizeOf(u16),
-                .level = linux.IPPROTO.UDP,
-                .type = linux.UDP.SEGMENT,
-            };
-            control.size = @intCast(first.bytes.len);
-            scratch.headers[groups].hdr.control = control;
-            scratch.headers[groups].hdr.controllen = @sizeOf(Segmentation);
+            const segment_size: u16 = @intCast(first.bytes.len);
+            control_len += putControl(@alignCast(control[control_len..]), linux.IPPROTO.UDP, linux.UDP.SEGMENT, segment_size);
+        }
+        if (control_len > 0) {
+            scratch.headers[groups].hdr.control = control.ptr;
+            scratch.headers[groups].hdr.controllen = control_len;
         }
         scratch.groups[groups] = .{ .end = end, .bytes = bytes };
         begin = end;

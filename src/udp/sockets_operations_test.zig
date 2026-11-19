@@ -22,7 +22,7 @@ test "UDP receives into caller storage and recovers after truncation" {
 
     const payload = [_]u8{0x44} ** 1200;
     const receiver_address = receiver.localAddress();
-    try sender.sendTo(std.testing.io, receiver_address, &payload, payload_max);
+    try sender.sendTo(std.testing.io, receiver_address, null, &payload, payload_max);
     const first = try receiver.receiveDatagram(std.testing.io, &buffer, oneSecond());
     try std.testing.expectEqualSlices(u8, &payload, first.bytes);
     try std.testing.expect(first.bytes.ptr == &buffer);
@@ -36,7 +36,7 @@ test "UDP receives into caller storage and recovers after truncation" {
     try raw_sender.send(std.testing.io, &destination, &oversized);
     try std.testing.expectError(error.DatagramTooLarge, receiver.receiveDatagram(std.testing.io, &buffer, oneSecond()));
 
-    try sender.sendTo(std.testing.io, receiver_address, &payload, payload_max);
+    try sender.sendTo(std.testing.io, receiver_address, null, &payload, payload_max);
     const second = try receiver.receiveDatagram(std.testing.io, &buffer, oneSecond());
     try std.testing.expectEqualSlices(u8, &payload, second.bytes);
 }
@@ -57,7 +57,7 @@ test "UDP rejects oversized sends before I/O" {
     const destination = Address{ .ip4 = .{ .octets = .{ 127, 0, 0, 1 }, .port = 9_001 } };
     try std.testing.expectError(
         error.DatagramTooLarge,
-        transport.sendTo(undefined, destination, &oversized, payload_max),
+        transport.sendTo(undefined, destination, null, &oversized, payload_max),
     );
 }
 
@@ -220,7 +220,7 @@ test "dual-stack UDP cancels both pending peek waits and leaves sockets usable" 
     } else return error.StartupWakeLimit;
     try std.testing.expectEqual(@as(u8, 2), worker.starts.load(.acquire));
     try std.testing.expectEqual(@as(u8, 0), worker.finished.load(.acquire));
-    for (destinations) |address| try sender.sendTo(std.testing.io, address.?, "retained", payload_max);
+    for (destinations) |address| try sender.sendTo(std.testing.io, address.?, null, "retained", payload_max);
     try std.testing.expectError(error.Canceled, receiver.cancel(std.testing.io));
     try std.testing.expectEqual(@as(u8, 2), worker.finished.load(.acquire));
     try std.testing.expectEqual(@as(u8, 2), worker.canceled.load(.acquire));
@@ -247,8 +247,8 @@ test "dual-stack UDP ready reads reject a truncated datagram and keep reading it
     defer raw_sender.close(std.testing.io);
     const oversized = [_]u8{0x55} ** (payload_max + 1);
     try raw_sender.send(std.testing.io, &Address.toNetwork(local[0].?), &oversized);
-    try target.sendTo(std.testing.io, local[0].?, "ip4", payload_max);
-    try target.sendTo(std.testing.io, local[1].?, "ip6", payload_max);
+    try target.sendTo(std.testing.io, local[0].?, null, "ip4", payload_max);
+    try target.sendTo(std.testing.io, local[1].?, null, "ip6", payload_max);
     var ready: [2]bool = @splat(true);
     try waitForDatagram(target.values[0].?);
     try std.testing.expectError(error.DatagramTooLarge, target.receiveReadyDatagram(std.testing.io, &buffer, &ready));
@@ -385,7 +385,7 @@ test "UDP provider lifetime clears descriptors and telemetry without probing fab
     _ = sockets.requestBuffers(.{ .receive = Sockets.Buffers.bytes_min, .send = Sockets.Buffers.bytes_min });
     try std.testing.expectEqual([2]?Sockets.Buffers.Reported{ null, null }, sockets.buffers);
     try std.testing.expectEqual([2]?u64{ null, null }, sockets.drops());
-    try std.testing.expectError(error.IncompatibleProvider, sockets.sendTo(std.testing.io, Address.fromNetwork(.{ .ip4 = .loopback(9000) }), "fake", 4));
+    try std.testing.expectError(error.IncompatibleProvider, sockets.sendTo(std.testing.io, Address.fromNetwork(.{ .ip4 = .loopback(9000) }), null, "fake", 4));
     var buffer: [8]u8 = undefined;
     try std.testing.expectError(error.IncompatibleProvider, sockets.receiveDatagram(std.testing.io, &buffer, .none));
     sockets.close(io);
@@ -403,7 +403,7 @@ test "UDP refuses destinations with port zero before I/O" {
     var socket = try Sockets.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer socket.close(std.testing.io);
     for ([_]net.IpAddress{ .{ .ip4 = .loopback(0) }, .{ .ip6 = .loopback(0) } }) |address| {
-        try std.testing.expectError(error.DestinationRefused, socket.sendTo(undefined, Address.fromNetwork(address), "x", payload_max));
+        try std.testing.expectError(error.DestinationRefused, socket.sendTo(undefined, Address.fromNetwork(address), null, "x", payload_max));
     }
 }
 
@@ -416,7 +416,7 @@ test "UDP receive batches preserve sources lengths truncation and buffer ownersh
         const payloads = [_][]const u8{ "first", "", "too large", "last" };
         for (payloads, 0..) |payload, i| {
             const sender = if (i % 2 == 0) &target else &other;
-            try sender.sendTo(std.testing.io, target.localAddress(), payload, 16);
+            try sender.sendTo(std.testing.io, target.localAddress(), null, payload, 16);
         }
         var buffers: [4][5]u8 = undefined;
         var slots: [4]Sockets.ReceiveSlot = undefined;
@@ -452,7 +452,7 @@ test "UDP receive batches preserve sources lengths truncation and buffer ownersh
         }
         try std.testing.expectEqual(Sockets.ReceiveOutcome{}, target.receiveManyReady(io, &slots, &ready, &scratch));
         try std.testing.expect(!ready[0]);
-        try other.sendTo(std.testing.io, target.localAddress(), "new", 16);
+        try other.sendTo(std.testing.io, target.localAddress(), null, "new", 16);
         try waitForDatagram(target.primary());
         ready = .{ true, false };
         try std.testing.expectEqual(Sockets.ReceiveOutcome{ .received = 1 }, target.receiveManyReady(io, slots[0..1], &ready, &scratch));
@@ -464,7 +464,7 @@ test "UDP receive batches alternate ready families and leave unmarked input queu
     var target = try Sockets.bind(std.testing.io, .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } });
     defer target.close(std.testing.io);
     const local = target.localAddresses();
-    for (0..3) |_| for (local) |address| try target.sendTo(std.testing.io, address.?, "data", 16);
+    for (0..3) |_| for (local) |address| try target.sendTo(std.testing.io, address.?, null, "data", 16);
     var buffers: [2][8]u8 = undefined;
     var slots: [2]Sockets.ReceiveSlot = undefined;
     for (&slots, &buffers) |*slot, *buffer| slot.* = .{ .buffer = buffer };
@@ -492,7 +492,7 @@ test "UDP receive batches alternate ready families and leave unmarked input queu
 test "UDP provider receive batches keep their prefix on cancellation" {
     var target = try Sockets.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer target.close(std.testing.io);
-    for ([_][]const u8{ "first", "next" }) |payload| try target.sendTo(std.testing.io, target.localAddress(), payload, 16);
+    for ([_][]const u8{ "first", "next" }) |payload| try target.sendTo(std.testing.io, target.localAddress(), null, payload, 16);
     var buffers: [2][8]u8 = undefined;
     var slots: [2]Sockets.ReceiveSlot = undefined;
     for (&slots, &buffers) |*slot, *buffer| slot.* = .{ .buffer = buffer };

@@ -101,13 +101,16 @@ pub const Sockets = struct {
         }
     };
     /// Payload-only datagrams. Payloads are borrowed for the duration of sendMany.
-    pub const Outgoing = struct { to: Address, bytes: []const u8 };
+    /// `from` pins the source address; its port is ignored. Null or an unspecified address leaves
+    /// the choice to the kernel.
+    pub const Outgoing = struct { to: Address, bytes: []const u8, from: ?Address = null };
     /// Exclusively borrowed during sendMany; no pointers are retained after it returns.
     pub const BatchScratch = union {
         native: native_io.SendScratch,
         provider: struct {
             addresses: [capacity]net.IpAddress,
             messages: [capacity]net.OutgoingMessage,
+            controls: [capacity]Control align(8),
         },
 
         pub const capacity = 16;
@@ -355,17 +358,20 @@ pub const Sockets = struct {
         return .{};
     }
 
-    pub fn sendTo(self: *const Sockets, io: std.Io, destination: Address, bytes: []const u8, payload_max: usize) SendError!void {
+    pub fn sendTo(self: *const Sockets, io: std.Io, destination: Address, from: ?Address, bytes: []const u8, payload_max: usize) SendError!void {
         if (bytes.len > payload_max) return error.DatagramTooLarge;
         if (destination.port() == 0) return error.DestinationRefused;
+        if (!sameFamily(destination, from)) return error.AddressFamilyUnsupported;
         const address = destination.toNetwork();
         const family: usize = if (destination == .ip4) 0 else 1;
         const socket = self.values[family] orelse return error.AddressFamilyUnsupported;
         if (!self.native[family] and compat.threadedSend(io)) return error.IncompatibleProvider;
         if (native_sockets) {
-            if (self.native[family] and compat.threadedSend(io)) return native_io.send(io, socket.handle, &address, bytes);
+            if (self.native[family] and compat.threadedSend(io)) return native_io.send(io, socket.handle, &address, from, bytes);
         }
-        try socket.send(io, &address, bytes);
+        var scratch: BatchScratch = undefined;
+        const outcome = sendProvider(io, socket.handle, &.{.{ .to = destination, .bytes = bytes, .from = from }}, &scratch);
+        if (outcome.failure) |err| return err;
     }
 
     /// Sends in input order, stopping at the first error with its exact accepted prefix.
@@ -376,12 +382,13 @@ pub const Sockets = struct {
         while (begin < messages.len) {
             if (messages[begin].bytes.len > payload_max) return .{ .sent = begin, .failure = error.DatagramTooLarge };
             if (messages[begin].to.port() == 0) return .{ .sent = begin, .failure = error.DestinationRefused };
+            if (!sameFamily(messages[begin].to, messages[begin].from)) return .{ .sent = begin, .failure = error.AddressFamilyUnsupported };
             const family: usize = if (messages[begin].to == .ip4) 0 else 1;
             const socket = self.values[family] orelse return .{ .sent = begin, .failure = error.AddressFamilyUnsupported };
             if (!self.native[family] and compat.threadedSend(io)) return .{ .sent = begin, .failure = error.IncompatibleProvider };
             var end = begin + 1;
             const limit = begin + @min(BatchScratch.capacity, messages.len - begin);
-            while (end < limit and std.meta.activeTag(messages[end].to) == std.meta.activeTag(messages[begin].to) and messages[end].bytes.len <= payload_max and messages[end].to.port() != 0) : (end += 1) {}
+            while (end < limit and std.meta.activeTag(messages[end].to) == std.meta.activeTag(messages[begin].to) and messages[end].bytes.len <= payload_max and messages[end].to.port() != 0 and sameFamily(messages[end].to, messages[end].from)) : (end += 1) {}
             const run = messages[begin..end];
             const outcome = if (native_sockets and self.native[family] and compat.threadedSend(io)) blk: {
                 scratch.* = .{ .native = undefined };
@@ -410,6 +417,10 @@ pub const Sockets = struct {
     fn passed(io: std.Io, deadline: std.Io.Timeout) bool {
         const duration = deadline.toDurationFromNow(io) orelse return false;
         return duration.raw.nanoseconds <= 0;
+    }
+
+    fn sameFamily(to: Address, from: ?Address) bool {
+        return from == null or std.meta.activeTag(from.?) == std.meta.activeTag(to);
     }
 
     fn boundFor(self: *const Sockets, from: net.IpAddress) net.IpAddress {
@@ -467,6 +478,10 @@ pub const Sockets = struct {
         for (messages, 0..) |message, i| {
             provider.addresses[i] = message.to.toNetwork();
             provider.messages[i] = .{ .address = &provider.addresses[i], .data_ptr = message.bytes.ptr, .data_len = message.bytes.len };
+            if (native_sockets) {
+                if (native_io.pinned(message.from)) |from|
+                    provider.messages[i].control = provider.controls[i][0..native_io.pinSource(&provider.controls[i], from)];
+            }
         }
         const failure, const sent = io.vtable.netSend(io.userdata, handle, provider.messages[0..messages.len], .{});
         assert(sent <= messages.len);
