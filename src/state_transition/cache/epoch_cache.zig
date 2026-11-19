@@ -536,15 +536,16 @@ pub const EpochCache = struct {
                 context,
             );
             var validators = try state.validators();
-            while (unfinalized.indexed_count < validators_count) : (unfinalized.indexed_count += 1) {
-                var validator = try validators.getReadonly(unfinalized.indexed_count);
+            for (unfinalized.indexed_count..validators_count) |index| {
+                var validator = try validators.getReadonly(index);
                 var validator_pubkey: [48]u8 = undefined;
                 try validator.getValue(undefined, "pubkey", &validator_pubkey);
                 unfinalized.map.putAssumeCapacityContext(
                     validator_pubkey,
-                    @intCast(unfinalized.indexed_count),
+                    @intCast(index),
                     context,
                 );
+                unfinalized.indexed_count = index + 1;
             }
         }
         return unfinalized.map.getContext(pubkey, context);
