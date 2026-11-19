@@ -197,6 +197,9 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const quicMu6 = listenAddress6 && quic ? `${muArgs.listenAddress6}${muArgs.quicPort6}` : undefined;
 
   const targetPeers = args.targetPeers;
+  if (targetPeers != null && targetPeers < 0) {
+    throw new YargsError("targetPeers must be greater than or equal to 0");
+  }
   const maxPeers =
     args["network.maxPeers"] ??
     (targetPeers !== undefined ? Math.max(Math.floor(targetPeers * 1.1), targetPeers + 1) : undefined);
