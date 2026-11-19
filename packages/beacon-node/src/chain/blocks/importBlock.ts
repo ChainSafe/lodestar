@@ -583,7 +583,8 @@ export async function importBlock(
   this.metrics?.parentBlockDistance.observe(blockSlot - parentBlockSlot);
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
   this.validatorMonitor?.registerImportedBlock(block.message, fullyVerifiedBlock);
-  if (isStatePostAltair(fullyVerifiedBlock.postState)) {
+  // A pq block has no sync aggregate
+  if (fork !== ForkSeq.pq && isStatePostAltair(fullyVerifiedBlock.postState)) {
     this.validatorMonitor?.registerSyncAggregateInBlock(
       blockEpoch,
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,
