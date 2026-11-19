@@ -1,6 +1,7 @@
 const schedule_test_support = @import("schedule_test_support.zig");
 const driver = @import("driver.zig");
 const std = @import("std");
+const awaitDatagrams = @import("transport_test_support.zig").awaitDatagrams;
 const NetworkCore = @import("network_core.zig").NetworkCore;
 const keys = @import("wire/keys.zig");
 const options = @import("network_core_test_support.zig").networkOptions;
@@ -335,6 +336,7 @@ test "discovery readiness with other work due runs a full turn" {
     _ = try node.transport.engine.dial(&destination, &node.transport.localAddress(), node.peerId(), node.last_now);
     try std.testing.expect(node.transport.engine.backlog());
     try remote.send(std.testing.io, &node.discovery.?.transport.sockets.primary().address, "junk datagram");
+    try awaitDatagrams(node.discovery.?.transport.sockets.primary(), 1);
     const now = try currentTime();
     const result = driver.step(&node, std.testing.io, now, .{}, .deadlineOnly(time.optionalMilliseconds(now.millis() +| 5_000)));
     try std.testing.expect(result.failure == null and result.readiness.discoveryReady());
@@ -391,6 +393,8 @@ test "a continuous QUIC flood on both families shares each receive quota and lea
     defer sender6.close(std.testing.io);
     for (0..2 * quota + 6) |_| try sender4.send(std.testing.io, &sockets[0].?.address, "junk");
     for (0..4) |_| try sender6.send(std.testing.io, &sockets[1].?.address, "junk");
+    try awaitDatagrams(sockets[0].?, 2 * quota + 6);
+    try awaitDatagrams(sockets[1].?, 4);
 
     // A wake, a due host deadline, then a wake again: each turn applies the host while the flood
     // lasts. Both families share the first quota, so IPv6 is drained by the second turn.
