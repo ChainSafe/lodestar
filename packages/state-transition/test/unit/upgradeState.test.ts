@@ -145,6 +145,7 @@ describe("upgradeState", () => {
     expect(latestBid.parentBlockHash).toEqual(latestPayloadParentHash);
     expect(latestBid.parentBlockRoot).toEqual(latestBlockParentRoot);
     expect(latestBid.blockHash).toEqual(latestPayloadBlockHash);
+    expect(latestBid.payloadRoot).toEqual(ssz.Root.defaultValue());
     expect(latestBid.prevRandao).toEqual(latestPayloadPrevRandao);
     expect(latestBid.feeRecipient).toEqual(ssz.ExecutionAddress.defaultValue());
     expect(latestBid.gasLimit).toBe(BigInt(latestPayloadGasLimit));

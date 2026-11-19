@@ -57,6 +57,7 @@ import {
   gloas,
   heze,
   ssz,
+  sszTypesFor,
 } from "@lodestar/types";
 import {
   GWEI_TO_WEI,
@@ -379,6 +380,8 @@ export async function produceBlockBody<T extends BlockType>(
       parentBlockHash,
       parentBlockRoot,
       blockHash: executionPayload.blockHash,
+      // Root of the payload as it is cached below and later revealed in the envelope
+      payloadRoot: sszTypesFor(fork).ExecutionPayload.hashTreeRoot(executionPayload as ExecutionPayload<ForkPostGloas>),
       prevRandao: currentState.getRandaoMix(currentState.epoch),
       feeRecipient: executionPayload.feeRecipient,
       gasLimit: BigInt(executionPayload.gasLimit),

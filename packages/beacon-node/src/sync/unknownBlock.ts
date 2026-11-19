@@ -10,7 +10,7 @@ import {isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
-import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
+import {BlockError, BlockErrorCode, isExecutionPayloadEnvelopeBlockBindingError} from "../chain/errors/index.js";
 import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {validateGloasBlockDataColumnSidecars} from "../chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadEnvelope} from "../chain/validation/executionPayloadEnvelope.js";
@@ -747,7 +747,7 @@ export class BlockInputSync {
   private toPendingPayloadInput(
     payloadInput: PayloadEnvelopeInput,
     previous?: PayloadSyncCacheItem,
-    envelope?: gloas.SignedExecutionPayloadEnvelope
+    envelope?: gloas.ExecutionPayloadEnvelope
   ): PendingPayloadInput {
     // Normalize every payload queueing path into the same cache shape while preserving first-seen
     // timing and peer provenance from any earlier by-root or envelope-only entry.
@@ -1297,16 +1297,24 @@ export class BlockInputSync {
       if (validationResult.err) {
         this.logger.debug(
           "Pending payload envelope failed validation after block import, refetching by root",
-          {slot: pendingPayload.envelope.message.payload.slotNumber, root: rootHex},
+          {slot: pendingPayload.envelope.payload.slotNumber, root: rootHex},
           validationResult.err
         );
+
+        const peerIdStrings = new Set(pendingPayload.peerIdStrings);
+        const {envelopePeerIdStr} = pendingPayload;
+        if (envelopePeerIdStr !== undefined && isExecutionPayloadEnvelopeBlockBindingError(validationResult.err)) {
+          // do not prefer this peer for the refetch
+          peerIdStrings.delete(envelopePeerIdStr);
+          this.reportBadEnvelopePeer(envelopePeerIdStr);
+        }
 
         const pendingPayloadByRoot: PendingPayloadRootHex = {
           status: PendingPayloadInputStatus.pending,
           rootHex,
-          slot: pendingPayload.envelope.message.payload.slotNumber,
+          slot: pendingPayload.envelope.payload.slotNumber,
           timeAddedSec: pendingPayload.timeAddedSec,
-          peerIdStrings: new Set(pendingPayload.peerIdStrings),
+          peerIdStrings,
         };
         this.pendingPayloads.set(rootHex, pendingPayloadByRoot);
 
@@ -1480,12 +1488,6 @@ export class BlockInputSync {
           this.removePendingPayloadAndDescendants(rootHex, DroppedItemReason.invalidEnvelope);
           break;
 
-        case PayloadErrorCode.INVALID_SIGNATURE:
-          this.logger.debug("Error processing payload from unknown sync", logCtx, res.err);
-          this.chain.seenPayloadEnvelopeInputCache.removeInvalid(pendingPayload.payloadInput);
-          this.removePendingPayloadAndDescendants(rootHex, DroppedItemReason.invalidSignature);
-          break;
-
         default:
           this.logger.debug("Error processing payload from unknown sync", logCtx, res.err);
           if (this.pendingPayloads.delete(rootHex)) {
@@ -1516,6 +1518,8 @@ export class BlockInputSync {
       ? cacheItem.payloadInput
       : await this.chain.seenPayloadEnvelopeInputCache.getOrReload(rootHex);
     let envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
+    // The peer that served `envelope`, if it was downloaded here and is not validated yet
+    let envelopePeerId: PeerIdStr | undefined;
 
     const fetchStartSec = Date.now() / 1000;
     if (typeof slot === "number") {
@@ -1563,9 +1567,10 @@ export class BlockInputSync {
       try {
         if (!envelope) {
           envelope = await this.fetchExecutionPayloadEnvelope(peerId, blockRoot, rootHex);
+          envelopePeerId = peerId;
           cacheItem.peerIdStrings.add(peerId);
           const slotWasUnknown = typeof slot !== "number";
-          slot = envelope.message.payload.slotNumber;
+          slot = envelope.payload.slotNumber;
           if (slotWasUnknown) {
             // we were not able to observe the time into slot when starting the fetch, do it now
             this.metrics?.blockInputSync.payloadFetchBegin.observe(this.chain.clock.secFromSlot(slot, fetchStartSec));
@@ -1586,6 +1591,7 @@ export class BlockInputSync {
           return {
             status: PendingPayloadInputStatus.waitingForBlock,
             envelope,
+            envelopePeerIdStr: envelopePeerId,
             timeAddedSec: cacheItem.timeAddedSec,
             peerIdStrings: cacheItem.peerIdStrings,
           };
@@ -1597,8 +1603,29 @@ export class BlockInputSync {
         }
 
         if (!payloadInput.hasPayloadEnvelope()) {
-          await validateGossipExecutionPayloadEnvelope(this.chain, envelope);
+          try {
+            await validateGossipExecutionPayloadEnvelope(this.chain, envelope);
+          } catch (e) {
+            this.logger.debug(
+              "Downloaded payload envelope failed validation in BlockInputSync.fetchPayloadInput",
+              {slot, rootHex, attempt: i, peer: envelopePeerId, peerClient},
+              e as Error
+            );
+            // The envelope is not signed, any peer can serve another one for this block root. Drop it so that the
+            // next attempt downloads the envelope again, keeping it would fail every other peer in its place
+            envelope = undefined;
+            if (envelopePeerId !== undefined) {
+              cacheItem.peerIdStrings.delete(envelopePeerId);
+              excludedPeers.add(envelopePeerId);
+              if (isExecutionPayloadEnvelopeBlockBindingError(e)) {
+                this.reportBadEnvelopePeer(envelopePeerId);
+              }
+              envelopePeerId = undefined;
+            }
+            continue;
+          }
         }
+        envelopePeerId = undefined;
 
         let pendingPayload = this.toPendingPayloadInput(payloadInput, cacheItem, envelope);
         if (!pendingPayload.payloadInput.hasAllData()) {
@@ -1691,18 +1718,26 @@ export class BlockInputSync {
     throw Error(`Error fetching payload with slot=${slot} root=${rootHex} after ${i - 1} attempts.`);
   }
 
+  /**
+   * The envelope is not signed, it is tied to its block by the block's parent root and the commitments of the
+   * block's bid. No honest peer serves an envelope that fails those for a block it has.
+   */
+  private reportBadEnvelopePeer(peerIdStr: PeerIdStr): void {
+    this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadPayloadEnvelopeByRoot");
+  }
+
   private async fetchExecutionPayloadEnvelope(
     peerIdStr: PeerIdStr,
     blockRoot: Uint8Array,
     rootHex: RootHex
-  ): Promise<gloas.SignedExecutionPayloadEnvelope> {
+  ): Promise<gloas.ExecutionPayloadEnvelope> {
     const response = await this.network.sendExecutionPayloadEnvelopesByRoot(peerIdStr, [blockRoot]);
     const envelope = response.at(0);
     if (!envelope) {
       throw new Error(`Missing execution payload envelope for root=${rootHex}`);
     }
 
-    const receivedRootHex = toRootHex(envelope.message.beaconBlockRoot);
+    const receivedRootHex = toRootHex(envelope.beaconBlockRoot);
     if (receivedRootHex !== rootHex) {
       throw new Error(`Execution payload envelope root mismatch requested=${rootHex} received=${receivedRootHex}`);
     }

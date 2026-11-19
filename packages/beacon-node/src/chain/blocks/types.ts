@@ -23,10 +23,10 @@ export enum AttestationImportOpt {
 export type ImportPayloadOpts = {
   /**
    * Set to true when the envelope was already validated upstream (e.g., gossip/API validation):
-   * signature is trusted and execution_requests_root was already verified against the bid.
+   * payload root and execution_requests_root were already verified against the bid.
    * When false/undefined, both are verified during import.
    */
-  validSignature?: boolean;
+  validEnvelope?: boolean;
 };
 
 export type ImportBlockOpts = {

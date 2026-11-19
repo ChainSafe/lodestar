@@ -99,6 +99,7 @@ export function createExecutionPayloadBid(input: ExecutionPayloadBidInput): Exec
     parentBlockHash: executionPayload.parentHash,
     parentBlockRoot: input.parentBlockRoot,
     blockHash: executionPayload.blockHash,
+    payloadRoot: sszTypesFor(fork).ExecutionPayload.hashTreeRoot(executionPayload),
     prevRandao: input.prevRandao,
     feeRecipient: input.feeRecipient,
     gasLimit: BigInt(executionPayload.gasLimit),

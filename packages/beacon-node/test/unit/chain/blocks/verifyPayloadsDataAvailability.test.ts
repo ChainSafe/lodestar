@@ -23,7 +23,7 @@ function buildPayloadEnvelopeInput({
   forkName?: ForkName;
 }): {
   payloadInput: PayloadEnvelopeInput;
-  signedEnvelope: gloas.SignedExecutionPayloadEnvelope;
+  signedEnvelope: gloas.ExecutionPayloadEnvelope;
 } {
   const block = ssz.gloas.SignedBeaconBlock.defaultValue();
   block.message.slot = 0;
@@ -44,8 +44,8 @@ function buildPayloadEnvelopeInput({
     daOutOfRange,
   });
 
-  const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-  signedEnvelope.message.beaconBlockRoot = blockRoot;
+  const signedEnvelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+  signedEnvelope.beaconBlockRoot = blockRoot;
 
   payloadInput.addPayloadEnvelope({
     envelope: signedEnvelope,
@@ -212,7 +212,7 @@ describe("PayloadEnvelopeInput.waitForEnvelopeAndAllData", () => {
   }: {
     blobCount: number;
     sampledColumns: ColumnIndex[];
-  }): {payloadInput: PayloadEnvelopeInput; signedEnvelope: gloas.SignedExecutionPayloadEnvelope} {
+  }): {payloadInput: PayloadEnvelopeInput; signedEnvelope: gloas.ExecutionPayloadEnvelope} {
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = 0;
     const commitments = Array.from({length: blobCount}, () => Buffer.alloc(48, 0x77));
@@ -232,8 +232,8 @@ describe("PayloadEnvelopeInput.waitForEnvelopeAndAllData", () => {
       daOutOfRange: false,
     });
 
-    const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    signedEnvelope.message.beaconBlockRoot = blockRoot;
+    const signedEnvelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    signedEnvelope.beaconBlockRoot = blockRoot;
 
     return {payloadInput, signedEnvelope};
   }

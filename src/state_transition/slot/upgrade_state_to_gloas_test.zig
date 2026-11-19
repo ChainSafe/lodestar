@@ -110,6 +110,10 @@ test "Gloas upgrade migrates empty pending queues" {
     defer epoch_cache.deinit();
     const upgraded = try upgradeStateToGloas(allocator, std.testing.io, &config, epoch_cache, state.castToFork(.fulu));
     state = .{ .gloas = upgraded.inner };
+    var bid = ct.gloas.ExecutionPayloadBid.default_value;
+    defer ct.gloas.ExecutionPayloadBid.deinit(allocator, &bid);
+    try upgraded.inner.getValue(allocator, "latest_execution_payload_bid", &bid);
+    try std.testing.expectEqualSlices(u8, &c.ZERO_HASH, &bid.payload_root);
     inline for (.{ "pending_deposits", "pending_partial_withdrawals", "pending_consolidations" }) |field| {
         var pending = try upgraded.inner.get(field);
         try std.testing.expectEqual(@as(usize, 0), try pending.length());

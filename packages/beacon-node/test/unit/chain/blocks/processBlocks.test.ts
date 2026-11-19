@@ -196,8 +196,8 @@ describe("chain / blocks / processBlocks", () => {
       source: PayloadEnvelopeInputSource.byRange,
       seenTimestampSec: 0,
     });
-    const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    envelope.message.beaconBlockRoot = blockRoot;
+    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    envelope.beaconBlockRoot = blockRoot;
     if (envelopeBeforeDa) {
       payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 1});
     }
@@ -233,7 +233,7 @@ describe("chain / blocks / processBlocks", () => {
     expect(importBlock).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({blockInput: gloasBlockInput}), {});
     if (envelopeBeforeDa) {
       expect(importExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, DataAvailabilityStatus.NotRequired, {
-        validSignature: false,
+        validEnvelope: false,
       });
       expect(vi.mocked(importBlock).mock.invocationCallOrder[0]).toBeLessThan(
         vi.mocked(importExecutionPayload).mock.invocationCallOrder[0]
@@ -276,8 +276,8 @@ describe("chain / blocks / processBlocks", () => {
         source: PayloadEnvelopeInputSource.byRange,
         seenTimestampSec: 0,
       });
-      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      envelope.message.beaconBlockRoot = blockRoot;
+      const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+      envelope.beaconBlockRoot = blockRoot;
       payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 1});
       return {blockInput, payloadInput};
     };
@@ -324,7 +324,7 @@ describe("chain / blocks / processBlocks", () => {
       expect(importExecutionPayload).toHaveBeenCalledExactlyOnceWith(
         current.payloadInput,
         DataAvailabilityStatus.NotRequired,
-        {validSignature: false}
+        {validEnvelope: false}
       );
       expect(chain.seenPayloadEnvelopeInputCache.remove).toHaveBeenCalledExactlyOnceWith(
         parent.payloadInput.blockRootHex
@@ -378,8 +378,8 @@ describe("chain / blocks / processBlocks", () => {
       source: PayloadEnvelopeInputSource.byRange,
       seenTimestampSec: 0,
     });
-    const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    envelope.message.beaconBlockRoot = blockRoot;
+    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    envelope.beaconBlockRoot = blockRoot;
     payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 1});
 
     // block already imported (PENDING payload), batch only re-delivers it together with its envelope
@@ -412,7 +412,7 @@ describe("chain / blocks / processBlocks", () => {
       expect(result).toEqual({orphaned: [{slot, payloadEnvelopeInput: payloadInput}], skipped: true});
     } else {
       expect(importExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, DataAvailabilityStatus.NotRequired, {
-        validSignature: false,
+        validEnvelope: false,
       });
       expect(chain.seenPayloadEnvelopeInputCache.remove).not.toHaveBeenCalled();
       expect(chain.recomputeForkChoiceHead).toHaveBeenCalledOnce();

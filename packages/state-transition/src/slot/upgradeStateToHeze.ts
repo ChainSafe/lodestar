@@ -70,6 +70,7 @@ export function upgradeStateToHeze(stateGloas: CachedBeaconStateGloas): CachedBe
   newBid.parentBlockHash = oldBid.parentBlockHash;
   newBid.parentBlockRoot = oldBid.parentBlockRoot;
   newBid.blockHash = oldBid.blockHash;
+  newBid.payloadRoot = oldBid.payloadRoot;
   newBid.prevRandao = oldBid.prevRandao;
   newBid.feeRecipient = oldBid.feeRecipient;
   newBid.gasLimit = oldBid.gasLimit;

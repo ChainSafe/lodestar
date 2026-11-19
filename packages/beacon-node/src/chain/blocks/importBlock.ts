@@ -532,6 +532,7 @@ export async function importBlock(
           executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
           ...(isGloasBeaconBlock(block.message) && {
             blockHash: toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash),
+            payloadRoot: toRootHex(block.message.body.signedExecutionPayloadBid.message.payloadRoot),
             builderIndex: block.message.body.signedExecutionPayloadBid.message.builderIndex,
           }),
         });
@@ -608,6 +609,9 @@ export async function importBlock(
     root: blockRootHex,
     delaySec: this.clock.secFromSlot(blockSlot),
   });
+
+  // A block this node built itself is in fork choice, however it arrived. Reveal its payload
+  this.revealSelfBuiltPayload(blockRootHex);
 }
 
 export function addAttestationPreElectra(

@@ -16,6 +16,11 @@ import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../src/cha
 import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
+import {
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
+} from "../../../src/chain/errors/executionPayloadEnvelope.js";
+import {GossipAction} from "../../../src/chain/errors/gossipValidation.js";
 import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../src/chain/index.js";
 import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
 import {SeenBlockInput} from "../../../src/chain/seenCache/seenGossipBlockInput.js";
@@ -24,6 +29,7 @@ import {validateGossipExecutionPayloadEnvelope} from "../../../src/chain/validat
 import {ExecutionPayloadStatus} from "../../../src/execution/index.js";
 import {INetwork, NetworkEvent, NetworkEventBus} from "../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
+import {PeerAction} from "../../../src/network/peers/score/interface.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
 import {
   BlockInputSyncCacheItem,
@@ -67,7 +73,7 @@ function buildPayloadFixture({
   blockRootHex: string;
   blockRoot: Uint8Array;
   payloadInput: PayloadEnvelopeInput;
-  envelope: gloas.SignedExecutionPayloadEnvelope;
+  envelope: gloas.ExecutionPayloadEnvelope;
   columnSidecars: gloas.DataColumnSidecar[];
 } {
   const block = ssz.gloas.SignedBeaconBlock.defaultValue();
@@ -78,6 +84,12 @@ function buildPayloadFixture({
   if (blockHash) {
     block.message.body.signedExecutionPayloadBid.message.blockHash = blockHash;
   }
+  const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+  envelope.payload.slotNumber = slot;
+  // the bid commits to the payload of the envelope it pairs with
+  block.message.body.signedExecutionPayloadBid.message.payloadRoot = ssz.gloas.ExecutionPayload.hashTreeRoot(
+    envelope.payload
+  );
 
   const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toRootHex(blockRoot);
@@ -92,9 +104,7 @@ function buildPayloadFixture({
     daOutOfRange: false,
   });
 
-  const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-  envelope.message.beaconBlockRoot = blockRoot;
-  envelope.message.payload.slotNumber = slot;
+  envelope.beaconBlockRoot = blockRoot;
 
   const columnSidecars = sampledColumns.map((index) => {
     const columnSidecar = ssz.gloas.DataColumnSidecar.defaultValue();
@@ -1993,6 +2003,150 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).not.toHaveBeenCalled();
     });
 
+    describe("an envelope that is not the one of the block", () => {
+      /** An envelope for the block of `envelope` with another payload, the block's bid does not commit to it */
+      function otherEnvelope(envelope: gloas.ExecutionPayloadEnvelope): gloas.ExecutionPayloadEnvelope {
+        const other = ssz.gloas.ExecutionPayloadEnvelope.clone(envelope);
+        other.payload.gasUsed += 1;
+        return other;
+      }
+
+      function payloadRootMismatch(blockRootHex: string): ExecutionPayloadEnvelopeError {
+        return new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+          code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ROOT_MISMATCH,
+          slot: 1,
+          root: blockRootHex,
+          envelopePayloadRoot: "",
+          bidPayloadRoot: "",
+        });
+      }
+
+      it("reports the peer that served it and downloads the envelope again from another peer", async () => {
+        const badPeer = await getRandPeerIdStr();
+        const goodPeer = await getRandPeerIdStr();
+        const {blockRoot, blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+          blobCount: 0,
+          sampledColumns: [],
+          slot: 1,
+        });
+        const badEnvelope = otherEnvelope(envelope);
+
+        const sendExecutionPayloadEnvelopesByRoot = vi
+          .fn()
+          .mockImplementation(async (peer: PeerIdStr) => [peer === badPeer ? badEnvelope : envelope]);
+        vi.mocked(validateGossipExecutionPayloadEnvelope).mockImplementation(async (_chain, validated) => {
+          if (validated !== envelope) throw payloadRootMismatch(blockRootHex);
+        });
+        const reportPeer = vi.fn();
+        const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
+        const {emitter} = setupPayloadSyncTest({
+          chainOverrides: {
+            processExecutionPayload,
+            seenPayloadEnvelopeInputCache: {
+              add: vi.fn(),
+              get: vi.fn().mockReturnValue(payloadInput),
+              getOrReload: vi.fn().mockResolvedValue(payloadInput),
+              remove: vi.fn(),
+            } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+            forkChoice: {
+              hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+              hasBlockHex: vi.fn().mockReturnValue(true),
+              getBlockHexDefaultStatus: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+              getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+            } as unknown as IForkChoice,
+          },
+          // enough sample groups for more than one download attempt
+          custodyConfig: {
+            sampledColumns: [],
+            sampleGroups: Array.from({length: 8}, () => []),
+          } as unknown as CustodyConfig,
+          networkOverrides: {sendExecutionPayloadEnvelopesByRoot, reportPeer},
+          peers: [{peerId: badPeer}, {peerId: goodPeer}],
+        });
+
+        // the peer that referenced the root is asked first
+        emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+          rootHex: blockRootHex,
+          peer: badPeer,
+          source: BlockInputSource.gossip,
+        });
+
+        await sleep(50);
+
+        expect(sendExecutionPayloadEnvelopesByRoot.mock.calls).toEqual([
+          [badPeer, [blockRoot]],
+          [goodPeer, [blockRoot]],
+        ]);
+        expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
+          badPeer,
+          PeerAction.LowToleranceError,
+          "BadPayloadEnvelopeByRoot"
+        );
+        // the envelope of the bad peer is not validated against the good peer
+        expect(validateGossipExecutionPayloadEnvelope).toHaveBeenCalledTimes(2);
+        expect(payloadInput.getPayloadEnvelope()).toBe(envelope);
+        expect(processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput);
+      });
+
+      it("reports the peer that served it once the block it waited for is known", async () => {
+        const badPeer = await getRandPeerIdStr();
+        const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+          blobCount: 0,
+          sampledColumns: [],
+          slot: 1,
+        });
+        const badEnvelope = otherEnvelope(envelope);
+
+        const sendExecutionPayloadEnvelopesByRoot = vi
+          .fn()
+          .mockResolvedValueOnce([badEnvelope])
+          .mockResolvedValue([envelope]);
+        vi.mocked(validateGossipExecutionPayloadEnvelope).mockImplementation(async (_chain, validated) => {
+          if (validated !== envelope) throw payloadRootMismatch(blockRootHex);
+        });
+        const reportPeer = vi.fn();
+        const {chain, emitter} = setupPayloadSyncTest({
+          networkOverrides: {
+            sendExecutionPayloadEnvelopesByRoot,
+            sendBeaconBlocksByRoot: vi.fn().mockResolvedValue([]),
+            reportPeer,
+          },
+          peers: [{peerId: badPeer}],
+        });
+
+        try {
+          emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+            rootHex: blockRootHex,
+            peer: badPeer,
+            source: BlockInputSource.gossip,
+          });
+          await vi.advanceTimersByTimeAsync(0);
+          // the block is not known, the envelope cannot be validated yet
+          expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
+          expect(validateGossipExecutionPayloadEnvelope).not.toHaveBeenCalled();
+          expect(reportPeer).not.toHaveBeenCalled();
+
+          vi.mocked(chain.forkChoice.hasBlockHex).mockReturnValue(true);
+          vi.mocked(chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(payloadInput);
+          vi.mocked(chain.seenPayloadEnvelopeInputCache.getOrReload).mockResolvedValue(payloadInput);
+          emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
+          await vi.advanceTimersByTimeAsync(0);
+
+          expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
+            badPeer,
+            PeerAction.LowToleranceError,
+            "BadPayloadEnvelopeByRoot"
+          );
+          // downloaded again, the envelope that waited for the block is not kept
+          expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(2);
+          expect(payloadInput.getPayloadEnvelope()).toBe(envelope);
+          expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput);
+        } finally {
+          service.close();
+        }
+      });
+    });
+
     it.each([false, true])("upgrades an idle root on incomplete payload gossip, complete=%s", async (complete) => {
       const peer = await getRandPeerIdStr();
       const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
@@ -2031,7 +2185,7 @@ describe("UnknownBlockSync", () => {
       async (initial) => {
         const peer = await getRandPeerIdStr();
         const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
-        const firstFetch = defer<gloas.SignedExecutionPayloadEnvelope[]>();
+        const firstFetch = defer<gloas.ExecutionPayloadEnvelope[]>();
         const sendExecutionPayloadEnvelopesByRoot = vi
           .fn()
           .mockReturnValueOnce(firstFetch.promise)
@@ -2174,7 +2328,12 @@ describe("UnknownBlockSync", () => {
           expect(sendDataColumnSidecarsByRoot).toHaveBeenCalledOnce();
 
           if (stage === "validation failure") {
-            validation.reject(new PayloadError(payloadInput, {code: PayloadErrorCode.INVALID_SIGNATURE}));
+            validation.reject(
+              new PayloadError(payloadInput, {
+                code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
+                message: "payload root mismatch",
+              })
+            );
           } else validation.resolve();
           reload.resolve(payloadInput);
           await vi.advanceTimersByTimeAsync(0);
@@ -2240,8 +2399,8 @@ describe("UnknownBlockSync", () => {
         sampledColumns: [],
         slot: 1,
       });
-      const oldFetch = defer<gloas.SignedExecutionPayloadEnvelope[]>();
-      const currentFetch = defer<gloas.SignedExecutionPayloadEnvelope[]>();
+      const oldFetch = defer<gloas.ExecutionPayloadEnvelope[]>();
+      const currentFetch = defer<gloas.ExecutionPayloadEnvelope[]>();
       const sendExecutionPayloadEnvelopesByRoot = vi
         .fn()
         .mockReturnValueOnce(oldFetch.promise)
@@ -2305,7 +2464,12 @@ describe("UnknownBlockSync", () => {
         await vi.advanceTimersByTimeAsync(0);
         expect(processExecutionPayload).toHaveBeenCalledTimes(2);
 
-        oldProcess.reject(new PayloadError(payloadInput, {code: PayloadErrorCode.INVALID_SIGNATURE}));
+        oldProcess.reject(
+          new PayloadError(payloadInput, {
+            code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
+            message: "payload root mismatch",
+          })
+        );
         await vi.advanceTimersByTimeAsync(0);
         expect(removeInvalid).not.toHaveBeenCalled();
         emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
@@ -2380,6 +2544,7 @@ describe("UnknownBlockSync", () => {
           slot: payloadInput.slot,
           builderIndex: 0,
           blockHash: toRootHex(Buffer.alloc(32, 0x44)),
+          payloadRoot: payloadInput.getPayloadRootHex(),
           blockRoot: blockRootHex,
           executionOptimistic: false,
         });
@@ -2630,6 +2795,7 @@ describe("UnknownBlockSync", () => {
       pendingPayloads.set(envelopeRootHex, {
         status: PendingPayloadInputStatus.waitingForBlock,
         envelope,
+        envelopePeerIdStr: "peer",
         timeAddedSec: 0,
         peerIdStrings: new Set(),
       });
@@ -2844,7 +3010,6 @@ describe("UnknownBlockSync", () => {
     });
 
     it.each<PayloadErrorType>([
-      {code: PayloadErrorCode.INVALID_SIGNATURE},
       {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
       {
         code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
@@ -2929,6 +3094,7 @@ describe("UnknownBlockSync", () => {
         slot: 99,
         builderIndex: 0,
         blockHash: toRootHex(Buffer.alloc(32, 0x44)),
+        payloadRoot: toRootHex(Buffer.alloc(32, 0x66)),
         blockRoot: toRootHex(Buffer.alloc(32, 0x55)),
         executionOptimistic: false,
       });

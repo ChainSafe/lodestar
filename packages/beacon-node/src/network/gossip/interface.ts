@@ -108,7 +108,7 @@ export type GossipTypeMap = {
   [GossipType.light_client_finality_update]: LightClientFinalityUpdate;
   [GossipType.light_client_optimistic_update]: LightClientOptimisticUpdate;
   [GossipType.bls_to_execution_change]: capella.SignedBLSToExecutionChange;
-  [GossipType.execution_payload]: gloas.SignedExecutionPayloadEnvelope;
+  [GossipType.execution_payload]: gloas.ExecutionPayloadEnvelope;
   [GossipType.payload_attestation_message]: gloas.PayloadAttestationMessage;
   [GossipType.execution_payload_bid]: gloas.SignedExecutionPayloadBid;
   [GossipType.proposer_preferences]: gloas.SignedProposerPreferences;
@@ -136,9 +136,7 @@ export type GossipFnByType = {
   [GossipType.bls_to_execution_change]: (
     blsToExecutionChange: capella.SignedBLSToExecutionChange
   ) => Promise<void> | void;
-  [GossipType.execution_payload]: (
-    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
-  ) => Promise<void> | void;
+  [GossipType.execution_payload]: (executionPayloadEnvelope: gloas.ExecutionPayloadEnvelope) => Promise<void> | void;
   [GossipType.payload_attestation_message]: (
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ) => Promise<void> | void;

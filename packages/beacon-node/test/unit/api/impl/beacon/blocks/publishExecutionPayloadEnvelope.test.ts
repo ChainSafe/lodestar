@@ -2,7 +2,8 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
-import {ForkName} from "@lodestar/params";
+import {PayloadStatus} from "@lodestar/fork-choice";
+import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
@@ -10,8 +11,16 @@ import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/in
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {PayloadEnvelopeInput} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {SelfBuiltPayloadRevealOutcome} from "../../../../../../src/chain/blocks/revealSelfBuiltPayload.js";
+import {
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
+  GossipAction,
+} from "../../../../../../src/chain/errors/index.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
+import {validateApiExecutionPayloadEnvelope} from "../../../../../../src/chain/validation/executionPayloadEnvelope.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
+import {config as forkConfig, generateBlockWithColumnSidecars} from "../../../../../utils/blocksAndData.js";
 import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 
 vi.mock("../../../../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js", () => ({
@@ -38,8 +47,9 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
     modules = getApiTestModules({config});
     Object.defineProperty(modules.chain, "blockProductionCache", {value: {get: vi.fn()}});
     Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
-    modules.network.publishSignedExecutionPayloadEnvelope = vi.fn();
+    modules.network.publishExecutionPayloadEnvelope = vi.fn();
     modules.chain.processExecutionPayload = vi.fn();
+    modules.chain.completeSelfBuiltPayloadReveal = vi.fn().mockReturnValue(null);
   });
 
   describe("broadcast_validation=consensus_and_equivocation", () => {
@@ -59,9 +69,9 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
         source: PayloadEnvelopeInputSource.byRange,
         daOutOfRange: false,
       });
-      const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      signedEnvelope.message.beaconBlockRoot = fromHex(blockRoot);
-      signedEnvelope.message.payload.slotNumber = slot;
+      const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+      envelope.beaconBlockRoot = fromHex(blockRoot);
+      envelope.payload.slotNumber = slot;
 
       modules.forkChoice.getBlockHex.mockReturnValue(generateProtoBlock({slot}));
       vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(payloadInput);
@@ -83,12 +93,12 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
       const api = getBeaconBlockApi(defaultApiOptions, modules);
       await expect(
         api.publishExecutionPayloadEnvelope({
-          signedEnvelopeOrContents: signedEnvelope,
+          executionPayloadEnvelopeContents: {executionPayloadEnvelope: envelope, kzgProofs: [], blobs: []},
           broadcastValidation: routes.beacon.BroadcastValidation.consensusAndEquivocation,
         })
       ).rejects.toThrow(/proposer equivocation/);
 
-      expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
+      expect(modules.network.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
       expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
       expect(payloadInput.hasPayloadEnvelope()).toBe(false);
     });
@@ -97,7 +107,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
   describe("broadcast_validation=gossip", () => {
     function setupPayloadInput(): {
       payloadInput: PayloadEnvelopeInput;
-      signedEnvelope: gloas.SignedExecutionPayloadEnvelope;
+      envelope: gloas.ExecutionPayloadEnvelope;
     } {
       const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
       const slot = signedBlock.message.slot;
@@ -112,32 +122,31 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
         source: PayloadEnvelopeInputSource.byRange,
         daOutOfRange: false,
       });
-      const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      signedEnvelope.message.beaconBlockRoot = fromHex(blockRoot);
-      signedEnvelope.message.payload.slotNumber = slot;
+      const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+      envelope.beaconBlockRoot = fromHex(blockRoot);
+      envelope.payload.slotNumber = slot;
 
       modules.forkChoice.getBlockHex.mockReturnValue(generateProtoBlock({slot}));
       vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(payloadInput);
-      return {payloadInput, signedEnvelope};
+      return {payloadInput, envelope};
     }
 
-    it("skips signature verification on import of the submitted envelope", async () => {
-      const {payloadInput, signedEnvelope} = setupPayloadInput();
+    it("skips envelope verification on import of the submitted envelope", async () => {
+      const {payloadInput, envelope} = setupPayloadInput();
 
       const api = getBeaconBlockApi(defaultApiOptions, modules);
       await api.publishExecutionPayloadEnvelope({
-        signedEnvelopeOrContents: signedEnvelope,
+        executionPayloadEnvelopeContents: {executionPayloadEnvelope: envelope, kzgProofs: [], blobs: []},
         broadcastValidation: routes.beacon.BroadcastValidation.gossip,
       });
 
-      expect(payloadInput.getPayloadEnvelope()).toBe(signedEnvelope);
-      expect(modules.chain.processExecutionPayload).toHaveBeenCalledWith(payloadInput, {validSignature: true});
+      expect(payloadInput.getPayloadEnvelope()).toBe(envelope);
+      expect(modules.chain.processExecutionPayload).toHaveBeenCalledWith(payloadInput, {validEnvelope: true});
     });
 
-    it("verifies signature on import of an envelope added by another source", async () => {
-      const {payloadInput, signedEnvelope} = setupPayloadInput();
-      const cachedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(signedEnvelope);
-      cachedEnvelope.signature = Buffer.alloc(96, 1);
+    it("verifies the envelope on import if it was added by another source", async () => {
+      const {payloadInput, envelope} = setupPayloadInput();
+      const cachedEnvelope = ssz.gloas.ExecutionPayloadEnvelope.clone(envelope);
       payloadInput.addPayloadEnvelope({
         envelope: cachedEnvelope,
         source: PayloadEnvelopeInputSource.byRange,
@@ -147,12 +156,369 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
 
       const api = getBeaconBlockApi(defaultApiOptions, modules);
       await api.publishExecutionPayloadEnvelope({
-        signedEnvelopeOrContents: signedEnvelope,
+        executionPayloadEnvelopeContents: {executionPayloadEnvelope: envelope, kzgProofs: [], blobs: []},
         broadcastValidation: routes.beacon.BroadcastValidation.gossip,
       });
 
       expect(payloadInput.getPayloadEnvelope()).toBe(cachedEnvelope);
-      expect(modules.chain.processExecutionPayload).toHaveBeenCalledWith(payloadInput, {validSignature: false});
+      expect(modules.chain.processExecutionPayload).toHaveBeenCalledWith(payloadInput, {validEnvelope: false});
+    });
+  });
+
+  describe("blob data", () => {
+    const sampledColumns = [0, 1];
+    /** Columns of the payload this node has seen before the envelope is published through the API */
+    const seenColumns = 10;
+
+    function setupBlobs(): {
+      blockRoot: string;
+      block: gloas.SignedBeaconBlock;
+      payloadInput: PayloadEnvelopeInput;
+      envelope: gloas.ExecutionPayloadEnvelope;
+      blobs: Uint8Array[];
+      kzgProofs: Uint8Array[];
+      columnSidecars: gloas.DataColumnSidecar[];
+    } {
+      const generated = generateBlockWithColumnSidecars({forkName: ForkName.gloas, returnBlobs: true});
+      const block = generated.block as gloas.SignedBeaconBlock;
+      const blobs = generated.blobs;
+      if (blobs === undefined) {
+        throw Error("Missing generated blobs");
+      }
+      const slot = block.message.slot;
+      const kzgProofs = blobs.flatMap((_, rowIndex) =>
+        generated.columnSidecars.map((columnSidecar) => columnSidecar.kzgProofs[rowIndex])
+      );
+
+      const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+      envelope.payload.slotNumber = slot;
+      envelope.payload.blockHash = Buffer.alloc(32, 0x22);
+      envelope.parentBeaconBlockRoot = block.message.parentRoot;
+
+      // The bid commits to the payload and the execution requests of the envelope
+      const bid = block.message.body.signedExecutionPayloadBid.message;
+      bid.slot = slot;
+      bid.blockHash = envelope.payload.blockHash;
+      bid.payloadRoot = ssz.gloas.ExecutionPayload.hashTreeRoot(envelope.payload);
+      bid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+      const blockRoot = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message));
+      envelope.beaconBlockRoot = fromHex(blockRoot);
+
+      const columnSidecars = (generated.columnSidecars as gloas.DataColumnSidecar[]).map((columnSidecar) => ({
+        ...columnSidecar,
+        beaconBlockRoot: envelope.beaconBlockRoot,
+      }));
+
+      const payloadInput = PayloadEnvelopeInput.createFromBlock({
+        blockRootHex: blockRoot,
+        block,
+        forkName: ForkName.gloas,
+        sampledColumns,
+        custodyColumns: sampledColumns,
+        seenTimestampSec: 0,
+        source: PayloadEnvelopeInputSource.gossip,
+        daOutOfRange: false,
+      });
+
+      modules = getApiTestModules({config: forkConfig});
+      Object.defineProperty(modules.chain, "blockProductionCache", {value: {get: vi.fn()}});
+      Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
+      modules.network.publishExecutionPayloadEnvelope = vi.fn().mockResolvedValue(1);
+      modules.network.publishDataColumnSidecar = vi.fn().mockResolvedValue({sentPeers: 1, alreadyPublished: false});
+      modules.chain.processExecutionPayload = vi.fn();
+      modules.chain.completeSelfBuiltPayloadReveal = vi.fn().mockReturnValue(null);
+      // The block is imported, its payload is not
+      modules.forkChoice.getBlockHex.mockImplementation((_blockRoot, payloadStatus) =>
+        payloadStatus === PayloadStatus.FULL
+          ? null
+          : generateProtoBlock({slot, blockRoot, parentRoot: toRootHex(block.message.parentRoot)})
+      );
+      vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(payloadInput);
+
+      return {blockRoot, block, payloadInput, envelope, blobs, kzgProofs, columnSidecars};
+    }
+
+    /** The node has seen the envelope and some of its data columns on gossip */
+    function setKnownEnvelope(
+      payloadInput: PayloadEnvelopeInput,
+      envelope: gloas.ExecutionPayloadEnvelope,
+      columnSidecars: gloas.DataColumnSidecar[]
+    ): gloas.ExecutionPayloadEnvelope {
+      const knownEnvelope = ssz.gloas.ExecutionPayloadEnvelope.clone(envelope);
+      payloadInput.addPayloadEnvelope({
+        envelope: knownEnvelope,
+        source: PayloadEnvelopeInputSource.gossip,
+        seenTimestampSec: 0,
+        peerIdStr: undefined,
+      });
+      for (const columnSidecar of columnSidecars.slice(0, seenColumns)) {
+        payloadInput.addColumn({
+          columnSidecar,
+          source: PayloadEnvelopeInputSource.gossip,
+          seenTimestampSec: 0,
+          peerIdStr: undefined,
+        });
+      }
+      vi.mocked(validateApiExecutionPayloadEnvelope).mockRejectedValueOnce(
+        new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+          code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
+          blockRoot: payloadInput.blockRootHex,
+          slot: payloadInput.slot,
+        })
+      );
+      return knownEnvelope;
+    }
+
+    it("publishes the envelope and the data columns of the submitted blobs", async () => {
+      const {blockRoot, payloadInput, envelope, blobs, kzgProofs} = setupBlobs();
+      const onGossip = vi.fn();
+      modules.chain.emitter.on(routes.events.EventType.executionPayloadGossip, onGossip);
+
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      await api.publishExecutionPayloadEnvelope({
+        executionPayloadEnvelopeContents: {executionPayloadEnvelope: envelope, kzgProofs, blobs},
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+      });
+
+      expect(modules.network.publishExecutionPayloadEnvelope).toHaveBeenCalledExactlyOnceWith(envelope);
+      expect(modules.network.publishDataColumnSidecar).toHaveBeenCalledTimes(NUMBER_OF_COLUMNS);
+      expect(payloadInput.getAllColumns()).toHaveLength(NUMBER_OF_COLUMNS);
+      expect(onGossip).toHaveBeenCalledExactlyOnceWith({
+        slot: payloadInput.slot,
+        builderIndex: payloadInput.getBuilderIndex(),
+        blockHash: toRootHex(envelope.payload.blockHash),
+        payloadRoot: toRootHex(ssz.gloas.ExecutionPayload.hashTreeRoot(envelope.payload)),
+        blockRoot,
+      });
+    });
+
+    it("rejects blobs and proofs that do not match the bid commitments, and neither publishes nor stores anything", async () => {
+      const {payloadInput, envelope, blobs, kzgProofs} = setupBlobs();
+      const badKzgProofs = [kzgProofs[1], kzgProofs[0], ...kzgProofs.slice(2)];
+
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      await expect(
+        api.publishExecutionPayloadEnvelope({
+          executionPayloadEnvelopeContents: {executionPayloadEnvelope: envelope, kzgProofs: badKzgProofs, blobs},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).rejects.toMatchObject({statusCode: 400});
+
+      expect(modules.network.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+      expect(modules.network.publishDataColumnSidecar).not.toHaveBeenCalled();
+      expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
+      expect(payloadInput.hasPayloadEnvelope()).toBe(false);
+      expect(payloadInput.getAllColumns()).toHaveLength(0);
+    });
+
+    it("rejects blobs other than those of the bid commitments", async () => {
+      const {payloadInput, envelope, blobs, kzgProofs} = setupBlobs();
+      const otherBlobs = [new Uint8Array(blobs[0].length), ...blobs.slice(1)];
+
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      await expect(
+        api.publishExecutionPayloadEnvelope({
+          executionPayloadEnvelopeContents: {executionPayloadEnvelope: envelope, kzgProofs, blobs: otherBlobs},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).rejects.toMatchObject({statusCode: 400});
+
+      expect(modules.network.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+      expect(modules.network.publishDataColumnSidecar).not.toHaveBeenCalled();
+      expect(payloadInput.getAllColumns()).toHaveLength(0);
+    });
+
+    it("publishes the data columns it has not seen of an envelope that is already known, but not the envelope", async () => {
+      const {payloadInput, envelope, blobs, kzgProofs, columnSidecars} = setupBlobs();
+      const knownEnvelope = setKnownEnvelope(payloadInput, envelope, columnSidecars);
+      const onGossip = vi.fn();
+      modules.chain.emitter.on(routes.events.EventType.executionPayloadGossip, onGossip);
+
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      await expect(
+        api.publishExecutionPayloadEnvelope({
+          executionPayloadEnvelopeContents: {executionPayloadEnvelope: envelope, kzgProofs, blobs},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).resolves.toBeUndefined();
+
+      expect(modules.network.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+      expect(onGossip).not.toHaveBeenCalled();
+      expect(payloadInput.getPayloadEnvelope()).toBe(knownEnvelope);
+
+      const publishedIndices = vi
+        .mocked(modules.network.publishDataColumnSidecar)
+        .mock.calls.map(([columnSidecar]) => columnSidecar.index);
+      expect(publishedIndices).toEqual(
+        Array.from({length: NUMBER_OF_COLUMNS - seenColumns}, (_, i) => seenColumns + i)
+      );
+      expect(payloadInput.getAllColumns()).toHaveLength(NUMBER_OF_COLUMNS);
+      // The known envelope was not validated by this request
+      expect(modules.chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {
+        validEnvelope: false,
+      });
+    });
+
+    it("rejects an envelope that differs from the known envelope of its block", async () => {
+      const {payloadInput, envelope, blobs, kzgProofs, columnSidecars} = setupBlobs();
+      setKnownEnvelope(payloadInput, envelope, columnSidecars);
+      const otherEnvelope = ssz.gloas.ExecutionPayloadEnvelope.clone(envelope);
+      otherEnvelope.payload.gasUsed = 1;
+
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      await expect(
+        api.publishExecutionPayloadEnvelope({
+          executionPayloadEnvelopeContents: {executionPayloadEnvelope: otherEnvelope, kzgProofs, blobs},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).rejects.toMatchObject({statusCode: 400});
+
+      expect(modules.network.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+      expect(modules.network.publishDataColumnSidecar).not.toHaveBeenCalled();
+      expect(payloadInput.getAllColumns()).toHaveLength(seenColumns);
+    });
+
+    it("rejects bad proofs for an envelope that is already known, and neither publishes nor stores a data column", async () => {
+      const {payloadInput, envelope, blobs, kzgProofs, columnSidecars} = setupBlobs();
+      setKnownEnvelope(payloadInput, envelope, columnSidecars);
+      const badKzgProofs = [...kzgProofs.slice(0, -2), ...kzgProofs.slice(-2).reverse()];
+
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      await expect(
+        api.publishExecutionPayloadEnvelope({
+          executionPayloadEnvelopeContents: {executionPayloadEnvelope: envelope, kzgProofs: badKzgProofs, blobs},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).rejects.toMatchObject({statusCode: 400});
+
+      expect(modules.network.publishDataColumnSidecar).not.toHaveBeenCalled();
+      expect(payloadInput.getAllColumns()).toHaveLength(seenColumns);
+    });
+
+    describe("payload this node reveals itself", () => {
+      it("does not publish the envelope again while the node broadcasts it, and leaves the event to the reveal", async () => {
+        const {blockRoot, payloadInput, envelope, blobs, kzgProofs} = setupBlobs();
+        const onGossip = vi.fn();
+        modules.chain.emitter.on(routes.events.EventType.executionPayloadGossip, onGossip);
+        // The reveal is in flight: the envelope is not broadcast yet, the request waits for its outcome
+        let onRevealed: (outcome: SelfBuiltPayloadRevealOutcome) => void = () => {};
+        modules.chain.completeSelfBuiltPayloadReveal = vi.fn().mockReturnValue(
+          new Promise<SelfBuiltPayloadRevealOutcome>((resolve) => {
+            onRevealed = resolve;
+          })
+        );
+
+        const api = getBeaconBlockApi(defaultApiOptions, modules);
+        const onPublished = vi.fn();
+        const request = api
+          .publishExecutionPayloadEnvelope({
+            executionPayloadEnvelopeContents: {executionPayloadEnvelope: envelope, kzgProofs, blobs},
+            broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+          })
+          .then(onPublished);
+
+        await vi.waitFor(() =>
+          expect(modules.chain.completeSelfBuiltPayloadReveal).toHaveBeenCalledExactlyOnceWith(blockRoot)
+        );
+        expect(onPublished).not.toHaveBeenCalled();
+        onRevealed({envelopePublished: true, unpublishedColumns: 0, inFlight: false});
+        await request;
+
+        expect(onPublished).toHaveBeenCalledOnce();
+        expect(modules.network.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+        expect(modules.network.publishDataColumnSidecar).not.toHaveBeenCalled();
+        // The reveal emits the event, adds the payload and imports it
+        expect(onGossip).not.toHaveBeenCalled();
+        expect(payloadInput.hasPayloadEnvelope()).toBe(false);
+        expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
+      });
+
+      it("fails the request if the reveal could not broadcast everything, without publishing anything itself", async () => {
+        const {envelope, blobs, kzgProofs} = setupBlobs();
+        modules.chain.completeSelfBuiltPayloadReveal = vi
+          .fn()
+          .mockReturnValue(Promise.resolve({envelopePublished: true, unpublishedColumns: 3, inFlight: false}));
+
+        const api = getBeaconBlockApi(defaultApiOptions, modules);
+        await expect(
+          api.publishExecutionPayloadEnvelope({
+            executionPayloadEnvelopeContents: {executionPayloadEnvelope: envelope, kzgProofs, blobs},
+            broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+          })
+        ).rejects.toMatchObject({statusCode: 500});
+
+        expect(modules.network.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+        expect(modules.network.publishDataColumnSidecar).not.toHaveBeenCalled();
+      });
+
+      it("validates the submitted envelope and blob data before it waits for the reveal", async () => {
+        const {payloadInput, envelope, blobs, kzgProofs, columnSidecars} = setupBlobs();
+        // The reveal has given the envelope to the PayloadEnvelopeInput
+        setKnownEnvelope(payloadInput, envelope, columnSidecars);
+        modules.chain.completeSelfBuiltPayloadReveal = vi
+          .fn()
+          .mockReturnValue(Promise.resolve({envelopePublished: true, unpublishedColumns: 0, inFlight: false}));
+        const otherEnvelope = ssz.gloas.ExecutionPayloadEnvelope.clone(envelope);
+        otherEnvelope.payload.gasUsed = 1;
+
+        const api = getBeaconBlockApi(defaultApiOptions, modules);
+        await expect(
+          api.publishExecutionPayloadEnvelope({
+            executionPayloadEnvelopeContents: {executionPayloadEnvelope: otherEnvelope, kzgProofs, blobs},
+            broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+          })
+        ).rejects.toMatchObject({statusCode: 400});
+        const badKzgProofs = [kzgProofs[1], kzgProofs[0], ...kzgProofs.slice(2)];
+        vi.mocked(validateApiExecutionPayloadEnvelope).mockRejectedValueOnce(
+          new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+            code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
+            blockRoot: payloadInput.blockRootHex,
+            slot: payloadInput.slot,
+          })
+        );
+        await expect(
+          api.publishExecutionPayloadEnvelope({
+            executionPayloadEnvelopeContents: {executionPayloadEnvelope: envelope, kzgProofs: badKzgProofs, blobs},
+            broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+          })
+        ).rejects.toMatchObject({statusCode: 400});
+
+        expect(modules.chain.completeSelfBuiltPayloadReveal).not.toHaveBeenCalled();
+      });
+    });
+
+    it("validates an envelope whose payload is imported and whose PayloadEnvelopeInput is pruned against the block", async () => {
+      const {block, payloadInput, envelope, blobs, kzgProofs, columnSidecars} = setupBlobs();
+      setKnownEnvelope(payloadInput, envelope, columnSidecars);
+      vi.mocked(validateApiExecutionPayloadEnvelope).mockRejectedValueOnce(
+        new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+          code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
+          blockRoot: payloadInput.blockRootHex,
+          slot: payloadInput.slot,
+        })
+      );
+      vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(undefined);
+      modules.chain.getBlockByRoot.mockResolvedValue({block, executionOptimistic: false, finalized: false});
+
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      await expect(
+        api.publishExecutionPayloadEnvelope({
+          executionPayloadEnvelopeContents: {executionPayloadEnvelope: envelope, kzgProofs, blobs},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).resolves.toBeUndefined();
+
+      const otherEnvelope = ssz.gloas.ExecutionPayloadEnvelope.clone(envelope);
+      otherEnvelope.executionRequests.deposits.push(ssz.electra.DepositRequest.defaultValue());
+      await expect(
+        api.publishExecutionPayloadEnvelope({
+          executionPayloadEnvelopeContents: {executionPayloadEnvelope: otherEnvelope, kzgProofs, blobs},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).rejects.toMatchObject({statusCode: 400});
+
+      expect(modules.network.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+      expect(modules.network.publishDataColumnSidecar).not.toHaveBeenCalled();
     });
   });
 });

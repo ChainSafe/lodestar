@@ -83,8 +83,8 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.BeaconBlocksByHead]: SignedBeaconBlock;
   [ReqRespMethod.DataColumnSidecarsByRange]: DataColumnSidecar;
   [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecar;
-  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: gloas.SignedExecutionPayloadEnvelope;
-  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: gloas.SignedExecutionPayloadEnvelope;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: gloas.ExecutionPayloadEnvelope;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: gloas.ExecutionPayloadEnvelope;
 
   [ReqRespMethod.LightClientBootstrap]: LightClientBootstrap;
   [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
@@ -146,8 +146,8 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientFinalityUpdate,
   [ReqRespMethod.DataColumnSidecarsByRange]: (fork) => sszTypesFor(onlyPostFuluFork(fork)).DataColumnSidecar,
   [ReqRespMethod.DataColumnSidecarsByRoot]: (fork) => sszTypesFor(onlyPostFuluFork(fork)).DataColumnSidecar,
-  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
-  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: () => ssz.gloas.ExecutionPayloadEnvelope,
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: () => ssz.gloas.ExecutionPayloadEnvelope,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
   [ReqRespMethod.InclusionListsByIndices]: () => ssz.heze.SignedInclusionList,

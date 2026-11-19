@@ -6,7 +6,7 @@ import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateView, computeTimeAtSlot, createCachedBeaconState, isStatePostFulu} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {gloas, ssz} from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../../src/chain/chain.js";
 import {
@@ -232,7 +232,7 @@ describe("Gloas engine body", () => {
     (modules.chain.executionEngine as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache =
       new PayloadIdCache();
     modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
-    const executionPayload = ssz.fulu.ExecutionPayload.defaultValue();
+    const executionPayload = ssz.gloas.ExecutionPayload.defaultValue();
     executionPayload.blockHash = new Uint8Array(32).fill(9);
     modules.chain.executionEngine.getPayload.mockResolvedValue({
       executionPayload,
@@ -240,7 +240,7 @@ describe("Gloas engine body", () => {
       blobsBundle: ssz.fulu.BlobsBundle.defaultValue(),
       executionRequests: ssz.gloas.ExecutionRequests.defaultValue(),
     });
-    return context;
+    return {...context, executionPayload};
   }
 
   for (const [source, requested, pooled, expected] of [
@@ -249,8 +249,8 @@ describe("Gloas engine body", () => {
     ["cached", false, false, cachedRecipient],
   ] as const) {
     it(`uses the ${source} fee recipient for payload preparation`, async () => {
-      const {state, modules, chain, attrs, common} = setupGloas(pooled);
-      await produceBlockBody.call(chain, BlockType.Full, state, {
+      const {state, modules, chain, attrs, common, executionPayload} = setupGloas(pooled);
+      const {body} = await produceBlockBody.call(chain, BlockType.Full, state, {
         ...attrs,
         feeRecipient: requested ? requestedRecipient : undefined,
         proposerIndex: 0,
@@ -265,6 +265,11 @@ describe("Gloas engine body", () => {
         expect.any(String),
         expect.objectContaining({suggestedFeeRecipient: expected, targetGasLimit: 30_000_000n})
       );
+      // The self-build bid commits to the root of the produced payload
+      expect((body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message).toMatchObject({
+        blockHash: executionPayload.blockHash,
+        payloadRoot: ssz.gloas.ExecutionPayload.hashTreeRoot(executionPayload),
+      });
     });
   }
 });

@@ -21,7 +21,7 @@ import {
   getDataColumnSidecarsFromColumnSidecar,
   getGloasDataColumnSidecars,
 } from "./dataColumns.js";
-import {signedHeaderEnvelopeToFull} from "./headerEnvelope.js";
+import {headerEnvelopeToFull} from "./headerEnvelope.js";
 
 export enum DataColumnEngineResult {
   PreFulu = "pre_fulu",
@@ -226,7 +226,7 @@ async function* reconstructBatch(
   metrics: Metrics | null,
   batch: RangeEntry[]
 ): AsyncIterable<SlotEnvelopeBytes> {
-  const headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[] = [];
+  const headerEnvelopes: gloas.ExecutionPayloadHeaderEnvelope[] = [];
   for (const entry of batch) {
     if (entry.headerEnvelope !== undefined) headerEnvelopes.push(entry.headerEnvelope);
   }
@@ -251,7 +251,7 @@ async function* reconstructBatch(
         `archived envelope range unservable from slot=${entry.slot}`
       );
     }
-    yield {slot: entry.slot, envelopeBytes: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result)};
+    yield {slot: entry.slot, envelopeBytes: ssz.gloas.ExecutionPayloadEnvelope.serialize(result)};
   }
 }
 
@@ -263,9 +263,9 @@ async function* reconstructBatch(
 export async function reconstructExecutionPayloadEnvelopes(
   executionEngine: Pick<IExecutionEngine, "getPayloadBodiesByHashV2">,
   metrics: Metrics | null,
-  headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[]
-): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
-  const out: (gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[] = [];
+  headerEnvelopes: gloas.ExecutionPayloadHeaderEnvelope[]
+): Promise<(gloas.ExecutionPayloadEnvelope | RebuildMiss)[]> {
+  const out: (gloas.ExecutionPayloadEnvelope | RebuildMiss)[] = [];
   for (let i = 0; i < headerEnvelopes.length; i += MAX_BODIES_PER_REQUEST) {
     out.push(
       ...(await reconstructEnvelopesBatch(
@@ -278,7 +278,7 @@ export async function reconstructExecutionPayloadEnvelopes(
   return out;
 }
 
-export function isRebuildMiss(result: gloas.SignedExecutionPayloadEnvelope | RebuildMiss): result is RebuildMiss {
+export function isRebuildMiss(result: gloas.ExecutionPayloadEnvelope | RebuildMiss): result is RebuildMiss {
   return "reason" in result;
 }
 
@@ -290,10 +290,10 @@ export function isRebuildMiss(result: gloas.SignedExecutionPayloadEnvelope | Reb
 async function reconstructEnvelopesBatch(
   executionEngine: Pick<IExecutionEngine, "getPayloadBodiesByHashV2">,
   metrics: Metrics | null,
-  headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[]
-): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
+  headerEnvelopes: gloas.ExecutionPayloadHeaderEnvelope[]
+): Promise<(gloas.ExecutionPayloadEnvelope | RebuildMiss)[]> {
   if (headerEnvelopes.length === 0) return [];
-  const hashes = headerEnvelopes.map((headerEnvelope) => toRootHex(headerEnvelope.message.payloadHeader.blockHash));
+  const hashes = headerEnvelopes.map((headerEnvelope) => toRootHex(headerEnvelope.payloadHeader.blockHash));
 
   let bodies: Awaited<ReturnType<IExecutionEngine["getPayloadBodiesByHashV2"]>>;
   try {
@@ -307,7 +307,7 @@ async function reconstructEnvelopesBatch(
   }
 
   return headerEnvelopes.map((headerEnvelope, i) => {
-    const slot = headerEnvelope.message.payloadHeader.slotNumber;
+    const slot = headerEnvelope.payloadHeader.slotNumber;
     const body = bodies[i];
     // A zero-length block access list cannot be valid, RLP encodes an empty list as 0xc0
     if (body == null || body.withdrawals == null || body.blockAccessList == null || body.blockAccessList.length === 0) {
@@ -322,7 +322,7 @@ async function reconstructEnvelopesBatch(
       };
     }
     try {
-      const envelope = signedHeaderEnvelopeToFull(headerEnvelope, {
+      const envelope = headerEnvelopeToFull(headerEnvelope, {
         transactions: body.transactions,
         withdrawals: body.withdrawals,
         blockAccessList: body.blockAccessList,

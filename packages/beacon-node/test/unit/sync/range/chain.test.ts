@@ -195,9 +195,9 @@ describe("sync / range / chain", () => {
         seenTimestampSec: 0,
       });
       if (receivedSlots.includes(slot)) {
-        const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-        envelope.message.beaconBlockRoot = blockRoot;
-        envelope.message.payload.slotNumber = slot;
+        const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+        envelope.beaconBlockRoot = blockRoot;
+        envelope.payload.slotNumber = slot;
         payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 0});
       }
       payloadEnvelopes.set(slot, payloadInput);

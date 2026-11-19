@@ -1,19 +1,12 @@
-import type {BuilderIndex, RootHex, Slot, deneb, gloas} from "@lodestar/types";
+import type {RootHex, Slot, gloas} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {LodestarError, byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import type {StoredPayload} from "./payloadStore.js";
 
 export type ExecutionPayloadEnvelopeInput = {
   blockRoot: RootHex;
-  builderIndex: BuilderIndex;
   selectedBid: gloas.ExecutionPayloadBid;
   storedPayload: StoredPayload;
-};
-
-export type ExecutionPayloadEnvelopeContents = {
-  envelope: gloas.ExecutionPayloadEnvelope;
-  kzgProofs: deneb.KZGProofs;
-  blobs: deneb.Blobs;
 };
 
 export enum ExecutionPayloadEnvelopeErrorCode {
@@ -21,17 +14,12 @@ export enum ExecutionPayloadEnvelopeErrorCode {
   PARENT_BLOCK_ROOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PARENT_BLOCK_ROOT_MISMATCH",
   PARENT_BLOCK_HASH_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PARENT_BLOCK_HASH_MISMATCH",
   BLOCK_HASH_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BLOCK_HASH_MISMATCH",
-  BUILDER_INDEX_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BUILDER_INDEX_MISMATCH",
+  PAYLOAD_ROOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PAYLOAD_ROOT_MISMATCH",
   BLOB_KZG_COMMITMENTS_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BLOB_KZG_COMMITMENTS_MISMATCH",
   EXECUTION_REQUESTS_ROOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_EXECUTION_REQUESTS_ROOT_MISMATCH",
 }
 
 export type ExecutionPayloadEnvelopeErrorType =
-  | {
-      code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH;
-      builderIndex: BuilderIndex;
-      bidBuilderIndex: BuilderIndex;
-    }
   | {code: ExecutionPayloadEnvelopeErrorCode.BLOB_KZG_COMMITMENTS_MISMATCH}
   | {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH;
@@ -57,6 +45,11 @@ export type ExecutionPayloadEnvelopeErrorType =
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH;
       bidBlockHash: RootHex;
       payloadBlockHash: RootHex;
+    }
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ROOT_MISMATCH;
+      bidPayloadRoot: RootHex;
+      payloadRoot: RootHex;
     };
 
 export class ExecutionPayloadEnvelopeError extends LodestarError<ExecutionPayloadEnvelopeErrorType> {}
@@ -64,18 +57,9 @@ export class ExecutionPayloadEnvelopeError extends LodestarError<ExecutionPayloa
 /** The caller must have matched the selected bid to its local ledger record. */
 export function createExecutionPayloadEnvelopeContents({
   blockRoot,
-  builderIndex,
   selectedBid,
   storedPayload,
-}: ExecutionPayloadEnvelopeInput): ExecutionPayloadEnvelopeContents {
-  if (builderIndex !== selectedBid.builderIndex) {
-    throw new ExecutionPayloadEnvelopeError({
-      code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
-      builderIndex,
-      bidBuilderIndex: selectedBid.builderIndex,
-    });
-  }
-
+}: ExecutionPayloadEnvelopeInput): gloas.ExecutionPayloadEnvelopeContents {
   const bidParentBlockRoot = toRootHex(selectedBid.parentBlockRoot);
   const storedParentBlockRoot = toRootHex(storedPayload.parentBlockRoot);
   if (storedParentBlockRoot !== bidParentBlockRoot) {
@@ -124,6 +108,19 @@ export function createExecutionPayloadEnvelopeContents({
     );
   }
 
+  const payloadRoot = ssz.gloas.ExecutionPayload.hashTreeRoot(payload.executionPayload);
+  if (!byteArrayEquals(payloadRoot, selectedBid.payloadRoot)) {
+    const bidPayloadRoot = toRootHex(selectedBid.payloadRoot);
+    throw new ExecutionPayloadEnvelopeError(
+      {
+        code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ROOT_MISMATCH,
+        bidPayloadRoot,
+        payloadRoot: toRootHex(payloadRoot),
+      },
+      `Selected bid payload root does not match payload bidPayloadRoot=${bidPayloadRoot} payloadRoot=${toRootHex(payloadRoot)}`
+    );
+  }
+
   if (
     !ssz.gloas.ExecutionPayloadBid.fields.blobKzgCommitments.equals(
       selectedBid.blobKzgCommitments,
@@ -143,10 +140,9 @@ export function createExecutionPayloadEnvelopeContents({
   }
 
   return {
-    envelope: {
+    executionPayloadEnvelope: {
       payload: payload.executionPayload,
       executionRequests: payload.executionRequests,
-      builderIndex,
       beaconBlockRoot: fromHex(blockRoot),
       parentBeaconBlockRoot: selectedBid.parentBlockRoot,
     },

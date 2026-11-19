@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {BUILDER_INDEX_SELF_BUILD, ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
+import {ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {defer, fromHex, toRootHex} from "@lodestar/utils";
 import {EngineBlockSelectionReason, getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
@@ -770,7 +770,6 @@ describe("api/validator - produceBlockV4", () => {
     const expectedEnvelope: gloas.ExecutionPayloadEnvelope = {
       payload,
       executionRequests: produceResult.executionRequests,
-      builderIndex: BUILDER_INDEX_SELF_BUILD,
       beaconBlockRoot,
       parentBeaconBlockRoot: produceResult.parentBlockRoot,
     };
@@ -785,12 +784,8 @@ describe("api/validator - produceBlockV4", () => {
     });
     expect(blockResponse.data).toMatchObject({executionPayloadEnvelope: expectedEnvelope});
 
-    const envelopeResponse = await api.getExecutionPayloadEnvelope({slot, beaconBlockRoot});
-    expect(envelopeResponse.data).toEqual(expectedEnvelope);
     if (enabled) {
-      expect(modules.chain.persistExecutionPayloadEnvelope).toHaveBeenCalledTimes(2);
-      expect(modules.chain.persistExecutionPayloadEnvelope).toHaveBeenNthCalledWith(1, expectedEnvelope);
-      expect(modules.chain.persistExecutionPayloadEnvelope).toHaveBeenNthCalledWith(2, expectedEnvelope);
+      expect(modules.chain.persistExecutionPayloadEnvelope).toHaveBeenCalledExactlyOnceWith(expectedEnvelope);
     } else {
       expect(modules.chain.persistExecutionPayloadEnvelope).not.toHaveBeenCalled();
     }

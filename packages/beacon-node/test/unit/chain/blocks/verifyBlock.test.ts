@@ -88,8 +88,8 @@ describe("chain / blocks / verifyBlocksInEpoch", () => {
       daOutOfRange: false,
     });
     if (hasEnvelope) {
-      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      envelope.message.beaconBlockRoot = blockRoot;
+      const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+      envelope.beaconBlockRoot = blockRoot;
       payloadInput.addPayloadEnvelope({
         envelope,
         source: PayloadEnvelopeInputSource.byRange,

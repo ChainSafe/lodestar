@@ -549,7 +549,7 @@ function signedBeaconBlockFromValues(slot: Slot): phase0.SignedBeaconBlock {
   return signedBeaconBlock;
 }
 
-describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {
+describe("ExecutionPayloadEnvelope SSZ serialized picking", () => {
   const testCases: {slot: Slot; blockRoot: RootHex}[] = [
     {slot: 0, blockRoot: "0x" + "00".repeat(32)},
     {slot: 1_000_000, blockRoot: "0x" + "aa".repeat(32)},
@@ -558,10 +558,12 @@ describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {
 
   for (const {slot, blockRoot} of testCases) {
     it(`slot=${slot}`, () => {
-      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      envelope.message.payload.slotNumber = slot;
-      envelope.message.beaconBlockRoot = fromHex(blockRoot);
-      const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+      const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+      envelope.payload.slotNumber = slot;
+      envelope.beaconBlockRoot = fromHex(blockRoot);
+      // Distinct neighbour so reading the wrong root cannot pass
+      envelope.parentBeaconBlockRoot = Buffer.alloc(32, 0x5c);
+      const bytes = ssz.gloas.ExecutionPayloadEnvelope.serialize(envelope);
 
       expect(getSlotFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(slot);
       expect(getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(blockRoot);
@@ -569,17 +571,17 @@ describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {
   }
 
   it("getSlotFromExecutionPayloadEnvelopeSerialized - invalid data", () => {
-    // slotNumber is at offset 712 within the serialized payload (alpha.6: parentBeaconBlockRoot
-    // shifted the envelope fixed portion to 80), need at least 720 bytes
-    const invalidSizes = [0, 50, 100, 719];
+    // slotNumber is at offset 604 within the serialized envelope (envelope fixed portion is 72 bytes,
+    // slotNumber is at byte 532 of the payload), need at least 612 bytes
+    const invalidSizes = [0, 50, 100, 611];
     for (const size of invalidSizes) {
       expect(getSlotFromExecutionPayloadEnvelopeSerialized(Buffer.alloc(size))).toBeNull();
     }
   });
 
   it("getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized - invalid data", () => {
-    // Block root is at offset 116, need at least 148 bytes
-    const invalidSizes = [0, 50, 100, 147];
+    // Block root is at offset 8, need at least 40 bytes
+    const invalidSizes = [0, 7, 20, 39];
     for (const size of invalidSizes) {
       expect(getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(Buffer.alloc(size))).toBeNull();
     }
@@ -587,30 +589,30 @@ describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {
 
   for (const count of [0, 1, 3, 1000]) {
     it(`getTransactionCountFromExecutionPayloadEnvelopeSerialized - ${count} transactions`, () => {
-      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      envelope.message.payload.extraData = new Uint8Array(5);
-      envelope.message.payload.transactions = SerializedList.fromArray(
+      const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+      envelope.payload.extraData = new Uint8Array(5);
+      envelope.payload.transactions = SerializedList.fromArray(
         Array.from({length: count}, (_, i) => new Uint8Array(i + 1))
       );
-      const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+      const bytes = ssz.gloas.ExecutionPayloadEnvelope.serialize(envelope);
 
       expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(count);
     });
   }
 
   it("getTransactionCountFromExecutionPayloadEnvelopeSerialized - invalid data", () => {
-    // withdrawals offset is at offset 688, need at least 692 bytes
-    const invalidSizes = [0, 100, 691];
+    // withdrawals offset is at offset 580, need at least 584 bytes
+    const invalidSizes = [0, 100, 583];
     for (const size of invalidSizes) {
       expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(Buffer.alloc(size))).toBeNull();
     }
 
-    const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    envelope.message.payload.transactions = SerializedList.fromArray([new Uint8Array(1), new Uint8Array(1)]);
-    const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    envelope.payload.transactions = SerializedList.fromArray([new Uint8Array(1), new Uint8Array(1)]);
+    const bytes = ssz.gloas.ExecutionPayloadEnvelope.serialize(envelope);
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    const transactionsOffset = view.getUint32(684, true);
-    const transactionsStart = 180 + transactionsOffset;
+    const transactionsOffset = view.getUint32(576, true);
+    const transactionsStart = 72 + transactionsOffset;
 
     const firstOffsetNotAligned = Uint8Array.from(bytes);
     new DataView(firstOffsetNotAligned.buffer).setUint32(transactionsStart, 6, true);
@@ -621,7 +623,7 @@ describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {
     expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(firstOffsetPastList)).toBeNull();
 
     const transactionsAfterWithdrawals = Uint8Array.from(bytes);
-    new DataView(transactionsAfterWithdrawals.buffer).setUint32(684, transactionsOffset + 100, true);
+    new DataView(transactionsAfterWithdrawals.buffer).setUint32(576, transactionsOffset + 100, true);
     expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(transactionsAfterWithdrawals)).toBeNull();
   });
 });
@@ -752,7 +754,7 @@ describe("SignedExecutionPayloadBid SSZ serialized picking", () => {
   }
 
   it("getSlotFromSignedExecutionPayloadBidSerialized - invalid data", () => {
-    const invalidSlotDataSizes = [0, 100, 271];
+    const invalidSlotDataSizes = [0, 100, 303];
     for (const size of invalidSlotDataSizes) {
       expect(getSlotFromSignedExecutionPayloadBidSerialized(Buffer.alloc(size))).toBeNull();
     }
@@ -781,7 +783,12 @@ function payloadAttestationMessageFromValues(slot: Slot, blockRoot: RootHex): gl
 function signedExecutionPayloadBidFromValues(slot: Slot): gloas.SignedExecutionPayloadBid {
   const bid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
   bid.message.slot = slot;
+  // Every root-sized field is distinct so reading the wrong field cannot pass
   bid.message.parentBlockHash = Buffer.alloc(32, 0xaa);
   bid.message.parentBlockRoot = Buffer.alloc(32, 0xbb);
+  bid.message.blockHash = Buffer.alloc(32, 0xcc);
+  bid.message.payloadRoot = Buffer.alloc(32, 0xcd);
+  bid.message.prevRandao = Buffer.alloc(32, 0xdd);
+  bid.message.builderIndex = 7;
   return bid;
 }

@@ -3,8 +3,6 @@ import {
   BlockAccessList,
   ExecutionPayloadEnvelope,
   ExecutionPayloadHeaderEnvelope,
-  SignedExecutionPayloadEnvelope,
-  SignedExecutionPayloadHeaderEnvelope,
   Transactions,
   Withdrawals,
 } from "@lodestar/types/gloas";
@@ -40,19 +38,15 @@ export function toHeaderEnvelope(envelope: ExecutionPayloadEnvelope): ExecutionP
   };
 }
 
-export function toSignedHeaderEnvelope(envelope: SignedExecutionPayloadEnvelope): SignedExecutionPayloadHeaderEnvelope {
-  return {message: toHeaderEnvelope(envelope.message), signature: envelope.signature};
-}
-
 /**
- * Rebuild the full signed envelope from header envelope + EL bodies, each body verified against its stored
+ * Rebuild the full envelope from header envelope + EL bodies, each body verified against its stored
  * root. Throws {@link EnvelopeReconstructionError} BODY_ROOT_MISMATCH naming the first body that differs.
  */
-export function signedHeaderEnvelopeToFull(
-  headerEnvelope: SignedExecutionPayloadHeaderEnvelope,
+export function headerEnvelopeToFull(
+  headerEnvelope: ExecutionPayloadHeaderEnvelope,
   bodies: ExecutionPayloadBodies
-): SignedExecutionPayloadEnvelope {
-  const {payloadHeader, ...envelopeFields} = headerEnvelope.message;
+): ExecutionPayloadEnvelope {
+  const {payloadHeader, ...envelopeFields} = headerEnvelope;
   const {transactionsRoot, withdrawalsRoot, blockAccessListRoot, ...scalars} = payloadHeader;
   const slot = scalars.slotNumber;
 
@@ -60,10 +54,7 @@ export function signedHeaderEnvelopeToFull(
   assertBodyRoot("withdrawals", slot, withdrawalsRoot, withdrawals.hashTreeRoot(bodies.withdrawals));
   assertBodyRoot("blockAccessList", slot, blockAccessListRoot, blockAccessList.hashTreeRoot(bodies.blockAccessList));
 
-  return {
-    message: {...envelopeFields, payload: {...scalars, ...bodies}},
-    signature: headerEnvelope.signature,
-  };
+  return {...envelopeFields, payload: {...scalars, ...bodies}};
 }
 
 function assertBodyRoot(field: ExecutionPayloadBodyField, slot: number, stored: Uint8Array, rebuilt: Uint8Array): void {

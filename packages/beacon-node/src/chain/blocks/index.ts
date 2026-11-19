@@ -177,7 +177,7 @@ export async function processBlocks(
           // we validated DA before reaching this
           throw new Error(`Payload envelope for slot ${slot} not complete after DA verification`);
         }
-        await importExecutionPayload.call(this, payloadInput, payloadDA, {validSignature: false});
+        await importExecutionPayload.call(this, payloadInput, payloadDA, {validEnvelope: false});
       }
 
       await nextEventLoop();
@@ -305,7 +305,7 @@ async function importPayloadEnvelopesOfKnownBlocks(
       slot: payloadInputs[i].slot,
       blockRoot: payloadInputs[i].blockRootHex,
     });
-    await importExecutionPayload.call(this, payloadInputs[i], dataAvailabilityStatuses[i], {validSignature: false});
+    await importExecutionPayload.call(this, payloadInputs[i], dataAvailabilityStatuses[i], {validEnvelope: false});
   }
   // the new FULL variants are not seen by the head cached from the last block import
   this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);

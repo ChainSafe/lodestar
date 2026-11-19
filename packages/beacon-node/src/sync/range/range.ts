@@ -247,8 +247,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     } catch (e) {
       if (
         e instanceof PayloadError &&
-        (e.type.code === PayloadErrorCode.INVALID_SIGNATURE ||
-          e.type.code === PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR ||
+        (e.type.code === PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR ||
           e.type.code === PayloadErrorCode.EXECUTION_ENGINE_INVALID)
       ) {
         const {payloadInput} = e;
@@ -391,6 +390,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         parentPayload = {
           blockRoot: headRoot,
           blockRootHex: toRootHex(headRoot),
+          parentRoot: headState.latestBlockHeader.parentRoot,
           slot: headSlot,
           proposerIndex: headState.latestBlockHeader.proposerIndex,
           forkName: this.config.getForkName(headSlot),

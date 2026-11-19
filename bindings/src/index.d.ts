@@ -53,6 +53,7 @@ export interface ExecutionPayloadBid {
   parentBlockHash: Uint8Array;
   parentBlockRoot: Uint8Array;
   blockHash: Uint8Array;
+  payloadRoot: Uint8Array;
   prevRandao: Uint8Array;
   feeRecipient: Uint8Array;
   gasLimit: bigint;

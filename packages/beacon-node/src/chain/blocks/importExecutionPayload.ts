@@ -27,10 +27,7 @@ import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "./payloadEnvelopeInput/index.js";
 import {ImportPayloadOpts} from "./types.js";
-import {
-  verifyExecutionPayloadEnvelope,
-  verifyExecutionPayloadEnvelopeSignature,
-} from "./verifyExecutionPayloadEnvelope.js";
+import {verifyExecutionPayloadEnvelope} from "./verifyExecutionPayloadEnvelope.js";
 
 const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
 
@@ -41,7 +38,6 @@ export enum PayloadErrorCode {
   BLOCK_EXECUTION_INVALID = "PAYLOAD_ERROR_BLOCK_EXECUTION_INVALID",
   MISS_BLOCK_STATE = "PAYLOAD_ERROR_MISS_BLOCK_STATE",
   ENVELOPE_VERIFICATION_ERROR = "PAYLOAD_ERROR_ENVELOPE_VERIFICATION_ERROR",
-  INVALID_SIGNATURE = "PAYLOAD_ERROR_INVALID_SIGNATURE",
   DATA_UNAVAILABLE = "PAYLOAD_ERROR_DATA_UNAVAILABLE",
 }
 
@@ -71,9 +67,6 @@ export type PayloadErrorType =
   | {
       code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR;
       message: string;
-    }
-  | {
-      code: PayloadErrorCode.INVALID_SIGNATURE;
     }
   | {
       code: PayloadErrorCode.DATA_UNAVAILABLE;
@@ -115,7 +108,7 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
  * 1. Emit `execution_payload_available` event for payload attestation
  * 2. Get the ProtoBlock from fork choice
  * 3. Regenerate state for envelope verification
- * 4. Verify envelope (fields against state, signature, and EL in parallel where possible)
+ * 4. Verify envelope (fields against state, then EL)
  * 5. Persist verified payload envelope to hot DB (waits for write-queue space for backpressure)
  * 6. Update fork choice (transitions the block's PENDING variant to FULL)
  * 7. Queue notifyForkchoiceUpdate to engine api
@@ -128,8 +121,7 @@ export async function importExecutionPayload(
   dataAvailabilityStatus: DataAvailabilityStatus,
   opts: ImportPayloadOpts = {}
 ): Promise<void> {
-  const signedEnvelope = payloadInput.getPayloadEnvelope();
-  const envelope = signedEnvelope.message;
+  const envelope = payloadInput.getPayloadEnvelope();
   const slot = envelope.payload.slotNumber;
   const blockRootHex = payloadInput.blockRootHex;
   const blockHashHex = payloadInput.getBlockHashHex();
@@ -183,12 +175,13 @@ export async function importExecutionPayload(
     });
   }
 
-  // 4. Verify envelope fields against state first to fail fast before the EL + BLS work.
-  // When validSignature is true, gossip/API has already verified both the signature and the
+  // 4. Verify envelope fields against state first to fail fast before the EL work.
+  // When validEnvelope is true, gossip/API has already verified both the payload root and the
   // executionRequestsRoot, so we skip those checks here.
   try {
     verifyExecutionPayloadEnvelope(this.config, blockState, envelope, {
-      verifyExecutionRequestsRoot: !opts.validSignature,
+      verifyExecutionRequestsRoot: !opts.validEnvelope,
+      verifyPayloadRoot: !opts.validEnvelope,
     });
   } catch (e) {
     throw new PayloadError(
@@ -232,39 +225,22 @@ export async function importExecutionPayload(
         : this.inclusionListStore.getInclusionListTransactions(inclusionListSlot, dependentRoot, true);
   }
 
-  // 4a. Run EL and signature verification in parallel
+  // 4a. Run EL verification
   const logCtx = {slot, root: blockRootHex, executionBlock: envelope.payload.blockNumber};
   this.logger.debug("Call engine api newPayload", logCtx);
   const verifyStartSec = Date.now() / 1000;
-  const [execResult, signatureValid] = await Promise.all([
-    this.executionEngine.notifyNewPayload(
-      fork,
-      envelope.payload,
-      payloadInput.getVersionedHashes(),
-      envelope.parentBeaconBlockRoot,
-      envelope.executionRequests,
-      inclusionListTransactions
-    ),
-
-    opts.validSignature === true
-      ? Promise.resolve(true)
-      : verifyExecutionPayloadEnvelopeSignature(
-          this.config,
-          blockState,
-          signedEnvelope,
-          payloadInput.proposerIndex,
-          this.bls
-        ),
-  ]);
+  const execResult = await this.executionEngine.notifyNewPayload(
+    fork,
+    envelope.payload,
+    payloadInput.getVersionedHashes(),
+    envelope.parentBeaconBlockRoot,
+    envelope.executionRequests,
+    inclusionListTransactions
+  );
   this.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
   this.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
 
-  // 4b. Check signature verification result
-  if (!signatureValid) {
-    throw new PayloadError(payloadInput, {code: PayloadErrorCode.INVALID_SIGNATURE});
-  }
-
-  // 4c. Handle EL response
+  // 4b. Handle EL response
   switch (execResult.status) {
     case ExecutionPayloadStatus.VALID:
       break;
@@ -411,8 +387,9 @@ export async function importExecutionPayload(
   if (this.clock.currentSlot - slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
     this.emitter.emit(routes.events.EventType.executionPayload, {
       slot,
-      builderIndex: envelope.builderIndex,
+      builderIndex: payloadInput.getBuilderIndex(),
       blockHash: blockHashHex,
+      payloadRoot: payloadInput.getPayloadRootHex(),
       blockRoot: blockRootHex,
       executionOptimistic: execStatus === ExecutionStatus.Syncing,
     });
@@ -420,7 +397,7 @@ export async function importExecutionPayload(
 
   this.logger.verbose("Execution payload imported", {
     slot,
-    builderIndex: envelope.builderIndex,
+    builderIndex: payloadInput.getBuilderIndex(),
     blockRoot: blockRootHex,
     blockHash: blockHashHex,
     delaySec,

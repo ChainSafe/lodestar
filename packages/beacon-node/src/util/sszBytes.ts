@@ -561,38 +561,23 @@ export function computeMaxGloasDataColumnSidecarSize(config: ChainForkConfig): n
 }
 
 /**
- * SignedExecutionPayloadEnvelope SSZ Layout:
- * ├─ 4 bytes: message offset (points to byte 100)
- * ├─ 96 bytes: signature
- * └─ ExecutionPayloadEnvelope (starts at byte 100):
- *    ├─ 4 bytes: payload offset
- *    ├─ 4 bytes: executionRequests offset
- *    ├─ 8 bytes: builderIndex          (offset 108-115)
- *    ├─ 32 bytes: beaconBlockRoot      (offset 116-147)
- *    ├─ 32 bytes: parentBeaconBlockRoot (offset 148-179) — new in Gloas alpha.6 (consensus-specs#5152)
- *    └─ variable: payload data (starts at envelope + 80)
- *       └─ ExecutionPayload fixed portion includes slotNumber at offset 532
+ * ExecutionPayloadEnvelope SSZ Layout:
+ * ├─ 4 bytes: payload offset
+ * ├─ 4 bytes: executionRequests offset
+ * ├─ 32 bytes: beaconBlockRoot       (offset 8-39)
+ * ├─ 32 bytes: parentBeaconBlockRoot (offset 40-71)
+ * └─ variable: payload data (starts at 72)
+ *    └─ ExecutionPayload fixed portion includes slotNumber at offset 532
  */
-const SIGNED_EXECUTION_PAYLOAD_ENVELOPE_MESSAGE_OFFSET = 4;
-const SIGNED_EXECUTION_PAYLOAD_ENVELOPE_SIGNATURE_SIZE = 96;
 const EXECUTION_PAYLOAD_ENVELOPE_PAYLOAD_OFFSET = 4;
 const EXECUTION_PAYLOAD_ENVELOPE_REQUESTS_OFFSET = 4;
-const EXECUTION_PAYLOAD_ENVELOPE_BUILDER_INDEX_SIZE = 8;
 
-const BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
-  SIGNED_EXECUTION_PAYLOAD_ENVELOPE_MESSAGE_OFFSET +
-  SIGNED_EXECUTION_PAYLOAD_ENVELOPE_SIGNATURE_SIZE +
-  EXECUTION_PAYLOAD_ENVELOPE_PAYLOAD_OFFSET +
-  EXECUTION_PAYLOAD_ENVELOPE_REQUESTS_OFFSET +
-  EXECUTION_PAYLOAD_ENVELOPE_BUILDER_INDEX_SIZE; // 116
+const BEACON_BLOCK_ROOT_OFFSET_IN_EXECUTION_PAYLOAD_ENVELOPE =
+  EXECUTION_PAYLOAD_ENVELOPE_PAYLOAD_OFFSET + EXECUTION_PAYLOAD_ENVELOPE_REQUESTS_OFFSET; // 8
 
-// Envelope fixed portion: payload_offset(4) + requests_offset(4) + builderIndex(8) + beaconBlockRoot(32) + parentBeaconBlockRoot(32) = 80
+// Envelope fixed portion: payload_offset(4) + requests_offset(4) + beaconBlockRoot(32) + parentBeaconBlockRoot(32) = 72
 const EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE =
-  EXECUTION_PAYLOAD_ENVELOPE_PAYLOAD_OFFSET +
-  EXECUTION_PAYLOAD_ENVELOPE_REQUESTS_OFFSET +
-  EXECUTION_PAYLOAD_ENVELOPE_BUILDER_INDEX_SIZE +
-  ROOT_SIZE +
-  ROOT_SIZE; // 80
+  EXECUTION_PAYLOAD_ENVELOPE_PAYLOAD_OFFSET + EXECUTION_PAYLOAD_ENVELOPE_REQUESTS_OFFSET + ROOT_SIZE + ROOT_SIZE; // 72
 
 // slotNumber offset within ExecutionPayload fixed portion:
 // parentHash(32) + feeRecipient(20) + stateRoot(32) + receiptsRoot(32) + logsBloom(256) +
@@ -602,29 +587,26 @@ const EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE =
 const SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD = 532;
 
 // Payload data starts right after the envelope's fixed portion
-const ENVELOPE_START_IN_SIGNED =
-  SIGNED_EXECUTION_PAYLOAD_ENVELOPE_MESSAGE_OFFSET + SIGNED_EXECUTION_PAYLOAD_ENVELOPE_SIGNATURE_SIZE; // 100
-
-const SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
-  ENVELOPE_START_IN_SIGNED + EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE + SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD; // 100 + 80 + 532 = 712
+const SLOT_OFFSET_IN_EXECUTION_PAYLOAD_ENVELOPE =
+  EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE + SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD; // 72 + 532 = 604
 
 export function getSlotFromExecutionPayloadEnvelopeSerialized(data: Uint8Array): Slot | null {
-  if (data.length < SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + SLOT_SIZE) {
+  if (data.length < SLOT_OFFSET_IN_EXECUTION_PAYLOAD_ENVELOPE + SLOT_SIZE) {
     return null;
   }
 
-  return getSlotFromOffset(data, SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE);
+  return getSlotFromOffset(data, SLOT_OFFSET_IN_EXECUTION_PAYLOAD_ENVELOPE);
 }
 
 export function getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(data: Uint8Array): RootHex | null {
-  if (data.length < BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + ROOT_SIZE) {
+  if (data.length < BEACON_BLOCK_ROOT_OFFSET_IN_EXECUTION_PAYLOAD_ENVELOPE + ROOT_SIZE) {
     return null;
   }
 
   blockRootBuf.set(
     data.subarray(
-      BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE,
-      BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + ROOT_SIZE
+      BEACON_BLOCK_ROOT_OFFSET_IN_EXECUTION_PAYLOAD_ENVELOPE,
+      BEACON_BLOCK_ROOT_OFFSET_IN_EXECUTION_PAYLOAD_ENVELOPE + ROOT_SIZE
     )
   );
   return "0x" + blockRootBuf.toString("hex");
@@ -632,25 +614,23 @@ export function getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(data: U
 
 // transactions offset within ExecutionPayload fixed portion, see SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD:
 // everything up to and including blockHash(32) = 504, followed by withdrawals_offset(4)
-const PAYLOAD_START_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
-  ENVELOPE_START_IN_SIGNED + EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE; // 180
-const TRANSACTIONS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
-  PAYLOAD_START_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + 504; // 684
-const WITHDRAWALS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
-  TRANSACTIONS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + 4; // 688
+const PAYLOAD_START_IN_EXECUTION_PAYLOAD_ENVELOPE = EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE; // 72
+const TRANSACTIONS_OFFSET_POSITION_IN_EXECUTION_PAYLOAD_ENVELOPE = PAYLOAD_START_IN_EXECUTION_PAYLOAD_ENVELOPE + 504; // 576
+const WITHDRAWALS_OFFSET_POSITION_IN_EXECUTION_PAYLOAD_ENVELOPE =
+  TRANSACTIONS_OFFSET_POSITION_IN_EXECUTION_PAYLOAD_ENVELOPE + 4; // 580
 
 /**
  * Transaction count of the payload, read from the SSZ offsets without deserializing the envelope.
  * Returns null on malformed offsets, deserialization reports the exact error.
  */
 export function getTransactionCountFromExecutionPayloadEnvelopeSerialized(data: Uint8Array): number | null {
-  if (data.length < WITHDRAWALS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + 4) {
+  if (data.length < WITHDRAWALS_OFFSET_POSITION_IN_EXECUTION_PAYLOAD_ENVELOPE + 4) {
     return null;
   }
 
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  const transactionsOffset = view.getUint32(TRANSACTIONS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE, true);
-  const withdrawalsOffset = view.getUint32(WITHDRAWALS_OFFSET_POSITION_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE, true);
+  const transactionsOffset = view.getUint32(TRANSACTIONS_OFFSET_POSITION_IN_EXECUTION_PAYLOAD_ENVELOPE, true);
+  const withdrawalsOffset = view.getUint32(WITHDRAWALS_OFFSET_POSITION_IN_EXECUTION_PAYLOAD_ENVELOPE, true);
   if (transactionsOffset > withdrawalsOffset) {
     return null;
   }
@@ -658,7 +638,7 @@ export function getTransactionCountFromExecutionPayloadEnvelopeSerialized(data: 
     return 0;
   }
 
-  const transactionsStart = PAYLOAD_START_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + transactionsOffset;
+  const transactionsStart = PAYLOAD_START_IN_EXECUTION_PAYLOAD_ENVELOPE + transactionsOffset;
   if (transactionsStart + 4 > data.length) {
     return null;
   }
@@ -753,17 +733,18 @@ export function getBlockRootFromPayloadAttestationMessageSerialized(data: Uint8A
  *   parentBlockHash: Bytes32      (32 bytes)
  *   parentBlockRoot: Root         (32 bytes)
  *   blockHash: Bytes32            (32 bytes)
+ *   payloadRoot: Root             (32 bytes)
  *   prevRandao: Bytes32           (32 bytes)
  *   feeRecipient: ExecutionAddress(20 bytes)
  *   gasLimit: UintBn64            (8 bytes)
  *   builderIndex: BuilderIndex    (8 bytes)
- *   slot: Slot                    (8 bytes)  ← absolute offset 264
+ *   slot: Slot                    (8 bytes)  ← absolute offset 296
  */
 const SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE; // 100
 const SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_ROOT_OFFSET =
   SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET + ROOT_SIZE; // 132
 const SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET =
-  VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + 32 + 32 + 32 + 32 + 20 + 8 + 8; // 264
+  VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + 32 + 32 + 32 + 32 + 32 + 20 + 8 + 8; // 296
 
 export function getSlotFromSignedExecutionPayloadBidSerialized(data: Uint8Array): Slot | null {
   if (data.length < SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET + SLOT_SIZE) {

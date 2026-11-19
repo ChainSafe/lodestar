@@ -1,5 +1,5 @@
 import {RootHex, Slot} from "@lodestar/types";
-import {SignedExecutionPayloadEnvelope} from "@lodestar/types/gloas";
+import {ExecutionPayloadEnvelope} from "@lodestar/types/gloas";
 import {toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -103,8 +103,6 @@ export enum DroppedItemReason {
   invalidParentPayload = "invalid_parent_payload",
   /** a payload envelope failed gossip verification (ENVELOPE_VERIFICATION_ERROR) */
   invalidEnvelope = "invalid_envelope",
-  /** a payload had an invalid signature (INVALID_SIGNATURE) */
-  invalidSignature = "invalid_signature",
   /** an unexpected / unhandled error code led to removal */
   unknown = "unknown",
 }
@@ -160,7 +158,9 @@ export type PendingPayloadRootHex = {
 
 export type PendingPayloadEnvelope = {
   status: PendingPayloadInputStatus.waitingForBlock;
-  envelope: SignedExecutionPayloadEnvelope;
+  envelope: ExecutionPayloadEnvelope;
+  /** The peer that served `envelope`, it is reported if the envelope is not the one of the block */
+  envelopePeerIdStr?: string;
   timeAddedSec: number;
   peerIdStrings: Set<string>;
 };
@@ -193,7 +193,7 @@ export function getPayloadSyncCacheItemRootHex(payload: PayloadSyncCacheItem): R
   }
 
   if (isPendingPayloadEnvelope(payload)) {
-    return toRootHex(payload.envelope.message.beaconBlockRoot);
+    return toRootHex(payload.envelope.beaconBlockRoot);
   }
 
   return payload.rootHex;
@@ -205,7 +205,7 @@ export function getPayloadSyncCacheItemSlot(payload: PayloadSyncCacheItem): Slot
   }
 
   if (isPendingPayloadEnvelope(payload)) {
-    return payload.envelope.message.payload.slotNumber;
+    return payload.envelope.payload.slotNumber;
   }
 
   return payload.slot ?? "unknown";

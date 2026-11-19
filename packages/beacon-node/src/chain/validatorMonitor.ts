@@ -69,11 +69,7 @@ export type ValidatorMonitor = {
     balances?: number[]
   ): void;
   registerBeaconBlock(src: OpSource, delaySec: Seconds, block: BeaconBlock): void;
-  registerExecutionPayloadEnvelope(
-    src: OpSource,
-    delaySec: Seconds,
-    envelope: gloas.SignedExecutionPayloadEnvelope
-  ): void;
+  registerExecutionPayloadEnvelope(src: OpSource, delaySec: Seconds, envelope: gloas.ExecutionPayloadEnvelope): void;
   registerExecutionPayloadBid(src: OpSource, proposerIndex: ValidatorIndex, bid: gloas.ExecutionPayloadBid): void;
   registerImportedBlock(block: BeaconBlock, data: {proposerBalanceDelta: number}): void;
   onPoolSubmitUnaggregatedAttestation(

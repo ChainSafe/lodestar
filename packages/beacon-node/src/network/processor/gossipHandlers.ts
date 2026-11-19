@@ -1138,25 +1138,20 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
       const {serializedData} = gossipData;
       validateGossipExecutionPayloadEnvelopeSerialized(chain, serializedData);
-      const signedEnvelope = sszDeserialize(topic, serializedData);
-      const envelope = signedEnvelope.message;
+      const envelope = sszDeserialize(topic, serializedData);
 
       // unlike BlockInput, we send the envelope into UnknownBlockInput sync
       // inside the sync it'll reconcile into PayloadEnvelopeInput and share the same cache with gossip
       try {
-        await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
+        await validateGossipExecutionPayloadEnvelope(chain, envelope);
       } catch (e) {
         if (e instanceof ExecutionPayloadEnvelopeError) {
-          const {beaconBlockRoot} = signedEnvelope.message;
-          const slot = signedEnvelope.message.payload.slotNumber;
+          const {beaconBlockRoot} = envelope;
+          const slot = envelope.payload.slotNumber;
           logger.debug("Gossip envelope has error", {slot, root: toRootHex(beaconBlockRoot), code: e.type.code});
 
           if (e.action === GossipAction.REJECT) {
-            chain.persistInvalidSszValue(
-              ssz.gloas.SignedExecutionPayloadEnvelope,
-              signedEnvelope,
-              `gossip_reject_slot_${slot}`
-            );
+            chain.persistInvalidSszValue(ssz.gloas.ExecutionPayloadEnvelope, envelope, `gossip_reject_slot_${slot}`);
           }
         }
 
@@ -1175,7 +1170,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
 
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
-      chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, signedEnvelope);
+      chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, envelope);
 
       const blockRootHex = toRootHex(envelope.beaconBlockRoot);
       // a gossip payload cannot be `MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE` slots after the block
@@ -1193,10 +1188,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       // Add the envelope in the same tick as validation, otherwise a by-root download that completes
       // before the next event loop sees no envelope, validates it again and adds it first
       if (!payloadInput.hasPayloadEnvelope()) {
-        chain.serializedCache.set(signedEnvelope, serializedData);
+        chain.serializedCache.set(envelope, serializedData);
 
         payloadInput.addPayloadEnvelope({
-          envelope: signedEnvelope,
+          envelope,
           source: PayloadEnvelopeInputSource.gossip,
           seenTimestampSec,
           peerIdStr,
@@ -1210,14 +1205,15 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
           chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
             slot,
-            builderIndex: envelope.builderIndex,
+            builderIndex: payloadInput.getBuilderIndex(),
             blockHash: toRootHex(envelope.payload.blockHash),
+            payloadRoot: payloadInput.getPayloadRootHex(),
             blockRoot: blockRootHex,
           });
 
-          // Signature is verified above only for this envelope, one added by another source is verified at import
-          const validSignature = payloadInput.getPayloadEnvelope() === signedEnvelope;
-          chain.processExecutionPayload(payloadInput, {validSignature}).catch((e) => {
+          // Only this envelope is validated above, one added by another source is verified at import
+          const validEnvelope = payloadInput.getPayloadEnvelope() === envelope;
+          chain.processExecutionPayload(payloadInput, {validEnvelope}).catch((e) => {
             // Adjust verbosity based on error type
             let logLevel: LogLevel;
 
@@ -1238,16 +1234,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
                 case PayloadErrorCode.BLOCK_EXECUTION_INVALID:
                   logLevel = LogLevel.warn;
                   break;
-                // INVALID_SIGNATURE only happens for an envelope added by another source
-                case PayloadErrorCode.INVALID_SIGNATURE:
                 case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
                 case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
                   // Penalize only when the stored envelope is the one this peer sent, not one added by another source
-                  if (validSignature) {
+                  if (validEnvelope) {
                     core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
                   }
-                  // The builder may have signed another envelope that is valid, keeping this one would make
-                  // by-root and range sync reuse it and never import the payload
+                  // An envelope added by another source may not be the one the bid commits to, keeping it would
+                  // make by-root and range sync reuse it and never import the payload
                   chain.seenPayloadEnvelopeInputCache.removeInvalid(payloadInput);
                   // Misbehaving peer, but could highlight an issue in another client
                   logLevel = LogLevel.warn;

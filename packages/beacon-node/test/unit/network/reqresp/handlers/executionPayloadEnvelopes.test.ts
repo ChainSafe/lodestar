@@ -16,11 +16,11 @@ import {IExecutionEngine} from "../../../../../src/execution/index.js";
 import {onExecutionPayloadEnvelopesByRange} from "../../../../../src/network/reqresp/handlers/executionPayloadEnvelopesByRange.js";
 import {onExecutionPayloadEnvelopesByRoot} from "../../../../../src/network/reqresp/handlers/executionPayloadEnvelopesByRoot.js";
 import {MAX_BODIES_PER_REQUEST} from "../../../../../src/util/execution.js";
-import {toSignedHeaderEnvelope} from "../../../../../src/util/headerEnvelope.js";
+import {toHeaderEnvelope} from "../../../../../src/util/headerEnvelope.js";
 import {startIsolatedTmpBeaconDb} from "../../../../utils/db.js";
 import {
+  generateExecutionPayloadEnvelope,
   generateProtoBlock,
-  generateSignedExecutionPayloadEnvelope,
   payloadBodiesOf,
 } from "../../../../utils/typeGenerator.js";
 
@@ -66,12 +66,9 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
 
   afterEach(() => closeDb());
 
-  async function seed(slot: number): Promise<gloas.SignedExecutionPayloadEnvelope> {
-    const full = generateSignedExecutionPayloadEnvelope(slot);
-    await db.executionPayloadEnvelopeArchive.putBinary(
-      slot,
-      encodeArchivedHeaderEnvelope(toSignedHeaderEnvelope(full))
-    );
+  async function seed(slot: number): Promise<gloas.ExecutionPayloadEnvelope> {
+    const full = generateExecutionPayloadEnvelope(slot);
+    await db.executionPayloadEnvelopeArchive.putBinary(slot, encodeArchivedHeaderEnvelope(toHeaderEnvelope(full)));
     await db.blockArchive.putBinary(
       slot,
       ssz.gloas.SignedBeaconBlock.serialize(ssz.gloas.SignedBeaconBlock.defaultValue())
@@ -79,8 +76,8 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
     return full;
   }
 
-  function elServes(fulls: gloas.SignedExecutionPayloadEnvelope[]) {
-    const byHash = new Map(fulls.map((f) => [toRootHex(f.message.payload.blockHash), payloadBodiesOf(f)]));
+  function elServes(fulls: gloas.ExecutionPayloadEnvelope[]) {
+    const byHash = new Map(fulls.map((f) => [toRootHex(f.payload.blockHash), payloadBodiesOf(f)]));
     const serve = async (hashes: string[]) => hashes.map((h) => byHash.get(h) ?? null);
     getPayloadBodiesByHashV2.mockImplementation(serve);
     return serve;
@@ -89,16 +86,16 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
   async function byRange(startSlot: number, count: number): Promise<number[]> {
     const slots: number[] = [];
     for await (const {data} of onExecutionPayloadEnvelopesByRange({startSlot, count}, chain, db, peerId, "test")) {
-      slots.push(ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(data).message.payload.slotNumber);
+      slots.push(ssz.gloas.ExecutionPayloadEnvelope.deserialize(data).payload.slotNumber);
     }
     return slots;
   }
 
-  async function seedSlots(fromSlot: number, count: number): Promise<gloas.SignedExecutionPayloadEnvelope[]> {
-    const fulls: gloas.SignedExecutionPayloadEnvelope[] = [];
+  async function seedSlots(fromSlot: number, count: number): Promise<gloas.ExecutionPayloadEnvelope[]> {
+    const fulls: gloas.ExecutionPayloadEnvelope[] = [];
     for (let slot = fromSlot; slot < fromSlot + count; slot++) fulls.push(await seed(slot));
     // Roots resolve through blockArchive.getSlotByRoot; map the seeded roots to their slots
-    const slotByRoot = new Map(fulls.map((f) => [toRootHex(f.message.beaconBlockRoot), f.message.payload.slotNumber]));
+    const slotByRoot = new Map(fulls.map((f) => [toRootHex(f.beaconBlockRoot), f.payload.slotNumber]));
     vi.spyOn(db.blockArchive, "getSlotByRoot").mockImplementation(
       async (root) => slotByRoot.get(toRootHex(root)) ?? null
     );
@@ -108,7 +105,7 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
   async function byRoot(roots: Uint8Array[]): Promise<number[]> {
     const slots: number[] = [];
     for await (const {data} of onExecutionPayloadEnvelopesByRoot(roots, chain, db, peerId, "test")) {
-      slots.push(ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(data).message.payload.slotNumber);
+      slots.push(ssz.gloas.ExecutionPayloadEnvelope.deserialize(data).payload.slotNumber);
     }
     return slots;
   }
@@ -144,7 +141,7 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
       chain.forkChoice.getAllAncestorBlocks = () => [
         generateProtoBlock({
           slot: finalizedSlot,
-          blockRoot: toRootHex(full.message.beaconBlockRoot),
+          blockRoot: toRootHex(full.beaconBlockRoot),
           payloadStatus: PayloadStatus.FULL,
         }),
       ];
@@ -160,14 +157,14 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
       bad.transactions = SerializedList.fromArray([Uint8Array.from([0xff])]);
       getPayloadBodiesByHashV2.mockResolvedValue([bad, payloadBodiesOf(fulls[1])]);
       // Roots resolve through blockArchive.getSlotByRoot; stub it to map our two roots to their slots
-      const roots = fulls.map((f) => f.message.beaconBlockRoot);
+      const roots = fulls.map((f) => f.beaconBlockRoot);
       vi.spyOn(db.blockArchive, "getSlotByRoot").mockImplementation(async (root) =>
         toRootHex(root) === toRootHex(roots[0]) ? 10 : toRootHex(root) === toRootHex(roots[1]) ? 11 : null
       );
 
       const slots: number[] = [];
       for await (const {data} of onExecutionPayloadEnvelopesByRoot(roots, chain, db, peerId, "test")) {
-        slots.push(ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(data).message.payload.slotNumber);
+        slots.push(ssz.gloas.ExecutionPayloadEnvelope.deserialize(data).payload.slotNumber);
       }
       expect(slots).toEqual([11]);
     });
@@ -175,13 +172,13 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
     it("omits an envelope the EL cannot serve and serves the rest", async () => {
       const fulls = await seedSlots(10, 2);
       elServes([fulls[1]]); // 10 pruned on the EL
-      expect(await byRoot(fulls.map((f) => f.message.beaconBlockRoot))).toEqual([11]);
+      expect(await byRoot(fulls.map((f) => f.beaconBlockRoot))).toEqual([11]);
     });
 
     it("serves a repeated root once, with a single EL lookup", async () => {
       const fulls = await seedSlots(10, 1);
       elServes(fulls);
-      expect(await byRoot(Array.from({length: 128}, () => fulls[0].message.beaconBlockRoot))).toEqual([10]);
+      expect(await byRoot(Array.from({length: 128}, () => fulls[0].beaconBlockRoot))).toEqual([10]);
       expect(getPayloadBodiesByHashV2).toHaveBeenCalledTimes(1);
       expect(getPayloadBodiesByHashV2.mock.calls[0][0]).toHaveLength(1);
     });
@@ -189,7 +186,7 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
     it("yields the first EL batch before rebuilding the next one", async () => {
       const fulls = await seedSlots(10, MAX_BODIES_PER_REQUEST + 1);
       elServes(fulls);
-      const roots = fulls.map((f) => f.message.beaconBlockRoot);
+      const roots = fulls.map((f) => f.beaconBlockRoot);
       const iterator = onExecutionPayloadEnvelopesByRoot(roots, chain, db, peerId, "test")[Symbol.asyncIterator]();
       await iterator.next();
       expect(getPayloadBodiesByHashV2).toHaveBeenCalledTimes(1);
@@ -199,16 +196,14 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
       const fulls = await seedSlots(10, MAX_BODIES_PER_REQUEST + 1);
       const serve = elServes(fulls);
       getPayloadBodiesByHashV2.mockImplementationOnce(serve).mockRejectedValueOnce(new Error("ECONNREFUSED"));
-      const slots = await byRoot(fulls.map((f) => f.message.beaconBlockRoot));
-      expect(slots).toEqual(fulls.slice(0, MAX_BODIES_PER_REQUEST).map((f) => f.message.payload.slotNumber));
+      const slots = await byRoot(fulls.map((f) => f.beaconBlockRoot));
+      expect(slots).toEqual(fulls.slice(0, MAX_BODIES_PER_REQUEST).map((f) => f.payload.slotNumber));
     });
 
     it("maps an EL outage on the first batch to RESOURCE_UNAVAILABLE", async () => {
       const fulls = await seedSlots(10, 2);
       getPayloadBodiesByHashV2.mockRejectedValue(new Error("ECONNREFUSED"));
-      expect(await respStatusOf(byRoot(fulls.map((f) => f.message.beaconBlockRoot)))).toBe(
-        RespStatus.RESOURCE_UNAVAILABLE
-      );
+      expect(await respStatusOf(byRoot(fulls.map((f) => f.beaconBlockRoot)))).toBe(RespStatus.RESOURCE_UNAVAILABLE);
     });
   });
 
@@ -222,7 +217,7 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
     it("throw BODY_UNAVAILABLE instead of returning null when the EL cannot serve an archived envelope", async () => {
       const full = await seed(10);
       elServes([]);
-      const rootHex = toRootHex(full.message.beaconBlockRoot);
+      const rootHex = toRootHex(full.beaconBlockRoot);
       expect(await errorCodeOf(chain.getSerializedExecutionPayloadEnvelope(10, rootHex))).toBe(
         EnvelopeReconstructionErrorCode.BODY_UNAVAILABLE
       );
@@ -232,7 +227,7 @@ describe("ExecutionPayloadEnvelopes serving paths", () => {
     });
 
     it("return null for an envelope that is not archived", async () => {
-      const rootHex = toRootHex(generateSignedExecutionPayloadEnvelope(10).message.beaconBlockRoot);
+      const rootHex = toRootHex(generateExecutionPayloadEnvelope(10).beaconBlockRoot);
       expect(await chain.getSerializedExecutionPayloadEnvelope(10, rootHex)).toBeNull();
       expect(await chain.getExecutionPayloadEnvelope(10, rootHex)).toBeNull();
       expect(getPayloadBodiesByHashV2).not.toHaveBeenCalled();
