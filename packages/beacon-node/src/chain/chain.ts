@@ -1864,7 +1864,6 @@ export class BeaconChain implements IBeaconChain {
     } catch (e) {
       // Per optimistic sync the node MAY exit once the justified checkpoint is INVALIDATED, fork choice has no head
       if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS) {
-        this.logger.error("Justified checkpoint has an invalid execution payload, shutting down", {slot}, e);
         this.processShutdownCallback(e);
         return;
       }
