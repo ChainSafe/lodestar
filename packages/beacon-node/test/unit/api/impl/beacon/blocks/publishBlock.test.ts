@@ -56,6 +56,38 @@ describe("api - beacon - publishBlockV2", () => {
     );
   });
 
+  it("rejects an invalid broadcast validation level before validating or caching the block", async () => {
+    const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    signedBlock.message.slot = 1;
+    const blockRoot = toRootHex(
+      config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+    );
+    modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(
+      BlockInputColumns.createFromBlock({
+        forkName: ForkName.fulu,
+        block: signedBlock,
+        blockRootHex: blockRoot,
+        source: BlockInputSource.api,
+        seenTimestampSec: 0,
+        daOutOfRange: false,
+        sampledColumns: [0],
+        custodyColumns: [0],
+      })
+    );
+
+    const api = getBeaconBlockApi(defaultApiOptions, modules);
+    await expect(
+      api.publishBlockV2({
+        signedBlockContents: {signedBlock},
+        broadcastValidation: "invalid" as routes.beacon.BroadcastValidation,
+      })
+    ).rejects.toMatchObject({statusCode: 400, message: "Invalid broadcast validation level invalid"});
+
+    expect(validateAndCacheBeaconBlock).not.toHaveBeenCalled();
+    expect(modules.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
+    expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+  });
+
   describe("broadcast_validation=gossip", () => {
     it("returns successfully for an already-known block", async () => {
       const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();

@@ -122,6 +122,10 @@ export function getBeaconBlockApi(
     // check what validations have been requested before broadcasting and publishing the block
     // TODO: add validation time to metrics
     broadcastValidation = broadcastValidation ?? routes.beacon.BroadcastValidation.gossip;
+    if (!Object.values(routes.beacon.BroadcastValidation).includes(broadcastValidation)) {
+      throw new ApiError(400, `Invalid broadcast validation level ${broadcastValidation}`);
+    }
+
     // if block is locally produced, full or blinded, it already is 'consensus' validated as it went through
     // state transition to produce the stateRoot
     // bodyRoot should be the same to produced block
@@ -269,10 +273,6 @@ export function getBeaconBlockApi(
 
         chain.logger.debug("Consensus validated while publishing block", valLogMeta);
         break;
-      }
-
-      default: {
-        throw new ApiError(400, `Invalid broadcast validation level ${broadcastValidation}`);
       }
     }
 
