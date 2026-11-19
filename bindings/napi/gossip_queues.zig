@@ -114,9 +114,9 @@ pub fn offer(
     var digest: [4]u8 = undefined;
     std.mem.writeInt(u32, &digest, try digest_arg.toU32Exact(), .big);
     const peer = try peerKey(peer_arg);
-    var context_buffer: [1026]u8 = undefined;
+    var context_buffer: [Processor.policy.context_max + 2]u8 = undefined;
     const context = try context_arg.toSlice(&context_buffer);
-    if (context.len > 1024) return error.InvalidGossipReceipt;
+    if (context.len > Processor.policy.context_max) return error.InvalidGossipReceipt;
     const bytes = try data_arg.toSlice();
     const slot = try slot_arg.toSafeInteger();
     const latest = try latest_arg.toSafeInteger();

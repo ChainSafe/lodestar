@@ -20,6 +20,8 @@ pub const Kind = enum(u8) {
 };
 pub const kind_count = @typeInfo(Kind).@"enum".fields.len;
 pub const capacity_max = 65535;
+pub const context_max = 1024;
+pub const single_attestation_bytes: u32 = @import("consensus_types").electra.SingleAttestation.fixed_size;
 pub const Limit = struct { items: u32, bytes: u32 };
 pub const Limits = [kind_count]Limit;
 
@@ -117,6 +119,9 @@ pub fn queueLimits(validators: u32) Limits {
     const slots = @import("preset").preset.SLOTS_PER_EPOCH;
     const expected = std.math.divCeil(u64, @as(u64, validators) * 11, slots * 10) catch unreachable;
     att.items = @intCast(@min(remaining, @max(att.items, expected)));
+    // Both bytes and receipts count against admission. The byte limit must accommodate
+    // one full slot of SingleAttestations even when every receipt is at its bound.
+    att.bytes = @max(att.bytes, std.mem.alignForward(u32, att.items * (single_attestation_bytes + context_max), 4096));
     return result;
 }
 pub fn executionLimits(limits: *const Limits, concurrency: u32) Limits {

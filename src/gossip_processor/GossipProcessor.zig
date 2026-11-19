@@ -185,7 +185,7 @@ pub const Input = struct {
 pub fn admit(self: *GossipProcessor, input: Input) !bool {
     const kind = input.kind;
     const k = @intFromEnum(kind);
-    if (self.closed or input.now >= input.deadline or input.bytes.len > payload_max or input.context.len > 1024) return false;
+    if (self.closed or input.now >= input.deadline or input.bytes.len > payload_max or input.context.len > policy.context_max) return false;
     const cost = input.bytes.len + input.context.len;
     if (self.expiry.tail != none and self.cells[self.expiry.tail].deadline > input.deadline) return error.UnorderedDeadline;
     const metadata = metadata_mod.extract(kind, input.fork, input.bytes);
@@ -196,7 +196,7 @@ pub fn admit(self: *GossipProcessor, input: Input) !bool {
     if (!metadata_mod.eligible(&metadata, kind, deneb, input.slot)) return false;
     const limit = self.limits[k];
     if (self.sources.getPtr(input.peer)) |source| {
-        if (source.items[k] >= policy.sourceItems(kind, limit) or cost > @max(limit.bytes / 2, payload_max + 1024) -| source.bytes[k]) {
+        if (source.items[k] >= policy.sourceItems(kind, limit) or cost > @max(limit.bytes / 2, payload_max + policy.context_max) -| source.bytes[k]) {
             self.capacity_drops[k] +|= 1;
             return false;
         }

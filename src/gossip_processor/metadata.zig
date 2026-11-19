@@ -26,7 +26,7 @@ pub fn extract(kind: Kind, fork: ForkSeq, data: []const u8) Metadata {
     // Lodestar slot extraction accepts uint32 slots. A missing required slot is returned
     // to the chain as a single ungrouped job so its peer receives the normal reject verdict.
     if (result.slot.? > std.math.maxInt(u32) or
-        (kind == .beacon_attestation and fork.gte(.electra) and data.len != 240)) return .{};
+        (kind == .beacon_attestation and fork.gte(.electra) and data.len != @import("limits.zig").single_attestation_bytes)) return .{};
     const root_offset: ?usize = switch (kind) {
         .beacon_attestation, .beacon_aggregate_and_proof => offset + 16,
         .beacon_block => 116,
