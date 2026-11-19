@@ -43,14 +43,18 @@ describe("Eth2Gossipsub", async () => {
     vi.clearAllMocks();
   });
 
-  function createGossip(events = new NetworkEventBus(), gossipQueueId?: number): Eth2Gossipsub {
+  function createGossip(
+    events = new NetworkEventBus(),
+    gossipQueueId?: number,
+    logger = getMockedLogger()
+  ): Eth2Gossipsub {
     return new Eth2Gossipsub(
       {skipParamsLog: true},
       {
         clock: {currentSlot: 0, currentSlotWithGossipDisparity: 0},
         networkConfig,
         libp2p: {services: {components: {}}} as unknown as Libp2p,
-        logger: getMockedLogger(),
+        logger,
         metricsRegister: null,
         eth2Context: {currentSlot: 0, currentEpoch: 0, activeValidatorCount: 1024},
         peersData: new PeersData(),
@@ -96,33 +100,34 @@ describe("Eth2Gossipsub", async () => {
     expect(gossip.getSubscribersWithOutboundStream(currentTopic).size).toBe(0);
   });
 
-  it("ignores a failed native admission and wakes the consumer for the next message", async () => {
+  it("reports each failed native admission, logs the burst once, and wakes on recovery", async () => {
     const events = new NetworkEventBus();
     const wake = vi.fn();
     events.on(NetworkEvent.gossipQueueReady, wake);
     const id = gossipQueues.create(0, 1);
-    const offer = vi.spyOn(nativeIngress, "offerGossip").mockImplementationOnce(() => {
+    const logger = getMockedLogger();
+    const fail = (): never => {
       throw Error("OutOfMemory");
-    });
+    };
+    const offer = vi.spyOn(nativeIngress, "offerGossip").mockImplementationOnce(fail).mockImplementationOnce(fail);
     try {
-      createGossip(events, id);
+      createGossip(events, id, logger);
       const [[, onMessage]] = router.addEventListener.mock.calls;
       const topic = stringifyGossipTopic(config, {
         type: GossipType.voluntary_exit,
         boundary: config.getForkBoundaryAtEpoch(1),
       });
       const msg = {type: "unsigned" as const, topic, data: new Uint8Array()};
-      for (const msgId of ["first", "second"]) {
+      for (const msgId of ["first", "second", "third"]) {
         onMessage(new CustomEvent("gossipsub:message", {detail: {msgId, propagationSource: peers[0], msg}}));
       }
       expect(wake).toHaveBeenCalledTimes(1);
-      await vi.waitFor(() =>
-        expect(router.reportMessageValidationResult).toHaveBeenCalledExactlyOnceWith(
-          "first",
-          peers[0].toString(),
-          TopicValidatorResult.Ignore
-        )
-      );
+      expect(logger.error).toHaveBeenCalledTimes(1);
+      await vi.waitFor(() => expect(router.reportMessageValidationResult).toHaveBeenCalledTimes(2));
+      expect(router.reportMessageValidationResult.mock.calls).toEqual([
+        ["first", peers[0].toString(), TopicValidatorResult.Ignore],
+        ["second", peers[0].toString(), TopicValidatorResult.Ignore],
+      ]);
     } finally {
       offer.mockRestore();
       gossipQueues.close(id);

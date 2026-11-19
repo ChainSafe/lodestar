@@ -31,6 +31,8 @@ import {
 import {GossipReceipt} from "./nativeIngress.js";
 import {PendingGossipsubMessage} from "./types.js";
 
+const DRAIN_RETRY_MS = 250;
+
 export class NativeGossipProcessor {
   private readonly topics: GossipTopicCache;
   private readonly slotted = createExtractBlockSlotRootFns();
@@ -38,6 +40,7 @@ export class NativeGossipProcessor {
   private readonly validate;
   private readonly validateBatch;
   private stopped = false;
+  private retrying = false;
   private immediate?: NodeJS.Immediate;
   private timer?: NodeJS.Timeout;
   private readonly searches: GossipRootSearch;
@@ -100,16 +103,43 @@ export class NativeGossipProcessor {
   }
 
   private readonly wake = (): void => {
-    if (!this.stopped && !this.immediate) this.immediate = setImmediate(this.drain);
+    if (!this.stopped && !this.retrying && !this.immediate) this.immediate = setImmediate(this.drain);
   };
 
   private readonly drain = (): void => {
     this.immediate = undefined;
     clearTimeout(this.timer);
     if (this.stopped) return;
+    const wasRetrying = this.retrying;
+    this.retrying = false;
+    try {
+      this.drainOnce();
+    } catch (error) {
+      if (this.stopped) return;
+      const closed = error instanceof Error && "code" in error && error.code === "GossipQueueClosed";
+      if (!wasRetrying || closed) {
+        this.modules.logger.error("Failed to drain native gossip queue", {queueId: this.id}, error as Error);
+      }
+      if (closed) {
+        void this.stop();
+        return;
+      }
+      clearImmediate(this.immediate);
+      this.immediate = undefined;
+      this.retrying = true;
+      this.timer = setTimeout(this.drain, DRAIN_RETRY_MS);
+    }
+  };
+
+  private drainOnce(): void {
     const {chain, logger} = this.modules;
-    const checks = gossipQueues.checks(this.id, Math.max(0, chain.clock.currentSlot));
+    const reason = !chain.blsThreadPoolCanAcceptWork()
+      ? CannotAcceptWorkReason.bls
+      : !chain.regenCanAcceptWork()
+        ? CannotAcceptWorkReason.regen
+        : null;
     const known = new Map<string, boolean>();
+    const checks = gossipQueues.checks(this.id, Math.max(0, chain.clock.currentSlot));
     const tokens = new BigUint64Array(checks.length);
     const decisions = new Uint8Array(checks.length);
     for (const [i, check] of checks.entries()) {
@@ -125,11 +155,6 @@ export class NativeGossipProcessor {
       }
     }
     if (this.stopped) return;
-    const reason = !chain.blsThreadPoolCanAcceptWork()
-      ? CannotAcceptWorkReason.bls
-      : !chain.regenCanAcceptWork()
-        ? CannotAcceptWorkReason.regen
-        : null;
     const {jobs, delay, blocked} = gossipQueues.drain(this.id, reason === null, tokens, decisions);
     if (blocked && reason !== null) this.modules.metrics?.networkProcessor.canNotAcceptWork.inc({reason});
     if (jobs.length)
@@ -138,7 +163,7 @@ export class NativeGossipProcessor {
       void this.processJob(job).catch((error) => logger.error("Error executing native gossip job", {}, error));
     if (delay === 0) this.wake();
     else if (delay > 0) this.timer = setTimeout(this.wake, delay);
-  };
+  }
 
   private async processJob(job: GossipDelivery[]): Promise<void> {
     const {events, metrics, core} = this.modules;

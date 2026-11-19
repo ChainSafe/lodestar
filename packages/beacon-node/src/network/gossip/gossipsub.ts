@@ -148,6 +148,7 @@ export class Eth2Gossipsub {
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
 
+  private lastOfferErrorLog = -Infinity;
   private readonly offerNative?: (message: PendingGossipsubMessage) => boolean;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
@@ -439,11 +440,15 @@ export class Eth2Gossipsub {
       try {
         wake = this.offerNative(pending);
       } catch (error) {
-        this.logger.error(
-          "Failed to enqueue gossip for validation",
-          {topic: topic.type, peer: peerIdStr},
-          error as Error
-        );
+        const now = performance.now();
+        if (now - this.lastOfferErrorLog >= 60_000) {
+          this.lastOfferErrorLog = now;
+          this.logger.error(
+            "Failed to enqueue gossip for validation",
+            {topic: topic.type, peer: peerIdStr},
+            error as Error
+          );
+        }
         this.onValidationResult({msgId, propagationSource: peerIdStr, acceptance: TopicValidatorResult.Ignore});
         return;
       }

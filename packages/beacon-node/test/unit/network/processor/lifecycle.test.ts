@@ -247,6 +247,47 @@ it("resumes native validation on capacity and preserves the libp2p verdict recei
   }
 });
 
+it.each(["checks", "drain"] as const)("recovers from a failed native %s without spinning on wakes", async (method) => {
+  vi.useFakeTimers();
+  const f = fixture(true);
+  const fail = (): never => {
+    throw Error("OutOfMemory");
+  };
+  const call = vi.spyOn(gossipQueues, method).mockImplementationOnce(fail).mockImplementationOnce(fail);
+  try {
+    f.dispatch(message(21));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(call).toHaveBeenCalledTimes(1);
+    f.events.emit(NetworkEvent.gossipQueueReady, null);
+    await vi.advanceTimersByTimeAsync(249);
+    expect(call).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(251);
+    expect(f.logger.error).toHaveBeenCalledTimes(1);
+    expect(f.results).toEqual([{msgId: "21", propagationSource: source, acceptance: "accept"}]);
+  } finally {
+    call.mockRestore();
+    await f.processor.stop();
+    vi.useRealTimers();
+  }
+});
+
+it("stops the native processor when its queue has closed", async () => {
+  const checks = gossipQueues.checks;
+  const call = vi.spyOn(gossipQueues, "checks").mockImplementationOnce((id, slot) => {
+    gossipQueues.close(id);
+    return checks(id, slot);
+  });
+  const f = fixture(true);
+  try {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(f.clock.listenerCount(ClockEvent.slot)).toBe(0);
+    expect(call).toHaveBeenCalledTimes(1);
+  } finally {
+    call.mockRestore();
+    await f.processor.stop();
+  }
+});
+
 it("retains attestations for an unknown block and validates the group on import", async () => {
   const f = fixture(true);
   try {
