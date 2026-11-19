@@ -254,4 +254,10 @@ pub const BeaconBlocksByRangeRequest = ssz.FixedContainerType(struct {
 
 pub const BeaconBlockRoots = ssz.FixedListType(p.Root, c.MAX_REQUEST_BLOCKS, .{});
 
-pub const ErrorMessage = ssz.ByteListType(c.MAX_ERROR_MESSAGE_LENGTH);
+comptime {
+    const assert = @import("std").debug.assert;
+    assert(Status.fixed_size == 84);
+    assert(MetaDataV1.fixed_size == 16);
+    assert(BeaconBlocksByRangeRequest.fixed_size == 24);
+    assert(BeaconBlockRoots.max_size == 32 * c.MAX_REQUEST_BLOCKS);
+}
