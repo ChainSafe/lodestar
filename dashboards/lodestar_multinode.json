@@ -496,7 +496,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "validator_monitor_validators",
+          "expr": "lodestar_validator_monitor_validators",
           "instant": false,
           "interval": "",
           "intervalFactor": 1,

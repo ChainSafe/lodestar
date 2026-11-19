@@ -7,7 +7,7 @@ import {nextEventLoop} from "../../util/eventLoop.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
-import {ForkchoiceCaller} from "../forkChoice/index.js";
+import {ExecutionInvalidSource, ForkchoiceCaller} from "../forkChoice/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {importBlock, importsBlockAttestations} from "./importBlock.js";
@@ -123,7 +123,10 @@ export async function processBlocks(
     // and we need to further propagate
     if (segmentExecStatus.execAborted !== null) {
       if (segmentExecStatus.invalidSegmentLVH !== undefined) {
-        this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLVH);
+        this.executionEngine.invalidateExecutionPayloads(
+          segmentExecStatus.invalidSegmentLVH,
+          ExecutionInvalidSource.blockSegment
+        );
       }
       throw segmentExecStatus.execAborted.execError;
     }
@@ -147,7 +150,7 @@ export async function processBlocks(
         proposerBalanceDelta: proposerBalanceDeltas[i],
         indexedAttestations: indexedAttestationsByBlock[i],
         // TODO: Make this param mandatory and capture in gossip
-        seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
+        seenTimestampSec: opts.seenTimestampSec ?? Date.now() / 1000,
       });
     }
 
@@ -292,7 +295,11 @@ async function importPayloadEnvelopesOfKnownBlocks(
     return result;
   }
 
-  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(payloadInputs, new AbortController().signal);
+  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(
+    this.config,
+    payloadInputs,
+    new AbortController().signal
+  );
   for (let i = 0; i < payloadInputs.length; i++) {
     this.logger.debug("Importing payload envelope of known block", {
       slot: payloadInputs[i].slot,

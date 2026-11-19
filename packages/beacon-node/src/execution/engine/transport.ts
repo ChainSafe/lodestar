@@ -1,21 +1,16 @@
 import {ForkName} from "@lodestar/params";
-import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
+import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {ClientVersion, ExecutionPayloadStatus, PayloadAttributes, PayloadId, VersionedHashes} from "./interface.js";
+import {
+  ClientVersion,
+  ForkchoiceUpdatedResult,
+  PayloadAttributes,
+  PayloadId,
+  PayloadStatusResult,
+  VersionedHashes,
+} from "./interface.js";
 import {JsonRpcHttpClientEventEmitter} from "./jsonRpcHttpClient.js";
 import {ExecutionPayloadBodyV2} from "./types.js";
-
-export type PayloadStatusResult = {
-  status: ExecutionPayloadStatus;
-  latestValidHash: RootHex | null;
-  validationError: string | null;
-};
-
-export type ForkchoiceUpdatedResult = {
-  payloadStatus: PayloadStatusResult;
-  payloadId: PayloadId | null;
-};
 
 export type GetPayloadResult = {
   executionPayload: ExecutionPayload;
@@ -38,7 +33,8 @@ export interface IEngineTransport {
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBeaconBlockRoot?: Root,
-    executionRequests?: ExecutionRequests
+    executionRequests?: ExecutionRequests,
+    inclusionListTransactions?: bellatrix.Transactions
   ): Promise<PayloadStatusResult>;
 
   forkchoiceUpdated(
@@ -53,9 +49,9 @@ export interface IEngineTransport {
 
   getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]>;
 
-  getBlobsV1(versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]>;
-
   getBlobsV2(versionedHashes: VersionedHashes, buffers?: Uint8Array[]): Promise<BlobAndProofV2[] | null>;
 
   getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]>;
+
+  getInclusionList(): Promise<bellatrix.Transactions>;
 }

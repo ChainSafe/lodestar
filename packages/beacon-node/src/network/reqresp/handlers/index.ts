@@ -5,7 +5,6 @@ import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {
   BeaconBlocksByRootRequestType,
-  BlobSidecarsByRootRequestType,
   DataColumnSidecarsByRootRequestType,
   ExecutionPayloadEnvelopesByRootRequestType,
 } from "../../../util/types.js";
@@ -13,12 +12,11 @@ import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
 import {onBeaconBlocksByHead} from "./beaconBlocksByHead.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
-import {onBlobSidecarsByRange} from "./blobSidecarsByRange.js";
-import {onBlobSidecarsByRoot} from "./blobSidecarsByRoot.js";
 import {onDataColumnSidecarsByRange} from "./dataColumnSidecarsByRange.js";
 import {onDataColumnSidecarsByRoot} from "./dataColumnSidecarsByRoot.js";
 import {onExecutionPayloadEnvelopesByRange} from "./executionPayloadEnvelopesByRange.js";
 import {onExecutionPayloadEnvelopesByRoot} from "./executionPayloadEnvelopesByRoot.js";
+import {onInclusionListsByIndices} from "./inclusionListsByIndices.js";
 import {onLightClientBootstrap} from "./lightClientBootstrap.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
@@ -89,20 +87,6 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       const body = deserializeRequestBody(ssz.fulu.BeaconBlocksByHeadRequest, req.data);
       return onBeaconBlocksByHead(body, chain, peerId, peerClient);
     },
-    [ReqRespMethod.BlobSidecarsByRoot]: (req) => {
-      const fork = chain.config.getForkName(chain.clock.currentSlot);
-      const body = deserializeRequestBody(BlobSidecarsByRootRequestType(fork, chain.config), req.data);
-      return onBlobSidecarsByRoot(body, chain);
-    },
-    [ReqRespMethod.BlobSidecarsByRange]: (req) => {
-      const body = deserializeRequestBody(ssz.deneb.BlobSidecarsByRangeRequest, req.data);
-      return trackByRangeResponse(
-        chain,
-        ReqRespMethod.BlobSidecarsByRange,
-        body.count,
-        onBlobSidecarsByRange(body, chain, db)
-      );
-    },
     [ReqRespMethod.DataColumnSidecarsByRange]: (req, peerId, peerClient) => {
       const body = deserializeRequestBody(ssz.fulu.DataColumnSidecarsByRangeRequest, req.data);
       return trackByRangeResponse(
@@ -142,6 +126,10 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     },
     [ReqRespMethod.LightClientFinalityUpdate]: () => onLightClientFinalityUpdate(chain),
     [ReqRespMethod.LightClientOptimisticUpdate]: () => onLightClientOptimisticUpdate(chain),
+    [ReqRespMethod.InclusionListsByIndices]: (req, peerId, peerClient) => {
+      const body = deserializeRequestBody(ssz.heze.InclusionListsByIndicesRequest, req.data);
+      return onInclusionListsByIndices(body, chain, peerId, peerClient);
+    },
   };
 
   return (method) => handlers[method];

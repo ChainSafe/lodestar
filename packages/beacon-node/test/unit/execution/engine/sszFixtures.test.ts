@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {BitVectorType, ByteListType, ContainerType, ListCompositeType} from "@chainsafe/ssz";
+import {BitVectorType, ByteListType, ContainerType, ListCompositeType, SerializedList} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {
   BuiltPayloadBellatrix,
@@ -89,7 +89,7 @@ describe("engine SSZ wire fixtures", () => {
   ])("matches the $fork envelope wire layout", ({actual, oracle}) => {
     const value = ExecutionPayloadEnvelopeGloas.defaultValue();
     value.payload.blockNumber = 7;
-    value.payload.transactions = [new Uint8Array([2, 3])];
+    value.payload.transactions = SerializedList.fromArray([new Uint8Array([2, 3])]);
     value.parentBeaconBlockRoot.fill(0x11);
     value.executionRequests = [new Uint8Array([0, 1, 2]), new Uint8Array([3, 4, 5])];
     expect(actual.serialize(value)).toEqual(oracle.serialize(value));
@@ -162,7 +162,7 @@ describe("engine SSZ wire fixtures", () => {
     value.blockNumber = 7;
     value.slotNumber = 11;
     value.blockAccessList = new Uint8Array([1, 2, 3]);
-    value.transactions = [new Uint8Array([9, 9])];
+    value.transactions = SerializedList.fromArray([new Uint8Array([9, 9])]);
     value.withdrawals = [ssz.capella.Withdrawal.defaultValue()];
     expect(ssz.gloas.ExecutionPayload.serialize(value)).toEqual(plain.serialize(value));
   });

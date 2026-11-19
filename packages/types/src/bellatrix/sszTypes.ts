@@ -1,4 +1,4 @@
-import {ByteListType, ByteVectorType, ContainerType, ListCompositeType} from "@chainsafe/ssz";
+import {ByteListType, ByteVectorType, ContainerType, ListCompositeType, SerializedListType} from "@chainsafe/ssz";
 import {
   BYTES_PER_LOGS_BLOOM,
   HISTORICAL_ROOTS_LIMIT,
@@ -35,7 +35,7 @@ export const Transaction = new ByteListType(MAX_BYTES_PER_TRANSACTION);
  *
  * Spec v1.0.1
  */
-export const Transactions = new ListCompositeType(Transaction, MAX_TRANSACTIONS_PER_PAYLOAD);
+export const Transactions = new SerializedListType(Transaction, MAX_TRANSACTIONS_PER_PAYLOAD);
 
 export const CommonExecutionPayloadType = new ContainerType({
   parentHash: Root,

@@ -1,7 +1,6 @@
 import {Slot, ssz} from "@lodestar/types";
+import {GWEI_TO_WEI} from "@lodestar/utils";
 import {BuiltPayload} from "../../../src/services/payloadStore.js";
-
-export const GWEI_TO_WEI = 1_000_000_000n;
 
 export function mockBuiltPayload({
   sourceId = "el",

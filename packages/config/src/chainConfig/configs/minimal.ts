@@ -63,8 +63,8 @@ export const chainConfig: ChainConfig = {
   SECONDS_PER_SLOT: 6,
   // [customized] 6000 milliseconds, 6 seconds
   SLOT_DURATION_MS: 6000,
-  // [customized] 5000 milliseconds, 5 seconds
-  SLOT_DURATION_MS_HEZE: 5000,
+  // [customized] 6000 milliseconds, 6 seconds
+  SLOT_DURATION_MS_HEZE: 6000,
   // 14 (estimate from Eth1 mainnet)
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs
@@ -197,6 +197,8 @@ export const chainConfig: ChainConfig = {
   // Gloas
   // 2**7 (= 128) payloads
   MAX_REQUEST_PAYLOADS: 128,
+  // `2**12` (= 4096 gas)
+  MIN_TRANSACTION_GAS: 4096,
 
   // Blob Scheduling
   // ---------------------------------------------------------------

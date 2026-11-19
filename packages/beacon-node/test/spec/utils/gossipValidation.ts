@@ -3,21 +3,18 @@ import fs from "node:fs";
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import snappyWasm from "@chainsafe/snappy-wasm";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, LVHInvalidJudged} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   ForkName,
-  ForkPostDeneb,
   ForkPostFulu,
   ForkPostGloas,
-  ForkPreDeneb,
   ForkPreFulu,
   ForkPreGloas,
-  isForkPostDeneb,
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
@@ -35,14 +32,13 @@ import {
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
 import {
-  BlockInputBlobs,
   BlockInputColumns,
   BlockInputNoData,
   BlockInputPreData,
   BlockInputSource,
   IBlockInput,
 } from "../../../src/chain/blocks/blockInput/index.js";
-import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
+import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
@@ -51,6 +47,7 @@ import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../..
 import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
 import {validateGossipBlock} from "../../../src/chain/validation/block.js";
 import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
+import {validateGossipInclusionList} from "../../../src/chain/validation/inclusionList.js";
 import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
 import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCommittee.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../src/chain/validation/syncCommitteeContributionAndProof.js";
@@ -175,6 +172,7 @@ const gossipTopicByHandler = {
   gossip_sync_committee_message: GossipType.sync_committee,
   gossip_sync_committee_contribution_and_proof: GossipType.sync_committee_contribution_and_proof,
   gossip_bls_to_execution_change: GossipType.bls_to_execution_change,
+  gossip_inclusion_list: GossipType.inclusion_list,
 } as const satisfies Record<string, GossipType>;
 
 export function isGossipValidationHandler(topicHandler: string): topicHandler is keyof typeof gossipTopicByHandler {
@@ -274,6 +272,7 @@ function getDataAvailabilityStatusForFork(fork: ForkName): DataAvailabilityStatu
     case ForkName.electra:
     case ForkName.fulu:
     case ForkName.gloas:
+    case ForkName.heze:
       return DataAvailabilityStatus.Available;
 
     default:
@@ -311,8 +310,9 @@ function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, pare
   chain.forkChoice.validateLatestHash({
     executionStatus: ExecutionStatus.Invalid,
     latestValidExecHash: parentBlock.executionPayloadBlockHash,
-    invalidateFromParentBlockRoot: blockRootHex,
-    invalidateFromParentBlockHash: block.executionPayloadBlockHash,
+    invalidateFromBlockRoot: blockRootHex,
+    invalidateFromBlockHash: block.executionPayloadBlockHash,
+    judged: LVHInvalidJudged.FromBlock,
   });
 }
 
@@ -518,21 +518,15 @@ export async function runGossipValidationTest(
             sampledColumns: [],
             custodyColumns: [],
           });
-        } else if (isForkPostDeneb(fork)) {
-          blockImport = BlockInputBlobs.createFromBlock({
-            ...blockProps,
-            block: signedBlock as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>,
-          });
         } else {
           blockImport = BlockInputPreData.createFromBlock({
             ...blockProps,
-            block: signedBlock as SignedBeaconBlock<ForkPreDeneb>,
+            block: signedBlock as SignedBeaconBlock<ForkPreFulu>,
           });
         }
 
         await chain.processBlock(blockImport, {
           seenTimestampSec: 0,
-          validBlobSidecars: BlobSidecarValidation.Full,
           importAttestations: AttestationImportOpt.Force,
           validSignatures: false,
         });
@@ -733,6 +727,14 @@ async function validateMessageForTopic(
       await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+      break;
+    }
+
+    case GossipType.inclusion_list: {
+      const signedInclusionList = rejectOnInvalidSerializedBytes(() => ssz.heze.SignedInclusionList.deserialize(bytes));
+      const {committeeIndices} = await validateGossipInclusionList(chain, signedInclusionList);
+      // Mirror gossip handler: store the list so later vectors see it
+      chain.inclusionListStore.process(signedInclusionList, committeeIndices, true);
       break;
     }
 

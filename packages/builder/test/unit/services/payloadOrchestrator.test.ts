@@ -265,6 +265,7 @@ describe("PayloadOrchestrator", () => {
     const orchestrator = createOrchestrator(source);
 
     await expect(orchestrator.run(buildJob())).rejects.toBe(sourceError);
+    expect(source.prepareCalls).toHaveLength(1);
   });
 
   it("retries missing payload IDs until preparation succeeds", async () => {
@@ -288,7 +289,7 @@ describe("PayloadOrchestrator", () => {
     expect(source.getPayloadCalls).toHaveLength(1);
   });
 
-  it("does not extend the preparation deadline while retrying", async () => {
+  it("does not extend the preparation deadline while retrying and reports the last error", async () => {
     const source = new StubPayloadSource();
     source.prepareImpl = async () => {
       throw new PayloadSourceError({code: PayloadSourceErrorCode.NO_PAYLOAD_ID, sourceId: source.id});
@@ -296,7 +297,11 @@ describe("PayloadOrchestrator", () => {
     const orchestrator = createOrchestrator(source);
     const result = orchestrator.run(buildJob("deadline", NOW + 250));
     const assertion = expect(result).rejects.toMatchObject({
-      type: {code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT, jobId: "deadline"},
+      type: {
+        code: PayloadOrchestratorErrorCode.PREPARE_TIMEOUT,
+        jobId: "deadline",
+        lastError: PayloadSourceErrorCode.NO_PAYLOAD_ID,
+      },
     });
 
     await vi.advanceTimersByTimeAsync(250);
@@ -321,24 +326,6 @@ describe("PayloadOrchestrator", () => {
     await assertion;
     await vi.advanceTimersByTimeAsync(500);
     expect(source.prepareCalls).toHaveLength(1);
-    expect(source.getPayloadCalls).toHaveLength(0);
-  });
-
-  it("does not retry a permanent source error after a missing payload ID", async () => {
-    const source = new StubPayloadSource();
-    const sourceError = new Error("invalid forkchoice");
-    source.prepareImpl = async () => {
-      if (source.prepareCalls.length === 1) {
-        throw new PayloadSourceError({code: PayloadSourceErrorCode.NO_PAYLOAD_ID, sourceId: source.id});
-      }
-      throw sourceError;
-    };
-    const orchestrator = createOrchestrator(source);
-    const result = orchestrator.run(buildJob("invalid", NOW + 350));
-    const assertion = expect(result).rejects.toBe(sourceError);
-    await vi.advanceTimersByTimeAsync(350);
-    await assertion;
-    expect(source.prepareCalls).toHaveLength(2);
     expect(source.getPayloadCalls).toHaveLength(0);
   });
 

@@ -1,15 +1,6 @@
 import {Logger} from "@lodestar/logger";
-import {
-  ForkName,
-  ForkPostFulu,
-  ForkPreFulu,
-  ForkSeq,
-  SLOTS_PER_EPOCH,
-  isForkPostBellatrix,
-  isForkPostFulu,
-} from "@lodestar/params";
-import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
+import {ForkName, ForkPostFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
+import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {isErrorAborted} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
@@ -22,9 +13,11 @@ import {
   ExecutePayloadResponse,
   ExecutionEngineState,
   ExecutionPayloadStatus,
+  ForkchoiceUpdatedResult,
   IExecutionEngine,
   PayloadAttributes,
   PayloadId,
+  PayloadStatusResult,
   VersionedHashes,
 } from "./interface.js";
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClientEvent} from "./jsonRpcHttpClient.js";
@@ -32,7 +25,7 @@ import {PayloadIdCache} from "./payloadIdCache.js";
 import {EngineRestError, EngineRestResponseError, isRetryableEngineRestError} from "./restHttpClient.js";
 import {EngineCapabilities, RestEngineTransport} from "./restTransport.js";
 import {executionForkName} from "./sszTypes.js";
-import {IEngineTransport, PayloadStatusResult} from "./transport.js";
+import {IEngineTransport} from "./transport.js";
 import {ExecutionPayloadBodyV2, serializePayloadAttributes} from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
 
@@ -154,7 +147,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private restSupport: RestSupport = {state: "pending"};
   private restProbe: Promise<RestSupport> | null = null;
   private lastRestProbeMs = Number.NEGATIVE_INFINITY;
-  private readonly loggedRestFallbacks = new Set<ForkName | "v1" | "v2">();
+  private readonly loggedRestFallbacks = new Set<ForkName | "v2">();
 
   constructor(
     {jsonRpc, rest}: ExecutionEngineTransports,
@@ -224,9 +217,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBlockRoot?: Root,
-    executionRequests?: ExecutionRequests
+    executionRequests?: ExecutionRequests,
+    inclusionListTransactions?: bellatrix.Transactions
   ): Promise<ExecutePayloadResponse> {
     // Validate before queueing, argument errors must not be reported as an unavailable execution client
+    if (ForkSeq[fork] >= ForkSeq.heze && inclusionListTransactions === undefined) {
+      throw Error(`inclusionListTransactions required in notifyNewPayload for fork=${fork}`);
+    }
     if (ForkSeq[fork] >= ForkSeq.deneb) {
       if (versionedHashes === undefined) {
         throw Error(`versionedHashes required in notifyNewPayload for fork=${fork}`);
@@ -243,7 +240,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     try {
       result = await this.enqueue(() =>
         this.withTransport(fork, undefined, (transport) =>
-          transport.newPayload(fork, executionPayload, versionedHashes, parentBlockRoot, executionRequests)
+          transport.newPayload(
+            fork,
+            executionPayload,
+            versionedHashes,
+            parentBlockRoot,
+            executionRequests,
+            inclusionListTransactions
+          )
         )
       );
     } catch (e) {
@@ -264,7 +268,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     switch (status) {
       case ExecutionPayloadStatus.VALID:
-        return {status, latestValidHash: latestValidHash ?? "0x0", validationError: null};
+        return {
+          status,
+          latestValidHash: latestValidHash ?? "0x0",
+          validationError: null,
+          inclusionListSatisfied: result.inclusionListSatisfied ?? null,
+        };
 
       case ExecutionPayloadStatus.INVALID:
         // As per latest specs if latestValidHash can be null and it would mean only
@@ -326,15 +335,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
-  ): Promise<PayloadId | null> {
-    const {
-      payloadStatus: {status, validationError},
-      payloadId,
-    } = await this.enqueue(() =>
+  ): Promise<ForkchoiceUpdatedResult> {
+    const result = await this.enqueue(() =>
       this.withTransport(fork, undefined, (transport) =>
         transport.forkchoiceUpdated(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes)
       )
     );
+    const {
+      payloadStatus: {status},
+      payloadId,
+    } = result;
 
     this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
     this.metrics?.engineNotifyForkchoiceUpdateResult.inc({result: status});
@@ -348,24 +358,27 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           }
 
           const payloadAttributesRpc = serializePayloadAttributes(payloadAttributes);
-          this.payloadIdCache.add({headBlockHash, finalizedBlockHash, ...payloadAttributesRpc}, payloadId);
+          this.payloadIdCache.add(
+            {
+              headBlockHash,
+              ...payloadAttributesRpc,
+              inclusionListTransactions: payloadAttributes.inclusionListTransactions,
+            },
+            payloadId
+          );
           void this.prunePayloadIdCache();
         }
-        return payloadId;
+        return result;
 
       case ExecutionPayloadStatus.SYNCING:
         // Throw error on syncing if requested to produce a block, else silently ignore
         if (payloadAttributes) {
           throw Error("Execution Layer Syncing");
         }
-        return null;
+        return result;
 
       case ExecutionPayloadStatus.INVALID:
-        throw Error(
-          `Invalid ${payloadAttributes ? "prepare payload" : "forkchoice request"}, validationError=${
-            validationError ?? ""
-          }`
-        );
+        return result;
 
       default:
         throw Error(`Unknown status ${status}`);
@@ -403,24 +416,23 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   async getBlobs(
-    fork: ForkPostFulu,
+    _fork: ForkPostFulu,
     versionedHashes: VersionedHashes,
     buffers?: Uint8Array[]
-  ): Promise<BlobAndProofV2[] | null>;
-  async getBlobs(
-    fork: ForkPreFulu,
-    versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
-  ): Promise<(BlobAndProof | null)[]>;
-  async getBlobs(
-    fork: ForkName,
-    versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
-  ): Promise<BlobAndProofV2[] | (BlobAndProof | null)[] | null> {
-    if (isForkPostFulu(fork)) {
-      return this.withTransport(undefined, "v2", (transport) => transport.getBlobsV2(versionedHashes, buffers));
-    }
-    return this.withTransport(undefined, "v1", (transport) => transport.getBlobsV1(versionedHashes));
+  ): Promise<BlobAndProofV2[] | null> {
+    return this.withTransport(undefined, "v2", (transport) => transport.getBlobsV2(versionedHashes, buffers));
+  }
+
+  /**
+   * `engine_getInclusionListV1`, JSON-RPC only as the REST engine API defines no inclusion list route.
+   * Queued so it runs after the forkchoiceUpdated of a payload imported just before, which prunes that
+   * payload's transactions from the mempool the list is built from.
+   */
+  async getInclusionList(): Promise<bellatrix.Transactions> {
+    return this.enqueue(() => {
+      this.metrics?.engineApiRequests.inc({transport: "json-rpc"});
+      return this.jsonRpc.getInclusionList();
+    });
   }
 
   private enqueue<T>(job: () => Promise<T>): Promise<T> {
@@ -434,7 +446,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   private async withTransport<T>(
     fork: ForkName | undefined,
-    blobsRevision: "v1" | "v2" | undefined,
+    blobsRevision: "v2" | undefined,
     fn: (transport: IEngineTransport) => Promise<T>
   ): Promise<T> {
     const transport = await this.getTransport(fork, blobsRevision);
@@ -475,7 +487,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * Pick the transport for a call. Fork-scoped calls only go over REST if the execution client
    * advertises that fork, blob requests only if it serves the needed `/blobs/vN` revision.
    */
-  private async getTransport(fork?: ForkName, blobsRevision?: "v1" | "v2"): Promise<IEngineTransport> {
+  private async getTransport(fork?: ForkName, blobsRevision?: "v2"): Promise<IEngineTransport> {
     if (this.rest === null || this.engineApi === "json-rpc") {
       return this.jsonRpc;
     }

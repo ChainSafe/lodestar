@@ -1,7 +1,16 @@
 import {Type} from "@chainsafe/ssz";
 import {CELLS_PER_EXT_BLOB, ForkName, ForkSeq, isForkPostBellatrix} from "@lodestar/params";
-import {ExecutionPayload, ExecutionRequests, Root, RootHex, capella, deneb, electra, gloas} from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
+import {
+  ExecutionPayload,
+  ExecutionRequests,
+  Root,
+  RootHex,
+  bellatrix,
+  capella,
+  deneb,
+  electra,
+  gloas,
+} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {EndTimer, LodestarError, fromHex, strip0xPrefix, toHex, toRootHex} from "@lodestar/utils";
 import {isValidBlobVersionedHashes} from "./blobVersionedHashes.js";
@@ -9,15 +18,16 @@ import {
   ClientCode,
   ClientVersion,
   ExecutionPayloadStatus,
+  ForkchoiceUpdatedResult,
   PayloadAttributes,
   PayloadId,
+  PayloadStatusResult,
   VersionedHashes,
 } from "./interface.js";
 import {JsonRpcHttpClientEventEmitter, ReqOpts} from "./jsonRpcHttpClient.js";
 import {EngineRestHttpClient, EngineRestResponseError} from "./restHttpClient.js";
 import {
   BlobsRequest,
-  BlobsV1Response,
   BlobsV2Response,
   BodiesByHashRequest,
   BodiesResponseBellatrix,
@@ -47,7 +57,7 @@ import {
   PayloadStatusSsz,
   executionForkName,
 } from "./sszTypes.js";
-import {ForkchoiceUpdatedResult, GetPayloadResult, IEngineTransport, PayloadStatusResult} from "./transport.js";
+import {GetPayloadResult, IEngineTransport} from "./transport.js";
 import {EngineTransportMetrics} from "./transportMetrics.js";
 import {
   ExecutionPayloadBodyV2,
@@ -78,7 +88,6 @@ const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedOpts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
 const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
-const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
 const getCapabilitiesOpts: ReqOpts = {routeId: "getCapabilities", retries: 0};
@@ -376,24 +385,6 @@ export class RestEngineTransport implements IEngineTransport {
     return bodies;
   }
 
-  async getBlobsV1(versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]> {
-    assertReqSizeLimit(versionedHashes.length, this.limits.blobsMaxVersionedHashes);
-    const res = await this.client.request(
-      {method: "POST", path: "/blobs/v1", body: BlobsRequest.serialize({versionedHashes}), responseType: "ssz"},
-      getBlobsV1Opts
-    );
-    // 204 means the EL cannot serve blobs at all, e.g. while syncing
-    if (res.status === 204) {
-      return versionedHashes.map(() => null);
-    }
-
-    const {entries} = deserializeResponse(BlobsV1Response, res.body, "getBlobsV1", this.metrics);
-    if (entries.length !== versionedHashes.length) {
-      throw Error(`Invalid blobs/v1 response length=${entries.length} versionedHashes=${versionedHashes.length}`);
-    }
-    return entries.map((entry) => (entry.available ? entry.contents : null));
-  }
-
   /**
    * Blobs and proofs are views into the response body rather than copies, the response is all-or-nothing
    * so every byte of it is needed. The pooled buffers of the JSON-RPC transport are not used.
@@ -453,6 +444,10 @@ export class RestEngineTransport implements IEngineTransport {
         commit: strip0xPrefix(cv.commit),
       };
     });
+  }
+
+  getInclusionList(): Promise<bellatrix.Transactions> {
+    throw Error("engine_getInclusionListV1 is not available over the REST engine API");
   }
 }
 

@@ -3,6 +3,7 @@ import os from "node:os";
 import {multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CliCommandOptions} from "@lodestar/utils";
 import {YargsError} from "../../util/index.js";
 
@@ -55,6 +56,7 @@ export type NetworkArgs = {
   targetPeers?: number;
   subscribeAllSubnets?: boolean;
   slotsToSubscribeBeforeAggregatorDuty?: number;
+  slotsToSubscribeBeforeProposalDuty?: number;
   disablePeerScoring?: boolean;
   quic?: boolean;
   tcp?: boolean;
@@ -127,6 +129,19 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     throw new YargsError("Cannot disable both TCP and QUIC transports");
   }
 
+  const slotsToSubscribeBeforeProposalDuty =
+    args.slotsToSubscribeBeforeProposalDuty ?? defaultOptions.network.slotsToSubscribeBeforeProposalDuty;
+  if (
+    !Number.isInteger(slotsToSubscribeBeforeProposalDuty) ||
+    slotsToSubscribeBeforeProposalDuty < 0 ||
+    // proposers are only known one epoch ahead (fulu proposer lookahead)
+    slotsToSubscribeBeforeProposalDuty > SLOTS_PER_EPOCH
+  ) {
+    throw new YargsError(
+      `slotsToSubscribeBeforeProposalDuty must be an integer in [0, ${SLOTS_PER_EPOCH}], got ${slotsToSubscribeBeforeProposalDuty}`
+    );
+  }
+
   // validate ip, ip6, ports
   const muArgs = {
     listenAddress: listenAddress ? `/ip4/${listenAddress}` : undefined,
@@ -178,7 +193,12 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const quicMu6 = listenAddress6 && quic ? `${muArgs.listenAddress6}${muArgs.quicPort6}` : undefined;
 
   const targetPeers = args.targetPeers;
-  const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
+  if (targetPeers != null && targetPeers < 0) {
+    throw new YargsError("targetPeers must be greater than or equal to 0");
+  }
+  const maxPeers =
+    args["network.maxPeers"] ??
+    (targetPeers !== undefined ? Math.max(Math.floor(targetPeers * 1.1), targetPeers + 1) : undefined);
   if (targetPeers != null && maxPeers != null && targetPeers > maxPeers) {
     throw new YargsError("network.maxPeers must be greater than or equal to targetPeers");
   }
@@ -215,6 +235,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     subscribeAllSubnets: args.subscribeAllSubnets,
     slotsToSubscribeBeforeAggregatorDuty:
       args.slotsToSubscribeBeforeAggregatorDuty ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
+    slotsToSubscribeBeforeProposalDuty,
     disablePeerScoring: args.disablePeerScoring,
     quic,
     tcp,
@@ -334,6 +355,15 @@ export const options: CliCommandOptions<NetworkArgs> = {
     type: "number",
     description: "Number of slots before an aggregator duty to subscribe to subnets",
     defaultDescription: String(defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty),
+    group: "network",
+  },
+
+  slotsToSubscribeBeforeProposalDuty: {
+    hidden: true,
+    type: "number",
+    description:
+      "Number of slots before a block proposal of a connected validator to subscribe to all attestation subnets, to pack their single attestations into the block. 0 disables",
+    defaultDescription: String(defaultOptions.network.slotsToSubscribeBeforeProposalDuty),
     group: "network",
   },
 
