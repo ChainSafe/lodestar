@@ -116,3 +116,30 @@ test "Gloas upgrade migrates empty pending queues" {
     }
     try std.testing.expectEqual(@as(usize, validator_count), try state.validatorsCount());
 }
+
+test "Gloas upgrade clears only the fork slot availability including ring wrap" {
+    const allocator = std.testing.allocator;
+    for ([_]u64{ preset.SLOTS_PER_EPOCH, preset.SLOTS_PER_HISTORICAL_ROOT }) |fork_slot| {
+        var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
+        defer pool.deinit();
+        const active_config = if (@import("preset").active_preset == .mainnet) config_module.mainnet.chain_config else config_module.minimal.chain_config;
+        var config = BeaconConfig.init(active_config, c.ZERO_HASH);
+        config.chain.GLOAS_FORK_EPOCH = fork_slot / preset.SLOTS_PER_EPOCH;
+        var state = try sourceState(allocator, &pool, &config, false);
+        defer state.deinit();
+        try state.castToFork(.fulu).inner.set("slot", fork_slot);
+        var pubkeys = PubkeyCache.init(allocator, std.testing.io);
+        defer pubkeys.deinit();
+        const epoch_cache = try EpochCache.createFromState(allocator, std.testing.io, &state, .{ .config = &config, .pubkey_cache = &pubkeys }, .{ .skip_sync_committee_cache = true, .skip_sync_pubkeys = true });
+        defer epoch_cache.deinit();
+        const upgraded = try upgradeStateToGloas(allocator, std.testing.io, &config, epoch_cache, state.castToFork(.fulu));
+        state = .{ .gloas = upgraded.inner };
+        var availability = try state.castToFork(.gloas).inner.getReadonly("execution_payload_availability");
+        for (0..preset.SLOTS_PER_HISTORICAL_ROOT) |index| {
+            if ((try availability.get(index)) != (index != fork_slot % preset.SLOTS_PER_HISTORICAL_ROOT)) {
+                std.log.err("incorrect availability at fork_slot={d}, index={d}", .{ fork_slot, index });
+                return error.TestUnexpectedResult;
+            }
+        }
+    }
+}
