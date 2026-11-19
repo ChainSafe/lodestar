@@ -24,6 +24,12 @@ pub const Root = [32]u8;
 /// The leaf of a slot, then its Merkle branch from the bottom up.
 pub const Proof = [depth + 1][32]u8;
 
+/// What a file of precomputed trees holds for one: its root, a slot, which is
+/// zero, and that slot's Merkle branch from the bottom up. A full tree hashes
+/// `2^32` times, so a validator builds only the leaves of its first slots and
+/// takes the siblings above them from such a record.
+pub const state_record_size = 32 + 4 + depth * 32;
+
 pub const VrfTree = struct {
     allocator: Allocator,
     seed: Seed,
@@ -66,10 +72,19 @@ pub const VrfTree = struct {
     };
 
     /// Builds the tree of `seed` on `threads` threads. A full tree hashes
-    /// `2^(depth + 1)` times. `populated_depth` below `depth` leaves the later
-    /// slots without a secret, which only a test network should accept.
-    pub fn init(allocator: Allocator, seed: *const Seed, populated_depth: u8, threads: usize) !VrfTree {
+    /// `2^(depth + 1)` times. `populated_depth` below `depth` builds the leaves
+    /// of the first `2^populated_depth` slots only, and proves no other slot.
+    ///
+    /// What stands above those leaves is `records`' if given: `state_record_size`
+    /// bytes per tree, one of which must be this seed's, or `error.NoMatchingState`.
+    /// Without `records` the other leaves are zero, which is another tree than
+    /// the seed's full one and only a test network should accept.
+    pub fn init(allocator: Allocator, seed: *const Seed, populated_depth: u8, records: ?[]const u8, threads: usize) !VrfTree {
         if (populated_depth > depth) return error.InvalidDepth;
+        if (records) |bytes| {
+            if (populated_depth < subtree_depth or populated_depth == depth) return error.InvalidDepth;
+            if (bytes.len % state_record_size != 0) return error.InvalidStateRecords;
+        }
         const populated = @as(u64, 1) << @intCast(populated_depth);
 
         const top = try allocator.alloc([32]u8, 2 * subtree_count);
@@ -90,6 +105,7 @@ pub const VrfTree = struct {
         if (build.failed.load(.acquire)) return error.OutOfMemory;
 
         hashLayers(top);
+        if (records) |bytes| try graft(top, populated_depth, bytes);
 
         return .{
             .allocator = allocator,
@@ -164,6 +180,30 @@ fn hashLayers(nodes: [][32]u8) void {
         node -= 1;
         Keccak256.hash(std.mem.asBytes(nodes[2 * node ..][0..2]), &nodes[node], .{});
     }
+}
+
+/// Replaces what `top` holds above the populated leaves, which it took for
+/// zero, by the siblings of the record in `records` that those leaves belong to.
+fn graft(top: [][32]u8, populated_depth: u8, records: []const u8) !void {
+    // The node over the populated leaves, and its ancestors, are the leftmost of their layers
+    const populated_root = top[@as(usize, 1) << @intCast(depth - populated_depth)];
+    var offset: usize = 0;
+    while (offset < records.len) : (offset += state_record_size) {
+        const record = records[offset..][0..state_record_size];
+        if (!std.mem.allEqual(u8, record[32..36], 0)) continue;
+        const siblings: *const [depth][32]u8 = @ptrCast(record[36..]);
+        var value = populated_root;
+        for (siblings[populated_depth..]) |*sibling| Keccak256.hash(&(value ++ sibling.*), &value, .{});
+        if (!std.mem.eql(u8, &value, record[0..32])) continue;
+
+        for (siblings[populated_depth..], populated_depth..) |*sibling, height| {
+            const node = @as(usize, 1) << @intCast(depth - height);
+            top[node + 1] = sibling.*;
+            Keccak256.hash(std.mem.asBytes(top[node..][0..2]), &top[node / 2], .{});
+        }
+        return;
+    }
+    return error.NoMatchingState;
 }
 
 /// The root of a subtree whose leaves are all zero.

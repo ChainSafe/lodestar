@@ -32,7 +32,7 @@ pub fn main(init: std.process.Init) !void {
     const threads = std.Thread.getCpuCount() catch 1;
 
     var timer = time.start(io);
-    var tree = try VrfTree.init(allocator, &@as([32]u8, @splat(1)), vrf_depth, threads);
+    var tree = try VrfTree.init(allocator, &@as([32]u8, @splat(1)), vrf_depth, null, threads);
     defer tree.deinit();
     std.debug.print("VRF tree of depth {d} on {d} threads: {d:.3} s\n", .{ vrf_depth, threads, time.durationSeconds(time.since(io, timer)) });
     timer = time.start(io);

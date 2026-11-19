@@ -62,6 +62,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     importKeystores?: string[];
     importKeystoresPassword?: string;
     disableKeystoresThreadPool?: boolean;
+    vrfStateUrl?: string;
 
     "http.requestWireFormat"?: string;
     "http.responseWireFormat"?: string;
@@ -348,6 +349,12 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     alias: ["passphraseFile"], // Backwards compatibility with old `validator import` cmd
     description: "Path to a file with password to decrypt all keystores from `importKeystores` option",
     defaultDescription: "./password.txt",
+    type: "string",
+  },
+
+  vrfStateUrl: {
+    description:
+      "On a network that starts at the pq fork: a URL or a path of precomputed states of full VRF trees, 1028 bytes per validator. A validator hashes only the first 2^20 slots of its tree and takes the rest from its state. Without it, the rest of a tree is zero, which a genesis with full trees does not accept",
     type: "string",
   },
 

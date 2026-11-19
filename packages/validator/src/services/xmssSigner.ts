@@ -64,6 +64,25 @@ export class XmssSigner {
     return new XmssSigner(key.toPublicKey(), key, vrfTree);
   }
 
+  /**
+   * The pq validator of a BLS keystore, as the devnet genesis tooling derives it: both seeds are
+   * hashes of the keystore's secret key.
+   *
+   * Only the first 2^20 slots of its VRF tree are hashed here. A full tree takes 2^32 hashes, so
+   * what stands above those slots comes from `vrfStates`, precomputed states of full trees with
+   * this key's among them. Without `vrfStates` the other leaves are zero, as the genesis tooling
+   * had it before it moved to full trees.
+   */
+  static async fromBlsSecretKey(secretKey: Uint8Array, vrfStates?: Uint8Array): Promise<XmssSigner> {
+    const seed = createHash("sha256").update("leanxmss-seed").update(secretKey).digest();
+    const vrfSeed = createHash("sha256").update("vrf-seed").update(secretKey).digest();
+    const [key, vrfTree] = await Promise.all([
+      XmssSecretKey.fromSeed(seed),
+      VrfTree.build(vrfSeed, KEYSTORE_VRF_POPULATED_DEPTH, vrfStates),
+    ]);
+    return new XmssSigner(key.toPublicKey(), key, vrfTree);
+  }
+
   get vrfRoot(): Uint8Array {
     return this.vrfTree.root();
   }
@@ -93,6 +112,9 @@ export class XmssSigner {
     return this.key.sign(signingRoot, leafIndex);
   }
 }
+
+/** Slots a keystore's validator has a VRF proof for: the devnet convention */
+const KEYSTORE_VRF_POPULATED_DEPTH = 20;
 
 /**
  * Slots with a VRF secret for an interop validator. Far fewer than a real tree's, which takes

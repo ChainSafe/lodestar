@@ -42,7 +42,7 @@ import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
 import {KeymanagerRestApiServer} from "./keymanager/server.js";
 import {IValidatorCliArgs, validatorMetricsDefaultOptions, validatorMonitoringDefaultOptions} from "./options.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
-import {getSignersFromArgs} from "./signers/index.js";
+import {getSignersFromArgs, toXmssSigners} from "./signers/index.js";
 import {logSigners, warnOrExitNoSigners} from "./signers/logSigners.js";
 
 /**
@@ -111,7 +111,10 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
    *
    * Note: local signers are already locked once returned from this function.
    */
-  const signers = await getSignersFromArgs(args, network, {logger, signal: abortController.signal});
+  let signers = await getSignersFromArgs(args, network, {logger, signal: abortController.signal});
+  if (config.PQ_FORK_EPOCH === 0) {
+    signers = await toXmssSigners(signers, args.vrfStateUrl, logger);
+  }
 
   // Ensure the validator has at least one key
   if (signers.length === 0) {

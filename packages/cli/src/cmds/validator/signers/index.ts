@@ -1,9 +1,10 @@
+import fs from "node:fs";
 import path from "node:path";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {SecretKey} from "@lodestar/native/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
-import {LogLevel, Logger, isValidHttpUrl, toPubkeyHex} from "@lodestar/utils";
-import {Signer, SignerType, externalSignerGetKeys, interopXmssSigner} from "@lodestar/validator";
+import {LogLevel, Logger, fetch, isValidHttpUrl, toPubkeyHex} from "@lodestar/utils";
+import {Signer, SignerType, XmssSigner, externalSignerGetKeys, interopXmssSigner} from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {GlobalArgs, defaultNetwork} from "../../../options/index.js";
 import {YargsError, assertValidPubkeysHex} from "../../../util/index.js";
@@ -149,6 +150,40 @@ export async function getSignersFromArgs(
   const remoteSigners = signerDefinitions.map(({url, pubkey}): Signer => ({type: SignerType.Remote, url, pubkey}));
 
   return [...keystoreSigners, ...remoteSigners];
+}
+
+/**
+ * On a network that starts at the pq fork, a validator's BLS keystore stands for its leanXMSS key
+ * and its VRF tree, both derived from the keystore's secret key.
+ */
+export async function toXmssSigners(
+  signers: Signer[],
+  vrfStateUrl: string | undefined,
+  logger: Pick<Logger, LogLevel.info | LogLevel.warn>
+): Promise<Signer[]> {
+  const localCount = signers.filter((signer) => signer.type === SignerType.Local).length;
+  if (localCount === 0) return signers;
+
+  let vrfStates: Uint8Array | undefined;
+  if (vrfStateUrl) {
+    if (isValidHttpUrl(vrfStateUrl)) {
+      const res = await fetch(vrfStateUrl);
+      if (!res.ok) throw Error(`Fetching ${vrfStateUrl} failed with status ${res.status}`);
+      vrfStates = new Uint8Array(await res.arrayBuffer());
+    } else {
+      vrfStates = fs.readFileSync(vrfStateUrl.replace(/^file:\/\//, ""));
+    }
+  } else {
+    logger.warn("No vrfStateUrl: VRF trees hold their first 2^20 slots and zeros after, not full trees");
+  }
+
+  logger.info("Deriving leanXMSS keys and VRF trees from keystores", {count: localCount});
+  return Promise.all(
+    signers.map(async (signer): Promise<Signer> => {
+      if (signer.type !== SignerType.Local) return signer;
+      return {type: SignerType.Xmss, signer: await XmssSigner.fromBlsSecretKey(signer.secretKey.toBytes(), vrfStates)};
+    })
+  );
 }
 
 export function getSignerPubkeyHex(signer: Signer): string {

@@ -11,6 +11,7 @@ const vrf_tree = @import("vrf_tree");
 pub const SEED_SIZE: u32 = @sizeOf(vrf_tree.Seed);
 pub const DEPTH: u32 = vrf_tree.depth;
 pub const PROOF_SIZE: u32 = @sizeOf(vrf_tree.Proof);
+pub const STATE_RECORD_SIZE: u32 = vrf_tree.state_record_size;
 
 // A tree outlives the task that builds it, on another thread than the JS one.
 const allocator = std.heap.c_allocator;
@@ -18,10 +19,12 @@ const allocator = std.heap.c_allocator;
 const BuildTask = struct {
     seed: vrf_tree.Seed,
     populated_depth: u8,
+    /// A copy of the caller's records: the task outlives the call.
+    records: ?[]u8 = null,
     tree: ?vrf_tree.VrfTree = null,
 
     pub fn compute(self: *BuildTask) !void {
-        self.tree = try vrf_tree.VrfTree.init(allocator, &self.seed, self.populated_depth, std.Thread.getCpuCount() catch 1);
+        self.tree = try vrf_tree.VrfTree.init(allocator, &self.seed, self.populated_depth, self.records, std.Thread.getCpuCount() catch 1);
     }
 
     pub fn resolve(self: *BuildTask, env: napi.Env) !napi.Value {
@@ -35,6 +38,7 @@ const BuildTask = struct {
 
     pub fn deinit(self: *BuildTask) void {
         std.crypto.secureZero(u8, &self.seed);
+        if (self.records) |records| allocator.free(records);
         if (self.tree) |*tree| tree.deinit();
     }
 };
@@ -66,13 +70,19 @@ pub const VrfTree = struct {
     }
 
     /// Resolves with the tree of `seed`, which is all of its secret material.
-    /// Slots from `2^populated_depth` on get no secret.
-    pub fn build(seed: js.Uint8Array, populated_depth: js.Number) !js.Value {
+    /// Slots from `2^populated_depth` on get no proof. `records`, if not empty,
+    /// holds the precomputed states among which the tree finds its own.
+    pub fn build(seed: js.Uint8Array, populated_depth: js.Number, records: js.Uint8Array) !js.Value {
         const slice = try seed.toSlice();
         if (slice.len != SEED_SIZE) return error.InvalidSeedLength;
         const depth = try populated_depth.toU32Exact();
         if (depth > vrf_tree.depth) return error.InvalidDepth;
-        var task: BuildTask = .{ .seed = slice[0..SEED_SIZE].*, .populated_depth = @intCast(depth) };
+        const records_slice = try records.toSlice();
+        var task: BuildTask = .{
+            .seed = slice[0..SEED_SIZE].*,
+            .populated_depth = @intCast(depth),
+            .records = if (records_slice.len == 0) null else try allocator.dupe(u8, records_slice),
+        };
         // Wipes this copy of the seed: the spawned task holds its own.
         defer std.crypto.secureZero(u8, &task.seed);
         return js.spawn(BuildTask, task, "vrfTree.VrfTree.build");

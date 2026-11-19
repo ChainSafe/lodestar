@@ -9,6 +9,12 @@ export declare const VRF_TREE_DEPTH: 31;
 /** The leaf then one sibling per level, 32 bytes each. */
 export declare const VRF_PROOF_SIZE: 1024;
 
+/**
+ * A precomputed state of a full tree: its root, 4 zero bytes, then the 31 siblings of its first
+ * leaf from the bottom up.
+ */
+export declare const VRF_STATE_RECORD_SIZE: 1028;
+
 /** Whether the `VRF_PROOF_SIZE`-byte `proof` opens the leaf of `slot` under `root` */
 export declare function isValidVrfProof(root: Uint8Array, slot: number, proof: Uint8Array): boolean;
 
@@ -21,10 +27,13 @@ export declare class VrfTree {
    * The tree of a `VRF_SEED_SIZE`-byte seed, which is all of its secret material. Runs off the JS
    * thread, on every CPU. A full tree hashes 2^32 times.
    *
-   * Slots from `2^populatedDepth` on get no secret, so their proofs are refused. Anything below
-   * `VRF_TREE_DEPTH` is for test networks only.
+   * Only the leaves of the first `2^populatedDepth` slots are built, and proofs of later slots are
+   * refused. What stands above them comes from `records`: precomputed states of
+   * `VRF_STATE_RECORD_SIZE` bytes each, one of which must be this seed's, or the promise rejects
+   * with `NoMatchingState`. Without `records` the other leaves are zero, which is another tree than
+   * the seed's full one: for test networks only.
    */
-  static build(seed: Uint8Array, populatedDepth: number): Promise<VrfTree>;
+  static build(seed: Uint8Array, populatedDepth: number, records?: Uint8Array): Promise<VrfTree>;
   root(): Uint8Array;
   /**
    * The `VRF_PROOF_SIZE`-byte proof for `slot`. Throws `SlotNotPopulated` past the populated slots.
