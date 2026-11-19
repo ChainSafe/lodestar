@@ -182,6 +182,24 @@ fn hashLayers(nodes: [][32]u8) void {
     }
 }
 
+/// The record among `records` whose tree has the second leaf of `seed`'s, which a
+/// record holds as its first sibling. `VrfTree.init` checks the rest of it.
+pub fn findState(seed: *const Seed, records: []const u8) ?*const [state_record_size]u8 {
+    var preimage: [@sizeOf(Seed) + 8]u8 = undefined;
+    defer std.crypto.secureZero(u8, &preimage);
+    preimage[0..@sizeOf(Seed)].* = seed.*;
+    std.mem.writeInt(u64, preimage[@sizeOf(Seed)..], 1, .little);
+    var second_leaf: [32]u8 = undefined;
+    Keccak256.hash(&preimage, &second_leaf, .{});
+
+    var offset: usize = 0;
+    while (offset + state_record_size <= records.len) : (offset += state_record_size) {
+        const record = records[offset..][0..state_record_size];
+        if (std.mem.eql(u8, record[36..68], &second_leaf)) return record;
+    }
+    return null;
+}
+
 /// Replaces what `top` holds above the populated leaves, which it took for
 /// zero, by the siblings of the record in `records` that those leaves belong to.
 fn graft(top: [][32]u8, populated_depth: u8, records: []const u8) !void {

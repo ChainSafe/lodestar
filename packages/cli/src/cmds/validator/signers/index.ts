@@ -3,7 +3,7 @@ import path from "node:path";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {SecretKey} from "@lodestar/native/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
-import {LogLevel, Logger, fetch, isValidHttpUrl, toPubkeyHex} from "@lodestar/utils";
+import {LogLevel, Logger, fetch, isValidHttpUrl, retry, toPubkeyHex} from "@lodestar/utils";
 import {Signer, SignerType, XmssSigner, externalSignerGetKeys, interopXmssSigner} from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {GlobalArgs, defaultNetwork} from "../../../options/index.js";
@@ -159,7 +159,7 @@ export async function getSignersFromArgs(
 export async function toXmssSigners(
   signers: Signer[],
   vrfStateUrl: string | undefined,
-  logger: Pick<Logger, LogLevel.info | LogLevel.warn>
+  logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.error>
 ): Promise<Signer[]> {
   const localCount = signers.filter((signer) => signer.type === SignerType.Local).length;
   if (localCount === 0) return signers;
@@ -167,9 +167,14 @@ export async function toXmssSigners(
   let vrfStates: Uint8Array | undefined;
   if (vrfStateUrl) {
     if (isValidHttpUrl(vrfStateUrl)) {
-      const res = await fetch(vrfStateUrl);
-      if (!res.ok) throw Error(`Fetching ${vrfStateUrl} failed with status ${res.status}`);
-      vrfStates = new Uint8Array(await res.arrayBuffer());
+      vrfStates = await retry(
+        async () => {
+          const res = await fetch(vrfStateUrl);
+          if (!res.ok) throw Error(`Fetching ${vrfStateUrl} failed with status ${res.status}`);
+          return new Uint8Array(await res.arrayBuffer());
+        },
+        {retries: 5, retryDelay: 2000}
+      );
     } else {
       vrfStates = fs.readFileSync(vrfStateUrl.replace(/^file:\/\//, ""));
     }
@@ -181,7 +186,16 @@ export async function toXmssSigners(
   return Promise.all(
     signers.map(async (signer): Promise<Signer> => {
       if (signer.type !== SignerType.Local) return signer;
-      return {type: SignerType.Xmss, signer: await XmssSigner.fromBlsSecretKey(signer.secretKey.toBytes(), vrfStates)};
+      const secretKey = signer.secretKey.toBytes();
+      try {
+        return {type: SignerType.Xmss, signer: await XmssSigner.fromBlsSecretKey(secretKey, vrfStates)};
+      } catch (e) {
+        if (!(e as Error).message.includes("NoMatchingState")) throw e;
+        // It still attests: only its proposals need the tree
+        const xmssSigner = await XmssSigner.fromBlsSecretKey(secretKey);
+        logger.error("No VRF state for validator: it cannot propose", {pubkey: toPubkeyHex(xmssSigner.publicKey)});
+        return {type: SignerType.Xmss, signer: xmssSigner};
+      }
     })
   );
 }

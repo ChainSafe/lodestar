@@ -72,6 +72,8 @@ test "a tree takes what stands above its first slots from a record" {
     try std.testing.expectEqualSlices(u8, std.mem.asBytes(&(try full.proof(70_000))), std.mem.asBytes(&(try partial.proof(70_000))));
     try std.testing.expectError(error.SlotNotPopulated, partial.proof(1 << 17));
 
+    try std.testing.expectEqual(records[vrf_tree.state_record_size..].ptr, @as([*]const u8, vrf_tree.findState(&seed, &records).?));
+    try std.testing.expectEqual(null, vrf_tree.findState(&seed, records[0..vrf_tree.state_record_size]));
     try std.testing.expectError(
         error.NoMatchingState,
         VrfTree.init(std.testing.allocator, &seed, 17, records[0..vrf_tree.state_record_size], 4),

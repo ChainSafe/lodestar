@@ -19,12 +19,12 @@ const allocator = std.heap.c_allocator;
 const BuildTask = struct {
     seed: vrf_tree.Seed,
     populated_depth: u8,
-    /// A copy of the caller's records: the task outlives the call.
-    records: ?[]u8 = null,
+    /// The tree's own record, copied: the task outlives the call.
+    state: ?[vrf_tree.state_record_size]u8 = null,
     tree: ?vrf_tree.VrfTree = null,
 
     pub fn compute(self: *BuildTask) !void {
-        self.tree = try vrf_tree.VrfTree.init(allocator, &self.seed, self.populated_depth, self.records, std.Thread.getCpuCount() catch 1);
+        self.tree = try vrf_tree.VrfTree.init(allocator, &self.seed, self.populated_depth, if (self.state) |*state| state else null, std.Thread.getCpuCount() catch 1);
     }
 
     pub fn resolve(self: *BuildTask, env: napi.Env) !napi.Value {
@@ -38,7 +38,6 @@ const BuildTask = struct {
 
     pub fn deinit(self: *BuildTask) void {
         std.crypto.secureZero(u8, &self.seed);
-        if (self.records) |records| allocator.free(records);
         if (self.tree) |*tree| tree.deinit();
     }
 };
@@ -78,11 +77,11 @@ pub const VrfTree = struct {
         const depth = try populated_depth.toU32Exact();
         if (depth > vrf_tree.depth) return error.InvalidDepth;
         const records_slice = try records.toSlice();
-        var task: BuildTask = .{
-            .seed = slice[0..SEED_SIZE].*,
-            .populated_depth = @intCast(depth),
-            .records = if (records_slice.len == 0) null else try allocator.dupe(u8, records_slice),
-        };
+        var task: BuildTask = .{ .seed = slice[0..SEED_SIZE].*, .populated_depth = @intCast(depth) };
+        if (records_slice.len != 0) {
+            if (records_slice.len % vrf_tree.state_record_size != 0) return error.InvalidStateRecords;
+            task.state = (vrf_tree.findState(&task.seed, records_slice) orelse return error.NoMatchingState).*;
+        }
         // Wipes this copy of the seed: the spawned task holds its own.
         defer std.crypto.secureZero(u8, &task.seed);
         return js.spawn(BuildTask, task, "vrfTree.VrfTree.build");
