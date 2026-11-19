@@ -14,7 +14,9 @@ const Gossipsub = @import("gossipsub/Gossipsub.zig");
 const PeerId = @import("wire/peer_id.zig").PeerId;
 
 pub fn initProtocols(allocator: std.mem.Allocator, options: Protocols.Options, transport: *const Engine) !Protocols {
-    const local = try options.identify.makeLocal(&transport.tls.local_peer_id, &transport.local);
+    const client = PeerId.fromPublicKey(&(try KeyPair.fromSecretKey(&(.{0} ** 31 ++ .{1}))).publicKey());
+    const address = if (transport.tls.local_peer_id.eql(&client)) support.client_address else support.server_address;
+    const local = try options.identify.makeLocal(&transport.tls.local_peer_id, &.{ address, null });
     var configured = options;
     if (configured.gossipsub.topic_policy.len == 0) configured.gossipsub.topic_policy = &.{topic_fixture.bytes(.{ 1, 2, 3, 4 })};
     return Protocols.init(allocator, configured, &local);

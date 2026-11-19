@@ -131,7 +131,7 @@ test "core native wait honors engine timers and pending lifecycle work" {
     defer remote.close(std.testing.io);
     const destination = udp.Address.fromNetwork(remote.address);
     const now = try Now.read(std.testing.io);
-    _ = try node.transport.engine.dial(&destination, node.peerId(), now);
+    _ = try node.transport.engine.dial(&destination, &node.transport.localAddress(), node.peerId(), now);
     try std.testing.expect(node.transport.engine.backlog());
     const first = driver.step(&node, std.testing.io, now, .{}, .deadlineOnly(time.optionalMilliseconds(now.millis() +| 100)));
     try std.testing.expect(first.failure == null);
@@ -144,7 +144,7 @@ test "core native wait honors engine timers and pending lifecycle work" {
     try std.testing.expect(schedule_test_support.wakeupMilliseconds(node.schedule(current, .{}), current.millis()).? <= deadline_ms);
     const timer = driver.step(&node, std.testing.io, current, .{}, .deadlineOnly(time.optionalMilliseconds(current.millis() +| 100)));
     try std.testing.expect(timer.failure == null);
-    const failed = try node.transport.engine.dial(&destination, node.peerId(), node.last_now);
+    const failed = try node.transport.engine.dial(&destination, &node.transport.localAddress(), node.peerId(), node.last_now);
     try std.testing.expect(node.transport.engine.failSend(failed));
     try std.testing.expect(node.transport.engine.eventsPending());
     const lifecycle = driver.step(&node, std.testing.io, node.last_now, .{}, .deadlineOnly(time.optionalMilliseconds(node.last_now.millis() +| 100)));
