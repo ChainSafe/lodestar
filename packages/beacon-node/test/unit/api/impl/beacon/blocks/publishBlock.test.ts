@@ -1,17 +1,19 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ApiError} from "@lodestar/api/server";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {computeStartSlotAtEpoch, signedBeaconBlockToBlinded} from "@lodestar/state-transition";
+import {fulu, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {BlockInputColumns, BlockInputSource} from "../../../../../../src/chain/blocks/blockInput/index.js";
 import {verifyBlocksInEpoch} from "../../../../../../src/chain/blocks/verifyBlock.js";
 import {BlockError, BlockErrorCode, BlockGossipError, GossipAction} from "../../../../../../src/chain/errors/index.js";
+import {BlockType, ProduceFullFulu} from "../../../../../../src/chain/produceBlock/index.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
 import {validateGossipBlock} from "../../../../../../src/chain/validation/block.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
@@ -363,5 +365,122 @@ describe("api - beacon - publishBlockV2", () => {
     ).resolves.toBeUndefined();
 
     expect(modules.network.publishDataColumnSidecar).toHaveBeenCalledTimes(columnSidecars.length);
+  });
+});
+
+describe("api - beacon - publish block size cap", () => {
+  const config = createBeaconConfig(
+    {
+      ...configDef,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+    },
+    Buffer.alloc(32, 1)
+  );
+  const limit = config.MAX_PAYLOAD_SIZE;
+  const sizes = [
+    ["at", limit, true],
+    ["just over", limit + 1, false],
+    ["far over", 2 * limit, false],
+  ] as const;
+  let modules: ApiTestModules;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(validateGossipBlock).mockResolvedValue({skippedSlots: 0});
+    modules = getApiTestModules({config});
+    Object.defineProperty(modules.chain, "blockProductionCache", {value: new Map()});
+    Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
+    modules.network.publishBeaconBlock = vi.fn();
+    modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
+  });
+
+  /** A Fulu block whose signed SSZ size is `size`, filled by one transaction */
+  function blockOfSize(size: number): fulu.SignedBeaconBlock {
+    const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    signedBlock.message.slot = 1;
+    const empty = ssz.fulu.SignedBeaconBlock.value_serializedSize(signedBlock);
+    // A transaction adds its 4-byte offset and its bytes
+    signedBlock.message.body.executionPayload.transactions = SerializedList.fromArray([
+      new Uint8Array(size - empty - 4),
+    ]);
+    expect(ssz.fulu.SignedBeaconBlock.value_serializedSize(signedBlock)).toBe(size);
+    return signedBlock;
+  }
+
+  function importInput(signedBlock: fulu.SignedBeaconBlock): BlockInputColumns {
+    const blockInput = BlockInputColumns.createFromBlock({
+      forkName: ForkName.fulu,
+      block: signedBlock,
+      // The lookup is mocked, so the root need not be the block's
+      blockRootHex: toRootHex(new Uint8Array(32)),
+      source: BlockInputSource.api,
+      seenTimestampSec: 0,
+      daOutOfRange: false,
+      sampledColumns: [0],
+      custodyColumns: [0],
+    });
+    modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
+    return blockInput;
+  }
+
+  async function expectOutcome(publish: Promise<unknown>, accepted: boolean, size: number): Promise<void> {
+    if (accepted) {
+      await expect(publish).resolves.toBeUndefined();
+      expect(modules.network.publishBeaconBlock).toHaveBeenCalledOnce();
+      expect(modules.chain.processBlock).toHaveBeenCalledOnce();
+      return;
+    }
+    await expect(publish).rejects.toMatchObject({
+      statusCode: 400,
+      message: expect.stringContaining(`Signed block size ${size} exceeds MAX_PAYLOAD_SIZE ${limit}`),
+    });
+    // Refused before the block is cached, published or imported
+    expect(validateGossipBlock).not.toHaveBeenCalled();
+    expect(modules.chain.seenBlockInputCache.getByBlock).not.toHaveBeenCalled();
+    expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+    expect(modules.chain.processBlock).not.toHaveBeenCalled();
+  }
+
+  it.each(sizes)("handles a full block %s the limit", async (_, size, accepted) => {
+    const signedBlock = blockOfSize(size);
+    importInput(signedBlock);
+    const api = getBeaconBlockApi(defaultApiOptions, modules);
+    await expectOutcome(
+      api.publishBlockV2({
+        signedBlockContents: {signedBlock},
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+      }),
+      accepted,
+      size
+    );
+  });
+
+  it.each(sizes)("handles an engine-reconstructed blinded block %s the limit", async (_, size, accepted) => {
+    const signedBlock = blockOfSize(size);
+    importInput(signedBlock);
+    const signedBlindedBlock = signedBeaconBlockToBlinded(config, signedBlock);
+    const blockRoot = toRootHex(
+      config
+        .getPostBellatrixForkTypes(signedBlock.message.slot)
+        .BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message)
+    );
+    modules.chain.blockProductionCache.set(blockRoot, {
+      type: BlockType.Full,
+      fork: ForkName.fulu,
+      executionPayload: signedBlock.message.body.executionPayload,
+      blobsBundle: {commitments: [], blobs: [], proofs: []},
+      cells: [],
+    } satisfies ProduceFullFulu);
+    const api = getBeaconBlockApi(defaultApiOptions, modules);
+    await expectOutcome(
+      api.publishBlindedBlockV2({signedBlindedBlock, broadcastValidation: routes.beacon.BroadcastValidation.gossip}),
+      accepted,
+      size
+    );
   });
 });
