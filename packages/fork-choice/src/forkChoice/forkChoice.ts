@@ -34,7 +34,6 @@ import {
 import {Logger, MapDef, fromHex, toRootHex, withObservedDuration} from "@lodestar/utils";
 import {ForkChoiceMetrics} from "../metrics.js";
 import {computeDeltas} from "../protoArray/computeDeltas.js";
-import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 import {
   BlockExecutionStatus,
   ExecutionStatus,
@@ -112,7 +111,6 @@ const INIT_VOTE_SLOT: Slot = 0;
  * - Time is not updated automatically, updateTime MUST be called every slot
  */
 export class ForkChoice implements IForkChoice {
-  irrecoverableError?: Error;
   /**
    * Votes currently tracked in the protoArray. Instead of tracking a VoteTracker of currentIndex, nextIndex and epoch,
    * we decompose the struct and track them in separate arrays for performance reason.
@@ -695,18 +693,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     // findHead returns the ProtoNode representing the head
-    let head: ProtoNode;
-    try {
-      head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
-    } catch (e) {
-      // A poisoned tree never recovers, shut the node down instead of failing every head computation
-      if (e instanceof ProtoArrayError && e.type.code === ProtoArrayErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS) {
-        this.irrecoverableError = e;
-      }
-      throw e;
-    }
-
-    this.head = head;
+    this.head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
     return this.head;
   }
 

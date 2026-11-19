@@ -126,7 +126,6 @@ describe("ForkChoice / invalidated parent payload chain", () => {
         forkChoice.onBlock(block, state, 0, 0, childSlot, executionStatus, DataAvailabilityStatus.PreData)
       );
       expect(forkChoice.hasBlockHex(blockRoot)).toBe(false);
-      expect(forkChoice.irrecoverableError).toBeUndefined();
       expect(forkChoice.updateHead().blockRoot).toBe(getBlockRoot(parentSlot));
     }
   );
@@ -146,7 +145,6 @@ describe("ForkChoice / invalidated parent payload chain", () => {
       )
     );
     expect(protoArray.getNodeIndexByRootAndStatus(getBlockRoot(headSlot), PayloadStatus.FULL)).toBeUndefined();
-    expect(forkChoice.irrecoverableError).toBeUndefined();
   });
 
   it("a gloas block inherits the execution status of the parent variant it builds on", () => {
