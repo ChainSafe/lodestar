@@ -246,7 +246,7 @@ pub const BlockSummary = struct {
 
     /// `execution_status` is the engine's `newPayload` verdict; it is normalized to
     /// `.pre_merge` for blocks without a payload and `.syncing` for Gloas blocks.
-    pub fn fromBlock(allocator: Allocator, block: AnyBeaconBlock, post_state: *CachedBeaconState, execution_status: ExecutionStatus) !BlockSummary {
+    pub fn fromBlock(allocator: Allocator, io: std.Io, block: AnyBeaconBlock, post_state: *CachedBeaconState, execution_status: ExecutionStatus) !BlockSummary {
         var root: Root = undefined;
         try block.hashTreeRoot(allocator, &root);
         const state = post_state.state;
@@ -254,7 +254,7 @@ pub const BlockSummary = struct {
         try state.currentJustifiedCheckpoint(&justified);
         var finalized: Checkpoint = undefined;
         try state.finalizedCheckpoint(&finalized);
-        const unrealized = try state_transition.computeUnrealizedCheckpoints(allocator, post_state);
+        const unrealized = try state_transition.computeUnrealizedCheckpoints(allocator, io, post_state);
         var summary: BlockSummary = .{
             .root = root,
             .parent_root = block.parentRoot().*,
@@ -448,6 +448,7 @@ pub const Store = struct {
     /// payload: `.valid` at genesis, `.syncing` for a checkpoint the engine has not seen.
     pub fn init(
         allocator: Allocator,
+        io: std.Io,
         config: *const BeaconConfig,
         anchor_state: *CachedBeaconState,
         anchor_block: AnyBeaconBlock,
@@ -457,7 +458,7 @@ pub const Store = struct {
         const state = anchor_state.state;
         const state_root = try state.hashTreeRoot();
         if (!std.mem.eql(u8, state_root, anchor_block.stateRoot())) return error.AnchorStateRootMismatch;
-        var summary = try BlockSummary.fromBlock(allocator, anchor_block, anchor_state, execution_status);
+        var summary = try BlockSummary.fromBlock(allocator, io, anchor_block, anchor_state, execution_status);
         summary.unrealized_justified_checkpoint = summary.justified_checkpoint;
         summary.unrealized_finalized_checkpoint = summary.finalized_checkpoint;
         return initFromSummary(allocator, config, try state.genesisTime(), summary, provider);
@@ -882,10 +883,10 @@ pub const Store = struct {
     /// `BlockSummary.fromBlock`; an `.invalid` payload never reaches the store
     /// (`onPayloadInvalid` takes its parent instead). On error the store is unchanged, so
     /// the same call can be retried.
-    pub fn onBlock(self: *Store, block: AnyBeaconBlock, block_root: Root, post_state: *CachedBeaconState, execution_status: ExecutionStatus) !void {
+    pub fn onBlock(self: *Store, io: std.Io, block: AnyBeaconBlock, block_root: Root, post_state: *CachedBeaconState, execution_status: ExecutionStatus) !void {
         if (self.hasBlock(block_root)) return;
         try self.validateBlock(block, block_root);
-        var summary = try BlockSummary.fromBlock(self.allocator, block, post_state, execution_status);
+        var summary = try BlockSummary.fromBlock(self.allocator, io, block, post_state, execution_status);
         summary.root = block_root;
         var ptc_messages: PtcMessages = .{};
         if (block.forkSeq().gte(.gloas)) try self.indexPtcMessages(block, post_state, &ptc_messages);

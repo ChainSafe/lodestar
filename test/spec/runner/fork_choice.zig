@@ -173,7 +173,7 @@ pub fn TestCase(comptime fork: ForkSeq) type {
             errdefer self.block_states.deinit(allocator);
             try self.block_states.put(allocator, anchor_root, self.anchor.cached_state);
 
-            self.store = try Store.init(allocator, self.anchor.config, self.anchor.cached_state, block, .valid, self.stateProvider());
+            self.store = try Store.init(allocator, self.io, self.anchor.config, self.anchor.cached_state, block, .valid, self.stateProvider());
             self.fast_confirmation = .init(&self.store);
         }
 
@@ -413,7 +413,7 @@ pub fn TestCase(comptime fork: ForkSeq) type {
                     post_state.deinit();
                     self.allocator.destroy(post_state);
                 }
-                try self.store.onBlock(block, root, post_state, execution_status);
+                try self.store.onBlock(self.io, block, root, post_state, execution_status);
             }
             self.block_states.putAssumeCapacity(root, post_state);
 

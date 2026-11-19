@@ -138,7 +138,7 @@ as children; child blocks hang off `empty` or `full` according to
 The spec `Store` holds full `block_states` and `checkpoint_states`; a client cannot.
 The boundary:
 
-- `onBlock(block, root, post_state, execution_status)` reads the post-state once
+- `onBlock(io, block, root, post_state, execution_status)` reads the post-state once
   (checkpoints, unrealized checkpoints, payload attestations) and does not keep it.
   `execution_status` is the engine's `newPayload` verdict; an `invalid` one never
   reaches `onBlock`, it goes to `onPayloadInvalid`. `onBlockSummary` takes the same

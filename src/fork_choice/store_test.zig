@@ -74,7 +74,7 @@ const Chain = struct {
         try block.hashTreeRoot(allocator, &self.anchor_root);
         self.states = .empty;
         self.blocks = .empty;
-        self.store = try Store.init(allocator, cached_state.config, cached_state, block, .valid, Provider.stateProvider());
+        self.store = try Store.init(allocator, testing.io, cached_state.config, cached_state, block, .valid, Provider.stateProvider());
     }
 
     fn deinit(self: *Chain) void {
@@ -128,7 +128,7 @@ const Chain = struct {
         const block: AnyBeaconBlock = .{ .full_electra = &signed.message };
         var root: [32]u8 = undefined;
         try block.hashTreeRoot(allocator, &root);
-        try self.store.onBlock(block, root, post_state, .valid);
+        try self.store.onBlock(testing.io, block, root, post_state, .valid);
         try self.states.append(allocator, post_state);
         try self.blocks.append(allocator, signed);
         return .{ .root = root, .state = post_state };
