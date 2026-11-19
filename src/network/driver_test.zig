@@ -332,7 +332,7 @@ test "discovery readiness with other work due runs a full turn" {
     const remote = try (std.Io.net.IpAddress{ .ip4 = .loopback(0) }).bind(std.testing.io, .{ .mode = .dgram, .protocol = .udp });
     defer remote.close(std.testing.io);
     const destination = udp.Address.fromNetwork(remote.address);
-    _ = try node.transport.engine.dial(&destination, node.peerId(), node.last_now);
+    _ = try node.transport.engine.dial(&destination, &node.transport.localAddress(), node.peerId(), node.last_now);
     try std.testing.expect(node.transport.engine.backlog());
     try remote.send(std.testing.io, &node.discovery.?.transport.sockets.primary().address, "junk datagram");
     const now = try currentTime();

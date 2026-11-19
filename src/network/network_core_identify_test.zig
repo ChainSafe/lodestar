@@ -69,7 +69,7 @@ test "identify replacement generation starts a fresh query and rejects stale com
     options.core.protocols.identify = .{ .agent = "first", .inbound_max = 1, .outbound_max = 1 };
     try setup.initOwnersWithOptions(&.{}, options);
     defer setup.deinit();
-    _ = try setup.pair.server.dial(&test_support.client_address, setup.client.peerId(), setup.pair.now);
+    _ = try setup.pair.server.dial(&test_support.client_address, &setup.pair.server_local, setup.client.peerId(), setup.pair.now);
     for (0..100) |_| try setup.step(1);
     var snapshots: [4]t.Snapshot = undefined;
     _ = setup.client.peer_manager.snapshots(&snapshots);
