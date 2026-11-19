@@ -1,11 +1,17 @@
-import {FAR_FUTURE_EPOCH, ForkSeq, GENESIS_SLOT, MAX_PENDING_DEPOSITS_PER_EPOCH} from "@lodestar/params";
+import {
+  BLS_WITHDRAWAL_PREFIX,
+  FAR_FUTURE_EPOCH,
+  ForkSeq,
+  GENESIS_SLOT,
+  MAX_PENDING_DEPOSITS_PER_EPOCH,
+} from "@lodestar/params";
 import {electra} from "@lodestar/types";
 import {addValidatorToRegistry, isValidDepositSignature} from "../block/processDeposit.js";
 import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
 import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
 import {computeStartSlotAtEpoch} from "../util/epoch.js";
-import {getActivationExitChurnLimit} from "../util/validator.js";
+import {getActivationChurnLimit, getActivationExitChurnLimit} from "../util/validator.js";
 
 /**
  * Starting from Electra:
@@ -17,8 +23,11 @@ import {getActivationExitChurnLimit} from "../util/validator.js";
  * TODO Electra: Update ssz library to support batch push to `pendingDeposits`
  */
 export function processPendingDeposits(state: CachedBeaconStateElectra, cache: EpochTransitionCache): void {
+  const fork = state.config.getForkSeq(state.slot);
   const nextEpoch = state.epochCtx.epoch + 1;
-  const availableForProcessing = state.depositBalanceToConsume + BigInt(getActivationExitChurnLimit(state.epochCtx));
+  const churnLimit =
+    fork >= ForkSeq.gloas ? getActivationChurnLimit(state.epochCtx) : getActivationExitChurnLimit(state.epochCtx);
+  const availableForProcessing = state.depositBalanceToConsume + BigInt(churnLimit);
   let processedAmount = 0;
   let nextDepositIndex = 0;
   const depositsToPostpone = [];
@@ -34,7 +43,9 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
 
     for (const deposit of deposits) {
       // Do not process deposit requests if Eth1 bridge deposits are not yet applied.
+      // The eth1 bridge deposit mechanism was removed in Fulu, so this gate only applies pre-Fulu.
       if (
+        fork < ForkSeq.fulu &&
         // Is deposit request
         deposit.slot > GENESIS_SLOT &&
         // There are pending Eth1 bridge deposits
@@ -66,7 +77,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
 
       if (isValidatorWithdrawn) {
         // Deposited balance will never become active. Increase balance but do not consume churn
-        applyPendingDeposit(state, deposit, cache);
+        applyPendingDeposit(fork, state, deposit, cache);
       } else if (isValidatorExited) {
         // Validator is exiting, postpone the deposit until after withdrawable epoch
         depositsToPostpone.push(deposit);
@@ -78,7 +89,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
         }
         // Consume churn and apply deposit.
         processedAmount += deposit.amount;
-        applyPendingDeposit(state, deposit, cache);
+        applyPendingDeposit(fork, state, deposit, cache);
       }
 
       // Regardless of how the deposit was handled, we move on in the queue.
@@ -105,6 +116,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
 }
 
 function applyPendingDeposit(
+  fork: ForkSeq,
   state: CachedBeaconStateElectra,
   deposit: electra.PendingDeposit,
   cache: EpochTransitionCache
@@ -114,6 +126,10 @@ function applyPendingDeposit(
   const cachedBalances = cache.balances;
 
   if (!isValidatorKnown(state, validatorIndex)) {
+    // Do not create validators with BLS withdrawal credentials, the deposit is skipped without a refund
+    if (fork >= ForkSeq.heze && withdrawalCredentials[0] === BLS_WITHDRAWAL_PREFIX) {
+      return;
+    }
     // Verify the deposit signature (proof of possession) which is not checked by the deposit contract
     if (isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
       addValidatorToRegistry(ForkSeq.electra, state, pubkey, withdrawalCredentials, amount);

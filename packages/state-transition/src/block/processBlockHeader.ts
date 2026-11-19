@@ -1,6 +1,5 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {BeaconBlock, BlindedBeaconBlock, ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {blindedOrFullBlockToHeader} from "../util/index.js";

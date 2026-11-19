@@ -5,7 +5,7 @@ echo $DATA_DIR
 echo $EL_BINARY_DIR
 echo $JWT_SECRET_HEX
 
-echo $scriptDir
+echo $elDir
 echo $currentDir
 
 # echo a hex encoded 256 bit secret into a file

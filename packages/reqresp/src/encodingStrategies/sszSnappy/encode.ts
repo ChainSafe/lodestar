@@ -1,5 +1,5 @@
 import {encode as varintEncode} from "uint8-varint";
-import {encodeSnappy} from "./snappyFrames/compress.js";
+import {encodeSnappy} from "../../utils/snappyIndex.js";
 
 /**
  * ssz_snappy encoding strategy writer.
@@ -8,12 +8,12 @@ import {encodeSnappy} from "./snappyFrames/compress.js";
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export const writeSszSnappyPayload = encodeSszSnappy as (bytes: Uint8Array) => AsyncGenerator<Buffer>;
+export const writeSszSnappyPayload = encodeSszSnappy as (bytes: Uint8Array) => Generator<Buffer>;
 
 /**
  * Buffered Snappy writer
  */
-export async function* encodeSszSnappy(bytes: Buffer): AsyncGenerator<Buffer> {
+export function* encodeSszSnappy(bytes: Buffer): Generator<Buffer> {
   // MUST encode the length of the raw SSZ bytes, encoded as an unsigned protobuf varint
   const varint = varintEncode(bytes.length);
   yield Buffer.from(varint.buffer, varint.byteOffset, varint.byteLength);

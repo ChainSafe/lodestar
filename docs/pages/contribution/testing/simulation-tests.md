@@ -23,7 +23,7 @@ To see what typical values for these are check out the `.env.test` file in the r
 The multi-fork sim test checks most of the functionality Lodestar provides. Is verifies that Lodestar is capable of peering, moving through all of the forks and using various sync methods in a testnet environment. Lodestar is tested with both Geth and Nethermind as the execution client. It also checks a Lighthouse/Geth node for cross client compatibility.
 
 ```sh
-yarn workspace @chainsafe/lodestar test:sim:multifork
+pnpm -r test:sim:multifork --filter "@chainsafe/lodestar"
 ```
 
 ### `test:sim:endpoints`
@@ -31,19 +31,15 @@ yarn workspace @chainsafe/lodestar test:sim:multifork
 This tests that various endpoints of the beacon node and validator client are working as expected.
 
 ```sh
-yarn workspace @chainsafe/lodestar test:sim:endpoints
+pnpm -r test:sim:endpoints --filter @chainsafe/lodestar
 ```
-
-### `test:sim:deneb`
-
-This test is still included in our CI but is no longer as important as it once was. Lodestar is often the first client to implement new features and this test was created before geth was upgraded with the features required to support the Deneb fork. To test that Lodestar was ready this test uses mocked geth instances. It is left as a placeholder for when the next fork comes along that requires a similar approach.
 
 ### `test:sim:mixedcleint`
 
 Checks that Lodestar is compatible with other consensus validators and vice-versa. All tests use Geth as the EL.
 
 ```sh
-yarn workspace @chainsafe/lodestar test:sim:mixedclient
+pnpm -r test:sim:mixedclient --filter @chainsafe/lodestar
 ```
 
 ## Sim Test Infrastructure

@@ -8,7 +8,7 @@ import {
   aggregateSignatures,
   verify,
   verifyMultipleAggregateSignatures,
-} from "@chainsafe/blst";
+} from "@lodestar/native/blst";
 import {linspace} from "../../../src/util/numpy.js";
 
 describe("BLS ops", () => {

@@ -1,15 +1,18 @@
 import {beforeEach, describe, expect, it} from "vitest";
+import {createBeaconConfig} from "@lodestar/config";
+import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {BeaconStateView, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RegenCaller} from "../../../../src/chain/regen/interface.js";
 import {processSlotsToNearestCheckpoint} from "../../../../src/chain/regen/regen.js";
 import {FIFOBlockStateCache} from "../../../../src/chain/stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
 import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
-import {testLogger} from "../../../utils/logger.js";
 import {generateCachedState} from "../../../utils/state.js";
 
 describe("regen", () => {
+  const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
   //
   //     epoch: 19         20           21         22          23
   //            |-----------|-----------|-----------|-----------|
@@ -42,7 +45,7 @@ describe("regen", () => {
           // cp0a
           state.blockRoots.set((startSlotEpoch20 - 1) % SLOTS_PER_HISTORICAL_ROOT, root0a);
           state.blockRoots.set(startSlotEpoch20 % SLOTS_PER_HISTORICAL_ROOT, root0a);
-          return state;
+          return new BeaconStateView(state);
         }
 
         // other states based on cp0b
@@ -55,7 +58,7 @@ describe("regen", () => {
         // if (stateEpoch >= 22) {
         //   state.blockRoots.set(startSlotEpoch22 % SLOTS_PER_HISTORICAL_ROOT, root2);
         // }
-        return state;
+        return new BeaconStateView(state);
       });
 
     const states = {
@@ -74,6 +77,7 @@ describe("regen", () => {
     beforeEach(() => {
       cache = new PersistentCheckpointStateCache(
         {
+          config,
           datastore,
           logger: testLogger(),
           blockStateCache: new FIFOBlockStateCache({}, {}),
@@ -94,7 +98,14 @@ describe("regen", () => {
       // no state is persisted at the  beginning
       expect(fileApisBuffer.size).toEqual(0);
 
-      const modules = {checkpointStateCache: cache, metrics: null, validatorMonitor: null, emitter: null, logger: null};
+      const modules = {
+        config,
+        checkpointStateCache: cache,
+        metrics: null,
+        validatorMonitor: null,
+        emitter: null,
+        logger: null,
+      };
       const preState = states["cp1"];
       await processSlotsToNearestCheckpoint(modules, preState, startSlotEpoch22, RegenCaller.processBlocksInEpoch, {
         dontTransferCache: true,
@@ -114,7 +125,14 @@ describe("regen", () => {
       // no state is persisted at the  beginning
       expect(fileApisBuffer.size).toEqual(0);
 
-      const modules = {checkpointStateCache: cache, metrics: null, validatorMonitor: null, emitter: null, logger: null};
+      const modules = {
+        config,
+        checkpointStateCache: cache,
+        metrics: null,
+        validatorMonitor: null,
+        emitter: null,
+        logger: null,
+      };
       const preState = states["cp0b"];
       await processSlotsToNearestCheckpoint(modules, preState, startSlotEpoch22, RegenCaller.processBlocksInEpoch, {
         dontTransferCache: true,

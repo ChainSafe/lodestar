@@ -1,9 +1,9 @@
 import {EventEmitter} from "node:events";
-import {PeerId, TopicValidatorResult} from "@libp2p/interface";
+import type {TopicValidatorResult} from "@libp2p/gossipsub";
+import type {PeerId} from "@libp2p/interface";
 import {CustodyIndex, Status} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
-import {EventDirection} from "../util/workerEvents.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
 
@@ -29,7 +29,7 @@ export type NetworkEventData = {
     clientAgent: string;
   };
   [NetworkEvent.peerDisconnected]: {peer: PeerIdStr};
-  [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId};
+  [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId; peerClient: string};
   [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;
   [NetworkEvent.gossipMessageValidationResult]: {
     msgId: string;
@@ -37,6 +37,13 @@ export type NetworkEventData = {
     acceptance: TopicValidatorResult;
   };
 };
+
+export enum EventDirection {
+  workerToMain,
+  mainToWorker,
+  /** Event not emitted through worker boundary */
+  none,
+}
 
 export const networkEventDirection: Record<NetworkEvent, EventDirection> = {
   [NetworkEvent.peerConnected]: EventDirection.workerToMain,

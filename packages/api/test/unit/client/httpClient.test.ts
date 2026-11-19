@@ -297,6 +297,8 @@ describe("httpClient json client", () => {
       method: "POST",
       handler: async (req) => {
         expect(req.headers[HttpHeader.ContentType]).toBe(MediaType.ssz);
+        expect(req.headers["content-length"]).toBe(String(container.serialize(payload).byteLength));
+        expect(req.headers["transfer-encoding"]).toBeUndefined();
         expect(req.body).toBeInstanceOf(Uint8Array);
         expect(container.deserialize(req.body as Uint8Array)).toEqual(payload);
       },
@@ -417,6 +419,27 @@ describe("httpClient json client", () => {
     const httpClient = new HttpClient({baseUrl, globalInit: {signal: controller.signal}});
 
     setTimeout(() => controller.abort(), 10);
+
+    try {
+      await httpClient.request(testDefinition, {});
+      return Promise.reject(Error("did not throw"));
+    } catch (e) {
+      if (!(e instanceof ErrorAborted)) throw Error(`Not an ErrorAborted: ${(e as Error).message}`);
+    }
+  });
+
+  it("should abort immediately when the signal is already aborted", async () => {
+    const {baseUrl} = await getServer({
+      ...testRoute,
+      handler: async () => new Promise((r) => setTimeout(r, 1000)),
+    });
+
+    const controller = new AbortController();
+    controller.abort();
+    const httpClient = new HttpClient({
+      baseUrl,
+      globalInit: {signal: controller.signal, timeoutMs: 5000},
+    });
 
     try {
       await httpClient.request(testDefinition, {});

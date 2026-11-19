@@ -1,6 +1,7 @@
 import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
-import {byteArrayEquals, fromHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
+import {byteArrayEquals} from "@lodestar/utils";
 
 // As of Sep 2023
 // root equals

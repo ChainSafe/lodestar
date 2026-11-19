@@ -3,12 +3,13 @@ import path from "node:path";
 import {cmds} from "../src/cmds/index.js";
 import {globalOptions} from "../src/options/index.js";
 import {renderCommandPage} from "./markdown.js";
+import {createCliManifest} from "./manifest.js";
 
 // Script to generate a reference of all CLI commands and options
 // Outputs a markdown format ready to be consumed
 //
 // Usage:
-// ts-node packages/cli/docsgen
+// tsx packages/cli/docsgen
 //
 // After generation the resulting .md files, they are written to the path expected
 // by the docusaurus index and other existing paths in the documentation
@@ -23,3 +24,8 @@ for (const cmd of cmds) {
   if (!fs.existsSync(folder)) fs.mkdirSync(folder, {recursive: true});
   fs.writeFileSync(path.join(folder, `${cmd.command}-cli.md`), docstring);
 }
+
+fs.writeFileSync(
+  path.join(DOCS_PAGES_FOLDER, "cli-options.json"),
+  `${JSON.stringify(createCliManifest(cmds, globalOptions), null, 2)}\n`
+);

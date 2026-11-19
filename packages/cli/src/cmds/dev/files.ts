@@ -15,7 +15,7 @@ export async function writeTestnetFiles(
   const genesisTime = Math.floor(Date.now() / 1000);
   const eth1BlockHash = Buffer.alloc(32, 0);
 
-  const {state} = nodeUtils.initDevState(config, genesisValidators, {genesisTime, eth1BlockHash});
+  const state = nodeUtils.initDevState(config, genesisValidators, {genesisTime, eth1BlockHash});
 
   // Write testnet data
   fs.mkdirSync(targetDir, {recursive: true});

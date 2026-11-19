@@ -71,7 +71,16 @@ export const encodingStrategiesDecodingErrorCases: {
     id: "if it read more than maxEncodedLen",
     type: ssz.phase0.Ping,
     error: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
-    chunks: [Buffer.from(varintEncode(ssz.phase0.Ping.minSize)), Buffer.alloc(100)],
+    chunks: [
+      Buffer.from(varintEncode(ssz.phase0.Ping.minSize)),
+      Buffer.concat([
+        // snappy stream identifier frame
+        Buffer.from([0xff, 0x06, 0x00, 0x00]),
+        Buffer.from("sNaPpY"),
+        // many empty skippable frames to force maxEncodedLen overflow
+        ...new Array(32).fill(Buffer.from([0x80, 0x00, 0x00, 0x00])),
+      ]),
+    ],
   },
   {
     id: "if failed ssz snappy input malformed",

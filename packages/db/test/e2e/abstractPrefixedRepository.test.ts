@@ -1,10 +1,15 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: values all exist */
 
 import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
-import {LevelDbController} from "#controller/level";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {fromAsync} from "@lodestar/utils";
-import {type Db, PrefixedRepository, decodeNumberForDbKey, encodeNumberForDbKey} from "../../src/index.js";
+import {
+  type Db,
+  LevelDbController,
+  PrefixedRepository,
+  decodeNumberForDbKey,
+  encodeNumberForDbKey,
+} from "../../src/index.js";
 
 type Slot = number;
 type Column = number;
@@ -170,6 +175,55 @@ describe("abstractPrefixedRepository", () => {
     await repo.deleteMany([p1, p2]);
     await expect(fromAsync(repo.valuesStream(p1))).resolves.toEqual([]);
     await expect(fromAsync(repo.valuesStream(p2))).resolves.toEqual([]);
+  });
+
+  it("batch mixes put and del operations within a prefix", async () => {
+    const prefix = 40;
+    const col1 = testData[prefix][1];
+    const col2 = testData[prefix][2];
+    const col3 = testData[prefix][3];
+
+    // Setup initial state
+    await repo.put(prefix, col1);
+    await repo.put(prefix, col2);
+    expect(await repo.get(prefix, col1.column)).toEqual(col1);
+    expect(await repo.get(prefix, col2.column)).toEqual(col2);
+    expect(await repo.get(prefix, col3.column)).toBeNull();
+
+    // Mix put and del in a single batch
+    await repo.batch(prefix, [
+      {type: "del", key: col1.column},
+      {type: "put", key: col3.column, value: col3},
+      {type: "del", key: col2.column},
+    ]);
+
+    expect(await repo.get(prefix, col1.column)).toBeNull();
+    expect(await repo.get(prefix, col2.column)).toBeNull();
+    expect(await repo.get(prefix, col3.column)).toEqual(col3);
+  });
+
+  it("batchBinary stores raw Uint8Array values without encoding", async () => {
+    const prefix = 41;
+    const id1 = 100;
+    const id2 = 101;
+    const rawValue1 = Buffer.from("raw-binary-1", "utf8");
+    const rawValue2 = Buffer.from("raw-binary-2", "utf8");
+
+    await repo.batchBinary(prefix, [
+      {type: "put", key: id1, value: rawValue1},
+      {type: "put", key: id2, value: rawValue2},
+    ]);
+
+    // Values should be stored as-is (raw), not encoded via the type serializer
+    const binA = await repo.getBinary(prefix, id1);
+    const binB = await repo.getBinary(prefix, id2);
+    expect(Buffer.from(binA!)).toEqual(rawValue1);
+    expect(Buffer.from(binB!)).toEqual(rawValue2);
+
+    // batchBinary can also delete
+    await repo.batchBinary(prefix, [{type: "del", key: id1}]);
+    expect(await repo.getBinary(prefix, id1)).toBeNull();
+    expect(await repo.getBinary(prefix, id2)).not.toBeNull();
   });
 
   describe("valuesStream,valuesStreamBinary,entriesStream,entriesStreamBinary", () => {

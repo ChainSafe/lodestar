@@ -1,4 +1,13 @@
-import {FINALIZED_ROOT_DEPTH_ELECTRA, ForkPostBellatrix, ForkPostDeneb, ForkPostElectra} from "@lodestar/params";
+import {
+  FINALIZED_ROOT_DEPTH_ELECTRA,
+  FINALIZED_ROOT_DEPTH_GLOAS,
+  ForkPostBellatrix,
+  ForkPostDeneb,
+  ForkPostElectra,
+  ForkPostGloas,
+  ForkPreGloas,
+} from "@lodestar/params";
+import {SignedExecutionPayloadEnvelope, SignedExecutionPayloadEnvelopeContents} from "../gloas/types.js";
 import {
   Attestation,
   BeaconBlock,
@@ -6,6 +15,7 @@ import {
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
   BlockContents,
+  DataColumnSidecar,
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
   ExecutionPayloadHeader,
@@ -65,8 +75,8 @@ export function isDenebBlockContents(
 
 export function isDenebSignedBlockContents(
   data: BeaconBlock | BlockContents | SignedBeaconBlock | SignedBlockContents
-): data is SignedBlockContents<ForkPostDeneb> {
-  return (data as SignedBlockContents<ForkPostDeneb>).kzgProofs !== undefined;
+): data is SignedBlockContents<ForkPostDeneb & ForkPreGloas> {
+  return "kzgProofs" in data && data.kzgProofs !== undefined;
 }
 
 export function isElectraAttestation(attestation: Attestation): attestation is Attestation<ForkPostElectra> {
@@ -83,7 +93,8 @@ export function isElectraLightClientUpdate(update: LightClientUpdate): update is
   const updatePostElectra = update as LightClientUpdate<ForkPostElectra>;
   return (
     updatePostElectra.finalityBranch !== undefined &&
-    updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA
+    (updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA ||
+      updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_GLOAS)
   );
 }
 
@@ -93,6 +104,21 @@ export function isELectraLightClientFinalityUpdate(
   const updatePostElectra = update as LightClientUpdate<ForkPostElectra>;
   return (
     updatePostElectra.finalityBranch !== undefined &&
-    updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA
+    (updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA ||
+      updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_GLOAS)
   );
+}
+
+export function isGloasBeaconBlock(block: BeaconBlock): block is BeaconBlock<ForkPostGloas> {
+  return (block.body as BeaconBlockBody<ForkPostGloas>).signedExecutionPayloadBid !== undefined;
+}
+
+export function isGloasDataColumnSidecar(sidecar: DataColumnSidecar): sidecar is DataColumnSidecar<ForkPostGloas> {
+  return (sidecar as DataColumnSidecar<ForkPostGloas>).beaconBlockRoot !== undefined;
+}
+
+export function isSignedExecutionPayloadEnvelopeContents(
+  signedEnvelope: SignedExecutionPayloadEnvelopeContents | SignedExecutionPayloadEnvelope
+): signedEnvelope is SignedExecutionPayloadEnvelopeContents {
+  return (signedEnvelope as SignedExecutionPayloadEnvelopeContents).signedExecutionPayloadEnvelope !== undefined;
 }

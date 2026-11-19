@@ -3,5 +3,8 @@
 # Define wordlist file
 wordlist=".wordlist.txt"
 
-# Sort the wordlist in place
-sort --human-numeric-sort -o "$wordlist" "$wordlist"
+# Ensure deterministic collation across environments
+export LC_ALL=C
+
+# Sort the wordlist in place (match check script options)
+sort --ignore-case --human-numeric-sort -o "$wordlist" "$wordlist"

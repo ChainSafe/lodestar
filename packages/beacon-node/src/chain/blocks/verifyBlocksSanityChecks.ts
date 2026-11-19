@@ -1,12 +1,13 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {RootHex, Slot} from "@lodestar/types";
+import {RootHex, Slot, isGloasBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IChainOptions} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
+import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {ImportBlockOpts} from "./types.js";
 
 /**
@@ -30,6 +31,7 @@ export function verifyBlocksSanityChecks(
     blacklistedBlocks: Map<RootHex, Slot | null>;
   },
   blocks: IBlockInput[],
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
   opts: ImportBlockOpts
 ): {
   relevantBlocks: IBlockInput[];
@@ -90,9 +92,34 @@ export function verifyBlocksSanityChecks(
     } else {
       // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
       const parentRoot = toRootHex(block.message.parentRoot);
-      parentBlock = chain.forkChoice.getBlockHex(parentRoot);
-      if (!parentBlock) {
-        throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+      const parentBlockDefaultStatus = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+      if (!parentBlockDefaultStatus) {
+        throw new BlockError(block, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
+      }
+
+      parentBlock = parentBlockDefaultStatus;
+      if (isGloasBeaconBlock(block.message)) {
+        const parentBlockHash = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
+        const parentBlockWithPayload = chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash);
+        if (!parentBlockWithPayload) {
+          // Checkpoint sync: parent's FULL variant may not be in fork-choice yet because the
+          // anchor block is initialized with PENDING+EMPTY only. The parent's payload arrives
+          // in the same batch via payloadEnvelopes and will be imported by processBlocks. If
+          // a matching payload is in the Map, accept the parent as known.
+          const parentPayloadInput = payloadEnvelopes?.get(parentBlockDefaultStatus.slot);
+          if (parentPayloadInput?.getBlockHashHex() !== parentBlockHash) {
+            throw new BlockError(block, {
+              code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+              parentRoot,
+              parentBlockHash,
+            });
+          }
+        } else {
+          parentBlock = parentBlockWithPayload;
+        }
+      }
+      if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
+        throw new BlockError(block, {code: BlockErrorCode.PARENT_EXECUTION_INVALID, parentRoot});
       }
       // Parent is known to the fork-choice
       parentBlockSlot = parentBlock.slot;

@@ -37,3 +37,81 @@ export function getDefaultGraffiti(
   // No EL client info available. We still want to include CL info albeit not spec compliant
   return `${consensusClientVersion.code}${consensusClientVersion.commit.slice(0, 4)}`;
 }
+
+function appendLongestFittingSuffix(userGraffiti: string, suffixes: string[]): string {
+  const userGraffitiBytes = Buffer.byteLength(userGraffiti, "utf8");
+  if (userGraffitiBytes >= GRAFFITI_SIZE) {
+    return userGraffiti;
+  }
+
+  const availableBytes = GRAFFITI_SIZE - userGraffitiBytes;
+
+  for (const suffix of suffixes) {
+    if (Buffer.byteLength(suffix, "utf8") <= availableBytes) {
+      return `${userGraffiti}${suffix}`;
+    }
+  }
+
+  return userGraffiti;
+}
+
+/**
+ * Appends the richest available client watermark that fits after user graffiti.
+ *
+ * Tiers are:
+ * - full EL/CL watermark, e.g. " BU9b0eLS80c2"
+ * - EL/CL client codes, e.g. " BULS"
+ * - CL client code, e.g. " LS"
+ */
+export function appendClientInfoToGraffiti(
+  userGraffiti: string,
+  consensusClientVersion: ClientVersion,
+  executionClientVersion: ClientVersion | null | undefined,
+  opts: {private?: boolean} = {}
+): string {
+  if (opts.private) {
+    return userGraffiti;
+  }
+
+  // Graffiti supplied via the beacon API is decoded from a fixed 32-byte field (see
+  // fromGraffitiHex) and arrives right-padded with NUL bytes. Trim only trailing padding
+  // NULs; a NUL that appears in the middle of the string is data, not padding.
+  let end = userGraffiti.length;
+  while (end > 0 && userGraffiti.charCodeAt(end - 1) === 0) {
+    end--;
+  }
+  const graffiti = userGraffiti.slice(0, end);
+
+  const fullClientInfo = getDefaultGraffiti(consensusClientVersion, executionClientVersion, {private: false});
+  if (graffiti.length === 0) {
+    return fullClientInfo;
+  }
+
+  const suffixes =
+    executionClientVersion != null
+      ? [
+          ` ${fullClientInfo}`,
+          ` ${executionClientVersion.code}${consensusClientVersion.code}`,
+          ` ${consensusClientVersion.code}`,
+        ]
+      : [` ${fullClientInfo}`, ` ${consensusClientVersion.code}`];
+
+  return appendLongestFittingSuffix(graffiti, suffixes);
+}
+
+export function getBlockGraffiti(
+  userGraffiti: string | undefined,
+  consensusClientVersion: ClientVersion,
+  executionClientVersion: ClientVersion | null | undefined,
+  opts: {private?: boolean; graffitiAppend?: boolean}
+): string {
+  if (userGraffiti === undefined) {
+    return getDefaultGraffiti(consensusClientVersion, executionClientVersion, opts);
+  }
+
+  if (opts.graffitiAppend === false) {
+    return userGraffiti;
+  }
+
+  return appendClientInfoToGraffiti(userGraffiti, consensusClientVersion, executionClientVersion, opts);
+}

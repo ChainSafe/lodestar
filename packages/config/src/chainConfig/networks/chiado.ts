@@ -42,7 +42,7 @@ export const chiadoChainConfig: ChainConfig = {
   ELECTRA_FORK_EPOCH: 948224, // Thu Mar 06 2025 09:43:40 GMT+0000
   // Fulu
   FULU_FORK_VERSION: b("0x0600006f"),
-  FULU_FORK_EPOCH: Infinity,
+  FULU_FORK_EPOCH: 1353216, // Mon Mar 16 2026 09:33:00 GMT+0000
   // Gloas
   GLOAS_FORK_VERSION: b("0x0700006f"),
   GLOAS_FORK_EPOCH: Infinity,

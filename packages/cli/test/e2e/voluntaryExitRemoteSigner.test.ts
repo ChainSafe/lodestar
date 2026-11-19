@@ -30,10 +30,8 @@ describe("voluntaryExit using remote signer", () => {
     });
   });
 
-  afterAll(async () => {
-    if (externalSigner) {
-      await externalSigner.container.stop();
-    }
+  afterAll(() => {
+    externalSigner.stop();
   });
 
   it("Perform a voluntary exit", async () => {

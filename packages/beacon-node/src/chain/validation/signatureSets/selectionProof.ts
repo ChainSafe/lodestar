@@ -1,8 +1,7 @@
-import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_SELECTION_PROOF} from "@lodestar/params";
-import {ISignatureSet, computeSigningRoot, createSingleSignatureSetFromComponents} from "@lodestar/state-transition";
-import {Slot, phase0, ssz} from "@lodestar/types";
+import {ISignatureSet, SignatureSetType, computeSigningRoot} from "@lodestar/state-transition";
+import {Slot, ValidatorIndex, phase0, ssz} from "@lodestar/types";
 
 export function getSelectionProofSigningRoot(config: BeaconConfig, slot: Slot): Uint8Array {
   // previously, we call `const selectionProofDomain = config.getDomain(state.slot, DOMAIN_SELECTION_PROOF, slot)`
@@ -16,12 +15,13 @@ export function getSelectionProofSigningRoot(config: BeaconConfig, slot: Slot): 
 export function getSelectionProofSignatureSet(
   config: BeaconConfig,
   slot: Slot,
-  aggregator: PublicKey,
+  aggregatorIndex: ValidatorIndex,
   aggregateAndProof: phase0.SignedAggregateAndProof
 ): ISignatureSet {
-  return createSingleSignatureSetFromComponents(
-    aggregator,
-    getSelectionProofSigningRoot(config, slot),
-    aggregateAndProof.message.selectionProof
-  );
+  return {
+    type: SignatureSetType.indexed,
+    index: aggregatorIndex,
+    signingRoot: getSelectionProofSigningRoot(config, slot),
+    signature: aggregateAndProof.message.selectionProof,
+  };
 }

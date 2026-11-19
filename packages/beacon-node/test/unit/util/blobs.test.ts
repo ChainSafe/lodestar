@@ -18,7 +18,7 @@ describe("reconstructBlobs", () => {
   });
 
   // Generate test data
-  const blobs = [generateRandomBlob(), generateRandomBlob()];
+  const blobs = [generateRandomBlob(), generateRandomBlob(), generateRandomBlob()];
 
   // Compute commitments, cells, and proofs for each blob
   const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
@@ -30,11 +30,11 @@ describe("reconstructBlobs", () => {
 
   const sidecars = getDataColumnSidecarsFromBlock(config, signedBeaconBlock, cellsAndProofs);
 
-  it("should reconstruct blobs from a complete set of data columns", async () => {
+  it("should reconstruct all blobs from a complete set of data columns", async () => {
     expect(await reconstructBlobs(sidecars)).toEqual(blobs);
   });
 
-  it("should reconstruct blobs from at least half of the data columns", async () => {
+  it("should reconstruct all blobs from at least half of the data columns", async () => {
     // random shuffle + take first 64
     const randomHalf = sidecars
       .slice()
@@ -42,6 +42,64 @@ describe("reconstructBlobs", () => {
       .slice(0, NUMBER_OF_COLUMNS / 2);
 
     expect(await reconstructBlobs(randomHalf)).toEqual(blobs);
+  });
+
+  it("should reconstruct only specified blobs from a complete set of data columns", async () => {
+    // only first blob
+    const firstBlobOnly = await reconstructBlobs(sidecars, [0]);
+    expect(firstBlobOnly).toHaveLength(1);
+    expect(firstBlobOnly[0]).toEqual(blobs[0]);
+
+    // only last blob
+    const lastBlobOnly = await reconstructBlobs(sidecars, [2]);
+    expect(lastBlobOnly).toHaveLength(1);
+    expect(lastBlobOnly[0]).toEqual(blobs[2]);
+
+    // first and last blobs
+    const firstAndLast = await reconstructBlobs(sidecars, [0, 2]);
+    expect(firstAndLast).toHaveLength(2);
+    expect(firstAndLast[0]).toEqual(blobs[0]);
+    expect(firstAndLast[1]).toEqual(blobs[2]);
+
+    // all blobs in different order
+    const reversedOrder = await reconstructBlobs(sidecars, [2, 1, 0]);
+    expect(reversedOrder).toHaveLength(3);
+    expect(reversedOrder[0]).toEqual(blobs[2]);
+    expect(reversedOrder[1]).toEqual(blobs[1]);
+    expect(reversedOrder[2]).toEqual(blobs[0]);
+  });
+
+  it("should reconstruct only specified blobs from at least half of the data columns", async () => {
+    // random shuffle + take first 64
+    const randomHalf = sidecars
+      .slice()
+      .sort(() => Math.random() - 0.5)
+      .slice(0, NUMBER_OF_COLUMNS / 2);
+
+    // only single blob
+    const firstBlobOnly = await reconstructBlobs(randomHalf, [0]);
+    expect(firstBlobOnly).toHaveLength(1);
+    expect(firstBlobOnly[0]).toEqual(blobs[0]);
+
+    // multiple specific blobs
+    const multipleBlobs = await reconstructBlobs(randomHalf, [0, 2]);
+    expect(multipleBlobs).toHaveLength(2);
+    expect(multipleBlobs[0]).toEqual(blobs[0]);
+    expect(multipleBlobs[1]).toEqual(blobs[2]);
+
+    // all blobs in sequential order
+    expect(await reconstructBlobs(randomHalf, [0, 1, 2])).toEqual(blobs);
+  });
+
+  it("should throw for invalid blob indices", async () => {
+    // negative index
+    await expect(reconstructBlobs(sidecars, [-1])).rejects.toThrow("Invalid blob index -1");
+
+    // out of range index
+    await expect(reconstructBlobs(sidecars, [3])).rejects.toThrow("Invalid blob index 3");
+
+    // valid and invalid
+    await expect(reconstructBlobs(sidecars, [0, 5])).rejects.toThrow("Invalid blob index 5");
   });
 
   it("should throw if less than half of the data columns are provided", async () => {

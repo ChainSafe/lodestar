@@ -6,13 +6,7 @@ import {
   createChainForkConfig,
 } from "@lodestar/config";
 import {NetworkName, getNetworkBeaconParams} from "../networks/index.js";
-import {
-  GlobalArgs,
-  ITerminalPowArgs,
-  defaultNetwork,
-  parseBeaconParamsArgs,
-  parseTerminalPowArgs,
-} from "../options/index.js";
+import {GlobalArgs, defaultNetwork, parseBeaconParamsArgs} from "../options/index.js";
 import {readFile} from "../util/index.js";
 import {IBeaconParamsUnparsed} from "./types.js";
 
@@ -44,7 +38,6 @@ export function getBeaconParamsFromArgs(args: GlobalArgs): ChainConfig {
     paramsFile: args.paramsFile,
     additionalParamsCli: {
       ...parseBeaconParamsArgs(args as IBeaconParamsUnparsed),
-      ...parseTerminalPowArgs(args as ITerminalPowArgs),
     },
   });
 }

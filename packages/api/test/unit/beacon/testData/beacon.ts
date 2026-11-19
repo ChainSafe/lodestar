@@ -1,4 +1,4 @@
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {
@@ -15,6 +15,13 @@ const balance = 32e9;
 const reward = 32e9;
 const pubkeyHex = toHex(Buffer.alloc(48, 1));
 const versionedHash = ssz.deneb.VersionedHash.defaultValue();
+
+const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+signedBlock.message.slot = SLOTS_PER_EPOCH;
+const signedEnvelopeContents = ssz.gloas.SignedExecutionPayloadEnvelopeContents.defaultValue();
+signedEnvelopeContents.signedExecutionPayloadEnvelope.message.payload.slotNumber = SLOTS_PER_EPOCH;
+const signedExecutionPayloadBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+signedExecutionPayloadBid.message.slot = SLOTS_PER_EPOCH;
 
 const blockHeaderResponse: BlockHeaderResponse = {
   root,
@@ -46,10 +53,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
     },
   },
-  getBlockAttestations: {
-    args: {blockId: "head"},
-    res: {data: [ssz.phase0.Attestation.defaultValue()], meta: {executionOptimistic: true, finalized: false}},
-  },
   getBlockAttestationsV2: {
     args: {blockId: "head"},
     res: {
@@ -69,19 +72,12 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {blockId: "head"},
     res: {data: {root}, meta: {executionOptimistic: true, finalized: false}},
   },
-  publishBlock: {
-    args: {signedBlockContents: ssz.electra.SignedBlockContents.defaultValue()},
-    res: undefined,
-  },
   publishBlockV2: {
     args: {
-      signedBlockContents: ssz.electra.SignedBlockContents.defaultValue(),
+      signedBlockContents: {signedBlock},
       broadcastValidation: BroadcastValidation.consensus,
+      builderUrl: "https://builder.example.com",
     },
-    res: undefined,
-  },
-  publishBlindedBlock: {
-    args: {signedBlindedBlock: ssz.electra.SignedBlindedBeaconBlock.defaultValue()},
     res: undefined,
   },
   publishBlindedBlockV2: {
@@ -90,6 +86,24 @@ export const testData: GenericServerTestCases<Endpoints> = {
       broadcastValidation: BroadcastValidation.consensus,
     },
     res: undefined,
+  },
+  publishExecutionPayloadEnvelope: {
+    args: {
+      signedEnvelopeOrContents: signedEnvelopeContents,
+      broadcastValidation: BroadcastValidation.gossip,
+    },
+    res: undefined,
+  },
+  publishExecutionPayloadBid: {
+    args: {signedExecutionPayloadBid},
+    res: undefined,
+  },
+  getSignedExecutionPayloadEnvelope: {
+    args: {blockId: "head"},
+    res: {
+      data: ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue(),
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
+    },
   },
   getBlobSidecars: {
     args: {blockId: "head", indices: [0]},
@@ -108,17 +122,16 @@ export const testData: GenericServerTestCases<Endpoints> = {
 
   // pool
 
-  getPoolAttestations: {
-    args: {slot: 1, committeeIndex: 2},
-    res: {data: [ssz.phase0.Attestation.defaultValue()]},
-  },
   getPoolAttestationsV2: {
     args: {slot: 1, committeeIndex: 2},
     res: {data: [ssz.electra.Attestation.defaultValue()], meta: {version: ForkName.electra}},
   },
-  getPoolAttesterSlashings: {
-    args: undefined,
-    res: {data: [ssz.phase0.AttesterSlashing.defaultValue()]},
+  getPoolPayloadAttestations: {
+    args: {slot: 1},
+    res: {
+      data: Array.from({length: 5}, () => ssz.gloas.PayloadAttestation.defaultValue()),
+      meta: {version: ForkName.gloas},
+    },
   },
   getPoolAttesterSlashingsV2: {
     args: undefined,
@@ -136,16 +149,8 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: undefined,
     res: {data: [ssz.capella.SignedBLSToExecutionChange.defaultValue()]},
   },
-  submitPoolAttestations: {
-    args: {signedAttestations: [ssz.phase0.Attestation.defaultValue()]},
-    res: undefined,
-  },
   submitPoolAttestationsV2: {
     args: {signedAttestations: [ssz.electra.SingleAttestation.defaultValue()]},
-    res: undefined,
-  },
-  submitPoolAttesterSlashings: {
-    args: {attesterSlashing: ssz.phase0.AttesterSlashing.defaultValue()},
     res: undefined,
   },
   submitPoolAttesterSlashingsV2: {
@@ -166,6 +171,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   submitPoolSyncCommitteeSignatures: {
     args: {signatures: [ssz.altair.SyncCommitteeMessage.defaultValue()]},
+    res: undefined,
+  },
+  submitPayloadAttestationMessages: {
+    args: {payloadAttestationMessages: [ssz.gloas.PayloadAttestationMessage.defaultValue()]},
     res: undefined,
   },
 
@@ -202,6 +211,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {stateId: "head", validatorIds: [pubkeyHex, 1300], statuses: ["active_ongoing"]},
     res: {data: [validatorResponse], meta: {executionOptimistic: true, finalized: false}},
   },
+  getStateBuilders: {
+    args: {stateId: "head", builderIds: [pubkeyHex, 32], statuses: ["active"]},
+    res: {
+      data: [{index: 32, status: "active", builder: ssz.gloas.Builder.defaultValue()}],
+      meta: {executionOptimistic: true, finalized: false},
+    },
+  },
   postStateValidatorIdentities: {
     args: {stateId: "head", validatorIds: [1300]},
     res: {
@@ -232,25 +248,32 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false},
     },
   },
+  getStatePtc: {
+    args: {stateId: "head", slot: 2},
+    res: {
+      data: {slot: 2, validators: ssz.gloas.PayloadTimelinessCommittee.defaultValue()},
+      meta: {executionOptimistic: true, finalized: false},
+    },
+  },
   getPendingDeposits: {
     args: {stateId: "head"},
     res: {
-      data: [ssz.electra.PendingDeposit.defaultValue()],
-      meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
+      data: [ssz.gloas.PendingDeposit.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
     },
   },
   getPendingPartialWithdrawals: {
     args: {stateId: "head"},
     res: {
-      data: [ssz.electra.PendingPartialWithdrawal.defaultValue()],
-      meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
+      data: [ssz.gloas.PendingPartialWithdrawal.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
     },
   },
   getPendingConsolidations: {
     args: {stateId: "head"},
     res: {
-      data: [ssz.electra.PendingConsolidation.defaultValue()],
-      meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
+      data: [ssz.gloas.PendingConsolidation.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
     },
   },
   getProposerLookahead: {
@@ -258,6 +281,20 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {
       data: ssz.fulu.ProposerLookahead.defaultValue(),
       meta: {executionOptimistic: true, finalized: false, version: ForkName.fulu},
+    },
+  },
+  getBuilderPendingPayments: {
+    args: {stateId: "head"},
+    res: {
+      data: ssz.gloas.BuilderPendingPayments.defaultValue(),
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
+    },
+  },
+  getBuilderPendingWithdrawals: {
+    args: {stateId: "head"},
+    res: {
+      data: [ssz.gloas.BuilderPendingWithdrawal.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
     },
   },
 
@@ -315,5 +352,9 @@ export const testData: GenericServerTestCases<Endpoints> = {
   getGenesis: {
     args: undefined,
     res: {data: ssz.phase0.Genesis.defaultValue()},
+  },
+  getProposerPreferences: {
+    args: {slot: 1, dependentRoot: new Uint8Array(32).fill(1)},
+    res: {data: [ssz.gloas.SignedProposerPreferences.defaultValue()], meta: {version: ForkName.gloas}},
   },
 };

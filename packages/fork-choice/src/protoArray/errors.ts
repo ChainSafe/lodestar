@@ -12,6 +12,8 @@ export type LVHExecError = {lvhCode: LVHExecErrorCode; blockRoot: RootHex; execH
 export enum ProtoArrayErrorCode {
   FINALIZED_NODE_UNKNOWN = "PROTO_ARRAY_ERROR_FINALIZED_NODE_UNKNOWN",
   JUSTIFIED_NODE_UNKNOWN = "PROTO_ARRAY_ERROR_JUSTIFIED_NODE_UNKNOWN",
+  UNKNOWN_BLOCK = "PROTO_ARRAY_ERROR_UNKNOWN_BLOCK",
+  UNKNOWN_PARENT_BLOCK = "PROTO_ARRAY_ERROR_UNKNOWN_PARENT_BLOCK",
   INVALID_FINALIZED_ROOT_CHANGE = "PROTO_ARRAY_ERROR_INVALID_FINALIZED_ROOT_CHANGE",
   INVALID_NODE_INDEX = "PROTO_ARRAY_ERROR_INVALID_NODE_INDEX",
   INVALID_PARENT_INDEX = "PROTO_ARRAY_ERROR_INVALID_PARENT_INDEX",
@@ -27,11 +29,14 @@ export enum ProtoArrayErrorCode {
   INVALID_BLOCK_EXECUTION_STATUS = "PROTO_ARRAY_INVALID_BLOCK_EXECUTION_STATUS",
   INVALID_JUSTIFIED_EXECUTION_STATUS = "PROTO_ARRAY_INVALID_JUSTIFIED_EXECUTION_STATUS",
   INVALID_LVH_EXECUTION_RESPONSE = "PROTO_ARRAY_INVALID_LVH_EXECUTION_RESPONSE",
+  PRE_GLOAS_BLOCK = "PROTO_ARRAY_ERROR_PRE_GLOAS_BLOCK",
 }
 
 export type ProtoArrayErrorType =
   | {code: ProtoArrayErrorCode.FINALIZED_NODE_UNKNOWN; root: RootHex}
   | {code: ProtoArrayErrorCode.JUSTIFIED_NODE_UNKNOWN; root: RootHex}
+  | {code: ProtoArrayErrorCode.UNKNOWN_BLOCK; root: RootHex}
+  | {code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK; parentRoot: RootHex; parentHash: RootHex | null}
   | {code: ProtoArrayErrorCode.INVALID_FINALIZED_ROOT_CHANGE}
   | {code: ProtoArrayErrorCode.INVALID_NODE_INDEX; index: number}
   | {code: ProtoArrayErrorCode.INVALID_PARENT_INDEX; index: number}
@@ -54,6 +59,7 @@ export type ProtoArrayErrorType =
     }
   | {code: ProtoArrayErrorCode.INVALID_BLOCK_EXECUTION_STATUS; root: RootHex}
   | {code: ProtoArrayErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS; root: RootHex}
-  | ({code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE} & LVHExecError);
+  | ({code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE} & LVHExecError)
+  | {code: ProtoArrayErrorCode.PRE_GLOAS_BLOCK; root: RootHex};
 
 export class ProtoArrayError extends LodestarError<ProtoArrayErrorType> {}

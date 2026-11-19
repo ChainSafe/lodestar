@@ -23,7 +23,7 @@ export class ChildProcessRunner implements RunnerEnv<RunnerType.ChildProcess> {
     const health = jobOption.health;
 
     if (health) {
-      spawnOpts.healthTimeoutMs = 30000;
+      spawnOpts.healthTimeoutMs = 60000;
       spawnOpts.health = health;
     } else {
       spawnOpts.resolveOn = ChildProcessResolve.Completion;

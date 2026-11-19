@@ -3,11 +3,11 @@
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 [![ETH Beacon APIs Spec v3.1.0](https://img.shields.io/badge/ETH%20beacon--APIs-3.1.0-blue)](https://github.com/ethereum/beacon-APIs/releases/tag/v3.1.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
-![Node Version](https://img.shields.io/badge/node-22.x-green)
+![Node Version](https://img.shields.io/badge/node-24.x-green)
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-Typescript implementation of the [Ethereum Consensus Req/Resp protocol](https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/p2p-interface.md#reqresp)
+Typescript implementation of the [Ethereum Consensus Req/Resp protocol](https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#reqresp)
 
 ## Usage
 
@@ -44,7 +44,7 @@ async function getReqResp(libp2p: Libp2p, logger: Logger): Promise<void> {
 ## Prerequisites
 
 - [NodeJS](https://nodejs.org/) (LTS)
-- [Yarn](https://classic.yarnpkg.com/lang/en/)
+- [pnpm](https://pnpm.io/)
 
 ## What you need
 

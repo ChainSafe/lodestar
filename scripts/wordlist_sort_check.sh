@@ -8,6 +8,9 @@
 # Define wordlist file
 wordlist=".wordlist.txt"
 
+# Ensure deterministic collation across environments
+export LC_ALL=C
+
 # Check if wordlist is sorted
 if ! sort --ignore-case --human-numeric-sort --check "$wordlist"; then
   echo "Error: The wordlist is not sorted."

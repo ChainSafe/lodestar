@@ -1,14 +1,12 @@
-import type {ChainForkConfig} from "@lodestar/config";
-import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
-import {ForkSeq} from "@lodestar/params";
-import {CachedBeaconStateAllForks, DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
-import type {Slot, fulu} from "@lodestar/types";
+import type {BlockExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
+import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
+import type {IndexedAttestation, Slot, fulu} from "@lodestar/types";
 import {IBlockInput} from "./blockInput/types.js";
+import {OrphanedPayloadEnvelope} from "./utils/chainSegment.js";
 
-export enum GossipedInputType {
-  block = "block",
-  blob = "blob",
-  dataColumn = "data_column",
+export enum InclusionListSource {
+  gossip = "gossip",
+  api = "api",
 }
 
 type DataColumnData = {
@@ -17,29 +15,19 @@ type DataColumnData = {
 };
 export type DataColumnsCacheMap = Map<number, DataColumnData>;
 
-export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clockSlot: Slot): boolean {
-  return (
-    config.getForkSeq(blockSlot) >= ForkSeq.deneb &&
-    // Only request blobs if they are recent enough
-    computeEpochAtSlot(blockSlot) >= computeEpochAtSlot(clockSlot) - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-  );
-}
-
 export enum AttestationImportOpt {
   Skip,
   Force,
 }
 
-export enum BlobSidecarValidation {
-  /** When recieved in gossip the blobs are individually verified before import */
-  Individual,
+export type ImportPayloadOpts = {
   /**
-   * Blobs when recieved in req/resp can be fully verified before import
-   * but currently used in spec tests where blobs come without proofs and assumed
-   * to be valid
+   * Set to true when the envelope was already validated upstream (e.g., gossip/API validation):
+   * signature is trusted and execution_requests_root was already verified against the bid.
+   * When false/undefined, both are verified during import.
    */
-  Full,
-}
+  validSignature?: boolean;
+};
 
 export type ImportBlockOpts = {
   /**
@@ -74,28 +62,39 @@ export type ImportBlockOpts = {
    * Metadata: `true` if all the signatures including the proposer signature have been verified
    */
   validSignatures?: boolean;
-  /** Set to true if already run `validateBlobSidecars()` sucessfully on the blobs */
-  validBlobSidecars?: BlobSidecarValidation;
   /** Seen timestamp seconds */
   seenTimestampSec?: number;
-  /** Set to true if persist block right at verification time */
-  eagerPersistBlock?: boolean;
 };
 
 /**
- * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import
+ * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import.
+ *
+ * `executionStatus` reflects the outcome of execution payload verification at block-import time:
+ * - pre-gloas: Valid | Syncing | PreMerge (from EL notifyNewPayload against the in-block payload)
+ * - post-gloas: inherited from parent's chain (Valid/Syncing) by importBlock; payload arrives
+ *   separately as an envelope and creates the FULL variant later via onExecutionPayload
  */
 export type FullyVerifiedBlock = {
   blockInput: IBlockInput;
-  postState: CachedBeaconStateAllForks;
+  postState: IBeaconStateView;
   parentBlockSlot: Slot;
   proposerBalanceDelta: number;
-  /**
-   * If the execution payload couldnt be verified because of EL syncing status,
-   * used in optimistic sync or for merge block
-   */
-  executionStatus: MaybeValidExecutionStatus;
   dataAvailabilityStatus: DataAvailabilityStatus;
+  /**
+   * Pre-computed indexed attestations from signature verification to avoid duplicate work.
+   * Their `attestingIndices` are in committee order, not sorted, so they are not spec-valid `IndexedAttestation`s.
+   */
+  indexedAttestations: IndexedAttestation[];
   /** Seen timestamp seconds */
   seenTimestampSec: number;
+  /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync */
+  executionStatus: BlockExecutionStatus | PayloadExecutionStatus;
+};
+
+/**
+ * Result of processing a chain segment.
+ */
+export type ProcessBlocksResult = {
+  orphaned: OrphanedPayloadEnvelope[];
+  skipped: boolean;
 };

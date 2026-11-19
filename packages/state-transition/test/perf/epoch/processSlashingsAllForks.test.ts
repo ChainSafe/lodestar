@@ -7,8 +7,8 @@ import {
   EpochTransitionCache,
   beforeProcessEpoch,
 } from "../../../src/index.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../../../src/testUtils/util.js";
 import {StateEpoch} from "../types.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 
 // PERF: Cost 'proportional' to only validators that are slashed. For mainnet conditions:
 // - indicesToSlash: max len is 8704. But it's very unlikely since it would require all validators on the same

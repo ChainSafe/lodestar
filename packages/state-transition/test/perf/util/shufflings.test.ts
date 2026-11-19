@@ -9,7 +9,7 @@ import {
   getNextSyncCommittee,
   getSeed,
 } from "../../../src/index.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../../../src/testUtils/util.js";
 
 describe("epoch shufflings", () => {
   let state: CachedBeaconStateAllForks;

@@ -1,7 +1,7 @@
 import {BeaconPreset} from "../types.js";
 
 // Minimal preset
-// https://github.com/ethereum/consensus-specs/tree/dev/presets/minimal
+// https://github.com/ethereum/consensus-specs/tree/master/presets/minimal
 
 export const minimalPreset: BeaconPreset = {
   // Misc
@@ -144,7 +144,20 @@ export const minimalPreset: BeaconPreset = {
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: 4,
 
   // GLOAS
-  PTC_SIZE: 2,
+  PTC_SIZE: 16,
   MAX_PAYLOAD_ATTESTATIONS: 4,
-  BUILDER_PENDING_WITHDRAWALS_LIMIT: 1048576, // 2**20
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD: 64, // 2**6
+  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD: 16, // 2**4
+  MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: 16, // 2**4
+
+  // Type-specific SSZ bounds
+  // ---------------------------------------------------------------
+  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE: 1462,
+  MAX_ATTESTER_SLASHING_SIZE: 131536,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: 196932,
+
+  // HEZE
+  INCLUSION_LIST_COMMITTEE_SIZE: 16, // 2**4
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: 196934,
+  MAX_SIGNED_INCLUSION_LIST_SIZE: 41112,
 };

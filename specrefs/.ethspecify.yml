@@ -1,0 +1,169 @@
+version: v1.7.0-beta.4
+style: full
+
+specrefs:
+  auto_add_missing_entries: true
+  auto_standardize_names: true
+  require_exceptions_have_fork: true
+
+  files:
+    - configs.yml
+    - constants.yml
+    - containers.yml
+    - dataclasses.yml
+    - functions.yml
+    - presets.yml
+    - types.yml
+
+exceptions:
+  constants:
+    # phase0
+    - UINT64_MAX#phase0
+    - UINT64_MAX_SQRT#phase0
+
+    # fulu
+    - UINT256_MAX#fulu
+
+    # gloas
+    - ATTESTATION_TIMELINESS_INDEX#gloas
+    - NUM_BLOCK_TIMELINESS_DEADLINES#gloas
+    - PTC_TIMELINESS_INDEX#gloas
+
+  containers:
+    # fulu (not implemented)
+    - CellsBitList#fulu
+    - OptionalPartialDataColumnHeader#fulu
+    - PartialDataColumnGroupID#fulu
+    - PartialDataColumnHeader#fulu
+    - PartialDataColumnPartsMetadata#fulu
+    - PartialDataColumnSidecar#fulu
+
+    # gloas
+    - CellsBitList#gloas
+    - CustodyColumnBits#gloas
+    - PartialDataColumnGroupID#gloas
+    - PartialDataColumnPartsMetadata#gloas
+    - PartialDataColumnSidecar#gloas
+
+    # heze (InclusionListsByIndices streams each SignedInclusionList as its own chunk; no list type)
+    - SignedInclusionLists#heze
+
+  dataclasses:
+    # phase0
+    - LatestMessage#phase0
+    - Seen#phase0
+
+    # altair
+    - Seen#altair
+
+    # bellatrix
+    - OptimisticStore#bellatrix
+
+    # capella
+    - Seen#capella
+
+    # deneb
+    - Seen#deneb
+
+    # electra
+    - Seen#electra
+
+    # fulu
+    - Seen#fulu
+
+    # gloas
+    - LatestMessage#gloas
+    - Seen#gloas
+
+    # heze
+    - Seen#heze
+
+  presets: []
+
+  functions:
+    # phase0
+    - compute_time_at_slot_ms#phase0
+    - is_future_epoch#phase0
+    - get_attestation_component_deltas#phase0
+    - get_attesting_balance#phase0
+    - get_block_epoch#phase0
+    - get_block_slot#phase0
+    - get_eth1_vote#phase0
+    - get_filtered_node_tree#phase0
+    - get_node_children#phase0
+    - get_node_for_root#phase0
+    - get_supported_node#phase0
+    - get_matching_source_attestations#phase0
+    - get_unslashed_attesting_indices#phase0
+    - is_candidate_block#phase0
+    - is_proposer#phase0
+    - seconds_to_milliseconds#phase0
+    - store_target_checkpoint_state#phase0
+    - voting_period_start_time#phase0
+
+    # optional fast confirmation restart recovery (not implemented)
+    - block_should_be_finalized#phase0
+    - get_restart_resilient_confirmed_root#phase0
+
+    # altair
+    - apply_light_client_update#altair
+    - eth_aggregate_pubkeys#altair
+    - get_unslashed_participating_indices#altair
+    - is_next_sync_committee_known#altair
+
+    # bellatrix
+    - get_execution_payload#bellatrix
+    - get_pow_block_at_terminal_total_difficulty#bellatrix
+    - get_terminal_pow_block#bellatrix
+    - is_execution_block#bellatrix
+    - is_optimistic_candidate_block#bellatrix
+    - is_valid_terminal_pow_block#bellatrix
+    - latest_verified_ancestor#bellatrix
+    - validate_merge_block#bellatrix
+
+    # deneb
+    # Pre-fulu blob sidecar functions, replaced by data columns in fulu
+    - compute_subnet_for_blob_sidecar#deneb
+    - get_blob_sidecars#deneb
+    - is_within_epoch#deneb
+    - validate_blob_sidecar_gossip#deneb
+    - verify_blob_sidecar_inclusion_proof#deneb
+
+    # electra
+    - compute_subnet_for_blob_sidecar#electra
+    - get_eth1_vote#electra
+    - validate_blob_sidecar_gossip#electra
+
+    # fulu
+    - verify_partial_data_column_header_inclusion_proof#fulu
+    - verify_partial_data_column_sidecar_kzg_proofs#fulu
+    - validate_partial_data_column_sidecar_gossip#fulu
+
+    # gloas
+    - compute_max_partial_data_column_sidecar_size#gloas
+    - get_node_children#gloas
+    - get_upcoming_proposal_slots#gloas
+    - is_current_or_next_slot#gloas
+    - validate_partial_data_column_sidecar_gossip#gloas
+
+    # gloas (attestation upgrade helpers; lodestar ssz types are structurally cross-fork compatible)
+    - upgrade_attestation_to_gloas#gloas
+    - upgrade_attester_slashing_to_gloas#gloas
+    - upgrade_indexed_attestation_to_gloas#gloas
+
+    # computed helpers replacing config vars (added in alpha.3)
+    # the following are hardcoded in config files rather than computed at runtime
+    - compute_max_request_blob_sidecars#deneb
+    - compute_max_request_blob_sidecars#electra
+    - compute_max_request_data_column_sidecars#fulu
+    - compute_min_epochs_for_block_requests#phase0
+    # The pre-Gloas retention minimum exceeds the reduced Gloas minimum.
+    - compute_min_epochs_for_block_requests#gloas
+
+  custom_types:
+    # phase0
+    - Ether#phase0
+    - Hash32#phase0
+
+    # fulu
+    - CellIndex#fulu

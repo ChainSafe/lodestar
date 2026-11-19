@@ -1,17 +1,19 @@
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {
+  BeaconStateView,
   DataAvailabilityStatus,
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
-import {Slot, SubnetID, phase0, ssz} from "@lodestar/types";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
-} from "../../../../state-transition/test/perf/util.js";
+} from "@lodestar/state-transition/test-utils";
+import {Slot, SubnetID, phase0, ssz} from "@lodestar/types";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
@@ -23,7 +25,6 @@ import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
 import {signCached} from "../cache.js";
 import {ClockStatic} from "../clock.js";
-import {testLogger} from "../logger.js";
 
 export type AttestationValidDataOpts = {
   currentSlot?: Slot;
@@ -75,9 +76,16 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     unrealizedFinalizedRoot: ZERO_HASH_HEX,
 
     timeliness: false,
+    importedTimely: false,
+    ptcTimeliness: false,
+    proposerIndex: 0,
 
-    ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+    executionPayloadBlockHash: null,
+    executionStatus: ExecutionStatus.PreMerge,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+    parentBlockHash: null,
+    payloadStatus: 2, // PayloadStatus.FULL
   };
 
   const shufflingCache = new ShufflingCache(null, null, {}, [
@@ -101,6 +109,18 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
       return headBlock;
     },
     getBlockHex: (rootHex) => {
+      if (rootHex !== toHexString(beaconBlockRoot)) return null;
+      return headBlock;
+    },
+    getBlockDefaultStatus: (root) => {
+      if (!ssz.Root.equals(root, beaconBlockRoot)) return null;
+      return headBlock;
+    },
+    getBlockHexDefaultStatus: (rootHex) => {
+      if (rootHex !== toHexString(beaconBlockRoot)) return null;
+      return headBlock;
+    },
+    getBlockHexAndBlockHash: (rootHex) => {
       if (rootHex !== toHexString(beaconBlockRoot)) return null;
       return headBlock;
     },
@@ -139,9 +159,9 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
 
   // Add state to regen
   const regen = {
-    getState: async () => state,
+    getState: async () => new BeaconStateView(state),
     // TODO: remove this once we have a better way to get state
-    getStateSync: () => state,
+    getStateSync: () => new BeaconStateView(state),
   } as Partial<IStateRegenerator> as IStateRegenerator;
 
   const chain = {
@@ -156,7 +176,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
       ? new BlsSingleThreadVerifier({metrics: null})
       : new BlsMultiThreadWorkerPool({}, {logger: testLogger(), metrics: null}),
     waitForBlock: () => Promise.resolve(false),
-    index2pubkey: state.epochCtx.index2pubkey,
+    pubkeyCache: state.epochCtx.pubkeyCache,
     shufflingCache,
     opts: defaultChainOptions,
   } as Partial<IBeaconChain> as IBeaconChain;

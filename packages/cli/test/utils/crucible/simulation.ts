@@ -330,7 +330,7 @@ export class Simulation {
         genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
         eth1BlockHash: fromHexString(eth1Genesis.hash),
         withEth1Credentials: true,
-      }).state;
+      });
 
       this.genesisState = genesisState;
 

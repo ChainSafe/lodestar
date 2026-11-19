@@ -4,7 +4,7 @@ import {INetwork, Network} from "../../src/network/index.js";
 vi.mock("../../src/network/index.js", async (importActual) => {
   const mod = await importActual<typeof import("../../src/network/index.js")>();
 
-  const Network = vi.fn().mockImplementation(() => {
+  const Network = vi.fn().mockImplementation(function MockedNetwork() {
     return {};
   });
 

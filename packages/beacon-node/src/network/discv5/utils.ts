@@ -4,7 +4,7 @@ import {IClock} from "../../util/clock.js";
 import {ENRKey} from "../metadata.js";
 
 export enum ENRRelevance {
-  no_tcp = "no_tcp",
+  no_transport = "no_transport",
   no_eth2 = "no_eth2",
   // biome-ignore lint/style/useNamingConvention: Need to use the this name for network convention
   unknown_forkDigest = "unknown_forkDigest",
@@ -13,10 +13,19 @@ export enum ENRRelevance {
 }
 
 export function enrRelevance(enr: ENR, config: BeaconConfig, clock: IClock): ENRRelevance {
-  // We are not interested in peers that don't advertise their tcp addr
-  const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
-  if (!multiaddrTCP) {
-    return ENRRelevance.no_tcp;
+  // We are not interested in peers that don't advertise at least one transport (tcp or quic).
+  let multiaddrTCP: ReturnType<ENR["getLocationMultiaddr"]>;
+  let multiaddrQUIC: ReturnType<ENR["getLocationMultiaddr"]>;
+  // Malformed ENR endpoint fields can make multiaddr conversion throw.
+  // Treat endpoints that cannot be converted as unusable.
+  try {
+    multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
+    multiaddrQUIC = enr.getLocationMultiaddr(ENRKey.quic);
+  } catch {
+    return ENRRelevance.no_transport;
+  }
+  if (!multiaddrTCP && !multiaddrQUIC) {
+    return ENRRelevance.no_transport;
   }
 
   // Check if the ENR.eth2 field matches and is of interest

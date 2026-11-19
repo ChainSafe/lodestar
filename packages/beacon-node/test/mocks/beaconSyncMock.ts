@@ -6,7 +6,7 @@ export type MockedBeaconSync = Mocked<BeaconSync>;
 vi.mock("../../src/sync/index.js", async (importActual) => {
   const mod = await importActual<typeof import("../../src/sync/index.js")>();
 
-  const BeaconSync = vi.fn().mockImplementation(() => {
+  const BeaconSync = vi.fn().mockImplementation(function MockedBeaconSync() {
     const sync = {
       isSynced: vi.fn(),
     };

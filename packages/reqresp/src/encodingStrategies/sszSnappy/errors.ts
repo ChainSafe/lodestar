@@ -9,8 +9,6 @@ export enum SszSnappyErrorCode {
   OVER_SSZ_MAX_SIZE = "SSZ_SNAPPY_ERROR_OVER_SSZ_MAX_SIZE",
   TOO_MUCH_BYTES_READ = "SSZ_SNAPPY_ERROR_TOO_MUCH_BYTES_READ",
   DECOMPRESSOR_ERROR = "SSZ_SNAPPY_ERROR_DECOMPRESSOR_ERROR",
-  DESERIALIZE_ERROR = "SSZ_SNAPPY_ERROR_DESERIALIZE_ERROR",
-  SERIALIZE_ERROR = "SSZ_SNAPPY_ERROR_SERIALIZE_ERROR",
   /** Received more bytes than specified sszDataLength */
   TOO_MANY_BYTES = "SSZ_SNAPPY_ERROR_TOO_MANY_BYTES",
   /** Source aborted before reading sszDataLength bytes */
@@ -23,8 +21,6 @@ type SszSnappyErrorType =
   | {code: SszSnappyErrorCode.OVER_SSZ_MAX_SIZE; maxSize: number; sszDataLength: number}
   | {code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ; readBytes: number; sszDataLength: number}
   | {code: SszSnappyErrorCode.DECOMPRESSOR_ERROR; decompressorError: Error}
-  | {code: SszSnappyErrorCode.DESERIALIZE_ERROR; deserializeError: Error}
-  | {code: SszSnappyErrorCode.SERIALIZE_ERROR; serializeError: Error}
   | {code: SszSnappyErrorCode.TOO_MANY_BYTES; sszDataLength: number}
   | {code: SszSnappyErrorCode.SOURCE_ABORTED};
 

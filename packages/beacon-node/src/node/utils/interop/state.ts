@@ -6,7 +6,7 @@ import {
   initializeBeaconStateFromEth1,
 } from "@lodestar/state-transition";
 import {Bytes32, TimeSeconds, phase0, ssz, sszTypesFor} from "@lodestar/types";
-import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
+import {DepositTree} from "./deposits.js";
 
 export const INTEROP_BLOCK_HASH = Buffer.alloc(32, "B");
 export const INTEROP_TIMESTAMP = Math.pow(2, 40);

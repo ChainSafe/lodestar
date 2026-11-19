@@ -3,13 +3,13 @@ import {afterEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
+import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, phase0} from "@lodestar/types";
 import {ChainEvent, ReorgEventData} from "../../../../src/chain/emitter.js";
 import {CacheItemType} from "../../../../src/chain/stateCache/types.js";
 import {ReorgedForkChoice} from "../../../mocks/fork-choice/reorg.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
-import {LogLevel, TestLoggerOpts, testLogger} from "../../../utils/logger.js";
 import {connect, onPeerConnect} from "../../../utils/network.js";
 import {getDevBeaconNode} from "../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../utils/node/validator.js";
@@ -303,12 +303,11 @@ describe("regen/reload states with n-historical states configuration", () => {
         options: {
           sync: {isSingleNode: true},
           network: {allowPublishToZeroPeers: true, mdns: true, useWorker: false},
-          // run the first bn with ReorgedForkChoice, no nHistoricalStates flag so it does not have to reload
+          // by default, maxCPStateEpochsInMemory is 3 so that it does not have to persist/reload checkpoint states
           chain: {
             blsVerifyAllMainThread: true,
             forkchoiceConstructor: ReorgedForkChoice,
             // this node does not need to reload state
-            nHistoricalStates: false,
             proposerBoost: true,
           },
         },
@@ -325,12 +324,10 @@ describe("regen/reload states with n-historical states configuration", () => {
         options: {
           api: {rest: {enabled: false}},
           network: {mdns: true, useWorker: false},
-          // run the 2nd bn with nHistoricalStates flag and the configured maxBlockStates, maxCPStateEpochsInMemory
+          // configure this node to be reloaded via maxBlockStates, maxCPStateEpochsInMemory options
           chain: {
             blsVerifyAllMainThread: true,
             forkchoiceConstructor: ReorgedForkChoice,
-            // this node can follow with nHistoricalStates flag and it has to reload state
-            nHistoricalStates: true,
             maxBlockStates,
             maxCPStateEpochsInMemory,
             proposerBoost: true,
@@ -419,21 +416,24 @@ describe("regen/reload states with n-historical states configuration", () => {
         ({slot}) => slot === LAST_SLOT
       );
 
-      const reloadMetricValues = await (followupBn.metrics?.cpStateCache.stateReloadDuration as Histogram).get();
+      const metrics = followupBn.metrics;
+      if (metrics === null) throw Error("followupBn metrics are not enabled");
+
+      const reloadMetricValues = await (metrics.cpStateCache.stateReloadDuration as Histogram).get();
       expect(
         reloadMetricValues?.values.find(
           (value) => value.metricName === "lodestar_cp_state_cache_state_reload_seconds_count"
         )?.value
       ).toEqual(reloadCount);
 
-      const stateSszMetricValues = await (followupBn.metrics?.stateSerializeDuration as Histogram).get();
+      const stateSszMetricValues = await (metrics.stateSerializeDuration as Histogram).get();
       expect(
         stateSszMetricValues?.values.find((value) => value.metricName === "lodestar_state_serialize_seconds_count")
           ?.value
       ).toEqual(persistCount);
 
       // assert number of persisted/in-memory states
-      const stateSizeMetricValues = await (followupBn.metrics?.cpStateCache.size as unknown as Gauge).get();
+      const stateSizeMetricValues = await (metrics.cpStateCache.size as unknown as Gauge).get();
       const numStateInMemoryItem = stateSizeMetricValues?.values.find(
         (value) => value.labels.type === CacheItemType.inMemory
       );
@@ -444,7 +444,7 @@ describe("regen/reload states with n-historical states configuration", () => {
       expect(numStatePersistedItem?.value).toEqual(numStatesPersisted);
 
       // assert number of epochs persisted/in-memory
-      const epochSizeMetricValues = await (followupBn.metrics?.cpStateCache.epochSize as unknown as Gauge).get();
+      const epochSizeMetricValues = await (metrics.cpStateCache.epochSize as unknown as Gauge).get();
       const numEpochsInMemoryItem = epochSizeMetricValues?.values.find(
         (value) => value.labels.type === CacheItemType.inMemory
       );

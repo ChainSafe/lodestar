@@ -1,4 +1,5 @@
-import {ForkName} from "@lodestar/params";
+import {SerializedList} from "@chainsafe/ssz";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {BuilderSelection, Endpoints} from "../../../../src/beacon/routes/validator.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
@@ -9,6 +10,12 @@ const randaoReveal = new Uint8Array(96).fill(1);
 const selectionProof = new Uint8Array(96).fill(1);
 const graffiti = "a".repeat(32);
 const feeRecipient = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const builderAuth = {
+  ...ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+  message: {data: new TextEncoder().encode("builder.example.com"), slot: 32000},
+};
+const signedProposerPreferences = ssz.gloas.SignedProposerPreferences.defaultValue();
+signedProposerPreferences.message.proposalSlot = SLOTS_PER_EPOCH;
 
 export const testData: GenericServerTestCases<Endpoints> = {
   getAttesterDuties: {
@@ -35,11 +42,25 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
     },
   },
+  getProposerDutiesV2: {
+    args: {epoch: 1000},
+    res: {
+      data: [{slot: 1, validatorIndex: 2, pubkey: new Uint8Array(48).fill(3)}],
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
+    },
+  },
   getSyncCommitteeDuties: {
     args: {epoch: 1000, indices: [1, 2, 3]},
     res: {
       data: [{pubkey: new Uint8Array(48).fill(1), validatorIndex: 2, validatorSyncCommitteeIndices: [3]}],
       meta: {executionOptimistic: true},
+    },
+  },
+  getPtcDuties: {
+    args: {epoch: 1000, indices: [1, 2, 3]},
+    res: {
+      data: [{pubkey: new Uint8Array(48).fill(1), validatorIndex: 2, slot: 3}],
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
     },
   },
   produceBlockV3: {
@@ -65,25 +86,63 @@ export const testData: GenericServerTestCases<Endpoints> = {
       },
     },
   },
+  produceBlockV4: {
+    args: {
+      slot: 32000,
+      randaoReveal,
+      graffiti,
+      skipRandaoVerification: true,
+      feeRecipient,
+      strictFeeRecipientCheck: true,
+      includePayload: true,
+      builderConfig: {
+        minBid: 0n,
+        builderBoostFactor: 100n,
+        builders: [
+          {
+            url: new TextEncoder().encode("https://builder.example.com"),
+            auth: builderAuth,
+            builderPubkeys: [],
+            maxExecutionPayment: 0n,
+            minBid: 0n,
+            builderBoostFactor: 100n,
+          },
+        ],
+      },
+    },
+    res: {
+      data: ssz.gloas.BlockContents.defaultValue(),
+      meta: {
+        version: ForkName.gloas,
+        consensusBlockValue: ssz.Wei.defaultValue(),
+        executionPayloadValue: ssz.Wei.defaultValue(),
+        executionPayloadIncluded: true,
+        builderUrl: "https://builder.example.com",
+      },
+    },
+  },
+  getExecutionPayloadEnvelope: {
+    args: {slot: 32000, beaconBlockRoot: ZERO_HASH},
+    res: {
+      data: ssz.gloas.ExecutionPayloadEnvelope.defaultValue(),
+      meta: {version: ForkName.gloas},
+    },
+  },
   produceAttestationData: {
     args: {committeeIndex: 2, slot: 32000},
     res: {data: ssz.phase0.AttestationData.defaultValue()},
+  },
+  producePayloadAttestationData: {
+    args: {slot: 32000},
+    res: {data: ssz.gloas.PayloadAttestationData.defaultValue(), meta: {version: ForkName.gloas}},
   },
   produceSyncCommitteeContribution: {
     args: {slot: 32000, subcommitteeIndex: 2, beaconBlockRoot: ZERO_HASH},
     res: {data: ssz.altair.SyncCommitteeContribution.defaultValue()},
   },
-  getAggregatedAttestation: {
-    args: {attestationDataRoot: ZERO_HASH, slot: 32000},
-    res: {data: ssz.phase0.Attestation.defaultValue()},
-  },
   getAggregatedAttestationV2: {
     args: {attestationDataRoot: ZERO_HASH, slot: 32000, committeeIndex: 2},
     res: {data: ssz.electra.Attestation.defaultValue(), meta: {version: ForkName.electra}},
-  },
-  publishAggregateAndProofs: {
-    args: {signedAggregateAndProofs: [ssz.phase0.SignedAggregateAndProof.defaultValue()]},
-    res: undefined,
   },
   publishAggregateAndProofsV2: {
     args: {signedAggregateAndProofs: [ssz.electra.SignedAggregateAndProof.defaultValue()]},
@@ -119,6 +178,45 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   registerValidator: {
     args: {registrations: [ssz.bellatrix.SignedValidatorRegistrationV1.defaultValue()]},
+    res: undefined,
+  },
+  submitProposerPreferences: {
+    args: {signedProposerPreferences: [signedProposerPreferences]},
+    res: undefined,
+  },
+  submitBuilderPreferences: {
+    args: {
+      builderPreferences: [
+        {
+          proposerPubkey: new Uint8Array(48).fill(1),
+          url: new TextEncoder().encode("https://builder.example.com"),
+          auth: builderAuth,
+          maxExecutionPayment: 0n,
+        },
+      ],
+    },
+    res: undefined,
+  },
+  getInclusionListCommitteeDuties: {
+    args: {epoch: 1000, indices: [1, 2, 3]},
+    res: {
+      data: [
+        {
+          pubkey: new Uint8Array(48).fill(1),
+          validatorIndex: 2,
+          slot: 7,
+          dependentRoot: new Uint8Array(32).fill(3),
+        },
+      ],
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
+    },
+  },
+  produceInclusionList: {
+    args: {slot: 10},
+    res: {data: SerializedList.fromArray([new Uint8Array([1, 2, 3])]), meta: {version: ForkName.heze}},
+  },
+  publishInclusionList: {
+    args: {signedInclusionList: ssz.heze.SignedInclusionList.defaultValue()},
     res: undefined,
   },
 };

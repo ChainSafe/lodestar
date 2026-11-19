@@ -78,9 +78,9 @@ export class Clock extends EventEmitter implements IClock {
 
     this.config = config;
     this.genesisTime = genesisTime;
-    this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
     this.signal = signal;
     this._currentSlot = getCurrentSlot(this.config, this.genesisTime);
+    this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
     this.signal.addEventListener("abort", () => clearTimeout(this.timeoutId), {once: true});
   }
 
@@ -92,15 +92,14 @@ export class Clock extends EventEmitter implements IClock {
     }
     return slot;
   }
-
   /**
    * If it's too close to next slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY, return currentSlot + 1.
-   * Otherwise return currentSlot
+   * Spec: phase0/p2p-interface.md rejects future messages with strict `<`, hence `<=` here.
    */
   get currentSlotWithGossipDisparity(): Slot {
     const currentSlot = this.currentSlot;
     const nextSlotTime = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime) * 1000;
-    return nextSlotTime - Date.now() < this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY ? currentSlot + 1 : currentSlot;
+    return nextSlotTime - Date.now() <= this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY ? currentSlot + 1 : currentSlot;
   }
 
   get currentEpoch(): Epoch {
@@ -121,6 +120,7 @@ export class Clock extends EventEmitter implements IClock {
 
   /**
    * Check if a slot is current slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY.
+   * Spec: phase0/p2p-interface.md rejects future messages with strict `<`, hence `<=`.
    */
   isCurrentSlotGivenGossipDisparity(slot: Slot): boolean {
     const currentSlot = this.currentSlot;
@@ -129,12 +129,12 @@ export class Clock extends EventEmitter implements IClock {
     }
     const nextSlotTime = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime) * 1000;
     // we're too close to next slot, accept next slot
-    if (nextSlotTime - Date.now() < this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
+    if (nextSlotTime - Date.now() <= this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
       return slot === currentSlot + 1;
     }
     const currentSlotTime = computeTimeAtSlot(this.config, currentSlot, this.genesisTime) * 1000;
     // we've just passed the current slot, accept previous slot
-    if (Date.now() - currentSlotTime < this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
+    if (Date.now() - currentSlotTime <= this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
       return slot === currentSlot - 1;
     }
     return false;
@@ -204,8 +204,7 @@ export class Clock extends EventEmitter implements IClock {
   };
 
   private msUntilNextSlot(): number {
-    const milliSecondsPerSlot = this.config.SLOT_DURATION_MS;
-    const diffInMilliSeconds = Date.now() - this.genesisTime * 1000;
-    return milliSecondsPerSlot - (diffInMilliSeconds % milliSecondsPerSlot);
+    const nextSlotTimeSec = computeTimeAtSlot(this.config, this._currentSlot + 1, this.genesisTime);
+    return Math.max(0, nextSlotTimeSec * 1000 - Date.now());
   }
 }

@@ -41,7 +41,7 @@ describe("encode and decode error message", () => {
       }
 
       const encodedMessage = accu.subarray(0);
-      const decodedErrorMessage = await decodeErrorMessage(encodedMessage);
+      const decodedErrorMessage = decodeErrorMessage(encodedMessage);
       expect(decodedErrorMessage).toBe(errorMessage);
     });
   }

@@ -1,10 +1,10 @@
-import {Direction, PeerId} from "@libp2p/interface";
+import type {MessageStreamDirection, PeerId} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
 
 export function lodestarNodePeer(
   peer: PeerId,
   state: routes.node.PeerState,
-  direction: Direction | null
+  direction: MessageStreamDirection | null
 ): routes.lodestar.LodestarNodePeer {
   return {
     peerId: peer.toString(),

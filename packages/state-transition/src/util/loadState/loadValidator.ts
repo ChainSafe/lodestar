@@ -1,6 +1,7 @@
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ValidatorIndex, deserializeContainerIgnoreFields, ssz} from "@lodestar/types";
+import {byteArrayEquals} from "@lodestar/utils";
 import {getStateTypeFromBytes} from "../sszBytes.js";
 
 /**
@@ -32,12 +33,12 @@ function getSameFields(
 ): ("pubkey" | "withdrawalCredentials")[] {
   const ignoredFields: ("pubkey" | "withdrawalCredentials")[] = [];
   const pubkey = validatorBytes.subarray(0, 48);
-  if (Buffer.compare(pubkey, validator.pubkey) === 0) {
+  if (byteArrayEquals(pubkey, validator.pubkey)) {
     ignoredFields.push("pubkey");
   }
 
   const withdrawalCredentials = validatorBytes.subarray(48, 80);
-  if (Buffer.compare(withdrawalCredentials, validator.withdrawalCredentials) === 0) {
+  if (byteArrayEquals(withdrawalCredentials, validator.withdrawalCredentials)) {
     ignoredFields.push("withdrawalCredentials");
   }
 

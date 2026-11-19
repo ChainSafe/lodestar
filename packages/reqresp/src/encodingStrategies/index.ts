@@ -1,10 +1,11 @@
+import type {Stream} from "@libp2p/interface";
+import type {ByteStream} from "@libp2p/utils";
 import {Encoding, TypeSizes} from "../types.js";
-import {BufferedSource} from "../utils/index.js";
 import {readSszSnappyPayload} from "./sszSnappy/decode.js";
 import {writeSszSnappyPayload} from "./sszSnappy/encode.js";
 
 // For more info about Ethereum Consensus request/response encoding strategies, see:
-// https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#encoding-strategies
+// https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#encoding-strategies
 // Supported encoding strategies:
 // - ssz_snappy
 
@@ -15,13 +16,14 @@ import {writeSszSnappyPayload} from "./sszSnappy/encode.js";
  * ```
  */
 export async function readEncodedPayload(
-  bufferedSource: BufferedSource,
+  stream: ByteStream<Stream>,
   encoding: Encoding,
-  type: TypeSizes
+  type: TypeSizes,
+  signal?: AbortSignal
 ): Promise<Uint8Array> {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
-      return readSszSnappyPayload(bufferedSource, type);
+      return readSszSnappyPayload(stream, type, signal);
 
     default:
       throw Error("Unsupported encoding");
@@ -34,7 +36,7 @@ export async function readEncodedPayload(
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function* writeEncodedPayload(chunkData: Uint8Array, encoding: Encoding): AsyncGenerator<Buffer> {
+export function* writeEncodedPayload(chunkData: Uint8Array, encoding: Encoding): Generator<Buffer> {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
       yield* writeSszSnappyPayload(chunkData);

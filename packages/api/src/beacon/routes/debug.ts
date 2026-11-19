@@ -1,8 +1,8 @@
-import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
+import {ContainerType, OptionalType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {BeaconState, StringType, fulu, ssz} from "@lodestar/types";
+import {isForkPostFulu} from "@lodestar/params";
+import {ArrayOf, BeaconState, DataColumnSidecars, StringType, ssz, sszTypesFor} from "@lodestar/types";
 import {
-  ArrayOf,
   EmptyArgs,
   EmptyMeta,
   EmptyMetaCodec,
@@ -41,7 +41,7 @@ const ProtoNodeType = new ContainerType(
     unrealizedFinalizedEpoch: ssz.Epoch,
     unrealizedFinalizedRoot: stringType,
     parent: stringType,
-    weight: ssz.Uint32,
+    weight: ssz.Gwei,
     bestChild: stringType,
     bestDescendant: stringType,
   },
@@ -63,7 +63,7 @@ const ForkChoiceNodeType = new ContainerType(
     parentRoot: stringType,
     justifiedEpoch: ssz.Epoch,
     finalizedEpoch: ssz.Epoch,
-    weight: ssz.UintNum64,
+    weight: ssz.Gwei,
     validity: new StringType<"valid" | "invalid" | "optimistic">(),
     executionBlockHash: stringType,
   },
@@ -78,12 +78,74 @@ const ForkChoiceResponseType = new ContainerType(
   {jsonCase: "eth2"}
 );
 
+const ForkChoiceNodeV2ExtraDataType = new ContainerType(
+  {
+    attestationScore: ssz.Gwei,
+    executionOptimistic: ssz.Boolean,
+    gasLimit: new OptionalType(ssz.UintNum64),
+    timestamp: ssz.UintNum64,
+    stateRoot: stringType,
+    target: stringType,
+    unrealizedJustifiedEpoch: ssz.Epoch,
+    unrealizedJustifiedRoot: stringType,
+    unrealizedFinalizedEpoch: ssz.Epoch,
+    unrealizedFinalizedRoot: stringType,
+  },
+  {jsonCase: "eth2"}
+);
+const payloadStatusType = new StringType<"pending" | "empty" | "full">();
+const ForkChoiceNodeV2Type = new ContainerType(
+  {
+    slot: ssz.Slot,
+    blockRoot: stringType,
+    payloadStatus: payloadStatusType,
+    parentRoot: stringType,
+    parentPayloadStatus: new OptionalType(payloadStatusType),
+    justifiedCheckpoint: ssz.phase0.Checkpoint,
+    finalizedCheckpoint: ssz.phase0.Checkpoint,
+    weight: ssz.Gwei,
+    validity: new StringType<"valid" | "invalid" | "optimistic">(),
+    executionBlockHash: stringType,
+    payloadAttesterCount: ssz.UintNum64,
+    payloadAvailabilityYesCount: ssz.UintNum64,
+    payloadDataAvailabilityYesCount: ssz.UintNum64,
+    extraData: ForkChoiceNodeV2ExtraDataType,
+  },
+  {jsonCase: "eth2"}
+);
+const ForkChoiceExtraDataType = new ContainerType(
+  {
+    head: new ContainerType(
+      {
+        blockRoot: stringType,
+        payloadStatus: payloadStatusType,
+      },
+      {jsonCase: "eth2"}
+    ),
+    proposerBoostRoot: stringType,
+    previousProposerBoostRoot: stringType,
+    unrealizedJustifiedCheckpoint: ssz.phase0.Checkpoint,
+    unrealizedFinalizedCheckpoint: ssz.phase0.Checkpoint,
+  },
+  {jsonCase: "eth2"}
+);
+const ForkChoiceResponseV2Type = new ContainerType(
+  {
+    justifiedCheckpoint: ssz.phase0.Checkpoint,
+    finalizedCheckpoint: ssz.phase0.Checkpoint,
+    forkChoiceNodes: ArrayOf(ForkChoiceNodeV2Type),
+    extraData: ForkChoiceExtraDataType,
+  },
+  {jsonCase: "eth2"}
+);
+
 const ProtoNodeListType = ArrayOf(ProtoNodeType);
 const DebugChainHeadListType = ArrayOf(DebugChainHeadType);
 
 type ProtoNodeList = ValueOf<typeof ProtoNodeListType>;
 type DebugChainHeadList = ValueOf<typeof DebugChainHeadListType>;
 type ForkChoiceResponse = ValueOf<typeof ForkChoiceResponseType>;
+type ForkChoiceResponseV2 = ValueOf<typeof ForkChoiceResponseV2Type>;
 
 export type Endpoints = {
   /**
@@ -107,6 +169,18 @@ export type Endpoints = {
     EmptyArgs,
     EmptyRequest,
     ForkChoiceResponse,
+    EmptyMeta
+  >;
+
+  /**
+   * Retrieves all current fork choice context (v2: per (root, payload_status) with PTC vote tallies)
+   */
+  getDebugForkChoiceV2: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    ForkChoiceResponseV2,
     EmptyMeta
   >;
 
@@ -150,7 +224,7 @@ export type Endpoints = {
       indices?: number[];
     },
     {params: {block_id: string}; query: {indices?: number[]}},
-    fulu.DataColumnSidecars,
+    DataColumnSidecars,
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
 };
@@ -183,6 +257,16 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
             data: resp as ForkChoiceResponse,
           }),
         },
+      },
+    },
+    getDebugForkChoiceV2: {
+      url: "/eth/v2/debug/fork_choice",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: ForkChoiceResponseV2Type,
+        meta: EmptyMetaCodec,
+        onlySupport: WireFormat.json,
       },
     },
     getProtoArrayNodes: {
@@ -223,7 +307,9 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         schema: {params: {block_id: Schema.StringRequired}, query: {indices: Schema.UintArray}},
       },
       resp: {
-        data: ssz.fulu.DataColumnSidecars,
+        data: WithVersion((fork) =>
+          isForkPostFulu(fork) ? sszTypesFor(fork).DataColumnSidecars : ssz.fulu.DataColumnSidecars
+        ),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },

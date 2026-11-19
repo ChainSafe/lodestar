@@ -1,4 +1,6 @@
-import {Uint8ArrayList} from "uint8arraylist";
+import type {Stream} from "@libp2p/interface";
+import type {ByteStream} from "@libp2p/utils";
+import {byteStream} from "@libp2p/utils";
 import {ForkName} from "@lodestar/params";
 import {readEncodedPayload} from "../encodingStrategies/index.js";
 import {RespStatus} from "../interface.js";
@@ -10,7 +12,7 @@ import {
   MixedProtocol,
   ResponseIncoming,
 } from "../types.js";
-import {BufferedSource, decodeErrorMessage} from "../utils/index.js";
+import {decodeErrorMessage, drainByteStream} from "../utils/index.js";
 
 /**
  * Internal helper type to signal stream ended early
@@ -27,22 +29,17 @@ enum StreamStatus {
  * result          ::= "0" | "1" | "2" | ["128" ... "255"]
  * ```
  */
-export function responseDecode(
+export async function* responseDecode(
   protocol: MixedProtocol,
-  cbs: {
-    onFirstHeader: () => void;
-    onFirstResponseChunk: () => void;
-  }
-): (source: AsyncIterable<Uint8Array | Uint8ArrayList>) => AsyncIterable<ResponseIncoming> {
-  return async function* responseDecodeSink(source) {
-    const bufferedSource = new BufferedSource(source as AsyncGenerator<Uint8ArrayList>);
+  stream: Stream,
+  opts: {signal?: AbortSignal; getError?: () => Error} = {}
+): AsyncIterable<ResponseIncoming> {
+  const bytes = byteStream(stream);
+  let responseReadDone = false;
 
-    let readFirstHeader = false;
-    let readFirstResponseChunk = false;
-
-    // Consumers of `responseDecode()` may limit the number of <response_chunk> and break out of the while loop
-    while (!bufferedSource.isDone) {
-      const status = await readResultHeader(bufferedSource);
+  try {
+    while (true) {
+      const status = await readResultHeader(bytes, opts.signal);
 
       // Stream is only allowed to end at the start of a <response_chunk> block
       // The happens when source ends before readResultHeader() can fetch 1 byte
@@ -50,34 +47,41 @@ export function responseDecode(
         break;
       }
 
-      if (!readFirstHeader) {
-        cbs.onFirstHeader();
-        readFirstHeader = true;
-      }
-
       // For multiple chunks, only the last chunk is allowed to have a non-zero error
       // code (i.e. The chunk stream is terminated once an error occurs
       if (status !== RespStatus.SUCCESS) {
-        const errorMessage = await readErrorMessage(bufferedSource);
+        const errorMessage = await readErrorMessage(bytes, opts.signal);
         throw new ResponseError(status, errorMessage);
       }
 
-      const forkName = await readContextBytes(protocol.contextBytes, bufferedSource);
+      const forkName = await readContextBytes(protocol.contextBytes, bytes, opts.signal);
       const typeSizes = protocol.responseSizes(forkName);
-      const chunkData = await readEncodedPayload(bufferedSource, protocol.encoding, typeSizes);
+      const chunkData = await readEncodedPayload(bytes, protocol.encoding, typeSizes, opts.signal);
 
       yield {
         data: chunkData,
         fork: forkName,
         protocolVersion: protocol.version,
       };
-
-      if (!readFirstResponseChunk) {
-        cbs.onFirstResponseChunk();
-        readFirstResponseChunk = true;
-      }
     }
-  };
+    responseReadDone = true;
+  } catch (e) {
+    if (opts.signal?.aborted && opts.getError) {
+      throw opts.getError();
+    }
+    throw e;
+  } finally {
+    try {
+      if (!responseReadDone) {
+        // Do not push partial bytes back into the stream on decode failure/abort.
+        // This stream is consumed by req/resp only once.
+        drainByteStream(bytes);
+      }
+      bytes.unwrap();
+    } catch {
+      // Ignore unwrap errors - stream may already be closed
+    }
+  }
 }
 
 /**
@@ -87,18 +91,17 @@ export function responseDecode(
  * ```
  * `<response_chunk>` starts with a single-byte response code which determines the contents of the response_chunk
  */
-export async function readResultHeader(bufferedSource: BufferedSource): Promise<RespStatus | StreamStatus> {
-  for await (const buffer of bufferedSource) {
-    const status = buffer.get(0);
-    buffer.consume(1);
+export async function readResultHeader(
+  bytes: ByteStream<Stream>,
+  signal?: AbortSignal
+): Promise<RespStatus | StreamStatus> {
+  const chunk = await bytes.read({bytes: 1, signal}).catch((e) => {
+    if ((e as Error).name === "UnexpectedEOFError") return null;
+    throw e;
+  });
+  if (chunk === null) return StreamStatus.Ended;
 
-    // If first chunk had zero bytes status === null, get next
-    if (status !== null) {
-      return status;
-    }
-  }
-
-  return StreamStatus.Ended;
+  return chunk.get(0);
 }
 
 /**
@@ -108,28 +111,29 @@ export async function readResultHeader(bufferedSource: BufferedSource): Promise<
  * result          ::= "1" | "2" | ["128" ... "255"]
  * ```
  */
-export async function readErrorMessage(bufferedSource: BufferedSource): Promise<string> {
-  // Read at least 256 or wait for the stream to end
-  let length: number | undefined;
-  for await (const buffer of bufferedSource) {
-    // Wait for next chunk with bytes or for the stream to end
-    // Note: The entire <error_message> is expected to be in the same chunk
-    if (buffer.length >= 256) {
-      length = 256;
+export async function readErrorMessage(bytes: ByteStream<Stream>, signal?: AbortSignal): Promise<string> {
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  while (total < 256) {
+    const chunk = await bytes.read({signal}).catch((e) => {
+      if ((e as Error).name === "UnexpectedEOFError") return null;
+      throw e;
+    });
+    if (chunk === null) {
+      // If EOF is reached while satisfying a larger read, libp2p v3 may still have
+      // buffered bytes available. Drain them so error_message matches pre-v3 behavior.
+      const remaining = drainByteStream(bytes);
+      if (remaining) {
+        chunks.push(remaining);
+      }
       break;
     }
-    length = buffer.length;
+    chunks.push(chunk.subarray());
+    total += chunk.byteLength;
   }
 
-  // biome-ignore lint/complexity/useLiteralKeys: It is a private attribute
-  const bytes = bufferedSource["buffer"].slice(0, length);
-
-  try {
-    return decodeErrorMessage(bytes);
-  } catch (_e) {
-    // Error message is optional and may not be included in the response stream
-    return Buffer.prototype.toString.call(bytes, "hex");
-  }
+  return decodeErrorMessage(Buffer.concat(chunks).subarray(0, 256));
 }
 
 /**
@@ -139,14 +143,15 @@ export async function readErrorMessage(bufferedSource: BufferedSource): Promise<
  */
 export async function readContextBytes(
   contextBytes: ContextBytesFactory,
-  bufferedSource: BufferedSource
+  bytes: ByteStream<Stream>,
+  signal?: AbortSignal
 ): Promise<ForkName> {
   switch (contextBytes.type) {
     case ContextBytesType.Empty:
       return ForkName.phase0;
 
     case ContextBytesType.ForkDigest: {
-      const forkDigest = await readContextBytesForkDigest(bufferedSource);
+      const forkDigest = await readContextBytesForkDigest(bytes, signal);
       return contextBytes.config.forkDigest2ForkBoundary(forkDigest).fork;
     }
   }
@@ -155,15 +160,6 @@ export async function readContextBytes(
 /**
  * Consumes a stream source to read `<context-bytes>`, where it's a fixed-width 4 byte
  */
-export async function readContextBytesForkDigest(bufferedSource: BufferedSource): Promise<Uint8Array> {
-  for await (const buffer of bufferedSource) {
-    if (buffer.length >= CONTEXT_BYTES_FORK_DIGEST_LENGTH) {
-      const bytes = buffer.slice(0, CONTEXT_BYTES_FORK_DIGEST_LENGTH);
-      buffer.consume(CONTEXT_BYTES_FORK_DIGEST_LENGTH);
-      return bytes;
-    }
-  }
-
-  // TODO: Use typed error
-  throw Error("Source ended while reading context bytes");
+export async function readContextBytesForkDigest(bytes: ByteStream<Stream>, signal?: AbortSignal): Promise<Uint8Array> {
+  return (await bytes.read({bytes: CONTEXT_BYTES_FORK_DIGEST_LENGTH, signal})).subarray();
 }

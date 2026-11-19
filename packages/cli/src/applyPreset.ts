@@ -1,7 +1,7 @@
 // MUST import this file first before anything and not import any Lodestar code.
 
-import {hasher as hashtreeHasher} from "#hashtree-hasher";
 import {setHasher} from "@chainsafe/persistent-merkle-tree";
+import {hasher as hashtreeHasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
 
 // Without setting this first, persistent-merkle-tree will use noble instead
 setHasher(hashtreeHasher);
@@ -20,13 +20,8 @@ setHasher(hashtreeHasher);
 // Running this file allows us to keep a static export strategy while NOT requiring users to
 // set LODESTAR_PRESET manually every time.
 
-// IMPORTANT: only import Lodestar code here which does not import any other Lodestar libraries
-import {PresetName, presetFromJson, setActivePreset} from "@lodestar/params/setPreset";
-import {readFile} from "./util/file.js";
-
 const network = valueOfArg("network");
 const preset = valueOfArg("preset");
-const presetFile = valueOfArg("presetFile");
 
 // Apply preset flag if present
 if (preset) {
@@ -42,8 +37,6 @@ else if (process.env.LODESTAR_PRESET) {
 else if (network) {
   if (network === "dev") {
     process.env.LODESTAR_PRESET = "minimal";
-    // the kzg library has hardcoded the mainnet value, do not use presets
-    setActivePreset(PresetName.minimal, {FIELD_ELEMENTS_PER_BLOB: 4096});
   } else if (network === "gnosis" || network === "chiado") {
     process.env.LODESTAR_PRESET = "gnosis";
   }
@@ -53,14 +46,6 @@ else if (network) {
 else if (process.argv[2] === "dev") {
   process.env.LODESTAR_PRESET = "minimal";
   process.env.LODESTAR_NETWORK = "dev";
-  // the kzg library has hardcoded the mainnet value, do not use presets
-  setActivePreset(PresetName.minimal, {FIELD_ELEMENTS_PER_BLOB: 4096});
-}
-
-if (presetFile) {
-  // Override the active preset with custom values from file
-  // Do not modify the preset to use as a base by passing null
-  setActivePreset(null, presetFromJson(readFile(presetFile) ?? {}));
 }
 
 /**

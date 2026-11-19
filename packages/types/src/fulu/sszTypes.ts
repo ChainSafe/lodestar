@@ -97,6 +97,14 @@ export const DataColumnSidecarsByRangeRequest = new ContainerType(
   {typeName: "DataColumnSidecarsByRangeRequest", jsonCase: "eth2"}
 );
 
+export const BeaconBlocksByHeadRequest = new ContainerType(
+  {
+    beaconRoot: Root,
+    count: UintNum64,
+  },
+  {typeName: "BeaconBlocksByHeadRequest", jsonCase: "eth2"}
+);
+
 // Explicit aliases for a few common types
 export const BeaconBlock = electraSsz.BeaconBlock;
 export const SignedBeaconBlock = electraSsz.SignedBeaconBlock;
@@ -109,6 +117,14 @@ export const BlobsBundle = new ContainerType(
     blobs: denebSsz.Blobs,
   },
   {typeName: "BlobsBundle", jsonCase: "eth2"}
+);
+
+export const ExecutionPayloadAndBlobsBundle = new ContainerType(
+  {
+    executionPayload: electraSsz.ExecutionPayload,
+    blobsBundle: BlobsBundle,
+  },
+  {typeName: "ExecutionPayloadAndBlobsBundle", jsonCase: "eth2"}
 );
 
 export const BeaconState = new ContainerType(

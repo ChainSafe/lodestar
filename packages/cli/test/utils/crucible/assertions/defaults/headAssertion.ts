@@ -46,7 +46,7 @@ export const headAssertion: Assertion<"head", HeadSummary> = {
      */
     const result = [`Slot,${nodes.map((n) => n.beacon.id).join(", ")}`];
     for (let s = 1; s <= slot; s++) {
-      result.push(`${s}, ${nodes.map((n) => store[n.beacon.id][s].blockRoot ?? "-").join(",")}`);
+      result.push(`${s}, ${nodes.map((n) => store[n.beacon.id][s]?.blockRoot ?? "-").join(",")}`);
     }
     return {"headAssertion.csv": result.join("\n")};
   },

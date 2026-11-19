@@ -1,11 +1,12 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
-import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {RootHex, deneb, fulu, phase0} from "@lodestar/types";
+import {CheckpointWithHex, PtcQuorumEvent} from "@lodestar/fork-choice";
+import {IBeaconStateView} from "@lodestar/state-transition";
+import {DataColumnSidecar, RootHex, Slot, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
+import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -32,9 +33,14 @@ export enum ChainEvent {
   /**
    * This event signals that the fork choice store has been updated.
    *
-   * This event is guaranteed to be triggered whenever the fork choice justified checkpoint is updated. This is in response to a newly processed block.
+   * This event is guaranteed to be triggered whenever the fork choice finalized checkpoint is updated. This is either in response to a newly processed block or a new clock tick.
    */
   forkChoiceFinalized = "forkChoice:finalized",
+  /**
+   * This event signals that the PTC verdict on a block was decided: a majority against payload presence or blob data
+   * availability, or a majority for both.
+   */
+  forkChoicePtcQuorum = "forkChoice:ptcQuorum",
   /**
    * This event signals that dependent services (e.g. custody sampling) should update to account for the new target group count.
    */
@@ -45,27 +51,46 @@ export enum ChainEvent {
    */
   publishDataColumns = "publishDataColumns",
   /**
-   * This event signals that blobs have been fetched from the execution engine
-   * and are ready to be published.
+   * This event signals that a proposer slashing has been produced from an observed equivocation
+   * and is ready to be published.
    */
-  publishBlobSidecars = "publishBlobSidecars",
+  publishProposerSlashing = "publishProposerSlashing",
+  /**
+   * New block proposal slots of validators connected to this node, the network subscribes to all attestation
+   * subnets before them, see `slotsToSubscribeBeforeProposalDuty`
+   */
+  localProposalSlots = "localProposalSlots",
   /**
    * Trigger an update of status so reqresp by peers have current earliestAvailableSlot
    */
   updateStatus = "updateStatus",
   /**
-   * Trigger a BlockInputSync for blocks where the parentRoot is not known to fork choice
+   * Trigger BlockInputSync to find parent of a SignedBeaconBlock received
+   * Post-gloas, missing parent could be a SignedBeaconBlock and/or a SignedExecutionPayloadEnvelope
    */
-  unknownParent = "unknownParent",
+  blockUnknownParent = "blockUnknownParent",
   /**
-   * Trigger BlockInputSync for objects that correspond to a block that is not known to fork choice
+   * Trigger BlockInputSync to find a SignedBeaconBlock with specified block root.
    */
   unknownBlockRoot = "unknownBlockRoot",
+  /**
+   * Trigger BlockInputSync to find a SignedExecutionPayloadEnvelope with specified block root.
+   */
+  unknownEnvelopeBlockRoot = "unknownEnvelopeBlockRoot",
+  /**
+   * Same as unknownEnvelopeBlockRoot, but with slot
+   */
+  unknownEnvelopeBlockRootSlot = "unknownEnvelopeBlockRootSlot",
   /**
    * Trigger BlockInputSync for blocks that are partially received via gossip but are not complete by time the
    * cut-off window passes for waiting on gossip
    */
   incompleteBlockInput = "incompleteBlockInput",
+  /**
+   * Post-gloas: trigger BlockInputSync for payload envelopes whose envelope and/or sampled columns are partially
+   * received via gossip but are not complete by time the cut-off window passes for waiting on gossip
+   */
+  incompletePayloadEnvelope = "incompletePayloadEnvelope",
 }
 
 export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
@@ -75,30 +100,43 @@ export type ReorgEventData = routes.events.EventData[routes.events.EventType.cha
 type ApiEvents = {[K in routes.events.EventType]: (data: routes.events.EventData[K]) => void};
 
 export type ChainEventData = {
-  [ChainEvent.unknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.blockUnknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
   [ChainEvent.unknownBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
   [ChainEvent.incompleteBlockInput]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.incompletePayloadEnvelope]: {
+    payloadInput: PayloadEnvelopeInput;
+    peer: PeerIdStr;
+    source: BlockInputSource;
+  };
+  [ChainEvent.unknownEnvelopeBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.unknownEnvelopeBlockRootSlot]: {rootHex: RootHex; slot: Slot; peer?: PeerIdStr; source: BlockInputSource};
 };
 
 export type IChainEvents = ApiEvents & {
-  [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks) => void;
+  [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: IBeaconStateView) => void;
 
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
+  [ChainEvent.forkChoicePtcQuorum]: (data: PtcQuorumEvent) => void;
 
   [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
 
-  [ChainEvent.publishDataColumns]: (sidecars: fulu.DataColumnSidecar[]) => void;
+  [ChainEvent.publishDataColumns]: (sidecars: DataColumnSidecar[]) => void;
 
-  [ChainEvent.publishBlobSidecars]: (sidecars: deneb.BlobSidecar[]) => void;
+  [ChainEvent.publishProposerSlashing]: (proposerSlashing: phase0.ProposerSlashing) => void;
+
+  [ChainEvent.localProposalSlots]: (proposalSlots: Slot[]) => void;
 
   [ChainEvent.updateStatus]: () => void;
 
   // Sync events that are chain->chain. Initiated from network requests but do not cross the network
   // barrier so are considered ChainEvent(s).
-  [ChainEvent.unknownParent]: (data: ChainEventData[ChainEvent.unknownParent]) => void;
+  [ChainEvent.blockUnknownParent]: (data: ChainEventData[ChainEvent.blockUnknownParent]) => void;
   [ChainEvent.unknownBlockRoot]: (data: ChainEventData[ChainEvent.unknownBlockRoot]) => void;
   [ChainEvent.incompleteBlockInput]: (data: ChainEventData[ChainEvent.incompleteBlockInput]) => void;
+  [ChainEvent.incompletePayloadEnvelope]: (data: ChainEventData[ChainEvent.incompletePayloadEnvelope]) => void;
+  [ChainEvent.unknownEnvelopeBlockRoot]: (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRoot]) => void;
+  [ChainEvent.unknownEnvelopeBlockRootSlot]: (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRootSlot]) => void;
 };
 
 /**

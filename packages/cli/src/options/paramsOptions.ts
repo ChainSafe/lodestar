@@ -1,4 +1,4 @@
-import {ChainConfig, chainConfigTypes} from "@lodestar/config";
+import {chainConfigTypes} from "@lodestar/config";
 import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
 import {IBeaconParamsUnparsed} from "../config/types.js";
 import {ObjectKeys} from "../util/index.js";
@@ -7,12 +7,7 @@ import {ObjectKeys} from "../util/index.js";
 // If an arbitrary key notation is used, it removes type safety on most of this CLI arg parsing code.
 // Params will be parsed from an args object assuming to contain the required keys
 
-export type ITerminalPowArgs = {
-  "terminal-total-difficulty-override"?: string;
-  "terminal-block-hash-override"?: string;
-  "terminal-block-hash-epoch-override"?: string;
-};
-export type IParamsArgs = Record<never, never> & ITerminalPowArgs;
+export type IParamsArgs = Record<never, never>;
 
 const getArgKey = (key: keyof IBeaconParamsUnparsed): string => `params.${key}`;
 
@@ -24,7 +19,7 @@ export function parseBeaconParamsArgs(args: Record<string, string | number>): IB
   }, {});
 }
 
-const paramsOptionsByName = ObjectKeys(chainConfigTypes).reduce(
+export const paramsOptions: CliCommandOptions<IParamsArgs> = ObjectKeys(chainConfigTypes).reduce(
   (options: Record<string, CliOptionDefinition>, key): Record<string, CliOptionDefinition> => {
     options[getArgKey(key)] = {
       hidden: true,
@@ -35,38 +30,3 @@ const paramsOptionsByName = ObjectKeys(chainConfigTypes).reduce(
   },
   {}
 );
-
-const terminalArgsToParamsMap: {[K in keyof ITerminalPowArgs]: keyof ChainConfig} = {
-  "terminal-total-difficulty-override": "TERMINAL_TOTAL_DIFFICULTY",
-  "terminal-block-hash-override": "TERMINAL_BLOCK_HASH",
-  "terminal-block-hash-epoch-override": "TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH",
-};
-
-export function parseTerminalPowArgs(args: ITerminalPowArgs): IBeaconParamsUnparsed {
-  const parsedArgs = ObjectKeys(terminalArgsToParamsMap).reduce((beaconParams: Partial<IBeaconParamsUnparsed>, key) => {
-    const paramOption = terminalArgsToParamsMap[key];
-    const value = args[key];
-    if (paramOption != null && value != null) beaconParams[paramOption] = value;
-    return beaconParams;
-  }, {});
-  return parsedArgs;
-}
-
-export const paramsOptions: CliCommandOptions<IParamsArgs> = {
-  ...paramsOptionsByName,
-
-  "terminal-total-difficulty-override": {
-    description: "Terminal PoW block TTD override",
-    type: "string",
-  },
-
-  "terminal-block-hash-override": {
-    description: "Terminal PoW block hash override",
-    type: "string",
-  },
-
-  "terminal-block-hash-epoch-override": {
-    description: "Terminal PoW block hash override activation epoch",
-    type: "string",
-  },
-};

@@ -12,8 +12,8 @@ describe("config / beaconNodeOptions", () => {
   });
 
   it("Should return added partial options", () => {
-    const initialPartialOptions = {eth1: {enabled: true}};
-    const editedPartialOptions = {eth1: {enabled: false}};
+    const initialPartialOptions = {metrics: {enabled: true}};
+    const editedPartialOptions = {metrics: {enabled: false}};
 
     const beaconNodeOptions = new BeaconNodeOptions(initialPartialOptions);
     beaconNodeOptions.set(editedPartialOptions);

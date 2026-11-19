@@ -3,7 +3,7 @@ import {presetStatus} from "./presetStatus.js";
 import {gnosisPreset} from "./presets/gnosis.js";
 import {mainnetPreset} from "./presets/mainnet.js";
 import {minimalPreset} from "./presets/minimal.js";
-import {userOverrides, userSelectedPreset} from "./setPreset.js";
+import {userSelectedPreset} from "./setPreset.js";
 
 export * from "./forkName.js";
 export {presetToJson} from "./json.js";
@@ -31,7 +31,7 @@ export const ACTIVE_PRESET =
   userSelectedPreset ??
   (typeof process !== "undefined" ? PresetName[process?.env?.LODESTAR_PRESET as PresetName] : undefined) ??
   PresetName.mainnet;
-export const activePreset = {...presets[ACTIVE_PRESET], ...userOverrides};
+export const activePreset = presets[ACTIVE_PRESET];
 
 // These variables must be exported individually and explicitly
 // in order to be accessible as top-level exports
@@ -117,7 +117,16 @@ export const {
 
   PTC_SIZE,
   MAX_PAYLOAD_ATTESTATIONS,
-  BUILDER_PENDING_WITHDRAWALS_LIMIT,
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDERS_PER_WITHDRAWALS_SWEEP,
+  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
+  MAX_ATTESTER_SLASHING_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
+
+  INCLUSION_LIST_COMMITTEE_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
+  MAX_SIGNED_INCLUSION_LIST_SIZE,
 } = activePreset;
 
 ////////////
@@ -142,7 +151,10 @@ export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 export const BLS_WITHDRAWAL_PREFIX = 0x00;
 export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 0x01;
 export const COMPOUNDING_WITHDRAWAL_PREFIX = 0x02;
-export const BUILDER_WITHDRAWAL_PREFIX = 0x03;
+export const BUILDER_WITHDRAWAL_PREFIX = 0xb0;
+
+// Builder version
+export const PAYLOAD_BUILDER_VERSION = 0;
 
 // Domain types
 
@@ -157,8 +169,11 @@ export const DOMAIN_SYNC_COMMITTEE = Uint8Array.from([7, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0]);
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
-export const DOMAIN_BEACON_BUILDER = Uint8Array.from([27, 0, 0, 0]);
+export const DOMAIN_BEACON_BUILDER = Uint8Array.from([11, 0, 0, 0]);
 export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
+export const DOMAIN_PROPOSER_PREFERENCES = Uint8Array.from([13, 0, 0, 0]);
+export const DOMAIN_BUILDER_DEPOSIT = Uint8Array.from([14, 0, 0, 0]);
+export const DOMAIN_INCLUSION_LIST_COMMITTEE = Uint8Array.from([16, 0, 0, 0]);
 
 // Application specific domains
 
@@ -170,6 +185,7 @@ export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
  */
 export const DOMAIN_APPLICATION_MASK = Uint8Array.from([0, 0, 0, 1]);
 export const DOMAIN_APPLICATION_BUILDER = Uint8Array.from([0, 0, 0, 1]);
+export const DOMAIN_BUILDER_REQUEST_AUTH = Uint8Array.from([11, 0, 0, 1]);
 
 // Participation flag indices
 
@@ -242,6 +258,33 @@ export const BLOCK_BODY_EXECUTION_PAYLOAD_INDEX = 9;
 
 /**
  * ```ts
+ * types.ssz.capella.BeaconBlockBody.getPathInfo(['executionPayload', 'blockHash']).gindex
+ * ```
+ */
+export const EXECUTION_BLOCK_HASH_GINDEX = 412;
+export const EXECUTION_BLOCK_HASH_DEPTH = 8;
+export const EXECUTION_BLOCK_HASH_INDEX = 156;
+
+/**
+ * ```ts
+ * types.ssz.deneb.BeaconBlockBody.getPathInfo(['executionPayload', 'blockHash']).gindex
+ * ```
+ */
+export const EXECUTION_BLOCK_HASH_GINDEX_DENEB = 812;
+export const EXECUTION_BLOCK_HASH_DEPTH_DENEB = 9;
+export const EXECUTION_BLOCK_HASH_INDEX_DENEB = 300;
+
+/**
+ * ```ts
+ * types.ssz.gloas.BeaconBlockBody.getPathInfo(['signedExecutionPayloadBid', 'message', 'parentBlockHash']).gindex
+ * ```
+ */
+export const EXECUTION_BLOCK_HASH_GINDEX_GLOAS = 2856;
+export const EXECUTION_BLOCK_HASH_DEPTH_GLOAS = 11;
+export const EXECUTION_BLOCK_HASH_INDEX_GLOAS = 808;
+
+/**
+ * ```ts
  * config.types.altair.BeaconState.getPathGindex(["currentSyncCommittee"])
  * ```
  */
@@ -271,6 +314,7 @@ export const MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES = 128;
 
 /**
  * Optimistic sync
+ * @deprecated All networks have completed the merge transition, blocks are always safe to import optimistically.
  */
 export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
 /** @deprecated */
@@ -312,5 +356,30 @@ export const KZG_COMMITMENTS_GINDEX = 27;
 export const KZG_COMMITMENTS_SUBTREE_INDEX = KZG_COMMITMENTS_GINDEX - 2 ** KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH;
 
 // Gloas Misc
+export const FINALIZED_ROOT_GINDEX_GLOAS = 735;
+export const FINALIZED_ROOT_DEPTH_GLOAS = 9;
+export const FINALIZED_ROOT_INDEX_GLOAS = 223;
+export const CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS = 2945;
+export const CURRENT_SYNC_COMMITTEE_DEPTH_GLOAS = 11;
+export const CURRENT_SYNC_COMMITTEE_INDEX_GLOAS = 897;
+export const NEXT_SYNC_COMMITTEE_GINDEX_GLOAS = 2946;
+export const NEXT_SYNC_COMMITTEE_DEPTH_GLOAS = 11;
+export const NEXT_SYNC_COMMITTEE_INDEX_GLOAS = 898;
+export const BUILDER_INDEX_FLAG = 2 ** 40;
+export const BUILDER_INDEX_SELF_BUILD = Infinity;
 export const BUILDER_PAYMENT_THRESHOLD_NUMERATOR = 6;
 export const BUILDER_PAYMENT_THRESHOLD_DENOMINATOR = 10;
+export const BUILDER_DEPOSIT_REQUEST_TYPE = 0x03;
+export const BUILDER_EXIT_REQUEST_TYPE = 0x04;
+
+// Gloas builder specs
+export const MAX_BUILDER_AUTH_DATA_SIZE = 4096;
+export const MAX_BUILDER_ENTRIES = 64;
+export const MAX_BUILDER_URL_SIZE = 2048;
+export const MAX_BUILDER_PUBKEYS = 64;
+export const MAX_EXECUTION_PAYMENT = 2n ** 64n - 1n;
+
+// EIP-8025 execution proofs
+export const MAX_PROOF_SIZE = 4194304;
+export const STATELESS_INPUT_SCHEMA_ID = 0x1501;
+export const MAX_SIGNED_EXECUTION_PROOF_ENVELOPE_SIZE = 4194449;

@@ -1,8 +1,8 @@
-import {toBigIntLE} from "bigint-buffer";
+import {toBigIntLE} from "@vekexasia/bigint-buffer2";
 import {describe, expect, it} from "vitest";
 import {GENESIS_SLOT, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {generateState} from "../../../src/testUtils/state.js";
 import {getBlockRoot} from "../../../src/util/index.js";
-import {generateState} from "../../utils/state.js";
 
 describe("getBlockRoot", () => {
   it("should return first block root for genesis slot", () => {

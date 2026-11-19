@@ -1,15 +1,14 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
+import {generatePerfTestCachedStateAltair} from "../../../src/testUtils/util.js";
 import {
   computeProposerIndex,
   computeShuffledIndex,
-  getComputeShuffledIndexFn,
   getNextSyncCommitteeIndices,
   naiveComputeProposerIndex,
   naiveGetNextSyncCommitteeIndices,
 } from "../../../src/util/seed.js";
-import {generatePerfTestCachedStateAltair} from "../util.js";
 
 // I'm not sure how to populate a good test data for this benchmark
 describe("computeProposerIndex", () => {
@@ -26,7 +25,8 @@ describe("computeProposerIndex", () => {
 
   const activeIndices = new Uint32Array(Array.from({length: vc}, (_, i) => i));
   const runsFactor = 100;
-  bench({
+  // enable this if you want to see the naive version performance
+  bench.skip({
     id: `naive computeProposerIndex ${vc} validators`,
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
@@ -57,7 +57,8 @@ describe("getNextSyncCommitteeIndices electra", () => {
       effectiveBalanceIncrements[i] = 32;
     }
 
-    bench({
+    // enable this if you want to see the naive version performance
+    bench.skip({
       id: `naiveGetNextSyncCommitteeIndices ${vc} validators`,
       fn: () => {
         naiveGetNextSyncCommitteeIndices(ForkSeq.electra, state, activeIndices, effectiveBalanceIncrements);
@@ -77,22 +78,12 @@ describe("computeShuffledIndex", () => {
   const seed = new Uint8Array(Array.from({length: 32}, (_, i) => i));
 
   for (const vc of [100_000, 2_000_000]) {
-    bench({
+    // enable this if you want to see the naive version performance
+    bench.skip({
       id: `naive computeShuffledIndex ${vc} validators`,
       fn: () => {
         for (let i = 0; i < vc; i++) {
           computeShuffledIndex(i, vc, seed);
-        }
-      },
-    });
-
-    const shuffledIndexFn = getComputeShuffledIndexFn(vc, seed);
-
-    bench({
-      id: `cached computeShuffledIndex ${vc} validators`,
-      fn: () => {
-        for (let i = 0; i < vc; i++) {
-          shuffledIndexFn(i);
         }
       },
     });

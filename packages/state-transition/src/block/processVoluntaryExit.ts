@@ -1,6 +1,7 @@
 import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
 import {verifyVoluntaryExitSignature} from "../signatureSets/index.js";
+import {BeaconStateView} from "../stateView/beaconStateView.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
 import {initiateValidatorExit} from "./index.js";
@@ -41,9 +42,31 @@ export function getVoluntaryExitValidity(
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): VoluntaryExitValidity {
+  const currentEpoch = state.epochCtx.epoch;
+  const voluntaryExit = signedVoluntaryExit.message;
+
+  // Exits must specify an epoch when they become valid; they are not valid before then
+  if (currentEpoch < voluntaryExit.epoch) {
+    return VoluntaryExitValidity.earlyEpoch;
+  }
+
+  return getValidatorVoluntaryExitValidity(fork, state, signedVoluntaryExit, verifySignature);
+}
+
+function getValidatorVoluntaryExitValidity(
+  fork: ForkSeq,
+  state: CachedBeaconStateAllForks,
+  signedVoluntaryExit: phase0.SignedVoluntaryExit,
+  verifySignature: boolean
+): VoluntaryExitValidity {
   const {config, epochCtx} = state;
   const voluntaryExit = signedVoluntaryExit.message;
-  const validator = state.validators.get(voluntaryExit.validatorIndex);
+
+  if (voluntaryExit.validatorIndex >= state.validators.length) {
+    return VoluntaryExitValidity.inactive;
+  }
+
+  const validator = state.validators.getReadonly(voluntaryExit.validatorIndex);
   const currentEpoch = epochCtx.epoch;
 
   // verify the validator is active
@@ -54,11 +77,6 @@ export function getVoluntaryExitValidity(
   // verify exit has not been initiated
   if (validator.exitEpoch !== FAR_FUTURE_EPOCH) {
     return VoluntaryExitValidity.alreadyExited;
-  }
-
-  // exits must specify an epoch when they become valid; they are not valid before then
-  if (currentEpoch < voluntaryExit.epoch) {
-    return VoluntaryExitValidity.earlyEpoch;
   }
 
   // verify the validator had been active long enough
@@ -74,7 +92,8 @@ export function getVoluntaryExitValidity(
     return VoluntaryExitValidity.pendingWithdrawals;
   }
 
-  if (verifySignature && !verifyVoluntaryExitSignature(state, signedVoluntaryExit)) {
+  // Verify signature
+  if (verifySignature && !verifyVoluntaryExitSignature(config, new BeaconStateView(state), signedVoluntaryExit)) {
     return VoluntaryExitValidity.invalidSignature;
   }
 

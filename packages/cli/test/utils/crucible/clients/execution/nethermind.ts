@@ -16,7 +16,6 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
 
   const {
     id,
-    mode,
     ttd,
     address,
     mining,
@@ -26,6 +25,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     shanghaiTime,
     cancunTime,
     pragueTime,
+    osakaTime,
     genesisTime,
   } = opts;
   const ports = getNodePorts(nodeIndex);
@@ -59,12 +59,13 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
       await writeFile(
         chainSpecPath,
         JSON.stringify(
-          getNethermindChainSpec(mode, {
+          getNethermindChainSpec({
             ttd,
             cliqueSealingPeriod,
             shanghaiTime,
             cancunTime,
             pragueTime,
+            osakaTime,
             genesisTime,
             clientOptions: [],
           })

@@ -2,7 +2,7 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {Discv5, Discv5EventEmitter} from "@chainsafe/discv5";
-import {ENR, ENRData, SignableENR} from "@chainsafe/enr";
+import {ENR, SignableENR} from "@chainsafe/enr";
 import {
   HttpMetricsServer,
   IBeaconNodeOptions,
@@ -87,7 +87,7 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
       void discv5.findRandomNode();
     }
 
-    discv5.on("multiaddrUpdated", (addr: ENRData) => {
+    discv5.on("multiaddrUpdated", (addr: Multiaddr) => {
       logger.info("Advertised socket address updated", {addr: addr.toString()});
     });
 

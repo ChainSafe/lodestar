@@ -124,10 +124,10 @@ $ which node_debug
 $ cd ../lodestar
 
 # Clean the build artifacts and node_modules
-$ yarn clean && yarn clean:nm
+$ pnpm clean && pnpm clean:nm
 
 # Install the dependencies
-$ yarn install
+$ pnpm install
 
 # Ensure that all native modules are rebuilt with debug symbols. Some
 # modules are prebuilt, like classic-level, and the debug symbols may

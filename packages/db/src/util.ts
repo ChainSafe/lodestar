@@ -23,7 +23,7 @@ export function encodeKey(bucket: number, key: Uint8Array | string | number | bi
     buf.write(key, prefixLength);
   } else if (typeof key === "number" || typeof key === "bigint") {
     buf = Buffer.alloc(uintLen + prefixLength);
-    intToBytes(BigInt(key), uintLen, "be").copy(buf, prefixLength);
+    buf.set(intToBytes(key, uintLen, "be"), prefixLength);
   } else {
     buf = Buffer.alloc(key.length + prefixLength);
     buf.set(key, prefixLength);

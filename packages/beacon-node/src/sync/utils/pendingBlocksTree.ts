@@ -40,21 +40,6 @@ function addToDescendantBlocks(
   return descendantBlocks;
 }
 
-export function getDescendantBlocks(
-  blockRootHex: RootHex,
-  blocks: Map<RootHex, BlockInputSyncCacheItem>
-): BlockInputSyncCacheItem[] {
-  const descendantBlocks: BlockInputSyncCacheItem[] = [];
-
-  for (const block of blocks.values()) {
-    if ((isPendingBlockInput(block) ? block.blockInput.parentRootHex : undefined) === blockRootHex) {
-      descendantBlocks.push(block);
-    }
-  }
-
-  return descendantBlocks;
-}
-
 export type UnknownAndAncestorBlocks = {
   unknowns: BlockInputSyncCacheItem[];
   ancestors: PendingBlockInput[];

@@ -10,7 +10,7 @@ import {isValidIndexedAttestation} from "./index.js";
  * state.previousEpochAttestations to be processed in bulk at the epoch transition.
  *
  * PERF: Work depends on number of Attestation per block. On mainnet the average is 89.7 / block, with 87.8 participant
- * true bits on average. See `packages/state-transition/test/perf/analyzeBlocks.ts`
+ * true bits on average.
  */
 export function processAttestationPhase0(
   state: CachedBeaconStatePhase0,
@@ -50,7 +50,15 @@ export function processAttestationPhase0(
     state.previousEpochAttestations.push(pendingAttestation);
   }
 
-  if (!isValidIndexedAttestation(state, epochCtx.getIndexedAttestation(ForkSeq.phase0, attestation), verifySignature)) {
+  if (
+    !isValidIndexedAttestation(
+      state.config,
+      state.slot,
+      state.validators.length,
+      epochCtx.getIndexedAttestation(ForkSeq.phase0, attestation),
+      verifySignature
+    )
+  ) {
     throw new Error("Attestation is not valid");
   }
 }
@@ -86,7 +94,11 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
   }
 
   if (fork >= ForkSeq.electra) {
-    assert.equal(data.index, 0, `AttestationData.index must be zero: index=${data.index}`);
+    if (fork >= ForkSeq.gloas) {
+      assert.lt(data.index, 2, `AttestationData.index must be 0 or 1: index=${data.index}`);
+    } else {
+      assert.equal(data.index, 0, `AttestationData.index must be 0: index=${data.index}`);
+    }
     const attestationElectra = attestation as electra.Attestation;
     const committeeIndices = attestationElectra.committeeBits.getTrueBitIndexes();
 

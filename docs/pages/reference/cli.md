@@ -4,6 +4,6 @@ _**Welcome! This page has been moved. Please checkout our new docs layout from t
 
 - [Beacon Node CLI](../run/beacon-management/beacon-cli.md)
 - [Validator CLI](../run/validator-management/validator-cli.md)
+- [Builder CLI](../run/builder-management/builder-cli.md)
 - [Bootnode CLI](../run/bootnode/bootnode-cli.md)
-- [Light Client CLI](../libraries/lightclient-prover/lightclient-cli.md)
 - [Dev CLI](../contribution/dev-cli.md)

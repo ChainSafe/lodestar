@@ -19,6 +19,13 @@ export function getTestDatastore(fileApisBuffer: Map<string, Uint8Array>): CPSta
       return Promise.resolve();
     },
     read: (persistentKey) => Promise.resolve(fileApisBuffer.get(toHexString(persistentKey)) ?? null),
+    readLatestSafe: async () => {
+      const lastKey = Array.from(fileApisBuffer.keys()).at(-1);
+      if (!lastKey) {
+        return null;
+      }
+      return fileApisBuffer.get(lastKey) ?? null;
+    },
     readKeys: () => Promise.resolve(Array.from(fileApisBuffer.keys()).map((key) => fromHexString(key))),
   };
 

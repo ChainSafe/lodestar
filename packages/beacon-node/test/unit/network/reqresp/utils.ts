@@ -1,5 +1,4 @@
-import {Direction, ReadStatus, Stream, StreamStatus, WriteStatus} from "@libp2p/interface";
-import {logger} from "@libp2p/logger";
+import type {Stream} from "@libp2p/interface";
 import {Uint8ArrayList} from "uint8arraylist";
 import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
@@ -14,50 +13,50 @@ export function generateRoots(count: number, offset = 0): Root[] {
 }
 
 /**
- * Helper for it-pipe when first argument is an array.
- * it-pipe does not convert the chunks array to a generator and BufferedSource breaks
- */
-export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
-  for (const item of arr) {
-    yield item;
-  }
-}
-
-/**
  * Wrapper for type-safety to ensure and array of Buffers is equal with a diff in hex
  */
 export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[]): void {
   expect(chunks.map(toHexString)).toEqual(expectedChunks.map(toHexString));
 }
 
-/**
- * Useful to simulate a LibP2P stream source emitting prepared bytes
- * and capture the response with a sink accessible via `this.resultChunks`
- */
-export class MockLibP2pStream implements Stream {
-  id = "mock";
-  log = logger("mock");
-  direction: Direction = "inbound";
-  timeline = {
-    open: Date.now(),
-  };
-  status: StreamStatus = "open";
-  readStatus: ReadStatus = "ready";
-  writeStatus: WriteStatus = "ready";
-  metadata = {};
-  source: Stream["source"];
-  resultChunks: Uint8Array[] = [];
+type SourceChunk = Uint8Array | Uint8ArrayList;
 
-  constructor(requestChunks: Uint8ArrayList[]) {
-    this.source = arrToSource(requestChunks);
-  }
-  sink: Stream["sink"] = async (source) => {
-    for await (const chunk of source) {
-      this.resultChunks.push(chunk.subarray());
-    }
-  };
-  close: Stream["close"] = async () => {};
-  closeRead = async (): Promise<void> => {};
-  closeWrite = async (): Promise<void> => {};
-  abort: Stream["abort"] = () => this.close();
+function toUint8ArrayList(chunk: SourceChunk): Uint8ArrayList {
+  return chunk instanceof Uint8ArrayList ? chunk : new Uint8ArrayList(chunk);
+}
+
+function toUint8Array(chunk: SourceChunk): Uint8Array {
+  return chunk instanceof Uint8ArrayList ? chunk.subarray() : chunk;
+}
+
+/**
+ * Minimal stream test double for reqresp unit tests.
+ * It captures sent chunks and yields a provided source for reads.
+ */
+export function createMockStream({
+  protocol = "",
+  source = (async function* (): AsyncIterable<SourceChunk> {})(),
+}: {
+  protocol?: string;
+  source?: AsyncIterable<SourceChunk>;
+} = {}): {stream: Stream; sentChunks: Uint8Array[]} {
+  const sentChunks: Uint8Array[] = [];
+
+  const stream = {
+    protocol,
+    send(chunk: SourceChunk): boolean {
+      sentChunks.push(toUint8Array(chunk));
+      return true;
+    },
+    async onDrain(): Promise<void> {},
+    async close(): Promise<void> {},
+    abort(): void {},
+    async *[Symbol.asyncIterator](): AsyncGenerator<Uint8ArrayList> {
+      for await (const chunk of source) {
+        yield toUint8ArrayList(chunk);
+      }
+    },
+  } as unknown as Stream;
+
+  return {stream, sentChunks};
 }

@@ -1,7 +1,9 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
+import type {LightClientUpdate} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
+import {LightClientServerError, LightClientServerErrorCode} from "../../../chain/errors/lightClientError.js";
 import {assertLightClientServer} from "../../../node/utils/lightclient.js";
 import {ApiModules} from "../types.js";
 // TODO: Import from lightclient/server package
@@ -16,8 +18,23 @@ export function getLightclientApi({
       assertLightClientServer(lightClientServer);
 
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
-      const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
-      const updates = await Promise.all(periods.map((period) => lightClientServer.getUpdate(period)));
+      const updates: LightClientUpdate[] = [];
+      for (let i = 0; i < maxAllowedCount; i++) {
+        try {
+          const update = await lightClientServer.getUpdate(startPeriod + i);
+          updates.push(update);
+        } catch (e) {
+          if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {
+            // Period not available, if we already have results, stop to preserve
+            // consecutive order. If not, skip and try the next period.
+            if (updates.length > 0) break;
+            continue;
+          }
+          // Unexpected error
+          throw e;
+        }
+      }
+
       return {
         data: updates,
         meta: {versions: updates.map((update) => config.getForkName(update.attestedHeader.beacon.slot))},

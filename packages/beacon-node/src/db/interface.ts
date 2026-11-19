@@ -1,9 +1,12 @@
 import {LevelDbControllerMetrics} from "@lodestar/db";
+import {Slot} from "@lodestar/types";
+import type {IDataColumnStore} from "./dataColumnStore.js";
+import type {FlatFileStoreMetrics} from "./flatFileStore/metrics.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
+import {EarliestAvailableSlotRepository} from "./repositories/earliestAvailableSlot.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
-  BackfilledRanges,
   BestLightClientUpdateRepository,
   BlobSidecarsArchiveRepository,
   BlobSidecarsRepository,
@@ -12,16 +15,15 @@ import {
   CheckpointHeaderRepository,
   DataColumnSidecarArchiveRepository,
   DataColumnSidecarRepository,
-  DepositDataRootRepository,
-  DepositEventRepository,
-  Eth1DataRepository,
+  ExecutionPayloadEnvelopeArchiveRepository,
+  ExecutionPayloadEnvelopeRepository,
+  ProposerPreferencesRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   VoluntaryExitRepository,
 } from "./repositories/index.js";
-import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -39,25 +41,21 @@ export interface IBeaconDb {
   dataColumnSidecar: DataColumnSidecarRepository;
   dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
 
+  executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
+  executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
+
   // finalized states
   stateArchive: StateArchiveRepository;
   // checkpoint states
   checkpointState: CheckpointStateRepository;
+  earliestAvailableSlot: EarliestAvailableSlotRepository;
 
   // op pool
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
+  proposerPreferences: ProposerPreferencesRepository;
   attesterSlashing: AttesterSlashingRepository;
-  depositEvent: DepositEventRepository;
   blsToExecutionChange: BLSToExecutionChangeRepository;
-
-  // eth1 processing
-  preGenesisState: PreGenesisState;
-  preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
-
-  // all deposit data roots and merkle tree
-  depositDataRoot: DepositDataRootRepository;
-  eth1Data: Eth1DataRepository;
 
   // lightclient
   bestLightClientUpdate: BestLightClientUpdateRepository;
@@ -65,12 +63,19 @@ export interface IBeaconDb {
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
-  backfilledRanges: BackfilledRanges;
+  dataColumns: IDataColumnStore;
+  /** Highest legacy column slot at startup; later archival writes the block-root index first. */
+  readonly lastLegacyArchiveSlot: Slot | null;
+  init(): Promise<void>;
+
+  compactLegacyDataColumns(prunedBeforeSlot: Slot, minSizeBytes?: number): Promise<void>;
 
   pruneHotDb(): Promise<void>;
+
+  deleteDeprecatedEth1Data(): Promise<void>;
 
   /**  Close the connection to the db instance and close the db store. */
   close(): Promise<void>;
   /** To inject metrics after CLI initialization */
-  setMetrics(metrics: LevelDbControllerMetrics): void;
+  setMetrics(metrics: LevelDbControllerMetrics, flatFileStoreMetrics?: FlatFileStoreMetrics | null): void;
 }

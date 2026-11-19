@@ -1,20 +1,21 @@
 import {ForkName} from "@lodestar/params";
-import {ColumnIndex, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ColumnIndex, DataColumnSidecar, RootHex, SignedBeaconBlock, Slot, fulu} from "@lodestar/types";
 import {VersionedHashes} from "../../../execution/index.js";
 
 export enum DAType {
   PreData = "pre-data",
-  Blobs = "blobs",
   Columns = "columns",
+  NoData = "no-data",
 }
 
-export type DAData = null | deneb.BlobSidecars | fulu.DataColumnSidecars;
+export type DAData = null | fulu.DataColumnSidecar[];
 
 /**
  * Represents were input originated. Blocks and Data can come from different
  * sources so each should be labelled individually.
  */
 export enum BlockInputSource {
+  network_processor = "network_processor",
   gossip = "gossip",
   api = "api",
   engine = "engine",
@@ -35,11 +36,6 @@ export type LogMetaBasic = {
   timeCreatedSec: number;
 };
 
-export type LogMetaBlobs = LogMetaBasic & {
-  expectedBlobs: number | string;
-  receivedBlobs: number;
-};
-
 export type LogMetaColumns = LogMetaBasic & {
   expectedColumns: number;
   receivedColumns: number;
@@ -52,8 +48,6 @@ export type SourceMeta = {
 };
 
 export type BlockWithSource = SourceMeta & {block: SignedBeaconBlock; blockRootHex: RootHex};
-
-export type BlobWithSource = SourceMeta & {blobSidecar: deneb.BlobSidecar};
 
 export type ColumnWithSource = SourceMeta & {columnSidecar: fulu.DataColumnSidecar};
 
@@ -80,24 +74,26 @@ export type AddBlock<F extends ForkName = ForkName> = SourceMeta & {
   blockRootHex: string;
 };
 
-export type AddBlob = BlobWithSource & {
-  blockRootHex: RootHex;
-};
-
 export type AddColumn = ColumnWithSource & {
   blockRootHex: RootHex;
-};
-
-export type BlobMeta = {
-  index: number;
-  blockRoot: Uint8Array;
-  versionedHash: Uint8Array;
 };
 
 export type MissingColumnMeta = {
   missing: ColumnIndex[];
   versionedHashes: VersionedHashes;
 };
+
+/**
+ * Minimal interface required to write data columns to the DB.
+ * Used by `writeDataColumnsToDb` and designed to be reusable across forks (e.g. Fulu, Gloas).
+ */
+export interface IDataColumnsInput {
+  readonly slot: Slot;
+  readonly blockRootHex: string;
+  getCustodyColumns(): DataColumnSidecar[];
+  hasComputedAllData(): boolean;
+  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<DataColumnSidecar[]>;
+}
 
 /**
  * This is used to validate that BlockInput implementations follow some minimal subset of operations
@@ -138,6 +134,11 @@ export interface IBlockInput<F extends ForkName = ForkName, TData extends DAData
 
   /** Only safe to call when `hasBlockAndAllData` is true */
   getTimeComplete(): number;
+  /**
+   * Return object references used as keys in `SerializedCache` that can be safely removed
+   * once this block input lifecycle has completed.
+   */
+  getSerializedCacheKeys(): object[];
 
   waitForBlock(timeout: number, signal?: AbortSignal): Promise<SignedBeaconBlock<F>>;
   waitForAllData(timeout: number, signal?: AbortSignal): Promise<TData>;

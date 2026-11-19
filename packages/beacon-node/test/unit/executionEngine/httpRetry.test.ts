@@ -3,8 +3,8 @@ import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/logger";
 import {ForkName} from "@lodestar/params";
-import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
+import {bytesToData, numToQuantity} from "../../../src/execution/engine/utils.js";
 import {IExecutionEngine, PayloadAttributes, initializeExecutionEngine} from "../../../src/execution/index.js";
 
 describe("ExecutionEngine / http ", () => {

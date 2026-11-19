@@ -7,7 +7,9 @@ const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 
-const expectedMinParticipationRate = 0.8;
+// With only 64 validators in sim tests, a single missed attestation drops participation
+// from ~81% to ~79.7%. Use 0.75 to allow for occasional missed attestations on slow CI.
+const expectedMinParticipationRate = 0.75;
 
 export const attestationParticipationAssertion: Assertion<
   "attestationParticipation",

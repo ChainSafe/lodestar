@@ -7,10 +7,10 @@ import {getTestdirPath} from "../../utils.js";
 
 describe("config / beaconParams", () => {
   const GENESIS_FORK_VERSION_MAINNET = "0x00000000";
-  const GENESIS_FORK_VERSION_HOLESKY = "0x01017000";
+  const GENESIS_FORK_VERSION_HOODI = "0x10000910";
   const GENESIS_FORK_VERSION_FILE = "0x00009902";
   const GENESIS_FORK_VERSION_CLI = "0x00009903";
-  const networkName = "holesky";
+  const networkName = "hoodi";
   const paramsFilepath = getTestdirPath("./test-config.yaml");
 
   const testCases: {
@@ -31,7 +31,7 @@ describe("config / beaconParams", () => {
         network: networkName,
         additionalParamsCli: {},
       },
-      GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_HOLESKY,
+      GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_HOODI,
     },
     {
       id: "Params from network & file > returns file",

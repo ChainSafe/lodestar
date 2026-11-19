@@ -496,7 +496,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "validator_monitor_validators",
+          "expr": "lodestar_validator_monitor_validators",
           "instant": false,
           "interval": "",
           "intervalFactor": 1,
@@ -844,7 +844,7 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "unstable-lg1k-hzax41-dkr"
+            "value": "unstable-super"
           }
         ],
         "hide": 0,

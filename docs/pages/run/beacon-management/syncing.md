@@ -28,11 +28,13 @@ Range sync involves syncing blocks within a specified range, beneficial when a n
 
 ### Backfill Sync
 
-This is another version of checkpoint sync that allows a node that has not been historically synchronized to verify data prior to the checkpoint. It is done via downloading a checkpoint and then fetch blocks backwards from that point until the desired data can be verified. It is a relatively inexpensive sync from a cpu perspective because it only checks the block hashes and verifies the proposer signatures along the way.
+🚧 Work in progress. Backfill sync is not yet available in Lodestar.
+
+Backfill sync downloads historical blocks preceding a checkpoint.
 
 ## Syncing Lodestar
 
-The implementation of the different syncing styles in Lodestar are actually one of two types under the hood, range sync and unknown-parent sync. Range sync is used when the start point of syncing is known. In the case of historical and checkpoint sync the starting points are well defined, genesis and the last finalized epoch boundary. Snapshot sync is not supported by Lodestar. If the starting point for sync is not known Lodestar must first determine where the starting point is. While the discussion about how that happens is out of scope for this document, the gist is that the beacon node will listen to gossipsub for blocks being broadcast on the network. It will also request [`MetaData`](https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/p2p-interface.md#getmetadata) from its peers and use that to start requesting the correct blocks from the network.
+The implementation of the different syncing styles in Lodestar are actually one of two types under the hood, range sync and unknown-parent sync. Range sync is used when the start point of syncing is known. In the case of historical and checkpoint sync the starting points are well defined, genesis and the last finalized epoch boundary. Snapshot sync is not supported by Lodestar. If the starting point for sync is not known Lodestar must first determine where the starting point is. While the discussion about how that happens is out of scope for this document, the gist is that the beacon node will listen to gossipsub for blocks being broadcast on the network. It will also request [`MetaData`](https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#getmetadata-v1) from its peers and use that to start requesting the correct blocks from the network.
 
 There are several flags that can be used to configure the sync process.
 

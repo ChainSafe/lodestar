@@ -1,6 +1,10 @@
 import {bench, describe} from "@chainsafe/benchmark";
 
-describe("dataview", () => {
+/**
+ * Benchmark to compare DataView.getUint32 vs manual uint32 creation from Uint8Array.
+ * Not lodestar code so skipped by default.
+ */
+describe.skip("dataview", () => {
   const data = Uint8Array.from([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
 
   bench({

@@ -1,9 +1,0 @@
-{
-  "extends": "../../tsconfig.build.json",
-  "include": ["src"],
-  "compilerOptions": {
-    // Had to add it because compiling error `Duplicate identifier 'Buffer'`
-    "skipLibCheck": true,
-    "outDir": "lib"
-  }
-}

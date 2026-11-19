@@ -1,10 +1,10 @@
 import {ChildProcess} from "node:child_process";
 import {Web3} from "web3";
-import {SecretKey} from "@chainsafe/blst";
 import {ApiClient} from "@lodestar/api";
 import {ApiClient as KeyManagerApi} from "@lodestar/api/keymanager";
 import {ChainForkConfig} from "@lodestar/config";
 import {LogLevel, Logger} from "@lodestar/logger";
+import {SecretKey} from "@lodestar/native/blst";
 import {ForkName} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
@@ -43,11 +43,6 @@ export enum ExecutionClient {
   Mock = "execution-mock",
   Geth = "execution-geth",
   Nethermind = "execution-nethermind",
-}
-
-export enum ExecutionStartMode {
-  PreMerge = "pre-merge",
-  PostMerge = "post-merge",
 }
 
 export type BeaconClientsOptions = {
@@ -130,6 +125,7 @@ export interface ExecutionGenesisOptions<E extends ExecutionClient = ExecutionCl
   shanghaiTime: number;
   cancunTime: number;
   pragueTime: number;
+  osakaTime: number;
   genesisTime: number;
   clientOptions: ExecutionClientsOptions[E];
 }
@@ -137,7 +133,6 @@ export interface ExecutionGenesisOptions<E extends ExecutionClient = ExecutionCl
 export interface ExecutionGeneratorOptions<E extends ExecutionClient = ExecutionClient>
   extends ExecutionGenesisOptions<E>,
     GeneratorOptions {
-  mode: ExecutionStartMode;
   mining: boolean;
   paths: ExecutionPaths;
   clientOptions: ExecutionClientsOptions[E];
@@ -178,6 +173,11 @@ export interface BeaconNode<C extends BeaconClient = BeaconClient> {
   readonly restPrivateUrl: string;
   readonly api: C extends BeaconClient.Lodestar ? LodestarAPI : LighthouseAPI;
   readonly job: Job;
+  /**
+   * P2P multiaddr including peer ID, populated after the node starts.
+   * Used for configuring `--directPeers` on other nodes.
+   */
+  multiaddr?: string;
 }
 
 export interface ValidatorNode<C extends ValidatorClient = ValidatorClient> {

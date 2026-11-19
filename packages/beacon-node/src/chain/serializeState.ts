@@ -1,4 +1,4 @@
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {IBeaconStateView} from "@lodestar/state-transition";
 import {AllocSource, BufferPool} from "../util/bufferPool.js";
 
 type ProcessStateBytesFn<T> = (stateBytes: Uint8Array) => Promise<T>;
@@ -7,12 +7,12 @@ type ProcessStateBytesFn<T> = (stateBytes: Uint8Array) => Promise<T>;
  * Serialize state using the BufferPool if provided.
  */
 export async function serializeState<T>(
-  state: CachedBeaconStateAllForks,
+  state: IBeaconStateView,
   source: AllocSource,
   processFn: ProcessStateBytesFn<T>,
   bufferPool?: BufferPool | null
 ): Promise<T> {
-  const size = state.type.tree_serializedSize(state.node);
+  const size = state.serializedSize();
   let stateBytes: Uint8Array | null = null;
   if (bufferPool) {
     using bufferWithKey = bufferPool.alloc(size, source);
@@ -20,7 +20,8 @@ export async function serializeState<T>(
       stateBytes = bufferWithKey.buffer;
       const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
       state.serializeToBytes({uint8Array: stateBytes, dataView}, 0);
-      return processFn(stateBytes);
+      // Await to ensure buffer is not released back to pool until processFn completes
+      return await processFn(stateBytes);
     }
     // release the buffer back to the pool automatically
   }

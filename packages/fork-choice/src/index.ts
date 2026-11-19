@@ -6,15 +6,29 @@ export {
   type InvalidBlock,
   InvalidBlockCode,
 } from "./forkChoice/errors.js";
-export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt, assertValidTerminalPowBlock} from "./forkChoice/forkChoice.js";
+export {
+  type FastConfirmationBalanceSource,
+  type FastConfirmationContext,
+  type FastConfirmationMetrics,
+  type FastConfirmationResult,
+  FastConfirmationRule,
+  type ForkChoiceStateGetter,
+  type IFastConfirmationRule,
+  type IFastConfirmationStore,
+  getFastConfirmationMetrics,
+} from "./forkChoice/fastConfirmation/fastConfirmationRule.js";
+export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt} from "./forkChoice/forkChoice.js";
 export {
   type AncestorResult,
   AncestorStatus,
+  type CheckpointWithBalance,
+  type CheckpointWithTotalBalance,
   EpochDifference,
   type IForkChoice,
   NotReorgedReason,
-  type PowBlockHex,
+  type PtcQuorumEvent,
 } from "./forkChoice/interface.js";
+export * from "./forkChoice/safeBlocks.js";
 export {
   type CheckpointWithHex,
   ForkChoiceStore,
@@ -23,12 +37,22 @@ export {
 } from "./forkChoice/store.js";
 export {type ForkChoiceMetrics, getForkChoiceMetrics} from "./metrics.js";
 export type {
+  BlockExecutionStatus,
   BlockExtraMeta,
   LVHInvalidResponse,
   LVHValidResponse,
-  MaybeValidExecutionStatus,
+  LVHVerdictResult,
+  PayloadExecutionStatus,
   ProtoBlock,
   ProtoNode,
+  PtcQuorum,
 } from "./protoArray/interface.js";
-export {ExecutionStatus} from "./protoArray/interface.js";
+export {
+  ExecutionStatus,
+  LVHInvalidJudged,
+  LVHNotAppliedReason,
+  PayloadStatus,
+  getPtcVerdict,
+  isGloasBlock,
+} from "./protoArray/interface.js";
 export {ProtoArray} from "./protoArray/protoArray.js";

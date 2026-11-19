@@ -37,8 +37,8 @@ export interface ReqRespOpts extends SendRequestOpts, ReqRespRateLimiterOpts {
 /**
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
  * For the spec that this code is based on, see:
- * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#the-reqresp-domain
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
 export class ReqResp {
   // protected to be usable by extending class
@@ -73,6 +73,9 @@ export class ReqResp {
 
     this.metrics?.selfRateLimiterPeerCount.addCollect(() => {
       this.metrics?.selfRateLimiterPeerCount.set(this.selfRateLimiter.getPeerCount());
+    });
+    this.metrics?.selfRateLimiterRateLimitedPeerCount.addCollect(() => {
+      this.metrics?.selfRateLimiterRateLimitedPeerCount.set(this.selfRateLimiter.getRateLimitedPeerCount());
     });
   }
 
@@ -174,10 +177,12 @@ export class ReqResp {
         throw Error(`Request to send to protocol ${protocolID} but it has not been declared`);
       }
 
-      if (!this.selfRateLimiter.allows(peerIdStr, protocolID, requestId)) {
+      const allows = this.selfRateLimiter.allows(peerIdStr, protocolID, requestId);
+      if (allows !== true) {
         // we technically don't send request in this case but would be nice just to track this in the same `outgoingErrorReasons` metric
         this.metrics?.outgoingErrorReasons.inc({reason: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
-        throw new RequestError({code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
+        const rateLimitedUntilMs = typeof allows === "number" ? allows : undefined;
+        throw new RequestError({code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED, rateLimitedUntilMs});
         // don't call this.onOutgoingRequestError() to penalize peer
       }
 
@@ -206,6 +211,11 @@ export class ReqResp {
         if (e.type.code === RequestErrorCode.DIAL_ERROR || e.type.code === RequestErrorCode.DIAL_TIMEOUT) {
           this.metrics?.dialErrors.inc();
         }
+        if (e.type.code === RequestErrorCode.RESP_RATE_LIMITED) {
+          for (const protocolID of protocolIDs) {
+            this.selfRateLimiter.onRateLimited(peerIdStr, protocolID, e.type.rateLimitedUntilMs);
+          }
+        }
         this.metrics?.outgoingErrorReasons.inc({reason: e.type.code});
 
         this.onOutgoingRequestError(peerId, method, e);
@@ -221,7 +231,7 @@ export class ReqResp {
   }
 
   private getRequestHandler(protocol: MixedProtocol, protocolID: string) {
-    return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
+    return async (stream: Stream, connection: Connection) => {
       if (this.dialOnlyProtocols.get(protocolID)) {
         throw new Error(`Received request on dial only protocol '${protocolID}'`);
       }
@@ -281,7 +291,7 @@ export class ReqResp {
    * ```
    * /ProtocolPrefix/MessageName/SchemaVersion/Encoding
    * ```
-   * https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#protocol-identification
+   * https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#protocol-identification
    */
   protected formatProtocolID(protocol: Pick<MixedProtocol, "method" | "version" | "encoding">): string {
     return formatProtocolID(this.protocolPrefix, protocol.method, protocol.version, protocol.encoding);

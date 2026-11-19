@@ -1,0 +1,296 @@
+import {BeaconConfig} from "@lodestar/config";
+import {
+  BUILDER_INDEX_FLAG,
+  BUILDER_PAYMENT_THRESHOLD_DENOMINATOR,
+  BUILDER_PAYMENT_THRESHOLD_NUMERATOR,
+  BUILDER_WITHDRAWAL_PREFIX,
+  DOMAIN_BUILDER_DEPOSIT,
+  EFFECTIVE_BALANCE_INCREMENT,
+  FAR_FUTURE_EPOCH,
+  MIN_DEPOSIT_AMOUNT,
+  MIN_SEED_LOOKAHEAD,
+  PTC_SIZE,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
+import {BuilderIndex, Epoch, ValidatorIndex, gloas, ssz} from "@lodestar/types";
+import {AttestationData} from "@lodestar/types/phase0";
+import {byteArrayEquals} from "@lodestar/utils";
+import {ZERO_HASH} from "../constants/index.js";
+import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
+import {computeDomain} from "./domain.js";
+import {computeEpochAtSlot} from "./epoch.js";
+import {computeEpochShuffling} from "./epochShuffling.js";
+import {RootCache} from "./rootCache.js";
+import {computePayloadTimelinessCommitteesForEpoch} from "./seed.js";
+import {createSingleSignatureSetFromComponents, verifySignatureSet} from "./signatureSets.js";
+import {computeSigningRoot} from "./signingRoot.js";
+import {getActiveValidatorIndices} from "./validator.js";
+
+export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
+  return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;
+}
+
+export function getBuilderPaymentQuorumThreshold(state: CachedBeaconStateGloas): number {
+  // total active balance exceeds Number.MAX_SAFE_INTEGER at mainnet scale, keep the intermediate math in bigint
+  const perSlotBalance =
+    (BigInt(state.epochCtx.totalActiveBalanceIncrements) * BigInt(EFFECTIVE_BALANCE_INCREMENT)) /
+    BigInt(SLOTS_PER_EPOCH);
+  const quorum = perSlotBalance * BigInt(BUILDER_PAYMENT_THRESHOLD_NUMERATOR);
+
+  return Number(quorum / BigInt(BUILDER_PAYMENT_THRESHOLD_DENOMINATOR));
+}
+
+function hasBuilderIndexFlag(index: number): boolean {
+  // Equivalent to `(index & BUILDER_INDEX_FLAG) != 0`
+  return Math.floor(index / BUILDER_INDEX_FLAG) % 2 === 1;
+}
+
+/**
+ * Check if a validator index represents a builder (has the builder flag set).
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-is_builder_index
+ */
+export function isBuilderIndex(validatorIndex: number): boolean {
+  // Note: Can't use bitwise AND (&) because BUILDER_INDEX_FLAG exceeds 32 bits in JS bitwise operations.
+  return hasBuilderIndexFlag(validatorIndex);
+}
+
+/**
+ * Convert a builder index to a flagged validator index for use in Withdrawal containers.
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-convert_builder_index_to_validator_index
+ */
+export function convertBuilderIndexToValidatorIndex(builderIndex: BuilderIndex): ValidatorIndex {
+  // Note: Can't use bitwise OR (|) because BUILDER_INDEX_FLAG exceeds 32 bits in JS bitwise operations.
+  return hasBuilderIndexFlag(builderIndex) ? builderIndex : builderIndex + BUILDER_INDEX_FLAG;
+}
+
+/**
+ * Convert a flagged validator index back to a builder index.
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-convert_validator_index_to_builder_index
+ */
+export function convertValidatorIndexToBuilderIndex(validatorIndex: ValidatorIndex): BuilderIndex {
+  // Note: Can't use bitwise AND (&) because BUILDER_INDEX_FLAG exceeds 32 bits in JS bitwise operations.
+  return hasBuilderIndexFlag(validatorIndex) ? validatorIndex - BUILDER_INDEX_FLAG : validatorIndex;
+}
+
+/**
+ * Check if a builder is active (deposited and not yet withdrawable).
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#isactivebuilder
+ */
+export function isActiveBuilder(builder: gloas.Builder, finalizedEpoch: Epoch): boolean {
+  return builder.depositEpoch < finalizedEpoch && builder.withdrawableEpoch === FAR_FUTURE_EPOCH;
+}
+
+/**
+ * Compute the gas limit that satisfies the EIP-1559 adjustment rule from `parentGasLimit`,
+ * clamping `targetGasLimit` into the allowed window of `±max(parentGasLimit / 1024, 1) - 1`.
+ *
+ * From https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md
+ */
+export function getExpectedGasLimit(parentGasLimit: number, targetGasLimit: number): number {
+  return Number(getExpectedGasLimitBigint(BigInt(parentGasLimit), BigInt(targetGasLimit)));
+}
+
+export function getExpectedGasLimitBigint(parentGasLimit: bigint, targetGasLimit: bigint): bigint {
+  const maxGasLimitDifference = (parentGasLimit / 1024n > 1n ? parentGasLimit / 1024n : 1n) - 1n;
+
+  if (targetGasLimit > parentGasLimit) {
+    const gasDiff = targetGasLimit - parentGasLimit;
+    return parentGasLimit + (gasDiff < maxGasLimitDifference ? gasDiff : maxGasLimitDifference);
+  }
+
+  const gasDiff = parentGasLimit - targetGasLimit;
+  return parentGasLimit - (gasDiff < maxGasLimitDifference ? gasDiff : maxGasLimitDifference);
+}
+
+/**
+ * Check if `gasLimit` is compatible with `targetGasLimit` under the EIP-1559 transition rule
+ * from `parentGasLimit`. The bid must hit `targetGasLimit` when the target is within one
+ * adjustment step of the parent, otherwise it must hit the clamped boundary.
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/builder.md#new-is_gas_limit_target_compatible
+ */
+export function isGasLimitTargetCompatible(parentGasLimit: bigint, gasLimit: bigint, targetGasLimit: bigint): boolean {
+  return gasLimit === getExpectedGasLimitBigint(parentGasLimit, targetGasLimit);
+}
+
+/**
+ * Get the total pending balance to withdraw for a builder (from withdrawals + payments).
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-get_pending_balance_to_withdraw_for_builder
+ */
+export function getPendingBalanceToWithdrawForBuilder(
+  state: CachedBeaconStateGloas,
+  builderIndex: BuilderIndex
+): number {
+  let pendingBalance = 0;
+
+  // Sum pending withdrawals
+  for (let i = 0; i < state.builderPendingWithdrawals.length; i++) {
+    const withdrawal = state.builderPendingWithdrawals.getReadonly(i);
+    if (withdrawal.builderIndex === builderIndex) {
+      pendingBalance += withdrawal.amount;
+    }
+  }
+
+  // Sum pending payments
+  for (let i = 0; i < state.builderPendingPayments.length; i++) {
+    const payment = state.builderPendingPayments.getReadonly(i);
+    if (payment.withdrawal.builderIndex === builderIndex) {
+      pendingBalance += payment.withdrawal.amount;
+    }
+  }
+
+  return pendingBalance;
+}
+
+/**
+ * Check if a builder has sufficient balance to cover a bid amount.
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-can_builder_cover_bid
+ */
+export function canBuilderCoverBid(
+  state: CachedBeaconStateGloas,
+  builderIndex: BuilderIndex,
+  bidAmount: number
+): boolean {
+  const builder = state.builders.getReadonly(builderIndex);
+  const pendingBalance = getPendingBalanceToWithdrawForBuilder(state, builderIndex);
+  const minBalance = MIN_DEPOSIT_AMOUNT + pendingBalance;
+
+  if (builder.balance < minBalance) {
+    return false;
+  }
+
+  return builder.balance - minBalance >= bidAmount;
+}
+
+/**
+ * Initiate a builder exit by setting their withdrawable epoch.
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-initiate_builder_exit
+ */
+export function initiateBuilderExit(state: CachedBeaconStateGloas, builderIndex: BuilderIndex): void {
+  const builder = state.builders.get(builderIndex);
+
+  // Return if builder already initiated exit
+  if (builder.withdrawableEpoch !== FAR_FUTURE_EPOCH) {
+    return;
+  }
+
+  // Set builder exit epoch
+  const currentEpoch = computeEpochAtSlot(state.slot);
+  builder.withdrawableEpoch = currentEpoch + state.config.MIN_BUILDER_WITHDRAWABILITY_DELAY;
+}
+
+/**
+ * Use cached block roots to avoid repeated state root lookups while matching the spec's is_attestation_same_slot behavior.
+ */
+export function isAttestationSameSlotRootCache(rootCache: RootCache, data: AttestationData): boolean {
+  if (data.slot === 0) return true;
+
+  const isMatchingBlockRoot = byteArrayEquals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot));
+  const isCurrentBlockRoot = !byteArrayEquals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot - 1));
+
+  return isMatchingBlockRoot && isCurrentBlockRoot;
+}
+
+export function initializePtcWindow(state: CachedBeaconStateFulu): Uint32Array[] {
+  const ptcWindow: Uint32Array[] = Array.from({length: SLOTS_PER_EPOCH}, () => new Uint32Array(PTC_SIZE));
+  const currentEpoch = state.epochCtx.epoch;
+
+  for (let epochOffset = 0; epochOffset <= MIN_SEED_LOOKAHEAD; epochOffset++) {
+    const epoch = currentEpoch + epochOffset;
+    const shuffling =
+      state.epochCtx.getShufflingAtEpochOrNull(epoch) ??
+      computeEpochShuffling(state, getActiveValidatorIndices(state, epoch), epoch);
+
+    ptcWindow.push(
+      ...computePayloadTimelinessCommitteesForEpoch(
+        state,
+        epoch,
+        shuffling.committees,
+        shuffling.shuffling,
+        state.epochCtx.effectiveBalanceIncrements
+      )
+    );
+  }
+
+  return ptcWindow;
+}
+
+export function getPtcWindowEpochCacheData(state: CachedBeaconStateGloas): {
+  previousPayloadTimelinessCommittees: Uint32Array[];
+  payloadTimelinessCommittees: Uint32Array[];
+  nextPayloadTimelinessCommittees: Uint32Array[];
+} {
+  const toUint32Arrays = (views: ReturnType<typeof state.ptcWindow.getReadonlyByRange>) =>
+    views.map((v) => Uint32Array.from(v.getAll()));
+
+  const previousPtcWindow = state.ptcWindow.getReadonlyByRange(0, SLOTS_PER_EPOCH);
+  const currentPtcWindow = state.ptcWindow.getReadonlyByRange(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH);
+  const nextPtcWindow = state.ptcWindow.getReadonlyByRange(2 * SLOTS_PER_EPOCH, SLOTS_PER_EPOCH);
+
+  return {
+    previousPayloadTimelinessCommittees: toUint32Arrays(previousPtcWindow),
+    payloadTimelinessCommittees: toUint32Arrays(currentPtcWindow),
+    nextPayloadTimelinessCommittees: toUint32Arrays(nextPtcWindow),
+  };
+}
+
+/**
+ * Append a new builder to the registry without scanning for a reusable slot.
+ *
+ * This is only safe to be used at the gloas fork transition.
+ */
+export function appendBuilderToRegistry(
+  state: CachedBeaconStateGloas,
+  pubkey: Uint8Array,
+  version: number,
+  executionAddress: Uint8Array,
+  amount: number,
+  slot: number
+): void {
+  const depositEpoch = computeEpochAtSlot(slot);
+  state.builders.push(createBuilderView(pubkey, version, executionAddress, amount, depositEpoch));
+}
+
+/**
+ * Build a Builder view from builder fields.
+ */
+export function createBuilderView(
+  pubkey: Uint8Array,
+  version: number,
+  executionAddress: Uint8Array,
+  amount: number,
+  depositEpoch: Epoch
+) {
+  return ssz.gloas.Builder.toViewDU({
+    pubkey,
+    version,
+    executionAddress,
+    balance: amount,
+    depositEpoch,
+    withdrawableEpoch: FAR_FUTURE_EPOCH,
+  });
+}
+
+/**
+ * Verify the proof of possession on a builder deposit request.
+ *
+ * The dedicated `DOMAIN_BUILDER_DEPOSIT` (vs the validator `DOMAIN_DEPOSIT`) prevents replay
+ * of validator deposit signatures against the builder deposit contract and vice versa.
+ *
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/beacon-chain.md#new-is_valid_builder_deposit_signature
+ */
+export function isValidBuilderDepositSignature(
+  config: BeaconConfig,
+  pubkey: Uint8Array,
+  withdrawalCredentials: Uint8Array,
+  amount: number,
+  signature: Uint8Array
+): boolean {
+  const depositMessage = {pubkey, withdrawalCredentials, amount};
+  const domain = computeDomain(DOMAIN_BUILDER_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+  const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
+  try {
+    return verifySignatureSet(createSingleSignatureSetFromComponents(pubkey, signingRoot, signature));
+  } catch (_e) {
+    return false;
+  }
+}

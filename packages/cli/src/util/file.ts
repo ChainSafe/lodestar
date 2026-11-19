@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import {copyFile, readFile as fsReadFile} from "node:fs/promises";
 import path from "node:path";
 import {Readable} from "node:stream";
 import stream from "node:stream/promises";
@@ -120,7 +121,7 @@ export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string)
     await downloadFile(pathDest, urlOrPathSrc);
   } else {
     mkdir(path.dirname(pathDest));
-    await fs.promises.copyFile(urlOrPathSrc, pathDest);
+    await copyFile(urlOrPathSrc, pathDest);
   }
 }
 
@@ -149,14 +150,17 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
  */
 export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
   if (isUrl(pathOrUrl)) {
-    const res = await fetch(pathOrUrl);
+    const res = await fetch(pathOrUrl, {
+      // Ensure we only receive SSZ responses if REST API is queried
+      headers: {accept: "application/octet-stream"},
+    });
     if (!res.ok) {
       throw new Error(`Failed to download file from ${pathOrUrl}: ${res.status} ${res.statusText}`);
     }
     const arrayBuffer = await res.arrayBuffer();
     return new Uint8Array(arrayBuffer);
   }
-  return fs.promises.readFile(pathOrUrl);
+  return fsReadFile(pathOrUrl);
 }
 
 /**

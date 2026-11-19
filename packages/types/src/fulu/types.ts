@@ -19,11 +19,13 @@ export type ProposerLookahead = ValueOf<typeof ssz.ProposerLookahead>;
 
 export type DataColumnsByRootIdentifier = ValueOf<typeof ssz.DataColumnsByRootIdentifier>;
 export type DataColumnSidecarsByRangeRequest = ValueOf<typeof ssz.DataColumnSidecarsByRangeRequest>;
+export type BeaconBlocksByHeadRequest = ValueOf<typeof ssz.BeaconBlocksByHeadRequest>;
 export type BeaconBlock = ValueOf<typeof ssz.BeaconBlock>;
 export type SignedBeaconBlock = ValueOf<typeof ssz.SignedBeaconBlock>;
 export type BeaconState = ValueOf<typeof ssz.BeaconState>;
 export type BlockContents = ValueOf<typeof ssz.BlockContents>;
 export type SignedBlockContents = ValueOf<typeof ssz.SignedBlockContents>;
+export type ExecutionPayloadAndBlobsBundle = ValueOf<typeof ssz.ExecutionPayloadAndBlobsBundle>;
 export type BlobsBundle = ValueOf<typeof ssz.BlobsBundle>;
 export type BlobAndProofV2 = {
   blob: Blob;

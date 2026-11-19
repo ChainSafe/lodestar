@@ -1,10 +1,12 @@
+import {PeerId} from "@libp2p/interface";
 import {ResponseOutgoing} from "@lodestar/reqresp";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, getBlobDataRetentionStartEpoch} from "@lodestar/state-transition";
 import {ColumnIndex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {DataColumnSidecarsByRootRequest} from "../../../util/types.js";
+import {prettyPrintPeerId} from "../../util.js";
 import {
   handleColumnSidecarUnavailability,
   validateRequestedDataColumns,
@@ -13,12 +15,14 @@ import {
 export async function* onDataColumnSidecarsByRoot(
   requestBody: DataColumnSidecarsByRootRequest,
   chain: IBeaconChain,
-  db: IBeaconDb
+  db: IBeaconDb,
+  peerId: PeerId,
+  peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
-  // SPEC: minimum_request_epoch = max(current_epoch - MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, FULU_FORK_EPOCH)
+  // SPEC: minimum_request_epoch = max(compute_blob_data_retention_start_epoch(current_epoch), FULU_FORK_EPOCH)
   const currentEpoch = chain.clock.currentEpoch;
   const minimumRequestEpoch = Math.max(
-    currentEpoch - chain.config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS,
+    getBlobDataRetentionStartEpoch(chain.config, currentEpoch),
     chain.config.FULU_FORK_EPOCH
   );
 
@@ -26,16 +30,24 @@ export async function* onDataColumnSidecarsByRoot(
     const {blockRoot, columns: requestedColumns} = dataColumnsByRootIdentifier;
     const availableColumns = validateRequestedDataColumns(chain, requestedColumns);
     if (availableColumns.length === 0) {
-      return;
+      continue;
     }
 
     const blockRootHex = toRootHex(blockRoot);
-    const block = chain.forkChoice.getBlockHex(blockRootHex);
+    const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
     // If the block is not in fork choice, it may be finalized. Attempt to find its slot in block archive
     const slot = block ? block.slot : await db.blockArchive.getSlotByRoot(blockRoot);
 
     if (slot === null) {
       // We haven't seen the block
+      continue;
+    }
+
+    if (slot < chain.earliestAvailableSlot) {
+      chain.logger.verbose("Peer did not respect earliestAvailableSlot for DataColumnSidecarsByRoot", {
+        peer: prettyPrintPeerId(peerId),
+        client: peerClient,
+      });
       continue;
     }
 
@@ -49,11 +61,7 @@ export async function* onDataColumnSidecarsByRoot(
       continue;
     }
 
-    const dataColumns = block
-      ? // Non-finalized sidecars are stored by block root
-        await db.dataColumnSidecar.getManyBinary(blockRoot, availableColumns)
-      : // Finalized sidecars are archived and stored by slot
-        await db.dataColumnSidecarArchive.getManyBinary(slot, availableColumns);
+    const dataColumns = await chain.getSerializedDataColumnSidecars(slot, blockRootHex, availableColumns);
 
     const unavailableColumnIndices: ColumnIndex[] = [];
     for (let i = 0; i < dataColumns.length; i++) {
@@ -73,12 +81,14 @@ export async function* onDataColumnSidecarsByRoot(
     }
 
     if (unavailableColumnIndices.length) {
+      const finalized = !block || (await db.blockArchive.getSlotByRoot(blockRoot)) === slot;
       await handleColumnSidecarUnavailability({
         chain,
         db,
         metrics: chain.metrics,
         slot,
         blockRoot,
+        finalized,
         unavailableColumnIndices,
         requestedColumns,
         availableColumns,

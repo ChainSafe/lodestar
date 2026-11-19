@@ -1,9 +1,11 @@
 import {MessagePort, Worker} from "node:worker_threads";
+import type {Message} from "@libp2p/gossipsub";
 import {Thread} from "@chainsafe/threads";
 import {Logger} from "@lodestar/logger";
 import {sleep} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 import {NetworkCoreWorkerMetrics} from "../network/core/metrics.js";
+import {EventDirection, NetworkEvent} from "../network/events.js";
 import {StrictEventEmitterSingleArg} from "./strictEvents.js";
 
 const NANO_TO_SECOND_CONVERSION = 1e9;
@@ -14,13 +16,6 @@ export type WorkerBridgeEvent<EventData> = {
   posted: [number, number];
   data: EventData[keyof EventData];
 };
-
-export enum EventDirection {
-  workerToMain,
-  mainToWorker,
-  /** Event not emitted through worker boundary */
-  none,
-}
 
 /**
  * Bridges events from worker to main thread
@@ -63,7 +58,13 @@ export function wireEventsOnWorkerThread<EventData>(
           posted: process.hrtime(),
           data,
         };
-        parentPort.postMessage(workerEvent);
+        let transferList: ArrayBuffer[] | undefined = undefined;
+        if (eventName === NetworkEvent.pendingGossipsubMessage) {
+          const payload = data as {msg: Message};
+          // Transfer the underlying ArrayBuffer to avoid copy for PendingGossipsubMessage
+          transferList = [payload.msg.data.buffer as ArrayBuffer];
+        }
+        parentPort.postMessage(workerEvent, transferList);
       });
     }
   }
@@ -110,6 +111,12 @@ export function wireEventsOnMainThread<EventData>(
   }
 }
 
+/**
+ * Terminate a worker thread, bounded to `retryCount * retryMs`.
+ *
+ * @returns `false` if it could not be terminated, the worker thread is then still running and the
+ * caller has to decide how to proceed without it.
+ */
 export async function terminateWorkerThread({
   worker,
   retryMs,
@@ -120,7 +127,7 @@ export async function terminateWorkerThread({
   retryMs: number;
   retryCount: number;
   logger?: Logger;
-}): Promise<void> {
+}): Promise<boolean> {
   const terminated = new Promise((resolve) => {
     Thread.events(worker).subscribe((event) => {
       if (event.type === "termination") {
@@ -130,13 +137,19 @@ export async function terminateWorkerThread({
   });
 
   for (let i = 0; i < retryCount; i++) {
-    await Thread.terminate(worker);
-    const result = await Promise.race([terminated, sleep(retryMs).then(() => false)]);
+    // `Worker.terminate()` resolves only once the worker thread exits, and the thread can spin
+    // forever in `Environment::CleanupHandles()` when a libuv handle on its loop never closes, so
+    // it has to be raced too, otherwise `retryCount * retryMs` never applies.
+    const result = await Promise.race([
+      Thread.terminate(worker).then(() => terminated),
+      sleep(retryMs).then(() => false),
+    ]);
 
-    if (result) return;
+    if (result) return true;
 
-    logger?.warn("Worker thread failed to terminate, retrying...");
+    logger?.debug("Worker thread failed to terminate, retrying...");
   }
 
-  throw new Error(`Worker thread failed to terminate in ${retryCount * retryMs}ms.`);
+  logger?.debug(`Worker thread failed to terminate in ${retryCount * retryMs}ms`);
+  return false;
 }
