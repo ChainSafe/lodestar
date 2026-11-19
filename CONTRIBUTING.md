@@ -115,13 +115,6 @@ Zig modules live in `src/`, and the Node.js addon, wrappers, and binding tests l
 Run Zig commands from the repository root. The native package uses the root pnpm
 lockfile and shared monorepo version.
 
-The network addon also requires CMake 3.22+, libclang, and a stable Rust
-toolchain. Install it with `rustup toolchain install`.
-Linux GNU builds require `llvm-objcopy` on `PATH` for the ere archive compatibility
-fix. For release cross-compilation, install the targets from
-`bindings/package.json` with
-`rustup target add $(node -p 'require("./bindings/package.json").zapi.targets.join(" ")')`.
-
 ### Tests and Formatting
 
 Run the tests relevant to your changes, for example:
