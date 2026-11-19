@@ -167,7 +167,7 @@ const Delivery = struct {
     context: []const u8,
     data: []const u8,
     slot: ?u64,
-    group: ?[128]u8,
+    group: ?Processor.AttestationDataBytes,
 };
 const Selection = struct {
     checks: [Processor.batch_max]Check = undefined,

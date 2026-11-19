@@ -16,6 +16,7 @@ const Dependencies = @import("dependencies.zig").Dependencies;
 const none = lists.none;
 const state_count = @typeInfo(State).@"enum".fields.len;
 const metadata_mod = @import("metadata.zig");
+pub const AttestationDataBytes = metadata_mod.AttestationDataBytes;
 pub const Kind = policy.Kind;
 const assert = std.debug.assert;
 pub const batch_max = 64;

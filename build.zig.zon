@@ -227,7 +227,7 @@
             .root_source_file = "src/bls/root.zig",
             .imports = .{.blst},
         },
-        .gossip_processor = .{ .root_source_file = "src/gossip_processor/GossipProcessor.zig", .imports = .{ .config, .consensus_types, .preset } },
+        .gossip_processor = .{ .root_source_file = "src/gossip_processor/GossipProcessor.zig", .imports = .{ .config, .consensus_types, .fork_types, .preset } },
         .swap_or_not_shuffle = .{
             .root_source_file = "src/swap_or_not_shuffle/root.zig",
             .imports = .{.blst},
