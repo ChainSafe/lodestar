@@ -67,7 +67,7 @@ describe("chain / blocks / processBlocks", () => {
     block.message.proposerIndex = proposerIndex;
     const blockRoot = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message));
     blockInput = new MockBlockInput({forkName: ForkName.deneb, slot, blockRootHex: blockRoot});
-    blockInput._block = block;
+    blockInput.block = block;
 
     vi.mocked(verifyBlocksSanityChecks).mockReturnValue({
       relevantBlocks: [blockInput],
@@ -135,6 +135,37 @@ describe("chain / blocks / processBlocks", () => {
 
     expect(seenBlockProposers.isKnown(slot, proposerIndex)).toBe(true);
     expect(importBlock).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    {
+      name: "stamps the block with the fractional import time when opts carry no seen timestamp",
+      opts: {},
+      expected: 12.75,
+    },
+    {name: "prefers the seen timestamp passed in opts", opts: {seenTimestampSec: 3.5}, expected: 3.5},
+  ])("$name", async ({opts, expected}) => {
+    const dateNow = vi.spyOn(Date, "now").mockReturnValue(12_750);
+    vi.mocked(verifyBlocksInEpoch).mockResolvedValue({
+      postStates: [{forkName: ForkName.deneb} as IBeaconStateView],
+      proposerBalanceDeltas: [0],
+      segmentExecStatus: {
+        execAborted: null,
+        executionStatuses: [ExecutionStatus.Valid],
+        executionTime: 0,
+      },
+      blockDAStatuses: [DataAvailabilityStatus.Available],
+      payloadDAStatuses: new Map(),
+      indexedAttestationsByBlock: [[]],
+    });
+
+    try {
+      await processBlocks.call(chain, [blockInput], null, opts);
+    } finally {
+      dateNow.mockRestore();
+    }
+
+    expect(importBlock).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({seenTimestampSec: expected}), opts);
   });
 
   it.each([
@@ -296,12 +327,12 @@ describe("chain / blocks / processBlocks", () => {
         DataAvailabilityStatus.NotRequired,
         {validSignature: false}
       );
-      expect(chain.seenPayloadEnvelopeInputCache.prune).toHaveBeenCalledExactlyOnceWith(
+      expect(chain.seenPayloadEnvelopeInputCache.remove).toHaveBeenCalledExactlyOnceWith(
         parent.payloadInput.blockRootHex
       );
     } else {
       expect([...(envelopesForDa?.keys() ?? [])]).toEqual([slot - 1, slot]);
-      expect(chain.seenPayloadEnvelopeInputCache.prune).not.toHaveBeenCalled();
+      expect(chain.seenPayloadEnvelopeInputCache.remove).not.toHaveBeenCalled();
     }
     // the batch's own map is left untouched, range sync still owns it
     expect(payloadEnvelopes.size).toBe(2);
@@ -376,7 +407,7 @@ describe("chain / blocks / processBlocks", () => {
     expect(importBlock).not.toHaveBeenCalled();
     if (headOnEmpty && skipAttestations) {
       expect(importExecutionPayload).not.toHaveBeenCalled();
-      expect(chain.seenPayloadEnvelopeInputCache.prune).toHaveBeenCalledExactlyOnceWith(blockRootHex);
+      expect(chain.seenPayloadEnvelopeInputCache.remove).toHaveBeenCalledExactlyOnceWith(blockRootHex);
       expect(chain.recomputeForkChoiceHead).not.toHaveBeenCalled();
       // the skipped orphaned envelope is returned so range sync can log the serving peer/client
       expect(result).toEqual({orphaned: [{slot, payloadEnvelopeInput: payloadInput}], skipped: true});
@@ -384,7 +415,7 @@ describe("chain / blocks / processBlocks", () => {
       expect(importExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, DataAvailabilityStatus.NotRequired, {
         validSignature: false,
       });
-      expect(chain.seenPayloadEnvelopeInputCache.prune).not.toHaveBeenCalled();
+      expect(chain.seenPayloadEnvelopeInputCache.remove).not.toHaveBeenCalled();
       expect(chain.recomputeForkChoiceHead).toHaveBeenCalledOnce();
       expect(result).toEqual({orphaned: [], skipped: false});
     }
@@ -404,54 +435,6 @@ describe("chain / blocks / processBlocks", () => {
     vi.mocked(verifyBlocksInEpoch).mockRejectedValue(payloadError);
 
     await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBe(payloadError);
-  });
-
-  it.each([
-    {code: PayloadErrorCode.INVALID_SIGNATURE, pruned: true},
-    {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, pruned: true},
-    {code: PayloadErrorCode.EXECUTION_ENGINE_INVALID, pruned: true},
-    {code: PayloadErrorCode.EXECUTION_ENGINE_ERROR, pruned: false},
-    {code: PayloadErrorCode.MISS_BLOCK_STATE, pruned: false},
-  ])("prunes the rejected envelope from the seen cache: $code -> $pruned", async ({code, pruned}) => {
-    const payloadInput = {slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput;
-    const type = {
-      code,
-      execStatus: ExecutionPayloadStatus.INVALID,
-      errorMessage: "bad payload",
-      message: "bad payload",
-      blockRootHex: "0x1234",
-    } as unknown as PayloadError["type"];
-    vi.mocked(verifyBlocksInEpoch).mockRejectedValue(new PayloadError(payloadInput, type));
-
-    await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBeInstanceOf(PayloadError);
-
-    if (pruned) {
-      expect(chain.seenPayloadEnvelopeInputCache.prune).toHaveBeenCalledExactlyOnceWith("0x1234");
-    } else {
-      expect(chain.seenPayloadEnvelopeInputCache.prune).not.toHaveBeenCalled();
-    }
-  });
-
-  it.each([
-    // INVALID_SIGNATURE is persisted for debugging on the error path, needs a serializable state
-    {code: BlockErrorCode.INVALID_SIGNATURE, pruned: true, state: {slot: 1, serialize: () => new Uint8Array()}},
-    {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS, pruned: true},
-    {code: BlockErrorCode.BLACKLISTED_BLOCK, pruned: true},
-    {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, pruned: false},
-    {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, pruned: false},
-  ])("prunes the rejected block from the seen cache: $code -> $pruned", async ({code, pruned, state}) => {
-    const blockError = new BlockError(blockInput.getBlock(), {code, state} as unknown as BlockError["type"]);
-    vi.mocked(verifyBlocksInEpoch).mockRejectedValue(blockError);
-    // debug artefacts written on the error path, not part of the mocked chain
-    Object.assign(chain, {persistInvalidSszValue: vi.fn(), persistInvalidSszBytes: vi.fn()});
-
-    await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBe(blockError);
-
-    if (pruned) {
-      expect(chain.seenBlockInputCache.prune).toHaveBeenCalledExactlyOnceWith(blockInput.blockRootHex);
-    } else {
-      expect(chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
-    }
   });
 
   it.each<{message: string; code: BlockErrorCode | PayloadErrorCode; level: BlockErrorLogLevel}>([
@@ -529,16 +512,6 @@ describe("chain / blocks / processBlocks", () => {
     const err = new PayloadError(payloadInput, {code, errorMessage: "bad payload"} as unknown as PayloadError["type"]);
     return {err, slot: 1, blockRoot: "0x1234"};
   }
-
-  it("prunes the rejected block from the seen cache with disableOnBlockError", async () => {
-    const blockError = new BlockError(blockInput.getBlock(), {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS});
-    vi.mocked(verifyBlocksInEpoch).mockRejectedValue(blockError);
-
-    await expect(processBlocks.call(chain, [blockInput], null, {disableOnBlockError: true})).rejects.toBe(blockError);
-
-    expect(chain.seenBlockInputCache.prune).toHaveBeenCalledExactlyOnceWith(blockInput.blockRootHex);
-    expect(chain.logger.debug).not.toHaveBeenCalledWith("Block error", expect.anything(), expect.anything());
-  });
 
   // Contrast: a plain error (not a Block/Payload error) IS wrapped, which is why the passthrough above
   // has to be selective.

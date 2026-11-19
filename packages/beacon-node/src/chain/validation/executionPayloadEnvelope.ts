@@ -1,11 +1,4 @@
-import {PayloadStatus} from "@lodestar/fork-choice";
-import {
-  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
-  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
-  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
-  MAX_WITHDRAWALS_PER_PAYLOAD,
-  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
-} from "@lodestar/params";
+import {PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {
   computeStartSlotAtEpoch,
   getExecutionPayloadEnvelopeSignatureSet,
@@ -13,9 +6,15 @@ import {
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
+import {
+  getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
+  getSlotFromExecutionPayloadEnvelopeSerialized,
+  getTransactionCountFromExecutionPayloadEnvelopeSerialized,
+} from "../../util/sszBytes.js";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
+import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 
 export async function validateApiExecutionPayloadEnvelope(
   chain: IBeaconChain,
@@ -29,6 +28,40 @@ export async function validateGossipExecutionPayloadEnvelope(
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
   return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+}
+
+/**
+ * Applies the transaction count check to the serialized envelope so that an oversized envelope is dropped
+ * before it is deserialized. Defers to validateGossipExecutionPayloadEnvelope if the data is malformed
+ * or the block is not known.
+ */
+export function validateGossipExecutionPayloadEnvelopeSerialized(
+  chain: IBeaconChain,
+  serializedData: Uint8Array
+): void {
+  const blockRootHex = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(serializedData);
+  const slot = getSlotFromExecutionPayloadEnvelopeSerialized(serializedData);
+  const transactionCount = getTransactionCountFromExecutionPayloadEnvelopeSerialized(serializedData);
+  if (blockRootHex === null || slot === null || transactionCount === null) {
+    return;
+  }
+
+  const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+  const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+  if (!block || !payloadInput) {
+    return;
+  }
+
+  const maxTransactionCount = getMaxTransactionCount(chain, block, payloadInput);
+  if (BigInt(transactionCount) > maxTransactionCount) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
+      slot,
+      root: blockRootHex,
+      transactionCount,
+      maxTransactionCount: Number(maxTransactionCount),
+    });
+  }
 }
 
 async function validateExecutionPayloadEnvelope(
@@ -89,6 +122,8 @@ async function validateExecutionPayloadEnvelope(
   if (block.slot !== payload.slotNumber) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeSlot: payload.slotNumber,
       blockSlot: block.slot,
     });
@@ -98,6 +133,8 @@ async function validateExecutionPayloadEnvelope(
   if (envelope.builderIndex !== payloadInput.getBuilderIndex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeBuilderIndex: envelope.builderIndex,
       bidBuilderIndex: payloadInput.getBuilderIndex(),
     });
@@ -107,6 +144,8 @@ async function validateExecutionPayloadEnvelope(
   if (toRootHex(payload.blockHash) !== payloadInput.getBlockHashHex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeBlockHash: toRootHex(payload.blockHash),
       bidBlockHash: payloadInput.getBlockHashHex(),
     });
@@ -117,38 +156,24 @@ async function validateExecutionPayloadEnvelope(
   if (!byteArrayEquals(requestsRoot, payloadInput.getBid().executionRequestsRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
       envelopeRequestsRoot: toRootHex(requestsRoot),
       bidRequestsRoot: toRootHex(payloadInput.getBid().executionRequestsRoot),
     });
   }
 
-  // [REJECT] The counts of `execution_requests` are within their respective limits.
-  // New in Gloas:EIP7688 — progressive lists are unbounded at the type level, so bounds
-  // are enforced here in gossip validation.
-  const {executionRequests} = envelope;
-  const requestCountLimits: [string, number, number][] = [
-    ["withdrawals", executionRequests.withdrawals.length, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD],
-    ["consolidations", executionRequests.consolidations.length, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD],
-    ["builderDeposits", executionRequests.builderDeposits.length, MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD],
-    ["builderExits", executionRequests.builderExits.length, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD],
-  ];
-  for (const [name, count, limit] of requestCountLimits) {
-    if (count > limit) {
-      throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
-        code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_COUNT_EXCEEDED,
-        name,
-        count,
-        limit,
-      });
-    }
-  }
-
-  // [REJECT] The number of withdrawals is within the limit.
-  if (payload.withdrawals.length > MAX_WITHDRAWALS_PER_PAYLOAD) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
-      code: ExecutionPayloadEnvelopeErrorCode.WITHDRAWALS_COUNT_EXCEEDED,
-      count: payload.withdrawals.length,
-      limit: MAX_WITHDRAWALS_PER_PAYLOAD,
+  // [IGNORE] The number of transactions is within the limit implied by the parent payload's gas limit
+  // TODO GLOAS: [REJECT] once https://github.com/ethereum/consensus-specs/pull/5802 is released,
+  // also in validateGossipExecutionPayloadEnvelopeSerialized
+  const maxTransactionCount = getMaxTransactionCount(chain, block, payloadInput);
+  if (BigInt(payload.transactions.length) > maxTransactionCount) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      transactionCount: payload.transactions.length,
+      maxTransactionCount: Number(maxTransactionCount),
     });
   }
 
@@ -178,6 +203,21 @@ async function validateExecutionPayloadEnvelope(
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
+      slot: payload.slotNumber,
+      root: blockRootHex,
     });
   }
+}
+
+/**
+ * The bid's gas limit is only tied to the parent payload by bid gossip, so the bound is the gas limit the
+ * EIP-1559 rule allows on top of the parent payload's. The bid is the only bound if that gas limit is unknown.
+ */
+function getMaxTransactionCount(chain: IBeaconChain, block: ProtoBlock, payloadInput: PayloadEnvelopeInput): bigint {
+  const parentGasLimit = block.executionPayloadBlockHash === null ? 0n : BigInt(block.executionPayloadGasLimit);
+  const maxGasLimit =
+    parentGasLimit === 0n
+      ? payloadInput.getBid().gasLimit
+      : parentGasLimit + (parentGasLimit / 1024n > 1n ? parentGasLimit / 1024n : 1n) - 1n;
+  return maxGasLimit / BigInt(chain.config.MIN_TRANSACTION_GAS);
 }

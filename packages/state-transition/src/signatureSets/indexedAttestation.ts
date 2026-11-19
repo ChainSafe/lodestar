@@ -1,8 +1,10 @@
 import {BeaconConfig} from "@lodestar/config";
-import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
-import {IndexedAttestation, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
+import {DOMAIN_BEACON_ATTESTER, ForkSeq} from "@lodestar/params";
+import {IndexedAttestation, SignedBeaconBlock, Slot, electra, phase0, ssz} from "@lodestar/types";
 import {
+  EpochShuffling,
   ISignatureSet,
+  SignatureSetType,
   computeSigningRoot,
   computeStartSlotAtEpoch,
   createAggregateSignatureSetFromComponents,
@@ -45,10 +47,15 @@ export function getIndexedAttestationSignatureSet(
   );
 }
 
+/**
+ * `shufflings[i]` is the shuffling of attestation `i`. Attestations whose shuffling has committee pubkeys get a
+ * committee signature set.
+ */
 export function getAttestationsSignatureSets(
   config: BeaconConfig,
   signedBlock: SignedBeaconBlock,
-  indexedAttestations: IndexedAttestation[]
+  indexedAttestations: IndexedAttestation[],
+  shufflings?: EpochShuffling[]
 ): ISignatureSet[] {
   if (indexedAttestations.length !== signedBlock.message.body.attestations.length) {
     throw Error(
@@ -58,7 +65,26 @@ export function getAttestationsSignatureSets(
   // the getDomain() api requires the state slot as 1st param, however it's the same to block.slot in state-transition
   // and the same epoch when we verify blocks in batch in beacon-node. So we can safely use block.slot here.
   const blockSlot = signedBlock.message.slot;
-  return indexedAttestations.map((indexedAttestation) =>
-    getIndexedAttestationSignatureSet(config, blockSlot, indexedAttestation)
-  );
+  const fork = config.getForkSeq(blockSlot);
+  return indexedAttestations.map((indexedAttestation, i) => {
+    const committeePubkeysId = shufflings?.[i]?.committeePubkeysId;
+    if (committeePubkeysId === undefined) {
+      return getIndexedAttestationSignatureSet(config, blockSlot, indexedAttestation);
+    }
+
+    const attestation = signedBlock.message.body.attestations[i];
+    return {
+      type: SignatureSetType.committee,
+      indices: indexedAttestation.attestingIndices,
+      committeePubkeysId,
+      slot: attestation.data.slot,
+      committeeIndices:
+        fork >= ForkSeq.electra
+          ? (attestation as electra.Attestation).committeeBits.getTrueBitIndexes()
+          : [attestation.data.index],
+      aggregationBits: attestation.aggregationBits,
+      signingRoot: getAttestationDataSigningRoot(config, blockSlot, attestation.data),
+      signature: attestation.signature,
+    };
+  });
 }

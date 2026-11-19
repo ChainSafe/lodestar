@@ -1,7 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
@@ -74,6 +74,7 @@ export async function getNetworkForTest(
       pubkeyCache,
       db,
       dataDir: ".",
+      dataColumnDir: "data_columns",
       dbName: ".",
       logger,
       processShutdownCallback: () => {},
@@ -87,6 +88,7 @@ export async function getNetworkForTest(
       validatorMonitor: null,
       anchorState: new BeaconStateView(cachedState),
       isAnchorStateFinalized: true,
+      earliestAvailableSlot: cachedState.slot,
       executionEngine: new ExecutionEngineDisabled(),
     }
   );

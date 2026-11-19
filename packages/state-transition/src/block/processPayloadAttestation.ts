@@ -5,7 +5,8 @@ import {isValidIndexedPayloadAttestation} from "./isValidIndexedPayloadAttestati
 
 export function processPayloadAttestation(
   state: CachedBeaconStateGloas,
-  payloadAttestation: gloas.PayloadAttestation
+  payloadAttestation: gloas.PayloadAttestation,
+  verifySignature = true
 ): void {
   const data = payloadAttestation.data;
 
@@ -19,7 +20,7 @@ export function processPayloadAttestation(
 
   const indexedPayloadAttestation = state.epochCtx.getIndexedPayloadAttestation(data.slot, payloadAttestation);
 
-  if (!isValidIndexedPayloadAttestation(state, indexedPayloadAttestation, true)) {
+  if (!isValidIndexedPayloadAttestation(state, indexedPayloadAttestation, verifySignature)) {
     throw Error("Invalid payload attestation");
   }
 }

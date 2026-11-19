@@ -40,7 +40,10 @@ export const resetIfBehindOrNotAncestorOrUnsafe: FastConfirmationRule = (
 
   const confirmedEpochBehindHead = confirmedEpoch + 1 < snapshot.currentEpoch;
   const notAncestorOfHead = !isAncestor(ctx, cache, snapshot.headRoot, decision.confirmedRoot);
+  // Short-circuit like the spec's `or`: the chain safety walk is expensive and needs the head state
   const allChildrenNotConfirmed =
+    !confirmedEpochBehindHead &&
+    !notAncestorOfHead &&
     isStartSlotOfEpoch(snapshot.currentSlot) &&
     !isConfirmedChainSafe(ctx, store, cache, decision.confirmedRoot, logger);
 

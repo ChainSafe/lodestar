@@ -31,13 +31,13 @@ type Types = Record<string, Type<any>>;
 //
 
 const sszStatic =
-  (skippedFork: string, skippedTypes?: string[]) =>
+  (skippedFork?: string, skippedTypes?: string[]) =>
   (fork: ForkName, typeName: string, _testSuite: string, testSuiteDirpath: string): void => {
     if (fork === skippedFork) {
       return;
     }
 
-    // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+    // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts
     if (skippedTypes?.includes(typeName)) {
       return;
     }
@@ -65,7 +65,7 @@ const sszStatic =
     const sszTypeNoUint = replaceUintTypeWithUintBigintType(sszType);
 
     for (const testCase of fs.readdirSync(testSuiteDirpath)) {
-      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts
       it(testCase, () => {
         // Mainnet must deal with big full states and hash each one multiple times
         if (ACTIVE_PRESET === "mainnet") {
@@ -81,7 +81,6 @@ const sszStatic =
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
   ssz_static: {
     type: RunnerType.custom,
-    // starting from v1.5.0-beta.3, there is "eip7441" fork in ssz_static tests but we ignore them
-    fn: sszStatic("eip7441"),
+    fn: sszStatic(),
   },
 });

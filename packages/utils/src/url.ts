@@ -31,6 +31,16 @@ export function isValidAsciiHttpUrl(urlStr: string): boolean {
   return isValidHttpUrl(urlStr);
 }
 
+/** Return the ASCII form of an HTTP(S) URL with its hostname in punycode, or null if it has none. */
+export function toAsciiHttpUrl(urlStr: string): string | null {
+  if (!isValidHttpUrl(urlStr)) {
+    return null;
+  }
+
+  const asciiUrl = new URL(urlStr).href;
+  return isValidAsciiHttpUrl(asciiUrl) ? asciiUrl : null;
+}
+
 /**
  * Sanitize URL to prevent leaking user credentials in logs or metrics
  *

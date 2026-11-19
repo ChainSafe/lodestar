@@ -29,12 +29,12 @@ export class MockBlockInput implements IBlockInput {
   blockRootHex: string;
   parentRootHex: string;
 
-  _block?: SignedBeaconBlock;
-  _blockSource?: BlockInputSource;
-  _blockSeenTimestampSec?: number;
-  _blockPeerIdStr?: string;
+  block?: SignedBeaconBlock;
+  blockSource?: BlockInputSource;
+  blockSeenTimestampSec?: number;
+  blockPeerIdStr?: string;
 
-  _timeCompleted?: number;
+  timeCompleted?: number;
 
   constructor({type, daOutOfRange, timeCreatedSec, forkName, slot, blockRootHex, parentRootHex}: MockBlockInputProps) {
     this.type = type ?? DAType.PreData;
@@ -52,23 +52,23 @@ export class MockBlockInput implements IBlockInput {
   ): void {
     this.blockRootHex = blockRootHex;
 
-    this._block = block;
-    this._blockSeenTimestampSec = seenTimestampSec;
-    this._blockSource = source;
-    this._blockPeerIdStr = peerIdStr;
+    this.block = block;
+    this.blockSeenTimestampSec = seenTimestampSec;
+    this.blockSource = source;
+    this.blockPeerIdStr = peerIdStr;
   }
   hasBlock(): boolean {
-    return !this._block;
+    return !this.block;
   }
   getBlock(): SignedBeaconBlock {
     // biome-ignore lint/style/noNonNullAssertion: test fixture
-    return this._block!;
+    return this.block!;
   }
   getBlockSource(): SourceMeta {
     return {
-      seenTimestampSec: this._blockSeenTimestampSec ?? Date.now(),
-      source: this._blockSource ?? BlockInputSource.gossip,
-      peerIdStr: this._blockPeerIdStr ?? "0xTESTING_PEER_ID_STR",
+      seenTimestampSec: this.blockSeenTimestampSec ?? Date.now(),
+      source: this.blockSource ?? BlockInputSource.gossip,
+      peerIdStr: this.blockPeerIdStr ?? "0xTESTING_PEER_ID_STR",
     };
   }
 
@@ -76,7 +76,7 @@ export class MockBlockInput implements IBlockInput {
     return true;
   }
   hasBlockAndAllData(): boolean {
-    return !!this._block;
+    return !!this.block;
   }
 
   getLogMeta(): LogMetaBasic {
@@ -88,18 +88,18 @@ export class MockBlockInput implements IBlockInput {
   }
 
   getTimeComplete(): number {
-    return this._timeCompleted ?? 0;
+    return this.timeCompleted ?? 0;
   }
 
   getSerializedCacheKeys(): object[] {
-    return this._block ? [this._block] : [];
+    return this.block ? [this.block] : [];
   }
 
   waitForAllData(_timeout: number, _signal?: AbortSignal): Promise<DAData> {
     return Promise.resolve(null);
   }
   waitForBlock(_timeout: number, _signal?: AbortSignal): Promise<SignedBeaconBlock> {
-    return Promise.resolve(this._block as SignedBeaconBlock);
+    return Promise.resolve(this.block as SignedBeaconBlock);
   }
   waitForBlockAndAllData(_timeout: number, _signal?: AbortSignal): Promise<this> {
     return Promise.resolve(this);

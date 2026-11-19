@@ -28,7 +28,6 @@ export function getBlockErrorLogLevel(code: BlockErrorCode | PayloadErrorCode): 
     case BlockErrorCode.SAME_PARENT_HASH:
     case BlockErrorCode.TRANSACTIONS_TOO_BIG:
     case BlockErrorCode.TOO_MANY_KZG_COMMITMENTS:
-    case BlockErrorCode.TOO_MANY_BLOCK_OPERATIONS:
     case BlockErrorCode.BID_PARENT_ROOT_MISMATCH:
       return LogLevel.warn;
     default:

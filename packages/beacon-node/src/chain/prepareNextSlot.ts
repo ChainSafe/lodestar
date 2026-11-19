@@ -22,15 +22,20 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Bytes32, Slot, ValidatorIndex} from "@lodestar/types";
-import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
+import {Logger, fromHex, isErrorAborted, sleep, toHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
+import {PayloadAttributes} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {IBeaconChain} from "./interface.js";
-import {getPayloadAttributesForSSE, prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
+import {
+  getPayloadAttributesForSSE,
+  getPooledProposerPreferences,
+  prepareExecutionPayload,
+} from "./produceBlock/produceBlockBody.js";
 import {RegenCaller} from "./regen/index.js";
 
 // TODO GLOAS: re-evaluate this timing
@@ -91,6 +96,7 @@ export class PrepareNextSlotScheduler {
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
     const isEpochTransition = prepareEpoch === nextEpoch;
     const fork = this.config.getForkName(prepareSlot);
+    const currentFork = this.config.getForkName(clockSlot);
 
     // Early return if we are pre-genesis
     //  or we are pre-bellatrix and this is not an epoch transition
@@ -101,7 +107,7 @@ export class PrepareNextSlotScheduler {
     try {
       // At PREPARE_NEXT_SLOT_BPS (~67%) of the current slot we prepare payload for the next slot
       // or precompute epoch transition
-      await sleep(this.config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS), this.signal);
+      await sleep(this.config.getSlotComponentDurationMs(currentFork, PREPARE_NEXT_SLOT_BPS), this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
       const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
@@ -157,7 +163,15 @@ export class PrepareNextSlotScheduler {
         };
 
         const proposerIndex = await getProposerIndex();
-        feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
+        if (this.chain.beaconProposerCache.has(proposerIndex)) {
+          const pooledPreferences = isForkPostGloas(fork)
+            ? getPooledProposerPreferences(this.chain, prepareSlot, headRoot)
+            : null;
+          feeRecipient =
+            pooledPreferences !== null
+              ? toHex(pooledPreferences.feeRecipient)
+              : this.chain.beaconProposerCache.getOrDefault(proposerIndex);
+        }
 
         // Predict the proposer head of the next slot when either:
         //  - we are proposing the next slot (single-slot proposer-boost-reorg), or
@@ -243,13 +257,34 @@ export class PrepareNextSlotScheduler {
           parentBlockHash = preparedState.latestExecutionPayloadHeader.blockHash;
         }
 
+        // The payload_attributes event must carry the same hashes we send to the EL
+        const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice, this.logger);
+        const finalizedBlockHash = getFinalizedExecutionBlockHash(this.chain.forkChoice);
+
+        let payloadAttributes: PayloadAttributes | undefined;
+        // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
+        // every slot. Without the flag, only emit the event if we are proposing in the next slot.
+        if (
+          (feeRecipient || this.chain.opts.emitPayloadAttributes === true) &&
+          this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
+        ) {
+          const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
+            prepareState: stateAfterParentPayload,
+            prepareSlot,
+            parentBlockRoot: fromHex(updatedHead.blockRoot),
+            parentBlockHash,
+            safeBlockHash,
+            finalizedBlockHash,
+            feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
+          });
+          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
+          payloadAttributes = data.payloadAttributes;
+        }
+
         if (feeRecipient) {
           const preparationTime =
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
-
-          const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice, this.logger);
-          const finalizedBlockHash = getFinalizedExecutionBlockHash(this.chain.forkChoice);
 
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice semantics to catch and log errors in the
@@ -263,7 +298,8 @@ export class PrepareNextSlotScheduler {
             safeBlockHash,
             finalizedBlockHash,
             stateAfterParentPayload,
-            feeRecipient
+            feeRecipient,
+            payloadAttributes
           );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
             prepareSlot,
@@ -273,22 +309,6 @@ export class PrepareNextSlotScheduler {
         }
 
         this.computeStateHashTreeRoot(preparedState, isEpochTransition);
-
-        // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
-        // every slot. Without the flag, only emit the event if we are proposing in the next slot.
-        if (
-          (feeRecipient || this.chain.opts.emitPayloadAttributes === true) &&
-          this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
-        ) {
-          const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
-            prepareState: stateAfterParentPayload,
-            prepareSlot,
-            parentBlockRoot: fromHex(updatedHead.blockRoot),
-            parentBlockHash,
-            feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
-          });
-          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
-        }
       } else {
         // Pre-bellatrix only reaches here at an epoch transition to precompute the next epoch state
         const preparedState = await this.chain.regen.getBlockSlotState(
@@ -350,7 +370,7 @@ export class PrepareNextSlotScheduler {
             // skip when we're the next-slot proposer — don't compete with block-production prep.
             feeRecipient === undefined
           ) {
-            const maxDurationMs = this.config.getSlotComponentDurationMs(BUILDER_PREVERIFY_LIMIT_BPS);
+            const maxDurationMs = this.config.getSlotComponentDurationMs(currentFork, BUILDER_PREVERIFY_LIMIT_BPS);
             const preVerifyTimer = this.metrics?.builderDepositPreVerify.duration.startTimer();
             const result = headState.preVerifyBuilderDepositsPreGloas(MAX_BUILDER_DEPOSITS_PER_SLOT, maxDurationMs);
             preVerifyTimer?.();
@@ -404,7 +424,10 @@ export class PrepareNextSlotScheduler {
    * later in the slot, connecting at PREPARE_NEXT_SLOT_BPS would go cold before bids are requested.
    */
   private checkBuilderStatusBeforeSlot(prepareSlot: Slot): void {
-    const msBeforeSlot = this.config.getSlotComponentDurationMs(BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS);
+    const msBeforeSlot = this.config.getSlotComponentDurationMs(
+      this.config.getForkName(prepareSlot - 1),
+      BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS
+    );
     const msUntilCheck = -this.chain.clock.msFromSlot(prepareSlot) - msBeforeSlot;
     sleep(Math.max(0, msUntilCheck), this.signal)
       .then(() => this.chain.builderApiClient.checkStatus())

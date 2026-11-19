@@ -1,5 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
+  EffectiveBalanceIncrements,
   IBeaconStateView,
   computeEpochAtSlot,
   computeSlotsSinceEpochStart,
@@ -9,7 +10,7 @@ import {
 } from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
-import {ExecutionStatus, ProtoBlock} from "../../protoArray/interface.js";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "../../protoArray/interface.js";
 import {CheckpointWithHex, computeTotalBalance, equalCheckpointWithHex} from "../store.js";
 import {
   type BalanceSourceKey,
@@ -267,6 +268,16 @@ export function getPreviousBalanceSource(
   return getBalanceSource(store, cache, "previous");
 }
 
+/**
+ * Balances with inactive and slashed validators zeroed.
+ * Full-registry scans read weights from here: `state.getValidator()` materializes a validator
+ * object per index on native state views.
+ */
+function getZeroInactiveBalances(balanceSource: FastConfirmationBalanceSource): EffectiveBalanceIncrements {
+  // Fallback balances come from the justified-balance path and already zero inactive validators
+  return balanceSource.state?.getEffectiveBalanceIncrementsZeroInactive() ?? balanceSource.balances;
+}
+
 export function getTotalActiveBalance(
   balanceSource: FastConfirmationBalanceSource,
   cache: FastConfirmationCache
@@ -277,11 +288,7 @@ export function getTotalActiveBalance(
   const cached = cache.totalActiveBalanceByKey.get(key);
   if (cached !== undefined) return cached;
 
-  const total = balanceSource.state
-    ? computeTotalBalance(balanceSource.state.getEffectiveBalanceIncrementsZeroInactive())
-    : // Fallback balances come from the justified-balance path and already zero inactive
-      // validators, so summing them gives the active justified total for this balance source.
-      computeTotalBalance(balanceSource.balances);
+  const total = computeTotalBalance(getZeroInactiveBalances(balanceSource));
 
   cache.totalActiveBalanceByKey.set(key, total);
   return total;
@@ -369,15 +376,12 @@ function ensureVoteMaps(
   if (cache.voteWeightBySource.has(sourceKey)) return;
 
   const voteMap = new Map<RootHex, number>();
-  const balances = balanceSource.balances;
-  const state = balanceSource.state;
-  const activeIndices = state?.getCurrentShuffling().activeIndices ?? null;
+  const balances = getZeroInactiveBalances(balanceSource);
+  const activeIndices = balanceSource.state?.getCurrentShuffling().activeIndices ?? null;
   const equivocating = ctx.getEquivocatingIndices();
   const indices: Iterable<number> = activeIndices ?? balances.keys();
-  const isSlashed = state ? (i: ValidatorIndex) => state.getValidator(i).slashed : () => false;
 
   for (const i of indices) {
-    if (isSlashed(i)) continue;
     if (equivocating.has(i)) continue;
     const weight = balances[i] ?? 0;
     if (weight === 0) continue;
@@ -409,33 +413,30 @@ export function getAttestationScore(
   return score;
 }
 
-export function getBlockSupportBetweenSlots(
+export function getNodeSupportBetweenSlots(
   ctx: FastConfirmationContext,
   store: IFastConfirmationStore,
   cache: FastConfirmationCache,
   balanceSource: FastConfirmationBalanceSource,
-  blockRoot: RootHex,
+  nodeRoot: RootHex,
+  nodePayloadStatus: PayloadStatus,
   startSlot: Slot,
   endSlot: Slot
 ): number {
   if (startSlot > endSlot) return 0;
-  const balances = balanceSource.balances;
-  const state = balanceSource.state;
-  const stateEpoch = state ? computeEpochAtSlot(state.slot) : null;
+  const balances = getZeroInactiveBalances(balanceSource);
   const participants = getSlotRangeParticipants(ctx, store, cache, startSlot, endSlot);
   if (participants.size === 0) return 0;
 
   const equivocating = ctx.getEquivocatingIndices();
   let score = 0;
   for (const i of participants) {
-    if (i >= balances.length) continue;
-    const validator = state?.getValidator(i);
-    if (validator?.slashed) continue;
-    if (validator && stateEpoch !== null && !isActiveValidator(validator, stateEpoch)) continue;
+    const weight = balances[i] ?? 0;
+    if (weight === 0) continue;
     if (equivocating.has(i)) continue;
     const latestMessage = ctx.getLatestMessage(i);
-    if (latestMessage?.root === blockRoot) {
-      score += balances[i] ?? 0;
+    if (latestMessage?.root === nodeRoot && latestMessage.payloadStatus === nodePayloadStatus) {
+      score += weight;
     }
   }
   return score;
@@ -468,6 +469,8 @@ export function getEquivocationScore(
   for (const i of participants) {
     if (!equivocating.has(i)) continue;
     if (i >= balances.length) continue;
+    // Slashed equivocators still count, so this cannot read the zero-inactive balances.
+    // Reads are bounded by the equivocating set.
     const validator = state?.getValidator(i);
     if (validator && stateEpoch !== null && !isActiveValidator(validator, stateEpoch)) continue;
     score += balances[i] ?? 0;
@@ -531,12 +534,18 @@ export function computeEmptySlotSupportDiscount(
     return 0;
   }
 
-  const parentSupportInEmptySlots = getBlockSupportBetweenSlots(
+  // Post-Gloas the parent block has PENDING, EMPTY and FULL nodes. Only the support of the node this
+  // block actually extends is discounted; votes for the other parent nodes are not support for it.
+  const parentNodePayloadStatus = ctx.getParentNodePayloadStatus(blockRoot);
+  if (parentNodePayloadStatus === null) return 0;
+
+  const parentSupportInEmptySlots = getNodeSupportBetweenSlots(
     ctx,
     store,
     cache,
     balanceSource,
     block.parentRoot,
+    parentNodePayloadStatus,
     (parentBlock.slot + 1) as Slot,
     (block.slot - 1) as Slot
   );
@@ -665,7 +674,7 @@ export function getCurrentTargetScore(
   const target = getCurrentTarget(ctx);
   const targetState = getCurrentEpochState(ctx, store, cache);
   if (!target || !targetState) return 0;
-  const balances = targetState.effectiveBalanceIncrements;
+  const balances = getZeroInactiveBalances({state: targetState, balances: targetState.effectiveBalanceIncrements});
   const activeIndices = targetState.getCurrentShuffling().activeIndices;
   const equivocating = ctx.getEquivocatingIndices();
 
@@ -673,7 +682,6 @@ export function getCurrentTargetScore(
   // On mainnet ~1M validators vote for only ~50 unique (root, epoch) pairs.
   const voteGroups = new Map<RootHex, Map<Epoch, number>>();
   for (const i of activeIndices) {
-    if (targetState.getValidator(i).slashed) continue;
     if (equivocating.has(i)) continue;
     const msg = ctx.getLatestMessage(i);
     if (!msg) continue;

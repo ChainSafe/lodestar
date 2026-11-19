@@ -1,0 +1,7 @@
+.{
+    .name = .afl,
+    .version = "0.1.0",
+    .fingerprint = 0xc1f79957bc2a190f,
+    .minimum_zig_version = "0.14.1",
+    .paths = .{ "build.zig", "build.zig.zon", "afl.c" },
+}

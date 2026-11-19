@@ -1,6 +1,11 @@
 import {describe, expect, it} from "vitest";
 import {phase0} from "../../src/types.js";
-import {getValidatorStatus} from "../../src/utils/validatorStatus.js";
+import {
+  GeneralValidatorStatus,
+  ValidatorStatus,
+  getValidatorStatus,
+  mapToGeneralStatus,
+} from "../../src/utils/validatorStatus.js";
 
 describe("getValidatorStatus", () => {
   it("should return PENDING_INITIALIZED", () => {
@@ -97,4 +102,21 @@ describe("getValidatorStatus", () => {
       expect(error).toHaveProperty("message", "ValidatorStatus unknown");
     }
   });
+});
+
+describe("mapToGeneralStatus", () => {
+  const groupMembers: Record<GeneralValidatorStatus, ValidatorStatus[]> = {
+    active: ["active_ongoing", "active_exiting", "active_slashed"],
+    pending: ["pending_initialized", "pending_queued"],
+    exited: ["exited_unslashed", "exited_slashed"],
+    withdrawal: ["withdrawal_possible", "withdrawal_done"],
+  };
+
+  for (const [group, members] of Object.entries(groupMembers) as [GeneralValidatorStatus, ValidatorStatus[]][]) {
+    it(`maps "${group}" members to the group status`, () => {
+      for (const member of members) {
+        expect(mapToGeneralStatus(member), `${member} should map to ${group}`).toBe(group);
+      }
+    });
+  }
 });

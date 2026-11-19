@@ -37,7 +37,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     chainEvents = new ChainEventEmitter();
     abortController = new AbortController();
     forkChoice = {
-      getAllAncestorBlocks: vi.fn(),
+      isDescendant: vi.fn().mockReturnValue(false),
       hasBlockHex: vi.fn(),
     } as unknown as IForkChoice;
     serializedCache = new SerializedCache();
@@ -122,22 +122,27 @@ describe("SeenPayloadEnvelopeInput", () => {
     const newRootHex = addPayloadInput(2);
     const parentBlock = protoBlock(newRootHex, 2);
 
-    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock, protoBlock(oldRootHex, 1)]);
+    vi.mocked(forkChoice.isDescendant).mockImplementation((ancestorRoot) => ancestorRoot === oldRootHex);
     cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(oldRootHex)).toBeUndefined();
     expect(cache.get(newRootHex)).toBeDefined();
   });
 
-  it("pruneBelowParent keeps ancestor payload inputs whose payload is not yet FULL", () => {
+  it("pruneBelowParent keeps payload inputs whose FULL variant is not an ancestor of the parent", () => {
     const oldRootHex = addPayloadInput(1);
     const newRootHex = addPayloadInput(2);
     const parentBlock = protoBlock(newRootHex, 2);
-    const emptyAncestor: ProtoBlock = {...protoBlock(oldRootHex, 1), payloadStatus: PayloadStatus.EMPTY};
 
-    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock, emptyAncestor]);
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(false);
     cache.pruneBelowParent(parentBlock);
 
+    expect(forkChoice.isDescendant).toHaveBeenCalledWith(
+      oldRootHex,
+      PayloadStatus.FULL,
+      newRootHex,
+      parentBlock.payloadStatus
+    );
     expect(cache.get(oldRootHex)).toBeDefined();
   });
 
@@ -148,7 +153,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     expect(cache.get(oldRootHex)?.hasComputedAllData()).toBe(false);
 
     const parentBlock = protoBlock(newRootHex, 2);
-    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock, protoBlock(oldRootHex, 1)]);
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(true);
     cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(oldRootHex)).toBeDefined();
@@ -158,7 +163,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     const rootHex = addPayloadInput(1);
     const parentBlock = protoBlock(rootHex, 1);
 
-    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock]);
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(true);
     cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(rootHex)).toBeDefined();
@@ -183,23 +188,57 @@ describe("SeenPayloadEnvelopeInput", () => {
     expect(cache.size()).toBe(1);
   });
 
-  it("prune removes a single entry by root and leaves others", () => {
+  it("remove removes a single entry by root and leaves others", () => {
     const rootHex1 = addPayloadInput(1);
     const rootHex2 = addPayloadInput(2);
 
-    cache.prune(rootHex1);
+    cache.remove(rootHex1);
 
     expect(cache.get(rootHex1)).toBeUndefined();
     expect(cache.get(rootHex2)).toBeDefined();
     expect(cache.size()).toBe(1);
   });
 
-  it("prune is a no-op for an unknown root", () => {
+  it("remove is a no-op for an unknown root", () => {
     const rootHex = addPayloadInput(1);
 
-    expect(() => cache.prune(`0x${"ab".repeat(32)}`)).not.toThrow();
+    expect(() => cache.remove(`0x${"ab".repeat(32)}`)).not.toThrow();
     expect(cache.get(rootHex)).toBeDefined();
     expect(cache.size()).toBe(1);
+  });
+
+  it("removeInvalid removes the given entry and leaves others", () => {
+    const rootHex1 = addPayloadInput(1);
+    const rootHex2 = addPayloadInput(2);
+    const input1 = cache.get(rootHex1);
+    if (input1 === undefined) throw Error("payload input not added");
+
+    cache.removeInvalid(input1);
+
+    expect(cache.get(rootHex1)).toBeUndefined();
+    expect(cache.get(rootHex2)).toBeDefined();
+    expect(cache.size()).toBe(1);
+  });
+
+  it("removeInvalid keeps an entry that was recreated for the same root", () => {
+    const {block, rootHex} = generateBlock({forkName: ForkName.gloas, slot: 1});
+    const props = {
+      blockRootHex: rootHex,
+      block,
+      forkName: ForkName.gloas,
+      sampledColumns: [],
+      custodyColumns: [],
+      seenTimestampSec: Date.now() / 1000,
+      source: PayloadEnvelopeInputSource.gossip,
+    };
+    const invalid = cache.add(props);
+    cache.removeInvalid(invalid);
+    const recreated = cache.add(props);
+    expect(recreated).not.toBe(invalid);
+
+    cache.removeInvalid(invalid);
+
+    expect(cache.get(rootHex)).toBe(recreated);
   });
 
   describe("getOrReload", () => {

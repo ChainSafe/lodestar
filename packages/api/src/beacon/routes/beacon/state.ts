@@ -6,16 +6,19 @@ import {
   BuilderStatus,
   CommitteeIndex,
   Epoch,
+  GeneralValidatorStatus,
   RootHex,
   Slot,
   StringType,
   ValidatorStatus,
   electra,
   fulu,
+  gloas,
   phase0,
   ssz,
 } from "@lodestar/types";
-import {JsonOnlyReq} from "../../../utils/codecs.js";
+import {JsonOnlyReq, WithVersion} from "../../../utils/codecs.js";
+import {getPostElectraForkTypes} from "../../../utils/fork.js";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {
   ExecutionOptimisticAndFinalizedCodec,
@@ -41,6 +44,12 @@ export type ValidatorId = string | number;
 export type BuilderId = string | number;
 
 export type {BuilderStatus, ValidatorStatus};
+
+/**
+ * Beacon API `status` filter: oneOf [ValidatorStatus, enum [active, pending, exited, withdrawal]].
+ * https://github.com/ethereum/beacon-APIs/blob/master/apis/beacon/states/validators.yaml
+ */
+export type ValidatorStatusFilter = ValidatorStatus | GeneralValidatorStatus;
 
 export const RandaoResponseType = new ContainerType({
   randao: ssz.Root,
@@ -90,6 +99,10 @@ export const EpochSyncCommitteeResponseType = new ContainerType(
   },
   {jsonCase: "eth2"}
 );
+export const PtcResponseType = new ContainerType({
+  slot: ssz.Slot,
+  validators: ssz.gloas.PayloadTimelinessCommittee,
+});
 export const ValidatorResponseListType = ArrayOf(ValidatorResponseType);
 export const BuilderResponseListType = ArrayOf(BuilderResponseType);
 export const ValidatorIdentitiesType = ArrayOf(ValidatorIdentityType);
@@ -103,6 +116,7 @@ export type BuilderResponse = ValueOf<typeof BuilderResponseType>;
 export type EpochCommitteeResponse = ValueOf<typeof EpochCommitteeResponseType>;
 export type ValidatorBalance = ValueOf<typeof ValidatorBalanceType>;
 export type EpochSyncCommitteeResponse = ValueOf<typeof EpochSyncCommitteeResponseType>;
+export type PtcResponse = ValueOf<typeof PtcResponseType>;
 
 export type ValidatorResponseList = ValueOf<typeof ValidatorResponseListType>;
 export type BuilderResponseList = ValueOf<typeof BuilderResponseListType>;
@@ -190,9 +204,9 @@ export type Endpoints = {
       /** Either hex encoded public key (with 0x prefix) or validator index */
       validatorIds?: ValidatorId[];
       /** [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ) */
-      statuses?: ValidatorStatus[];
+      statuses?: ValidatorStatusFilter[];
     },
-    {params: {state_id: string}; query: {id?: ValidatorId[]; status?: ValidatorStatus[]}},
+    {params: {state_id: string}; query: {id?: ValidatorId[]; status?: ValidatorStatusFilter[]}},
     ValidatorResponseList,
     ExecutionOptimisticAndFinalizedMeta
   >;
@@ -207,9 +221,9 @@ export type Endpoints = {
       /** Either hex encoded public key (with 0x prefix) or validator index */
       validatorIds?: ValidatorId[];
       /** [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ) */
-      statuses?: ValidatorStatus[];
+      statuses?: ValidatorStatusFilter[];
     },
-    {params: {state_id: string}; body: {ids?: string[]; statuses?: ValidatorStatus[]}},
+    {params: {state_id: string}; body: {ids?: string[]; statuses?: ValidatorStatusFilter[]}},
     ValidatorResponseList,
     ExecutionOptimisticAndFinalizedMeta
   >;
@@ -316,6 +330,19 @@ export type Endpoints = {
   >;
 
   /**
+   * Get the payload timeliness committee for a slot from the given state.
+   *
+   * Defaults to the state's slot. Validator indices are returned in committee order and may contain duplicates.
+   */
+  getStatePtc: Endpoint<
+    "GET",
+    StateArgs & {slot?: Slot},
+    {params: {state_id: string}; query: {slot?: number}},
+    PtcResponse,
+    ExecutionOptimisticAndFinalizedMeta
+  >;
+
+  /**
    * Get State Pending Deposits
    *
    * Returns pending deposits for state with given 'stateId'.
@@ -366,6 +393,32 @@ export type Endpoints = {
     fulu.ProposerLookahead,
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
+
+  /**
+   * Get State Builder Pending Payments
+   *
+   * Returns pending builder payments for state with given 'stateId'.
+   */
+  getBuilderPendingPayments: Endpoint<
+    "GET",
+    StateArgs,
+    {params: {state_id: string}},
+    gloas.BuilderPendingPayments,
+    ExecutionOptimisticFinalizedAndVersionMeta
+  >;
+
+  /**
+   * Get State Builder Pending Withdrawals
+   *
+   * Returns pending builder withdrawals for state with given 'stateId'.
+   */
+  getBuilderPendingWithdrawals: Endpoint<
+    "GET",
+    StateArgs,
+    {params: {state_id: string}},
+    gloas.BuilderPendingWithdrawals,
+    ExecutionOptimisticFinalizedAndVersionMeta
+  >;
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
@@ -414,6 +467,22 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       },
       resp: {
         data: EpochSyncCommitteeResponseType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
+    },
+    getStatePtc: {
+      url: "/eth/v1/beacon/states/{state_id}/ptc",
+      method: "GET",
+      req: {
+        writeReq: ({stateId, slot}) => ({params: {state_id: stateId.toString()}, query: {slot}}),
+        parseReq: ({params, query}) => ({stateId: params.state_id, slot: query.slot}),
+        schema: {
+          params: {state_id: Schema.StringRequired},
+          query: {slot: Schema.Uint},
+        },
+      },
+      resp: {
+        data: PtcResponseType,
         meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
@@ -615,7 +684,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: stateIdOnlyReq,
       resp: {
-        data: ssz.electra.PendingDeposits,
+        data: WithVersion((fork) => getPostElectraForkTypes(fork).PendingDeposits),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
@@ -624,7 +693,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: stateIdOnlyReq,
       resp: {
-        data: ssz.electra.PendingPartialWithdrawals,
+        data: WithVersion((fork) => getPostElectraForkTypes(fork).PendingPartialWithdrawals),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
@@ -633,7 +702,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: stateIdOnlyReq,
       resp: {
-        data: ssz.electra.PendingConsolidations,
+        data: WithVersion((fork) => getPostElectraForkTypes(fork).PendingConsolidations),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
@@ -643,6 +712,24 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       req: stateIdOnlyReq,
       resp: {
         data: ssz.fulu.ProposerLookahead,
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
+      },
+    },
+    getBuilderPendingPayments: {
+      url: "/eth/v1/beacon/states/{state_id}/builder_pending_payments",
+      method: "GET",
+      req: stateIdOnlyReq,
+      resp: {
+        data: ssz.gloas.BuilderPendingPayments,
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
+      },
+    },
+    getBuilderPendingWithdrawals: {
+      url: "/eth/v1/beacon/states/{state_id}/builder_pending_withdrawals",
+      method: "GET",
+      req: stateIdOnlyReq,
+      resp: {
+        data: ssz.gloas.BuilderPendingWithdrawals,
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },

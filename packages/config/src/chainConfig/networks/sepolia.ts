@@ -41,7 +41,7 @@ export const sepoliaChainConfig: ChainConfig = {
   FULU_FORK_EPOCH: 272640,
   // Gloas
   GLOAS_FORK_VERSION: b("0x90000076"),
-  GLOAS_FORK_EPOCH: Infinity,
+  GLOAS_FORK_EPOCH: 353024,
 
   // Deposit contract
   // ---------------------------------------------------------------
@@ -59,6 +59,15 @@ export const sepoliaChainConfig: ChainConfig = {
     {
       EPOCH: 275712,
       MAX_BLOBS_PER_BLOCK: 21,
+    },
+  ],
+
+  // Gas Limit Scheduling
+  // ---------------------------------------------------------------
+  GAS_LIMIT_SCHEDULE: [
+    {
+      EPOCH: 353024,
+      GAS_LIMIT: 200000000,
     },
   ],
 };

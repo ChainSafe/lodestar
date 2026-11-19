@@ -3,10 +3,12 @@ import {
   ForkName,
   ForkPostBellatrix,
   ForkPostDeneb,
+  ForkPreDeneb,
   ForkPreGloas,
   ForkSeq,
   isForkPostBellatrix,
   isForkPostDeneb,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
   BeaconBlock,
@@ -31,13 +33,9 @@ export function blindedOrFullBlockHashTreeRoot(
 ): Root {
   return isBlindedBeaconBlock(blindedOrFull)
     ? // Blinded
-      config
-        .getPostBellatrixForkTypes(blindedOrFull.slot)
-        .BlindedBeaconBlock.hashTreeRoot(blindedOrFull)
+      config.getPostBellatrixForkTypes(blindedOrFull.slot).BlindedBeaconBlock.hashTreeRoot(blindedOrFull)
     : // Full
-      config
-        .getForkTypes(blindedOrFull.slot)
-        .BeaconBlock.hashTreeRoot(blindedOrFull);
+      config.getForkTypes(blindedOrFull.slot).BeaconBlock.hashTreeRoot(blindedOrFull);
 }
 
 export function blindedOrFullBlockToHeader(
@@ -46,13 +44,9 @@ export function blindedOrFullBlockToHeader(
 ): BeaconBlockHeader {
   const bodyRoot = isBlindedBeaconBlock(blindedOrFull)
     ? // Blinded
-      config
-        .getPostBellatrixForkTypes(blindedOrFull.slot)
-        .BlindedBeaconBlockBody.hashTreeRoot(blindedOrFull.body)
+      config.getPostBellatrixForkTypes(blindedOrFull.slot).BlindedBeaconBlockBody.hashTreeRoot(blindedOrFull.body)
     : // Full
-      config
-        .getForkTypes(blindedOrFull.slot)
-        .BeaconBlockBody.hashTreeRoot(blindedOrFull.body);
+      config.getForkTypes(blindedOrFull.slot).BeaconBlockBody.hashTreeRoot(blindedOrFull.body);
 
   return {
     slot: blindedOrFull.slot,
@@ -128,7 +122,10 @@ export function reconstructSignedBlockContents(
   signedBlindedBlock: SignedBlindedBeaconBlock,
   executionPayload: ExecutionPayload | null,
   blobsBundle: BlobsBundle | null
-): SignedBlockContents {
+): SignedBlockContents<ForkPreGloas> {
+  if (isForkPostGloas(fork)) {
+    throw Error("Blinded block reconstruction is not supported after Gloas");
+  }
   const signedBlock = signedBlindedBlockToFull(fork, signedBlindedBlock, executionPayload);
 
   if (isForkPostDeneb(fork)) {
@@ -136,10 +133,10 @@ export function reconstructSignedBlockContents(
       throw Error("Missing blobs bundle to reconstruct post-deneb block contents");
     }
     return {
-      signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb>,
+      signedBlock: signedBlock as SignedBeaconBlock<ForkPostDeneb & ForkPreGloas>,
       kzgProofs: blobsBundle.proofs,
       blobs: blobsBundle.blobs,
     };
   }
-  return {signedBlock};
+  return {signedBlock: signedBlock as SignedBeaconBlock<ForkPreDeneb>};
 }

@@ -12,8 +12,7 @@ export enum ExecutionPayloadEnvelopeErrorCode {
   BUILDER_INDEX_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BUILDER_INDEX_MISMATCH",
   BLOCK_HASH_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BLOCK_HASH_MISMATCH",
   EXECUTION_REQUESTS_ROOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_EXECUTION_REQUESTS_ROOT_MISMATCH",
-  EXECUTION_REQUESTS_COUNT_EXCEEDED = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_EXECUTION_REQUESTS_COUNT_EXCEEDED",
-  WITHDRAWALS_COUNT_EXCEEDED = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_WITHDRAWALS_COUNT_EXCEEDED",
+  TOO_MANY_TRANSACTIONS = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_TOO_MANY_TRANSACTIONS",
   INVALID_SIGNATURE = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_INVALID_SIGNATURE",
   PAYLOAD_ENVELOPE_INPUT_MISSING = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PAYLOAD_ENVELOPE_INPUT_MISSING",
 }
@@ -28,30 +27,42 @@ export type ExecutionPayloadEnvelopeErrorType =
       slot: Slot;
     }
   | {code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK; blockRoot: RootHex}
-  | {code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH; envelopeSlot: Slot; blockSlot: Slot}
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH;
+      slot: Slot;
+      root: RootHex;
+      envelopeSlot: Slot;
+      blockSlot: Slot;
+    }
   | {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH;
+      slot: Slot;
+      root: RootHex;
       envelopeBuilderIndex: BuilderIndex;
       bidBuilderIndex: BuilderIndex | null;
     }
   | {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH;
+      slot: Slot;
+      root: RootHex;
       envelopeBlockHash: RootHex;
       bidBlockHash: RootHex | null;
     }
   | {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH;
+      slot: Slot;
+      root: RootHex;
       envelopeRequestsRoot: RootHex;
       bidRequestsRoot: RootHex;
     }
   | {
-      code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_COUNT_EXCEEDED;
-      name: string;
-      count: number;
-      limit: number;
+      code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS;
+      slot: Slot;
+      root: RootHex;
+      transactionCount: number;
+      maxTransactionCount: number;
     }
-  | {code: ExecutionPayloadEnvelopeErrorCode.WITHDRAWALS_COUNT_EXCEEDED; count: number; limit: number}
-  | {code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE}
+  | {code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE; slot: Slot; root: RootHex}
   | {code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING; blockRoot: RootHex};
 
 export class ExecutionPayloadEnvelopeError extends GossipActionError<ExecutionPayloadEnvelopeErrorType> {}

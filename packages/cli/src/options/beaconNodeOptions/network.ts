@@ -1,6 +1,9 @@
+import net from "node:net";
+import os from "node:os";
 import {multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CliCommandOptions} from "@lodestar/utils";
 import {YargsError} from "../../util/index.js";
 
@@ -8,6 +11,36 @@ export const defaultListenAddress = "0.0.0.0";
 export const defaultListenAddress6 = "::";
 export const defaultP2pPort = 9000;
 export const defaultQuicPort = 9001;
+
+/** IANA allocates global unicast addresses from 2000::/3 only */
+const globalUnicastIPv6 = new net.BlockList();
+globalUnicastIPv6.addSubnet("2000::", 3, "ipv6");
+
+/** Special-purpose blocks excluded from automatic IPv6 listening (IANA IPv6 Special-Purpose Address Registry) */
+const specialPurposeIPv6 = new net.BlockList();
+specialPurposeIPv6.addSubnet("2001::", 23, "ipv6"); // IETF protocol assignments, includes Teredo
+specialPurposeIPv6.addSubnet("2001:db8::", 32, "ipv6"); // documentation
+specialPurposeIPv6.addSubnet("2002::", 16, "ipv6"); // 6to4
+specialPurposeIPv6.addSubnet("3fff::", 20, "ipv6"); // documentation
+
+/**
+ * discv5 contacts dual-stack peers over IPv6 whenever an IPv6 socket is bound, so binding "::"
+ * on a host without IPv6 connectivity makes every dual-stack bootnode unreachable.
+ * Only bind IPv6 by default if the host has a global unicast IPv6 address.
+ */
+export function hasGlobalIPv6Address(interfaces = os.networkInterfaces()): boolean {
+  for (const addrs of Object.values(interfaces)) {
+    for (const addr of addrs ?? []) {
+      // node 18 returned family as a number, see isLocalMultiAddr
+      if (!String(addr.family).endsWith("6") || addr.internal) continue;
+      const ip = addr.address;
+      if (net.isIPv6(ip) && globalUnicastIPv6.check(ip, "ipv6") && !specialPurposeIPv6.check(ip, "ipv6")) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 export type NetworkArgs = {
   discv5?: boolean;
@@ -23,6 +56,7 @@ export type NetworkArgs = {
   targetPeers?: number;
   subscribeAllSubnets?: boolean;
   slotsToSubscribeBeforeAggregatorDuty?: number;
+  slotsToSubscribeBeforeProposalDuty?: number;
   disablePeerScoring?: boolean;
   quic?: boolean;
   tcp?: boolean;
@@ -64,7 +98,7 @@ function validateMultiaddrArg<T extends Record<string, string | undefined>>(args
   }
 }
 
-export function parseListenArgs(args: NetworkArgs) {
+export function parseListenArgs(args: NetworkArgs, ipv6Available = hasGlobalIPv6Address()) {
   // If listenAddress is explicitly set, use it
   // If listenAddress6 is not set, use defaultListenAddress
   const listenAddress = args.listenAddress ?? (args.listenAddress6 ? undefined : defaultListenAddress);
@@ -73,8 +107,9 @@ export function parseListenArgs(args: NetworkArgs) {
   const quicPort = listenAddress ? (args.quicPort ?? (port !== undefined ? port + 1 : defaultQuicPort)) : undefined;
 
   // If listenAddress6 is explicitly set, use it
-  // If listenAddress is not set, use defaultListenAddress6
-  const listenAddress6 = args.listenAddress6 ?? (args.listenAddress ? undefined : defaultListenAddress6);
+  // If listenAddress is not set, use defaultListenAddress6 when the host has a global IPv6 address
+  const listenAddress6 =
+    args.listenAddress6 ?? (!args.listenAddress && ipv6Available ? defaultListenAddress6 : undefined);
   const port6 = listenAddress6 ? (args.port6 ?? args.port ?? defaultP2pPort) : undefined;
   const discoveryPort6 = listenAddress6 ? (args.discoveryPort6 ?? port6) : undefined;
   const quicPort6 = listenAddress6
@@ -92,6 +127,19 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
 
   if (!quic && !tcp) {
     throw new YargsError("Cannot disable both TCP and QUIC transports");
+  }
+
+  const slotsToSubscribeBeforeProposalDuty =
+    args.slotsToSubscribeBeforeProposalDuty ?? defaultOptions.network.slotsToSubscribeBeforeProposalDuty;
+  if (
+    !Number.isInteger(slotsToSubscribeBeforeProposalDuty) ||
+    slotsToSubscribeBeforeProposalDuty < 0 ||
+    // proposers are only known one epoch ahead (fulu proposer lookahead)
+    slotsToSubscribeBeforeProposalDuty > SLOTS_PER_EPOCH
+  ) {
+    throw new YargsError(
+      `slotsToSubscribeBeforeProposalDuty must be an integer in [0, ${SLOTS_PER_EPOCH}], got ${slotsToSubscribeBeforeProposalDuty}`
+    );
   }
 
   // validate ip, ip6, ports
@@ -145,7 +193,12 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const quicMu6 = listenAddress6 && quic ? `${muArgs.listenAddress6}${muArgs.quicPort6}` : undefined;
 
   const targetPeers = args.targetPeers;
-  const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
+  if (targetPeers != null && targetPeers < 0) {
+    throw new YargsError("targetPeers must be greater than or equal to 0");
+  }
+  const maxPeers =
+    args["network.maxPeers"] ??
+    (targetPeers !== undefined ? Math.max(Math.floor(targetPeers * 1.1), targetPeers + 1) : undefined);
   if (targetPeers != null && maxPeers != null && targetPeers > maxPeers) {
     throw new YargsError("network.maxPeers must be greater than or equal to targetPeers");
   }
@@ -182,6 +235,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     subscribeAllSubnets: args.subscribeAllSubnets,
     slotsToSubscribeBeforeAggregatorDuty:
       args.slotsToSubscribeBeforeAggregatorDuty ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
+    slotsToSubscribeBeforeProposalDuty,
     disablePeerScoring: args.disablePeerScoring,
     quic,
     tcp,
@@ -245,7 +299,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
   listenAddress6: {
     type: "string",
     description: "The IPv6 address to listen for p2p UDP and TCP connections",
-    defaultDescription: defaultListenAddress6,
+    defaultDescription: `${defaultListenAddress6} if the host has a global IPv6 address`,
     group: "network",
   },
 
@@ -301,6 +355,15 @@ export const options: CliCommandOptions<NetworkArgs> = {
     type: "number",
     description: "Number of slots before an aggregator duty to subscribe to subnets",
     defaultDescription: String(defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty),
+    group: "network",
+  },
+
+  slotsToSubscribeBeforeProposalDuty: {
+    hidden: true,
+    type: "number",
+    description:
+      "Number of slots before a block proposal of a connected validator to subscribe to all attestation subnets, to pack their single attestations into the block. 0 disables",
+    defaultDescription: String(defaultOptions.network.slotsToSubscribeBeforeProposalDuty),
     group: "network",
   },
 

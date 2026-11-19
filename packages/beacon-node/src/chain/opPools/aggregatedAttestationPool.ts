@@ -1,7 +1,7 @@
-import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {IForkChoice} from "@lodestar/fork-choice";
+import {Signature, aggregateSignatures} from "@lodestar/native/blst";
 import {
   ForkName,
   ForkSeq,
@@ -20,6 +20,7 @@ import {
 } from "@lodestar/params";
 import {
   EffectiveBalanceIncrements,
+  G2_POINT_AT_INFINITY,
   IBeaconStateView,
   RootCache,
   computeEpochAtSlot,
@@ -30,11 +31,12 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Attestation, Epoch, RootHex, Slot, electra, isElectraAttestation, phase0, ssz} from "@lodestar/types";
-import {MapDef, assert, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, assert, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ShufflingCache} from "../shufflingCache.js";
+import {SingleAttestationPool, SinglesForCommittee} from "./singleAttestationPool.js";
 import {InsertOutcome} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
@@ -48,17 +50,28 @@ type CommitteeIndex = number;
  */
 export type AttestationsConsolidation = {
   byCommittee: Map<CommitteeIndex, AttestationNonParticipant>;
+  /**
+   * Single attestations of committee members that no aggregate in `byCommittee` covers, a committee may have both.
+   * Disjoint from `byCommittee` by construction so the signatures can be aggregated together
+   */
+  singlesByCommittee: Map<CommitteeIndex, SinglesForCommittee>;
   attData: phase0.AttestationData;
   totalNewSeenEffectiveBalance: number;
   newSeenAttesters: number;
   notSeenAttesters: number;
   /** total number of attesters across all committees in this consolidation */
   totalAttesters: number;
+  /** part of `totalNewSeenEffectiveBalance` contributed by `singlesByCommittee` */
+  singlesNewSeenEffectiveBalance: number;
+  /** part of `newSeenAttesters` contributed by `singlesByCommittee` */
+  singlesNewSeenAttesters: number;
+  /** sum of participation flag weights this consolidation earns, set when scoring */
+  weight: number;
 };
 
 /**
  * This function returns not seen participation for a given epoch and slot and committee index.
- * Return null if all validators are seen or no info to check.
+ * Return an empty set if all validators are seen, or null if the committee cannot be computed (e.g. missing shuffling).
  */
 type GetNotSeenValidatorsFn = (epoch: Epoch, slot: Slot, committeeIndex: number) => Set<number> | null;
 
@@ -109,6 +122,14 @@ const MAX_ATTESTATIONS_PER_GROUP_ELECTRA = Math.min(
   MAX_ATTESTATIONS_ELECTRA
 );
 
+/**
+ * Bounds the single attestation signatures decoded and aggregated synchronously in block production. Without
+ * aggregates (e.g. during non-finality) the pool can hold far more uncovered singles than a block needs.
+ * The budget is spent in scan order, also by candidates that later miss the top MAX_ATTESTATIONS_ELECTRA
+ * As tested on Nov 2026, we never this many not-seen attesters on mainnet.
+ */
+const MAX_SINGLE_ATTESTATIONS_PER_BLOCK = 1024;
+
 /** Same to https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/altair/beacon-chain.md#has_flag */
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
@@ -140,7 +161,8 @@ export class AggregatedAttestationPool {
 
   constructor(
     private readonly config: BeaconConfig,
-    private readonly metrics: Metrics | null = null
+    private readonly metrics: Metrics | null = null,
+    private readonly logger: Logger | null = null
   ) {
     metrics?.opPool.aggregatedAttestationPool.attDataPerSlot.addCollect(() => this.onScrapeMetrics(metrics));
   }
@@ -211,24 +233,27 @@ export class AggregatedAttestationPool {
     fork: ForkName,
     forkChoice: IForkChoice,
     shufflingCache: ShufflingCache,
-    state: IBeaconStateView
+    state: IBeaconStateView,
+    singleAttestationPool: SingleAttestationPool
   ): Attestation[] {
     const forkSeq = ForkSeq[fork];
     if (forkSeq < ForkSeq.electra) {
       throw new Error("Does not support producing blocks for pre-electra forks anymore");
     }
 
-    return this.getAttestationsForBlockElectra(fork, forkChoice, shufflingCache, state);
+    return this.getAttestationsForBlockElectra(fork, forkChoice, shufflingCache, state, singleAttestationPool);
   }
 
   /**
-   * Get attestations to be included in an electra block. Returns up to $MAX_ATTESTATIONS_ELECTRA items
+   * Get attestations to be included in an electra block. Returns up to $MAX_ATTESTATIONS_ELECTRA items.
+   * Single attestations fill committee members that no picked aggregate covers, see `addSinglesToConsolidation`
    */
   getAttestationsForBlockElectra(
     fork: ForkName,
     forkChoice: IForkChoice,
     shufflingCache: ShufflingCache,
-    state: IBeaconStateView
+    state: IBeaconStateView,
+    singleAttestationPool: SingleAttestationPool
   ): electra.Attestation[] {
     const stateSlot = state.slot;
     const stateEpoch = state.epoch;
@@ -239,17 +264,27 @@ export class AggregatedAttestationPool {
     const notSeenValidatorsFn = getNotSeenValidatorsFn(this.config, shufflingCache, state);
     const validateAttestationDataFn = getValidateAttestationDataFn(forkChoice, state);
 
-    const slots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys()).sort((a, b) => b - a);
+    const slots = Array.from(
+      new Set([...this.attestationGroupByIndexByDataHexBySlot.keys(), ...singleAttestationPool.getStoredSlots()])
+    ).sort((a, b) => b - a);
     // Track score of each `AttestationsConsolidation`
     const consolidations = new Map<AttestationsConsolidation, number>();
+    let remainingSingles = MAX_SINGLE_ATTESTATIONS_PER_BLOCK;
     let scannedSlots = 0;
     let stopReason: ScannedSlotsTerminationReason | null = null;
+    const missingShufflingCommitteesByEpoch = new Map<Epoch, number>();
+    // reset so that inclusion distances not scanned for this block do not keep values of a previous block
+    this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.returnedAttestations.reset();
+    this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.scannedAttestations.reset();
     slot: for (const slot of slots) {
-      const attestationGroupByIndexByDataHash = this.attestationGroupByIndexByDataHexBySlot.get(slot);
-      // should not happen
-      if (!attestationGroupByIndexByDataHash) {
-        throw Error(`No aggregated attestation pool for slot=${slot}`);
-      }
+      // a slot may only have single attestations, e.g. votes for a minority head that nobody aggregated
+      const attestationGroupByIndexByDataHash =
+        this.attestationGroupByIndexByDataHexBySlot.get(slot) ??
+        new Map<DataRootHex, Map<CommitteeIndex, MatchingDataAttestationGroup>>();
+      const singlesDataBySlot =
+        remainingSingles > 0
+          ? singleAttestationPool.getDataRoots(slot)
+          : new Map<DataRootHex, phase0.AttestationData>();
 
       const epoch = computeEpochAtSlot(slot);
       if (epoch < statePrevEpoch) {
@@ -276,16 +311,22 @@ export class AggregatedAttestationPool {
       // Attestations    att00  ---   att10  ---  att20  ---   0 (att 00 10 20)
       //                 att01  ---     -    ---  att21  ---   1 (att 01 __ 21)
       //                   -    ---     -    ---  att22  ---   2 (att __ __ 22)
-      for (const attestationGroupByIndex of attestationGroupByIndexByDataHash.values()) {
+      const dataRootHexes = new Set([...attestationGroupByIndexByDataHash.keys(), ...singlesDataBySlot.keys()]);
+      for (const dataRootHex of dataRootHexes) {
+        if (remainingSingles === 0 && !attestationGroupByIndexByDataHash.has(dataRootHex)) {
+          continue;
+        }
+        const attestationGroupByIndex =
+          attestationGroupByIndexByDataHash.get(dataRootHex) ?? new Map<CommitteeIndex, MatchingDataAttestationGroup>();
         // sameAttDataCons could be up to MAX_ATTESTATIONS_PER_GROUP_ELECTRA
         const sameAttDataCons: AttestationsConsolidation[] = [];
-        const allAttestationGroups = Array.from(attestationGroupByIndex.values());
-        if (allAttestationGroups.length === 0) {
+        const attData = attestationGroupByIndex.values().next().value?.data ?? singlesDataBySlot.get(dataRootHex);
+        if (attData === undefined) {
           this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.emptyAttestationData.inc();
           continue;
         }
 
-        const invalidAttDataReason = validateAttestationDataFn(allAttestationGroups[0].data);
+        const invalidAttDataReason = validateAttestationDataFn(attData);
         if (invalidAttDataReason !== null) {
           this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.invalidAttestationData.inc({
             reason: invalidAttDataReason,
@@ -293,9 +334,16 @@ export class AggregatedAttestationPool {
           continue;
         }
 
+        // committee members not on chain and not covered by any picked aggregate, owned by this loop
+        const remainingNotSeenByCommittee = new Map<CommitteeIndex, Set<number>>();
         for (const [committeeIndex, attestationGroup] of attestationGroupByIndex.entries()) {
           const notSeenCommitteeMembers = notSeenValidatorsFn(epoch, slot, committeeIndex);
-          if (notSeenCommitteeMembers === null || notSeenCommitteeMembers.size === 0) {
+          if (notSeenCommitteeMembers === null) {
+            // skip this committee instead of failing the whole block production, other epochs may still have shuffling
+            missingShufflingCommitteesByEpoch.set(epoch, (missingShufflingCommitteesByEpoch.get(epoch) ?? 0) + 1);
+            continue;
+          }
+          if (notSeenCommitteeMembers.size === 0) {
             this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.seenCommittees.inc();
             continue;
           }
@@ -319,18 +367,16 @@ export class AggregatedAttestationPool {
           const attestationsSameGroup = getAttestationGroupResult.result;
           returnedAttestationsPerSlot += attestationsSameGroup.length;
           totalAttestationsPerSlot += getAttestationGroupResult.totalAttestations;
+          // notSeenCommitteeMembers of the last pick are the ones no pick covers, it's a new Set (not the cached one)
+          remainingNotSeenByCommittee.set(
+            committeeIndex,
+            attestationsSameGroup.at(-1)?.notSeenCommitteeMembers ?? notSeenCommitteeMembers
+          );
 
           for (const [i, attestationNonParticipation] of attestationsSameGroup.entries()) {
             // sameAttDataCons shares the same index for different committees so we use index `i` here
             if (sameAttDataCons[i] === undefined) {
-              sameAttDataCons[i] = {
-                byCommittee: new Map(),
-                attData: attestationNonParticipation.attestation.data,
-                totalNewSeenEffectiveBalance: 0,
-                newSeenAttesters: 0,
-                notSeenAttesters: 0,
-                totalAttesters: 0,
-              };
+              sameAttDataCons[i] = newConsolidation(attestationNonParticipation.attestation.data);
             }
             const sameAttDataCon = sameAttDataCons[i];
             // committeeIndex was from a map so it should be unique, but just in case
@@ -343,6 +389,34 @@ export class AggregatedAttestationPool {
             }
           }
         } // all committees are processed
+
+        for (const committeeIndex of singleAttestationPool.getCommitteeIndices(slot, dataRootHex)) {
+          if (remainingSingles === 0) {
+            break;
+          }
+          // a committee with no aggregate for this data starts from on chain participation (cached set, read only)
+          const notSeenCommitteeMembers =
+            remainingNotSeenByCommittee.get(committeeIndex) ?? notSeenValidatorsFn(epoch, slot, committeeIndex);
+          if (notSeenCommitteeMembers === null || notSeenCommitteeMembers.size === 0) {
+            continue;
+          }
+
+          const singles = singleAttestationPool.getUncovered(
+            slot,
+            dataRootHex,
+            committeeIndex,
+            notSeenCommitteeMembers,
+            state.effectiveBalanceIncrements,
+            remainingSingles
+          );
+          if (singles !== null) {
+            // the first consolidation holds the best aggregate of every committee, adding singles to it costs no
+            // extra attestation in the block. It's created if this data has no aggregate at all
+            sameAttDataCons[0] ??= newConsolidation(attData);
+            addSinglesToConsolidation(sameAttDataCons[0], committeeIndex, singles, notSeenCommitteeMembers.size);
+            remainingSingles -= singles.newSeenAttesters;
+          }
+        }
 
         this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.returnedAttestations.set(
           {inclusionDistance},
@@ -366,16 +440,16 @@ export class AggregatedAttestationPool {
             gloasState?.latestBlockHeader.slot ?? null
           );
 
-          const weight =
+          consolidation.weight =
             ((flags & TIMELY_SOURCE) === TIMELY_SOURCE ? TIMELY_SOURCE_WEIGHT : 0) +
             ((flags & TIMELY_TARGET) === TIMELY_TARGET ? TIMELY_TARGET_WEIGHT : 0) +
             ((flags & TIMELY_HEAD) === TIMELY_HEAD ? TIMELY_HEAD_WEIGHT : 0);
 
-          const score = consolidation.totalNewSeenEffectiveBalance * weight;
+          const score = consolidation.totalNewSeenEffectiveBalance * consolidation.weight;
 
           consolidations.set(consolidation, score);
-          // Stop accumulating attestations there are enough that may have good scoring
-          if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 2) {
+          // bound the max consolidation candidates, does not likely happen on mainnet through
+          if (consolidations.size >= MAX_ATTESTATIONS_ELECTRA * 4) {
             stopReason = ScannedSlotsTerminationReason.MaxConsolidationReached;
             break slot;
           }
@@ -386,31 +460,120 @@ export class AggregatedAttestationPool {
       scannedSlots++;
     }
 
+    for (const [epoch, missingCommittees] of missingShufflingCommitteesByEpoch) {
+      this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.missingShufflingCommittees.inc(
+        missingCommittees
+      );
+      this.logger?.debug("Missing shuffling when packing attestations, skipped committees", {
+        slot: stateSlot,
+        epoch,
+        decisionRoot: state.getShufflingDecisionRoot(epoch),
+        missingCommittees,
+      });
+    }
+
     this.metrics?.opPool.aggregatedAttestationPool.packedAttestations.totalConsolidations.set(consolidations.size);
 
     const sortedConsolidationsByScore = Array.from(consolidations.entries())
       .sort((a, b) => b[1] - a[1])
-      .map(([consolidation, _]) => consolidation)
-      .slice(0, MAX_ATTESTATIONS_ELECTRA);
+      .map(([consolidation, _]) => consolidation);
 
     // on chain aggregation is expensive, only do it after all
     const packedAttestationsMetrics = this.metrics?.opPool.aggregatedAttestationPool.packedAttestations;
-    const packedAttestations: electra.Attestation[] = new Array(sortedConsolidationsByScore.length);
-    for (const [i, consolidation] of sortedConsolidationsByScore.entries()) {
-      packedAttestations[i] = aggregateConsolidation(consolidation);
+    const packedAttestations: electra.Attestation[] = [];
+    const packedConsolidations: AttestationsConsolidation[] = [];
+    // reset so that indexes beyond the packed attestations of this block do not keep values of a previous block
+    packedAttestationsMetrics?.committeeCount.reset();
+    packedAttestationsMetrics?.totalAttesters.reset();
+    packedAttestationsMetrics?.nonParticipation.reset();
+    packedAttestationsMetrics?.inclusionDistance.reset();
+    packedAttestationsMetrics?.newSeenAttesters.reset();
+    packedAttestationsMetrics?.totalEffectiveBalance.reset();
+    for (const consolidation of sortedConsolidationsByScore) {
+      if (packedAttestations.length >= MAX_ATTESTATIONS_ELECTRA) {
+        break;
+      }
+
+      const attestation = aggregateConsolidation(consolidation);
+      const committeeCount = attestation.committeeBits.getTrueBitIndexes().length;
+      // The point at infinity is not a valid aggregate signature, exclude it from the block
+      if (byteArrayEquals(attestation.signature, G2_POINT_AT_INFINITY)) {
+        this.logger?.debug("Excluding aggregate with infinity signature", {
+          slot: stateSlot,
+          attestationSlot: attestation.data.slot,
+          committees: committeeCount,
+        });
+        continue;
+      }
+
+      const i = packedAttestations.push(attestation) - 1;
+      packedConsolidations.push(consolidation);
 
       // record metrics of packed attestations
-      packedAttestationsMetrics?.committeeCount.set({index: i}, consolidation.byCommittee.size);
+      packedAttestationsMetrics?.committeeCount.set({index: i}, committeeCount);
       packedAttestationsMetrics?.totalAttesters.set({index: i}, consolidation.totalAttesters);
       packedAttestationsMetrics?.nonParticipation.set({index: i}, consolidation.notSeenAttesters);
-      packedAttestationsMetrics?.inclusionDistance.set({index: i}, stateSlot - packedAttestations[i].data.slot);
+      packedAttestationsMetrics?.inclusionDistance.set({index: i}, stateSlot - attestation.data.slot);
       packedAttestationsMetrics?.newSeenAttesters.set({index: i}, consolidation.newSeenAttesters);
       packedAttestationsMetrics?.totalEffectiveBalance.set({index: i}, consolidation.totalNewSeenEffectiveBalance);
     }
 
+    // value is proportional to the proposer reward of the attestations, singles are disjoint from aggregates
+    // so their part is exactly what they add on top of an aggregates only block
+    let totalValue = 0;
+    let singlesValue = 0;
+    let newSeenAttesters = 0;
+    let singlesNewSeenAttesters = 0;
+    let singlesNewSeenEffectiveBalance = 0;
+    let singlesOnlyConsolidations = 0;
+    let singlesCommittees = 0;
+    const singlesNewSeenAttestersByInclusionDistance = new Map<number, number>();
+    for (const consolidation of packedConsolidations) {
+      totalValue += consolidation.totalNewSeenEffectiveBalance * consolidation.weight;
+      singlesValue += consolidation.singlesNewSeenEffectiveBalance * consolidation.weight;
+      newSeenAttesters += consolidation.newSeenAttesters;
+      singlesNewSeenAttesters += consolidation.singlesNewSeenAttesters;
+      if (consolidation.singlesNewSeenAttesters > 0) {
+        const inclusionDistance = stateSlot - consolidation.attData.slot;
+        singlesNewSeenAttestersByInclusionDistance.set(
+          inclusionDistance,
+          (singlesNewSeenAttestersByInclusionDistance.get(inclusionDistance) ?? 0) +
+            consolidation.singlesNewSeenAttesters
+        );
+      }
+      singlesNewSeenEffectiveBalance += consolidation.singlesNewSeenEffectiveBalance;
+      singlesCommittees += consolidation.singlesByCommittee.size;
+      if (consolidation.byCommittee.size === 0) {
+        singlesOnlyConsolidations++;
+      }
+    }
+    packedAttestationsMetrics?.attestationValue.inc({source: "aggregate"}, totalValue - singlesValue);
+    packedAttestationsMetrics?.attestationValue.inc({source: "single"}, singlesValue);
+    packedAttestationsMetrics?.blockNewSeenAttesters.set(newSeenAttesters);
+    packedAttestationsMetrics?.singlesValueRatio.observe(totalValue > 0 ? singlesValue / totalValue : 0);
+    packedAttestationsMetrics?.singlesNewSeenAttesters.observe(singlesNewSeenAttesters);
+    // reset so that distances of a previous block do not keep stale values, the gauge then sums to the last block
+    packedAttestationsMetrics?.singlesNewSeenAttestersByInclusionDistance.reset();
+    for (const [inclusionDistance, count] of singlesNewSeenAttestersByInclusionDistance) {
+      packedAttestationsMetrics?.singlesNewSeenAttestersByInclusionDistance.set({inclusionDistance}, count);
+    }
+    packedAttestationsMetrics?.singlesNewSeenEffectiveBalance.observe(singlesNewSeenEffectiveBalance);
+    packedAttestationsMetrics?.singlesOnlyConsolidations.observe(singlesOnlyConsolidations);
+    packedAttestationsMetrics?.singlesFoldedCommittees.observe(singlesCommittees);
+    this.logger?.debug("Packed single attestations into block", {
+      slot: stateSlot,
+      singlesNewSeenAttesters,
+      singlesNewSeenEffectiveBalance,
+      singlesCommittees,
+      singlesOnlyConsolidations,
+      packedAttestations: packedAttestations.length,
+    });
+
     if (stopReason === null) {
       stopReason = ScannedSlotsTerminationReason.ScannedAllSlots;
     }
+    // only one reason per block, reset so that other reasons do not keep values of a previous block
+    packedAttestationsMetrics?.scannedSlots.reset();
     packedAttestationsMetrics?.scannedSlots.set({reason: stopReason}, scannedSlots);
     packedAttestationsMetrics?.poolSlots.set(slots.length);
 
@@ -443,7 +606,8 @@ export class AggregatedAttestationPool {
         attestations.push(...attestationGroup.getAttestations());
       }
     }
-    return attestations;
+    // The point at infinity is not a valid aggregate signature, do not serve such an aggregate
+    return attestations.filter((attestation) => !byteArrayEquals(attestation.signature, G2_POINT_AT_INFINITY));
   }
 
   private onScrapeMetrics(metrics: Metrics): void {
@@ -710,20 +874,38 @@ export function aggregateInto(attestation1: AttestationWithIndex, attestation2: 
  * attestation data from different committee into a single attestation
  * https://github.com/ethereum/consensus-specs/blob/aba6345776aa876dad368cab27fbbb23fae20455/specs/_features/eip7549/validator.md?plain=1#L39
  */
-export function aggregateConsolidation({byCommittee, attData}: AttestationsConsolidation): electra.Attestation {
+export function aggregateConsolidation({
+  byCommittee,
+  singlesByCommittee,
+  attData,
+}: AttestationsConsolidation): electra.Attestation {
   const committeeBits = BitArray.fromBitLen(MAX_COMMITTEES_PER_SLOT);
   // TODO: can we improve this?
   let aggregationBits: boolean[] = [];
   const signatures: Signature[] = [];
-  const sortedCommittees = Array.from(byCommittee.keys()).sort((a, b) => a - b);
+  const sortedCommittees = Array.from(new Set([...byCommittee.keys(), ...singlesByCommittee.keys()])).sort(
+    (a, b) => a - b
+  );
   for (const committeeIndex of sortedCommittees) {
-    const attestationNonParticipation = byCommittee.get(committeeIndex);
-    if (attestationNonParticipation !== undefined) {
-      const {attestation} = attestationNonParticipation;
-      committeeBits.set(committeeIndex, true);
-      aggregationBits = [...aggregationBits, ...attestation.aggregationBits.toBoolArray()];
+    const attestation = byCommittee.get(committeeIndex)?.attestation;
+    const singles = singlesByCommittee.get(committeeIndex);
+    let committeeAggregationBits: boolean[];
+    if (attestation !== undefined) {
+      committeeAggregationBits = attestation.aggregationBits.toBoolArray();
       signatures.push(signatureFromBytesNoCheck(attestation.signature));
+    } else if (singles !== undefined) {
+      committeeAggregationBits = new Array<boolean>(singles.committeeSize).fill(false);
+    } else {
+      continue;
     }
+
+    // singles are disjoint from the aggregate of the same committee, see addSinglesToConsolidation
+    for (const {validatorCommitteeIndex, single} of singles?.singles ?? []) {
+      committeeAggregationBits[validatorCommitteeIndex] = true;
+      signatures.push(signatureFromBytesNoCheck(single.signature));
+    }
+    committeeBits.set(committeeIndex, true);
+    aggregationBits = [...aggregationBits, ...committeeAggregationBits];
   }
   return {
     aggregationBits: BitArray.fromBoolArray(aggregationBits),
@@ -731,6 +913,46 @@ export function aggregateConsolidation({byCommittee, attData}: AttestationsConso
     committeeBits,
     signature: aggregateSignatures(signatures).toBytes(),
   };
+}
+
+function newConsolidation(attData: phase0.AttestationData): AttestationsConsolidation {
+  return {
+    byCommittee: new Map(),
+    singlesByCommittee: new Map(),
+    attData,
+    totalNewSeenEffectiveBalance: 0,
+    newSeenAttesters: 0,
+    notSeenAttesters: 0,
+    totalAttesters: 0,
+    singlesNewSeenEffectiveBalance: 0,
+    singlesNewSeenAttesters: 0,
+    weight: 0,
+  };
+}
+
+/**
+ * Add single attestations of committee members that no picked aggregate covers. They are disjoint from every picked
+ * aggregate of the same committee, so their signatures can be aggregated with the committee's aggregate.
+ * @param notSeenCommitteeMembersCount committee members still not seen before adding these singles
+ */
+function addSinglesToConsolidation(
+  consolidation: AttestationsConsolidation,
+  committeeIndex: CommitteeIndex,
+  singles: SinglesForCommittee,
+  notSeenCommitteeMembersCount: number
+): void {
+  consolidation.singlesByCommittee.set(committeeIndex, singles);
+  consolidation.totalNewSeenEffectiveBalance += singles.newSeenEffectiveBalance;
+  consolidation.newSeenAttesters += singles.newSeenAttesters;
+  consolidation.singlesNewSeenEffectiveBalance += singles.newSeenEffectiveBalance;
+  consolidation.singlesNewSeenAttesters += singles.newSeenAttesters;
+  if (consolidation.byCommittee.has(committeeIndex)) {
+    // these members were counted as not seen by the aggregate of this committee
+    consolidation.notSeenAttesters -= singles.newSeenAttesters;
+  } else {
+    consolidation.totalAttesters += singles.committeeSize;
+    consolidation.notSeenAttesters += notSeenCommitteeMembersCount - singles.newSeenAttesters;
+  }
 }
 
 /**
@@ -770,13 +992,18 @@ export function getNotSeenValidatorsFn(
     }
     const cacheKey = slot + "_" + committeeIndex;
     let notSeenCommitteeMembers = cachedNotSeenValidators.get(cacheKey);
-    if (notSeenCommitteeMembers != null) {
-      // if all validators are seen then return null, we don't need to check for any attestations of same committee again
-      return notSeenCommitteeMembers.size === 0 ? null : notSeenCommitteeMembers;
+    if (notSeenCommitteeMembers !== undefined) {
+      return notSeenCommitteeMembers;
     }
 
     const decisionRoot = state.getShufflingDecisionRoot(computeEpochAtSlot(slot));
-    const committee = shufflingCache.getBeaconCommittee(epoch, decisionRoot, slot, committeeIndex);
+    const committee = shufflingCache.getBeaconCommitteeOrNull(epoch, decisionRoot, slot, committeeIndex);
+    if (committee === null) {
+      // attestations in the pool were validated against a cached shuffling of the previous or current epoch,
+      // so a miss is a ShufflingCache bug. Return null so the caller tracks it via metrics/logs without failing
+      // block production. Don't fall back to the state's shuffling, that would hide the bug
+      return null;
+    }
     notSeenCommitteeMembers = new Set<number>();
     for (const [i, validatorIndex] of committee.entries()) {
       // no need to check flagIsTimelySource as if validator is not seen, it's participation status is 0
@@ -786,8 +1013,8 @@ export function getNotSeenValidatorsFn(
       }
     }
     cachedNotSeenValidators.set(cacheKey, notSeenCommitteeMembers);
-    // if all validators are seen then return null, we don't need to check for any attestations of same committee again
-    return notSeenCommitteeMembers.size === 0 ? null : notSeenCommitteeMembers;
+    // an empty set means all validators are seen, we don't need to check for any attestations of same committee again
+    return notSeenCommitteeMembers;
   };
 }
 

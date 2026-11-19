@@ -24,9 +24,51 @@ export enum PendingBlockType {
    */
   UNKNOWN_PAYLOAD_BLOCK_ROOT = "unknown_payload_block_root",
   /**
+   * Same as UNKNOWN_PAYLOAD_BLOCK_ROOT, but the trigger also carries the payload's slot
+   */
+  UNKNOWN_PAYLOAD_BLOCK_ROOT_SLOT = "unknown_payload_block_root_slot",
+  /**
+   * Same as UNKNOWN_PAYLOAD_BLOCK_ROOT_SLOT for the current slot
+   */
+  DEFERRED_PAYLOAD_BLOCK_ROOT = "deferred_payload_block_root",
+  /**
    * Payload analog of INCOMPLETE_BLOCK_INPUT: we have a partial payload input that did not complete in time.
    */
   INCOMPLETE_PAYLOAD_ENVELOPE = "incomplete_payload_envelope",
+}
+
+export enum DownloadResult {
+  /** payload fully downloaded, ready to process */
+  Resolved = "resolved",
+  /** payload fully downloaded, but it was already imported (via gossip) while we were downloading */
+  Late = "late",
+  /** envelope downloaded, held until the block lands in fork choice */
+  WaitingForBlock = "waiting_for_block",
+  /** fetch failed, the pending entry is retained for retry */
+  Failed = "failed",
+}
+
+export enum FetchResult {
+  SuccessResolved = "success_resolved",
+  SuccessMissingParent = "success_missing_parent",
+  SuccessLate = "success_late",
+  SuccessWaitingForBlock = "success_waiting_for_block",
+  FailureTriedAllPeers = "failure_tried_all_peers",
+  FailureMaxAttempts = "failure_max_attempts",
+}
+
+/**
+ * Outcome of a slot's deferred optimistic payload searches, recorded once when its poll loop ends.
+ */
+export enum DeferredPayloadResult {
+  /** gossip delivered every watched payload before PAYLOAD_DUE, no search was needed */
+  ImportedBeforeSearch = "imported_before_search",
+  /** at least one was missing at PAYLOAD_DUE, we searched, and all were imported afterwards */
+  ImportedAfterSearch = "imported_after_search",
+  /** something was still not in fork choice when the slot ended */
+  Unresolved = "unresolved",
+  /** the slot had no optimistic search and no payload import at all, eg a skipped slot */
+  ResolvedNoRoot = "resolved_no_root",
 }
 
 export enum PendingBlockInputStatus {
@@ -63,8 +105,6 @@ export enum DroppedItemReason {
   invalidEnvelope = "invalid_envelope",
   /** a payload had an invalid signature (INVALID_SIGNATURE) */
   invalidSignature = "invalid_signature",
-  /** a block root was given up on after exhausting download attempts (data could not be fetched) */
-  unavailable = "unavailable",
   /** an unexpected / unhandled error code led to removal */
   unknown = "unknown",
 }
@@ -110,9 +150,8 @@ export type PendingPayloadInput = {
 export type PendingPayloadRootHex = {
   status: PendingPayloadInputStatus.pending | PendingPayloadInputStatus.fetching;
   rootHex: RootHex;
-  // Trusted slot only (fork choice / validated data), may be missing until resolved. NOT the gossip
-  // message slot from ChainEvent.unknownEnvelopeBlockRoot, which is untrusted and not necessarily the
-  // payload/block slot. See BlockInputSync.resolvePayloadSlot.
+  // slot could be via fork choice or ChainEvent.unknownEnvelopeBlockRootSlot
+  // while ChainEvent.unknownEnvelopeBlockRoot does not provide one
   slot?: Slot;
   timeAddedSec: number;
   timeSyncedSec?: number;

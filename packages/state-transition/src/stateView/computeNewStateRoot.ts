@@ -1,5 +1,5 @@
 import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../block/externalData.js";
-import {StateHashTreeRootSource, StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
+import {StateTransitionOpts} from "../stateTransition.js";
 import {ComputeNewStateRootResult, IBeaconStateView} from "./interface.js";
 
 /** State transition options for computing the state root of a locally produced block. */
@@ -18,18 +18,13 @@ export const computeNewStateRootStateTransitionOpts: StateTransitionOpts = {
   dontTransferCache: true,
 };
 
-export function getComputeNewStateRootResult(
-  postState: IBeaconStateView,
-  {metrics}: StateTransitionModules
-): ComputeNewStateRootResult {
+export function getComputeNewStateRootResult(postState: IBeaconStateView): ComputeNewStateRootResult {
   const {attestations, syncAggregate, slashing} = postState.proposerRewards;
   const proposerReward = BigInt(attestations + syncAggregate + slashing);
 
-  const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-    source: StateHashTreeRootSource.computeNewStateRoot,
-  });
+  const start = Date.now();
   const newStateRoot = postState.hashTreeRoot();
-  hashTreeRootTimer?.();
+  const hashTreeRootTime = (Date.now() - start) / 1000;
 
-  return {newStateRoot, proposerReward, postState};
+  return {newStateRoot, proposerReward, postState, hashTreeRootTime};
 }

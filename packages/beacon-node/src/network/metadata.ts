@@ -42,13 +42,13 @@ export class MetadataController {
   private onSetValue: (key: string, value: Uint8Array) => void;
   private networkConfig: NetworkConfig;
   private logger: Logger;
-  private _metadata: fulu.Metadata;
+  private metadata: fulu.Metadata;
 
   constructor(opts: MetadataOpts, modules: MetadataModules) {
     this.networkConfig = modules.networkConfig;
     this.logger = modules.logger;
     this.onSetValue = modules.onSetValue;
-    this._metadata = opts.metadata ?? {
+    this.metadata = opts.metadata ?? {
       ...ssz.fulu.Metadata.defaultValue(),
       custodyGroupCount: modules.networkConfig.custodyConfig.targetCustodyGroupCount,
     };
@@ -58,61 +58,61 @@ export class MetadataController {
     // updateEth2Field() MUST be called with clock epoch
     this.updateEth2Field(currentEpoch);
 
-    this.onSetValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
+    this.onSetValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this.metadata.attnets));
 
     const config = this.networkConfig.config;
 
     if (config.getForkSeq(computeStartSlotAtEpoch(currentEpoch)) >= ForkSeq.altair) {
       // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
       // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
-      this.onSetValue(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(this._metadata.syncnets));
+      this.onSetValue(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(this.metadata.syncnets));
     }
 
     // Set CGC regardless of fork. It may be useful to clients before Fulu, and will be ignored otherwise.
-    this.onSetValue(ENRKey.cgc, serializeCgc(this._metadata.custodyGroupCount));
+    this.onSetValue(ENRKey.cgc, serializeCgc(this.metadata.custodyGroupCount));
   }
 
   get seqNumber(): bigint {
-    return this._metadata.seqNumber;
+    return this.metadata.seqNumber;
   }
 
   get syncnets(): BitArray {
-    return this._metadata.syncnets;
+    return this.metadata.syncnets;
   }
 
   set syncnets(syncnets: BitArray) {
     this.onSetValue(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(syncnets));
-    this._metadata.seqNumber++;
-    this._metadata.syncnets = syncnets;
+    this.metadata.seqNumber++;
+    this.metadata.syncnets = syncnets;
   }
 
   get attnets(): BitArray {
-    return this._metadata.attnets;
+    return this.metadata.attnets;
   }
 
   set attnets(attnets: BitArray) {
     this.onSetValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(attnets));
-    this._metadata.seqNumber++;
-    this._metadata.attnets = attnets;
+    this.metadata.seqNumber++;
+    this.metadata.attnets = attnets;
   }
 
   get custodyGroupCount(): number {
-    return this._metadata.custodyGroupCount;
+    return this.metadata.custodyGroupCount;
   }
 
   set custodyGroupCount(custodyGroupCount: number) {
-    if (custodyGroupCount === this._metadata.custodyGroupCount) {
+    if (custodyGroupCount === this.metadata.custodyGroupCount) {
       return;
     }
     this.onSetValue(ENRKey.cgc, serializeCgc(custodyGroupCount));
     this.logger.debug("Updated cgc field in ENR", {custodyGroupCount});
-    this._metadata.seqNumber++;
-    this._metadata.custodyGroupCount = custodyGroupCount;
+    this.metadata.seqNumber++;
+    this.metadata.custodyGroupCount = custodyGroupCount;
   }
 
   /** Consumers that need the phase0.Metadata type can just ignore the .syncnets property */
   get json(): fulu.Metadata {
-    return this._metadata;
+    return this.metadata;
   }
 
   /**

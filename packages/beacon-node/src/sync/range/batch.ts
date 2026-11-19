@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
+import {ForkName, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
 import {Epoch, RootHex, SignedBeaconBlock, Slot, gloas, phase0} from "@lodestar/types";
 import {LodestarError, byteArrayEquals, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
@@ -15,7 +15,7 @@ import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
-import {DownloadByRangeRequests, ParentPayloadCommitments} from "../utils/downloadByRange.js";
+import {DownloadByRangeRequests, ParentPayload} from "../utils/downloadByRange.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
 
 /**
@@ -113,7 +113,6 @@ export type BatchMetadata = {
   // Per-type outstanding request shapes; only present when that sub-request exists.
   // Format: "startSlot=<n>,count=<n>" (plus ",cols=<indices>" for columns).
   blocksReq?: string;
-  blobsReq?: string;
   columnsReq?: string;
   envelopesReq?: string;
 
@@ -160,7 +159,7 @@ export class Batch {
   readonly startSlot: Slot;
   readonly count: number;
 
-  /** Block, blob and column requests that are used to determine the best peer and are used in downloadByRange */
+  /** Block, column and envelope requests that are used to determine the best peer and are used in downloadByRange */
   requests: DownloadByRangeRequests;
   /** State of the batch. */
   state: BatchState = {status: BatchStatus.AwaitingDownload, blocks: [], payloadEnvelopes: null};
@@ -176,7 +175,7 @@ export class Batch {
   private readonly clock: IClock;
   private readonly custodyConfig: CustodyConfig;
   private readonly isFirstBatchInChain: boolean;
-  private readonly latestBid: gloas.ExecutionPayloadBid | undefined;
+  private readonly parentPayload: ParentPayload | undefined;
 
   constructor(
     startEpoch: Epoch,
@@ -184,7 +183,7 @@ export class Batch {
     clock: IClock,
     custodyConfig: CustodyConfig,
     isFirstBatchInChain: boolean,
-    latestBid: gloas.ExecutionPayloadBid | undefined,
+    parentPayload: ParentPayload | undefined,
     targetSlot: Slot
   ) {
     this.config = config;
@@ -197,7 +196,7 @@ export class Batch {
     this.startSlot = startSlot;
     this.count = Math.min(count, targetSlot - startSlot + 1);
     this.isFirstBatchInChain = isFirstBatchInChain;
-    this.latestBid = latestBid;
+    this.parentPayload = parentPayload;
     this.requests = this.getRequests([]);
   }
 
@@ -209,28 +208,23 @@ export class Batch {
     }
 
     // we only know if we should download parent envelope if firstBlock is downloaded
-    if (firstBlock === undefined) return false;
-    if (this.latestBid === undefined) return false;
-    const firstBlockBidParentHash = (firstBlock.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message
-      .parentBlockHash;
-    return byteArrayEquals(firstBlockBidParentHash, this.latestBid.blockHash);
+    if (firstBlock === undefined || this.parentPayload === undefined) return false;
+    const firstBlockBid = (firstBlock.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message;
+    return (
+      byteArrayEquals(firstBlock.message.parentRoot, this.parentPayload.blockRoot) &&
+      byteArrayEquals(firstBlockBid.parentBlockHash, this.parentPayload.bid.blockHash)
+    );
   }
 
-  getParentPayloadCommitments(parentBlockRoot: Uint8Array): ParentPayloadCommitments {
-    if (this.latestBid === undefined) {
-      throw new Error(
-        `Coding error: getParentPayloadCommitments called without latestBid for parentBlockRoot=${toRootHex(parentBlockRoot)}`
-      );
+  getParentPayload(): ParentPayload {
+    if (this.parentPayload === undefined) {
+      throw new Error("Coding error: getParentPayload called without parentPayload");
     }
-    return {
-      blockRoot: parentBlockRoot,
-      blockRootHex: toRootHex(parentBlockRoot),
-      kzgCommitments: this.latestBid.blobKzgCommitments,
-    };
+    return this.parentPayload;
   }
 
   /**
-   * Builds ByRange requests for block, blobs and columns
+   * Builds ByRange requests for block, columns and envelopes
    */
   private getRequests(blocks: IBlockInput[]): DownloadByRangeRequests {
     const withinValidRequestWindow = !isDaOutOfRange(
@@ -260,8 +254,6 @@ export class Batch {
           count: this.count,
           columns: this.custodyConfig.sampledColumns,
         };
-      } else if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
-        requests.blobsRequest = {startSlot: this.startSlot, count: this.count};
       }
 
       return requests;
@@ -340,23 +332,15 @@ export class Batch {
     if (dataStartSlot <= endSlot) {
       // range of 40 - 63, startSlot will be inclusive but subtraction will exclusive so need to + 1
       const count = endSlot - dataStartSlot + 1;
-      if (isForkPostFulu(this.forkName) && withinValidRequestWindow) {
-        // Skip the column re-request when we have no specific column indices outstanding.
-        // Peer rejects an empty `columns` list
-        if (neededColumns.size > 0) {
-          requests.columnsRequest = {
-            count,
-            startSlot: dataStartSlot,
-            columns: Array.from(neededColumns),
-          };
-        }
-      } else if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
-        requests.blobsRequest = {
+      // Peer rejects an empty `columns` list
+      if (isForkPostFulu(this.forkName) && withinValidRequestWindow && neededColumns.size > 0) {
+        requests.columnsRequest = {
           count,
           startSlot: dataStartSlot,
+          columns: Array.from(neededColumns),
         };
       }
-      // dataSlot will still have a value but do not create a request for preDeneb forks
+      // dataSlot will still have a value but do not create a request for pre-fulu forks
     }
 
     if (isForkPostGloas(this.forkName) && envelopeStartSlot <= endSlot) {
@@ -477,7 +461,7 @@ export class Batch {
   }
 
   getMetadata(): BatchMetadata {
-    const {blocksRequest, blobsRequest, columnsRequest, envelopesRequest} = this.requests;
+    const {blocksRequest, columnsRequest, envelopesRequest} = this.requests;
     const failedProcessingPeerList = this.failedProcessingAttempts.flatMap((a) => a.peers);
     const executionErrorPeerList = this.executionErrorAttempts.flatMap((a) => a.peers);
     return {
@@ -486,7 +470,6 @@ export class Batch {
       count: this.count,
       status: this.state.status,
       ...(blocksRequest && {blocksReq: formatRangeReq(blocksRequest)}),
-      ...(blobsRequest && {blobsReq: formatRangeReq(blobsRequest)}),
       ...(columnsRequest && {columnsReq: formatColumnsReq(columnsRequest)}),
       ...(envelopesRequest && {envelopesReq: formatRangeReq(envelopesRequest)}),
       downloadAttempts: this.failedDownloadAttempts.length,
@@ -774,6 +757,7 @@ export class Batch {
     // remove any downloaded blocks and re-attempt
     // TODO(fulu): need to remove the bad blocks from the SeenBlockInputCache
     this.state = {status: BatchStatus.AwaitingDownload, blocks: [], payloadEnvelopes: null};
+    this.resetRequests();
   }
 
   private onProcessingError(attempt: FailedAttempt): void {
@@ -785,6 +769,16 @@ export class Batch {
     // remove any downloaded blocks and re-attempt
     // TODO(fulu): need to remove the bad blocks from the SeenBlockInputCache
     this.state = {status: BatchStatus.AwaitingDownload, blocks: [], payloadEnvelopes: null};
+    this.resetRequests();
+  }
+
+  /**
+   * After a partial download `requests` only cover the data still missing from the downloaded blocks,
+   * e.g. a single column. Once those blocks are dropped, request the whole batch again, otherwise
+   * every peer fails the retry for lack of blocks to validate the data against.
+   */
+  private resetRequests(): void {
+    this.requests = this.getRequests([]);
   }
 
   /** Helper to construct typed BatchError. Stack traces are correct as the error is thrown above */
@@ -831,7 +825,3 @@ function isExecutionEngineFailure(code: BlockErrorCode | PayloadErrorCode | null
     code === PayloadErrorCode.EXECUTION_ENGINE_ERROR
   );
 }
-
-/**
- * Based on an error code, return if peer is attributable for FailedAttempt.
- */
