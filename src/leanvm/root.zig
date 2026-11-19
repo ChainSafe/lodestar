@@ -144,6 +144,14 @@ pub fn cpuSupported() bool {
 }
 
 fn hostHasBaseline() bool {
+    // On arm64 Linux the kernel says what the CPU has. Detection by CPU model knows nothing of a
+    // core it has no entry for, such as a virtual machine's, and reports no extensions for it.
+    if (comptime builtin.cpu.arch == .aarch64 and builtin.os.tag == .linux) {
+        const hwcap_aes = 1 << 3;
+        const hwcap_pmull = 1 << 4;
+        const wanted = hwcap_aes | hwcap_pmull;
+        return std.os.linux.getauxval(std.elf.AT_HWCAP) & wanted == wanted;
+    }
     const host = std.zig.system.resolveTargetQuery(std.Io.Threaded.global_single_threaded.io(), .{}) catch return false;
     return switch (builtin.cpu.arch) {
         // rustc's `haswell`.
@@ -151,7 +159,7 @@ fn hostHasBaseline() bool {
             .avx2, .bmi, .bmi2, .f16c, .fma, .lzcnt, .movbe, .pclmul, .popcnt,
         }),
         // rustc's `apple-m1` on macOS, which every arm64 Mac meets.
-        .aarch64 => builtin.os.tag == .macos or std.Target.aarch64.featureSetHas(host.cpu.features, .aes),
+        .aarch64 => builtin.os.tag == .macos,
         else => true,
     };
 }
