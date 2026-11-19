@@ -102,6 +102,18 @@ export interface FastConfirmationStore {
   currentSlotHead: Uint8Array;
 }
 
+/** `Store.InvalidJudged`: which payload the engine judged INVALID */
+export type InvalidJudged = "from_block" | "child_payload";
+
+/** `Store.VerdictResult`: whether a payload verdict was applied, and if not, why */
+export type VerdictResult =
+  | "applied"
+  | "unknown_lvh"
+  | "already_applied"
+  | "contradiction"
+  | "unusable_lvh"
+  | "nothing_to_invalidate";
+
 export type KeepHeadReason =
   | "head_timely"
   | "shuffling_not_stable"
@@ -198,9 +210,14 @@ export declare class ForkChoice {
   inclusionListSatisfaction(blockIndex: number): boolean | undefined;
   isPayloadInclusionListSatisfied(blockIndex: number): boolean;
   /** Optimistic sync: the payload with `blockHash` and those below it are valid */
-  onPayloadValid(blockHash: Uint8Array): void;
-  /** Optimistic sync: the engine rejected a block on `parentRoot` whose payload builds on `parentBlockHash` */
-  onPayloadInvalid(parentRoot: Uint8Array, parentBlockHash: Uint8Array, latestValidHash?: Uint8Array): void;
+  onPayloadValid(blockHash: Uint8Array): VerdictResult;
+  /** Optimistic sync: the engine judged a payload INVALID, from block `fromRoot` whose payload chain holds `fromBlockHash` */
+  onPayloadInvalid(
+    fromRoot: Uint8Array,
+    fromBlockHash: Uint8Array,
+    latestValidHash: Uint8Array | undefined,
+    judged: InvalidJudged
+  ): VerdictResult;
   /** New index of each old block index (`NO_BLOCK` when dropped), `undefined` when nothing was dropped */
   prune(): Uint32Array | undefined;
 

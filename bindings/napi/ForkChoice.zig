@@ -332,13 +332,13 @@ fn blockArg(self: *const ForkChoice, value: js.Number) !BlockIndex {
 }
 
 fn nodeArg(self: *const ForkChoice, value: js.Number) !ForkChoiceNode {
-    const id = try value.toU32Exact();
-    if (id / 3 >= self.inner.store.blockCount()) return error.InvalidNodeId;
-    return .{ .block = id / 3, .payload_status = @enumFromInt(id % 3) };
+    const node = fork_choice.store.nodeAt(try value.toU32Exact());
+    if (node.block >= self.inner.store.blockCount()) return error.InvalidNodeId;
+    return node;
 }
 
 fn nodeNumber(node: ForkChoiceNode) js.Number {
-    return js.Number.from(fork_choice.head.nodeId(node));
+    return js.Number.from(fork_choice.store.nodeId(node));
 }
 
 // --- time -------------------------------------------------------------------------
@@ -464,21 +464,27 @@ pub fn isPayloadInclusionListSatisfied(self: *ForkChoice, block: js.Number) !js.
     return js.Boolean.from(self.inner.store.isPayloadInclusionListSatisfied(try self.blockArg(block)));
 }
 
-/// Optimistic sync: the payload with `block_hash` and those below it are valid.
-pub fn onPayloadValid(self: *ForkChoice, block_hash: js.Uint8Array) !void {
-    try self.inner.store.onPayloadValid(try rootArg(block_hash));
+/// Optimistic sync: the payload with `block_hash` and those below it are valid. Returns
+/// the `Store.VerdictResult` tag.
+pub fn onPayloadValid(self: *ForkChoice, block_hash: js.Uint8Array) !js.String {
+    return js.String.from(@tagName(self.inner.store.onPayloadValid(try rootArg(block_hash))));
 }
 
-/// Optimistic sync: the engine rejected a block whose parent is `parent_root` and whose
-/// payload builds on `parent_block_hash`. See `Store.onPayloadInvalid`.
+/// Optimistic sync: the engine judged a payload INVALID, starting from block `from_root`
+/// whose payload chain holds `from_block_hash`. `judged` is a `Store.InvalidJudged` tag.
+/// Returns the `Store.VerdictResult` tag. See `Store.onPayloadInvalid`.
 pub fn onPayloadInvalid(
     self: *ForkChoice,
-    parent_root: js.Uint8Array,
-    parent_block_hash: js.Uint8Array,
+    from_root: js.Uint8Array,
+    from_block_hash: js.Uint8Array,
     latest_valid_hash: ?js.Uint8Array,
-) !void {
+    judged: js.String,
+) !js.String {
     const lvh: ?Root = if (latest_valid_hash) |hash| try rootArg(hash) else null;
-    try self.inner.store.onPayloadInvalid(try rootArg(parent_root), try rootArg(parent_block_hash), lvh);
+    var buf: [16]u8 = undefined;
+    const judged_tag = std.meta.stringToEnum(fork_choice.store.InvalidJudged, try judged.toSlice(&buf)) orelse return error.InvalidJudged;
+    const result = try self.inner.store.onPayloadInvalid(try rootArg(from_root), try rootArg(from_block_hash), lvh, judged_tag);
+    return js.String.from(@tagName(result));
 }
 
 /// Drops every block that does not descend from the finalized block. Returns the new
@@ -539,9 +545,9 @@ pub fn isProposerEquivocation(self: *ForkChoice, block: js.Number) !js.Boolean {
 pub fn weights(self: *ForkChoice) !js.BigUint64Array {
     const store = &self.inner.store;
     try fork_choice.head.ensureComputed(store);
-    const out = try js.BigUint64Array.alloc(store.blockCount() * 3);
+    const out = try js.BigUint64Array.alloc(store.blockCount() * fork_choice.store.NODES_PER_BLOCK);
     for (try out.toSlice(), 0..) |*weight, id| {
-        weight.* = fork_choice.head.weight(store, .{ .block = @intCast(id / 3), .payload_status = @enumFromInt(id % 3) });
+        weight.* = fork_choice.head.weight(store, fork_choice.store.nodeAt(@intCast(id)));
     }
     return out;
 }

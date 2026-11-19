@@ -9,6 +9,7 @@ import {
   type AttestationData as NativeAttestationData,
   ExecutionStatus as NativeExecutionStatus,
   ForkChoice as NativeStore,
+  type VerdictResult as NativeVerdictResult,
 } from "@lodestar/native/fork-choice";
 import {PTC_SIZE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
@@ -41,6 +42,9 @@ import {
   ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,
+  LVHInvalidJudged,
+  LVHNotAppliedReason,
+  LVHVerdictResult,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
@@ -109,6 +113,17 @@ const KEEP_HEAD_REASONS: Record<KeepHeadReason, NotReorgedReason> = {
   proposer_boost_not_worn_off: NotReorgedReason.ProposerBoostNotWornOff,
   head_not_weak: NotReorgedReason.HeadBlockNotWeak,
   parent_not_strong: NotReorgedReason.ParentBlockNotStrong,
+};
+
+const NOT_APPLIED_REASONS: Record<
+  Exclude<NativeVerdictResult, "applied">,
+  Exclude<LVHNotAppliedReason, LVHNotAppliedReason.Error>
+> = {
+  unknown_lvh: LVHNotAppliedReason.UnknownLVH,
+  already_applied: LVHNotAppliedReason.AlreadyApplied,
+  contradiction: LVHNotAppliedReason.Contradiction,
+  unusable_lvh: LVHNotAppliedReason.UnusableLVH,
+  nothing_to_invalidate: LVHNotAppliedReason.NothingToInvalidate,
 };
 
 const EXECUTION_STATUS_FROM_NATIVE: Record<number, ExecutionStatus> = {
@@ -959,29 +974,27 @@ export class NativeForkChoice implements IForkChoice {
     this.refreshExecutionStatuses();
   }
 
-  validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean}): boolean {
+  validateLatestHash(execResponse: LVHExecResponse): LVHVerdictResult {
     this.mutated();
-    const strict = opts?.strict ?? true;
+    let verdict: NativeVerdictResult;
     try {
-      if (execResponse.executionStatus === ExecutionStatus.Valid) {
-        this.store.onPayloadValid(fromHex(execResponse.latestValidExecHash));
-      } else {
-        this.store.onPayloadInvalid(
-          fromHex(execResponse.invalidateFromParentBlockRoot),
-          fromHex(execResponse.invalidateFromParentBlockHash),
-          execResponse.latestValidExecHash === null ? undefined : fromHex(execResponse.latestValidExecHash)
-        );
-      }
+      verdict =
+        execResponse.executionStatus === ExecutionStatus.Valid
+          ? this.store.onPayloadValid(fromHex(execResponse.latestValidExecHash))
+          : this.store.onPayloadInvalid(
+              fromHex(execResponse.invalidateFromBlockRoot),
+              fromHex(execResponse.invalidateFromBlockHash),
+              execResponse.latestValidExecHash === null ? undefined : fromHex(execResponse.latestValidExecHash),
+              execResponse.judged === LVHInvalidJudged.FromBlock ? "from_block" : "child_payload"
+            );
     } catch (e) {
-      const code = nativeErrorCode(e);
-      // The engine contradicting a verdict it already gave is a consensus failure, unless the verdict is a
-      // forkchoiceUpdated reply, which is applied leniently: one wrong reply must not shut the node down
-      if (strict && (code === "PayloadInvalidToValid" || code === "PayloadValidToInvalid")) {
-        this.irrecoverableError = e as Error;
-      }
-      return false;
+      return {applied: false, reason: LVHNotAppliedReason.Error, error: e as Error};
     }
-    return this.refreshExecutionStatuses();
+    if (verdict !== "applied") {
+      return {applied: false, reason: NOT_APPLIED_REASONS[verdict]};
+    }
+    this.refreshExecutionStatuses();
+    return {applied: true};
   }
 
   /**
