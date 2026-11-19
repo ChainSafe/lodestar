@@ -401,6 +401,7 @@
                     .config,
                     .fork_types,
                     .state_transition,
+                    .metrics,
                     .hex,
                     .ere_verifier,
                     "zapi:zapi",

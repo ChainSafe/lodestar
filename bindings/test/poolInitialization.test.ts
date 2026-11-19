@@ -11,6 +11,10 @@ it("defers invalid capacity until state creation and retries failed pool initial
   runProcess("invalid capacity", "invalid");
 });
 
+it("scrapes live PMT usage and retained backing memory", {timeout: 30_000}, () => {
+  runProcess("pool metrics", "200000");
+});
+
 function runProcess(scenario: PoolScenario, capacity = "10000000"): void {
   const result = spawnSync(
     process.execPath,
