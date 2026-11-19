@@ -275,6 +275,10 @@
             .root_source_file = "src/udp/root.zig",
             .imports = .{ .fault_io, .socket_test_support },
         },
+        .discv5 = .{
+            .root_source_file = "src/discv5/root.zig",
+            .imports = .{ .udp, .fault_io, .socket_test_support },
+        },
         .ere_verifier = .{
             .root_source_file = "src/ere_verifier/root.zig",
             .imports = .{.ere},
@@ -448,6 +452,7 @@
         .beacon_node = .{ .root_module = .beacon_node },
         .fault_io = .{ .root_module = .fault_io },
         .udp = .{ .root_module = .udp },
+        .discv5 = .{ .root_module = .discv5 },
         .ere_verifier = .{ .root_module = .ere_verifier },
         .bindings_allocator = .{
             .root_module = .{

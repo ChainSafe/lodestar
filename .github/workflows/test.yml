@@ -457,6 +457,8 @@ jobs:
 
       - name: Run discovery and network tests
         run: |
+          zig build test:discv5
+          zig build test:discv5 -Doptimize=ReleaseSafe
           zig build test:fault_io
           zig build test:udp
 
