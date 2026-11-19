@@ -231,7 +231,8 @@ describe("api - beacon - publishBlockV2", () => {
         sampledColumns: [0],
         custodyColumns: [0],
       });
-      modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(generateProtoBlock({slot: 0}));
+      const parentBlock = generateProtoBlock({slot: 0});
+      modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(parentBlock);
       modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
       modules.chain.seenBlockProposers.observeBlockRoot(
         signedBlock.message.slot,
@@ -249,6 +250,12 @@ describe("api - beacon - publishBlockV2", () => {
       ).rejects.toThrow(/proposer equivocation/);
 
       expect(verifyBlocksInEpoch).toHaveBeenCalledOnce();
+      expect(verifyBlocksInEpoch).toHaveBeenCalledWith(
+        parentBlock,
+        [blockInput],
+        null,
+        expect.objectContaining({validProposerSignature: true})
+      );
       expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
       expect(modules.chain.processBlock).not.toHaveBeenCalled();
       expect(modules.chain.seenBlockInputCache.remove).toHaveBeenCalledExactlyOnceWith(blockRoot);
@@ -296,7 +303,7 @@ describe("api - beacon - publishBlockV2", () => {
     );
 
     it.each([routes.beacon.BroadcastValidation.consensus, routes.beacon.BroadcastValidation.consensusAndEquivocation])(
-      "verifies all signatures for a non-local block with broadcast_validation=%s",
+      "passes validProposerSignature for a non-local block with broadcast_validation=%s",
       async (broadcastValidation) => {
         const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
         signedBlock.message.slot = 1;
@@ -314,13 +321,24 @@ describe("api - beacon - publishBlockV2", () => {
           sampledColumns: [0],
           custodyColumns: [0],
         });
-        modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(generateProtoBlock({slot: 0}));
+        const parentBlock = generateProtoBlock({slot: 0});
+        modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(parentBlock);
         modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
 
         const api = getBeaconBlockApi(defaultApiOptions, modules);
         await api.publishBlockV2({signedBlockContents: {signedBlock}, broadcastValidation});
 
         expect(verifyBlocksInEpoch).toHaveBeenCalledOnce();
+        expect(verifyBlocksInEpoch).toHaveBeenCalledWith(
+          parentBlock,
+          [blockInput],
+          null,
+          expect.objectContaining({
+            verifyOnly: true,
+            skipVerifyExecutionPayload: true,
+            validProposerSignature: true,
+          })
+        );
         expect(modules.network.publishBeaconBlock).toHaveBeenCalledWith(signedBlock);
       }
     );
@@ -520,6 +538,15 @@ describe("api - beacon - publishBlockV2", () => {
 
       expect(modules.chain.seenBlockInputCache.remove).toHaveBeenCalledExactlyOnceWith(blockRoot);
       expect(modules.chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
+      expect(modules.chain.logger.debug).toHaveBeenCalledWith(
+        "Dropping seen block input while publishing the block",
+        expect.objectContaining({
+          slot: signedBlock.message.slot,
+          blockRoot,
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+          blockLocallyProduced: false,
+        })
+      );
     });
 
     it("removes a block this call cached when a malformed blob fails cell computation", async () => {
@@ -539,6 +566,10 @@ describe("api - beacon - publishBlockV2", () => {
 
       expect(modules.chain.seenBlockInputCache.remove).toHaveBeenCalledExactlyOnceWith(blockRoot);
       expect(modules.chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
+      expect(modules.chain.logger.debug).toHaveBeenCalledWith("Dropping seen block input while publishing the block", {
+        slot: signedBlock.message.slot,
+        blockRoot,
+      });
       expect(validateGossipBlock).not.toHaveBeenCalled();
       expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
     });
@@ -616,6 +647,15 @@ describe("api - beacon - publishBlockV2", () => {
 
       expect(modules.chain.seenBlockInputCache.remove).toHaveBeenCalledExactlyOnceWith(blockRoot);
       expect(modules.chain.seenBlockInputCache.prune).not.toHaveBeenCalled();
+      expect(modules.chain.logger.debug).toHaveBeenCalledWith(
+        "Dropping seen block input while publishing the block",
+        expect.objectContaining({
+          slot: signedBlock.message.slot,
+          blockRoot,
+          broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+          blockLocallyProduced: false,
+        })
+      );
     });
 
     it("removes a block this call cached when a local proposer signature is invalid", async () => {
@@ -710,6 +750,10 @@ describe("api - beacon - publishBlockV2", () => {
       ).rejects.toBe(error);
 
       expectKept(blockRoot);
+      expect(modules.chain.logger.debug).not.toHaveBeenCalledWith(
+        "Dropping seen block input while publishing the block",
+        expect.anything()
+      );
     });
 
     it("does not remove an already-known block", async () => {
@@ -774,6 +818,14 @@ describe("api - beacon - publishBlockV2", () => {
       expect(modules.chain.seenPayloadEnvelopeInputCache.add).toHaveBeenCalledOnce();
       expect(modules.chain.seenBlockInputCache.remove).toHaveBeenCalledExactlyOnceWith(blockRoot);
       expect(modules.chain.seenPayloadEnvelopeInputCache.remove).toHaveBeenCalledExactlyOnceWith(blockRoot);
+      expect(modules.chain.logger.debug).toHaveBeenCalledWith(
+        "Dropping seen block input while publishing the block",
+        expect.objectContaining({slot: signedBlock.message.slot, blockRoot, blockLocallyProduced: false})
+      );
+      expect(modules.chain.logger.debug).toHaveBeenCalledWith(
+        "Dropping seen payload envelope input while publishing the block",
+        expect.objectContaining({slot: signedBlock.message.slot, blockRoot, blockLocallyProduced: false})
+      );
     });
 
     it("does not remove a post-gloas payload entry that was already cached", async () => {
@@ -823,6 +875,14 @@ describe("api - beacon - publishBlockV2", () => {
       ).rejects.toThrow(BlockGossipError);
 
       expectKept(blockRoot);
+      expect(modules.chain.logger.debug).not.toHaveBeenCalledWith(
+        "Dropping seen block input while publishing the block",
+        expect.anything()
+      );
+      expect(modules.chain.logger.debug).not.toHaveBeenCalledWith(
+        "Dropping seen payload envelope input while publishing the block",
+        expect.anything()
+      );
     });
   });
 });

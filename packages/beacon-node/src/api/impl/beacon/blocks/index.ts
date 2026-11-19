@@ -181,13 +181,16 @@ export function getBeaconBlockApi(
     // If a publish is rejected, remove the entries that this call inserted.
     let handedToUnknownParentSync = false;
     let dataColumnSidecars: fulu.DataColumnSidecar[] = [];
-    let valLogMeta: {
-      slot: number;
-      blockRoot: string;
-      bodyRoot: string;
-      broadcastValidation: routes.beacon.BroadcastValidation;
-      blockLocallyProduced: boolean;
-    };
+    // Unset if publishing throws before bodyRoot is known.
+    let valLogMeta:
+      | {
+          slot: number;
+          blockRoot: string;
+          bodyRoot: string;
+          broadcastValidation: routes.beacon.BroadcastValidation;
+          blockLocallyProduced: boolean;
+        }
+      | undefined = undefined;
 
     try {
       // After gloas, data columns are not published with the block but when publishing the execution payload envelope.
@@ -298,6 +301,8 @@ export function getBeaconBlockApi(
                 ...opts,
                 verifyOnly: true,
                 skipVerifyExecutionPayload: true,
+                // Proposer signature was already checked before the block was cached.
+                validProposerSignature: true,
                 seenTimestampSec,
               });
             } catch (error) {
@@ -314,7 +319,8 @@ export function getBeaconBlockApi(
 
           chain.logger.debug("Consensus validated while publishing block", valLogMeta);
 
-          // Non-local blocks had their proposer and block-body signatures checked by verifyBlocksInEpoch above
+          // Non-local proposer signatures were checked before caching. verifyBlocksInEpoch skips
+          // them via validProposerSignature and still checks the other block signatures.
           // Locally produced blocks already passed block production validation, so only their proposer signature is unchecked
           // Verify that signature and observe the block root here
           if (blockLocallyProduced) {
@@ -377,11 +383,14 @@ export function getBeaconBlockApi(
       }
     } catch (e) {
       if (!handedToUnknownParentSync) {
+        const logMeta = valLogMeta ?? {slot, blockRoot};
         if (!blockInputExisted) {
           chain.seenBlockInputCache.remove(blockRoot);
+          chain.logger.debug("Dropping seen block input while publishing the block", logMeta);
         }
         if (!payloadInputExisted) {
           chain.seenPayloadEnvelopeInputCache.remove(blockRoot);
+          chain.logger.debug("Dropping seen payload envelope input while publishing the block", logMeta);
         }
       }
       throw e;
