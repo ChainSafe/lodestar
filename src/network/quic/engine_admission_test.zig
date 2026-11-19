@@ -19,58 +19,55 @@ const client_ip6: types.Address = .{ .ip6 = .{ .octets = .{ 0x20, 1, 0xd, 0xb8 }
 const server_ip6: types.Address = .{ .ip6 = .{ .octets = .{0} ** 15 ++ .{1}, .port = 4_002 } };
 const admission_now: Engine.Now = Now.fromMilliseconds(.{ .mono_ms = 1_000, .unix_s = support.now_unix });
 
-fn initAdmissionEngine(local: *const [2]?types.Address, seed: u8) !Engine {
+fn initAdmissionEngine(seed: u8) !Engine {
     const key = try keys.KeyPair.fromSecretKey(&([_]u8{0} ** 31 ++ [_]u8{seed}));
     var context = try tls.Context.init(&key, support.now_unix, @splat(seed));
     errdefer context.deinit();
 
     return Engine.init(std.testing.allocator, .{
         .tls = context,
-        .local = local.*,
         .seed = &@as([32]u8, @splat(seed)),
         .limits = .{ .connections_max = 4, .handshaking_max = 4, .handshaking_per_source_max = 1, .dialing_max = 4, .outbound_max = 4 },
     });
 }
 
 fn admitSource(server: *Engine, client: *Engine, source: *const types.Address) !Engine.Handle {
-    const destination = server.local[if (source.* == .ip4) @as(usize, 0) else 1].?;
-    const handle = try client.dial(&destination, server.tls.local_peer_id, admission_now);
+    const destination = if (source.* == .ip4) server_address else server_ip6;
+    const handle = try client.dial(&destination, source, server.tls.local_peer_id, admission_now);
     var packet: [constants.datagram_size_max]u8 = undefined;
     var response: [constants.datagram_size_max]u8 = undefined;
     const initial = client.sendOne(handle.index, admission_now, &packet) orelse return error.TestUnexpectedResult;
-    const retry = server.receive(initial.bytes, source, admission_now, &response);
+    const retry = server.receive(initial.bytes, source, &destination, admission_now, &response);
     try std.testing.expect(retry == .retry);
-    const received = client.receive(retry.retry, &destination, admission_now, &packet);
+    const received = client.receive(retry.retry, &destination, source, admission_now, &packet);
     try std.testing.expect(received == .accepted);
     const validated = client.sendOne(handle.index, admission_now, &packet) orelse return error.TestUnexpectedResult;
-    const admitted = server.receive(validated.bytes, source, admission_now, &response);
+    const admitted = server.receive(validated.bytes, source, &destination, admission_now, &response);
     try std.testing.expect(admitted == .accepted);
     return admitted.accepted;
 }
 
 fn expectSourceAdmission(first: *const types.Address, candidate: *const types.Address, same_group: bool) !void {
-    var server = try initAdmissionEngine(&.{ server_address, server_ip6 }, 1);
+    var server = try initAdmissionEngine(1);
     defer server.deinit();
-    const first_local: [2]?types.Address = if (first.* == .ip4) .{ first.*, null } else .{ null, first.* };
-    var first_client = try initAdmissionEngine(&first_local, 2);
+    var first_client = try initAdmissionEngine(2);
     defer first_client.deinit();
-    const candidate_local: [2]?types.Address = if (candidate.* == .ip4) .{ candidate.*, null } else .{ null, candidate.* };
-    var candidate_client = try initAdmissionEngine(&candidate_local, 3);
+    var candidate_client = try initAdmissionEngine(3);
     defer candidate_client.deinit();
 
     const pending = try admitSource(&server, &first_client, first);
-    _ = try server.dial(candidate, candidate_client.tls.local_peer_id, admission_now);
+    const destination = if (candidate.* == .ip4) server_address else server_ip6;
+    _ = try server.dial(candidate, &destination, candidate_client.tls.local_peer_id, admission_now);
     const before = server.resourceSnapshot();
     try std.testing.expectEqual(@as(usize, 2), before.active);
     try std.testing.expectEqual(@as(usize, 1), before.handshaking);
 
-    const destination = server.local[if (candidate.* == .ip4) @as(usize, 0) else 1].?;
-    const handle = try candidate_client.dial(&destination, server.tls.local_peer_id, admission_now);
+    const handle = try candidate_client.dial(&destination, candidate, server.tls.local_peer_id, admission_now);
     var packet: [constants.datagram_size_max]u8 = undefined;
     var response: [constants.datagram_size_max]u8 = undefined;
     const initial = candidate_client.sendOne(handle.index, admission_now, &packet) orelse return error.TestUnexpectedResult;
     const random_before = server.csprng;
-    const outcome = server.receive(initial.bytes, candidate, admission_now, &response);
+    const outcome = server.receive(initial.bytes, candidate, &destination, admission_now, &response);
     try std.testing.expectEqualDeep(before, server.resourceSnapshot());
     if (same_group) {
         try std.testing.expect(outcome == .dropped);
@@ -129,10 +126,10 @@ fn dialValidatedInitial(pair: *Pair, out: []u8) ![]u8 {
     const handle = try pair.dial();
     const initial = pair.sendOne(&pair.client, handle.index, out) orelse return error.TestUnexpectedResult;
     var response: [constants.datagram_size_max]u8 = undefined;
-    const outcome = pair.server.receive(initial, &client_address, pair.now, &response);
+    const outcome = pair.server.receive(initial, &client_address, &server_address, pair.now, &response);
     try std.testing.expect(outcome == .retry);
     var reply: [constants.datagram_size_max]u8 = undefined;
-    _ = pair.client.receive(outcome.retry, &server_address, pair.now, &reply);
+    _ = pair.client.receive(outcome.retry, &server_address, &client_address, pair.now, &reply);
     return pair.sendOne(&pair.client, handle.index, out) orelse error.TestUnexpectedResult;
 }
 
@@ -144,22 +141,22 @@ test "engine incoming handshakes and closing slots preserve selected outgoing ca
     var response: [constants.datagram_size_max]u8 = undefined;
     var incoming: [3]Engine.Handle = undefined;
     for (&incoming) |*handle| {
-        const received = pair.server.receive(try dialValidatedInitial(&pair, &packet), &client_address, pair.now, &response);
+        const received = pair.server.receive(try dialValidatedInitial(&pair, &packet), &client_address, &server_address, pair.now, &response);
         try std.testing.expect(received == .accepted);
         handle.* = received.accepted;
     }
     try std.testing.expectEqual(@as(u16, 3), pair.server.registry.active_len);
     const initial = try dialValidatedInitial(&pair, &packet);
-    try std.testing.expectEqual(Engine.ReceiveOutcome.dropped, pair.server.receive(initial, &client_address, pair.now, &response));
-    const selected = try pair.server.dial(&client_address, pair.client_ctx.local_peer_id, pair.now);
+    try std.testing.expectEqual(Engine.ReceiveOutcome.dropped, pair.server.receive(initial, &client_address, &server_address, pair.now, &response));
+    const selected = try pair.server.dial(&client_address, &server_address, pair.client_ctx.local_peer_id, pair.now);
     try std.testing.expectEqual(@as(u16, 4), pair.server.registry.active_len);
     try std.testing.expect(pair.server.close(incoming[0], 0));
     try std.testing.expectEqual(@as(u16, 4), pair.server.registry.active_len);
-    try std.testing.expectEqual(Engine.ReceiveOutcome.dropped, pair.server.receive(initial, &client_address, pair.now, &response));
+    try std.testing.expectEqual(Engine.ReceiveOutcome.dropped, pair.server.receive(initial, &client_address, &server_address, pair.now, &response));
     try std.testing.expect(pair.server.abandon(selected));
     try std.testing.expectEqual(@as(u16, 3), pair.server.registry.active_len);
-    try std.testing.expectEqual(Engine.ReceiveOutcome.dropped, pair.server.receive(initial, &client_address, pair.now, &response));
-    _ = try pair.server.dial(&client_address, pair.client_ctx.local_peer_id, pair.now);
+    try std.testing.expectEqual(Engine.ReceiveOutcome.dropped, pair.server.receive(initial, &client_address, &server_address, pair.now, &response));
+    _ = try pair.server.dial(&client_address, &server_address, pair.client_ctx.local_peer_id, pair.now);
 }
 
 test "engine routes existing streams and replayed Initials while source admission is full" {
@@ -173,6 +170,7 @@ test "engine routes existing streams and replayed Initials while source admissio
     const pending = pair.server.receive(
         try dialValidatedInitial(&pair, &packet),
         &client_address,
+        &server_address,
         pair.now,
         &response,
     );
@@ -184,6 +182,7 @@ test "engine routes existing streams and replayed Initials while source admissio
     try std.testing.expectEqual(Engine.ReceiveOutcome.dropped, pair.server.receive(
         try dialInitial(&pair, &packet),
         &client_address,
+        &server_address,
         pair.now,
         &response,
     ));
@@ -196,6 +195,7 @@ test "engine routes existing streams and replayed Initials while source admissio
     const routed = pair.server.receive(
         replay[0..pair.first_initial_len],
         &client_address,
+        &server_address,
         pair.now,
         &response,
     );
@@ -266,6 +266,7 @@ test "engine drops new handshakes when the server table is full" {
     );
     try std.testing.expectError(error.TableFull, pair.server.dial(
         &client_address,
+        &server_address,
         pair.client_ctx.local_peer_id,
         pair.now,
     ));
@@ -292,6 +293,7 @@ test "engine caps inbound handshakes per source address" {
         const outcome = pair.server.receive(
             initial,
             &client_address,
+            &server_address,
             pair.now,
             &response,
         );
@@ -309,6 +311,7 @@ test "engine caps inbound handshakes per source address" {
     const foreign = pair.server.receive(
         other,
         &elsewhere,
+        &server_address,
         pair.now,
         &response,
     );
@@ -341,7 +344,7 @@ test "engine startup seeds reproducible independent connection IDs and Retry key
         try std.testing.expect(pair.client.registry.slots[first.index].scid.eql(&repeated.client.registry.slots[second.index].scid));
     }
     try std.testing.expectEqualDeep(server_before, pair.server.csprng);
-    const server = try pair.server.dial(&client_address, pair.client_ctx.local_peer_id, pair.now);
+    const server = try pair.server.dial(&client_address, &server_address, pair.client_ctx.local_peer_id, pair.now);
     try std.testing.expect(!pair.client.registry.slots[0].scid.eql(&pair.server.registry.slots[server.index].scid));
 }
 
@@ -363,6 +366,7 @@ test "engine drops version negotiation packets instead of reflecting them" {
         pair.server.receive(
             &packet,
             &client_address,
+            &server_address,
             pair.now,
             &response,
         ),
@@ -389,6 +393,7 @@ test "engine answers unsupported versions and drops unroutable packets" {
     const outcome = pair.server.receive(
         &initial,
         &client_address,
+        &server_address,
         pair.now,
         &response,
     );
@@ -401,6 +406,7 @@ test "engine answers unsupported versions and drops unroutable packets" {
     try std.testing.expectEqual(Engine.ReceiveOutcome.dropped, pair.server.receive(
         &short,
         &client_address,
+        &server_address,
         pair.now,
         &response,
     ));
@@ -409,6 +415,7 @@ test "engine answers unsupported versions and drops unroutable packets" {
     try std.testing.expectEqual(Engine.ReceiveOutcome.dropped, pair.server.receive(
         &tiny,
         &client_address,
+        &server_address,
         pair.now,
         &response,
     ));
@@ -442,6 +449,7 @@ test "engine retains a live routed stream across unrelated slot churn" {
     pair.client.csprng = before_first_dial;
     try std.testing.expectError(error.TableFull, pair.client.dial(
         &support.server_address,
+        &client_address,
         pair.server_ctx.local_peer_id,
         pair.now,
     ));
@@ -576,10 +584,10 @@ test "engine stopped admission rejects both initial flights without allocating" 
         pair.server.stopAdmission();
         const before = pair.server.resourceSnapshot();
         const random = pair.server.csprng;
-        try std.testing.expectEqual(.dropped, pair.server.receive(initial, &client_address, pair.now, &response));
-        try std.testing.expectError(error.Stopped, pair.server.dial(&client_address, pair.client_ctx.local_peer_id, pair.now));
+        try std.testing.expectEqual(.dropped, pair.server.receive(initial, &client_address, &server_address, pair.now, &response));
+        try std.testing.expectError(error.Stopped, pair.server.dial(&client_address, &server_address, pair.client_ctx.local_peer_id, pair.now));
         pair.server.closeAll();
-        try std.testing.expectEqual(.dropped, pair.server.receive(initial, &client_address, pair.now, &response));
+        try std.testing.expectEqual(.dropped, pair.server.receive(initial, &client_address, &server_address, pair.now, &response));
         try std.testing.expectEqualDeep(before, pair.server.resourceSnapshot());
         try std.testing.expectEqualDeep(random, pair.server.csprng);
     }
@@ -609,22 +617,22 @@ test "engine stopped admission preserves streams and close progress on existing 
 }
 
 test "engine prefix admission leaves handshake room for an unrelated network" {
-    var server = try initAdmissionEngine(&.{ server_address, server_ip6 }, 1);
+    var server = try initAdmissionEngine(1);
     defer server.deinit();
     server.limits.handshaking_per_prefix_max = 1;
-    var first_client = try initAdmissionEngine(&.{ client_address, null }, 2);
+    var first_client = try initAdmissionEngine(2);
     defer first_client.deinit();
     _ = try admitSource(&server, &first_client, &client_address);
     var neighbor = client_address;
     neighbor.ip4.octets[3] += 1;
-    var second_client = try initAdmissionEngine(&.{ neighbor, null }, 3);
+    var second_client = try initAdmissionEngine(3);
     defer second_client.deinit();
-    const handle = try second_client.dial(&server_address, server.tls.local_peer_id, admission_now);
+    const handle = try second_client.dial(&server_address, &neighbor, server.tls.local_peer_id, admission_now);
     var packet: [constants.datagram_size_max]u8 = undefined;
     var response: [constants.datagram_size_max]u8 = undefined;
     const initial = second_client.sendOne(handle.index, admission_now, &packet).?;
-    try std.testing.expect(server.receive(initial.bytes, &neighbor, admission_now, &response) == .dropped);
+    try std.testing.expect(server.receive(initial.bytes, &neighbor, &server_address, admission_now, &response) == .dropped);
     neighbor.ip4.octets[2] +%= 1;
-    try std.testing.expect(server.receive(initial.bytes, &neighbor, admission_now, &response) == .retry);
+    try std.testing.expect(server.receive(initial.bytes, &neighbor, &server_address, admission_now, &response) == .retry);
     try std.testing.expectEqual(@as(u16, 1), server.registry.handshaking);
 }

@@ -7,7 +7,7 @@ test "engine notifications deliver a later close during sustained earlier stream
     try pair.init(.{}, .{});
     defer pair.deinit();
     const handles = try support.connectPair(&pair);
-    const victim = try pair.server.dial(&support.client_address, pair.client_ctx.local_peer_id, pair.now);
+    const victim = try pair.server.dial(&support.client_address, &support.server_address, pair.client_ctx.local_peer_id, pair.now);
     try std.testing.expect(pair.server.failSend(victim));
     var one: [1]Engine.Event = undefined;
     var delivered = false;
@@ -94,7 +94,7 @@ test "engine notifications preserve generations through active swaps retirement 
     _ = try support.connectPair(&pair);
     var owners: [3]Engine.Handle = undefined;
     for (&owners) |*owner| {
-        owner.* = try pair.server.dial(&support.client_address, pair.client_ctx.local_peer_id, pair.now);
+        owner.* = try pair.server.dial(&support.client_address, &support.server_address, pair.client_ctx.local_peer_id, pair.now);
         try std.testing.expect(pair.server.failSend(owner.*));
     }
     var one: [1]Engine.Event = undefined;
@@ -104,7 +104,7 @@ test "engine notifications preserve generations through active swaps retirement 
     _ = try support.expectClosed(one[0], owners[0], .outbound, null);
     pair.server.releaseReported();
     try std.testing.expectEqual(owners[2].index, pair.server.registry.active[1]);
-    const replacement = try pair.server.dial(&support.client_address, pair.client_ctx.local_peer_id, pair.now);
+    const replacement = try pair.server.dial(&support.client_address, &support.server_address, pair.client_ctx.local_peer_id, pair.now);
     try std.testing.expectEqual(owners[0].index, replacement.index);
     try std.testing.expect(replacement.generation != owners[0].generation);
     try std.testing.expect(pair.server.failSend(replacement));
