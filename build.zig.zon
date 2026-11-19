@@ -227,6 +227,7 @@
             .root_source_file = "src/bls/root.zig",
             .imports = .{.blst},
         },
+        .gossip_processor = .{ .root_source_file = "src/gossip_processor/GossipProcessor.zig", .imports = .{ .config, .consensus_types, .preset } },
         .swap_or_not_shuffle = .{
             .root_source_file = "src/swap_or_not_shuffle/root.zig",
             .imports = .{.blst},
@@ -391,6 +392,7 @@
                     .bls,
                     .bls_options,
                     .cpu_count,
+                    .gossip_processor,
                     .swap_or_not_shuffle,
                     .hex,
                     .persistent_merkle_tree,
@@ -432,6 +434,7 @@
         .clock = .{ .root_module = .clock },
         .beacon_node = .{ .root_module = .beacon_node },
         .ere_verifier = .{ .root_module = .ere_verifier },
+        .gossip_processor = .{ .root_module = .gossip_processor },
         .bindings_allocator = .{
             .root_module = .{
                 .root_source_file = "bindings/napi/tracked_allocator.zig",

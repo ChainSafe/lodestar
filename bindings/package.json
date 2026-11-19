@@ -35,6 +35,10 @@
       "types": "./src/metrics.d.ts",
       "import": "./src/metrics.js"
     },
+    "./gossip-queues": {
+      "types": "./src/gossip-queues.d.ts",
+      "import": "./src/gossip-queues.js"
+    },
     "./shuffle": {
       "types": "./src/shuffle.d.ts",
       "import": "./src/shuffle.js"

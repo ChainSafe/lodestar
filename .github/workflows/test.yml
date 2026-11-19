@@ -420,6 +420,8 @@ jobs:
       - name: Run consensus-type tests
         run: |
           zig build test:consensus_types
+      - name: Run gossip processor tests
+        run: zig build test:gossip_processor
       - name: Run fork_types tests
         run: |
           zig build test:fork_types
