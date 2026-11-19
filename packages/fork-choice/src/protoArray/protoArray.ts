@@ -1123,7 +1123,7 @@ export class ProtoArray {
       if (judged === LVHInvalidJudged.ChildPayload) {
         return {applied: false, reason: LVHNotAppliedReason.UnusableLVH};
       }
-      latestValidHashIndex = this.getUnknownLVHIndex(invalidateFromIndex);
+      latestValidHashIndex = this.getParentPayloadIndex(invalidateFromIndex);
     }
 
     // Never invalidate the justified block, the EMPTY variant sharing its chain, or anything at or below it in
@@ -1138,8 +1138,8 @@ export class ProtoArray {
         (node.blockRoot === this.justifiedRoot && node.payloadStatus === PayloadStatus.EMPTY);
       if (conflict || justified) {
         if (judged === LVHInvalidJudged.FromBlock) {
-          // The LVH is unusable: fall back to the unknown LVH bound, but never cross this node
-          latestValidHashIndex = Math.max(nodeIndex, this.getUnknownLVHIndex(invalidateFromIndex));
+          // The LVH is unusable: invalidate only the judged payload, but never cross this node
+          latestValidHashIndex = Math.max(nodeIndex, this.getParentPayloadIndex(invalidateFromIndex));
         } else if (conflict) {
           return {applied: false, reason: LVHNotAppliedReason.Contradiction};
         } else {
@@ -1160,11 +1160,11 @@ export class ProtoArray {
   }
 
   /**
-   * Upper bound (exclusive) for invalidating from `fromIndex` when the engine gave no usable LVH: the parent of the
-   * last ancestor that still inherits the queried payload. Pre-gloas this is the parent of `fromIndex`. For a gloas
-   * EMPTY or PENDING node it reaches up to the FULL node that owns the payload. -1 when the chain reaches the root.
+   * Index of the nearest ancestor carrying a different payload than `fromIndex`, i.e. the node holding its parent
+   * payload. Pre-gloas this is the parent of `fromIndex`. For a gloas EMPTY or PENDING node it skips past the FULL
+   * node that owns the payload. -1 when the chain reaches the root.
    */
-  private getUnknownLVHIndex(fromIndex: number): number {
+  private getParentPayloadIndex(fromIndex: number): number {
     const payloadBlockHash = this.nodes[fromIndex].executionPayloadBlockHash;
     let nodeIndex = fromIndex;
     let parentIndex = this.nodes[nodeIndex].parent;
