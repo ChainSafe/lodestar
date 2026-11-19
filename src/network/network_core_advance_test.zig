@@ -191,7 +191,7 @@ test "core lifecycle only advances and closed owners reject new connections" {
         core.shutdown(setup.pair.now);
         core.beginGracefulClose(setup.pair.now);
         try std.testing.expectEqual(.stopped, core.phase());
-        try std.testing.expectError(error.Stopped, core.transport.engine.dial(&test_support.client_address, setup.client.peerId(), setup.pair.now));
+        try std.testing.expectError(error.Stopped, core.transport.engine.dial(&test_support.client_address, &core.transport.localAddress(), setup.client.peerId(), setup.pair.now));
         core.deinit(setup.pair.io());
         try std.testing.expect(!core.initialized);
     }
