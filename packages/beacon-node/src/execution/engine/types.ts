@@ -9,6 +9,7 @@ import {
   DEPOSIT_REQUEST_TYPE,
   FIELD_ELEMENTS_PER_BLOB,
   ForkName,
+  ForkPostElectra,
   ForkSeq,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
@@ -23,8 +24,8 @@ import {
   deneb,
   gloas,
   ssz,
+  sszTypesFor,
 } from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {
   ExecutionPayloadStatus,
@@ -100,7 +101,6 @@ export type EngineApiRpcParamTypes = {
    */
   engine_getClientVersionV1: [ClientVersionRpc];
 
-  engine_getBlobsV1: [DATA[]];
   engine_getBlobsV2: [DATA[]];
 
   engine_getInclusionListV1: [];
@@ -159,7 +159,6 @@ export type EngineApiRpcReturnTypes = {
 
   engine_getClientVersionV1: ClientVersionRpc[];
 
-  engine_getBlobsV1: (BlobAndProofRpc | null)[];
   engine_getBlobsV2: BlobAndProofV2Rpc[] | null;
 
   engine_getInclusionListV1: InclusionListRpc;
@@ -245,11 +244,6 @@ export type WithdrawalRequestsRpc = DATA;
 export type ConsolidationRequestsRpc = DATA;
 export type BuilderDepositRequestsRpc = DATA;
 export type BuilderExitRequestsRpc = DATA;
-
-export type BlobAndProofRpc = {
-  blob: DATA;
-  proof: DATA;
-};
 
 export type BlobAndProofV2Rpc = {
   blob: DATA;
@@ -628,7 +622,7 @@ export function deserializeExecutionRequestsFromBytes(fork: ForkName, serialized
 
     switch (currentRequestType) {
       case DEPOSIT_REQUEST_TYPE: {
-        result.deposits = ssz.electra.DepositRequests.deserialize(requests);
+        result.deposits = sszTypesFor(fork as ForkPostElectra).DepositRequests.deserialize(requests);
         break;
       }
       case WITHDRAWAL_REQUEST_TYPE: {
@@ -695,15 +689,6 @@ export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null)
     ? {
         transactions: Array.from(data.transactions, (tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
-      }
-    : null;
-}
-
-export function deserializeBlobAndProofs(data: BlobAndProofRpc | null): BlobAndProof | null {
-  return data
-    ? {
-        blob: dataToBytes(data.blob, BLOB_BYTES),
-        proof: dataToBytes(data.proof, PROOF_BYTES),
       }
     : null;
 }

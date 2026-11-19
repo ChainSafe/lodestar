@@ -1,9 +1,10 @@
-import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
+import {Signature, aggregateSignatures} from "@lodestar/native/blst";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
 import {Root, Slot, SubcommitteeIndex, SubnetID, altair} from "@lodestar/types";
-import {MapDef, toRootHex} from "@lodestar/utils";
+import {MapDef, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
@@ -110,10 +111,16 @@ export class SyncCommitteeMessagePool {
       return null;
     }
 
+    const signature = contribution.signature.toBytes();
+    // The point at infinity is not a valid contribution signature, do not serve such a contribution
+    if (byteArrayEquals(signature, G2_POINT_AT_INFINITY)) {
+      return null;
+    }
+
     return {
       ...contribution,
       aggregationBits: contribution.aggregationBits,
-      signature: contribution.signature.toBytes(),
+      signature,
     };
   }
 

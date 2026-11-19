@@ -57,6 +57,17 @@ describe("execution/builder/apiClient", () => {
     expect(logger.warn).toHaveBeenCalledWith("Ignoring builder entry with invalid url", {slot, url: invalidUrl});
   });
 
+  it("advertises the configured bid deadline and allows for event loop lag", async () => {
+    const slot = 1;
+    const entry = getBuilderEntry("https://builder.example.com", slot);
+    getExecutionPayloadBid.mockResolvedValue({value: () => ssz.gloas.SignedExecutionPayloadBid.defaultValue()});
+
+    const client = new BuilderApiClient({bidDeadline: 800}, config, clock, bls);
+    await client.getExecutionPayloadBids([entry], slot, new Uint8Array(32), new Uint8Array(32), new Uint8Array(48));
+
+    expect(getExecutionPayloadBid).toHaveBeenCalledWith(expect.objectContaining({timeoutMs: 800}), {timeoutMs: 1050});
+  });
+
   it("ignores builder urls that cannot be safely returned in the response header", async () => {
     const slot = 1;
     const invalidUtf8Entry = getBuilderEntry("https://builder.example.com", slot);

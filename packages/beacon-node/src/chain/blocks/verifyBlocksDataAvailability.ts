@@ -1,3 +1,4 @@
+import {ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {TimeoutError} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -10,7 +11,7 @@ export const BLOB_AVAILABILITY_TIMEOUT = 12_000;
 /**
  * Verifies that all block inputs have data available.
  * - Waits a max of BLOB_AVAILABILITY_TIMEOUT for all data to be available
- * - Returns the time at which all data was available
+ * - Returns the time at which all data was available, in Unix milliseconds
  * - Returns the data availability status for each block input
  */
 export async function verifyBlocksDataAvailability(
@@ -18,7 +19,7 @@ export async function verifyBlocksDataAvailability(
   signal: AbortSignal
 ): Promise<{
   dataAvailabilityStatuses: DataAvailabilityStatus[];
-  availableTime: number;
+  availableTimeMs: number;
 }> {
   const promises: Promise<DAData>[] = [];
   for (const blockInput of blocks) {
@@ -36,13 +37,17 @@ export async function verifyBlocksDataAvailability(
   }
   await Promise.all(promises);
 
-  const availableTime = Math.max(0, Math.max(...blocks.map((blockInput) => blockInput.getTimeComplete())));
+  const availableTimeMs = Math.max(0, Math.max(...blocks.map((blockInput) => blockInput.getTimeComplete()))) * 1000;
   const dataAvailabilityStatuses: DataAvailabilityStatus[] = blocks.map((blockInput) => {
     if (blockInput.type === DAType.NoData) {
       return DataAvailabilityStatus.NotRequired;
     }
     if (blockInput.type === DAType.PreData) {
-      return DataAvailabilityStatus.PreData;
+      // Legacy deneb..electra blob sidecars are not tracked, so these blocks are imported without a DA check.
+      // PreData cannot represent them because the state transition rejects it for post-deneb forks.
+      return ForkSeq[blockInput.forkName] >= ForkSeq.deneb
+        ? DataAvailabilityStatus.NotRequired
+        : DataAvailabilityStatus.PreData;
     }
     if (blockInput.daOutOfRange) {
       return DataAvailabilityStatus.OutOfRange;
@@ -50,5 +55,5 @@ export async function verifyBlocksDataAvailability(
     return DataAvailabilityStatus.Available;
   });
 
-  return {dataAvailabilityStatuses, availableTime};
+  return {dataAvailabilityStatuses, availableTimeMs};
 }

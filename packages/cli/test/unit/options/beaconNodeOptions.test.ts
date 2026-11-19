@@ -36,6 +36,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.dedupePayloads": false,
       "chain.disableImportExecutionFcU": false,
       "chain.preaggregateSlotDistance": 1,
+      "chain.singleAttestationIgnoreProposalDuty": true,
       "chain.attDataCacheSlotDistance": 2,
       "chain.computeUnrealized": true,
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -61,6 +62,7 @@ describe("options / beaconNodeOptions", () => {
       builder: false,
       "builder.url": "http://localhost:8661",
       "builder.timeout": 12000,
+      "builder.bidDeadline": 500,
       "builder.faultInspectionWindow": 32,
       "builder.allowedFaults": 8,
 
@@ -85,6 +87,7 @@ describe("options / beaconNodeOptions", () => {
       targetPeers: 25,
       subscribeAllSubnets: true,
       slotsToSubscribeBeforeAggregatorDuty: 1,
+      slotsToSubscribeBeforeProposalDuty: 4,
       disablePeerScoring: true,
       mdns: false,
       "network.maxPeers": 30,
@@ -139,6 +142,7 @@ describe("options / beaconNodeOptions", () => {
         dedupePayloads: false,
         disableImportExecutionFcU: false,
         preaggregateSlotDistance: 1,
+        singleAttestationIgnoreProposalDuty: true,
         attDataCacheSlotDistance: 2,
         computeUnrealized: true,
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -152,12 +156,13 @@ describe("options / beaconNodeOptions", () => {
         archiveMode: ArchiveMode.Frequency,
         graffitiAppend: false,
         nHistoricalStatesFileDataStore: true,
-        nativeStateTransition: false,
+        nativeStateTransition: true,
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
         maxCPStateEpochsOnDisk: 1000,
         faultInspectionWindow: 32,
         allowedFaults: 8,
+        pruneHistory: true,
       },
       executionEngine: {
         urls: ["http://localhost:8551"],
@@ -169,6 +174,7 @@ describe("options / beaconNodeOptions", () => {
         enabled: false,
         url: "http://localhost:8661",
         timeout: 12000,
+        bidDeadline: 500,
         faultInspectionWindow: 32,
         allowedFaults: 8,
       },
@@ -199,6 +205,7 @@ describe("options / beaconNodeOptions", () => {
         localMultiaddrs: ["/ip4/127.0.0.1/udp/9003/quic-v1", "/ip4/127.0.0.1/tcp/9001"],
         subscribeAllSubnets: true,
         slotsToSubscribeBeforeAggregatorDuty: 1,
+        slotsToSubscribeBeforeProposalDuty: 4,
         disablePeerScoring: true,
         connectToDiscv5Bootnodes: true,
         discv5FirstQueryDelayMs: 1000,
@@ -228,6 +235,16 @@ describe("options / beaconNodeOptions", () => {
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
     expect(options).toEqual(expectedOptions);
+  });
+
+  it("should prune history by default unless serving historical state", () => {
+    expect(parseBeaconNodeArgs({} as BeaconNodeArgs).chain?.pruneHistory).toBe(true);
+    expect(parseBeaconNodeArgs({serveHistoricalState: true} as BeaconNodeArgs).chain?.pruneHistory).toBe(false);
+    expect(
+      parseBeaconNodeArgs({serveHistoricalState: true, "chain.pruneHistory": true} as BeaconNodeArgs).chain
+        ?.pruneHistory
+    ).toBe(true);
+    expect(parseBeaconNodeArgs({"chain.pruneHistory": false} as BeaconNodeArgs).chain?.pruneHistory).toBe(false);
   });
 });
 
