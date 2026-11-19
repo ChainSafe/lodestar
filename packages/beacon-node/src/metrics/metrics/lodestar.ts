@@ -91,6 +91,11 @@ export function createLodestarMetrics(
         help: "Count of total gossip validation queue dropped jobs",
         labelNames: ["topic"],
       }),
+      nativeDrops: register.gauge<{topic: GossipType; reason: string}>({
+        name: "lodestar_native_gossip_queue_drops_total",
+        help: "Messages discarded by the native gossip queue by topic and reason",
+        labelNames: ["topic", "reason"],
+      }),
       jobTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_job_time_seconds",
         help: "Time to process gossip validation queue job in seconds (accepted messages only)",

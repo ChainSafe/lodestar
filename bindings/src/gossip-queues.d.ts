@@ -1,3 +1,6 @@
+export const gossipDependencyDecision: Readonly<{ready: 0; awaitBlock: 1; awaitPayload: 2; fatalPeer: 3}>;
+export type GossipDependencyDecision = (typeof gossipDependencyDecision)[keyof typeof gossipDependencyDecision];
+
 export interface DependencyCheck {
   token: bigint;
   kind: string;
@@ -13,6 +16,16 @@ export interface GossipDelivery {
   slot: number | null;
   group: Uint8Array | null;
   data: Uint8Array;
+  queueSeconds: number;
+}
+export interface GossipWaitStats {
+  current: number;
+  entered: number;
+  resolved: number;
+  limited: number;
+  expired: number;
+  resolveSeconds: number;
+  expireSeconds: number;
 }
 export const gossipQueues: {
   /** The creating JS environment owns this queue. Other environments may only offer messages. */
@@ -30,12 +43,35 @@ export const gossipQueues: {
     currentSlot: number,
     latestSlot: number
   ): boolean;
-  stats(id: number): Record<string, {queued: number; executing: number; keys: number; dropped: number}>;
+  stats(id: number): {
+    topics: Record<
+      string,
+      {
+        queued: number;
+        executing: number;
+        keys: number;
+        drops: Record<string, number>;
+        block: GossipWaitStats;
+        payload: GossipWaitStats;
+      }
+    >;
+    keyAgeMs: Uint32Array;
+  };
   dump(id: number, kind: string): {context: string; data: Uint8Array}[];
-  drain(id: number, slot: number, ready: boolean): {checks: DependencyCheck[]; jobs: GossipDelivery[][]; delay: number};
-  classify(id: number, token: bigint, available: boolean): void;
-  complete(id: number, token: bigint): boolean;
+  checks(id: number, slot: number): DependencyCheck[];
+  /** Apply one decision per claimed token and select the jobs eligible in this turn. */
+  drain(
+    id: number,
+    ready: boolean,
+    tokens: BigUint64Array,
+    decisions: Uint8Array
+  ): {
+    jobs: GossipDelivery[][];
+    delay: number;
+    blocked: boolean;
+  };
+  complete(id: number, token: bigint, skipped?: boolean): boolean;
   notify(id: number, root: Uint8Array): void;
   dropQueued(id: number): void;
-  dropPeer(id: number, peer: string): void;
+  setPeerFatal(id: number, peer: string, fatal: boolean): void;
 };

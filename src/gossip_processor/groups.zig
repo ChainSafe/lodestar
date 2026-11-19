@@ -11,6 +11,7 @@ pub const Row = struct {
     members: lists.List = .{},
     link: lists.Link = .{},
     due: u64 = 0,
+    created_ms: u64 = 0,
     timer: u32 = none,
     ready: bool = false,
 };
@@ -43,7 +44,7 @@ pub const Groups = struct {
         const key: Key = .{ .attestation_data = cell.metadata.group.?, .fork_digest = cell.fork_digest };
         const index = self.index.find(self.rows, &key) orelse blk: {
             const index = self.free.pop(self.rows, "link").?;
-            self.rows[index] = .{ .key = key, .due = cell.admitted_ms +| delay_ms };
+            self.rows[index] = .{ .key = key, .due = cell.admitted_ms +| delay_ms, .created_ms = cell.queued_ms };
             self.index.insert(self.rows, index);
             break :blk index;
         };

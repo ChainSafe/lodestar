@@ -68,6 +68,9 @@ pub fn sourceItems(kind: Kind, limit: Limit) usize {
     return if (kind == .beacon_block or kind == .execution_payload) 2 else @max(1, limit.items / 2);
 }
 
+pub const dependency_search_slots = .{ .past = 2, .future = 1 };
+const waiting_column_slots = dependency_search_slots.past + 1 + dependency_search_slots.future;
+
 pub const Plan = struct { items: u32, mib: u32, execution_items: u32, execution_bytes: u32 };
 pub const plan: [kind_count]Plan = blk: {
     var result: [kind_count]Plan = undefined;
@@ -83,7 +86,8 @@ pub const plan: [kind_count]Plan = blk: {
         .{ Kind.light_client_finality_update, 8, 2, 1, 2 },
         .{ Kind.light_client_optimistic_update, 8, 2, 1, 2 },
         .{ Kind.bls_to_execution_change, 128, 1, 1, 1 },
-        .{ Kind.data_column_sidecar, 256, 16, 8, 24 },
+        // Half the lane may wait. A supernode can receive a full column set for each searchable slot.
+        .{ Kind.data_column_sidecar, 2 * waiting_column_slots * @import("preset").NUMBER_OF_COLUMNS, 48, 8, 24 },
         .{ Kind.execution_payload, 32, 24, 1, 32 },
         .{ Kind.payload_attestation_message, 1024, 2, 4, 1 },
         .{ Kind.execution_payload_bid, 128, 4, 2, 1 },

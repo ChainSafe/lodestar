@@ -167,14 +167,14 @@ const Delivery = struct {
     context: []const u8,
     data: []const u8,
     slot: ?u64,
+    queued_ms: u64,
     group: ?Processor.AttestationDataBytes,
 };
 const Selection = struct {
-    checks: [Processor.batch_max]Check = undefined,
-    check_count: usize = 0,
     messages: [Processor.batch_max]Delivery = undefined,
     batch: Processor.Batch = .{},
     delay: i64 = -1,
+    blocked: bool = false,
 
     fn release(self: *Selection) void {
         for (self.messages[0..self.batch.len]) |message| {
@@ -183,28 +183,67 @@ const Selection = struct {
         }
     }
 };
-fn select(id: u32, slot: u64, ordinary: bool, result: *Selection) !void {
+pub fn checks(id_arg: js.Number, slot_arg: js.Number) !js.Array {
+    const id = try id_arg.toU32Exact();
+    const slot = try slot_arg.toSafeInteger();
+    var rows: [Processor.batch_max]Check = undefined;
+    const count_checks = blk: {
+        lock.lockUncancelable(js.io());
+        defer lock.unlock(js.io());
+        const q = try lookup(id, true);
+        q.signalled = false;
+        const table = &q.table;
+        const now = nowMs();
+        table.maintain(now, slot);
+        const batch = table.claimChecks(now, Processor.batch_max);
+        for (batch.tokens[0..batch.len], 0..) |token, i| {
+            const c = table.get(token).?;
+            rows[i] = .{
+                .token = token,
+                .peer = c.peer,
+                .kind = c.kind,
+                .slot = c.metadata.slot.?,
+                .root = c.metadata.root.?,
+                .parent = c.metadata.parent_hash,
+                .payload = c.metadata.payload_present,
+            };
+        }
+        break :blk batch.len;
+    };
+    errdefer {
+        lock.lockUncancelable(js.io());
+        defer lock.unlock(js.io());
+        if (lookup(id, true)) |q| {
+            for (rows[0..count_checks]) |check| if (q.table.get(check.token)) |cell| {
+                if (cell.state == .checking) q.table.cancel(cell);
+            };
+        } else |_| {}
+    }
+    const env = js.env();
+    const result = try env.createArrayWithLength(count_checks);
+    for (rows[0..count_checks], 0..) |check, i| {
+        const obj = try env.createObject();
+        try obj.setNamedProperty("token", tokenValue(check.token));
+        try obj.setNamedProperty("peerId", try env.createStringUtf8(std.mem.sliceTo(&check.peer, 0)));
+        try obj.setNamedProperty("kind", try env.createStringUtf8(@tagName(check.kind)));
+        try obj.setNamedProperty("slot", js.Number.from(check.slot).val);
+        try obj.setNamedProperty("root", try copyBytes(&check.root));
+        try obj.setNamedProperty("parentBlockHash", if (check.parent) |v| try copyBytes(&v) else try env.getNull());
+        try obj.setNamedProperty("payloadPresent", js.Boolean.from(check.payload).val);
+        try result.setElement(@intCast(i), obj);
+    }
+    return .{ .val = result };
+}
+
+const Classification = struct { token: Processor.Token, decision: Processor.Decision };
+
+fn select(id: u32, ordinary: bool, decisions: []const Classification, result: *Selection) !void {
     lock.lockUncancelable(js.io());
     defer lock.unlock(js.io());
-    const q = try lookup(id, true);
-    const table = &q.table;
-    q.signalled = false;
+    const table = &(try lookup(id, true)).table;
     const now = nowMs();
-    table.maintain(now, slot);
-    const checks = table.claimChecks(now, Processor.batch_max);
-    for (checks.tokens[0..checks.len], 0..) |token, i| {
-        const c = table.get(token).?;
-        result.checks[i] = .{
-            .token = token,
-            .peer = c.peer,
-            .kind = c.kind,
-            .slot = c.metadata.slot.?,
-            .root = c.metadata.root.?,
-            .parent = c.metadata.parent_hash,
-            .payload = c.metadata.payload_present,
-        };
-    }
-    result.check_count = checks.len;
+    table.expire(now);
+    for (decisions) |item| _ = table.classify(item.token, item.decision);
     result.batch = table.claimDemand(now, .{ .items = Processor.batch_max, .bytes = 8 * 1024 * 1024, .ordinary = ordinary });
     for (result.batch.tokens[0..result.batch.len], 0..) |token, i| {
         const c = table.get(token).?;
@@ -214,44 +253,39 @@ fn select(id: u32, slot: u64, ordinary: bool, result: *Selection) !void {
             .context = buffers.context,
             .data = buffers.data,
             .slot = c.metadata.slot,
+            .queued_ms = now -| c.queued_ms,
             .group = c.metadata.group,
         };
     }
     table.finish(&result.batch);
     const ready = table.readiness();
+    result.blocked = !ordinary and ready.ordinary;
     if (table.pending() or ready.checks or ready.urgent or (ordinary and ready.ordinary)) {
         result.delay = 0;
     } else if (table.deadline()) |deadline| result.delay = @intCast(deadline -| now);
 }
-pub fn drain(id_arg: js.Number, slot_arg: js.Number, ready_arg: js.Boolean) !js.Value {
+pub fn drain(id_arg: js.Number, ready_arg: js.Boolean, tokens_arg: js.BigUint64Array, decisions_arg: js.Uint8Array) !js.Value {
     const id = try id_arg.toU32Exact();
+    const tokens = try tokens_arg.toSlice();
+    const decisions = try decisions_arg.toSlice();
+    if (tokens.len != decisions.len or tokens.len > Processor.batch_max) return error.InvalidGossipCheckBatch;
+    var batch: [Processor.batch_max]Classification = undefined;
+    for (tokens, decisions, batch[0..tokens.len]) |token, decision, *item| item.* = .{
+        .token = .{ .index = @truncate(token), .generation = token >> 16 },
+        .decision = std.enums.fromInt(Processor.Decision, decision) orelse return error.InvalidGossipCheckDecision,
+    };
     var selection: Selection = .{};
-    try select(id, try slot_arg.toSafeInteger(), try ready_arg.toBool(), &selection);
+    try select(id, try ready_arg.toBool(), batch[0..tokens.len], &selection);
     defer selection.release();
     errdefer {
         lock.lockUncancelable(js.io());
         defer lock.unlock(js.io());
         if (lookup(id, true)) |q| {
-            for (selection.checks[0..selection.check_count]) |check| if (q.table.get(check.token)) |c| {
-                if (c.state == .checking) q.table.cancel(c);
-            };
             for (selection.batch.tokens[0..selection.batch.len]) |token| if (q.table.get(token)) |_| q.table.retire(token);
         } else |_| {}
     }
     const env = js.env();
     const out = try env.createObject();
-    const checks = try env.createArrayWithLength(selection.check_count);
-    for (selection.checks[0..selection.check_count], 0..) |check, i| {
-        const obj = try env.createObject();
-        try obj.setNamedProperty("token", tokenValue(check.token));
-        try obj.setNamedProperty("peerId", try env.createStringUtf8(std.mem.sliceTo(&check.peer, 0)));
-        try obj.setNamedProperty("kind", try env.createStringUtf8(@tagName(check.kind)));
-        try obj.setNamedProperty("slot", js.Number.from(check.slot).val);
-        try obj.setNamedProperty("root", try copyBytes(&check.root));
-        try obj.setNamedProperty("parentBlockHash", if (check.parent) |v| try copyBytes(&v) else try env.getNull());
-        try obj.setNamedProperty("payloadPresent", js.Boolean.from(check.payload).val);
-        try checks.setElement(@intCast(i), obj);
-    }
     const jobs = try env.createArrayWithLength(selection.batch.job_count);
     for (selection.batch.jobs[0..selection.batch.job_count], 0..) |job, j| {
         const messages = try env.createArrayWithLength(job.len);
@@ -261,31 +295,25 @@ pub fn drain(id_arg: js.Number, slot_arg: js.Number, ready_arg: js.Boolean) !js.
             try obj.setNamedProperty("data", try copyBytes(message.data));
             try obj.setNamedProperty("context", try env.createStringUtf8(message.context));
             try obj.setNamedProperty("slot", if (message.slot) |slot| js.Number.from(slot).val else try env.getNull());
+            try obj.setNamedProperty("queueSeconds", js.Number.from(@as(f64, @floatFromInt(message.queued_ms)) / 1000).val);
             try obj.setNamedProperty("group", if (message.group) |v| try copyBytes(&v) else try env.getNull());
             try messages.setElement(@intCast(i), obj);
         }
         try jobs.setElement(@intCast(j), messages);
     }
-    try out.setNamedProperty("checks", checks);
+    try out.setNamedProperty("blocked", js.Boolean.from(selection.blocked).val);
     try out.setNamedProperty("jobs", jobs);
     try out.setNamedProperty("delay", js.Number.from(selection.delay).val);
     return .{ .val = out };
 }
-pub fn classify(id_arg: js.Number, handle: js.BigInt, available_arg: js.Boolean) !void {
+pub fn complete(id_arg: js.Number, handle: js.BigInt, skipped_arg: ?js.Boolean) !js.Boolean {
     const id = try id_arg.toU32Exact();
     const token = try parseToken(handle);
-    const available = try available_arg.toBool();
-    lock.lockUncancelable(js.io());
-    defer lock.unlock(js.io());
-    _ = (try lookup(id, true)).table.classify(token, available);
-}
-pub fn complete(id_arg: js.Number, handle: js.BigInt) !js.Boolean {
-    const id = try id_arg.toU32Exact();
-    const token = try parseToken(handle);
+    const skipped = if (skipped_arg) |arg| try arg.toBool() else false;
     lock.lockUncancelable(js.io());
     defer lock.unlock(js.io());
     const q = lookup(id, true) catch return js.Boolean.from(false);
-    return js.Boolean.from(q.table.complete(token, nowMs()));
+    return js.Boolean.from(q.table.complete(token, nowMs(), skipped));
 }
 pub fn notify(id_arg: js.Number, root_arg: js.Uint8Array) !void {
     const id = try id_arg.toU32Exact();
@@ -295,12 +323,13 @@ pub fn notify(id_arg: js.Number, root_arg: js.Uint8Array) !void {
     defer lock.unlock(js.io());
     (try lookup(id, true)).table.notifyBlock(root[0..32].*);
 }
-pub fn dropPeer(id_arg: js.Number, peer_arg: js.String) !void {
+pub fn setPeerFatal(id_arg: js.Number, peer_arg: js.String, fatal_arg: js.Boolean) !void {
     const id = try id_arg.toU32Exact();
     const peer = try peerKey(peer_arg);
+    const fatal = try fatal_arg.toBool();
     lock.lockUncancelable(js.io());
     defer lock.unlock(js.io());
-    (try lookup(id, true)).table.dropPeer(peer);
+    (try lookup(id, true)).table.setPeerFatal(peer, fatal);
 }
 pub fn dropQueued(id_arg: js.Number) !void {
     const id = try id_arg.toU32Exact();
@@ -352,27 +381,59 @@ pub fn dump(id_arg: js.Number, kind_arg: js.String) !js.Array {
 
 pub fn stats(id_arg: js.Number) !js.Value {
     const id = try id_arg.toU32Exact();
-    const Row = struct { queued: usize, executing: usize, keys: usize, dropped: u64 };
+    const Row = struct { queued: usize, executing: usize, keys: usize, drops: std.EnumArray(Processor.DropReason, u64), waits: std.EnumArray(Processor.WaitFor, Processor.WaitStats) };
     var rows: [Processor.policy.kind_count]Row = undefined;
-    {
+    const ages = blk: {
         lock.lockUncancelable(js.io());
         defer lock.unlock(js.io());
         const table = &(try lookup(id, true)).table;
+        const groups = &table.groups;
+        const key_count = groups.ready.len + groups.timer_count;
         for (std.enums.values(Processor.Kind), 0..) |kind, k| {
             rows[k] = .{
                 .queued = table.queues[k][@intFromEnum(Processor.State.queued)].len,
                 .executing = table.executing_items[k],
-                .keys = if (kind == .beacon_attestation) table.groups.rows.len - table.groups.free.len else 1,
-                .dropped = table.capacity_drops[k],
+                .keys = if (kind == .beacon_attestation) key_count else 1,
+                .drops = table.drops[k],
+                .waits = table.wait_stats[k],
             };
         }
-    }
+        const now = nowMs();
+        const ages = try alloc.alloc(u32, key_count);
+        var index = groups.ready.head;
+        for (ages[0..groups.ready.len]) |*age| {
+            const group = &groups.rows[index];
+            age.* = std.math.lossyCast(u32, now -| group.created_ms);
+            index = group.link.next;
+        }
+        for (ages[groups.ready.len..], groups.timers[0..groups.timer_count]) |*age, i| {
+            age.* = std.math.lossyCast(u32, now -| groups.rows[i].created_ms);
+        }
+        break :blk ages;
+    };
+    defer alloc.free(ages);
     const env = js.env();
-    const result = try env.createObject();
-    inline for (std.meta.fields(Processor.Kind), 0..) |field, k| {
+    const topics = try env.createObject();
+    inline for (std.meta.fields(Processor.Kind), 0..) |topic, k| {
         const obj = try env.createObject();
-        inline for (std.meta.fields(Row)) |metric| try obj.setNamedProperty(metric.name, js.Number.from(@field(rows[k], metric.name)).val);
-        try result.setNamedProperty(field.name, obj);
+        inline for (.{ "queued", "executing", "keys" }) |name| try obj.setNamedProperty(name, js.Number.from(@field(rows[k], name)).val);
+        const drops = try env.createObject();
+        inline for (std.meta.fields(Processor.DropReason)) |r| try drops.setNamedProperty(r.name, js.Number.from(rows[k].drops.get(@enumFromInt(r.value))).val);
+        try obj.setNamedProperty("drops", drops);
+        inline for (std.enums.values(Processor.WaitFor)) |target| {
+            const waits = try env.createObject();
+            const stats_row = rows[k].waits.get(target);
+            inline for (.{ "current", "entered", "resolved", "limited", "expired" }) |name| try waits.setNamedProperty(name, js.Number.from(@field(stats_row, name)).val);
+            try waits.setNamedProperty("resolveSeconds", js.Number.from(@as(f64, @floatFromInt(stats_row.resolve_ms)) / 1000).val);
+            try waits.setNamedProperty("expireSeconds", js.Number.from(@as(f64, @floatFromInt(stats_row.expire_ms)) / 1000).val);
+            try obj.setNamedProperty(@tagName(target), waits);
+        }
+        try topics.setNamedProperty(topic.name, obj);
     }
-    return .{ .val = result };
+    const js_ages = try js.Uint32Array.alloc(ages.len);
+    @memcpy(try js_ages.toSlice(), ages);
+    const out = try env.createObject();
+    try out.setNamedProperty("topics", topics);
+    try out.setNamedProperty("keyAgeMs", js_ages.val);
+    return .{ .val = out };
 }

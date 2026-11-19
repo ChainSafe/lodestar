@@ -6,7 +6,7 @@ assert(parentPort);
 const id: number = workerData;
 const data = new Uint8Array(240);
 const peer = "libp2p-peer";
-assert.throws(() => gossipQueues.drain(id, 0, true), /WrongGossipQueueOwner/);
+assert.throws(() => gossipQueues.checks(id, 0), /WrongGossipQueueOwner/);
 assert.throws(() => gossipQueues.close(id), /WrongGossipQueueOwner/);
 const wakes = Array.from({length: 32}, (_, i) => {
   data[0] = i;

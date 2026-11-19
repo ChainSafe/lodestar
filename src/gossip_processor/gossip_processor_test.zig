@@ -20,16 +20,17 @@ test "block notification during dependency check retries and late report cannot 
     const check = table.claimChecks(2, 1);
     try std.testing.expectEqual(1, check.len);
     table.notifyBlock(@splat(0));
-    try std.testing.expect(table.classify(check.tokens[0], false));
+    try std.testing.expect(table.classify(check.tokens[0], .await_block));
     const retry = table.claimChecks(3, 1);
     try std.testing.expectEqual(1, retry.len);
-    try std.testing.expect(table.classify(retry.tokens[0], true));
+    try std.testing.expect(table.classify(retry.tokens[0], .ready));
     table.maintain(60, 0);
     const batch = table.claim(60);
     try std.testing.expectEqual(1, batch.len);
     table.finish(&batch);
     table.expire(100);
-    try std.testing.expect(!table.complete(batch.tokens[0], 101));
+    try std.testing.expect(!table.complete(batch.tokens[0], 101, false));
+    try std.testing.expectEqual(1, table.drops[@intFromEnum(Processor.Kind.beacon_attestation)].get(.expired));
     try std.testing.expectEqual(0, table.occupied);
 }
 
@@ -61,18 +62,18 @@ test "newest-first replacement preserves delivered work and rejects stale tokens
     try std.testing.expect(try table.admit(input));
     try std.testing.expectEqual(1, table.executing_items[k]);
     try std.testing.expectEqual(0, table.claim(2).len);
-    try std.testing.expect(table.complete(first, 2));
+    try std.testing.expect(table.complete(first, 2, false));
     const next = table.claim(2);
     try std.testing.expectEqualStrings("third", table.get(next.tokens[0]).?.input);
     table.finish(&next);
-    try std.testing.expect(table.complete(next.tokens[0], 3));
+    try std.testing.expect(table.complete(next.tokens[0], 3, false));
     try std.testing.expect(try table.admit(input));
     const reuse = table.claim(3);
     try std.testing.expectEqual(first.index, reuse.tokens[0].index);
     try std.testing.expect(reuse.tokens[0].generation > first.generation);
     table.finish(&reuse);
-    try std.testing.expect(!table.complete(first, 4));
-    try std.testing.expect(table.complete(reuse.tokens[0], 4));
+    try std.testing.expect(!table.complete(first, 4, false));
+    try std.testing.expect(table.complete(reuse.tokens[0], 4, false));
     try std.testing.expectEqual(0, table.used_bytes[k]);
     try std.testing.expectEqual(0, table.executing_bytes[k]);
     try std.testing.expectEqual(0, table.sources.count());

@@ -1,6 +1,12 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {routes} from "@lodestar/api";
-import {DependencyCheck, GossipDelivery, gossipQueues} from "@lodestar/native/gossip-queues";
+import {
+  DependencyCheck,
+  GossipDelivery,
+  GossipDependencyDecision,
+  gossipDependencyDecision,
+  gossipQueues,
+} from "@lodestar/native/gossip-queues";
 import {SlotRootHex} from "@lodestar/types";
 import {BlockInputSource} from "../../chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
@@ -15,10 +21,12 @@ import {getGossipHandlers} from "./gossipHandlers.js";
 import {GossipRootSearch} from "./gossipRootSearch.js";
 import {getGossipValidatorBatchFn, getGossipValidatorFn, rejectPeerAction} from "./gossipValidatorFn.js";
 import {
+  CannotAcceptWorkReason,
   FATAL_PEER_EXPIRY_SLOTS,
   MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE,
   NetworkProcessorModules,
   NetworkProcessorOpts,
+  ReprocessRejectReason,
 } from "./index.js";
 import {GossipReceipt} from "./nativeIngress.js";
 import {PendingGossipsubMessage} from "./types.js";
@@ -44,8 +52,8 @@ export class NativeGossipProcessor {
     const handlers = modules.gossipHandlers ?? getGossipHandlers(modules, opts);
     const dropPeer = (peer: PeerIdStr): void => {
       if (this.stopped) return;
+      if (!this.fatalPeers.has(peer)) gossipQueues.setPeerFatal(id, peer, true);
       this.fatalPeers.set(peer, modules.chain.clock.currentSlot);
-      gossipQueues.dropPeer(id, peer);
     };
     this.validate = getGossipValidatorFn(handlers, modules, dropPeer);
     this.validateBatch = getGossipValidatorBatchFn(handlers, modules, dropPeer);
@@ -54,17 +62,39 @@ export class NativeGossipProcessor {
     modules.chain.emitter.on(ChainEvent.validationCapacity, this.wake);
     modules.chain.emitter.on(routes.events.EventType.block, this.onBlock);
     modules.chain.emitter.on(routes.events.EventType.executionPayload, this.onPayload);
-    const queueMetrics = modules.metrics?.gossipValidationQueue;
-    queueMetrics?.length.addCollect(() => {
+    const metrics = modules.metrics;
+    metrics?.gossipValidationQueue.length.addCollect(() => {
       if (this.stopped) return;
       const stats = gossipQueues.stats(id);
+      const queue = metrics.gossipValidationQueue;
+      let awaitingBlock = 0;
+      let awaitingPayload = 0;
       for (const topic of Object.values(GossipType)) {
-        const {queued, executing, keys, dropped} = stats[topic];
-        queueMetrics.length.set({topic}, queued);
-        queueMetrics.concurrency.set({topic}, executing);
-        queueMetrics.keySize.set({topic}, keys);
-        queueMetrics.droppedJobs.set({topic}, dropped);
+        const {queued, executing, keys, drops, block, payload} = stats.topics[topic];
+        queue.length.set({topic}, queued);
+        queue.concurrency.set({topic}, executing);
+        queue.keySize.set({topic}, keys);
+        queue.droppedJobs.set({topic}, drops.capacity);
+        for (const [reason, count] of Object.entries(drops)) queue.nativeDrops.set({topic, reason}, count);
+        awaitingBlock += block.current;
+        awaitingPayload += payload.current;
+        for (const [wait, gauges] of [
+          [block, metrics.awaitingBlockGossipMessages],
+          [payload, metrics.awaitingPayloadGossipMessages],
+        ] as const) {
+          gauges.queue.set({topic}, wait.entered);
+          gauges.resolve.set({topic}, wait.resolved);
+          gauges.reject.set({topic, reason: ReprocessRejectReason.reached_limit}, wait.limited);
+          gauges.reject.set({topic, reason: ReprocessRejectReason.expired}, wait.expired);
+          if (wait.resolved) gauges.waitSecBeforeResolve.set({topic}, wait.resolveSeconds);
+          if (wait.expired)
+            gauges.waitSecBeforeReject.set({topic, reason: ReprocessRejectReason.expired}, wait.expireSeconds);
+        }
       }
+      metrics.awaitingBlockGossipMessages.countPerSlot.set(awaitingBlock);
+      metrics.awaitingPayloadGossipMessages.countPerSlot.set(awaitingPayload);
+      queue.keyAge.reset();
+      for (const age of stats.keyAgeMs) queue.keyAge.observe(age / 1000);
     });
     this.wake();
   }
@@ -78,24 +108,35 @@ export class NativeGossipProcessor {
     clearTimeout(this.timer);
     if (this.stopped) return;
     const {chain, logger} = this.modules;
-    const ready = chain.blsThreadPoolCanAcceptWork() && chain.regenCanAcceptWork();
-    const {checks, jobs, delay} = gossipQueues.drain(this.id, Math.max(0, chain.clock.currentSlot), ready);
-    if (jobs.length)
-      this.modules.metrics?.networkProcessor.jobsSubmitted.observe(jobs.reduce((count, job) => count + job.length, 0));
+    const checks = gossipQueues.checks(this.id, Math.max(0, chain.clock.currentSlot));
     const known = new Map<string, boolean>();
-    for (const check of checks) {
-      let available = false;
+    const tokens = new BigUint64Array(checks.length);
+    const decisions = new Uint8Array(checks.length);
+    for (const [i, check] of checks.entries()) {
+      tokens[i] = check.token;
       try {
-        if (this.fatalPeers.has(check.peerId)) gossipQueues.dropPeer(this.id, check.peerId);
-        else available = this.checkDependency(check, known);
+        decisions[i] = this.fatalPeers.has(check.peerId)
+          ? gossipDependencyDecision.fatalPeer
+          : this.checkDependency(check, known);
       } catch (error) {
         logger.error("Error checking native gossip dependency", {slot: check.slot}, error as Error);
+        decisions[i] =
+          check.kind === GossipType.beacon_block ? gossipDependencyDecision.ready : gossipDependencyDecision.awaitBlock;
       }
-      gossipQueues.classify(this.id, check.token, available);
     }
+    if (this.stopped) return;
+    const reason = !chain.blsThreadPoolCanAcceptWork()
+      ? CannotAcceptWorkReason.bls
+      : !chain.regenCanAcceptWork()
+        ? CannotAcceptWorkReason.regen
+        : null;
+    const {jobs, delay, blocked} = gossipQueues.drain(this.id, reason === null, tokens, decisions);
+    if (blocked && reason !== null) this.modules.metrics?.networkProcessor.canNotAcceptWork.inc({reason});
+    if (jobs.length)
+      this.modules.metrics?.networkProcessor.jobsSubmitted.observe(jobs.reduce((count, job) => count + job.length, 0));
     for (const job of jobs)
       void this.processJob(job).catch((error) => logger.error("Error executing native gossip job", {}, error));
-    if (delay === 0 || checks.length > 0) this.wake();
+    if (delay === 0) this.wake();
     else if (delay > 0) this.timer = setTimeout(this.wake, delay);
   };
 
@@ -113,6 +154,7 @@ export class NativeGossipProcessor {
           metrics?.networkProcessor.gossipValidationError.inc({topic: type, error: GossipErrorCode.FATAL_PEER});
           continue;
         }
+        metrics?.gossipValidationQueue.queueTime.observe({topic: type}, item.queueSeconds);
         metrics?.gossipValidationQueue.jobWaitTime.observe(
           {topic: type},
           Math.max(0, started - message.seenTimestampSec)
@@ -138,8 +180,9 @@ export class NativeGossipProcessor {
       if (!this.stopped) {
         let i = 0;
         for (const item of job) {
-          const live = gossipQueues.complete(this.id, item.token);
-          if (item.token !== tokens[i]) continue;
+          const skipped = item.token !== tokens[i];
+          const live = gossipQueues.complete(this.id, item.token, skipped);
+          if (skipped) continue;
           const message = messages[i];
           const acceptance = results[i++] ?? TopicValidatorResult.Ignore;
           if (!live) continue;
@@ -174,7 +217,7 @@ export class NativeGossipProcessor {
     };
   }
 
-  private checkDependency(check: DependencyCheck, blocks: Map<string, boolean>): boolean {
+  private checkDependency(check: DependencyCheck, blocks: Map<string, boolean>): GossipDependencyDecision {
     const {forkChoice} = this.modules.chain;
     const root = `0x${Buffer.from(check.root).toString("hex")}`;
     const slotRoot = {slot: check.slot, root};
@@ -197,11 +240,15 @@ export class NativeGossipProcessor {
           const parent = forkChoice.getBlockHexDefaultStatus(root);
           if (parent?.executionPayloadBlockHash && parent.executionPayloadBlockHash !== hash) {
             if (maySearch) this.searchUnknownEnvelope(slotRoot, source, check.peerId);
-            return check.kind === GossipType.beacon_block;
+            return check.kind === GossipType.beacon_block
+              ? gossipDependencyDecision.ready
+              : gossipDependencyDecision.awaitPayload;
           }
         }
       }
-      return check.kind === GossipType.beacon_block || blockKnown;
+      return check.kind === GossipType.beacon_block || blockKnown
+        ? gossipDependencyDecision.ready
+        : gossipDependencyDecision.awaitBlock;
     }
     if (
       (check.kind === GossipType.beacon_attestation || check.kind === GossipType.beacon_aggregate_and_proof) &&
@@ -209,7 +256,7 @@ export class NativeGossipProcessor {
       !forkChoice.hasPayloadHexUnsafe(root)
     ) {
       if (maySearch) this.searchUnknownEnvelope(slotRoot, source, check.peerId);
-      return false;
+      return gossipDependencyDecision.awaitPayload;
     }
     if (
       (check.kind === GossipType.data_column_sidecar ||
@@ -218,7 +265,7 @@ export class NativeGossipProcessor {
       maySearch
     )
       this.searchUnknownEnvelope(slotRoot, source, undefined, true);
-    return blockKnown;
+    return blockKnown ? gossipDependencyDecision.ready : gossipDependencyDecision.awaitBlock;
   }
 
   searchUnknownBlock(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
@@ -242,6 +289,7 @@ export class NativeGossipProcessor {
   dropAllJobs(): void {
     if (this.stopped) return;
     this.searches.clear();
+    for (const peer of this.fatalPeers.keys()) gossipQueues.setPeerFatal(this.id, peer, false);
     this.fatalPeers.clear();
     gossipQueues.dropQueued(this.id);
     this.wake();
@@ -252,8 +300,12 @@ export class NativeGossipProcessor {
   }
   private readonly onSlot = (slot: number): void => {
     this.searches.prune(slot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE);
-    for (const [peer, since] of this.fatalPeers)
-      if (slot - since > FATAL_PEER_EXPIRY_SLOTS) this.fatalPeers.delete(peer);
+    for (const [peer, since] of this.fatalPeers) {
+      if (slot - since > FATAL_PEER_EXPIRY_SLOTS) {
+        gossipQueues.setPeerFatal(this.id, peer, false);
+        this.fatalPeers.delete(peer);
+      }
+    }
     this.wake();
   };
   async stop(): Promise<void> {
