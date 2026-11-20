@@ -92,6 +92,8 @@ pub const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 
 pub const MAX_REQUEST_BLOCKS = std.math.pow(usize, 2, 10);
 pub const MAX_REQUEST_BLOCKS_DENEB = std.math.pow(usize, 2, 7);
+pub const MAX_REQUEST_PAYLOADS = 128;
+pub const MAX_ERROR_MESSAGE_LENGTH = 256;
 
 // Lightclient pre-computed
 pub const FINALIZED_ROOT_GINDEX = 105;
