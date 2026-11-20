@@ -2,24 +2,40 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const compat = @import("compat.zig");
-const Sockets = @import("sockets.zig").Sockets;
+const SocketPair = @import("SocketPair.zig");
 const Address = @import("address.zig").Address;
 const net = std.Io.net;
 const assert = std.debug.assert;
-const SendError = Sockets.SendError;
-const SendOutcome = Sockets.SendOutcome;
-const ReceiveError = Sockets.ReceiveError;
+const SendError = SocketPair.SendError;
+const SendOutcome = SocketPair.SendOutcome;
+const ReceiveError = SocketPair.ReceiveError;
 const os = builtin.os.tag;
 const linux = std.os.linux;
-const gso_payload_max = 65_507;
+const ip4_total_length_max = std.math.maxInt(u16);
+const ip4_header_size = 20;
+const udp_header_size = 8;
+/// Generic Segmentation Offload (GSO) is a Linux feature for sending many UDP datagrams with one pass through the kernel.
+const gso_payload_max = ip4_total_length_max - ip4_header_size - udp_header_size;
 
 const ControlHeader = if (os == .linux) linux.cmsghdr else extern struct { len: u32, level: i32, type: i32 };
 const control_alignment = if (os == .linux) @sizeOf(usize) else @sizeOf(u32);
 const control_data = std.mem.alignForward(usize, @sizeOf(ControlHeader), control_alignment);
 // Darwin's values from netinet/in.h and netinet6/in6.h are absent from std.posix in Zig 0.16.
-const ip_pktinfo = if (os == .linux) linux.IP.PKTINFO else 26;
-const ipv6_recvpktinfo = if (os == .linux) linux.IPV6.RECVPKTINFO else 61;
-const ipv6_pktinfo = if (os == .linux) linux.IPV6.PKTINFO else 46;
+const ip_pktinfo = switch (os) {
+    .linux => linux.IP.PKTINFO,
+    .macos => 26,
+    else => @compileError("IP_PKTINFO is not defined for " ++ @tagName(os)),
+};
+const ipv6_recvpktinfo = switch (os) {
+    .linux => linux.IPV6.RECVPKTINFO,
+    .macos => 61,
+    else => @compileError("IPV6_RECVPKTINFO is not defined for " ++ @tagName(os)),
+};
+const ipv6_pktinfo = switch (os) {
+    .linux => linux.IPV6.PKTINFO,
+    .macos => 46,
+    else => @compileError("IPV6_PKTINFO is not defined for " ++ @tagName(os)),
+};
 pub const control_size = 64;
 pub const Control = [control_size]u8;
 comptime {
@@ -185,7 +201,7 @@ pub fn send(
 
 /// The source address the kernel routes `peer` from. Connecting a UDP socket sends nothing, and
 /// disconnecting makes the next call resolve afresh.
-pub fn route(io: std.Io, probe: net.Socket.Handle, peer: *const net.IpAddress) Sockets.SourceError!Address {
+pub fn route(io: std.Io, probe: net.Socket.Handle, peer: *const net.IpAddress) SocketPair.SourceError!Address {
     const p = std.posix;
     var storage: compat.PosixAddress = undefined;
     const peer_length = compat.addressToPosix(peer, &storage);
@@ -205,21 +221,21 @@ pub fn route(io: std.Io, probe: net.Socket.Handle, peer: *const net.IpAddress) S
 }
 
 pub const SendScratch = if (os == .linux) struct {
-    headers: [Sockets.BatchScratch.capacity]linux.mmsghdr,
-    addresses: [Sockets.BatchScratch.capacity]compat.PosixAddress,
-    vectors: [Sockets.BatchScratch.capacity]std.posix.iovec,
-    controls: [Sockets.BatchScratch.capacity]Control align(8),
-    groups: [Sockets.BatchScratch.capacity]struct { end: usize, bytes: usize },
+    headers: [SocketPair.BatchScratch.capacity]linux.mmsghdr,
+    addresses: [SocketPair.BatchScratch.capacity]compat.PosixAddress,
+    vectors: [SocketPair.BatchScratch.capacity]std.posix.iovec,
+    controls: [SocketPair.BatchScratch.capacity]Control align(8),
+    groups: [SocketPair.BatchScratch.capacity]struct { end: usize, bytes: usize },
 } else struct {};
 
 /// Positive sendmmsg results hide the next group's errno. Retry only the unsent suffix.
 pub fn sendMany(
     io: std.Io,
     handle: net.Socket.Handle,
-    messages: []const Sockets.Outgoing,
+    messages: []const SocketPair.Outgoing,
     scratch: *SendScratch,
 ) SendOutcome {
-    assert(messages.len > 0 and messages.len <= Sockets.BatchScratch.capacity);
+    assert(messages.len > 0 and messages.len <= SocketPair.BatchScratch.capacity);
     if (comptime os != .linux) {
         for (messages, 0..) |message, sent| {
             const address = message.to.toNetwork();
@@ -271,7 +287,7 @@ fn segmentationRefused(errno: std.posix.E) bool {
     };
 }
 
-fn prepareSend(messages: []const Sockets.Outgoing, scratch: *SendScratch, segment: bool) usize {
+fn prepareSend(messages: []const SocketPair.Outgoing, scratch: *SendScratch, segment: bool) usize {
     for (messages, 0..) |message, i|
         scratch.vectors[i] = .{ .base = @constCast(message.bytes.ptr), .len = message.bytes.len };
     var begin: usize = 0;
@@ -317,18 +333,18 @@ fn prepareSend(messages: []const Sockets.Outgoing, scratch: *SendScratch, segmen
 }
 
 pub const ReceiveScratch = if (os == .linux) struct {
-    headers: [Sockets.receive_batch_max]linux.mmsghdr,
-    addresses: [Sockets.receive_batch_max]compat.PosixAddress,
-    vectors: [Sockets.receive_batch_max]std.posix.iovec,
+    headers: [SocketPair.receive_batch_max]linux.mmsghdr,
+    addresses: [SocketPair.receive_batch_max]compat.PosixAddress,
+    vectors: [SocketPair.receive_batch_max]std.posix.iovec,
 } else struct {};
 
 pub fn receiveMany(
     io: std.Io,
     handle: net.Socket.Handle,
-    slots: []Sockets.ReceiveSlot,
+    slots: []SocketPair.ReceiveSlot,
     scratch: *ReceiveScratch,
 ) ReceiveError!usize {
-    assert(slots.len > 0 and slots.len <= Sockets.receive_batch_max);
+    assert(slots.len > 0 and slots.len <= SocketPair.receive_batch_max);
     for (slots, 0..) |*slot, i| {
         scratch.vectors[i] = .{ .base = slot.buffer.ptr, .len = slot.buffer.len };
         scratch.headers[i] = .{ .hdr = .{

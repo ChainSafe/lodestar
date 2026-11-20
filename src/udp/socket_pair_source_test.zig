@@ -1,6 +1,6 @@
 const std = @import("std");
 const FaultIo = @import("fault_io");
-const Sockets = @import("sockets.zig").Sockets;
+const SocketPair = @import("SocketPair.zig");
 const Address = @import("address.zig").Address;
 const net = std.Io.net;
 const waitForDatagram = @import("socket_test_support").waitForDatagram;
@@ -8,7 +8,7 @@ const io = std.testing.io;
 const os = @import("builtin").os.tag;
 const payload_max = 1_200;
 
-const wildcards: Sockets.Bindings = .{ .dual = .{ .ip4 = .unspecified(0), .ip6 = .unspecified(0) } };
+const wildcards: SocketPair.Bindings = .{ .dual = .{ .ip4 = .unspecified(0), .ip6 = .unspecified(0) } };
 
 fn oneSecond() std.Io.Timeout {
     return .{ .duration = .{ .raw = .fromMilliseconds(1_000), .clock = .awake } };
@@ -25,7 +25,7 @@ fn loopback6(port: u16) Address {
 /// Linux treats all of 127.0.0.0/8 as local. Other systems need 127.0.0.2 and 127.0.0.3 configured on loopback.
 fn skipIfNoLoopbackAliases() !void {
     for ([_]u8{ 2, 3 }) |last| {
-        var alias = Sockets.bind(io, .{ .ip4 = .{ .bytes = .{ 127, 0, 0, last }, .port = 0 } }) catch |err| switch (err) {
+        var alias = SocketPair.bind(io, .{ .ip4 = .{ .bytes = .{ 127, 0, 0, last }, .port = 0 } }) catch |err| switch (err) {
             error.AddressUnavailable => return error.SkipZigTest,
             else => return err,
         };
@@ -33,22 +33,22 @@ fn skipIfNoLoopbackAliases() !void {
     }
 }
 
-fn readReady(sockets: *Sockets, buffer: []u8) !Sockets.Datagram {
+fn readReady(sockets: *SocketPair, buffer: []u8) !SocketPair.Datagram {
     var ready: [2]bool = @splat(true);
     return (try sockets.receiveReadyDatagram(io, buffer, &ready)) orelse error.NoDatagram;
 }
 
 /// Loopback delivery is asynchronous on macOS, so a sent datagram may not be readable yet.
-fn readSent(sockets: *Sockets, family: usize, buffer: []u8) !Sockets.Datagram {
+fn readSent(sockets: *SocketPair, family: usize, buffer: []u8) !SocketPair.Datagram {
     try waitForDatagram(sockets.values[family].?);
     return readReady(sockets, buffer);
 }
 
 test "a wildcard socket reports the address each datagram was sent to on every receive path" {
     try skipIfNoLoopbackAliases();
-    var target = try Sockets.bind(io, wildcards);
+    var target = try SocketPair.bind(io, wildcards);
     defer target.close(io);
-    var sender = try Sockets.bind(io, .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } });
+    var sender = try SocketPair.bind(io, .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } });
     defer sender.close(io);
     const ports = target.localAddresses();
     const destinations = [_]Address{ loopback(2, ports[0].?.port()), loopback(3, ports[0].?.port()), loopback6(ports[1].?.port()) };
@@ -68,19 +68,19 @@ test "a wildcard socket reports the address each datagram was sent to on every r
         try std.testing.expectEqualDeep(destination, (try target.receiveReadyDatagram(fault.io(), &buffer, &either)).?.to);
 
         var buffers: [2][16]u8 = undefined;
-        var slots: [2]Sockets.ReceiveSlot = undefined;
+        var slots: [2]SocketPair.ReceiveSlot = undefined;
         for (&slots, &buffers) |*slot, *bytes| slot.* = .{ .buffer = bytes };
-        var scratch: Sockets.ReceiveScratch = undefined;
+        var scratch: SocketPair.ReceiveScratch = undefined;
         either = @splat(true);
         try waitForDatagram(target.values[family].?);
-        try std.testing.expectEqual(Sockets.ReceiveOutcome{ .received = 1 }, target.receiveManyReady(io, &slots, &either, &scratch));
+        try std.testing.expectEqual(SocketPair.ReceiveOutcome{ .received = 1 }, target.receiveManyReady(io, &slots, &either, &scratch));
         try std.testing.expectEqualDeep(destination, (try slots[0].datagram()).to);
         try std.testing.expectEqualStrings("to", (try slots[0].datagram()).bytes);
     }
 }
 
 test "a socket bound to one address reports it for every datagram and resolves sources without a system call" {
-    var target = try Sockets.bind(io, .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } });
+    var target = try SocketPair.bind(io, .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } });
     defer target.close(io);
     try std.testing.expectEqual([2]?net.Socket.Handle{ null, null }, target.probes);
     var buffer: [16]u8 = undefined;
@@ -95,16 +95,16 @@ test "a socket bound to one address reports it for every datagram and resolves s
         }
         try std.testing.expectEqualDeep(local.?, try target.sourceFor(undefined, peer));
     }
-    var single = try Sockets.bind(io, .{ .ip4 = .loopback(0) });
+    var single = try SocketPair.bind(io, .{ .ip4 = .loopback(0) });
     defer single.close(io);
     try std.testing.expectError(error.AddressFamilyUnsupported, single.sourceFor(undefined, loopback6(9)));
 }
 
 test "a pinned source leaves from that address on single, batched, mixed and segmented sends" {
     try skipIfNoLoopbackAliases();
-    var target = try Sockets.bind(io, .{ .ip4 = .loopback(0) });
+    var target = try SocketPair.bind(io, .{ .ip4 = .loopback(0) });
     defer target.close(io);
-    var sender = try Sockets.bind(io, .{ .ip4 = .unspecified(0) });
+    var sender = try SocketPair.bind(io, .{ .ip4 = .unspecified(0) });
     defer sender.close(io);
     const to = target.localAddress();
     const port = sender.localAddress().port();
@@ -120,17 +120,17 @@ test "a pinned source leaves from that address on single, batched, mixed and seg
     try sender.sendTo(fault.io(), to, loopback(3, 0), "provider", payload_max);
     try std.testing.expectEqualDeep(loopback(3, port), (try readSent(&target, 0, &buffer)).from);
 
-    var scratch: Sockets.BatchScratch = undefined;
+    var scratch: SocketPair.BatchScratch = undefined;
     const segment = [_]u8{0x51} ** 64;
     const sources = [_]?Address{ loopback(2, 0), loopback(2, 0), loopback(2, 0), loopback(3, 0), null, loopback(2, 0) };
-    var batch: [sources.len]Sockets.Outgoing = undefined;
+    var batch: [sources.len]SocketPair.Outgoing = undefined;
     for (&batch, sources) |*message, from| message.* = .{ .to = to, .bytes = &segment, .from = from };
     var expected: [sources.len]u8 = undefined;
     for (&expected, sources) |*last, from| last.* = if (from) |pinned| pinned.ip4.octets[3] else 1;
     // macOS loopback may deliver datagrams from different sources out of order.
     if (os != .linux) std.mem.sort(u8, &expected, {}, std.sort.asc(u8));
     for ([_]std.Io{ io, fault.io() }, [_]bool{ true, false }) |provider, native| {
-        try std.testing.expectEqual(Sockets.SendOutcome{ .sent = batch.len, .failure = null }, sender.sendMany(provider, &batch, payload_max, &scratch));
+        try std.testing.expectEqual(SocketPair.SendOutcome{ .sent = batch.len, .failure = null }, sender.sendMany(provider, &batch, payload_max, &scratch));
         if (os == .linux and native) {
             // The first three share a destination and a source, so they leave as one segmented message.
             try std.testing.expectEqual(@as(usize, 3), scratch.native.headers[0].hdr.iovlen);
@@ -151,30 +151,30 @@ test "a pinned source leaves from that address on single, batched, mixed and seg
 }
 
 test "a source that is not local or not of the destination's family fails as unreachable without sending" {
-    var sockets = try Sockets.bind(io, wildcards);
+    var sockets = try SocketPair.bind(io, wildcards);
     defer sockets.close(io);
-    var target = try Sockets.bind(io, .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } });
+    var target = try SocketPair.bind(io, .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } });
     defer target.close(io);
     const foreign = [2]Address{
         .{ .ip4 = .{ .octets = .{ 192, 0, 2, 1 }, .port = 0 } },
         .{ .ip6 = .{ .octets = .{ 0x20, 0x01, 0x0d, 0xb8 } ++ .{0} ** 11 ++ .{1}, .port = 0 } },
     };
-    var scratch: Sockets.BatchScratch = undefined;
+    var scratch: SocketPair.BatchScratch = undefined;
     // Linux reports EINVAL for a foreign IPv6 source. macOS reports EADDRNOTAVAIL for both families.
-    const refused: [2]Sockets.SendError = .{ error.NetworkUnreachable, if (os == .linux) error.DestinationRefused else error.NetworkUnreachable };
+    const refused: [2]SocketPair.SendError = .{ error.NetworkUnreachable, if (os == .linux) error.DestinationRefused else error.NetworkUnreachable };
     for (target.localAddresses(), foreign, refused, 0..) |to, from, expected, family| {
-        try std.testing.expect(Sockets.destinationUnreachable(expected));
+        try std.testing.expect(SocketPair.destinationUnreachable(expected));
         try std.testing.expectError(expected, sockets.sendTo(io, to.?, from, "foreign", payload_max));
-        const batch = [_]Sockets.Outgoing{
+        const batch = [_]SocketPair.Outgoing{
             .{ .to = to.?, .bytes = "local", .from = to.? },
             .{ .to = to.?, .bytes = "first", .from = from },
             .{ .to = to.?, .bytes = "again", .from = from },
         };
-        try std.testing.expectEqual(Sockets.SendOutcome{ .sent = 1, .failure = expected }, sockets.sendMany(io, &batch, payload_max, &scratch));
+        try std.testing.expectEqual(SocketPair.SendOutcome{ .sent = 1, .failure = expected }, sockets.sendMany(io, &batch, payload_max, &scratch));
         const other = foreign[1 - family];
         try std.testing.expectError(error.AddressFamilyUnsupported, sockets.sendTo(io, to.?, other, "family", payload_max));
-        const mixed = [_]Sockets.Outgoing{ .{ .to = to.?, .bytes = "local" }, .{ .to = to.?, .bytes = "family", .from = other } };
-        try std.testing.expectEqual(Sockets.SendOutcome{ .sent = 1, .failure = error.AddressFamilyUnsupported }, sockets.sendMany(io, &mixed, payload_max, &scratch));
+        const mixed = [_]SocketPair.Outgoing{ .{ .to = to.?, .bytes = "local" }, .{ .to = to.?, .bytes = "family", .from = other } };
+        try std.testing.expectEqual(SocketPair.SendOutcome{ .sent = 1, .failure = error.AddressFamilyUnsupported }, sockets.sendMany(io, &mixed, payload_max, &scratch));
         var buffer: [16]u8 = undefined;
         for (0..2) |_| try std.testing.expectEqualStrings("local", (try readSent(&target, family, &buffer)).bytes);
         try std.testing.expectError(error.NoDatagram, readReady(&target, &buffer));
@@ -182,12 +182,12 @@ test "a source that is not local or not of the destination's family fails as unr
 }
 
 test "a pinned IPv6 source round trips with its destination" {
-    var sockets = try Sockets.bind(io, .{ .ip6 = .unspecified(0) });
+    var sockets = try SocketPair.bind(io, .{ .ip6 = .unspecified(0) });
     defer sockets.close(io);
     const local = loopback6(sockets.localAddress().port());
-    var scratch: Sockets.BatchScratch = undefined;
-    const batch = [_]Sockets.Outgoing{ .{ .to = local, .bytes = "one", .from = local }, .{ .to = local, .bytes = "two", .from = local } };
-    try std.testing.expectEqual(Sockets.SendOutcome{ .sent = 2, .failure = null }, sockets.sendMany(io, &batch, payload_max, &scratch));
+    var scratch: SocketPair.BatchScratch = undefined;
+    const batch = [_]SocketPair.Outgoing{ .{ .to = local, .bytes = "one", .from = local }, .{ .to = local, .bytes = "two", .from = local } };
+    try std.testing.expectEqual(SocketPair.SendOutcome{ .sent = 2, .failure = null }, sockets.sendMany(io, &batch, payload_max, &scratch));
     if (os == .linux) try std.testing.expectEqual(@as(usize, 2), scratch.native.headers[0].hdr.iovlen);
     try sockets.sendTo(io, local, local, "end", payload_max);
     var buffer: [16]u8 = undefined;
@@ -201,7 +201,7 @@ test "a pinned IPv6 source round trips with its destination" {
 
 test "a wildcard socket rejects a datagram sent to a multicast group" {
     if (os != .linux) return error.SkipZigTest;
-    var target = try Sockets.bind(io, .{ .ip4 = .unspecified(0) });
+    var target = try SocketPair.bind(io, .{ .ip4 = .unspecified(0) });
     defer target.close(io);
     const port = target.localAddress().port();
     const group: Address = .{ .ip4 = .{ .octets = .{ 224, 0, 0, 1 }, .port = port } };
@@ -213,7 +213,7 @@ test "a wildcard socket rejects a datagram sent to a multicast group" {
 }
 
 test "sourceFor asks the kernel afresh for each peer of a wildcard socket" {
-    var sockets = try Sockets.bind(io, wildcards);
+    var sockets = try SocketPair.bind(io, wildcards);
     defer sockets.close(io);
     const ports = sockets.localAddresses();
     try std.testing.expect(sockets.probes[0] != null and sockets.probes[1] != null);
