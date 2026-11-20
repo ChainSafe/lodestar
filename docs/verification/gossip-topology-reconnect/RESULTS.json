@@ -1,17 +1,22 @@
 {
   "base": "3d90162",
   "dependency": "libp2p@3.4.0",
-  "patch_sha256": "32d5d7bc49a2764bff171d07cb38664a07f5bfb81e9a7c7a82af144877813ced",
+  "patch_sha256": "0631b733bc0a2774aad1d83452ee3ebaf28a711eca4481deab0a4f0f71a94736",
   "tests": {
     "old_dependency": {
       "failed": 3,
       "passed": 2
     },
     "patched_dependency": {
-      "failed": 0,
-      "passed": 5
+      "passed": 7,
+      "failed": 0
     },
-    "scope": "Actual delivered registrar runtime via installed package resolution, public constructor/register and connection/identify/update events; no implementation copy."
+    "scope": "Actual delivered registrar runtime via installed package resolution, public constructor/register and connection/identify/update events; no implementation copy.",
+    "first_fix_additional_revision_control": {
+      "passed": 6,
+      "failed": 1
+    },
+    "additional_controls": "A newer identify on an existing peer supersedes obsolete protocol cleanup; a limited connection cannot cancel an in-flight unlimited identify."
   },
   "typescript_compiler": "6.0.3",
   "unmodified_source_transpile_matches_original_runtime": true,
@@ -20,5 +25,6 @@
   "full_lint_exit": 0,
   "existing_lint_warnings": 7,
   "typescript_workspace_build_excluding_native_exit": 0,
-  "runtime_fault_recovery_qualified": false
+  "runtime_fault_recovery_qualified": false,
+  "beacon_node_typecheck_exit": 0
 }

@@ -171,3 +171,63 @@ it("does not apply obsolete protocol removals after reconnect", async () => {
   expect([...active].sort()).toEqual(protocols);
   expect(f.logger.error).not.toHaveBeenCalled();
 });
+
+it("keeps a new identify on an already connected peer after obsolete protocol cleanup", async () => {
+  const protocols = ["/meshsub/1.1.0", "/meshsub/1.2.0"];
+  const f = fixture(protocols);
+  const entered = defer<void>();
+  const release = defer<void>();
+  const active = new Set<string>();
+  for (const [index, protocol] of protocols.entries()) {
+    await f.registrar.register(protocol, {
+      onConnect: () => {
+        active.add(protocol);
+      },
+      onDisconnect: async () => {
+        active.delete(protocol);
+        if (index === 0) {
+          entered.resolve();
+          await release.promise;
+        }
+      },
+    });
+  }
+  await f.identify("old");
+  const old = f.emit("peer:update", {peer: {id: f.peer, protocols: []}, previous: {protocols}});
+  await entered.promise;
+  await f.emit("peer:identify", {peerId: f.peer, protocols, connection: {status: "open", id: "new-unlimited"}});
+  release.resolve();
+  await old;
+  expect([...active].sort()).toEqual(protocols);
+  expect(f.logger.error).not.toHaveBeenCalled();
+});
+
+it("does not let a limited connection cancel an in-flight unlimited identify", async () => {
+  const protocols = ["/meshsub/1.1.0", "/meshsub/1.2.0"];
+  const f = fixture(protocols);
+  const entered = defer<void>();
+  const release = defer<void>();
+  const active = new Set<string>();
+  for (const [index, protocol] of protocols.entries()) {
+    await f.registrar.register(protocol, {
+      onConnect: async () => {
+        active.add(protocol);
+        if (index === 0) {
+          entered.resolve();
+          await release.promise;
+        }
+      },
+    });
+  }
+  const old = f.identify("unlimited");
+  await entered.promise;
+  await f.emit("peer:identify", {
+    peerId: f.peer,
+    protocols,
+    connection: {status: "open", id: "limited", limits: {bytes: 1024}},
+  });
+  release.resolve();
+  await old;
+  expect([...active].sort()).toEqual(protocols);
+  expect(f.logger.error).not.toHaveBeenCalled();
+});
