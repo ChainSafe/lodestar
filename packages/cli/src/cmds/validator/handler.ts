@@ -113,7 +113,8 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
    */
   let signers = await getSignersFromArgs(args, network, {logger, signal: abortController.signal});
   if (config.PQ_FORK_EPOCH === 0) {
-    signers = await toXmssSigners(signers, args.vrfStateUrl, logger);
+    const treesDir = path.join(accountPaths.cacheDir, "xmss-trees");
+    signers = await toXmssSigners(signers, args.vrfStateUrl, treesDir, logger);
   }
 
   // Ensure the validator has at least one key

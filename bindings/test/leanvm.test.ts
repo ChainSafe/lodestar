@@ -51,6 +51,16 @@ describe.skipIf(!LEANVM_AVAILABLE)("leanvm", () => {
     await expect(first.prepare(1 << 16)).resolves.toBeUndefined();
   }, 60_000);
 
+  it("loads a key from its tree cache", async () => {
+    const cache = first.toCache();
+    const loaded = await XmssSecretKey.fromCache(first.toSeed(), first.toPublicKey(), cache);
+    expect(await loaded.sign(MESSAGE_A, 7)).toEqual(signatures[0]);
+    await expect(XmssSecretKey.fromCache(first.toSeed(), second.toPublicKey(), cache)).rejects.toThrow("InvalidCache");
+    await expect(XmssSecretKey.fromCache(first.toSeed(), first.toPublicKey(), cache.subarray(1))).rejects.toThrow(
+      "InvalidCache"
+    );
+  }, 60_000);
+
   it("rejects malformed key inputs", async () => {
     await expect(XmssSecretKey.fromSeed(new Uint8Array(31))).rejects.toThrow("InvalidSeedLength");
     await expect(first.sign(new Uint8Array(31), 0)).rejects.toThrow("InvalidMessageLength");

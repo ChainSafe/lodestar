@@ -18,7 +18,7 @@ export const XmssSecretKey = leanvm.XmssSecretKey;
 
 // The native methods throw on a malformed argument before they return a promise: reject instead.
 for (const target of [XmssSecretKey, XmssSecretKey.prototype]) {
-  for (const name of target === XmssSecretKey ? ["fromSeed"] : ["prepare", "sign"]) {
+  for (const name of target === XmssSecretKey ? ["fromSeed", "fromCache"] : ["prepare", "sign"]) {
     const native = target[name];
     target[name] = async function (...args) {
       return native.apply(this, args);

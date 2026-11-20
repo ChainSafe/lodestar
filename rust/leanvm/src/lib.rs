@@ -48,6 +48,7 @@ const ERR_INVALID_PROOF: i32 = 3;
 const ERR_INVALID_INPUT: i32 = 4;
 const ERR_INVALID_CHILD: i32 = 5;
 const ERR_PROVE: i32 = 6;
+const ERR_INVALID_CACHE: i32 = 7;
 
 #[repr(C)]
 pub struct Claim {
@@ -133,6 +134,38 @@ pub unsafe extern "C" fn leanvm_xmss_key_gen(seed: *const lean_xmss::SecretKey) 
     let seed = unsafe { *seed };
     let (expanded, _) = lean_xmss::key_gen(&seed);
     boxed(SecretKey { seed, expanded })
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn leanvm_xmss_secret_key_from_cache(
+    seed: *const lean_xmss::SecretKey,
+    public_key: *const [u8; lean_xmss::PUB_KEY_SIZE],
+    cache: *const u8,
+    cache_len: usize,
+    out_key: *mut *mut SecretKey,
+) -> i32 {
+    status(|| {
+        let seed = unsafe { *seed };
+        let public_key = LeanXmssPublicKey::from_bytes(unsafe { &*public_key });
+        let cache = unsafe { slice(cache, cache_len) };
+        let expanded =
+            LeanXmssExpandedSecretKey::from_cache_bytes(&seed, &public_key, cache).ok_or(ERR_INVALID_CACHE)?;
+        unsafe { out_key.write(boxed(SecretKey { seed, expanded })) };
+        Ok(())
+    })
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn leanvm_xmss_secret_key_cache(
+    key: *const SecretKey,
+    out_bytes: *mut *mut u8,
+    out_len: *mut usize,
+) {
+    let bytes = unsafe { &*key }.expanded.cache_to_bytes().into_boxed_slice();
+    unsafe {
+        out_len.write(bytes.len());
+        out_bytes.write(Box::into_raw(bytes).cast());
+    }
 }
 
 #[unsafe(no_mangle)]

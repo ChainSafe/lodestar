@@ -1,5 +1,5 @@
 import {createHash} from "node:crypto";
-import {XmssSecretKey} from "@lodestar/native/leanvm";
+import {XMSS_PUBLIC_KEY_SIZE, XmssSecretKey} from "@lodestar/native/leanvm";
 import {VrfTree} from "@lodestar/native/vrf-tree";
 import {
   LEAF_OFFSET_AGGREGATE_AND_PROOF,
@@ -47,12 +47,42 @@ export function getXmssSigningTarget(signableMessage: SignableMessage, signingSl
   }
 }
 
+/**
+ * Where a leanXMSS key's trees are kept between runs: its public key, then the trees. Building
+ * them takes seconds a key, loading them does not, and neither part is secret.
+ */
+export type XmssTreeStore = {
+  read(): Uint8Array | null;
+  write(bytes: Uint8Array): void;
+};
+
+/** The key of `seed`, with the trees in `store` if they are its own and built otherwise */
+async function loadXmssKey(seed: Uint8Array, store?: XmssTreeStore): Promise<XmssSecretKey> {
+  const stored = store?.read();
+  if (stored && stored.length > XMSS_PUBLIC_KEY_SIZE) {
+    try {
+      return await XmssSecretKey.fromCache(
+        seed,
+        stored.subarray(0, XMSS_PUBLIC_KEY_SIZE),
+        stored.subarray(XMSS_PUBLIC_KEY_SIZE)
+      );
+    } catch (e) {
+      if (!(e as Error).message.includes("InvalidCache")) throw e;
+    }
+  }
+  return XmssSecretKey.fromSeed(seed);
+}
+
 /** A pq validator's secrets: its leanXMSS key and its VRF tree */
 export class XmssSigner {
+  /** Bottom trees of the key that `treeStore` holds */
+  private readonly storedTrees = new Set<number>();
+
   private constructor(
     readonly publicKey: Uint8Array,
     private readonly key: XmssSecretKey,
-    private readonly vrfTree: VrfTree
+    private readonly vrfTree: VrfTree,
+    private readonly treeStore?: XmssTreeStore
   ) {}
 
   /**
@@ -73,14 +103,18 @@ export class XmssSigner {
    * this key's among them. Without `vrfStates` the other leaves are zero, as the genesis tooling
    * had it before it moved to full trees.
    */
-  static async fromBlsSecretKey(secretKey: Uint8Array, vrfStates?: Uint8Array): Promise<XmssSigner> {
+  static async fromBlsSecretKey(
+    secretKey: Uint8Array,
+    vrfStates?: Uint8Array,
+    treeStore?: XmssTreeStore
+  ): Promise<XmssSigner> {
     const seed = createHash("sha256").update("leanxmss-seed").update(secretKey).digest();
     const vrfSeed = createHash("sha256").update("vrf-seed").update(secretKey).digest();
     const [key, vrfTree] = await Promise.all([
-      XmssSecretKey.fromSeed(seed),
+      loadXmssKey(seed, treeStore),
       VrfTree.build(vrfSeed, KEYSTORE_VRF_POPULATED_DEPTH, vrfStates),
     ]);
-    return new XmssSigner(key.toPublicKey(), key, vrfTree);
+    return new XmssSigner(key.toPublicKey(), key, vrfTree, treeStore);
   }
 
   get vrfRoot(): Uint8Array {
@@ -98,10 +132,14 @@ export class XmssSigner {
    * for it. The key keeps the trees it used last.
    */
   async prepare(slot: Slot): Promise<void> {
-    await Promise.all([
-      this.key.prepare(computeXmssAttestationLeafIndex(computeEpochAtSlot(slot))),
-      this.key.prepare(computeXmssLeafIndex(slot, 0)),
-    ]);
+    const leaves = [computeXmssAttestationLeafIndex(computeEpochAtSlot(slot)), computeXmssLeafIndex(slot, 0)];
+    await Promise.all(leaves.map((leaf) => this.key.prepare(leaf)));
+
+    if (!this.treeStore) return;
+    const trees = leaves.map((leaf) => leaf >>> XMSS_BOTTOM_TREE_HEIGHT);
+    if (trees.every((tree) => this.storedTrees.has(tree))) return;
+    this.treeStore.write(Buffer.concat([this.publicKey, this.key.toCache()]));
+    for (const tree of trees) this.storedTrees.add(tree);
   }
 
   /**
@@ -112,6 +150,9 @@ export class XmssSigner {
     return this.key.sign(signingRoot, leafIndex);
   }
 }
+
+/** A leaf index names its bottom tree above this many bits */
+const XMSS_BOTTOM_TREE_HEIGHT = 16;
 
 /** Slots a keystore's validator has a VRF proof for: the devnet convention */
 const KEYSTORE_VRF_POPULATED_DEPTH = 20;

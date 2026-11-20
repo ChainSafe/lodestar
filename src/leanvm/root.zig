@@ -44,6 +44,8 @@ pub const Error = error{
     InvalidChild,
     /// Proving failed, as it does on an invalid child or signature, or on too many claims.
     Prove,
+    /// Bytes that are not the key's tree cache.
+    InvalidCache,
     Unknown,
 };
 
@@ -55,6 +57,7 @@ const Status = enum(i32) {
     invalid_input,
     invalid_child,
     prove,
+    invalid_cache,
     _,
 };
 
@@ -67,6 +70,7 @@ fn check(status: Status) Error!void {
         .invalid_input => error.InvalidInput,
         .invalid_child => error.InvalidChild,
         .prove => error.Prove,
+        .invalid_cache => error.InvalidCache,
         _ => error.Unknown,
     };
 }
@@ -76,6 +80,15 @@ fn check(status: Status) Error!void {
 const c = struct {
     extern fn leanvm_setup() void;
     extern fn leanvm_xmss_key_gen(seed: *const xmss.Seed) *xmss.SecretKey;
+    extern fn leanvm_xmss_secret_key_from_cache(
+        seed: *const xmss.Seed,
+        public_key: *const xmss.PublicKey,
+        cache: [*]const u8,
+        cache_len: usize,
+        out_key: **xmss.SecretKey,
+    ) Status;
+    /// Free `out_bytes` with `leanvm_bytes_free`.
+    extern fn leanvm_xmss_secret_key_cache(key: *const xmss.SecretKey, out_bytes: *[*]u8, out_len: *usize) void;
     extern fn leanvm_xmss_secret_key_free(key: *xmss.SecretKey) void;
     extern fn leanvm_xmss_secret_key_seed(key: *const xmss.SecretKey, out_seed: *xmss.Seed) void;
     extern fn leanvm_xmss_secret_key_public_key(key: *const xmss.SecretKey, out_public_key: *xmss.PublicKey) void;
@@ -215,9 +228,30 @@ pub const xmss = struct {
             return c.leanvm_xmss_key_gen(key_seed);
         }
 
+        /// The key of `key_seed` with the trees of `tree_cache`, building none. Fails with
+        /// `error.InvalidCache` unless they are the trees of the key whose public key is
+        /// `public_key`: a loaded key signs as a built one.
+        pub fn fromCache(key_seed: *const Seed, public_key: *const PublicKey, tree_cache: []const u8) Error!*SecretKey {
+            if (!available) return error.Unavailable;
+            var key: *SecretKey = undefined;
+            try check(c.leanvm_xmss_secret_key_from_cache(key_seed, public_key, tree_cache.ptr, tree_cache.len, &key));
+            return key;
+        }
+
         pub fn deinit(self: *SecretKey) void {
             if (!available) return;
             c.leanvm_xmss_secret_key_free(self);
+        }
+
+        /// The trees the key holds, for `fromCache`: its top tree and the bottom trees it used
+        /// last. They hold no secret. The caller owns the result.
+        pub fn cache(self: *const SecretKey, allocator: std.mem.Allocator) (Error || std.mem.Allocator.Error)![]u8 {
+            if (!available) return error.Unavailable;
+            var ptr: [*]u8 = undefined;
+            var len: usize = 0;
+            c.leanvm_xmss_secret_key_cache(self, &ptr, &len);
+            defer c.leanvm_bytes_free(ptr, len);
+            return allocator.dupe(u8, ptr[0..len]);
         }
 
         /// SECRET KEY MATERIAL.

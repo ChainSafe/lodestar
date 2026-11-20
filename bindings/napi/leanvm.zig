@@ -72,10 +72,15 @@ const SharedKey = struct {
 
 const KeyTask = struct {
     seed: xmss.Seed,
+    /// The key's public key and trees, to load in place of building them. Owned.
+    cached: ?struct { public_key: xmss.PublicKey, trees: []const u8 } = null,
     key: ?*xmss.SecretKey = null,
 
     pub fn compute(self: *KeyTask) !void {
-        self.key = try xmss.SecretKey.fromSeed(&self.seed);
+        self.key = if (self.cached) |cached|
+            try xmss.SecretKey.fromCache(&self.seed, &cached.public_key, cached.trees)
+        else
+            try xmss.SecretKey.fromSeed(&self.seed);
     }
 
     pub fn resolve(self: *KeyTask, env: napi.Env) !napi.Value {
@@ -90,6 +95,7 @@ const KeyTask = struct {
 
     pub fn deinit(self: *KeyTask) void {
         std.crypto.secureZero(u8, &self.seed);
+        if (self.cached) |cached| js.allocator().free(cached.trees);
         if (self.key) |key| key.deinit();
     }
 };
@@ -153,6 +159,20 @@ pub const XmssSecretKey = struct {
         return js.spawn(KeyTask, task, "leanvm.XmssSecretKey.fromSeed");
     }
 
+    /// Resolves with the key of `seed`, loaded from `cache` in place of building its trees.
+    /// Rejects with `InvalidCache` unless `cache` is that of the key with `public_key`.
+    pub fn fromCache(seed: js.Uint8Array, public_key: js.Uint8Array, cache: js.Uint8Array) !js.Value {
+        try ensureAvailable();
+        var task: KeyTask = .{ .seed = try fixed(xmss.seed_len, seed, error.InvalidSeedLength) };
+        // Wipes this copy of the seed: the spawned task holds its own.
+        defer std.crypto.secureZero(u8, &task.seed);
+        const key = try fixed(xmss.public_key_size, public_key, error.InvalidPublicKeyLength);
+        const trees = try js.allocator().dupe(u8, try cache.toSlice());
+        errdefer js.allocator().free(trees);
+        task.cached = .{ .public_key = key, .trees = trees };
+        return js.spawn(KeyTask, task, "leanvm.XmssSecretKey.fromCache");
+    }
+
     /// SECRET KEY MATERIAL.
     pub fn toSeed(self: *const XmssSecretKey) !js.Uint8Array {
         const shared = self.shared orelse return error.KeyNotLoaded;
@@ -162,6 +182,14 @@ pub const XmssSecretKey = struct {
     pub fn toPublicKey(self: *const XmssSecretKey) !js.Uint8Array {
         const shared = self.shared orelse return error.KeyNotLoaded;
         return js.Uint8Array.from(&try shared.key.publicKey());
+    }
+
+    /// The trees the key holds, for `fromCache`. They hold no secret.
+    pub fn toCache(self: *const XmssSecretKey) !js.OwnedUint8Array {
+        const shared = self.shared orelse return error.KeyNotLoaded;
+        const trees = try shared.key.cache(js.allocator());
+        defer js.allocator().free(trees);
+        return .fromSlice(js.allocator(), trees);
     }
 
     /// Builds the bottom tree `leaf_index` is in, ahead of `sign`.

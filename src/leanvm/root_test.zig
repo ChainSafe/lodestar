@@ -21,6 +21,17 @@ test "sign, aggregate, verify" {
 
     const message_a: xmss.Message = @splat(0xaa);
     const message_b: xmss.Message = @splat(0xbb);
+
+    // A key loaded from its trees signs as the one that built them.
+    const tree_cache = try first.cache(allocator);
+    defer allocator.free(tree_cache);
+    const loaded = try xmss.SecretKey.fromCache(&@splat(1), &try first.publicKey(), tree_cache);
+    defer loaded.deinit();
+    try std.testing.expectEqual(try first.sign(&message_a, 7), try loaded.sign(&message_a, 7));
+    try std.testing.expectError(
+        error.InvalidCache,
+        xmss.SecretKey.fromCache(&@splat(1), &try second.publicKey(), tree_cache),
+    );
     const signed = [_]xmss.Signed{
         .{ .public_key = try first.publicKey(), .message = message_a, .signature = try first.sign(&message_a, 7) },
         .{ .public_key = try second.publicKey(), .message = message_a, .signature = try second.sign(&message_a, 7) },

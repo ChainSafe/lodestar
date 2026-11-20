@@ -4,7 +4,14 @@ import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-key
 import {SecretKey} from "@lodestar/native/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {LogLevel, Logger, fetch, isValidHttpUrl, retry, toPubkeyHex} from "@lodestar/utils";
-import {Signer, SignerType, XmssSigner, externalSignerGetKeys, interopXmssSigner} from "@lodestar/validator";
+import {
+  Signer,
+  SignerType,
+  XmssSigner,
+  XmssTreeStore,
+  externalSignerGetKeys,
+  interopXmssSigner,
+} from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {GlobalArgs, defaultNetwork} from "../../../options/index.js";
 import {YargsError, assertValidPubkeysHex} from "../../../util/index.js";
@@ -159,6 +166,7 @@ export async function getSignersFromArgs(
 export async function toXmssSigners(
   signers: Signer[],
   vrfStateUrl: string | undefined,
+  treesDir: string,
   logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.error>
 ): Promise<Signer[]> {
   const localCount = signers.filter((signer) => signer.type === SignerType.Local).length;
@@ -182,22 +190,42 @@ export async function toXmssSigners(
     logger.warn("No vrfStateUrl: VRF trees hold their first 2^20 slots and zeros after, not full trees");
   }
 
+  fs.mkdirSync(treesDir, {recursive: true});
   logger.info("Deriving leanXMSS keys and VRF trees from keystores", {count: localCount});
   return Promise.all(
     signers.map(async (signer): Promise<Signer> => {
       if (signer.type !== SignerType.Local) return signer;
       const secretKey = signer.secretKey.toBytes();
+      const treeStore = xmssTreeStore(path.join(treesDir, `${signer.secretKey.toPublicKey().toHex()}.bin`));
       try {
-        return {type: SignerType.Xmss, signer: await XmssSigner.fromBlsSecretKey(secretKey, vrfStates)};
+        return {type: SignerType.Xmss, signer: await XmssSigner.fromBlsSecretKey(secretKey, vrfStates, treeStore)};
       } catch (e) {
         if (!(e as Error).message.includes("NoMatchingState")) throw e;
         // It still attests: only its proposals need the tree
-        const xmssSigner = await XmssSigner.fromBlsSecretKey(secretKey);
+        const xmssSigner = await XmssSigner.fromBlsSecretKey(secretKey, undefined, treeStore);
         logger.error("No VRF state for validator: it cannot propose", {pubkey: toPubkeyHex(xmssSigner.publicKey)});
         return {type: SignerType.Xmss, signer: xmssSigner};
       }
     })
   );
+}
+
+function xmssTreeStore(filepath: string): XmssTreeStore {
+  return {
+    read: () => {
+      try {
+        return fs.readFileSync(filepath);
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+        throw e;
+      }
+    },
+    // Renamed into place, so that a stop mid-write leaves the file it had
+    write: (bytes) => {
+      fs.writeFileSync(`${filepath}.tmp`, bytes);
+      fs.renameSync(`${filepath}.tmp`, filepath);
+    },
+  };
 }
 
 export function getSignerPubkeyHex(signer: Signer): string {

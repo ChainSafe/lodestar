@@ -35,8 +35,16 @@ export declare class XmssSecretKey {
   static generate(): Promise<XmssSecretKey>;
   /** The key of a `XMSS_SEED_SIZE`-byte seed, which is all of its secret material. */
   static fromSeed(seed: Uint8Array): Promise<XmssSecretKey>;
+  /**
+   * The key of `seed`, loaded from the bytes of `toCache` in place of building its trees. Rejects
+   * with `InvalidCache` unless they are the trees of the key whose public key is `publicKey`: a
+   * loaded key signs as a built one.
+   */
+  static fromCache(seed: Uint8Array, publicKey: Uint8Array, cache: Uint8Array): Promise<XmssSecretKey>;
   /** SECRET KEY MATERIAL. */
   toSeed(): Uint8Array;
+  /** The trees the key holds: its top tree and the bottom trees it used last. No secret is in them. */
+  toCache(): Uint8Array;
   toPublicKey(): Uint8Array;
   /**
    * Builds the bottom tree `leafIndex` is in: the 2^16 leaf indices that share its top 16 bits.
