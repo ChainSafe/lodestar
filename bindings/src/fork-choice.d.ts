@@ -135,16 +135,10 @@ export declare class ForkChoice {
 
   /** Spec `on_block`. Returns the block's index */
   onBlock(block: BlockSummary): number;
-  /** Spec `on_attestation` for an attestation verified against its target state */
-  onAttestation(
-    slot: number,
-    index: number,
-    beaconBlockRoot: Uint8Array,
-    targetEpoch: number,
-    targetRoot: Uint8Array,
-    attestingIndices: Uint32Array,
-    isFromBlock: boolean
-  ): void;
+  /** The buffer `onAttestation` reads from, in u32 words: count, isFromBlock, slot, index, targetEpoch (u64, low word first), beaconBlockRoot, targetRoot, attestingIndices. Never transfer it */
+  attestationScratch(): Uint32Array;
+  /** Spec `on_attestation` for an attestation verified against its target state, with its arguments in `attestationScratch`. Returns the store's error name instead of throwing, undefined when accepted */
+  onAttestation(): string | undefined;
   /** Spec `on_attester_slashing`; both index lists sorted ascending */
   onAttesterSlashing(
     data1: AttestationData,

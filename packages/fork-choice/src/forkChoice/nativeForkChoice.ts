@@ -157,6 +157,8 @@ export class NativeForkChoice implements IForkChoice {
 
   private readonly fastConfirmation: boolean;
   private fastConfirmationPaused = false;
+  private readonly attScratch: Uint32Array;
+  private readonly attScratchBytes: Uint8Array;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -208,6 +210,8 @@ export class NativeForkChoice implements IForkChoice {
       }
     );
     this.fastConfirmation = opts?.fastConfirmation === true;
+    this.attScratch = this.store.attestationScratch();
+    this.attScratchBytes = new Uint8Array(this.attScratch.buffer);
     this.insertBlock(0, block);
 
     // Bring the clock up to the slot the caller starts at; the anchor may be older
@@ -856,19 +860,27 @@ export class NativeForkChoice implements IForkChoice {
       });
     }
 
+    if (data.beaconBlockRoot.length !== 32 || data.target.root.length !== 32) {
+      throw nativeError("InvalidRootLength");
+    }
+    // The native side rejects a count beyond the buffer; the writes past its end are dropped
+    const words = this.attScratch;
+    const count = attestingIndices.length;
+    words[ATT_SCRATCH.count] = count;
+    words[ATT_SCRATCH.fromBlock] = forceImport === true ? 1 : 0;
+    writeU64(words, ATT_SCRATCH.slot, data.slot);
+    writeU64(words, ATT_SCRATCH.index, data.index);
+    writeU64(words, ATT_SCRATCH.targetEpoch, data.target.epoch);
+    this.attScratchBytes.set(data.beaconBlockRoot, ATT_SCRATCH.beaconBlockRoot * 4);
+    this.attScratchBytes.set(data.target.root, ATT_SCRATCH.targetRoot * 4);
+    for (let i = 0; i < count; i++) {
+      words[ATT_SCRATCH.indices + i] = attestingIndices[i];
+    }
+
     this.mutated();
-    try {
-      this.store.onAttestation(
-        data.slot,
-        data.index,
-        data.beaconBlockRoot,
-        data.target.epoch,
-        data.target.root,
-        Uint32Array.from(attestingIndices),
-        forceImport === true
-      );
-    } catch (e) {
-      throw this.toInvalidAttestationError(e, data);
+    const error = this.store.onAttestation();
+    if (error !== undefined) {
+      throw this.toInvalidAttestationError(error, data);
     }
   }
 
@@ -1676,13 +1688,12 @@ export class NativeForkChoice implements IForkChoice {
     }
   }
 
-  private toInvalidAttestationError(e: unknown, data: phase0.AttestationData): unknown {
-    const currentEpoch = computeEpochAtSlot(this.store.currentSlot);
-    const beaconBlockRoot = toRootHex(data.beaconBlockRoot);
+  private toInvalidAttestationError(code: string, data: phase0.AttestationData): Error {
     const invalid = (err: ConstructorParameters<typeof ForkChoiceError>[0] & {err: unknown}): ForkChoiceError =>
       new ForkChoiceError(err);
-    switch (nativeErrorCode(e)) {
-      case "AttestationTargetEpochNotCurrentOrPrevious":
+    switch (code) {
+      case "AttestationTargetEpochNotCurrentOrPrevious": {
+        const currentEpoch = computeEpochAtSlot(this.store.currentSlot);
         return invalid({
           code: ForkChoiceErrorCode.INVALID_ATTESTATION,
           err:
@@ -1690,6 +1701,7 @@ export class NativeForkChoice implements IForkChoice {
               ? {code: InvalidAttestationCode.FUTURE_EPOCH, attestationEpoch: data.target.epoch, currentEpoch}
               : {code: InvalidAttestationCode.PAST_EPOCH, attestationEpoch: data.target.epoch, currentEpoch},
         });
+      }
       case "AttestationTargetEpochSlotMismatch":
         return invalid({
           code: ForkChoiceErrorCode.INVALID_ATTESTATION,
@@ -1703,14 +1715,14 @@ export class NativeForkChoice implements IForkChoice {
       case "UnknownAttestationBlock":
         return invalid({
           code: ForkChoiceErrorCode.INVALID_ATTESTATION,
-          err: {code: InvalidAttestationCode.UNKNOWN_HEAD_BLOCK, beaconBlockRoot},
+          err: {code: InvalidAttestationCode.UNKNOWN_HEAD_BLOCK, beaconBlockRoot: toRootHex(data.beaconBlockRoot)},
         });
       case "AttestationForFutureBlock":
         return invalid({
           code: ForkChoiceErrorCode.INVALID_ATTESTATION,
           err: {
             code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK,
-            block: this.getDefaultNode(beaconBlockRoot)?.slot ?? data.slot,
+            block: this.getDefaultNode(toRootHex(data.beaconBlockRoot))?.slot ?? data.slot,
             attestation: data.slot,
           },
         });
@@ -1723,7 +1735,7 @@ export class NativeForkChoice implements IForkChoice {
       case "AttestationPayloadNotVerified":
         return invalid({
           code: ForkChoiceErrorCode.INVALID_ATTESTATION,
-          err: {code: InvalidAttestationCode.UNKNOWN_PAYLOAD_STATUS, beaconBlockRoot},
+          err: {code: InvalidAttestationCode.UNKNOWN_PAYLOAD_STATUS, beaconBlockRoot: toRootHex(data.beaconBlockRoot)},
         });
       case "AttestationTargetNotInChain":
         return invalid({
@@ -1731,11 +1743,11 @@ export class NativeForkChoice implements IForkChoice {
           err: {
             code: InvalidAttestationCode.INVALID_TARGET,
             attestation: toRootHex(data.target.root),
-            local: this.getDefaultNode(beaconBlockRoot)?.targetRoot ?? HEX_ZERO_HASH,
+            local: this.getDefaultNode(toRootHex(data.beaconBlockRoot))?.targetRoot ?? HEX_ZERO_HASH,
           },
         });
       default:
-        return e;
+        return nativeError(code);
     }
   }
 }
@@ -1751,6 +1763,32 @@ function balanceSourceOf(state: IBeaconStateView): BalanceSource {
 /** The Zig error name of a failed native call */
 function nativeErrorCode(e: unknown): string | undefined {
   return (e as {code?: string}).code;
+}
+
+/** The error a native call throws, for a failure the native side returns instead */
+function nativeError(code: string): Error {
+  return Object.assign(new Error(code), {code});
+}
+
+/** Word offsets in the native `attestationScratch` buffer, mirroring `bindings/napi/ForkChoice.zig` */
+const ATT_SCRATCH = {
+  count: 0,
+  fromBlock: 1,
+  slot: 2,
+  index: 4,
+  targetEpoch: 6,
+  beaconBlockRoot: 8,
+  targetRoot: 16,
+  indices: 24,
+} as const;
+
+function writeU64(words: Uint32Array, at: number, value: number): void {
+  // Splitting a non-integer or out of range number would wrap it to a valid looking value
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw nativeError("InvalidUnsignedInteger");
+  }
+  words[at] = value >>> 0;
+  words[at + 1] = Math.floor(value / 2 ** 32);
 }
 
 /** Slashings may carry their attestation data with bigint slots and epochs */

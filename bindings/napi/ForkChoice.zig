@@ -64,6 +64,9 @@ const Inner = struct {
     fast_confirmation: ?FastConfirmation = null,
     indices: std.ArrayList(ValidatorIndex) = .empty,
     indices_2: std.ArrayList(ValidatorIndex) = .empty,
+    /// Holds the `attestationScratch` buffer, so `scratch` stays valid until `deinit`.
+    scratch_ref: ?napi.Ref = null,
+    scratch: []u32 = &.{},
 };
 
 inner: *Inner,
@@ -121,6 +124,7 @@ pub fn deinit(self: *ForkChoice) void {
     inner.slot_committee_members.delete() catch {};
     if (inner.checkpoint_balance_source) |ref| ref.delete() catch {};
     if (inner.pulled_up_balance_source) |ref| ref.delete() catch {};
+    if (inner.scratch_ref) |ref| ref.delete() catch {};
     inner.config_rc.unref();
     allocator.destroy(inner);
 }
@@ -352,26 +356,63 @@ pub fn onBlock(self: *ForkChoice, block: js.Value) !js.Number {
     return js.Number.from(store.blockIndex(summary.root).?);
 }
 
-/// Spec `on_attestation` for an attestation verified against its target state.
-pub fn onAttestation(
-    self: *ForkChoice,
-    slot: js.Number,
-    index: js.Number,
-    beacon_block_root: js.Uint8Array,
-    target_epoch: js.Number,
-    target_root: js.Uint8Array,
-    attesting_indices: js.Uint32Array,
-    is_from_block: js.Boolean,
-) !void {
+/// `attestationScratch` layout in u32 words. 64-bit values are low word first.
+const scratch_count = 0;
+const scratch_from_block = 1;
+const scratch_slot = 2;
+const scratch_index = 4;
+const scratch_target_epoch = 6;
+const scratch_beacon_block_root = 8;
+const scratch_target_root = 16;
+const scratch_indices = 24;
+const scratch_words = scratch_indices + max_attesting_indices;
+
+/// The buffer `onAttestation` reads its arguments from, one per store. The caller must
+/// not transfer or detach it: the store reads it through a pointer taken at creation.
+pub fn attestationScratch(self: *ForkChoice) !js.Uint32Array {
+    const env = js.env();
+    const inner = self.inner;
+    if (inner.scratch_ref == null) {
+        var bytes: [*]u8 = undefined;
+        const buffer = try env.createArrayBuffer(scratch_words * @sizeOf(u32), &bytes);
+        inner.scratch_ref = try env.createReference(buffer, 1);
+        inner.scratch = @as([*]u32, @ptrCast(@alignCast(bytes)))[0..scratch_words];
+    }
+    const buffer = try inner.scratch_ref.?.getValue();
+    return .{ .val = try env.createTypedarray(.uint32, scratch_words, buffer, 0) };
+}
+
+/// Spec `on_attestation` for an attestation verified against its target state, its
+/// arguments written to the `attestationScratch` buffer to save converting them one by
+/// one. Returns the store's error name instead of throwing, undefined when accepted.
+pub fn onAttestation(self: *ForkChoice) !?js.String {
+    const words = self.inner.scratch;
+    if (words.len == 0) return error.NoAttestationScratch;
+    const count = words[scratch_count];
+    if (count > words.len - scratch_indices) return error.TooManyAttestingIndices;
     const data: AttestationData = .{
-        .slot = try slot.toSafeInteger(),
-        .index = try index.toSafeInteger(),
-        .beacon_block_root = try rootArg(beacon_block_root),
+        .slot = try scratchU64(words, scratch_slot),
+        .index = try scratchU64(words, scratch_index),
+        .beacon_block_root = scratchRoot(words, scratch_beacon_block_root),
         .source = .{ .epoch = 0, .root = constants.ZERO_HASH },
-        .target = .{ .epoch = try target_epoch.toSafeInteger(), .root = try rootArg(target_root) },
+        .target = .{ .epoch = try scratchU64(words, scratch_target_epoch), .root = scratchRoot(words, scratch_target_root) },
     };
-    const indices = try widenIndices(&self.inner.indices, try attesting_indices.toSlice());
-    try self.inner.store.onAttestationData(&data, indices, try is_from_block.toBool());
+    const indices = try widenIndices(&self.inner.indices, words[scratch_indices..][0..count]);
+    self.inner.store.onAttestationData(&data, indices, words[scratch_from_block] != 0) catch |err| {
+        return js.String.from(@errorName(err));
+    };
+    return null;
+}
+
+/// A JavaScript safe integer, as the store's arithmetic on slots and epochs assumes.
+fn scratchU64(words: []const u32, at: usize) !u64 {
+    const value = @as(u64, words[at]) | (@as(u64, words[at + 1]) << 32);
+    if (value > std.math.maxInt(u53)) return error.InvalidUnsignedInteger;
+    return value;
+}
+
+fn scratchRoot(words: []const u32, at: usize) Root {
+    return std.mem.sliceAsBytes(words[at..][0..8])[0..32].*;
 }
 
 /// Spec `on_attester_slashing` for two attestations verified against the justified

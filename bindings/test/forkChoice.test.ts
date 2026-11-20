@@ -54,6 +54,27 @@ function pendingNode(blockIndex: number): number {
   return blockIndex * 3 + PayloadStatus.Pending;
 }
 
+/** Writes an attestation to the scratch buffer and imports it; returns the rejection, if any */
+function attest(
+  forkChoice: ForkChoice,
+  slot: number,
+  beaconBlockRoot: Uint8Array,
+  targetEpoch: number,
+  targetRoot: Uint8Array,
+  indices: number[]
+): string | undefined {
+  const words = forkChoice.attestationScratch();
+  const bytes = new Uint8Array(words.buffer);
+  words.fill(0, 0, 24);
+  words[0] = indices.length;
+  words[2] = slot;
+  words[6] = targetEpoch;
+  bytes.set(beaconBlockRoot, 8 * 4);
+  bytes.set(targetRoot, 16 * 4);
+  words.set(indices, 24);
+  return forkChoice.onAttestation();
+}
+
 describe("ForkChoice", () => {
   it("starts at the anchor", () => {
     const forkChoice = createForkChoice();
@@ -101,7 +122,7 @@ describe("ForkChoice", () => {
     // Without votes the higher root wins
     expect(forkChoice.getHead()).toBe(pendingNode(2));
 
-    forkChoice.onAttestation(1, 0, root(0x0a), 0, ANCHOR, Uint32Array.from([0, 1, 2]), false);
+    expect(attest(forkChoice, 1, root(0x0a), 0, ANCHOR, [0, 1, 2])).toBeUndefined();
     expect(forkChoice.queuedVoteCount).toBe(3);
     expect(forkChoice.getHead()).toBe(pendingNode(2));
     expect(forkChoice.voteChangesTotal).toBe(0);
@@ -144,7 +165,7 @@ describe("ForkChoice", () => {
     forkChoice.onBlock(summary(0x0a, ANCHOR, 1));
     forkChoice.onBlock(summary(0x0b, ANCHOR, 1));
     forkChoice.onTick(forkChoice.timeAtSlotMs(2));
-    forkChoice.onAttestation(1, 0, root(0x0a), 0, ANCHOR, Uint32Array.from([0, 1]), false);
+    expect(attest(forkChoice, 1, root(0x0a), 0, ANCHOR, [0, 1])).toBeUndefined();
     expect(forkChoice.getHead()).toBe(pendingNode(1));
 
     const data = {index: 0, slot: 1, source: anchorCheckpoint, target: anchorCheckpoint};
@@ -206,9 +227,7 @@ describe("ForkChoice", () => {
     expect(() => forkChoice.onBlock(summary(0x0a, ANCHOR, 1, {executionStatus: ExecutionStatus.Valid}))).toThrow(
       "ExecutionStatusMismatch"
     );
-    expect(() => forkChoice.onAttestation(1, 0, root(0x55), 0, ANCHOR, Uint32Array.from([0]), false)).toThrow(
-      "UnknownAttestationBlock"
-    );
+    expect(attest(forkChoice, 1, root(0x55), 0, ANCHOR, [0])).toBe("UnknownAttestationBlock");
     expect(forkChoice.blockCount).toBe(1);
   });
 
@@ -220,6 +239,24 @@ describe("ForkChoice", () => {
     expect(() => forkChoice.onBlock(summary(0x0a, new Uint8Array(4), 0))).toThrow("InvalidRootLength");
     expect(() => forkChoice.onExecutionPayload(ANCHOR, 9)).toThrow("InvalidExecutionStatus");
     expect(() => forkChoice.shouldBuildOnFull(pendingNode(0), 1)).toThrow("PendingHeadNode");
+    expect(() => forkChoice.onAttestation()).toThrow("NoAttestationScratch");
+    const scratch = forkChoice.attestationScratch();
+    scratch[0] = scratch.length - 24 + 1;
+    expect(() => forkChoice.onAttestation()).toThrow("TooManyAttestingIndices");
+    // A slot or epoch past the safe integer range would overflow the store's arithmetic
+    expect(attest(forkChoice, 0, ANCHOR, 0, ANCHOR, [0])).toBeUndefined();
+    scratch[2] = 0xffffffff;
+    scratch[3] = 0xffffffff;
+    expect(() => forkChoice.onAttestation()).toThrow("InvalidUnsignedInteger");
+    scratch[2] = 0;
+    scratch[3] = 0x200000;
+    expect(() => forkChoice.onAttestation()).toThrow("InvalidUnsignedInteger");
+    scratch[3] = 0;
+    scratch[7] = 0x200000;
+    expect(() => forkChoice.onAttestation()).toThrow("InvalidUnsignedInteger");
+    scratch[7] = 0;
+    scratch[5] = 0x200000;
+    expect(() => forkChoice.onAttestation()).toThrow("InvalidUnsignedInteger");
     expect(
       () =>
         new ForkChoice(new bindings.BeaconConfig(chainConfig, new Uint8Array(32)), 0, summary(1, root(0), 0), {
@@ -258,8 +295,8 @@ describe("ForkChoice", () => {
 
       forkChoice.onTick(forkChoice.timeAtSlotMs(1));
       forkChoice.onBlock(summary(2, ANCHOR, 1));
-      const everyone = Uint32Array.from({length: VALIDATOR_COUNT}, (_, i) => i);
-      forkChoice.onAttestation(1, 0, root(2), 0, ANCHOR, everyone, false);
+      const everyone = Array.from({length: VALIDATOR_COUNT}, (_, i) => i);
+      expect(attest(forkChoice, 1, root(2), 0, ANCHOR, everyone)).toBeUndefined();
       forkChoice.onTick(forkChoice.timeAtSlotMs(2));
       forkChoice.onFastConfirmation();
 
