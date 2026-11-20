@@ -78,8 +78,6 @@ export type ShouldOverrideForkChoiceUpdateResult =
   | {shouldOverrideFcu: false; reason: NotReorgedReason};
 
 export interface IForkChoice {
-  irrecoverableError?: Error;
-
   /**
    * Returns the ancestor node of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)
