@@ -73,7 +73,7 @@ export class ProposerPreferencesRecovery {
 
   /** Polls all sources once, a call while a refresh is in progress joins it */
   refresh(currentSlot: Slot): Promise<void> {
-    if (this.inflight) {
+    if (this.inflight !== null) {
       return this.inflight;
     }
     const nextEpochStart = computeStartSlotAtEpoch(computeEpochAtSlot(currentSlot) + 1);

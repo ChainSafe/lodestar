@@ -22,7 +22,7 @@ env:
 jobs:
   interop:
     name: ${{ matrix.el }}
-    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-latest' }}
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-24.04' }}
     timeout-minutes: 45
     strategy:
       fail-fast: false

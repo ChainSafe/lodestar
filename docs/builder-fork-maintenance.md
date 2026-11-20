@@ -46,14 +46,14 @@ The other old branches have been compared explicitly:
 The whole-file resolutions were compared with upstream changes since the common
 ancestor, including files that had no textual conflict:
 
-| Files | Resolution |
-| --- | --- |
-| Builder assembly, defaults, exports, metrics and test utilities | The fork already carries upstream's bidding and reveal pipeline, with continuous revisions, staged identities and recovery added. Preserve those extensions. |
-| Identity and tests | Restore per-slot pending polling. Retain the fork's explicit handling of a pre-Gloas head at the fork slot; tests cover both a 400 response and a pending identity, followed by activation one slot later. |
-| Bid ledger and tests | Retain settlement and the fork's branch-aware liabilities and recovery. The upstream three-epoch payment-settlement limitation still applies and is documented in the package README. |
-| Payload orchestrator and tests | Last preparation error reporting and bounded retries are already present, alongside constructor reservation recovery. |
-| Builder CLI options and README | Restore the event-emission requirement, current spec badge and payment-settlement limitation. Keep constructor options alongside Engine access. |
-| Nightly workflow, devnet configuration and launcher | Preserve the Docker builder and HTTP API checks. Restore the Kurtosis and artifact versions, coherent metrics sampling and Docker base-image refresh. Host-side Node/Zig builds are unnecessary because the Docker build owns compilation. |
+| Files                                                           | Resolution                                                                                                                                                                                                                                 |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Builder assembly, defaults, exports, metrics and test utilities | The fork already carries upstream's bidding and reveal pipeline, with continuous revisions, staged identities and recovery added. Preserve those extensions.                                                                               |
+| Identity and tests                                              | Restore per-slot pending polling. Retain the fork's explicit handling of a pre-Gloas head at the fork slot; tests cover both a 400 response and a pending identity, followed by activation one slot later.                                 |
+| Bid ledger and tests                                            | Retain settlement and the fork's branch-aware liabilities and recovery. The upstream three-epoch payment-settlement limitation still applies and is documented in the package README.                                                      |
+| Payload orchestrator and tests                                  | Last preparation error reporting and bounded retries are already present, alongside constructor reservation recovery.                                                                                                                      |
+| Builder CLI options and README                                  | Restore the event-emission requirement, current spec badge and payment-settlement limitation. Keep constructor options alongside Engine access.                                                                                            |
+| Nightly workflow, devnet configuration and launcher             | Preserve the Docker builder and HTTP API checks. Restore the Kurtosis and artifact versions, coherent metrics sampling and Docker base-image refresh. Host-side Node/Zig builds are unnecessary because the Docker build owns compilation. |
 
 The review also restored the Engine FCU `INVALID` check and corrected deadlines
 measured in the preceding slot to use that slot's fork duration. Qualification

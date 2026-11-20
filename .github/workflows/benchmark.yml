@@ -7,7 +7,7 @@ on:
 
 jobs:
   run:
-    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-latest' }}
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-24.04' }}
     # Forks don't have access to the S3 credentials and the workflow will fail
     if: github.repository == 'ChainSafe/lodestar'
 

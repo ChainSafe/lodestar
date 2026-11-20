@@ -1,3 +1,4 @@
+import {FastifyPluginAsync} from "fastify";
 import {Endpoint} from "@lodestar/api";
 import {BuilderApiMethods, getRoutes} from "@lodestar/api/builder/server";
 import {ApiError, FastifyRoute, canSendResponse} from "@lodestar/api/server";
@@ -108,7 +109,7 @@ export class BuilderRestApiServer extends RestApiServer {
       this.server.addHook("onResponse", async (request) => {
         if (request.headers.upgrade !== undefined) request.raw.socket.destroy();
       });
-      void this.server.register(async (server) => {
+      const bidStreamPlugin: FastifyPluginAsync = async (server) => {
         await registerBidStream(
           server,
           modules.getBidStreamApi ?? (() => null),
@@ -116,7 +117,8 @@ export class BuilderRestApiServer extends RestApiServer {
           modules.config.SLOT_DURATION_MS,
           opts.bidStreamAdaptiveTiming
         );
-      });
+      };
+      void this.server.register(bidStreamPlugin);
     }
 
     if (opts.orderExposureTokenFile)

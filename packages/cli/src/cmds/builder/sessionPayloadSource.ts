@@ -996,7 +996,7 @@ export class SessionPayloadSource implements PayloadSource {
     if (handle.sourceId !== this.id || !entry || entry.request.fork !== handle.fork)
       throw new SessionPayloadError({code: SessionPayloadErrorCode.UNKNOWN_HANDLE, reason: handle.payloadId});
     if (entry.lease) entry.lease.ready = false;
-    if (entry.release) return entry.release;
+    if (entry.release !== undefined) return entry.release;
     entry.state = "releasing";
     entry.release = Promise.resolve()
       .then(async () => {
