@@ -34,8 +34,13 @@
 pub const index_list = @import("index_list.zig");
 pub const logging = @import("logging.zig");
 pub const stream_trace = @import("stream_trace.zig");
+pub const identify = @import("identify/root.zig");
+pub const capabilities = @import("capabilities.zig");
 pub const transport_driver = @import("transport_driver.zig");
 pub const Schedule = types.Schedule;
+pub const advertisement = @import("advertisement.zig");
+pub const local_state = @import("local_state.zig");
+pub const control_wire = @import("control_wire.zig");
 pub const constants = @import("constants.zig");
 pub const types = @import("types.zig");
 pub const time = @import("time.zig");
@@ -44,8 +49,12 @@ pub const quic = @import("quic/root.zig");
 pub const tls = @import("tls/root.zig");
 pub const udp = @import("udp");
 pub const protocol = @import("protocol.zig");
+pub const Router = @import("router.zig").Router;
+pub const stream_io = @import("stream_io.zig");
+pub const reqresp = @import("reqresp/root.zig");
 
 pub const Transport = @import("transport.zig").Transport;
+pub const Negotiator = @import("negotiate.zig").Negotiator;
 pub const Engine = quic.Engine;
 pub const Handle = types.Handle;
 pub const StreamHandle = types.StreamHandle;
@@ -59,6 +68,8 @@ pub const Multiaddr = wire.multiaddr.Multiaddr;
 pub const KeyPair = wire.keys.KeyPair;
 
 test {
+    _ = local_state;
+    _ = control_wire;
     _ = constants;
     _ = types;
     _ = wire;
@@ -66,11 +77,18 @@ test {
     _ = tls;
     _ = udp;
     _ = Transport;
+    _ = Negotiator;
+    _ = stream_io;
+    _ = reqresp;
     _ = @import("wait.zig");
+    _ = Router;
     _ = transport_driver;
     _ = @import("counting_allocator.zig");
     _ = @import("deadline_heap.zig");
     _ = index_list;
+    _ = @import("capabilities.zig");
+    _ = identify;
     _ = logging;
     _ = @import("metrics/histogram.zig");
+    _ = @import("reqresp/metrics.zig");
 }
