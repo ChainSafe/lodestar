@@ -3,6 +3,7 @@ import {ACTIVE_PRESET} from "@lodestar/params";
 import {ethereumConsensusSpecsTests} from "../../specTestVersioning.js";
 import {specTestIterator} from "../../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../../utils/types.js";
+import {dataCollection} from "./data_collection.js";
 import {singleMerkleProof} from "./single_merkle_proof.js";
 import {sync} from "./sync.js";
 import {updateRanking} from "./update_ranking.js";
@@ -17,6 +18,7 @@ const lightClient: TestRunnerFn<any, any> = (fork, testName, testSuite) => {
 };
 
 const lightclientTestFns: Record<string, TestRunnerFn<any, any>> = {
+  data_collection: dataCollection,
   single_merkle_proof: singleMerkleProof,
   sync: sync,
   update_ranking: updateRanking,

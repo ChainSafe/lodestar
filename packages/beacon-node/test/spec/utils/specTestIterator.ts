@@ -77,7 +77,6 @@ export const defaultSkipOpts: SkipOpts = {
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
     /^bellatrix\/fork_choice\/on_merge_block\/.*/,
-    /^.+\/light_client\/data_collection\/.*/,
     // The gossip harness still lacks coverage for parent validation and voluntary-exit anchors.
     /^.+\/networking\/gossip_beacon_block\/.*$/,
     /^.+\/networking\/gossip_voluntary_exit\/.*$/,
