@@ -2,9 +2,9 @@
 
 pub const Address = @import("address.zig").Address;
 pub const AddressPrefix = @import("address_prefix.zig").Prefix;
-pub const Sockets = @import("sockets.zig").Sockets;
+pub const SocketPair = @import("SocketPair.zig");
 
 test {
     _ = Address;
-    _ = @import("sockets.zig");
+    _ = @import("SocketPair.zig");
 }
