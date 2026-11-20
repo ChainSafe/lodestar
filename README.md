@@ -2,6 +2,10 @@
 
 # Lodestar Ethereum Consensus Implementation
 
+This fork maintains its ePBS builder stack on [`builder`](https://github.com/nflaig/lodestar/tree/builder).
+The `unstable` branch tracks ChainSafe upstream. Builder pull requests target `builder`;
+deployments use tested commits. See [the fork maintenance guide](docs/builder-fork-maintenance.md).
+
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/chainsafe/lodestar?label=Github)](https://github.com/ChainSafe/lodestar/releases/latest)
 [![Docker Image Version (latest by date)](https://img.shields.io/docker/v/chainsafe/lodestar?color=blue&label=Docker&sort=semver)](https://hub.docker.com/r/chainsafe/lodestar)
 [![Eth Consensus Spec v1.5.0](https://img.shields.io/badge/ETH%20consensus--spec-1.5.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.5.0)

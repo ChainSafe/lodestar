@@ -3,7 +3,7 @@ name: Check docs
 on:
   push:
     # We intentionally don't run push on feature branches. See PR for rational.
-    branches: [unstable, stable]
+    branches: [builder, unstable, stable]
   pull_request:
 
 jobs:

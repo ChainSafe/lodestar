@@ -1,9 +1,46 @@
 # Maintaining the builder fork
 
-`nflaig/lodestar:unstable` is the shared integration branch for the builder stack.
-It carries the custom builder features plus regular merges from
-`ChainSafe/lodestar:unstable`. Deployment uses qualified commit hashes, never a
-moving branch name.
+`nflaig/lodestar:builder` is the default branch and shared integration branch for
+the builder stack. It carries the custom builder features plus reviewed merges
+from `ChainSafe/lodestar:unstable`. The fork's `unstable` branch is an upstream
+mirror. Deployment uses qualified commit hashes, never a moving branch name.
+
+Builder feature PRs target `builder`. For contributions to ChainSafe, start from
+the upstream mirror and target `ChainSafe/lodestar:unstable`.
+
+## Branch migration
+
+The former integration branch was renamed from `unstable` to `builder` at
+`5b38029d99892f24e54aef7e562cac53041c07c7`, preserving its complete history,
+default-branch role and branch protection. The tag
+`archive/builder-unstable-20261120` also retains that commit. Draft PR #25 follows
+the renamed base without changing its proposed code.
+
+The recreated `unstable` points to upstream
+`3d90162721dfcd809c48538e8abf77d2db4a6be0`. Moving the mirror does not merge that
+commit into `builder`; upstream changes still require an integration PR and
+qualification before deployment. Never reset `builder` to the mirror.
+
+CI includes pushes and PRs to `builder`. The external-contributor lockfile check
+compares the checked-out PR with its actual base branch, using full Git history.
+The fork disables the automatic Publish and Deploy docs workflows in repository
+settings: the clean upstream mirror cannot carry the fork's release guards.
+Manual publication remains an explicit operation.
+
+Existing images retain their recorded source commit and historical branch label.
+This migration does not change runtime source or require redeployment. If a local
+`unstable` branch contains the former builder stack, migrate its tracking without
+resetting it:
+
+```sh
+git branch -m unstable builder
+git fetch origin
+git branch --set-upstream-to=origin/builder builder
+git remote set-head origin -a
+```
+
+Keep unrelated feature branches and uncommitted work intact. Create a separate
+local branch from `origin/unstable` when working on upstream contributions.
 
 ## Consolidating the October stack
 
@@ -68,13 +105,13 @@ separately. Documentation wording changes in this round address the fork's
 hosted spelling check. GitHub-hosted runners are used when ChainSafe's Warp
 runners are unavailable to the fork.
 
-## Future work
+## Development workflow
 
-1. Create short feature branches from the fork's `unstable` and target PRs there.
+1. Create short feature branches from the fork's `builder` and target PRs there.
    Stack a PR only when it has an actual dependency. After its parent merges,
-   update the child to the shared base without reintroducing older feature code.
+   update the child to `builder` without reintroducing older feature code.
 2. Update upstream through a dedicated integration PR: branch from the fork's
-   `unstable`, fetch ChainSafe's `unstable`, and merge that exact upstream commit.
+   `builder`, fetch ChainSafe's `unstable`, and merge that exact upstream commit.
    Resolve conflicts explicitly; do not reset the fork to upstream or force-push
    its shared branch.
 3. Run tests for the changed interfaces. For state transition or wire changes,
@@ -82,7 +119,7 @@ runners are unavailable to the fork.
    `scripts/builder/qualifyNativeUpgrade.mjs` with pinned network inputs. Keep
    deployment canary results separate from offline compatibility results.
 4. Pin the tested build in `builder-stack`, preserving active configuration and
-   existing feature overlays. Qualify Plataberget before Sepolia. A merged PR is
+   required runtime settings. Qualify Plataberget before Sepolia. A merged PR is
    not evidence that a build has been deployed.
 
 Temporary compatibility patches for an older deployed image should record the
