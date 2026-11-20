@@ -256,6 +256,29 @@ test("connect timeout retains independently wanted direct membership", async () 
   }
 });
 
+test("a wildcard listener dialed at another loopback address connects and both ends observe that pair", async () => {
+  const first = applicationConfig();
+  const second = applicationConfig();
+  second.identitySecretKey[31] = 2;
+  second.bind = {address: Uint8Array.of(0, 0, 0, 0), family: 4, port: 0};
+  const a = startRuntime(first, () => undefined);
+  let b: PeerRuntime | undefined;
+  try {
+    b = await startPeer(second);
+    const [local, remote] = await Promise.all([a.identity, b.identity]);
+    await Promise.all([a.applyIntent(localIntent(first)), b.applyIntent(localIntent(second))]);
+    const dialed = {address: Uint8Array.of(127, 0, 0, 3), family: 4, port: remote.localEndpoint.port} as const;
+    await a.connect(remote.peerId, [dialed], 5000n);
+    await vi.waitFor(async () => expect((await a.observePeers()).counts.connected).toBe(1));
+    const outbound = (await a.observePeers()).peers.find((peer) => peer.identity === remote.peerId);
+    expect(outbound?.endpoint).toEqual(dialed);
+    const inbound = (await b.observePeers()).peers.find((peer) => peer.identity === local.peerId);
+    expect(inbound?.endpoint).toEqual(local.localEndpoint);
+  } finally {
+    await Promise.all([a.close(), b?.stop()]);
+  }
+}, 15000);
+
 test("peer penalties accumulate while the command lane is full", async () => {
   const first = applicationConfig();
   const second = applicationConfig();

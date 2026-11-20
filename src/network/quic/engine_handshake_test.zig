@@ -161,7 +161,6 @@ fn standaloneEngine(seed: u8, engine_limits: Engine.Limits) !Engine {
     return Engine.init(std.testing.allocator, .{
         .tls = ctx,
         .limits = engine_limits,
-        .local = .{ client_address, null },
         .seed = &@as([32]u8, @splat(seed)),
     });
 }

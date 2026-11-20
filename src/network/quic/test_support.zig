@@ -27,6 +27,8 @@ pub const Pair = struct {
     first_initial_len: usize = 0,
     drop_to_server: bool = false,
     client_source: types.Address = client_address,
+    /// The address the server's socket receives on.
+    server_local: types.Address = server_address,
     drop_to_address: ?types.Address = null,
     /// Datagrams the client accepted from the server.
     client_accepted: u64 = 0,
@@ -47,7 +49,6 @@ pub const Pair = struct {
         self.client = Engine.init(test_allocator, .{
             .tls = self.client_ctx,
             .limits = client_limits,
-            .local = .{ client_address, null },
             .seed = &@as([32]u8, @splat(1)),
         }) catch |err| {
             self.server_ctx.deinit();
@@ -57,7 +58,6 @@ pub const Pair = struct {
         self.server = Engine.init(test_allocator, .{
             .tls = self.server_ctx,
             .limits = server_limits,
-            .local = .{ server_address, null },
             .seed = &@as([32]u8, @splat(2)),
         }) catch |err| {
             self.client.deinit();
@@ -68,6 +68,7 @@ pub const Pair = struct {
         self.first_initial_len = 0;
         self.drop_to_server = false;
         self.client_source = client_address;
+        self.server_local = server_address;
         self.drop_to_address = null;
         self.client_stash = .{};
         self.server_stash = .{};
@@ -84,7 +85,8 @@ pub const Pair = struct {
 
     pub fn dial(self: *Pair) !Engine.Handle {
         return self.client.dial(
-            &server_address,
+            &self.server_local,
+            &client_address,
             self.server_ctx.local_peer_id,
             self.now,
         );
@@ -100,7 +102,7 @@ pub const Pair = struct {
         while (rounds < 64) : (rounds += 1) {
             const source = self.client_source;
             var moved = try self.transfer(&self.client, &self.server, source, self.drop_to_server);
-            moved = try self.transfer(&self.server, &self.client, server_address, false) or moved;
+            moved = try self.transfer(&self.server, &self.client, self.server_local, false) or moved;
             self.settle(&self.client);
             self.settle(&self.server);
             if (!moved and !self.client.backlog() and !self.server.backlog()) return;
@@ -112,7 +114,7 @@ pub const Pair = struct {
     pub fn flush(self: *Pair, engine: *Engine) !void {
         if (engine == &self.client) {
             _ = try self.transfer(&self.client, &self.server, self.client_source, self.drop_to_server);
-        } else _ = try self.transfer(&self.server, &self.client, server_address, false);
+        } else _ = try self.transfer(&self.server, &self.client, self.server_local, false);
     }
 
     /// Advances one engine at the pair's clock.
@@ -129,6 +131,9 @@ pub const Pair = struct {
         drop: bool,
     ) !bool {
         var moved = false;
+        // A rebinding changes the source the server sees, never the client's own address.
+        const to_address = if (to == &self.client) client_address else self.server_local;
+        const from_local = if (from == &self.client) client_address else self.server_local;
         var remaining = from.dirtyCount();
         while (remaining > 0) : (remaining -= 1) {
             const index = from.nextDirty() orelse break;
@@ -141,6 +146,7 @@ pub const Pair = struct {
                 budget += count;
                 moved = moved or count > 0;
                 for (self.batch.outgoing[0..count]) |sent| {
+                    std.debug.assert(sent.from.eql(from_local));
                     const datagram = @constCast(sent.bytes);
                     if (from == &self.client and self.first_initial_len == 0) {
                         @memcpy(self.first_initial[0..datagram.len], datagram);
@@ -152,6 +158,7 @@ pub const Pair = struct {
                     const outcome = to.receive(
                         datagram,
                         &from_address,
+                        &to_address,
                         self.now,
                         &response,
                     );
@@ -175,7 +182,7 @@ pub const Pair = struct {
             // Replies re-dirty the sender after its burst ended, as a later turn would.
             for (replies[0..reply_count]) |*reply| {
                 var out: [constants.datagram_size_max]u8 = undefined;
-                _ = from.receive(reply.bytes[0..reply.len], &reply.from, self.now, &out);
+                _ = from.receive(reply.bytes[0..reply.len], &reply.from, &from_address, self.now, &out);
             }
         }
         from.finishFlush(self.now);

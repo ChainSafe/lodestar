@@ -60,7 +60,7 @@ const Refusal = struct {
         if (self.installation != .installed) return;
         const destination = sockets[0].primary().address;
         for (sockets, &self.results, &self.batches) |*socket, *result, *batch| {
-            result.* = socket.sendTo(std.testing.io, Address.fromNetwork(destination), "filtered", 16);
+            result.* = socket.sendTo(std.testing.io, Address.fromNetwork(destination), null, "filtered", 16);
             const message: Sockets.Outgoing = .{ .to = Address.fromNetwork(destination), .bytes = "filtered" };
             batch.* = sendMany(socket, std.testing.io, (&message)[0..1]);
         }
@@ -100,7 +100,7 @@ const Pressure = struct {
         vtable.batchAwaitConcurrent = wait;
         const io: std.Io = .{ .userdata = std.testing.io.userdata, .vtable = &vtable };
         const destination = sockets.primary().address;
-        self.single = sockets.sendTo(io, Address.fromNetwork(destination), "dropped", 16);
+        self.single = sockets.sendTo(io, Address.fromNetwork(destination), null, "dropped", 16);
         const message: Sockets.Outgoing = .{ .to = Address.fromNetwork(destination), .bytes = "dropped" };
         self.batch = sendMany(sockets, io, (&message)[0..1]);
     }
@@ -401,7 +401,7 @@ test "UDP native receive batches use one syscall and cancellation leaves the nex
     var target = try Sockets.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer target.close(std.testing.io);
     for (0..Sockets.receive_batch_max + 1) |i|
-        try target.sendTo(std.testing.io, target.localAddress(), &.{@intCast(i)}, 1);
+        try target.sendTo(std.testing.io, target.localAddress(), null, &.{@intCast(i)}, 1);
     var buffers: [Sockets.receive_batch_max][1]u8 = undefined;
     var slots: [Sockets.receive_batch_max]Sockets.ReceiveSlot = undefined;
     for (&slots, &buffers) |*slot, *buffer| slot.* = .{ .buffer = buffer };

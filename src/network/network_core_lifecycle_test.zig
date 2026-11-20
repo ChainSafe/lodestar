@@ -427,7 +427,7 @@ test "core native immediate close preserves direct membership and rejects stale 
         setup.pair.advance(60_000);
         var intents: [1]SelectedDial = undefined;
         try std.testing.expectEqual(@as(usize, 1), setup.client.peer_manager.selectDials(setup.client.protocols.gossipsub, setup.pair.client, setup.pair.now, &intents));
-        const replacement = try setup.pair.client.dial(&intents[0].address, intents[0].peer, setup.pair.now);
+        const replacement = try setup.pair.client.dial(&intents[0].address, &setup.pair.client_local, intents[0].peer, setup.pair.now);
         try std.testing.expect(setup.client.peer_manager.dialStarted(intents[0].token, replacement));
         for (0..60) |_| try setup.step(1);
         try std.testing.expectEqual(@as(u16, 1), setup.client.peer_manager.peerCounts().relevant);

@@ -648,7 +648,7 @@ pub const NetworkCore = struct {
         const count = self.peer_manager.selectDials(self.protocols.gossipsub, &self.transport.engine, tick, selected[0..@min(room, selected.len)]);
         for (selected[0..count], 0..) |attempt, index| {
             const handle = self.transport.dialPeer(io, attempt.address, attempt.peer, tick) catch |err| {
-                if (err == error.DestinationUnreachable) {
+                if (err == error.DestinationUnreachable or err == error.SourceUnavailable) {
                     std.log.scoped(.network_core).debug("dial_failed peer={f} endpoint={any} reason={s}", .{ logging.peer(&attempt.peer), attempt.address, @errorName(err) });
                     std.debug.assert(self.peer_manager.dialFailed(attempt.token, tick));
                     result.dial_failed += 1;
@@ -819,6 +819,7 @@ test {
     _ = @import("network_core_lifecycle_test.zig");
     _ = @import("network_core_identify_test.zig");
     _ = @import("network_core_socket_test.zig");
+    _ = @import("network_core_source_test.zig");
     _ = @import("network_core_control_test.zig");
     _ = @import("network_core_coverage_test.zig");
 }

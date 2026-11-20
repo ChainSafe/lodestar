@@ -358,7 +358,7 @@ test "core coverage physical closing capacity blocks new leased intents" {
     try std.testing.expect(setup.client.peer_manager.disconnect(snapshots[0].peer, .host, setup.pair.now));
     setup.pair.client.limits.dialing_max = 3;
     setup.pair.client.outbound_max = 4;
-    for (0..3) |_| _ = try setup.pair.client.dial(&support.server_address, setup.server.peerId(), setup.pair.now);
+    for (0..3) |_| _ = try setup.pair.client.dial(&support.server_address, &setup.pair.client_local, setup.server.peerId(), setup.pair.now);
     try std.testing.expectEqual(@as(u16, 4), setup.pair.client.registry.active_len);
     var secret: [32]u8 = @splat(0);
     secret[31] = 17;
