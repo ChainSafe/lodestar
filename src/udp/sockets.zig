@@ -6,6 +6,8 @@ const native_io = @import("native.zig");
 const os = @import("builtin").os.tag;
 const native_sockets = compat.native_sockets;
 const Address = @import("address.zig").Address;
+const family_ip4: usize = 0;
+const family_ip6: usize = 1;
 
 /// Owns at most one socket per configured address family. The caller serializes
 /// operations and close and does not copy a live owner. Pass an `std.Io` compatible
@@ -260,7 +262,7 @@ pub const Sockets = struct {
     /// bound to a specific address answers without a system call. Where no route can be asked
     /// for, the answer is the bound address, which may be unspecified.
     pub fn sourceFor(self: *const Sockets, io: std.Io, peer: Address) SourceError!Address {
-        const family: usize = if (peer == .ip4) 0 else 1;
+        const family: usize = if (peer == .ip4) family_ip4 else family_ip6;
         const socket = self.values[family] orelse return error.AddressFamilyUnsupported;
         const bound = Address.fromNetwork(socket.address);
         if (native_sockets) {
