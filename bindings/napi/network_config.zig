@@ -12,12 +12,12 @@ const BeaconConfig = @import("config").BeaconConfig;
 
 pub const Config = struct {
     secret: [32]u8,
-    bind: n.udp.Sockets.Bindings,
+    bind: n.udp.SocketPair.Bindings,
     local: t.LocalState,
     clock: n.SlotClock,
     chain: n.chain.Config,
     state: n.application_state.Config,
-    discovery_bind: ?n.udp.Sockets.Bindings,
+    discovery_bind: ?n.udp.SocketPair.Bindings,
     discovery_sequence: u64,
     advertisement: ?n.advertisement.Hints,
     fixed: n.advertisement.Endpoints,
@@ -35,7 +35,7 @@ pub const Config = struct {
 fn optionalBigint(value: Value) !?u64 {
     return if (try value.typeof() == .null) null else try decode.bigint(value);
 }
-pub fn bindings(value: Value) !n.udp.Sockets.Bindings {
+pub fn bindings(value: Value) !n.udp.SocketPair.Bindings {
     if (!try value.isArray()) return .single(try decode.endpoint(value));
     const count = try decode.array(value, 2);
     if (count == 0) return error.InvalidNetworkConfig;

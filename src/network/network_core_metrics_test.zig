@@ -14,7 +14,7 @@ const KeyPair = @import("wire/keys.zig").KeyPair;
 const logging = @import("logging.zig");
 const types = @import("peers/types.zig");
 const topic_mod = @import("gossipsub/topic.zig");
-const Sockets = @import("udp").Sockets;
+const SocketPair = @import("udp").SocketPair;
 const score = @import("gossipsub/score.zig");
 const topic_fixture = @import("gossipsub/topic_fixture.zig");
 const test_support = @import("quic/test_support.zig");
@@ -538,7 +538,7 @@ test "metrics report the kernel's buffer sizes and drops for every UDP socket" {
     var f = try Fixture.initWith(&.{}, .{ .bind = .{ .ip4 = .loopback(0) } });
     defer f.deinit();
     const output = try f.render();
-    const roles = [_]struct { []const u8, *Sockets }{
+    const roles = [_]struct { []const u8, *SocketPair }{
         .{ "quic", &f.node.transport.sockets },
         .{ "discovery", &f.node.discovery.?.transport.sockets },
     };

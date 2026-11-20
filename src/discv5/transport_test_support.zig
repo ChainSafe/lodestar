@@ -4,7 +4,7 @@ const Engine = @import("Engine.zig");
 const Transport = @import("Transport.zig");
 const RoutingTable = @import("RoutingTable.zig");
 const SessionStore = @import("SessionStore.zig");
-const Sockets = @import("udp").Sockets;
+const SocketPair = @import("udp").SocketPair;
 const enr = @import("identity/enr.zig");
 const types = @import("types.zig");
 const support = @import("test_support.zig");
@@ -24,9 +24,9 @@ pub const Pair = struct {
     pub fn init(self: *Pair, io: std.Io, request_timeout_ms: u64, install_session: bool) !void {
         self.io = io;
         const loopback = net.IpAddress{ .ip4 = .loopback(0) };
-        self.transport_a.sockets = try Sockets.bind(io, .single(loopback));
+        self.transport_a.sockets = try SocketPair.bind(io, .single(loopback));
         errdefer self.transport_a.sockets.close(io);
-        self.transport_b.sockets = try Sockets.bind(io, .single(loopback));
+        self.transport_b.sockets = try SocketPair.bind(io, .single(loopback));
         errdefer self.transport_b.sockets.close(io);
 
         const key_a = try keyPair(0x11);
