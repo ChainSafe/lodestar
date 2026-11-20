@@ -233,6 +233,7 @@ pub fn isParentBlockFull(comptime fork: ForkSeq, state: *BeaconState(fork)) !boo
 pub fn initializePtcWindow(
     comptime fork: ForkSeq,
     allocator: Allocator,
+    io: std.Io,
     epoch_cache: *const EpochCache,
     state: *BeaconState(fork),
 ) !ct.gloas.PtcWindow.Type {
@@ -256,7 +257,7 @@ pub fn initializePtcWindow(
             }
             const indices = try active.toOwnedSlice(allocator);
             errdefer allocator.free(indices);
-            owned_shuffling = try computeEpochShufflingForFork(fork, allocator, state, indices, epoch);
+            owned_shuffling = try computeEpochShufflingForFork(fork, allocator, io, state, indices, epoch);
             break :blk owned_shuffling.?;
         };
         const committees = try computePayloadTimelinessCommitteesForEpoch(

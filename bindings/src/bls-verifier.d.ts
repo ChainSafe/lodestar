@@ -2,6 +2,7 @@ export declare const BLS_VERIFIER_SET_TYPE: {
   readonly indexed: 0;
   readonly aggregate: 1;
   readonly single: 2;
+  readonly committee: 3;
 };
 
 export declare const BLS_VERIFIER_MAX_BATCH_SIZE: 256;
@@ -30,7 +31,25 @@ export type SingleSignatureSet = {
   signature: Uint8Array;
 };
 
-export type BlsSignatureSet = IndexedSignatureSet | AggregateSignatureSet | SingleSignatureSet;
+/**
+ * An attestation over whole committees of one slot, verified with the committee pubkeys from
+ * `computeCommitteePubkeys()`. Its aggregation bits are concatenated in `committeeIndices` order. `indices` lists the
+ * participants and is aggregated instead when the entry is not cached. Only the participant count is checked, so
+ * callers must derive `indices` and the aggregation bits from the same attestation.
+ */
+export type CommitteeSignatureSet = {
+  type: typeof BLS_VERIFIER_SET_TYPE.committee;
+  indices: Uint32Array;
+  committeePubkeysId: number;
+  slot: number;
+  committeeIndices: Uint32Array;
+  aggregationBits: Uint8Array;
+  bitLen: number;
+  message: Uint8Array;
+  signature: Uint8Array;
+};
+
+export type BlsSignatureSet = IndexedSignatureSet | AggregateSignatureSet | SingleSignatureSet | CommitteeSignatureSet;
 
 export type SameMessageSignatureSet = {
   index: number;

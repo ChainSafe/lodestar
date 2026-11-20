@@ -37,10 +37,7 @@ export enum ForkchoiceCaller {
   executionInvalid = "execution_invalid",
 }
 
-/**
- * Where an execution engine INVALID verdict comes from. Only `blockSegment` verdicts are about the payload the engine
- * just processed and keep the consensus failure semantics in fork choice, the others are applied leniently.
- */
+/** Where an execution engine INVALID verdict comes from, a label for logs and metrics */
 export enum ExecutionInvalidSource {
   forkchoiceUpdated = "forkchoice_updated",
   newPayload = "new_payload",

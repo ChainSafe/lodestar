@@ -6,10 +6,6 @@ const computeEpochAtSlot = @import("../utils/epoch.zig").computeEpochAtSlot;
 
 /// Consumes gloas_state only on success. Compatible field roots remain shared.
 pub fn upgradeStateToHeze(allocator: std.mem.Allocator, config: *const BeaconConfig, gloas_state: *BeaconState(.gloas)) !BeaconState(.heze) {
-    if (try gloas_state.eth1DepositIndex() != try gloas_state.depositRequestsStartIndex()) {
-        return error.LegacyDepositsNotDrained;
-    }
-
     try gloas_state.commit();
     var state = try gloas_state.upgradeUnsafe();
     errdefer state.deinit();

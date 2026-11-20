@@ -25,7 +25,7 @@ test "Heze inclusion list committees cycle across slot committees" {
             const indices = try allocator.alloc(u32, count);
             errdefer allocator.free(indices);
             for (indices, 0..) |*index, i| index.* = @intCast(i + 100);
-            break :blk try EpochShuffling.init(allocator, @splat(7), 2, indices);
+            break :blk try EpochShuffling.init(allocator, std.testing.io, @splat(7), 2, indices);
         };
         defer shuffling.deinit();
 

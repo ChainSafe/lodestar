@@ -8,7 +8,7 @@ import {PayloadError, PayloadErrorCode} from "./importExecutionPayload.js";
 /**
  * Verifies that all payload envelope inputs have their data columns available.
  * - Waits a max of one slot duration of the payload's fork for all data to be available
- * - Returns the time at which all data was available
+ * - Returns the time at which all data was available, in Unix milliseconds
  * - Returns the data availability status for each payload input
  */
 export async function verifyPayloadsDataAvailability(
@@ -17,7 +17,7 @@ export async function verifyPayloadsDataAvailability(
   signal: AbortSignal
 ): Promise<{
   dataAvailabilityStatuses: DataAvailabilityStatus[];
-  availableTime: number;
+  availableTimeMs: number;
 }> {
   const promises: Promise<gloas.DataColumnSidecar[]>[] = [];
   for (const payloadInput of payloadInputs) {
@@ -35,7 +35,8 @@ export async function verifyPayloadsDataAvailability(
   }
   await Promise.all(promises);
 
-  const availableTime = Math.max(0, Math.max(...payloadInputs.map((payloadInput) => payloadInput.getTimeComplete())));
+  const availableTimeMs =
+    Math.max(0, Math.max(...payloadInputs.map((payloadInput) => payloadInput.getTimeComplete()))) * 1000;
   const dataAvailabilityStatuses: DataAvailabilityStatus[] = payloadInputs.map((payloadInput) => {
     if (payloadInput.daOutOfRange) {
       return DataAvailabilityStatus.OutOfRange;
@@ -45,5 +46,5 @@ export async function verifyPayloadsDataAvailability(
       : DataAvailabilityStatus.Available;
   });
 
-  return {dataAvailabilityStatuses, availableTime};
+  return {dataAvailabilityStatuses, availableTimeMs};
 }
