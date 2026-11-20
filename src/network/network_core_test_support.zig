@@ -134,6 +134,9 @@ pub const Link = struct {
     drop_to_server: bool = false,
     client_source: types.Address = support.client_address,
     server_source: types.Address = support.server_address,
+    /// The addresses the cores' sockets are bound to.
+    client_local: types.Address = support.client_address,
+    server_local: types.Address = support.server_address,
     drop_to_address: ?types.Address = null,
     base: std.Io = undefined,
     vtable: std.Io.VTable = undefined,
@@ -178,7 +181,7 @@ pub const Link = struct {
 
     /// Dials the server from the client engine, outside the client's dialing policy.
     pub fn dial(self: *Link) !Engine.Handle {
-        return self.client.dial(&support.server_address, self.server.tls.local_peer_id, self.now);
+        return self.client.dial(&support.server_address, &self.client_local, self.server.tls.local_peer_id, self.now);
     }
 
     /// Delivers captured and pending datagrams both ways and runs both engines' timer and
@@ -210,13 +213,14 @@ pub const Link = struct {
             if (self.drop_to_address) |blocked| if (datagram.to.eql(blocked)) continue;
             const from, const to = if (datagram.from_client) .{ self.client, self.server } else .{ self.server, self.client };
             const source = if (datagram.from_client) self.client_source else self.server_source;
+            const local, const remote = if (datagram.from_client) .{ self.client_local, self.server_local } else .{ self.server_local, self.client_local };
             var response: [constants.datagram_size_max]u8 = undefined;
-            const outcome = to.receive(datagram.bytes[0..datagram.len], &source, self.now, &response);
+            const outcome = to.receive(datagram.bytes[0..datagram.len], &source, &remote, self.now, &response);
             if (outcome == .retry) {
                 var reply: [constants.datagram_size_max]u8 = undefined;
                 @memcpy(reply[0..outcome.retry.len], outcome.retry);
                 var out: [constants.datagram_size_max]u8 = undefined;
-                _ = from.receive(reply[0..outcome.retry.len], &datagram.to, self.now, &out);
+                _ = from.receive(reply[0..outcome.retry.len], &datagram.to, &local, self.now, &out);
             }
         }
         self.sent.clearRetainingCapacity();
@@ -226,6 +230,7 @@ pub const Link = struct {
     /// Flushes the sender's dirty connections into the receiver, as the transport does.
     pub fn transfer(self: *Link, from: *Engine, to: *Engine, from_address: types.Address, drop: bool) bool {
         var moved = false;
+        const local, const remote = if (from == self.client) .{ self.client_local, self.server_local } else .{ self.server_local, self.client_local };
         var remaining = from.dirtyCount();
         while (remaining > 0) : (remaining -= 1) {
             const index = from.nextDirty() orelse break;
@@ -241,7 +246,7 @@ pub const Link = struct {
                     if (drop) continue;
                     if (self.drop_to_address) |blocked| if (sent.to.eql(blocked)) continue;
                     var response: [constants.datagram_size_max]u8 = undefined;
-                    const outcome = to.receive(@constCast(sent.bytes), &from_address, self.now, &response);
+                    const outcome = to.receive(@constCast(sent.bytes), &from_address, &remote, self.now, &response);
                     if (outcome == .retry) {
                         const reply = &replies[reply_count];
                         reply.* = .{ .bytes = undefined, .len = outcome.retry.len, .from = sent.to };
@@ -258,7 +263,7 @@ pub const Link = struct {
             // Replies re-dirty the sender after its burst ended, as a later turn would.
             for (replies[0..reply_count]) |*reply| {
                 var out: [constants.datagram_size_max]u8 = undefined;
-                _ = from.receive(reply.bytes[0..reply.len], &reply.from, self.now, &out);
+                _ = from.receive(reply.bytes[0..reply.len], &reply.from, &local, self.now, &out);
             }
         }
         from.finishFlush(self.now);
@@ -319,7 +324,7 @@ pub const Setup = struct {
         try self.initOwners(local);
         errdefer self.deinit();
         if (reverse) {
-            _ = try self.pair.server.dial(&support.client_address, self.client.peerId(), self.pair.now);
+            _ = try self.pair.server.dial(&support.client_address, &self.pair.server_local, self.client.peerId(), self.pair.now);
         } else _ = try self.pair.dial();
     }
 
@@ -362,6 +367,8 @@ pub const Setup = struct {
         self.pair.server = &self.server.transport.engine;
         self.pair.client_sockets = self.client.transport.sockets.handles();
         self.pair.server_sockets = self.server.transport.sockets.handles();
+        self.pair.client_local = self.client.transport.localAddress();
+        self.pair.server_local = self.server.transport.localAddress();
     }
 
     pub fn deinit(self: *Setup) void {
