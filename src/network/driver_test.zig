@@ -213,6 +213,7 @@ test "a host applies only on its wake, a carried-over cap or its deadline" {
     const sender = try (std.Io.net.IpAddress{ .ip4 = .loopback(0) }).bind(std.testing.io, .{ .mode = .dgram, .protocol = .udp });
     defer sender.close(std.testing.io);
     try sender.send(std.testing.io, &node.transport.sockets.primary().address, "junk");
+    try awaitDatagrams(node.transport.sockets.primary(), 1);
     var now = try currentTime();
     const quic = driver.step(&node, std.testing.io, now, .{}, host.seam(now.millis() +| 5_000));
     try std.testing.expect(quic.failure == null and quic.readiness.quicReady() and !quic.readiness.host);
@@ -303,6 +304,7 @@ test "discovery returns to polling after each datagram within a bounded network 
     defer sender.close(std.testing.io);
     const target = node.discovery.?.transport.sockets.primary().address;
     for (0..40) |_| try sender.send(std.testing.io, &target, "junk datagram");
+    try awaitDatagrams(node.discovery.?.transport.sockets.primary(), 40);
     const visits = Visits.capture(&node);
     const counted = datagramsCounted(&node);
     for (0..40) |_| {
