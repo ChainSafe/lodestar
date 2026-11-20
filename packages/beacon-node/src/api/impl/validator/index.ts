@@ -2326,7 +2326,9 @@ export function getValidatorApi(
       metrics?.inclusionListsValid.inc({source: InclusionListSource.api});
       metrics?.inclusionListsValidSize.inc(totalBytes);
 
-      const isTimely = secFromSlot * 1000 < chain.config.getInclusionListDueMs(chain.config.getForkName(slot));
+      const isTimely =
+        secFromSlot * 1000 >= -chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY &&
+        secFromSlot * 1000 < chain.config.getInclusionListDueMs(chain.config.getForkName(slot));
       chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
 
       chain.emitter.emit(routes.events.EventType.inclusionList, {
