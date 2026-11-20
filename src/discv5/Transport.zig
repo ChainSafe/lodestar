@@ -8,14 +8,14 @@ const Lookup = @import("Lookup.zig");
 const Maintenance = @import("Maintenance.zig");
 const PendingResponse = @import("PendingResponse.zig");
 const enr = @import("identity/enr.zig");
-const Sockets = @import("udp").Sockets;
+const SocketPair = @import("udp").SocketPair;
 const types = @import("types.zig");
 const constants = @import("wire/constants.zig");
 const message = @import("wire/message.zig");
 const KeyPair = @import("identity/crypto.zig").KeyPair;
 
-pub const Error = Engine.Error || Sockets.DatagramError ||
-    Sockets.SendError || std.Io.RandomSecureError || error{
+pub const Error = Engine.Error || SocketPair.DatagramError ||
+    SocketPair.SendError || std.Io.RandomSecureError || error{
     ClockOutOfRange,
     DestinationUnreachable,
     MissingExpiryStorage,
@@ -47,15 +47,15 @@ pub const AdvanceResult = struct {
 const Transport = @This();
 
 engine: Engine,
-sockets: Sockets,
-send_drops: Sockets.SendDrops = .{},
+sockets: SocketPair,
+send_drops: SocketPair.SendDrops = .{},
 scratch: Engine.Scratch = .{},
 response: PendingResponse = .{},
 output: [constants.packet_size_max]u8 = undefined,
 receive_buffer: [constants.packet_size_max]u8 = undefined,
 
 /// Takes ownership of bound sockets on success. Initialize at the final address.
-pub fn init(self: *Transport, allocator: std.mem.Allocator, sockets: Sockets, key: KeyPair, record: enr.Record, config: Engine.Config) !void {
+pub fn init(self: *Transport, allocator: std.mem.Allocator, sockets: SocketPair, key: KeyPair, record: enr.Record, config: Engine.Config) !void {
     self.* = .{ .engine = undefined, .sockets = sockets };
     try self.engine.init(allocator, key, record, config);
 }
@@ -152,13 +152,13 @@ pub fn transmit(
     bytes: []const u8,
 ) Error!void {
     return self.sockets.sendTo(io, destination, from, bytes, constants.packet_size_max) catch |err| {
-        if (Sockets.SendDrops.Reason.fromError(err)) |reason| self.send_drops.add(reason, bytes.len);
+        if (SocketPair.SendDrops.Reason.fromError(err)) |reason| self.send_drops.add(reason, bytes.len);
         std.log.scoped(.network_discovery).debug("discovery_send_failed endpoint={any} bytes={d} reason={s}", .{ destination, bytes.len, @errorName(err) });
-        return if (Sockets.destinationUnreachable(err)) error.DestinationUnreachable else err;
+        return if (SocketPair.destinationUnreachable(err)) error.DestinationUnreachable else err;
     };
 }
 
-pub const Input = Sockets.DatagramError!?Sockets.Datagram;
+pub const Input = SocketPair.DatagramError!?SocketPair.Datagram;
 
 /// Reads at most one datagram without waiting. Input bytes borrow receive_buffer until the next
 /// receive. Pass this result to advance even on failure, so expiry delivery still progresses.
@@ -203,7 +203,7 @@ fn recordFailure(result: *AdvanceResult, err: Error, stage: FailureStage) void {
 fn processDatagram(
     self: *Transport,
     io: std.Io,
-    datagram: Sockets.Datagram,
+    datagram: SocketPair.Datagram,
     result: *AdvanceResult,
 ) Error!void {
     if (!self.engine.admitDatagram(&datagram.from, result.now_ms)) {

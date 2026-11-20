@@ -7,7 +7,7 @@ const adapter = @import("enr.zig");
 const types = @import("types.zig");
 const local_state = @import("../local_state.zig");
 const advertisement = @import("../advertisement.zig");
-const Sockets = @import("udp").Sockets;
+const SocketPair = @import("udp").SocketPair;
 const KeyPair = @import("../wire/keys.zig").KeyPair;
 const types_mod = @import("../types.zig");
 const Histogram = @import("../metrics/histogram.zig").Duration;
@@ -26,7 +26,7 @@ pub const Discovery = struct {
     pub const Config = struct {
         advertisement: ?advertisement.Hints = null,
         fixed: advertisement.Endpoints = .{},
-        bind: Sockets.Bindings,
+        bind: SocketPair.Bindings,
         sequence: u64 = 1,
         bootstrap: []const d.identity.enr.Record = &.{},
     };
@@ -102,8 +102,8 @@ pub const Discovery = struct {
     lookup_published: u64 = 0,
     empty_lookups: u3 = 0,
 
-    pub fn init(self: *Discovery, allocator: std.mem.Allocator, io: std.Io, options: Config, buffers: Sockets.Buffers, host: *const KeyPair, local: *const types.LocalState, fork_schedule: local_state.ForkSchedule, quic: [2]?types.Address, now_ms: u64) !void {
-        var sockets = try Sockets.bind(io, options.bind);
+    pub fn init(self: *Discovery, allocator: std.mem.Allocator, io: std.Io, options: Config, buffers: SocketPair.Buffers, host: *const KeyPair, local: *const types.LocalState, fork_schedule: local_state.ForkSchedule, quic: [2]?types.Address, now_ms: u64) !void {
+        var sockets = try SocketPair.bind(io, options.bind);
         errdefer sockets.close(io);
         sockets.requestBuffersLogged(buffers, .network_discovery);
         var udp_addresses: [2]?d.types.Address = .{ null, null };
@@ -127,7 +127,7 @@ pub const Discovery = struct {
     }
 
     /// Takes ownership of bound sockets on success. Records are immutable authenticated values.
-    pub fn initBound(self: *Discovery, allocator: std.mem.Allocator, sockets: Sockets, key: *const d.identity.crypto.KeyPair, record: *const d.identity.enr.Record, context: *const types.ForkContext, bootstrap: []const d.identity.enr.Record, now_ms: u64, options: Options, engine_config: d.Engine.Config) !void {
+    pub fn initBound(self: *Discovery, allocator: std.mem.Allocator, sockets: SocketPair, key: *const d.identity.crypto.KeyPair, record: *const d.identity.enr.Record, context: *const types.ForkContext, bootstrap: []const d.identity.enr.Record, now_ms: u64, options: Options, engine_config: d.Engine.Config) !void {
         try context.validate();
         if (options.query_interval_ms == 0 or options.query_interval_ms > 86_400_000 or options.local_retry_ms == 0 or options.local_retry_ms > 86_400_000) return error.InvalidOptions;
         if (bootstrap.len > bootstrap_max) return error.TooManyBootstraps;
@@ -440,7 +440,7 @@ pub fn advertisementFor(local: *const types.LocalState, schedule: local_state.Fo
         .quic6 = endpoints.quic6,
     };
 }
-fn validateEndpointFamilies(endpoints: advertisement.Endpoints, quic: [2]bool, udp: *const Sockets) error{InvalidAdvertisement}!void {
+fn validateEndpointFamilies(endpoints: advertisement.Endpoints, quic: [2]bool, udp: *const SocketPair) error{InvalidAdvertisement}!void {
     if ((endpoints.quic != null and !quic[0]) or (endpoints.quic6 != null and !quic[1]) or
         (endpoints.udp != null and udp.values[0] == null) or (endpoints.ip6 != null and (endpoints.udp6 orelse endpoints.udp) != null and udp.values[1] == null)) return error.InvalidAdvertisement;
 }

@@ -14,7 +14,7 @@ const Schedule = @import("schedule.zig").Schedule;
 const local_state = @import("local_state.zig");
 const advertisement = @import("advertisement.zig");
 const KeyPair = @import("wire/keys.zig").KeyPair;
-const Sockets = @import("udp").Sockets;
+const SocketPair = @import("udp").SocketPair;
 const CountingAllocator = @import("counting_allocator.zig").CountingAllocator;
 const timing = @import("metrics/timing.zig");
 const TurnTiming = @import("turn_timing.zig").TurnTiming;
@@ -44,7 +44,7 @@ pub const NetworkCore = struct {
     pub const DiscoveryOptions = peers.Discovery.Config;
     pub const Startup = struct {
         host: *const KeyPair,
-        bind: Sockets.Bindings,
+        bind: SocketPair.Bindings,
         local: t.LocalState,
         clock: SlotClock,
         schedule: local_state.ForkSchedule = .{},

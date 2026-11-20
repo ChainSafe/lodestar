@@ -4,7 +4,7 @@ const adapter = @import("enr.zig");
 const discovery = @import("discovery.zig");
 const types = @import("types.zig");
 const context = types.ForkContext{ .digest = .{ 1, 2, 3, 4 } };
-const Sockets = @import("udp").Sockets;
+const SocketPair = @import("udp").SocketPair;
 const protocols_test_support = @import("../protocols_test_support.zig");
 const PeerManager = @import("../peer_manager.zig").PeerManager;
 const KeyPair = @import("../wire/keys.zig").KeyPair;
@@ -19,13 +19,13 @@ pub const Node = struct {
         fork: types.ForkContext = context,
         bootstrap: []const d.identity.enr.Record = &.{},
         discovery: discovery.Discovery.Options = .{},
-        bindings: Sockets.Bindings = .{ .ip4 = .loopback(0) },
+        bindings: SocketPair.Bindings = .{ .ip4 = .loopback(0) },
         alternate_ip4: ?[4]u8 = null,
     };
 
     pub fn init(self: *Node, io: std.Io, scalar: u8, quic: ?u16, options: *const Options) !void {
         self.io = io;
-        var sockets = try Sockets.bind(io, options.bindings);
+        var sockets = try SocketPair.bind(io, options.bindings);
         errdefer sockets.close(io);
         const address = sockets.localAddress();
         const key = try d.identity.crypto.keyPairFromSecret(&(.{0} ** 31 ++ .{scalar}));

@@ -6,7 +6,7 @@ const adapter = @import("enr.zig");
 const discovery = @import("discovery.zig");
 const types = @import("types.zig");
 const context = types.ForkContext{ .digest = .{ 1, 2, 3, 4 } };
-const Sockets = @import("udp").Sockets;
+const SocketPair = @import("udp").SocketPair;
 const fault_io = @import("fault_io");
 
 const support = @import("discovery_test_support.zig");
@@ -25,7 +25,7 @@ test "peer discovery seeds the configured list without claiming reachability or 
     }
     const now = try d.Transport.monotonicMilliseconds(io);
     var owner: discovery.Discovery = undefined;
-    var sockets = try Sockets.bind(io, .{ .ip4 = .loopback(0) });
+    var sockets = try SocketPair.bind(io, .{ .ip4 = .loopback(0) });
     var sockets_owned = true;
     defer if (sockets_owned) sockets.close(io);
     const key = try d.identity.crypto.keyPairFromSecret(&(.{0} ** 31 ++ .{1}));
@@ -849,7 +849,7 @@ test "peer discovery owning construction cleans every allocation prefix" {
 fn constructOwner(allocator: std.mem.Allocator) !void {
     var network: Network = .{};
     const io = network.io();
-    var sockets = try Sockets.bind(io, .{ .ip4 = .loopback(0) });
+    var sockets = try SocketPair.bind(io, .{ .ip4 = .loopback(0) });
     var sockets_owned = true;
     defer if (sockets_owned) sockets.close(io);
     const key = try d.identity.crypto.keyPairFromSecret(&(.{0} ** 31 ++ .{119}));
@@ -865,7 +865,7 @@ fn constructOwner(allocator: std.mem.Allocator) !void {
 test "peer discovery validates complete bootstrap list before taking sockets" {
     var network: Network = .{};
     const io = network.io();
-    var sockets = try Sockets.bind(io, .{ .ip4 = .loopback(0) });
+    var sockets = try SocketPair.bind(io, .{ .ip4 = .loopback(0) });
     defer sockets.close(io);
     const key = try d.identity.crypto.keyPairFromSecret(&(.{0} ** 31 ++ .{120}));
     const record = try d.identity.enr.Record.create(&key, 1, sockets.localAddress());
