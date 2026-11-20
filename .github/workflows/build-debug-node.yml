@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     name: Build Debug version of Node.js
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
     steps:

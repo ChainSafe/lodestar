@@ -23,9 +23,50 @@ adapted on the deployed stack.
 PRs #5, #6, #7, #8, #11 and #20 are ancestors of the consolidation. They can be
 retired as incorporated when the consolidation is merged. Other old PRs require
 an explicit check of their remaining changes, because cherry-picks and later
-reimplementations are not ancestry. In particular, #25's Cloudflare request-time
+rewrites are not ancestry. In particular, #25's Cloudflare request-time
 proposal is not part of this consolidation. Keep genuinely outstanding proposals
 separate and recreate only their remaining diff against the consolidated base.
+
+The other old branches have been compared explicitly:
+
+- #9: controlled payloads are retained. Its final preference-wait variant is
+  superseded by the current preference recovery and continuous update path.
+- #10: pending identities now poll every slot. The old behavior that acknowledged
+  and discarded preferences during startup is deliberately excluded; startup
+  returns an unavailable response until those preferences can be processed.
+- #12 and #27: the subsidy cutoff is included in the consolidated publisher.
+- #21: its only extra commit adds dictionary words that are already present.
+- #29: the stream client, cleanup and retry fixes are included through later
+  commits; merging its older integration branch would add obsolete code.
+- #36: the optional assumed identity is included with later staged identity
+  checks. Deployments without those explicit options still use the registry.
+
+### November merge review
+
+The whole-file resolutions were compared with upstream changes since the common
+ancestor, including files that had no textual conflict:
+
+| Files | Resolution |
+| --- | --- |
+| Builder assembly, defaults, exports, metrics and test utilities | The fork already carries upstream's bidding and reveal pipeline, with continuous revisions, staged identities and recovery added. Preserve those extensions. |
+| Identity and tests | Restore per-slot pending polling. Retain the fork's explicit handling of a pre-Gloas head at the fork slot; tests cover both a 400 response and a pending identity, followed by activation one slot later. |
+| Bid ledger and tests | Retain settlement and the fork's branch-aware liabilities and recovery. The upstream three-epoch payment-settlement limitation still applies and is documented in the package README. |
+| Payload orchestrator and tests | Last preparation error reporting and bounded retries are already present, alongside constructor reservation recovery. |
+| Builder CLI options and README | Restore the event-emission requirement, current spec badge and payment-settlement limitation. Keep constructor options alongside Engine access. |
+| Nightly workflow, devnet configuration and launcher | Preserve the Docker builder and HTTP API checks. Restore the Kurtosis and artifact versions, coherent metrics sampling and Docker base-image refresh. Host-side Node/Zig builds are unnecessary because the Docker build owns compilation. |
+
+The review also restored the Engine FCU `INVALID` check and corrected deadlines
+measured in the preceding slot to use that slot's fork duration. Qualification
+includes an actual old-build journal written with array transactions and recovered
+by the new build with serialized transactions, preserving payload bytes, signed
+bid roots and reveal obligations without granting new offers. Native and
+TypeScript FULL-parent liability preparation agree at the exact balance boundary.
+
+The frozen lockfile installs in a clean source tree with pnpm 11.0.0; lifecycle
+scripts were disabled for that dependency check and builds were qualified
+separately. Documentation wording changes in this round address the fork's
+hosted spelling check. GitHub-hosted runners are used when ChainSafe's Warp
+runners are unavailable to the fork.
 
 ## Future work
 
@@ -44,7 +85,7 @@ separate and recreate only their remaining diff against the consolidated base.
    existing feature overlays. Qualify Plataberget before Sepolia. A merged PR is
    not evidence that a build has been deployed.
 
-Temporary compatibility backports for an older deployed image should record the
+Temporary compatibility patches for an older deployed image should record the
 upstream commit and exact runtime delta. They are not new long-lived integration
 branches; remove their deployment overlays when the consolidated build replaces
 the old image.

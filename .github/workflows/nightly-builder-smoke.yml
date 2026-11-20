@@ -16,12 +16,12 @@ env:
   BUILDER_METRICS_PORT: 5077
   # Pinned by hand rather than via the ethpandaops action (used by the sim tests)
   # so a red nightly can only mean a Lodestar change, not an upstream Kurtosis release.
-  KURTOSIS_VERSION: "1.20.0"
+  KURTOSIS_VERSION: "1.23.0"
 
 jobs:
   test:
     name: Build and run Kurtosis builder setup
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-latest' }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -82,10 +82,15 @@ jobs:
           fi
 
           # the builder is the only bidder, it must have won bids and revealed their payloads
-          metric() { curl -sf "$METRICS_URL" | awk -v name="$1" '$1 == name {print $2}'; }
-          BIDS="$(metric 'bc_builder_bids_total{result="published"}')"
-          WINS="$(metric 'bc_builder_bids_won_total')"
-          REVEALS="$(metric 'bc_builder_reveals_total{result="published"}')"
+          metric() { awk -v name="$1" '$1 == name {print $2}' <<< "$METRICS"; }
+          for _ in 1 2 3; do
+            METRICS="$(curl -sf "$METRICS_URL")"
+            BIDS="$(metric 'bc_builder_bids_total{result="published"}')"
+            WINS="$(metric 'bc_builder_bids_won_total')"
+            REVEALS="$(metric 'bc_builder_reveals_total{result="published"}')"
+            [ "${REVEALS:-0}" -eq "${WINS:-0}" ] && break
+            sleep 1
+          done
           echo "bids=${BIDS:-0} wins=${WINS:-0} reveals=${REVEALS:-0}"
           if [ "${BIDS:-0}" -lt 1 ] || [ "${WINS:-0}" -lt 1 ]; then
             echo "builder did not win any bids"; exit 1
@@ -116,7 +121,7 @@ jobs:
       - name: Upload diagnostics
         # temporarily `always` to see initial logs, switch to `failure()` once stable
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: builder-smoke-diagnostics
           path: |

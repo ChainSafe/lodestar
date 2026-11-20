@@ -15,7 +15,7 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -93,7 +93,7 @@ jobs:
   unit-tests:
     name: Unit Tests
     needs: build
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -140,7 +140,7 @@ jobs:
 
   e2e-tests:
     name: E2E Tests
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-latest' }}
     needs: build
     strategy:
       fail-fast: false
@@ -176,7 +176,7 @@ jobs:
 
   e2e-sync-tests:
     name: E2E Sync Tests
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-latest' }}
     needs: build
     strategy:
       fail-fast: false
@@ -194,7 +194,7 @@ jobs:
 
   browser-tests:
     name: Browser Tests
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-latest' }}
     needs: build
     strategy:
       fail-fast: false
@@ -222,7 +222,7 @@ jobs:
   spec-tests:
     name: Spec tests
     needs: build
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -266,7 +266,7 @@ jobs:
   spec-tests-native:
     name: Spec tests (native)
     needs: build
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -298,7 +298,7 @@ jobs:
 
   bindings-test:
     name: Native bindings tests
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-latest' }}
     needs: build
     strategy:
       fail-fast: false
