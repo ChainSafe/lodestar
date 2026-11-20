@@ -205,20 +205,18 @@ describe("Builder", () => {
   });
 
   it("settles and prunes won bids on slot ticks", async () => {
-    const bid = {
-      slot: 1,
-      parentBlockHash: toRootHex(Buffer.alloc(32, 2)),
-      parentBlockRoot: toRootHex(Buffer.alloc(32, 3)),
-      blockHash: toRootHex(Buffer.alloc(32, 4)),
-      valueGwei: 5,
-      signedBidRoot: toRootHex(Buffer.alloc(32, 5)),
-    };
-    modules.ledger.recordBid(bid);
+    const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    signedBid.message.slot = 1;
+    signedBid.message.parentBlockHash = Buffer.alloc(32, 2);
+    signedBid.message.parentBlockRoot = Buffer.alloc(32, 3);
+    signedBid.message.blockHash = Buffer.alloc(32, 4);
+    signedBid.message.value = 5;
+    const bid = modules.ledger.recordBid({signedBid, signedBidRoot: toRootHex(Buffer.alloc(32, 5))});
     modules.ledger.recordWin(bid, toRootHex(Buffer.alloc(32, 6)));
     new Builder(modules);
 
     await clock.tickSlotFns(bid.slot + 3 * SLOTS_PER_EPOCH, controller.signal);
-    expect(modules.ledger.getUnsettledValueGwei(0)).toBe(bid.valueGwei);
+    expect(modules.ledger.getUnsettledValueGwei(0)).toBe(signedBid.message.value);
 
     await clock.tickSlotFns(bid.slot + 3 * SLOTS_PER_EPOCH + 1, controller.signal);
     expect(modules.ledger.getUnsettledValueGwei(0)).toBe(0);
