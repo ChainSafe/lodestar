@@ -3,6 +3,7 @@ export * from "./gossip/index.js";
 export * from "./interface.js";
 export * from "./libp2p/index.js";
 export * from "./network.js";
+export {validateNetworkOptions} from "./options.js";
 export * from "./peers/index.js";
 export * from "./reqresp/ReqRespBeaconNode.js";
 export * from "./util.js";
