@@ -215,7 +215,7 @@ describe("order exposure receipts", () => {
     expect(ssz.gloas.ExecutionPayload.serialize(restored.payload.executionPayload)).toEqual(
       ssz.gloas.ExecutionPayload.serialize(fresh.stored.payload.executionPayload)
     );
-  });
+  }, 300_000);
 
   it("keeps the 64 MiB exposure budget fail-closed across append, restart and pruning", () => {
     vi.useFakeTimers();

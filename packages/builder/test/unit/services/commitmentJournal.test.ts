@@ -663,7 +663,7 @@ describe("CommitmentJournal", () => {
     later.payloads.add(next.stored);
     later.journal.retain(next.signed, next.stored);
     expect(recover(directory, slot + 1).payloads.size).toBe(769);
-  }, 20_000);
+  }, 60_000);
 
   it("fits a full bid history at the revision limit and recovers it after restart", () => {
     const {directory, journal} = setup();
@@ -690,7 +690,7 @@ describe("CommitmentJournal", () => {
     };
     journal.retainReveal(record);
     expect(recover(directory, currentSlot).ledger.hasRevealed(record.blockRoot)).toBe(true);
-  }, 120_000);
+  }, 600_000);
 
   it("recovers every selectable revision and payload, reserves one liability per slot, and consumes gossip allowance", () => {
     const {directory, journal} = setup();

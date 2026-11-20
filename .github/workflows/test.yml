@@ -91,13 +91,14 @@ jobs:
         run: pnpm check-readme
 
   unit-tests:
-    name: Unit Tests
+    name: Unit Tests (${{ matrix.node }})${{ github.repository != 'ChainSafe/lodestar' && format(' shard {0}', matrix.shard) || '' }}
     needs: build
     runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-24.04' }}
     strategy:
       fail-fast: false
       matrix:
         node: [26]
+        shard: ${{ fromJSON(github.repository == 'ChainSafe/lodestar' && '["1/1"]' || '["1/4","2/4","3/4","4/4"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/restore-build"
@@ -121,7 +122,8 @@ jobs:
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
       - name: Unit tests
-        run: pnpm vitest run --project unit --project unit-minimal --coverage
+        # Large state and journal fixtures need a dedicated coverage worker on the smaller hosted runners.
+        run: pnpm vitest run --project unit --project unit-minimal --coverage --shard=${{ matrix.shard }} ${{ github.repository != 'ChainSafe/lodestar' && '--maxWorkers=1' || '' }}
 
       - name: Save interop pubkey cache
         if: ${{ always() && steps.interop-pubkey-cache.outputs.cache-hit != 'true' }}
