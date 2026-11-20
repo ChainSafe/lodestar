@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import http from "node:http";
 import {setTimeout as sleep} from "node:timers/promises";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
+import {SecretKey} from "@lodestar/native/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {DOMAIN_BUILDER_REQUEST_AUTH, ForkName} from "@lodestar/params";

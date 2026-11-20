@@ -3,10 +3,12 @@ import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex,
 import {
   BlockExecutionStatus,
   LVHExecResponse,
+  LVHVerdictResult,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
+  PtcQuorum,
 } from "../protoArray/interface.js";
 import {IFastConfirmationSpecStore} from "./fastConfirmation/types.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
@@ -30,6 +32,9 @@ export type CheckpointWithBalance = {
 export type CheckpointWithTotalBalance = CheckpointWithBalance & {
   totalBalance: number;
 };
+
+/** Emitted when the PTC verdict on a block is decided or flips, see getPtcVerdict */
+export type PtcQuorumEvent = PtcQuorum & {blockRoot: RootHex; slot: Slot; verdict: boolean};
 
 export enum EpochDifference {
   current = 0,
@@ -73,8 +78,6 @@ export type ShouldOverrideForkChoiceUpdateResult =
   | {shouldOverrideFcu: false; reason: NotReorgedReason};
 
 export interface IForkChoice {
-  irrecoverableError?: Error;
-
   /**
    * Returns the ancestor node of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)
@@ -119,7 +122,7 @@ export interface IForkChoice {
    */
   shouldOverrideForkChoiceUpdate(
     headBlock: ProtoBlock,
-    secFromSlot: number,
+    msFromSlot: number,
     currentSlot: Slot
   ): ShouldOverrideForkChoiceUpdateResult;
   /**
@@ -151,12 +154,15 @@ export interface IForkChoice {
    * ## Notes:
    *
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
+   *
+   * Throws `InvalidBlockCode.PARENT_EXECUTION_INVALID` if the parent payload chain was invalidated.
+   * `executionStatus` is ignored for a gloas block, it inherits the status of the parent variant it builds on.
    */
   onBlock(
     block: BeaconBlock,
     state: IBeaconStateView,
-    receiveDelaySec: number,
-    importDelaySec: number,
+    receiveDelayMs: number,
+    importDelayMs: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
@@ -259,6 +265,8 @@ export interface IForkChoice {
     payloadPresentCount: number;
     dataAvailableCount: number;
   } | null;
+  /** Current PTC majority per vote field; `null` for pre-Gloas roots */
+  getPtcQuorum(blockRootHex: RootHex): PtcQuorum | null;
   getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null;
   getPayloadDataAvailabilityVotes(blockRootHex: RootHex): (boolean | null)[] | null;
 
@@ -273,6 +281,12 @@ export interface IForkChoice {
   shouldExtendPayload(blockRoot: RootHex): boolean;
   /** Spec: should_build_on_full(store, head, slot) */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean;
+  /** Inclusion list verdict for the payload of `blockRoot`, as reported by the execution engine. True if it changed */
+  recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): boolean;
+  /** True once the payload is delivered and not recorded unsatisfied */
+  isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean;
+  /** Engine verdict recorded for the payload of `blockRoot`, null when none was recorded */
+  getPayloadInclusionListSatisfaction(blockRoot: RootHex): boolean | null;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
   getFinalizedCheckpointSlot(): Slot;
@@ -338,14 +352,17 @@ export interface IForkChoice {
    * `CheckpointWithHex` / finalized root without a specific payload-status variant in mind.
    */
   forwardIterateDescendantsDefaultStatus(blockRoot: RootHex): IterableIterator<ProtoBlock>;
+  /** One summary per block, its default variant (FULL pre-Gloas, PENDING for Gloas) */
   getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
+  /** One summary per block, its default variant (FULL pre-Gloas, PENDING for Gloas) */
   getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
   /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */
   getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult;
   /**
-   * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
+   * Apply an execution engine verdict with a latest valid hash, see `ProtoArray.validateLatestHash`.
+   * Returns whether any execution status changed, and if not, why.
    */
-  validateLatestHash(execResponse: LVHExecResponse): void;
+  validateLatestHash(execResponse: LVHExecResponse): LVHVerdictResult;
 
   /**
    * A dependent root is the block root of the last block before the state transition that decided a specific shuffling

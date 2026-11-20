@@ -2,6 +2,8 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {toRootHex} from "@lodestar/utils";
+import {ApiOptions} from "../../options.js";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {getBeaconBlockApi} from "./blocks/index.js";
@@ -10,9 +12,10 @@ import {getBeaconRewardsApi} from "./rewards/index.js";
 import {getBeaconStateApi} from "./state/index.js";
 
 export function getBeaconApi(
+  opts: ApiOptions,
   modules: Pick<ApiModules, "chain" | "config" | "logger" | "metrics" | "network" | "db" | "sync">
 ): ApplicationMethods<routes.beacon.Endpoints> {
-  const block = getBeaconBlockApi(modules);
+  const block = getBeaconBlockApi(opts, modules);
   const pool = getBeaconPoolApi(modules);
   const state = getBeaconStateApi(modules);
   const rewards = getBeaconRewardsApi(modules);
@@ -35,14 +38,15 @@ export function getBeaconApi(
       };
     },
 
-    async getProposerPreferences({slot}) {
+    async getProposerPreferences({slot, dependentRoot}) {
       // Preferences are broadcast up to one epoch ahead of their proposal slot, the first ones before Gloas is active
       const fork = config.getForkName(slot ?? computeStartSlotAtEpoch(chain.clock.currentEpoch + 1));
       if (!isForkPostGloas(fork)) {
         throw new ApiError(400, `Proposer preferences are not supported before Gloas fork=${fork}`);
       }
 
-      return {data: chain.proposerPreferencesPool.getAll(slot), meta: {version: fork}};
+      const preferences = chain.proposerPreferencesPool.getAll(slot, dependentRoot && toRootHex(dependentRoot));
+      return {data: preferences, meta: {version: fork}};
     },
   };
 }

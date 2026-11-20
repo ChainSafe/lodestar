@@ -25,6 +25,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     shanghaiTime,
     cancunTime,
     pragueTime,
+    osakaTime,
     genesisTime,
   } = opts;
   const ports = getNodePorts(nodeIndex);
@@ -64,6 +65,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
             shanghaiTime,
             cancunTime,
             pragueTime,
+            osakaTime,
             genesisTime,
             clientOptions: [],
           })

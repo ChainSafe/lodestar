@@ -1,7 +1,8 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
+import {SerializedList} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {SecretKey} from "@lodestar/native/blst";
 import {ForkName} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {defer, fromHex, toRootHex} from "@lodestar/utils";
@@ -1376,15 +1377,17 @@ describe("alternate parent bidder", () => {
             if (!payload?.offerEligibility?.retained) throw Error("Missing grant");
             const first = acquired[0];
             if (first) {
-              payload.executionPayload = structuredClone(first.executionPayload);
+              payload.executionPayload = ssz.gloas.ExecutionPayload.clone(first.executionPayload);
               payload.executionRequests = structuredClone(first.executionRequests);
               payload.blobsBundle = structuredClone(first.blobsBundle);
               payload.executionPayloadValue = first.executionPayloadValue * (higher ? 2n : 1n);
               payload.offerEligibility.retained.blockHash = toRootHex(first.executionPayload.blockHash);
-              expect(payload.executionPayload.transactions[0] === first.executionPayload.transactions[0]).toBe(false);
+              expect(payload.executionPayload.transactions.bytes === first.executionPayload.transactions.bytes).toBe(
+                false
+              );
             } else {
               // Opaque bytes exercise retention accounting, not EVM validity.
-              payload.executionPayload.transactions = [new Uint8Array(20 * 1024 * 1024)];
+              payload.executionPayload.transactions = SerializedList.fromArray([new Uint8Array(20 * 1024 * 1024)]);
             }
             acquired.push(payload);
           }
@@ -1426,7 +1429,7 @@ describe("alternate parent bidder", () => {
         cleanup.resolve();
         await vi.advanceTimersByTimeAsync(150);
         const renewed = m.payloadSource.renewOffer.mock.calls.at(-1)?.[0];
-        expect(renewed?.executionPayload.transactions[0] === stored.executionPayload.transactions[0]).toBe(true);
+        expect(renewed?.executionPayload.transactions.bytes === stored.executionPayload.transactions.bytes).toBe(true);
         expect(m.bidStore.has(old)).toBe(true);
         expect(m.payloadStore.get(toRootHex(old.message.blockHash))?.payload).toBe(stored);
       }

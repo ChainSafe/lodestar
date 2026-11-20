@@ -3,6 +3,7 @@ import {fetch, fromHex} from "@lodestar/utils";
 import {chainConfig as mainnetChainConfig} from "../../src/chainConfig/configs/mainnet.js";
 import {chainConfig as minimalChainConfig} from "../../src/chainConfig/configs/minimal.js";
 import {ChainConfig} from "../../src/chainConfig/types.js";
+// biome-ignore lint/correctness/useImportExtensions: false positive, the import resolves through a symlink to a .json file
 import specTestsVersions from "../spec-tests-version.json" with {type: "json"};
 
 // Not e2e, but slow. Run with e2e tests
@@ -41,6 +42,9 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // These are preset values, not config values - they're tested separately
   "PRESET_BASE",
   "CONFIG_NAME",
+  // EIP-8198 quick slots are not implemented.
+  "MIN_BLOB_DATA_RETENTION_MS" as keyof ChainConfig,
+  "SLOT_DURATION_MS_EIP8198" as keyof ChainConfig,
 ];
 
 /**

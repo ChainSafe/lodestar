@@ -63,6 +63,7 @@ export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;
 export type BeaconBlock = ValueOf<typeof ssz.BeaconBlock>;
 export type SignedBeaconBlock = ValueOf<typeof ssz.SignedBeaconBlock>;
 export type BlockContents = ValueOf<typeof ssz.BlockContents>;
+export type SignedBlockContents = {signedBlock: SignedBeaconBlock};
 export type LightClientHeader = ValueOf<typeof ssz.LightClientHeader>;
 export type LightClientBootstrap = ValueOf<typeof ssz.LightClientBootstrap>;
 export type LightClientUpdate = ValueOf<typeof ssz.LightClientUpdate>;

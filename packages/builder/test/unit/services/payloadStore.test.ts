@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {PayloadStore} from "../../../src/services/payloadStore.js";
 import {mockBuiltPayload} from "../utils/payload.js";
 
@@ -161,7 +162,7 @@ describe("PayloadStore", () => {
     const records = [5, 5, 6, 7, 8, 9].map((slot, index) => {
       const hash = Buffer.alloc(32, index + 1);
       const payload = mockBuiltPayload({slot, blockHash: hash});
-      payload.executionPayload.transactions.push(new Uint8Array(1100 * 1024));
+      payload.executionPayload.transactions = SerializedList.fromArray([new Uint8Array(1100 * 1024)]);
       return {slot, parentBlockRoot: Buffer.alloc(32), blockHash: "0x" + hash.toString("hex"), payload};
     });
     store.add(records[0]);

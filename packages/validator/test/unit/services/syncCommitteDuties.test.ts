@@ -1,11 +1,11 @@
 import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {when} from "vitest-when";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/native/blst";
 import {ssz} from "@lodestar/types";
 import {
   SyncCommitteeDutiesService,
@@ -193,6 +193,39 @@ describe("SyncCommitteeDutiesService", () => {
       0: {[indices[1]]: {duty: toSyncDutySubnet(duty2)}},
       1: {},
     } as typeof dutiesByIndexByPeriodObj);
+  });
+
+  it("Should keep duties of other validators if a selection proof fails", async () => {
+    const slot = 1;
+    const duties: routes.validator.SyncDuty[] = [0, 1].map((i) => ({
+      pubkey: pubkeys[i],
+      validatorIndex: indices[i],
+      validatorSyncCommitteeIndices: [7],
+    }));
+    api.validator.getSyncCommitteeDuties.mockResolvedValue(
+      mockApiResponse({data: duties, meta: {executionOptimistic: false}})
+    );
+    api.validator.prepareSyncCommitteeSubnets.mockResolvedValue(mockApiResponse({}));
+    vi.spyOn(validatorStore, "signSyncCommitteeSelectionProof").mockImplementation(async (pubkey) => {
+      if (pubkey === toHexString(pubkeys[0])) throw Error("Remote signer error");
+      return new Uint8Array(96);
+    });
+
+    const clock = new ClockMock();
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+    const dutiesService = new SyncCommitteeDutiesService(
+      altair0Config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      syncingStatusTracker,
+      null
+    );
+
+    await clock.tickEpochFns(0, controller.signal);
+
+    expect((await dutiesService.getDutiesAtSlot(slot)).map(({duty}) => duty)).toEqual([toSyncDutySubnet(duties[1])]);
   });
 
   it("Should remove signer from sync committee duties", async () => {

@@ -84,6 +84,7 @@ MevBoost
 MiB
 ModuleNotFoundError
 Monorepo
+NAPI
 NPM
 NVM
 Nethermind
@@ -126,6 +127,7 @@ Vitest
 Wagyu
 WebSocket
 Zig
+addon
 addons
 api
 args
@@ -190,6 +192,7 @@ forkchoice
 fsSL
 fsync
 getNetworkIdentity
+glibc
 gloas
 gnosis
 gpg
@@ -225,6 +228,7 @@ mmeshsub
 monorepo
 multiaddr
 multifork
+musl
 namespace
 namespaced
 namespaces
@@ -295,3 +299,4 @@ yaml
 yamux
 yml
 zbuilder
+zapi

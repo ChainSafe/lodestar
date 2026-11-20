@@ -10,7 +10,7 @@ const scratch = path.resolve(process.argv[3]);
 const variant = process.argv[4];
 assert(["baseline", "batched"].includes(variant));
 const imp = (p) => import(root + "/" + p);
-const {SecretKey} = await imp("packages/builder/node_modules/@chainsafe/lodestar-z/bindings/src/blst.js");
+const {SecretKey} = await imp("packages/builder/node_modules/@lodestar/native/bindings/src/blst.js");
 const {createBeaconConfig} = await imp("packages/config/lib/index.js");
 const {getConfig} = await imp("packages/config/lib/testUtils/index.js");
 const {ForkName} = await imp("packages/params/lib/index.js");

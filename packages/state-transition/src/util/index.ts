@@ -17,6 +17,7 @@ export * from "./execution.js";
 export * from "./finality.js";
 export * from "./genesis.js";
 export * from "./gloas.js";
+export * from "./inclusionListCommittee.js";
 export * from "./interop.js";
 export * from "./loadState/index.js";
 export * from "./pendingDepositsLookup.js";

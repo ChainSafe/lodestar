@@ -155,6 +155,7 @@ describe("ProposerPreferencesCache", () => {
     signed.message.slot = slot;
     signed.message.blockHash = payload.executionPayload.blockHash;
     signed.message.parentBlockHash = payload.executionPayload.parentHash;
+    signed.message.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(payload.executionRequests);
     journal.retain(signed, {
       slot,
       blockHash: toRootHex(signed.message.blockHash),

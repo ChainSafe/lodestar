@@ -4,9 +4,9 @@ import {createServer} from "node:net";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {Mock, afterEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {SecretKey} from "@lodestar/native/blst";
 import {DOMAIN_BUILDER_REQUEST_AUTH, ForkName} from "@lodestar/params";
 import {
   ZERO_HASH,

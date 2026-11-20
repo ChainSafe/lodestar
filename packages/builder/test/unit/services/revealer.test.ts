@@ -2,9 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {SecretKey} from "@lodestar/native/blst";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -111,7 +111,7 @@ describe("Revealer", () => {
     }
 
     return {
-      blockRoot: toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message)),
+      blockRoot: toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message)),
       slot,
       executionOptimistic: false,
       version: ForkName.gloas,
@@ -178,7 +178,7 @@ describe("Revealer", () => {
       signedExecutionPayloadEnvelope: {
         message: {
           builderIndex,
-          beaconBlockRoot: ssz.gloas.BeaconBlock.hashTreeRoot(observed.block.message),
+          beaconBlockRoot: config.getForkTypes(slot).BeaconBlock.hashTreeRoot(observed.block.message),
           parentBeaconBlockRoot: observed.signedBid.message.parentBlockRoot,
           payload: {blockHash: observed.signedBid.message.blockHash},
         },
@@ -220,7 +220,7 @@ describe("Revealer", () => {
       ...first,
       block,
       signedBid,
-      blockRoot: toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message)),
+      blockRoot: toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message)),
     };
     await revealer.onBlock(first);
     await revealer.onBlock(second);
@@ -236,7 +236,7 @@ describe("Revealer", () => {
   it("ignores a block that selected another builder", async () => {
     const observed = selectedBlock();
     observed.signedBid.message.builderIndex = builderIndex + 1;
-    observed.blockRoot = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(observed.block.message));
+    observed.blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(observed.block.message));
 
     await revealer.onBlock(observed);
 
@@ -251,7 +251,7 @@ describe("Revealer", () => {
   it("does not log a block of a slot it did not bid on", async () => {
     const observed = selectedBlock({recordBid: false});
     observed.signedBid.message.builderIndex = builderIndex + 1;
-    observed.blockRoot = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(observed.block.message));
+    observed.blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(observed.block.message));
 
     await revealer.onBlock(observed);
 
@@ -271,7 +271,7 @@ describe("Revealer", () => {
   it("does not reveal after the cutoff", async () => {
     const observed = selectedBlock();
     vi.spyOn(clock, "msFromSlot").mockReturnValue(
-      config.getSlotComponentDurationMs(config.PAYLOAD_ATTESTATION_DUE_BPS) + 1
+      config.getSlotComponentDurationMs(ForkName.gloas, config.PAYLOAD_ATTESTATION_DUE_BPS) + 1
     );
 
     await revealer.onBlock(observed);
@@ -298,7 +298,7 @@ describe("Revealer", () => {
     const observed = selectedBlock();
 
     const revealing = revealer.onBlock(observed);
-    await vi.advanceTimersByTimeAsync(config.getSlotComponentDurationMs(8000) - 1);
+    await vi.advanceTimersByTimeAsync(config.getSlotComponentDurationMs(ForkName.gloas, 8000) - 1);
     expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1);

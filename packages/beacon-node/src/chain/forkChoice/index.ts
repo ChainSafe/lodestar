@@ -35,6 +35,14 @@ export enum ForkchoiceCaller {
   prepareNextSlot = "prepare_next_slot",
   prepareEarlyPayloadAttributes = "prepare_early_payload_attributes",
   importBlock = "import_block",
+  executionInvalid = "execution_invalid",
+}
+
+/** Where an execution engine INVALID verdict comes from, a label for logs and metrics */
+export enum ExecutionInvalidSource {
+  forkchoiceUpdated = "forkchoice_updated",
+  newPayload = "new_payload",
+  blockSegment = "block_segment",
 }
 
 /**
@@ -125,6 +133,7 @@ export function initializeForkChoiceFromFinalizedState(
         onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
         onFastConfirmation: ({block, slot, currentSlot}) =>
           emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
+        onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
       }
     ),
 
@@ -223,6 +232,7 @@ export function initializeForkChoiceFromUnfinalizedState(
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
       onFastConfirmation: ({block, slot, currentSlot}) =>
         emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
+      onPtcQuorum: (data) => emitter.emit(ChainEvent.forkChoicePtcQuorum, data),
     }
   );
 

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, describe, expect, it, vi} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BidLedger} from "../../../src/services/bidLedger.js";
@@ -32,7 +33,7 @@ function directory(): string {
 
 function revision(txBytes = 0) {
   const payload = mockBuiltPayload({slot, blockHash: Buffer.alloc(32, 2)});
-  payload.executionPayload.transactions = txBytes ? [Buffer.alloc(txBytes)] : [];
+  payload.executionPayload.transactions = SerializedList.fromArray(txBytes ? [Buffer.alloc(txBytes)] : []);
   const signed = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
   signed.message.slot = slot;
   signed.message.blockHash = payload.executionPayload.blockHash;

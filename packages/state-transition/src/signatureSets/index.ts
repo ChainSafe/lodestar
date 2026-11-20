@@ -4,7 +4,7 @@ import {IndexedAttestation, SignedBeaconBlock, altair, capella, gloas} from "@lo
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {IBeaconStateView, IBeaconStateViewGloas} from "../stateView/interface.js";
-import {ISignatureSet, createAggregateSignatureSetFromComponents} from "../util/index.js";
+import {EpochShuffling, ISignatureSet, createAggregateSignatureSetFromComponents} from "../util/index.js";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
 import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
 import {getAttestationsSignatureSets} from "./indexedAttestation.js";
@@ -12,12 +12,13 @@ import {getPayloadAttestationDataSigningRoot} from "./indexedPayloadAttestation.
 import {getBlockProposerSignatureSet} from "./proposer.js";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
 import {getRandaoRevealSignatureSet} from "./randao.js";
-import {getVoluntaryExitsSignatureSets} from "./voluntaryExits.js";
+import {getVoluntaryExitSignatureSet} from "./voluntaryExits.js";
 
 export * from "./attesterSlashings.js";
 export * from "./blsToExecutionChange.js";
 export * from "./executionPayloadBid.js";
 export * from "./executionPayloadEnvelope.js";
+export * from "./inclusionList.js";
 export * from "./indexedAttestation.js";
 export * from "./indexedPayloadAttestation.js";
 export * from "./proposer.js";
@@ -39,6 +40,8 @@ export function getBlockSignatureSets(
   opts?: {
     /** Useful since block proposer signature is verified beforehand on gossip validation */
     skipProposerSignature?: boolean;
+    /** Shuffling of each attestation, see `getAttestationsSignatureSets()` */
+    attestationShufflings?: EpochShuffling[];
   }
 ): ISignatureSet[] {
   // fork based validations
@@ -48,8 +51,10 @@ export function getBlockSignatureSets(
     getRandaoRevealSignatureSet(config, signedBlock.message),
     ...getProposerSlashingsSignatureSets(config, signedBlock),
     ...getAttesterSlashingsSignatureSets(config, signedBlock),
-    ...getAttestationsSignatureSets(config, signedBlock, indexedAttestations),
-    ...getVoluntaryExitsSignatureSets(config, state, signedBlock),
+    ...getAttestationsSignatureSets(config, signedBlock, indexedAttestations, opts?.attestationShufflings),
+    ...signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
+      getVoluntaryExitSignatureSet(config, state, voluntaryExit)
+    ),
   ];
 
   if (!opts?.skipProposerSignature) {

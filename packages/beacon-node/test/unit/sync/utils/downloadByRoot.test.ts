@@ -1,19 +1,15 @@
 import {randomBytes} from "node:crypto";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {BlobIndex, ColumnIndex, ssz} from "@lodestar/types";
-import {BlobMeta} from "../../../../src/chain/blocks/blockInput/types.js";
-import {BlobSidecarValidationError} from "../../../../src/chain/errors/blobSidecarError.js";
+import {ColumnIndex, ssz} from "@lodestar/types";
 import {DataColumnSidecarValidationError} from "../../../../src/chain/errors/dataColumnSidecarError.js";
 import {INetwork} from "../../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../../src/network/peers/peersData.js";
 import {PendingBlockInputStatus} from "../../../../src/sync/types.js";
 import {
   DownloadByRootError,
-  fetchAndValidateBlobs,
   fetchAndValidateBlock,
   fetchAndValidateColumns,
-  fetchBlobsByRoot,
   fetchByRoot,
   fetchColumnsByRoot,
 } from "../../../../src/sync/utils/downloadByRoot.js";
@@ -22,7 +18,6 @@ import {
   BlockWithColumnsTestSet,
   config,
   generateBlock,
-  generateBlockWithBlobSidecars,
   generateBlockWithColumnSidecars,
 } from "../../../utils/blocksAndData.js";
 
@@ -90,151 +85,6 @@ describe("downloadByRoot.ts", () => {
           blockRoot: invalidRoot,
         })
       ).rejects.toThrow(DownloadByRootError);
-    });
-  });
-
-  describe("fetchAndValidateBlobs", () => {
-    const forkName = ForkName.deneb;
-    let denebBlockWithBlobs: ReturnType<typeof generateBlockWithBlobSidecars>;
-    let missing: BlobIndex[];
-
-    beforeEach(() => {
-      denebBlockWithBlobs = generateBlockWithBlobSidecars({forkName, count: 6});
-      missing = denebBlockWithBlobs.blobSidecars.map(({index}) => index);
-    });
-
-    afterEach(() => {
-      vi.resetAllMocks();
-    });
-
-    it("should successfully fetch blobs from network only", async () => {
-      const sendBlobSidecarsByRootMock = vi.fn(() => Promise.resolve(denebBlockWithBlobs.blobSidecars));
-      network = {
-        sendBlobSidecarsByRoot: sendBlobSidecarsByRootMock,
-      } as unknown as INetwork;
-
-      const response = await fetchAndValidateBlobs({
-        config,
-        chain: null,
-        network,
-        forkName,
-        peerIdStr,
-        blockRoot: denebBlockWithBlobs.blockRoot,
-        block: denebBlockWithBlobs.block,
-        missing,
-      });
-
-      expect(response).toEqual(denebBlockWithBlobs.blobSidecars);
-    });
-
-    it("should not error if unable to fetch all blobs from network", async () => {
-      const sendBlobSidecarsByRootMock = vi.fn(() =>
-        Promise.resolve([
-          denebBlockWithBlobs.blobSidecars[1],
-          denebBlockWithBlobs.blobSidecars[3],
-          denebBlockWithBlobs.blobSidecars[5],
-        ])
-      );
-      network = {
-        sendBlobSidecarsByRoot: sendBlobSidecarsByRootMock,
-      } as unknown as INetwork;
-
-      const response = await fetchAndValidateBlobs({
-        config,
-        chain: null,
-        network,
-        forkName,
-        peerIdStr,
-        blockRoot: denebBlockWithBlobs.blockRoot,
-        block: denebBlockWithBlobs.block,
-        missing,
-      });
-
-      expect(sendBlobSidecarsByRootMock).toHaveBeenCalledExactlyOnceWith(
-        peerIdStr,
-        missing.map((index) => ({blockRoot: denebBlockWithBlobs.blockRoot, index}))
-      );
-
-      const returnedIndices = response.map((b) => b.index);
-      expect(returnedIndices).toEqual([1, 3, 5]);
-    });
-
-    it.todo("should throw error if no blobs are returned", async () => {
-      const sendBlobSidecarsByRootMock = vi.fn(() => Promise.resolve([]));
-      network = {
-        sendBlobSidecarsByRoot: sendBlobSidecarsByRootMock,
-      } as unknown as INetwork;
-
-      const requestedBlockRoot = randomBytes(ROOT_SIZE);
-
-      await expect(
-        fetchAndValidateBlobs({
-          config,
-          chain: null,
-          network,
-          forkName,
-          peerIdStr,
-          blockRoot: requestedBlockRoot,
-          block: denebBlockWithBlobs.block,
-          missing,
-        })
-      ).rejects.toThrow(BlobSidecarValidationError);
-    });
-  });
-
-  describe("fetchBlobsByRoot", () => {
-    let denebBlockWithColumns: ReturnType<typeof generateBlockWithBlobSidecars>;
-    let blockRoot: Uint8Array;
-    let missing: BlobIndex[];
-    let blobMeta: BlobMeta[];
-    beforeAll(() => {
-      denebBlockWithColumns = generateBlockWithBlobSidecars({forkName: ForkName.deneb, count: 6});
-      blockRoot = denebBlockWithColumns.blockRoot;
-      missing = denebBlockWithColumns.blobSidecars.map(({index}) => index);
-      blobMeta = missing.map((index) => ({blockRoot, index}) as BlobMeta);
-      network = {
-        sendBlobSidecarsByRoot: vi.fn(() => denebBlockWithColumns.blobSidecars),
-      } as unknown as INetwork;
-    });
-    afterAll(() => {
-      vi.resetAllMocks();
-    });
-
-    it("should fetch missing columnSidecars ByRoot from network", async () => {
-      const response = await fetchBlobsByRoot({
-        network,
-        peerIdStr,
-        blockRoot,
-        missing,
-      });
-      expect(response).toEqual(denebBlockWithColumns.blobSidecars);
-      expect(network.sendBlobSidecarsByRoot).toHaveBeenCalledOnce();
-      expect(network.sendBlobSidecarsByRoot).toHaveBeenCalledWith(peerIdStr, blobMeta);
-    });
-
-    it("should filter out blobs already in possession", async () => {
-      await fetchBlobsByRoot({
-        network,
-        peerIdStr,
-        blockRoot,
-        missing,
-        // biome-ignore lint/style/noNonNullAssertion: its there
-        indicesInPossession: [0, denebBlockWithColumns.blobSidecars.at(-1)?.index!],
-      });
-      expect(network.sendBlobSidecarsByRoot).toHaveBeenCalledOnce();
-      expect(network.sendBlobSidecarsByRoot).toHaveBeenCalledWith(peerIdStr, blobMeta.slice(1, -1));
-    });
-
-    it("should handle empty blob request when all blobs are in possession", async () => {
-      const response = await fetchBlobsByRoot({
-        network,
-        peerIdStr,
-        blockRoot,
-        missing,
-        indicesInPossession: blobMeta.map(({index}) => index),
-      });
-      expect(response).toEqual([]);
-      expect(network.sendBlobSidecarsByRoot).not.toHaveBeenCalled();
     });
   });
 

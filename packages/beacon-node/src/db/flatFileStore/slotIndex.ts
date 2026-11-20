@@ -1,4 +1,5 @@
-import fs from "node:fs";
+import type {Dirent} from "node:fs";
+import {readdir} from "node:fs/promises";
 import {Slot} from "@lodestar/types";
 import {isFsNotFoundError} from "./errors.js";
 import {padSlot} from "./path.js";
@@ -33,9 +34,9 @@ export class SlotIndex {
 
   async rebuildFromDisk(columnsDir: string): Promise<SlotIndexRebuildStats> {
     this.slots.clear();
-    let entries: fs.Dirent[];
+    let entries: Dirent[];
     try {
-      entries = await fs.promises.readdir(columnsDir, {withFileTypes: true});
+      entries = await readdir(columnsDir, {withFileTypes: true});
     } catch (e) {
       if (!isFsNotFoundError(e)) throw e;
       return {slots: 0, ignoredEntries: 0};

@@ -28,7 +28,7 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Bytes32, RootHex, SSEPayloadAttributes, Slot, ValidatorIndex} from "@lodestar/types";
-import {Logger, fromHex, isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, isErrorAborted, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {PayloadAttributes} from "../execution/index.js";
@@ -38,7 +38,11 @@ import {isQueueErrorAborted} from "../util/queue/index.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {IBeaconChain} from "./interface.js";
 import {PayloadAttributesAlternates} from "./payloadAttributesAlternates.js";
-import {getPayloadAttributesForSSE, prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
+import {
+  getPayloadAttributesForSSE,
+  getPooledProposerPreferences,
+  prepareExecutionPayload,
+} from "./produceBlock/produceBlockBody.js";
 import {RegenCaller} from "./regen/index.js";
 
 // TODO GLOAS: re-evaluate this timing
@@ -133,6 +137,7 @@ export class PrepareNextSlotScheduler {
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
     const isEpochTransition = prepareEpoch === nextEpoch;
     const fork = this.config.getForkName(prepareSlot);
+    const currentFork = this.config.getForkName(clockSlot);
 
     // Early return if we are pre-genesis
     //  or we are pre-bellatrix and this is not an epoch transition
@@ -143,7 +148,7 @@ export class PrepareNextSlotScheduler {
     try {
       // At PREPARE_NEXT_SLOT_BPS (~67%) of the current slot we prepare payload for the next slot
       // or precompute epoch transition
-      await sleep(this.config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS), this.signal);
+      await sleep(this.config.getSlotComponentDurationMs(currentFork, PREPARE_NEXT_SLOT_BPS), this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
       const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
@@ -199,7 +204,15 @@ export class PrepareNextSlotScheduler {
         };
 
         const proposerIndex = await getProposerIndex();
-        feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
+        if (this.chain.beaconProposerCache.has(proposerIndex)) {
+          const pooledPreferences = isForkPostGloas(fork)
+            ? getPooledProposerPreferences(this.chain, prepareSlot, headRoot)
+            : null;
+          feeRecipient =
+            pooledPreferences !== null
+              ? toHex(pooledPreferences.feeRecipient)
+              : this.chain.beaconProposerCache.getOrDefault(proposerIndex);
+        }
 
         // Predict the proposer head of the next slot when either:
         //  - we are proposing the next slot (single-slot proposer-boost-reorg), or
@@ -404,7 +417,7 @@ export class PrepareNextSlotScheduler {
             // skip when we're the next-slot proposer — don't compete with block-production prep.
             feeRecipient === undefined
           ) {
-            const maxDurationMs = this.config.getSlotComponentDurationMs(BUILDER_PREVERIFY_LIMIT_BPS);
+            const maxDurationMs = this.config.getSlotComponentDurationMs(currentFork, BUILDER_PREVERIFY_LIMIT_BPS);
             const preVerifyTimer = this.metrics?.builderDepositPreVerify.duration.startTimer();
             const result = headState.preVerifyBuilderDepositsPreGloas(MAX_BUILDER_DEPOSITS_PER_SLOT, maxDurationMs);
             preVerifyTimer?.();
@@ -517,7 +530,10 @@ export class PrepareNextSlotScheduler {
       return;
     }
 
-    const grace = this.config.getSlotComponentDurationMs(EARLY_PAYLOAD_ATTRIBUTES_FALLBACK_BPS);
+    const grace = this.config.getSlotComponentDurationMs(
+      this.config.getForkName(clockSlot),
+      EARLY_PAYLOAD_ATTRIBUTES_FALLBACK_BPS
+    );
     const elapsed = this.chain.clock.msFromSlot(clockSlot);
     // currentSlot can recursively emit catch-up events. Only read it after slot dispatch completes.
     if (elapsed < 0 || elapsed >= grace) return;
@@ -687,7 +703,10 @@ export class PrepareNextSlotScheduler {
    * later in the slot, connecting at PREPARE_NEXT_SLOT_BPS would go cold before bids are requested.
    */
   private checkBuilderStatusBeforeSlot(prepareSlot: Slot): void {
-    const msBeforeSlot = this.config.getSlotComponentDurationMs(BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS);
+    const msBeforeSlot = this.config.getSlotComponentDurationMs(
+      this.config.getForkName(prepareSlot - 1),
+      BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS
+    );
     const msUntilCheck = -this.chain.clock.msFromSlot(prepareSlot) - msBeforeSlot;
     sleep(Math.max(0, msUntilCheck), this.signal)
       .then(() => this.chain.builderApiClient.checkStatus())

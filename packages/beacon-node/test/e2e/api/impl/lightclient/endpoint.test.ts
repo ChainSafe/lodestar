@@ -18,7 +18,7 @@ describe.skipIf(process.env.CI)("lightclient api", () => {
   const SLOT_DURATION_MS = 1000;
   const restPort = 9596;
   const ELECTRA_FORK_EPOCH = 0;
-  const FULU_FORK_EPOCH = 1;
+  const FULU_FORK_EPOCH = 0;
   const testParams: Partial<ChainConfig> = {
     SLOT_DURATION_MS,
     ALTAIR_FORK_EPOCH: ELECTRA_FORK_EPOCH,
@@ -95,7 +95,7 @@ describe.skipIf(process.env.CI)("lightclient api", () => {
     expect(updates.length).toBe(1);
     // best update could be any slots
     // version is set
-    expect(res.meta().versions[0]).toBe(ForkName.electra);
+    expect(res.meta().versions[0]).toBe(ForkName.fulu);
   });
 
   it("getLightClientOptimisticUpdate()", async () => {
@@ -107,7 +107,7 @@ describe.skipIf(process.env.CI)("lightclient api", () => {
     // at slot 2 we got attestedHeader for slot 1
     expect(update.attestedHeader.beacon.slot).toBe(slot - 1);
     // version is set
-    expect(res.meta().version).toBe(ForkName.electra);
+    expect(res.meta().version).toBe(ForkName.fulu);
     // Ensure version header is made available to scripts running in the browser
     expect(res.headers.get(HttpHeader.ExposeHeaders)?.includes("Eth-Consensus-Version")).toBe(true);
   });

@@ -1,7 +1,7 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {Builder} from "@lodestar/builder";
 import {chainConfig} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/native/blst";
 import {LogLevel} from "@lodestar/utils";
 import {BuilderRestApiServer} from "../../../../src/cmds/builder/apiServer.js";
 import {builderHandler, parseProposerPreferencesUrls} from "../../../../src/cmds/builder/handler.js";

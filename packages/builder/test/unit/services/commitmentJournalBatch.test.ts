@@ -108,6 +108,7 @@ afterEach(() => {
 
 describe("CommitmentJournal reference durability barriers", () => {
   it.each([0, 4, 8, 12, 21])("syncs %s blob links before the separate payload and bid barriers", (blobs) => {
+    vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
     const state = setup(blobs),
       sync = fs.fsyncSync,
       events: string[][] = [];

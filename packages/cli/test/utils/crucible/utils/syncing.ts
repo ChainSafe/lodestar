@@ -1,5 +1,6 @@
 import {routes} from "@lodestar/api";
-import {ForkPostDeneb} from "@lodestar/params";
+import {kzg} from "@lodestar/beacon-node/util";
+import {ForkPostDeneb, ForkPreGloas, isForkPostDeneb} from "@lodestar/params";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
 import {BeaconClient, ExecutionClient, NodePair} from "../interfaces.js";
@@ -115,9 +116,13 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
   const currentHeadRoot = toHex(
     env.forkConfig.getForkTypes(currentHead.message.slot).BeaconBlock.hashTreeRoot(currentHead.message)
   );
-  const currentSidecars = (
-    await env.nodes[0].beacon.api.beacon.getBlobSidecars({blockId: currentHead.message.slot})
-  ).value();
+  const headFork = env.forkConfig.getForkName(currentHead.message.slot);
+  const headHasBlobs =
+    isForkPostDeneb(headFork) &&
+    (currentHead as SignedBeaconBlock<ForkPostDeneb & ForkPreGloas>).message.body.blobKzgCommitments.length > 0;
+  const currentBlobs = headHasBlobs
+    ? (await env.nodes[0].beacon.api.beacon.getBlobs({blockId: currentHead.message.slot})).value()
+    : [];
 
   const directPeers = env.nodes.map((n) => n.beacon.multiaddr).filter((m): m is string => m != null);
 
@@ -154,11 +159,11 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
     (
       await unknownBlockSync.beacon.api.beacon.publishBlockV2({
         signedBlockContents: {
-          signedBlock: currentHead as SignedBeaconBlock<ForkPostDeneb>,
-          blobs: currentSidecars.map((b) => b.blob),
-          kzgProofs: currentSidecars.map((b) => b.kzgProof),
+          signedBlock: currentHead as SignedBeaconBlock<ForkPostDeneb & ForkPreGloas>,
+          blobs: currentBlobs,
+          kzgProofs: currentBlobs.flatMap((blob) => kzg.computeCellsAndKzgProofs(blob).proofs),
         },
-        broadcastValidation: routes.beacon.BroadcastValidation.none,
+        broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       })
     ).assertOk();
   } catch (error) {

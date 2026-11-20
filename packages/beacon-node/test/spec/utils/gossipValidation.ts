@@ -3,13 +3,21 @@ import fs from "node:fs";
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import snappyWasm from "@chainsafe/snappy-wasm";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, LVHInvalidJudged} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName} from "@lodestar/params";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {
+  ForkName,
+  ForkPostFulu,
+  ForkPostGloas,
+  ForkPreFulu,
+  ForkPreGloas,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateView,
@@ -23,8 +31,14 @@ import {
 } from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
-import {BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
-import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
+import {
+  BlockInputColumns,
+  BlockInputNoData,
+  BlockInputPreData,
+  BlockInputSource,
+  IBlockInput,
+} from "../../../src/chain/blocks/blockInput/index.js";
+import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
@@ -33,6 +47,7 @@ import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../..
 import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
 import {validateGossipBlock} from "../../../src/chain/validation/block.js";
 import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
+import {validateGossipInclusionList} from "../../../src/chain/validation/inclusionList.js";
 import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
 import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCommittee.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../src/chain/validation/syncCommitteeContributionAndProof.js";
@@ -121,9 +136,9 @@ class GossipTestClock extends EventEmitter implements IClock {
     return (toMs ?? this.currentTimeMs) - slotTimeMs;
   }
 
-  /** Set the current time in milliseconds since genesis */
+  /** Set the current Unix time in milliseconds */
   setCurrentTimeMs(ms: number): void {
-    this.currentTimeMs = this.genesisTime * 1000 + ms;
+    this.currentTimeMs = ms;
   }
 
   /** Also support setSlot for block import phases */
@@ -138,9 +153,8 @@ interface MetaYaml {
   topic: GossipType;
   blocks?: {block: string; failed?: boolean; payload_status?: MetaPayloadStatus}[];
   finalized_checkpoint?: {epoch: bigint; root?: string; block?: string};
-  current_time_ms?: bigint;
   messages: {
-    offset_ms?: bigint;
+    current_time_ms?: bigint;
     subnet_id?: bigint;
     message: string;
     expected: "valid" | "ignore" | "reject";
@@ -158,6 +172,7 @@ const gossipTopicByHandler = {
   gossip_sync_committee_message: GossipType.sync_committee,
   gossip_sync_committee_contribution_and_proof: GossipType.sync_committee_contribution_and_proof,
   gossip_bls_to_execution_change: GossipType.bls_to_execution_change,
+  gossip_inclusion_list: GossipType.inclusion_list,
 } as const satisfies Record<string, GossipType>;
 
 export function isGossipValidationHandler(topicHandler: string): topicHandler is keyof typeof gossipTopicByHandler {
@@ -257,6 +272,7 @@ function getDataAvailabilityStatusForFork(fork: ForkName): DataAvailabilityStatu
     case ForkName.electra:
     case ForkName.fulu:
     case ForkName.gloas:
+    case ForkName.heze:
       return DataAvailabilityStatus.Available;
 
     default:
@@ -270,7 +286,7 @@ function computePostState(
   fork: ForkName
 ): IBeaconStateView {
   return parentState.stateTransition(
-    signedBlock,
+    {block: signedBlock},
     {
       verifyStateRoot: true,
       verifyProposer: true,
@@ -294,8 +310,9 @@ function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, pare
   chain.forkChoice.validateLatestHash({
     executionStatus: ExecutionStatus.Invalid,
     latestValidExecHash: parentBlock.executionPayloadBlockHash,
-    invalidateFromParentBlockRoot: blockRootHex,
-    invalidateFromParentBlockHash: block.executionPayloadBlockHash,
+    invalidateFromBlockRoot: blockRootHex,
+    invalidateFromBlockHash: block.executionPayloadBlockHash,
+    judged: LVHInvalidJudged.FromBlock,
   });
 }
 
@@ -387,6 +404,7 @@ export async function runGossipValidationTest(
       validatorMonitor: null,
       anchorState: anchorStateView,
       isAnchorStateFinalized: true,
+      earliestAvailableSlot: anchorStateView.slot,
       executionEngine,
       executionBuilder: undefined,
     }
@@ -480,18 +498,35 @@ export async function runGossipValidationTest(
         clock.setSlot(slot);
         chain.forkChoice.updateTime(slot);
 
-        const blockImport = BlockInputPreData.createFromBlock({
+        const blockProps = {
           forkName: fork,
-          block: signedBlock,
           blockRootHex,
           source: BlockInputSource.gossip,
           seenTimestampSec: 0,
-          daOutOfRange: false,
-        });
+          daOutOfRange: true,
+        };
+        let blockImport: IBlockInput;
+        if (isForkPostGloas(fork)) {
+          blockImport = BlockInputNoData.createFromBlock({
+            ...blockProps,
+            block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+          });
+        } else if (isForkPostFulu(fork)) {
+          blockImport = BlockInputColumns.createFromBlock({
+            ...blockProps,
+            block: signedBlock as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
+            sampledColumns: [],
+            custodyColumns: [],
+          });
+        } else {
+          blockImport = BlockInputPreData.createFromBlock({
+            ...blockProps,
+            block: signedBlock as SignedBeaconBlock<ForkPreFulu>,
+          });
+        }
 
         await chain.processBlock(blockImport, {
           seenTimestampSec: 0,
-          validBlobSidecars: BlobSidecarValidation.Full,
           importAttestations: AttestationImportOpt.Force,
           validSignatures: false,
         });
@@ -515,10 +550,10 @@ export async function runGossipValidationTest(
         })
     );
 
-    const baseCurrentTimeMs = Number(meta.current_time_ms ?? 0);
     for (const message of meta.messages) {
-      const messageTimeMs = baseCurrentTimeMs + Number(message.offset_ms ?? 0);
-      clock.setCurrentTimeMs(messageTimeMs);
+      if (message.current_time_ms !== undefined) {
+        clock.setCurrentTimeMs(Number(message.current_time_ms));
+      }
 
       let result: "valid" | "ignore" | "reject";
       try {
@@ -692,6 +727,14 @@ async function validateMessageForTopic(
       await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+      break;
+    }
+
+    case GossipType.inclusion_list: {
+      const signedInclusionList = rejectOnInvalidSerializedBytes(() => ssz.heze.SignedInclusionList.deserialize(bytes));
+      const {committeeIndices} = await validateGossipInclusionList(chain, signedInclusionList);
+      // Mirror gossip handler: store the list so later vectors see it
+      chain.inclusionListStore.process(signedInclusionList, committeeIndices, true);
       break;
     }
 

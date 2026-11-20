@@ -8,10 +8,9 @@ import {
   BLOB_AND_PROOF_V2_RPC_BYTES,
   parseExecutionPayload,
   serializeExecutionPayload,
-  serializeExecutionPayloadBody,
   serializeExecutionPayloadBodyV2,
 } from "../../../src/execution/engine/types.js";
-import {RpcPayload, numToQuantity} from "../../../src/execution/engine/utils.js";
+import {RpcPayload} from "../../../src/execution/engine/utils.js";
 import {IExecutionEngine, initializeExecutionEngine} from "../../../src/execution/index.js";
 
 describe("ExecutionEngine / http", () => {
@@ -169,62 +168,46 @@ describe("ExecutionEngine / http", () => {
     expect(reqJsonRpcPayload).toEqual(request);
   });
 
-  it("getPayloadBodiesByHash", async () => {
-    /**
-     *  curl -X GET -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_getPayloadBodiesByHashV1","params":[
-        [
-          "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-          "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-        ]
-      ],"id":67}' http://localhost:8545
-     */
-    const response = {
+  it("notifyForkchoiceUpdate returns an INVALID verdict with its latestValidHash", async () => {
+    const headBlockHash = "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174";
+    const latestValidHash = "0x05a771b000000000000000000000000000000000000000000000000000000a05";
+    returnValue = {
       jsonrpc: "2.0",
       id: 67,
-      result: [
-        {
-          transactions: [
-            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-          ],
-          withdrawals: [
-            {
-              index: "0x0",
-              validatorIndex: "0xffff",
-              address: "0x0200000000000000000000000000000000000000",
-              amount: "0x7b",
-            },
-          ],
-        },
-        null, // null returned for missing blocks
-        {
-          transactions: [
-            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-          ],
-          withdrawals: null, // withdrawals is null pre-capella
-        },
-      ],
+      result: {
+        payloadStatus: {status: "INVALID", latestValidHash, validationError: "HeaderGasUsedMismatch"},
+        payloadId: null,
+      },
     };
 
-    const reqBlockHashes = [
-      "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-      "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed111",
-      "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed000",
-    ];
+    const result = await executionEngine.notifyForkchoiceUpdate(
+      ForkName.bellatrix,
+      headBlockHash,
+      headBlockHash,
+      headBlockHash
+    );
 
-    const request = {
+    expect(result).toEqual({
+      payloadStatus: {status: "INVALID", latestValidHash, validationError: "HeaderGasUsedMismatch"},
+      payloadId: null,
+    });
+  });
+
+  it("notifyForkchoiceUpdate returns the heze inclusion list verdict", async () => {
+    const hash = "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174";
+    returnValue = {
       jsonrpc: "2.0",
-      method: "engine_getPayloadBodiesByHashV1",
-      params: [reqBlockHashes],
+      id: 67,
+      result: {
+        payloadStatus: {status: "VALID", latestValidHash: hash, validationError: null, inclusionListSatisfied: false},
+        payloadId: "0x",
+      },
     };
 
-    returnValue = response;
+    const result = await executionEngine.notifyForkchoiceUpdate(ForkName.heze, hash, hash, hash);
 
-    const res = await executionEngine.getPayloadBodiesByHash(ForkName.bellatrix, reqBlockHashes);
-
-    expect(reqJsonRpcPayload).toEqual(request);
-    expect(res.map(serializeExecutionPayloadBody)).toEqual(response.result);
+    expect(reqJsonRpcPayload).toMatchObject({method: "engine_forkchoiceUpdatedV5"});
+    expect(result.payloadStatus).toMatchObject({status: "VALID", inclusionListSatisfied: false});
   });
 
   it("getPayloadBodiesByHashV2", async () => {
@@ -266,55 +249,6 @@ describe("ExecutionEngine / http", () => {
     });
     expect(res.map(serializeExecutionPayloadBodyV2)).toEqual(response.result);
     expect(res[2]?.blockAccessList).toBeNull();
-  });
-
-  it("getPayloadBodiesByRange", async () => {
-    /**
-     *  curl -X GET -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_getPayloadBodiesByRangeV1","params":[ QUANTITY, QUANTITY],"id":67}' http://localhost:8545
-     */
-    const startBlockNumber = 2;
-    const blockCount = 3;
-    const response = {
-      jsonrpc: "2.0",
-      id: 67,
-      result: [
-        {
-          transactions: [
-            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-          ],
-          withdrawals: [
-            {
-              index: "0x0",
-              validatorIndex: "0xffff",
-              address: "0x0200000000000000000000000000000000000000",
-              amount: "0x7b",
-            },
-          ],
-        },
-        null, // null returned for missing blocks
-        {
-          transactions: [
-            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-          ],
-          withdrawals: null, // withdrawals is null pre-capella
-        },
-      ],
-    };
-
-    const request = {
-      jsonrpc: "2.0",
-      method: "engine_getPayloadBodiesByRangeV1",
-      params: [numToQuantity(startBlockNumber), numToQuantity(blockCount)],
-    };
-
-    returnValue = response;
-
-    const res = await executionEngine.getPayloadBodiesByRange(ForkName.bellatrix, startBlockNumber, blockCount);
-
-    expect(reqJsonRpcPayload).toEqual(request);
-    expect(res.map(serializeExecutionPayloadBody)).toEqual(response.result);
   });
 
   it("getBlobsV2 with more preallocated buffers than versioned hashes", async () => {

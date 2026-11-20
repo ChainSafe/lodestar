@@ -1,7 +1,7 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {EpochShuffling, IBeaconStateView} from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -25,7 +25,7 @@ import {
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BuilderApiClient} from "../execution/builder/apiClient.js";
-import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
+import {IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
@@ -42,6 +42,7 @@ import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
+import {ForkChoiceExecutionEngine} from "./forkChoiceExecutionEngine.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
@@ -49,14 +50,17 @@ import {
   AttestationPool,
   DeferredVoluntaryExitPool,
   ExecutionPayloadBidPool,
+  InclusionListStore,
   OpPool,
   PayloadAttestationPool,
   ProposerPreferencesPool,
+  SingleAttestationPool,
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
+import {ProposerTracker} from "./proposerTracker.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {
@@ -76,8 +80,7 @@ import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPa
 import {ShufflingCache} from "./shufflingCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
-export {BlockType, type AssembledBlockType};
-export {type ProposerPreparationData};
+export {type AssembledBlockType, BlockType, type ProposerPreparationData};
 export type BlockHash = RootHex;
 
 export type StateGetOpts = {
@@ -98,7 +101,7 @@ export interface IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
   earliestAvailableSlot: Slot;
-  readonly executionEngine: IExecutionEngine;
+  readonly executionEngine: ForkChoiceExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   readonly builderCircuitBreaker: BuilderCircuitBreaker;
   readonly builderApiClient: BuilderApiClient;
@@ -126,11 +129,14 @@ export interface IBeaconChain {
   // Ops pool
   readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
+  readonly singleAttestationPool: SingleAttestationPool;
+  readonly proposerTracker: ProposerTracker;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool: SyncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly proposerPreferencesPool: ProposerPreferencesPool;
+  readonly inclusionListStore: InclusionListStore;
   readonly opPool: OpPool;
   readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
 
@@ -229,7 +235,6 @@ export interface IBeaconChain {
     root: RootHex
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
   getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
-  getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
   getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]>;
   getSerializedDataColumnSidecars(
     blockSlot: Slot,
@@ -288,8 +293,11 @@ export interface IBeaconChain {
   waitForBlock(slot: Slot, root: RootHex): Promise<boolean>;
 
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
+  /** Track validators that use this node for duties, e.g. by subscribing to attestation subnets */
+  updateAttachedValidators(epoch: Epoch, validatorIndices: ValidatorIndex[]): Promise<void>;
 
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void;
+  persistExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): void;
   persistInvalidStateRoot(
     preState: IBeaconStateView,
     postState: IBeaconStateView,
@@ -328,6 +336,7 @@ export type SSZObjectType =
   | "syncCommittee"
   | "contributionAndProof";
 
-export type CommonBlockBody = phase0.BeaconBlockBody &
+export type CommonBlockBody = Omit<phase0.BeaconBlockBody, "eth1Data" | "deposits"> &
+  Partial<Pick<phase0.BeaconBlockBody, "eth1Data" | "deposits">> &
   Pick<capella.BeaconBlockBody, "blsToExecutionChanges"> &
   Pick<altair.BeaconBlockBody, "syncAggregate">;

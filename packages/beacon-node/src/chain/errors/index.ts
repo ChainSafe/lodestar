@@ -1,6 +1,5 @@
 export * from "./attestationError.js";
 export * from "./attesterSlashingError.js";
-export * from "./blobSidecarError.js";
 export * from "./blockError.js";
 export * from "./blsToExecutionChangeError.js";
 export * from "./dataColumnSidecarError.js";
@@ -8,6 +7,7 @@ export * from "./envelopeReconstructionError.js";
 export * from "./executionPayloadBid.js";
 export * from "./executionPayloadEnvelope.js";
 export * from "./gossipValidation.js";
+export * from "./inclusionList.js";
 export * from "./payloadAttestation.js";
 export * from "./proposerPreferences.js";
 export * from "./proposerSlashingError.js";

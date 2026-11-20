@@ -124,7 +124,7 @@ describe("TestingPayloadSource", () => {
       fork: ForkName.gloas,
       forkchoiceState: request.forkchoiceState,
       aborted: false,
-      request: fetch.mock.calls[1][0],
+      request: JSON.parse(JSON.stringify(fetch.mock.calls[1][0])),
       response,
     });
     await expect(source.getPayload(handle, signal)).rejects.toMatchObject({

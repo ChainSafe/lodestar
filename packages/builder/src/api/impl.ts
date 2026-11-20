@@ -2,7 +2,7 @@ import {ApiClient, routes} from "@lodestar/api";
 import type {BuilderApiMethods} from "@lodestar/api/builder/server";
 import {ApiError} from "@lodestar/api/server";
 import {BeaconConfig} from "@lodestar/config";
-import {DOMAIN_BEACON_PROPOSER, DOMAIN_BUILDER_REQUEST_AUTH} from "@lodestar/params";
+import {DOMAIN_BEACON_PROPOSER, DOMAIN_BUILDER_REQUEST_AUTH, ForkPostGloas} from "@lodestar/params";
 import {
   IClock,
   ZERO_HASH,
@@ -11,7 +11,7 @@ import {
   createSingleSignatureSetFromComponents,
   verifySignatureSet,
 } from "@lodestar/state-transition";
-import {BLSPubkey, BuilderIndex, gloas, ssz} from "@lodestar/types";
+import {BLSPubkey, BuilderIndex, SignedBlockContents, gloas, ssz} from "@lodestar/types";
 import {Logger, byteArrayEquals, isErrorAborted, prettyGweiToEth, sleep, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {BidRequestResult, Metrics} from "../metrics.js";
 import {BidStore} from "../services/bidStore.js";
@@ -180,7 +180,7 @@ export function getBuilderApi(modules: BuilderApiModules, opts: BuilderApiOption
       // The payload is revealed once the beacon node imported the block and emits its block event
       (
         await api.beacon.publishBlockV2({
-          signedBlockContents: {signedBlock: block},
+          signedBlockContents: {signedBlock: block} as SignedBlockContents<ForkPostGloas>,
           broadcastValidation: routes.beacon.BroadcastValidation.gossip,
         })
       ).assertOk();
@@ -231,7 +231,7 @@ export function bidResponseBudgets(
 ): {waitMs: number; hardStopMs: number} {
   const currentSlot = clock.getCurrentSlot();
   if (!(transitMs >= 0 && slot >= currentSlot && slot <= currentSlot + 1)) return {waitMs: 0, hardStopMs: 0};
-  const slotRemaining = clock.msToSlot(slot) + config.SLOT_DURATION_MS;
+  const slotRemaining = clock.msToSlot(slot) + config.getSlotDurationMs(config.getForkName(slot));
   const requestRemaining = timeoutMs - transitMs - timing.responseMarginMs;
   return {
     waitMs: Math.max(0, Math.min(requestRemaining - Math.min(transitMs, timing.returnReserveCapMs), slotRemaining)),

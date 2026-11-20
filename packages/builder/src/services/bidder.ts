@@ -330,7 +330,9 @@ export class Bidder {
       signal.throwIfAborted();
 
       const msToDeadline =
-        clock.msToSlot(slot) - config.SLOT_DURATION_MS + config.getSlotComponentDurationMs(this.opts.deadlineBps);
+        clock.msToSlot(slot) -
+        config.getSlotDurationMs(config.getForkName(slot)) +
+        config.getSlotComponentDurationMs(config.getForkName(slot), this.opts.deadlineBps);
       logger.verbose("Preparing payload build", {...logCtx, msToDeadline, targetGasLimit});
 
       const job: PayloadBuildJob = {
@@ -481,8 +483,8 @@ export class Bidder {
     return Math.max(
       slotStart - (this.opts.alternateRefreshBeforeSlotMs ?? 0),
       slotStart -
-        config.SLOT_DURATION_MS +
-        config.getSlotComponentDurationMs(this.opts.deadlineBps) +
+        config.getSlotDurationMs(config.getForkName(slot)) +
+        config.getSlotComponentDurationMs(config.getForkName(slot), this.opts.deadlineBps) +
         ALTERNATE_REFRESH_PRIMARY_MARGIN_MS
     );
   }
@@ -558,21 +560,22 @@ export class Bidder {
       clock.msToSlot(primary.slot) <= duration + 50
     ) {
       if (this.opts.alternateBranches && this.alternateQueue.size > 0) {
-        const reason: AlternateDiagnosticReason = this.alternateTask
-          ? "alternate_in_progress"
-          : !primary?.ready
-            ? "primary_not_ready"
-            : primary.controller.signal.aborted || this.modules.signal.aborted
-              ? "stopping"
-              : primary.feeRecipient === undefined || primary.dependentRoot === undefined
-                ? "primary_preferences_unavailable"
-                : !resources
-                  ? "source_resources_unavailable"
-                  : resources.alternatesDisabled
-                    ? "source_disabled"
-                    : (this.alternateAttempts.get(primary.slot)?.length ?? 0) >= MAX_ALTERNATE_ATTEMPTS_PER_SLOT
-                      ? "attempt_limit"
-                      : "build_window_closed";
+        const reason: AlternateDiagnosticReason =
+          this.alternateTask !== undefined
+            ? "alternate_in_progress"
+            : !primary?.ready
+              ? "primary_not_ready"
+              : primary.controller.signal.aborted || this.modules.signal.aborted
+                ? "stopping"
+                : primary.feeRecipient === undefined || primary.dependentRoot === undefined
+                  ? "primary_preferences_unavailable"
+                  : !resources
+                    ? "source_resources_unavailable"
+                    : resources.alternatesDisabled
+                      ? "source_disabled"
+                      : (this.alternateAttempts.get(primary.slot)?.length ?? 0) >= MAX_ALTERNATE_ATTEMPTS_PER_SLOT
+                        ? "attempt_limit"
+                        : "build_window_closed";
         this.logAlternateDiagnostic(reason, this.alternateQueue.values().next().value?.event.data, resources);
       }
       return;
@@ -602,7 +605,11 @@ export class Bidder {
     const slotStart = Date.now() + clock.msToSlot(primary.slot);
     if (
       [this.opts.deadlineBps, ...(this.modules.gossipStages ?? []).map((stage) => stage.deadlineBps)].some((bps) => {
-        const remaining = slotStart - config.SLOT_DURATION_MS + config.getSlotComponentDurationMs(bps) - Date.now();
+        const remaining =
+          slotStart -
+          config.getSlotDurationMs(config.getForkName(primary.slot)) +
+          config.getSlotComponentDurationMs(config.getForkName(primary.slot), bps) -
+          Date.now();
         return remaining >= -50 && remaining <= duration + 50;
       })
     ) {
@@ -996,7 +1003,8 @@ export class Bidder {
       primary.controller.signal.aborted ||
       primary.slot !== slot ||
       primary.data.proposerIndex !== retained.event.data.proposerIndex ||
-      clock.msToSlot(slot) <= -config.getSlotComponentDurationMs(this.opts.updateCutoffBps ?? 1000)
+      clock.msToSlot(slot) <=
+        -config.getSlotComponentDurationMs(config.getForkName(slot), this.opts.updateCutoffBps ?? 1000)
     )
       return "invalid";
     if (primary.dependentRoot === undefined) return "pending";
@@ -1074,7 +1082,11 @@ export class Bidder {
 
   private msToAlternateGossip(slot: number): number {
     const {clock, config} = this.modules;
-    return clock.msToSlot(slot) - config.SLOT_DURATION_MS + config.getSlotComponentDurationMs(this.opts.deadlineBps);
+    return (
+      clock.msToSlot(slot) -
+      config.getSlotDurationMs(config.getForkName(slot)) +
+      config.getSlotComponentDurationMs(config.getForkName(slot), this.opts.deadlineBps)
+    );
   }
 
   private gossipRetainedAlternate(retained: RetainedAlternate): void {
@@ -1103,7 +1115,11 @@ export class Bidder {
     const signal = AbortSignal.any([controller.signal, retained.controller.signal, this.modules.signal]);
     const timer = setTimeout(
       () => controller.abort(),
-      Math.max(0, clock.msToSlot(slot) + config.getSlotComponentDurationMs(this.opts.updateCutoffBps ?? 1000))
+      Math.max(
+        0,
+        clock.msToSlot(slot) +
+          config.getSlotComponentDurationMs(config.getForkName(slot), this.opts.updateCutoffBps ?? 1000)
+      )
     );
     // The ledger consumes the tuple before transport. Neither uncertainty nor a
     // replacement owner may retry it; renewal and historical reveals stay independent.
@@ -1183,7 +1199,10 @@ export class Bidder {
       return;
     const cutoff =
       this.modules.clock.msToSlot(primary.slot) +
-      this.modules.config.getSlotComponentDurationMs(this.opts.updateCutoffBps ?? 1000);
+      this.modules.config.getSlotComponentDurationMs(
+        this.modules.config.getForkName(primary.slot),
+        this.opts.updateCutoffBps ?? 1000
+      );
     if (cutoff <= 0) return;
     const abort = (): void => this.finishPrimaryHandoff(handoff);
     const handoff: PendingPrimaryHandoff = {
@@ -1485,7 +1504,9 @@ export class Bidder {
     const parentBlockHash = toRootHex(data.parentBlockHash);
     const parentBlockRoot = toRootHex(data.parentBlockRoot);
     const until =
-      Date.now() + clock.msToSlot(slot) + config.getSlotComponentDurationMs(this.opts.updateCutoffBps ?? 1000);
+      Date.now() +
+      clock.msToSlot(slot) +
+      config.getSlotComponentDurationMs(config.getForkName(slot), this.opts.updateCutoffBps ?? 1000);
     let best: gloas.SignedExecutionPayloadBid | null = null;
     let publication: Promise<void> | undefined;
     let publicationPending = false;
@@ -1499,7 +1520,9 @@ export class Bidder {
     const stages = this.modules.gossipStages ?? [];
     const slotStart = Date.now() + clock.msToSlot(slot);
     const stageTime = (deadlineBps: number): number =>
-      slotStart - config.SLOT_DURATION_MS + config.getSlotComponentDurationMs(deadlineBps);
+      slotStart -
+      config.getSlotDurationMs(config.getForkName(slot)) +
+      config.getSlotComponentDurationMs(config.getForkName(slot), deadlineBps);
     const primaryUntil = stages.length ? stageTime(stages[0].deadlineBps) : until;
     const gossipBest = (): void => {
       if (Date.now() < job.getPayloadAt) return;

@@ -1,5 +1,7 @@
 import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {toHex, toRootHex} from "@lodestar/utils";
+import {IBeaconDb} from "../../db/index.js";
+import {persistDiff} from "./utils.js";
 
 /**
  * Pool of validated `SignedProposerPreferences` indexed by `(slot, dependent_root)`.
@@ -37,15 +39,19 @@ export class ProposerPreferencesPool {
     byRoot.set(rootHex, signed);
   }
 
-  /** API read-out: flatten across branches, optionally filtered by slot. */
-  getAll(slot?: Slot): gloas.SignedProposerPreferences[] {
-    if (slot !== undefined) {
-      const byRoot = this.bySlot.get(slot);
-      return byRoot ? Array.from(byRoot.values()) : [];
-    }
+  /** API read-out: flatten across branches, optionally filtered by slot and dependent root. */
+  getAll(slot?: Slot, dependentRootHex?: RootHex): gloas.SignedProposerPreferences[] {
     const out: gloas.SignedProposerPreferences[] = [];
-    for (const byRoot of this.bySlot.values()) {
-      for (const v of byRoot.values()) out.push(v);
+    for (const [s, byRoot] of this.bySlot) {
+      if (slot !== undefined && s !== slot) {
+        continue;
+      }
+      for (const [root, signed] of byRoot) {
+        if (dependentRootHex !== undefined && root !== dependentRootHex) {
+          continue;
+        }
+        out.push(signed);
+      }
     }
     return out;
   }
@@ -59,5 +65,22 @@ export class ProposerPreferencesPool {
     for (const slot of this.bySlot.keys()) {
       if (slot < currentSlot) this.bySlot.delete(slot);
     }
+  }
+
+  /** Restore the preferences of upcoming slots, they were validated before they were persisted */
+  async fromPersisted(db: IBeaconDb, currentSlot: Slot): Promise<void> {
+    for (const signed of await db.proposerPreferences.values()) {
+      if (signed.message.proposalSlot >= currentSlot) {
+        this.add(signed);
+      }
+    }
+  }
+
+  async toPersisted(db: IBeaconDb): Promise<void> {
+    await persistDiff(
+      db.proposerPreferences,
+      this.getAll().map((signed) => ({key: db.proposerPreferences.getId(signed), value: signed})),
+      toHex
+    );
   }
 }

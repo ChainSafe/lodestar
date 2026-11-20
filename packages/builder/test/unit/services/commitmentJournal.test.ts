@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, describe, expect, it, vi} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -136,7 +137,7 @@ describe("CommitmentJournal", () => {
     const payload = original.stored.payload;
     payload.sourceId = 'journal "quoted"\\path\n\u0000 \u2603 \ud800';
     payload.executionPayloadValue = 123456789012345678901234567890n;
-    payload.executionPayload.transactions = size ? [bytes(0), bytes(1), bytes(size)] : [];
+    payload.executionPayload.transactions = SerializedList.fromArray(size ? [bytes(0), bytes(1), bytes(size)] : []);
     payload.executionPayload.blockAccessList = bytes(size * 3);
     payload.executionPayload.extraData = bytes(32);
     payload.executionPayload.baseFeePerGas = 12345678901234567890n;
@@ -192,6 +193,7 @@ describe("CommitmentJournal", () => {
   it("does not acknowledge a sparse transaction list that cannot be recovered", () => {
     const {journal, directory} = setup();
     const original = revision(1);
+    // @ts-expect-error A malformed, sparse list must never be acknowledged.
     original.stored.payload.executionPayload.transactions = new Array<Uint8Array>(1);
     expect(() => journal.retain(original.signed, original.stored)).toThrow();
     expect(recover(directory).count).toBe(0);

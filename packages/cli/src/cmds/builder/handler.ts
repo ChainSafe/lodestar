@@ -254,8 +254,9 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
       {signal: abortController.signal, logger}
     );
     return new EnginePayloadSource(toPrintableUrl(executionUrl), {
-      notifyForkchoiceUpdate: (fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes) =>
-        engine.notifyForkchoiceUpdate(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes),
+      notifyForkchoiceUpdate: async (fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes) =>
+        (await engine.notifyForkchoiceUpdate(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes))
+          .payloadId,
       getPayload: async (fork, payloadId) => (await engine.getPayload(fork, payloadId)) as EnginePayloadResult,
     });
   };
@@ -276,8 +277,8 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
         payloadSource,
         createEngineSource(),
         engineUntilSlot,
-        config.SLOT_DURATION_MS -
-          config.getSlotComponentDurationMs(args["bidding.deadlineBps"]) +
+        config.getSlotDurationMs(config.getForkName(engineUntilSlot)) -
+          config.getSlotComponentDurationMs(config.getForkName(engineUntilSlot), args["bidding.deadlineBps"]) +
           FORK_TRANSITION_SNAPSHOT_MARGIN_MS
       );
       logger.info("Execution client builds through the configured fork transition slot", {engineUntilSlot});

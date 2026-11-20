@@ -1,9 +1,9 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {JsonRpcHttpClient} from "@lodestar/beacon-node";
 import {type BuildHandle, type BuildRequest, type BuiltPayload, PayloadSourceNotReady} from "@lodestar/builder";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {SecretKey} from "@lodestar/native/blst";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {defer, sleep, toRootHex} from "@lodestar/utils";
@@ -486,7 +486,7 @@ describe("ForkTransitionPayloadSource", () => {
         slot,
         blockHash: payload.executionPayload.blockHash,
       });
-      await vi.advanceTimersByTimeAsync(900 + config.getSlotComponentDurationMs(2100));
+      await vi.advanceTimersByTimeAsync(900 + config.getSlotComponentDurationMs(ForkName.gloas, 2100));
       await bidding;
       expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
       if (selected === engine) expect(engine.getPayload).toHaveBeenCalledOnce();

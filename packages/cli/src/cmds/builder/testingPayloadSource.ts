@@ -218,7 +218,7 @@ function validateTestingPayload(
     return fail("Returned payload does not match the requested parent or attributes");
   if (
     executionPayload.transactions.length !== plan.transactions.length ||
-    executionPayload.transactions.some((tx, i) => toHex(tx).toLowerCase() !== plan.transactions[i].toLowerCase())
+    plan.transactions.some((tx, i) => toHex(executionPayload.transactions.get(i)).toLowerCase() !== tx.toLowerCase())
   )
     return fail("Returned transactions differ from the requested order");
   return {sourceId, fork: request.fork, executionPayload, executionPayloadValue, blobsBundle, executionRequests};

@@ -27,22 +27,23 @@ jobs:
     name: Build
     runs-on: warp-ubuntu-2204-x64-4x
     steps:
-      # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 24
+          node: 26
+      - uses: ./.github/actions/upload-build
+        with:
+          node: 26
 
   sim-test-multifork:
     name: Multifork sim test
     needs: build
     runs-on: warp-ubuntu-2204-x64-4x
     steps:
-      # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: "./.github/actions/setup-and-build"
+      - uses: "./.github/actions/restore-build"
         with:
-          node: 24
+          node: 26
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -57,7 +58,7 @@ jobs:
           GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sim-test-multifork-logs
           path: packages/cli/test-logs
@@ -67,11 +68,10 @@ jobs:
     needs: build
     runs-on: warp-ubuntu-2204-x64-4x
     steps:
-      # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: "./.github/actions/setup-and-build"
+      - uses: "./.github/actions/restore-build"
         with:
-          node: 24
+          node: 26
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -86,7 +86,7 @@ jobs:
           GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sim-test-endpoints-logs
           path: packages/cli/test-logs
@@ -96,11 +96,10 @@ jobs:
     needs: build
     runs-on: warp-ubuntu-2204-x64-4x
     steps:
-      # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: "./.github/actions/setup-and-build"
+      - uses: "./.github/actions/restore-build"
         with:
-          node: 24
+          node: 26
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -115,7 +114,7 @@ jobs:
           GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sim-test-eth-backup-provider-logs
           path: packages/cli/test-logs
@@ -125,11 +124,10 @@ jobs:
     needs: build
     runs-on: warp-ubuntu-2204-x64-4x
     steps:
-      # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: "./.github/actions/setup-and-build"
+      - uses: "./.github/actions/restore-build"
         with:
-          node: 24
+          node: 26
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -144,7 +142,7 @@ jobs:
           GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sim-test-mixed-clients-logs
           path: packages/cli/test-logs
