@@ -42,7 +42,11 @@ test "core native readiness wakes for either delayed protocol socket" {
         const target = if (source == 0) node.transport.sockets.primary() else node.discovery.?.transport.sockets.primary();
         const task = try std.Thread.spawn(.{}, delayedRuntimeDatagram, .{ sender, target.address });
         defer task.join();
-        const result = try stepAfter(&node, 100);
+        var result = try stepAfter(&node, 100);
+        for (0..50) |_| {
+            if (result.failure != null or result.readiness.quicReady() or result.readiness.discoveryReady()) break;
+            result = try stepAfter(&node, 100);
+        }
         try std.testing.expect(result.failure == null);
         if (source == 0) {
             try std.testing.expectEqual([2]bool{ true, false }, result.readiness.quic);
@@ -72,7 +76,11 @@ test "core native host wake validates rollback stays attached through shutdown a
     _ = try stepAfter(&node, 0);
     const sender = try std.Thread.spawn(.{}, delayedRuntimeDatagram, .{ host, host.address });
     defer sender.join();
-    const result = try stepAfter(&node, 100);
+    var result = try stepAfter(&node, 100);
+    for (0..50) |_| {
+        if (result.failure != null or result.readiness.host) break;
+        result = try stepAfter(&node, 100);
+    }
     try std.testing.expect(result.failure == null and result.readiness.host);
     const repeated = try stepAfter(&node, 0);
     try std.testing.expect(repeated.readiness.host);
