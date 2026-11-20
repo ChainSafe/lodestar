@@ -157,13 +157,14 @@ test("validation returns before deferred handlers and only accepted messages are
       return Promise.resolve(job.messages.map(({data}) => verdictOf(data[0])));
     },
   });
-  // The first peer publishes; the second receives what the facade forwards.
-  const {network: facade, peers} = await facadeWithPeers(networkHost, 2);
+  // A peer holds at most two blocks in validation, so two peers publish two each; the last receives what the facade
+  // forwards.
+  const {network: facade, peers} = await facadeWithPeers(networkHost, 3);
   network = facade;
-  const [publisher, receiver] = peers;
+  const receiver = peers[2];
   try {
     for (let byte = 0; byte < COUNT; byte++)
-      await publisher.publishGossip(TOPIC, blockPayload(byte), {allowZeroPeers: false});
+      await peers[byte >> 1].publishGossip(TOPIC, blockPayload(byte), {allowZeroPeers: false});
     await vi.waitFor(() => expect(validated).toHaveLength(COUNT), {timeout: 10000});
     await vi.waitFor(() => expect(handled).toHaveLength(COUNT), {timeout: 10000});
     expect(validated.slice().sort((a, b) => a - b)).toEqual([...Array(COUNT).keys()]);
