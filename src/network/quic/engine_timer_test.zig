@@ -53,7 +53,8 @@ test "engine calls on_timeout only for keys whose quiche timer expired" {
     pair.now = readClock();
     const handles = try support.connectPair(&pair);
     try pair.pump();
-    var fired = pair.client.visits.timeouts;
+    const connected = pair.client.visits;
+    var fired = connected.timeouts;
     var closed = false;
     for (0..40) |_| {
         try std.Io.sleep(std.testing.io, .fromMilliseconds(25), .awake);
@@ -76,7 +77,7 @@ test "engine calls on_timeout only for keys whose quiche timer expired" {
     }
     try std.testing.expect(closed);
     try std.testing.expect(fired >= 1);
-    try std.testing.expect(pair.client.visits.timer >= pair.client.visits.timeouts);
+    try std.testing.expect(pair.client.visits.timer - connected.timer >= pair.client.visits.timeouts - connected.timeouts);
 }
 
 fn readClock() Engine.Now {
