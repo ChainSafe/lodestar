@@ -1,6 +1,7 @@
 import {createRequire} from "node:module";
 import {pathToFileURL} from "node:url";
 import {expect, it, vi} from "vitest";
+import {defer} from "@lodestar/utils";
 
 type Peer = {toString(): string};
 type Connection = {status: "open" | "closed"; id: string};
@@ -72,7 +73,7 @@ it("does not disconnect a newer identified peer after a deferred old peer-store 
     },
   });
   await f.identify("old");
-  const delayed = Promise.withResolvers<{protocols: string[]}>();
+  const delayed = defer<{protocols: string[]}>();
   f.setRead(() => delayed.promise);
   const old = f.emit("peer:disconnect", f.peer);
   await f.identify("new");
@@ -95,8 +96,8 @@ it("still notifies an ordinary final disconnect", async () => {
 it("does not continue obsolete protocol cleanup after reconnecting during another callback", async () => {
   const protocols = ["/meshsub/1.1.0", "/meshsub/1.2.0"];
   const f = fixture(protocols);
-  const entered = Promise.withResolvers<void>();
-  const release = Promise.withResolvers<void>();
+  const entered = defer<void>();
+  const release = defer<void>();
   const active = new Set<string>();
   for (const [index, protocol] of protocols.entries()) {
     await f.registrar.register(protocol, {
@@ -131,7 +132,7 @@ it("does not suppress a different peer's legitimate disconnect", async () => {
     },
   });
   await f.identify("old");
-  const delayed = Promise.withResolvers<{protocols: string[]}>();
+  const delayed = defer<{protocols: string[]}>();
   f.setRead(() => delayed.promise);
   const old = f.emit("peer:disconnect", f.peer);
   await f.identify("unrelated", {toString: () => "other-peer"});
@@ -144,8 +145,8 @@ it("does not suppress a different peer's legitimate disconnect", async () => {
 it("does not apply obsolete protocol removals after reconnect", async () => {
   const protocols = ["/meshsub/1.1.0", "/meshsub/1.2.0"];
   const f = fixture(protocols);
-  const entered = Promise.withResolvers<void>();
-  const release = Promise.withResolvers<void>();
+  const entered = defer<void>();
+  const release = defer<void>();
   const active = new Set<string>();
   for (const [index, protocol] of protocols.entries()) {
     await f.registrar.register(protocol, {

@@ -1,0 +1,24 @@
+{
+  "base": "3d90162",
+  "dependency": "libp2p@3.4.0",
+  "patch_sha256": "32d5d7bc49a2764bff171d07cb38664a07f5bfb81e9a7c7a82af144877813ced",
+  "tests": {
+    "old_dependency": {
+      "failed": 3,
+      "passed": 2
+    },
+    "patched_dependency": {
+      "failed": 0,
+      "passed": 5
+    },
+    "scope": "Actual delivered registrar runtime via installed package resolution, public constructor/register and connection/identify/update events; no implementation copy."
+  },
+  "typescript_compiler": "6.0.3",
+  "unmodified_source_transpile_matches_original_runtime": true,
+  "patched_runtime_source_map_and_declaration_generated": true,
+  "unrelated_dependency_versions_or_platform_entries_changed": false,
+  "full_lint_exit": 0,
+  "existing_lint_warnings": 7,
+  "typescript_workspace_build_excluding_native_exit": 0,
+  "runtime_fault_recovery_qualified": false
+}
