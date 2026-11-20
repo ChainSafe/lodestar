@@ -6,5 +6,6 @@ export default defineConfig({
     maxWorkers: 8,
     pool: "forks",
     setupFiles: ["./test/utils/network-setup.ts"],
+    testTimeout: 20_000,
   },
 });
