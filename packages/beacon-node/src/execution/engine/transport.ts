@@ -1,7 +1,18 @@
+import {BitArray} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix} from "@lodestar/types";
+import {
+  BlobsBundle,
+  ColumnIndex,
+  ExecutionPayload,
+  ExecutionRequests,
+  Root,
+  RootHex,
+  Wei,
+  bellatrix,
+} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {
+  BlobCellsAndProofs,
   ClientVersion,
   ForkchoiceUpdatedResult,
   PayloadAttributes,
@@ -42,7 +53,8 @@ export interface IEngineTransport {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
+    payloadAttributes?: PayloadAttributes,
+    custodyColumns?: BitArray
   ): Promise<ForkchoiceUpdatedResult>;
 
   getPayload(fork: ForkName, payloadId: PayloadId): Promise<GetPayloadResult>;
@@ -50,6 +62,10 @@ export interface IEngineTransport {
   getPayloadBodiesByHashV2(blockHashes: RootHex[]): Promise<(ExecutionPayloadBodyV2 | null)[]>;
 
   getBlobsV2(versionedHashes: VersionedHashes, buffers?: Uint8Array[]): Promise<BlobAndProofV2[] | null>;
+
+  getBlobsV4(versionedHashes: VersionedHashes, columns: ColumnIndex[]): Promise<(BlobCellsAndProofs | null)[] | null>;
+
+  exchangeCapabilities(methods: string[]): Promise<string[]>;
 
   getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]>;
 

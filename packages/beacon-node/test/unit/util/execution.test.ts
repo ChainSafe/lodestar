@@ -1,15 +1,21 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SerializedList} from "@chainsafe/ssz";
-import {createChainForkConfig} from "@lodestar/config";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {gloas, ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
+import {DataColumnSidecar, SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {BlockInputColumns} from "../../../src/chain/blocks/blockInput/index.js";
+import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
+import {ChainEvent, ChainEventEmitter} from "../../../src/chain/emitter.js";
 import {EnvelopeReconstructionError, EnvelopeReconstructionErrorCode} from "../../../src/chain/errors/index.js";
 import {BeaconDb} from "../../../src/db/beacon.js";
 import {encodeArchivedHeaderEnvelope} from "../../../src/db/repositories/index.js";
 import {ExecutionPayloadBodyV2} from "../../../src/execution/engine/types.js";
 import {IExecutionEngine} from "../../../src/execution/index.js";
 import {
+  DataColumnEngineResult,
+  getDataColumnSidecarsFromExecution,
   isRebuildMiss,
   reconstructExecutionPayloadEnvelopes,
   reconstructExecutionPayloadEnvelopesByRange,
@@ -266,5 +272,86 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
     if (!isRebuildMiss(result) || result.reason !== "unavailable") throw Error("expected an unavailable miss");
     expect(result.slot).toBe(10);
     expect(result.error.type.code).toBe(EnvelopeReconstructionErrorCode.BODY_UNAVAILABLE);
+  });
+});
+
+describe("getDataColumnSidecarsFromExecution", () => {
+  const config = createChainForkConfig({
+    ...defaultChainConfig,
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 0,
+    ELECTRA_FORK_EPOCH: 0,
+    FULU_FORK_EPOCH: 0,
+  });
+  const cell = (blob: number, column: number): Uint8Array => new Uint8Array(2048).fill(blob * 100 + column);
+  const proof = (blob: number, column: number): Uint8Array => new Uint8Array(48).fill(blob * 100 + column);
+
+  function createBlockInput(): BlockInputColumns {
+    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+    block.message.slot = 1;
+    block.message.body.blobKzgCommitments = [new Uint8Array(48), new Uint8Array(48).fill(1)];
+    return BlockInputColumns.createFromBlock({
+      block: block as SignedBeaconBlock<typeof ForkName.fulu>,
+      blockRootHex: toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message)),
+      forkName: ForkName.fulu,
+      daOutOfRange: false,
+      seenTimestampSec: 0,
+      source: BlockInputSource.gossip,
+      sampledColumns: [70, 3],
+      custodyColumns: [70, 3],
+    });
+  }
+
+  function cellsOf(columns: number[], missing?: {blob: number; column: number}) {
+    return [0, 1].map((blob) => ({
+      cells: columns.map((column) => (missing?.blob === blob && missing.column === column ? null : cell(blob, column))),
+      proofs: columns.map((column) =>
+        missing?.blob === blob && missing.column === column ? null : proof(blob, column)
+      ),
+    }));
+  }
+
+  it("builds the missing sampled columns from getBlobsV4 cells", async () => {
+    const getBlobs = vi.fn();
+    const getBlobsV4 = vi.fn(async (_hashes: Uint8Array[], columns: number[]) => cellsOf(columns));
+    const executionEngine = {getBlobs, getBlobsV4, supportsGetBlobsV4: () => true} as unknown as IExecutionEngine;
+    const emitter = new ChainEventEmitter();
+    const published: DataColumnSidecar[] = [];
+    emitter.on(ChainEvent.publishDataColumns, (sidecars) => published.push(...sidecars));
+    const input = createBlockInput();
+
+    const result = await getDataColumnSidecarsFromExecution(config, executionEngine, emitter, input, null);
+
+    expect(result).toBe(DataColumnEngineResult.SuccessResolved);
+    expect(getBlobs).not.toHaveBeenCalled();
+    expect(getBlobsV4).toHaveBeenCalledWith(input.getVersionedHashes(), [3, 70]);
+    expect(published.map((sidecar) => sidecar.index)).toEqual([3, 70]);
+    expect(input.hasAllData()).toBe(true);
+    for (const column of [3, 70]) {
+      const sidecar = input.getColumn(column);
+      expect(sidecar?.column).toEqual([cell(0, column), cell(1, column)]);
+      expect(sidecar?.kzgProofs).toEqual([proof(0, column), proof(1, column)]);
+    }
+  });
+
+  it("treats a missing cell as a miss", async () => {
+    const getBlobsV4 = vi.fn(async (_hashes: Uint8Array[], columns: number[]) =>
+      cellsOf(columns, {blob: 1, column: 70})
+    );
+    const executionEngine = {getBlobsV4, supportsGetBlobsV4: () => true} as unknown as IExecutionEngine;
+    const input = createBlockInput();
+
+    const result = await getDataColumnSidecarsFromExecution(
+      config,
+      executionEngine,
+      new ChainEventEmitter(),
+      input,
+      null
+    );
+
+    expect(result).toBe(DataColumnEngineResult.NullResponse);
+    expect(input.hasColumn(3)).toBe(false);
   });
 });

@@ -70,6 +70,9 @@ describe("REST engine compatibility", () => {
       if (method === "engine_getClientVersionV1") {
         return {jsonrpc: "2.0", id: 1, result: [{code: "XX", name: "Test EL", version: "1", commit: "0x12345678"}]};
       }
+      if (method === "engine_exchangeCapabilities") {
+        return {jsonrpc: "2.0", id: 1, result: []};
+      }
       requests.push(method);
       if (jsonRpcError) return {jsonrpc: "2.0", id: 1, error: jsonRpcError};
       if (method.startsWith("engine_getBlobs")) {

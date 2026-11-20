@@ -29,6 +29,16 @@ export class ExecutionEngineDisabled implements IExecutionEngine {
     throw Error("Execution engine disabled");
   }
 
+  supportsGetBlobsV4(): boolean {
+    return false;
+  }
+
+  getBlobsV4(): Promise<never> {
+    throw Error("Execution engine disabled");
+  }
+
+  setCustodyColumns(): void {}
+
   getInclusionList(): Promise<never> {
     throw Error("Execution engine disabled");
   }

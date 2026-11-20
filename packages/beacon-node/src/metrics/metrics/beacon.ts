@@ -378,6 +378,19 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Duration of engine_getBlobsV2 requests",
         buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
       }),
+      getBlobsV4Requests: register.counter({
+        name: "beacon_engine_getBlobsV4_requests_total",
+        help: "Total number of engine_getBlobsV4 requests sent",
+      }),
+      getBlobsV4Responses: register.counter({
+        name: "beacon_engine_getBlobsV4_responses_total",
+        help: "Total number of engine_getBlobsV4 responses with every requested cell",
+      }),
+      getBlobsV4RequestDuration: register.histogram({
+        name: "beacon_engine_getBlobsV4_request_duration_seconds",
+        help: "Duration of engine_getBlobsV4 requests",
+        buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
+      }),
       custodyGroupCount: register.gauge({
         name: "beacon_custody_groups",
         help: "Total number of custody groups within a node",

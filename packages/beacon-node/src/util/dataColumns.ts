@@ -38,6 +38,8 @@ import {NodeId} from "../network/subnets/index.js";
 import {dataColumnMatrixRecovery} from "./blobs.js";
 import {kzg} from "./kzg.js";
 
+const ALL_COLUMN_INDICES: ColumnIndex[] = Array.from({length: NUMBER_OF_COLUMNS}, (_, i) => i);
+
 export enum RecoverResult {
   // the recover is not attempted because we have less than `NUMBER_OF_COLUMNS / 2` columns
   NotAttemptedLessThanHalf = "not_attempted_less_than_half",
@@ -294,14 +296,15 @@ export function getFuluDataColumnSidecars(
   signedBlockHeader: SignedBeaconBlockHeader,
   kzgCommitments: deneb.KZGCommitment[],
   kzgCommitmentsInclusionProof: fulu.KzgCommitmentsInclusionProof,
-  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
+  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[],
+  columnIndices: ColumnIndex[] = ALL_COLUMN_INDICES
 ): fulu.DataColumnSidecar[] {
   if (cellsAndKzgProofs.length !== kzgCommitments.length) {
     throw Error("Invalid cellsAndKzgProofs length for getDataColumnSidecars");
   }
 
   const sidecars: fulu.DataColumnSidecar[] = [];
-  for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+  for (const columnIndex of columnIndices) {
     const columnCells = [];
     const columnProofs = [];
     for (const {cells, proofs} of cellsAndKzgProofs) {
@@ -331,7 +334,8 @@ export function getFuluDataColumnSidecars(
 export function getDataColumnSidecarsFromBlock(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock<ForkPostFulu>,
-  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
+  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[],
+  columnIndices: ColumnIndex[] = ALL_COLUMN_INDICES
 ): DataColumnSidecar[] {
   const fork = config.getForkName(signedBlock.message.slot);
   const blobKzgCommitments = getBlobKzgCommitments(fork, signedBlock);
@@ -343,7 +347,7 @@ export function getDataColumnSidecarsFromBlock(
 
   if (isForkPostGloas(fork)) {
     const beaconBlockRoot = config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message);
-    return getGloasDataColumnSidecars(signedBlock.message.slot, beaconBlockRoot, cellsAndKzgProofs);
+    return getGloasDataColumnSidecars(signedBlock.message.slot, beaconBlockRoot, cellsAndKzgProofs, columnIndices);
   }
 
   const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
@@ -353,7 +357,8 @@ export function getDataColumnSidecarsFromBlock(
     signedBlockHeader,
     blobKzgCommitments,
     kzgCommitmentsInclusionProof,
-    cellsAndKzgProofs
+    cellsAndKzgProofs,
+    columnIndices
   );
 }
 
@@ -367,17 +372,19 @@ export function getDataColumnSidecarsFromBlock(
  */
 export function getDataColumnSidecarsFromColumnSidecar(
   sidecar: DataColumnSidecar,
-  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
+  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[],
+  columnIndices: ColumnIndex[] = ALL_COLUMN_INDICES
 ): DataColumnSidecar[] {
   if (isGloasDataColumnSidecar(sidecar)) {
-    return getGloasDataColumnSidecars(sidecar.slot, sidecar.beaconBlockRoot, cellsAndKzgProofs);
+    return getGloasDataColumnSidecars(sidecar.slot, sidecar.beaconBlockRoot, cellsAndKzgProofs, columnIndices);
   }
 
   return getFuluDataColumnSidecars(
     sidecar.signedBlockHeader,
     sidecar.kzgCommitments,
     sidecar.kzgCommitmentsInclusionProof,
-    cellsAndKzgProofs
+    cellsAndKzgProofs,
+    columnIndices
   );
 }
 
@@ -399,7 +406,8 @@ export function getDataColumnSidecarSlot(sidecar: DataColumnSidecar): Slot {
 export function getGloasDataColumnSidecars(
   slot: Slot,
   beaconBlockRoot: Root,
-  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
+  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[],
+  columnIndices: ColumnIndex[] = ALL_COLUMN_INDICES
 ): gloas.DataColumnSidecar[] {
   // No need to create data column sidecars if there are no blobs
   if (cellsAndKzgProofs.length === 0) {
@@ -407,7 +415,7 @@ export function getGloasDataColumnSidecars(
   }
 
   const sidecars: gloas.DataColumnSidecar[] = [];
-  for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+  for (const columnIndex of columnIndices) {
     const column: Uint8Array[] = [];
     const kzgProofs: Uint8Array[] = [];
     for (const {cells, proofs} of cellsAndKzgProofs) {

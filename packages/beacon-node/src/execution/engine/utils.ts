@@ -1,3 +1,5 @@
+import {BitArray} from "@chainsafe/ssz";
+import {CELLS_PER_EXT_BLOB} from "@lodestar/params";
 import {bigIntToBytes, bytesToBigInt, fromHex, fromHexInto, isErrorAborted, isFetchError, toHex} from "@lodestar/utils";
 import {isQueueErrorAborted} from "../../util/queue/errors.js";
 import {ExecutionEngineState, ExecutionPayloadStatus} from "./interface.js";
@@ -112,6 +114,14 @@ export function dataToBytes(hex: DATA, fixedLength: number | null): Uint8Array {
  * Convert DATA into a preallocated buffer
  * fromHexInto will throw if buffer's length is not the same as the decoded hex length
  */
+export function columnsToBitArray(columns: number[]): BitArray {
+  const bits = BitArray.fromBitLen(CELLS_PER_EXT_BLOB);
+  for (const column of columns) {
+    bits.set(column, true);
+  }
+  return bits;
+}
+
 export function dataIntoBytes(hex: DATA, buffer: Uint8Array): Uint8Array {
   fromHexInto(hex, buffer);
   return buffer;

@@ -54,7 +54,7 @@ describe("GetBlobsTracker", () => {
     getBlobs = vi.fn().mockResolvedValue(null);
     tracker = new GetBlobsTracker({
       logger: testLogger(),
-      executionEngine: {getBlobs} as unknown as IExecutionEngine,
+      executionEngine: {getBlobs, supportsGetBlobsV4: () => false} as unknown as IExecutionEngine,
       emitter: new ChainEventEmitter(),
       metrics: null,
       config,
@@ -182,7 +182,7 @@ describe("GetBlobsTracker", () => {
     beforeEach(() => {
       gloasTracker = new GetBlobsTracker({
         logger: testLogger(),
-        executionEngine: {getBlobs} as unknown as IExecutionEngine,
+        executionEngine: {getBlobs, supportsGetBlobsV4: () => false} as unknown as IExecutionEngine,
         emitter: new ChainEventEmitter(),
         metrics: null,
         config: gloasConfig,

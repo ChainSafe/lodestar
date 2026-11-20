@@ -1,6 +1,7 @@
-import {Type} from "@chainsafe/ssz";
+import {BitArray, Type} from "@chainsafe/ssz";
 import {CELLS_PER_EXT_BLOB, ForkName, ForkSeq, isForkPostBellatrix} from "@lodestar/params";
 import {
+  ColumnIndex,
   ExecutionPayload,
   ExecutionRequests,
   Root,
@@ -15,6 +16,7 @@ import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {EndTimer, LodestarError, fromHex, strip0xPrefix, toHex, toRootHex} from "@lodestar/utils";
 import {isValidBlobVersionedHashes} from "./blobVersionedHashes.js";
 import {
+  BlobCellsAndProofs,
   ClientCode,
   ClientVersion,
   ExecutionPayloadStatus,
@@ -29,6 +31,8 @@ import {EngineRestHttpClient, EngineRestResponseError} from "./restHttpClient.js
 import {
   BlobsRequest,
   BlobsV2Response,
+  BlobsV4Request,
+  BlobsV4Response,
   BodiesByHashRequest,
   BodiesResponseBellatrix,
   BodiesResponseCapella,
@@ -65,6 +69,7 @@ import {
   deserializeExecutionRequestsFromBytes,
   serializeExecutionRequestsToBytes,
 } from "./types.js";
+import {columnsToBitArray} from "./utils.js";
 
 export type EngineCapabilities = {
   supportedForks: Set<string>;
@@ -89,6 +94,7 @@ const forkchoiceUpdatedOpts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
 const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
+const getBlobsV4Opts: ReqOpts = {routeId: "getBlobsV4"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
 const getCapabilitiesOpts: ReqOpts = {routeId: "getCapabilities", retries: 0};
 
@@ -241,7 +247,8 @@ export class RestEngineTransport implements IEngineTransport {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
+    payloadAttributes?: PayloadAttributes,
+    custodyColumns?: BitArray
   ): Promise<ForkchoiceUpdatedResult> {
     const forkchoiceState = {
       headBlockHash: fromHex(headBlockHash),
@@ -254,7 +261,7 @@ export class RestEngineTransport implements IEngineTransport {
       body = ForkchoiceUpdateGloas.serialize({
         forkchoiceState,
         payloadAttributes: payloadAttributes ? [toPayloadAttributesGloas(fork, payloadAttributes)] : [],
-        custodyColumns: [],
+        custodyColumns: custodyColumns !== undefined ? [custodyColumns] : [],
       });
     } else if (ForkSeq[fork] >= ForkSeq.deneb) {
       body = ForkchoiceUpdateDeneb.serialize({
@@ -415,6 +422,55 @@ export class RestEngineTransport implements IEngineTransport {
       }
       return contents;
     });
+  }
+
+  /** Cells are views into the response body, only the requested ones are kept */
+  async getBlobsV4(
+    versionedHashes: VersionedHashes,
+    columns: ColumnIndex[]
+  ): Promise<(BlobCellsAndProofs | null)[] | null> {
+    assertReqSizeLimit(versionedHashes.length, this.limits.blobsMaxVersionedHashes);
+
+    const res = await this.client.request(
+      {
+        method: "POST",
+        path: "/blobs/v4",
+        body: BlobsV4Request.serialize({versionedHashes, indicesBitarray: columnsToBitArray(columns)}),
+        responseType: "ssz",
+      },
+      getBlobsV4Opts
+    );
+    if (res.status === 204) {
+      return null;
+    }
+
+    const {entries} = deserializeResponse(BlobsV4Response, res.body, "getBlobsV4", this.metrics, {reuseBytes: true});
+    if (entries.length !== versionedHashes.length) {
+      throw Error(`Invalid blobs/v4 response length=${entries.length} versionedHashes=${versionedHashes.length}`);
+    }
+
+    return entries.map(({available, contents}) => {
+      if (!available) {
+        return null;
+      }
+      if (contents.blobCells.length !== CELLS_PER_EXT_BLOB || contents.proofs.length !== CELLS_PER_EXT_BLOB) {
+        throw Error(
+          `Invalid blobs/v4 entry cells=${contents.blobCells.length} proofs=${contents.proofs.length}, expected ${CELLS_PER_EXT_BLOB}`
+        );
+      }
+      const cells = columns.map((column) => contents.blobCells[column][0] ?? null);
+      const proofs = columns.map((column) => contents.proofs[column][0] ?? null);
+      for (let i = 0; i < columns.length; i++) {
+        if ((cells[i] === null) !== (proofs[i] === null)) {
+          throw Error(`Invalid blobs/v4 entry, cell ${columns[i]} without its proof`);
+        }
+      }
+      return {cells, proofs};
+    });
+  }
+
+  exchangeCapabilities(): Promise<string[]> {
+    throw Error("engine_exchangeCapabilities is not available over the REST engine API");
   }
 
   async getClientVersion(_clientVersion: ClientVersion): Promise<ClientVersion[]> {

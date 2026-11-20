@@ -1,7 +1,16 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostFulu} from "@lodestar/params";
-import {DataColumnSidecar, SignedBeaconBlock, Slot, gloas, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
+import {ForkPostFulu, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {
+  ColumnIndex,
+  DataColumnSidecar,
+  SignedBeaconBlock,
+  Slot,
+  fulu,
+  gloas,
+  isGloasDataColumnSidecar,
+  ssz,
+} from "@lodestar/types";
 import {Logger, fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
@@ -13,7 +22,7 @@ import {
 } from "../chain/errors/envelopeReconstructionError.js";
 import {IBeaconDb} from "../db/index.js";
 import {ArchivedEnvelope, decodeArchivedEnvelope} from "../db/repositories/index.js";
-import {IExecutionEngine} from "../execution/index.js";
+import {BlobCellsAndProofs, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {
   getCellsAndProofs,
@@ -39,14 +48,14 @@ export enum DataColumnEngineResult {
 }
 
 /**
- * Call getBlobsV2 from execution engine once per slot to fetch blobs and compute data columns.
+ * Call getBlobsV4, or getBlobsV2 if the execution client does not serve it, to build the missing sampled columns.
  *
  * Post fulu, whenever we see either beacon_block or data_column_sidecar gossip message and data isn't complete.
  * Post gloas, immediately when beacon block is successfully imported and PayloadEnvelopeInput is created.
  */
 export async function getDataColumnSidecarsFromExecution(
   config: ChainForkConfig,
-  executionEngine: Pick<IExecutionEngine, "getBlobs">,
+  executionEngine: Pick<IExecutionEngine, "getBlobs" | "getBlobsV4" | "supportsGetBlobsV4">,
   emitter: ChainEventEmitter,
   input: IBlockInput | PayloadEnvelopeInput,
   metrics: Metrics | null,
@@ -71,46 +80,63 @@ export async function getDataColumnSidecarsFromExecution(
     return DataColumnEngineResult.NotAttemptedNoBlobs;
   }
 
-  // Get blobs from execution engine
-  metrics?.peerDas.getBlobsV2Requests.inc();
-  const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
-  const blobs = await executionEngine.getBlobs(input.forkName as ForkPostFulu, versionedHashes, blobAndProofBuffers);
-  timer?.();
+  let blobs: fulu.BlobAndProofV2[] | null = null;
+  let cellsAndProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[] | null = null;
+  let columns: ColumnIndex[];
+  if (executionEngine.supportsGetBlobsV4()) {
+    // The execution client answers in ascending column order
+    columns = [...input.getMissingSampledColumnMeta().missing].sort((a, b) => a - b);
+    metrics?.peerDas.getBlobsV4Requests.inc();
+    const timer = metrics?.peerDas.getBlobsV4RequestDuration.startTimer();
+    const blobCells = await executionEngine.getBlobsV4(versionedHashes, columns);
+    timer?.();
 
-  // Execution engine was unable to find one or more blobs
-  if (blobs === null) {
-    return DataColumnEngineResult.NullResponse;
+    cellsAndProofs = blobCells !== null ? toColumnIndexedCells(blobCells, columns) : null;
+    if (cellsAndProofs === null) {
+      return DataColumnEngineResult.NullResponse;
+    }
+    metrics?.peerDas.getBlobsV4Responses.inc();
+  } else {
+    metrics?.peerDas.getBlobsV2Requests.inc();
+    const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
+    blobs = await executionEngine.getBlobs(input.forkName as ForkPostFulu, versionedHashes, blobAndProofBuffers);
+    timer?.();
+
+    // Execution engine was unable to find one or more blobs
+    if (blobs === null) {
+      return DataColumnEngineResult.NullResponse;
+    }
+    metrics?.peerDas.getBlobsV2Responses.inc();
+    columns = input.getMissingSampledColumnMeta().missing;
   }
-  metrics?.peerDas.getBlobsV2Responses.inc();
 
   // Return if we received all data columns while waiting for getBlobs
   if (input.hasAllData()) {
     return DataColumnEngineResult.SuccessLate;
   }
 
-  let dataColumnSidecars: DataColumnSidecar[];
+  let sampledColumns: DataColumnSidecar[];
   const compTimer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
   try {
-    const cellsAndProofs = await getCellsAndProofs(blobs);
+    cellsAndProofs ??= await getCellsAndProofs(blobs ?? []);
     if (isPayloadInput) {
-      dataColumnSidecars = getGloasDataColumnSidecars(input.slot, fromHex(input.blockRootHex), cellsAndProofs);
+      sampledColumns = getGloasDataColumnSidecars(input.slot, fromHex(input.blockRootHex), cellsAndProofs, columns);
     } else if (input.hasBlock()) {
-      dataColumnSidecars = getDataColumnSidecarsFromBlock(
+      sampledColumns = getDataColumnSidecarsFromBlock(
         config,
         input.getBlock() as SignedBeaconBlock<ForkPostFulu>,
-        cellsAndProofs
+        cellsAndProofs,
+        columns
       );
     } else {
       const firstSidecar = input.getAllColumns()[0];
-      dataColumnSidecars = getDataColumnSidecarsFromColumnSidecar(firstSidecar, cellsAndProofs);
+      sampledColumns = getDataColumnSidecarsFromColumnSidecar(firstSidecar, cellsAndProofs, columns);
     }
   } finally {
     compTimer?.();
   }
 
   // Publish columns if and only if subscribed to them
-  const previouslyMissingColumns = input.getMissingSampledColumnMeta().missing;
-  const sampledColumns = previouslyMissingColumns.map((columnIndex) => dataColumnSidecars[columnIndex]);
 
   // for columns we have already seen, publishDataColumnSidecar() catches PublishError.Duplicate and marks alreadyPublished=true
   emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
@@ -160,9 +186,38 @@ export async function getDataColumnSidecarsFromExecution(
 
   metrics?.dataColumns.bySource.inc(
     {source: BlockInputSource.engine},
-    previouslyMissingColumns.length - alreadyAddedColumnsCount
+    sampledColumns.length - alreadyAddedColumnsCount
   );
   return DataColumnEngineResult.SuccessResolved;
+}
+
+/**
+ * Spreads the cells of a getBlobsV4 answer over column indices. Without partial columns a column needs
+ * the cell of every blob, so a missing blob or cell is a miss.
+ */
+function toColumnIndexedCells(
+  blobCells: (BlobCellsAndProofs | null)[],
+  columns: ColumnIndex[]
+): {cells: Uint8Array[]; proofs: Uint8Array[]}[] | null {
+  const cellsAndProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[] = [];
+  for (const blob of blobCells) {
+    if (blob === null) {
+      return null;
+    }
+    const cells = new Array<Uint8Array>(NUMBER_OF_COLUMNS);
+    const proofs = new Array<Uint8Array>(NUMBER_OF_COLUMNS);
+    for (let i = 0; i < columns.length; i++) {
+      const cell = blob.cells[i];
+      const proof = blob.proofs[i];
+      if (cell === null || proof === null) {
+        return null;
+      }
+      cells[columns[i]] = cell;
+      proofs[columns[i]] = proof;
+    }
+    cellsAndProofs.push({cells, proofs});
+  }
+  return cellsAndProofs;
 }
 
 /** engine_getPayloadBodiesByHashV2: every EL must accept requests of up to 32 hashes, larger ones may fail with -38004 */
