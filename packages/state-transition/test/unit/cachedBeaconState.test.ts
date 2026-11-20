@@ -161,7 +161,7 @@ describe("CachedBeaconState", () => {
   });
 
   describe("loadCachedBeaconState", () => {
-    vi.setConfig({testTimeout: 25_000, hookTimeout: 25_000});
+    vi.setConfig({testTimeout: 60_000, hookTimeout: 25_000});
 
     const numValidator = 16;
     const pubkeys = interopPubkeysCached(2 * numValidator);

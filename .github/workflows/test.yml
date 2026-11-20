@@ -132,13 +132,27 @@ jobs:
           path: packages/state-transition/test-cache/interop-pubkeys.pkix
           key: ${{ steps.interop-pubkey-cache.outputs.cache-primary-key }}
 
+      - name: Check coverage output
+        run: test -s coverage/lcov.info
+
       - name: Upload coverage data
+        if: ${{ github.repository == 'ChainSafe/lodestar' }}
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
           verbose: true # optional (default = false)
           flags: "unit"
+
+      - name: Retain fork coverage data
+        if: ${{ github.repository != 'ChainSafe/lodestar' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unit-coverage-${{ matrix.node }}-${{ strategy.job-index }}
+          path: coverage/lcov.info
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
 
   e2e-tests:
     name: E2E Tests

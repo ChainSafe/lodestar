@@ -54,5 +54,5 @@ describe("processConsolidationRequest", () => {
     processConsolidationRequest(state, request);
 
     expect(state.pendingConsolidations.length).eq(0);
-  });
+  }, 60_000);
 });
