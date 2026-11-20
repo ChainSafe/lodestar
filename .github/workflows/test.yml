@@ -458,6 +458,7 @@ jobs:
         run: |
           sudo ifconfig lo0 alias 127.0.0.2
           sudo ifconfig lo0 alias 127.0.0.3
+
       - name: Run discovery and network tests
         run: |
           zig build test:fault_io
