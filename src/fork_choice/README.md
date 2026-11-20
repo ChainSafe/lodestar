@@ -19,7 +19,7 @@ and what is still missing. It stays here while the rewrite is under review;
 | `fast_confirmation.zig`            | Fast confirmation rule: the spec `FastConfirmationStore` and one run per slot      | `get_fast_confirmation_store`, `on_fast_confirmation`, `get_latest_confirmed`, `find_latest_confirmed_descendant`, `is_one_confirmed`, `is_confirmed_chain_safe`, the FFG helpers, `get_safe_execution_block_hash`                                                                              |
 | `store_test.zig`                   | Unit tests on a real two-branch chain                                              |                                                                                                                                                                                                                                                                                                 |
 | `test/spec/runner/fork_choice.zig` | Spec vector runner, plays the role of `block_states` and `checkpoint_states`       |                                                                                                                                                                                                                                                                                                 |
-| `bench/fork_choice/`               | `getHead` and `onAttestation` benchmarks, including mainnet-shaped `getHead` cases |                                                                                                                                                                                                                                                                                                 |
+| `bench/fork_choice/`               | `getHead`, `onAttestation` and `onBlock` benchmarks, with mainnet-shaped `getHead` |                                                                                                                                                                                                                                                                                                 |
 
 Every helper keeps its spec name in camelCase so the Zig and the Python read side
 by side.
@@ -52,11 +52,13 @@ loads the balances of an unrealized justified checkpoint that gets ahead of the
 justified one, and the store holds them until an epoch start pulls the checkpoint up,
 so `onTick` never loads and cannot fail after genesis.
 
-Only the vote accounting is carried between calls: the per-node vote totals, the
-target each validator's vote is counted on, and a bitset with a count of the
-validators whose vote or weight changed since the last call. Weights, viability and
-best children live in scratch arrays that every `getHead` rebuilds from those totals;
-a `dirty` flag on the cache makes repeated reads free.
+Two things are carried between calls. The vote accounting: the per-node vote totals,
+the target each validator's vote is counted on, and a bitset with a count of the
+validators whose vote or weight changed since the last call. And each node's execution
+status: a new block derives its own from its parent, and a verdict change derives them
+again from the first block it touched. Weights, viability and best children live in
+scratch arrays that every `getHead` rebuilds; a `dirty` flag on the cache makes
+repeated reads free.
 
 ### Head computation
 
@@ -97,8 +99,9 @@ the bid names, and the fork transition needs no special case.
 
 A node derived `invalid` is treated as removed: it is never viable, its weight never
 reaches its parent, a proposer boost on it is dropped, and a justified checkpoint on
-it makes `getHead` fail, which also fails every later import; the spec allows a node
-to exit there and proto-array does the same. Two entry points change the facts:
+it makes `getHead` fail, which also fails the import of a timely first block, the one
+import that takes the head; the spec allows a node to exit there and proto-array does
+the same. Two entry points change the facts:
 
 - `onPayloadValid(block_hash)` and a `.valid` verdict on `onBlock` or
   `onExecutionPayloadEnvelope` mark every `syncing` payload below the node `valid`,

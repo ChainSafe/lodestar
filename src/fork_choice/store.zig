@@ -623,6 +623,9 @@ pub const Store = struct {
         try self.blocks.ensureUnusedCapacity(self.allocator, 1);
         try self.ptc_votes.ensureUnusedCapacity(self.allocator, 1);
         try self.index_by_root.ensureUnusedCapacity(self.allocator, 1);
+        if (self.head_cache.execution_stale_from == NO_BLOCK) {
+            try self.head_cache.execution.ensureUnusedCapacity(self.allocator, NODES_PER_BLOCK);
+        }
     }
 
     fn appendBlockAssumeCapacity(self: *Store, block: Block) void {
@@ -630,6 +633,7 @@ pub const Store = struct {
         self.index_by_root.putAssumeCapacityNoClobber(block.root, index);
         self.blocks.appendAssumeCapacity(block);
         self.ptc_votes.appendAssumeCapacity(@splat(.{}));
+        if (self.head_cache.execution_stale_from == NO_BLOCK) head_mod.appendBlockExecution(self, index);
         self.head_cache.dirty = true;
     }
 
@@ -911,9 +915,14 @@ pub const Store = struct {
         try checkExecutionStatus(summary);
         const parent = self.blockIndex(summary.parent_root).?;
 
-        const head = try self.getHead();
+        try head_mod.ensureExecution(self);
         const parent_node: ForkChoiceNode = .{ .block = parent, .payload_status = self.parentPayloadStatus(summary, parent) };
         if (head_mod.execution(self, parent_node) == .invalid) return error.ParentPayloadInvalid;
+
+        // Spec `on_block` takes the head before adding the block for `update_proposer_boost_root`
+        // alone, whose result it changes only for a timely first block. Other blocks skip it.
+        const timely = self.blockTimeliness(summary.slot, summary.arrival_ms_into_slot orelse self.timeIntoSlotMs());
+        const boost_head: ?BlockIndex = if (self.mayTakeProposerBoost(timely)) (try self.getHead()).block else null;
 
         // Spec `update_checkpoints` for the block, then `compute_pulled_up_tip`:
         // `update_unrealized_checkpoints`, and `update_checkpoints` again for a block from a
@@ -956,8 +965,8 @@ pub const Store = struct {
                 votes[position] = .{ .voted = true, .payload_present = message.payload_present, .blob_data_available = message.blob_data_available };
             }
         }
-        self.recordBlockTimeliness(index, summary.arrival_ms_into_slot orelse self.timeIntoSlotMs());
-        self.updateProposerBoostRoot(head.block, index);
+        self.blocks.items(.timely)[index] = timely;
+        self.updateProposerBoostRoot(boost_head, index);
         self.commitCheckpoints(&checkpoints);
     }
 
@@ -968,24 +977,30 @@ pub const Store = struct {
         return if (std.mem.eql(u8, &summary.bid_parent_block_hash, &parent_payload_block_hash)) .full else .empty;
     }
 
-    /// Spec `record_block_timeliness`.
-    fn recordBlockTimeliness(self: *Store, index: BlockIndex, time_into_slot_ms: u64) void {
-        const is_current_slot = self.currentSlot() == self.blockSlot(index);
-        self.blocks.items(.timely)[index] = .{
+    /// Spec `record_block_timeliness`, for a block at `slot`.
+    fn blockTimeliness(self: *const Store, slot: Slot, time_into_slot_ms: u64) [2]bool {
+        const is_current_slot = self.currentSlot() == slot;
+        return .{
             is_current_slot and time_into_slot_ms < self.attestationDueMs(),
             is_current_slot and time_into_slot_ms < self.payloadAttestationDueMs(),
         };
     }
 
-    /// Spec `update_proposer_boost_root`.
-    fn updateProposerBoostRoot(self: *Store, head: BlockIndex, index: BlockIndex) void {
+    /// Spec `update_proposer_boost_root` up to the dependent root check: `is_timely` and
+    /// `is_first_block`.
+    fn mayTakeProposerBoost(self: *const Store, timely: [2]bool) bool {
         const is_first_block = std.mem.eql(u8, &self.proposer_boost_root, &constants.ZERO_HASH);
-        const is_timely = self.blocks.items(.timely)[index][ATTESTATION_TIMELINESS_INDEX];
+        return timely[ATTESTATION_TIMELINESS_INDEX] and is_first_block;
+    }
+
+    /// Spec `update_proposer_boost_root`. `head` is the head before the block was added,
+    /// null when `mayTakeProposerBoost` did not hold.
+    fn updateProposerBoostRoot(self: *Store, head: ?BlockIndex, index: BlockIndex) void {
+        const head_block = head orelse return;
         const epoch = self.currentEpoch();
-        const head_dependent_root = self.getShufflingDependentRoot(head, epoch);
+        const head_dependent_root = self.getShufflingDependentRoot(head_block, epoch);
         const block_dependent_root = self.getShufflingDependentRoot(index, epoch);
-        const is_same_dependent_root = std.mem.eql(u8, &head_dependent_root, &block_dependent_root);
-        if (is_timely and is_first_block and is_same_dependent_root) {
+        if (std.mem.eql(u8, &head_dependent_root, &block_dependent_root)) {
             self.proposer_boost_root = self.blockRoot(index);
             self.head_cache.dirty = true;
         }
@@ -1312,7 +1327,10 @@ pub const Store = struct {
         if (execution_status == .valid and parent != NO_BLOCK) {
             try self.markChainValid(.{ .block = parent, .payload_status = self.blocks.items(.parent_payload_status)[block] });
         }
-        if (statuses[block] != .valid) statuses[block] = execution_status;
+        if (statuses[block] != .valid and statuses[block] != execution_status) {
+            statuses[block] = execution_status;
+            head_mod.invalidateExecution(self, block);
+        }
         if (inclusion_list_satisfied) |satisfied| {
             self.blocks.items(.inclusion_list_satisfaction)[block] = if (satisfied) .satisfied else .unsatisfied;
         }
@@ -1385,9 +1403,17 @@ pub const Store = struct {
         const validates_root_base = reached_root and self.root_base_status == .syncing;
         if (count == 0 and !validates_root_base) return;
         chain = self.payloadChain(node);
-        while (count > 0) : (count -= 1) statuses[chain.next().?] = .valid;
-        if (validates_root_base) self.root_base_status = .valid;
-        self.head_cache.dirty = true;
+        var lowest: BlockIndex = NO_BLOCK;
+        while (count > 0) : (count -= 1) {
+            const block = chain.next().?;
+            statuses[block] = .valid;
+            lowest = @min(lowest, block);
+        }
+        if (validates_root_base) {
+            self.root_base_status = .valid;
+            lowest = 0;
+        }
+        head_mod.invalidateExecution(self, lowest);
     }
 
     /// Optimistic sync `NOT_VALIDATED -> INVALIDATED` from an engine `INVALID` verdict on
@@ -1430,15 +1456,18 @@ pub const Store = struct {
                 .syncing, .invalid => {},
             }
         }
-        for (hashes, statuses) |*hash, *status| {
-            if (invalid_hashes.contains(hash.*)) status.* = .invalid;
+        var lowest: BlockIndex = NO_BLOCK;
+        for (hashes, statuses, 0..) |*hash, *status, i| {
+            if (!invalid_hashes.contains(hash.*)) continue;
+            status.* = .invalid;
+            lowest = @min(lowest, @as(BlockIndex, @intCast(i)));
         }
-        self.head_cache.dirty = true;
+        head_mod.invalidateExecution(self, lowest);
     }
 
-    /// The worst engine verdict on the payloads `node` stands on, valid after `getHead`.
+    /// The worst engine verdict on the payloads `node` stands on.
     pub fn executionStatus(self: *Store, node: ForkChoiceNode) !ExecutionStatus {
-        try head_mod.ensureComputed(self);
+        try head_mod.ensureExecution(self);
         return head_mod.execution(self, node);
     }
 
@@ -1552,7 +1581,7 @@ pub const Store = struct {
         for (self.blocks.items(.root), 0..) |root, i| {
             self.index_by_root.putAssumeCapacityNoClobber(root, @intCast(i));
         }
-        self.head_cache.dirty = true;
+        head_mod.invalidateExecution(self, 0);
         return n - kept;
     }
 

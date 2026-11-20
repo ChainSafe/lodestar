@@ -133,6 +133,32 @@ fn payloadHash(slot: u64) [32]u8 {
     return hash;
 }
 
+/// The chain's block at `slot`, built on the block at `slot - 1`. The chain justifies every
+/// epoch: a block in epoch E has realized checkpoints (E-1, E-2) and unrealized (E, E-1),
+/// so the store's checkpoints follow the tip and the whole chain stays viable however far
+/// the clock has advanced.
+pub fn chainBlock(slot: u64, gloas: bool) fork_choice.store.BlockSummary {
+    const root = rootFromSlot(slot);
+    const epoch = slot / preset.SLOTS_PER_EPOCH;
+    const justified = epochCheckpoint(epoch -| 1);
+    return .{
+        .root = root,
+        .parent_root = rootFromSlot(slot - 1),
+        .slot = slot,
+        .proposer_index = 0,
+        .state_root = root,
+        .fork = if (gloas) .gloas else .electra,
+        .justified_checkpoint = justified,
+        .finalized_checkpoint = epochCheckpoint(epoch -| 2),
+        .unrealized_justified_checkpoint = epochCheckpoint(epoch),
+        .unrealized_finalized_checkpoint = justified,
+        .payload_block_hash = if (gloas) payloadHash(slot) else ZERO_HASH,
+        .execution_status = if (gloas) .syncing else .pre_merge,
+        // Each block builds on the parent's payload, so Gloas chains link FULL variants.
+        .bid_parent_block_hash = if (gloas) payloadHash(slot - 1) else ZERO_HASH,
+    };
+}
+
 /// A store with blocks at slots `0 .. initial_block_count - 1`, the clock at
 /// `initial_block_count`, and the first `initial_equivocated_count` validators equivocating.
 pub fn initStore(allocator: Allocator, opts: Opts) !Bench {
@@ -167,35 +193,12 @@ pub fn initStore(allocator: Allocator, opts: Opts) !Bench {
     // Every Gloas block builds on its parent's payload, so each payload must be verified first.
     if (opts.gloas_boosted) try store.onExecutionPayloadEnvelope(anchor_root, .valid, null);
 
-    // A chain that justifies every epoch: a block in epoch E has realized checkpoints
-    // (E-1, E-2) and unrealized (E, E-1), so the store's checkpoints follow the tip and
-    // the whole chain stays viable however far the clock has advanced.
-    var parent_root = anchor_root;
     for (1..opts.initial_block_count) |slot| {
-        const root = rootFromSlot(slot);
-        const epoch = slot / preset.SLOTS_PER_EPOCH;
-        const justified = epochCheckpoint(epoch -| 1);
-        try store.onBlockSummary(.{
-            .root = root,
-            .parent_root = parent_root,
-            .slot = slot,
-            .proposer_index = 0,
-            .state_root = root,
-            .fork = fork,
-            .justified_checkpoint = justified,
-            .finalized_checkpoint = epochCheckpoint(epoch -| 2),
-            .unrealized_justified_checkpoint = epochCheckpoint(epoch),
-            .unrealized_finalized_checkpoint = justified,
-            .payload_block_hash = if (opts.gloas_boosted) payloadHash(slot) else ZERO_HASH,
-            .execution_status = if (opts.gloas_boosted) .syncing else .pre_merge,
-            // Each block builds on the parent's payload, so Gloas chains link FULL variants.
-            .bid_parent_block_hash = if (opts.gloas_boosted) payloadHash(slot - 1) else ZERO_HASH,
-        });
-        if (opts.gloas_boosted) try store.onExecutionPayloadEnvelope(root, .valid, null);
-        parent_root = root;
+        try store.onBlockSummary(chainBlock(slot, opts.gloas_boosted));
+        if (opts.gloas_boosted) try store.onExecutionPayloadEnvelope(rootFromSlot(slot), .valid, null);
     }
 
-    if (opts.gloas_boosted) store.proposer_boost_root = parent_root;
+    if (opts.gloas_boosted) store.proposer_boost_root = rootFromSlot(opts.initial_block_count - 1);
 
     if (opts.initial_equivocated_count > 0) {
         try store.equivocating_indices.resize(allocator, opts.initial_equivocated_count, true);

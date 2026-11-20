@@ -17,11 +17,15 @@
 //! Optimistic sync: each block stores the engine's verdict on its own payload; a node's
 //! status is the worst verdict on the payloads it stands on, derived here in one forward
 //! pass. A node derived invalid is treated as removed: no weight reaches its parent and
-//! it is never viable.
+//! it is never viable. The statuses depend only on the verdicts and the block tree, so
+//! they persist between runs: a new block extends them from its parent, and a verdict
+//! change derives them again from the first block it touched, since every block sits
+//! after its parent in the block table.
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const preset = @import("preset").preset;
+const ForkSeq = @import("config").ForkSeq;
 const GENESIS_EPOCH = @import("preset").GENESIS_EPOCH;
 const store_mod = @import("store.zig");
 const Store = store_mod.Store;
@@ -65,6 +69,9 @@ pub const ViableHead = struct {
 
 pub const Cache = struct {
     dirty: bool = true,
+    /// The first block whose `execution` statuses need deriving again, `NO_BLOCK` when
+    /// all are current. Anything stale implies `dirty`.
+    execution_stale_from: BlockIndex = 0,
     /// Spec `get_attestation_score` per node, in Gwei.
     weight: std.ArrayList(u64) = .empty,
     flags: std.ArrayList(NodeFlags) = .empty,
@@ -158,6 +165,72 @@ pub fn ensureComputed(store: *Store) !void {
     try compute(store);
 }
 
+/// Brings `execution` up to date without the rest of the head computation.
+pub fn ensureExecution(store: *Store) !void {
+    const cache = &store.head_cache;
+    if (cache.execution_stale_from == NO_BLOCK) return;
+    const n = store.blocks.len;
+    std.debug.assert(cache.execution_stale_from <= n);
+    try cache.execution.resize(store.allocator, n * NODES_PER_BLOCK);
+    const columns: ExecutionColumns = .of(store);
+    for (cache.execution_stale_from..n) |i| columns.derive(@intCast(i));
+    cache.execution_stale_from = NO_BLOCK;
+}
+
+/// Marks the statuses of `from` and every later block for deriving again.
+pub fn invalidateExecution(store: *Store, from: BlockIndex) void {
+    std.debug.assert(from < store.blocks.len);
+    store.head_cache.execution_stale_from = @min(store.head_cache.execution_stale_from, from);
+    store.head_cache.dirty = true;
+}
+
+/// Derives the statuses of the block just appended at `index`, when the rest are current.
+/// `execution` must have room for its nodes.
+pub fn appendBlockExecution(store: *Store, index: BlockIndex) void {
+    std.debug.assert(store.head_cache.execution_stale_from == NO_BLOCK);
+    const statuses = &store.head_cache.execution;
+    std.debug.assert(statuses.items.len == @as(usize, index) * NODES_PER_BLOCK);
+    _ = statuses.addManyAsArrayAssumeCapacity(NODES_PER_BLOCK);
+    ExecutionColumns.of(store).derive(index);
+}
+
+const ExecutionColumns = struct {
+    parents: []const BlockIndex,
+    parent_statuses: []const PayloadStatus,
+    own_statuses: []const ExecutionStatus,
+    forks: []const ForkSeq,
+    root_base_status: ExecutionStatus,
+    exec: []ExecutionStatus,
+
+    fn of(store: *Store) ExecutionColumns {
+        return .{
+            .parents = store.blocks.items(.parent),
+            .parent_statuses = store.blocks.items(.parent_payload_status),
+            .own_statuses = store.blocks.items(.execution_status),
+            .forks = store.blocks.items(.fork),
+            .root_base_status = store.root_base_status,
+            .exec = store.head_cache.execution.items,
+        };
+    }
+
+    /// Reads only the node `index` hangs from, so a forward pass derives every block.
+    fn derive(self: ExecutionColumns, index: BlockIndex) void {
+        const parent = self.parents[index];
+        std.debug.assert(parent == NO_BLOCK or parent < index);
+        const base: ExecutionStatus = if (parent == NO_BLOCK)
+            self.root_base_status
+        else
+            self.exec[nodeId(.{ .block = parent, .payload_status = self.parent_statuses[index] })];
+        // A node stands on the node it hangs from plus, before Gloas and for `.full` nodes,
+        // the block's own payload.
+        const with_own = base.worst(self.own_statuses[index]);
+        const gloas = self.forks[index].gte(.gloas);
+        self.exec[nodeId(.{ .block = index, .payload_status = .pending })] = if (gloas) base else with_own;
+        self.exec[nodeId(.{ .block = index, .payload_status = .empty })] = if (gloas) base else with_own;
+        self.exec[nodeId(.{ .block = index, .payload_status = .full })] = with_own;
+    }
+};
+
 fn compute(store: *Store) !void {
     const allocator = store.allocator;
     const cache = &store.head_cache;
@@ -165,8 +238,9 @@ fn compute(store: *Store) !void {
     const node_count = n * NODES_PER_BLOCK;
     try cache.weight.resize(allocator, node_count);
     try cache.flags.resize(allocator, node_count);
-    try cache.execution.resize(allocator, node_count);
     try cache.best_child.resize(allocator, node_count);
+    try ensureExecution(store);
+    std.debug.assert(cache.execution.items.len == node_count);
     try updateVoteWeights(store, node_count);
     @memcpy(cache.weight.items, cache.vote_weight.items);
     @memset(cache.flags.items, .{});
@@ -182,11 +256,11 @@ fn compute(store: *Store) !void {
     const exec = cache.execution.items;
     const current_epoch = store.currentEpoch();
 
-    const own_status = store.blocks.items(.execution_status);
     const finalized_slot = computeStartSlotAtEpoch(store.finalized_checkpoint.epoch);
     const finalized_index = store.blockIndex(store.finalized_checkpoint.root) orelse NO_BLOCK;
     const finalized_at_genesis = store.finalized_checkpoint.epoch == GENESIS_EPOCH;
-    // Each block reads only its own row and its parent's results, so one forward pass fills all three.
+    // `finalized_descendant` reads the parent's, so one forward pass fills it; `exists` reads
+    // only the block's own row.
     for (0..n) |i| {
         const index: BlockIndex = @intCast(i);
         const parent = parents[i];
@@ -194,14 +268,6 @@ fn compute(store: *Store) !void {
         const pending = nodeId(Store.pendingNode(index));
         const empty = nodeId(.{ .block = index, .payload_status = .empty });
         const full = nodeId(.{ .block = index, .payload_status = .full });
-
-        // A node stands on the node it hangs from plus, before Gloas and for `.full` nodes,
-        // the block's own payload.
-        const base: ExecutionStatus = if (parent == NO_BLOCK) store.root_base_status else exec[nodeId(.{ .block = parent, .payload_status = parent_statuses[i] })];
-        const with_own = base.worst(own_status[i]);
-        exec[pending] = if (gloas) base else with_own;
-        exec[empty] = if (gloas) base else with_own;
-        exec[full] = with_own;
 
         // The checkpoint block of a block past the finalized slot is its parent's.
         flags[pending].finalized_descendant = if (slots[i] <= finalized_slot or parent == NO_BLOCK)
@@ -430,7 +496,7 @@ pub fn attestationScore(store: *const Store, node: ForkChoiceNode) u64 {
     return store.head_cache.weight.items[nodeId(node)];
 }
 
-/// The worst engine verdict on the payloads `node` stands on, valid after `ensureComputed`.
+/// The worst engine verdict on the payloads `node` stands on, valid after `ensureExecution`.
 pub fn execution(store: *const Store, node: ForkChoiceNode) ExecutionStatus {
     return store.head_cache.execution.items[nodeId(node)];
 }

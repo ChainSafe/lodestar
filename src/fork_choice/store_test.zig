@@ -16,6 +16,7 @@ const JustifiedBalances = store_mod.JustifiedBalances;
 const StateProvider = store_mod.StateProvider;
 const NO_BLOCK = store_mod.NO_BLOCK;
 const vote_targets_mod = @import("vote_targets.zig");
+const head_mod = @import("head.zig");
 const FastConfirmation = @import("fast_confirmation.zig").FastConfirmation;
 
 const validator_count = 64;
@@ -1053,6 +1054,83 @@ test "get_ancestor: a Gloas walk takes each link's payload status from the child
 
     try testing.expectEqual(store_mod.ForkChoiceNode{ .block = store.blockIndex(tagRoot(0x20)).?, .payload_status = .empty }, store.getAncestor(pendingOf(&store, 0x21), 1));
     try testing.expectEqual(fullOf(&store, 1), store.getAncestor(pendingOf(&store, 0x21), 0));
+}
+
+/// The statuses kept current block by block, or derived again from the first block a
+/// verdict touched, equal a full derivation.
+fn expectExecutionMatchesDerivation(store: *Store) !void {
+    const cache = &store.head_cache;
+    try head_mod.ensureExecution(store);
+    const kept = try testing.allocator.dupe(ExecutionStatus, cache.execution.items);
+    defer testing.allocator.free(kept);
+    cache.execution_stale_from = 0;
+    try head_mod.ensureExecution(store);
+    try testing.expectEqualSlices(ExecutionStatus, cache.execution.items, kept);
+}
+
+fn expectExecutionCurrent(store: *const Store) !void {
+    try testing.expectEqual(NO_BLOCK, store.head_cache.execution_stale_from);
+}
+
+test "execution statuses: an import extends them, a verdict derives them from the first block it touched" {
+    const allocator = testing.allocator;
+    const config = &@import("config").mainnet.config;
+    var store = try Store.initFromSummary(allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
+    defer store.deinit();
+    try store.onTick(store.timing.timeAtSlotMs(8));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 0x20, .slot = 2 }));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x21, .parent = 0x20, .slot = 2 }));
+    try expectExecutionCurrent(&store);
+    try expectExecutionMatchesDerivation(&store);
+
+    // Validating 0x20 and 0x30 below 0x31 leaves the anchor current.
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x31, .parent = 0x30, .slot = 3, .status = .valid }));
+    try testing.expectEqual(store.blockIndex(tagRoot(0x20)).?, store.head_cache.execution_stale_from);
+    try expectExecutionMatchesDerivation(&store);
+    try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(pendingOf(&store, 0x31)));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x32, .parent = 0x31, .slot = 4, .status = .valid }));
+    try expectExecutionCurrent(&store);
+
+    try store.onPayloadInvalid(tagRoot(0x21), tagHash(0x21), tagHash(0x20));
+    try testing.expectEqual(store.blockIndex(tagRoot(0x21)).?, store.head_cache.execution_stale_from);
+    try testing.expectError(error.ParentPayloadInvalid, store.onBlockSummary(optimisticSummary(.{ .tag = 0x22, .parent = 0x21, .slot = 3 })));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x33, .parent = 0x32, .slot = 5 }));
+    try expectExecutionCurrent(&store);
+    try expectExecutionMatchesDerivation(&store);
+}
+
+test "execution statuses: a Gloas envelope derives them again from its own block" {
+    const allocator = testing.allocator;
+    const config_mod = @import("config");
+    const chain_config = config_mod.mainnet.chain_config.merge(.{
+        .ALTAIR_FORK_EPOCH = 0,
+        .BELLATRIX_FORK_EPOCH = 0,
+        .CAPELLA_FORK_EPOCH = 0,
+        .DENEB_FORK_EPOCH = 0,
+        .ELECTRA_FORK_EPOCH = 0,
+        .FULU_FORK_EPOCH = 0,
+        .GLOAS_FORK_EPOCH = 0,
+    });
+    const config = config_mod.BeaconConfig.init(chain_config, config_mod.mainnet.genesis_validators_root);
+    var store = try Store.initFromSummary(allocator, &config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .gloas }), Provider.stateProvider());
+    defer store.deinit();
+    try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
+    try store.onTick(store.timing.timeAtSlotMs(8));
+    // A full link to the anchor's payload, then an empty link off 0x20.
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x21, .parent = 0x20, .slot = 2, .fork = .gloas, .bid_parent = 1 }));
+    try expectExecutionCurrent(&store);
+    try expectExecutionMatchesDerivation(&store);
+
+    // The payload below 0x20, the anchor's, is already valid, so only 0x20 and later change.
+    try store.onExecutionPayloadEnvelope(tagRoot(0x20), .valid, null);
+    try testing.expectEqual(store.blockIndex(tagRoot(0x20)).?, store.head_cache.execution_stale_from);
+    try expectExecutionMatchesDerivation(&store);
+    try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(fullOf(&store, 0x20)));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x22, .parent = 0x20, .slot = 3, .fork = .gloas, .bid_parent = 0x20 }));
+    try expectExecutionCurrent(&store);
+    try expectExecutionMatchesDerivation(&store);
 }
 
 test "optimistic sync: a valid import and a valid envelope validate the payloads below them" {
