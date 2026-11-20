@@ -48,21 +48,21 @@ test "UDP seccomp distinguishes unavailable capability from a malformed filter" 
 
 test "UDP send filter selects descriptor and flags and ends with its thread" {
     if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
-    var selected = try udp.Sockets.bind(std.testing.io, .{ .ip4 = .loopback(0) });
+    var selected = try udp.SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer selected.close(std.testing.io);
-    var other = try udp.Sockets.bind(std.testing.io, .{ .ip4 = .loopback(0) });
+    var other = try udp.SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer other.close(std.testing.io);
     const Worker = struct {
         installation: Seccomp.Installation = undefined,
         result: anyerror!void = {},
 
-        fn run(self: *@This(), filtered: *const udp.Sockets, unfiltered: *const udp.Sockets) void {
+        fn run(self: *@This(), filtered: *const udp.SocketPair, unfiltered: *const udp.SocketPair) void {
             self.installation = testing.SendFilter.install(&.{.{ .socket = filtered.primary().handle, .errno = .ACCES, .nonblocking_only = true }});
             if (self.installation != .installed) return;
             self.result = send(filtered, unfiltered);
         }
 
-        fn send(filtered: *const udp.Sockets, unfiltered: *const udp.Sockets) !void {
+        fn send(filtered: *const udp.SocketPair, unfiltered: *const udp.SocketPair) !void {
             try std.testing.expectError(error.AccessDenied, filtered.sendTo(std.testing.io, filtered.localAddress(), null, "denied", 16));
             try unfiltered.sendTo(std.testing.io, unfiltered.localAddress(), null, "other", 16);
             try filtered.primary().send(std.testing.io, &filtered.primary().address, "blocking");

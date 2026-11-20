@@ -5,7 +5,7 @@ const Engine = @import("Engine.zig");
 const Transport = @import("Transport.zig");
 const enr = @import("identity/enr.zig");
 const message = @import("wire/message.zig");
-const Sockets = @import("udp").Sockets;
+const SocketPair = @import("udp").SocketPair;
 const test_support = @import("test_support.zig");
 const types = @import("types.zig");
 const endpoint = test_support.endpoint;
@@ -21,7 +21,7 @@ const Nodes = struct {
         var bound: usize = 0;
         errdefer for (self.transports[0..bound]) |*transport| transport.sockets.close(io);
         for (&self.transports, bindings) |*transport, binding| {
-            transport.sockets = try Sockets.bind(io, .{ .ip4 = binding });
+            transport.sockets = try SocketPair.bind(io, .{ .ip4 = binding });
             bound += 1;
         }
         var started: usize = 0;
