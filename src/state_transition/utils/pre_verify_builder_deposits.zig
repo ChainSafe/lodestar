@@ -26,8 +26,8 @@ pub const PreVerifyBuilderDepositsResult = struct {
 /// Called on committed Fulu head states during the scheduler's pre-Gloas window.
 /// Both scanning and BLS share one deadline, checked every batch. Builder-related deposits
 /// take priority; spare verification time warms unknown validator prefixes before a late
-/// builder can link them. Each pass has its own cursor and half the scan budget so a long
-/// unrelated queue cannot consume all scanning work before speculative verification starts.
+/// builder can link them. Each pass has its own cursor. When speculation has cache capacity,
+/// half the scan budget is reserved for it; otherwise the priority pass gets the full budget.
 /// A valid deposit can suppress only later entries in this scan, never earlier entries
 /// or entries in another state. A cache miss still falls back to verification at the fork.
 pub fn preVerifyBuilderDepositsPreGloas(
@@ -46,7 +46,6 @@ pub fn preVerifyBuilderDepositsPreGloas(
     const len = try pending.length();
     var result: PreVerifyBuilderDepositsResult = .{ .pending_deposits_count = len };
     const verification_limit = @min(max_deposits, cache_module.max_deposits_per_call);
-    const scan_limit = @min(len, max_scanned_deposits_per_call / 2);
     // Unlike the NodeJS scanner, which rescans from 0 each tick so a forked head state's
     // different pendingDeposits gets full coverage, the scan resumes from the persisted cursor
     // because each scanned element here decodes a value and runs a validator-known lookup.
@@ -67,6 +66,12 @@ pub fn preVerifyBuilderDepositsPreGloas(
     defer resolved.deinit(allocator);
 
     for ([_]bool{ false, true }) |speculative| {
+        const scan_limit = @min(len, @as(usize, if (speculative)
+            max_scanned_deposits_per_call - result.scanned_pending_deposits
+        else if (cache.speculativeCapacity() == 0)
+            max_scanned_deposits_per_call
+        else
+            max_scanned_deposits_per_call / 2));
         const cursor = if (speculative) &cache.speculative_scan_cursor else &cache.scan_cursor;
         if (cursor.* >= len) cursor.* = 0;
         var iterator = pending.iteratorReadonly(cursor.*);
@@ -82,6 +87,7 @@ pub fn preVerifyBuilderDepositsPreGloas(
             const batch_limit = @min(verification_limit - verified, remaining_capacity);
             for (0..scan_count) |_| {
                 if (count == batch_limit) break;
+                if (!speculative and cache.validity.count() + count >= cache.capacity) break;
                 const item = try iterator.nextValueWithRoot();
                 const deposit = item.value;
                 scanned += 1;

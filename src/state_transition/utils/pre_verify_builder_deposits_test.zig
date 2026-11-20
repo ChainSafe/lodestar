@@ -374,6 +374,101 @@ test "deposit preverify shares verification limits and makes speculative progres
     try std.testing.expectEqual(scan_limit, second.scanned_pending_deposits);
     try std.testing.expectEqual(@as(usize, 1), second.invalid_validator_signatures_count);
     try std.testing.expectEqual(@as(usize, 2), second.total_cached_deposits);
+    const cache = &state.epoch_cache.builder_deposit_signature_cache.instance;
+    cache.capacity = 3;
+    cache.scan_cursor = 0;
+    const tail_builder = try signedDeposit(state.config, 211, c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000);
+    try pending.setValue(scan_limit * 3 / 4, &tail_builder);
+    try state.state.commit();
+    const full_speculation = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+    try std.testing.expectEqual(scan_limit, full_speculation.scanned_pending_deposits);
+    try std.testing.expectEqual(@as(usize, 1), full_speculation.valid_builder_signatures_count);
+    try std.testing.expectEqual(@as(usize, 3), full_speculation.total_cached_deposits);
+}
+
+test "deposit preverify accounts for promotions before verifying another batch entry" {
+    const allocator = std.testing.allocator;
+    var nodes = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
+    defer nodes.deinit();
+    var fixture = try fuluState(allocator, &nodes);
+    defer fixture.deinit();
+    const state = fixture.cached_state;
+    const cache = &state.epoch_cache.builder_deposit_signature_cache.instance;
+    cache.capacity = 4;
+    var pending = try state.state.castToFork(.fulu).pendingDeposits();
+    var invalid = try signedDeposit(state.config, 220, 1, 1_000_000_000);
+    invalid.amount += 1;
+    try pending.pushValue(&invalid);
+    for (0..3) |index| try pending.pushValue(&(try signedDeposit(state.config, @intCast(221 + index), c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000)));
+    try state.state.commit();
+    const pool = try bls.ThreadPool.init(allocator, std.testing.io, .{ .n_workers = 1 });
+    defer pool.deinit(std.testing.io);
+    const first = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+    try std.testing.expectEqual(@as(usize, 4), first.total_cached_deposits);
+    const builder = try signedDeposit(state.config, 220, c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000);
+    try pending.pushValue(&builder);
+    try state.state.commit();
+    try cache.addBuilderPubkey(allocator, builder.pubkey);
+    const second = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+    try std.testing.expectEqual(@as(usize, 0), second.valid_builder_signatures_count);
+    try std.testing.expectEqual(@as(usize, 0), second.invalid_validator_signatures_count);
+    try std.testing.expectEqual(@as(usize, 4), cache.validity.count());
+    try std.testing.expectEqual(@as(usize, 0), cache.speculative_validity.count());
+    try std.testing.expectEqual(@as(?bool, null), cache.get((try pending.getFieldRoot(4)).*));
+}
+
+test "deposit preverify preserves warmed roots during full-cache upgrades of sibling states" {
+    const allocator = std.testing.allocator;
+    var nodes = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
+    defer nodes.deinit();
+    var fixture = try fuluState(allocator, &nodes);
+    defer fixture.deinit();
+    const state = fixture.cached_state;
+    const cache = &state.epoch_cache.builder_deposit_signature_cache.instance;
+    cache.capacity = 4;
+    var pending = try state.state.castToFork(.fulu).pendingDeposits();
+    var invalid = try signedDeposit(state.config, 230, 1, 1_000_000_000);
+    for (0..2) |_| {
+        invalid.amount += 1;
+        try pending.pushValue(&invalid);
+    }
+    try state.state.commit();
+    const pool = try bls.ThreadPool.init(allocator, std.testing.io, .{ .n_workers = 1 });
+    defer pool.deinit(std.testing.io);
+    const first = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+    try std.testing.expectEqual(@as(usize, 2), first.invalid_validator_signatures_count);
+    for (0..2) |index| try pending.pushValue(&(try signedDeposit(state.config, @intCast(231 + index), c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000)));
+    try state.state.commit();
+    const second = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+    try std.testing.expectEqual(@as(usize, 2), second.valid_builder_signatures_count);
+    try std.testing.expectEqual(@as(usize, 4), second.total_cached_deposits);
+    try pending.pushValue(&(try signedDeposit(state.config, 233, c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000)));
+    try pending.pushValue(&(try signedDeposit(state.config, 230, c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000)));
+    try state.state.commit();
+    const first_root = (try pending.getFieldRoot(0)).*;
+    const second_root = (try pending.getFieldRoot(1)).*;
+    try metrics.init(allocator, std.testing.io, .{});
+    defer metrics.deinit();
+    var previous_post_root: ?[32]u8 = null;
+    for (0..2) |_| {
+        const clone = try state.clone(allocator, .{});
+        defer {
+            clone.deinit();
+            allocator.destroy(clone);
+        }
+        const upgraded = try upgradeStateToGloas(allocator, std.testing.io, clone.config, clone.epoch_cache, clone.state.castToFork(.fulu));
+        clone.state.* = .{ .gloas = upgraded.inner };
+        const post_root = (try clone.state.hashTreeRoot()).*;
+        if (previous_post_root) |expected| try std.testing.expectEqualSlices(u8, &expected, &post_root);
+        previous_post_root = post_root;
+        try std.testing.expectEqual(@as(?bool, false), cache.get(first_root));
+        try std.testing.expectEqual(@as(?bool, false), cache.get(second_root));
+        var output: std.Io.Writer.Allocating = .init(allocator);
+        defer output.deinit();
+        try metrics.write(&output.writer);
+        try std.testing.expect(std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 2\n") != null);
+        try std.testing.expect(std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 4\n") != null);
+    }
 }
 
 test "deposit preverify valid validator prefix suppresses later signatures at the fork" {
@@ -418,4 +513,42 @@ test "deposit preverify valid validator prefix suppresses later signatures at th
     try std.testing.expect(
         std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 1\n") != null,
     );
+}
+
+test "deposit preverify clears resolved pubkeys when the speculative cursor wraps" {
+    const allocator = std.testing.allocator;
+    var nodes = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
+    defer nodes.deinit();
+    var fixture = try fuluState(allocator, &nodes);
+    defer fixture.deinit();
+    const state = fixture.cached_state;
+    var pending = try state.state.castToFork(.fulu).pendingDeposits();
+    const validator = try signedDeposit(state.config, 240, 1, 1_000_000_000);
+    for (0..40) |index| {
+        var invalid = validator;
+        invalid.amount += index + 1;
+        try pending.pushValue(&invalid);
+    }
+    try pending.pushValue(&validator);
+    try state.state.commit();
+    state.epoch_cache.builder_deposit_signature_cache.instance.speculative_scan_cursor = 40;
+    const pool = try bls.ThreadPool.init(allocator, std.testing.io, .{ .n_workers = 1 });
+    defer pool.deinit(std.testing.io);
+    const result = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+    try std.testing.expectEqual(@as(usize, 1), result.valid_validator_signatures_count);
+    try std.testing.expectEqual(@as(usize, 40), result.invalid_validator_signatures_count);
+    try std.testing.expectEqual(@as(usize, 41), result.total_cached_deposits);
+    try pending.pushValue(&(try signedDeposit(state.config, 240, c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000)));
+    try state.state.commit();
+    try metrics.init(allocator, std.testing.io, .{});
+    defer metrics.deinit();
+    const upgraded = try upgradeStateToGloas(allocator, std.testing.io, state.config, state.epoch_cache, state.state.castToFork(.fulu));
+    state.state.* = .{ .gloas = upgraded.inner };
+    var builders = try upgraded.inner.get("builders");
+    try std.testing.expectEqual(@as(usize, 0), try builders.length());
+    var output: std.Io.Writer.Allocating = .init(allocator);
+    defer output.deinit();
+    try metrics.write(&output.writer);
+    try std.testing.expect(std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 0\n") != null);
+    try std.testing.expect(std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 41\n") != null);
 }

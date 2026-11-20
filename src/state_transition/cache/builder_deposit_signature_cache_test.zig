@@ -82,6 +82,30 @@ test "memory_safety: deposit signature cache partial initialization and insertio
     try std.testing.checkAllAllocationFailures(std.testing.allocator, insertWithAllocationFailures, .{});
 }
 
+fn evictWithAllocationFailures(allocator: std.mem.Allocator) !void {
+    var cache: Cache = .{
+        .hash_context = .{ .hash_key = @splat(0) },
+        .validity_context = .{ .pubkey_context = .{ .hash_key = @splat(0) } },
+        .capacity = 32,
+    };
+    defer cache.deinit(allocator);
+    for (0..16) |index| try cache.putSpeculative(allocator, @splat(@intCast(index)), false);
+    for (16..48) |index| {
+        const before = cache.count();
+        cache.put(allocator, @splat(@intCast(index)), true) catch |err| {
+            try std.testing.expectEqual(before, cache.count());
+            return err;
+        };
+        try std.testing.expect(cache.count() <= cache.capacity);
+    }
+    try std.testing.expectEqual(@as(usize, 32), cache.validity.count());
+    try std.testing.expectEqual(@as(usize, 0), cache.speculative_validity.count());
+}
+
+test "memory_safety: deposit signature cache eviction preserves entries on allocation failure" {
+    try std.testing.checkAllAllocationFailures(std.testing.allocator, evictWithAllocationFailures, .{});
+}
+
 test "deposit signature cache promotes speculative results and evicts them for builders" {
     const allocator = std.testing.allocator;
     var cache: Cache = .{

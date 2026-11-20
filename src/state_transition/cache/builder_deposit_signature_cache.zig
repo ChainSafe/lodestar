@@ -10,6 +10,7 @@ pub const BuilderDepositSignatureCacheRc = RefCount(BuilderDepositSignatureCache
 /// Signature results are independent of queue order and shared across state clones and reloads.
 /// Access must stay on the owning state thread. Keys are PendingDeposit hash tree roots, not
 /// recycled node IDs or deposit indexes.
+/// Both validity maps retain their backing storage after eviction until clear().
 ///
 /// The deposit domain is fork-agnostic and fixed per network since it is always
 /// `compute_domain(DOMAIN_DEPOSIT, GENESIS_FORK_VERSION, ZERO_HASH)`,
