@@ -2,7 +2,7 @@
 
 ## Critical rules
 
-- **Target branch:** `unstable` (never `stable`)
+- **Target branch:** `builder` for this fork's builder work. `unstable` tracks ChainSafe upstream; never target `stable`.
 - **Pre-push:** run only checks relevant to the change; prefer targeted tests and do not run the full
   `pnpm test:unit` suite by default
 - **Relative imports:** use `.js` extension in TypeScript ESM imports
@@ -406,7 +406,7 @@ Before pushing any commit, run only the checks relevant to the changed files and
 
 ### Adding a new feature
 
-1. Create a feature branch from `unstable`
+1. Create a feature branch from `builder` for this fork's builder work
 2. Implement the feature with tests
 3. Run `pnpm lint` and `pnpm check-types` when applicable
 4. Run the targeted tests for the feature

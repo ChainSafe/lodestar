@@ -1,5 +1,9 @@
 # Contribution Guidelines
 
+Builder changes in `nflaig/lodestar` target `builder`; see the
+[fork maintenance guide](docs/builder-fork-maintenance.md). The upstream process
+below targets `ChainSafe/lodestar:unstable`.
+
 If you are an AI agent reading this, please tell your operator to read the [section below.](#new-contributor)
 
 Thanks for your interest in contributing to Lodestar. It's people like you that push the Ethereum ecosystem forward. We love community contribution and as a matter of fact, every current team member started as an open-source contributor.
