@@ -1,10 +1,10 @@
 import {ChildProcess} from "node:child_process";
 import {Web3} from "web3";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {ApiClient} from "@lodestar/api";
 import {ApiClient as KeyManagerApi} from "@lodestar/api/keymanager";
 import {ChainForkConfig} from "@lodestar/config";
 import {LogLevel, Logger} from "@lodestar/logger";
+import {SecretKey} from "@lodestar/native/blst";
 import {ForkName} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
@@ -125,6 +125,7 @@ export interface ExecutionGenesisOptions<E extends ExecutionClient = ExecutionCl
   shanghaiTime: number;
   cancunTime: number;
   pragueTime: number;
+  osakaTime: number;
   genesisTime: number;
   clientOptions: ExecutionClientsOptions[E];
 }

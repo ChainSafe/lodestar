@@ -1,3 +1,4 @@
+import {SerializedList} from "@chainsafe/ssz";
 import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Slot, gloas, phase0, ssz} from "@lodestar/types";
@@ -38,7 +39,7 @@ export function generateSignedExecutionPayloadEnvelope(slot: Slot): gloas.Signed
   p.blockNumber = slot;
   p.blockHash = root32(0xaa);
   p.stateRoot = root32(0xbb);
-  p.transactions = [Uint8Array.from([lo, 1, 2]), Uint8Array.from([lo, 3, 4])];
+  p.transactions = SerializedList.fromArray([Uint8Array.from([lo, 1, 2]), Uint8Array.from([lo, 3, 4])]);
   p.withdrawals = [{index: slot, validatorIndex: 2, address: new Uint8Array(20).fill(0xdd), amount: 99n}];
   p.blockAccessList = Uint8Array.from([lo, 0x22]); // GLOAS:EIP-7928
   envelope.message.builderIndex = 7;

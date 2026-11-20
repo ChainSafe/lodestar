@@ -1,5 +1,5 @@
-import {unshuffleList} from "@chainsafe/lodestar-z/shuffle";
 import {BeaconConfig} from "@lodestar/config";
+import {unshuffleList} from "@lodestar/native/shuffle";
 import {
   DOMAIN_BEACON_ATTESTER,
   GENESIS_SLOT,
@@ -54,6 +54,11 @@ export type EpochShuffling = {
    * Committees per slot, for fast attestation verification
    */
   committeesPerSlot: number;
+
+  /**
+   * Native committee aggregate pubkeys of this shuffling, set once `computeCommitteePubkeys()` resolves
+   */
+  committeePubkeysId?: number;
 };
 
 export function computeCommitteeCount(activeValidatorCount: number): number {

@@ -1,8 +1,8 @@
 import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/native/blst";
 import {pollPrepareBeaconProposer} from "../../../src/services/prepareBeaconProposer.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";

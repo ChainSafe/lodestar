@@ -1,4 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {SerializedList} from "@chainsafe/ssz";
 import {ChainForkConfig, createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {fulu, gloas, ssz} from "@lodestar/types";
@@ -166,7 +167,10 @@ describe("data column sidecars", () => {
     const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
 
     for (const kzgCommitment of kzgCommitments) {
-      signedBeaconBlock.message.body.executionPayload.transactions.push(transactionForKzgCommitment(kzgCommitment));
+      signedBeaconBlock.message.body.executionPayload.transactions = SerializedList.fromArray([
+        ...signedBeaconBlock.message.body.executionPayload.transactions,
+        transactionForKzgCommitment(kzgCommitment),
+      ]);
       signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
     }
     const blockRoot = ssz.fulu.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
@@ -251,7 +255,10 @@ describe("data column sidecars", () => {
     const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
 
     for (const kzgCommitment of kzgCommitments) {
-      signedBeaconBlock.message.body.executionPayload.transactions.push(transactionForKzgCommitment(kzgCommitment));
+      signedBeaconBlock.message.body.executionPayload.transactions = SerializedList.fromArray([
+        ...signedBeaconBlock.message.body.executionPayload.transactions,
+        transactionForKzgCommitment(kzgCommitment),
+      ]);
       signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
     }
     const blockRoot = ssz.fulu.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);

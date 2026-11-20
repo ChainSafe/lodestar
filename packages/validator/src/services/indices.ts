@@ -79,7 +79,7 @@ export class IndicesService {
     // Ensures pollValidatorIndicesInternal() is not called more than once at the same time.
     // AttestationDutiesService, SyncCommitteeDutiesService and DoppelgangerService will call this function at the same time, so this will
     // cache the promise and return it to the second caller, preventing calling the API twice for the same data.
-    if (this.pollValidatorIndicesPromise) {
+    if (this.pollValidatorIndicesPromise !== null) {
       return this.pollValidatorIndicesPromise;
     }
 

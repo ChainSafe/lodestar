@@ -30,7 +30,8 @@ const SYSTEM_CONTRACTS_ALLOC = {
 };
 
 export const getGethGenesisBlock = (options: ExecutionGenesisOptions): Record<string, unknown> => {
-  const {ttd, cliqueSealingPeriod, shanghaiTime, genesisTime, cancunTime, pragueTime} = options;
+  const {ttd, cliqueSealingPeriod, shanghaiTime, genesisTime, cancunTime, pragueTime, osakaTime} = options;
+  const osakaScheduled = Number.isFinite(osakaTime);
 
   const genesis = {
     config: {
@@ -51,6 +52,7 @@ export const getGethGenesisBlock = (options: ExecutionGenesisOptions): Record<st
       shanghaiTime,
       cancunTime,
       pragueTime,
+      ...(osakaScheduled ? {osakaTime} : {}),
       blobSchedule: {
         cancun: {
           target: 3,
@@ -58,7 +60,7 @@ export const getGethGenesisBlock = (options: ExecutionGenesisOptions): Record<st
           baseFeeUpdateFraction: 3338477,
         },
         prague: {target: 6, max: 9, baseFeeUpdateFraction: 5007716},
-        // "osaka":  { "target": 6, "max": 9, "updateFraction": 5007716 }
+        ...(osakaScheduled ? {osaka: {target: 6, max: 9, baseFeeUpdateFraction: 5007716}} : {}),
       },
       terminalTotalDifficulty: Number(ttd as bigint),
       clique: {period: cliqueSealingPeriod, epoch: 30000},
@@ -93,8 +95,9 @@ export const getGethGenesisBlock = (options: ExecutionGenesisOptions): Record<st
 };
 
 export const getNethermindChainSpec = (options: ExecutionGenesisOptions): Record<string, unknown> => {
-  const {ttd, shanghaiTime, cancunTime, pragueTime} = options;
+  const {ttd, shanghaiTime, cancunTime, pragueTime, osakaTime} = options;
   const genesis = getGethGenesisBlock(options) as Eth1GenesisBlock;
+  const osakaTimestamp = Number.isFinite(osakaTime) ? `0x${osakaTime.toString(16)}` : undefined;
 
   return {
     name: "simulation-dev",
@@ -153,6 +156,14 @@ export const getNethermindChainSpec = (options: ExecutionGenesisOptions): Record
       eip7251TransitionTimestamp: `0x${pragueTime.toString(16)}`,
       eip7623TransitionTimestamp: `0x${pragueTime.toString(16)}`,
       eip7702TransitionTimestamp: `0x${pragueTime.toString(16)}`,
+      eip7594TransitionTimestamp: osakaTimestamp,
+      eip7823TransitionTimestamp: osakaTimestamp,
+      eip7825TransitionTimestamp: osakaTimestamp,
+      eip7883TransitionTimestamp: osakaTimestamp,
+      eip7918TransitionTimestamp: osakaTimestamp,
+      eip7934TransitionTimestamp: osakaTimestamp,
+      eip7939TransitionTimestamp: osakaTimestamp,
+      eip7951TransitionTimestamp: osakaTimestamp,
       depositContractAddress: "0x1234567890123456789012345678901234567890",
       blobSchedule: [
         {
@@ -169,6 +180,9 @@ export const getNethermindChainSpec = (options: ExecutionGenesisOptions): Record
           max: 9,
           baseFeeUpdateFraction: "0x4c6964",
         },
+        ...(osakaTimestamp
+          ? [{name: "osaka", timestamp: osakaTimestamp, target: 6, max: 9, baseFeeUpdateFraction: "0x4c6964"}]
+          : []),
       ],
     },
     accounts: genesis.alloc,

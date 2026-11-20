@@ -35,4 +35,24 @@ describe("BeaconStateView", () => {
     expect(result).toBeInstanceOf(BeaconStateView);
     expect((result as InstanceType<typeof BeaconStateView>).cachedState).toBe(postState);
   });
+
+  it("computes zero-inactive effective balances once per view", () => {
+    const validators = [{slashed: false}, {slashed: true}, {slashed: false}];
+    const forEachValue = vi.fn((fn: (validator: {slashed: boolean}, i: number) => void) => validators.forEach(fn));
+    const state = {
+      config: {},
+      epochCtx: {
+        currentShuffling: {activeIndices: Uint32Array.from([0, 1])},
+        effectiveBalanceIncrements: Uint16Array.from([32, 32, 32]),
+      },
+      validators: {length: validators.length, forEachValue},
+    } as unknown as CachedBeaconStateAllForks;
+    const view = new BeaconStateView(state);
+
+    const balances = view.getEffectiveBalanceIncrementsZeroInactive();
+
+    expect(Array.from(balances)).toEqual([32, 0, 0]);
+    expect(view.getEffectiveBalanceIncrementsZeroInactive()).toBe(balances);
+    expect(forEachValue).toHaveBeenCalledTimes(1);
+  });
 });

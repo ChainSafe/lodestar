@@ -1,4 +1,4 @@
-import {rimraf} from "rimraf";
+import fs from "node:fs";
 import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {LevelDbController} from "@lodestar/db/controller/level";
@@ -29,7 +29,7 @@ describe("slashing-protection-interchange-tests", () => {
 
   afterAll(async () => {
     await db.close();
-    rimraf.sync(dbLocation);
+    fs.rmSync(dbLocation, {recursive: true, force: true});
   });
 
   beforeEach(async () => {

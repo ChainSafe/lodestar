@@ -84,6 +84,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   // phase0
   private cachedFork: Fork | null = null;
   private cachedLatestBlockHeader: phase0.BeaconBlockHeader | null = null;
+  private cachedEffectiveBalanceIncrementsZeroInactive: EffectiveBalanceIncrements | null = null;
   // altair
   private cachedCurrentSyncCommittee: SyncCommittee | null = null;
   private cachedNextSyncCommittee: SyncCommittee | null = null;
@@ -638,7 +639,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   getEffectiveBalanceIncrementsZeroInactive(): EffectiveBalanceIncrements {
-    return getEffectiveBalanceIncrementsZeroInactive(this.cachedState);
+    if (this.cachedEffectiveBalanceIncrementsZeroInactive === null) {
+      this.cachedEffectiveBalanceIncrementsZeroInactive = getEffectiveBalanceIncrementsZeroInactive(this.cachedState);
+    }
+    return this.cachedEffectiveBalanceIncrementsZeroInactive;
   }
 
   getBalance(index: number): number {

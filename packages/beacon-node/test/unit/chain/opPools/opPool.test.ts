@@ -1,8 +1,8 @@
 import {describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/native/blst";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {
   BeaconStateView,

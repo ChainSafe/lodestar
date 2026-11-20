@@ -1,7 +1,7 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
+import {PublicKey} from "@lodestar/native/blst";
 import {
   BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX,
   CURRENT_SYNC_COMMITTEE_GINDEX,

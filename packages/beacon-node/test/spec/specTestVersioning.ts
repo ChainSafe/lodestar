@@ -1,5 +1,6 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
+// biome-ignore lint/correctness/useImportExtensions: false positive, the import resolves through a symlink to a .json file
 import specTestVersions from "../spec-tests-version.json" with {type: "json"};
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

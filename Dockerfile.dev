@@ -1,12 +1,13 @@
+# syntax=docker/dockerfile:1
 # Dockerfile.dev is a stripped down version of Dockerfile that is used for development purposes.
 # It minimizes number of installs and builds to speed up the development process.
 # Run this on local host only.
 # Generated image is larger than production image. Do not use this for production.
 
-FROM --platform=${BUILDPLATFORM:-amd64} node:24 AS build_dev
+FROM --platform=${BUILDPLATFORM:-amd64} node:26 AS build_dev
 
 # Install zig toolchain
-# Required by @chainsafe/lodestar-z's `prepare` script in dev builds
+# Required to build the @lodestar/native workspace package
 ARG TARGETARCH
 ARG ZIG_VERSION=0.16.0
 RUN case "${TARGETARCH}" in \
@@ -23,8 +24,8 @@ RUN case "${TARGETARCH}" in \
 
 WORKDIR /usr/app
 
-# Enable corepack for pnpm support
-RUN corepack enable
+# Node 26 no longer bundles corepack
+RUN npm install -g corepack@0.36.0 && corepack enable
 
 # Copy dependency manifests first for optimal layer caching.
 # Only changes to package.json or lockfile will invalidate the install layer,
@@ -40,6 +41,7 @@ COPY packages/db/package.json packages/db/
 COPY packages/era/package.json packages/era/
 COPY packages/fork-choice/package.json packages/fork-choice/
 COPY packages/logger/package.json packages/logger/
+COPY bindings/package.json bindings/
 COPY packages/params/package.json packages/params/
 COPY packages/reqresp/package.json packages/reqresp/
 COPY packages/spec-test-util/package.json packages/spec-test-util/
@@ -51,15 +53,30 @@ COPY packages/validator/package.json packages/validator/
 
 RUN pnpm install --frozen-lockfile
 
-# Copy source code and build
+# Build the native addon before copying the TypeScript sources so that
+# source edits reuse this layer. Only Zig changes rebuild it.
+COPY build.zig build.zig.zon ./
+COPY src ./src
+COPY bench ./bench
+COPY scripts ./scripts
+COPY test ./test
+COPY bindings/napi ./bindings/napi
+
+# Keep the Zig package and build caches outside the layer so that a Zig edit
+# recompiles incrementally instead of refetching and rebuilding everything.
+RUN --mount=type=cache,target=/root/.cache/zig \
+    --mount=type=cache,target=/usr/app/.zig-cache \
+    pnpm build:native
+
+# Copy source code and build the TypeScript packages
 COPY . .
 
-RUN pnpm build
+RUN pnpm -r --filter "!@lodestar/native" --filter "!{.}" build
 
 # Declare COMMIT arg after install+build layers to avoid cache invalidation
 ARG COMMIT
 RUN cd packages/cli && GIT_COMMIT=${COMMIT} pnpm write-git-data
 
-ENV NODE_OPTIONS=--max-old-space-size=8192
+ENV NODE_OPTIONS="--max-old-space-size=8192 --max-semi-space-size=64"
 
 ENTRYPOINT ["node", "./packages/cli/bin/lodestar"]
