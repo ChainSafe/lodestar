@@ -17,7 +17,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {JsonOnlyReq, WithVersion} from "../../../utils/codecs.js";
+import {JsonOnlyReq, JsonOnlyResp, WithVersion} from "../../../utils/codecs.js";
 import {getPostElectraForkTypes} from "../../../utils/fork.js";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {
@@ -68,6 +68,13 @@ export const ValidatorResponseType = new ContainerType({
   status: new StringType<ValidatorStatus>(),
   validator: ssz.phase0.Validator,
 });
+/** From pq a validator has a leanXMSS public key and a VRF root */
+export const PqValidatorResponseType = new ContainerType({
+  index: ssz.ValidatorIndex,
+  balance: ssz.UintNum64,
+  status: new StringType<ValidatorStatus>(),
+  validator: ssz.pq.Validator,
+});
 export const BuilderResponseType = new ContainerType({
   index: ssz.BuilderIndex,
   status: new StringType<BuilderStatus>(),
@@ -103,7 +110,6 @@ export const PtcResponseType = new ContainerType({
   slot: ssz.Slot,
   validators: ssz.gloas.PayloadTimelinessCommittee,
 });
-export const ValidatorResponseListType = ArrayOf(ValidatorResponseType);
 export const BuilderResponseListType = ArrayOf(BuilderResponseType);
 export const ValidatorIdentitiesType = ArrayOf(ValidatorIdentityType);
 export const EpochCommitteeResponseListType = ArrayOf(EpochCommitteeResponseType);
@@ -111,14 +117,33 @@ export const ValidatorBalanceListType = ArrayOf(ValidatorBalanceType);
 
 export type RandaoResponse = ValueOf<typeof RandaoResponseType>;
 export type FinalityCheckpoints = ValueOf<typeof FinalityCheckpointsType>;
-export type ValidatorResponse = ValueOf<typeof ValidatorResponseType>;
+export type ValidatorResponse = ValueOf<typeof ValidatorResponseType> | ValueOf<typeof PqValidatorResponseType>;
 export type BuilderResponse = ValueOf<typeof BuilderResponseType>;
 export type EpochCommitteeResponse = ValueOf<typeof EpochCommitteeResponseType>;
 export type ValidatorBalance = ValueOf<typeof ValidatorBalanceType>;
 export type EpochSyncCommitteeResponse = ValueOf<typeof EpochSyncCommitteeResponseType>;
 export type PtcResponse = ValueOf<typeof PtcResponseType>;
 
-export type ValidatorResponseList = ValueOf<typeof ValidatorResponseListType>;
+export type ValidatorResponseList = ValidatorResponse[];
+
+type ValidatorResponseJson = {validator: {vrf_root?: unknown}};
+
+/** The response names no fork: a pq validator is told by its VRF root */
+const validatorResponseCodec = {
+  toJson: (data: ValidatorResponse): unknown =>
+    "vrfRoot" in data.validator
+      ? PqValidatorResponseType.toJson(data as ValueOf<typeof PqValidatorResponseType>)
+      : ValidatorResponseType.toJson(data),
+  fromJson: (json: unknown): ValidatorResponse =>
+    (json as ValidatorResponseJson).validator?.vrf_root !== undefined
+      ? PqValidatorResponseType.fromJson(json)
+      : ValidatorResponseType.fromJson(json),
+};
+
+const validatorResponseListCodec = {
+  toJson: (data: ValidatorResponseList): unknown => data.map(validatorResponseCodec.toJson),
+  fromJson: (json: unknown): ValidatorResponseList => (json as unknown[]).map(validatorResponseCodec.fromJson),
+};
 export type BuilderResponseList = ValueOf<typeof BuilderResponseListType>;
 export type ValidatorIdentities = ValueOf<typeof ValidatorIdentitiesType>;
 export type EpochCommitteeResponseList = ValueOf<typeof EpochCommitteeResponseListType>;
@@ -539,11 +564,10 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
           params: {state_id: Schema.StringRequired, validator_id: Schema.StringRequired},
         },
       },
-      resp: {
-        onlySupport: WireFormat.json,
-        data: ValidatorResponseType,
+      resp: JsonOnlyResp({
+        data: validatorResponseCodec,
         meta: ExecutionOptimisticAndFinalizedCodec,
-      },
+      }),
     },
     getStateValidators: {
       url: "/eth/v1/beacon/states/{state_id}/validators",
@@ -559,11 +583,10 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
           query: {id: Schema.UintOrStringArray, status: Schema.StringArray},
         },
       },
-      resp: {
-        onlySupport: WireFormat.json,
-        data: ValidatorResponseListType,
+      resp: JsonOnlyResp({
+        data: validatorResponseListCodec,
         meta: ExecutionOptimisticAndFinalizedCodec,
-      },
+      }),
     },
     postStateValidators: {
       url: "/eth/v1/beacon/states/{state_id}/validators",
@@ -586,11 +609,10 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
           body: Schema.Object,
         },
       }),
-      resp: {
-        onlySupport: WireFormat.json,
-        data: ValidatorResponseListType,
+      resp: JsonOnlyResp({
+        data: validatorResponseListCodec,
         meta: ExecutionOptimisticAndFinalizedCodec,
-      },
+      }),
     },
     getStateBuilders: {
       url: "/eth/v1/beacon/states/{state_id}/builders",

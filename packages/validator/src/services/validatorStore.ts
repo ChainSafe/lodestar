@@ -298,7 +298,10 @@ export class ValidatorStore {
     // Consumers will call this function every epoch forever. If everyone has been discovered, skip
     return this.indicesService.indexCount >= this.validators.size
       ? Promise.resolve([])
-      : this.indicesService.pollValidatorIndices(Array.from(this.validators.keys()));
+      : this.indicesService.pollValidatorIndices(Array.from(this.validators.keys()), (pubkeyHex) => {
+          const signer = this.validators.get(pubkeyHex)?.signer;
+          return signer?.type === SignerType.Xmss ? signer.signer.vrfRoot : undefined;
+        });
   }
 
   getFeeRecipient(pubkeyHex: PubkeyHex): ExecutionAddress {

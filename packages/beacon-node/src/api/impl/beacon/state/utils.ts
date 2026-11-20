@@ -106,12 +106,7 @@ export function toValidatorResponse(
   balance: number,
   currentEpoch: Epoch
 ): routes.beacon.ValidatorResponse {
-  return {
-    index,
-    status: getValidatorStatus(validator, currentEpoch),
-    balance,
-    validator: {...validator, pubkey: toApiPubkey(validator.pubkey)},
-  };
+  return {index, status: getValidatorStatus(validator, currentEpoch), balance, validator};
 }
 
 type StateBuilderIndexResponse =
@@ -221,8 +216,8 @@ export function getStateValidatorIndex(
     return {valid: true, validatorIndex};
   }
 
-  // typeof id === Uint8Array
-  const validatorIndex = pubkeyCache.getIndex(id);
+  // typeof id === Uint8Array. A leanXMSS public key may come bare: the cache holds its 48 byte form
+  const validatorIndex = pubkeyCache.getIndex(toApiPubkey(id));
   if (validatorIndex === null) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
   }

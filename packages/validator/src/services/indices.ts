@@ -1,6 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
+import {fromRequestPubkey, isLegacyPubkey, toApiPubkey} from "@lodestar/state-transition";
 import {ValidatorIndex} from "@lodestar/types";
-import {Logger, MapDef, toPubkeyHex} from "@lodestar/utils";
+import {Logger, MapDef, byteArrayEquals, fromHex, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {batchItems} from "../util/index.js";
 
@@ -75,7 +76,11 @@ export class IndicesService {
     return this.index2pubkey.has(index);
   }
 
-  async pollValidatorIndices(pubkeysHex: PubkeyHex[]): Promise<ValidatorIndex[]> {
+  /** `getVrfRoot` gives the root of the VRF tree held for a pq validator, to check against the state's */
+  async pollValidatorIndices(
+    pubkeysHex: PubkeyHex[],
+    getVrfRoot?: (pubkeyHex: PubkeyHex) => Uint8Array | undefined
+  ): Promise<ValidatorIndex[]> {
     // Ensures pollValidatorIndicesInternal() is not called more than once at the same time.
     // AttestationDutiesService, SyncCommitteeDutiesService and DoppelgangerService will call this function at the same time, so this will
     // cache the promise and return it to the second caller, preventing calling the API twice for the same data.
@@ -83,7 +88,7 @@ export class IndicesService {
       return this.pollValidatorIndicesPromise;
     }
 
-    this.pollValidatorIndicesPromise = this.pollValidatorIndicesInternal(pubkeysHex).finally(() => {
+    this.pollValidatorIndicesPromise = this.pollValidatorIndicesInternal(pubkeysHex, getVrfRoot).finally(() => {
       // Once the pollValidatorIndicesInternal() resolves or rejects null the cached promise so it can be called again.
       this.pollValidatorIndicesPromise = null;
     });
@@ -101,7 +106,10 @@ export class IndicesService {
 
   /** Iterate through all the voting pubkeys in the `ValidatorStore` and attempt to learn any unknown
       validator indices. Returns the new discovered indexes */
-  private async pollValidatorIndicesInternal(pubkeysHex: PubkeyHex[]): Promise<ValidatorIndex[]> {
+  private async pollValidatorIndicesInternal(
+    pubkeysHex: PubkeyHex[],
+    getVrfRoot?: (pubkeyHex: PubkeyHex) => Uint8Array | undefined
+  ): Promise<ValidatorIndex[]> {
     const pubkeysHexToDiscover = pubkeysHex.filter((pubkey) => !this.pubkey2index.has(pubkey));
 
     if (pubkeysHexToDiscover.length === 0) {
@@ -114,7 +122,7 @@ export class IndicesService {
 
     const newIndices: number[] = [];
     for (const pubkeysHexBatch of pubkeysHexBatches) {
-      const validatorIndicesArr = await this.fetchValidatorIndices(pubkeysHexBatch);
+      const validatorIndicesArr = await this.fetchValidatorIndices(pubkeysHexBatch, getVrfRoot);
       newIndices.push(...validatorIndicesArr);
     }
 
@@ -123,8 +131,16 @@ export class IndicesService {
     return newIndices;
   }
 
-  private async fetchValidatorIndices(pubkeysHex: string[]): Promise<ValidatorIndex[]> {
-    const validators = (await this.api.beacon.postStateValidators({stateId: "head", validatorIds: pubkeysHex})).value();
+  private async fetchValidatorIndices(
+    pubkeysHex: string[],
+    getVrfRoot?: (pubkeyHex: PubkeyHex) => Uint8Array | undefined
+  ): Promise<ValidatorIndex[]> {
+    // A pq validator is known here by the 48 byte form of its public key, and to the API by the key
+    const validatorIds = pubkeysHex.map((pubkeyHex) => {
+      const pubkey = fromHex(pubkeyHex);
+      return isLegacyPubkey(pubkey) ? pubkeyHex : toHex(fromRequestPubkey(pubkey));
+    });
+    const validators = (await this.api.beacon.postStateValidators({stateId: "head", validatorIds})).value();
 
     const newIndices = [];
 
@@ -135,12 +151,20 @@ export class IndicesService {
       const status = statusToSimpleStatusMapping(validator.status);
       allValidatorStatuses.set(status, allValidatorStatuses.getOrDefault(status) + 1);
 
-      const pubkeyHex = toPubkeyHex(validator.validator.pubkey);
+      const pubkeyHex = toPubkeyHex(toApiPubkey(validator.validator.pubkey));
       if (!this.pubkey2index.has(pubkeyHex)) {
         this.logger.info("Validator seen on beacon chain", {
           validatorIndex: validator.index,
           pubKey: pubkeyHex,
         });
+        const vrfRoot = getVrfRoot?.(pubkeyHex);
+        if (vrfRoot && "vrfRoot" in validator.validator && !byteArrayEquals(vrfRoot, validator.validator.vrfRoot)) {
+          this.logger.error("VRF tree is not the validator's in the state: it cannot propose", {
+            validatorIndex: validator.index,
+            vrfRoot: toRootHex(vrfRoot),
+            stateVrfRoot: toRootHex(validator.validator.vrfRoot),
+          });
+        }
         this.pubkey2index.set(pubkeyHex, validator.index);
         this.index2pubkey.set(validator.index, pubkeyHex);
         newIndices.push(validator.index);
