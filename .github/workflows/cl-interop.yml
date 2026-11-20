@@ -25,7 +25,7 @@ env:
   LODESTAR_IMAGE: ${{ inputs.lodestar_image || 'chainsafe/lodestar:next' }}
   EL_IMAGE: ${{ inputs.el_image || 'ethpandaops/geth:master' }}
   # Pinned by hand so a red run means a client change, not an upstream Kurtosis release
-  KURTOSIS_VERSION: "1.20.0"
+  KURTOSIS_VERSION: "1.23.0"
 
 jobs:
   interop:
