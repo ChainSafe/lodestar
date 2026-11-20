@@ -25,7 +25,7 @@ test "peer discovery independent local nodes confirm signed candidates and cance
         const tick = try d.Transport.monotonicMilliseconds(io);
         const result = try support.advance(controller, io, tick, &output);
         if (result.failure) |failure| return failure.cause;
-        const remote = try d.driver.step(b.transport, io, &expiries, .{ .deadline = .{ .clock = .awake, .raw = .fromNanoseconds(@as(i96, tick) * std.time.ns_per_ms) }, .wait_max = .fromMilliseconds(10) });
+        const remote = try d.driver.step(b.transport, io, &expiries, .{ .wait_max = .fromMilliseconds(10) });
         if (remote.failure) |failure| return failure.cause;
         for (output[0..result.candidates]) |candidate| {
             try adapter.requireIdentity(b.transport.engine.localRecord(), &candidate.peer);
@@ -65,7 +65,7 @@ test "dual-stack discovery confirms both families in one routing table" {
         const result = try support.advance(controller, io, tick, &.{});
         if (result.failure) |failure| return failure.cause;
         for ([_]*Node{ &ipv4, &ipv6 }) |node| {
-            const remote = try d.driver.step(node.transport, io, &expiries, .{ .deadline = .{ .clock = .awake, .raw = .fromNanoseconds(@as(i96, tick) * std.time.ns_per_ms) }, .wait_max = .fromMilliseconds(10) });
+            const remote = try d.driver.step(node.transport, io, &expiries, .{ .wait_max = .fromMilliseconds(10) });
             if (remote.failure) |failure| return failure.cause;
         }
         if (hub.transport.engine.peerRecord(&ipv4.transport.engine.localRecord().node_id).?.last_verified_ms != null and
