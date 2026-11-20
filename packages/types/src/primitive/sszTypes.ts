@@ -1,5 +1,20 @@
-import {BooleanType, ByteVectorType, UintBigintType, UintNumberType} from "@chainsafe/ssz";
+import {BooleanType, ByteVectorType, ByteViews, UintBigintType, UintNumberType} from "@chainsafe/ssz";
 import {ExecutionAddressType} from "../utils/executionAddress.js";
+
+/**
+ * Rejects encoded values above `Number.MAX_SAFE_INTEGER`, except `2^64-1` clipped to `Infinity`.
+ * A JS `number` rounds them, so different bytes would decode to the same value and hash tree root.
+ */
+class SafeUintNumberType extends UintNumberType {
+  // biome-ignore lint/style/useNamingConvention: Keep the naming consistent with ssz pattern
+  value_deserializeFromBytes(data: ByteViews, start: number, end: number): number {
+    const value = super.value_deserializeFromBytes(data, start, end);
+    if (value > Number.MAX_SAFE_INTEGER && value !== Infinity) {
+      throw Error("Uint value exceeds Number.MAX_SAFE_INTEGER");
+    }
+    return value;
+  }
+}
 
 // biome-ignore lint/suspicious/noShadowRestrictedNames: We explicitly want this name for variable
 export const Boolean = new BooleanType();
@@ -24,8 +39,8 @@ export const Uint32 = new UintNumberType(4);
  *
  * Caution and reasoned analysis are always required before using this type as the consequence of misuse is a consensus split.
  */
-export const UintNum64 = new UintNumberType(8);
-export const UintNumInf64 = new UintNumberType(8, {clipInfinity: true});
+export const UintNum64: UintNumberType = new SafeUintNumberType(8);
+export const UintNumInf64: UintNumberType = new SafeUintNumberType(8, {clipInfinity: true});
 export const UintBn64 = new UintBigintType(8);
 export const UintBn128 = new UintBigintType(16);
 export const UintBn256 = new UintBigintType(32);
