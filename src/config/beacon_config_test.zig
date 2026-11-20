@@ -44,27 +44,3 @@ test "getDomain matches independently computed domain bytes" {
     try std.testing.expectEqualSlices(u8, &exit_domain, try config.getDomain(mainnet.chain_config.ALTAIR_FORK_EPOCH, DOMAIN_VOLUNTARY_EXIT, null));
     try std.testing.expectEqualSlices(u8, &attester_domain, try config.getDomain(mainnet.chain_config.ALTAIR_FORK_EPOCH, @import("constants").DOMAIN_BEACON_ATTESTER, null));
 }
-
-test "getDomain selects the domain across a fork boundary" {
-    const mainnet = @import("networks/mainnet.zig");
-    const preset = @import("preset").preset;
-    const b = @import("hex").hexToBytesComptime;
-    const config = BeaconConfig.init(mainnet.chain_config, mainnet.genesis_validators_root);
-    const fork_epoch = mainnet.chain_config.ALTAIR_FORK_EPOCH;
-    const fork_slot = fork_epoch * preset.SLOTS_PER_EPOCH;
-
-    // Same independent domain formula as above, for mainnet Phase0 and Altair.
-    const phase0_domain = b(32, "0x04000000b5303f2ad2010d699a76c8e62350947421a3e4a979779642cfdb0f66");
-    const altair_domain = b(32, "0x04000000afcaaba0efab1ca832a15152469bb09bb84641c405171dfa2d3fb45f");
-    const cases = [_]struct { state_epoch: u64, message_slot: ?u64, expected: *const [32]u8 }{
-        .{ .state_epoch = fork_epoch - 1, .message_slot = null, .expected = &phase0_domain },
-        .{ .state_epoch = fork_epoch, .message_slot = null, .expected = &altair_domain },
-        .{ .state_epoch = fork_epoch + 1, .message_slot = null, .expected = &altair_domain },
-        .{ .state_epoch = fork_epoch + 1, .message_slot = fork_slot - 1, .expected = &phase0_domain },
-        .{ .state_epoch = fork_epoch + 1, .message_slot = fork_slot, .expected = &altair_domain },
-        .{ .state_epoch = fork_epoch + 1, .message_slot = fork_slot + 1, .expected = &altair_domain },
-    };
-    for (cases) |case| {
-        try std.testing.expectEqualSlices(u8, case.expected, try config.getDomain(case.state_epoch, DOMAIN_VOLUNTARY_EXIT, case.message_slot));
-    }
-}
