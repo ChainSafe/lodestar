@@ -188,14 +188,15 @@ pub fn send(
 pub fn route(io: std.Io, probe: net.Socket.Handle, peer: *const net.IpAddress) Sockets.SourceError!Address {
     const p = std.posix;
     var storage: compat.PosixAddress = undefined;
-    var length = compat.addressToPosix(peer, &storage);
+    const peer_length = compat.addressToPosix(peer, &storage);
     try io.checkCancel();
-    if (p.errno(p.system.connect(probe, &storage.any, length)) != .SUCCESS) return error.SourceUnavailable;
-    length = @sizeOf(compat.PosixAddress);
+    if (p.errno(p.system.connect(probe, &storage.any, peer_length)) != .SUCCESS) return error.SourceUnavailable;
+    var length: p.socklen_t = @sizeOf(compat.PosixAddress);
     const named = p.errno(p.system.getsockname(probe, &storage.any, &length));
-    var unspecified = std.mem.zeroes(p.sockaddr);
-    unspecified.family = p.AF.UNSPEC;
-    const disconnected = p.errno(p.system.connect(probe, &unspecified, @sizeOf(p.sockaddr)));
+    // Darwin reports EINVAL for an address shorter than the socket's family requires.
+    var unspecified = std.mem.zeroes(compat.PosixAddress);
+    unspecified.any.family = p.AF.UNSPEC;
+    const disconnected = p.errno(p.system.connect(probe, &unspecified.any, peer_length));
     // Darwin disconnects and then reports the unspecified family as unsupported.
     if (named != .SUCCESS or (disconnected != .SUCCESS and (os == .linux or disconnected != .AFNOSUPPORT))) return error.SourceUnavailable;
     var source = Address.fromNetwork(compat.addressFromPosix(&storage));
@@ -402,7 +403,8 @@ fn sendError(errno: std.posix.E) SendError {
         .PIPE, .NOTCONN => error.SocketUnconnected,
         .AFNOSUPPORT => error.AddressFamilyUnsupported,
         .HOSTUNREACH => error.HostUnreachable,
-        .NETUNREACH => error.NetworkUnreachable,
+        // A pinned source that is not a local address produces EADDRNOTAVAIL on macOS.
+        .NETUNREACH, .ADDRNOTAVAIL => error.NetworkUnreachable,
         .NETDOWN => error.NetworkDown,
         .BADF, .DESTADDRREQ, .FAULT, .ISCONN, .NOTSOCK, .OPNOTSUPP => |err| compat.errnoBug(err),
         else => |err| std.posix.unexpectedErrno(err),

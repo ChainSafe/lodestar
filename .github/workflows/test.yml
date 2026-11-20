@@ -453,6 +453,11 @@ jobs:
         run: |
           zig build test:ere_verifier
 
+      - name: Add loopback addresses for the UDP source tests
+        if: matrix.os == 'macos-latest'
+        run: |
+          sudo ifconfig lo0 alias 127.0.0.2
+          sudo ifconfig lo0 alias 127.0.0.3
       - name: Run discovery and network tests
         run: |
           zig build test:fault_io
