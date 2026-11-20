@@ -498,7 +498,10 @@ test "gossip advertisements sample the whole burst independently for each recipi
     g.overlay.rows[t].fanout = .empty;
     const context = g.overlayContext(1);
     g.cycle.begin(context.sessions, context.peers, context.now, false, g.overlay.rng.random());
-    Gossipsub.finishPump(&g, Now.fromMilliseconds(.{ .mono_ms = context.now, .unix_s = 0 }));
+    for (0..g.overlay.rows.len + 1) |_| {
+        Gossipsub.finishPump(&g, Now.fromMilliseconds(.{ .mono_ms = context.now, .unix_s = 0 }));
+        if (!g.cycle.isActive()) break;
+    }
     const first = g.sessions.rows[0].io.tx.segment(&g.messages.store, 0);
     const second = g.sessions.rows[1].io.tx.segment(&g.messages.store, 0);
     try std.testing.expect(first.len > 0 and second.len > 0);
