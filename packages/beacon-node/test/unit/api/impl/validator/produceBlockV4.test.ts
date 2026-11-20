@@ -68,8 +68,8 @@ describe("api/validator - produceBlockV4", () => {
     api = getValidatorApi(defaultApiOptions, {...modules, config});
 
     vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
-    // Zero bid deadline so the p2p bid is selected without waiting
-    (modules.chain.builderApiClient as {bidDeadline: number}).bidDeadline = 0;
+    // Zero bid window so the p2p bid is selected without waiting
+    modules.chain.builderApiClient.getBidWindowMs.mockReturnValue(0);
     vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(0);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
     modules.chain.getProposerHead.mockReturnValue(parentBlock);
@@ -585,7 +585,15 @@ describe("api/validator - produceBlockV4", () => {
 
     const candidateLogs = modules.chain.logger.debug.mock.calls.filter(([msg]) => msg === "Builder bid candidate");
     expect(candidateLogs.map(([, ctx]) => ctx)).toMatchObject([
-      {source: builderUrl, value: "0.00000 ETH", executionPayment: "5.00000 ETH", total: "3.00000 ETH"},
+      {
+        source: builderUrl,
+        value: "0.00000 ETH",
+        executionPayment: "5.00000 ETH",
+        total: "3.00000 ETH",
+        blockHash: toRootHex(apiBid.message.blockHash),
+        parentBlockHash: toRootHex(apiBid.message.parentBlockHash),
+        parentBlockRoot: toRootHex(apiBid.message.parentBlockRoot),
+      },
       {source: "p2p", value: "1.00000 ETH", executionPayment: "0.00000 ETH", total: "1.00000 ETH"},
     ]);
   });

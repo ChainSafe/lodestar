@@ -7,6 +7,9 @@ import {
   BUILDER_BID_LAG_BUFFER_MS,
   BeaconDb,
   BeaconNode,
+  DEFAULT_BUILDER_BID_DEADLINE_MS,
+  DEFAULT_BUILDER_BID_DELAY_MS,
+  DEFAULT_BUILDER_BID_REQUESTS,
 } from "@lodestar/beacon-node";
 import {ChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
@@ -238,16 +241,23 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
-  // Bids received up to the deadline plus the lag buffer must still have a chance to win the block
-  // production race, otherwise the local block is selected at the race cutoff before any bid.
-  // Only enforced on an explicitly configured deadline, the default is used as is on short slots
-  const bidDeadline = args["builder.bidDeadline"];
-  if (bidDeadline !== undefined) {
+  // Bids received up to the end of the bid window plus the lag buffer must still have a chance to win the
+  // block production race, otherwise the local block is selected at the race cutoff before any bid.
+  // Only enforced on explicitly configured values, the defaults are used as is on short slots
+  if (
+    args["builder.bidDeadline"] !== undefined ||
+    args["builder.bidDelay"] !== undefined ||
+    args["builder.bidRequests"] !== undefined
+  ) {
+    const bidDeadline = options.executionBuilder.bidDeadline ?? DEFAULT_BUILDER_BID_DEADLINE_MS;
+    const bidDelay = options.executionBuilder.bidDelay ?? DEFAULT_BUILDER_BID_DELAY_MS;
+    const bidRequests = options.executionBuilder.bidRequests ?? DEFAULT_BUILDER_BID_REQUESTS;
+    const bidWindowMs = bidDelay + bidRequests * bidDeadline;
     for (const {name: fork, epoch} of config.forksAscendingEpochOrder) {
       const raceCutoffMs = config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS);
-      if (isForkPostGloas(fork) && epoch !== Infinity && bidDeadline + BUILDER_BID_LAG_BUFFER_MS >= raceCutoffMs) {
+      if (isForkPostGloas(fork) && epoch !== Infinity && bidWindowMs + BUILDER_BID_LAG_BUFFER_MS >= raceCutoffMs) {
         throw Error(
-          `--builder.bidDeadline of ${bidDeadline}ms must be below ${raceCutoffMs - BUILDER_BID_LAG_BUFFER_MS}ms for fork ${fork}`
+          `Builder bid window of ${bidWindowMs}ms (bidDelay + bidRequests * bidDeadline) must be below ${raceCutoffMs - BUILDER_BID_LAG_BUFFER_MS}ms for fork ${fork}`
         );
       }
     }

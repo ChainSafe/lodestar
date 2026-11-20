@@ -361,6 +361,9 @@ importers:
       uint8arraylist:
         specifier: ^2.4.7
         version: 2.4.8
+      ws:
+        specifier: 8.22.0
+        version: 8.22.0
       xxhash-wasm:
         specifier: 1.0.2
         version: 1.0.2
@@ -389,6 +392,9 @@ importers:
       '@types/tmp':
         specifier: ^0.2.3
         version: 0.2.3
+      '@types/ws':
+        specifier: 8.5.5
+        version: 8.5.5
       dotenv:
         specifier: ^16.4.5
         version: 16.4.5

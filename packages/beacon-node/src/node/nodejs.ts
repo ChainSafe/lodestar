@@ -80,6 +80,7 @@ export enum BeaconNodeStatus {
 
 enum LoggerModule {
   api = "api",
+  builder = "builder",
   chain = "chain",
   execution = "execution",
   metrics = "metrics",
@@ -282,6 +283,7 @@ export class BeaconNode {
       db,
       dbName: opts.db.name,
       logger: logger.child({module: LoggerModule.chain}),
+      builderApiClientLogger: logger.child({module: LoggerModule.builder}),
       processShutdownCallback,
       metrics,
       validatorMonitor,
@@ -299,6 +301,9 @@ export class BeaconNode {
       builderApiClientOpts: {
         timeout: opts.executionBuilder.timeout,
         bidDeadline: opts.executionBuilder.bidDeadline,
+        bidDelay: opts.executionBuilder.bidDelay,
+        bidRequests: opts.executionBuilder.bidRequests,
+        bidStream: opts.executionBuilder.bidStream,
         // Sent with all builder api requests, unless the node runs in private mode
         userAgent: opts.executionBuilder.userAgent,
       },

@@ -36,7 +36,7 @@ The other old branches have been compared explicitly:
   returns an unavailable response until those preferences can be processed.
 - #12 and #27: the subsidy cutoff is included in the consolidated publisher.
 - #21: its only extra commit adds dictionary words that are already present.
-- #29: the stream client, cleanup and retry fixes are included through later
+- #29: the publisher cleanup and retry fixes are included through later
   commits; merging its older integration branch would add obsolete code.
 - #36: the optional assumed identity is included with later staged identity
   checks. Deployments without those explicit options still use the registry.
@@ -89,3 +89,18 @@ Temporary compatibility patches for an older deployed image should record the
 upstream commit and exact runtime delta. They are not new long-lived integration
 branches; remove their deployment overlays when the consolidated build replaces
 the old image.
+
+## Proposer receiver deployment parity
+
+The November image audit found that the deployed Plataberget proposer beacon had
+an additional receiver branch at `8fcee35bc3eb62a03a91850e03b432b66233f67e`.
+That branch was absent from the publisher-based consolidation. Restore its delayed
+and repeated requests, authenticated WebSocket client, bounded HTTP fallback,
+TLS connection timing fixes, shutdown handling and receipt diagnostics before
+replacing that beacon's image. The publisher's WebSocket server was already
+included.
+
+The restored client keeps the current upstream native state transition and
+block-production validation. Its receiver modules match the deployed branch;
+integration tests use the current `@lodestar/native` package. Qualify the entire
+runtime command as well as the publisher branch when replacing a composite image.

@@ -20,6 +20,14 @@ You will need to go over the [specification](https://github.com/ethereum/consens
 - Follow the [installation guide](https://chainsafe.github.io/lodestar/) to install Lodestar.
 - Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/contribution/advanced-topics/setting-up-a-testnet/).
 
+## Gloas builder bid streaming
+
+The beacon node can request builder bids over WebSocket with `--builder.bidStream`. The option defaults to `false` and applies only to Gloas. Builder URLs and request authentication still come from the validator client's builder configuration; the pre-Gloas `--builder` switch is not required.
+
+Streaming preserves the configured `--builder.bidDelay`, `--builder.bidDeadline` and `--builder.bidRequests`. Each request round opens its own stream and keeps the latest matching bid, including a lower replacement. Distinct offers collected across rounds remain subject to the normal bid validation and selection rules.
+
+If a connection fails before the WebSocket upgrade, the client can fall back to HTTP using only that round's remaining deadline. An established stream does not trigger an HTTP retry when it closes or receives invalid frames. Bids still pass the normal parent, signature, payment and collateral checks before selection.
+
 ## Contributors
 
 Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!
