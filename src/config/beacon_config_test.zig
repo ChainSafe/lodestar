@@ -32,13 +32,17 @@ test "Heze timing uses the fork-specific slot duration" {
     try std.testing.expectEqual(1000, config.getProposerReorgCutoffMs(.heze));
 }
 
-test "getDomain" {
-    const root = [_]u8{0} ** 32;
-    var beacon_config = BeaconConfig.init(@import("./networks/mainnet.zig").chain_config, root);
+test "getDomain matches independently computed domain bytes" {
+    const mainnet = @import("networks/mainnet.zig");
+    const b = @import("hex").hexToBytesComptime;
+    const config = BeaconConfig.init(mainnet.chain_config, mainnet.genesis_validators_root);
 
-    const domain = try beacon_config.getDomain(100, DOMAIN_VOLUNTARY_EXIT, null);
-    const domain2 = try beacon_config.getDomain(100, DOMAIN_VOLUNTARY_EXIT, null);
-    try std.testing.expectEqualSlices(u8, domain, domain2);
+    // domain_type || SHA256(fork_version || zero_bytes(28) || genesis_validators_root)[:28].
+    // These vectors use the mainnet Altair version (0x01000000) and genesis validators root.
+    const exit_domain = b(32, "0x04000000afcaaba0efab1ca832a15152469bb09bb84641c405171dfa2d3fb45f");
+    const attester_domain = b(32, "0x01000000afcaaba0efab1ca832a15152469bb09bb84641c405171dfa2d3fb45f");
+    try std.testing.expectEqualSlices(u8, &exit_domain, try config.getDomain(mainnet.chain_config.ALTAIR_FORK_EPOCH, DOMAIN_VOLUNTARY_EXIT, null));
+    try std.testing.expectEqualSlices(u8, &attester_domain, try config.getDomain(mainnet.chain_config.ALTAIR_FORK_EPOCH, @import("constants").DOMAIN_BEACON_ATTESTER, null));
 }
 
 test "blob parameters select latest active entry and share payload bounds" {
