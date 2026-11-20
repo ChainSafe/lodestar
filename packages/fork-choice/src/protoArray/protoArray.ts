@@ -1208,6 +1208,7 @@ export class ProtoArray {
     for (let nodeIndex = 0; nodeIndex < this.nodes.length; nodeIndex++) {
       const node = this.nodes[nodeIndex];
       if (
+        isGloasBlock(node) &&
         node.executionStatus === ExecutionStatus.Syncing &&
         node.executionPayloadBlockHash !== null &&
         payloadHashes.has(node.executionPayloadBlockHash)
