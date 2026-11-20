@@ -6,6 +6,8 @@ import {FAR_FUTURE_EPOCH, ForkName, MIN_DEPOSIT_AMOUNT, SLOTS_PER_EPOCH} from "@
 import {ssz} from "@lodestar/types";
 import {CachedBeaconStateGloas, createCachedBeaconState} from "../../../src/index.js";
 import {BeaconStateView} from "../../../src/stateView/beaconStateView.js";
+import {isStatePostGloas} from "../../../src/stateView/interface.js";
+import {createBeaconStateView} from "../../../src/stateView/stateViewFactory.js";
 import {generateState} from "../../utils/state.js";
 
 describe("BeaconStateView prepared builder liabilities", () => {
@@ -61,5 +63,32 @@ describe("BeaconStateView prepared builder liabilities", () => {
     expect(view.builderPendingPayments[0].weight).toBe(3);
     expect(view.builderPendingPayments[0].withdrawal.amount).toBe(17);
     expect(view.builderPendingWithdrawals[0].amount).toBe(19);
+  });
+
+  it("matches native FULL-parent liabilities and spendable balance", () => {
+    const stateBytes = fixture().serialize();
+    const parents = [false, true].map((nativeStateTransition) => {
+      const state = createBeaconStateView({nativeStateTransition, config, stateBytes});
+      if (!isStatePostGloas(state)) throw Error("Expected Gloas fixture");
+      return state;
+    });
+    const applied = parents.map((parent) =>
+      parent.withParentPayloadApplied(ssz.gloas.ExecutionRequests.defaultValue())
+    );
+    try {
+      for (const view of applied) {
+        expect(view.builderPendingPayments[SLOTS_PER_EPOCH + 4].withdrawal.amount).toBe(0);
+        expect(view.builderPendingWithdrawals.map((withdrawal) => withdrawal.amount)).toEqual([700]);
+        expect(view.canBuilderCoverBid(0, 300)).toBe(true);
+        expect(view.canBuilderCoverBid(0, 301)).toBe(false);
+      }
+      expect(applied[1].hashTreeRoot()).toEqual(applied[0].hashTreeRoot());
+      for (const parent of parents) {
+        expect(parent.builderPendingPayments[SLOTS_PER_EPOCH + 4].withdrawal.amount).toBe(700);
+        expect(parent.builderPendingWithdrawals).toEqual([]);
+      }
+    } finally {
+      for (const view of [...applied, ...parents]) view.release();
+    }
   });
 });

@@ -63,13 +63,13 @@ describe("Bidder", () => {
   function createBidder(
     getBuilderStatus?: () => {status: BuilderStatus | undefined; balance: number | undefined},
     dryRun = false,
-    updateOptions?: Pick<BidderOptions, "updateIntervalMs" | "updateCutoffBps" | "maxRevisionsPerSlot">
+    updateOptions?: Pick<BidderOptions, "updateIntervalMs" | "updateCutoffBps" | "maxRevisionsPerSlot">,
+    config = getConfig(ForkName.gloas)
   ): {
     bidder: Bidder;
     ledger: BidLedger;
     bidStore: BidStore;
   } {
-    const config = getConfig(ForkName.gloas);
     const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
     return createBiddingModules({
       api,
@@ -111,6 +111,24 @@ describe("Bidder", () => {
     data.payloadAttributes.targetGasLimit = 30_000_000n;
     return {version: ForkName.gloas, data};
   }
+
+  it("uses the preceding slot duration when the proposal fork changes slot length", async () => {
+    const config = getConfig(ForkName.gloas);
+    vi.spyOn(config, "getForkName").mockImplementation((slot) => (slot === 0 ? ForkName.fulu : ForkName.gloas));
+    vi.spyOn(config, "getSlotDurationMs").mockImplementation((fork) => (fork === ForkName.fulu ? 12_000 : 6_000));
+    vi.spyOn(config, "getSlotComponentDurationMs").mockImplementation((fork, bps) =>
+      Math.floor(((fork === ForkName.fulu ? 12_000 : 6_000) * bps) / 10_000)
+    );
+    addProposerPreferences();
+    const {bidder} = createBidder(undefined, false, undefined, config);
+    const bidding = bidder.onPayloadAttributes(payloadAttributesEvent());
+    await vi.advanceTimersByTimeAsync(msToDeadline - 1);
+    expect(payloadSource.getPayload).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(payloadSource.getPayload).toHaveBeenCalledOnce();
+    await bidding;
+    expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+  });
 
   it("builds in dry-run mode without signing, publishing, or storing a bid", async () => {
     const sign = vi.spyOn(BuilderSigner.prototype, "signExecutionPayloadBid");

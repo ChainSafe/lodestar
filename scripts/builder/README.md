@@ -22,3 +22,18 @@ consensus compatibility; it is not an execution validation or live latency test.
 On 20 November, a captured state with 85,539 validators and 28 available blocks
 across 32 slots passed these checks against upstream `269cf1aa5bcf`. The four
 missing slots were recorded explicitly.
+
+To check recovery across a publisher upgrade, build the old and new repositories,
+then write a synthetic journal with the old publisher and recover it with the new
+one. Use a new directory, never a live journal:
+
+```sh
+node scripts/builder/qualifyJournalUpgrade.mjs write /path/to/old-build /tmp/journal-upgrade/records
+node scripts/builder/qualifyJournalUpgrade.mjs read /path/to/new-build /tmp/journal-upgrade/records
+```
+
+Create the parent directory first. The writer requires the old transaction array
+representation. The reader checks identical execution payload bytes and signed
+bid roots after recovery, and confirms that a recovered reveal obligation does
+not become permission to offer the bid again. The transactions are synthetic SSZ
+test data; this does not execute or broadcast them.

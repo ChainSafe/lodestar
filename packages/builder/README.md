@@ -1,7 +1,7 @@
 # Lodestar Builder
 
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
-[![Eth Consensus Spec v1.7.0-beta.2](https://img.shields.io/badge/ETH%20consensus--spec-1.7.0_beta.2-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.7.0-beta.2)
+[![Eth Consensus Spec v1.7.0-beta.4](https://img.shields.io/badge/ETH%20consensus--spec-1.7.0_beta.4-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.7.0-beta.4)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
 ![Node Version](https://img.shields.io/badge/node-24.x-green)
 
@@ -13,6 +13,22 @@ Typescript implementation of the Ethereum Consensus builder client.
 
 - Follow the [installation guide](https://chainsafe.github.io/lodestar/) to install Lodestar.
 - Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/contribution/advanced-topics/setting-up-a-testnet/).
+
+## Requirements
+
+- Start the beacon node with `--emitPayloadAttributes`. Otherwise it only emits
+  payload attributes for its own proposal slots.
+- Configure either an execution client with Engine API access or the incremental
+  constructor described below. The builder requires Gloas to be scheduled.
+
+## Limitations
+
+Won bids reserve their value for three epochs. Their payments only leave the
+builder's beacon balance when withdrawals are processed, so a longer withdrawal
+backlog can cause the publisher to overestimate available balance. Reconciling
+the publisher ledger with pending payments and withdrawals remains necessary.
+Beacon-side bid validation checks these liabilities; disabling that check does
+not remove the publisher limitation.
 
 ## Recovering proposer preferences
 

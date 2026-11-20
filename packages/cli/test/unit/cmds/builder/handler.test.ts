@@ -1,7 +1,10 @@
+import {createServer} from "node:http";
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {Builder} from "@lodestar/builder";
 import {chainConfig} from "@lodestar/config/default";
 import {SecretKey} from "@lodestar/native/blst";
+import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {LogLevel} from "@lodestar/utils";
 import {BuilderRestApiServer} from "../../../../src/cmds/builder/apiServer.js";
 import {builderHandler, parseProposerPreferencesUrls} from "../../../../src/cmds/builder/handler.js";
@@ -58,6 +61,60 @@ describe("cmds / builder / args handler", () => {
 
   it("Should reject unscheduled Gloas", async () => {
     await expect(runBuilderHandler({})).rejects.toThrow("Gloas must be scheduled via GLOAS_FORK_EPOCH");
+  });
+
+  it("preserves an invalid Engine parent error in the payload source", async () => {
+    const server = createServer(async (req, res) => {
+      if (req.method !== "POST") {
+        res.statusCode = 404;
+        res.end();
+        return;
+      }
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(Buffer.from(chunk));
+      const {id} = JSON.parse(Buffer.concat(chunks).toString());
+      res.setHeader("content-type", "application/json");
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id,
+          result: {
+            payloadStatus: {status: "INVALID", latestValidHash: null, validationError: "test invalid parent"},
+            payloadId: null,
+          },
+        })
+      );
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") throw Error("Missing test server address");
+      const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
+      vi.spyOn(keyLoader, "loadBuilderKeypair").mockResolvedValue({secretKey, publicKey: secretKey.toPublicKey()});
+      vi.spyOn(cliUtils, "onGracefulShutdown").mockImplementation(() => {});
+      const init = vi.spyOn(Builder, "init").mockRejectedValue(Error("BUILDER_INIT_CAPTURED"));
+      await expect(
+        runBuilderHandler({
+          "params.GLOAS_FORK_EPOCH": "0",
+          "execution.urls": [`http://127.0.0.1:${address.port}`],
+        })
+      ).rejects.toThrow("BUILDER_INIT_CAPTURED");
+      const source = init.mock.calls[0][0].payloadSource;
+      const blockHash = `0x${"11".repeat(32)}`;
+      await expect(
+        source.prepare(
+          {
+            fork: ForkName.gloas,
+            forkchoiceState: {headBlockHash: blockHash, safeBlockHash: blockHash, finalizedBlockHash: blockHash},
+            payloadAttributes: ssz.gloas.SSEPayloadAttributes.defaultValue().payloadAttributes,
+          },
+          new AbortController().signal
+        )
+      ).rejects.toThrow("Invalid prepare payload, validationError=test invalid parent");
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+    }
   });
 
   it("keeps the private exposure endpoint opt-in and requires the builder API", () => {

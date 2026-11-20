@@ -204,8 +204,8 @@ describe("Identity", () => {
     );
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
 
-    // Does not re-poll before the next epoch boundary
-    await vi.advanceTimersByTimeAsync(epochPollMs - 1);
+    // Recheck the head after the next slot.
+    await vi.advanceTimersByTimeAsync(clock.msToSlot(1) - 1);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
 
     await vi.advanceTimersByTimeAsync(1);
@@ -239,6 +239,32 @@ describe("Identity", () => {
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
     await vi.advanceTimersByTimeAsync(clock.msToSlot(1));
     expect((await promise).index).toEqual(index);
+    expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(["pre-gloas", "pending"])("retries a %s head at the fork slot on the next slot", async (head) => {
+    vi.useFakeTimers();
+    const forkClock = new ClockMock();
+    forkClock.currentSlot = SLOTS_PER_EPOCH - 1;
+    const forkConfig = createBeaconConfig({...getConfig(ForkName.fulu), GLOAS_FORK_EPOCH: 1}, Buffer.alloc(32));
+    api.beacon.getStateBuilders
+      .mockResolvedValueOnce(
+        head === "pre-gloas"
+          ? await mockApiErrorResponse(400)
+          : mockGetStateBuildersResponse(index, {status: "pending", pubkey, balance, version})
+      )
+      .mockResolvedValue(mockGetStateBuildersResponse(index, {status, pubkey, balance, version}));
+    const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, forkClock, forkConfig);
+    await vi.advanceTimersByTimeAsync(11999);
+    expect(api.beacon.getStateBuilders).not.toHaveBeenCalled();
+    forkClock.currentSlot = SLOTS_PER_EPOCH;
+    await vi.advanceTimersByTimeAsync(1);
+    expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(11999);
+    expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
+    forkClock.currentSlot++;
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(promise).resolves.toMatchObject({index, status: "active"});
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
 

@@ -83,7 +83,7 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
   ...logOptions,
 
   beaconNodeUrl: {
-    description: "Url to a trusted beacon node",
+    description: "Url to a trusted beacon node started with --emitPayloadAttributes",
     type: "string",
     default: defaultOptions.beaconNodeUrl,
   },

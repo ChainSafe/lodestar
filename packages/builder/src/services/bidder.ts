@@ -331,8 +331,8 @@ export class Bidder {
 
       const msToDeadline =
         clock.msToSlot(slot) -
-        config.getSlotDurationMs(config.getForkName(slot)) +
-        config.getSlotComponentDurationMs(config.getForkName(slot), this.opts.deadlineBps);
+        config.getSlotDurationMs(config.getForkName(slot - 1)) +
+        config.getSlotComponentDurationMs(config.getForkName(slot - 1), this.opts.deadlineBps);
       logger.verbose("Preparing payload build", {...logCtx, msToDeadline, targetGasLimit});
 
       const job: PayloadBuildJob = {
@@ -483,8 +483,8 @@ export class Bidder {
     return Math.max(
       slotStart - (this.opts.alternateRefreshBeforeSlotMs ?? 0),
       slotStart -
-        config.getSlotDurationMs(config.getForkName(slot)) +
-        config.getSlotComponentDurationMs(config.getForkName(slot), this.opts.deadlineBps) +
+        config.getSlotDurationMs(config.getForkName(slot - 1)) +
+        config.getSlotComponentDurationMs(config.getForkName(slot - 1), this.opts.deadlineBps) +
         ALTERNATE_REFRESH_PRIMARY_MARGIN_MS
     );
   }
@@ -607,8 +607,8 @@ export class Bidder {
       [this.opts.deadlineBps, ...(this.modules.gossipStages ?? []).map((stage) => stage.deadlineBps)].some((bps) => {
         const remaining =
           slotStart -
-          config.getSlotDurationMs(config.getForkName(primary.slot)) +
-          config.getSlotComponentDurationMs(config.getForkName(primary.slot), bps) -
+          config.getSlotDurationMs(config.getForkName(primary.slot - 1)) +
+          config.getSlotComponentDurationMs(config.getForkName(primary.slot - 1), bps) -
           Date.now();
         return remaining >= -50 && remaining <= duration + 50;
       })
@@ -1084,8 +1084,8 @@ export class Bidder {
     const {clock, config} = this.modules;
     return (
       clock.msToSlot(slot) -
-      config.getSlotDurationMs(config.getForkName(slot)) +
-      config.getSlotComponentDurationMs(config.getForkName(slot), this.opts.deadlineBps)
+      config.getSlotDurationMs(config.getForkName(slot - 1)) +
+      config.getSlotComponentDurationMs(config.getForkName(slot - 1), this.opts.deadlineBps)
     );
   }
 
@@ -1521,8 +1521,8 @@ export class Bidder {
     const slotStart = Date.now() + clock.msToSlot(slot);
     const stageTime = (deadlineBps: number): number =>
       slotStart -
-      config.getSlotDurationMs(config.getForkName(slot)) +
-      config.getSlotComponentDurationMs(config.getForkName(slot), deadlineBps);
+      config.getSlotDurationMs(config.getForkName(slot - 1)) +
+      config.getSlotComponentDurationMs(config.getForkName(slot - 1), deadlineBps);
     const primaryUntil = stages.length ? stageTime(stages[0].deadlineBps) : until;
     const gossipBest = (): void => {
       if (Date.now() < job.getPayloadAt) return;

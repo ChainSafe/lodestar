@@ -156,11 +156,10 @@ async function waitForBuilder(
     }
     if (builder?.status === "pending") {
       logger.info("Waiting for builder deposit to be finalized", {id, slot: clock.getCurrentSlot()});
-      await sleep(msToNextEpochPoll(clock), signal);
     } else {
       logger.info("Waiting for builder to be known to the beacon node", {id, slot: clock.getCurrentSlot()});
-      await sleep(msToNextSlotPoll(clock), signal);
     }
+    await sleep(msToNextSlotPoll(clock), signal);
   }
   throw new ErrorAborted("waitForBuilder");
 }
@@ -214,10 +213,6 @@ function assumedBuilderResponse(
   builder.balance = assumed.balanceGwei;
   builder.withdrawableEpoch = FAR_FUTURE_EPOCH;
   return {index: assumed.index, status: "active", builder};
-}
-
-function msToNextEpochPoll(clock: IClock): number {
-  return clock.msToSlot(computeStartSlotAtEpoch(clock.getCurrentEpoch() + 1));
 }
 
 function msToNextSlotPoll(clock: IClock): number {

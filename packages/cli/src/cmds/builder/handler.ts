@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {getClient} from "@lodestar/api";
 import {
+  ExecutionPayloadStatus,
   JsonRpcHttpClient,
   RegistryMetricCreator,
   collectNodeJSMetrics,
@@ -254,9 +255,19 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
       {signal: abortController.signal, logger}
     );
     return new EnginePayloadSource(toPrintableUrl(executionUrl), {
-      notifyForkchoiceUpdate: async (fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes) =>
-        (await engine.notifyForkchoiceUpdate(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes))
-          .payloadId,
+      notifyForkchoiceUpdate: async (fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes) => {
+        const {payloadStatus, payloadId} = await engine.notifyForkchoiceUpdate(
+          fork,
+          headBlockHash,
+          safeBlockHash,
+          finalizedBlockHash,
+          payloadAttributes
+        );
+        if (payloadStatus.status === ExecutionPayloadStatus.INVALID) {
+          throw Error(`Invalid prepare payload, validationError=${payloadStatus.validationError ?? ""}`);
+        }
+        return payloadId;
+      },
       getPayload: async (fork, payloadId) => (await engine.getPayload(fork, payloadId)) as EnginePayloadResult,
     });
   };
@@ -277,8 +288,8 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
         payloadSource,
         createEngineSource(),
         engineUntilSlot,
-        config.getSlotDurationMs(config.getForkName(engineUntilSlot)) -
-          config.getSlotComponentDurationMs(config.getForkName(engineUntilSlot), args["bidding.deadlineBps"]) +
+        config.getSlotDurationMs(config.getForkName(engineUntilSlot - 1)) -
+          config.getSlotComponentDurationMs(config.getForkName(engineUntilSlot - 1), args["bidding.deadlineBps"]) +
           FORK_TRANSITION_SNAPSHOT_MARGIN_MS
       );
       logger.info("Execution client builds through the configured fork transition slot", {engineUntilSlot});
