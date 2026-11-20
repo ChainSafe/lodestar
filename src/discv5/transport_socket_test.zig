@@ -4,7 +4,7 @@ const Transport = @import("Transport.zig");
 const enr = @import("identity/enr.zig");
 const Maintenance = @import("Maintenance.zig");
 const message = @import("wire/message.zig");
-const Sockets = @import("udp").Sockets;
+const SocketPair = @import("udp").SocketPair;
 const test_support = @import("test_support.zig");
 const Pair = @import("transport_test_support.zig").Pair;
 const types = @import("types.zig");
@@ -180,7 +180,7 @@ test "transport fails a call whose handshake is not sent so maintenance keeps th
         const unsent = try driver.step(&pair.transport_a, host.io(), &expired, .{ .wait_max = .fromMilliseconds(10) });
         try std.testing.expectEqual(if (send_failure == error.SystemResources) @as(?Transport.Error, error.SystemResources) else null, @as(?Transport.Error, if (unsent.failure) |failure| failure.cause else null));
         const dropped = &pair.transport_a.send_drops;
-        const pressure = @intFromEnum(Sockets.SendDrops.Reason.system_resources);
+        const pressure = @intFromEnum(SocketPair.SendDrops.Reason.system_resources);
         try std.testing.expectEqual(@as(u64, @intFromBool(send_failure == error.SystemResources)), dropped.datagrams[pressure]);
         try std.testing.expectEqual(send_failure == error.SystemResources, dropped.bytes[pressure] > 0);
         try std.testing.expectEqual(@as(usize, 1), host.send_calls);
@@ -233,7 +233,7 @@ test "discovery ready steps expire calls with no eligible socket and preserve la
 
 test "discovery ready steps retain one family mask through the drain" {
     const key = try keyPair(0x66);
-    var sockets = try Sockets.bind(std.testing.io, .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } });
+    var sockets = try SocketPair.bind(std.testing.io, .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } });
     var owned = true;
     defer if (owned) sockets.close(std.testing.io);
     const record = try enr.Record.create(&key, 1, sockets.localAddress());

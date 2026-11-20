@@ -2,9 +2,9 @@
 //! Re-audit these assumptions when upgrading Zig, including the Darwin socket ABI.
 const std = @import("std");
 const builtin = @import("builtin");
-const Sockets = @import("sockets.zig").Sockets;
+const SocketPair = @import("SocketPair.zig");
 const net = std.Io.net;
-const BindError = Sockets.BindError;
+const BindError = SocketPair.BindError;
 const os = builtin.os.tag;
 pub const PosixAddress = std.Io.Threaded.PosixAddress;
 pub const addressToPosix = std.Io.Threaded.addressToPosix;

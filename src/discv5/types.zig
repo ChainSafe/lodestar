@@ -36,7 +36,7 @@ pub fn xorCloser(
 }
 
 pub const Address = @import("udp").Address;
-pub const Mode = @import("udp").Sockets.Mode;
+pub const Mode = @import("udp").SocketPair.Mode;
 
 pub const Endpoint = struct {
     node_id: NodeId,
