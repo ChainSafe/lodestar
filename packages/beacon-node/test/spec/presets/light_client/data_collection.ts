@@ -1,13 +1,12 @@
 import {expect} from "vitest";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkPostAltair, ForkPostGloas, isForkPostGloas} from "@lodestar/params";
+import {ForkPostAltair} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
   BeaconStateView,
   CachedBeaconStateAllForks,
-  CachedBeaconStateGloas,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateViewAltair,
@@ -25,6 +24,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
+import {createGenesisBlock} from "../../../../src/chain/initState.js";
 import {LightClientServer, blockToLightClientHeader} from "../../../../src/chain/lightClient/index.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 import {startIsolatedTmpBeaconDb} from "../../../utils/db.js";
@@ -109,26 +109,14 @@ export const dataCollection: TestRunnerFn<DataCollectionTestCase, void> = (fork)
 
         const statesByRoot = new Map<RootHex, CachedBeaconStateAllForks>([[genesisRoot, genesisState]]);
 
-        // Genesis is never imported, but it is a valid bootstrap target and the first block attests to it.
-        // Its body is the default one, see `create_signed_genesis_block` in the spec test helpers.
-        const genesisFork = fork as ForkPostAltair;
-        const genesisBlock = sszTypesFor(genesisFork).BeaconBlock.defaultValue() as BeaconBlock<ForkPostAltair>;
-        genesisBlock.slot = genesisHeader.slot;
-        genesisBlock.proposerIndex = genesisHeader.proposerIndex;
-        genesisBlock.parentRoot = genesisHeader.parentRoot;
-        genesisBlock.stateRoot = genesisHeader.stateRoot;
-        if (isForkPostGloas(genesisFork)) {
-          (genesisBlock as BeaconBlock<ForkPostGloas>).body.signedExecutionPayloadBid.message = (
-            genesisState as CachedBeaconStateGloas
-          ).latestExecutionPayloadBid.toValue();
-        }
-        const genesisLightClientHeader = blockToLightClientHeader(genesisFork, genesisBlock);
-        expect(toRootHex(genesisLightClientHeader.beacon.bodyRoot)).toEqual(toRootHex(genesisHeader.bodyRoot));
-        await server.initAnchor(
-          fromHex(genesisRoot),
-          genesisLightClientHeader,
-          new BeaconStateView(genesisState) as IBeaconStateViewAltair
+        // Genesis is never imported, but it is a valid bootstrap target and the first block attests to it
+        const genesisView = new BeaconStateView(genesisState) as IBeaconStateViewAltair;
+        const genesisBlock = createGenesisBlock(config, genesisView).message as BeaconBlock<ForkPostAltair>;
+        const genesisLightClientHeader = blockToLightClientHeader(fork as ForkPostAltair, genesisBlock);
+        expect(toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(genesisLightClientHeader.beacon))).toEqual(
+          genesisRoot
         );
+        await server.initAnchor(fromHex(genesisRoot), genesisLightClientHeader, genesisView);
 
         const getFile = (name: string): Uint8Array => {
           const bytes = testcase.files.get(name);
