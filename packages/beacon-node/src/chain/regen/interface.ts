@@ -14,6 +14,7 @@ export enum RegenCaller {
   validateGossipDataColumn = "validateGossipDataColumn",
   validateGossipExecutionPayloadEnvelope = "validateGossipExecutionPayloadEnvelope",
   precomputeEpoch = "precomputeEpoch",
+  prepareEarlyPayloadAttributes = "prepareEarlyPayloadAttributes",
   predictProposerHead = "predictProposerHead",
   produceAttestationData = "produceAttestationData",
   processBlocksInEpoch = "processBlocksInEpoch",

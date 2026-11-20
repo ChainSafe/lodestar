@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "observedAt": "2026-10-23T18:05:59.240732+00:00",
+  "scope": "local post-Gloas work-preservation qualification; not deployed",
+  "sourceCommits": {
+    "native": "7363254a73834dac844e18febfdc5ea79f73c84e",
+    "gateway": "2425141857d8e0d7c541d01913516dfb37306e9d",
+    "publisher": "f7d8413777416ed42113a3ae1cf86f0367052440"
+  },
+  "baselines": {
+    "native": "3dd0f1c3f99f1d24adac2c629ddd661b2430cdcf",
+    "gateway": "a42f00a582b05eb1ddd073fcbe94d5c5f4eb6abc",
+    "publisher": "5119da029a183360daa3e28e98e133e8c6741f33"
+  },
+  "nativeBinarySourceCommit": "e42e52f5341acc03a8ee73892bf68fa57235d68f",
+  "nativeBinaryNote": "Final native commits after e42e change only test/docs; src diff is empty. Release must build from final integrated commit.",
+  "tests": {
+    "zigUnits": {
+      "debug": 257,
+      "safe": 257
+    },
+    "nativeProcesses": {
+      "debug": 15,
+      "safe": 15
+    },
+    "gatewayCombined": 190,
+    "gatewaySimulationChecks": 95,
+    "publisherUniqueAffectedTests": 511,
+    "publisherDetails": {
+      "unitFiles": 12,
+      "full482Run": "480 passed; two test doubles fixed to forward offer context, affected225 rerun passed",
+      "eligibilityAdditional": 27,
+      "finalCapAsyncStoreStagesPublisher": 154,
+      "finalJournal": 55,
+      "realCompiledWorker": "257 admissions; definite cap refusal before writes; next slot/exposure healthy; old reveals recover"
+    },
+    "crossStack": {
+      "debug": 6,
+      "safe": 6
+    },
+    "typecheck": "pass",
+    "build": "pass",
+    "scopedBiome": "pass"
+  },
+  "workComparison": {
+    "workload": "one unchanged known private order, two unrelated cancellations",
+    "limits": "Synthetic authenticated Gloas state; canned Engine validation. Work counts, not live latency or win rate.",
+    "results": [
+      {
+        "scoped": false,
+        "transitions": 2,
+        "appendCalls": 3,
+        "candidateResets": 2,
+        "payloadPreserved": true,
+        "proofCallsAfterInitialCandidate": 0
+      },
+      {
+        "scoped": true,
+        "transitions": 2,
+        "appendCalls": 1,
+        "candidateResets": 0,
+        "payloadPreserved": true,
+        "proofCallsAfterInitialCandidate": 0
+      }
+    ]
+  },
+  "limits": [
+    "Global 250ms offer lease/300ms drain, global1/12s owner1/30s cancellation limits and pending private-feed pause unchanged. Opt-in flags remain required.",
+    "Native unidentified/affected candidates use bounded reset; old-generation retained grants remain fenced. Primary handoff remains one-shot.",
+    "Quotes remain generation-bound and re-simulate after an unrelated cancellation.",
+    "Owner-order revocation is distinct from transaction-byte exclusion. Public/other-owner copies may land and earlier signed payloads remain revealable.",
+    "Fixture state authenticated, Engine VALID acknowledgment canned: no independent full-block execution validity, mainnet throughput, latency or win-rate claim.",
+    "Process-level lost commit/reauthorize ACK injection remains a gap; source guards, unit tests and ordinary live-process fence races are covered.",
+    "Publisher graph recompiles builder on pinned5119 non-builder graph, not a whole monorepo production-image qualification.",
+    "Journal v3 requires a compatible rollback reader until 96-slot bid history expires; retain journals and reader artifacts."
+  ],
+  "review": {
+    "model": "claude-opus-5-5",
+    "round": "r4",
+    "verdict": "No P0/P1/P2. Prior findings fixed. P3 same-generation shortcut test gap closed by test-only2425141; selected telemetry clarified; unchanged quote work/default limits documented.",
+    "reviewedCommits": {
+      "native": "7363254a73834dac844e18febfdc5ea79f73c84e",
+      "gateway": "a5aa30d9f92b2c5275312f24d0af0cae05641092",
+      "publisher": "f7d8413777416ed42113a3ae1cf86f0367052440"
+    },
+    "resultSha256": "9bc2ffcf0724978febfbae0b2339e5c659ec39b4f7de2d5bb610aa3fb0279580"
+  },
+  "artifacts": {
+    "nativeDebugSha256": "af31e4ff74152337b76a6e4dd940dcd540e4c26b38820a4ea83a6209353b028f",
+    "nativeSafeSha256": "fcdf3113e75f0f40ee0651c9ace750bb4ebfa39e841de12e95185cb493e11063",
+    "publisherGraphManifestSha256": "cf5cc6fad7f4dc008421c2540bf62da96cb4c584569ce138985b7ff6e2f2a02b"
+  },
+  "evidence": {
+    "native-merged-debug-build.log": "84caf08eb3af790206ec66feedddef7bd5fc2928e4a94c707fec50ac6c2d9506",
+    "native-merged-safe-build.log": "af7af33f59406ee7b175d91b99ffe4dc8d05e5985eccc0cacab8d91243bfede6",
+    "native-merged-debug-process.log": "2c28ac7bb3b982392a995c565cbac1d80827ca70c6e15fd8c2215ae5bb3a0907",
+    "native-merged-safe-process.log": "ef3317f0e4cac95fee03a81c85d647dd91371c9901f73d743488be6d06b89450",
+    "gateway-final-tests.log": "d6e7e1ec11edbbe945182dd210f035c645c2030078f9820dd5f8164ea0c403aa",
+    "gateway-final-simtest.log": "95d7af31a5d3880c02dea4948e63b57eb3ade4f8df68a21f7046e7b2996282a2",
+    "publisher-suite-r3.log": "1050b1c8299dac7e7995b96e2edd94d7e3abd1af901f01416c69f85eeb682a22",
+    "publisher-retested-r3.log": "2dc6784fb2ac5d1c9e858cfcaeb18fdf92e23b481d4249faf542ab92acdd0d4d",
+    "publisher-alternate-eligibility-r3.log": "f509c581cdc654e62c6ea10117991406f89a55dba78f0008c9be518a365f7086",
+    "publisher-cap-r4.log": "aec2ee99221e5a1641befe8f14780b5e412d2e42a7bc1507b421248aae99298f",
+    "publisher-journal-r4.log": "20674db5fe26c6e8f1efad2be6b9f74a65d20d0cf5610b3b5cd179fc03ece6e0",
+    "publisher-types-r4.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "publisher-build-r4.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "publisher-final-lint.log": "095c38d604af232e76a7acc16ca3bf367342a30423877ac90b598980a3ca5944",
+    "publisher-real-worker-r4.json": "848bb5e4c5daca0baec351fe636712fad97892608caeb91bd4386e5a0e184102",
+    "stack-merged-debug-final.log": "6bd8a4aeefb943c09cec011b78a6694718c2990d527810256271a2d9cc32f60d",
+    "stack-merged-safe-r4.log": "4a2b41f4d4078fc56584cf028c9bdc4c3658a59fc318acc020ae572f7e1f5117",
+    "matched-merged-debug.json": "2f1d8f655ea37dc09446f78b27fa3f705ececd422cb33b5c7904fd3c2ac0209b",
+    "matched-merged-safe.json": "2f1d8f655ea37dc09446f78b27fa3f705ececd422cb33b5c7904fd3c2ac0209b",
+    "publisher-graph.json": "cf5cc6fad7f4dc008421c2540bf62da96cb4c584569ce138985b7ff6e2f2a02b",
+    "review-r4/result.json": "9bc2ffcf0724978febfbae0b2339e5c659ec39b4f7de2d5bb610aa3fb0279580"
+  }
+}

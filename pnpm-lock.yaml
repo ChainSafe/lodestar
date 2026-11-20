@@ -20,6 +20,7 @@ catalogs:
       version: 4.0.7
 
 overrides:
+  '@fastify/websocket>ws': 8.22.0
   dns-over-http-resolver: ^2.1.1
   elliptic: '>=6.6.1'
   loupe: ^2.3.6
@@ -424,6 +425,9 @@ importers:
       '@lodestar/utils':
         specifier: workspace:^
         version: link:../utils
+      classic-level:
+        specifier: ^1.4.1
+        version: 1.4.1
     devDependencies:
       '@lodestar/logger':
         specifier: workspace:^
@@ -455,6 +459,12 @@ importers:
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
+      '@ethereumjs/rlp':
+        specifier: ^4.0.1
+        version: 4.0.1
+      '@fastify/websocket':
+        specifier: 11.3.4
+        version: 11.3.4
       '@libp2p/crypto':
         specifier: ^5.1.25
         version: 5.1.25
@@ -509,6 +519,9 @@ importers:
       ethers:
         specifier: ^6.7.0
         version: 6.7.0
+      fastify:
+        specifier: ^5.8.1
+        version: 5.12.6
       find-up:
         specifier: ^6.3.0
         version: 6.3.0
@@ -527,6 +540,9 @@ importers:
       uint8arrays:
         specifier: ^5.0.1
         version: 5.1.0
+      ws:
+        specifier: 8.22.0
+        version: 8.22.0
       yargs:
         specifier: ^17.7.1
         version: 17.7.2
@@ -534,9 +550,6 @@ importers:
       '@chainsafe/as-sha256':
         specifier: ^1.2.5
         version: 1.2.5
-      '@ethereumjs/rlp':
-        specifier: ^4.0.1
-        version: 4.0.1
       '@lodestar/test-utils':
         specifier: workspace:^
         version: link:../test-utils
@@ -555,6 +568,9 @@ importers:
       '@types/tmp':
         specifier: ^0.2.3
         version: 0.2.3
+      '@types/ws':
+        specifier: 8.5.5
+        version: 8.5.5
       '@types/yargs':
         specifier: ^17.0.24
         version: 17.0.24
@@ -564,9 +580,6 @@ importers:
       ethereum-cryptography:
         specifier: ^2.2.1
         version: 2.2.1
-      fastify:
-        specifier: ^5.8.1
-        version: 5.12.6
       tmp:
         specifier: ^0.2.4
         version: 0.2.7
@@ -1766,6 +1779,9 @@ packages:
 
   '@fastify/swagger@9.0.0':
     resolution: {integrity: sha512-E7TQbBCbhvS2djGLxJ7t2OFbhc2F+KCsOZCNhh6xQIlJxq9H4ZR5KuLKG+vn6COVqkLxRVUOZ9qtbbzdf5Jfqw==}
+
+  '@fastify/websocket@11.3.4':
+    resolution: {integrity: sha512-firnJtEOv6pfdoXIzFDMbd+omgWwFNfLtdM8JejNFr/9lT/9DHkEhjTShuRFeE4phqrevD2B3JRW0v6uyzWhHQ==}
 
   '@inquirer/ansi@1.0.2':
     resolution: {integrity: sha512-S8qNSZiYzFd0wAcyG5AXCvUHC5Sr7xpZ9wZ2py9XR88jUz8wooStVx5M6dRzczbBWjic9NP7+rY0Xi7qqK/aMQ==}
@@ -3638,6 +3654,9 @@ packages:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
     engines: {node: '>= 0.4'}
 
+  duplexify@4.1.3:
+    resolution: {integrity: sha512-M3BmBhwJRZsSx38lZyhE53Csddgzl5R7xGJNk7CVddZD6CcmwMCH8J+7AprIrQKH7TonKxaCjcv27Qmf+sQ+oA==}
+
   eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
 
@@ -3811,6 +3830,9 @@ packages:
 
   fastify-plugin@5.0.1:
     resolution: {integrity: sha512-HCxs+YnRaWzCl+cWRYFnHmeRFyR5GVnJTAaCJQiYzQSDwK9MgJdyAsuL3nh0EWRCYMgQ5MeziymvmAhUHYHDUQ==}
+
+  fastify-plugin@6.0.1:
+    resolution: {integrity: sha512-4wW4RxSmvPXLrh5mgQEiu43qU3bw44N2ss4FTkTkQIbprUhE+/s43QX0j/ttcztdWK7PEkHqVthdc5GdEGDvjA==}
 
   fastify@5.12.6:
     resolution: {integrity: sha512-XeErl1DDsxdbhE9RPRJ05iNnfMhHRHHewVNNAJXaGTOaCY4wHb6rEizphhgzBq5YQe4JyqQWPpGd+hLh2PXXJA==}
@@ -5438,6 +5460,9 @@ packages:
   stream-http@3.2.0:
     resolution: {integrity: sha512-Oq1bLqisTyK3TSCXpPbT4sdeYNdmyZJv1LxpEm2vu1ZhK89kSE5YXwZc3cWk0MagGaKriBh9mCFbVGtO+vY29A==}
 
+  stream-shift@1.0.3:
+    resolution: {integrity: sha512-76ORR0DO1o1hlKwTbi/DM3EXWGf3ZJYO8cXX5RJwnul2DEg2oyoZyjLNoQM8WsvZiFKCRfC1O0J7iCvie3RZmQ==}
+
   strict-event-emitter-types@2.0.0:
     resolution: {integrity: sha512-Nk/brWYpD85WlOgzw5h173aci0Teyv8YdIAEtV+N88nDB0dLlazZyJMIsN6eo1/AR61l+p6CJTG1JIyFaoNEEA==}
 
@@ -6044,6 +6069,18 @@ packages:
 
   ws@8.18.3:
     resolution: {integrity: sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
+  ws@8.22.0:
+    resolution: {integrity: sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -7016,6 +7053,15 @@ snapshots:
       yaml: 2.8.2
     transitivePeerDependencies:
       - supports-color
+
+  '@fastify/websocket@11.3.4':
+    dependencies:
+      duplexify: 4.1.3
+      fastify-plugin: 6.0.1
+      ws: 8.22.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   '@inquirer/ansi@1.0.2': {}
 
@@ -9200,6 +9246,13 @@ snapshots:
       es-errors: 1.3.0
       gopd: 1.2.0
 
+  duplexify@4.1.3:
+    dependencies:
+      end-of-stream: 1.4.5
+      inherits: 2.0.4
+      readable-stream: 3.6.2
+      stream-shift: 1.0.3
+
   eastasianwidth@0.2.0: {}
 
   elliptic@6.6.1:
@@ -9446,6 +9499,8 @@ snapshots:
       strnum: 1.0.5
 
   fastify-plugin@5.0.1: {}
+
+  fastify-plugin@6.0.1: {}
 
   fastify@5.12.6:
     dependencies:
@@ -11207,6 +11262,8 @@ snapshots:
       readable-stream: 3.6.2
       xtend: 4.0.2
 
+  stream-shift@1.0.3: {}
+
   strict-event-emitter-types@2.0.0: {}
 
   string-width@4.2.3:
@@ -11939,6 +11996,8 @@ snapshots:
       write-json-file: 6.0.0
 
   ws@8.18.3: {}
+
+  ws@8.22.0: {}
 
   ws@8.5.0: {}
 

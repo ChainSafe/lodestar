@@ -1,6 +1,6 @@
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import type {Epoch, RootHex, Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
+import {BID_HISTORY_SLOTS, MAX_BID_REVISIONS_PER_SLOT} from "./commitmentLimits.js";
 
 export type SubmittedBid = {
   slot: Slot;
@@ -31,6 +31,7 @@ type MutableBidLedgerRecord = SubmittedBid & {
 
 export enum BidLedgerErrorCode {
   INVALID_BID_VALUE = "BID_LEDGER_ERROR_INVALID_BID_VALUE",
+  REVISION_LIMIT = "BID_LEDGER_ERROR_REVISION_LIMIT",
   DUPLICATE_BID = "BID_LEDGER_ERROR_DUPLICATE_BID",
   BID_TOO_OLD = "BID_LEDGER_ERROR_BID_TOO_OLD",
   REVEAL_CONFLICT = "BID_LEDGER_ERROR_REVEAL_CONFLICT",
@@ -43,7 +44,7 @@ export type BidLedgerErrorType =
       valueGwei: number;
     }
   | {
-      code: BidLedgerErrorCode.DUPLICATE_BID;
+      code: BidLedgerErrorCode.DUPLICATE_BID | BidLedgerErrorCode.REVISION_LIMIT;
       slot: Slot;
       parentBlockHash: RootHex;
       parentBlockRoot: RootHex;
@@ -68,17 +69,36 @@ export type BidLedgerErrorType =
 
 export class BidLedgerError extends LodestarError<BidLedgerErrorType> {}
 
-const RECORD_RETENTION_EPOCHS = 3;
-const KEEP_SLOTS = RECORD_RETENTION_EPOCHS * SLOTS_PER_EPOCH;
+const KEEP_SLOTS = BID_HISTORY_SLOTS;
 
-/** Tracks at most one bid per (slot, parentBlockHash, parentBlockRoot) and its reveal obligations. */
+/** Retains signed revisions and tracks the separate first-gossip allowance for each parent tuple. */
 export class BidLedger {
+  private readonly recoveredLiabilityBySlot = new Map<Slot, number>();
+  private readonly gossipBySlot = new Map<Slot, Set<string>>();
   private readonly bidsBySlot = new Map<Slot, Map<string, MutableBidLedgerRecord>>();
   private readonly revealedPayloadByBlockRoot = new Map<RootHex, RevealedPayload>();
   private pruneCutoffSlot = 0;
 
   hasSubmitted(slot: Slot, parentBlockHash: RootHex, parentBlockRoot: RootHex): boolean {
-    return this.bidsBySlot.get(slot)?.has(tupleKey(parentBlockHash, parentBlockRoot)) ?? false;
+    return this.gossipBySlot.get(slot)?.has(tupleKey(parentBlockHash, parentBlockRoot)) ?? false;
+  }
+
+  getRevisionCount(slot: Slot): number {
+    return this.bidsBySlot.get(slot)?.size ?? 0;
+  }
+
+  /** Preflight new offers before retaining their payload or signing. */
+  assertCanRecordRevision(
+    {slot, parentBlockHash, parentBlockRoot}: Pick<SubmittedBid, "slot" | "parentBlockHash" | "parentBlockRoot">,
+    limit = MAX_BID_REVISIONS_PER_SLOT
+  ): void {
+    if (slot < this.pruneCutoffSlot) {
+      throw new BidLedgerError({code: BidLedgerErrorCode.BID_TOO_OLD, slot, pruneCutoffSlot: this.pruneCutoffSlot});
+    }
+    // Bound all parent variants together, including uncertain network publications.
+    if (this.getRevisionCount(slot) >= Math.min(limit, MAX_BID_REVISIONS_PER_SLOT)) {
+      throw new BidLedgerError({code: BidLedgerErrorCode.REVISION_LIMIT, slot, parentBlockHash, parentBlockRoot});
+    }
   }
 
   assertCanRecordBid({
@@ -98,6 +118,19 @@ export class BidLedger {
   }
 
   recordBid(bid: SubmittedBid): BidLedgerRecord {
+    this.assertCanRecordBid(bid);
+    const record = this.recordRevision(bid);
+    let parents = this.gossipBySlot.get(bid.slot);
+    if (!parents) {
+      parents = new Set();
+      this.gossipBySlot.set(bid.slot, parents);
+    }
+    parents.add(tupleKey(bid.parentBlockHash, bid.parentBlockRoot));
+    return record;
+  }
+
+  /** Record before exposing a signed API response. Older revisions remain selectable. */
+  recordRevision(bid: SubmittedBid): BidLedgerRecord {
     if (!Number.isSafeInteger(bid.valueGwei) || bid.valueGwei < 0) {
       throw new BidLedgerError(
         {code: BidLedgerErrorCode.INVALID_BID_VALUE, valueGwei: bid.valueGwei},
@@ -105,21 +138,29 @@ export class BidLedger {
       );
     }
 
-    this.assertCanRecordBid(bid);
+    if (bid.slot < this.pruneCutoffSlot) {
+      throw new BidLedgerError({
+        code: BidLedgerErrorCode.BID_TOO_OLD,
+        slot: bid.slot,
+        pruneCutoffSlot: this.pruneCutoffSlot,
+      });
+    }
+    const key = `${tupleKey(bid.parentBlockHash, bid.parentBlockRoot)}:${bid.signedBidRoot}`;
     let bidsForSlot = this.bidsBySlot.get(bid.slot);
+    const previous = bidsForSlot?.get(key);
+    if (previous) return toRecord(previous);
+    this.assertCanRecordRevision(bid);
     if (bidsForSlot === undefined) {
       bidsForSlot = new Map();
       this.bidsBySlot.set(bid.slot, bidsForSlot);
     }
-
-    const key = tupleKey(bid.parentBlockHash, bid.parentBlockRoot);
     const record = {...bid, wonBlockRoots: new Set<RootHex>(), paymentSettled: false};
     bidsForSlot.set(key, record);
     return toRecord(record);
   }
 
   recordWin(identity: BidIdentity & Pick<SubmittedBid, "signedBidRoot">, blockRoot: RootHex): BidLedgerRecord | null {
-    const record = this.getBid(identity.slot, identity.parentBlockHash, identity.parentBlockRoot);
+    const record = this.getBid(identity);
     if (record === null || record.blockHash !== identity.blockHash || record.signedBidRoot !== identity.signedBidRoot) {
       return null;
     }
@@ -129,19 +170,14 @@ export class BidLedger {
   }
 
   hasWon(identity: BidIdentity, blockRoot: RootHex): boolean {
-    const record = this.getBid(identity.slot, identity.parentBlockHash, identity.parentBlockRoot);
-    return record !== null && record.blockHash === identity.blockHash && record.wonBlockRoots.has(blockRoot);
+    return this.getBids(identity).some((record) => record.wonBlockRoots.has(blockRoot));
   }
 
   /** Release a winning bid liability only after its payment is known to be reflected in Builder balance. */
   recordPaymentSettled(identity: BidIdentity): BidLedgerRecord | null {
-    const record = this.getBid(identity.slot, identity.parentBlockHash, identity.parentBlockRoot);
-    if (record === null || record.blockHash !== identity.blockHash || record.wonBlockRoots.size === 0) {
-      return null;
-    }
-
-    record.paymentSettled = true;
-    return toRecord(record);
+    const records = this.getBids(identity).filter((record) => record.wonBlockRoots.size > 0);
+    for (const record of records) record.paymentSettled = true;
+    return records.length > 0 ? toRecord(records[0]) : null;
   }
 
   canReveal(blockRoot: RootHex, blockHash: RootHex, envelopeRoot: RootHex): boolean {
@@ -192,6 +228,9 @@ export class BidLedger {
 
   /** Marks won bids before the given slot as settled, by then their payment is reflected in the builder balance. */
   settlePaymentsBefore(slot: Slot): void {
+    for (const recoveredSlot of this.recoveredLiabilityBySlot.keys()) {
+      if (recoveredSlot < slot) this.recoveredLiabilityBySlot.delete(recoveredSlot);
+    }
     for (const [bidSlot, bidsForSlot] of this.bidsBySlot) {
       if (bidSlot >= slot) {
         continue;
@@ -207,22 +246,29 @@ export class BidLedger {
 
   getUnsettledValueGwei(currentEpoch: Epoch): number {
     let total = 0;
-    for (const bidsForSlot of this.bidsBySlot.values()) {
+    for (const [slot, bidsForSlot] of this.bidsBySlot) {
+      let slotValue = this.recoveredLiabilityBySlot.get(slot) ?? 0;
       for (const record of bidsForSlot.values()) {
         if (record.wonBlockRoots.size === 0 || record.paymentSettled) {
           continue;
         }
 
-        total += record.valueGwei;
-        if (!Number.isSafeInteger(total)) {
-          throw new BidLedgerError(
-            {code: BidLedgerErrorCode.UNSETTLED_VALUE_OVERFLOW, currentEpoch},
-            `Unsettled bid value exceeds the safe integer range currentEpoch=${currentEpoch}`
-          );
-        }
+        slotValue = Math.max(slotValue, record.valueGwei);
+      }
+      // Competing revisions/parents in one slot are mutually exclusive canonical payments.
+      total += slotValue;
+      if (!Number.isSafeInteger(total)) {
+        throw new BidLedgerError({code: BidLedgerErrorCode.UNSETTLED_VALUE_OVERFLOW, currentEpoch});
       }
     }
     return total;
+  }
+
+  /** Selection events may have been missed while offline. Reserve the largest
+   * recovered offer per slot until its payment would be reflected in balance. */
+  reserveRecoveredSlot(slot: Slot, valueGwei: number): void {
+    if (!Number.isSafeInteger(valueGwei) || valueGwei < 0) throw Error("INVALID_RECOVERED_LIABILITY");
+    this.recoveredLiabilityBySlot.set(slot, Math.max(this.recoveredLiabilityBySlot.get(slot) ?? 0, valueGwei));
   }
 
   getBidsForSlot(slot: Slot): BidLedgerRecord[] {
@@ -239,7 +285,7 @@ export class BidLedger {
       }
 
       for (const [key, record] of bidsForSlot) {
-        if (record.wonBlockRoots.size === 0 || record.paymentSettled) {
+        if (!this.recoveredLiabilityBySlot.has(slot) && (record.wonBlockRoots.size === 0 || record.paymentSettled)) {
           bidsForSlot.delete(key);
           removed++;
         }
@@ -254,11 +300,27 @@ export class BidLedger {
         this.revealedPayloadByBlockRoot.delete(blockRoot);
       }
     }
+    for (const slot of this.gossipBySlot.keys()) {
+      if (slot < this.pruneCutoffSlot && !this.bidsBySlot.has(slot)) this.gossipBySlot.delete(slot);
+    }
     return removed;
   }
 
-  private getBid(slot: Slot, parentBlockHash: RootHex, parentBlockRoot: RootHex): MutableBidLedgerRecord | null {
-    return this.bidsBySlot.get(slot)?.get(tupleKey(parentBlockHash, parentBlockRoot)) ?? null;
+  private getBids(identity: BidIdentity): MutableBidLedgerRecord[] {
+    return Array.from(this.bidsBySlot.get(identity.slot)?.values() ?? []).filter(
+      (record) =>
+        record.parentBlockHash === identity.parentBlockHash &&
+        record.parentBlockRoot === identity.parentBlockRoot &&
+        record.blockHash === identity.blockHash
+    );
+  }
+
+  private getBid(identity: BidIdentity & {signedBidRoot?: RootHex}): MutableBidLedgerRecord | null {
+    return (
+      this.getBids(identity).find(
+        (record) => identity.signedBidRoot === undefined || record.signedBidRoot === identity.signedBidRoot
+      ) ?? null
+    );
   }
 }
 

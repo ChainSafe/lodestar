@@ -1,5 +1,6 @@
 import {vi} from "vitest";
-import {ApiClientStub} from "@lodestar/test-utils/apiStub";
+import {ForkName} from "@lodestar/params";
+import {ApiClientStub, mockApiResponse} from "@lodestar/test-utils/apiStub";
 
 export {type ApiClientStub, mockApiErrorResponse, mockApiResponse} from "@lodestar/test-utils/apiStub";
 
@@ -9,9 +10,10 @@ export function getApiClientStub(): ApiClientStub {
       getGenesis: vi.fn(),
       getStateBuilders: vi.fn(),
       getBlockV2: vi.fn(),
-      getProposerPreferences: vi.fn(),
       publishExecutionPayloadBid: vi.fn(),
       publishExecutionPayloadEnvelope: vi.fn(),
+      publishBlockV2: vi.fn(),
+      getProposerPreferences: vi.fn().mockResolvedValue(mockApiResponse({data: [], meta: {version: ForkName.gloas}})),
     },
     validator: {
       getProposerDutiesV2: vi.fn(),

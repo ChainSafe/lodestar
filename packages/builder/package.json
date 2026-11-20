@@ -53,7 +53,8 @@
     "@lodestar/params": "workspace:^",
     "@lodestar/state-transition": "workspace:^",
     "@lodestar/types": "workspace:^",
-    "@lodestar/utils": "workspace:^"
+    "@lodestar/utils": "workspace:^",
+    "classic-level": "^1.4.1"
   },
   "devDependencies": {
     "@lodestar/logger": "workspace:^",

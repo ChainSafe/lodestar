@@ -1,0 +1,621 @@
+{
+  "date": "2026-10-19",
+  "baseSource": "acabe41444405f43c17dd2fbc4fba8bfb5b09dfd",
+  "candidateSourceSha256": "1e8c2007946749ed033c2cbe69fc343b0bb77b96f716936951d18025394f6f36",
+  "candidateCompiledModuleSha256": "82874dddca3eb6191dfa02034a3c1f253e83d810c40c621df8756e3b8e11b80c",
+  "targetedTestsPassed": 108,
+  "samplesPerVariantBlobCountAndRevision": 6,
+  "order": ["baseline", "batched", "batched", "baseline"],
+  "workload": {
+    "transactions": 150,
+    "transactionBytes": 400,
+    "blockAccessListBytes": 50000,
+    "blobCounts": [0, 4, 8, 12, 21],
+    "cpus": 1,
+    "memoryMiB": 512,
+    "network": "none",
+    "syntheticOnly": true
+  },
+  "results": [
+    {
+      "report": "paired-xfs.json",
+      "image": "sha256:ac4a5b98620ce053253c59ed38b94ae9db11483cba419033ee848eb2d810e3a2",
+      "filesystemDevice": 66309,
+      "baselineMapSha256": "a8410888424454c110b662c1e33e114a172463004fe13446fb44ce9a82382d85",
+      "candidateMapSha256": "42b751059caf9da648fbdcee473fe0b523f70b67db5315f1086a4ce6744442e8",
+      "allRecoveredPayloadsByteEqual": true,
+      "groups": [
+        {
+          "blobs": 0,
+          "revision": 0,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 11.191499000000022,
+            "prepareMaxMs": 21.85673500000007,
+            "retainMedianMs": 10.2388916015625,
+            "directorySyncMedianMs": 3.898101499999939,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.181884765625,
+            "signMedianMs": 0.701778999999874,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 9.32902450000006,
+            "prepareMaxMs": 15.186087000000043,
+            "retainMedianMs": 8.370361328125,
+            "directorySyncMedianMs": 3.870506500000033,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.19677734375,
+            "signMedianMs": 0.608592999999928,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 0,
+          "revision": 1,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 9.445156999999881,
+            "prepareMaxMs": 12.604352999999946,
+            "retainMedianMs": 8.489013671875,
+            "directorySyncMedianMs": 3.8729410000000826,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.151123046875,
+            "signMedianMs": 0.7293855000000349,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 9.010783500000002,
+            "prepareMaxMs": 10.17798300000004,
+            "retainMedianMs": 8.2088623046875,
+            "directorySyncMedianMs": 3.8821810000000596,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1142578125,
+            "signMedianMs": 0.5653020000000879,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 4,
+          "revision": 0,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 21.607279999999946,
+            "prepareMaxMs": 31.21505100000013,
+            "retainMedianMs": 20.0908203125,
+            "directorySyncMedianMs": 13.027631499999984,
+            "directorySyncCounts": [6],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.209228515625,
+            "signMedianMs": 0.6384285000000318,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 11.716699500000118,
+            "prepareMaxMs": 18.309561999999914,
+            "retainMedianMs": 10.83984375,
+            "directorySyncMedianMs": 5.949209500000052,
+            "directorySyncCounts": [3],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1966552734375,
+            "signMedianMs": 0.6333130000000438,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 4,
+          "revision": 1,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 9.25918200000001,
+            "prepareMaxMs": 11.419527000000016,
+            "retainMedianMs": 8.4530029296875,
+            "directorySyncMedianMs": 4.031934000000092,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1463623046875,
+            "signMedianMs": 0.7051300000000538,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 9.036823499999969,
+            "prepareMaxMs": 14.001421000000164,
+            "retainMedianMs": 8.1219482421875,
+            "directorySyncMedianMs": 3.9594569999999294,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1583251953125,
+            "signMedianMs": 0.7079745000000912,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 8,
+          "revision": 0,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 31.61611849999997,
+            "prepareMaxMs": 42.539666000000125,
+            "retainMedianMs": 30.3892822265625,
+            "directorySyncMedianMs": 24.37610749999999,
+            "directorySyncCounts": [10],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1871337890625,
+            "signMedianMs": 0.6662939999999935,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 11.664983000000234,
+            "prepareMaxMs": 19.15674899999999,
+            "retainMedianMs": 10.857666015625,
+            "directorySyncMedianMs": 5.9274630000001025,
+            "directorySyncCounts": [3],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1998291015625,
+            "signMedianMs": 0.6056630000000496,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 8,
+          "revision": 1,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 9.059044499999914,
+            "prepareMaxMs": 10.361116999999922,
+            "retainMedianMs": 8.1102294921875,
+            "directorySyncMedianMs": 3.9217459999999846,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.184326171875,
+            "signMedianMs": 0.6254929999998922,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 9.35505999999998,
+            "prepareMaxMs": 31.18162099999995,
+            "retainMedianMs": 8.363525390625,
+            "directorySyncMedianMs": 4.0546539999998,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1578369140625,
+            "signMedianMs": 0.7600410000000011,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 12,
+          "revision": 0,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 37.51971200000003,
+            "prepareMaxMs": 47.731334999999945,
+            "retainMedianMs": 36.4371337890625,
+            "directorySyncMedianMs": 29.62232199999994,
+            "directorySyncCounts": [14],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.2005615234375,
+            "signMedianMs": 0.7637105000001156,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 11.87850800000001,
+            "prepareMaxMs": 15.211087000000134,
+            "retainMedianMs": 10.9349365234375,
+            "directorySyncMedianMs": 5.869277499999953,
+            "directorySyncCounts": [3],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.2247314453125,
+            "signMedianMs": 0.6265529999998307,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 12,
+          "revision": 1,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 9.09128499999997,
+            "prepareMaxMs": 13.101102999999966,
+            "retainMedianMs": 8.290283203125,
+            "directorySyncMedianMs": 3.975508000000218,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.194580078125,
+            "signMedianMs": 0.6281430000001365,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 8.864174499999763,
+            "prepareMaxMs": 9.355944999999792,
+            "retainMedianMs": 8.0224609375,
+            "directorySyncMedianMs": 3.885871500000121,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.188232421875,
+            "signMedianMs": 0.6722389999999905,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 21,
+          "revision": 0,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 56.0083525,
+            "prepareMaxMs": 66.18192899999985,
+            "retainMedianMs": 55.018310546875,
+            "directorySyncMedianMs": 47.6919740000003,
+            "directorySyncCounts": [23],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.251953125,
+            "signMedianMs": 0.7333600000001752,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 13.828277499999786,
+            "prepareMaxMs": 22.29752499999995,
+            "retainMedianMs": 12.771728515625,
+            "directorySyncMedianMs": 6.0545064999998885,
+            "directorySyncCounts": [3],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.240234375,
+            "signMedianMs": 0.694729499999994,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 21,
+          "revision": 1,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 10.417396499999995,
+            "prepareMaxMs": 12.936620000000403,
+            "retainMedianMs": 9.3980712890625,
+            "directorySyncMedianMs": 4.0203190000002,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.224853515625,
+            "signMedianMs": 0.7029594999999063,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 8.999702999999954,
+            "prepareMaxMs": 20.75022200000012,
+            "retainMedianMs": 7.97119140625,
+            "directorySyncMedianMs": 3.904167000000143,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1585693359375,
+            "signMedianMs": 0.6240525000000616,
+            "throttledOperations": 0
+          }
+        }
+      ]
+    },
+    {
+      "report": "paired-ext4.json",
+      "image": "sha256:771bf85c8d6aba5042870ac106a1e956ecaaa134940375aa6d46ff3b1718fa8d",
+      "filesystemDevice": 2306,
+      "baselineMapSha256": "071e4b708379b8849fe048ce9db3b88a782ca58e9d994db73f78a1d61ae98e26",
+      "candidateMapSha256": "f64abea379662b314c6952f5ab2ac3dac03a8d47b571da92dc79aed57ecf9073",
+      "allRecoveredPayloadsByteEqual": true,
+      "groups": [
+        {
+          "blobs": 0,
+          "revision": 0,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 34.09403050000003,
+            "prepareMaxMs": 58.888048000000026,
+            "retainMedianMs": 32.434326171875,
+            "directorySyncMedianMs": 18.216873500000133,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.2059326171875,
+            "signMedianMs": 0.6411884999999984,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 31.210600500000055,
+            "prepareMaxMs": 50.70796700000005,
+            "retainMedianMs": 29.9000244140625,
+            "directorySyncMedianMs": 15.957463499999903,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.2154541015625,
+            "signMedianMs": 0.679909000000066,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 0,
+          "revision": 1,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 28.18402750000007,
+            "prepareMaxMs": 48.84500800000001,
+            "retainMedianMs": 27.2718505859375,
+            "directorySyncMedianMs": 16.273658499999783,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1590576171875,
+            "signMedianMs": 0.5823970000000145,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 26.13707999999997,
+            "prepareMaxMs": 36.633563000000095,
+            "retainMedianMs": 25.3719482421875,
+            "directorySyncMedianMs": 16.139601499999912,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1395263671875,
+            "signMedianMs": 0.5900674999999183,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 4,
+          "revision": 0,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 35.87993299999982,
+            "prepareMaxMs": 74.06360300000006,
+            "retainMedianMs": 34.877197265625,
+            "directorySyncMedianMs": 26.640014499999893,
+            "directorySyncCounts": [6],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1695556640625,
+            "signMedianMs": 0.5630669999999327,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 44.72262249999994,
+            "prepareMaxMs": 80.95683800000006,
+            "retainMedianMs": 43.9527587890625,
+            "directorySyncMedianMs": 34.20127900000011,
+            "directorySyncCounts": [3],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.163818359375,
+            "signMedianMs": 0.5824020000002292,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 4,
+          "revision": 1,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 17.621171999999888,
+            "prepareMaxMs": 32.268673000000035,
+            "retainMedianMs": 16.7281494140625,
+            "directorySyncMedianMs": 10.205238000000008,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.12646484375,
+            "signMedianMs": 0.7251500000000988,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 35.412947999999915,
+            "prepareMaxMs": 56.917827000000216,
+            "retainMedianMs": 34.5264892578125,
+            "directorySyncMedianMs": 18.047945000000254,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1322021484375,
+            "signMedianMs": 0.6601385000001301,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 8,
+          "revision": 0,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 43.55158800000004,
+            "prepareMaxMs": 155.14420400000017,
+            "retainMedianMs": 42.3876953125,
+            "directorySyncMedianMs": 36.893097999999554,
+            "directorySyncCounts": [10],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.20166015625,
+            "signMedianMs": 0.6848844999999528,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 19.403704500000003,
+            "prepareMaxMs": 39.95831300000009,
+            "retainMedianMs": 18.114990234375,
+            "directorySyncMedianMs": 13.620323999999982,
+            "directorySyncCounts": [3],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1756591796875,
+            "signMedianMs": 0.7905214999998407,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 8,
+          "revision": 1,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 12.815281500000083,
+            "prepareMaxMs": 54.64627999999993,
+            "retainMedianMs": 11.9871826171875,
+            "directorySyncMedianMs": 7.199245499999961,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1270751953125,
+            "signMedianMs": 0.5838169999999536,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 8.846234500000264,
+            "prepareMaxMs": 16.055695000000014,
+            "retainMedianMs": 7.8157958984375,
+            "directorySyncMedianMs": 4.447372500000029,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1641845703125,
+            "signMedianMs": 0.6923150000000078,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 12,
+          "revision": 0,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 31.941060999999763,
+            "prepareMaxMs": 179.130314,
+            "retainMedianMs": 30.6859130859375,
+            "directorySyncMedianMs": 22.48053849999951,
+            "directorySyncCounts": [14],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.236572265625,
+            "signMedianMs": 0.8184875000001739,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 8.556023000000096,
+            "prepareMaxMs": 13.111762999999883,
+            "retainMedianMs": 7.5078125,
+            "directorySyncMedianMs": 3.9768920000001344,
+            "directorySyncCounts": [3],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.208984375,
+            "signMedianMs": 0.681239000000005,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 12,
+          "revision": 1,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 9.413401000000022,
+            "prepareMaxMs": 28.300780999999915,
+            "retainMedianMs": 8.3551025390625,
+            "directorySyncMedianMs": 4.195823499999733,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.214599609375,
+            "signMedianMs": 0.8004165000002104,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 6.209359500000119,
+            "prepareMaxMs": 10.024359999999433,
+            "retainMedianMs": 5.14404296875,
+            "directorySyncMedianMs": 2.5535234999997556,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.1619873046875,
+            "signMedianMs": 0.6582739999998921,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 21,
+          "revision": 0,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 51.475328000000445,
+            "prepareMaxMs": 58.329516000000694,
+            "retainMedianMs": 49.5491943359375,
+            "directorySyncMedianMs": 37.8009154999977,
+            "directorySyncCounts": [23],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.273681640625,
+            "signMedianMs": 0.832392499999969,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 11.248759500000233,
+            "prepareMaxMs": 40.63046699999995,
+            "retainMedianMs": 10.2493896484375,
+            "directorySyncMedianMs": 4.756533999999647,
+            "directorySyncCounts": [3],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.2381591796875,
+            "signMedianMs": 0.6962039999998524,
+            "throttledOperations": 0
+          }
+        },
+        {
+          "blobs": 21,
+          "revision": 1,
+          "baseline": {
+            "samples": 6,
+            "prepareMedianMs": 7.196915500000159,
+            "prepareMaxMs": 9.8239250000006,
+            "retainMedianMs": 6.2784423828125,
+            "directorySyncMedianMs": 2.6728900000002795,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.2470703125,
+            "signMedianMs": 0.7801409999997304,
+            "throttledOperations": 0
+          },
+          "batched": {
+            "samples": 6,
+            "prepareMedianMs": 7.182350000000042,
+            "prepareMaxMs": 31.157510000000002,
+            "retainMedianMs": 6.1083984375,
+            "directorySyncMedianMs": 2.6454249999997046,
+            "directorySyncCounts": [2],
+            "fileSyncCounts": [1],
+            "dispatchMedianMs": 0.250244140625,
+            "signMedianMs": 0.7468749999998181,
+            "throttledOperations": 0
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Timing wrappers and ambient filesystem load included; this is not proposer arrival or win-rate evidence.",
+    "The ext4 4-blob initial prepare and its unchanged-operation-count refresh regressed between the paired samples. This is consistent with changing ambient I/O load, but its cause was not established.",
+    "One XFS refreshed prepare exceeded 25ms; keep the bounded refresh fallback.",
+    "Crash tests model durable directory prefixes; no physical power-failure experiment was performed.",
+    "The timing preload adds fstat on each open, slightly favoring the variant with fewer directory opens. Each run uses ascending blob counts and only two runs per variant; ambient I/O can confound a cell."
+  ],
+  "rawReportSha256": {
+    "paired-xfs.json": "8f9def3a8dc8a9750aac055182d209945586d4ecf4056a01811118f63c270c86",
+    "paired-ext4.json": "c1f91204127db75168c721de7c32980b53d0dd1ef8d74d88c51404a8b5451c28"
+  },
+  "baselineDifferential": {
+    "baseSource": "acabe41444405f43c17dd2fbc4fba8bfb5b09dfd",
+    "tests": 39,
+    "failed": 10,
+    "passed": 29,
+    "interpretation": "Expected barrier-count and durable-prefix checks fail on the old per-blob loop; the final candidate passes all 39."
+  },
+  "sepoliaCompositeTestsPassed": 76,
+  "summarizerSha256": "a85ddd52cd383bfb63a6d7fbd40aa26fecbafcae1449ee44d1cee1c4f99d60e0"
+}

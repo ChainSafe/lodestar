@@ -26,6 +26,8 @@ export type ApiContext = {
    * Informs application method about preferable return type to avoid unnecessary serialization
    */
   returnBytes?: boolean;
+  /** Register volatile response permission for a server's final send hook. */
+  setResponseGuard?: (guard: () => boolean) => void;
 };
 
 type GenericOptions = Record<string, unknown>;

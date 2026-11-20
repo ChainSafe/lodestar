@@ -13,6 +13,7 @@ CTRL
 Casper
 Chai
 ChainSafe
+Cloudflare
 Codespaces
 CoinCashew
 Corepack
@@ -26,6 +27,7 @@ Docusaurus
 EIP
 EIPs
 EL
+ENOSPC
 ENR
 ENRs
 ETH
@@ -59,6 +61,7 @@ HackMD
 Hashicorp
 Homebrew
 Hyperledger
+IPC
 IPFS
 IPv
 Infura
@@ -66,6 +69,7 @@ JSON
 JSObjects
 JWT
 KDE
+KiB
 Kubernetes
 Kurtosis
 LMD
@@ -77,6 +81,7 @@ MEV
 MacOS
 Metamask
 MevBoost
+MiB
 ModuleNotFoundError
 Monorepo
 NAPI
@@ -87,6 +92,7 @@ Nim
 NodeJS
 NodeSource
 OSI
+POSIX
 PR
 PRs
 Plaintext
@@ -97,6 +103,7 @@ Quickstart
 README
 READMEs
 RPC
+RTT
 Reth
 Ryzen
 SFTP
@@ -118,11 +125,13 @@ VM
 Vitalik
 Vitest
 Wagyu
+WebSocket
 Zig
 addon
 addons
 api
 args
+assumeBuilderIndex
 async
 auth
 backfill
@@ -136,6 +145,7 @@ bootnodes
 bundlers
 chainConfig
 chainsafe
+checksums
 chiado
 chmod
 cli
@@ -152,6 +162,7 @@ cryptographic
 dApp
 dApps
 ddos
+deadlineBps
 decrypt
 decrypted
 derypted
@@ -170,12 +181,16 @@ env
 envs
 ephemery
 ethers
+failover
 fastconfirm
 feeRecipient
+filesystem
 flamegraph
 flamegraphs
 floodsub
+forkchoice
 fsSL
+fsync
 getNetworkIdentity
 glibc
 gloas
@@ -201,6 +216,7 @@ liveness
 lldb
 llnode
 lockfile
+loopback
 mainnet
 malloc
 mbps
@@ -218,6 +234,8 @@ namespaced
 namespaces
 navbar
 nodemodule
+nonces
+onboards
 orchestrator
 osx
 params
@@ -231,7 +249,9 @@ premined
 produceBlockV
 protolambda
 prover
+proxying
 pubsub
+reauthorization
 rebased
 recompiles
 repo
@@ -251,6 +271,7 @@ subnet
 subnets
 sudo
 supernode
+symlink
 tcp
 testnet
 testnets
@@ -259,6 +280,8 @@ trustless
 typesafe
 udp
 uint
+unadopted
+unleased
 unpkg
 util
 utils
@@ -276,3 +299,4 @@ yaml
 yamux
 yml
 zapi
+zbuilder

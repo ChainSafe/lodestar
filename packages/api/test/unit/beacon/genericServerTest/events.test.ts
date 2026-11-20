@@ -1,10 +1,19 @@
+import {createServer} from "node:http";
 import {FastifyInstance} from "fastify";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {defer, fetch, sleep} from "@lodestar/utils";
 import {getClient} from "../../../../src/beacon/client/events.js";
-import {BeaconEvent, Endpoints, EventType, getDefinitions} from "../../../../src/beacon/routes/events.js";
+import {
+  AlternatePayloadAttributesEvent,
+  BeaconEvent,
+  Endpoints,
+  EventType,
+  getDefinitions,
+  getEventSerdes,
+} from "../../../../src/beacon/routes/events.js";
 import {SSE_KEEP_ALIVE_INTERVAL_MS, getRoutes} from "../../../../src/beacon/server/events.js";
 import {getMockApi, getTestServer} from "../../../utils/utils.js";
 import {eventTestData} from "../testData/events.js";
@@ -248,5 +257,49 @@ describe("beacon / events", () => {
 
     expect(eventsReceived).toEqual([eventHead1, eventHead2]);
     expect(errorsReceived.map((e) => e.message)).toEqual(["consumer failed"]);
+  });
+
+  it("rejects malformed alternate context and receives later primary and alternate events on the same stream", async () => {
+    const primary: BeaconEvent = {
+      type: EventType.payloadAttributes,
+      message: {version: ForkName.gloas, data: ssz.gloas.SSEPayloadAttributes.defaultValue()},
+    };
+    const alternate: AlternatePayloadAttributesEvent = {
+      version: ForkName.gloas,
+      data: {...ssz.gloas.SSEPayloadAttributes.defaultValue(), parentBlockHash: new Uint8Array(32).fill(1)},
+      context: {role: "alternate", dependentRoot: new Uint8Array(32).fill(2), builders: []},
+    };
+    const alternateEvent: BeaconEvent = {type: EventType.payloadAttributes, message: alternate};
+    const serdes = getEventSerdes(config);
+    const validPrimary = serdes.toJson(primary) as Record<string, unknown>;
+    const wire = [{...validPrimary, context: {role: "primary"}}, validPrimary, serdes.toJson(alternateEvent)];
+    const rawServer = createServer((_request, response) => {
+      response.writeHead(200, {"Content-Type": "text/event-stream"});
+      for (const event of wire) response.write(`event: payload_attributes\ndata: ${JSON.stringify(event)}\n\n`);
+    });
+    await new Promise<void>((resolve) => rawServer.listen(0, "127.0.0.1", resolve));
+    const address = rawServer.address();
+    if (address === null || typeof address === "string") throw Error("Missing test listener");
+    const received = defer<void>();
+    const eventsReceived: BeaconEvent[] = [];
+    const errorsReceived: Error[] = [];
+    try {
+      await getClient(config, `http://127.0.0.1:${address.port}`).eventstream({
+        topics: [EventType.payloadAttributes],
+        signal: controller.signal,
+        onEvent: (event) => {
+          eventsReceived.push(event);
+          if (eventsReceived.length === 2) received.resolve();
+        },
+        onError: (error) => errorsReceived.push(error),
+      });
+      await received.promise;
+      expect(eventsReceived).toEqual([primary, alternateEvent]);
+      expect(errorsReceived.map((error) => error.message)).toEqual(["INVALID_ALTERNATE_PAYLOAD_ATTRIBUTES_CONTEXT"]);
+    } finally {
+      controller.abort();
+      rawServer.closeAllConnections();
+      await new Promise<void>((resolve) => rawServer.close(() => resolve()));
+    }
   });
 });

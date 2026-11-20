@@ -32,7 +32,7 @@ on:
 jobs:
   analyze:
     name: Analyze
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-24.04' }}
     permissions:
       actions: read
       contents: read

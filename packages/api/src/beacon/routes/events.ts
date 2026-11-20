@@ -1,4 +1,4 @@
-import {ContainerType, ListBasicType, ValueOf} from "@chainsafe/ssz";
+import {ContainerType, ListBasicType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, MAX_BLOB_COMMITMENTS_PER_BLOCK, isForkPostGloas} from "@lodestar/params";
 import {
@@ -28,6 +28,38 @@ import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {VersionType} from "../../utils/metadata.js";
 
 const stringType = new StringType();
+export const MAX_PAYLOAD_ATTRIBUTES_ALTERNATE_BUILDERS = 16;
+const alternateBuilder = new ContainerType(
+  {
+    index: ssz.BuilderIndex,
+    pubkey: ssz.BLSPubkey,
+    version: ssz.Uint8,
+    active: ssz.Boolean,
+    availableGwei: ssz.UintNum64,
+  },
+  {jsonCase: "eth2"}
+);
+const alternateMetadata = new ContainerType(
+  {
+    dependentRoot: ssz.Root,
+    builders: new ListCompositeType(alternateBuilder, MAX_PAYLOAD_ATTRIBUTES_ALTERNATE_BUILDERS),
+  },
+  {jsonCase: "eth2"}
+);
+export type AlternateBuilder = ValueOf<typeof alternateBuilder>;
+export type AlternatePayloadAttributesContext = {
+  role: "alternate";
+  dependentRoot: Uint8Array;
+  builders: AlternateBuilder[];
+};
+export type AlternatePayloadAttributesEvent = {
+  version: ForkName.gloas;
+  data: gloas.SSEPayloadAttributes;
+  context: AlternatePayloadAttributesContext;
+};
+export type PayloadAttributesEvent =
+  | {version: ForkName; data: SSEPayloadAttributes; context?: undefined}
+  | AlternatePayloadAttributesEvent;
 export const blobSidecarSSE = new ContainerType(
   {
     blockRoot: stringType,
@@ -237,7 +269,7 @@ export type EventData = {
   [EventType.contributionAndProof]: altair.SignedContributionAndProof;
   [EventType.lightClientOptimisticUpdate]: {version: ForkName; data: LightClientOptimisticUpdate};
   [EventType.lightClientFinalityUpdate]: {version: ForkName; data: LightClientFinalityUpdate};
-  [EventType.payloadAttributes]: {version: ForkName; data: SSEPayloadAttributes};
+  [EventType.payloadAttributes]: PayloadAttributesEvent;
   [EventType.blobSidecar]: BlobSidecarSSE;
   [EventType.dataColumnSidecar]: DataColumnSidecarSSE;
   [EventType.executionPayload]: {
@@ -338,6 +370,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       },
     };
   };
+  const payloadAttributes = WithVersion((fork) => getPostBellatrixForkTypes(fork).SSEPayloadAttributes);
 
   return {
     [EventType.head]: new ContainerType(
@@ -428,7 +461,45 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     ),
 
     [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,
-    [EventType.payloadAttributes]: WithVersion((fork) => getPostBellatrixForkTypes(fork).SSEPayloadAttributes),
+    [EventType.payloadAttributes]: {
+      toJson: (event) => {
+        const primary = payloadAttributes.toJson(event) as Record<string, unknown>;
+        if (event.context === undefined) return primary;
+        if (
+          event.version !== ForkName.gloas ||
+          event.context?.role !== "alternate" ||
+          !Array.isArray(event.context.builders) ||
+          event.context.builders.length > MAX_PAYLOAD_ATTRIBUTES_ALTERNATE_BUILDERS
+        ) {
+          throw Error("INVALID_ALTERNATE_PAYLOAD_ATTRIBUTES_CONTEXT");
+        }
+        return {
+          ...primary,
+          context: {role: "alternate", ...(alternateMetadata.toJson(event.context) as Record<string, unknown>)},
+        };
+      },
+      fromJson: (value) => {
+        const primary = payloadAttributes.fromJson(value);
+        if (!Object.hasOwn(value as object, "context")) return primary;
+        const context = (value as {context: unknown}).context;
+        if (
+          primary.version !== ForkName.gloas ||
+          typeof context !== "object" ||
+          context === null ||
+          Array.isArray(context) ||
+          !("role" in context) ||
+          context.role !== "alternate" ||
+          Object.keys(context).some((key) => !["role", "dependent_root", "builders"].includes(key))
+        ) {
+          throw Error("INVALID_ALTERNATE_PAYLOAD_ATTRIBUTES_CONTEXT");
+        }
+        return {
+          version: ForkName.gloas,
+          data: primary.data as gloas.SSEPayloadAttributes,
+          context: {role: "alternate", ...alternateMetadata.fromJson(context)},
+        };
+      },
+    },
     [EventType.blobSidecar]: blobSidecarSSE,
     [EventType.dataColumnSidecar]: {
       toJson: (data) => {

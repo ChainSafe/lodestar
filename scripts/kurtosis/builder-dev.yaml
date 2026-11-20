@@ -1,5 +1,5 @@
 participants:
-  # Beacon node and execution client of the builder, the builder runs on the host
+  # Beacon node and execution client of the builder, the builder runs as a container in the devnet network
   - el_type: geth
     el_image: ethpandaops/geth:glamsterdam-devnet-8
     cl_type: lodestar
@@ -8,7 +8,7 @@ participants:
     cl_extra_params:
       - --emitPayloadAttributes
     validator_count: 0
-  # Validators, they receive the bids and payloads of the builder over gossip
+  # Validators, their beacon node receives the bids of the builder over gossip and requests them from its builder API
   - el_type: geth
     el_image: ethpandaops/geth:glamsterdam-devnet-8
     cl_type: lodestar
@@ -19,6 +19,7 @@ participants:
     vc_extra_params:
       - --builder.selection=builderalways
       - --graffiti=builder-dev
+      - --builder.urls=http://lodestar-builder:18550
     supernode: true
     validator_count: 64
 

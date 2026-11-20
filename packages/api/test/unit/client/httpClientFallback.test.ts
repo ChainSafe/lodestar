@@ -94,6 +94,28 @@ describe("httpClient fallback", () => {
     assertServerCallCount(0, [1, 0, 0]);
   });
 
+  it("rechecks admission before fallback sends after the first request loses permission", async () => {
+    let eligible = true;
+    fetchStub.mockClear();
+    fetchStub.mockImplementation(async () => {
+      eligible = false;
+      return new Response(null, {status: 500});
+    });
+    await expect(
+      httpClient.request(
+        testDefinition,
+        {},
+        {
+          beforeRequest: () => {
+            if (!eligible) throw Error("offer expired");
+          },
+        }
+      )
+    ).rejects.toThrow("offer expired");
+    expect(fetchStub).toHaveBeenCalledOnce();
+    fetchStub.mockClear();
+  });
+
   it("server 0 throws, so call next healthy, server 1", async () => {
     serverErrors.set(0, true);
     await requestTestRoute();

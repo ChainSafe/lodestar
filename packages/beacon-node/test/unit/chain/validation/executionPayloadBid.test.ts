@@ -1,11 +1,15 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
-import {FAR_FUTURE_EPOCH, ForkName, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkName, PAYLOAD_BUILDER_VERSION, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadBidErrorCode} from "../../../../src/chain/errors/index.js";
+import {ExecutionPayloadBidPool} from "../../../../src/chain/opPools/executionPayloadBidPool.js";
+import {ProposerPreferencesPool} from "../../../../src/chain/opPools/proposerPreferencesPool.js";
+import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
+import {SeenExecutionPayloadBids} from "../../../../src/chain/seenCache/seenExecutionPayloadBids.js";
 import {validateGossipExecutionPayloadBid} from "../../../../src/chain/validation/executionPayloadBid.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
@@ -87,6 +91,106 @@ describe("validateGossipExecutionPayloadBid", () => {
         toRootHex(parentBlockRoot)
       )
     ).toBe(true);
+  });
+
+  describe("gossip branch identity and proposer pool", () => {
+    const root = (n: number) => Buffer.alloc(32, n);
+    const head = generateProtoBlock({
+      slot: 1,
+      blockRoot: toRootHex(root(4)),
+      parentRoot: toRootHex(root(3)),
+      parentBlockHash: toRootHex(root(6)),
+      executionPayloadBlockHash: toRootHex(root(5)),
+    });
+    let pool: ExecutionPayloadBidPool;
+    let preferences: ProposerPreferencesPool;
+
+    beforeEach(() => {
+      pool = new ExecutionPayloadBidPool();
+      preferences = new ProposerPreferencesPool();
+      const pref = ssz.gloas.SignedProposerPreferences.defaultValue();
+      pref.message.proposalSlot = 2;
+      pref.message.dependentRoot = root(7);
+      pref.message.targetGasLimit = 60_000_000n;
+      preferences.add(pref);
+      Object.assign(chain, {
+        executionPayloadBidPool: pool,
+        proposerPreferencesPool: preferences,
+        seenExecutionPayloadBids: new SeenExecutionPayloadBids(),
+        predictProposerHead: vi.fn(() => head),
+      });
+      chain.forkChoice.getHead.mockReturnValue(head);
+      chain.forkChoice.getDependentRoot.mockReturnValue(toRootHex(root(7)));
+      chain.forkChoice.getBlockHexAndBlockHash.mockImplementation((blockRoot, hash) =>
+        generateProtoBlock({blockRoot, executionPayloadBlockHash: hash, executionPayloadGasLimit: 60_000_000})
+      );
+      const builder = ssz.gloas.Builder.defaultValue();
+      builder.depositEpoch = 0;
+      builder.withdrawableEpoch = FAR_FUTURE_EPOCH;
+      const state = mockState({builder});
+      Object.assign(state, {latestExecutionPayloadBid: ssz.gloas.ExecutionPayloadBid.defaultValue()});
+      chain.regen.getBlockSlotState.mockResolvedValue(state);
+      signedBid.message.gasLimit = 60_000_000n;
+      signedBid.message.value = 1_000_000;
+    });
+
+    function bid(parentRoot: number, parentHash: number) {
+      return {
+        ...signedBid,
+        message: {...signedBid.message, parentBlockRoot: root(parentRoot), parentBlockHash: root(parentHash)},
+      };
+    }
+
+    it("accepts one index on FULL, EMPTY and direct-parent tuples and keeps their separate best bids", async () => {
+      const branches = [bid(4, 5), bid(4, 6), bid(3, 6)];
+      for (const [i, signed] of branches.entries()) {
+        chain.forkChoice.shouldBuildOnFull.mockReturnValue(i !== 1);
+        await expect(validateGossipExecutionPayloadBid(chain, signed), `branch ${i}`).resolves.toEqual({
+          proposerIndex: 0,
+        });
+        expect(pool.add(signed, -500), `pool branch ${i}`).toBe(InsertOutcome.NewData);
+      }
+      expect(pool.size).toBe(3);
+      for (const signed of branches) {
+        expect(
+          pool.getBestBid(2, toRootHex(signed.message.parentBlockHash), toRootHex(signed.message.parentBlockRoot))
+            ?.signedBid
+        ).toBe(signed);
+      }
+      chain.forkChoice.shouldBuildOnFull.mockReturnValue(true);
+      const revision = {...branches[0], message: {...branches[0].message, value: 20_000_000, blockHash: root(10)}};
+      await expect(validateGossipExecutionPayloadBid(chain, revision)).rejects.toMatchObject({
+        type: {code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN},
+      });
+      expect(chain.bls.verifySignatureSets).toHaveBeenCalledTimes(3);
+      expect(pool.getBestBid(2, toRootHex(root(5)), toRootHex(root(4)))?.signedBid).toBe(branches[0]);
+    });
+
+    it("ignores the opposite head variant without consuming its future branch allowance", async () => {
+      chain.forkChoice.shouldBuildOnFull.mockReturnValue(true);
+      const empty = bid(4, 6);
+      await expect(validateGossipExecutionPayloadBid(chain, empty)).rejects.toMatchObject({
+        type: {code: ExecutionPayloadBidErrorCode.INCOMPATIBLE_WITH_HEAD},
+      });
+      expect(chain.seenExecutionPayloadBids.isKnown(2, 0, toRootHex(root(6)), toRootHex(root(4)))).toBe(false);
+      chain.forkChoice.shouldBuildOnFull.mockReturnValue(false);
+      await expect(validateGossipExecutionPayloadBid(chain, empty)).resolves.toEqual({proposerIndex: 0});
+    });
+
+    it("requires the predicted direct parent at an epoch boundary", async () => {
+      signedBid.message.slot = SLOTS_PER_EPOCH;
+      const parent = bid(3, 6);
+      await expect(validateGossipExecutionPayloadBid(chain, parent)).rejects.toMatchObject({
+        type: {code: ExecutionPayloadBidErrorCode.INCOMPATIBLE_WITH_HEAD},
+      });
+      Object.assign(chain, {predictProposerHead: () => generateProtoBlock({blockRoot: head.parentRoot})});
+      const pref = ssz.gloas.SignedProposerPreferences.defaultValue();
+      pref.message.proposalSlot = SLOTS_PER_EPOCH;
+      pref.message.dependentRoot = root(7);
+      pref.message.targetGasLimit = 60_000_000n;
+      preferences.add(pref);
+      await expect(validateGossipExecutionPayloadBid(chain, parent)).resolves.toEqual({proposerIndex: 0});
+    });
   });
 
   it("rejects a bid whose block hash equals its parent block hash", async () => {

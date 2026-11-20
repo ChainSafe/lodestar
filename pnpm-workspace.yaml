@@ -34,6 +34,8 @@ allowBuilds:
   ssh2: true
 
 overrides:
+  # Use one WebSocket implementation for builder transport and Fastify.
+  "@fastify/websocket>ws": "8.22.0"
   dns-over-http-resolver: "^2.1.1"
   elliptic: ">=6.6.1"
   loupe: "^2.3.6"

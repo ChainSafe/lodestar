@@ -25,6 +25,8 @@ export type ExtraRequestInit = {
 
 export type OptionalRequestInit = {
   bearerToken?: string;
+  /** Synchronous admission check immediately before each send, including retries and fallbacks. */
+  beforeRequest?: () => void;
 };
 
 export type UrlInit = ApiRequestInit & {baseUrl?: string};

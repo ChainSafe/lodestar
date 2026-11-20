@@ -16,6 +16,13 @@ import {WireFormat, fromWireFormat, getWireFormat} from "../wireFormat.js";
 import {ApiError} from "./error.js";
 import {ApplicationMethod} from "./method.js";
 
+const responseGuards = new WeakMap<fastify.FastifyReply, () => boolean>();
+
+/** Call from the server's synchronous onSend hook, after response serialization. */
+export function canSendResponse(reply: fastify.FastifyReply): boolean {
+  return responseGuards.get(reply)?.() ?? true;
+}
+
 export type FastifyHandler<E extends Endpoint> = fastify.RouteHandlerMethod<
   fastify.RawServerDefault,
   fastify.RawRequestDefaultExpression<fastify.RawServerDefault>,
@@ -105,6 +112,7 @@ export function createFastifyHandler<E extends Endpoint>(
     const response = await method(args, {
       sszBytes: requestWireFormat === WireFormat.ssz ? (req.body as Uint8Array) : null,
       returnBytes: responseWireFormat === WireFormat.ssz,
+      setResponseGuard: (guard) => responseGuards.set(resp, guard),
     });
 
     if (response?.status !== undefined) {

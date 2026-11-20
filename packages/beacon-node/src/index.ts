@@ -6,6 +6,12 @@ export {persistAnchorState} from "./chain/index.js";
 export {DbCPStateDatastore} from "./chain/stateCache/datastore/db.js";
 export {FileCPStateDatastore} from "./chain/stateCache/datastore/file.js";
 export {BeaconDb, type IBeaconDb} from "./db/index.js";
+export {ErrorJsonRpcResponse, JsonRpcHttpClient} from "./execution/engine/jsonRpcHttpClient.js";
+export {
+  type EngineApiRpcReturnTypes,
+  parseExecutionPayload,
+  serializePayloadAttributes,
+} from "./execution/engine/types.js";
 // Export execution engine to make it usable by builder
 export {ExecutionPayloadStatus, initializeExecutionEngine} from "./execution/index.js";
 // Export metrics utilities to de-duplicate validator metrics

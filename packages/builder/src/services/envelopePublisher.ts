@@ -3,6 +3,7 @@ import {type BuilderIndex, type RootHex, type gloas, ssz} from "@lodestar/types"
 import {LodestarError, defer, toRootHex} from "@lodestar/utils";
 import type {BidIdentity, BidLedger} from "./bidLedger.js";
 import type {BuilderSigner} from "./builderSigner.js";
+import type {RevealRecord} from "./commitmentJournal.js";
 import type {ExecutionPayloadEnvelopeContents} from "./executionPayloadEnvelope.js";
 
 export type EnvelopeSelectionIdentity = BidIdentity & {blockRoot: RootHex};
@@ -12,6 +13,7 @@ export type EnvelopePublisherModules = {
   signer: BuilderSigner;
   ledger: BidLedger;
   builderIndex: BuilderIndex;
+  retainReveal?: (record: RevealRecord) => Promise<void>;
 };
 
 export enum EnvelopePublisherErrorCode {
@@ -134,6 +136,14 @@ export class EnvelopePublisher {
     signer: BuilderSigner,
     signal: AbortSignal
   ): Promise<EnvelopePublicationResult> {
+    if (this.modules.retainReveal)
+      await this.modules.retainReveal({
+        slot: identity.slot,
+        blockRoot: identity.blockRoot,
+        blockHash: identity.blockHash,
+        envelopeRoot,
+      });
+    signal.throwIfAborted();
     const signedEnvelope = signer.signExecutionPayloadEnvelope(contents.envelope);
 
     const response = await api.beacon.publishExecutionPayloadEnvelope(

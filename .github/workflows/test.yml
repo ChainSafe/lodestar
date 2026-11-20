@@ -15,7 +15,7 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-24.04' }}
     strategy:
       fail-fast: false
       matrix:
@@ -91,13 +91,14 @@ jobs:
         run: pnpm check-readme
 
   unit-tests:
-    name: Unit Tests
+    name: Unit Tests (${{ matrix.node }})${{ github.repository != 'ChainSafe/lodestar' && format(' shard {0}', matrix.shard) || '' }}
     needs: build
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-24.04' }}
     strategy:
       fail-fast: false
       matrix:
         node: [26]
+        shard: ${{ fromJSON(github.repository == 'ChainSafe/lodestar' && '["1/1"]' || '["1/4","2/4","3/4","4/4"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/restore-build"
@@ -121,7 +122,8 @@ jobs:
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
       - name: Unit tests
-        run: pnpm vitest run --project unit --project unit-minimal --coverage
+        # Large state and journal fixtures need a dedicated coverage worker on the smaller hosted runners.
+        run: pnpm vitest run --project unit --project unit-minimal --coverage --shard=${{ matrix.shard }} ${{ github.repository != 'ChainSafe/lodestar' && '--maxWorkers=1' || '' }}
 
       - name: Save interop pubkey cache
         if: ${{ always() && steps.interop-pubkey-cache.outputs.cache-hit != 'true' }}
@@ -130,7 +132,11 @@ jobs:
           path: packages/state-transition/test-cache/interop-pubkeys.pkix
           key: ${{ steps.interop-pubkey-cache.outputs.cache-primary-key }}
 
+      - name: Check coverage output
+        run: test -s coverage/lcov.info
+
       - name: Upload coverage data
+        if: ${{ github.repository == 'ChainSafe/lodestar' }}
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -138,9 +144,19 @@ jobs:
           verbose: true # optional (default = false)
           flags: "unit"
 
+      - name: Retain fork coverage data
+        if: ${{ github.repository != 'ChainSafe/lodestar' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unit-coverage-${{ matrix.node }}-${{ strategy.job-index }}
+          path: coverage/lcov.info
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
   e2e-tests:
     name: E2E Tests
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-24.04' }}
     needs: build
     strategy:
       fail-fast: false
@@ -176,7 +192,7 @@ jobs:
 
   e2e-sync-tests:
     name: E2E Sync Tests
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-24.04' }}
     needs: build
     strategy:
       fail-fast: false
@@ -194,7 +210,7 @@ jobs:
 
   browser-tests:
     name: Browser Tests
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-24.04' }}
     needs: build
     strategy:
       fail-fast: false
@@ -222,7 +238,7 @@ jobs:
   spec-tests:
     name: Spec tests
     needs: build
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-24.04' }}
     strategy:
       fail-fast: false
       matrix:
@@ -266,7 +282,7 @@ jobs:
   spec-tests-native:
     name: Spec tests (native)
     needs: build
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-24.04' }}
     strategy:
       fail-fast: false
       matrix:
@@ -298,7 +314,7 @@ jobs:
 
   bindings-test:
     name: Native bindings tests
-    runs-on: warp-ubuntu-2204-x64-4x
+    runs-on: ${{ github.repository == 'ChainSafe/lodestar' && 'warp-ubuntu-2204-x64-4x' || 'ubuntu-24.04' }}
     needs: build
     strategy:
       fail-fast: false

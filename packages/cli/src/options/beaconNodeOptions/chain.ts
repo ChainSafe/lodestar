@@ -1,3 +1,4 @@
+import {routes} from "@lodestar/api";
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
@@ -30,6 +31,9 @@ export type ChainArgs = {
   "chain.maxSkipSlots"?: number;
   "chain.disableProposerSlashings"?: boolean;
   emitPayloadAttributes?: boolean;
+  "chain.emitPayloadAttributesEarly"?: boolean;
+  "chain.emitPayloadAttributesAlternates"?: boolean;
+  "chain.payloadAttributesAlternateBuilderIndices"?: number[];
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
   "chain.archiveStateEpochFrequency": number;
@@ -73,6 +77,9 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     maxSkipSlots: args["chain.maxSkipSlots"],
     disableProposerSlashings: args["chain.disableProposerSlashings"],
     emitPayloadAttributes: args.emitPayloadAttributes,
+    emitPayloadAttributesEarly: args["chain.emitPayloadAttributesEarly"],
+    emitPayloadAttributesAlternates: args["chain.emitPayloadAttributesAlternates"],
+    payloadAttributesAlternateBuilderIndices: args["chain.payloadAttributesAlternateBuilderIndices"],
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
@@ -106,6 +113,46 @@ export const options: CliCommandOptions<ChainArgs> = {
     defaultDescription: String(defaultOptions.chain.emitPayloadAttributes),
     description: "Flag to SSE emit execution `payloadAttributes` before every slot",
     group: "chain",
+  },
+
+  "chain.emitPayloadAttributesEarly": {
+    type: "boolean",
+    defaultDescription: String(defaultOptions.chain.emitPayloadAttributesEarly),
+    description:
+      "Post-Gloas, also SSE emit execution `payloadAttributes` as soon as the parent of the next slot is known, on block and execution payload import. Requires `--emitPayloadAttributes`. The regular emission before the slot still runs.",
+    group: "chain",
+  },
+
+  "chain.emitPayloadAttributesAlternates": {
+    type: "boolean",
+    defaultDescription: String(defaultOptions.chain.emitPayloadAttributesAlternates),
+    description:
+      "Gloas only: add bounded alternate contexts to payload_attributes events. Requires --emitPayloadAttributes and a dedicated endpoint whose subscribers understand context.role; does not start extra execution-layer builds.",
+    hidden: true,
+    group: "chain",
+  },
+
+  "chain.payloadAttributesAlternateBuilderIndices": {
+    type: "array",
+    string: true,
+    description:
+      "Comma-separated builder indices for prepared alternate collateral metadata (maximum 16). Required for useful alternate events; no builder registry scan is performed.",
+    defaultDescription: "[]",
+    hidden: true,
+    group: "chain",
+    coerce: (values: string[]): number[] => {
+      const parts = values.flatMap((value) => value.split(",")).map((value) => value.trim());
+      const indices = parts.map(Number);
+      if (
+        indices.length > routes.events.MAX_PAYLOAD_ATTRIBUTES_ALTERNATE_BUILDERS ||
+        parts.some((value) => !/^\d+$/.test(value)) ||
+        indices.some((index) => !Number.isSafeInteger(index) || index < 0) ||
+        new Set(indices).size !== indices.length
+      ) {
+        throw Error("INVALID_PAYLOAD_ATTRIBUTES_ALTERNATE_BUILDER_INDICES");
+      }
+      return indices;
+    },
   },
 
   graffitiAppend: {

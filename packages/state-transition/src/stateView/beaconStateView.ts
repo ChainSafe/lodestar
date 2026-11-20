@@ -427,7 +427,9 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     }
 
     if (this.cachedBuilderPendingPayments === null) {
-      this.cachedBuilderPendingPayments = (this.cachedState as CachedBeaconStateGloas).builderPendingPayments.toValue();
+      const payments = (this.cachedState as CachedBeaconStateGloas).builderPendingPayments;
+      payments.commit();
+      this.cachedBuilderPendingPayments = payments.toValue();
     }
     return this.cachedBuilderPendingPayments;
   }
@@ -438,9 +440,9 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     }
 
     if (this.cachedBuilderPendingWithdrawals === null) {
-      this.cachedBuilderPendingWithdrawals = (
-        this.cachedState as CachedBeaconStateGloas
-      ).builderPendingWithdrawals.toValue();
+      const withdrawals = (this.cachedState as CachedBeaconStateGloas).builderPendingWithdrawals;
+      withdrawals.commit();
+      this.cachedBuilderPendingWithdrawals = withdrawals.toValue();
     }
     return this.cachedBuilderPendingWithdrawals;
   }

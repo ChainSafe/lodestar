@@ -24,6 +24,31 @@ const signer = new BuilderSigner(
 );
 
 describe("EnvelopePublisher", () => {
+  it("waits for the durable conflict record before signing or revealing", async () => {
+    const disk = defer<void>();
+    const retainReveal = vi.fn(() => disk.promise);
+    const {api, publisher} = createPublisher({retainReveal});
+    const contents = createContents();
+    const signed = vi.spyOn(signer, "signExecutionPayloadEnvelope");
+    const result = publisher.publish(contents, new AbortController().signal);
+    expect(retainReveal).toHaveBeenCalledOnce();
+    expect(signed).not.toHaveBeenCalled();
+    expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+    disk.resolve();
+    await result;
+    expect(signed).toHaveBeenCalledOnce();
+    signed.mockRestore();
+  });
+
+  it("keeps a failed durable reveal ineligible for publication", async () => {
+    const {api, publisher} = createPublisher({
+      retainReveal: async () => {
+        throw Error("disk failed");
+      },
+    });
+    await expect(publisher.publish(createContents(), new AbortController().signal)).rejects.toThrow("disk failed");
+    expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+  });
   it("signs, records, and submits an exact selected envelope", async () => {
     const contents = createContents();
     const {api, ledger, publisher} = createPublisher();
@@ -251,7 +276,13 @@ describe("EnvelopePublisher", () => {
   });
 });
 
-function createPublisher({win = true}: {win?: boolean} = {}) {
+function createPublisher({
+  win = true,
+  retainReveal,
+}: {
+  win?: boolean;
+  retainReveal?: ConstructorParameters<typeof EnvelopePublisher>[0]["retainReveal"];
+} = {}) {
   const api = getApiClientStub();
   Object.assign(api.beacon, {publishExecutionPayloadEnvelope: vi.fn()});
   api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(mockApiResponse({}));
@@ -262,7 +293,7 @@ function createPublisher({win = true}: {win?: boolean} = {}) {
   if (win) {
     ledger.recordWin({...bidIdentity, signedBidRoot}, blockRoot);
   }
-  const publisher = new EnvelopePublisher({api, signer, ledger, builderIndex});
+  const publisher = new EnvelopePublisher({api, signer, ledger, builderIndex, retainReveal});
   return {api, ledger, publisher};
 }
 

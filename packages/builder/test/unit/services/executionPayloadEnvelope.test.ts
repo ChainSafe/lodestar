@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+import {CELLS_PER_EXT_BLOB, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
 import type {Root, RootHex, gloas} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
@@ -31,8 +32,9 @@ describe("createExecutionPayloadEnvelopeContents", () => {
       beaconBlockRoot: fromHex(blockRoot),
       parentBeaconBlockRoot: selectedBid.parentBlockRoot,
     });
-    expect(contents.kzgProofs).toBe(payload.blobsBundle.proofs);
-    expect(contents.blobs).toBe(payload.blobsBundle.blobs);
+    expect(contents.kzgProofs).toBe(storedPayload.payload.blobsBundle.proofs);
+    expect(contents.blobs).toBe(storedPayload.payload.blobsBundle.blobs);
+    expect(contents.blobs).toEqual(payload.blobsBundle.blobs);
   });
 
   it("rejects a retained payload for a different slot", () => {
@@ -168,8 +170,8 @@ function createBuiltPayload(): BuiltPayload {
   executionPayload.blockHash = Buffer.alloc(32, 4);
   const blobsBundle = ssz.gloas.BlobsBundle.defaultValue();
   blobsBundle.commitments.push(Buffer.alloc(48, 6), Buffer.alloc(48, 7));
-  blobsBundle.proofs.push(Buffer.alloc(48, 5), Buffer.alloc(48, 8));
-  blobsBundle.blobs.push(Buffer.alloc(0), Buffer.alloc(0));
+  blobsBundle.proofs.push(...Array.from({length: 2 * CELLS_PER_EXT_BLOB}, (_, i) => Buffer.alloc(48, i % 256)));
+  blobsBundle.blobs.push(Buffer.alloc(FIELD_ELEMENTS_PER_BLOB * 32), Buffer.alloc(FIELD_ELEMENTS_PER_BLOB * 32, 1));
 
   return {
     sourceId: "engine",

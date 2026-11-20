@@ -1,3 +1,4 @@
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import type {RootHex, Slot, gloas} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
 
@@ -22,6 +23,24 @@ export class ProposerPreferencesTracker {
 
   get(slot: Slot, dependentRoot: RootHex): gloas.SignedProposerPreferences | null {
     return this.byDependentRootBySlot.get(slot)?.get(dependentRoot) ?? null;
+  }
+
+  count(slot: Slot): number {
+    return this.byDependentRootBySlot.get(slot)?.size ?? 0;
+  }
+
+  snapshot(currentSlot: Slot): gloas.SignedProposerPreferences[] {
+    const until = (Math.floor(currentSlot / SLOTS_PER_EPOCH) + 2) * SLOTS_PER_EPOCH;
+    const result: gloas.SignedProposerPreferences[] = [];
+    for (const [slot, byRoot] of this.byDependentRootBySlot) {
+      if (slot < currentSlot || slot >= until) continue;
+      let count = 0;
+      for (const signed of byRoot.values()) {
+        result.push(signed);
+        if (++count === 4) break;
+      }
+    }
+    return result;
   }
 
   prune(currentSlot: Slot): number {

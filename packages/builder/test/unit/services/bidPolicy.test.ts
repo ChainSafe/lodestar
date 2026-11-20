@@ -4,32 +4,52 @@ import {ProportionalBidPolicy} from "../../../src/services/bidPolicy.js";
 describe("ProportionalBidPolicy", () => {
   it("offers a share of the payload value", () => {
     const policy = new ProportionalBidPolicy({shareBps: 9000, fixedCostGwei: 0, minValueGwei: 0});
-    expect(policy.computeValue({payloadValueGwei: 1_000_000, coverableGwei: 10_000_000})).toEqual(900_000);
+    expect(policy.computeValue({slot: 0, payloadValueGwei: 1_000_000, coverableGwei: 10_000_000})).toEqual(900_000);
   });
 
   it("deducts the fixed cost", () => {
     const policy = new ProportionalBidPolicy({shareBps: 10_000, fixedCostGwei: 100, minValueGwei: 0});
-    expect(policy.computeValue({payloadValueGwei: 1_000, coverableGwei: 10_000})).toEqual(900);
+    expect(policy.computeValue({slot: 0, payloadValueGwei: 1_000, coverableGwei: 10_000})).toEqual(900);
+  });
+
+  it("adds the subsidy on top of the share", () => {
+    const policy = new ProportionalBidPolicy({shareBps: 9000, fixedCostGwei: 100, subsidyGwei: 500, minValueGwei: 0});
+    expect(policy.computeValue({slot: 0, payloadValueGwei: 1_000, coverableGwei: 10_000})).toEqual(1_300);
+    expect(policy.computeValue({slot: 0, payloadValueGwei: 0, coverableGwei: 10_000})).toEqual(400);
+    expect(policy.computeValue({slot: 0, payloadValueGwei: 1_000, coverableGwei: 1_299})).toBeNull();
+  });
+
+  it("only adds the subsidy to bids up to the configured slot", () => {
+    const policy = new ProportionalBidPolicy({
+      shareBps: 9000,
+      fixedCostGwei: 0,
+      subsidyGwei: 500,
+      subsidyUntilSlot: 10,
+      minValueGwei: 0,
+    });
+    expect(policy.computeValue({slot: 9, payloadValueGwei: 1_000, coverableGwei: 10_000})).toEqual(1_400);
+    expect(policy.computeValue({slot: 10, payloadValueGwei: 1_000, coverableGwei: 10_000})).toEqual(1_400);
+    expect(policy.computeValue({slot: 11, payloadValueGwei: 1_000, coverableGwei: 10_000})).toEqual(900);
   });
 
   it("never bids below the minimum value", () => {
     const policy = new ProportionalBidPolicy({shareBps: 5000, fixedCostGwei: 0, minValueGwei: 800});
-    expect(policy.computeValue({payloadValueGwei: 1_000, coverableGwei: 10_000})).toEqual(800);
+    expect(policy.computeValue({slot: 0, payloadValueGwei: 1_000, coverableGwei: 10_000})).toEqual(800);
   });
 
   it("never bids below zero", () => {
     const policy = new ProportionalBidPolicy({shareBps: 5000, fixedCostGwei: 1_000, minValueGwei: 0});
-    expect(policy.computeValue({payloadValueGwei: 100, coverableGwei: 10_000})).toEqual(0);
+    expect(policy.computeValue({slot: 0, payloadValueGwei: 100, coverableGwei: 10_000})).toEqual(0);
   });
 
   it("caps at the maximum value", () => {
     const policy = new ProportionalBidPolicy({shareBps: 10_000, fixedCostGwei: 0, minValueGwei: 0, maxValueGwei: 500});
-    expect(policy.computeValue({payloadValueGwei: 1_000, coverableGwei: 10_000})).toEqual(500);
+    expect(policy.computeValue({slot: 0, payloadValueGwei: 1_000, coverableGwei: 10_000})).toEqual(500);
   });
 
   it("declines if the builder cannot cover the value", () => {
     const policy = new ProportionalBidPolicy({shareBps: 10_000, fixedCostGwei: 0, minValueGwei: 0});
-    expect(policy.computeValue({payloadValueGwei: 1_000, coverableGwei: 999})).toBeNull();
+    expect(policy.computeValue({slot: 0, payloadValueGwei: 1_000, coverableGwei: 999})).toBeNull();
   });
 
   it("rejects an invalid share", () => {
@@ -42,30 +62,33 @@ describe("ProportionalBidPolicy", () => {
     ).toThrow();
   });
 
-  describe.each(["fixedCostGwei", "minValueGwei", "maxValueGwei"] as const)("%s validation", (option) => {
-    it.each([-1, 0.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1])("rejects %s", (value) => {
-      expect(
-        () => new ProportionalBidPolicy({shareBps: 10_000, fixedCostGwei: 0, minValueGwei: 0, [option]: value})
-      ).toThrow(`Invalid ${option}=`);
-    });
+  describe.each(["fixedCostGwei", "subsidyGwei", "subsidyUntilSlot", "minValueGwei", "maxValueGwei"] as const)(
+    "%s validation",
+    (option) => {
+      it.each([-1, 0.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1])("rejects %s", (value) => {
+        expect(
+          () => new ProportionalBidPolicy({shareBps: 10_000, fixedCostGwei: 0, minValueGwei: 0, [option]: value})
+        ).toThrow(`Invalid ${option}=`);
+      });
 
-    it.each([0, Number.MAX_SAFE_INTEGER])("accepts %s", (value) => {
-      expect(
-        () => new ProportionalBidPolicy({shareBps: 10_000, fixedCostGwei: 0, minValueGwei: 0, [option]: value})
-      ).not.toThrow();
-    });
-  });
+      it.each([0, Number.MAX_SAFE_INTEGER])("accepts %s", (value) => {
+        expect(
+          () => new ProportionalBidPolicy({shareBps: 10_000, fixedCostGwei: 0, minValueGwei: 0, [option]: value})
+        ).not.toThrow();
+      });
+    }
+  );
 
   it("computes a full-value bid without unsafe intermediate arithmetic", () => {
     const policy = new ProportionalBidPolicy({shareBps: 10_000, fixedCostGwei: 0, minValueGwei: 0});
     expect(
-      policy.computeValue({payloadValueGwei: Number.MAX_SAFE_INTEGER, coverableGwei: Number.MAX_SAFE_INTEGER})
+      policy.computeValue({slot: 0, payloadValueGwei: Number.MAX_SAFE_INTEGER, coverableGwei: Number.MAX_SAFE_INTEGER})
     ).toBe(Number.MAX_SAFE_INTEGER);
   });
 
   it("rounds a proportional value down before deducting the fixed cost", () => {
     const policy = new ProportionalBidPolicy({shareBps: 3333, fixedCostGwei: 2, minValueGwei: 0});
-    expect(policy.computeValue({payloadValueGwei: 10, coverableGwei: 100})).toBe(1);
+    expect(policy.computeValue({slot: 0, payloadValueGwei: 10, coverableGwei: 100})).toBe(1);
   });
 
   it("rejects a non-integer shareBps value", () => {

@@ -15,6 +15,8 @@ export type LodestarGitData = {
 export const builderStatusValue: Record<BuilderStatus, number> = {pending: 0, active: 1, exited: 2};
 
 export enum BidResult {
+  dryRun = "dry_run",
+  prepared = "prepared",
   published = "published",
   noProposerPreferences = "no_proposer_preferences",
   inactive = "inactive",
@@ -27,7 +29,13 @@ export enum RevealResult {
   published = "published",
   unknownPayload = "unknown_payload",
   late = "late",
+  withheld = "withheld",
   error = "error",
+}
+
+export enum BidRequestResult {
+  served = "served",
+  noBid = "no_bid",
 }
 
 export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitData) {
@@ -67,6 +75,31 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
         name: "bc_builder_reveals_total",
         help: "Total count of payload reveal attempts by result",
         labelNames: ["result"],
+      }),
+    },
+
+    proposerPreferences: {
+      recovered: register.gauge<{source: string}>({
+        name: "bc_builder_proposer_preferences_recovered_total",
+        help: "Total count of proposer preferences first learned by polling a beacon node, by source",
+        labelNames: ["source"],
+      }),
+      fetchErrors: register.gauge<{source: string}>({
+        name: "bc_builder_proposer_preferences_fetch_errors_total",
+        help: "Total count of failed proposer preferences polls by source",
+        labelNames: ["source"],
+      }),
+    },
+
+    api: {
+      bidRequests: register.gauge<{result: BidRequestResult}>({
+        name: "bc_builder_api_bid_requests_total",
+        help: "Total count of authenticated bid requests received over the builder API by result",
+        labelNames: ["result"],
+      }),
+      blockSubmissions: register.gauge({
+        name: "bc_builder_api_block_submissions_total",
+        help: "Total count of valid signed beacon blocks received over the builder API",
       }),
     },
 

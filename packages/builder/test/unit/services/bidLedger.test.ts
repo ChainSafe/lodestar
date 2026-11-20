@@ -129,7 +129,7 @@ describe("BidLedger", () => {
   it("sums each winning bid until its payment is explicitly settled", () => {
     const ledger = new BidLedger();
     const first = submittedBid({valueGwei: 100});
-    const second = submittedBid({parentBlockRoot: root(8), blockHash: root(9), valueGwei: 50});
+    const second = submittedBid({slot: 2, parentBlockRoot: root(8), blockHash: root(9), valueGwei: 50});
     ledger.recordBid(first);
     ledger.recordBid(second);
 
@@ -146,6 +146,37 @@ describe("BidLedger", () => {
     expect(ledger.getUnsettledValueGwei(3)).toBe(50);
   });
 
+  it("journals API revisions without consuming gossip and reserves the largest win per slot", () => {
+    const ledger = new BidLedger();
+    const first = submittedBid({valueGwei: 100});
+    const second = submittedBid({valueGwei: 200, blockHash: root(9), signedBidRoot: root(10)});
+    ledger.recordRevision(first);
+    ledger.recordRevision(second);
+    expect(ledger.hasSubmitted(first.slot, first.parentBlockHash, first.parentBlockRoot)).toBe(false);
+    ledger.recordBid(second);
+    expect(ledger.getBidsForSlot(first.slot)).toHaveLength(2);
+    expect(ledger.recordWin(first, root(11))).not.toBeNull();
+    expect(ledger.recordWin(second, root(12))).not.toBeNull();
+    expect(ledger.getUnsettledValueGwei(0)).toBe(200);
+    expect(() => ledger.recordBid(first)).toThrow();
+    expect(ledger.recordWin({...first, signedBidRoot: second.signedBidRoot}, root(13))).toBeNull();
+  });
+
+  it("bounds retained revisions across every parent of a slot", () => {
+    const ledger = new BidLedger();
+    const revisions = Array.from({length: 256}, (_, i) =>
+      submittedBid({signedBidRoot: root(i), parentBlockRoot: root(i % 2)})
+    );
+    for (const bid of revisions) ledger.recordRevision(bid);
+    expect(() => ledger.recordRevision(submittedBid({signedBidRoot: root(256)}))).toThrow(
+      expect.objectContaining({type: expect.objectContaining({code: BidLedgerErrorCode.REVISION_LIMIT})})
+    );
+    expect(ledger.getBidsForSlot(submittedBid().slot)).toHaveLength(256);
+    expect(ledger.recordRevision(revisions[0])).toMatchObject(revisions[0]);
+    expect(ledger.recordBid(revisions[0])).toMatchObject(revisions[0]);
+    expect(ledger.recordWin(revisions[0], root(300))).not.toBeNull();
+  });
+
   it("only settles an exact winning bid identity", () => {
     const ledger = new BidLedger();
     const bid = submittedBid();
@@ -160,7 +191,7 @@ describe("BidLedger", () => {
   it("fails closed if unsettled liability exceeds the safe integer range", () => {
     const ledger = new BidLedger();
     const first = submittedBid({valueGwei: Number.MAX_SAFE_INTEGER});
-    const second = submittedBid({parentBlockRoot: root(8), blockHash: root(9), valueGwei: 1});
+    const second = submittedBid({slot: 2, parentBlockRoot: root(8), blockHash: root(9), valueGwei: 1});
     ledger.recordBid(first);
     ledger.recordBid(second);
     ledger.recordWin(first, root(6));
@@ -278,8 +309,10 @@ function submittedBid(overrides: Partial<SubmittedBid> = {}): SubmittedBid {
   };
 }
 
-function root(byte: number): RootHex {
-  return toRootHex(Uint8Array.from({length: 32}, () => byte));
+function root(value: number): RootHex {
+  const bytes = Buffer.alloc(32);
+  bytes.writeUInt32BE(value, 28);
+  return toRootHex(bytes);
 }
 
 function getBidLedgerError(fn: () => unknown): BidLedgerError {
