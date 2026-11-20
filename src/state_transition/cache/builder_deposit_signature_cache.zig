@@ -31,10 +31,12 @@ pub const BuilderDepositSignatureCache = struct {
     };
 
     validity: std.array_hash_map.Custom([32]u8, bool, RootContext, true) = .empty,
+    speculative_validity: std.array_hash_map.Custom([32]u8, bool, RootContext, true) = .empty,
     builder_pubkeys: std.array_hash_map.Custom([48]u8, void, PubkeyHashContext, true) = .empty,
     hash_context: PubkeyHashContext,
     validity_context: RootContext,
     scan_cursor: usize = 0,
+    speculative_scan_cursor: usize = 0,
     capacity: usize = max_cached_deposits,
 
     pub fn deinit(self: *BuilderDepositSignatureCache, allocator: std.mem.Allocator) void {
@@ -43,18 +45,31 @@ pub const BuilderDepositSignatureCache = struct {
 
     pub fn clear(self: *BuilderDepositSignatureCache, allocator: std.mem.Allocator) void {
         self.validity.deinit(allocator);
+        self.speculative_validity.deinit(allocator);
         self.builder_pubkeys.deinit(allocator);
         self.validity = .empty;
+        self.speculative_validity = .empty;
         self.builder_pubkeys = .empty;
         self.scan_cursor = 0;
+        self.speculative_scan_cursor = 0;
     }
 
     pub fn get(self: *const BuilderDepositSignatureCache, deposit_root: [32]u8) ?bool {
-        return self.validity.getContext(deposit_root, self.validity_context);
+        return self.validity.getContext(deposit_root, self.validity_context) orelse
+            self.speculative_validity.getContext(deposit_root, self.validity_context);
+    }
+
+    pub fn count(self: *const BuilderDepositSignatureCache) usize {
+        return self.validity.count() + self.speculative_validity.count();
+    }
+
+    pub fn speculativeCapacity(self: *const BuilderDepositSignatureCache) usize {
+        return @min(self.capacity / 2 - self.speculative_validity.count(), self.capacity - self.count());
     }
 
     /// Only insert results from full deposit proof-of-possession verification, including
-    /// public-key and signature subgroup/infinity checks. Capacity exhaustion is a cache miss.
+    /// public-key and signature subgroup/infinity checks. Builder-related results can evict
+    /// speculative entries; once all capacity holds builder-related results, new roots miss.
     pub fn put(
         self: *BuilderDepositSignatureCache,
         allocator: std.mem.Allocator,
@@ -67,7 +82,31 @@ pub const BuilderDepositSignatureCache = struct {
             return;
         }
         if (self.validity.count() >= self.capacity) return;
-        try self.validity.putContext(allocator, pending_deposit_root, valid, context);
+        if (self.speculative_validity.getContext(pending_deposit_root, context)) |value| {
+            std.debug.assert(value == valid);
+        }
+        try self.validity.ensureUnusedCapacityContext(allocator, 1, context);
+        if (!self.speculative_validity.swapRemoveContext(pending_deposit_root, context) and self.count() >= self.capacity) {
+            std.debug.assert(self.speculative_validity.count() > 0);
+            self.speculative_validity.swapRemoveAtContext(self.speculative_validity.count() - 1, context);
+        }
+        self.validity.putAssumeCapacityNoClobberContext(pending_deposit_root, valid, context);
+    }
+
+    /// Requires the same full proof-of-possession verification as put(). Unknown validator
+    /// results use at most half the shared capacity and may be evicted for builder-related work.
+    pub fn putSpeculative(
+        self: *BuilderDepositSignatureCache,
+        allocator: std.mem.Allocator,
+        pending_deposit_root: [32]u8,
+        valid: bool,
+    ) !void {
+        if (self.get(pending_deposit_root)) |value| {
+            std.debug.assert(value == valid);
+            return;
+        }
+        if (self.speculativeCapacity() == 0) return;
+        try self.speculative_validity.putContext(allocator, pending_deposit_root, valid, self.validity_context);
     }
 
     pub fn addBuilderPubkey(self: *BuilderDepositSignatureCache, allocator: std.mem.Allocator, pubkey: [48]u8) !void {

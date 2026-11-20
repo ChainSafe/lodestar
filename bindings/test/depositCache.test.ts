@@ -7,6 +7,72 @@ import {createNative, signedDeposit} from "./depositCacheFixture.js";
 describe("native pre-Gloas deposit signature cache", () => {
   beforeAll(() => init());
 
+  it("warms a validator prefix before a late builder appears and reuses fork-time verification", () => {
+    const validator = signedDeposit(109, 1);
+    const builder = signedDeposit(109);
+    const invalid = Array.from({length: 40}, (_, index) => ({...validator, amount: validator.amount + index + 1}));
+    const {state, value} = createNative(invalid);
+    const {state: coldSource} = createNative([...invalid, builder]);
+    let reloaded: InstanceType<typeof bindings.BeaconStateView> | undefined;
+    let cold: InstanceType<typeof bindings.BeaconStateView> | undefined;
+    let first: InstanceType<typeof bindings.BeaconStateView> | undefined;
+    let second: InstanceType<typeof bindings.BeaconStateView> | undefined;
+    try {
+      const before = state.hashTreeRoot();
+      const warmed = state.preVerifyBuilderDepositsPreGloas(10_000, 60_000);
+      expect(warmed.invalidValidatorSignaturesCount).toBe(invalid.length);
+      expect(warmed.totalBuilderPubkeys).toBe(0);
+      expect(warmed.totalCachedDeposits).toBe(invalid.length);
+      expect(state.hashTreeRoot()).toEqual(before);
+      value.pendingDeposits = [...invalid, builder];
+      reloaded = state.loadOtherState(ssz.fulu.BeaconState.serialize(value));
+      cold = coldSource.processSlots(coldSource.slot + 1, {dontTransferCache: true});
+      first = reloaded.processSlots(reloaded.slot + 1, {dontTransferCache: true});
+      expect(first.hashTreeRoot()).toEqual(cold.hashTreeRoot());
+      expect(first.getBuildersLength()).toBe(1);
+      expect(first.getBuilder(0).balance).toBe(builder.amount);
+      expect(scrapeMetrics()).toContain('stfn_gloas_onboard_builders_signature_checks{source="verified"} 1\n');
+      expect(scrapeMetrics()).toContain('stfn_gloas_onboard_builders_signature_checks{source="cache"} 40\n');
+      second = reloaded.processSlots(reloaded.slot + 1, {dontTransferCache: true});
+      expect(second.hashTreeRoot()).toEqual(first.hashTreeRoot());
+      expect(scrapeMetrics()).toContain('stfn_gloas_onboard_builders_signature_checks{source="verified"} 0\n');
+      expect(scrapeMetrics()).toContain('stfn_gloas_onboard_builders_signature_checks{source="cache"} 41\n');
+    } finally {
+      second?.release();
+      first?.release();
+      cold?.release();
+      reloaded?.release();
+      coldSource.release();
+      state.release();
+    }
+  });
+
+  it("deduplicates cold invalid deposits within an upgrade and across shared-cache clones", () => {
+    const deposit = signedDeposit(110);
+    deposit.amount += 1;
+    const {state} = createNative(Array.from({length: 8}, () => deposit));
+    let first: InstanceType<typeof bindings.BeaconStateView> | undefined;
+    let second: InstanceType<typeof bindings.BeaconStateView> | undefined;
+    try {
+      const before = state.hashTreeRoot();
+      first = state.processSlots(state.slot + 1, {dontTransferCache: true});
+      expect(first.getBuildersLength()).toBe(0);
+      expect(first.pendingDepositsCount).toBe(0);
+      expect(scrapeMetrics()).toContain('stfn_gloas_onboard_builders_signature_checks{source="verified"} 1\n');
+      expect(scrapeMetrics()).toContain('stfn_gloas_onboard_builders_signature_checks{source="cache"} 7\n');
+      second = state.processSlots(state.slot + 1, {dontTransferCache: true});
+      expect(second.hashTreeRoot()).toEqual(first.hashTreeRoot());
+      expect(state.hashTreeRoot()).toEqual(before);
+      expect(scrapeMetrics()).toContain('stfn_gloas_onboard_builders_signature_checks{source="verified"} 0\n');
+      expect(scrapeMetrics()).toContain('stfn_gloas_onboard_builders_signature_checks{source="cache"} 8\n');
+      expect(state.preVerifyBuilderDepositsPreGloas(0, 0).totalCachedDeposits).toBe(1);
+    } finally {
+      second?.release();
+      first?.release();
+      state.release();
+    }
+  });
+
   it("warms the adversarial prefix even when a valid same-key validator deposit follows the builder", () => {
     const builder = signedDeposit(91);
     const validator = signedDeposit(91, 1);

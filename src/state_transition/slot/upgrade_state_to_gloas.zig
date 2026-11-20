@@ -206,6 +206,7 @@ fn isValidCachedDeposit(
         error.BadEncoding, error.PointNotOnCurve, error.PointNotInGroup, error.VerifyFail, error.PkIsInfinity => false,
         else => return err,
     };
+    cache.put(cache_rc.allocator, deposit_root, valid) catch {};
     return valid;
 }
 

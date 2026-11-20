@@ -234,10 +234,11 @@ test "deposit preverify unrelated validators do not exhaust capacity before a bu
     try std.testing.expectEqual(@as(?bool, true), cache.get(builder_root));
     for (&unrelated, 0..) |*deposit, index| {
         const deposit_root = (try pending.getFieldRoot(index)).*;
-        try std.testing.expectEqual(@as(?bool, null), cache.get(deposit_root));
+        try std.testing.expectEqual(@as(?bool, if (index == 0) true else null), cache.get(deposit_root));
         try std.testing.expect(!cache.isBuilderPubkey(deposit.pubkey));
     }
     try std.testing.expectEqual(@as(usize, 1), cache.validity.count());
+    try std.testing.expectEqual(@as(usize, 2), cache.count());
 }
 
 test "deposit preverify bounds scans even when no deposit needs verification" {
@@ -291,7 +292,7 @@ test "deposit preverify covers a late builder trigger and skips recoverable top-
     const pool = try bls.ThreadPool.init(allocator, std.testing.io, .{ .n_workers = 4 });
     defer pool.deinit(std.testing.io);
     const result = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
-    try std.testing.expectEqual(@as(usize, 0), result.invalid_validator_signatures_count);
+    try std.testing.expectEqual(@as(usize, 40), result.invalid_validator_signatures_count);
     try std.testing.expectEqual(@as(usize, 1), result.valid_builder_signatures_count);
     try std.testing.expectEqual(@as(usize, 23), result.invalid_builder_signatures_count);
     try pending.pushValue(&builder);
@@ -304,18 +305,75 @@ test "deposit preverify covers a late builder trigger and skips recoverable top-
     var builders = try upgraded.inner.get("builders");
     try std.testing.expectEqual(@as(usize, 2), try builders.length());
     try std.testing.expectEqual(
-        @as(?bool, null),
+        @as(?bool, true),
         state.epoch_cache.builder_deposit_signature_cache.instance.get(builder_root),
     );
     var output: std.Io.Writer.Allocating = .init(allocator);
     defer output.deinit();
     try metrics.write(&output.writer);
     try std.testing.expect(
-        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 41\n") != null,
+        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"verified\"} 1\n") != null,
     );
     try std.testing.expect(
-        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 1\n") != null,
+        std.mem.find(u8, output.written(), "stfn_gloas_onboard_builders_signature_checks{source=\"cache\"} 41\n") != null,
     );
+}
+
+test "deposit preverify gives builders the full capacity after speculative warming" {
+    const allocator = std.testing.allocator;
+    var nodes = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
+    defer nodes.deinit();
+    var fixture = try fuluState(allocator, &nodes);
+    defer fixture.deinit();
+    const state = fixture.cached_state;
+    const cache = &state.epoch_cache.builder_deposit_signature_cache.instance;
+    cache.capacity = 4;
+    var pending = try state.state.castToFork(.fulu).pendingDeposits();
+    for (0..4) |index| try pending.pushValue(&(try signedDeposit(state.config, @intCast(190 + index), 1, 1_000_000_000)));
+    try state.state.commit();
+    const pool = try bls.ThreadPool.init(allocator, std.testing.io, .{ .n_workers = 1 });
+    defer pool.deinit(std.testing.io);
+    const speculative = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+    try std.testing.expectEqual(@as(usize, 2), speculative.valid_validator_signatures_count);
+    try std.testing.expectEqual(@as(usize, 2), speculative.total_cached_deposits);
+    for (0..4) |index| try pending.pushValue(&(try signedDeposit(state.config, @intCast(200 + index), c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000)));
+    try state.state.commit();
+    const prioritized = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+    try std.testing.expectEqual(@as(usize, 4), prioritized.valid_builder_signatures_count);
+    try std.testing.expectEqual(@as(usize, 4), prioritized.total_cached_deposits);
+    try std.testing.expectEqual(@as(usize, 0), cache.speculative_validity.count());
+    for (4..8) |index| try std.testing.expectEqual(@as(?bool, true), cache.get((try pending.getFieldRoot(index)).*));
+}
+
+test "deposit preverify shares verification limits and makes speculative progress across a long queue" {
+    const allocator = std.testing.allocator;
+    var nodes = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 3_000_000 });
+    defer nodes.deinit();
+    var fixture = try fuluState(allocator, &nodes);
+    defer fixture.deinit();
+    const state = fixture.cached_state;
+    var pending = try state.state.castToFork(.fulu).pendingDeposits();
+    const builder = try signedDeposit(state.config, 210, c.BUILDER_WITHDRAWAL_PREFIX, 1_000_000_000);
+    try pending.pushValue(&builder);
+    const invalid = ct.electra.PendingDeposit.default_value;
+    try pending.pushValue(&invalid);
+    var known = invalid;
+    var validators = try state.state.validators();
+    var validator: ct.phase0.Validator.Type = undefined;
+    try validators.getValue(undefined, 0, &validator);
+    known.pubkey = validator.pubkey;
+    const scan_limit = @import("pre_verify_builder_deposits.zig").max_scanned_deposits_per_call;
+    for (0..scan_limit) |_| try pending.pushValue(&known);
+    try state.state.commit();
+    const pool = try bls.ThreadPool.init(allocator, std.testing.io, .{ .n_workers = 1 });
+    defer pool.deinit(std.testing.io);
+    const first = try preVerify(std.testing.io, pool, state, 1, 60_000);
+    try std.testing.expectEqual(@as(usize, 1), first.valid_builder_signatures_count);
+    try std.testing.expectEqual(@as(usize, 0), first.invalid_validator_signatures_count);
+    const second = try preVerify(std.testing.io, pool, state, 10_000, 60_000);
+    try std.testing.expectEqual(scan_limit, second.scanned_pending_deposits);
+    try std.testing.expectEqual(@as(usize, 1), second.invalid_validator_signatures_count);
+    try std.testing.expectEqual(@as(usize, 2), second.total_cached_deposits);
 }
 
 test "deposit preverify valid validator prefix suppresses later signatures at the fork" {

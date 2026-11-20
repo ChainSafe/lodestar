@@ -24,9 +24,10 @@ pub const PreVerifyBuilderDepositsResult = struct {
 };
 
 /// Called on committed Fulu head states during the scheduler's pre-Gloas window.
-/// Both scanning and BLS share one deadline, checked every batch. Validator deposits are
-/// checked only once their pubkey has appeared on a builder deposit, so those preceding it
-/// in the queue are picked up on a later pass.
+/// Both scanning and BLS share one deadline, checked every batch. Builder-related deposits
+/// take priority; spare verification time warms unknown validator prefixes before a late
+/// builder can link them. Each pass has its own cursor and half the scan budget so a long
+/// unrelated queue cannot consume all scanning work before speculative verification starts.
 /// A valid deposit can suppress only later entries in this scan, never earlier entries
 /// or entries in another state. A cache miss still falls back to verification at the fork.
 pub fn preVerifyBuilderDepositsPreGloas(
@@ -45,7 +46,7 @@ pub fn preVerifyBuilderDepositsPreGloas(
     const len = try pending.length();
     var result: PreVerifyBuilderDepositsResult = .{ .pending_deposits_count = len };
     const verification_limit = @min(max_deposits, cache_module.max_deposits_per_call);
-    const scan_limit = @min(len, max_scanned_deposits_per_call);
+    const scan_limit = @min(len, max_scanned_deposits_per_call / 2);
     // Unlike the NodeJS scanner, which rescans from 0 each tick so a forked head state's
     // different pendingDeposits gets full coverage, the scan resumes from the persisted cursor
     // because each scanned element here decodes a value and runs a validator-known lookup.
@@ -54,98 +55,99 @@ pub fn preVerifyBuilderDepositsPreGloas(
     // end, so entries shifted before the cursor are pre-verified at most one wrap cycle late.
     // The fork transition verifies on cache miss, so this timing difference costs CPU only,
     // never correctness.
-    const start_cursor = if (cache.scan_cursor < len) cache.scan_cursor else 0;
-    cache.scan_cursor = start_cursor;
-    errdefer cache.scan_cursor = start_cursor;
-    var iterator = pending.iteratorReadonly(start_cursor);
+    const start_cursor = cache.scan_cursor;
+    const speculative_start_cursor = cache.speculative_scan_cursor;
+    errdefer {
+        cache.scan_cursor = start_cursor;
+        cache.speculative_scan_cursor = speculative_start_cursor;
+    }
     var verified: usize = 0;
     var batch_verify = true;
     var resolved: std.array_hash_map.Custom([48]u8, void, PubkeyHashContext, true) = .empty;
     defer resolved.deinit(allocator);
 
-    while (result.scanned_pending_deposits < scan_limit and
-        verified < verification_limit and
-        cache.validity.count() < cache.capacity)
-    {
-        var deposits: [batch_size]ct.electra.PendingDeposit.Type = undefined;
-        var deposit_roots: [batch_size][32]u8 = undefined;
-        var count: usize = 0;
-        const scan_count = @min(batch_size, scan_limit - result.scanned_pending_deposits);
-        const batch_limit = @min(verification_limit - verified, cache.capacity - cache.validity.count());
-        for (0..scan_count) |_| {
-            if (count == batch_limit) break;
-            const item = try iterator.nextValueWithRoot();
-            const deposit = item.value;
-            result.scanned_pending_deposits += 1;
-            cache.scan_cursor += 1;
-            const is_builder = isBuilderWithdrawalCredential(&deposit.withdrawal_credentials);
-            if (is_builder) {
-                try cache.addBuilderPubkey(allocator, deposit.pubkey);
-            }
-            if (
-            // is a builder,
-            (is_builder or cache.isBuilderPubkey(deposit.pubkey)) and
-                // is not locally known as valid (or resolved),
-                !resolved.containsContext(deposit.pubkey, cache.hash_context) and
-                // is not a known pubkey,
-                !try isValidatorKnown(
-                    .fulu,
-                    state.state.castToFork(.fulu),
-                    state.epoch_cache.pubkey_cache.get(io, deposit.pubkey),
-                ))
-            {
-                // then find from cache,
-                if (cache.get(item.root)) |valid| {
-                    // if valid, mark it as resolved,
-                    if (valid and resolved.count() < cache_module.max_deposits_per_call)
-                        try resolved.putContext(
-                            allocator,
-                            deposit.pubkey,
-                            {},
-                            cache.hash_context,
-                        );
-                }
-                // otherwise, put it in queue for verification
-                else {
-                    deposits[count] = deposit;
-                    deposit_roots[count] = item.root;
-                    count += 1;
-                }
-            }
-            if (cache.scan_cursor == len) break;
-        }
-        if (count > 0) {
-            var results: [batch_size]bool = undefined;
-            try deposit_module.verifyDepositSignatures(io, pool, state.config, deposits[0..count], results[0..count], batch_verify);
-            // Avoid repeating pairings in an invalid flood; resume batching after an all-valid chunk.
-            batch_verify = std.mem.allEqual(bool, results[0..count], true);
-            for (deposits[0..count], deposit_roots[0..count], results[0..count]) |*deposit, deposit_root, valid| {
-                try cache.put(allocator, deposit_root, valid);
+    for ([_]bool{ false, true }) |speculative| {
+        const cursor = if (speculative) &cache.speculative_scan_cursor else &cache.scan_cursor;
+        if (cursor.* >= len) cursor.* = 0;
+        var iterator = pending.iteratorReadonly(cursor.*);
+        var scanned: usize = 0;
+        resolved.clearRetainingCapacity();
+        while (scanned < scan_limit and verified < verification_limit) {
+            const remaining_capacity = if (speculative) cache.speculativeCapacity() else cache.capacity - cache.validity.count();
+            if (remaining_capacity == 0) break;
+            var deposits: [batch_size]ct.electra.PendingDeposit.Type = undefined;
+            var deposit_roots: [batch_size][32]u8 = undefined;
+            var count: usize = 0;
+            const scan_count = @min(batch_size, scan_limit - scanned);
+            const batch_limit = @min(verification_limit - verified, remaining_capacity);
+            for (0..scan_count) |_| {
+                if (count == batch_limit) break;
+                const item = try iterator.nextValueWithRoot();
+                const deposit = item.value;
+                scanned += 1;
+                result.scanned_pending_deposits += 1;
+                cursor.* += 1;
                 const is_builder = isBuilderWithdrawalCredential(&deposit.withdrawal_credentials);
-                if (valid) {
-                    if (resolved.count() < cache_module.max_deposits_per_call)
-                        try resolved.putContext(allocator, deposit.pubkey, {}, cache.hash_context);
-                    if (is_builder)
-                        result.valid_builder_signatures_count += 1
-                    else
-                        result.valid_validator_signatures_count += 1;
-                } else {
-                    if (is_builder)
-                        result.invalid_builder_signatures_count += 1
-                    else
-                        result.invalid_validator_signatures_count += 1;
+                if (is_builder) try cache.addBuilderPubkey(allocator, deposit.pubkey);
+                const builder_related = is_builder or cache.isBuilderPubkey(deposit.pubkey);
+                const eligible = if (speculative) !builder_related else builder_related;
+                if (eligible and
+                    !resolved.containsContext(deposit.pubkey, cache.hash_context) and
+                    !try isValidatorKnown(
+                        .fulu,
+                        state.state.castToFork(.fulu),
+                        state.epoch_cache.pubkey_cache.get(io, deposit.pubkey),
+                    ))
+                {
+                    if (cache.get(item.root)) |valid| {
+                        if (!speculative) try cache.put(allocator, item.root, valid);
+                        if (valid and resolved.count() < cache_module.max_deposits_per_call)
+                            try resolved.putContext(allocator, deposit.pubkey, {}, cache.hash_context);
+                    } else {
+                        deposits[count] = deposit;
+                        deposit_roots[count] = item.root;
+                        count += 1;
+                    }
                 }
+                if (cursor.* == len) break;
             }
-            verified += count;
-        }
-        if (cache.scan_cursor == len) {
-            cache.scan_cursor = 0;
-            iterator = pending.iteratorReadonly(0);
-            resolved.clearRetainingCapacity();
+            if (count > 0) {
+                var results: [batch_size]bool = undefined;
+                try deposit_module.verifyDepositSignatures(io, pool, state.config, deposits[0..count], results[0..count], batch_verify);
+                // Avoid repeating pairings in an invalid flood; resume batching after an all-valid chunk.
+                batch_verify = std.mem.allEqual(bool, results[0..count], true);
+                for (deposits[0..count], deposit_roots[0..count], results[0..count]) |*deposit, deposit_root, valid| {
+                    if (speculative)
+                        try cache.putSpeculative(allocator, deposit_root, valid)
+                    else
+                        try cache.put(allocator, deposit_root, valid);
+                    const is_builder = isBuilderWithdrawalCredential(&deposit.withdrawal_credentials);
+                    if (valid) {
+                        if (resolved.count() < cache_module.max_deposits_per_call)
+                            try resolved.putContext(allocator, deposit.pubkey, {}, cache.hash_context);
+                        if (is_builder)
+                            result.valid_builder_signatures_count += 1
+                        else
+                            result.valid_validator_signatures_count += 1;
+                    } else {
+                        if (is_builder)
+                            result.invalid_builder_signatures_count += 1
+                        else
+                            result.invalid_validator_signatures_count += 1;
+                    }
+                }
+                verified += count;
+            }
+            if (cursor.* == len) {
+                cursor.* = 0;
+                iterator = pending.iteratorReadonly(0);
+                resolved.clearRetainingCapacity();
+            }
+            if (time.since(io, started).toMilliseconds() >= max_duration_ms) break;
         }
         if (time.since(io, started).toMilliseconds() >= max_duration_ms) break;
     }
-    result.total_cached_deposits = cache.validity.count();
+    result.total_cached_deposits = cache.count();
     result.total_builder_pubkeys = cache.builder_pubkeys.count();
     return result;
 }

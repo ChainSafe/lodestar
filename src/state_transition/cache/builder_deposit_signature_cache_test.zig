@@ -74,9 +74,47 @@ fn insertWithAllocationFailures(allocator: std.mem.Allocator) !void {
     });
     defer rc.unref();
     try rc.instance.addBuilderPubkey(allocator, @splat(0));
+    try rc.instance.putSpeculative(allocator, @splat(0), false);
     try rc.instance.put(allocator, @splat(0), false);
 }
 
 test "memory_safety: deposit signature cache partial initialization and insertion" {
     try std.testing.checkAllAllocationFailures(std.testing.allocator, insertWithAllocationFailures, .{});
+}
+
+test "deposit signature cache promotes speculative results and evicts them for builders" {
+    const allocator = std.testing.allocator;
+    var cache: Cache = .{
+        .hash_context = .{ .hash_key = @splat(0) },
+        .validity_context = .{ .pubkey_context = .{ .hash_key = @splat(0) } },
+        .capacity = 4,
+    };
+    defer cache.deinit(allocator);
+    for (0..3) |index| try cache.putSpeculative(allocator, @splat(@intCast(index)), index == 0);
+    try std.testing.expectEqual(@as(usize, 2), cache.count());
+    try std.testing.expectEqual(@as(?bool, null), cache.get(@splat(2)));
+    try cache.put(allocator, @splat(0), true);
+    try std.testing.expectEqual(@as(usize, 1), cache.validity.count());
+    try std.testing.expectEqual(@as(usize, 1), cache.speculative_validity.count());
+    try std.testing.expectEqual(@as(?bool, false), cache.get(@splat(1)));
+    for (2..5) |index| try cache.put(allocator, @splat(@intCast(index)), false);
+    try std.testing.expectEqual(@as(usize, 4), cache.count());
+    try std.testing.expectEqual(@as(usize, 0), cache.speculative_validity.count());
+    try std.testing.expectEqual(@as(?bool, null), cache.get(@splat(1)));
+    try std.testing.expectEqual(@as(?bool, true), cache.get(@splat(0)));
+    try cache.putSpeculative(allocator, @splat(5), false);
+    try cache.put(allocator, @splat(5), false);
+    try std.testing.expectEqual(@as(?bool, null), cache.get(@splat(5)));
+    cache.clear(allocator);
+    try cache.putSpeculative(allocator, @splat(0), false);
+    cache.scan_cursor = 1;
+    cache.speculative_scan_cursor = 2;
+    cache.clear(allocator);
+    try std.testing.expectEqual(@as(usize, 0), cache.count());
+    try std.testing.expectEqual(@as(usize, 0), cache.scan_cursor);
+    try std.testing.expectEqual(@as(usize, 0), cache.speculative_scan_cursor);
+    cache.capacity = 0;
+    try cache.putSpeculative(allocator, @splat(0), false);
+    try cache.put(allocator, @splat(0), false);
+    try std.testing.expectEqual(@as(usize, 0), cache.count());
 }
