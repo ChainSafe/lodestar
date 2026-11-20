@@ -6,6 +6,7 @@ const driver = @import("driver.zig");
 const core_test = @import("network_core_test_support.zig");
 const FaultIo = @import("fault_io");
 const std = @import("std");
+const awaitDatagrams = @import("transport_test_support.zig").awaitDatagrams;
 const NetworkCore = @import("network_core.zig").NetworkCore;
 const t = @import("peers/types.zig");
 const keys = @import("wire/keys.zig");
@@ -523,6 +524,7 @@ test "core socket faults preserve the other owner and local dial refusal is defe
     for ([_]std.Io.net.Socket{ node.transport.sockets.primary(), node.discovery.?.transport.sockets.primary() }) |socket| {
         // The owner receives only from a socket its poll reported readable.
         try sender.send(std.testing.io, &socket.address, "invalid");
+        try awaitDatagrams(socket, 1);
         faults.receive = .{ .socket = socket.handle };
         faults.receive_calls = 0;
         const result = driver.step(&node, io, now, .{}, .deadlineOnly(time.optionalMilliseconds(now.millis() +| 1000)));
@@ -571,6 +573,7 @@ test "core discovery advancement does not wait for datagrams" {
     const sender = try (std.Io.net.IpAddress{ .ip4 = .loopback(0) }).bind(std.testing.io, .{ .mode = .dgram, .protocol = .udp });
     defer sender.close(std.testing.io);
     try sender.send(std.testing.io, &node.discovery.?.transport.sockets.primary().address, "invalid");
+    try awaitDatagrams(node.discovery.?.transport.sockets.primary(), 1);
     const now = try Now.read(std.testing.io);
     const received = driver.step(&node, faults.io(), now, .{}, .deadlineOnly(time.optionalMilliseconds(now.millis())));
     try std.testing.expect(received.failure == null);
