@@ -93,7 +93,7 @@ test "IPv6-only discovery bootstraps a dual-stack record over IPv6" {
         const tick = try d.Transport.monotonicMilliseconds(io);
         const result = try support.advance(controller, io, tick, &.{});
         if (result.failure) |failure| return failure.cause;
-        const response = try d.driver.step(seed.transport, io, &expiries, .{ .deadline = .{ .clock = .awake, .raw = .fromNanoseconds(@as(i96, tick) * std.time.ns_per_ms) }, .wait_max = .fromMilliseconds(10) });
+        const response = try d.driver.step(seed.transport, io, &expiries, .{ .wait_max = .fromMilliseconds(10) });
         if (response.failure) |failure| return failure.cause;
         if (node.transport.engine.peerRecord(&seed.transport.engine.localRecord().node_id).?.last_verified_ms != null) break;
     }
