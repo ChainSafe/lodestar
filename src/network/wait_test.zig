@@ -2,6 +2,7 @@ const std = @import("std");
 const wait = @import("wait.zig");
 const net = std.Io.net;
 const Sockets = @import("udp").Sockets;
+const awaitDatagrams = @import("transport_test_support.zig").awaitDatagrams;
 
 fn socket() !net.Socket {
     return (net.IpAddress{ .ip4 = .loopback(0) }).bind(std.testing.io, .{ .mode = .dgram, .protocol = .udp });
@@ -31,7 +32,10 @@ test "native wait retains independent and simultaneous datagrams with actual zer
         const message = try target.receiveTimeout(std.testing.io, &buffer, .{ .duration = .{ .clock = .awake, .raw = .fromMilliseconds(0) } });
         try std.testing.expectEqualStrings("retained", message.data);
     }
-    for (sockets) |target| try host.send(std.testing.io, &target.address, "queued");
+    for (sockets) |target| {
+        try host.send(std.testing.io, &target.address, "queued");
+        try awaitDatagrams(target, 1);
+    }
     const all = wait.poll(std.testing.io, sources, .{ .duration = .{ .clock = .awake, .raw = .fromMilliseconds(0) } });
     try std.testing.expect(all.failure == null and all.quic[0] and all.discoveryReady() and all.host);
     for (sockets) |target| {
@@ -145,6 +149,8 @@ test "native wait reports each QUIC family and a datagram arriving after its sna
     // Arrivals after the snapshot: one on the ready family, one on the other.
     try ip4.send(std.testing.io, &ip4.address, "later");
     try ip6.send(std.testing.io, &ip6.address, "later");
+    try awaitDatagrams(ip4, 2);
+    try awaitDatagrams(ip6, 1);
     var ready = snapshot.quic;
     var buffer: [8]u8 = undefined;
     for ([_][]const u8{ "early", "later" }) |expected| {
@@ -154,6 +160,7 @@ test "native wait reports each QUIC family and a datagram arriving after its sna
     try std.testing.expectEqual([2]bool{ false, false }, ready);
     // An arrival on a family already found empty this turn.
     try ip4.send(std.testing.io, &ip4.address, "last");
+    try awaitDatagrams(ip4, 1);
     const next = wait.poll(std.testing.io, sources, .{ .duration = .{ .clock = .awake, .raw = .fromMilliseconds(1_000) } });
     try std.testing.expect(next.failure == null);
     try std.testing.expectEqual([2]bool{ true, true }, next.quic);
