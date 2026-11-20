@@ -15,11 +15,11 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {BeaconStateGloas, createBeaconStateView, isStatePostAltair} from "@lodestar/state-transition";
-import {LightClientUpdate, altair, gloas, ssz} from "@lodestar/types";
+import {LightClientUpdate, gloas, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {
+  BlockLightClientCache,
   LightClientServer,
-  SyncAttestedData,
   blockToLightClientHeader,
 } from "../../../../src/chain/lightClient/index.js";
 import {getSyncCommitteesWitness} from "../../../../src/chain/lightClient/proofs.js";
@@ -87,7 +87,7 @@ describe("Gloas light client server", () => {
 
       // Exercise the real import path and repository codec that rejected the old
       // native shared multiproof, then read the persisted witness back from disk.
-      await server["persistPostBlockImportData"](block, native, block.slot - 1);
+      await server["onImportBlock"](block, native, block.slot - 1);
       native.release();
       const witness = await db.syncCommitteeWitness.get(blockRoot);
       if (!witness) throw Error("Expected a persisted sync committee witness");
@@ -122,9 +122,11 @@ describe("Gloas light client server", () => {
         )
       ).toBe(false);
 
-      const attestedData = server["prevHeadData"].get(toRootHex(blockRoot));
-      if (!attestedData) throw Error("Expected the native finalized checkpoint proof");
-      await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), block.slot + 1, attestedData);
+      const attestedData = server["blockData"].get(toRootHex(blockRoot));
+      if (!attestedData?.finalizedCheckpoint) throw Error("Expected the native finalized checkpoint proof");
+      const built = await server["buildUpdate"](ssz.altair.SyncAggregate.defaultValue(), block.slot + 1, attestedData);
+      if (!built) throw Error("Expected a built light-client update");
+      await db.bestLightClientUpdate.put(0, built.update);
       const update = await db.bestLightClientUpdate.get(0);
       if (!update) throw Error("Expected a persisted light-client update");
       expect(() => ssz.gloas.LightClientUpdate.serialize(update as gloas.LightClientUpdate)).not.toThrow();
@@ -221,15 +223,23 @@ describe("Gloas light client server", () => {
     );
     const attestedHeader = ssz.gloas.LightClientHeader.defaultValue();
     attestedHeader.beacon.slot = gloasSlot;
-    const attestedData: SyncAttestedData = {
+    const attestedData: BlockLightClientCache = {
       attestedHeader,
       blockRoot: new Uint8Array(32),
-      finalizedCheckpoint: {epoch: 0, root: new Uint8Array(32)},
-      finalityBranch: zeroBranch(FINALIZED_ROOT_DEPTH_GLOAS),
+      syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
+      signatureSlot: gloasSlot,
+      bestUpdateRoot: null,
+      bestUpdateSummary: null,
+      latestSignatureSlot: gloasSlot,
+      finalizedCheckpoint: null,
+      finalityBranch: null,
     };
 
-    await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
-    await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
+    const built = await server["buildUpdate"](ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
+    const nextBuilt = await server["buildUpdate"](ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
+    if (!built || !nextBuilt) throw Error("Expected built light-client updates");
+    await db.bestLightClientUpdate.put(0, built.update);
+    await db.bestLightClientUpdate.put(0, nextBuilt.update);
 
     expect(putBestUpdate).toHaveBeenCalledTimes(2);
     const update = putBestUpdate.mock.calls[0][1] as gloas.LightClientUpdate;
@@ -244,49 +254,55 @@ describe("Gloas light client server", () => {
 
   it("serves the finality branch with an empty finalized header at genesis", async () => {
     const finalityBranch = Array.from({length: FINALIZED_ROOT_DEPTH_GLOAS}, (_, i) => new Uint8Array(32).fill(i + 1));
-    const {server, putBestUpdate} = createServerForFinalityTest();
+    const {server} = createServerForFinalityTest();
 
-    const attestedHeader = ssz.gloas.LightClientHeader.defaultValue();
-    attestedHeader.beacon.slot = gloasSlot;
-    await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, {
-      attestedHeader,
-      blockRoot: new Uint8Array(32),
+    const built = await server["buildUpdate"](ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, {
+      ...createBlockData(gloasSlot),
       finalizedCheckpoint: {epoch: 0, root: new Uint8Array(32)},
       finalityBranch,
     });
 
-    const update = putBestUpdate.mock.calls[0][1] as gloas.LightClientUpdate;
     const zeroUpdate = ssz.gloas.LightClientUpdate.defaultValue();
-    expect(update.finalizedHeader).toEqual(zeroUpdate.finalizedHeader);
-    expect(update.finalityBranch).toEqual(finalityBranch);
+    expect(built?.hasFinality).toBe(true);
+    expect(built?.update.finalizedHeader).toEqual(zeroUpdate.finalizedHeader);
+    expect(built?.update.finalityBranch).toEqual(finalityBranch);
   });
 
   it("serves no finality when the finalized header is not available", async () => {
-    const {server, putBestUpdate} = createServerForFinalityTest();
+    const {server} = createServerForFinalityTest();
 
-    const attestedHeader = ssz.gloas.LightClientHeader.defaultValue();
-    attestedHeader.beacon.slot = gloasSlot;
-    await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, {
-      attestedHeader,
-      blockRoot: new Uint8Array(32),
+    const built = await server["buildUpdate"](ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, {
+      ...createBlockData(gloasSlot),
       finalizedCheckpoint: {epoch: 1, root: new Uint8Array(32).fill(0xcc)},
       finalityBranch: Array.from({length: FINALIZED_ROOT_DEPTH_GLOAS}, () => new Uint8Array(32).fill(0xdd)),
     });
 
-    const update = putBestUpdate.mock.calls[0][1] as gloas.LightClientUpdate;
     const zeroUpdate = ssz.gloas.LightClientUpdate.defaultValue();
-    expect(update.finalizedHeader).toEqual(zeroUpdate.finalizedHeader);
-    expect(update.finalityBranch).toEqual(zeroUpdate.finalityBranch);
+    expect(built?.hasFinality).toBe(false);
+    expect(built?.update.finalizedHeader).toEqual(zeroUpdate.finalizedHeader);
+    expect(built?.update.finalityBranch).toEqual(zeroUpdate.finalityBranch);
   });
 });
 
-function createServerForFinalityTest(): {
-  server: LightClientServer;
-  putBestUpdate: ReturnType<typeof vi.fn>;
-} {
-  const putBestUpdate = vi.fn(async (_period: number, _update: LightClientUpdate) => undefined);
+function createBlockData(slot: number): BlockLightClientCache {
+  const attestedHeader = ssz.gloas.LightClientHeader.defaultValue();
+  attestedHeader.beacon.slot = slot;
+  return {
+    attestedHeader,
+    blockRoot: new Uint8Array(32),
+    syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
+    signatureSlot: slot,
+    bestUpdateRoot: null,
+    bestUpdateSummary: null,
+    latestSignatureSlot: slot,
+    finalizedCheckpoint: null,
+    finalityBranch: null,
+  };
+}
+
+function createServerForFinalityTest(): {server: LightClientServer} {
   const db = {
-    bestLightClientUpdate: {get: vi.fn(async () => null), put: putBestUpdate},
+    bestLightClientUpdate: {get: vi.fn(async () => null), put: vi.fn(async () => undefined)},
     syncCommitteeWitness: {
       get: vi.fn(async () => ({
         witness: [],
@@ -312,16 +328,5 @@ function createServerForFinalityTest(): {
       signal: new AbortController().signal,
     }
   );
-  return {server, putBestUpdate};
-}
-
-async function storeBestUpdate(
-  server: LightClientServer,
-  syncAggregate: altair.SyncAggregate,
-  signatureSlot: number,
-  attestedData: SyncAttestedData
-): Promise<void> {
-  const built = await server["buildUpdate"](attestedData, syncAggregate, signatureSlot);
-  if (!built) throw Error("Expected a built light-client update");
-  await server["maybeStoreNewBestUpdate"](0, built);
+  return {server};
 }
