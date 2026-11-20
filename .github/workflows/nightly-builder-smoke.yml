@@ -14,7 +14,7 @@ env:
   BUILDER_TEMP: ./temp/builder-dev
   # Pinned by hand rather than via the ethpandaops action (used by the sim tests)
   # so a red nightly can only mean a Lodestar change, not an upstream Kurtosis release.
-  KURTOSIS_VERSION: "1.20.0"
+  KURTOSIS_VERSION: "1.23.0"
 
 jobs:
   test:

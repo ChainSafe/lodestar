@@ -1,5 +1,6 @@
 const std = @import("std");
 const ct = @import("consensus_types");
+const constants = @import("constants");
 const preset = @import("preset").preset;
 const config_module = @import("config");
 const BeaconConfig = config_module.BeaconConfig;
@@ -51,17 +52,19 @@ test "Heze upgrade preserves bid fields and initializes inclusion list bits" {
     try std.testing.expectEqual(17, try balances.get(0));
 }
 
-test "Heze upgrade rejects undrained legacy deposits without consuming the source" {
+test "Heze upgrade accepts an unset deposit requests start index" {
     const allocator = std.testing.allocator;
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
     defer pool.deinit();
     const config = BeaconConfig.init(config_module.mainnet.chain_config, @splat(0));
     var source = BeaconState(.gloas){ .inner = try ct.gloas.BeaconState.TreeView.fromValue(allocator, &pool, &ct.gloas.BeaconState.default_value) };
-    defer source.deinit();
-    try source.setDepositRequestsStartIndex(1);
-    const root = (try source.hashTreeRoot()).*;
-    try std.testing.expectError(error.LegacyDepositsNotDrained, upgradeStateToHeze(allocator, &config, &source));
-    try std.testing.expectEqualSlices(u8, &root, try source.hashTreeRoot());
+    var source_owned = true;
+    defer if (source_owned) source.deinit();
+    try source.setDepositRequestsStartIndex(constants.UNSET_DEPOSIT_REQUESTS_START_INDEX);
+    var upgraded = try upgradeStateToHeze(allocator, &config, &source);
+    source_owned = false;
+    defer upgraded.deinit();
+    try std.testing.expectEqualSlices(u8, &config.chain.HEZE_FORK_VERSION, &try upgraded.forkCurrentVersion());
 }
 
 test "memory_safety: Heze upgrade retains source ownership on allocation failure" {

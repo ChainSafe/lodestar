@@ -7,6 +7,8 @@ import {
   AncestorStatus,
   CheckpointWithHex,
   EpochDifference,
+  ForkChoiceError,
+  ForkChoiceErrorCode,
   ForkChoiceStateGetter,
   IForkChoice,
   PayloadStatus,
@@ -1859,14 +1861,18 @@ export class BeaconChain implements IBeaconChain {
   private onClockSlot(slot: Slot): void {
     this.logger.verbose("Clock slot", {slot});
 
-    // CRITICAL UPDATE
-    if (this.forkChoice.irrecoverableError) {
-      this.processShutdownCallback(this.forkChoice.irrecoverableError);
-    }
-
     // updateTime() recomputes the head on epoch-boundary checkpoint pull-up and under fast confirmation
     const prevHead = this.forkChoice.getHead();
-    this.forkChoice.updateTime(slot);
+    try {
+      this.forkChoice.updateTime(slot);
+    } catch (e) {
+      // Per optimistic sync the node MAY exit once the justified checkpoint is INVALIDATED, fork choice has no head
+      if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS) {
+        this.processShutdownCallback(e);
+        return;
+      }
+      throw e;
+    }
     this.emitHeadEvents(prevHead, this.forkChoice.getHead());
     this.metrics?.clockSlot.set(slot);
 
