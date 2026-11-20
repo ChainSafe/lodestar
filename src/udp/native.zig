@@ -11,15 +11,31 @@ const SendOutcome = Sockets.SendOutcome;
 const ReceiveError = Sockets.ReceiveError;
 const os = builtin.os.tag;
 const linux = std.os.linux;
-const gso_payload_max = 65_507;
+const ip4_total_length_max = std.math.maxInt(u16);
+const ip4_header_size = 20;
+const udp_header_size = 8;
+/// Generic Segmentation Offload (GSO) is a Linux feature for sending many UDP datagrams with one pass through the kernel.
+const gso_payload_max = ip4_total_length_max - ip4_header_size - udp_header_size;
 
 const ControlHeader = if (os == .linux) linux.cmsghdr else extern struct { len: u32, level: i32, type: i32 };
 const control_alignment = if (os == .linux) @sizeOf(usize) else @sizeOf(u32);
 const control_data = std.mem.alignForward(usize, @sizeOf(ControlHeader), control_alignment);
 // Darwin's values from netinet/in.h and netinet6/in6.h are absent from std.posix in Zig 0.16.
-const ip_pktinfo = if (os == .linux) linux.IP.PKTINFO else 26;
-const ipv6_recvpktinfo = if (os == .linux) linux.IPV6.RECVPKTINFO else 61;
-const ipv6_pktinfo = if (os == .linux) linux.IPV6.PKTINFO else 46;
+const ip_pktinfo = switch (os) {
+    .linux => linux.IP.PKTINFO,
+    .macos => 26,
+    else => @compileError("IP_PKTINFO is not defined for " ++ @tagName(os)),
+};
+const ipv6_recvpktinfo = switch (os) {
+    .linux => linux.IPV6.RECVPKTINFO,
+    .macos => 61,
+    else => @compileError("IPV6_RECVPKTINFO is not defined for " ++ @tagName(os)),
+};
+const ipv6_pktinfo = switch (os) {
+    .linux => linux.IPV6.PKTINFO,
+    .macos => 46,
+    else => @compileError("IPV6_PKTINFO is not defined for " ++ @tagName(os)),
+};
 pub const control_size = 64;
 pub const Control = [control_size]u8;
 comptime {
@@ -402,7 +418,8 @@ fn sendError(errno: std.posix.E) SendError {
         .PIPE, .NOTCONN => error.SocketUnconnected,
         .AFNOSUPPORT => error.AddressFamilyUnsupported,
         .HOSTUNREACH => error.HostUnreachable,
-        .NETUNREACH => error.NetworkUnreachable,
+        // A pinned source that is not a local address produces EADDRNOTAVAIL on macOS.
+        .NETUNREACH, .ADDRNOTAVAIL => error.NetworkUnreachable,
         .NETDOWN => error.NetworkDown,
         .BADF, .DESTADDRREQ, .FAULT, .ISCONN, .NOTSOCK, .OPNOTSUPP => |err| compat.errnoBug(err),
         else => |err| std.posix.unexpectedErrno(err),
