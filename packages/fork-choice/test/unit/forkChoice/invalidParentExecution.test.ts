@@ -1,5 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
 import {RootHex, Slot, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
@@ -8,6 +9,7 @@ import {
   ForkChoice,
   ForkChoiceError,
   ForkChoiceErrorCode,
+  IForkChoiceStore,
   InvalidBlockCode,
   LVHInvalidJudged,
   PayloadStatus,
@@ -42,7 +44,10 @@ const state = {
   isExecutionStateType: false,
 } as unknown as IBeaconStateView;
 
-function setup(isGloas: boolean): {forkChoice: ForkChoice; protoArray: ProtoArray} {
+function setup(
+  isGloas: boolean,
+  storeOverrides: Partial<IForkChoiceStore> = {}
+): {forkChoice: ForkChoice; protoArray: ProtoArray} {
   const genesisRoot = getBlockRoot(genesisSlot);
   const protoArray = ProtoArray.initialize(
     toProtoBlock(genesisSlot, genesisRoot, false, {executionPayloadBlockHash: payloadHash(genesisSlot)}),
@@ -76,7 +81,7 @@ function setup(isGloas: boolean): {forkChoice: ForkChoice; protoArray: ProtoArra
   }
   const forkChoice = new ForkChoice(
     gloasConfig,
-    {...makeStore(), currentSlot: childSlot},
+    {...makeStore(), currentSlot: childSlot, ...storeOverrides},
     protoArray,
     VALIDATOR_COUNT,
     null
@@ -126,7 +131,6 @@ describe("ForkChoice / invalidated parent payload chain", () => {
         forkChoice.onBlock(block, state, 0, 0, childSlot, executionStatus, DataAvailabilityStatus.PreData)
       );
       expect(forkChoice.hasBlockHex(blockRoot)).toBe(false);
-      expect(forkChoice.irrecoverableError).toBeUndefined();
       expect(forkChoice.updateHead().blockRoot).toBe(getBlockRoot(parentSlot));
     }
   );
@@ -146,7 +150,33 @@ describe("ForkChoice / invalidated parent payload chain", () => {
       )
     );
     expect(protoArray.getNodeIndexByRootAndStatus(getBlockRoot(headSlot), PayloadStatus.FULL)).toBeUndefined();
-    expect(forkChoice.irrecoverableError).toBeUndefined();
+  });
+
+  it("updateTime throws when the epoch-start pull-up realizes an invalidated justified checkpoint", () => {
+    const headRoot = getBlockRoot(headSlot);
+    const {forkChoice} = setup(false, {
+      unrealizedJustified: {
+        checkpoint: {epoch: 1, root: fromHexString(headRoot), rootHex: headRoot},
+        balances: makeStore().justified.balances,
+      },
+    });
+    invalidateHead(forkChoice, false);
+
+    forkChoice.updateTime(SLOTS_PER_EPOCH - 1);
+    expect(forkChoice.getJustifiedCheckpoint().epoch).toBe(0);
+
+    let error: unknown;
+    try {
+      forkChoice.updateTime(SLOTS_PER_EPOCH);
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(ForkChoiceError);
+    expect((error as ForkChoiceError).type).toEqual({
+      code: ForkChoiceErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS,
+      epoch: 1,
+      root: headRoot,
+    });
   });
 
   it("a gloas block inherits the execution status of the parent variant it builds on", () => {
