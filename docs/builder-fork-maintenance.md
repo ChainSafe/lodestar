@@ -1,9 +1,9 @@
 # Maintaining the builder fork
 
-`nflaig/lodestar:builder` is the default branch and shared integration branch for
-the builder stack. It carries the custom builder features plus reviewed merges
-from `ChainSafe/lodestar:unstable`. The fork's `unstable` branch is an upstream
-mirror. Deployment uses qualified commit hashes, never a moving branch name.
+`nflaig/lodestar:builder` is the shared integration branch for the builder stack.
+It carries the custom builder features plus reviewed merges from
+`ChainSafe/lodestar:unstable`. The fork's default branch remains `unstable`, an
+upstream mirror. Deployment uses qualified commit hashes, never a moving branch name.
 
 Builder feature PRs target `builder`. For contributions to ChainSafe, start from
 the upstream mirror and target `ChainSafe/lodestar:unstable`.
@@ -11,8 +11,8 @@ the upstream mirror and target `ChainSafe/lodestar:unstable`.
 ## Branch migration
 
 The former integration branch was renamed from `unstable` to `builder` at
-`5b38029d99892f24e54aef7e562cac53041c07c7`, preserving its complete history,
-default-branch role and branch protection. The tag
+`5b38029d99892f24e54aef7e562cac53041c07c7`, preserving its complete history
+and branch protection. The repository default is `unstable`. The tag
 `archive/builder-unstable-20261120` also retains that commit. Draft PR #25 follows
 the renamed base without changing its proposed code.
 
