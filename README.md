@@ -2,7 +2,7 @@
 
 # Lodestar Ethereum Consensus Implementation
 
-This fork maintains its ePBS builder stack on [`builder`](https://github.com/nflaig/lodestar/tree/builder).
+This fork maintains its builder stack on [`builder`](https://github.com/nflaig/lodestar/tree/builder).
 The `unstable` branch tracks ChainSafe upstream. Builder pull requests target `builder`;
 deployments use tested commits. See [the fork maintenance guide](docs/builder-fork-maintenance.md).
 
