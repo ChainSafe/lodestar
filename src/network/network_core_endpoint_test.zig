@@ -6,7 +6,7 @@ const d = @import("discv5");
 const core_test = @import("network_core_test_support.zig");
 const NetworkCore = @import("network_core.zig").NetworkCore;
 const keys = @import("wire/keys.zig");
-const Sockets = @import("udp").Sockets;
+const SocketPair = @import("udp").SocketPair;
 const transport = @import("transport.zig");
 const time = @import("time.zig");
 const Multiaddr = @import("wire/multiaddr.zig").Multiaddr;
@@ -20,7 +20,7 @@ const Peers = struct {
         errdefer for (nodes[0..initialized]) |*node| node.deinit(std.testing.allocator, std.testing.io);
         for (nodes, 0..) |*node, i| {
             const key = try d.identity.crypto.keyPairFromSecret(&(.{0} ** 31 ++ .{@as(u8, @intCast(100 + i))}));
-            var sockets = try Sockets.bind(std.testing.io, .{ .ip4 = .{ .bytes = .{ 127, 1, @intCast(i), 1 }, .port = 0 } });
+            var sockets = try SocketPair.bind(std.testing.io, .{ .ip4 = .{ .bytes = .{ 127, 1, @intCast(i), 1 }, .port = 0 } });
             errdefer sockets.close(std.testing.io);
             const record = try d.identity.enr.Record.create(&key, 1, d.types.Address.fromNetwork(sockets.primary().address));
             try node.init(std.testing.allocator, sockets, key, record, .{});

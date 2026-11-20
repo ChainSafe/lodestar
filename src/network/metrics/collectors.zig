@@ -70,7 +70,7 @@ fn writeNativeCounters(self: *const Context, w: *prom.Encoder) prom.Error!void {
         .help = metric[1],
     }, @field(self.owner.transport.counters, metric[0]));
     const udp = @import("udp");
-    const discovery_drops = if (self.owner.discovery) |d| d.transport.send_drops else udp.Sockets.SendDrops{};
+    const discovery_drops = if (self.owner.discovery) |d| d.transport.send_drops else udp.SocketPair.SendDrops{};
     inline for (.{ "datagrams", "bytes" }) |measure| {
         const dropped = try w.family(.{
             .name = "lodestar_udp_send_dropped_" ++ measure ++ "_total",
@@ -78,7 +78,7 @@ fn writeNativeCounters(self: *const Context, w: *prom.Encoder) prom.Error!void {
             .help = "UDP " ++ measure ++ " discarded before kernel acceptance due to local send pressure or unreachable destinations",
             .labels = &.{ "role", "reason" },
         });
-        inline for (std.meta.fields(udp.Sockets.SendDrops.Reason)) |reason| {
+        inline for (std.meta.fields(udp.SocketPair.SendDrops.Reason)) |reason| {
             try dropped.sample(.{ "quic", reason.name }, @field(self.owner.transport.send_drops, measure)[reason.value]);
             try dropped.sample(.{ "discovery", reason.name }, @field(discovery_drops, measure)[reason.value]);
         }
@@ -101,8 +101,8 @@ fn writeQuic(self: *const Context, w: *prom.Encoder) prom.Error!void {
 }
 
 fn writeSockets(self: *const Context, w: *prom.Encoder) prom.Error!void {
-    const Sockets = @import("udp").Sockets;
-    const roles = [_]struct { []const u8, ?*const Sockets }{
+    const SocketPair = @import("udp").SocketPair;
+    const roles = [_]struct { []const u8, ?*const SocketPair }{
         .{ "quic", &self.owner.transport.sockets },
         .{ "discovery", if (self.owner.discovery) |d| &d.transport.sockets else null },
     };

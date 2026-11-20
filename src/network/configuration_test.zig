@@ -216,15 +216,15 @@ test "configuration preserves independent transport work limits" {
 
 test "configuration carries bounded UDP socket buffer requests" {
     const bounds: configuration.SocketBuffers = .{
-        .quic = .{ .receive = udp.Sockets.Buffers.bytes_max, .send = udp.Sockets.Buffers.bytes_min },
-        .discovery = .{ .receive = udp.Sockets.Buffers.bytes_min, .send = udp.Sockets.Buffers.bytes_max },
+        .quic = .{ .receive = udp.SocketPair.Buffers.bytes_max, .send = udp.SocketPair.Buffers.bytes_min },
+        .discovery = .{ .receive = udp.SocketPair.Buffers.bytes_min, .send = udp.SocketPair.Buffers.bytes_max },
     };
     try std.testing.expectEqual(bounds, (try resolve(.{ .seed = 1, .forks = &.{}, .socket_buffers = bounds, .admission_policy = policy_fixture.config() })).socket_buffers);
     const invalid = [_]configuration.SocketBuffers{
-        .{ .quic = .{ .receive = udp.Sockets.Buffers.bytes_min - 1, .send = udp.Sockets.Buffers.bytes_min } },
-        .{ .quic = .{ .receive = udp.Sockets.Buffers.bytes_min, .send = udp.Sockets.Buffers.bytes_max + 1 } },
-        .{ .discovery = .{ .receive = udp.Sockets.Buffers.bytes_max + 1, .send = udp.Sockets.Buffers.bytes_min } },
-        .{ .discovery = .{ .receive = udp.Sockets.Buffers.bytes_min, .send = udp.Sockets.Buffers.bytes_min - 1 } },
+        .{ .quic = .{ .receive = udp.SocketPair.Buffers.bytes_min - 1, .send = udp.SocketPair.Buffers.bytes_min } },
+        .{ .quic = .{ .receive = udp.SocketPair.Buffers.bytes_min, .send = udp.SocketPair.Buffers.bytes_max + 1 } },
+        .{ .discovery = .{ .receive = udp.SocketPair.Buffers.bytes_max + 1, .send = udp.SocketPair.Buffers.bytes_min } },
+        .{ .discovery = .{ .receive = udp.SocketPair.Buffers.bytes_min, .send = udp.SocketPair.Buffers.bytes_min - 1 } },
     };
     for (invalid) |socket_buffers| {
         try std.testing.expectError(error.InvalidLimits, resolve(.{ .seed = 1, .forks = &.{}, .socket_buffers = socket_buffers, .admission_policy = policy_fixture.config() }));
