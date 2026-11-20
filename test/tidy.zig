@@ -47,6 +47,14 @@ const inline_test_allowlist = [_][]const u8{
     "src/beacon_node/chain/state_cache/block_state_cache.zig",
     // Private cgroup v1/v2 parsers: parseCpuV1, parseCpuMaxV2, translate.
     "src/cpu_count.zig",
+    // Private frame enqueue path: Outbox.appendControl.
+    "src/network/gossipsub/outbox.zig",
+    // Private mesh selection helper: Overlay.shuffle.
+    "src/network/gossipsub/overlay.zig",
+    // Private CPU probe and accelerated-hash seams: x86ShaAvx2, aarch64Sha2, hash.
+    "src/network/gossipsub/sha256.zig",
+    // Private score counters: PeerScore.load, PeerScore.store.
+    "src/network/gossipsub/score.zig",
     // Private helper: compatibleUnionOptionsAreCompatible.
     "src/ssz/type/compatible_union.zig",
     // Private diff internals: findModifiedIndices, loadValidators.
@@ -65,6 +73,8 @@ const unimported_file_allowlist = [_][]const u8{
     // Narrow roots for running one subtree's tests without compiling the rest.
     "src/state_transition/block_test_root.zig",
     "src/state_transition/utils_test_root.zig",
+    // The accelerated gossip SHA-256 object's root, which build.zig compiles with extra CPU features.
+    "src/network/gossipsub/sha256_accelerated.zig",
 };
 
 /// Rule scoping.

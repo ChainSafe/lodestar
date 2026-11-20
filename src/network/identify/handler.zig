@@ -322,3 +322,8 @@ pub const Handler = struct {
         for (self.outbound) |*slot| slot.cancel(router, engine, .shutdown);
     }
 };
+
+test {
+    _ = @import("handler_options_test.zig");
+    _ = @import("handler_protocols_test.zig");
+}

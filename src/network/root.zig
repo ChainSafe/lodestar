@@ -50,8 +50,10 @@ pub const tls = @import("tls/root.zig");
 pub const udp = @import("udp");
 pub const protocol = @import("protocol.zig");
 pub const Router = @import("router.zig").Router;
+pub const Protocols = @import("protocols.zig").Protocols;
 pub const stream_io = @import("stream_io.zig");
 pub const reqresp = @import("reqresp/root.zig");
+pub const gossipsub = @import("gossipsub/root.zig");
 
 pub const Transport = @import("transport.zig").Transport;
 pub const Negotiator = @import("negotiate.zig").Negotiator;
@@ -80,8 +82,10 @@ test {
     _ = Negotiator;
     _ = stream_io;
     _ = reqresp;
+    _ = gossipsub;
     _ = @import("wait.zig");
     _ = Router;
+    _ = Protocols;
     _ = transport_driver;
     _ = @import("counting_allocator.zig");
     _ = @import("deadline_heap.zig");
