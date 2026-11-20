@@ -116,7 +116,7 @@ const epochProcessing =
         },
         // Lodestar rejects a pre-state uint64 above Number.MAX_SAFE_INTEGER on decode, e.g. invalid_large_withdrawable_epoch
         shouldErrorOnInput: (error: Error, inputNames: Set<string>) =>
-          !inputNames.has("post") && /exceeds Number.MAX_SAFE_INTEGER/.test(error.message),
+          !inputNames.has("post") && /Invalid serialized number > MAX_SAFE_INTEGER/.test(error.message),
         getExpected: (testCase) => testCase.post,
         expectFunc: (_testCase, expected, actual) => {
           expectEqualBeaconState(fork, expected, actual);
