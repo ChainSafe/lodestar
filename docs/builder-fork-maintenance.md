@@ -55,7 +55,7 @@ ancestor, including files that had no textual conflict:
 | Builder CLI options and README                                  | Restore the event-emission requirement, current spec badge and payment-settlement limitation. Keep constructor options alongside Engine access.                                                                                            |
 | Nightly workflow, devnet configuration and launcher             | Preserve the Docker builder and HTTP API checks. Restore the Kurtosis and artifact versions, coherent metrics sampling and Docker base-image refresh. Host-side Node/Zig builds are unnecessary because the Docker build owns compilation. |
 
-The review also restored the Engine FCU `INVALID` check and corrected deadlines
+The review also restored the Engine `forkchoiceUpdated` `INVALID` check and corrected deadlines
 measured in the preceding slot to use that slot's fork duration. Qualification
 includes an actual old-build journal written with array transactions and recovered
 by the new build with serialized transactions, preserving payload bytes, signed
