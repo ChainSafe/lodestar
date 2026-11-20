@@ -29,13 +29,13 @@ export {allNamespaces} from "../api/rest/index.js";
 export type {EngineApiMode};
 // Re-export to use as default values and for validation in CLI args
 export {
-  DEFAULT_BUILDER_BID_DEADLINE_MS,
-  DEFAULT_BUILDER_BID_DELAY_MS,
-  DEFAULT_BUILDER_BID_REQUESTS,
   ArchiveMode,
   BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS,
   BUILDER_BID_LAG_BUFFER_MS,
   DEFAULT_ARCHIVE_MODE,
+  DEFAULT_BUILDER_BID_DEADLINE_MS,
+  DEFAULT_BUILDER_BID_DELAY_MS,
+  DEFAULT_BUILDER_BID_REQUESTS,
   defaultExecutionBuilderHttpOpts,
   defaultExecutionEngineHttpOpts,
   engineApiModes,
