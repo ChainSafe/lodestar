@@ -17,6 +17,7 @@ import {
   runChild,
   settleOnly,
   startRuntime,
+  unreachableConnect,
 } from "./utils/network.js";
 import {type PeerRuntime, startPeer} from "./utils/network-peer.js";
 
@@ -353,7 +354,7 @@ test("disconnect cancels pending one-shot connects and releases their dial inten
     await a.identity;
     const identity = await b.identity;
     await a.applyIntent(localIntent(config));
-    const pending = a.connect(identity.peerId, [identity.localEndpoint], 60000n).catch((error: Error) => error.message);
+    const pending = a.connect(identity.peerId, unreachableConnect()[1], 60000n).catch((error: Error) => error.message);
     await a.disconnect(identity.peerId);
     expect(await pending).toContain("NetworkConnectCancelled");
     await b.applyIntent(localIntent(other));
