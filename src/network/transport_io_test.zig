@@ -140,6 +140,7 @@ test "transport keeps batching past a counted receive error" {
     const destination = udp_mod.Address.toNetwork(node.transport.sockets.localAddress());
     var sent: usize = 0;
     while (sent < 3) : (sent += 1) try stranger.send(std.testing.io, &destination, &oversized);
+    try support.awaitDatagrams(node.transport.sockets.primary(), 3);
 
     var events: [4]Engine.Event = undefined;
     const result = try support.step(&node.transport, std.testing.io, &events, step_options);
@@ -521,6 +522,7 @@ test "transport bounds each turn's receive drain without active connections" {
     defer source.close(std.testing.io);
     const destination = node.transport.localAddress();
     for (0..3) |_| try source.sendTo(std.testing.io, destination, null, &.{0}, constants.datagram_size_max);
+    try support.awaitDatagrams(node.transport.sockets.primary(), 3);
     var events: [4]Engine.Event = undefined;
     const result = try support.step(&node.transport, std.testing.io, &events, .{ .wait_max = .fromMilliseconds(10) });
     try std.testing.expectEqual(@as(u32, 2), result.datagrams_received);
@@ -685,6 +687,7 @@ test "transport receive cancellation retains progress and events while deferring
     const failed = try node.transport.engine.dial(&destination, &node.transport.localAddress(), node.transport.peerId(), now);
     try std.testing.expect(node.transport.engine.failSend(failed));
     try sink.primary().send(std.testing.io, &node.transport.sockets.primary().address, "invalid");
+    try support.awaitDatagrams(node.transport.sockets.primary(), 1);
     var faults: FaultIo = .{ .receive = .{ .at = 2 } };
     const io = faults.io();
     var events: [4]Engine.Event = undefined;
@@ -776,6 +779,8 @@ test "transport reads only the ready families up to the turn quota and resumes t
     try stranger.send(std.testing.io, &sockets[0].?.address, &oversized);
     for (0..quota + 7) |_| try stranger.send(std.testing.io, &sockets[0].?.address, &.{0});
     for (0..3) |_| try sockets[1].?.send(std.testing.io, &sockets[1].?.address, &.{0});
+    try support.awaitDatagrams(sockets[0].?, quota + 8);
+    try support.awaitDatagrams(sockets[1].?, 3);
 
     var result: Transport.Progress = .{ .now = try Now.read(std.testing.io) };
     try hub.receive(std.testing.io, &result, .{ false, true });
@@ -1064,6 +1069,7 @@ test "transport caps the final receive batch at the remaining budget including t
         const payload: []const u8 = if (i == udp_mod.Sockets.receive_batch_max) &oversized else &.{0};
         try socket.send(std.testing.io, &socket.address, payload);
     }
+    try support.awaitDatagrams(socket, 20);
     const now = try Now.read(std.testing.io);
     var first: Transport.Progress = .{ .now = now };
     try transport.receive(std.testing.io, &first, .{ true, false });
