@@ -12,6 +12,16 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
   return {
     register,
 
+    xrayBufferedBytes: register.gauge({
+      name: "lodestar_xray_buffered_bytes",
+      help: "Bytes retained in the Xray replay buffer",
+    }),
+    xrayErrors: register.counter<{code: string}>({
+      name: "lodestar_xray_errors_total",
+      help: "Xray collector and capture errors by code",
+      labelNames: ["code"],
+    }),
+
     // Peers
 
     peers: register.gauge({
