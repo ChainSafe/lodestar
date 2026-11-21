@@ -1,0 +1,94 @@
+{
+  "functional_source": "cad22db26b2c0d9b3bef1998ea998a1c2be21329",
+  "dependency": "libp2p@3.4.0",
+  "patch_sha256": "b1b03520dcf17504a10641301d16abca4e8434c02b1c9e81dd5e7baf9fc8e156",
+  "actual_consumer": "@libp2p/gossipsub@17.1.4 shares one topology across protocol aliases",
+  "source_evidence": "dist/src/gossipsub.js: topology registration during start",
+  "additional_original_failures": 3,
+  "current_root_project_tests_passed": 15,
+  "controls_include_pending_shared_alias_unregister": true,
+  "normal_checks": [
+    {
+      "name": "normal-build",
+      "command": [
+        "/projects/eth2030/qualification/node26/pnpm",
+        "build"
+      ],
+      "exit": 0,
+      "seconds": 22.07674703199882
+    },
+    {
+      "name": "check-build",
+      "command": [
+        "/projects/eth2030/qualification/node26/pnpm",
+        "check-build"
+      ],
+      "exit": 0,
+      "seconds": 8.523766436002916
+    },
+    {
+      "name": "types",
+      "command": [
+        "/projects/eth2030/qualification/node26/pnpm",
+        "check-types"
+      ],
+      "exit": 0,
+      "seconds": 11.6305480680021
+    },
+    {
+      "name": "root-targeted-unit",
+      "command": [
+        "/projects/eth2030/qualification/node26/pnpm",
+        "vitest",
+        "run",
+        "--project",
+        "unit",
+        "packages/beacon-node/test/unit/network/gossip/registrarReconnect.test.ts"
+      ],
+      "exit": 0,
+      "seconds": 1.3949931320094038
+    },
+    {
+      "name": "lint",
+      "command": [
+        "/projects/eth2030/qualification/node26/pnpm",
+        "lint"
+      ],
+      "exit": 0,
+      "seconds": 1.4402514550019987
+    },
+    {
+      "name": "readme",
+      "command": [
+        "/projects/eth2030/qualification/node26/pnpm",
+        "check-readme"
+      ],
+      "exit": 0,
+      "seconds": 31.911904586013407
+    },
+    {
+      "name": "exports",
+      "command": [
+        "node",
+        "scripts/assert_exports.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.028990323015023023
+    }
+  ],
+  "actual_deployment": {
+    "passed": true,
+    "startup_and_catchup_seconds": 12.72806355098146,
+    "actual_runtime_module_sha256": {
+      "src/registrar.ts": "54c9f7cb441d80e360532b82d82c040f3c59aa55464a9918e40667db43d342ab",
+      "dist/src/registrar.js": "112d96d7cd676b3038f08bf1c8483f367f6c6e0db1fd396ef8d4010fbc135e56",
+      "dist/src/registrar.js.map": "7ab90897db107a40466bc23c6ecd90709ee0f6b77446384f38bb497d17e72361",
+      "dist/src/registrar.d.ts": "f58207a0fd5436fff82df86df6db62ee1b6e6682fd424a76d6aac079e04c7b22"
+    },
+    "reproducible_patched_image_id": "sha256:f517e0629602543028dde7270b924505f4b68378130bd6e605d5d333daa0fd42",
+    "original_container_base_image_id": "sha256:24785cda051a06288707d68258c78455d5303c7622ab92fb8d33c20a35f80ba4",
+    "source_identity": "Unchanged application cf705 plus explicitly identified libp2p dependency patch; CLI application version is not relabelled."
+  },
+  "operating_scope": "Distinct final-source windows in ETH2030 post-merge campaign; original phase hashes/failures remain separate.",
+  "full_upstream_hosted_ci_pass_claimed": false
+}
