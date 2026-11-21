@@ -1,4 +1,3 @@
-// snappy is better for compression for larger payloads
 import {compressSync} from "snappy";
 import {ChunkType, IDENTIFIER_FRAME, UNCOMPRESSED_CHUNK_SIZE, crc} from "./snappyCommon.js";
 
@@ -8,7 +7,8 @@ export function* encodeSnappy(bytes: Buffer): Generator<Buffer> {
 
   for (let i = 0; i < bytes.length; i += UNCOMPRESSED_CHUNK_SIZE) {
     const chunk = bytes.subarray(i, i + UNCOMPRESSED_CHUNK_SIZE);
-    const compressed = compressSync(chunk);
+    // Copy output to avoid deferring native allocation release until the event loop runs finalizers.
+    const compressed = compressSync(chunk, {copyOutputData: true});
     if (compressed.length < chunk.length) {
       const size = compressed.length + 4;
       yield Buffer.concat([Buffer.from([ChunkType.COMPRESSED, size, size >> 8, size >> 16]), crc(chunk), compressed]);
