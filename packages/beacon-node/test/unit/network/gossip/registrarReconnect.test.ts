@@ -6,6 +6,7 @@ import {defer} from "@lodestar/utils";
 type Peer = {toString(): string};
 type Connection = {status: "open" | "closed"; id: string};
 type Topology = {
+  filter?: {has(peer: Peer): boolean; add(peer: Peer): void; remove(peer: Peer): void};
   onConnect?(peer: Peer, connection: Connection): void | Promise<void>;
   onDisconnect?(peer: Peer): void | Promise<void>;
 };
@@ -229,5 +230,109 @@ it("does not let a limited connection cancel an in-flight unlimited identify", a
   release.resolve();
   await old;
   expect([...active].sort()).toEqual(protocols);
+  expect(f.logger.error).not.toHaveBeenCalled();
+});
+
+for (const newer of ["identify-omits-removed-protocols", "final-disconnect"] as const) {
+  it(`finishes protocol/filter removals after ${newer}`, async () => {
+    const protocols = ["/meshsub/1.1.0", "/meshsub/1.2.0"];
+    const f = fixture(protocols);
+    const entered = defer<void>();
+    const release = defer<void>();
+    const active = new Set<string>();
+    const filtered = new Set<string>();
+    for (const [index, protocol] of protocols.entries()) {
+      await f.registrar.register(protocol, {
+        filter: {
+          has: () => filtered.has(protocol),
+          add: () => {
+            filtered.add(protocol);
+          },
+          remove: () => {
+            filtered.delete(protocol);
+          },
+        },
+        onConnect: () => {
+          active.add(protocol);
+        },
+        onDisconnect: async () => {
+          active.delete(protocol);
+          if (index === 0) {
+            entered.resolve();
+            await release.promise;
+          }
+        },
+      });
+    }
+    await f.identify("old");
+    f.setRead(() => Promise.resolve({protocols: []}));
+    const old = f.emit("peer:update", {peer: {id: f.peer, protocols: []}, previous: {protocols}});
+    await entered.promise;
+    if (newer === "final-disconnect") await f.emit("peer:disconnect", f.peer);
+    else await f.emit("peer:identify", {peerId: f.peer, protocols: [], connection: {status: "open", id: "new"}});
+    release.resolve();
+    await old;
+    expect([...active]).toEqual([]);
+    expect([...filtered]).toEqual([]);
+    expect(f.logger.error).not.toHaveBeenCalled();
+  });
+}
+
+it("removes disconnected protocols that a newer identify does not re-establish", async () => {
+  const protocols = ["/meshsub/1.1.0", "/meshsub/1.2.0"];
+  const f = fixture(protocols);
+  const entered = defer<void>();
+  const release = defer<void>();
+  const active = new Set<string>();
+  for (const [index, protocol] of protocols.entries()) {
+    await f.registrar.register(protocol, {
+      onConnect: () => {
+        active.add(protocol);
+      },
+      onDisconnect: async () => {
+        active.delete(protocol);
+        if (index === 0) {
+          entered.resolve();
+          await release.promise;
+        }
+      },
+    });
+  }
+  await f.identify("old");
+  const old = f.emit("peer:disconnect", f.peer);
+  await entered.promise;
+  await f.emit("peer:identify", {peerId: f.peer, protocols: [protocols[0]], connection: {status: "open", id: "new"}});
+  release.resolve();
+  await old;
+  expect([...active]).toEqual([protocols[0]]);
+  expect(f.logger.error).not.toHaveBeenCalled();
+});
+
+it("does not finish a pending identify for a subsequently removed protocol", async () => {
+  const protocols = ["/meshsub/1.1.0", "/meshsub/1.2.0"];
+  const f = fixture(protocols);
+  const entered = defer<void>();
+  const release = defer<void>();
+  const active = new Set<string>();
+  for (const [index, protocol] of protocols.entries()) {
+    await f.registrar.register(protocol, {
+      onConnect: async () => {
+        active.add(protocol);
+        if (index === 0) {
+          entered.resolve();
+          await release.promise;
+        }
+      },
+      onDisconnect: () => {
+        active.delete(protocol);
+      },
+    });
+  }
+  const identify = f.identify("old");
+  await entered.promise;
+  await f.emit("peer:update", {peer: {id: f.peer, protocols: [protocols[0]]}, previous: {protocols}});
+  release.resolve();
+  await identify;
+  expect([...active]).toEqual([protocols[0]]);
   expect(f.logger.error).not.toHaveBeenCalled();
 });
