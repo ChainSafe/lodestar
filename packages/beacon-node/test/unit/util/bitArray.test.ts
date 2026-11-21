@@ -1,6 +1,12 @@
 import {describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
-import {IntersectResult, intersectUint8Arrays, isSuperSetOrEqual} from "../../../src/util/bitArray.js";
+import {
+  IntersectResult,
+  countTrueBits,
+  intersectUint8Arrays,
+  isSuperSetOrEqual,
+  sliceBitArray,
+} from "../../../src/util/bitArray.js";
 
 describe("util / bitArray / intersectUint8Arrays", () => {
   const testCases: {id?: string; a: number[]; b: number[]; res: IntersectResult}[] = [
@@ -117,3 +123,43 @@ describe("util / bitArray / isSuperSetOrEqual", () => {
 function toId(a: number[], b: number[]): string {
   return [a, b].map((arr) => arr.map((n) => n.toString(2).padStart(8, "0")).join(",")).join(" - ");
 }
+
+describe("util / bitArray / sliceBitArray", () => {
+  const sourceBools = Array.from({length: 77}, (_, i) => (i * 7) % 3 === 0 || i % 11 === 0);
+  const source = BitArray.fromBoolArray(sourceBools);
+
+  it("matches a boolean array slice for every start and length", () => {
+    for (let start = 0; start <= sourceBools.length; start++) {
+      for (let bitLen = 0; start + bitLen <= sourceBools.length; bitLen++) {
+        const expected = BitArray.fromBoolArray(sourceBools.slice(start, start + bitLen));
+        const sliced = sliceBitArray(source, start, bitLen);
+        expect(sliced.bitLen).toBe(bitLen);
+        expect(sliced.uint8Array, `wrong bytes for start ${start} bitLen ${bitLen}`).toEqual(expected.uint8Array);
+      }
+    }
+  });
+
+  it("does not alias the source bytes", () => {
+    const sliced = sliceBitArray(source, 8, 16);
+    sliced.set(0, !sliced.get(0));
+    expect(source.toBoolArray()).toEqual(sourceBools);
+  });
+
+  it("throws on a range past the end of the source", () => {
+    expect(() => sliceBitArray(source, 70, 8)).toThrow();
+    expect(() => sliceBitArray(source, -1, 8)).toThrow();
+  });
+});
+
+describe("util / bitArray / countTrueBits", () => {
+  it("matches getTrueBitIndexes for every bit length", () => {
+    for (let bitLen = 0; bitLen <= 40; bitLen++) {
+      const bitArray = BitArray.fromBoolArray(Array.from({length: bitLen}, (_, i) => i % 3 !== 1));
+      expect(countTrueBits(bitArray), `wrong count for bitLen ${bitLen}`).toBe(bitArray.getTrueBitIndexes().length);
+    }
+  });
+
+  it("counts a full byte range", () => {
+    expect(countTrueBits(new BitArray(new Uint8Array([0xff, 0x00, 0x81]), 24))).toBe(10);
+  });
+});
