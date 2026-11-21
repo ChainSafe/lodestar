@@ -18,6 +18,7 @@ export class SeenBlockAttesters {
     ) {
       return false;
     }
+    // Validator i is bit (i % 8) of byte floor(i / 8): `>>> 3` picks the byte, `& 7` the bit inside it
     return (bits[validatorIndex >>> 3] & (1 << (validatorIndex & 7))) !== 0;
   }
 
@@ -34,6 +35,7 @@ export class SeenBlockAttesters {
     }
 
     for (const index of validatorIndexes) {
+      // floor(index / 8), the byte that holds this validator's bit
       const byteIndex = index >>> 3;
       if (byteIndex >= bits.length) {
         const grown: Uint8Array = new Uint8Array(Math.max(byteIndex + 1, bits.length * 2));
@@ -42,6 +44,7 @@ export class SeenBlockAttesters {
         this.bitsByEpoch.set(epoch, bits);
         this.byteLength = Math.max(this.byteLength, bits.length);
       }
+      // Set bit (index % 8) of that byte
       bits[byteIndex] |= 1 << (index & 7);
     }
   }
