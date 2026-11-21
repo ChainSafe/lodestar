@@ -472,7 +472,7 @@ export class NetworkProcessor {
       const code = GossipErrorCode.INVALID_SLOT;
       const peerAction = rejectPeerAction(topicType, code);
       this.metrics?.networkProcessor.gossipValidationReject.inc({topic: topicType});
-      if (peerAction !== null) this.core.reportPeer(propagationSource, peerAction, code);
+      this.core.reportPeer(propagationSource, peerAction, code);
       this.logger.debug(`Gossip validation ${topicType} rejected due to null slot`, {
         peer: propagationSource,
         clientAgent,

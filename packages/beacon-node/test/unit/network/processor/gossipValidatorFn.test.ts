@@ -42,13 +42,6 @@ describe("rejectPeerAction", () => {
   ] as const)("preserves fatal signature penalties on %s", (type, code) => {
     expect(rejectPeerAction(type, code)).toBe(PeerAction.Fatal);
   });
-
-  it.each([GossipType.beacon_attestation, GossipType.beacon_aggregate_and_proof] as const)(
-    "does not report an invalidated payload on %s",
-    (type) => {
-      expect(rejectPeerAction(type, AttestationErrorCode.EXECUTION_PAYLOAD_INVALID)).toBeNull();
-    }
-  );
 });
 
 describe("gossip SSZ rejection", () => {

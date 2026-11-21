@@ -44,8 +44,7 @@ export type ValidatorFnModules = {
 
 export type OnFatalPeerFn = (peer: PeerIdStr) => void;
 
-/** A `null` action rejects the message without an application score penalty */
-type RejectPeerActionRule = {default: PeerAction; byCode?: Record<string, PeerAction | null>};
+type RejectPeerActionRule = {default: PeerAction; byCode?: Record<string, PeerAction>};
 
 /**
  * PeerAction mapping based on the topic and specific codes.
@@ -64,21 +63,13 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
     default: PeerAction.LowToleranceError,
     byCode: {[ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
-  // An invalidated payload is this node's execution engine opinion and honest peers relay votes their engine accepted.
-  // The message is still rejected, gossipsub applies its own decaying invalid message penalty
   [GossipType.beacon_aggregate_and_proof]: {
     default: PeerAction.MidToleranceError,
-    byCode: {
-      [AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal,
-      [AttestationErrorCode.EXECUTION_PAYLOAD_INVALID]: null,
-    },
+    byCode: {[AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
   [GossipType.beacon_attestation]: {
     default: PeerAction.MidToleranceError,
-    byCode: {
-      [AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal,
-      [AttestationErrorCode.EXECUTION_PAYLOAD_INVALID]: null,
-    },
+    byCode: {[AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
   [GossipType.sync_committee_contribution_and_proof]: {
     default: PeerAction.MidToleranceError,
@@ -125,13 +116,12 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
   [GossipType.light_client_optimistic_update]: {default: PeerAction.HighToleranceError},
 };
 
-export function rejectPeerAction(type: GossipType, code: string): PeerAction | null {
+export function rejectPeerAction(type: GossipType, code: string): PeerAction {
   if (code === GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE) {
     return PeerAction.LowToleranceError;
   }
   const rule = gossipRejectPeerAction[type];
-  const action = rule.byCode?.[code];
-  return action !== undefined ? action : rule.default;
+  return rule.byCode?.[code] ?? rule.default;
 }
 
 /**
@@ -190,7 +180,7 @@ export function getGossipValidatorBatchFn(
             // only beacon_attestation topic is validated in batch
             metrics?.networkProcessor.gossipAttestationRejectByReason.inc({reason: e.type.code});
             const peerAction = rejectPeerAction(type, e.type.code);
-            if (peerAction !== null) core.reportPeer(propagationSource, peerAction, e.type.code);
+            core.reportPeer(propagationSource, peerAction, e.type.code);
             if (peerAction === PeerAction.Fatal) onFatalPeer(propagationSource);
             logger.debug(
               `Gossip validation ${type} rejected`,
@@ -282,7 +272,7 @@ export function getGossipValidatorFn(
         case GossipAction.REJECT: {
           metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
           const peerAction = rejectPeerAction(type, e.type.code);
-          if (peerAction !== null) core.reportPeer(propagationSource, peerAction, e.type.code);
+          core.reportPeer(propagationSource, peerAction, e.type.code);
           if (peerAction === PeerAction.Fatal) onFatalPeer(propagationSource);
           logger.debug(
             `Gossip validation ${type} rejected`,
