@@ -1,6 +1,7 @@
 //! Port of https://github.com/ChainSafe/swap-or-not-shuffle/blob/main/src/lib.rs
 
 const std = @import("std");
+const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 const sha256 = @import("sha256.zig");
 
@@ -152,6 +153,61 @@ fn swapOrNotPairs(
 ///
 /// `T` is `u32` for the JS binding and `ValidatorIndex`/`u64` for Zig callers.
 pub fn innerShuffleList(comptime T: type, out: []T, seed: []const u8, rounds: i32, forwards: bool) ShufflingError!void {
+    shuffleRounds(T, null, out, seed, rounds, forwards) catch |err| switch (err) {
+        // `Canceled` only comes from awaiting tasks on an io, and the io here is null.
+        error.Canceled => unreachable,
+        else => |e| return e,
+    };
+}
+
+/// `unshuffleList` with each round's swap-or-not pairs split across tasks on `io`.
+pub fn unshuffleListParallel(comptime T: type, io: std.Io, out: []T, seed: []const u8, rounds: i32) (ShufflingError || std.Io.Cancelable)!void {
+    return shuffleRounds(T, io, out, seed, rounds, false);
+}
+
+/// Pairs per task when a round runs on an io. Within a round the pairs are disjoint, so tasks never
+/// touch the same element; rounds still run one after another. Small in tests so that test lists
+/// split into many tasks with unaligned starts.
+pub const pairs_per_task: usize = if (builtin.is_test) 1 << 10 else 1 << 16;
+
+fn SwapPairsTask(comptime T: type) type {
+    return struct {
+        fn run(out: []T, manager: ShufflingManager, low_first: usize, high_first: usize, pair_count: usize) void {
+            var task_manager = manager;
+            swapOrNotPairs(T, out, &task_manager, low_first, high_first, pair_count);
+        }
+    };
+}
+
+fn swapOrNotPairsOnGroup(
+    comptime T: type,
+    io: std.Io,
+    group: *std.Io.Group,
+    out: []T,
+    manager: *ShufflingManager,
+    low_first: usize,
+    high_first: usize,
+    pair_count: usize,
+) void {
+    if (pair_count <= pairs_per_task) {
+        swapOrNotPairs(T, out, manager, low_first, high_first, pair_count);
+        return;
+    }
+    var start: usize = 0;
+    while (start < pair_count) : (start += pairs_per_task) {
+        const task_pair_count = @min(pairs_per_task, pair_count - start);
+        group.async(io, SwapPairsTask(T).run, .{ out, manager.*, low_first + start, high_first - start, task_pair_count });
+    }
+}
+
+fn shuffleRounds(
+    comptime T: type,
+    io: ?std.Io,
+    out: []T,
+    seed: []const u8,
+    rounds: i32,
+    forwards: bool,
+) (ShufflingError || std.Io.Cancelable)!void {
     if (rounds == 0) {
         // no shuffling rounds
         return;
@@ -186,11 +242,25 @@ pub fn innerShuffleList(comptime T: type, out: []T, seed: []const u8, rounds: i3
 
         // swap-or-not from beginning of list to mirror point
         const mirror_low = (pivot + 1) >> 1;
-        swapOrNotPairs(T, out, &manager, 0, pivot, mirror_low);
-
         // swap-or-not from just past the pivot to the mirror point of the rest of the list
         const mirror_high = (pivot + list_size + 1) >> 1;
-        swapOrNotPairs(T, out, &manager, pivot + 1, list_size - 1, mirror_high - (pivot + 1));
+
+        if (io) |task_io| {
+            const high_pair_count = mirror_high - (pivot + 1);
+            var group: std.Io.Group = .init;
+            // The smaller range may run inline, so spawn the larger one's tasks first.
+            if (mirror_low >= high_pair_count) {
+                swapOrNotPairsOnGroup(T, task_io, &group, out, &manager, 0, pivot, mirror_low);
+                swapOrNotPairsOnGroup(T, task_io, &group, out, &manager, pivot + 1, list_size - 1, high_pair_count);
+            } else {
+                swapOrNotPairsOnGroup(T, task_io, &group, out, &manager, pivot + 1, list_size - 1, high_pair_count);
+                swapOrNotPairsOnGroup(T, task_io, &group, out, &manager, 0, pivot, mirror_low);
+            }
+            try group.await(task_io);
+        } else {
+            swapOrNotPairs(T, out, &manager, 0, pivot, mirror_low);
+            swapOrNotPairs(T, out, &manager, pivot + 1, list_size - 1, mirror_high - (pivot + 1));
+        }
 
         // update current_round and stop when reaching the end of the
         // predetermined rounds
@@ -218,94 +288,60 @@ pub fn unshuffleList(comptime T: type, out: []T, seed: []const u8, rounds: i32) 
     return innerShuffleList(T, out, seed, rounds, false);
 }
 
-/// `compute_shuffled_index` for single indices, caching per-round pivots and
-/// source hashes across calls.
+/// `compute_shuffled_index` for single indices of one seed. Each round's pivot is computed once;
+/// the source hashes repeat too rarely across lookups for a cache to pay off.
+/// It allocates nothing, so each thread can use its own copy.
 pub const ComputeShuffledIndex = struct {
-    /// The caches below are written until `deinit` and never freed piecemeal,
-    /// so an arena keeps their many small allocations to one teardown.
-    arena: std.heap.ArenaAllocator,
-    /// Lazily computed pivot per round; there are at most `rounds` values.
-    pivot_by_round: []?u32,
-    /// Unmanaged: a managed map would capture a pointer to init's stack frame.
-    source_by_position_by_round: []std.AutoHashMapUnmanaged(u32, [32]u8),
-    /// 32 bytes seed + 1 byte round
-    pivot_buffer: [PIVOT_VIEW_SIZE]u8,
+    /// A round hashes only its low byte, so the pivots repeat every 256 rounds.
+    const distinct_rounds = 256;
+
+    pivots: [distinct_rounds]u32,
     /// 32 bytes seed + 1 byte round + 4 bytes position_div
     source_buffer: [TOTAL_SIZE]u8,
     index_count: u32,
     rounds: u32,
 
-    pub fn init(parent_allocator: Allocator, seed: []const u8, index_count: u32, rounds: u32) !ComputeShuffledIndex {
-        if (seed.len != SEED_SIZE) {
-            return error.InvalidSeedLength;
-        }
+    pub fn init(seed: []const u8, index_count: u32, rounds: u32) ShufflingError!ComputeShuffledIndex {
+        if (seed.len != SEED_SIZE) return error.InvalidSeedLength;
+        if (index_count == 0) return error.InvalidActiveIndicesLength;
 
-        var arena = std.heap.ArenaAllocator.init(parent_allocator);
-        errdefer arena.deinit();
-        const allocator = arena.allocator();
-
-        const pivot_by_round = try allocator.alloc(?u32, rounds);
-        @memset(pivot_by_round, null);
-
-        const source_by_position_by_round = try allocator.alloc(std.AutoHashMapUnmanaged(u32, [32]u8), rounds);
-        @memset(source_by_position_by_round, .empty);
-
-        var pivot_buffer = [_]u8{0} ** PIVOT_VIEW_SIZE;
-        var source_buffer = [_]u8{0} ** TOTAL_SIZE;
-        @memcpy(pivot_buffer[0..SEED_SIZE], seed);
-        @memcpy(source_buffer[0..SEED_SIZE], seed);
-
-        return .{
-            .arena = arena,
-            .pivot_by_round = pivot_by_round,
-            .source_by_position_by_round = source_by_position_by_round,
-            .pivot_buffer = pivot_buffer,
-            .source_buffer = source_buffer,
+        var self: ComputeShuffledIndex = .{
+            .pivots = undefined,
+            .source_buffer = undefined,
             .index_count = index_count,
             .rounds = rounds,
         };
+        var pivot_buffer: [PIVOT_VIEW_SIZE]u8 = undefined;
+        @memcpy(pivot_buffer[0..SEED_SIZE], seed);
+        for (self.pivots[0..@min(rounds, distinct_rounds)], 0..) |*pivot, round| {
+            pivot_buffer[SEED_SIZE] = @intCast(round);
+            var digest: [sha256.digest_length]u8 = undefined;
+            sha256.hash(&pivot_buffer, &digest);
+            pivot.* = @intCast(std.mem.readInt(u64, digest[0..8], .little) % index_count);
+        }
+        @memcpy(self.source_buffer[0..SEED_SIZE], seed);
+        return self;
     }
 
-    pub fn deinit(self: *ComputeShuffledIndex) void {
-        // pivot_by_round and source_by_position_by_round are arena-owned
-        self.arena.deinit();
-    }
-
-    pub fn get(self: *ComputeShuffledIndex, index: u32) !u32 {
-        // u32 wrapping arithmetic mirrors the reference's release-mode u32
-        // arithmetic: for valid inputs (index < index_count) this is
-        // arithmetically identical to non-wrapping math, so out-of-range
-        // indices produce the same (garbage but deterministic) values as the
-        // reference instead of panicking.
-        const index_count: u32 = self.index_count;
+    /// u32 wrapping arithmetic mirrors the reference's release-mode u32 arithmetic: for valid
+    /// inputs (index < index_count) it is identical to non-wrapping math, so out-of-range indices
+    /// produce the same (garbage but deterministic) values as the reference instead of panicking.
+    pub fn get(self: *ComputeShuffledIndex, index: u32) u32 {
+        const index_count = self.index_count;
         var permuted: u32 = index;
-
         for (0..self.rounds) |round| {
-            const pivot: u32 = self.pivot_by_round[round] orelse blk: {
-                self.pivot_buffer[SEED_SIZE] = @intCast(round % 256);
-                var digest: [sha256.digest_length]u8 = undefined;
-                sha256.hash(&self.pivot_buffer, &digest);
-                const pivot: u32 = @intCast(std.mem.readInt(u64, digest[0..8], .little) % index_count);
-                self.pivot_by_round[round] = pivot;
-                break :blk pivot;
-            };
-
+            const round_byte: u8 = @truncate(round);
+            const pivot = self.pivots[round_byte];
             const flip = (pivot +% index_count -% permuted) % index_count;
             const position = @max(permuted, flip);
-            const position_div: u32 = @intCast(position / 256);
+            self.source_buffer[SEED_SIZE] = round_byte;
+            std.mem.writeInt(u32, self.source_buffer[PIVOT_VIEW_SIZE..][0..POSITION_WINDOW_SIZE], position / 256, .little);
+            var source: [sha256.digest_length]u8 = undefined;
+            sha256.hash(&self.source_buffer, &source);
 
-            const source = try self.source_by_position_by_round[round].getOrPut(self.arena.allocator(), position_div);
-            if (!source.found_existing) {
-                self.source_buffer[SEED_SIZE] = @intCast(round % 256);
-                std.mem.writeInt(u32, self.source_buffer[PIVOT_VIEW_SIZE..][0..POSITION_WINDOW_SIZE], position_div, .little);
-                sha256.hash(&self.source_buffer, source.value_ptr);
-            }
-
-            const byte = source.value_ptr[@intCast(position % 256 / 8)];
-            const bit = (byte >> @intCast(position % 8)) & 1;
+            const bit = (source[position % 256 / 8] >> @intCast(position % 8)) & 1;
             permuted = if (bit == 1) flip else permuted;
         }
-
         return permuted;
     }
 };
@@ -319,7 +355,6 @@ pub const ByteCount = enum(u8) {
 /// Fills caller-owned `out` with indices weighted by effective balance.
 /// `out` must not alias the inputs. An error may leave it partially written.
 pub fn getCommitteeIndices(
-    allocator: Allocator,
     seed: []const u8,
     active_indices: []const u32,
     effective_balance_increments: []const u16,
@@ -347,11 +382,7 @@ pub fn getCommitteeIndices(
     };
     const max_effective_balance_increment = @divTrunc(max_effective_balance, effective_balance_increment);
 
-    var compute_shuffled_index = try ComputeShuffledIndex.init(allocator, seed, @intCast(active_indices.len), rounds);
-    defer compute_shuffled_index.deinit();
-
-    var shuffled_result = std.AutoHashMap(u32, u32).init(allocator);
-    defer shuffled_result.deinit();
+    var compute_shuffled_index = try ComputeShuffledIndex.init(seed, @intCast(active_indices.len), rounds);
 
     var i: u32 = 0;
     var count: usize = 0;
@@ -364,12 +395,7 @@ pub fn getCommitteeIndices(
 
     while (count < out.len) {
         const index: u32 = @intCast(i % active_indices.len);
-        const shuffled = try shuffled_result.getOrPut(index);
-        if (!shuffled.found_existing) {
-            shuffled.value_ptr.* = try compute_shuffled_index.get(index);
-        }
-        const shuffled_index = shuffled.value_ptr.*;
-        const candidate_index = active_indices[shuffled_index];
+        const candidate_index = active_indices[compute_shuffled_index.get(index)];
 
         if (i % hash_increment == 0) {
             std.mem.writeInt(u32, cached_hash_input[SEED_SIZE..][0..4], i / hash_increment, .little);
@@ -401,7 +427,6 @@ pub fn getCommitteeIndices(
 }
 
 pub fn computeProposerIndex(
-    allocator: Allocator,
     seed: []const u8,
     active_indices: []const u32,
     effective_balance_increments: []const u16,
@@ -412,7 +437,6 @@ pub fn computeProposerIndex(
 ) !u32 {
     var indices: [1]u32 = undefined;
     try getCommitteeIndices(
-        allocator,
         seed,
         active_indices,
         effective_balance_increments,
@@ -426,7 +450,6 @@ pub fn computeProposerIndex(
 }
 
 pub fn computeProposerIndexElectra(
-    allocator: Allocator,
     seed: []const u8,
     active_indices: []const u32,
     effective_balance_increments: []const u16,
@@ -435,7 +458,6 @@ pub fn computeProposerIndexElectra(
     rounds: u32,
 ) !u32 {
     return computeProposerIndex(
-        allocator,
         seed,
         active_indices,
         effective_balance_increments,
@@ -448,6 +470,7 @@ pub fn computeProposerIndexElectra(
 
 fn getCommitteeIndicesFromListShuffle(
     allocator: Allocator,
+    io: std.Io,
     seed: []const u8,
     active_indices: []const u32,
     effective_balance_increments: []const u16,
@@ -463,7 +486,7 @@ fn getCommitteeIndicesFromListShuffle(
     const shuffled_indices = try allocator.dupe(u32, active_indices);
     defer allocator.free(shuffled_indices);
 
-    try unshuffleList(u32, shuffled_indices, seed, @intCast(rounds));
+    try unshuffleListParallel(u32, io, shuffled_indices, seed, @intCast(rounds));
 
     const max_random_value: i64 = 0xffff;
     const max_increments = @divTrunc(max_effective_balance, effective_balance_increment);
@@ -497,8 +520,11 @@ fn getCommitteeIndicesFromListShuffle(
 }
 
 /// Fills caller-owned `out`, which must not alias the inputs. An error may leave it partially written.
+/// Returns `error.Canceled` if the caller is canceled while waiting on the shuffle's tasks on
+/// `io`. `io` is unused when sampling falls back to one shuffled index per candidate.
 pub fn computeSyncCommitteeIndicesInto(
     allocator: Allocator,
+    io: std.Io,
     seed: []const u8,
     active_indices: []const u32,
     effective_balance_increments: []const u16,
@@ -514,6 +540,7 @@ pub fn computeSyncCommitteeIndicesInto(
     {
         return getCommitteeIndicesFromListShuffle(
             allocator,
+            io,
             seed,
             active_indices,
             effective_balance_increments,
@@ -524,7 +551,6 @@ pub fn computeSyncCommitteeIndicesInto(
         );
     }
     return getCommitteeIndices(
-        allocator,
         seed,
         active_indices,
         effective_balance_increments,
