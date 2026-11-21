@@ -1729,6 +1729,16 @@ pub fn canBuilderCoverBid(self: *BeaconStateView, builder_index: js.Number, bid_
     };
 }
 
+pub fn getBuilderBidLimit(self: *BeaconStateView, builder_index: js.Number) !js.Number {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    const index = builder_index.toSafeInteger() catch return error.InvalidBuilderIndex;
+    return switch (cached_state.state.forkSeq()) {
+        inline .gloas, .heze => |f| js.Number.from(try st.getBuilderBidLimit(f, cached_state.state.castToFork(f), index)),
+        else => error.InvalidAtFork,
+    };
+}
+
 fn readPayloadTimelinessCommittee(cached_state: *CachedBeaconState, slot_value: u64, out: *[preset.PTC_SIZE]u64) !void {
     const epoch_value = st.computeEpochAtSlot(slot_value);
     const current_epoch = cached_state.epoch_cache.epoch;
