@@ -5,7 +5,6 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
 import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../../chain/blocks/blockInput/types.js";
-import {ChainEvent} from "../../chain/emitter.js";
 import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../chain/interface.js";
 import {IBeaconDb} from "../../db/interface.js";
@@ -31,10 +30,10 @@ import {
   GossipValidatorBatchFn,
   GossipValidatorFn,
 } from "../gossip/interface.js";
-import {MAX_PEERS_PER_ROOT} from "./constants.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
 import {GossipHandlerOpts, ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
 import {createGossipQueues} from "./gossipQueues/index.js";
+import {GossipRootSearch} from "./gossipRootSearch.js";
 import {
   ValidatorFnModules,
   getGossipValidatorBatchFn,
@@ -71,13 +70,7 @@ export const MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE = 3;
  */
 export const MAX_BUFFERED_ROOTS_PER_SLOT = 5;
 
-/**
- * Max distinct roots we emit an unknown-root search for, per slot. Higher than
- * the buffer budget because:
- * - in the attack scenario, the genuine root may comes after the first MAX_BUFFERED_ROOTS_PER_SLOT roots
- * - if we cannot search, we'll penalize peers in UnknownBlockInput, not in NetworkProcessor
- */
-export const MAX_SEARCHED_ROOTS_PER_SLOT = 32;
+export {MAX_SEARCHED_ROOTS_PER_SLOT} from "./gossipRootSearch.js";
 
 /**
  * Given the same root and topic, we'll ignore messages after the below cap. Each cap is the number of
@@ -88,16 +81,6 @@ export const MAX_AWAITING_MESSAGES_PER_ROOT: Partial<Record<GossipType, number>>
   [GossipType.data_column_sidecar]: 2 * NUMBER_OF_COLUMNS,
   [GossipType.execution_payload]: 2,
   [GossipType.execution_payload_bid]: 8,
-};
-
-/**
- * Track the forwarded peers we already emit to UnknownBlockInput sync.
- * envelopeSlotEmitted: whether the unknownEnvelopeBlockRootSlot event was already emitted for this root.
- */
-type SearchedRootEntry = {
-  blockPeerIds?: Set<PeerIdStr>;
-  envelopePeerIds?: Set<PeerIdStr>;
-  envelopeSlotEmitted?: boolean;
 };
 
 /**
@@ -271,9 +254,7 @@ export class NetworkProcessor {
     MapDef<GossipType, Set<PendingGossipsubMessage>>
   >;
   private awaitingPayloadMessageCount = 0;
-  private searchedRootsBySlot = new MapDef<Slot, MapDef<RootHex, SearchedRootEntry>>(
-    () => new MapDef<RootHex, SearchedRootEntry>(() => ({}))
-  );
+  private readonly searches: GossipRootSearch;
   private bufferedRootsBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
   /** peer -> clock slot when it was Fatal'ed */
   private readonly fatalPeers = new Map<PeerIdStr, Slot>();
@@ -284,6 +265,7 @@ export class NetworkProcessor {
   ) {
     const {chain, core, events, logger, metrics} = modules;
     this.chain = chain;
+    this.searches = new GossipRootSearch(chain);
     this.core = core;
     this.events = events;
     this.metrics = metrics;
@@ -358,7 +340,7 @@ export class NetworkProcessor {
     this.awaitingBlockMessageCount = 0;
     this.awaitingMessagesByPayloadBlockRoot.clear();
     this.awaitingPayloadMessageCount = 0;
-    this.searchedRootsBySlot.clear();
+    this.searches.clear();
     this.bufferedRootsBySlot.clear();
     this.fatalPeers.clear();
   }
@@ -372,76 +354,16 @@ export class NetworkProcessor {
     return queue.getAll();
   }
 
-  /**
-   * Search block via `ChainEvent.unknownBlockRoot` event
-   * Slot is the message slot, which is not necessarily the same as the block's slot, but it can be used for a good prune strategy.
-   * In the rare case, if 2 messages on 2 slots search for the same root (for example beacon_attestation) we may emit the same root twice but BlockInputSync should handle it well.
-   * We forward every distinct peer that gossiped this root (not just the first) so BlockInputSync can
-   * prefer them as by-root download candidates.
-   */
-  searchUnknownBlock({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
-    if (this.stopped || this.chain.seenBlock(root)) {
-      return;
-    }
-    const entry = this.searchedRootsBySlot.getOrDefault(slot).getOrDefault(root);
-    const alreadySearching = entry.blockPeerIds !== undefined;
-    if (entry.blockPeerIds === undefined) {
-      entry.blockPeerIds = new Set();
-    }
-    const forwardedPeers = entry.blockPeerIds;
-
-    // brand-new search always emits (peer may be undefined)
-    let shouldEmit = !alreadySearching;
-    if (peer !== undefined && !forwardedPeers.has(peer) && forwardedPeers.size < MAX_PEERS_PER_ROOT) {
-      // First time we forward THIS peer for THIS root: emit so BlockInputSync accumulates it.
-      forwardedPeers.add(peer);
-      shouldEmit = true;
-    }
-    if (shouldEmit) {
-      this.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: root, peer, source});
-    }
+  searchUnknownBlock(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
+    if (!this.stopped) this.searches.searchUnknownBlock(slotRoot, source, peer);
   }
-
-  /**
-   * Search envelope via `ChainEvent.unknownEnvelopeBlockRoot` / `ChainEvent.unknownEnvelopeBlockRootSlot` event
-   * Slot is the message slot, which is not necessarily the same as the envelope's slot, but it can be used for a good prune strategy.
-   * In the rare case, if 2 messages on 2 slots search for the same root (for example beacon_attestation) we may emit the same root twice but BlockInputSync should handle it well.
-   * Same peer-forwarding + dedup behavior as searchUnknownBlock.
-   */
   searchUnknownEnvelope(
-    {slot, root}: SlotRootHex,
+    slotRoot: SlotRootHex,
     source: BlockInputSource,
     peer?: PeerIdStr,
     slotIsPayloadSlot = false
   ): void {
-    if (this.stopped || this.chain.seenPayloadEnvelope(root)) {
-      return;
-    }
-    const entry = this.searchedRootsBySlot.getOrDefault(slot).getOrDefault(root);
-    const alreadySearching = entry.envelopePeerIds !== undefined;
-    if (entry.envelopePeerIds === undefined) {
-      entry.envelopePeerIds = new Set();
-    }
-    const forwardedPeers = entry.envelopePeerIds;
-
-    let shouldEmit = !alreadySearching; // brand-new search always emits (peer may be undefined)
-    if (peer !== undefined && !forwardedPeers.has(peer) && forwardedPeers.size < MAX_PEERS_PER_ROOT) {
-      // First time we forward THIS peer for THIS root: emit so BlockInputSync accumulates it.
-      forwardedPeers.add(peer);
-      shouldEmit = true;
-    }
-    // the payload-slot seed must reach the sync once, even if a slot-less trigger started the search first
-    if (slotIsPayloadSlot && !entry.envelopeSlotEmitted) {
-      shouldEmit = true;
-    }
-    if (shouldEmit) {
-      if (slotIsPayloadSlot) {
-        entry.envelopeSlotEmitted = true;
-        this.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRootSlot, {rootHex: root, slot, peer, source});
-      } else {
-        this.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex: root, peer, source});
-      }
-    }
+    if (!this.stopped) this.searches.searchUnknownEnvelope(slotRoot, source, peer, slotIsPayloadSlot);
   }
 
   private onFatalPeer = (peer: PeerIdStr): void => {
@@ -746,15 +668,6 @@ export class NetworkProcessor {
   }
 
   /**
-   * Cap distinct roots we emit an unknown-root search for, an already-tracked root (dedup) never counts as "too many".
-   */
-  private tooManySearchedRoots(slot: Slot, root: RootHex): boolean {
-    const roots = this.searchedRootsBySlot.get(slot);
-    if (roots === undefined) return false;
-    return !roots.has(root) && roots.size >= MAX_SEARCHED_ROOTS_PER_SLOT;
-  }
-
-  /**
    * Cap distinct roots we buffer per slot.
    */
   tryReserveBufferedRoot(slot: Slot, root: RootHex): boolean {
@@ -774,7 +687,7 @@ export class NetworkProcessor {
     peerId: PeerIdStr | undefined,
     search: SearchUnknownRootTarget
   ): void {
-    if (this.tooManySearchedRoots(slotRoot.slot, slotRoot.root)) return;
+    if (!this.searches.hasRoom(slotRoot)) return;
     switch (search.target) {
       case SearchTarget.Block:
         this.searchUnknownBlock(slotRoot, BlockInputSource.network_processor, peerId);
@@ -947,9 +860,7 @@ export class NetworkProcessor {
       this.bufferedRootsBySlot.delete(slot);
     }
 
-    for (const slot of this.searchedRootsBySlot.keys()) {
-      if (slot <= minSlot) this.searchedRootsBySlot.delete(slot);
-    }
+    this.searches.prune(minSlot);
 
     for (const [peer, slot] of this.fatalPeers) {
       if (clockSlot - slot > FATAL_PEER_EXPIRY_SLOTS) this.fatalPeers.delete(peer);

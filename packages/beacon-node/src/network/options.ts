@@ -29,6 +29,7 @@ export interface NetworkOptions
   advertiseVersion?: boolean;
   private?: boolean;
   useWorker?: boolean;
+  nativeGossipQueues?: boolean;
   maxYoungGenerationSizeMb?: number;
   disableLightClientServer?: boolean;
   /**

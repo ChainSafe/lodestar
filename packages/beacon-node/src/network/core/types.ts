@@ -83,6 +83,7 @@ export interface INetworkCore extends INetworkCorePublic {
  * libp2p worker contructor (start-up) data
  */
 export type NetworkWorkerData = {
+  gossipQueueId?: number;
   // TODO: Review if NetworkOptions is safe for passing
   opts: NetworkOptions;
   chainConfigJson: SpecJson;

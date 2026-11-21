@@ -90,6 +90,7 @@ if (networkCoreWorkerMetrics) {
 }
 
 const core = await NetworkCore.init({
+  gossipQueueId: workerData.gossipQueueId,
   opts: workerData.opts,
   config,
   privateKey,

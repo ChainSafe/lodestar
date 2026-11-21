@@ -15,6 +15,8 @@ export enum NetworkEvent {
   reqRespRequest = "req-resp.request",
 
   // Network processor events
+  /** (Network -> App) Wake the shared queue consumer. */
+  gossipQueueReady = "gossip.queueReady",
   /** (Network -> App) A gossip message is ready for validation */
   pendingGossipsubMessage = "gossip.pendingGossipsubMessage",
   /** (App -> Network) A gossip message has been validated */
@@ -30,6 +32,7 @@ export type NetworkEventData = {
   };
   [NetworkEvent.peerDisconnected]: {peer: PeerIdStr};
   [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId; peerClient: string};
+  [NetworkEvent.gossipQueueReady]: null;
   [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;
   [NetworkEvent.gossipMessageValidationResult]: {
     msgId: string;
@@ -49,6 +52,7 @@ export const networkEventDirection: Record<NetworkEvent, EventDirection> = {
   [NetworkEvent.peerConnected]: EventDirection.workerToMain,
   [NetworkEvent.peerDisconnected]: EventDirection.workerToMain,
   [NetworkEvent.reqRespRequest]: EventDirection.none, // Only used internally in NetworkCore
+  [NetworkEvent.gossipQueueReady]: EventDirection.workerToMain,
   [NetworkEvent.pendingGossipsubMessage]: EventDirection.workerToMain,
   [NetworkEvent.gossipMessageValidationResult]: EventDirection.mainToWorker,
 };

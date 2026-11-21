@@ -5,6 +5,7 @@ const builtin = @import("builtin");
 const js = @import("zapi:zapi").js;
 const pool = @import("./pool.zig");
 pub const shuffle = @import("./shuffle.zig");
+pub const gossipQueues = @import("./gossip_queues.zig");
 pub const metrics = @import("./metrics.zig");
 pub const stateTransition = @import("./stateTransition.zig");
 pub const BeaconConfig = @import("./BeaconConfig.zig");
