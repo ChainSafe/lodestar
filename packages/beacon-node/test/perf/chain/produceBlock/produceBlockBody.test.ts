@@ -5,8 +5,8 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {BeaconStateView, CachedBeaconStateElectra} from "@lodestar/state-transition";
 import {generatePerfTestCachedStateElectra} from "@lodestar/state-transition/test-utils";
 import {toRootHex} from "@lodestar/utils";
-import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {BeaconChain} from "../../../../src/chain/index.js";
+import {defaultChainOptions} from "../../../../src/chain/options.js";
 import {
   BlockType,
   produceBlockBody,
@@ -50,7 +50,7 @@ describe("produceBlockBody", () => {
         proposerBoostReorg: true,
         computeUnrealized: false,
         disableArchiveOnCheckpoint: true,
-        suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
+        suggestedFeeRecipient: defaultChainOptions.suggestedFeeRecipient,
         skipCreateStateCacheIfAvailable: true,
         archiveStateEpochFrequency: 1024,
         minSameMessageSignatureSetsToBatch: 32,

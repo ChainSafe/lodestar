@@ -101,6 +101,10 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
     ...beaconNodeOptions["execution.engineMock"],
     default: true,
   },
+  suggestedFeeRecipient: {
+    ...beaconNodeOptions.suggestedFeeRecipient,
+    default: "0x0000000000000000000000000000000000000000",
+  },
 };
 
 export const devOptions = {

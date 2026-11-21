@@ -68,9 +68,11 @@ If you import keys using `--importKeystores` at runtime (Option 2) any keys load
 
 ### Configuring the fee recipient address
 
-Post-Merge Ethereum requires validators to set a **Fee Recipient** which allows you to receive priority fees when proposing blocks. If you do not set this address, your priority fees will be sent to the [burn address](https://etherscan.io/address/0x0000000000000000000000000000000000000000).
+Post-Merge Ethereum requires validators to set a **Fee Recipient** which allows you to receive priority fees and builder payments when proposing blocks. The validator client does not start without a fee recipient.
 
-Configure your validator client's fee recipient address by using the [`--suggestedFeeRecipient`](./validator-cli.md#--suggestedfeerecipient) flag. Ensure you specify an Ethereum address you control. An example of a fee recipient set with the address `0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d` would add the following flag to their configuration: `--suggestedFeeRecipient 0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d`.
+Configure your validator client's fee recipient address by using the [`--suggestedFeeRecipient`](./validator-cli.md#--suggestedfeerecipient) flag. Ensure you specify an Ethereum address you control. An example of a fee recipient set with the address `0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d` would add the following flag to their configuration: `--suggestedFeeRecipient 0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d`. The address can also be set as `fee_recipient` of the `default_config` in a [proposer configuration](./proposer-config.md) file.
+
+If you intend to burn your rewards, you have to set the [burn address](https://etherscan.io/address/0x0000000000000000000000000000000000000000) explicitly.
 
 You may choose to use the [`--strictFeeRecipientCheck`](./validator-cli.md#--strictfeerecipientcheck) flag to enable a strict check of the fee recipient address with the one returned by the beacon node for added reassurance.
 
@@ -149,7 +151,7 @@ Slashing protection is enabled by default and cannot be disabled by the user. Th
 To start a Lodestar validator run the command:
 
 ```bash
-./lodestar validator --network $NETWORK_NAME
+./lodestar validator --network $NETWORK_NAME --suggestedFeeRecipient $FEE_RECIPIENT
 ```
 
 You should see confirmation that modules have started.

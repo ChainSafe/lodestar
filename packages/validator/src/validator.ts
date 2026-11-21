@@ -83,7 +83,7 @@ export type ValidatorOptions = {
   scAfterBlockDelaySlotFraction?: number;
   doppelgangerProtection?: boolean;
   closed?: boolean;
-  valProposerConfig?: ValidatorProposerConfig;
+  valProposerConfig: ValidatorProposerConfig;
   distributed?: boolean;
   broadcastValidation?: routes.beacon.BroadcastValidation;
   blindedLocal?: boolean;
@@ -412,9 +412,9 @@ export class Validator {
     const {broadcastValidation = defaultOptions.broadcastValidation, valProposerConfig} = opts;
     const gloasScheduled = config.GLOAS_FORK_EPOCH !== Infinity;
     const defaultBuilderSelection =
-      valProposerConfig?.defaultConfig.builder?.selection ?? getDefaultBuilderSelection(gloasScheduled);
-    const strictFeeRecipientCheck = valProposerConfig?.defaultConfig.strictFeeRecipientCheck ?? false;
-    const suggestedFeeRecipient = valProposerConfig?.defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient;
+      valProposerConfig.defaultConfig.builder?.selection ?? getDefaultBuilderSelection(gloasScheduled);
+    const strictFeeRecipientCheck = valProposerConfig.defaultConfig.strictFeeRecipientCheck ?? false;
+    const suggestedFeeRecipient = valProposerConfig.defaultConfig.feeRecipient;
 
     logger.info("Initializing validator", {
       broadcastValidation,
@@ -426,7 +426,7 @@ export class Validator {
     metrics?.defaultConfiguration.set({builderSelection: defaultBuilderSelection, broadcastValidation}, 1);
 
     if (gloasScheduled) {
-      const defaultBuilderConfig = valProposerConfig?.defaultConfig.builder;
+      const defaultBuilderConfig = valProposerConfig.defaultConfig.builder;
       const defaultBuilders = defaultBuilderConfig?.builders ?? [];
 
       logger.info("Builder config", {

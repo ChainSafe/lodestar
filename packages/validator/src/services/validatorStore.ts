@@ -122,7 +122,7 @@ export type ResolvedBuilderEntry = {
 
 export type ValidatorProposerConfig = {
   proposerConfig: {[index: PubkeyHex]: ProposerConfig};
-  defaultConfig: ProposerConfig;
+  defaultConfig: ProposerConfig & {feeRecipient: ExecutionAddress};
 };
 
 export type ValidatorStoreModules = {
@@ -159,7 +159,6 @@ type ValidatorData = ProposerConfig & {
 };
 
 export const defaultOptions = {
-  suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   defaultGasLimit: 60_000_000,
   builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
   builderAliasSelection: routes.validator.BuilderSelection.Default,
@@ -233,7 +232,7 @@ export class ValidatorStore {
     this.defaultProposerConfig = {
       graffiti: defaultConfig.graffiti,
       strictFeeRecipientCheck: defaultConfig.strictFeeRecipientCheck ?? false,
-      feeRecipient: defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient,
+      feeRecipient: defaultConfig.feeRecipient,
       builder: {
         gasLimit: defaultConfig.builder?.gasLimit,
         selection: defaultConfig.builder?.selection,
@@ -255,7 +254,7 @@ export class ValidatorStore {
   static async init(
     modules: ValidatorStoreModules,
     initialSigners: Signer[],
-    valProposerConfig: ValidatorProposerConfig = {defaultConfig: {}, proposerConfig: {}}
+    valProposerConfig: ValidatorProposerConfig
   ): Promise<ValidatorStore> {
     const validatorStore = new ValidatorStore(modules, valProposerConfig);
 

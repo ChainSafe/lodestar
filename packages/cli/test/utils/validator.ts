@@ -37,6 +37,7 @@ export async function startValidatorWithKeyManager(
       "--keymanager.address=localhost",
       `--keymanager.port=${keymanagerPort}`,
       `--server=${beaconUrl}`,
+      "--suggestedFeeRecipient=0x0000000000000000000000000000000000000000",
       ...(args ?? []),
     ],
     {pipeStdioToParent: true, logPrefix: logPrefix ?? "vc"}
