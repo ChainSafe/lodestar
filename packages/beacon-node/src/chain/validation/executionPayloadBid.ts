@@ -1,7 +1,6 @@
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {PAYLOAD_BUILDER_VERSION, isForkPostHeze} from "@lodestar/params";
 import {
-  ETH_TO_GWEI,
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
   getExecutionPayloadBidSigningRoot,
@@ -374,9 +373,9 @@ async function validateExecutionPayloadBid(
   }
 
   // [IGNORE] The builder has not reached its bid limit for the tuple
-  // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)` -- i.e. one bid per ETH of builder balance,
-  // `get_builder_bid_limit(state, bid.builder_index)`.
-  const bidLimit = Math.floor(builder.balance / ETH_TO_GWEI);
+  // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)` -- i.e. one bid per ETH of builder balance
+  // not owed in pending withdrawals, `get_builder_bid_limit(state, bid.builder_index)`.
+  const bidLimit = state.getBuilderBidLimit(bid.builderIndex);
   if (
     (chain.seenExecutionPayloadBids.get(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)?.count ??
       0) >= bidLimit

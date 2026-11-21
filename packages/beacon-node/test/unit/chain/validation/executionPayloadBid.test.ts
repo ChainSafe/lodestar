@@ -50,6 +50,7 @@ describe("validateGossipExecutionPayloadBid", () => {
       getBuilder: () => builder,
       getRandaoMix: () => randaoMix,
       canBuilderCoverBid: () => true,
+      getBuilderBidLimit: () => Math.floor(builder.balance / ETH_TO_GWEI),
       latestExecutionPayloadBid: {blockHash: Buffer.alloc(32, 0)},
     } as unknown as IBeaconStateView;
   }
