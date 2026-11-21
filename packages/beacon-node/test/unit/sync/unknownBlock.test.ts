@@ -908,6 +908,47 @@ describe("UnknownBlockSync", () => {
       svc.close();
     });
 
+    it("evicts unknown roots nothing waits on before a pending block and its parent", async () => {
+      const peerA = await getRandPeerIdStr();
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = 1;
+      block.message.parentRoot = Buffer.alloc(32, 0xbb);
+      const blockRootHex = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+      const parentRootHex = toRootHex(block.message.parentRoot);
+
+      const {service: svc, chainEmitter} = setupBlockSyncTest({
+        processBlock: vi.fn(),
+        sendBeaconBlocksByRoot: vi.fn().mockReturnValue(new Promise(() => {})),
+        peer: peerA,
+      });
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+
+      chainEmitter.emit(ChainEvent.blockUnknownParent, {
+        blockInput: BlockInputPreData.createFromBlock({
+          block,
+          blockRootHex,
+          forkName: ForkName.phase0,
+          daOutOfRange: false,
+          seenTimestampSec: 0,
+          source: BlockInputSource.gossip,
+          peerIdStr: peerA,
+        }),
+        peer: peerA,
+        source: BlockInputSource.gossip,
+      });
+      // Any gossip message with an unknown root adds one of these before validation
+      for (let i = 0; i < 200; i++) {
+        const rootHex = toRootHex(Buffer.alloc(32, 0).fill(i + 1, 0, 4));
+        chainEmitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: peerA, source: BlockInputSource.gossip});
+      }
+
+      expect(pendingBlocks.size).toBe(100);
+      expect(pendingBlocks.has(blockRootHex)).toBe(true);
+      expect(pendingBlocks.has(parentRootHex)).toBe(true);
+
+      svc.close();
+    });
+
     it("retries a rate-limited download when the backoff expires around the retry timer", async () => {
       const peerA = await getRandPeerIdStr();
       const block = ssz.phase0.SignedBeaconBlock.defaultValue();

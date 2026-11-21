@@ -484,13 +484,7 @@ export class BlockInputSync {
       pendingBlock.peerIdStrings.add(peerIdStr);
     }
 
-    // TODO: check this prune methodology
-    // Limit pending blocks to prevent DOS attacks that cause OOM
-    const prunedItemCount = pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);
-    if (prunedItemCount > 0) {
-      this.metrics?.blockInputSync.removedBlocks.inc({reason: DroppedItemReason.capacity}, prunedItemCount);
-      this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);
-    }
+    this.prunePendingBlocks();
     return added;
   };
 
@@ -526,14 +520,40 @@ export class BlockInputSync {
       pendingBlock.peerIdStrings.add(peerIdStr);
     }
 
-    // TODO: check this prune methodology
-    // Limit pending blocks to prevent DOS attacks that cause OOM
-    const prunedItemCount = pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);
-    if (prunedItemCount > 0) {
-      this.metrics?.blockInputSync.removedBlocks.inc({reason: DroppedItemReason.capacity}, prunedItemCount);
-      this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);
-    }
+    this.prunePendingBlocks();
   };
+
+  /**
+   * Limit pending blocks to prevent DOS attacks that cause OOM. Any gossip message with an unknown root adds a root-only
+   * entry before validation, so those nothing waits on are evicted before a block or a root a pending item waits on.
+   */
+  private prunePendingBlocks(): void {
+    if (this.pendingBlocks.size <= this.maxPendingBlocks) {
+      return;
+    }
+
+    const awaitedRoots = new Set<RootHex>();
+    for (const pendingBlock of this.pendingBlocks.values()) {
+      if (isPendingBlockInput(pendingBlock)) {
+        awaitedRoots.add(pendingBlock.blockInput.parentRootHex);
+      }
+    }
+
+    let prunedItemCount = 0;
+    for (const [rootHex, pendingBlock] of this.pendingBlocks) {
+      if (this.pendingBlocks.size <= this.maxPendingBlocks) {
+        break;
+      }
+      if (!isPendingBlockInput(pendingBlock) && !awaitedRoots.has(rootHex) && !this.pendingPayloads.has(rootHex)) {
+        this.pendingBlocks.delete(rootHex);
+        prunedItemCount++;
+      }
+    }
+    prunedItemCount += pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);
+
+    this.metrics?.blockInputSync.removedBlocks.inc({reason: DroppedItemReason.capacity}, prunedItemCount);
+    this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);
+  }
 
   private addByPayloadRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr, slot?: Slot): boolean => {
     if (this.knownBadBlocks.has(rootHex)) {
