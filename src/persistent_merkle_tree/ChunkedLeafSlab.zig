@@ -149,6 +149,12 @@ pub fn bytesInUse(self: *const ChunkedLeafSlab) usize {
     return self.chunked_leaves_in_use * @sizeOf(ChunkedLeaf);
 }
 
+pub fn reservedBytes(self: *const ChunkedLeafSlab) usize {
+    return @as(usize, self.segment_count) * segment_bytes +
+        self.segments.len * @sizeOf([*]ChunkedLeaf) +
+        self.free_indexes.words.len * @sizeOf(u64);
+}
+
 fn addSegment(self: *ChunkedLeafSlab, allocator: Allocator) Allocator.Error!void {
     if (self.segment_count == self.segments.len) return error.OutOfMemory;
     // rawAlloc does not write to the memory, so the page allocator backs only the blobs in use.

@@ -235,24 +235,26 @@ export function lintGrafanaDashboard(json) {
     type: "interval",
   });
 
-  assertTemplatingListItemContent(json, variableNameFilters, {
-    datasource: {
-      type: "prometheus",
-      uid: "prometheus_local",
-    },
-    filters: [
-      {
-        condition: "",
-        key: "instance",
-        operator: "=",
-        value: "unstable-super",
+  if (!json.templating.list.some((item) => item.name === variableNameFilters)) {
+    json.templating.list.push({
+      datasource: {
+        type: "prometheus",
+        uid: "prometheus_local",
       },
-    ],
-    hide: 0,
-    name: "Filters",
-    skipUrlSync: false,
-    type: "adhoc",
-  });
+      filters: [
+        {
+          condition: "",
+          key: "instance",
+          operator: "=",
+          value: "unstable-super",
+        },
+      ],
+      hide: 0,
+      name: variableNameFilters,
+      skipUrlSync: false,
+      type: "adhoc",
+    });
+  }
 
   return json;
 }

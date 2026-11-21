@@ -1,7 +1,7 @@
 /** Initialize this environment's native state-transition metrics. */
 export declare function init(options?: {historical?: boolean}): void;
 
-/** Scrape native state-transition metrics in Prometheus text format. */
+/** Scrape native state-transition and initialized PMT pool metrics in Prometheus text format. */
 export declare function scrapeMetrics(): string;
 
 /**

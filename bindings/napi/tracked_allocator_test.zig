@@ -102,3 +102,27 @@ test "shared pool payload stays charged until its last parent is released" {
     try std.testing.expectEqual(0, tracked.bytesInUse() + pool.chunkedLeafBytesInUse());
     try std.testing.expectEqual(baseline_nodes, pool.getNodesInUse());
 }
+
+test "pool memory stats match the bytes requested from the page allocator" {
+    var tracked: TrackedAllocator = .{ .backing = std.testing.allocator };
+    var pool = try Node.Pool.init(.{ .page_allocator = tracked.allocator(), .pool_size = 3 });
+    defer pool.deinit();
+
+    const empty = pool.memoryStats();
+    try std.testing.expectEqual(3, empty.capacity);
+    try std.testing.expectEqual(0, empty.nodes_in_use);
+    try std.testing.expectEqual(tracked.bytesInUse(), empty.reserved_bytes);
+    try std.testing.expectEqual(0, empty.chunked_leaf_reserved_bytes);
+
+    const leaf = try pool.createChunkedLeafEmpty(1);
+    const active = pool.memoryStats();
+    try std.testing.expectEqual(1, active.nodes_in_use);
+    try std.testing.expectEqual(empty.reserved_bytes, active.reserved_bytes);
+    try std.testing.expectEqual(tracked.bytesInUse(), active.reserved_bytes + active.chunked_leaf_reserved_bytes);
+
+    pool.unref(leaf);
+    const released = pool.memoryStats();
+    try std.testing.expectEqual(0, released.nodes_in_use);
+    try std.testing.expectEqual(0, released.chunked_leaf_bytes_in_use);
+    try std.testing.expectEqual(active.chunked_leaf_reserved_bytes, released.chunked_leaf_reserved_bytes);
+}

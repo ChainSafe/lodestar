@@ -279,6 +279,48 @@ test "StructContainerTreeView clone drops uncommitted changes" {
     try std.testing.expectEqual(@as(u64, 5), try view.get("epoch"));
 }
 
+test "struct container memory stats track shared views and failed node creation" {
+    const Container = StructContainerType(struct { epoch: UintType(64) });
+    const value: Container.Type = .{ .epoch = 1 };
+    var heap = std.testing.FailingAllocator.init(std.testing.allocator, .{});
+    const allocator = heap.allocator();
+    var pool = try Node.Pool.init(.{
+        .allocator = allocator,
+        .pool_size = 1,
+    });
+    defer pool.deinit();
+
+    {
+        const view = try Container.TreeView.fromValue(allocator, &pool, &value);
+        defer view.deinit();
+        const single = pool.memoryStats();
+        try std.testing.expectEqual(1, single.container_structs.count);
+        try std.testing.expectEqual(1, single.struct_container_tree_views.count);
+        try std.testing.expectEqual(
+            heap.allocated_bytes - heap.freed_bytes,
+            single.container_structs.bytes + single.struct_container_tree_views.bytes,
+        );
+
+        const clone = try view.clone(.{});
+        defer clone.deinit();
+        const shared = pool.memoryStats();
+        try std.testing.expectEqual(single.container_structs, shared.container_structs);
+        try std.testing.expectEqual(2, shared.struct_container_tree_views.count);
+        try std.testing.expectEqual(2 * single.struct_container_tree_views.bytes, shared.struct_container_tree_views.bytes);
+
+        try std.testing.expectError(error.PoolExhausted, Container.tree.fromValue(&pool, &value));
+        try std.testing.expectEqual(shared, pool.memoryStats());
+        try std.testing.expectEqual(
+            heap.allocated_bytes - heap.freed_bytes,
+            shared.container_structs.bytes + shared.struct_container_tree_views.bytes,
+        );
+    }
+
+    const released = pool.memoryStats();
+    try std.testing.expectEqual(Node.Pool.AllocationStats{}, released.container_structs);
+    try std.testing.expectEqual(Node.Pool.AllocationStats{}, released.struct_container_tree_views);
+}
+
 test "TreeView container nested types set/get/commit" {
     const allocator = std.testing.allocator;
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 2048 });

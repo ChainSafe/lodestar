@@ -162,7 +162,8 @@ pub const ContainerStructRef = struct {
     ptr: *anyopaque,
     get_root: *const fn (ptr: *const anyopaque, out: *[32]u8) void,
     to_tree: *const fn (ptr: *const anyopaque, pool: *Pool) Error!Id,
-    deinit: *const fn (ptr: *anyopaque, allocator: Allocator) void,
+    // Returns the size of the freed struct for pool accounting.
+    deinit: *const fn (ptr: *anyopaque, allocator: Allocator) usize,
 };
 
 /// Sentinel value marking an uncomputed root cache on `branch`,
@@ -265,6 +266,8 @@ pub const Pool = struct {
     /// Lowest free slot, or `nodes.len` when no slot is free.
     next_free_node: Id,
     nodes_in_use: usize,
+    container_structs: AllocationStats,
+    struct_container_tree_views: AllocationStats,
     // Reused scratch for chunked_leaf root recompute: single-threaded, and chunked_leaf is a leaf
     // of getRoot's traversal, so at most one computeRoot uses it at a time.
     chunked_leaf_scratch: [ChunkedLeaf.K / 2][32]u8 align(64),
@@ -278,6 +281,31 @@ pub const Pool = struct {
         allocator: Allocator = std.heap.smp_allocator,
         /// Usable user slots. The zero-hash sentinels are allocated in addition.
         pool_size: u32,
+    };
+
+    pub const AllocationStats = struct {
+        count: usize = 0,
+        bytes: usize = 0,
+
+        pub fn add(self: *AllocationStats, bytes: usize) void {
+            self.count += 1;
+            self.bytes += bytes;
+        }
+
+        pub fn remove(self: *AllocationStats, bytes: usize) void {
+            self.count -= 1;
+            self.bytes -= bytes;
+        }
+    };
+
+    pub const MemoryStats = struct {
+        capacity: usize,
+        nodes_in_use: usize,
+        reserved_bytes: usize,
+        chunked_leaf_bytes_in_use: usize,
+        chunked_leaf_reserved_bytes: usize,
+        container_structs: AllocationStats,
+        struct_container_tree_views: AllocationStats,
     };
 
     pub fn init(opts: InitOptions) Error!Pool {
@@ -299,6 +327,8 @@ pub const Pool = struct {
             .chunked_leaf_slab = null,
             .next_free_node = @enumFromInt(max_depth),
             .nodes_in_use = max_depth,
+            .container_structs = .{},
+            .struct_container_tree_views = .{},
             .chunked_leaf_scratch = undefined,
         };
 
@@ -336,11 +366,7 @@ pub const Pool = struct {
             const idx: u32 = @intCast(i);
             switch (s.kind()) {
                 .chunked_leaf => self.freeChunkedLeaf(chunkedLeafPtr(payloads, idx)),
-                .container_struct => {
-                    const struct_ref = containerStructRef(payloads, idx);
-                    struct_ref.deinit(struct_ref.ptr, self.allocator);
-                    self.allocator.destroy(struct_ref);
-                },
+                .container_struct => self.freeContainerStruct(containerStructRef(payloads, idx)),
                 else => {},
             }
         }
@@ -361,6 +387,20 @@ pub const Pool = struct {
             std.debug.assert(actual == self.nodes_in_use);
         }
         return self.nodes_in_use;
+    }
+
+    /// Slot counts exclude zero-hash sentinels. Reserved bytes count allocator requests.
+    pub fn memoryStats(self: *const Pool) MemoryStats {
+        return .{
+            .capacity = self.nodes.len - max_depth,
+            .nodes_in_use = self.getNodesInUse() - max_depth,
+            .reserved_bytes = std.MultiArrayList(Node).capacityInBytes(self.nodes.capacity) +
+                self.free_slots.words.len * @sizeOf(u64),
+            .chunked_leaf_bytes_in_use = self.chunkedLeafBytesInUse(),
+            .chunked_leaf_reserved_bytes = if (self.chunked_leaf_slab) |*slab| slab.reservedBytes() else 0,
+            .container_structs = self.container_structs,
+            .struct_container_tree_views = self.struct_container_tree_views,
+        };
     }
 
     /// Take the lowest free slot. Caller must initialise the returned slot.
@@ -539,9 +579,10 @@ pub const Pool = struct {
                 }
             }.call,
             .deinit = struct {
-                fn call(erased: *anyopaque, allocator: Allocator) void {
+                fn call(erased: *anyopaque, allocator: Allocator) usize {
                     const typed: *T = @ptrCast(@alignCast(erased));
                     T.deinit(typed, allocator);
+                    return @sizeOf(T);
                 }
             }.call,
         };
@@ -553,7 +594,14 @@ pub const Pool = struct {
         self.nodes.items(.payload)[idx] = ptrAsPayload(@ptrCast(ref_ptr));
         self.nodes.items(.root)[idx] = lazy_sentinel;
         self.nodes.items(.state)[idx] = State.initInUse(.container_struct, 0);
+        self.container_structs.add(@sizeOf(T) + @sizeOf(ContainerStructRef));
         return node_id;
+    }
+
+    fn freeContainerStruct(self: *Pool, ref_ptr: *ContainerStructRef) void {
+        const struct_size = ref_ptr.deinit(ref_ptr.ptr, self.allocator);
+        self.allocator.destroy(ref_ptr);
+        self.container_structs.remove(struct_size + @sizeOf(ContainerStructRef));
     }
 
     /// Returns a read-only pointer to the wrapped struct held by a
@@ -757,10 +805,7 @@ pub const Pool = struct {
                     current = null;
                 },
                 .container_struct => {
-                    // Free the wrapped struct + the ContainerStructRef heap-allocation.
-                    const ref_ptr = containerStructRef(self.nodes.items(.payload), @intFromEnum(id));
-                    ref_ptr.deinit(ref_ptr.ptr, self.allocator);
-                    self.allocator.destroy(ref_ptr);
+                    self.freeContainerStruct(containerStructRef(self.nodes.items(.payload), @intFromEnum(id)));
                     current = null;
                 },
                 else => {
