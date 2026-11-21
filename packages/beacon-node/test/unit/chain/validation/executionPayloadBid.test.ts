@@ -92,7 +92,7 @@ describe("validateGossipExecutionPayloadBid", () => {
         toRootHex(parentBlockHash),
         toRootHex(parentBlockRoot)
       )
-    ).toEqual({count: 1, limit: 1});
+    ).toEqual({count: 1, limit: 1, value: 0});
   });
 
   it("rejects a bid whose block hash equals its parent block hash", async () => {
@@ -120,8 +120,11 @@ describe("validateGossipExecutionPayloadBid", () => {
 
   it("accepts one bid per ETH of builder balance for the same slot and parent", async () => {
     chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder: activeBuilder(2 * ETH_TO_GWEI)}));
-    await validateGossipExecutionPayloadBid(chain, signedBid);
-    await validateGossipExecutionPayloadBid(chain, signedBid);
+    for (const value of [1, 2]) {
+      signedBid.message.value = value;
+      await validateGossipExecutionPayloadBid(chain, signedBid);
+    }
+    signedBid.message.value = 3;
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED, bidLimit: 2},
     });
@@ -137,11 +140,36 @@ describe("validateGossipExecutionPayloadBid", () => {
   });
 
   it("does not exceed the bid limit with concurrent bids", async () => {
+    const higherBid = ssz.gloas.SignedExecutionPayloadBid.clone(signedBid);
+    higherBid.message.value = signedBid.message.value + 1;
+    const results = await Promise.allSettled([
+      validateGossipExecutionPayloadBid(chain, signedBid),
+      validateGossipExecutionPayloadBid(chain, higherBid),
+    ]);
+    expect(results.map((result) => result.status).sort()).toEqual(["fulfilled", "rejected"]);
+    expect(results.find((result) => result.status === "rejected")?.reason).toMatchObject({
+      type: {code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED},
+    });
+  });
+
+  it("does not count concurrent copies of a bid against the bid limit", async () => {
+    chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder: activeBuilder(2 * ETH_TO_GWEI)}));
     const results = await Promise.allSettled([
       validateGossipExecutionPayloadBid(chain, signedBid),
       validateGossipExecutionPayloadBid(chain, signedBid),
     ]);
     expect(results.map((result) => result.status).sort()).toEqual(["fulfilled", "rejected"]);
+    expect(results.find((result) => result.status === "rejected")?.reason).toMatchObject({
+      type: {code: ExecutionPayloadBidErrorCode.BID_TOO_LOW},
+    });
+    expect(
+      chain.seenExecutionPayloadBids.get(
+        signedBid.message.slot,
+        signedBid.message.builderIndex,
+        toRootHex(parentBlockHash),
+        toRootHex(parentBlockRoot)
+      )
+    ).toEqual({count: 1, limit: 2, value: 0});
   });
 
   it("rejects if the parent block is unknown", async () => {
