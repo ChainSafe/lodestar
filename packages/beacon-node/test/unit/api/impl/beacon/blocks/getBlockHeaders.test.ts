@@ -210,6 +210,47 @@ describe("api - beacon - getBlockHeaders", () => {
     expect(blockHeaders[0].header.message.slot).toBe(1);
   });
 
+  it("finalized slot - finalized block is also in fork choice", async () => {
+    // The finalized block is migrated to the archive but stays in fork choice as its anchor
+    const finalizedBlock = generateSignedBlockAtSlot(8);
+    const finalizedRoot = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(finalizedBlock.message));
+    const finalizedSummary = generateProtoBlock({slot: 8, blockRoot: finalizedRoot});
+
+    modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: 10}));
+    when(modules.chain.getCanonicalBlockAtSlot)
+      .calledWith(8)
+      .thenResolve({block: finalizedBlock, executionOptimistic: false, finalized: true});
+    when(modules.forkChoice.getBlockSummariesAtSlot).calledWith(8).thenReturn([finalizedSummary]);
+
+    const {data: blockHeaders, meta} = (await api.getBlockHeaders({slot: 8})) as {
+      data: routes.beacon.BlockHeaderResponse[];
+      meta: {finalized: boolean};
+    };
+
+    expect(blockHeaders).toHaveLength(1);
+    expect(blockHeaders[0].canonical).toBe(true);
+    expect(meta.finalized).toBe(true);
+  });
+
+  it("finalized slot - finalized block is not archived yet", async () => {
+    const finalizedBlock = generateSignedBlockAtSlot(8);
+    const finalizedRoot = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(finalizedBlock.message));
+    const finalizedSummary = generateProtoBlock({slot: 8, blockRoot: finalizedRoot});
+
+    modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: 10}));
+    when(modules.chain.getCanonicalBlockAtSlot).calledWith(8).thenResolve(null);
+    when(modules.forkChoice.getBlockSummariesAtSlot).calledWith(8).thenReturn([finalizedSummary]);
+    when(modules.forkChoice.getCanonicalBlockAtSlot).calledWith(8).thenReturn(finalizedSummary);
+    when(modules.chain.getBlockByRoot)
+      .calledWith(finalizedRoot)
+      .thenResolve({block: finalizedBlock, executionOptimistic: false, finalized: false});
+
+    const {data: blockHeaders} = (await api.getBlockHeaders({slot: 8})) as {data: routes.beacon.BlockHeaderResponse[]};
+
+    expect(blockHeaders).toHaveLength(1);
+    expect(blockHeaders[0].canonical).toBe(true);
+  });
+
   it("parent root + slot filter", async () => {
     modules.db.blockArchive.getByParentRoot.mockResolvedValue(ssz.phase0.SignedBeaconBlock.defaultValue());
     modules.forkChoice.getBlockSummariesByParentRoot.mockReturnValue([
