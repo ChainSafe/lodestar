@@ -1,11 +1,12 @@
 import {EventEmitter} from "node:events";
+import {setImmediate as yieldToIO} from "node:timers/promises";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {LogLevel, defer} from "@lodestar/utils";
 import {ChainEvent} from "../../../src/chain/emitter.js";
@@ -20,11 +21,13 @@ import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 
+const logger = testLogger();
+afterEach(() => vi.restoreAllMocks());
+
 async function fixture(close: () => Promise<void>, config = createBeaconConfig(defaultConfig, new Uint8Array(32))) {
   const clock = new ClockStopped(0);
   const chain = {...getMockedBeaconChain(), clock, config, getStatus: vi.fn(() => ssz.fulu.Status.defaultValue())};
   const events = new NetworkEventBus();
-  const logger = testLogger();
   const aggregatorTracker = new AggregatorTracker();
   const publishGossip = vi.fn(async () => 0);
   const updateStatus = vi.fn<INetworkCore["updateStatus"]>().mockResolvedValue(undefined);
@@ -165,4 +168,57 @@ describe("network event command failures", () => {
       await network.close();
     }
   });
+});
+describe("network publication completion", () => {
+  it.each([
+    {firstFails: false, lastFails: false},
+    {firstFails: false, lastFails: true},
+    {firstFails: true, lastFails: false},
+    {firstFails: true, lastFails: true},
+  ])(
+    "waits for every fork publication (first fails: $firstFails, last fails: $lastFails)",
+    async ({firstFails, lastFails}) => {
+      const config = createBeaconConfig(
+        {
+          ...defaultConfig,
+          ALTAIR_FORK_EPOCH: 0,
+          BELLATRIX_FORK_EPOCH: 0,
+          CAPELLA_FORK_EPOCH: 0,
+          DENEB_FORK_EPOCH: 1,
+          ELECTRA_FORK_EPOCH: 2,
+          FULU_FORK_EPOCH: 3,
+          GLOAS_FORK_EPOCH: 4,
+          HEZE_FORK_EPOCH: 5,
+        },
+        new Uint8Array(32)
+      );
+      const {network, clock, publishGossip} = await fixture(async () => {}, config);
+      clock.setSlot(3 * SLOTS_PER_EPOCH);
+      const publications = Array.from({length: 6}, () => defer<number>());
+      for (const publication of publications) publishGossip.mockReturnValueOnce(publication.promise);
+      const finished = vi.fn();
+      const published = network.publishBlsToExecutionChange(ssz.capella.SignedBLSToExecutionChange.defaultValue());
+      void published.then(finished, finished);
+      try {
+        if (firstFails) publications[0].reject(new Error("first fork refused"));
+        else publications[0].resolve(3);
+        await yieldToIO();
+        expect(publishGossip).toHaveBeenCalledTimes(6);
+        expect(finished).not.toHaveBeenCalled();
+        for (const index of [4, 2, 5, 3]) {
+          if (index === 5 && !lastFails) publications[index].resolve(4);
+          else publications[index].reject(new Error(`fork ${index} refused`));
+          await yieldToIO();
+          expect(finished, `publication 1 is still pending after settling ${index}`).not.toHaveBeenCalled();
+        }
+        publications[1].reject(new Error("final outstanding fork refused"));
+        if (firstFails && lastFails) await expect(published).rejects.toBeInstanceOf(AggregateError);
+        else await expect(published).resolves.toBe(firstFails ? 4 : 3);
+      } finally {
+        for (const publication of publications) publication.resolve(0);
+        await Promise.allSettled([published]);
+        await network.close();
+      }
+    }
+  );
 });
