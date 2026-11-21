@@ -7,6 +7,7 @@ export * from "./blindedBlock.js";
 export * from "./blockRoot.js";
 export * from "./capella.js";
 export * from "./clock.js";
+export * from "./compactMultiProof.js";
 export * from "./computeAnchorCheckpoint.js";
 export * from "./deposit.js";
 export * from "./domain.js";

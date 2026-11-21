@@ -19,6 +19,23 @@ const FixedContainerType = container.FixedContainerType;
 const StructContainerType = container.StructContainerType;
 const VariableContainerType = container.VariableContainerType;
 
+test "memory_safety: compact multiproof traversal through nested struct containers releases terminal nodes" {
+    const Inner = StructContainerType(struct { value: UintType(64) });
+    const Outer = StructContainerType(struct { inner: Inner });
+    const value: Outer.Type = .{ .inner = .{ .value = 42 } };
+    var pool = try Node.Pool.init(.{ .page_allocator = std.testing.allocator, .allocator = std.testing.allocator, .pool_size = 16 });
+    defer pool.deinit();
+    const root = try Outer.tree.fromValue(&pool, &value);
+    defer pool.unref(root);
+    try std.testing.expect(root.getState(&pool).isContainerStruct());
+    const expected_root = root.getRoot(&pool).*;
+    const baseline = pool.getNodesInUse();
+
+    try std.testing.expectError(error.InvalidProofTraversal, proof.createCompactMultiProof(std.testing.allocator, &pool, root, &.{0x60}));
+    try std.testing.expectEqual(baseline, pool.getNodesInUse());
+    try std.testing.expectEqualSlices(u8, &expected_root, root.getRoot(&pool));
+}
+
 test "memory_safety: fixed container serialized hashing should reject invalid lengths" {
     const ST = FixedContainerType(struct { flag: BoolType(), count: UintType(64) });
     const encoded = [_]u8{ 1, 0, 0, 0, 0, 0, 0, 0, 0 };

@@ -1,52 +1,68 @@
-import {CompactMultiProof, ProofType, createProof} from "@chainsafe/persistent-merkle-tree";
+import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
+import {createCompactMultiProof} from "@lodestar/state-transition";
 import {ApiOptions} from "../../options.js";
 import {getBlockResponse} from "../beacon/blocks/utils.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {ValidationError} from "../errors.js";
 import {ApiModules} from "../types.js";
+import {validateProofRequest} from "./validation.js";
 
 export function getProofApi(
   opts: ApiOptions,
   {chain, config, sync}: Pick<ApiModules, "chain" | "config" | "db" | "sync">
 ): ApplicationMethods<routes.proof.Endpoints> {
-  // It's currently possible to request gigantic proofs (eg: a proof of the entire beacon state)
-  // We want some some sort of resistance against this DoS vector.
   const maxGindicesInProof = opts.maxGindicesInProof ?? 512;
+  if (!Number.isSafeInteger(maxGindicesInProof) || maxGindicesInProof < 0) {
+    throw Error("maxGindicesInProof must be a non-negative safe integer");
+  }
+  const maxDescriptorBytes = Math.min(
+    maxGindicesInProof * 2,
+    routes.proof.CompactMultiProofType.fields.descriptor.limitBytes
+  );
 
   return {
     async getStateProof({stateId, descriptor}) {
-      // descriptor.length / 2 is a rough approximation of # of gindices
-      if (descriptor.length / 2 > maxGindicesInProof) {
-        throw new Error("Requested proof is too large.");
-      }
+      validateProofRequest(stateId, descriptor, maxDescriptorBytes);
 
       const res = await getStateResponseWithRegen(chain, sync, stateId);
 
       const state = res.state instanceof Uint8Array ? chain.getHeadState().loadOtherState(res.state) : res.state;
 
-      return {
-        data: state.createMultiProof(descriptor),
-        meta: {version: config.getForkName(state.slot)},
-      };
+      try {
+        return {
+          data: createProofWithValidation(() => state.createMultiProof(descriptor)),
+          meta: {version: config.getForkName(state.slot)},
+        };
+      } finally {
+        if (res.state instanceof Uint8Array) state.release();
+      }
     },
     async getBlockProof({blockId, descriptor}) {
-      // descriptor.length / 2 is a rough approximation of # of gindices
-      if (descriptor.length / 2 > maxGindicesInProof) {
-        throw new Error("Requested proof is too large.");
-      }
+      validateProofRequest(blockId.toLowerCase(), descriptor, maxDescriptorBytes);
 
       const {block} = await getBlockResponse(chain, blockId);
 
-      // Commit any changes before computing the state root. In normal cases the state should have no changes here
       const blockNode = config.getForkTypes(block.message.slot).BeaconBlock.toView(block.message).node;
 
-      const proof = createProof(blockNode, {type: ProofType.compactMulti, descriptor});
+      const proof = createProofWithValidation(() => createCompactMultiProof(blockNode, descriptor));
 
       return {
-        data: proof as CompactMultiProof,
+        data: proof,
         meta: {version: config.getForkName(block.message.slot)},
       };
     },
   };
+}
+
+function createProofWithValidation(create: () => CompactMultiProof): CompactMultiProof {
+  try {
+    return create();
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "INVALID_PROOF_TRAVERSAL") {
+      throw new ValidationError(error.message);
+    }
+    throw error;
+  }
 }

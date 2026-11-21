@@ -17,6 +17,8 @@ pub const Error = error{
     InvalidWitnessLength,
     /// A proof branch path exceeds the supported tree depth.
     InvalidProofDepth,
+    /// A compact proof descriptor requests children of a terminal chunk.
+    InvalidProofTraversal,
 };
 
 pub const ProofType = enum {
@@ -423,6 +425,9 @@ pub fn createCompactMultiProof(
             current = pending[pending_count];
         } else {
             current = try materializeIfOpaque(allocator, pool, current, &temporary_roots);
+            if (current.getState(pool).isLeaf() or @intFromEnum(current) == 0) {
+                return error.InvalidProofTraversal;
+            }
             std.debug.assert(pending_count < max_depth);
             pending[pending_count] = try current.getRight(pool);
             pending_count += 1;

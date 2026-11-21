@@ -127,6 +127,7 @@ async
 auth
 backfill
 beaconcha
+bitlist
 blockRoot
 blockchain
 blockspace
@@ -154,6 +155,7 @@ dApps
 ddos
 decrypt
 decrypted
+deduplicate
 derypted
 deserialization
 dev
@@ -164,6 +166,8 @@ devtools
 distutils
 dropdown
 eg
+encodings
+endian
 enodes
 enum
 env
@@ -212,6 +216,7 @@ mmeshsub
 monorepo
 multiaddr
 multifork
+multiproofs
 musl
 namespace
 namespaced
@@ -228,6 +233,7 @@ plataberget
 pnpm
 pre
 premined
+preorder
 produceBlockV
 protolambda
 prover
@@ -249,6 +255,7 @@ ssz
 stakers
 subnet
 subnets
+subtree
 sudo
 supernode
 tcp
@@ -260,6 +267,7 @@ typesafe
 udp
 uint
 unpkg
+untrusted
 util
 utils
 validator

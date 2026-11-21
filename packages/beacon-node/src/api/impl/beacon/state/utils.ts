@@ -18,6 +18,7 @@ import {IBeaconChain} from "../../../../chain/index.js";
 import {GENESIS_EPOCH} from "../../../../constants/index.js";
 import {IBeaconSync} from "../../../../sync/index.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
+import {QueueError, QueueErrorCode} from "../../../../util/queue/errors.js";
 import {ApiError, ValidationError} from "../../errors.js";
 import {notWhileSyncing} from "../../utils.js";
 
@@ -90,7 +91,16 @@ export async function getStateResponseWithRegen(
           ? null // Don't try to serve future slots
           : stateId >= chain.forkChoice.getFinalizedBlock().slot
             ? await chain.getStateBySlot(stateId, {allowRegen: true})
-            : await chain.getHistoricalStateBySlot(stateId)
+            : await chain.getHistoricalStateBySlot(stateId).catch((error: unknown) => {
+                if (
+                  error instanceof QueueError &&
+                  (error.type.code === QueueErrorCode.QUEUE_MAX_LENGTH ||
+                    error.type.code === QueueErrorCode.QUEUE_ABORTED)
+                ) {
+                  throw new ApiError(503, "Historical state reconstruction is temporarily unavailable");
+                }
+                throw error;
+              })
         : await chain.getStateOrBytesByCheckpoint(stateId);
 
   if (!res) {
