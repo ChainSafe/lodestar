@@ -12,6 +12,7 @@ import {
   ExecutionPayloadEnvelopeErrorCode,
   GossipAction,
   GossipActionError,
+  GossipErrorCode,
   InclusionListErrorCode,
   PayloadAttestationErrorCode,
   ProposerPreferencesErrorCode,
@@ -116,6 +117,9 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
 };
 
 export function rejectPeerAction(type: GossipType, code: string): PeerAction {
+  if (code === GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE) {
+    return PeerAction.LowToleranceError;
+  }
   const rule = gossipRejectPeerAction[type];
   return rule.byCode?.[code] ?? rule.default;
 }
