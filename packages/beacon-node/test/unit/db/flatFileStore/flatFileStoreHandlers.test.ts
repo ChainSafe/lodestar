@@ -170,19 +170,20 @@ describe("FlatFileStore reqresp handler integration", () => {
         db,
       } as unknown as BeaconChain;
 
+      const headChain = (opts.headChain ?? []).map((block) => ({
+        ...block,
+        payloadStatus: block.payloadStatus ?? PayloadStatus.FULL,
+      }));
       const chain = {
         config,
         getHeadState: () => opts.headState ?? {slot: 0},
         clock: {currentEpoch: 10},
         forkChoice: {
           getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
-          getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
+          getHead: () =>
+            headChain[0] ?? {slot: opts.finalizedSlot + 1, blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL},
           getBlockHexDefaultStatus: vi.fn().mockReturnValue(opts.forkChoiceBlockByRoot ?? null),
-          getAllAncestorBlocks: () =>
-            (opts.headChain ?? []).map((block) => ({
-              ...block,
-              payloadStatus: block.payloadStatus ?? PayloadStatus.FULL,
-            })),
+          iterateAncestorBlocks: () => headChain.slice(1).values(),
         },
         custodyConfig: {
           custodyColumns: opts.custodyColumns,
