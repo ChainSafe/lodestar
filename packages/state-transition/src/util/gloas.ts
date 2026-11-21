@@ -164,7 +164,7 @@ export function canBuilderCoverBid(
 
 /**
  * Return the number of bids the builder may submit for each slot and parent.
- * Spec: https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/p2p-interface.md#new-get_builder_bid_limit
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.5/specs/gloas/p2p-interface.md#new-get_builder_bid_limit
  */
 export function getBuilderBidLimit(state: CachedBeaconStateGloas, builderIndex: BuilderIndex): number {
   const builder = state.builders.getReadonly(builderIndex);
