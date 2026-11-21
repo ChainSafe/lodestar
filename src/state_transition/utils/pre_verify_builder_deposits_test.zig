@@ -17,7 +17,7 @@ fn fuluState(allocator: std.mem.Allocator, pool: *Node.Pool) !TestCachedBeaconSt
     var fixture = try TestCachedBeaconState.init(allocator, pool, 64);
     errdefer fixture.deinit();
     const state = fixture.cached_state;
-    const upgraded = try upgradeStateToFulu(allocator, state.config, state.epoch_cache, state.state.castToFork(.electra));
+    const upgraded = try upgradeStateToFulu(std.testing.io, state.config, state.epoch_cache, state.state.castToFork(.electra));
     state.state.* = .{ .fulu = upgraded.inner };
     try state.state.commit();
     return fixture;

@@ -191,28 +191,31 @@ export function getBeaconBlockApi(
 
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.gossip: {
-        if (!blockLocallyProduced) {
-          try {
+        try {
+          if (blockLocallyProduced) {
+            // Block production does not cover the proposer signature, the validator client signs the block
+            await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
+          } else {
             await validateGossipBlock(config, chain, signedBlock, fork);
-          } catch (error) {
-            if (error instanceof BlockGossipError) {
-              switch (error.type.code) {
-                case BlockErrorCode.ALREADY_KNOWN:
-                  // Block has already been seen, e.g. via gossip racing the publish API. Benign.
-                  chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
-                  return;
-              }
-            }
-
-            chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
-            chain.persistInvalidSszValue(
-              chain.config.getForkTypes(slot).SignedBeaconBlock,
-              signedBlock,
-              "api_reject_gossip_failure",
-              blockRoot
-            );
-            throw error;
           }
+        } catch (error) {
+          if (error instanceof BlockGossipError) {
+            switch (error.type.code) {
+              case BlockErrorCode.ALREADY_KNOWN:
+                // Block has already been seen, e.g. via gossip racing the publish API. Benign.
+                chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+                return;
+            }
+          }
+
+          chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
+          chain.persistInvalidSszValue(
+            chain.config.getForkTypes(slot).SignedBeaconBlock,
+            signedBlock,
+            "api_reject_gossip_failure",
+            blockRoot
+          );
+          throw error;
         }
         chain.logger.debug("Gossip checks validated while publishing the block", valLogMeta);
         break;

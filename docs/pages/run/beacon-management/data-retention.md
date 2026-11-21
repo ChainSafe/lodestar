@@ -47,7 +47,7 @@ $dataDir # specified by --dataDir on the validator command
 Configuring your node to store and prune data is key to success. On average you can expect for the database to grow by the follow amounts:
 
 - `execution-db` grows at 2-30GB per week
-- `chain-db` grows at 1GB per month
+- `chain-db` stops growing once it holds the block retention window, since history is pruned by default (see [Pruning history](#pruning-history)). It grows at 1GB per month if history is retained
 - `validator-db` grows at less than 2MB per year, per key (2000 keys = 4GB per year)
 
 `keystores`, `keystore-cache` and `peerstore` are not usually very large and are not expected to grow much during normal operation.
@@ -56,10 +56,10 @@ Logs can also become quite large so please check out the section on [log managem
 
 Data column flat files are stored in `$dataDir/data_columns` by default. Use `--dataColumnDir` to place them on a separate volume.
 
-There is really only one flag that is needed to manage the data for Lodestar, [`--dataDir`](./beacon-cli#--datadir). Other than that handling log management is really the heart of the data management story. Beacon node data is what it is. Depending on the execution client that is chosen, there may be flags to help with data storage growth but that is outside the scope of this document.
+[`--dataDir`](./beacon-cli#--datadir) sets where Lodestar stores its data. The beacon node prunes its own database by default, so the remaining growth to manage is logs. Execution clients have their own flags to limit storage growth, which are outside the scope of this document.
 
 ### Pruning history
 
-For validators seeking to store the least amount of data possible, and store no historical data, use [`--chain.pruneHistory`](./beacon-cli#--chainprunehistory). This flag will configure the beacon node to continually prune all old blocks and execution payload envelopes (older than `config.MIN_EPOCHS_FOR_BLOCK_REQUESTS`, which is ~5 months on mainnet and reduced to ~2 months from gloas) and all prior finalized states.
+By default the beacon node continually prunes all old blocks and execution payload envelopes (older than `config.MIN_EPOCHS_FOR_BLOCK_REQUESTS`, which is ~5 months on mainnet and reduced to ~2 months from gloas) and all prior finalized states. To retain historical data, set [`--chain.pruneHistory=false`](./beacon-cli#--chainprunehistory). Pruning is also disabled when `--serveHistoricalState` is set, unless `--chain.pruneHistory` is passed explicitly.
 
-**Note:** An existing large database is pruned gradually, up to 4096 slots of blocks on startup and on every finalized checkpoint, so disk usage drops over days to weeks rather than immediately.
+**Note:** An existing large database is pruned gradually, up to 4096 slots of blocks on startup and on every finalized checkpoint, so disk usage drops over days to weeks rather than immediately. Pruned data cannot be recovered without syncing the node again.

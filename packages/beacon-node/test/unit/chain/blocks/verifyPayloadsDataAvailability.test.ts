@@ -67,31 +67,37 @@ describe("verifyPayloadsDataAvailability", () => {
     const {payloadInput} = buildPayloadEnvelopeInput({blobCount: 0, sampledColumns: [0, 1, 2, 3]});
 
     const controller = new AbortController();
-    const {dataAvailabilityStatuses, availableTime} = await verifyPayloadsDataAvailability(
+    const {dataAvailabilityStatuses, availableTimeMs} = await verifyPayloadsDataAvailability(
       config,
       [payloadInput],
       controller.signal
     );
 
     expect(dataAvailabilityStatuses).toEqual([DataAvailabilityStatus.NotRequired]);
-    expect(availableTime).toBeGreaterThan(0);
+    expect(availableTimeMs).toBeGreaterThan(0);
   });
 
   it("resolves immediately when all sampled columns are already present", async () => {
     const sampled = [0, 1, 2, 3];
     const {payloadInput} = buildPayloadEnvelopeInput({blobCount: 1, sampledColumns: sampled});
+    const completeSec = 1_700_000_002;
     for (const idx of sampled) {
       payloadInput.addColumn({
         columnSidecar: buildColumnSidecar(idx),
         source: PayloadEnvelopeInputSource.gossip,
-        seenTimestampSec: Date.now() / 1000,
+        seenTimestampSec: completeSec,
       });
     }
     expect(payloadInput.hasAllData()).toBe(true);
 
     const controller = new AbortController();
-    const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(config, [payloadInput], controller.signal);
+    const {dataAvailabilityStatuses, availableTimeMs} = await verifyPayloadsDataAvailability(
+      config,
+      [payloadInput],
+      controller.signal
+    );
     expect(dataAvailabilityStatuses).toEqual([DataAvailabilityStatus.Available]);
+    expect(availableTimeMs).toBe(completeSec * 1000);
   });
 
   it("waits for columns to arrive after envelope, then resolves", async () => {

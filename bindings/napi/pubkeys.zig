@@ -3,6 +3,7 @@ const zapi = @import("zapi:zapi");
 const js = zapi.js;
 const napi = zapi.napi;
 const blst_bindings = @import("./blst.zig");
+const committee_pubkeys = @import("./committee_pubkeys.zig");
 const state_transition = @import("state_transition");
 const PubkeyCache = state_transition.PubkeyCache;
 const pkix = state_transition.pkix;
@@ -99,11 +100,14 @@ pub fn load(file_path: js.String, max_capacity: js.Number) !void {
     try pkix.install(&state.cache, io, &loaded_cache);
 }
 
+/// Also drops the committee pubkeys, which were aggregated from the cleared keys.
+///
 /// JS: pubkeys.reset()
 pub fn reset() !void {
     if (!state.initialized) return error.PubkeyIndexNotInitialized;
     try state.requireControlEnvironment(js.env());
     try state.cache.clear(js.io());
+    committee_pubkeys.state.clear(js.io());
 }
 
 /// JS: pubkeys.getIndex(pubkeyBytes) → number | null
