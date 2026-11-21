@@ -9,14 +9,14 @@ import type {IForkChoice} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {defer, toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 import {archiveBlocks} from "../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {BeaconDb} from "../../../src/db/beacon.js";
 import {Bucket} from "../../../src/db/buckets.js";
 import {blobSidecarsWrapperSsz} from "../../../src/db/repositories/blobSidecars.js";
 import {generateProtoBlock} from "../../utils/typeGenerator.js";
 
-describe("BeaconDb.pruneHotDb", () => {
+describe("BeaconDb startup", () => {
   const config = createChainForkConfig({FULU_FORK_EPOCH: 0});
   const logger = testLogger();
   let tmpDir: string;
@@ -35,7 +35,7 @@ describe("BeaconDb.pruneHotDb", () => {
     await rm(tmpDir, {recursive: true, force: true});
   });
 
-  it.each([0, 1, 8])("prunes hot sidecars for %i roots while preserving other data", async (rootCount) => {
+  it.each([0, 1, 8])("prunes hot blobs for %i roots without scanning legacy columns", async (rootCount) => {
     const columns = Array.from({length: NUMBER_OF_COLUMNS}, (_, index) => ({
       ...ssz.fulu.DataColumnSidecar.defaultValue(),
       index,
@@ -59,25 +59,17 @@ describe("BeaconDb.pruneHotDb", () => {
     ]);
     expect(await db.dataColumnSidecar.keys()).toHaveLength(rootCount * NUMBER_OF_COLUMNS);
 
-    const batchDelete = vi.spyOn(controller, "batchDelete");
-    const compactRange = controller.compactRange.bind(controller);
-    const compact = vi.spyOn(controller, "compactRange").mockImplementation(async (start, end) => {
-      expect(batchDelete.mock.settledResults.every(({type}) => type === "fulfilled")).toBe(true);
-      expect(await db.dataColumnSidecar.keys()).toHaveLength(0);
-      await compactRange(start, end);
-    });
+    const keysStream = vi.spyOn(controller, "keysStream");
+    const compact = vi.spyOn(controller, "compactRange");
 
     await db.pruneHotDb();
 
-    expect(compact).toHaveBeenCalledExactlyOnceWith(
-      encodeKey(Bucket.allForks_dataColumnSidecars, Buffer.alloc(0)),
-      encodeKey(Bucket.allForks_dataColumnSidecars + 1, Buffer.alloc(0))
-    );
-    for (const deleteOrder of batchDelete.mock.invocationCallOrder) {
-      expect(deleteOrder).toBeLessThan(compact.mock.invocationCallOrder[0]);
-    }
-
-    expect((await db.dataColumnSidecar.keys()).length).toBe(0);
+    expect(keysStream).not.toHaveBeenCalledWith({
+      gte: encodeKey(Bucket.allForks_dataColumnSidecars, Buffer.alloc(0)),
+      lt: encodeKey(Bucket.allForks_dataColumnSidecars + 1, Buffer.alloc(0)),
+    });
+    expect(compact).not.toHaveBeenCalled();
+    expect(await db.dataColumnSidecar.keys()).toHaveLength(rootCount * NUMBER_OF_COLUMNS);
     expect((await db.blobSidecars.keys()).length).toBe(0);
     expect(await db.block.getBinary(root)).toEqual(Buffer.from(ssz.fulu.SignedBeaconBlock.serialize(block)));
     expect(await db.blobSidecarsArchive.getBinary(slot)).toEqual(
@@ -89,43 +81,25 @@ describe("BeaconDb.pruneHotDb", () => {
     expect(await db.dataColumns.getAll({slot, blockRoot: toRootHex(root)})).toEqual([column]);
   });
 
-  it("compacts legacy columns already deleted by an earlier startup", async () => {
-    const root = Buffer.alloc(32, 1);
-    await db.dataColumnSidecar.putMany(root, [ssz.fulu.DataColumnSidecar.defaultValue()]);
-    await db.dataColumnSidecar.deleteMany([root]);
-    expect(await db.dataColumnSidecar.keys()).toHaveLength(0);
-    const compact = vi.spyOn(controller, "compactRange");
-
-    await db.pruneHotDb();
-
-    expect(compact).toHaveBeenCalledExactlyOnceWith(
-      encodeKey(Bucket.allForks_dataColumnSidecars, Buffer.alloc(0)),
-      encodeKey(Bucket.allForks_dataColumnSidecars + 1, Buffer.alloc(0))
-    );
-  });
-
-  it("waits for legacy column compaction to complete", async () => {
-    const started = defer<void>();
-    const completed = defer<void>();
-    const compactRange = controller.compactRange.bind(controller);
-    const compact = vi.spyOn(controller, "compactRange").mockImplementation(async (start, end) => {
-      started.resolve();
-      await completed.promise;
-      await compactRange(start, end);
-    });
-    let pruned = false;
-    const pruning = db.pruneHotDb().then(() => {
-      pruned = true;
-    });
-
-    try {
-      await Promise.race([started.promise, pruning]);
-      expect(compact).toHaveBeenCalledTimes(1);
-      expect(pruned).toBe(false);
-    } finally {
-      completed.resolve();
-      await pruning;
+  it.each([false, true])("initializes without scanning legacy columns (populated: %s)", async (populated) => {
+    const slot = 10;
+    const column = ssz.fulu.DataColumnSidecar.defaultValue();
+    if (populated) {
+      await db.dataColumnSidecarArchive.put(slot, column);
     }
+    await db.close();
+    controller = await LevelDbController.create({name: path.join(tmpDir, "leveldb")}, {logger});
+    db = new BeaconDb(config, controller, {dataColumnDir: path.join(tmpDir, "data_columns"), logger});
+    const keysStream = vi.spyOn(controller, "keysStream");
+    const archiveKeys = vi.spyOn(db.dataColumnSidecarArchive, "keys");
+
+    await db.init();
+
+    expect(archiveKeys).not.toHaveBeenCalled();
+    expect(keysStream).not.toHaveBeenCalled();
+    expect(await db.dataColumnSidecarArchive.getBinary(slot, column.index)).toEqual(
+      populated ? Buffer.from(ssz.fulu.DataColumnSidecar.serialize(column)) : null
+    );
   });
 
   it("keeps canonical flat columns serveable after block archiving", async () => {
