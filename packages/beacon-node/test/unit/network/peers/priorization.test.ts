@@ -6,10 +6,10 @@ import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {RequestedSubnet} from "../../../../src/network/peers/utils/index.js";
 import {
   ExcessPeerDisconnectReason,
   PrioritizePeersOpts,
+  RequestedSubnetWithPeerCount,
   prioritizePeers,
   sortPeersToPrune,
 } from "../../../../src/network/peers/utils/prioritizePeers.js";
@@ -664,8 +664,8 @@ describe("network / peers / priorization", async () => {
     it(id, () => {
       const result = prioritizePeers(
         connectedPeers,
-        toReqSubnet(activeAttnets),
-        toReqSubnet(activeSyncnets),
+        toReqSubnet(activeAttnets, connectedPeers, "attnets"),
+        toReqSubnet(activeSyncnets, connectedPeers, "syncnets"),
         samplingGroups,
         opts,
         config,
@@ -674,6 +674,56 @@ describe("network / peers / priorization", async () => {
       expect(cleanResult(result)).toEqual(cleanResult(expectedResult));
     });
   }
+
+  it("requests subnet peers at target when advertised peers have no usable subscriptions", () => {
+    const connectedPeers = peers.slice(0, 6).map((id) => ({
+      id,
+      direction: null,
+      status,
+      attnets: getAttnets([3]),
+      syncnets: getSyncnets([1]),
+      samplingGroups: null,
+      score: 0,
+    }));
+    const result = prioritizePeers(
+      connectedPeers,
+      [{subnet: 3, toSlot: 10, peerCount: 0}],
+      [{subnet: 1, toSlot: 20, peerCount: 0}],
+      undefined,
+      {...defaultOpts, targetPeers: 6, maxPeers: 10, targetSubnetPeers: 6},
+      config,
+      null
+    );
+
+    expect(result.attnetQueries).toEqual([{subnet: 3, toSlot: 10, maxPeersToDiscover: 6}]);
+    expect(result.syncnetQueries).toEqual([{subnet: 1, toSlot: 20, maxPeersToDiscover: 6}]);
+    expect(result.peersToConnect).toBe(0);
+    expect(result.peersToDisconnect.size).toBe(0);
+  });
+
+  it("uses supplied subscriber coverage without metadata", () => {
+    const connectedPeers = peers.slice(0, 6).map((id) => ({
+      id,
+      direction: null,
+      status,
+      attnets: null,
+      syncnets: null,
+      samplingGroups: null,
+      score: 0,
+    }));
+    const result = prioritizePeers(
+      connectedPeers,
+      [{subnet: 3, toSlot: 10, peerCount: 5}],
+      [{subnet: 1, toSlot: 20, peerCount: 6}],
+      undefined,
+      {...defaultOpts, targetPeers: 6, maxPeers: 10, targetSubnetPeers: 6},
+      config,
+      null
+    );
+
+    expect(result.attnetQueries).toEqual([{subnet: 3, toSlot: 10, maxPeersToDiscover: 1}]);
+    expect(result.syncnetQueries).toEqual([]);
+  });
 
   function cleanResult(res: Result): Omit<Result, "peersToDisconnect"> & {peersToDisconnect: string[]} {
     const toCleanResult = (peersToDisconnect: Map<string, PeerId[]>): string[] => {
@@ -692,8 +742,16 @@ describe("network / peers / priorization", async () => {
     };
   }
 
-  function toReqSubnet(subnets: number[]): RequestedSubnet[] {
-    return subnets.map((subnet) => ({subnet, toSlot: 0}));
+  function toReqSubnet(
+    subnets: number[],
+    connectedPeers: Parameters<typeof prioritizePeers>[0],
+    type: "attnets" | "syncnets"
+  ): RequestedSubnetWithPeerCount[] {
+    return subnets.map((subnet) => ({
+      subnet,
+      toSlot: 0,
+      peerCount: connectedPeers.filter((peer) => peer[type]?.get(subnet)).length,
+    }));
   }
 });
 

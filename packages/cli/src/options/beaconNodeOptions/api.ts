@@ -13,6 +13,7 @@ export function coerceCors(cors: string): string {
 
 export type ApiArgs = {
   "api.maxGindicesInProof"?: number;
+  "api.disableBidValidation"?: boolean;
   "rest.namespace"?: string[];
   "rest.cors"?: string;
   rest: boolean;
@@ -27,6 +28,7 @@ export type ApiArgs = {
 export function parseArgs(args: ApiArgs): IBeaconNodeOptions["api"] {
   return {
     maxGindicesInProof: args["api.maxGindicesInProof"],
+    disableBidValidation: args["api.disableBidValidation"],
     rest: {
       api: args["rest.namespace"] as IBeaconNodeOptions["api"]["rest"]["api"],
       cors: args["rest.cors"],
@@ -54,6 +56,15 @@ export const options: CliCommandOptions<ApiArgs> = {
     type: "number",
     description: "Limit max number of gindices in a single proof request. DoS vector protection",
     defaultDescription: String(defaultOptions.api.maxGindicesInProof),
+    group: "api",
+  },
+
+  "api.disableBidValidation": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "Broadcast execution payload bids submitted via the API without running gossip validation. Only enable if the API is exclusively used by a trusted local builder, forwarding invalid bids gets the node penalized by peers",
+    defaultDescription: String(defaultOptions.api.disableBidValidation),
     group: "api",
   },
 

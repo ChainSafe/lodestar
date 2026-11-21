@@ -3,7 +3,16 @@ import {BitArray} from "@chainsafe/ssz";
 import {PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {ExecutionStatus, PayloadStatus, ProtoArray, ProtoBlock, ProtoNode, getPtcVerdict} from "../../../src/index.js";
+import {
+  ExecutionStatus,
+  LVHInvalidJudged,
+  LVHNotAppliedReason,
+  PayloadStatus,
+  ProtoArray,
+  ProtoBlock,
+  ProtoNode,
+  getPtcVerdict,
+} from "../../../src/index.js";
 import {countNoVotes} from "../../../src/protoArray/protoArray.js";
 
 describe("Gloas Fork Choice", () => {
@@ -797,13 +806,13 @@ describe("Gloas Fork Choice", () => {
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: null,
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xa1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xa1",
+          judged: LVHInvalidJudged.FromBlock,
         },
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
-      expect(applied).toBe(true);
+      expect(applied).toEqual({applied: true});
       expect(payloadStatus("0x0b", PayloadStatus.EMPTY)).toBe(ExecutionStatus.Invalid);
       expect(payloadStatus("0x0b", PayloadStatus.PENDING)).toBe(ExecutionStatus.Invalid);
       expect(payloadStatus("0x0a", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
@@ -826,13 +835,13 @@ describe("Gloas Fork Choice", () => {
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: null,
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xb1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xb1",
+          judged: LVHInvalidJudged.FromBlock,
         },
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
-      expect(applied).toBe(true);
+      expect(applied).toEqual({applied: true});
       expect(payloadStatus("0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
       expect(payloadStatus("0x0b", PayloadStatus.PENDING)).toBe(ExecutionStatus.Syncing);
       expect(payloadStatus("0x0b", PayloadStatus.EMPTY)).toBe(ExecutionStatus.Syncing);
@@ -864,13 +873,13 @@ describe("Gloas Fork Choice", () => {
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: "0xa1",
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xb1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xb1",
+          judged: LVHInvalidJudged.FromBlock,
         },
-        gloasForkSlot + 2,
-        {strict: false}
+        gloasForkSlot + 2
       );
-      expect(applied).toBe(true);
+      expect(applied).toEqual({applied: true});
       expect(payloadStatus("0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
       expect(payloadStatus("0x0c", PayloadStatus.PENDING)).toBe(ExecutionStatus.Invalid);
       expect(payloadStatus("0x0c", PayloadStatus.EMPTY)).toBe(ExecutionStatus.Invalid);
@@ -929,10 +938,9 @@ describe("Gloas Fork Choice", () => {
       const protoArray = setup();
       const applied = protoArray.validateLatestHash(
         {executionStatus: ExecutionStatus.Valid, latestValidExecHash: "0xa1", blockRoot: "0x0b"},
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
-      expect(applied).toBe(true);
+      expect(applied).toEqual({applied: true});
       expect(status(protoArray, "0x0a", PayloadStatus.FULL)).toBe(ExecutionStatus.Valid);
       for (const root of ["0x0b", "0x0c"]) {
         expect(status(protoArray, root, PayloadStatus.PENDING)).toBe(ExecutionStatus.Valid);
@@ -955,17 +963,16 @@ describe("Gloas Fork Choice", () => {
       const lvh = {
         executionStatus: ExecutionStatus.Invalid as const,
         latestValidExecHash: null,
-        invalidateFromParentBlockRoot: "0x0b",
-        invalidateFromParentBlockHash: "0xb1",
+        invalidateFromBlockRoot: "0x0b",
+        invalidateFromBlockHash: "0xb1",
+        judged: LVHInvalidJudged.FromBlock,
       };
-      expect(protoArray.validateLatestHash(lvh, gloasForkSlot + 1, {strict: false})).toBe(true);
+      expect(protoArray.validateLatestHash(lvh, gloasForkSlot + 1)).toEqual({applied: true});
       const applied = protoArray.validateLatestHash(
         {executionStatus: ExecutionStatus.Valid, latestValidExecHash: "0xb1", blockRoot: "0x0b"},
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
-      expect(applied).toBe(false);
-      expect(protoArray.lvhError).toBeUndefined();
+      expect(applied).toEqual({applied: false, reason: LVHNotAppliedReason.Contradiction});
       expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
     });
 
@@ -985,13 +992,13 @@ describe("Gloas Fork Choice", () => {
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: "0xc1",
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xa1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xa1",
+          judged: LVHInvalidJudged.FromBlock,
         },
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
-      expect(applied).toBe(true);
+      expect(applied).toEqual({applied: true});
       expect(status(protoArray, "0x0a", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
       expect(status(protoArray, "0x0a", PayloadStatus.PENDING)).toBe(ExecutionStatus.Syncing);
       for (const root of ["0x0b", "0x0c"]) {
@@ -1018,13 +1025,13 @@ describe("Gloas Fork Choice", () => {
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: "0xdead",
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xb1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xb1",
+          judged: LVHInvalidJudged.ChildPayload,
         },
-        gloasForkSlot + 2,
-        {strict: false, fromNodeJudged: false}
+        gloasForkSlot + 2
       );
-      expect(unknown).toBe(false);
+      expect(unknown).toEqual({applied: false, reason: LVHNotAppliedReason.UnusableLVH});
       expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Syncing);
 
       // With the LVH at A's payload, B's payload is invalid
@@ -1032,13 +1039,13 @@ describe("Gloas Fork Choice", () => {
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: "0xa1",
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xb1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xb1",
+          judged: LVHInvalidJudged.ChildPayload,
         },
-        gloasForkSlot + 2,
-        {strict: false, fromNodeJudged: false}
+        gloasForkSlot + 2
       );
-      expect(known).toBe(true);
+      expect(known).toEqual({applied: true});
       expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
       expect(status(protoArray, "0x0b", PayloadStatus.EMPTY)).toBe(ExecutionStatus.Syncing);
       expect(status(protoArray, "0x0a", PayloadStatus.FULL)).toBe(ExecutionStatus.Syncing);
@@ -1058,22 +1065,20 @@ describe("Gloas Fork Choice", () => {
       );
       protoArray.validateLatestHash(
         {executionStatus: ExecutionStatus.Valid, latestValidExecHash: "0xa1", blockRoot: "0x0a"},
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
-      // LVH at genesis would invalidate the validated A payload, the verdict is dropped whole
+      // LVH above A's payload would invalidate the validated A payload, the verdict is dropped whole
       const applied = protoArray.validateLatestHash(
         {
           executionStatus: ExecutionStatus.Invalid,
-          latestValidExecHash: genesisRoot,
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xb1",
+          latestValidExecHash: "0x0a",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xb1",
+          judged: LVHInvalidJudged.ChildPayload,
         },
-        gloasForkSlot + 2,
-        {strict: false, fromNodeJudged: false}
+        gloasForkSlot + 2
       );
-      expect(applied).toBe(false);
-      expect(protoArray.lvhError).toBeUndefined();
+      expect(applied).toEqual({applied: false, reason: LVHNotAppliedReason.Contradiction});
       expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Syncing);
       expect(status(protoArray, "0x0a", PayloadStatus.FULL)).toBe(ExecutionStatus.Valid);
     });
@@ -1090,17 +1095,18 @@ describe("Gloas Fork Choice", () => {
         ExecutionStatus.Syncing,
         DataAvailabilityStatus.Available
       );
+      // LVH above A's payload would cross the justified block, only what is above it is invalidated
       const applied = protoArray.validateLatestHash(
         {
           executionStatus: ExecutionStatus.Invalid,
-          latestValidExecHash: "0xa1",
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xb1",
+          latestValidExecHash: "0x0a",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xb1",
+          judged: LVHInvalidJudged.ChildPayload,
         },
-        gloasForkSlot + 2,
-        {strict: false, fromNodeJudged: false}
+        gloasForkSlot + 2
       );
-      expect(applied).toBe(true);
+      expect(applied).toEqual({applied: true});
       expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
       expect(status(protoArray, "0x0b", PayloadStatus.PENDING)).toBe(ExecutionStatus.Syncing);
       expect(status(protoArray, "0x0b", PayloadStatus.EMPTY)).toBe(ExecutionStatus.Syncing);
@@ -1112,13 +1118,13 @@ describe("Gloas Fork Choice", () => {
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: null,
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xa1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xa1",
+          judged: LVHInvalidJudged.FromBlock,
         },
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
-      expect(fromEmpty).toBe(false);
+      expect(fromEmpty).toEqual({applied: false, reason: LVHNotAppliedReason.NothingToInvalidate});
       expect(status(protoArray, "0x0b", PayloadStatus.EMPTY)).toBe(ExecutionStatus.Syncing);
       expect(status(protoArray, "0x0a", PayloadStatus.FULL)).toBe(ExecutionStatus.Syncing);
 
@@ -1136,13 +1142,13 @@ describe("Gloas Fork Choice", () => {
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: null,
-          invalidateFromParentBlockRoot: "0x0b",
-          invalidateFromParentBlockHash: "0xb1",
+          invalidateFromBlockRoot: "0x0b",
+          invalidateFromBlockHash: "0xb1",
+          judged: LVHInvalidJudged.FromBlock,
         },
-        gloasForkSlot + 1,
-        {strict: false}
+        gloasForkSlot + 1
       );
-      expect(fromFull).toBe(true);
+      expect(fromFull).toEqual({applied: true});
       expect(status(protoArray, "0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Invalid);
       expect(status(protoArray, "0x0b", PayloadStatus.PENDING)).toBe(ExecutionStatus.Syncing);
     });

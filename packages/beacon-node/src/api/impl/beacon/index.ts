@@ -3,6 +3,7 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
+import {ApiOptions} from "../../options.js";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {getBeaconBlockApi} from "./blocks/index.js";
@@ -11,9 +12,10 @@ import {getBeaconRewardsApi} from "./rewards/index.js";
 import {getBeaconStateApi} from "./state/index.js";
 
 export function getBeaconApi(
+  opts: ApiOptions,
   modules: Pick<ApiModules, "chain" | "config" | "logger" | "metrics" | "network" | "db" | "sync">
 ): ApplicationMethods<routes.beacon.Endpoints> {
-  const block = getBeaconBlockApi(modules);
+  const block = getBeaconBlockApi(opts, modules);
   const pool = getBeaconPoolApi(modules);
   const state = getBeaconStateApi(modules);
   const rewards = getBeaconRewardsApi(modules);

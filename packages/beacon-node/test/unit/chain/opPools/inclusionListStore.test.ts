@@ -1,5 +1,5 @@
 import {beforeEach, describe, expect, it} from "vitest";
-import {BitArray} from "@chainsafe/ssz";
+import {BitArray, SerializedList} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import {ValidatorIndex, heze} from "@lodestar/types";
@@ -28,7 +28,7 @@ describe("chain / opPools / InclusionListStore", () => {
       slot: opts?.slot ?? slot,
       validatorIndex,
       dependentRoot: opts?.dependentRoot ?? dependentRoot,
-      transactions,
+      transactions: SerializedList.fromArray(transactions),
     },
     signature: Buffer.alloc(96, 0),
   });
@@ -64,30 +64,30 @@ describe("chain / opPools / InclusionListStore", () => {
     expect(process(makeInclusionList(1, [txB]), true)).toBe(InclusionListInsertOutcome.Equivocating);
     // The first list stays stored but no longer counts
     expect(store.size).toBe(2);
-    expect(store.getInclusionListTransactions(slot, dependentRootHex)).toEqual([txB]);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex).toArray()).toEqual([txB]);
     expect(store.getInclusionListBits(slot, dependentRootHex).getTrueBitIndexes()).toEqual([1]);
 
     expect(process(makeInclusionList(1, [txB]), true)).toBe(InclusionListInsertOutcome.SubsequentEquivocation);
     // The stored list is already processed, resubmitting it is not new evidence
     expect(process(makeInclusionList(1, [txA]), true)).toBe(InclusionListInsertOutcome.Seen);
-    expect(store.getInclusionListTransactions(slot, dependentRootHex)).toEqual([txB]);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex).toArray()).toEqual([txB]);
   });
 
   it("deduplicates transactions across inclusion lists", () => {
     process(makeInclusionList(1, [txA, txB]), true);
     process(makeInclusionList(2, [txA]), true);
 
-    expect(store.getInclusionListTransactions(slot, dependentRootHex)).toEqual([txA, txB]);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex).toArray()).toEqual([txA, txB]);
   });
 
   it("excludes untimely inclusion lists unless onlyTimely is false", () => {
     process(makeInclusionList(1, [txA]), true);
     process(makeInclusionList(2, [txB]), false);
 
-    expect(store.getInclusionListTransactions(slot, dependentRootHex)).toEqual([txA]);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex).toArray()).toEqual([txA]);
     expect(store.getInclusionListBits(slot, dependentRootHex).getTrueBitIndexes()).toEqual([0]);
 
-    expect(store.getInclusionListTransactions(slot, dependentRootHex, false)).toEqual([txA, txB]);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex, false).toArray()).toEqual([txA, txB]);
     expect(store.getInclusionListBits(slot, dependentRootHex, false).getTrueBitIndexes()).toEqual([0, 1]);
   });
 
@@ -97,9 +97,9 @@ describe("chain / opPools / InclusionListStore", () => {
     process(makeInclusionList(2, [txB], {slot: slot + 1}), true);
 
     expect(store.size).toBe(2);
-    expect(store.getInclusionListTransactions(slot, dependentRootHex)).toEqual([]);
-    expect(store.getInclusionListTransactions(slot, toRootHex(otherRoot))).toEqual([txA]);
-    expect(store.getInclusionListTransactions(slot + 1, dependentRootHex)).toEqual([txB]);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex).toArray()).toEqual([]);
+    expect(store.getInclusionListTransactions(slot, toRootHex(otherRoot)).toArray()).toEqual([txA]);
+    expect(store.getInclusionListTransactions(slot + 1, dependentRootHex).toArray()).toEqual([txB]);
   });
 
   it("tracks equivocations per slot and dependent root", () => {
@@ -108,8 +108,8 @@ describe("chain / opPools / InclusionListStore", () => {
     process(makeInclusionList(1, [txB]), true);
 
     expect(process(makeInclusionList(1, [txA], {dependentRoot: otherRoot}), true)).toBe(InclusionListInsertOutcome.New);
-    expect(store.getInclusionListTransactions(slot, dependentRootHex)).toEqual([]);
-    expect(store.getInclusionListTransactions(slot, toRootHex(otherRoot))).toEqual([txA]);
+    expect(store.getInclusionListTransactions(slot, dependentRootHex).toArray()).toEqual([]);
+    expect(store.getInclusionListTransactions(slot, toRootHex(otherRoot)).toArray()).toEqual([txA]);
   });
 
   describe("a validator holding several committee positions", () => {
@@ -202,18 +202,19 @@ describe("chain / opPools / InclusionListStore", () => {
   });
 
   describe("prune", () => {
-    it("retains MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS slots beyond the inclusion list slot", () => {
+    it("retains the inclusion lists one slot past MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS", () => {
       process(makeInclusionList(1, [txA]), true);
 
-      store.prune(slot + 1);
-      expect(store.size).toBe(1);
-
       store.prune(slot + 2);
+      expect(store.size).toBe(1);
+      expect(store.getInclusionListTransactions(slot, dependentRootHex).toArray()).toEqual([txA]);
+
+      store.prune(slot + 3);
       expect(store.size).toBe(0);
     });
 
     it("rejects inclusion lists below the prune horizon", () => {
-      store.prune(slot + 2);
+      store.prune(slot + 3);
 
       expect(process(makeInclusionList(1, [txA]), true)).toBe(InclusionListInsertOutcome.Old);
       expect(store.size).toBe(0);
@@ -224,7 +225,7 @@ describe("chain / opPools / InclusionListStore", () => {
       store.markSeen(slot, dependentRootHex, 1);
       expect(store.seenTwice(slot, dependentRootHex, 1)).toBe(true);
 
-      store.prune(slot + 2);
+      store.prune(slot + 3);
       expect(store.seenTwice(slot, dependentRootHex, 1)).toBe(false);
     });
   });

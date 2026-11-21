@@ -40,7 +40,7 @@ export function stringToNum(str: string): number {
 }
 
 export function minEpoch(epochs: Epoch[]): Epoch | null {
-  return epochs.length > 0 ? epochs.reduce((minEpoch, epoch) => (minEpoch < epoch ? minEpoch : epoch)) : null;
+  return epochs.length > 0 ? epochs.reduce((minEpoch, epoch) => Math.min(minEpoch, epoch)) : null;
 }
 
 export function uniqueVectorArr(buffers: Uint8Array[]): Uint8Array[] {

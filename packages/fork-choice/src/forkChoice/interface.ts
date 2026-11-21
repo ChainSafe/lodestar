@@ -3,6 +3,7 @@ import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex,
 import {
   BlockExecutionStatus,
   LVHExecResponse,
+  LVHVerdictResult,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
@@ -77,8 +78,6 @@ export type ShouldOverrideForkChoiceUpdateResult =
   | {shouldOverrideFcu: false; reason: NotReorgedReason};
 
 export interface IForkChoice {
-  irrecoverableError?: Error;
-
   /**
    * Returns the ancestor node of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)
@@ -123,7 +122,7 @@ export interface IForkChoice {
    */
   shouldOverrideForkChoiceUpdate(
     headBlock: ProtoBlock,
-    secFromSlot: number,
+    msFromSlot: number,
     currentSlot: Slot
   ): ShouldOverrideForkChoiceUpdateResult;
   /**
@@ -155,12 +154,15 @@ export interface IForkChoice {
    * ## Notes:
    *
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
+   *
+   * Throws `InvalidBlockCode.PARENT_EXECUTION_INVALID` if the parent payload chain was invalidated.
+   * `executionStatus` is ignored for a gloas block, it inherits the status of the parent variant it builds on.
    */
   onBlock(
     block: BeaconBlock,
     state: IBeaconStateView,
-    receiveDelaySec: number,
-    importDelaySec: number,
+    receiveDelayMs: number,
+    importDelayMs: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
@@ -350,15 +352,17 @@ export interface IForkChoice {
    * `CheckpointWithHex` / finalized root without a specific payload-status variant in mind.
    */
   forwardIterateDescendantsDefaultStatus(blockRoot: RootHex): IterableIterator<ProtoBlock>;
+  /** One summary per block, its default variant (FULL pre-Gloas, PENDING for Gloas) */
   getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
+  /** One summary per block, its default variant (FULL pre-Gloas, PENDING for Gloas) */
   getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
   /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */
   getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult;
   /**
    * Apply an execution engine verdict with a latest valid hash, see `ProtoArray.validateLatestHash`.
-   * Returns whether any execution status changed. A consensus failure is recorded in `irrecoverableError`.
+   * Returns whether any execution status changed, and if not, why.
    */
-  validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean; fromNodeJudged?: boolean}): boolean;
+  validateLatestHash(execResponse: LVHExecResponse): LVHVerdictResult;
 
   /**
    * A dependent root is the block root of the last block before the state transition that decided a specific shuffling

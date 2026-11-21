@@ -1,3 +1,4 @@
+import {SerializedList} from "@chainsafe/ssz";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {BuilderSelection, Endpoints} from "../../../../src/beacon/routes/validator.js";
@@ -212,7 +213,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   produceInclusionList: {
     args: {slot: 10},
-    res: {data: [new Uint8Array([1, 2, 3])], meta: {version: ForkName.heze}},
+    res: {data: SerializedList.fromArray([new Uint8Array([1, 2, 3])]), meta: {version: ForkName.heze}},
   },
   publishInclusionList: {
     args: {signedInclusionList: ssz.heze.SignedInclusionList.defaultValue()},

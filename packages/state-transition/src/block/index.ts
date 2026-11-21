@@ -23,19 +23,6 @@ import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processWithdrawals} from "./processWithdrawals.js";
 import {BlockProcessStep, ProcessBlockOpts, ProposerRewardType} from "./types.js";
 
-// Spec tests
-export {
-  processBlockHeader,
-  processExecutionPayload,
-  processRandao,
-  processEth1Data,
-  processSyncAggregate,
-  processWithdrawals,
-  processExecutionPayloadBid,
-  processPayloadAttestation,
-  processParentExecutionPayload,
-};
-
 export * from "./externalData.js";
 export * from "./initiateValidatorExit.js";
 export * from "./isValidIndexedAttestation.js";
@@ -43,6 +30,18 @@ export * from "./processBuilderDepositRequest.js";
 export * from "./processBuilderExitRequest.js";
 export * from "./processDepositRequest.js";
 export * from "./processOperations.js";
+// Spec tests
+export {
+  processBlockHeader,
+  processEth1Data,
+  processExecutionPayload,
+  processExecutionPayloadBid,
+  processParentExecutionPayload,
+  processPayloadAttestation,
+  processRandao,
+  processSyncAggregate,
+  processWithdrawals,
+};
 
 export function processBlock(
   fork: ForkSeq,

@@ -5,7 +5,6 @@ import {
   AttestationError,
   AttestationErrorCode,
   AttesterSlashingErrorCode,
-  BlobSidecarErrorCode,
   BlockErrorCode,
   BlsToExecutionChangeErrorCode,
   DataColumnSidecarErrorCode,
@@ -13,6 +12,7 @@ import {
   ExecutionPayloadEnvelopeErrorCode,
   GossipAction,
   GossipActionError,
+  GossipErrorCode,
   InclusionListErrorCode,
   PayloadAttestationErrorCode,
   ProposerPreferencesErrorCode,
@@ -55,10 +55,6 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
     default: PeerAction.LowToleranceError,
     byCode: {[BlockErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal},
   },
-  [GossipType.blob_sidecar]: {
-    default: PeerAction.LowToleranceError,
-    byCode: {[BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal},
-  },
   [GossipType.data_column_sidecar]: {
     default: PeerAction.LowToleranceError,
     byCode: {[DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal},
@@ -67,21 +63,13 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
     default: PeerAction.LowToleranceError,
     byCode: {[ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
-  // An invalidated payload is this node's execution engine opinion. The override only softens the application score,
-  // the message is still rejected and gossipsub applies its own invalid message penalty to the delivering peers
   [GossipType.beacon_aggregate_and_proof]: {
     default: PeerAction.MidToleranceError,
-    byCode: {
-      [AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal,
-      [AttestationErrorCode.EXECUTION_PAYLOAD_INVALID]: PeerAction.HighToleranceError,
-    },
+    byCode: {[AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
   [GossipType.beacon_attestation]: {
     default: PeerAction.MidToleranceError,
-    byCode: {
-      [AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal,
-      [AttestationErrorCode.EXECUTION_PAYLOAD_INVALID]: PeerAction.HighToleranceError,
-    },
+    byCode: {[AttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
   [GossipType.sync_committee_contribution_and_proof]: {
     default: PeerAction.MidToleranceError,
@@ -129,6 +117,9 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
 };
 
 export function rejectPeerAction(type: GossipType, code: string): PeerAction {
+  if (code === GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE) {
+    return PeerAction.LowToleranceError;
+  }
   const rule = gossipRejectPeerAction[type];
   return rule.byCode?.[code] ?? rule.default;
 }

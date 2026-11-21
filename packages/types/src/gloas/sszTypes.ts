@@ -9,6 +9,7 @@ import {
   ProgressiveContainerType,
   ProgressiveListBasicType,
   ProgressiveListCompositeType,
+  ProgressiveSerializedListType,
   VectorBasicType,
   VectorCompositeType,
 } from "@chainsafe/ssz";
@@ -96,7 +97,7 @@ export const AttestingIndices = new ProgressiveListBasicType(ValidatorIndex, {
   limit: MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT,
 });
 export const Transaction = new ProgressiveByteListType({typeName: "Transaction", limit: MAX_BYTES_PER_TRANSACTION});
-export const Transactions = new ProgressiveListCompositeType(Transaction, {
+export const Transactions = new ProgressiveSerializedListType(Transaction, {
   typeName: "Transactions",
   limit: MAX_TRANSACTIONS_PER_PAYLOAD,
 });
