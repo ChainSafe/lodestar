@@ -2,13 +2,10 @@
 
 const std = @import("std");
 const types = @import("consensus_types");
-const c = @import("constants");
 const Node = @import("persistent_merkle_tree").Node;
 const preset = @import("preset").preset;
 const TestCachedBeaconState = @import("../test_utils/root.zig").TestCachedBeaconState;
 const interop = @import("../test_utils/interop_pubkeys.zig");
-const computeDomain = @import("../utils/domain.zig").computeDomain;
-const computeSigningRoot = @import("../utils/signing_root.zig").computeSigningRoot;
 const processPendingDeposits = @import("process_pending_deposits.zig").processPendingDeposits;
 const processRewardsAndPenalties = @import("process_rewards_and_penalties.zig").processRewardsAndPenalties;
 
@@ -73,30 +70,6 @@ test "processRewardsAndPenalties maps compact slashing penalties to validator in
     try std.testing.expectEqual(slashed_balance_without_slashing - slashing_penalty, try updated_balances.get(slashed_index));
 }
 
-fn signedPendingDeposit(
-    genesis_fork_version: types.primitive.Version.Type,
-    validator_index: usize,
-    pubkey: *const BLSPubkey,
-) !types.electra.PendingDeposit.Type {
-    const message = types.phase0.DepositMessage.Type{
-        .pubkey = pubkey.*,
-        .withdrawal_credentials = [_]u8{0} ** 32,
-        .amount = 2_000_000_000,
-    };
-    var domain: types.primitive.Domain.Type = undefined;
-    try computeDomain(c.DOMAIN_DEPOSIT, genesis_fork_version, c.ZERO_HASH, &domain);
-    var signing_root: types.primitive.Root.Type = undefined;
-    try computeSigningRoot(types.phase0.DepositMessage, &message, &domain, &signing_root);
-    const signature = try interop.interopSign(validator_index, &signing_root);
-    return .{
-        .pubkey = message.pubkey,
-        .withdrawal_credentials = message.withdrawal_credentials,
-        .amount = message.amount,
-        .signature = signature.compress(),
-        .slot = 0,
-    };
-}
-
 test "cached balances should match state after pending deposits fill the headroom" {
     const allocator = std.testing.allocator;
     const pool_size = 400_000;
@@ -116,7 +89,7 @@ test "cached balances should match state after pending deposits fill the headroo
     try interop.interopPubkeysCached(pubkeys.len, &pubkeys);
     var pending_deposits = try state.pendingDeposits();
     for (validator_count..pubkeys.len) |i| {
-        const deposit = try signedPendingDeposit(cached_state.config.chain.GENESIS_FORK_VERSION, i, &pubkeys[i]);
+        const deposit = try interop.interopPendingDeposit(cached_state.config.chain.GENESIS_FORK_VERSION, &pubkeys[i], 2_000_000_000, i);
         try pending_deposits.pushValue(&deposit);
     }
     try cached_state.state.commit();
