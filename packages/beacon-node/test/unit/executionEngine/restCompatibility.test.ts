@@ -20,6 +20,8 @@ const capabilities = {
   independently_versioned: {blobs: ["v1", "v2"]},
 };
 const validStatus = {status: PayloadStatusCode.VALID, latestValidHash: [], validationError: []};
+const clientVersion = {code: "XX", name: "Test EL", version: "1", commit: "0x12345678"};
+const invalidParams = {code: -32602, message: "Invalid params"};
 
 describe("REST engine compatibility", () => {
   let server: FastifyInstance;
@@ -28,10 +30,13 @@ describe("REST engine compatibility", () => {
   let discovery: {status: number; body: unknown};
   let restError: {status: number; body: unknown} | undefined;
   let jsonRpcError: {code: number; message: string} | undefined;
+  let clientVersionRpc: {result: unknown} | {error: {code: number; message: string}};
+  let identity: {status: number; body: unknown};
   let malformedResponse: boolean;
   let requests: string[];
   let beforePayload: (() => Promise<void>) | undefined;
   let beforeForkchoice: (() => Promise<void>) | undefined;
+  let beforeClientVersion: (() => Promise<void>) | undefined;
   let logger: MockedLogger;
 
   beforeEach(async () => {
@@ -40,9 +45,12 @@ describe("REST engine compatibility", () => {
     discovery = {status: 200, body: capabilities};
     restError = undefined;
     jsonRpcError = undefined;
+    clientVersionRpc = {result: [clientVersion]};
+    identity = {status: 200, body: [clientVersion]};
     malformedResponse = false;
     beforePayload = undefined;
     beforeForkchoice = undefined;
+    beforeClientVersion = undefined;
     requests = [];
     await startServer();
   });
@@ -54,7 +62,10 @@ describe("REST engine compatibility", () => {
       requests.push("capabilities");
       return reply.code(discovery.status).send(discovery.body);
     });
-    server.get("/engine/v1/identity", () => [{code: "XX", name: "Test EL", version: "1", commit: "0x12345678"}]);
+    server.get("/engine/v1/identity", async (_, reply) => {
+      await beforeClientVersion?.();
+      return reply.code(identity.status).send(identity.body);
+    });
     server.post("/engine/v1/payloads", async (_, reply) => {
       requests.push("REST newPayload");
       await beforePayload?.();
@@ -65,10 +76,11 @@ describe("REST engine compatibility", () => {
       await beforeForkchoice?.();
       return sendResponse(reply, ForkchoiceUpdateResponse.serialize({payloadStatus: validStatus, payloadId: []}));
     });
-    server.post<{Body: {method: string}}>("/", (req) => {
+    server.post<{Body: {method: string}}>("/", async (req) => {
       const method = req.body.method;
       if (method === "engine_getClientVersionV1") {
-        return {jsonrpc: "2.0", id: 1, result: [{code: "XX", name: "Test EL", version: "1", commit: "0x12345678"}]};
+        await beforeClientVersion?.();
+        return {jsonrpc: "2.0", id: 1, ...clientVersionRpc};
       }
       requests.push(method);
       if (jsonRpcError) return {jsonrpc: "2.0", id: 1, error: jsonRpcError};
@@ -137,6 +149,61 @@ describe("REST engine compatibility", () => {
     await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
     expect(requests).toEqual(["capabilities", "engine_forkchoiceUpdatedV1", "engine_forkchoiceUpdatedV1"]);
     expectCompatibilityLogsAtDebugOnly();
+  });
+
+  it.each<{name: string; engineApi: EngineApiMode; rpcReply?: typeof clientVersionRpc; restReply?: typeof identity}>([
+    {name: "a JSON-RPC error in json-rpc mode", engineApi: "json-rpc", rpcReply: {error: invalidParams}},
+    {name: "an empty JSON-RPC result in json-rpc mode", engineApi: "json-rpc", rpcReply: {result: []}},
+    {name: "a JSON-RPC error in auto mode", engineApi: "auto", rpcReply: {error: invalidParams}},
+    {name: "a REST 404", engineApi: "auto", restReply: {status: 404, body: {}}},
+    {name: "a REST 200 with an invalid body", engineApi: "auto", restReply: {status: 200, body: {}}},
+  ])("keeps the engine state when the client version call gets $name", async ({engineApi, rpcReply, restReply}) => {
+    if (rpcReply) {
+      // Without the REST API, auto mode sends the client version call over JSON-RPC
+      discovery = {status: 404, body: {}};
+      clientVersionRpc = rpcReply;
+    }
+    if (restReply) identity = restReply;
+    const started = defer<void>();
+    const release = defer<void>();
+    beforeClientVersion = async () => {
+      started.resolve();
+      await release.promise;
+    };
+    const rpc = new JsonRpcHttpClient([url], {signal: controller.signal, retries: 0});
+    const engine = new ExecutionEngineHttp(
+      {
+        jsonRpc: new JsonRpcEngineTransport(rpc),
+        rest:
+          engineApi === "json-rpc"
+            ? undefined
+            : new RestEngineTransport(new EngineRestHttpClient([url], {signal: controller.signal})),
+      },
+      {signal: controller.signal, logger},
+      {urls: [url], retries: 0, retryDelay: 0, engineApi}
+    );
+
+    await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hash, hash, hash);
+    await started.promise;
+    try {
+      // Simulate a required call failing with ECONNREFUSED while the client version call is in flight
+      const failure = new TypeError("fetch failed", {
+        cause: Object.assign(new Error("connection refused"), {code: "ECONNREFUSED"}),
+      });
+      rpc.emitter.emit(JsonRpcHttpClientEvent.ERROR, {error: new FetchError(url, failure)});
+      expect(engine.state).toBe(ExecutionEngineState.OFFLINE);
+      vi.clearAllMocks();
+    } finally {
+      release.resolve();
+    }
+
+    await vi.waitFor(() =>
+      expect(logger.debug).toHaveBeenCalledWith("Unable to get execution client version", {}, expect.any(Error))
+    );
+    expect(engine.state).toBe(ExecutionEngineState.OFFLINE);
+    for (const level of ["info", "warn", "error"] as const) {
+      expect(logger[level], `client version failure must not log at ${level}`).not.toHaveBeenCalled();
+    }
   });
 
   it("rediscovers REST after the execution client reconnects", async () => {

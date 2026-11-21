@@ -54,6 +54,8 @@ export type ReqOpts = {
   retries?: number;
   retryDelay?: number;
   shouldRetry?: (lastError: Error) => boolean;
+  // Do not emit RESPONSE or ERROR events for this request
+  skipEvents?: boolean;
 };
 
 export type JsonRpcHttpClientMetrics = EngineTransportMetrics & {
@@ -141,20 +143,17 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * Perform RPC request
    */
   async fetch<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
-    return this.wrapWithEvents(
-      async () => {
-        const res: RpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
-        return parseRpcResponse(res, payload);
-      },
-      {payload}
-    );
+    return this.wrapWithEvents({payload}, opts, async () => {
+      const res: RpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
+      return parseRpcResponse(res, payload);
+    });
   }
 
   /**
    * Perform RPC request with retry
    */
   async fetchWithRetries<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
-    return this.wrapWithEvents(async () => {
+    return this.wrapWithEvents(payload, opts, async () => {
       const routeId = opts?.routeId ?? "unknown";
 
       const res = await retry<RpcResponse<R>>(
@@ -172,7 +171,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         }
       );
       return parseRpcResponse(res, payload);
-    }, payload);
+    });
   }
 
   /**
@@ -180,7 +179,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * Type-wise assumes all requests results have the same type
    */
   async fetchBatch<R>(rpcPayloadArr: RpcPayload[], opts?: ReqOpts): Promise<R[]> {
-    return this.wrapWithEvents(async () => {
+    return this.wrapWithEvents(rpcPayloadArr, opts, async () => {
       if (rpcPayloadArr.length === 0) return [];
 
       const resArr: RpcResponse<R>[] = await this.fetchJson(
@@ -198,10 +197,11 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       }
 
       return resArr.map((res, i) => parseRpcResponse(res, rpcPayloadArr[i]));
-    }, rpcPayloadArr);
+    });
   }
 
-  private async wrapWithEvents<T>(func: () => Promise<T>, payload?: unknown): Promise<T> {
+  private async wrapWithEvents<T>(payload: unknown, opts: ReqOpts | undefined, func: () => Promise<T>): Promise<T> {
+    if (opts?.skipEvents) return func();
     try {
       const response = await func();
       this.emitter.emit(JsonRpcHttpClientEvent.RESPONSE, {payload, response});

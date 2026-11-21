@@ -100,8 +100,12 @@ export class EngineRestHttpClient {
     this.metrics = opts.metrics ?? null;
   }
 
-  /** Perform request with retries, emitting response and error events consumed by the engine state tracking */
+  /**
+   * Perform request with retries, emitting response and error events consumed by the engine state tracking
+   * unless `skipEvents` is set
+   */
   async request(req: EngineRestRequest, opts?: ReqOpts): Promise<EngineRestResponse> {
+    if (opts?.skipEvents) return this.requestWithRetries(req, opts);
     try {
       const response = await this.requestWithRetries(req, opts);
       this.emitter.emit(JsonRpcHttpClientEvent.RESPONSE, {payload: req, response});

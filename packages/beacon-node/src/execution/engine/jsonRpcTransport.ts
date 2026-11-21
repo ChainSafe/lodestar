@@ -46,7 +46,7 @@ const forkchoiceUpdatedOpts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
 const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
-const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
+const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion", skipEvents: true};
 const getInclusionListOpts: ReqOpts = {routeId: "getInclusionList"};
 
 /**
