@@ -90,5 +90,86 @@
     "source_identity": "Unchanged application cf705 plus explicitly identified libp2p dependency patch; CLI application version is not relabelled."
   },
   "operating_scope": "Distinct final-source windows in ETH2030 post-merge campaign; original phase hashes/failures remain separate.",
-  "full_upstream_hosted_ci_pass_claimed": false
+  "full_upstream_hosted_ci_pass_claimed": false,
+  "actual_automatic_reconnect": {
+    "passed": true,
+    "provider_disconnect_seconds": 6,
+    "recovery_budget_seconds": 90,
+    "elapsed_seconds": [
+      0.155210671,
+      5.49299027,
+      1.167715174
+    ],
+    "manual_reconnect": false,
+    "peer_score_or_validation_change": false
+  },
+  "final_source_operating": {
+    "steady-reviewed-02": {
+      "latency_passed": true,
+      "finality": {
+        "passed": true,
+        "spec": "2ea9d96a420927eb1a35d7c9399c8b3691c69f6a",
+        "bls_active": true,
+        "latency_passed": true,
+        "operating_budgets_evaluated": true,
+        "beacon_window": {
+          "first": 58519,
+          "stop": 58919,
+          "slots": 400,
+          "finalized_root": "0xbbd95d7882f272290f19983f40e502b52003598d33c6849a52881ed183613fa1",
+          "finalized_slot": 58944,
+          "signature_slot": 59009,
+          "signature_participants": 512,
+          "parent_hash_links": 426,
+          "missing_slots": [],
+          "missing_fraction": 0.0
+        },
+        "rejected_controls": [
+          "signature",
+          "finality_branch",
+          "genesis_domain"
+        ]
+      },
+      "offline_passed": true
+    },
+    "pressure-reviewed-02": {
+      "latency_passed": true,
+      "finality": {
+        "passed": true,
+        "spec": "2ea9d96a420927eb1a35d7c9399c8b3691c69f6a",
+        "bls_active": true,
+        "latency_passed": true,
+        "operating_budgets_evaluated": true,
+        "beacon_window": {
+          "first": 59012,
+          "stop": 59072,
+          "slots": 60,
+          "finalized_root": "0x8535c490f69f1f86dfcd4fe3836629e0b62ba37df736b7bd8383cfc5d27760fb",
+          "finalized_slot": 59072,
+          "signature_slot": 59137,
+          "signature_participants": 512,
+          "parent_hash_links": 61,
+          "missing_slots": [],
+          "missing_fraction": 0.0
+        },
+        "rejected_controls": [
+          "signature",
+          "finality_branch",
+          "genesis_domain"
+        ]
+      },
+      "offline_passed": true
+    }
+  },
+  "final_source_blob": {
+    "passed": true,
+    "slot": 59163,
+    "two_rows": true,
+    "cell_proofs": 544,
+    "target_partial_useful_cells": 228,
+    "target_completed_columns": 114,
+    "get_blobs_disabled": true,
+    "external_builder_parent_state_root_authenticated": true,
+    "finality_and_offline": true
+  }
 }
