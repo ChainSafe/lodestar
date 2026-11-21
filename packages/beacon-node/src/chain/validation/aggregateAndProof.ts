@@ -110,6 +110,13 @@ async function validateAggregateAndProof(
           beaconBlockRoot,
         });
       }
+      // [IGNORE] The attested execution payload is optimistic
+      if (fullBlock.executionStatus === ExecutionStatus.Syncing) {
+        throw new AttestationError(GossipAction.IGNORE, {
+          code: AttestationErrorCode.EXECUTION_PAYLOAD_OPTIMISTIC,
+          beaconBlockRoot,
+        });
+      }
       // [REJECT] The attested execution payload is processed and invalid
       if (fullBlock.executionStatus === ExecutionStatus.Invalid) {
         throw new AttestationError(GossipAction.REJECT, {

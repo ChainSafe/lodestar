@@ -152,6 +152,10 @@ export enum AttestationErrorCode {
    */
   EXECUTION_PAYLOAD_NOT_SEEN = "ATTESTATION_ERROR_EXECUTION_PAYLOAD_NOT_SEEN",
   /**
+   * Gloas: index-1 attestation to a block whose execution payload is not yet validated by the execution engine
+   */
+  EXECUTION_PAYLOAD_OPTIMISTIC = "ATTESTATION_ERROR_EXECUTION_PAYLOAD_OPTIMISTIC",
+  /**
    * Gloas: index-1 attestation to a block whose execution payload was invalidated
    */
   EXECUTION_PAYLOAD_INVALID = "ATTESTATION_ERROR_EXECUTION_PAYLOAD_INVALID",
@@ -195,6 +199,7 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE; attDataIndex: number}
   | {code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT}
   | {code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN; beaconBlockRoot: RootHex}
+  | {code: AttestationErrorCode.EXECUTION_PAYLOAD_OPTIMISTIC; beaconBlockRoot: RootHex}
   | {code: AttestationErrorCode.EXECUTION_PAYLOAD_INVALID; beaconBlockRoot: RootHex};
 
 export class AttestationError extends GossipActionError<AttestationErrorType> {

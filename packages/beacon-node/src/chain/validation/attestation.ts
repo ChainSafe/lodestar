@@ -339,6 +339,12 @@ async function validateAttestationNoSignatureCheck(
           beaconBlockRoot,
         });
       }
+    } else if (fullBlock.executionStatus === ExecutionStatus.Syncing) {
+      // [IGNORE] The attested execution payload is optimistic
+      throw new AttestationError(GossipAction.IGNORE, {
+        code: AttestationErrorCode.EXECUTION_PAYLOAD_OPTIMISTIC,
+        beaconBlockRoot,
+      });
     } else if (fullBlock.executionStatus === ExecutionStatus.Invalid) {
       // [REJECT] The attested execution payload is processed and invalid
       throw new AttestationError(GossipAction.REJECT, {
