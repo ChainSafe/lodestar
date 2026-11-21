@@ -1,0 +1,51 @@
+{
+  "base": "3d90162",
+  "dependency": "libp2p@3.4.0",
+  "patch_sha256": "0631b733bc0a2774aad1d83452ee3ebaf28a711eca4481deab0a4f0f71a94736",
+  "tests": {
+    "old_dependency": {
+      "failed": 3,
+      "passed": 2
+    },
+    "patched_dependency": {
+      "passed": 7,
+      "failed": 0
+    },
+    "scope": "Actual delivered registrar runtime via installed package resolution, public constructor/register and connection/identify/update events; no implementation copy.",
+    "first_fix_additional_revision_control": {
+      "passed": 6,
+      "failed": 1
+    },
+    "additional_controls": "A newer identify on an existing peer supersedes obsolete protocol cleanup; a limited connection cannot cancel an in-flight unlimited identify."
+  },
+  "typescript_compiler": "6.0.3",
+  "unmodified_source_transpile_matches_original_runtime": true,
+  "patched_runtime_source_map_and_declaration_generated": true,
+  "unrelated_dependency_versions_or_platform_entries_changed": false,
+  "full_lint_exit": 0,
+  "existing_lint_warnings": 7,
+  "typescript_workspace_build_excluding_native_exit": 0,
+  "runtime_fault_recovery_qualified": true,
+  "beacon_node_typecheck_exit": 0,
+  "actual_process": {
+    "application_source": "cf705b46b08ba8172d2e32225964ecb9bb1d2b95",
+    "dependency_patch_source": "fa03d65",
+    "startup_and_catchup_seconds": 10.649420482004643,
+    "automatic_reconnect_only": true,
+    "provider_outages": 3,
+    "provider_loss_seconds_each": 6,
+    "predeclared_recovery_seconds_max": 90,
+    "recovery_seconds": [
+      6.605391051998595,
+      0.08222667600784916,
+      2.2413512070052093
+    ],
+    "canonical_lodestar_proposal_roots": [
+      "0xc334cfc67a744f936b0cba72e94fbf73d2ca3ad7382a1f48127cee69f0676cf0",
+      "0x0d2aad45cb24b99ba65d0a4013dbf8322af53e18ccd4f9a220971172d0d5d5bd",
+      "0x00734bceb8b2ed135221eb99a97a5e8c3391cf17657e3a7c774d8915ebc1c676"
+    ],
+    "peer_scoring_and_validation_unchanged": true,
+    "operating_window": "A separate final-composition operating window is running; it is not substituted for these fault cases."
+  }
+}

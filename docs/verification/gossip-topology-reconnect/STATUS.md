@@ -1,0 +1,17 @@
+# Gossip topology reconnect correction
+
+The actual pinned libp2p 3.4.0 registrar reproduces a newer identify followed by obsolete disconnect/protocol-removal callbacks. The dependency patch uses bounded per-peer lifecycle generations across awaited work, preserves legitimate final disconnects and unrelated peers, and keeps a limited connection from cancelling an unlimited identify. Seven regressions pass against the delivered installed dependency. The original five-case campaign has three failures and two passing controls on the unmodified dependency; the completed patch also covers two additional identify cases.
+
+TypeScript 6.0.3 reproduces the unmodified published registrar before generating the patched runtime, declaration and source map. The frozen lock changes only this patch. All TypeScript workspaces build with unchanged native bindings excluded; beacon-node type check and full Biome check pass, with seven existing warnings.
+
+The real private Gloas composition retains application cf705 and adds dependency source fa03d65, patch SHA-256 0631b733bc0a2774aad1d83452ee3ebaf28a711eca4481deab0a4f0f71a94736. Its normal startup/catch-up is 10.649 seconds under 300. Three six-second provider outages automatically maintain or restore gossip and a canonical Lodestar-validator proposal in 6.605, 0.082 and 2.241 seconds, under the predeclared 90-second maximum. No debug reconnect, scoring reset or validation change is used. Exact runtime module hashes are retained in the process deployment manifest. A separate final-composition operating window is running.
+
+This source review starts at upstream unstable 3d90162. The qualified runtime's separate fork-slot correction remains explicitly identified by application cf705.
+
+## Post-review correction and full local project route (2026-11-21)
+
+Review discussion 4643423017 identified removals that a newer identify did not replace. Four additional installed-dependency regressions fail on source 66f09f9: identify omitting removed protocols, final disconnect during multi-protocol removal, partial re-identify during disconnect, and protocol removal during a pending identify. Bounded per-peer/per-topology generations protect every eligible addition before awaiting callbacks and cancel removed pending additions before cleanup. A removal is skipped only when its topology was superseded. Unregister and final disconnect clear their records. All eleven regressions pass through the normal root unit project, including filters and original limited/unlimited controls.
+
+Source e243b58 passes normal pnpm build with Zig 0.16.0 mainnet/minimal/gnosis native bindings included, full check-build, workspace types, lint, README and exports on Node 26.13.1/pnpm 11. The initial root test route could not load an unbuilt addon and ran no tests; normal native builds resolved that setup failure. Dependency versions and original platform lock entries remain unchanged. The new libp2p patch SHA-256 is 1731ebe1281485b9e2734306d1669acff6e1f2e49e0d5f9f9375122d5d7c8242.
+
+The unchanged upstream external-PR lockfile gate is reproduced on the exact PR base/head and exits 1 for the required patch-lock modification. Lockfile review remains a maintainer action. Full upstream hosted unit/spec/e2e/browser CI is not represented as run. Updated-runtime provider-loss and operating qualification is in progress; prior cf705+0631 results keep their original identity.
