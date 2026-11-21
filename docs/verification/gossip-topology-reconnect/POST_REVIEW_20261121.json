@@ -1,0 +1,90 @@
+{
+  "source": "e243b58f776950ac3d813b31cb84f21881e39f00",
+  "patch_sha256": "1731ebe1281485b9e2734306d1669acff6e1f2e49e0d5f9f9375122d5d7c8242",
+  "review": "https://github.com/ChainSafe/lodestar/pull/10693#discussion_r4643423017",
+  "original_review_regressions_failed": 4,
+  "current_regressions_passed": 11,
+  "normal_native_presets": [
+    "mainnet",
+    "minimal",
+    "gnosis"
+  ],
+  "checks": [
+    {
+      "name": "normal-build",
+      "command": [
+        "/projects/eth2030/qualification/node26/pnpm",
+        "build"
+      ],
+      "exit": 0,
+      "seconds": 7.390773936000187
+    },
+    {
+      "name": "check-build",
+      "command": [
+        "/projects/eth2030/qualification/node26/pnpm",
+        "check-build"
+      ],
+      "exit": 0,
+      "seconds": 5.211400398984551
+    },
+    {
+      "name": "types",
+      "command": [
+        "/projects/eth2030/qualification/node26/pnpm",
+        "check-types"
+      ],
+      "exit": 0,
+      "seconds": 11.48180375501397
+    },
+    {
+      "name": "root-targeted-unit",
+      "command": [
+        "/projects/eth2030/qualification/node26/pnpm",
+        "vitest",
+        "run",
+        "--project",
+        "unit",
+        "packages/beacon-node/test/unit/network/gossip/registrarReconnect.test.ts"
+      ],
+      "exit": 0,
+      "seconds": 1.4729091280023567
+    },
+    {
+      "name": "lint",
+      "command": [
+        "/projects/eth2030/qualification/node26/pnpm",
+        "lint"
+      ],
+      "exit": 0,
+      "seconds": 1.451294152007904
+    },
+    {
+      "name": "readme",
+      "command": [
+        "/projects/eth2030/qualification/node26/pnpm",
+        "check-readme"
+      ],
+      "exit": 0,
+      "seconds": 29.389990886003943
+    },
+    {
+      "name": "exports",
+      "command": [
+        "node",
+        "scripts/assert_exports.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.023996594973141328
+    }
+  ],
+  "external_lock_review": {
+    "source": "66f09f98c6036afa209bb56d7e26d8f36796ce05",
+    "base": "3d90162721dfcd809c48538e8abf77d2db4a6be0",
+    "policy_script_sha256": "773c819d9504eb1f34dae7f68694e9d855c47ab3611315c69229197a1d8d5ece",
+    "actual_exit": 1,
+    "policy_unchanged": true,
+    "scope": "Unmodified upstream external-PR lockfile guard, reproduced in an owned isolated checkout with the exact PR base/head. Review of the required patch lockfile remains a maintainer action."
+  },
+  "upstream_full_hosted_ci_run": false
+}

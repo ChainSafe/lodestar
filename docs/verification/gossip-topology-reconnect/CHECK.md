@@ -7,3 +7,11 @@
 - [x] Run targeted tests, formatting and applicable type checks.
 - [x] Build the compatible frozen Gloas composition and qualify automatic peer recovery in actual processes.
 - [ ] Publish a separate unstable-targeted PR with the exact source and qualification boundary.
+
+## Post-review closure (2026-11-21)
+
+- [x] Reproduce required-removal/filter loss and stale pending-identify addition.
+- [x] Pass eleven topology lifecycle controls through the normal root unit project.
+- [x] Build all three native presets and complete normal build/type/lint/README/export checks.
+- [x] Retain the unchanged external lockfile review gate.
+- [ ] Qualify automatic reconnect and operating windows on the updated actual network.
