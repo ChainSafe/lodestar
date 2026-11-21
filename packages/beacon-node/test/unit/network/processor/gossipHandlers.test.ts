@@ -5,7 +5,7 @@ import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
-import {RootHex, SignedBeaconBlock, gloas, ssz, sszTypesFor} from "@lodestar/types";
+import {IndexedAttestation, RootHex, SignedBeaconBlock, gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInputNoData, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
@@ -23,11 +23,15 @@ import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../src/chain
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {validateGossipExecutionPayloadEnvelope} from "../../../../src/chain/validation/executionPayloadEnvelope.js";
-import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
+import {
+  AttestationValidationResult,
+  validateGossipAttestationsSameAttData,
+  validateGossipBlock,
+} from "../../../../src/chain/validation/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NetworkEventBus} from "../../../../src/network/events.js";
-import {GossipType, SequentialGossipHandler} from "../../../../src/network/gossip/interface.js";
+import {BatchGossipHandler, GossipType, SequentialGossipHandler} from "../../../../src/network/gossip/interface.js";
 import {PeerAction} from "../../../../src/network/peers/index.js";
 import {AggregatorTracker} from "../../../../src/network/processor/aggregatorTracker.js";
 import {getGossipHandlers} from "../../../../src/network/processor/gossipHandlers.js";
@@ -39,6 +43,7 @@ vi.mock("../../../../src/chain/validation/index.js", async (importActual) => {
   const mod = await importActual<typeof import("../../../../src/chain/validation/index.js")>();
   return {
     ...mod,
+    validateGossipAttestationsSameAttData: vi.fn(),
     validateGossipBlock: vi.fn(),
   };
 });
@@ -890,3 +895,99 @@ function getExecutionBlockError(
     errorMessage: "invalid payload",
   });
 }
+
+describe("beacon_attestation batch handler", () => {
+  const rootA = "0x" + "aa".repeat(32);
+  const rootB = "0x" + "bb".repeat(32);
+
+  function validResult(
+    attDataRootHex: RootHex,
+    validatorIndex: number
+  ): {err: null; result: AttestationValidationResult} {
+    const data = ssz.phase0.AttestationData.defaultValue();
+    data.slot = attDataRootHex === rootA ? 1 : 2;
+    return {
+      err: null,
+      result: {
+        attestation: ssz.electra.SingleAttestation.defaultValue(),
+        indexedAttestation: {attestingIndices: [validatorIndex], data, signature: new Uint8Array(96)},
+        subnet: 0,
+        attDataRootHex,
+        committeeIndex: 0,
+        validatorCommitteeIndex: 0,
+        committeeSize: 1,
+      },
+    };
+  }
+
+  async function runBatch(
+    onAttestation: (attestation: IndexedAttestation, attDataRoot: string) => void,
+    opts: {dontSendGossipAttestationsToForkchoice?: boolean} = {}
+  ): Promise<{results: ReturnType<typeof validResult>[]}> {
+    const results = [validResult(rootA, 1), validResult(rootA, 2), validResult(rootB, 3), validResult(rootA, 4)];
+    vi.mocked(validateGossipAttestationsSameAttData).mockResolvedValue({
+      results: [results[0], {err: new Error("invalid")}, results[1], results[2], results[3]],
+      batchableBls: true,
+    });
+    const chain = {
+      emitter: new ChainEventEmitter(),
+      forkChoice: {onAttestation: vi.fn(onAttestation)},
+      proposerTracker: {shouldCollect: () => false},
+    } as unknown as IBeaconChain;
+    const handlers = getGossipHandlers(
+      {
+        aggregatorTracker: {shouldAggregate: () => false} as unknown as AggregatorTracker,
+        chain,
+        config: defaultConfig as BeaconConfig,
+        core: {} as INetworkCore,
+        events: new NetworkEventBus(),
+        logger: testLogger(),
+        metrics: null,
+      },
+      opts
+    );
+    const handler = handlers[GossipType.beacon_attestation] as BatchGossipHandler<GossipType.beacon_attestation>;
+    const param = {
+      gossipData: {serializedData: new Uint8Array(0), msgSlot: 1, indexed: "key"},
+      peerIdStr: "16Uiu2HAmTestGossipPeer",
+      seenTimestampSec: 0,
+      topic: {boundary: {fork: ForkName.electra, epoch: 0}, type: GossipType.beacon_attestation, subnet: 0},
+    } as Parameters<typeof handler>[0][number];
+    await handler([param, param, param, param, param]);
+    // The import is deferred via callInNextEventLoop
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return {results};
+  }
+
+  afterEach(() => {
+    vi.mocked(validateGossipAttestationsSameAttData).mockReset();
+  });
+
+  it("imports the valid votes of each attestation data root in one fork choice call", async () => {
+    const calls: {indices: number[]; root: string}[] = [];
+    const {results} = await runBatch((attestation, root) => {
+      calls.push({indices: [...attestation.attestingIndices], root});
+    });
+    expect(calls).toEqual([
+      {indices: [1, 2, 4], root: rootA},
+      {indices: [3], root: rootB},
+    ]);
+    // The validation results keep their own index lists
+    expect(results.map((r) => r.result.indexedAttestation.attestingIndices)).toEqual([[1], [2], [3], [4]]);
+  });
+
+  it("still imports the other roots when fork choice rejects one", async () => {
+    const roots: string[] = [];
+    await runBatch((_attestation, root) => {
+      roots.push(root);
+      if (root === rootA) throw Error("unknown head block");
+    });
+    expect(roots).toEqual([rootA, rootB]);
+  });
+
+  it("imports nothing when gossip attestations are not sent to fork choice", async () => {
+    const onAttestation = vi.fn();
+    await runBatch(onAttestation, {dontSendGossipAttestationsToForkchoice: true});
+    expect(onAttestation).not.toHaveBeenCalled();
+  });
+});

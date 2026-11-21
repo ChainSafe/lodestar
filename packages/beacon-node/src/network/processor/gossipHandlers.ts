@@ -14,6 +14,7 @@ import {
 } from "@lodestar/params";
 import {computeTimeAtSlot, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
+  IndexedAttestation,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -1486,6 +1487,8 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
 
       // Handler - deferred to next event loop so the validation result propagates first.
       callInNextEventLoop(() => {
+        // Fork choice validates a vote by its attestation data alone, so votes sharing a data root are imported in one call.
+        const forkChoiceVotes = new Map<RootHex, IndexedAttestation>();
         for (const [i, validationResult] of validationResults.entries()) {
           if (validationResult.err) continue;
           const {
@@ -1548,10 +1551,14 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
 
             // Separate boundary: a pool insertion error above must not skip the fork-choice vote
             if (!options.dontSendGossipAttestationsToForkchoice) {
-              try {
-                chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
-              } catch (e) {
-                logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
+              const votes = forkChoiceVotes.get(attDataRootHex);
+              if (votes === undefined) {
+                forkChoiceVotes.set(attDataRootHex, {
+                  ...indexedAttestation,
+                  attestingIndices: [...indexedAttestation.attestingIndices],
+                });
+              } else {
+                votes.attestingIndices.push(...indexedAttestation.attestingIndices);
               }
             }
 
@@ -1572,6 +1579,18 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
             }
           } catch (e) {
             logger.debug("Error handling gossip attestation", {slot: indexedAttestation.data.slot, subnet}, e as Error);
+          }
+        }
+
+        for (const [attDataRootHex, votes] of forkChoiceVotes) {
+          try {
+            chain.forkChoice.onAttestation(votes, attDataRootHex);
+          } catch (e) {
+            logger.debug(
+              "Error adding gossip unaggregated attestations to forkchoice",
+              {slot: votes.data.slot, attDataRoot: attDataRootHex, count: votes.attestingIndices.length},
+              e as Error
+            );
           }
         }
       });
