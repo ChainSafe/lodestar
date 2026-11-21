@@ -14,6 +14,7 @@ pub const blsVerifier = @import("./bls_verifier.zig");
 pub const pubkeys = @import("./pubkeys.zig");
 pub const committeePubkeys = @import("./committee_pubkeys.zig");
 pub const executionProofVerifier = @import("./execution_proof_verifier.zig");
+pub const leanvm = @import("./leanvm.zig");
 
 const options = @import("bls_options");
 

@@ -30,6 +30,7 @@
 - :gear: [NodeJS](https://nodejs.org/) (LTS)
 - :toolbox: [pnpm](https://pnpm.io/)
 - :zap: [Zig](https://ziglang.org/download/) 0.16.0
+- :crab: [rustup](https://rustup.rs/), which installs the Rust toolchain that builds [leanVM](https://github.com/leanEthereum/leanVM)
 
 ###### Developer Quickstart:
 
