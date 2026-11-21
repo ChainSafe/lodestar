@@ -17,33 +17,6 @@ import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
 /**
- * Relative increment over the current highest bid required to forward a bid, in basis points.
- * With 3%, laddering from 1 gwei to 1 ETH takes ~256 bids given the floor and cap below, see
- * https://github.com/ethereum/consensus-specs/pull/4792#issuecomment-3714553549.
- */
-const BID_INCREMENT_BPS = 300;
-/**
- * Minimum absolute increment (0.0001 ETH). Covers low bid values where the relative increment
- * is tiny and provides weak spam protection.
- */
-const BID_INCREMENT_FLOOR_GWEI = 100_000;
-/**
- * Maximum absolute increment (0.01 ETH). Bounds the barrier for legitimate competition on
- * high value blocks where the relative increment would suppress closely competing bids.
- */
-const BID_INCREMENT_CAP_GWEI = 10_000_000;
-
-/**
- * Return the minimum value a new bid must have to be forwarded given the current highest bid.
- * Division before multiplication to stay within safe integer range for max gwei values.
- */
-function getMinBidValue(currentHighestBid: number): number {
-  const relativeIncrement = Math.floor(currentHighestBid / 10_000) * BID_INCREMENT_BPS;
-  const increment = Math.min(Math.max(BID_INCREMENT_FLOOR_GWEI, relativeIncrement), BID_INCREMENT_CAP_GWEI);
-  return currentHighestBid + increment;
-}
-
-/**
  * Check whether a bid builds on one of the paths compatible with the local head branch.
  *
  * Building directly on the parent is allowed for proposer-boost reorgs, including at epoch
@@ -181,11 +154,8 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] this bid is the highest value bid seen for the tuple
   // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
-  // As a DoS prevention measure, the bid must also exceed the current highest bid by a minimum
-  // increment, see https://github.com/ethereum/consensus-specs/pull/4831. This prevents spam
-  // from builders submitting numerous bids with minimal value increments.
   const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, bidParentBlockHash, bidParentBlockRoot);
-  if (bestBid !== null && bid.value < getMinBidValue(bestBid.signedBid.message.value)) {
+  if (bestBid !== null && bid.value <= bestBid.signedBid.message.value) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
       bidValue: bid.value,
