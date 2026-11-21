@@ -102,8 +102,12 @@ pub fn TestCaseUtils(comptime fork: ForkSeq) type {
         }
 
         pub fn loadPreState(allocator: Allocator, pool: *Node.Pool, dir: std.Io.Dir) !TestCachedBeaconState {
+            return loadCachedState(allocator, pool, dir, "pre.ssz_snappy");
+        }
+
+        pub fn loadCachedState(allocator: Allocator, pool: *Node.Pool, dir: std.Io.Dir, file_name: []const u8) !TestCachedBeaconState {
             var pre_state = ForkTypes.BeaconState.default_value;
-            try loadSszSnappyValue(ForkTypes.BeaconState, allocator, dir, "pre.ssz_snappy", &pre_state);
+            try loadSszSnappyValue(ForkTypes.BeaconState, allocator, dir, file_name, &pre_state);
             defer ForkTypes.BeaconState.deinit(allocator, &pre_state);
 
             const pre_state_all_forks = try allocator.create(AnyBeaconState);
