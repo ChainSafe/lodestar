@@ -55,6 +55,15 @@ const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
 const MAX_PENDING_BLOCKS = 100;
 /**
+ * A failed download is retried after this delay, doubling per failure up to one slot.
+ */
+const DOWNLOAD_RETRY_BASE_MS = 1_000;
+/**
+ * Requests per peer per window, half the BeaconBlocksByRoot quota peers enforce, they disconnect a peer that exceeds it.
+ */
+const MAX_REQUESTS_PER_PEER = 64;
+const REQUESTS_PER_PEER_WINDOW_MS = 10_000;
+/**
  * A pending payload without slot can only stay at most 2 epochs.
  */
 const PRUNE_UNRESOLVED_SLOT_EPOCHS = 2;
@@ -127,6 +136,8 @@ export class BlockInputSync {
   private subscribedToNetworkEvents = false;
   private peerBalancer: UnknownBlockPeerBalancer;
   private rateLimitBackoffTimeout: NodeJS.Timeout | undefined;
+  private downloadRetryTimeout: NodeJS.Timeout | undefined;
+  private downloadRetryAtMs: number | undefined;
   /**
    * Search unknown payload starting at PAYLOAD_DUE_BPS.
    */
@@ -198,6 +209,7 @@ export class BlockInputSync {
   unsubscribeFromNetwork(): void {
     this.logger.verbose("BlockInputSync disabled.");
     this.clearRateLimitBackoffTimer();
+    this.clearDownloadRetryTimer();
     this.chain.clock.off(ClockEvent.slot, this.startPayloadPollAtSlot);
     this.payloadPollAbortController?.abort();
     this.payloadPollAbortController = undefined;
@@ -833,11 +845,31 @@ export class BlockInputSync {
       if (!hasConnectedPeers) {
         this.logger.debug("No connected peers, skipping unknown block download.");
       } else {
+        // Blocks and roots a pending item waits on are downloaded first, any gossip message with an unknown root adds
+        // another root, and they all share the per-peer request budget
+        const awaitedRoots = new Set<RootHex>(this.pendingPayloads.keys());
+        for (const pendingBlock of this.pendingBlocks.values()) {
+          if (isPendingBlockInput(pendingBlock)) {
+            awaitedRoots.add(pendingBlock.blockInput.parentRootHex);
+          }
+        }
+        const isAwaited = (block: BlockInputSyncCacheItem): boolean =>
+          isPendingBlockInput(block) || awaitedRoots.has(block.rootHex);
+
+        const now = Date.now();
+        let nextRetryAtMs: number | undefined;
         // Most of the time there is exactly 1 unknown block
-        for (const block of unknowns) {
+        for (const block of [...unknowns.filter(isAwaited), ...unknowns.filter((block) => !isAwaited(block))]) {
+          if (block.retryAtMs !== undefined && block.retryAtMs > now) {
+            nextRetryAtMs = Math.min(nextRetryAtMs ?? block.retryAtMs, block.retryAtMs);
+            continue;
+          }
           this.downloadBlock(block).catch((e) => {
             this.logger.debug("Unexpected error - downloadBlock", {root: getBlockInputSyncCacheItemRootHex(block)}, e);
           });
+        }
+        if (nextRetryAtMs !== undefined) {
+          this.scheduleDownloadRetry(nextRetryAtMs);
         }
       }
     } else if (ancestors.length > 0) {
@@ -915,6 +947,31 @@ export class BlockInputSync {
       clearTimeout(this.rateLimitBackoffTimeout);
       this.rateLimitBackoffTimeout = undefined;
     }
+  }
+
+  private scheduleDownloadRetry(retryAtMs: number): void {
+    if (this.downloadRetryAtMs !== undefined && this.downloadRetryAtMs <= retryAtMs) {
+      return;
+    }
+
+    this.clearDownloadRetryTimer();
+    this.downloadRetryAtMs = retryAtMs;
+    this.downloadRetryTimeout = setTimeout(
+      () => {
+        this.downloadRetryTimeout = undefined;
+        this.downloadRetryAtMs = undefined;
+        this.triggerUnknownBlockSearch();
+      },
+      Math.max(0, retryAtMs - Date.now())
+    );
+  }
+
+  private clearDownloadRetryTimer(): void {
+    if (this.downloadRetryTimeout !== undefined) {
+      clearTimeout(this.downloadRetryTimeout);
+      this.downloadRetryTimeout = undefined;
+    }
+    this.downloadRetryAtMs = undefined;
   }
 
   /**
@@ -1118,6 +1175,7 @@ export class BlockInputSync {
         const pendingBlock = this.pendingBlocks.get(rootHex);
         if (pendingBlock) {
           pendingBlock.status = PendingBlockInputStatus.pending;
+          pendingBlock.retryAtMs = res.err.retryAt;
         }
         this.logger.debug("Deferring unknown block download due to peer rate limit", logCtx, res.err);
         if (!this.scheduleRateLimitBackoffRetry() || res.err.retryAt <= Date.now()) {
@@ -1133,6 +1191,12 @@ export class BlockInputSync {
       const pendingBlock = this.pendingBlocks.get(rootHex);
       if (pendingBlock && pendingBlock.status === PendingBlockInputStatus.fetching) {
         pendingBlock.status = PendingBlockInputStatus.pending;
+        // Not retried on every search, any gossip message with an unknown root triggers one
+        pendingBlock.failedDownloads = (pendingBlock.failedDownloads ?? 0) + 1;
+        pendingBlock.retryAtMs =
+          Date.now() +
+          Math.min(DOWNLOAD_RETRY_BASE_MS * 2 ** (pendingBlock.failedDownloads - 1), this.config.SLOT_DURATION_MS);
+        this.scheduleDownloadRetry(pendingBlock.retryAtMs);
       }
     }
   }
@@ -2070,11 +2134,13 @@ export class UnknownBlockPeerBalancer {
   readonly peersMeta: Map<PeerIdStr, PeerSyncMeta>;
   readonly activeRequests: Map<PeerIdStr, number>;
   readonly rateLimitedUntilByPeer: Map<PeerIdStr, number>;
+  readonly requestTimesByPeer: Map<PeerIdStr, number[]>;
 
   constructor() {
     this.peersMeta = new Map();
     this.activeRequests = new Map();
     this.rateLimitedUntilByPeer = new Map();
+    this.requestTimesByPeer = new Map();
   }
 
   /** Trigger on each peer re-status */
@@ -2090,6 +2156,7 @@ export class UnknownBlockPeerBalancer {
     this.peersMeta.delete(peerId);
     this.activeRequests.delete(peerId);
     this.rateLimitedUntilByPeer.delete(peerId);
+    this.requestTimesByPeer.delete(peerId);
   }
 
   /** Reset all tracked peer state, e.g. when BlockInputSync unsubscribes from the network. */
@@ -2097,6 +2164,7 @@ export class UnknownBlockPeerBalancer {
     this.peersMeta.clear();
     this.activeRequests.clear();
     this.rateLimitedUntilByPeer.clear();
+    this.requestTimesByPeer.clear();
   }
 
   onRateLimited(peerId: PeerIdStr, rateLimitedUntilMs: number): void {
@@ -2163,7 +2231,7 @@ export class UnknownBlockPeerBalancer {
     );
 
     const bestPeerId = sortedEligiblePeers[0];
-    this.onRequest(bestPeerId);
+    this.onRequest(bestPeerId, now);
     return this.peersMeta.get(bestPeerId) ?? null;
   }
 
@@ -2171,8 +2239,18 @@ export class UnknownBlockPeerBalancer {
    * Consumers don't need to call this method directly, it is called internally by bestPeer*() methods
    * make this public for testing
    */
-  onRequest(peerId: PeerIdStr): void {
+  onRequest(peerId: PeerIdStr, now = Date.now()): void {
     this.activeRequests.set(peerId, (this.activeRequests.get(peerId) ?? 0) + 1);
+
+    const requestTimes = (this.requestTimesByPeer.get(peerId) ?? []).filter(
+      (time) => now - time < REQUESTS_PER_PEER_WINDOW_MS
+    );
+    requestTimes.push(now);
+    this.requestTimesByPeer.set(peerId, requestTimes);
+    if (requestTimes.length >= MAX_REQUESTS_PER_PEER) {
+      const budgetUntilMs = requestTimes[0] + REQUESTS_PER_PEER_WINDOW_MS;
+      this.onRateLimited(peerId, Math.max(this.rateLimitedUntilByPeer.get(peerId) ?? 0, budgetUntilMs));
+    }
   }
 
   /**
