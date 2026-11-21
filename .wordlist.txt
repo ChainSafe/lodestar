@@ -73,6 +73,7 @@ LPoS
 LTS
 LVM
 Lerna
+LevelDB
 MEV
 MacOS
 Metamask
@@ -193,6 +194,7 @@ keypair
 keyrings
 keystore
 keystores
+leveldb
 libp
 lifecycle
 lightclient

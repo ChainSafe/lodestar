@@ -42,6 +42,10 @@
     "./execution-proof-verifier": {
       "types": "./src/execution-proof-verifier.d.ts",
       "import": "./src/execution-proof-verifier.js"
+    },
+    "./leveldb": {
+      "types": "./src/leveldb.d.ts",
+      "import": "./src/leveldb.js"
     }
   },
   "scripts": {
@@ -49,6 +53,7 @@
     "prepare-minimal": "zapi build --variant minimal --optimize ReleaseSafe --zig-cwd .. --prefix bindings/zig-out",
     "prepare-gnosis": "zapi build --variant gnosis --optimize ReleaseSafe --zig-cwd .. --prefix bindings/zig-out",
     "lint": "biome check",
+    "check-types": "tsc -p tsconfig.leveldb.json",
     "test": "NODE_OPTIONS='--expose-gc' vitest run",
     "benchmark": "NODE_OPTIONS='--import tsx' benchmark 'perf/**/*.test.ts' --isolate --config .benchrc.yaml --defaultBranch unstable",
     "build": "pnpm run prepare-mainnet && pnpm run prepare-minimal && pnpm run prepare-gnosis",
