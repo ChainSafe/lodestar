@@ -79,10 +79,10 @@ describe("gossip SSZ rejection", () => {
           clientVersion: "test",
           seenTimestampSec: 0,
           msgSlot: null,
+          reportPeer,
         })
       ).toBe(TopicValidatorResult.Reject);
       expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
-        propagationSource,
         PeerAction.LowToleranceError,
         GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE
       );

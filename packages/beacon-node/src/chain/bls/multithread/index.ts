@@ -31,6 +31,7 @@ import {chunkifyMaxChunkSize} from "./utils.js";
 const workerDir = process.env.NODE_ENV === "test" ? "../../../../lib/chain/bls/multithread" : "./";
 
 export type BlsMultiThreadWorkerPoolModules = {
+  onCapacity?: () => void;
   logger: Logger;
   metrics: Metrics | null;
 };
@@ -128,10 +129,12 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private blsVerifyAllMultiThread: boolean;
   private closePromise: Promise<void> | undefined;
   private workersBusy = 0;
+  private readonly onCapacity: (() => void) | undefined;
 
   constructor(options: BlsMultiThreadWorkerPoolOptions, modules: BlsMultiThreadWorkerPoolModules) {
     const {logger, metrics} = modules;
     this.logger = logger;
+    this.onCapacity = modules.onCapacity;
     this.metrics = metrics;
     this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
 
@@ -379,6 +382,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     }
 
     // Prepare work package
+    const wasReady = this.canAcceptWork();
     const jobsInput = this.prepareWork();
     if (jobsInput.length === 0) {
       return;
@@ -396,6 +400,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       abort: () => completion.reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED})),
     };
     this.workersBusy++;
+    if (!wasReady && this.canAcceptWork()) this.onCapacity?.();
     const jobsStarted: JobQueueItem[] = [];
     let completedJobsCount = 0;
 
@@ -445,7 +450,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const startedSigSets = startedSetsDefault + startedSetsSameMessage;
       if (workReqs.length === 0) {
         worker.status = {code: WorkerStatusCode.idle, workerApi};
+        const wasReady = this.canAcceptWork();
         this.workersBusy--;
+        if (!wasReady && this.canAcceptWork()) this.onCapacity?.();
         callInNextEventLoop(() => void this.runJob());
         return;
       }
@@ -520,7 +527,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     }
 
     worker.status = {code: WorkerStatusCode.idle, workerApi};
+    const wasReadyAtCompletion = this.canAcceptWork();
     this.workersBusy--;
+    if (!wasReadyAtCompletion && this.canAcceptWork()) this.onCapacity?.();
 
     // Potentially run a new job
     callInNextEventLoop(() => void this.runJob());
