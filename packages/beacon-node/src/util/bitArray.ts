@@ -92,10 +92,15 @@ export function sliceBitArray(bitArray: BitArray, start: number, bitLen: number)
   return new BitArray(sliced, bitLen);
 }
 
-const TRUE_BITS_BY_BYTE = new Uint8Array(256);
-for (let byte = 1; byte < 256; byte++) {
-  TRUE_BITS_BY_BYTE[byte] = TRUE_BITS_BY_BYTE[byte >> 1] + (byte & 1);
+function buildTrueBitsByByte(): Uint8Array {
+  const trueBitsByByte = new Uint8Array(256);
+  for (let byte = 1; byte < 256; byte++) {
+    trueBitsByByte[byte] = trueBitsByByte[byte >> 1] + (byte & 1);
+  }
+  return trueBitsByByte;
 }
+
+const TRUE_BITS_BY_BYTE = buildTrueBitsByByte();
 
 /** Bits past `bitLen` in the last byte must be zero */
 export function countTrueBits(bitArray: BitArray): number {
