@@ -29,6 +29,8 @@ type RevealedPayload = {
 type MutableBidLedgerRecord = SubmittedBid & {
   /** Derived from the signed bid when it is recorded */
   identity: BidIdentity;
+  /** Value of the signed bid when it is recorded, later changes to the signed bid do not affect the liability */
+  valueGwei: number;
   wonBlockRoots: Set<RootHex>;
   paymentSettled: boolean;
 };
@@ -103,10 +105,11 @@ export class BidLedger {
 
   recordBid({signedBid, signedBidRoot}: SubmittedBid): BidLedgerRecord {
     const bid = signedBid.message;
-    if (!Number.isSafeInteger(bid.value) || bid.value < 0) {
+    const valueGwei = bid.value;
+    if (!Number.isSafeInteger(valueGwei) || valueGwei < 0) {
       throw new BidLedgerError(
-        {code: BidLedgerErrorCode.INVALID_BID_VALUE, valueGwei: bid.value},
-        `Invalid bid value valueGwei=${bid.value}`
+        {code: BidLedgerErrorCode.INVALID_BID_VALUE, valueGwei},
+        `Invalid bid value valueGwei=${valueGwei}`
       );
     }
 
@@ -124,7 +127,14 @@ export class BidLedger {
     }
 
     const key = tupleKey(identity.parentBlockHash, identity.parentBlockRoot);
-    const record = {signedBid, signedBidRoot, identity, wonBlockRoots: new Set<RootHex>(), paymentSettled: false};
+    const record = {
+      signedBid,
+      signedBidRoot,
+      identity,
+      valueGwei,
+      wonBlockRoots: new Set<RootHex>(),
+      paymentSettled: false,
+    };
     bidsForSlot.set(key, record);
     return toRecord(record);
   }
@@ -228,7 +238,7 @@ export class BidLedger {
           continue;
         }
 
-        total += record.signedBid.message.value;
+        total += record.valueGwei;
         if (!Number.isSafeInteger(total)) {
           throw new BidLedgerError(
             {code: BidLedgerErrorCode.UNSETTLED_VALUE_OVERFLOW, currentEpoch},

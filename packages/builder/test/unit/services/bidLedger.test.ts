@@ -192,6 +192,19 @@ describe("BidLedger", () => {
     expect(error.type).toEqual({code: BidLedgerErrorCode.UNSETTLED_VALUE_OVERFLOW, currentEpoch: 0});
   });
 
+  it("keeps the recorded value if the signed bid is changed afterwards", () => {
+    const ledger = new BidLedger();
+    const bid = submittedBid({valueGwei: 100});
+    ledger.recordBid(bid);
+    ledger.recordWin(bid, root(6));
+
+    bid.signedBid.message.value = 0;
+    expect(ledger.getUnsettledValueGwei(0)).toBe(100);
+
+    bid.signedBid.message.value = Number.MAX_SAFE_INTEGER + 1;
+    expect(ledger.getUnsettledValueGwei(0)).toBe(100);
+  });
+
   it("returns snapshots that cannot mutate ledger state", () => {
     const ledger = new BidLedger();
     const bid = submittedBid();
