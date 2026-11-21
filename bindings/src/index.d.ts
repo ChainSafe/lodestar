@@ -357,6 +357,7 @@ export declare class BeaconStateView {
   getEffectiveBalanceIncrementsZeroInactive(): Uint16Array;
   getBalance(index: number): number;
   getValidator(index: number): Validator;
+  getValidatorIndex(pubkey: Uint8Array): number | null;
   getAllValidators(): Validator[];
   getBuildersLength(): number;
   getAllBalances(): number[];

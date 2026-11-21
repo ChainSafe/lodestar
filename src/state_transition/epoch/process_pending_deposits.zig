@@ -44,6 +44,7 @@ pub fn processPendingDeposits(
     var pending_deposits = try state.pendingDeposits();
     var pending_deposits_it = pending_deposits.iteratorReadonly(0);
     const pending_deposits_len = try pending_deposits.length();
+    try epoch_cache.ensureUnfinalizedMapUnusedCapacity(@min(pending_deposits_len, preset.MAX_PENDING_DEPOSITS_PER_EPOCH));
 
     for (0..pending_deposits_len) |_| {
         const deposit = try pending_deposits_it.nextValue();
@@ -75,7 +76,7 @@ pub fn processPendingDeposits(
         // Read validator state
         var is_validator_exited = false;
         var is_validator_withdrawn = false;
-        const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
+        const validator_index = try epoch_cache.getValidatorIndex(io, state, deposit.pubkey);
 
         if (try isValidatorKnown(fork, state, validator_index)) {
             var validators = try state.validators();
@@ -132,7 +133,7 @@ fn applyPendingDeposit(
     deposit: PendingDeposit,
     cache: *EpochTransitionCache,
 ) !void {
-    const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
+    const validator_index = try epoch_cache.getValidatorIndex(io, state, deposit.pubkey);
     const pubkey = &deposit.pubkey;
 
     const withdrawal_credentials = &deposit.withdrawal_credentials;
@@ -146,7 +147,7 @@ fn applyPendingDeposit(
         }
         // Verify the deposit signature (proof of possession) which is not checked by the deposit contract
         if (validateDepositSignature(config, pubkey, withdrawal_credentials, amount, signature)) {
-            try addValidatorToRegistry(fork, io, epoch_cache, state, pubkey, withdrawal_credentials, amount);
+            try addValidatorToRegistry(fork, epoch_cache, state, pubkey, withdrawal_credentials, amount);
             cache.appendCompoundingValidatorFlag(hasCompoundingWithdrawalCredential(withdrawal_credentials));
             // set balance, so that the next deposit of same pubkey will increase the balance correctly
             // this is to fix the double deposit issue found in mekong

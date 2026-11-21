@@ -92,17 +92,27 @@ export class OpPool {
       db.blsToExecutionChange.values(),
     ]);
 
+    const getStatePubkey = (index: number): Uint8Array => state.getValidator(index).pubkey;
     // Persisted operations have no verification context. Rebuild it before they can enter the pool.
     // The startup anchor may precede a fork whose slashings are already persisted.
     for (const {key, value: attesterSlashing} of attesterSlashings) {
       try {
-        assertValidAttesterSlashing(this.config, currentSlot, state.validatorCount, attesterSlashing, false);
+        assertValidAttesterSlashing(
+          this.config,
+          currentSlot,
+          state.validatorCount,
+          attesterSlashing,
+          false,
+          getStatePubkey
+        );
       } catch {
         continue;
       }
       const verifiedDomains = getAttesterSlashingSignatureDomains(this.config, currentSlot, attesterSlashing);
       if (
-        !(await bls.verifySignatureSets(getAttesterSlashingSignatureSets(this.config, currentSlot, attesterSlashing)))
+        !(await bls.verifySignatureSets(
+          getAttesterSlashingSignatureSets(this.config, currentSlot, attesterSlashing, getStatePubkey)
+        ))
       ) {
         continue;
       }

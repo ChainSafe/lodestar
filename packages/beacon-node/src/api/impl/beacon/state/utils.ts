@@ -1,6 +1,5 @@
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
-import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {IBeaconStateView, IBeaconStateViewGloas} from "@lodestar/state-transition";
 import {
@@ -171,13 +170,12 @@ export function getStateBuilderIndex(
 export function filterStateValidatorsByStatus(
   statuses: string[],
   state: IBeaconStateView,
-  pubkeyCache: PubkeyCache,
   currentEpoch: Epoch
 ): routes.beacon.ValidatorResponse[] {
   const responses: routes.beacon.ValidatorResponse[] = [];
   const validators = state.getValidatorsByStatus(new Set(statuses), currentEpoch);
   for (const validator of validators) {
-    const resp = getStateValidatorIndex(validator.pubkey, state, pubkeyCache);
+    const resp = getStateValidatorIndex(validator.pubkey, state);
     if (resp.valid) {
       responses.push(
         toValidatorResponse(resp.validatorIndex, validator, state.getBalance(resp.validatorIndex), currentEpoch)
@@ -193,8 +191,7 @@ type StateValidatorIndexResponse =
 
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | BLSPubkey,
-  state: IBeaconStateView,
-  pubkeyCache: PubkeyCache
+  state: IBeaconStateView
 ): StateValidatorIndexResponse {
   if (typeof id === "string") {
     // mutate `id` and fallthrough to below
@@ -222,12 +219,9 @@ export function getStateValidatorIndex(
   }
 
   // typeof id === Uint8Array
-  const validatorIndex = pubkeyCache.getIndex(id);
+  const validatorIndex = state.getValidatorIndex(id);
   if (validatorIndex === null) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
-  }
-  if (validatorIndex >= state.validatorCount) {
-    return {valid: false, code: 404, reason: "Validator pubkey from future state"};
   }
   return {valid: true, validatorIndex};
 }

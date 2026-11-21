@@ -432,6 +432,12 @@ describe("BeaconStateView", () => {
       expect(validator.withdrawableEpoch).toBe(expected.validator0.withdrawableEpoch);
     });
 
+    it("getValidatorIndex should resolve a pubkey in the state", () => {
+      expect(state.getValidatorIndex(expected.validator0.pubkey)).toBe(0);
+      expect(state.getValidatorIndex(new Uint8Array(48).fill(0xb0))).toBeNull();
+      expect(() => state.getValidatorIndex(new Uint8Array(47))).toThrow("InvalidPubkeyLength");
+    });
+
     it("getValidatorStatus should return a valid status string", () => {
       const status = state.getValidatorStatus(0);
       const validStatuses = [

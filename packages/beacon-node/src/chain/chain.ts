@@ -37,6 +37,7 @@ import {
   isStatePostAltair,
   isStatePostElectra,
   isStatePostGloas,
+  promoteFinalizedPubkeys,
   proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
 import {
@@ -236,6 +237,7 @@ export class BeaconChain implements IBeaconChain {
 
   // Global state caches
   readonly pubkeyCache: PubkeyCache;
+  private pubkeyCacheFinalizedEpoch: Epoch;
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
@@ -402,6 +404,7 @@ export class BeaconChain implements IBeaconChain {
 
     // Global cache of validators pubkey/index mapping
     this.pubkeyCache = pubkeyCache;
+    this.pubkeyCacheFinalizedEpoch = anchorState.finalizedCheckpoint.epoch;
 
     const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
     const blockStateCache = new FIFOBlockStateCache(this.opts, {metrics});
@@ -663,6 +666,15 @@ export class BeaconChain implements IBeaconChain {
       throw Error(`headState does not exist for head root=${head.blockRoot} slot=${head.slot}`);
     }
     return headState;
+  }
+
+  /** The state must come from an accepted block or processing its empty slots. */
+  promoteFinalizedPubkeys(state: IBeaconStateView): void {
+    const finalizedEpoch = state.finalizedCheckpoint.epoch;
+    if (finalizedEpoch > this.pubkeyCacheFinalizedEpoch) {
+      promoteFinalizedPubkeys(this.pubkeyCache, state);
+      this.pubkeyCacheFinalizedEpoch = finalizedEpoch;
+    }
   }
 
   async getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<IBeaconStateView> {
@@ -1974,6 +1986,8 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private onCheckpoint(this: BeaconChain, _checkpoint: phase0.Checkpoint, state: IBeaconStateView): void {
+    // Later skipped epochs can activate these keys, so promotion must not be deferred.
+    this.promoteFinalizedPubkeys(state);
     // Defer to not block other checkpoint event handlers, which can cause lightclient update delays
     callInNextEventLoop(() => {
       this.shufflingCache.processState(state);

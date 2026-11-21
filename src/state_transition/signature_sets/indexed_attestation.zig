@@ -47,22 +47,59 @@ pub fn getAttestationWithIndicesSignatureSet(
     return createAggregateSignatureSetFromComponents(pubkeys, signing_root, signature);
 }
 
-/// Consumer need to free the returned pubkeys array
+/// Consumer need to free the returned pubkeys array.
+/// Attester slashings may name validators that are not active yet, whose keys can be past the
+/// finalized pubkey cache prefix, so pubkeys are resolved against `state`.
 pub fn getIndexedAttestationSignatureSet(
     comptime fork: ForkSeq,
     allocator: Allocator,
     io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
+    state: anytype,
     indexed_attestation: *const ForkTypes(fork).IndexedAttestation.Type,
 ) !AggregatedSignatureSet {
-    return try getAttestationWithIndicesSignatureSet(
-        allocator,
-        io,
-        config,
-        epoch_cache,
-        &indexed_attestation.data,
-        indexed_attestation.signature,
-        indexed_attestation.attesting_indices.items,
-    );
+    const attesting_indices = indexed_attestation.attesting_indices.items;
+    const pubkeys = try allocator.alloc(PublicKey, attesting_indices.len);
+    errdefer allocator.free(pubkeys);
+    epoch_cache.pubkey_cache.getPubkeys(io, attesting_indices, pubkeys) catch |err| switch (err) {
+        error.InvalidIndex => {
+            const cached_count = epoch_cache.pubkey_cache.count(io);
+            var cached_len: usize = 0;
+            for (attesting_indices) |index| {
+                if (index >= cached_count) break;
+                cached_len += 1;
+            }
+            epoch_cache.pubkey_cache.getPubkeys(
+                io,
+                attesting_indices[0..cached_len],
+                pubkeys[0..cached_len],
+            ) catch |batch_err| switch (batch_err) {
+                error.InvalidIndex => return error.PubkeyNotFound,
+                else => return batch_err,
+            };
+
+            if (cached_len < attesting_indices.len) {
+                const validators_count = try state.validatorsCount();
+                var validators = try state.validators();
+                for (attesting_indices[cached_len..], pubkeys[cached_len..]) |index, *pubkey| {
+                    if (index >= validators_count) return error.PubkeyNotFound;
+                    var validator = try validators.getReadonly(index);
+                    var pubkey_bytes: [48]u8 = undefined;
+                    try validator.getValue(undefined, "pubkey", &pubkey_bytes);
+                    pubkey.* = try PublicKey.uncompress(&pubkey_bytes);
+                }
+            }
+        },
+        else => return err,
+    };
+
+    var signing_root: Root = undefined;
+    try getAttestationDataSigningRoot(config, epoch_cache.epoch, &indexed_attestation.data, &signing_root);
+
+    return createAggregateSignatureSetFromComponents(pubkeys, signing_root, indexed_attestation.signature);
+}
+
+test {
+    _ = @import("indexed_attestation_test.zig");
 }

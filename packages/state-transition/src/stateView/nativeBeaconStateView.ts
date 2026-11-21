@@ -463,6 +463,10 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return cached;
   }
 
+  getValidatorIndex(pubkey: Uint8Array): ValidatorIndex | null {
+    return this.binding.getValidatorIndex(pubkey);
+  }
+
   getValidatorsByStatus(statuses: Set<string>, currentEpoch: Epoch): phase0.Validator[] {
     return this.binding.getValidatorsByStatus(statuses, currentEpoch);
   }

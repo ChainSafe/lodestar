@@ -41,11 +41,19 @@ export async function validateAttesterSlashing(
   }
 
   const state = chain.getHeadState();
+  const getStatePubkey = (index: number): Uint8Array => state.getValidator(index).pubkey;
 
   // [REJECT] All of the conditions within process_attester_slashing pass validation.
   try {
     // verifySignature = false, verified in batch below
-    assertValidAttesterSlashing(chain.config, state.slot, state.validatorCount, attesterSlashing, false);
+    assertValidAttesterSlashing(
+      chain.config,
+      state.slot,
+      state.validatorCount,
+      attesterSlashing,
+      false,
+      getStatePubkey
+    );
   } catch (e) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,
@@ -61,7 +69,7 @@ export async function validateAttesterSlashing(
     });
   }
 
-  const signatureSets = getAttesterSlashingSignatureSets(chain.config, state.slot, attesterSlashing);
+  const signatureSets = getAttesterSlashingSignatureSets(chain.config, state.slot, attesterSlashing, getStatePubkey);
   const verifiedDomains = getAttesterSlashingSignatureDomains(chain.config, state.slot, attesterSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new AttesterSlashingError(GossipAction.REJECT, {

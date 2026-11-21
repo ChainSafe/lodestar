@@ -102,6 +102,8 @@ pub fn processOperations(
 
     if (comptime fork.lt(.heze)) {
         const timer = time.start(io);
+        if (comptime fork.lt(.fulu))
+            try epoch_cache.ensureUnfinalizedMapUnusedCapacity(body.inner.deposits.items.len);
         for (body.inner.deposits.items) |*deposit| {
             try processDeposit(fork, io, config, epoch_cache, state, deposit);
         }

@@ -25,7 +25,7 @@ import {
   ValidatorIndex,
   gloas,
 } from "@lodestar/types";
-import {LodestarError} from "@lodestar/utils";
+import {LodestarError, toPubkeyHex} from "@lodestar/utils";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
 import {
   EpochShuffling,
@@ -120,6 +120,8 @@ export class EpochCache {
    * can skip the bulk verification cost. There should only exist one for the entire application.
    */
   builderDepositSignatureCache: BuilderDepositSignatureCache;
+  /** State-local index for validators outside the shared finalized prefix. Clones own independent copies. */
+  private readonly unfinalizedPubkey2index: Map<string, ValidatorIndex>;
   /**
    * Indexes of the block proposers for the current epoch.
    * For pre-fulu, this is computed and cached from the current shuffling.
@@ -255,6 +257,7 @@ export class EpochCache {
   constructor(data: {
     config: BeaconConfig;
     pubkeyCache: PubkeyCache;
+    unfinalizedPubkey2index: Map<string, ValidatorIndex>;
     builderDepositSignatureCache: BuilderDepositSignatureCache;
     proposers: number[];
     proposersPrevEpoch: number[] | null;
@@ -289,6 +292,7 @@ export class EpochCache {
   }) {
     this.config = data.config;
     this.pubkeyCache = data.pubkeyCache;
+    this.unfinalizedPubkey2index = data.unfinalizedPubkey2index;
     this.builderDepositSignatureCache = data.builderDepositSignatureCache;
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
@@ -349,6 +353,12 @@ export class EpochCache {
     // - computeSyncCommitteeCache() needs a fully populated pubkeyCache
     if (!opts?.skipSyncPubkeys) {
       pubkeyCache.syncPubkeys(validators);
+    }
+
+    const cachedCount = pubkeyCache.size;
+    const unfinalizedPubkey2index = new Map<string, ValidatorIndex>();
+    for (let index = cachedCount; index < validatorCount; index++) {
+      unfinalizedPubkey2index.set(toPubkeyHex(validators[index].pubkey), index);
     }
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
@@ -533,6 +543,7 @@ export class EpochCache {
     return new EpochCache({
       config,
       pubkeyCache,
+      unfinalizedPubkey2index,
       // Created once per application (shared by-reference through clone()).
       builderDepositSignatureCache: new BuilderDepositSignatureCache(),
       proposers,
@@ -573,13 +584,14 @@ export class EpochCache {
    * Copies a given EpochCache while avoiding copying its immutable parts.
    */
   clone(): EpochCache {
-    // warning: pubkey cache is not copied, it is shared, as eth1 is not expected to reorder validators.
+    // Only the finalized pubkey prefix is shared. The local index must remain independent across branches.
     // Shallow copy all data from current epoch context to the next
     // All data is completely replaced, or only-appended
     return new EpochCache({
       config: this.config,
       // Common append-only structures shared with all states, no need to clone
       pubkeyCache: this.pubkeyCache,
+      unfinalizedPubkey2index: new Map(this.unfinalizedPubkey2index),
       // Singleton per application, shared by-reference across clones
       builderDepositSignatureCache: this.builderDepositSignatureCache,
       // Immutable data
@@ -725,6 +737,11 @@ export class EpochCache {
     // ```
     this.epoch = computeEpochAtSlot(state.slot);
     this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
+
+    const cachedCount = this.pubkeyCache.size;
+    for (const [pubkey, index] of this.unfinalizedPubkey2index) {
+      if (index < cachedCount) this.unfinalizedPubkey2index.delete(pubkey);
+    }
   }
 
   /**
@@ -927,12 +944,16 @@ export class EpochCache {
     return this.pubkeyCache.get(index);
   }
 
-  getValidatorIndex(pubkey: Uint8Array): ValidatorIndex | null {
-    return this.pubkeyCache.getIndex(pubkey);
+  /**
+   * Index of the validator with `pubkey` in `state`, which must be the state this cache belongs to.
+   */
+  getValidatorIndex(state: BeaconStateAllForks, pubkey: Uint8Array): ValidatorIndex | null {
+    const index = this.pubkeyCache.getIndex(pubkey) ?? this.unfinalizedPubkey2index.get(toPubkeyHex(pubkey)) ?? null;
+    return index !== null && index < state.validators.length ? index : null;
   }
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    this.pubkeyCache.append(index, pubkey);
+    this.unfinalizedPubkey2index.set(toPubkeyHex(pubkey), index);
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {

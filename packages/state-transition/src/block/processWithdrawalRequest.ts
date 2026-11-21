@@ -24,8 +24,7 @@ export function processWithdrawalRequest(
 ): void {
   const amount = Number(withdrawalRequest.amount);
   const {pendingPartialWithdrawals, validators, epochCtx} = state;
-  // no need to use unfinalized pubkey cache from 6110 as validator won't be active anyway
-  const {pubkeyCache, config} = epochCtx;
+  const {config} = epochCtx;
   const isFullExitRequest = amount === FULL_EXIT_REQUEST_AMOUNT;
 
   // If partial withdrawal queue is full, only full exits are processed
@@ -34,8 +33,7 @@ export function processWithdrawalRequest(
   }
 
   // bail out if validator is not in beacon state
-  // note that we don't need to check for 6110 unfinalized vals as they won't be eligible for withdraw/exit anyway
-  const validatorIndex = pubkeyCache.getIndex(withdrawalRequest.validatorPubkey);
+  const validatorIndex = epochCtx.getValidatorIndex(state, withdrawalRequest.validatorPubkey);
   if (!isValidatorKnown(state, validatorIndex)) {
     return;
   }

@@ -22,8 +22,8 @@ export function processConsolidationRequest(
     return;
   }
 
-  const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey);
-  const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey);
+  const sourceIndex = state.epochCtx.getValidatorIndex(state, sourcePubkey);
+  const targetIndex = state.epochCtx.getValidatorIndex(state, targetPubkey);
 
   if (sourceIndex === null || targetIndex === null) {
     return;
@@ -109,8 +109,8 @@ function isValidSwitchToCompoundRequest(
   consolidationRequest: electra.ConsolidationRequest
 ): boolean {
   const {sourcePubkey, targetPubkey, sourceAddress} = consolidationRequest;
-  const sourceIndex = state.epochCtx.getValidatorIndex(sourcePubkey);
-  const targetIndex = state.epochCtx.getValidatorIndex(targetPubkey);
+  const sourceIndex = state.epochCtx.getValidatorIndex(state, sourcePubkey);
+  const targetIndex = state.epochCtx.getValidatorIndex(state, targetPubkey);
 
   // Verify pubkey exists
   if (sourceIndex === null) {

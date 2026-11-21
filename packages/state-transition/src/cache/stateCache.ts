@@ -178,19 +178,9 @@ export function loadCachedBeaconState<T extends CachedBeaconStateAllForks>(
   opts?: EpochCacheOpts,
   seedValidatorsBytes?: Uint8Array
 ): T {
-  const {state: migratedState, modifiedValidators} = loadState(
-    cachedSeedState.config,
-    cachedSeedState,
-    stateBytes,
-    seedValidatorsBytes
-  );
+  // Loaded states can be unfinalized, so their new validators stay out of the shared pubkey cache
+  const {state: migratedState} = loadState(cachedSeedState.config, cachedSeedState, stateBytes, seedValidatorsBytes);
   const {pubkeyCache} = cachedSeedState.epochCtx;
-  // Get the validators sub tree once for all the loop
-  const validators = migratedState.validators;
-  for (const validatorIndex of modifiedValidators) {
-    const validator = validators.getReadonly(validatorIndex);
-    pubkeyCache.append(validatorIndex, validator.pubkey);
-  }
 
   return createCachedBeaconState(
     migratedState,

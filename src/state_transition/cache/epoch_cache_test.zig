@@ -11,6 +11,7 @@ const EffectiveBalanceIncrementsRc = @import("effective_balance_increments.zig")
 const effectiveBalanceIncrementsInit = @import("effective_balance_increments.zig").effectiveBalanceIncrementsInit;
 const SLOTS_PER_EPOCH = @import("preset").preset.SLOTS_PER_EPOCH;
 const TARGET_COMMITTEE_SIZE = @import("preset").preset.TARGET_COMMITTEE_SIZE;
+const addValidatorToRegistry = @import("../block/process_deposit.zig").addValidatorToRegistry;
 
 test "memory_safety: createFromState releases shuffling inputs on every allocation failure" {
     const allocator = std.testing.allocator;
@@ -20,6 +21,8 @@ test "memory_safety: createFromState releases shuffling inputs on every allocati
     var test_state = try TestCachedBeaconState.init(allocator, &pool, 256);
     defer test_state.deinit();
     const state = test_state.cached_state.state;
+    try addValidatorToRegistry(.electra, test_state.cached_state.epoch_cache, state.castToFork(.electra), &([_]u8{0xb0} ** 48), &([_]u8{1} ** 32), 32_000_000_000);
+    try state.commit();
     const immutable_data = @import("epoch_cache.zig").EpochCacheImmutableData{
         .config = test_state.config,
         .pubkey_cache = test_state.pubkey_cache,
@@ -179,6 +182,105 @@ test "memory_safety: rotateSyncCommitteeIndexed should preserve shared caches on
     }
 }
 
+test "addPubkey reuses capacity reserved for the deposit batch" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 200_000 });
+    defer pool.deinit();
+    var counting = std.testing.FailingAllocator.init(allocator, .{});
+    var test_state = try TestCachedBeaconState.init(counting.allocator(), &pool, 128);
+    defer test_state.deinit();
+    const cache = test_state.cached_state.epoch_cache;
+    try cache.ensureUnfinalizedMapUnusedCapacity(2);
+    const allocation_count = counting.alloc_index;
+    const resize_count = counting.resize_index;
+    try cache.addPubkey(128, [_]u8{0xb0} ** 48);
+    try cache.addPubkey(129, [_]u8{1} ** 48);
+    try std.testing.expectEqual(allocation_count, counting.alloc_index);
+    try std.testing.expectEqual(resize_count, counting.resize_index);
+    try std.testing.expectEqual(@as(usize, 2), cache.unfinalized_index_by_pubkey.count());
+}
+
+test "getValidatorIndex reads registered pubkeys without allocation across clones" {
+    const allocator = std.testing.allocator;
+    const io = std.testing.io;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 200_000 });
+    defer pool.deinit();
+    var test_state = try TestCachedBeaconState.init(allocator, &pool, 128);
+    defer test_state.deinit();
+    const parent = test_state.cached_state;
+    const pubkey_p = [_]u8{0xb0} ** 48;
+    const pubkey_q = [_]u8{1} ** 48;
+    const credentials = [_]u8{1} ** 32;
+    try addValidatorToRegistry(.electra, parent.epoch_cache, parent.state.castToFork(.electra), &pubkey_p, &credentials, 32_000_000_000);
+    try parent.state.commit();
+    const child = try parent.clone(allocator, .{});
+    defer {
+        child.deinit();
+        allocator.destroy(child);
+    }
+    try addValidatorToRegistry(.electra, child.epoch_cache, child.state.castToFork(.electra), &pubkey_q, &credentials, 32_000_000_000);
+
+    var failing = std.testing.FailingAllocator.init(allocator, .{ .fail_index = 0 });
+    parent.epoch_cache.allocator = failing.allocator();
+    child.epoch_cache.allocator = failing.allocator();
+    defer {
+        parent.epoch_cache.allocator = allocator;
+        child.epoch_cache.allocator = allocator;
+    }
+    try std.testing.expectEqual(@as(?u64, 128), try parent.epoch_cache.getValidatorIndex(io, parent.state, pubkey_p));
+    try std.testing.expectEqual(@as(?u64, null), try parent.epoch_cache.getValidatorIndex(io, parent.state, pubkey_q));
+    try std.testing.expectEqual(@as(?u64, 128), try child.epoch_cache.getValidatorIndex(io, child.state, pubkey_p));
+    try std.testing.expectEqual(@as(?u64, 129), try child.epoch_cache.getValidatorIndex(io, child.state, pubkey_q));
+    try std.testing.expectEqual(@as(u32, 128), test_state.pubkey_cache.count(io));
+    try std.testing.expect(!failing.has_induced_failure);
+}
+
+test "afterProcessEpoch removes only pubkeys already in the shared cache" {
+    const allocator = std.testing.allocator;
+    const io = std.testing.io;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 200_000 });
+    defer pool.deinit();
+    var test_state = try TestCachedBeaconState.init(allocator, &pool, 128);
+    defer test_state.deinit();
+    const state = test_state.cached_state.state;
+    const cache = test_state.cached_state.epoch_cache;
+    var validators = try state.validators();
+    var validator = try validators.getReadonly(0);
+    const finalized_pubkey = try validator.get("pubkey");
+    try cache.addPubkey(0, finalized_pubkey);
+    const unfinalized_pubkey = [_]u8{0xb0} ** 48;
+    try addValidatorToRegistry(.electra, cache, state.castToFork(.electra), &unfinalized_pubkey, &([_]u8{1} ** 32), 0);
+    try state.setSlot(try state.slot() + 1);
+    try state.commit();
+    try std.testing.expectEqual(@as(usize, 2), cache.unfinalized_index_by_pubkey.count());
+    test_state.epoch_transition_cache.next_epoch_total_active_balance_by_increment = cache.total_active_balance_increments;
+
+    try cache.afterProcessEpoch(io, state, test_state.epoch_transition_cache);
+    try std.testing.expectEqual(@as(usize, 1), cache.unfinalized_index_by_pubkey.count());
+    try std.testing.expectEqual(@as(?u64, 0), try cache.getValidatorIndex(io, state, finalized_pubkey));
+    try std.testing.expectEqual(@as(?u64, 128), try cache.getValidatorIndex(io, state, unfinalized_pubkey));
+}
+
+test "createFromState indexes unfinalized validators before lookup" {
+    const allocator = std.testing.allocator;
+    const io = std.testing.io;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 200_000 });
+    defer pool.deinit();
+    var test_state = try TestCachedBeaconState.init(allocator, &pool, 128);
+    defer test_state.deinit();
+    const state = test_state.cached_state.state;
+    const pubkey = [_]u8{0xb0} ** 48;
+    try addValidatorToRegistry(.electra, test_state.cached_state.epoch_cache, state.castToFork(.electra), &pubkey, &([_]u8{1} ** 32), 32_000_000_000);
+    try state.commit();
+    const cache = try EpochCache.createFromState(allocator, io, state, .{ .config = test_state.config, .pubkey_cache = test_state.pubkey_cache }, .{ .skip_sync_committee_cache = true, .skip_sync_pubkeys = true });
+    defer cache.deinit();
+    var failing = std.testing.FailingAllocator.init(allocator, .{ .fail_index = 0 });
+    cache.allocator = failing.allocator();
+    defer cache.allocator = allocator;
+    try std.testing.expectEqual(@as(?u64, 128), try cache.getValidatorIndex(io, state, pubkey));
+    try std.testing.expect(!failing.has_induced_failure);
+}
+
 test "memory_safety: EpochCache.clone does not retain shared references when allocation fails" {
     const allocator = std.testing.allocator;
 
@@ -191,6 +293,8 @@ test "memory_safety: EpochCache.clone does not retain shared references when all
 
     var test_state = try TestCachedBeaconState.init(allocator, &pool, 256);
     defer test_state.deinit();
+
+    try addValidatorToRegistry(.electra, test_state.cached_state.epoch_cache, test_state.cached_state.state.castToFork(.electra), &([_]u8{0xb0} ** 48), &([_]u8{1} ** 32), 32_000_000_000);
 
     // Leaked refs prevent test_state teardown from releasing the last shared owners.
     try std.testing.checkAllAllocationFailures(allocator, struct {

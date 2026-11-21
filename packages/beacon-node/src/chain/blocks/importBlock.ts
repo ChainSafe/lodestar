@@ -316,6 +316,7 @@ export async function importBlock(
   const oldHead = this.forkChoice.getHead();
   const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
+  this.promoteFinalizedPubkeys(postState);
 
   // Prune the gloas payload-envelope cache below the new head's parent so it stays bounded during
   // syncing. On a synced node, cache holds just 2 entries — head (parent for

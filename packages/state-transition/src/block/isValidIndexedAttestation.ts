@@ -1,7 +1,11 @@
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {IndexedAttestation, IndexedAttestationBigint, Slot} from "@lodestar/types";
-import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
+import {
+  StatePubkeyGetter,
+  getIndexedAttestationBigintSignatureSet,
+  getIndexedAttestationSignatureSet,
+} from "../signatureSets/index.js";
 import {verifySignatureSet} from "../util/index.js";
 
 /**
@@ -29,14 +33,17 @@ export function isValidIndexedAttestationBigint(
   stateSlot: Slot,
   validatorsLen: number,
   indexedAttestation: IndexedAttestationBigint,
-  verifySignature: boolean
+  verifySignature: boolean,
+  getStatePubkey: StatePubkeyGetter
 ): boolean {
   if (!isValidIndexedAttestationIndices(config, stateSlot, validatorsLen, indexedAttestation.attestingIndices)) {
     return false;
   }
 
   if (verifySignature) {
-    return verifySignatureSet(getIndexedAttestationBigintSignatureSet(config, stateSlot, indexedAttestation));
+    return verifySignatureSet(
+      getIndexedAttestationBigintSignatureSet(config, stateSlot, indexedAttestation, getStatePubkey)
+    );
   }
   return true;
 }

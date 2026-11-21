@@ -111,6 +111,12 @@ pub fn release(self: *BeaconStateView) void {
     if (self.active_calls == 0) self.deinit();
 }
 
+const CachedStateOpts = struct {
+    /// Append this state's validators to the shared pubkey cache. Only for a finalized state:
+    /// the cache holds finalized validators only.
+    sync_pubkeys: bool = true,
+};
+
 fn initCachedState(
     allocator: std.mem.Allocator,
     cached_state: *CachedBeaconState,
@@ -118,6 +124,7 @@ fn initCachedState(
     state: *AnyBeaconState,
     beacon_config: *const c.BeaconConfig,
     deposit_cache: ?*st.BuilderDepositSignatureCacheRc,
+    opts: CachedStateOpts,
 ) !void {
     try cached_state.init(
         allocator,
@@ -128,7 +135,10 @@ fn initCachedState(
             .pubkey_cache = &pubkey.state.cache,
             .builder_deposit_signature_cache = deposit_cache,
         },
-        null,
+        if (opts.sync_pubkeys) null else .{
+            .skip_sync_committee_cache = state.forkSeq().lt(.altair),
+            .skip_sync_pubkeys = true,
+        },
     );
 }
 
@@ -160,7 +170,7 @@ pub fn createFromBytes(bytes: js.Uint8Array, config: *const BeaconConfig) !Beaco
     errdefer allocator.destroy(cached_state);
 
     const io = js.io();
-    try initCachedState(allocator, cached_state, io, state, &config_rc.instance.config, null);
+    try initCachedState(allocator, cached_state, io, state, &config_rc.instance.config, null, .{});
 
     return .{
         .cached_state = cached_state,
@@ -807,6 +817,18 @@ pub fn getValidator(self: *BeaconStateView, index_arg: js.Number) !js_types.Vali
     return js_types.wrap(js_types.Validator, try sszValueToNapiValue(env, ct.phase0.Validator, &validator));
 }
 
+/// Get the index of the validator with the given pubkey in this state.
+/// Returns: number | null
+pub fn getValidatorIndex(self: *BeaconStateView, pubkey_arg: js.Uint8Array) !js.Value {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    const pubkey_bytes = try pubkey_arg.toSlice();
+    if (pubkey_bytes.len != 48) return error.InvalidPubkeyLength;
+    const index = (try cached_state.epoch_cache.getValidatorIndex(js.io(), cached_state.state, pubkey_bytes[0..48].*)) orelse
+        return jsNull();
+    return js_types.wrap(js.Value, js.Number.from(index).toValue());
+}
+
 /// Get the status of a validator by index.
 /// Returns: status string
 pub fn getValidatorStatus(self: *BeaconStateView, index_arg: js.Number) !js.String {
@@ -1304,6 +1326,8 @@ pub fn loadOtherState(
         new_state,
         old_cached_state.config,
         old_cached_state.epoch_cache.builder_deposit_signature_cache,
+        // Loaded states can be unfinalized; only the finalized anchor populates the cache.
+        .{ .sync_pubkeys = false },
     );
     new_cached_state_initialized = true;
 
