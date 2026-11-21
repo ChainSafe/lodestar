@@ -185,6 +185,16 @@ describe("validateGossipExecutionPayloadBid", () => {
     expect(chain.regen.getBlockSlotState).not.toHaveBeenCalled();
   });
 
+  it("accepts a bid 1 gwei above the current best bid", async () => {
+    const bestBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    bestBid.message.value = 100;
+    chain.executionPayloadBidPool.getBestBid.mockReturnValue({signedBid: bestBid, receivedMs: 0} as ReturnType<
+      typeof chain.executionPayloadBidPool.getBestBid
+    >);
+    signedBid.message.value = 101;
+    expect(await validateGossipExecutionPayloadBid(chain, signedBid)).toEqual({proposerIndex});
+  });
+
   it("rejects a wrong randao mix", async () => {
     signedBid.message.prevRandao = Buffer.alloc(32, 2);
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
