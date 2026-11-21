@@ -8124,7 +8124,7 @@
 - name: is_previous_slot_payload_decision#gloas
   sources:
     - file: packages/fork-choice/src/protoArray/protoArray.ts
-      search: "// For Gloas: check if from previous slot"
+      search: const isPreviousSlot =
     - file: packages/fork-choice/src/protoArray/protoArray.ts
       search: const childEffectiveWeight =
   spec: |
