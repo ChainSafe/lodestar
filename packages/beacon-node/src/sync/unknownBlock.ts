@@ -566,7 +566,21 @@ export class BlockInputSync {
         prunedItemCount++;
       }
     }
-    prunedItemCount += pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);
+    for (const [rootHex, pendingBlock] of this.pendingBlocks) {
+      if (this.pendingBlocks.size <= this.maxPendingBlocks) {
+        break;
+      }
+      this.pendingBlocks.delete(rootHex);
+      prunedItemCount++;
+      // The block input cache is only trimmed on import, a block whose parent never resolves would stay there
+      if (
+        isPendingBlockInput(pendingBlock) &&
+        pendingBlock.status !== PendingBlockInputStatus.processing &&
+        this.getMissingBlockDependency(pendingBlock.blockInput).kind === "parentBlock"
+      ) {
+        this.chain.seenBlockInputCache.remove(rootHex);
+      }
+    }
 
     this.metrics?.blockInputSync.removedBlocks.inc({reason: DroppedItemReason.capacity}, prunedItemCount);
     this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);

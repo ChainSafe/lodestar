@@ -485,6 +485,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
               source,
             }),
           prune: () => {},
+          remove: () => {},
         } as unknown as SeenBlockInput,
         seenPayloadEnvelopeInputCache: {
           add: vi.fn(),
@@ -1015,6 +1016,36 @@ describe("UnknownBlockSync", () => {
       expect(pendingBlocks.has(blocks[1].rootHex)).toBe(true);
       expect(pendingBlocks.has(blocks[2].rootHex)).toBe(true);
       expect(pendingBlocks.has(otherPeerBlock.rootHex)).toBe(true);
+
+      svc.close();
+    });
+
+    it("removes a retained block from the block input cache when capacity evicts it", async () => {
+      const peerA = await getRandPeerIdStr();
+      const blocks = Array.from({length: 60}, (_, i) => unknownParentBlock(i + 1, i + 1));
+
+      const {
+        service: svc,
+        chainEmitter,
+        chain,
+      } = setupBlockSyncTest({
+        processBlock: vi.fn(),
+        sendBeaconBlocksByRoot: vi.fn().mockReturnValue(new Promise(() => {})),
+        peer: peerA,
+      });
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+
+      // Each block also adds its parent root, so small blocks fill the pending set before the byte budget
+      for (const {blockInput} of blocks) {
+        chainEmitter.emit(ChainEvent.blockUnknownParent, {blockInput, peer: peerA, source: BlockInputSource.gossip});
+      }
+
+      const evicted = blocks.filter(({rootHex}) => !pendingBlocks.has(rootHex));
+      expect(evicted.length).toBeGreaterThan(0);
+      for (const {rootHex} of evicted) {
+        expect(chain.seenBlockInputCache.remove, `evicted block ${rootHex}`).toHaveBeenCalledWith(rootHex);
+      }
+      expect(chain.seenBlockInputCache.remove).toHaveBeenCalledTimes(evicted.length);
 
       svc.close();
     });
