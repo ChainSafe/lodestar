@@ -27,7 +27,7 @@ overrides:
   sigstore: 4.0.0
 
 patchedDependencies:
-  libp2p@3.4.0: 1731ebe1281485b9e2734306d1669acff6e1f2e49e0d5f9f9375122d5d7c8242
+  libp2p@3.4.0: b1b03520dcf17504a10641301d16abca4e8434c02b1c9e81dd5e7baf9fc8e156
   sigstore@4.0.0: 0d9fa39ff088202d74fca3bec0d7bc1c2822b4bddcab7cd31627235b21b52b32
 
 importers:
@@ -112,7 +112,7 @@ importers:
         version: 9.1.5
       libp2p:
         specifier: 3.4.0
-        version: 3.4.0(patch_hash=1731ebe1281485b9e2734306d1669acff6e1f2e49e0d5f9f9375122d5d7c8242)
+        version: 3.4.0(patch_hash=b1b03520dcf17504a10641301d16abca4e8434c02b1c9e81dd5e7baf9fc8e156)
       playwright:
         specifier: ^1.60.0
         version: 1.60.0
@@ -339,7 +339,7 @@ importers:
         version: 0.5.6
       libp2p:
         specifier: 3.4.0
-        version: 3.4.0(patch_hash=1731ebe1281485b9e2734306d1669acff6e1f2e49e0d5f9f9375122d5d7c8242)
+        version: 3.4.0(patch_hash=b1b03520dcf17504a10641301d16abca4e8434c02b1c9e81dd5e7baf9fc8e156)
       multiformats:
         specifier: ^13.4.2
         version: 13.4.2
@@ -750,7 +750,7 @@ importers:
         version: link:../types
       libp2p:
         specifier: 3.4.0
-        version: 3.4.0(patch_hash=1731ebe1281485b9e2734306d1669acff6e1f2e49e0d5f9f9375122d5d7c8242)
+        version: 3.4.0(patch_hash=b1b03520dcf17504a10641301d16abca4e8434c02b1c9e81dd5e7baf9fc8e156)
 
   packages/spec-test-util:
     dependencies:
@@ -10112,7 +10112,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  libp2p@3.4.0(patch_hash=1731ebe1281485b9e2734306d1669acff6e1f2e49e0d5f9f9375122d5d7c8242):
+  libp2p@3.4.0(patch_hash=b1b03520dcf17504a10641301d16abca4e8434c02b1c9e81dd5e7baf9fc8e156):
     dependencies:
       '@chainsafe/is-ip': 2.1.0
       '@chainsafe/netmask': 2.0.0

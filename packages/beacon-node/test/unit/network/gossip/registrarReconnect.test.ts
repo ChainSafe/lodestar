@@ -10,7 +10,7 @@ type Topology = {
   onConnect?(peer: Peer, connection: Connection): void | Promise<void>;
   onDisconnect?(peer: Peer): void | Promise<void>;
 };
-type Registrar = {register(protocol: string, topology: Topology): Promise<string>};
+type Registrar = {register(protocol: string, topology: Topology): Promise<string>; unregister(id: string): void};
 type Components = {
   peerId: Peer;
   peerStore: {get(peer: Peer): Promise<{protocols: string[]}>};
@@ -334,5 +334,99 @@ it("does not finish a pending identify for a subsequently removed protocol", asy
   release.resolve();
   await identify;
   expect([...active]).toEqual([protocols[0]]);
+  expect(f.logger.error).not.toHaveBeenCalled();
+});
+
+for (const event of ["peer:update", "peer:disconnect"] as const) {
+  it(`preserves a shared topology re-established under another protocol during ${event}`, async () => {
+    const protocols = ["/control", "/meshsub/1.1.0", "/meshsub/1.2.0"];
+    const f = fixture(protocols);
+    const entered = defer<void>();
+    const release = defer<void>();
+    await f.registrar.register(protocols[0], {
+      onDisconnect: async () => {
+        entered.resolve();
+        await release.promise;
+      },
+    });
+    let active = false;
+    let filtered = false;
+    const shared = {
+      filter: {
+        has: () => filtered,
+        add: () => {
+          filtered = true;
+        },
+        remove: () => {
+          filtered = false;
+        },
+      },
+      onConnect: () => {
+        active = true;
+      },
+      onDisconnect: () => {
+        active = false;
+      },
+    };
+    await f.registrar.register(protocols[1], shared);
+    await f.registrar.register(protocols[2], shared);
+    await f.identify("old");
+    const old =
+      event === "peer:update"
+        ? f.emit(event, {peer: {id: f.peer, protocols: []}, previous: {protocols}})
+        : f.emit(event, f.peer);
+    await entered.promise;
+    await f.emit("peer:identify", {peerId: f.peer, protocols: [protocols[2]], connection: {status: "open", id: "new"}});
+    release.resolve();
+    await old;
+    expect(active).toBe(true);
+    expect(filtered).toBe(true);
+    expect(f.logger.error).not.toHaveBeenCalled();
+  });
+}
+
+it("keeps a shared topology while another advertised protocol still supports it", async () => {
+  const protocols = ["/meshsub/1.1.0", "/meshsub/1.2.0"];
+  const f = fixture(protocols);
+  const active = new Set<string>();
+  const disconnected = vi.fn();
+  const shared = {
+    onConnect: (peer: Peer) => {
+      active.add(peer.toString());
+    },
+    onDisconnect: (peer: Peer) => {
+      active.delete(peer.toString());
+      disconnected();
+    },
+  };
+  await f.registrar.register(protocols[0], shared);
+  await f.registrar.register(protocols[1], shared);
+  await f.identify("old");
+  await f.emit("peer:update", {peer: {id: f.peer, protocols: [protocols[1]]}, previous: {protocols}});
+  expect(active.has(f.peer.toString())).toBe(true);
+  expect(disconnected).not.toHaveBeenCalled();
+});
+
+it("does not cancel a pending shared topology when only one registration is removed", async () => {
+  const protocols = ["/control", "/meshsub/1.1.0", "/meshsub/1.2.0"];
+  const f = fixture(protocols),
+    entered = defer<void>(),
+    release = defer<void>();
+  await f.registrar.register(protocols[0], {
+    onConnect: async () => {
+      entered.resolve();
+      await release.promise;
+    },
+  });
+  const connected = vi.fn();
+  const shared = {onConnect: connected};
+  const first = await f.registrar.register(protocols[1], shared);
+  await f.registrar.register(protocols[2], shared);
+  const identify = f.identify("old");
+  await entered.promise;
+  f.registrar.unregister(first);
+  release.resolve();
+  await identify;
+  expect(connected).toHaveBeenCalledTimes(1);
   expect(f.logger.error).not.toHaveBeenCalled();
 });
