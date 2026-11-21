@@ -189,6 +189,7 @@ export class BlockInputSync {
       this.network.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
       this.network.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
       this.chain.clock.on(ClockEvent.slot, this.startPayloadPollAtSlot);
+      this.chain.clock.on(ClockEvent.slot, this.pruneUnresolvedBlocks);
 
       // Seed the balancer with peers that connected before we subscribed
       for (const peerId of this.network.getConnectedPeers()) {
@@ -211,6 +212,7 @@ export class BlockInputSync {
     this.clearRateLimitBackoffTimer();
     this.clearDownloadRetryTimer();
     this.chain.clock.off(ClockEvent.slot, this.startPayloadPollAtSlot);
+    this.chain.clock.off(ClockEvent.slot, this.pruneUnresolvedBlocks);
     this.payloadPollAbortController?.abort();
     this.payloadPollAbortController = undefined;
     this.deferredPayloadRoots.clear();
@@ -358,6 +360,9 @@ export class BlockInputSync {
         this.addByRootHex(missingDependency.rootHex, data.peer);
       }
       this.addByBlockInput(data.blockInput, data.peer);
+      if (data.source === BlockInputSource.gossip) {
+        this.limitRetainedBlocks(data.blockInput, data.peer);
+      }
       this.triggerUnknownBlockSearch();
       this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PARENT});
       this.metrics?.blockInputSync.source.inc({source: data.source});
@@ -561,7 +566,21 @@ export class BlockInputSync {
         prunedItemCount++;
       }
     }
-    prunedItemCount += pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);
+    for (const [rootHex, pendingBlock] of this.pendingBlocks) {
+      if (this.pendingBlocks.size <= this.maxPendingBlocks) {
+        break;
+      }
+      this.pendingBlocks.delete(rootHex);
+      prunedItemCount++;
+      // The block input cache is only trimmed on import, a block whose parent never resolves would stay there
+      if (
+        isPendingBlockInput(pendingBlock) &&
+        pendingBlock.status !== PendingBlockInputStatus.processing &&
+        this.getMissingBlockDependency(pendingBlock.blockInput).kind === "parentBlock"
+      ) {
+        this.chain.seenBlockInputCache.remove(rootHex);
+      }
+    }
 
     this.metrics?.blockInputSync.removedBlocks.inc({reason: DroppedItemReason.capacity}, prunedItemCount);
     this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);
@@ -696,6 +715,78 @@ export class BlockInputSync {
     this.peerBalancer.onPeerDisconnected(peerId);
     this.scheduleRateLimitBackoffRetry();
   };
+
+  /**
+   * A peer can make us retain a signed block per validator key and slot until its parent resolves. Bound the bytes
+   * retained per peer, its oldest blocks still waiting on their parent are removed first.
+   */
+  private limitRetainedBlocks(blockInput: IBlockInput, peerIdStr: PeerIdStr): void {
+    const pendingBlock = this.pendingBlocks.get(blockInput.blockRootHex);
+    if (pendingBlock === undefined || !isPendingBlockInput(pendingBlock) || pendingBlock.retainedBy !== undefined) {
+      return;
+    }
+    pendingBlock.retainedBy = peerIdStr;
+    pendingBlock.retainedBytes = this.config
+      .getForkTypes(blockInput.slot)
+      .SignedBeaconBlock.value_serializedSize(blockInput.getBlock());
+
+    const retainedBlocks: PendingBlockInput[] = [];
+    let retainedBytes = 0;
+    for (const item of this.pendingBlocks.values()) {
+      if (isPendingBlockInput(item) && item.retainedBy === peerIdStr && this.isWaitingOnParent(item)) {
+        retainedBlocks.push(item);
+        retainedBytes += item.retainedBytes ?? 0;
+      }
+    }
+    // One block of the max gossip size fits, honest blocks are far smaller
+    for (const item of retainedBlocks) {
+      if (retainedBytes <= this.config.MAX_PAYLOAD_SIZE) {
+        break;
+      }
+      retainedBytes -= item.retainedBytes ?? 0;
+      this.removeUnresolvedBlock(item, DroppedItemReason.peerBudget);
+    }
+  }
+
+  /**
+   * Blocks are otherwise only pruned once finalization passes them, which never happens for a parent that does not resolve
+   */
+  private pruneUnresolvedBlocks = (): void => {
+    const nowSec = Date.now() / 1000;
+    const maxSecInCache = (PRUNE_UNRESOLVED_SLOT_EPOCHS * SLOTS_PER_EPOCH * this.config.SLOT_DURATION_MS) / 1000;
+    for (const pendingBlock of this.pendingBlocks.values()) {
+      if (
+        isPendingBlockInput(pendingBlock) &&
+        nowSec - pendingBlock.timeAddedSec > maxSecInCache &&
+        this.isWaitingOnParent(pendingBlock)
+      ) {
+        this.removeUnresolvedBlock(pendingBlock, DroppedItemReason.agedOut);
+      }
+    }
+  };
+
+  private isWaitingOnParent(pendingBlock: PendingBlockInput): boolean {
+    if (pendingBlock.status === PendingBlockInputStatus.processing) {
+      return false;
+    }
+    const {kind} = this.getMissingBlockDependency(pendingBlock.blockInput);
+    return kind === "parentBlock" || kind === "parentPayload";
+  }
+
+  /**
+   * Removes only the block itself, its descendants request it again by root and its claimed ancestors stay cached
+   */
+  private removeUnresolvedBlock(pendingBlock: PendingBlockInput, reason: DroppedItemReason): void {
+    const rootHex = pendingBlock.blockInput.blockRootHex;
+    this.pendingBlocks.delete(rootHex);
+    this.chain.seenBlockInputCache.remove(rootHex);
+    this.metrics?.blockInputSync.removedBlocks.inc({reason});
+    this.logger.debug("Removed unresolved BlockInputSync block", {
+      slot: pendingBlock.blockInput.slot,
+      root: rootHex,
+      reason,
+    });
+  }
 
   /**
    * Post-gloas, a locally complete block can still be blocked on its parent's execution payload lineage.
