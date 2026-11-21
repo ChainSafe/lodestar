@@ -14,8 +14,6 @@ export type SeenBuilderBids = {
    * so it is known without the state once a bid was valid
    */
   limit: number;
-  /** Value of the highest valid bid seen */
-  value: number;
 };
 
 /**
@@ -45,15 +43,14 @@ export class SeenExecutionPayloadBids {
     builderIndex: BuilderIndex,
     parentBlockHash: RootHex,
     parentBlockRoot: RootHex,
-    bidLimit: number,
-    bidValue: number
+    bidLimit: number
   ): void {
     if (slot < this.lowestPermissibleSlot) {
       throw Error(`slot ${slot} < lowestPermissibleSlot ${this.lowestPermissibleSlot}`);
     }
     const bidsByBranch = this.bidsByBranchByBuilderBySlot.getOrDefault(slot).getOrDefault(builderIndex);
     const key = branchKey(parentBlockHash, parentBlockRoot);
-    bidsByBranch.set(key, {count: (bidsByBranch.get(key)?.count ?? 0) + 1, limit: bidLimit, value: bidValue});
+    bidsByBranch.set(key, {count: (bidsByBranch.get(key)?.count ?? 0) + 1, limit: bidLimit});
   }
 
   prune(currentSlot: Slot): void {

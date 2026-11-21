@@ -450,22 +450,12 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // Repeat the checks after the awaited signature verification so concurrent bids for the same builder and
-  // tuple can't all pass. A valid bid only enters the pool after validation, so compare to the builder's own.
-  const seenBidsAfterSignature = chain.seenExecutionPayloadBids.get(
-    bid.slot,
-    bid.builderIndex,
-    bidParentBlockHash,
-    bidParentBlockRoot
-  );
-  if (seenBidsAfterSignature !== undefined && bid.value <= seenBidsAfterSignature.value) {
-    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
-      bidValue: bid.value,
-      currentHighestBid: seenBidsAfterSignature.value,
-    });
-  }
-  if ((seenBidsAfterSignature?.count ?? 0) >= bidLimit) {
+  // Repeat the bid limit check after the awaited signature verification to prevent concurrent bids
+  // for the same builder and tuple from all passing validation.
+  if (
+    (chain.seenExecutionPayloadBids.get(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)?.count ??
+      0) >= bidLimit
+  ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED,
       builderIndex: bid.builderIndex,
@@ -477,14 +467,7 @@ async function validateExecutionPayloadBid(
   }
 
   // Valid
-  chain.seenExecutionPayloadBids.add(
-    bid.slot,
-    bid.builderIndex,
-    bidParentBlockHash,
-    bidParentBlockRoot,
-    bidLimit,
-    bid.value
-  );
+  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot, bidLimit);
 
   return {proposerIndex: proposerPreferences.message.validatorIndex};
 }

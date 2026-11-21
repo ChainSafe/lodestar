@@ -92,7 +92,7 @@ describe("validateGossipExecutionPayloadBid", () => {
         toRootHex(parentBlockHash),
         toRootHex(parentBlockRoot)
       )
-    ).toEqual({count: 1, limit: 1, value: 0});
+    ).toEqual({count: 1, limit: 1});
   });
 
   it("rejects a bid whose block hash equals its parent block hash", async () => {
@@ -150,26 +150,6 @@ describe("validateGossipExecutionPayloadBid", () => {
     expect(results.find((result) => result.status === "rejected")?.reason).toMatchObject({
       type: {code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED},
     });
-  });
-
-  it("does not count concurrent copies of a bid against the bid limit", async () => {
-    chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder: activeBuilder(2 * ETH_TO_GWEI)}));
-    const results = await Promise.allSettled([
-      validateGossipExecutionPayloadBid(chain, signedBid),
-      validateGossipExecutionPayloadBid(chain, signedBid),
-    ]);
-    expect(results.map((result) => result.status).sort()).toEqual(["fulfilled", "rejected"]);
-    expect(results.find((result) => result.status === "rejected")?.reason).toMatchObject({
-      type: {code: ExecutionPayloadBidErrorCode.BID_TOO_LOW},
-    });
-    expect(
-      chain.seenExecutionPayloadBids.get(
-        signedBid.message.slot,
-        signedBid.message.builderIndex,
-        toRootHex(parentBlockHash),
-        toRootHex(parentBlockRoot)
-      )
-    ).toEqual({count: 1, limit: 2, value: 0});
   });
 
   it("rejects if the parent block is unknown", async () => {
