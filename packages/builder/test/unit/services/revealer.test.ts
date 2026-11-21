@@ -137,9 +137,7 @@ describe("Revealer", () => {
 
   it("does not reveal after the cutoff", async () => {
     const observed = selectedBlock();
-    vi.spyOn(clock, "msFromSlot").mockReturnValue(
-      config.getSlotComponentDurationMs(ForkName.gloas, config.PAYLOAD_ATTESTATION_DUE_BPS) + 1
-    );
+    vi.spyOn(clock, "msFromSlot").mockReturnValue(config.getPayloadAttestationDueMs(ForkName.gloas) + 1);
 
     await revealer.onBlock(observed);
 
