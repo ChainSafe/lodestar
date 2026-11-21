@@ -1,9 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {BinaryRepository, Db} from "@lodestar/db";
 import {Root, RootHex, Slot} from "@lodestar/types";
-import {bytesToInt, toHex} from "@lodestar/utils";
+import {bytesToInt, intToBytes, toHex} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
-import {getRootIndex, getRootIndexKey, storeRootIndex} from "./stateArchiveIndex.js";
+import {getRootIndex, getRootIndexKey} from "./stateArchiveIndex.js";
 
 export type BeaconStateArchive = {
   serialize(): Uint8Array;
@@ -19,7 +19,18 @@ export class StateArchiveRepository extends BinaryRepository<Slot> {
   // Handle key as slot
 
   async put(key: Slot, value: BeaconStateArchive): Promise<void> {
-    await Promise.all([super.putBinary(key, value.serialize()), storeRootIndex(this.db, key, value.hashTreeRoot())]);
+    await this.putBinaryWithRoot(key, value.serialize(), value.hashTreeRoot());
+  }
+
+  /** Store state bytes together with the root index entry that `getBinaryByRoot` relies on */
+  async putBinaryWithRoot(slot: Slot, stateBytes: Uint8Array, stateRoot: Root): Promise<void> {
+    await this.db.batchPut(
+      [
+        {key: this.encodeKey(slot), value: stateBytes},
+        {key: getRootIndexKey(stateRoot), value: intToBytes(slot, 8, "be")},
+      ],
+      this.dbReqOpts
+    );
   }
 
   decodeKey(data: Uint8Array): number {
