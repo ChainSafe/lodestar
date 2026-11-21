@@ -4,7 +4,7 @@ import {DataAvailabilityStatus, computeEpochAtSlot, computeStartSlotAtEpoch} fro
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {bitCount, toRootHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
-import {LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
+import {ExecutionStatusTransition, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 import {
   ExecutionStatus,
   HEX_ZERO_HASH,
@@ -1123,7 +1123,7 @@ export class ProtoArray {
       if (judged === LVHInvalidJudged.ChildPayload) {
         return {applied: false, reason: LVHNotAppliedReason.UnusableLVH};
       }
-      latestValidHashIndex = this.getUnknownLVHIndex(invalidateFromIndex);
+      latestValidHashIndex = this.getParentPayloadIndex(invalidateFromIndex);
     }
 
     // Never invalidate the justified block, the EMPTY variant sharing its chain, or anything at or below it in
@@ -1138,8 +1138,8 @@ export class ProtoArray {
         (node.blockRoot === this.justifiedRoot && node.payloadStatus === PayloadStatus.EMPTY);
       if (conflict || justified) {
         if (judged === LVHInvalidJudged.FromBlock) {
-          // The LVH is unusable: fall back to the unknown LVH bound, but never cross this node
-          latestValidHashIndex = Math.max(nodeIndex, this.getUnknownLVHIndex(invalidateFromIndex));
+          // The LVH is unusable: invalidate only the judged payload, but never cross this node
+          latestValidHashIndex = Math.max(nodeIndex, this.getParentPayloadIndex(invalidateFromIndex));
         } else if (conflict) {
           return {applied: false, reason: LVHNotAppliedReason.Contradiction};
         } else {
@@ -1160,11 +1160,11 @@ export class ProtoArray {
   }
 
   /**
-   * Upper bound (exclusive) for invalidating from `fromIndex` when the engine gave no usable LVH: the parent of the
-   * last ancestor that still inherits the queried payload. Pre-gloas this is the parent of `fromIndex`. For a gloas
-   * EMPTY or PENDING node it reaches up to the FULL node that owns the payload. -1 when the chain reaches the root.
+   * Index of the nearest ancestor carrying a different payload than `fromIndex`, i.e. the node holding its parent
+   * payload. Pre-gloas this is the parent of `fromIndex`. For a gloas EMPTY or PENDING node it skips past the FULL
+   * node that owns the payload. -1 when the chain reaches the root.
    */
-  private getUnknownLVHIndex(fromIndex: number): number {
+  private getParentPayloadIndex(fromIndex: number): number {
     const payloadBlockHash = this.nodes[fromIndex].executionPayloadBlockHash;
     let nodeIndex = fromIndex;
     let parentIndex = this.nodes[nodeIndex].parent;
@@ -1198,16 +1198,17 @@ export class ProtoArray {
   }
 
   /**
-   * Gloas PENDING and EMPTY variants have no payload of their own, they inherit the execution status of
-   * the payload they build on, which is their `executionPayloadBlockHash`. Once that payload is VALID, all
-   * of them are, not only the ones on the chain the validation walked up (e.g. siblings, or blocks
-   * building on a sibling's EMPTY variant).
+   * A node's execution status is that of the payload in its `executionPayloadBlockHash`: its own for FULL, the
+   * inherited parent payload for gloas PENDING and EMPTY. Once that payload is VALID every node carrying it is, not
+   * only the chain the validation walked up (e.g. siblings, blocks on a sibling's EMPTY variant, or an equivocating
+   * block with the same payload). A parent has a lower index than its children, so the scan flips a node carrying
+   * the payload before its descendants that inherit it.
    */
   private validatePayloadDependents(payloadHashes: Set<RootHex>): void {
     for (let nodeIndex = 0; nodeIndex < this.nodes.length; nodeIndex++) {
       const node = this.nodes[nodeIndex];
       if (
-        node.payloadStatus === PayloadStatus.PENDING &&
+        isGloasBlock(node) &&
         node.executionStatus === ExecutionStatus.Syncing &&
         node.executionPayloadBlockHash !== null &&
         payloadHashes.has(node.executionPayloadBlockHash)
@@ -1289,11 +1290,11 @@ export class ProtoArray {
       invalidNode.executionStatus === ExecutionStatus.PreMerge
     ) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
-        lvhCode:
+        code: ProtoArrayErrorCode.INVALID_EXECUTION_STATUS_TRANSITION,
+        transition:
           invalidNode.executionStatus === ExecutionStatus.Valid
-            ? LVHExecErrorCode.ValidToInvalid
-            : LVHExecErrorCode.PreMergeToInvalid,
+            ? ExecutionStatusTransition.ValidToInvalid
+            : ExecutionStatusTransition.PreMergeToInvalid,
         blockRoot: invalidNode.blockRoot,
         execHash: invalidNode.executionPayloadBlockHash ?? ZERO_HASH_HEX,
       });
@@ -1317,8 +1318,8 @@ export class ProtoArray {
     const validNode = this.getNodeFromIndex(nodeIndex);
     if (validNode.executionStatus === ExecutionStatus.Invalid) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
-        lvhCode: LVHExecErrorCode.InvalidToValid,
+        code: ProtoArrayErrorCode.INVALID_EXECUTION_STATUS_TRANSITION,
+        transition: ExecutionStatusTransition.InvalidToValid,
         blockRoot: validNode.blockRoot,
         execHash: validNode.executionPayloadBlockHash,
       });
