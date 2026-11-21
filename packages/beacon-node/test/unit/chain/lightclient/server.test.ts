@@ -123,7 +123,7 @@ describe("Gloas light client server", () => {
       ).toBe(false);
 
       const attestedData = server["prevHeadData"].get(toRootHex(blockRoot));
-      if (!attestedData?.isFinalized) throw Error("Expected the native finalized checkpoint proof");
+      if (!attestedData) throw Error("Expected the native finalized checkpoint proof");
       await server["maybeStoreNewBestUpdate"](0, ssz.altair.SyncAggregate.defaultValue(), block.slot + 1, attestedData);
       const update = await db.bestLightClientUpdate.get(0);
       if (!update) throw Error("Expected a persisted light-client update");
@@ -224,7 +224,8 @@ describe("Gloas light client server", () => {
     const attestedData: SyncAttestedData = {
       attestedHeader,
       blockRoot: new Uint8Array(32),
-      isFinalized: false,
+      finalizedCheckpoint: {epoch: 0, root: new Uint8Array(32)},
+      finalityBranch: zeroBranch(FINALIZED_ROOT_DEPTH_GLOAS),
     };
 
     await server["maybeStoreNewBestUpdate"](0, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
@@ -240,4 +241,76 @@ describe("Gloas light client server", () => {
     expect(nextUpdate.finalityBranch).toBe(update.finalityBranch);
     expect(() => ssz.gloas.LightClientUpdate.serialize(update)).not.toThrow();
   });
+
+  it("serves the finality branch with an empty finalized header at genesis", async () => {
+    const finalityBranch = Array.from({length: FINALIZED_ROOT_DEPTH_GLOAS}, (_, i) => new Uint8Array(32).fill(i + 1));
+    const {server, putBestUpdate} = createServerForFinalityTest();
+
+    const attestedHeader = ssz.gloas.LightClientHeader.defaultValue();
+    attestedHeader.beacon.slot = gloasSlot;
+    await server["maybeStoreNewBestUpdate"](0, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, {
+      attestedHeader,
+      blockRoot: new Uint8Array(32),
+      finalizedCheckpoint: {epoch: 0, root: new Uint8Array(32)},
+      finalityBranch,
+    });
+
+    const update = putBestUpdate.mock.calls[0][1] as gloas.LightClientUpdate;
+    const zeroUpdate = ssz.gloas.LightClientUpdate.defaultValue();
+    expect(update.finalizedHeader).toEqual(zeroUpdate.finalizedHeader);
+    expect(update.finalityBranch).toEqual(finalityBranch);
+  });
+
+  it("serves no finality when the finalized header is not available", async () => {
+    const {server, putBestUpdate} = createServerForFinalityTest();
+
+    const attestedHeader = ssz.gloas.LightClientHeader.defaultValue();
+    attestedHeader.beacon.slot = gloasSlot;
+    await server["maybeStoreNewBestUpdate"](0, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, {
+      attestedHeader,
+      blockRoot: new Uint8Array(32),
+      finalizedCheckpoint: {epoch: 1, root: new Uint8Array(32).fill(0xcc)},
+      finalityBranch: Array.from({length: FINALIZED_ROOT_DEPTH_GLOAS}, () => new Uint8Array(32).fill(0xdd)),
+    });
+
+    const update = putBestUpdate.mock.calls[0][1] as gloas.LightClientUpdate;
+    const zeroUpdate = ssz.gloas.LightClientUpdate.defaultValue();
+    expect(update.finalizedHeader).toEqual(zeroUpdate.finalizedHeader);
+    expect(update.finalityBranch).toEqual(zeroUpdate.finalityBranch);
+  });
 });
+
+function createServerForFinalityTest(): {
+  server: LightClientServer;
+  putBestUpdate: ReturnType<typeof vi.fn>;
+} {
+  const putBestUpdate = vi.fn(async (_period: number, _update: LightClientUpdate) => undefined);
+  const db = {
+    bestLightClientUpdate: {get: vi.fn(async () => null), put: putBestUpdate},
+    syncCommitteeWitness: {
+      get: vi.fn(async () => ({
+        witness: [],
+        currentSyncCommitteeRoot: new Uint8Array(32).fill(0xaa),
+        nextSyncCommitteeRoot: new Uint8Array(32).fill(0xbb),
+        currentSyncCommitteeBranch: zeroBranch(CURRENT_SYNC_COMMITTEE_DEPTH_GLOAS),
+        nextSyncCommitteeBranch: zeroBranch(NEXT_SYNC_COMMITTEE_DEPTH_GLOAS),
+      })),
+    },
+    syncCommittee: {get: vi.fn(async () => ssz.altair.SyncCommittee.defaultValue())},
+    // Finalized header is never available in this setup
+    checkpointHeader: {get: vi.fn(async () => null)},
+  } as unknown as IBeaconDb;
+  const server = new LightClientServer(
+    {},
+    {
+      config,
+      db,
+      clock: {} as never,
+      metrics: null,
+      emitter: {} as never,
+      logger: {debug: vi.fn(), error: vi.fn()} as never,
+      signal: new AbortController().signal,
+    }
+  );
+  return {server, putBestUpdate};
+}
