@@ -19,12 +19,12 @@ const builderIndex = 7;
 describe("BidSelector", () => {
   for (const fork of [ForkName.gloas, ForkName.heze] as const) {
     it(`matches an exact local ${fork} bid and records the selecting block`, () => {
-      const {identity, ledger, observed, selector, signedBidRoot} = setup(fork);
+      const {identity, ledger, observed, selector, signedBid, signedBidRoot} = setup(fork);
 
       expect(selector.match(observed)).toEqual({
         status: "selected",
         blockRoot: observed.blockRoot,
-        bid: {...identity, valueGwei: 5, signedBidRoot, wonBlockRoots: [observed.blockRoot]},
+        bid: {...identity, signedBid, signedBidRoot, wonBlockRoots: [observed.blockRoot]},
       });
       expect(ledger.getBidsForSlot(identity.slot)[0].wonBlockRoots).toEqual([observed.blockRoot]);
       expect(ledger.getUnsettledValueGwei(0)).toBe(5);
@@ -160,14 +160,13 @@ function setup(fork: ForkPostGloas, {recordBid = true}: {recordBid?: boolean} = 
   };
   const identity = identityFor(toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash));
   const ledger = new BidLedger();
-  const signedBidRoot = toRootHex(
-    sszTypesFor(fork, "SignedExecutionPayloadBid").hashTreeRoot(block.message.body.signedExecutionPayloadBid)
-  );
+  const signedBid = block.message.body.signedExecutionPayloadBid;
+  const signedBidRoot = toRootHex(sszTypesFor(fork, "SignedExecutionPayloadBid").hashTreeRoot(signedBid));
   if (recordBid) {
-    ledger.recordBid({...identity, valueGwei: 5, signedBidRoot});
+    ledger.recordBid({signedBid, signedBidRoot});
   }
   const selector = new BidSelector({config, ledger, builderIndex});
-  return {identity, ledger, observed, selector, signedBidRoot};
+  return {identity, ledger, observed, selector, signedBid, signedBidRoot};
 }
 
 function createBlock(fork: ForkPostGloas): SignedBeaconBlock<ForkPostGloas> {

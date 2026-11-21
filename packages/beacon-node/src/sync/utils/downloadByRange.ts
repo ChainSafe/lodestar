@@ -1,37 +1,24 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  ForkPostDeneb,
-  ForkPostFulu,
-  ForkPostGloas,
-  ForkPreFulu,
-  isForkPostFulu,
-  isForkPostGloas,
-} from "@lodestar/params";
+import {ForkName, ForkPostFulu, ForkPostGloas, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
 import {
   ColumnIndex,
   DataColumnSidecar,
   RootHex,
   SignedBeaconBlock,
   Slot,
-  deneb,
+  ValidatorIndex,
   fulu,
   gloas,
+  isGloasBeaconBlock,
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
-import {
-  BlockInputSource,
-  DAType,
-  IBlockInput,
-  isBlockInputBlobs,
-  isBlockInputColumns,
-} from "../../chain/blocks/blockInput/index.js";
+import {BlockInputSource, DAType, IBlockInput, isBlockInputColumns} from "../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/types.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {SeenPayloadEnvelopeInput} from "../../chain/seenCache/seenPayloadEnvelopeInput.js";
-import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {
   validateFuluBlockDataColumnSidecars,
   validateGloasBlockDataColumnSidecars,
@@ -44,7 +31,6 @@ import {WarnResult} from "../../util/wrapError.js";
 
 export type DownloadByRangeRequests = {
   blocksRequest?: phase0.BeaconBlocksByRangeRequest;
-  blobsRequest?: deneb.BlobSidecarsByRangeRequest;
   columnsRequest?: fulu.DataColumnSidecarsByRangeRequest;
   envelopesRequest?: gloas.ExecutionPayloadEnvelopesByRangeRequest;
   /**
@@ -59,15 +45,21 @@ export type DownloadByRangeRequests = {
   };
 };
 
-export type ParentPayloadCommitments = {
+/**
+ * The head block when the `SyncChain` was created. The first block of the first batch may build on its FULL variant
+ * while the payload is not imported yet, the batch then downloads the payload by root as its dangling parent.
+ */
+export type ParentPayload = {
   blockRoot: Uint8Array;
   blockRootHex: RootHex;
-  kzgCommitments: deneb.BlobKzgCommitments;
+  slot: Slot;
+  proposerIndex: ValidatorIndex;
+  forkName: ForkName;
+  bid: gloas.ExecutionPayloadBid;
 };
 
 export type DownloadByRangeResponses = {
   blocks?: SignedBeaconBlock[];
-  blobSidecars?: deneb.BlobSidecars;
   columnSidecars?: DataColumnSidecar[];
   payloadEnvelopes?: gloas.SignedExecutionPayloadEnvelope[];
 };
@@ -78,14 +70,14 @@ export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
   logger: Logger;
   peerIdStr: string;
   batchBlocks?: IBlockInput[];
-  /** Required when `parentPayloadRequest` is set; supplies the data needed to validate the parent's columns. */
-  parentPayloadCommitments?: ParentPayloadCommitments;
+  /** Required when `parentPayloadRequest` is set */
+  parentPayload?: ParentPayload;
   peerDasMetrics?: BeaconMetrics["peerDas"] | null;
 };
 
 export type CacheByRangeResponsesProps = {
-  cache: SeenBlockInput;
-  seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
+  cache: Pick<SeenBlockInput, "getByBlock">;
+  seenPayloadEnvelopeInputCache: Pick<SeenPayloadEnvelopeInput, "add" | "addFromBid">;
   peerIdStr: string;
   responses: ValidatedResponses;
   batchBlocks: IBlockInput[];
@@ -93,6 +85,8 @@ export type CacheByRangeResponsesProps = {
   downloadedPayloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null;
   /** Envelopes already wrapped from previous partial downloads on this batch */
   existingPayloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+  /** Set when `downloadedPayloadEnvelopes` may contain the dangling parent envelope */
+  parentPayload?: ParentPayload;
   /** Sampled/custody column indices for building PayloadEnvelopeInputs */
   custodyConfig: Pick<CustodyConfig, "sampledColumns" | "custodyColumns">;
   seenTimestampSec: number;
@@ -103,11 +97,6 @@ export type ValidatedBlock = {
   block: SignedBeaconBlock;
 };
 
-export type ValidatedBlobSidecars = {
-  blockRoot: Uint8Array;
-  blobSidecars: deneb.BlobSidecars;
-};
-
 export type ValidatedColumnSidecars = {
   blockRoot: Uint8Array;
   columnSidecars: DataColumnSidecar[];
@@ -115,7 +104,6 @@ export type ValidatedColumnSidecars = {
 
 export type ValidatedResponses = {
   validatedBlocks?: ValidatedBlock[];
-  validatedBlobSidecars?: ValidatedBlobSidecars[];
   validatedColumnSidecars?: ValidatedColumnSidecars[];
 };
 
@@ -130,6 +118,7 @@ export function cacheByRangeResponses({
   batchBlocks,
   downloadedPayloadEnvelopes,
   existingPayloadEnvelopes,
+  parentPayload,
   custodyConfig,
   seenTimestampSec,
 }: CacheByRangeResponsesProps): {blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null} {
@@ -170,8 +159,8 @@ export function cacheByRangeResponses({
       updatedBatchBlocks.set(blockInput.slot, blockInput);
     }
 
-    // Seed seenPayloadEnvelopeInputCache the instant we have the block, before the blob loop (or any
-    // later step) can throw and abort the batch — otherwise a gloas block would sit in
+    // Seed seenPayloadEnvelopeInputCache the instant we have the block, before any
+    // later step can throw and abort the batch. Otherwise a gloas block would sit in
     // seenBlockInputCache but unseeded here, and payload-by-root sync would later throw "Missing
     // PayloadEnvelopeInput for known block" (see issue #9306). add() is idempotent.
     if (isForkPostGloas(blockInput.forkName) && !payloadEnvelopes.has(blockInput.slot)) {
@@ -188,60 +177,31 @@ export function cacheByRangeResponses({
     }
   }
 
-  for (const {blockRoot, blobSidecars} of responses.validatedBlobSidecars ?? []) {
-    const dataSlot = blobSidecars.at(0)?.signedBlockHeader.message.slot;
-    if (dataSlot === undefined) {
-      throw new Error(
-        `Coding Error: empty blobSidecars returned for blockRoot=${toRootHex(blockRoot)} from validation functions`
-      );
-    }
-    const existing = updatedBatchBlocks.get(dataSlot);
-    const blockRootHex = toRootHex(blockRoot);
-
-    if (!existing) {
-      throw new Error("Coding error: blockInput must exist when adding blobs");
-    }
-
-    if (!isBlockInputBlobs(existing)) {
-      throw new DownloadByRangeError({
-        code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
-        slot: existing.slot,
-        blockRoot: existing.blockRootHex,
-        expected: DAType.Blobs,
-        actual: existing.type,
-      });
-    }
-    for (const blobSidecar of blobSidecars) {
-      // will throw if root hex does not match (meaning we are following the wrong chain)
-      existing.addBlob(
-        {
-          blobSidecar,
-          blockRootHex,
-          seenTimestampSec,
-          peerIdStr,
-          source,
-        },
-        {throwOnDuplicateAdd: false}
-      );
-    }
-  }
-
   if (downloadedPayloadEnvelopes !== null) {
     for (const [slot, envelope] of downloadedPayloadEnvelopes) {
-      // the only PayloadEnvelopeInput miss is the dangling parent, which we can get from the seen cache
+      // the only PayloadEnvelopeInput miss is the dangling parent
       let payloadInput = payloadEnvelopes.get(slot);
       if (payloadInput === undefined) {
+        const blockRootHex = toRootHex(envelope.message.beaconBlockRoot);
         if (updatedBatchBlocks.has(slot)) {
-          throw new Error(
-            `Missing PayloadEnvelopeInput for in-batch slot ${slot} root ${toRootHex(envelope.message.beaconBlockRoot)}`
-          );
+          throw new Error(`Missing PayloadEnvelopeInput for in-batch slot ${slot} root ${blockRootHex}`);
         }
-        payloadInput = seenPayloadEnvelopeInputCache.get(toRootHex(envelope.message.beaconBlockRoot));
-      }
-      if (payloadInput === undefined) {
-        throw new Error(
-          `Missing PayloadEnvelopeInput for slot ${slot} root ${toRootHex(envelope.message.beaconBlockRoot)}`
-        );
+        if (parentPayload === undefined || blockRootHex !== parentPayload.blockRootHex) {
+          throw new Error(`Coding error: envelope for slot ${slot} root ${blockRootHex} is not the dangling parent`);
+        }
+        // Recreates the entry if it was evicted, by the cache cap or after an invalid envelope failed the import,
+        // the parent block is not part of the batch to recreate it from
+        payloadInput = seenPayloadEnvelopeInputCache.addFromBid({
+          blockRootHex,
+          slot: parentPayload.slot,
+          forkName: parentPayload.forkName,
+          proposerIndex: parentPayload.proposerIndex,
+          bid: parentPayload.bid,
+          sampledColumns: custodyConfig.sampledColumns,
+          custodyColumns: custodyConfig.custodyColumns,
+          seenTimestampSec,
+          source: PayloadEnvelopeInputSource.byRange,
+        });
       }
 
       if (!payloadInput.hasPayloadEnvelope()) {
@@ -328,11 +288,10 @@ export async function downloadByRange({
   peerIdStr,
   batchBlocks,
   blocksRequest,
-  blobsRequest,
   columnsRequest,
   envelopesRequest,
   parentPayloadRequest,
-  parentPayloadCommitments,
+  parentPayload,
   peerDasMetrics,
 }: DownloadAndCacheByRangeProps): Promise<
   WarnResult<
@@ -346,7 +305,6 @@ export async function downloadByRange({
       network,
       peerIdStr,
       blocksRequest,
-      blobsRequest,
       columnsRequest,
       envelopesRequest,
       parentPayloadRequest,
@@ -355,7 +313,7 @@ export async function downloadByRange({
     throw new DownloadByRangeError({
       code: DownloadByRangeErrorCode.REQ_RESP_ERROR,
       reason: (err as Error).message,
-      ...requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}),
+      ...requestsLogMeta({blocksRequest, columnsRequest}),
     });
   }
 
@@ -363,11 +321,10 @@ export async function downloadByRange({
     config,
     batchBlocks,
     blocksRequest,
-    blobsRequest,
     columnsRequest,
     envelopesRequest,
     parentPayloadRequest,
-    parentPayloadCommitments,
+    parentPayload,
     peerDasMetrics,
     ...response,
   });
@@ -380,7 +337,6 @@ export async function requestByRange({
   network,
   peerIdStr,
   blocksRequest,
-  blobsRequest,
   columnsRequest,
   envelopesRequest,
   parentPayloadRequest,
@@ -389,7 +345,6 @@ export async function requestByRange({
   peerIdStr: PeerIdStr;
 }): Promise<DownloadByRangeResponses> {
   let blocks: undefined | SignedBeaconBlock[];
-  let blobSidecars: undefined | deneb.BlobSidecars;
   const columnSidecars: DataColumnSidecar[] = [];
   const payloadEnvelopes: gloas.SignedExecutionPayloadEnvelope[] = [];
 
@@ -399,14 +354,6 @@ export async function requestByRange({
     requests.push(
       network.sendBeaconBlocksByRange(peerIdStr, blocksRequest).then((blockResponse) => {
         blocks = blockResponse;
-      })
-    );
-  }
-
-  if (blobsRequest) {
-    requests.push(
-      network.sendBlobSidecarsByRange(peerIdStr, blobsRequest).then((blobResponse) => {
-        blobSidecars = blobResponse;
       })
     );
   }
@@ -454,7 +401,6 @@ export async function requestByRange({
 
   return {
     blocks,
-    blobSidecars,
     columnSidecars,
     payloadEnvelopes,
   };
@@ -467,13 +413,11 @@ export async function validateResponses({
   config,
   batchBlocks,
   blocksRequest,
-  blobsRequest,
   columnsRequest,
   envelopesRequest,
   parentPayloadRequest,
-  parentPayloadCommitments,
+  parentPayload,
   blocks,
-  blobSidecars,
   columnSidecars,
   payloadEnvelopes,
   peerDasMetrics,
@@ -481,7 +425,7 @@ export async function validateResponses({
   DownloadByRangeResponses & {
     config: ChainForkConfig;
     batchBlocks?: IBlockInput[];
-    parentPayloadCommitments?: ParentPayloadCommitments;
+    parentPayload?: ParentPayload;
     peerDasMetrics?: BeaconMetrics["peerDas"] | null;
   }): Promise<
   WarnResult<
@@ -489,22 +433,22 @@ export async function validateResponses({
     DownloadByRangeError
   >
 > {
-  // Blocks are always required for blob/column validation
+  // Blocks are always required for column validation
   // If a blocksRequest is provided, blocks have just been downloaded
   // If no blocksRequest is provided, batchBlocks must have been provided from cache
-  if ((blobsRequest || columnsRequest) && !(blocks || batchBlocks)) {
+  if (columnsRequest && !(blocks || batchBlocks)) {
     throw new DownloadByRangeError(
       {
         code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-        ...requestsLogMeta({blobsRequest, columnsRequest}),
+        ...requestsLogMeta({columnsRequest}),
       },
       "No blocks to validate data requests against"
     );
   }
 
-  // `parentPayloadRequest` and `parentPayloadCommitments` must be supplied together
-  if ((parentPayloadRequest === undefined) !== (parentPayloadCommitments === undefined)) {
-    throw new Error("Coding error: parentPayloadRequest and parentPayloadCommitments must be both set or both unset");
+  // `parentPayloadRequest` and `parentPayload` must be supplied together
+  if ((parentPayloadRequest === undefined) !== (parentPayload === undefined)) {
+    throw new Error("Coding error: parentPayloadRequest and parentPayload must be both set or both unset");
   }
 
   const validatedResponses: ValidatedResponses = {};
@@ -518,20 +462,15 @@ export async function validateResponses({
     validatedResponses.validatedBlocks = result.result;
   }
 
-  const needsEnvelopeValidation = !!envelopesRequest || parentPayloadCommitments !== undefined;
-  const dataRequest = blobsRequest ?? columnsRequest;
-  if (!dataRequest && !needsEnvelopeValidation) {
+  const needsEnvelopeValidation = !!envelopesRequest || parentPayload !== undefined;
+  if (!columnsRequest && !needsEnvelopeValidation) {
     return {result: {responses: validatedResponses, payloadEnvelopes: null}, warnings};
   }
 
-  if (!dataRequest) {
+  if (!columnsRequest) {
     // Only envelope and/or parent-by-root validation needed
-    if (parentPayloadCommitments !== undefined) {
-      const parentValidated = await validateParentPayloadColumns(
-        parentPayloadCommitments,
-        columnSidecars ?? [],
-        peerDasMetrics
-      );
+    if (parentPayload !== undefined) {
+      const parentValidated = await validateParentPayloadColumns(parentPayload, columnSidecars ?? [], peerDasMetrics);
       if (parentValidated) {
         validatedResponses.validatedColumnSidecars = [parentValidated];
       }
@@ -540,13 +479,13 @@ export async function validateResponses({
       validatedResponses.validatedBlocks ?? [],
       batchBlocks,
       payloadEnvelopes ?? [],
-      parentPayloadCommitments
+      parentPayload
     );
     return {result: {responses: validatedResponses, payloadEnvelopes: validatedPayloadEnvelopes}, warnings};
   }
 
   const blocksForDataValidation = getBlocksForDataValidation(
-    dataRequest,
+    columnsRequest,
     batchBlocks,
     validatedResponses.validatedBlocks?.length ? validatedResponses.validatedBlocks : undefined
   );
@@ -555,58 +494,35 @@ export async function validateResponses({
     throw new DownloadByRangeError(
       {
         code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-        ...requestsLogMeta({blobsRequest, columnsRequest}),
+        ...requestsLogMeta({columnsRequest}),
       },
       "No blocks in data request slot range to validate data response against"
     );
   }
 
-  if (blobsRequest) {
-    if (!blobSidecars) {
-      throw new DownloadByRangeError(
-        {
-          code: DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE,
-          ...requestsLogMeta({blobsRequest, columnsRequest}),
-        },
-        "No blobSidecars to validate against blobsRequest"
-      );
-    }
-
-    validatedResponses.validatedBlobSidecars = await validateBlobsByRangeResponse(
-      blocksForDataValidation,
-      blobSidecars
+  if (!columnSidecars) {
+    throw new DownloadByRangeError(
+      {
+        code: DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE,
+        ...requestsLogMeta({columnsRequest}),
+      },
+      "No columnSidecars to check columnRequest against"
     );
   }
 
-  if (columnsRequest) {
-    if (!columnSidecars) {
-      throw new DownloadByRangeError(
-        {
-          code: DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE,
-          ...requestsLogMeta({blobsRequest, columnsRequest}),
-        },
-        "No columnSidecars to check columnRequest against"
-      );
-    }
-
-    const validatedColumnSidecarsResult = await validateColumnsByRangeResponse(
-      config,
-      columnsRequest,
-      blocksForDataValidation,
-      columnSidecars,
-      peerDasMetrics
-    );
-    validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
-    warnings = validatedColumnSidecarsResult.warnings;
-  }
+  const validatedColumnSidecarsResult = await validateColumnsByRangeResponse(
+    config,
+    columnsRequest,
+    blocksForDataValidation,
+    columnSidecars,
+    peerDasMetrics
+  );
+  validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
+  warnings = validatedColumnSidecarsResult.warnings;
 
   // Parent columns (by-root): KZG-validate against parent's bid commitments and append.
-  if (parentPayloadCommitments !== undefined) {
-    const parentValidated = await validateParentPayloadColumns(
-      parentPayloadCommitments,
-      columnSidecars ?? [],
-      peerDasMetrics
-    );
+  if (parentPayload !== undefined) {
+    const parentValidated = await validateParentPayloadColumns(parentPayload, columnSidecars ?? [], peerDasMetrics);
     if (parentValidated) {
       validatedResponses.validatedColumnSidecars = [
         ...(validatedResponses.validatedColumnSidecars ?? []),
@@ -621,7 +537,7 @@ export async function validateResponses({
       validatedResponses.validatedBlocks ?? [],
       batchBlocks,
       payloadEnvelopes ?? [],
-      parentPayloadCommitments
+      parentPayload
     );
   }
 
@@ -629,13 +545,13 @@ export async function validateResponses({
 }
 
 async function validateParentPayloadColumns(
-  parentPayloadCommitments: ParentPayloadCommitments,
+  parentPayload: ParentPayload,
   columnSidecars: DataColumnSidecar[],
   peerDasMetrics?: BeaconMetrics["peerDas"] | null
 ): Promise<ValidatedColumnSidecars | null> {
   const parentColumns: gloas.DataColumnSidecar[] = [];
   for (const cs of columnSidecars) {
-    if (isGloasDataColumnSidecar(cs) && byteArrayEquals(cs.beaconBlockRoot, parentPayloadCommitments.blockRoot)) {
+    if (isGloasDataColumnSidecar(cs) && byteArrayEquals(cs.beaconBlockRoot, parentPayload.blockRoot)) {
       parentColumns.push(cs);
     }
   }
@@ -645,17 +561,16 @@ async function validateParentPayloadColumns(
   }
 
   parentColumns.sort((a, b) => a.index - b.index);
-  const parentSlot = parentColumns[0].slot;
 
   await validateGloasBlockDataColumnSidecars(
-    parentSlot,
-    parentPayloadCommitments.blockRoot,
-    parentPayloadCommitments.kzgCommitments,
+    parentPayload.slot,
+    parentPayload.blockRoot,
+    parentPayload.bid.blobKzgCommitments,
     parentColumns,
     peerDasMetrics
   );
 
-  return {blockRoot: parentPayloadCommitments.blockRoot, columnSidecars: parentColumns};
+  return {blockRoot: parentPayload.blockRoot, columnSidecars: parentColumns};
 }
 
 /**
@@ -764,79 +679,6 @@ export function validateBlockByRangeResponse(
     result: response,
     warnings: null,
   };
-}
-
-/**
- * Should not be called directly. Only exported for unit testing purposes.
- * This is used only in Deneb and Electra
- */
-export async function validateBlobsByRangeResponse(
-  dataRequestBlocks: ValidatedBlock[],
-  blobSidecars: deneb.BlobSidecars
-): Promise<ValidatedBlobSidecars[]> {
-  const expectedBlobCount = dataRequestBlocks.reduce(
-    (acc, {block}) =>
-      (block as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>).message.body.blobKzgCommitments.length + acc,
-    0
-  );
-  if (blobSidecars.length > expectedBlobCount) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.EXTRA_BLOBS,
-        expected: expectedBlobCount,
-        actual: blobSidecars.length,
-      },
-      "Extra blobs received in BlobSidecarsByRange response"
-    );
-  }
-  if (blobSidecars.length < expectedBlobCount) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.MISSING_BLOBS,
-        expected: expectedBlobCount,
-        actual: blobSidecars.length,
-      },
-      "Missing blobs in BlobSidecarsByRange response"
-    );
-  }
-
-  const validateSidecarsPromises: Promise<ValidatedBlobSidecars>[] = [];
-  for (let blockIndex = 0, blobSidecarIndex = 0; blockIndex < dataRequestBlocks.length; blockIndex++) {
-    const {block, blockRoot} = dataRequestBlocks[blockIndex];
-    const blockKzgCommitments = (block as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>).message.body
-      .blobKzgCommitments;
-    if (blockKzgCommitments.length === 0) {
-      continue;
-    }
-
-    const blockBlobSidecars = blobSidecars.slice(blobSidecarIndex, blobSidecarIndex + blockKzgCommitments.length);
-    blobSidecarIndex += blockKzgCommitments.length;
-
-    for (let i = 0; i < blockBlobSidecars.length; i++) {
-      if (blockBlobSidecars[i].index !== i) {
-        throw new DownloadByRangeError(
-          {
-            code: DownloadByRangeErrorCode.OUT_OF_ORDER_BLOBS,
-            slot: block.message.slot,
-          },
-          "Blob sidecars not in order or do not match expected indexes in BlobSidecarsByRange response"
-        );
-      }
-    }
-
-    validateSidecarsPromises.push(
-      validateBlockBlobSidecars(
-        null, // do not pass chain here so we do not validate header signature
-        block.message.slot,
-        blockRoot,
-        blockKzgCommitments.length,
-        blockBlobSidecars
-      ).then(() => ({blockRoot, blobSidecars: blockBlobSidecars}))
-    );
-  }
-
-  // Await all sidecar validations in parallel
-  return Promise.all(validateSidecarsPromises);
 }
 
 /**
@@ -1115,22 +957,16 @@ export function getBlocksForDataValidation(
   return dataRequestBlocks;
 }
 
-function requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}: DownloadByRangeRequests) {
+function requestsLogMeta({blocksRequest, columnsRequest}: DownloadByRangeRequests) {
   const logMeta: {
     blockStartSlot?: number;
     blockCount?: number;
-    blobStartSlot?: number;
-    blobCount?: number;
     columnStartSlot?: number;
     columnCount?: number;
   } = {};
   if (blocksRequest) {
     logMeta.blockStartSlot = blocksRequest.startSlot;
     logMeta.blockCount = blocksRequest.count;
-  }
-  if (blobsRequest) {
-    logMeta.blobStartSlot = blobsRequest.startSlot;
-    logMeta.blobCount = blobsRequest.count;
   }
   if (columnsRequest) {
     logMeta.columnStartSlot = columnsRequest.startSlot;
@@ -1141,7 +977,6 @@ function requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}: Download
 
 export enum DownloadByRangeErrorCode {
   MISSING_BLOCKS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCK_RESPONSE",
-  MISSING_BLOBS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOBS_RESPONSE",
   MISSING_COLUMNS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS_RESPONSE",
 
   /** Error at the reqresp layer */
@@ -1153,10 +988,6 @@ export enum DownloadByRangeErrorCode {
   EXTRA_BLOCKS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_BLOCKS",
   OUT_OF_RANGE_BLOCKS = "DOWNLOAD_BY_RANGE_OUT_OF_RANGE_BLOCKS",
   OUT_OF_ORDER_BLOCKS = "DOWNLOAD_BY_RANGE_OUT_OF_ORDER_BLOCKS",
-
-  MISSING_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOBS",
-  OUT_OF_ORDER_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_OUT_OF_ORDER_BLOBS",
-  EXTRA_BLOBS = "DOWNLOAD_BY_RANGE_ERROR_EXTRA_BLOBS",
 
   MISSING_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS",
   OVER_COLUMNS = "DOWNLOAD_BY_RANGE_ERROR_OVER_COLUMNS",
@@ -1171,6 +1002,10 @@ export enum DownloadByRangeErrorCode {
 
   /** Envelope beaconBlockRoot does not match the block's root */
   INVALID_ENVELOPE_BEACON_BLOCK_ROOT = "DOWNLOAD_BY_RANGE_ERROR_INVALID_ENVELOPE_BEACON_BLOCK_ROOT",
+  /** Envelope payload.blockHash does not match the block's bid */
+  INVALID_ENVELOPE_BLOCK_HASH = "DOWNLOAD_BY_RANGE_ERROR_INVALID_ENVELOPE_BLOCK_HASH",
+  /** Dangling parent envelope payload.slotNumber does not match the parent's slot */
+  INVALID_ENVELOPE_SLOT = "DOWNLOAD_BY_RANGE_ERROR_INVALID_ENVELOPE_SLOT",
 
   /** Block segment + envelopes failed chain-segment linearity / FULL-chain checks */
   INVALID_CHAIN_SEGMENT = "DOWNLOAD_BY_RANGE_ERROR_INVALID_CHAIN_SEGMENT",
@@ -1178,14 +1013,9 @@ export enum DownloadByRangeErrorCode {
 
 export type DownloadByRangeErrorType =
   | {
-      code:
-        | DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE
-        | DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE
-        | DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE;
+      code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE | DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE;
       blockStartSlot?: number;
       blockCount?: number;
-      blobStartSlot?: number;
-      blobCount?: number;
       columnStartSlot?: number;
       columnCount?: number;
     }
@@ -1206,8 +1036,6 @@ export type DownloadByRangeErrorType =
       code: DownloadByRangeErrorCode.REQ_RESP_ERROR;
       blockStartSlot?: number;
       blockCount?: number;
-      blobStartSlot?: number;
-      blobCount?: number;
       columnStartSlot?: number;
       columnCount?: number;
       reason: string;
@@ -1224,18 +1052,8 @@ export type DownloadByRangeErrorType =
       actual: number;
     }
   | {
-      code: DownloadByRangeErrorCode.MISSING_BLOBS;
-      expected: number;
-      actual: number;
-    }
-  | {
-      code: DownloadByRangeErrorCode.OUT_OF_ORDER_BLOBS | DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS;
+      code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS;
       slot: number;
-    }
-  | {
-      code: DownloadByRangeErrorCode.EXTRA_BLOBS;
-      expected: number;
-      actual: number;
     }
   | {
       code: DownloadByRangeErrorCode.OVER_COLUMNS;
@@ -1273,6 +1091,17 @@ export type DownloadByRangeErrorType =
       actual: string;
     }
   | {
+      code: DownloadByRangeErrorCode.INVALID_ENVELOPE_BLOCK_HASH;
+      slot: Slot;
+      expected: string;
+      actual: string;
+    }
+  | {
+      code: DownloadByRangeErrorCode.INVALID_ENVELOPE_SLOT;
+      expected: Slot;
+      actual: Slot;
+    }
+  | {
       code: DownloadByRangeErrorCode.INVALID_CHAIN_SEGMENT;
       slot: Slot;
       reason: string;
@@ -1285,57 +1114,94 @@ export class DownloadByRangeError extends LodestarError<DownloadByRangeErrorType
  *
  * Three categories of envelope slots:
  *   - In-batch slot whose block we have: verify envelope.beaconBlockRoot matches.
- *   - Dangling-parent envelope (only when `parentPayloadCommitments` is set, i.e. the first
- *     batch of a `SyncChain`): keep if `envelope.beaconBlockRoot === parentPayloadCommitments.blockRoot`.
+ *   - Dangling-parent envelope (only when `parentPayload` is set, i.e. the first
+ *     batch of a `SyncChain`): keep if `envelope.beaconBlockRoot === parentPayload.blockRoot`, its slot and
+ *     block hash must match the parent's bid.
  *   - Other "orphan" envelopes (e.g. unrelated slots): ignored.
  */
 export function validateEnvelopesByRangeResponse(
   validatedBlocks: ValidatedBlock[],
   batchBlocks: IBlockInput[] | undefined,
   payloadEnvelopes: gloas.SignedExecutionPayloadEnvelope[],
-  parentPayloadCommitments?: ParentPayloadCommitments
+  parentPayload?: ParentPayload
 ): Map<Slot, gloas.SignedExecutionPayloadEnvelope> {
-  // Build a map of slot -> blockRoot for all blocks in the batch
-  const batchBlockRoots = new Map<Slot, Uint8Array>();
+  // Build a map of slot -> block root and bid block hash for all blocks in the batch
+  const batchBlocksBySlot = new Map<Slot, {blockRoot: Uint8Array; block: SignedBeaconBlock | null}>();
   if (batchBlocks) {
     for (const blockInput of batchBlocks) {
-      batchBlockRoots.set(blockInput.slot, fromHex(blockInput.blockRootHex));
+      batchBlocksBySlot.set(blockInput.slot, {
+        blockRoot: fromHex(blockInput.blockRootHex),
+        block: blockInput.hasBlock() ? blockInput.getBlock() : null,
+      });
     }
   }
   for (const {block, blockRoot} of validatedBlocks) {
-    batchBlockRoots.set(block.message.slot, blockRoot);
+    batchBlocksBySlot.set(block.message.slot, {blockRoot, block});
   }
 
   const payloadEnvelopeMap = new Map<Slot, gloas.SignedExecutionPayloadEnvelope>();
 
   for (const payloadEnvelope of payloadEnvelopes) {
     const slot = payloadEnvelope.message.payload.slotNumber;
-    const batchBlockRoot = batchBlockRoots.get(slot);
+    const batchBlock = batchBlocksBySlot.get(slot);
 
-    if (batchBlockRoot === undefined) {
+    if (batchBlock === undefined) {
       // Keep the requested dangling-parent envelope only when its beaconBlockRoot matches
       // exactly. All other unrelated envelopes are dropped.
       if (
-        parentPayloadCommitments !== undefined &&
-        byteArrayEquals(payloadEnvelope.message.beaconBlockRoot, parentPayloadCommitments.blockRoot)
+        parentPayload !== undefined &&
+        byteArrayEquals(payloadEnvelope.message.beaconBlockRoot, parentPayload.blockRoot)
       ) {
+        if (slot !== parentPayload.slot) {
+          throw new DownloadByRangeError({
+            code: DownloadByRangeErrorCode.INVALID_ENVELOPE_SLOT,
+            expected: parentPayload.slot,
+            actual: slot,
+          });
+        }
+        assertEnvelopeBlockHash(payloadEnvelope, parentPayload.bid.blockHash);
         payloadEnvelopeMap.set(slot, payloadEnvelope);
       }
       continue;
     }
 
     // Verify beaconBlockRoot matches the block's root
-    if (!byteArrayEquals(payloadEnvelope.message.beaconBlockRoot, batchBlockRoot)) {
+    if (!byteArrayEquals(payloadEnvelope.message.beaconBlockRoot, batchBlock.blockRoot)) {
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.INVALID_ENVELOPE_BEACON_BLOCK_ROOT,
         slot,
-        expected: toRootHex(batchBlockRoot),
+        expected: toRootHex(batchBlock.blockRoot),
         actual: toRootHex(payloadEnvelope.message.beaconBlockRoot),
       });
+    }
+
+    if (batchBlock.block !== null && isGloasBeaconBlock(batchBlock.block.message)) {
+      assertEnvelopeBlockHash(
+        payloadEnvelope,
+        batchBlock.block.message.body.signedExecutionPayloadBid.message.blockHash
+      );
     }
 
     payloadEnvelopeMap.set(slot, payloadEnvelope);
   }
 
   return payloadEnvelopeMap;
+}
+
+/**
+ * Rejected before it is cached. In-batch, `assertLinearChainSegment` fails on a wrong hash without evicting the
+ * envelope. For the dangling parent, the mismatch would only be caught at import.
+ */
+function assertEnvelopeBlockHash(
+  payloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  bidBlockHash: Uint8Array
+): void {
+  if (!byteArrayEquals(payloadEnvelope.message.payload.blockHash, bidBlockHash)) {
+    throw new DownloadByRangeError({
+      code: DownloadByRangeErrorCode.INVALID_ENVELOPE_BLOCK_HASH,
+      slot: payloadEnvelope.message.payload.slotNumber,
+      expected: toRootHex(bidBlockHash),
+      actual: toRootHex(payloadEnvelope.message.payload.blockHash),
+    });
+  }
 }

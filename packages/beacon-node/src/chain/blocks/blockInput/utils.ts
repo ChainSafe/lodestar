@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, getBlobDataRetentionStartEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
 
 export function isDaOutOfRange(
@@ -10,7 +10,7 @@ export function isDaOutOfRange(
   currentEpoch: Epoch
 ): boolean {
   if (isForkPostFulu(forkName)) {
-    return computeEpochAtSlot(blockSlot) < currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS;
+    return computeEpochAtSlot(blockSlot) < getBlobDataRetentionStartEpoch(config, currentEpoch);
   }
 
   if (isForkPostDeneb(forkName)) {

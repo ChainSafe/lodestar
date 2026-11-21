@@ -21,10 +21,11 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SUBNET_COUNT,
 } from "@lodestar/params";
+import {getSlotDurations} from "@lodestar/state-transition";
 import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
-import {callInNextEventLoop} from "../../util/eventLoop.js";
+import {callImmediate, callInNextEventLoop} from "../../util/eventLoop.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
 import {Libp2p} from "../interface.js";
 import {NetworkConfig} from "../networkConfig.js";
@@ -107,6 +108,7 @@ type GossipSubInternal = GossipSub & {
   score: {score: (peerIdStr: string) => number};
   direct: Set<string>;
   topics: Map<string, Set<string>>;
+  streamsOutbound: ReadonlyMap<string, unknown>;
   start: () => Promise<void>;
   stop: () => Promise<void>;
   publish: (topic: TopicStr, data: Uint8Array, opts?: PublishOpts) => Promise<PublishResult>;
@@ -172,7 +174,8 @@ export class Eth2Gossipsub {
       mcacheLength: 6,
       mcacheGossip: 3,
       // this should be in ms
-      seenTTL: config.SLOT_DURATION_MS * SLOTS_PER_EPOCH * 2,
+      // use the largest configured slot duration so the TTL stays conservative across duration changes
+      seenTTL: Math.max(...getSlotDurations(config).map(([, slotDurationMs]) => slotDurationMs)) * SLOTS_PER_EPOCH * 2,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
       // For a single stream, await processing each RPC before processing the next
@@ -244,6 +247,16 @@ export class Eth2Gossipsub {
 
   getMeshPeers(topic: TopicStr): string[] {
     return this.gossipsub.getMeshPeers(topic);
+  }
+
+  getSubscribersWithOutboundStream(topic: GossipTopic): Set<string> {
+    const topicStr = stringifyGossipTopic(this.config, topic);
+    const peers = new Set<string>();
+    for (const peer of this.gossipsub.getSubscribers(topicStr)) {
+      const id = peer.toString();
+      if (this.gossipsub.streamsOutbound.has(id)) peers.add(id);
+    }
+    return peers;
   }
 
   publish(topic: TopicStr, data: Uint8Array, opts?: PublishOpts): Promise<PublishResult> {
@@ -401,10 +414,7 @@ export class Eth2Gossipsub {
     const clientAgent = this.peersData.getPeerKind(peerIdStr) ?? "Unknown";
     const clientVersion = this.peersData.getAgentVersion(peerIdStr);
 
-    // Use setTimeout to yield to the macro queue
-    // Without this we'll have huge event loop lag
-    // See https://github.com/ChainSafe/lodestar/issues/5604
-    callInNextEventLoop(() => {
+    const emitPendingMessage = (): void => {
       this.events.emit(NetworkEvent.pendingGossipsubMessage, {
         topic,
         msg,
@@ -416,7 +426,17 @@ export class Eth2Gossipsub {
         seenTimestampSec,
         startProcessUnixSec: null,
       });
-    });
+    };
+
+    // Use setTimeout to yield to the macro queue
+    // Without this we'll have huge event loop lag
+    // See https://github.com/ChainSafe/lodestar/issues/5604
+    // A block arrives once per slot and cannot cause that lag, so it skips the 1ms timer delay
+    if (topic.type === GossipType.beacon_block) {
+      callImmediate(emitPendingMessage);
+    } else {
+      callInNextEventLoop(emitPendingMessage);
+    }
   }
 
   private onValidationResult(data: NetworkEventData[NetworkEvent.gossipMessageValidationResult]): void {

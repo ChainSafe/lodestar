@@ -1,7 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ForkName} from "@lodestar/params";
-import {SignedBeaconBlock, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
   BlockInputColumns,
@@ -17,6 +17,7 @@ import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
 import {Batch, BatchError, BatchErrorCode, BatchStatus} from "../../../../src/sync/range/batch.js";
 import {getBatchSlotRange} from "../../../../src/sync/range/utils/index.js";
+import {ParentPayload} from "../../../../src/sync/utils/downloadByRange.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {clock, config} from "../../../utils/blocksAndData.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
@@ -175,7 +176,6 @@ describe("sync / range / batch", async () => {
       it("should make default pre-deneb requests if no existing blocks are passed", () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
       });
 
@@ -186,33 +186,10 @@ describe("sync / range / batch", async () => {
       let batch: Batch;
       const startEpoch = config.DENEB_FORK_EPOCH + 1;
 
-      it("should make default ForkDABlobs requests if no existing blocks are passed", () => {
+      it("should make blocks-only requests for deneb-era epochs (blob download removed)", () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toEqual({startSlot: batch.startSlot, count: batch.count});
-        expect(batch.requests.columnsRequest).toBeUndefined();
-      });
-
-      it("should make default ForkDABlobs requests if current epoch is the last in request range", () => {
-        vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
-          startEpoch + config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-        );
-        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
-
-        expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toEqual({startSlot: batch.startSlot, count: batch.count});
-        expect(batch.requests.columnsRequest).toBeUndefined();
-      });
-
-      it("should not make ForkDABlobs requests if current epoch is ahead of request range", () => {
-        vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
-          startEpoch + config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS + 1
-        );
-        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
-
-        expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
       });
     });
@@ -227,7 +204,6 @@ describe("sync / range / batch", async () => {
 
       it("should make ForkDAColumns requests if no existing blocks are passed", () => {
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toEqual({
           startSlot: batch.startSlot,
           count: batch.count,
@@ -242,7 +218,6 @@ describe("sync / range / batch", async () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toEqual({
           startSlot: batch.startSlot,
           count: batch.count,
@@ -257,7 +232,6 @@ describe("sync / range / batch", async () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
       });
     });
@@ -266,7 +240,6 @@ describe("sync / range / batch", async () => {
       const startEpoch = config.CAPELLA_FORK_EPOCH - 1;
       const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
       expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-      expect(batch.requests.blobsRequest).toBeUndefined();
       expect(batch.requests.columnsRequest).toBeUndefined();
     });
 
@@ -282,7 +255,6 @@ describe("sync / range / batch", async () => {
       const startEpoch = config.FULU_FORK_EPOCH + 1;
       const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
       expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-      expect(batch.requests.blobsRequest).toBeUndefined();
       expect(batch.requests.columnsRequest).toEqual({
         startSlot: batch.startSlot,
         count: batch.count,
@@ -307,12 +279,16 @@ describe("sync / range / batch", async () => {
 
       function buildGloasBlockWithEnvelope({
         slot,
+        parentRoot,
+        parentBlockHash,
         blobCount = 0,
         sampledColumns = [],
         addEnvelope = true,
         addAllColumns = true,
       }: {
         slot: number;
+        parentRoot?: Uint8Array;
+        parentBlockHash?: Uint8Array;
         blobCount?: number;
         sampledColumns?: number[];
         addEnvelope?: boolean;
@@ -320,6 +296,8 @@ describe("sync / range / batch", async () => {
       }): {blockInput: BlockInputNoData; payloadInput: PayloadEnvelopeInput} {
         const block = ssz.gloas.SignedBeaconBlock.defaultValue();
         block.message.slot = slot;
+        if (parentRoot) block.message.parentRoot = parentRoot;
+        if (parentBlockHash) block.message.body.signedExecutionPayloadBid.message.parentBlockHash = parentBlockHash;
         block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = Array.from({length: blobCount}, () =>
           Buffer.alloc(48, 0x11)
         );
@@ -371,6 +349,65 @@ describe("sync / range / batch", async () => {
         }
         return {blockInput, payloadInput};
       }
+
+      it("requests the dangling parent payload only if the first block builds on the FULL variant of the parent", () => {
+        const parentBid = ssz.gloas.ExecutionPayloadBid.defaultValue();
+        parentBid.blockHash = Buffer.alloc(32, 0x22);
+        const parentRoot = Buffer.alloc(32, 0x33);
+        const parentPayload: ParentPayload = {
+          blockRoot: parentRoot,
+          blockRootHex: toRootHex(parentRoot),
+          slot: getBatchSlotRange(startEpoch).startSlot - 1,
+          proposerIndex: 0,
+          forkName: ForkName.gloas,
+          bid: parentBid,
+        };
+        const testCases = [
+          {
+            name: "parent root and parent block hash match",
+            parentRoot,
+            parentBlockHash: parentBid.blockHash,
+            expected: true,
+          },
+          {
+            name: "parent block hash matches but parent root does not",
+            parentRoot: Buffer.alloc(32, 0x44),
+            parentBlockHash: parentBid.blockHash,
+            expected: false,
+          },
+          {
+            name: "parent root matches but the block builds on the EMPTY variant",
+            parentRoot,
+            parentBlockHash: Buffer.alloc(32, 0x55),
+            expected: false,
+          },
+        ];
+
+        for (const {name, parentRoot, parentBlockHash, expected} of testCases) {
+          const batch = new Batch(
+            startEpoch,
+            config,
+            clock,
+            custodyConfig,
+            true,
+            parentPayload,
+            Number.MAX_SAFE_INTEGER
+          );
+          batch.startDownloading(peerSyncMeta);
+          const {blockInput, payloadInput} = buildGloasBlockWithEnvelope({
+            slot: batch.startSlot + 1,
+            parentRoot,
+            parentBlockHash,
+          });
+
+          batch.downloadingSuccess(peer, [blockInput], new Map([[blockInput.slot, payloadInput]]));
+
+          expect(batch.requests.parentPayloadRequest !== undefined, name).toBe(expected);
+          expect(batch.state.status, name).toBe(
+            expected ? BatchStatus.AwaitingDownload : BatchStatus.AwaitingProcessing
+          );
+        }
+      });
 
       it("transitions to AwaitingProcessing when every block has a complete payload envelope", () => {
         const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
@@ -451,6 +488,63 @@ describe("sync / range / batch", async () => {
         // and only include the missing column indices.
         expect(batch.requests.columnsRequest?.startSlot).toBe(bi2.slot);
         expect(batch.requests.columnsRequest?.columns).toEqual(sampledColumns);
+      });
+
+      it.each([
+        {name: "processing error", err: new Error("processing failed")},
+        {
+          name: "execution engine error",
+          err: new PayloadError(payloadInput, {
+            code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+            execStatus: ExecutionPayloadStatus.ELERROR,
+            errorMessage: "el is down",
+          }),
+        },
+      ])("requests the whole batch again after a $name following a partial download", ({err}) => {
+        // count=1 so the first round returns every block of the batch
+        const {startSlot} = getBatchSlotRange(startEpoch);
+        const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, startSlot);
+        const initialRequests = batch.requests;
+
+        // first round returns the block and envelope but not its columns
+        const sampledColumns = [0, 1];
+        const {blockInput, payloadInput} = buildGloasBlockWithEnvelope({
+          slot: batch.startSlot,
+          blobCount: 1,
+          sampledColumns,
+          addAllColumns: false,
+        });
+        const payloadEnvelopes = new Map([[blockInput.slot, payloadInput]]);
+        batch.startDownloading(peerSyncMeta);
+        batch.downloadingSuccess(peer, [blockInput], payloadEnvelopes);
+        expect(batch.requests.blocksRequest).toBeUndefined();
+        expect(batch.requests.columnsRequest?.columns).toEqual(sampledColumns);
+
+        // second round completes the columns
+        for (const index of sampledColumns) {
+          const columnSidecar = ssz.gloas.DataColumnSidecar.defaultValue();
+          columnSidecar.beaconBlockRoot = sszTypesFor(blockInput.forkName).BeaconBlock.hashTreeRoot(
+            blockInput.getBlock().message
+          );
+          columnSidecar.slot = blockInput.slot;
+          columnSidecar.index = index;
+          payloadInput.addColumn({
+            columnSidecar,
+            source: PayloadEnvelopeInputSource.byRange,
+            seenTimestampSec,
+            peerIdStr: peer,
+          });
+        }
+        batch.startDownloading(peerSyncMeta);
+        batch.downloadingSuccess(peer, [blockInput], payloadEnvelopes);
+        expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
+
+        batch.startProcessing();
+        batch.processingError(err);
+
+        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+        expect(batch.state.blocks).toEqual([]);
+        expect(batch.requests).toEqual(initialRequests);
       });
     });
 

@@ -55,16 +55,44 @@ export function isGloasBlock(block: ProtoBlock): block is ProtoBlock & {parentBl
 export type LVHValidResponse = {
   executionStatus: ExecutionStatus.Valid;
   latestValidExecHash: RootHex;
+  /** Resolves the exact node to validate when several nodes carry the same payload hash (gloas variants) */
+  blockRoot?: RootHex;
 };
+/** Which payload the execution engine judged INVALID, relative to the node the invalidation starts from */
+export enum LVHInvalidJudged {
+  /** The from node's own payload, e.g. the head sent in forkchoiceUpdated */
+  FromBlock = "from_block",
+  /** A payload built on the from node that is not in fork choice, e.g. a payload rejected by newPayload */
+  ChildPayload = "child_payload",
+}
 export type LVHInvalidResponse = {
   executionStatus: ExecutionStatus.Invalid;
   latestValidExecHash: RootHex | null;
-  invalidateFromParentBlockRoot: RootHex;
-  // EL block hash from invalid block's bid (gloas) or payload's parentHash (pre-gloas).
-  // Disambiguates which variant of the parent (FULL vs EMPTY) to invalidate from.
-  invalidateFromParentBlockHash: RootHex;
+  invalidateFromBlockRoot: RootHex;
+  // EL block hash of the from node's payload chain, disambiguates which variant (FULL vs EMPTY) to invalidate from.
+  // For `ChildPayload` it is the judged payload's parent hash.
+  invalidateFromBlockHash: RootHex;
+  judged: LVHInvalidJudged;
 };
 export type LVHExecResponse = LVHValidResponse | LVHInvalidResponse;
+
+export enum LVHNotAppliedReason {
+  /** VALID verdict whose latest valid hash is not in fork choice */
+  UnknownLVH = "unknown_lvh",
+  /** Fork choice already holds the verdict */
+  AlreadyApplied = "already_applied",
+  /** The verdict contradicts a status the engine already resolved */
+  Contradiction = "contradiction",
+  /** INVALID verdict on a payload that is not in fork choice, with a latest valid hash that is null or unknown */
+  UnusableLVH = "unusable_lvh",
+  /** INVALID verdict that covers no node above the latest valid hash or the justified block */
+  NothingToInvalidate = "nothing_to_invalidate",
+  Error = "error",
+}
+export type LVHVerdictResult =
+  | {applied: true}
+  | {applied: false; reason: Exclude<LVHNotAppliedReason, LVHNotAppliedReason.Error>}
+  | {applied: false; reason: LVHNotAppliedReason.Error; error: Error};
 
 /**
  * Any execution status that is not definitively invalid.
@@ -180,3 +208,24 @@ export type ProtoNode = ProtoBlock & {
   bestChild?: number;
   bestDescendant?: number;
 };
+
+/**
+ * PTC majority per PayloadAttestationData field: `true` or `false` once more than PTC_SIZE // 2
+ * members voted that way, `null` while neither outcome has a majority.
+ */
+export type PtcQuorum = {
+  payloadPresent: boolean | null;
+  blobDataAvailable: boolean | null;
+};
+
+/**
+ * The PTC verdict fork choice acts on: `false` once either field has a majority against the
+ * payload, `true` once both have a majority for it, `null` while undecided. A single majority
+ * against is final on its own because should_extend_payload needs both in favour and
+ * should_build_on_full moves the proposer onto EMPTY on either.
+ */
+export function getPtcVerdict({payloadPresent, blobDataAvailable}: PtcQuorum): boolean | null {
+  if (payloadPresent === false || blobDataAvailable === false) return false;
+  if (payloadPresent === true && blobDataAvailable === true) return true;
+  return null;
+}

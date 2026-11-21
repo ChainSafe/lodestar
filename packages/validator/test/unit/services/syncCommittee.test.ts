@@ -1,8 +1,8 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/native/blst";
 import {ssz} from "@lodestar/types";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
@@ -33,7 +33,7 @@ describe("SyncCommitteeService", () => {
 
   const config = createChainForkConfig({
     ...mainnetConfig,
-    SLOT_DURATION_MS: 1, // Make slot time super short: 1 ms
+    SLOT_DURATION_MS: 1000,
     ALTAIR_FORK_EPOCH: 0, // Activate Altair immediately
   });
 

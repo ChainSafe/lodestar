@@ -136,7 +136,7 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   bench({
     id: `${stateId} - altair processEth1DataReset`,
     beforeEach: () => stateOg.value.clone(),
-    fn: (state) => processEth1DataReset(state, cache.value),
+    fn: (state) => processEth1DataReset(state as CachedBeaconStateAltair, cache.value),
   });
 
   bench({

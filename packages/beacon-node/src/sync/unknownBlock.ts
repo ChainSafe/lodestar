@@ -6,7 +6,7 @@ import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot, gloas} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
-import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
+import {isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
@@ -73,7 +73,11 @@ type AdvancePendingBlockResult =
   | "removed";
 
 class UnknownBlockRateLimitedError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    /** Earliest backoff expiry seen when the download was deferred, it is retried once that has passed */
+    readonly retryAt: number
+  ) {
     super(message);
     this.name = "UnknownBlockRateLimitedError";
   }
@@ -296,10 +300,19 @@ export class BlockInputSync {
 
   private onIncompletePayloadEnvelope = (data: ChainEventData[ChainEvent.incompletePayloadEnvelope]): void => {
     try {
-      this.addByPayloadInput(data.payloadInput, data.peer);
-      this.triggerUnknownBlockSearch();
-      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.INCOMPLETE_PAYLOAD_ENVELOPE});
-      this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
+      const isNewRoot = this.addByPayloadInput(data.payloadInput, data.peer);
+      const pendingPayload = this.pendingPayloads.get(data.payloadInput.blockRootHex);
+      if (
+        pendingPayload &&
+        pendingPayload.status !== PendingPayloadInputStatus.fetching &&
+        pendingPayload.status !== PendingPayloadInputStatus.processing
+      ) {
+        this.triggerUnknownBlockSearch();
+      }
+      if (isNewRoot) {
+        this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.INCOMPLETE_PAYLOAD_ENVELOPE});
+        this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
+      }
     } catch (e) {
       this.logger.debug("Error handling incompletePayloadEnvelope event", {}, e as Error);
     }
@@ -595,43 +608,44 @@ export class BlockInputSync {
     return this.chain.seenPayloadEnvelopeInputCache.get(rootHex)?.slot;
   }
 
-  private addByPayloadInput = (
-    payloadInput: PayloadEnvelopeInput,
-    peerIdStr?: PeerIdStr,
-    envelope?: gloas.SignedExecutionPayloadEnvelope
-  ): void => {
+  private addByPayloadInput = (payloadInput: PayloadEnvelopeInput, peerIdStr?: PeerIdStr): boolean => {
     if (this.knownBadBlocks.has(payloadInput.blockRootHex)) {
       this.logger.debug("Ignoring payload input for known bad block root", {
         slot: payloadInput.slot,
         root: payloadInput.blockRootHex,
         peerIdStr,
       });
-      return;
+      return false;
     }
 
-    const pendingPayload = this.toPendingPayloadInput(
-      payloadInput,
-      this.pendingPayloads.get(payloadInput.blockRootHex),
-      envelope
-    );
+    let pendingPayload = this.pendingPayloads.get(payloadInput.blockRootHex);
+    const isNewRoot = pendingPayload === undefined;
+    // Envelope-only entries must go through reconciliation to validate their speculative envelope.
+    if (
+      !pendingPayload ||
+      pendingPayload.status === PendingPayloadInputStatus.pending ||
+      pendingPayload.status === PendingPayloadInputStatus.downloaded
+    ) {
+      pendingPayload = this.toPendingPayloadInput(payloadInput, pendingPayload);
+      this.pendingPayloads.set(payloadInput.blockRootHex, pendingPayload);
+
+      this.logger.verbose("Added payloadInput to BlockInputSync.pendingPayloads", {
+        slot: payloadInput.slot,
+        root: payloadInput.blockRootHex,
+        delaySec: this.chain.clock.secFromSlot(payloadInput.slot),
+      });
+    }
 
     if (peerIdStr && pendingPayload.peerIdStrings.size < MAX_PEERS_PER_ROOT) {
       pendingPayload.peerIdStrings.add(peerIdStr);
     }
-
-    this.pendingPayloads.set(payloadInput.blockRootHex, pendingPayload);
-
-    this.logger.verbose("Added payloadInput to BlockInputSync.pendingPayloads", {
-      slot: payloadInput.slot,
-      root: payloadInput.blockRootHex,
-      delaySec: this.chain.clock.secFromSlot(payloadInput.slot),
-    });
 
     const prunedItemCount = pruneSetToMax(this.pendingPayloads, this.maxPendingBlocks);
     if (prunedItemCount > 0) {
       this.metrics?.blockInputSync.removedPayloads.inc({reason: DroppedItemReason.capacity}, prunedItemCount);
       this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingPayloads`);
     }
+    return isNewRoot;
   };
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
@@ -849,17 +863,20 @@ export class BlockInputSync {
     }
   };
 
-  private scheduleRateLimitBackoffRetry(): void {
+  /**
+   * Returns false if there is no backoff left to wait for, in which case no retry is scheduled.
+   */
+  private scheduleRateLimitBackoffRetry(): boolean {
     this.clearRateLimitBackoffTimer();
 
     if (!this.subscribedToNetworkEvents || (this.pendingBlocks.size === 0 && this.pendingPayloads.size === 0)) {
-      return;
+      return false;
     }
 
     const now = Date.now();
     const retryAt = this.peerBalancer.getNextRateLimitRetryAt();
     if (retryAt === null) {
-      return;
+      return false;
     }
 
     this.rateLimitBackoffTimeout = setTimeout(
@@ -870,6 +887,7 @@ export class BlockInputSync {
       },
       Math.max(0, retryAt - now)
     );
+    return true;
   }
 
   private clearRateLimitBackoffTimer(): void {
@@ -910,16 +928,17 @@ export class BlockInputSync {
    * Poll unknown payloads of the current slot.
    */
   private async pollPayloadsAtSlot(slot: Slot, signal: AbortSignal): Promise<void> {
+    const fork = this.config.getForkName(slot);
     // fixed tick count so the loop cannot outlive its slot: for mainnet, it's 6 ticks
     const tickCount = Math.floor(
-      (this.config.SLOT_DURATION_MS - this.config.getPayloadDueMs()) / PAYLOAD_POLL_INTERVAL_MS
+      (this.config.getSlotDurationMs(fork) - this.config.getPayloadDueMs(fork)) / PAYLOAD_POLL_INTERVAL_MS
     );
     // a root still missing on several ticks is searched on each of them, recorded once
     const searchedRoots = new Set<RootHex>();
     let polls = 0;
 
     try {
-      await sleep(Math.max(0, this.config.getPayloadDueMs() - this.chain.clock.msFromSlot(slot)), signal);
+      await sleep(Math.max(0, this.config.getPayloadDueMs(fork) - this.chain.clock.msFromSlot(slot)), signal);
 
       for (polls = 0; polls < tickCount; polls++) {
         let importedCount = 0;
@@ -1081,7 +1100,11 @@ export class BlockInputSync {
           pendingBlock.status = PendingBlockInputStatus.pending;
         }
         this.logger.debug("Deferring unknown block download due to peer rate limit", logCtx, res.err);
-        this.scheduleRateLimitBackoffRetry();
+        if (!this.scheduleRateLimitBackoffRetry() || res.err.retryAt <= Date.now()) {
+          // The backoff this download waited for expired in the meantime, a timer is only armed if another
+          // peer is still in backoff and would retry it later than needed
+          this.triggerUnknownBlockSearch();
+        }
         return;
       }
 
@@ -1254,6 +1277,9 @@ export class BlockInputSync {
     }
 
     const payloadInput = await this.chain.seenPayloadEnvelopeInputCache.getOrReload(rootHex);
+    if (this.pendingPayloads.get(rootHex) !== pendingPayload) {
+      return;
+    }
     if (!payloadInput) {
       this.logger.debug("PayloadEnvelopeInput not yet reloadable for imported block, will retry", {
         root: rootHex,
@@ -1265,6 +1291,9 @@ export class BlockInputSync {
       const validationResult = await wrapError(
         validateGossipExecutionPayloadEnvelope(this.chain, pendingPayload.envelope)
       );
+      if (this.pendingPayloads.get(rootHex) !== pendingPayload) {
+        return;
+      }
       if (validationResult.err) {
         this.logger.debug(
           "Pending payload envelope failed validation after block import, refetching by root",
@@ -1332,14 +1361,13 @@ export class BlockInputSync {
     payload.status = PendingPayloadInputStatus.fetching;
 
     const res = await wrapError(this.fetchPayloadInput(payload));
+    if (this.pendingPayloads.get(rootHex) !== payload) {
+      this.logger.verbose("Dropping downloaded payload, entry changed during fetch", logCtx);
+      return;
+    }
     if (!res.err) {
       const pendingPayload = res.result;
       const resultRootHex = getPayloadSyncCacheItemRootHex(pendingPayload);
-      // finalization may have deleted this entry while we were awaiting the network, do not resurrect it via the set below
-      if (!this.pendingPayloads.has(resultRootHex)) {
-        this.logger.verbose("Dropping downloaded payload, entry pruned during fetch", logCtx);
-        return;
-      }
       this.pendingPayloads.set(resultRootHex, pendingPayload);
       const result = isPendingPayloadEnvelope(pendingPayload)
         ? DownloadResult.WaitingForBlock
@@ -1363,6 +1391,14 @@ export class BlockInputSync {
     this.logger.debug("Failed to download unknown payload root, retained for retry", logCtx, res.err);
     if (!isPendingPayloadEnvelope(payload)) {
       payload.status = PendingPayloadInputStatus.pending;
+    }
+    if (
+      res.err instanceof UnknownBlockRateLimitedError &&
+      (!this.scheduleRateLimitBackoffRetry() || res.err.retryAt <= Date.now())
+    ) {
+      // The backoff this download waited for expired in the meantime, a timer is only armed if another
+      // peer is still in backoff and would retry it later than needed
+      this.triggerUnknownBlockSearch();
     }
   }
 
@@ -1402,10 +1438,14 @@ export class BlockInputSync {
     this.logger.debug("Processing downloaded payload", logCtx);
 
     const res = await wrapError(this.chain.processExecutionPayload(pendingPayload.payloadInput));
+    // The executionPayload event emitted during import usually removes the entry before this point
     if (!res.err) {
       this.logger.debug("Processed payload from unknown sync", logCtx);
       this.pendingPayloads.delete(rootHex);
       this.triggerUnknownBlockSearch();
+      return;
+    }
+    if (this.pendingPayloads.get(rootHex) !== pendingPayload) {
       return;
     }
 
@@ -1488,16 +1528,21 @@ export class BlockInputSync {
       const pendingColumns = payloadInput?.hasAllData()
         ? new Set<number>()
         : new Set(payloadInput?.getMissingSampledColumnMeta().missing ?? []);
+      // Same `now` for both calls, a backoff expiring in between would be reported as no peer available
+      const now = Date.now();
       // prefer peers that gossiped this payload root to us (#9923)
       const peerMeta = this.peerBalancer.bestPeerForPendingColumns(
         pendingColumns,
         excludedPeers,
-        cacheItem.peerIdStrings
+        cacheItem.peerIdStrings,
+        now
       );
       if (peerMeta === null) {
-        if (this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers) !== null) {
+        const retryAt = this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers, now);
+        if (retryAt !== null) {
           throw new UnknownBlockRateLimitedError(
-            `Error fetching payload by root slot=${slot} root=${rootHex} after ${i}: peers with needed columns are rate-limited`
+            `Error fetching payload by root slot=${slot} root=${rootHex} after ${i}: peers with needed columns are rate-limited`,
+            retryAt
           );
         }
 
@@ -1636,9 +1681,11 @@ export class BlockInputSync {
     );
     this.metrics?.blockInputSync.payloadFetchPeers.set({result: FetchResult.FailureMaxAttempts}, i - 1);
 
-    if (deferredByRateLimit && this.peerBalancer.getNextRateLimitRetryAt() !== null) {
+    const retryAt = deferredByRateLimit ? this.peerBalancer.getNextRateLimitRetryAt() : null;
+    if (retryAt !== null) {
       throw new UnknownBlockRateLimitedError(
-        `Error fetching payload with slot=${slot} root=${rootHex} after ${i - 1} attempts: peers are rate-limited`
+        `Error fetching payload with slot=${slot} root=${rootHex} after ${i - 1} attempts: peers are rate-limited`,
+        retryAt
       );
     }
     throw Error(`Error fetching payload with slot=${slot} root=${rootHex} after ${i - 1} attempts.`);
@@ -1730,16 +1777,21 @@ export class BlockInputSync {
         isPendingBlockInput(cacheItem) && isBlockInputColumns(cacheItem.blockInput)
           ? new Set(cacheItem.blockInput.getMissingSampledColumnMeta().missing)
           : defaultPendingColumns;
+      // Same `now` for both calls, a backoff expiring in between would be reported as no peer available
+      const now = Date.now();
       // prefer peers that gossiped this block root to us (#9923)
       const peerMeta = this.peerBalancer.bestPeerForPendingColumns(
         pendingColumns,
         excludedPeers,
-        cacheItem.peerIdStrings
+        cacheItem.peerIdStrings,
+        now
       );
       if (peerMeta === null) {
-        if (this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers) !== null) {
+        const retryAt = this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers, now);
+        if (retryAt !== null) {
           throw new UnknownBlockRateLimitedError(
-            `Error fetching UnknownBlockRoot slot=${slot} root=${rootHex} after ${i}: peers with needed columns are rate-limited`
+            `Error fetching UnknownBlockRoot slot=${slot} root=${rootHex} after ${i}: peers with needed columns are rate-limited`,
+            retryAt
           );
         }
 
@@ -1845,8 +1897,9 @@ export class BlockInputSync {
 
     const message = `Error fetching BlockInput with slot=${slot} root=${rootHex} after ${i - 1} attempts.`;
 
-    if (deferredByRateLimit && this.peerBalancer.getNextRateLimitRetryAt() !== null) {
-      throw new UnknownBlockRateLimitedError(`${message} Peers are rate-limited.`);
+    const retryAt = deferredByRateLimit ? this.peerBalancer.getNextRateLimitRetryAt() : null;
+    if (retryAt !== null) {
+      throw new UnknownBlockRateLimitedError(`${message} Peers are rate-limited.`, retryAt);
     }
 
     if (!isPendingBlockInput(cacheItem)) {
@@ -1855,13 +1908,6 @@ export class BlockInputSync {
 
     if (!cacheItem.blockInput.hasBlock()) {
       throw new Error(`${message} Block was not found.`);
-    }
-
-    if (isBlockInputBlobs(cacheItem.blockInput)) {
-      const missing = cacheItem.blockInput.getMissingBlobMeta().map((b) => b.index);
-      if (missing.length) {
-        throw new Error(`${message} Missing blob indices=${prettyPrintIndices(missing)}.`);
-      }
     }
 
     if (isBlockInputColumns(cacheItem.blockInput)) {
@@ -2037,8 +2083,11 @@ export class UnknownBlockPeerBalancer {
     this.rateLimitedUntilByPeer.set(peerId, rateLimitedUntilMs);
   }
 
-  getNextRateLimitRetryAt(pendingColumns?: Set<number>, excludedPeers?: Set<PeerIdStr>): number | null {
-    const now = Date.now();
+  getNextRateLimitRetryAt(
+    pendingColumns?: Set<number>,
+    excludedPeers?: Set<PeerIdStr>,
+    now = Date.now()
+  ): number | null {
     let retryAt: number | null = null;
 
     for (const [peerId, rateLimitedUntil] of this.rateLimitedUntilByPeer.entries()) {
@@ -2077,9 +2126,10 @@ export class UnknownBlockPeerBalancer {
   bestPeerForPendingColumns(
     pendingColumns: Set<number>,
     excludedPeers: Set<PeerIdStr>,
-    preferredPeers?: Set<PeerIdStr>
+    preferredPeers?: Set<PeerIdStr>,
+    now = Date.now()
   ): PeerSyncMeta | null {
-    const eligiblePeers = this.filterPeers(pendingColumns, excludedPeers);
+    const eligiblePeers = this.filterPeers(pendingColumns, excludedPeers, now);
     if (eligiblePeers.length === 0) {
       return null;
     }
@@ -2120,8 +2170,7 @@ export class UnknownBlockPeerBalancer {
     return totalActiveRequests;
   }
 
-  private filterPeers(pendingDataColumns: Set<number>, excludedPeers: Set<PeerIdStr>): PeerIdStr[] {
-    const now = Date.now();
+  private filterPeers(pendingDataColumns: Set<number>, excludedPeers: Set<PeerIdStr>, now: number): PeerIdStr[] {
     let maxColumnCount = 0;
     const considerPeers: {peerId: PeerIdStr; columnCount: number}[] = [];
     for (const [peerId, syncMeta] of this.peersMeta.entries()) {

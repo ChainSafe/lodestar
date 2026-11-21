@@ -7,7 +7,7 @@ export enum ExecutionPayloadBidErrorCode {
   NON_ZERO_EXECUTION_PAYMENT = "EXECUTION_PAYLOAD_BID_ERROR_NON_ZERO_EXECUTION_PAYMENT",
   BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH = "EXECUTION_PAYLOAD_BID_ERROR_BLOCK_HASH_EQUALS_PARENT_BLOCK_HASH",
   INCOMPATIBLE_WITH_HEAD = "EXECUTION_PAYLOAD_BID_ERROR_INCOMPATIBLE_WITH_HEAD",
-  BID_ALREADY_KNOWN = "EXECUTION_PAYLOAD_BID_ERROR_BID_ALREADY_KNOWN",
+  BID_LIMIT_REACHED = "EXECUTION_PAYLOAD_BID_ERROR_BID_LIMIT_REACHED",
   BID_TOO_LOW = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_LOW",
   BID_TOO_HIGH = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_HIGH",
   BUILDER_MAY_EXIT = "EXECUTION_PAYLOAD_BID_ERROR_BUILDER_MAY_EXIT",
@@ -21,6 +21,8 @@ export enum ExecutionPayloadBidErrorCode {
   NO_MATCHING_PROPOSER_PREFERENCES = "EXECUTION_PAYLOAD_BID_ERROR_NO_MATCHING_PROPOSER_PREFERENCES",
   PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH",
   PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH",
+  INCLUSION_LIST_BITS_NOT_INCLUSIVE = "EXECUTION_PAYLOAD_BID_ERROR_INCLUSION_LIST_BITS_NOT_INCLUSIVE",
+  BEFORE_INCLUSION_LIST_DEADLINE = "EXECUTION_PAYLOAD_BID_ERROR_BEFORE_INCLUSION_LIST_DEADLINE",
 }
 
 export type ExecutionPayloadBidErrorType =
@@ -44,11 +46,12 @@ export type ExecutionPayloadBidErrorType =
       headBlockRoot: RootHex;
     }
   | {
-      code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN;
+      code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED;
       builderIndex: BuilderIndex;
       slot: Slot;
       parentBlockRoot: RootHex;
       parentBlockHash: RootHex;
+      bidLimit: number;
     }
   | {code: ExecutionPayloadBidErrorCode.BID_TOO_LOW; bidValue: number; currentHighestBid: number}
   | {code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH; bidValue: number; builderBalance: number}
@@ -85,6 +88,16 @@ export type ExecutionPayloadBidErrorType =
       builderIndex: BuilderIndex;
       bidFeeRecipient: string;
       expectedFeeRecipient: string;
+    }
+  | {
+      code: ExecutionPayloadBidErrorCode.INCLUSION_LIST_BITS_NOT_INCLUSIVE;
+      builderIndex: BuilderIndex;
+      slot: Slot;
+    }
+  | {
+      code: ExecutionPayloadBidErrorCode.BEFORE_INCLUSION_LIST_DEADLINE;
+      builderIndex: BuilderIndex;
+      slot: Slot;
     }
   | {
       code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH;

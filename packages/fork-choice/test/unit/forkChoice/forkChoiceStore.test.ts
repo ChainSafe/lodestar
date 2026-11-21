@@ -104,4 +104,47 @@ describe("ForkChoiceStore", () => {
       }).not.toThrow();
     });
   });
+
+  describe("notifyPtcQuorum", () => {
+    const event = {blockRoot: root, slot: 42 as Slot, verdict: true, payloadPresent: true, blobDataAvailable: true};
+
+    it("invokes onPtcQuorum when callback is provided", () => {
+      const onPtcQuorum = vi.fn();
+      const store = new ForkChoiceStore(
+        genesisSlot,
+        checkpoint,
+        checkpoint,
+        justifiedBalances,
+        justifiedBalancesGetter,
+        stateGetter,
+        {
+          onJustified: () => {},
+          onFinalized: () => {},
+          onPtcQuorum,
+        }
+      );
+
+      store.notifyPtcQuorum(event);
+
+      expect(onPtcQuorum).toHaveBeenCalledTimes(1);
+      expect(onPtcQuorum).toHaveBeenCalledWith(event);
+    });
+
+    it("is a no-op when onPtcQuorum is not provided", () => {
+      const store = new ForkChoiceStore(
+        genesisSlot,
+        checkpoint,
+        checkpoint,
+        justifiedBalances,
+        justifiedBalancesGetter,
+        stateGetter,
+        {
+          onJustified: () => {},
+          onFinalized: () => {},
+        }
+      );
+
+      expect(() => store.notifyPtcQuorum(event)).not.toThrow();
+    });
+  });
 });

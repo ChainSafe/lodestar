@@ -1,8 +1,8 @@
 import {describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {SecretKey} from "@lodestar/native/blst";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -10,9 +10,11 @@ import {Builder, BuilderOptions} from "../../src/builder.js";
 import {BlockObserver} from "../../src/services/blockObserver.js";
 import {BuilderSigner} from "../../src/services/builderSigner.js";
 import {BuilderStatusTracker} from "../../src/services/builderStatusTracker.js";
+import {HeadTracker} from "../../src/services/headTracker.js";
 import {PayloadStore} from "../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
+import {biddingOptions, createBiddingModules, getPayloadSourceStub} from "./utils/bidding.js";
 import {ClockMock} from "./utils/clock.js";
 import {getMockedLogger} from "./utils/logger.js";
 
@@ -30,7 +32,9 @@ describe("Builder preference tracking", () => {
     const builderStatusTracker = new BuilderStatusTracker(api, logger, 1, null);
     const blockObserver = new BlockObserver(config, logger, api);
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
+    const headTracker = new HeadTracker();
     const payloadStore = new PayloadStore();
+    const payloadSource = getPayloadSourceStub();
     const opts: BuilderOptions = {
       logger,
       config,
@@ -39,6 +43,9 @@ describe("Builder preference tracking", () => {
       api,
       executionFeeRecipient: Buffer.alloc(20),
       metrics: null,
+      payloadSource,
+      bidding: biddingOptions,
+      reveal: {},
     };
     const clockStart = vi.spyOn(clock, "start");
     const builder = new Builder({
@@ -47,15 +54,33 @@ describe("Builder preference tracking", () => {
       blockObserver,
       builderStatusTracker,
       proposerPreferencesTracker,
+      headTracker,
       clock,
       index: 1,
       payloadStore,
+      ...createBiddingModules({
+        api,
+        config,
+        logger,
+        clock,
+        builderSigner,
+        proposerPreferencesTracker,
+        headTracker,
+        payloadStore,
+        payloadSource,
+        signal: controller.signal,
+      }),
     });
 
     expect(clockStart).toHaveBeenCalledWith(controller.signal);
     expect(api.events.eventstream).toHaveBeenCalledOnce();
     const [{onEvent, signal, topics}] = api.events.eventstream.mock.calls[0];
-    expect(topics).toEqual([routes.events.EventType.block, routes.events.EventType.proposerPreferences]);
+    expect(topics).toEqual([
+      routes.events.EventType.headV2,
+      routes.events.EventType.block,
+      routes.events.EventType.proposerPreferences,
+      routes.events.EventType.payloadAttributes,
+    ]);
     expect(signal).toBe(controller.signal);
     const signed = ssz.gloas.SignedProposerPreferences.defaultValue();
     signed.message.proposalSlot = 4;

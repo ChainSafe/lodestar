@@ -65,7 +65,20 @@ export function fromHex(hex: string): Uint8Array {
   return new Uint8Array(b.buffer, b.byteOffset, b.length);
 }
 
-/// the performance of fromHexInto using a preallocated buffer is very bad compared to browser so I moved it to the benchmark
+export function fromHexInto(hex: string, buffer: Uint8Array): void {
+  if (hex.startsWith("0x")) {
+    hex = hex.slice(2);
+  }
+
+  if (hex.length !== buffer.length * 2) {
+    throw new Error(`hex string length ${hex.length} must be exactly double the buffer length ${buffer.length}`);
+  }
+
+  const bytesWritten = Buffer.from(buffer.buffer, buffer.byteOffset, buffer.length).write(hex, "hex");
+  if (bytesWritten !== buffer.length) {
+    throw new Error("hex string contains invalid characters");
+  }
+}
 
 /**
  * Compare two byte arrays for equality using the most performant method based on size.
@@ -99,7 +112,6 @@ export {
   bitCount,
   bytesToBigInt,
   bytesToInt,
-  fromHexInto,
   intToBytes,
   toHexString,
   xor,

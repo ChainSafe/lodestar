@@ -2,7 +2,6 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkSeq,
-  GENESIS_SLOT,
   MAX_DEPOSITS,
   MAX_EFFECTIVE_BALANCE,
   SLOTS_PER_EPOCH,
@@ -13,6 +12,7 @@ import {Epoch, Root, Slot, TimeSeconds, ssz} from "@lodestar/types";
 import {ZERO_HASH} from "../constants/constants.js";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeCheckpointEpochAtStateSlot, computeEpochAtSlot, getCurrentEpoch} from "./epoch.js";
+import {computeSlotAtTimeMs} from "./slot.js";
 import {StateBytesMetadata, getStateTypeFromBytes, scanActiveValidatorsFromStateBytes} from "./sszBytes.js";
 import {
   getActivationChurnLimit,
@@ -107,7 +107,7 @@ function computeWeakSubjectivityPeriodFromActiveValidators(
 ): number {
   const fork = config.getForkName(slot);
 
-  const churnLimitsGloas = getGloasChurnLimits(config, totalActiveBalanceIncrements);
+  const churnLimitsGloas = getGloasChurnLimits(config, computeEpochAtSlot(slot), totalActiveBalanceIncrements);
 
   return isForkPostGloas(fork)
     ? computeWeakSubjectivityPeriodFromConstituentsGloas(
@@ -223,6 +223,6 @@ export function isWithinWeakSubjectivityPeriodFromSummary(
   summary: WeakSubjectivitySummary,
   now: TimeSeconds = Date.now() / 1000
 ): boolean {
-  const clockSlot = GENESIS_SLOT + Math.floor((now - summary.genesisTime) / (config.SLOT_DURATION_MS / 1000));
+  const clockSlot = computeSlotAtTimeMs(config, now * 1000, summary.genesisTime * 1000);
   return computeEpochAtSlot(clockSlot) <= summary.checkpointEpoch + summary.period;
 }
