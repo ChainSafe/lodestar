@@ -478,6 +478,7 @@ export class BeaconChain implements IBeaconChain {
       logger,
       metrics,
     });
+    this.executionEngine.setCustodyColumns(this.custodyConfig.sampledColumns);
 
     this.builderCircuitBreaker = new BuilderCircuitBreaker(
       {faultInspectionWindow: opts.faultInspectionWindow, allowedFaults: opts.allowedFaults},
@@ -2107,6 +2108,7 @@ export class BeaconChain implements IBeaconChain {
     // Only update if target is increased
     if (targetCustodyGroupCount > this.custodyConfig.targetCustodyGroupCount) {
       this.custodyConfig.updateTargetCustodyGroupCount(targetCustodyGroupCount);
+      this.executionEngine.setCustodyColumns(this.custodyConfig.sampledColumns);
       this.metrics?.peerDas.custodyGroupCount.set(targetCustodyGroupCount);
       this.logger.verbose("Updated target custody group count", {
         finalizedEpoch: finalizedCheckpoint.epoch,

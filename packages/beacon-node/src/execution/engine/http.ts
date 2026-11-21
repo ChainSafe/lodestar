@@ -1,6 +1,16 @@
+import {BitArray} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/logger";
 import {ForkName, ForkPostFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
-import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix} from "@lodestar/types";
+import {
+  BlobsBundle,
+  ColumnIndex,
+  ExecutionPayload,
+  ExecutionRequests,
+  Root,
+  RootHex,
+  Wei,
+  bellatrix,
+} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {isErrorAborted} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
@@ -9,6 +19,7 @@ import {getLodestarClientVersion} from "../../util/metadata.js";
 import {isQueueErrorAborted} from "../../util/queue/errors.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {
+  BlobCellsAndProofs,
   ClientVersion,
   ExecutePayloadResponse,
   ExecutionEngineState,
@@ -26,8 +37,8 @@ import {EngineRestError, EngineRestResponseError, isRetryableEngineRestError} fr
 import {EngineCapabilities, RestEngineTransport} from "./restTransport.js";
 import {executionForkName} from "./sszTypes.js";
 import {IEngineTransport} from "./transport.js";
-import {ExecutionPayloadBodyV2, serializePayloadAttributes} from "./types.js";
-import {getExecutionEngineState} from "./utils.js";
+import {EngineApiRpcParamTypes, ExecutionPayloadBodyV2, serializePayloadAttributes} from "./types.js";
+import {columnsToBitArray, getExecutionEngineState} from "./utils.js";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
@@ -93,6 +104,8 @@ export type ExecutionEngineTransports = {
   rest?: RestEngineTransport;
 };
 
+type BlobsRevision = "v2" | "v4";
+
 type RestSupport =
   | {state: "pending"; error?: Error}
   | {state: "unsupported"}
@@ -106,6 +119,32 @@ const QUEUE_MAX_LENGTH = EPOCHS_PER_BATCH * SLOTS_PER_EPOCH * 2;
 
 /** Minimum delay between capabilities probes while the execution client is unreachable */
 const REST_PROBE_RETRY_MS = 12_000;
+
+/** Every JSON-RPC method Lodestar calls, advertised through `engine_exchangeCapabilities` */
+const ENGINE_API_METHODS: Exclude<keyof EngineApiRpcParamTypes, "engine_exchangeCapabilities">[] = [
+  "engine_newPayloadV1",
+  "engine_newPayloadV2",
+  "engine_newPayloadV3",
+  "engine_newPayloadV4",
+  "engine_newPayloadV5",
+  "engine_newPayloadV6",
+  "engine_forkchoiceUpdatedV1",
+  "engine_forkchoiceUpdatedV2",
+  "engine_forkchoiceUpdatedV3",
+  "engine_forkchoiceUpdatedV4",
+  "engine_forkchoiceUpdatedV5",
+  "engine_getPayloadV1",
+  "engine_getPayloadV2",
+  "engine_getPayloadV3",
+  "engine_getPayloadV4",
+  "engine_getPayloadV5",
+  "engine_getPayloadV6",
+  "engine_getPayloadBodiesByHashV2",
+  "engine_getClientVersionV1",
+  "engine_getBlobsV2",
+  "engine_getBlobsV4",
+  "engine_getInclusionListV1",
+];
 
 /**
  * Drives the execution client over the engine API, either the legacy `engine_*` JSON-RPC methods
@@ -129,6 +168,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   /** Cached EL client version from the latest getClientVersion call */
   clientVersion?: ClientVersion | null;
 
+  /** JSON-RPC methods of the latest `engine_exchangeCapabilities` answer */
+  private jsonRpcMethods?: Set<string> | null;
+  private custodyColumns?: BitArray;
+
   readonly payloadIdCache = new PayloadIdCache();
   /**
    * A queue to serialize the fcUs and newPayloads calls:
@@ -147,7 +190,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private restSupport: RestSupport = {state: "pending"};
   private restProbe: Promise<RestSupport> | null = null;
   private lastRestProbeMs = Number.NEGATIVE_INFINITY;
-  private readonly loggedRestFallbacks = new Set<ForkName | "v2">();
+  private readonly loggedRestFallbacks = new Set<ForkName | BlobsRevision>();
 
   constructor(
     {jsonRpc, rest}: ExecutionEngineTransports,
@@ -182,6 +225,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
             this.logger.debug("Unable to get execution client version", {}, e);
           });
+        }
+        if (this.jsonRpcMethods === undefined) {
+          this.jsonRpcMethods = null;
+          this.exchangeCapabilities();
         }
         this.updateEngineState(
           getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state})
@@ -338,7 +385,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   ): Promise<ForkchoiceUpdatedResult> {
     const result = await this.enqueue(() =>
       this.withTransport(fork, undefined, (transport) =>
-        transport.forkchoiceUpdated(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes)
+        transport.forkchoiceUpdated(
+          fork,
+          headBlockHash,
+          safeBlockHash,
+          finalizedBlockHash,
+          payloadAttributes,
+          // Decided after the transport probe, the first update after a reconnect also carries it
+          this.supportsGetBlobsV4() ? this.custodyColumns : undefined
+        )
       )
     );
     const {
@@ -423,6 +478,29 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return this.withTransport(undefined, "v2", (transport) => transport.getBlobsV2(versionedHashes, buffers));
   }
 
+  supportsGetBlobsV4(): boolean {
+    // Mirrors getTransport: REST when it serves blobs/v4, JSON-RPC otherwise unless REST is forced
+    const restV4 = this.restSupport.state === "supported" && this.restSupport.capabilities.blobsRevisions.has("v4");
+    if (this.engineApi === "ssz") {
+      return restV4;
+    }
+    if (this.engineApi === "auto" && restV4) {
+      return true;
+    }
+    return this.jsonRpcMethods?.has("engine_getBlobsV4") === true;
+  }
+
+  async getBlobsV4(
+    versionedHashes: VersionedHashes,
+    columns: ColumnIndex[]
+  ): Promise<(BlobCellsAndProofs | null)[] | null> {
+    return this.withTransport(undefined, "v4", (transport) => transport.getBlobsV4(versionedHashes, columns));
+  }
+
+  setCustodyColumns(columns: ColumnIndex[]): void {
+    this.custodyColumns = columnsToBitArray(columns);
+  }
+
   /**
    * `engine_getInclusionListV1`, JSON-RPC only as the REST engine API defines no inclusion list route.
    * Queued so it runs after the forkchoiceUpdated of a payload imported just before, which prunes that
@@ -446,7 +524,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   private async withTransport<T>(
     fork: ForkName | undefined,
-    blobsRevision: "v2" | undefined,
+    blobsRevision: BlobsRevision | undefined,
     fn: (transport: IEngineTransport) => Promise<T>
   ): Promise<T> {
     const transport = await this.getTransport(fork, blobsRevision);
@@ -487,7 +565,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * Pick the transport for a call. Fork-scoped calls only go over REST if the execution client
    * advertises that fork, blob requests only if it serves the needed `/blobs/vN` revision.
    */
-  private async getTransport(fork?: ForkName, blobsRevision?: "v2"): Promise<IEngineTransport> {
+  private async getTransport(fork?: ForkName, blobsRevision?: BlobsRevision): Promise<IEngineTransport> {
     if (this.rest === null || this.engineApi === "json-rpc") {
       return this.jsonRpc;
     }
@@ -587,6 +665,25 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return this.restProbe;
   }
 
+  /** Also tells the execution client that Lodestar consumes cells through `engine_getBlobsV4` */
+  private exchangeCapabilities(): void {
+    if (this.engineApi === "ssz") {
+      return;
+    }
+    this.jsonRpc
+      .exchangeCapabilities(ENGINE_API_METHODS)
+      .then((methods) => {
+        this.jsonRpcMethods = new Set(methods);
+        this.logger.debug("Exchanged engine API capabilities", {
+          getBlobsV4: this.jsonRpcMethods.has("engine_getBlobsV4"),
+        });
+      })
+      .catch((e) => {
+        this.jsonRpcMethods = null;
+        this.logger.debug("Unable to exchange engine API capabilities", {}, e);
+      });
+  }
+
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
     const clientVersions = await this.withTransport(undefined, undefined, (transport) =>
       transport.getClientVersion(clientVersion)
@@ -618,6 +715,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           this.logger.debug("Unable to get execution client version", {}, e);
           this.clientVersion = null;
         });
+        this.exchangeCapabilities();
         break;
       case ExecutionEngineState.OFFLINE:
         // Reprobe before choosing a transport for the next call after a disconnect.

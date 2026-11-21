@@ -1,8 +1,10 @@
+import {BitArray} from "@chainsafe/ssz";
 import {ForkName, ForkSeq} from "@lodestar/params";
-import {ExecutionPayload, ExecutionRequests, Root, RootHex, bellatrix} from "@lodestar/types";
+import {ColumnIndex, ExecutionPayload, ExecutionRequests, Root, RootHex, bellatrix} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {strip0xPrefix} from "@lodestar/utils";
 import {
+  BlobCellsAndProofs,
   ClientCode,
   ClientVersion,
   ForkchoiceUpdatedResult,
@@ -21,6 +23,7 @@ import {
   assertReqSizeLimit,
   deserializeBlobAndProofsV2,
   deserializeBlobAndProofsV2IntoBytes,
+  deserializeBlobCellsAndProofsV1,
   deserializeExecutionPayloadBodyV2,
   deserializeInclusionList,
   parseExecutionPayload,
@@ -31,7 +34,7 @@ import {
   serializePayloadAttributes,
   serializeVersionedHashes,
 } from "./types.js";
-import {bytesToData} from "./utils.js";
+import {bytesToData, columnsToBitArray} from "./utils.js";
 
 /**
  * Maximum number of version hashes that can be sent in a getBlobs request
@@ -46,8 +49,10 @@ const forkchoiceUpdatedOpts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
 const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
+const getBlobsV4Opts: ReqOpts = {routeId: "getBlobsV4"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
 const getInclusionListOpts: ReqOpts = {routeId: "getInclusionList"};
+const exchangeCapabilitiesOpts: ReqOpts = {routeId: "exchangeCapabilities"};
 
 /**
  * Legacy `engine_*` JSON-RPC methods
@@ -141,7 +146,8 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
+    payloadAttributes?: PayloadAttributes,
+    custodyColumns?: BitArray
   ): Promise<ForkchoiceUpdatedResult> {
     const method =
       ForkSeq[fork] >= ForkSeq.heze
@@ -161,7 +167,20 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     const {payloadStatus, payloadId} = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, payloadAttributesRpc]}, fcUReqOpts);
+    >(
+      {
+        method,
+        params:
+          custodyColumns !== undefined && ForkSeq[fork] >= ForkSeq.gloas
+            ? [
+                {headBlockHash, safeBlockHash, finalizedBlockHash},
+                payloadAttributesRpc,
+                bytesToData(custodyColumns.uint8Array),
+              ]
+            : [{headBlockHash, safeBlockHash, finalizedBlockHash}, payloadAttributesRpc],
+      },
+      fcUReqOpts
+    );
 
     return {payloadStatus, payloadId: payloadId && payloadId !== "0x" ? payloadId : null};
   }
@@ -245,6 +264,41 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     }
 
     return response.map(deserializeBlobAndProofsV2);
+  }
+
+  async getBlobsV4(
+    versionedHashes: VersionedHashes,
+    columns: ColumnIndex[]
+  ): Promise<(BlobCellsAndProofs | null)[] | null> {
+    assertReqSizeLimit(versionedHashes.length, MAX_VERSIONED_HASHES);
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes["engine_getBlobsV4"],
+      EngineApiRpcParamTypes["engine_getBlobsV4"]
+    >(
+      {
+        method: "engine_getBlobsV4",
+        params: [versionedHashes.map(bytesToData), bytesToData(columnsToBitArray(columns).uint8Array)],
+      },
+      getBlobsV4Opts
+    );
+
+    if (response == null) {
+      return null;
+    }
+    if (response.length !== versionedHashes.length) {
+      throw Error(
+        `Invalid engine_getBlobsV4 response length=${response.length} versionedHashes=${versionedHashes.length}`
+      );
+    }
+    return response.map((entry) => (entry === null ? null : deserializeBlobCellsAndProofsV1(entry, columns.length)));
+  }
+
+  async exchangeCapabilities(methods: string[]): Promise<string[]> {
+    const method = "engine_exchangeCapabilities";
+    return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
+      {method, params: [methods]},
+      exchangeCapabilitiesOpts
+    );
   }
 
   async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {

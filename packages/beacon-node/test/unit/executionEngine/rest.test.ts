@@ -1,6 +1,6 @@
 import {RLP} from "@ethereumjs/rlp";
 import {FastifyReply, FastifyRequest, fastify} from "fastify";
-import {afterAll, beforeAll, beforeEach, describe, expect, it} from "vitest";
+import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {SerializedList} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/logger";
 import {ForkName, ForkSeq} from "@lodestar/params";
@@ -12,11 +12,14 @@ import {decodeJwtToken} from "../../../src/execution/engine/jwt.js";
 import {
   BlobsRequest,
   BlobsV2Response,
+  BlobsV4Request,
+  BlobsV4Response,
   BodiesByHashRequest,
   BodiesResponseGloas,
   BuiltPayloadFulu,
   ForkchoiceUpdateBellatrix,
   ForkchoiceUpdateDeneb,
+  ForkchoiceUpdateGloas,
   ForkchoiceUpdateResponse,
   PayloadStatus,
   PayloadStatusCode,
@@ -59,6 +62,7 @@ describe("ExecutionEngine / rest", () => {
   let sszResponse: {status: number; body: Uint8Array} = {status: 200, body: new Uint8Array()};
   let problem: {status: number; body: unknown} | null = null;
   let jsonRpcResult: unknown = null;
+  let elJsonRpcMethods: string[] = [];
 
   function record(req: FastifyRequest): void {
     const body = req.body instanceof Buffer ? new Uint8Array(req.body) : req.body;
@@ -95,11 +99,15 @@ describe("ExecutionEngine / rest", () => {
     server.post("/engine/v1/bodies/hash", async (req, reply) => sendSsz(req, reply));
     server.get("/engine/v1/bodies", async (req, reply) => sendSsz(req, reply));
     server.post("/engine/v1/blobs/v2", async (req, reply) => sendSsz(req, reply));
+    server.post("/engine/v1/blobs/v4", async (req, reply) => sendSsz(req, reply));
     server.post<{Body: {method: string}}>("/", async (req) => {
       if (req.body.method === "engine_getClientVersionV1") {
         return {jsonrpc: "2.0", id: 1, result: [{code: "XX", name: "Test EL", version: "1", commit: "0x12345678"}]};
       }
       record(req);
+      if (req.body.method === "engine_exchangeCapabilities") {
+        return {jsonrpc: "2.0", id: 1, result: elJsonRpcMethods};
+      }
       return {jsonrpc: "2.0", id: 1, result: jsonRpcResult};
     });
 
@@ -117,6 +125,7 @@ describe("ExecutionEngine / rest", () => {
     sszResponse = {status: 200, body: new Uint8Array()};
     problem = null;
     jsonRpcResult = null;
+    elJsonRpcMethods = [];
   });
 
   function createEngine(engineApi?: EngineApiMode): IExecutionEngine {
@@ -132,8 +141,12 @@ describe("ExecutionEngine / rest", () => {
     return req;
   }
 
+  /** Without the capabilities exchange, which every engine sends on its first response */
   function jsonRpcMethods(): string[] {
-    return requests.filter((r) => r.url === "/").map((r) => (r.body as {method: string}).method);
+    return requests
+      .filter((r) => r.url === "/")
+      .map((r) => (r.body as {method: string}).method)
+      .filter((method) => method !== "engine_exchangeCapabilities");
   }
 
   describe("transport selection", () => {
@@ -550,6 +563,114 @@ describe("ExecutionEngine / rest", () => {
       expect(res).toEqual([{blob, proofs}]);
       expect(res?.[0].blob.buffer).not.toBe(buffers[0].buffer);
       expect(buffers[0][0]).toBe(0);
+    });
+  });
+
+  describe("getBlobsV4", () => {
+    const cell = (byte: number): Uint8Array => new Uint8Array(2048).fill(byte);
+    const proof = (byte: number): Uint8Array => new Uint8Array(48).fill(byte);
+    const fcuValid = {payloadStatus: {status: "VALID", latestValidHash: null, validationError: null}, payloadId: null};
+    // columns 3 and 70: bit 3 of byte 0 and bit 6 of byte 8
+    const columns = [3, 70];
+    const bitarrayHex = `0x08${"00".repeat(7)}40${"00".repeat(7)}`;
+
+    function restEntry(cells: Map<number, Uint8Array>) {
+      return {
+        available: true,
+        contents: {
+          blobCells: Array.from({length: 128}, (_, i) => (cells.has(i) ? [cells.get(i) as Uint8Array] : [])),
+          proofs: Array.from({length: 128}, (_, i) => (cells.has(i) ? [proof(i)] : [])),
+        },
+      };
+    }
+
+    it("maps blobs/v4 cells to the requested columns and sends custody on gloas forkchoice updates", async () => {
+      const engine = createEngine();
+      sszResponse.body = BlobsV4Response.serialize({
+        entries: [
+          restEntry(
+            new Map([
+              [3, cell(3)],
+              [70, cell(70)],
+            ])
+          ),
+          {available: false, contents: restEntry(new Map()).contents},
+        ],
+      });
+
+      const res = await engine.getBlobsV4([hash, hash], columns);
+
+      expect(res).toEqual([{cells: [cell(3), cell(70)], proofs: [proof(3), proof(70)]}, null]);
+      const request = BlobsV4Request.deserialize(lastRequest("/engine/v1/blobs/v4").body as Uint8Array);
+      expect(request.versionedHashes).toEqual([hash, hash]);
+      expect(request.indicesBitarray.getTrueBitIndexes()).toEqual(columns);
+      expect(engine.supportsGetBlobsV4()).toBe(true);
+
+      engine.setCustodyColumns(columns);
+      sszResponse.body = ForkchoiceUpdateResponse.serialize({payloadStatus: validStatus, payloadId: []});
+      await engine.notifyForkchoiceUpdate(ForkName.gloas, hashHex, hashHex, hashHex);
+      const {custodyColumns} = ForkchoiceUpdateGloas.deserialize(
+        lastRequest("/engine/v1/forkchoice").body as Uint8Array
+      );
+      expect(custodyColumns.map((bits) => bits.getTrueBitIndexes())).toEqual([columns]);
+    });
+
+    it("rejects blobs/v4 cells that are not indexed by column", async () => {
+      const engine = createEngine();
+      sszResponse.body = BlobsV4Response.serialize({
+        entries: [{available: true, contents: {blobCells: [[cell(3)], [cell(70)]], proofs: [[proof(3)], [proof(70)]]}}],
+      });
+
+      await expect(engine.getBlobsV4([hash], columns)).rejects.toThrow("Invalid blobs/v4 entry cells=2");
+    });
+
+    it("uses engine_getBlobsV4 once the execution client lists it in its capabilities", async () => {
+      capabilities = {status: 404, body: {}};
+      elJsonRpcMethods = ["engine_forkchoiceUpdatedV4", "engine_getBlobsV4"];
+      jsonRpcResult = fcuValid;
+      const engine = createEngine();
+      engine.setCustodyColumns(columns);
+
+      await engine.notifyForkchoiceUpdate(ForkName.bellatrix, hashHex, hashHex, hashHex);
+      await vi.waitFor(() => expect(engine.supportsGetBlobsV4()).toBe(true));
+      expect(requests.map((r) => r.body)).toContainEqual({
+        jsonrpc: "2.0",
+        id: expect.any(Number),
+        method: "engine_exchangeCapabilities",
+        params: [expect.arrayContaining(["engine_getBlobsV4"])],
+      });
+
+      await engine.notifyForkchoiceUpdate(ForkName.gloas, hashHex, hashHex, hashHex);
+      expect((lastRequest("/").body as {params: unknown[]}).params[2]).toBe(bitarrayHex);
+
+      jsonRpcResult = [{blob_cells: [toHex(cell(3)), null], proofs: [toHex(proof(3)), null]}, null];
+      const res = await engine.getBlobsV4([hash, hash], columns);
+
+      expect(res).toEqual([{cells: [cell(3), null], proofs: [proof(3), null]}, null]);
+      expect(lastRequest("/").body).toMatchObject({
+        method: "engine_getBlobsV4",
+        params: [[hashHex, hashHex], bitarrayHex],
+      });
+    });
+
+    it("keeps custody columns off forkchoice updates while getBlobsV4 is not served", async () => {
+      capabilities = {
+        status: 200,
+        body: {...defaultCapabilities, independently_versioned: {blobs: ["v1", "v2", "v3"]}},
+      };
+      const engine = createEngine();
+      engine.setCustodyColumns(columns);
+      sszResponse.body = ForkchoiceUpdateResponse.serialize({payloadStatus: validStatus, payloadId: []});
+
+      await engine.notifyForkchoiceUpdate(ForkName.gloas, hashHex, hashHex, hashHex);
+      await vi.waitFor(() => expect(requests.some((r) => r.url === "/")).toBe(true));
+      await engine.notifyForkchoiceUpdate(ForkName.gloas, hashHex, hashHex, hashHex);
+
+      expect(engine.supportsGetBlobsV4()).toBe(false);
+      const {custodyColumns} = ForkchoiceUpdateGloas.deserialize(
+        lastRequest("/engine/v1/forkchoice").body as Uint8Array
+      );
+      expect(custodyColumns).toEqual([]);
     });
   });
 });

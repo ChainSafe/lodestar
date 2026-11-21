@@ -16,18 +16,18 @@ const MAX_TRACKED_BLOCK_ROOTS = 64;
 
 export type GetBlobsTrackerInit = {
   logger: Logger;
-  executionEngine: Pick<IExecutionEngine, "getBlobs">;
+  executionEngine: Pick<IExecutionEngine, "getBlobs" | "getBlobsV4" | "supportsGetBlobsV4">;
   emitter: ChainEventEmitter;
   metrics: Metrics | null;
   config: ChainForkConfig;
 };
 
 /**
- * Tracks getBlobsV2 calls to the execution engine to avoid duplicate and multiple in-flight calls
+ * Tracks getBlobs calls to the execution engine to avoid duplicate and multiple in-flight calls
  */
 export class GetBlobsTracker {
   logger: Logger;
-  executionEngine: Pick<IExecutionEngine, "getBlobs">;
+  executionEngine: Pick<IExecutionEngine, "getBlobs" | "getBlobsV4" | "supportsGetBlobsV4">;
   emitter: ChainEventEmitter;
   metrics: Metrics | null;
   config: ChainForkConfig;
@@ -93,7 +93,7 @@ export class GetBlobsTracker {
     this.activeReconstructions.add(input.blockRootHex);
     this.blobsAndProofsBuffers[freeIndex].inUse = true;
     const logCtx = {slot: input.slot, root: input.blockRootHex};
-    this.logger.verbose("Trigger getBlobsV2 for block", logCtx);
+    this.logger.verbose("Trigger getBlobs for block", logCtx);
     let requestFailed = false;
     // The request is sent right away, before block processing issues newPayload: ELs that drop a
     // transaction's blobs once the payload is validated can only answer a request that gets there first
@@ -106,7 +106,7 @@ export class GetBlobsTracker {
       this.blobsAndProofsBuffers[freeIndex].buffers
     )
       .then((result) => {
-        this.logger.debug("getBlobsV2 result for block", {...logCtx, result});
+        this.logger.debug("getBlobs result for block", {...logCtx, result});
         this.metrics?.dataColumns.dataColumnEngineResult.inc({result});
         if (result === DataColumnEngineResult.NullResponse) {
           requestFailed = true;
@@ -114,13 +114,13 @@ export class GetBlobsTracker {
         }
       })
       .catch((error) => {
-        this.logger.debug("Error during getBlobsV2 for block", logCtx, error as Error);
+        this.logger.debug("Error during getBlobs for block", logCtx, error as Error);
         this.metrics?.dataColumns.dataColumnEngineResult.inc({result: DataColumnEngineResult.Failed});
         requestFailed = true;
         this.recordFailedAttempt(input.blockRootHex);
       })
       .finally(() => {
-        this.logger.verbose("Completed getBlobsV2 for block", logCtx);
+        this.logger.verbose("Completed getBlobs for block", logCtx);
         this.activeReconstructions.delete(input.blockRootHex);
         this.blobsAndProofsBuffers[freeIndex].inUse = false;
         this.retryPendingTrigger(input, requestFailed);
