@@ -105,9 +105,7 @@
     </spec>
 
 - name: COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR#phase0
-  sources:
-    - file: packages/fork-choice/src/forkChoice/fastConfirmation/utils.ts
-      search: const COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR =
+  sources: []
   spec: |
     <spec constant_var="COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR" fork="phase0" hash="0e734eab">
     COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR: Uint64 = 5
