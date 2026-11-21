@@ -25,6 +25,7 @@ import {
 } from "@lodestar/state-transition";
 import {
   ProducedBlockSource,
+  RootHex,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
   SignedBlockContents,
@@ -510,26 +511,32 @@ export function getBeaconBlockApi(
 
       const result: routes.beacon.BlockHeaderResponse[] = [];
       if (parentRoot) {
+        let finalizedRoot: RootHex | null = null;
         const finalizedBlock = await db.blockArchive.getByParentRoot(fromHex(parentRoot));
         if (finalizedBlock) {
-          result.push(toBeaconHeaderResponse(config, finalizedBlock, true));
+          const header = toBeaconHeaderResponse(config, finalizedBlock, true);
+          finalizedRoot = toRootHex(header.root);
+          result.push(header);
         }
         const nonFinalizedBlocks = chain.forkChoice.getBlockSummariesByParentRoot(parentRoot);
         await Promise.all(
           nonFinalizedBlocks.map(async (summary) => {
+            // The finalized block stays in fork choice as its anchor after it is archived
+            if (summary.blockRoot === finalizedRoot) {
+              return;
+            }
             const blockResult = await chain.getBlockByRoot(summary.blockRoot);
             if (blockResult) {
+              // There is no canonical block at the slot of a child that was reorged out by a later sibling
               const canonical = chain.forkChoice.getCanonicalBlockAtSlot(blockResult.block.message.slot);
-              if (canonical) {
-                result.push(
-                  toBeaconHeaderResponse(config, blockResult.block, canonical.blockRoot === summary.blockRoot)
-                );
-                if (isOptimisticBlock(canonical)) {
-                  executionOptimistic = true;
-                }
-                // Block from hot db which only contains unfinalized blocks
-                finalized = false;
+              result.push(
+                toBeaconHeaderResponse(config, blockResult.block, canonical?.blockRoot === summary.blockRoot)
+              );
+              if (isOptimisticBlock(summary)) {
+                executionOptimistic = true;
               }
+              // Block from hot db which only contains unfinalized blocks
+              finalized = false;
             }
           })
         );
@@ -554,21 +561,18 @@ export function getBeaconBlockApi(
           return {data: [], meta: {executionOptimistic: false, finalized: false}};
         }
 
+        let canonicalRoot: RootHex | null = null;
         const canonicalBlock = await chain.getCanonicalBlockAtSlot(slot);
-        // skip slot
-        if (!canonicalBlock) {
-          return {data: [], meta: {executionOptimistic: false, finalized: false}};
-        }
-        const canonicalRoot = config
-          .getForkTypes(canonicalBlock.block.message.slot)
-          .BeaconBlock.hashTreeRoot(canonicalBlock.block.message);
-        result.push(toBeaconHeaderResponse(config, canonicalBlock.block, true));
-        if (!canonicalBlock.finalized) {
-          finalized = false;
+        if (canonicalBlock) {
+          const header = toBeaconHeaderResponse(config, canonicalBlock.block, true);
+          canonicalRoot = toRootHex(header.root);
+          result.push(header);
+          if (!canonicalBlock.finalized) {
+            finalized = false;
+          }
         }
 
-        // fork blocks
-        // TODO: What is this logic?
+        // Non-canonical blocks at the slot, also if the canonical chain skipped it
         await Promise.all(
           chain.forkChoice.getBlockSummariesAtSlot(slot).map(async (summary) => {
             if (isOptimisticBlock(summary)) {
@@ -576,7 +580,7 @@ export function getBeaconBlockApi(
             }
             finalized = false;
 
-            if (summary.blockRoot !== toRootHex(canonicalRoot)) {
+            if (summary.blockRoot !== canonicalRoot) {
               const blockResult = await chain.getBlockByRoot(summary.blockRoot);
               if (blockResult) {
                 result.push(toBeaconHeaderResponse(config, blockResult.block));
@@ -584,6 +588,11 @@ export function getBeaconBlockApi(
             }
           })
         );
+
+        // skip slot
+        if (result.length === 0) {
+          return {data: [], meta: {executionOptimistic: false, finalized: false}};
+        }
       }
 
       return {
