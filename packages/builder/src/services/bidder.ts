@@ -185,8 +185,9 @@ export class Bidder {
 
   /**
    * Dependent root of the proposer duties for the proposal slot on the branch of the parent block, identifies
-   * the proposer preferences to bid against. Taken from the head events, the proposer duties are only fetched
-   * for a parent that was not announced as head, e.g. before the first head event after connecting.
+   * the proposer preferences to bid against. Taken from the head events. A parent that was not announced as
+   * head, e.g. before the first head event after connecting, falls back to the proposer duties, which carry
+   * the dependent root of the beacon node's head branch.
    */
   private async getDependentRoot(parentBlockRoot: RootHex, slot: Slot, logCtx: LogData): Promise<RootHex> {
     const {api, headTracker, logger, signal} = this.modules;
