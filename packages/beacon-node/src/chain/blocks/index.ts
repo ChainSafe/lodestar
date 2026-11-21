@@ -1,7 +1,7 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {SignedBeaconBlock, Slot} from "@lodestar/types";
-import {isErrorAborted, toRootHex} from "@lodestar/utils";
+import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
+import {LogLevel, isErrorAborted, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
@@ -14,6 +14,7 @@ import {importBlock, importsBlockAttestations} from "./importBlock.js";
 import {PayloadError, importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {FullyVerifiedBlock, ImportBlockOpts, ProcessBlocksResult} from "./types.js";
+import {getBlockErrorLogLevel} from "./utils/blockErrorLogLevel.js";
 import {OrphanedPayloadEnvelope, assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
@@ -22,6 +23,8 @@ import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.j
 export {AttestationImportOpt, type ImportBlockOpts} from "./types.js";
 
 const QUEUE_MAX_LENGTH = 256;
+/** Block or payload errors already logged above debug level, bounded to the most recent ones */
+const MAX_REPORTED_BLOCK_ERRORS = 1024;
 
 /**
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
@@ -198,21 +201,21 @@ export async function processBlocks(
       this.logger.debug("Neither BlockError nor PayloadError received", {}, err);
     } else if (err instanceof PayloadError) {
       if (!opts.disableOnBlockError) {
-        this.logger.debug(
-          "Payload error",
-          {slot: err.payloadInput.slot, blockRoot: err.payloadInput.blockRootHex},
-          err
-        );
+        logBlockOrPayloadError.call(this, "Payload error", err, err.payloadInput);
       }
     } else if (!opts.disableOnBlockError) {
-      this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
+      const blockRootHex =
+        blocks.find((blockInput) => blockInput.getBlock() === err.signedBlock)?.blockRootHex ??
+        toRootHex(
+          this.config.getForkTypes(err.signedBlock.message.slot).BeaconBlock.hashTreeRoot(err.signedBlock.message)
+        );
+      logBlockOrPayloadError.call(this, "Block error", err, {slot: err.signedBlock.message.slot, blockRootHex});
 
       if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
         const {signedBlock} = err;
         const blockSlot = signedBlock.message.slot;
         const {state} = err.type;
         const forkTypes = this.config.getForkTypes(blockSlot);
-        const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
         this.persistInvalidSszValue(
           forkTypes.SignedBeaconBlock,
           signedBlock,
@@ -243,6 +246,34 @@ export async function processBlocks(
 
     throw err;
   }
+}
+
+/**
+ * The first occurrence of an error for a block is logged at the level of the error, repeats of the same error for the
+ * same block are only logged at debug level. Range sync retries a failed batch several times and unknown block sync
+ * retries a block, both would otherwise repeat the same warning for a block that cannot be imported.
+ */
+function logBlockOrPayloadError(
+  this: BeaconChain,
+  message: string,
+  err: BlockError | PayloadError,
+  {slot, blockRootHex}: {slot: Slot; blockRootHex: RootHex}
+): void {
+  const {code} = err.type;
+  let level = getBlockErrorLogLevel(code);
+  if (level !== LogLevel.debug) {
+    // BEACON_CHAIN_ERROR, PRESTATE_MISSING and PER_BLOCK_PROCESSING_ERROR wrap the actual error, a different one for
+    // the same block is not a repeat
+    const wrapped = (err.type as {error?: Error}).error?.message ?? "";
+    const key = `${code}:${blockRootHex}:${wrapped}`;
+    if (this.reportedBlockErrors.has(key)) {
+      level = LogLevel.debug;
+    } else {
+      this.reportedBlockErrors.add(key);
+      pruneSetToMax(this.reportedBlockErrors, MAX_REPORTED_BLOCK_ERRORS);
+    }
+  }
+  this.logger[level](message, {slot, blockRoot: blockRootHex}, err);
 }
 
 /**
