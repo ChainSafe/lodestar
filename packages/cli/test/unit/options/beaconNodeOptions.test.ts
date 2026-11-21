@@ -152,6 +152,7 @@ describe("options / beaconNodeOptions", () => {
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
       "sync.disableRangeSync": false,
+      "sync.backfill": false,
     } as BeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
@@ -269,6 +270,7 @@ describe("options / beaconNodeOptions", () => {
         slotImportTolerance: 32,
         disableProcessAsChainSegment: true,
         disableRangeSync: false,
+        backfill: false,
       },
     };
 
