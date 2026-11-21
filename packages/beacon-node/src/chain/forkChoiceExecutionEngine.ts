@@ -5,6 +5,8 @@ import {
   LVHInvalidResponse,
   LVHNotAppliedReason,
   LVHVerdictResult,
+  PayloadStatus,
+  ProtoBlock,
 } from "@lodestar/fork-choice";
 import {ForkName, ForkPostFulu} from "@lodestar/params";
 import {RootHex, bellatrix} from "@lodestar/types";
@@ -176,8 +178,9 @@ export class ForkChoiceExecutionEngine {
     headBlockHash: RootHex,
     result: ForkchoiceUpdatedResult
   ): void {
-    const {status, latestValidHash, validationError} = result.payloadStatus;
-    const executionStatus = this.forkChoice.getBlockHexAndBlockHash(headBlockRoot, headBlockHash)?.executionStatus;
+    const {status, latestValidHash, validationError, inclusionListSatisfied} = result.payloadStatus;
+    const node = this.forkChoice.getBlockHexAndBlockHash(headBlockRoot, headBlockHash);
+    const executionStatus = node?.executionStatus;
     try {
       if (status === ExecutionPayloadStatus.INVALID) {
         if (executionStatus === ExecutionStatus.Invalid) {
@@ -200,6 +203,17 @@ export class ForkChoiceExecutionEngine {
           ExecutionInvalidSource.forkchoiceUpdated
         );
       } else if (status === ExecutionPayloadStatus.VALID && executionStatus === ExecutionStatus.Syncing) {
+        // The verdict replaces the satisfied record of the optimistic import. It belongs to the FULL variant that
+        // owns the block hash, gloas variants of descendants only inherit the hash
+        if (inclusionListSatisfied != null) {
+          let payloadNode: ProtoBlock | null = node;
+          while (payloadNode !== null && payloadNode.payloadStatus !== PayloadStatus.FULL) {
+            payloadNode = this.forkChoice.getBlockHexAndBlockHash(payloadNode.parentRoot, headBlockHash);
+          }
+          if (payloadNode !== null) {
+            this.forkChoice.recordPayloadInclusionListSatisfaction(payloadNode.blockRoot, inclusionListSatisfied);
+          }
+        }
         const result = this.forkChoice.validateLatestHash({
           executionStatus: ExecutionStatus.Valid,
           latestValidExecHash: headBlockHash,
