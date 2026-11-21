@@ -167,7 +167,7 @@ export function getDefinitions(config: ChainForkConfig | BeaconConfig): RouteDef
           }),
           fromHeaders: (headers) => {
             const versions = headers.getOrDefault(MetaHeader.Version, "");
-            return {versions: versions === "" ? [] : versions.split(",").map((version) => toForkName(version.trim()))};
+            return {versions: versions === "" ? [] : versions.split(",").map(toForkName)};
           },
         },
         transform: {

@@ -243,9 +243,7 @@ describe("web3signer signature test", () => {
   async function getValidatorStore(signer: Signer): Promise<ValidatorStore> {
     const logger = testLogger();
     const api = getClient({baseUrl: "http://localhost:9596"}, {config});
-    const staticGenesisValidatorsRoot = genesisData.mainnet.genesisValidatorsRoot;
-    if (staticGenesisValidatorsRoot === null) throw Error("Expected a static mainnet genesis validators root");
-    const genesisValidatorsRoot = fromHex(staticGenesisValidatorsRoot);
+    const genesisValidatorsRoot = fromHex(genesisData.mainnet.genesisValidatorsRoot as string);
     const metrics = null;
     const doppelgangerService = null;
     const valProposerConfig = undefined;
