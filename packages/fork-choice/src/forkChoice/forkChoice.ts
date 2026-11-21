@@ -34,12 +34,13 @@ import {
 import {Logger, MapDef, fromHex, toRootHex, withObservedDuration} from "@lodestar/utils";
 import {ForkChoiceMetrics} from "../metrics.js";
 import {computeDeltas} from "../protoArray/computeDeltas.js";
-import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 import {
   BlockExecutionStatus,
   ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,
+  LVHNotAppliedReason,
+  LVHVerdictResult,
   NULL_VOTE_INDEX,
   PayloadExecutionStatus,
   PayloadStatus,
@@ -110,7 +111,6 @@ const INIT_VOTE_SLOT: Slot = 0;
  * - Time is not updated automatically, updateTime MUST be called every slot
  */
 export class ForkChoice implements IForkChoice {
-  irrecoverableError?: Error;
   /**
    * Votes currently tracked in the protoArray. Instead of tracking a VoteTracker of currentIndex, nextIndex and epoch,
    * we decompose the struct and track them in separate arrays for performance reason.
@@ -693,22 +693,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     // findHead returns the ProtoNode representing the head
-    let head: ProtoNode;
-    try {
-      head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
-    } catch (e) {
-      // A poisoned tree never recovers, shut the node down instead of failing every head computation
-      if (
-        e instanceof ProtoArrayError &&
-        (e.type.code === ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE ||
-          e.type.code === ProtoArrayErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS)
-      ) {
-        this.irrecoverableError = e;
-      }
-      throw e;
-    }
-
-    this.head = head;
+    this.head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
     return this.head;
   }
 
@@ -1213,6 +1198,18 @@ export class ForkChoice implements IForkChoice {
       const previousSlot = this.fcStore.currentSlot;
       // Note: we are relying upon `onTick` to update `fcStore.time` to ensure we don't get stuck in a loop.
       const didUpdateCheckpoints = this.onTick(previousSlot + 1);
+      if (didUpdateCheckpoints) {
+        // The pull-up realizes the unrealized justified checkpoint regardless of its execution status. Throw before
+        // fast confirmation, which swallows head computation errors
+        const justified = this.fcStore.justified.checkpoint;
+        if (this.getBlockHexDefaultStatus(justified.rootHex)?.executionStatus === ExecutionStatus.Invalid) {
+          throw new ForkChoiceError({
+            code: ForkChoiceErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS,
+            epoch: justified.epoch,
+            root: justified.rootHex,
+          });
+        }
+      }
       this.queuedAttestationsPreviousSlot = 0;
       // Process any attestations that might now be eligible before running FCR for this slot.
       this.processAttestationQueue();
@@ -1633,14 +1630,11 @@ export class ForkChoice implements IForkChoice {
    * justified's status as well as validate the terminal conditions if terminal block
    * becomes valid
    */
-  validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean}): boolean {
+  validateLatestHash(execResponse: LVHExecResponse): LVHVerdictResult {
     try {
-      return this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot, opts);
+      return this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot);
     } catch (e) {
-      if (e instanceof ProtoArrayError && e.type.code === ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE) {
-        this.irrecoverableError = e;
-      }
-      return false;
+      return {applied: false, reason: LVHNotAppliedReason.Error, error: e as Error};
     }
   }
 

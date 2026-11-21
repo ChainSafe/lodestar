@@ -24,6 +24,7 @@ const FLAG_PREV_TARGET_ATTESTER_UNSLASHED = attester_status.FLAG_PREV_TARGET_ATT
 const hasMarkers = attester_status.hasMarkers;
 
 const isInInactivityLeak = @import("inactivity_leak.zig").isInInactivityLeak;
+const validator_chunks = @import("../utils/validator_chunks.zig");
 
 const RewardPenaltyItem = struct {
     base_reward: u64,
@@ -65,6 +66,7 @@ pub fn computeInactivityPenalty(effective_balance_increment: u64, inactivity_sco
 /// consumer should deinit `rewards` and `penalties` arrays
 pub fn getRewardsAndPenaltiesAltair(
     comptime fork: ForkSeq,
+    io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
     state: *BeaconState(fork),
@@ -78,38 +80,77 @@ pub fn getRewardsAndPenaltiesAltair(
     }
     std.debug.assert(cache.flags.len == validator_count);
 
-    const is_in_inactivity_leak = isInInactivityLeak(epoch_cache.epoch, try state.finalizedEpoch());
     // effectiveBalance is a multiple of EFFECTIVE_BALANCE_INCREMENT and bounded by max effective balance
     // (32 ETH pre-Electra, 2048 ETH post-Electra). Use a fixed array for O(1) lookup.
     const max_effective = comptime if (fork.gte(.electra)) preset.MAX_EFFECTIVE_BALANCE_ELECTRA else preset.MAX_EFFECTIVE_BALANCE;
     const max_increment = comptime max_effective / EFFECTIVE_BALANCE_INCREMENT + 1;
-    var reward_penalty_item_cache: [max_increment]?RewardPenaltyItem = .{null} ** max_increment;
+    // Filled up front because the chunk tasks share it read-only.
+    var reward_penalty_items: [max_increment]RewardPenaltyItem = undefined;
+    for (&reward_penalty_items, 0..) |*item, increment| item.* = computeRewardPenaltyItem(cache, increment);
 
+    const non_target_counts = cache.chunk_counts[0..validator_chunks.count(validator_count)];
+    const effective_balance_increments = epoch_cache.getEffectiveBalanceIncrements().items[0..validator_count];
+    const scan: RewardsScan = .{
+        .flags = cache.flags,
+        .effective_balance_increments = effective_balance_increments,
+        .reward_penalty_items = &reward_penalty_items,
+        .is_in_inactivity_leak = isInInactivityLeak(epoch_cache.epoch, try state.finalizedEpoch()),
+        .rewards = rewards,
+        .penalties = penalties,
+        .non_target = cache.index_scratch[0..validator_count],
+        .non_target_counts = non_target_counts,
+    };
+    try validator_chunks.run(io, validator_count, &scan, rewardsChunk);
+
+    // Same logic to getInactivityPenaltyDeltas. Tree views are not thread-safe, so the inactivity
+    // scores are read on this thread.
+    // TODO: if we have limited value in inactivityScores we can provide a cache too
     const penalty_denominator = inactivityPenaltyDenominator(config, fork);
-
-    const flags = cache.flags;
-    const effective_balance_increments = epoch_cache.getEffectiveBalanceIncrements().items;
     var inactivity_scores = try state.inactivityScores();
-    for (flags, 0..) |flag, i| {
+    for (non_target_counts, 0..) |non_target_count, chunk_index| {
+        const chunk = validator_chunks.at(validator_count, chunk_index);
+        for (scan.non_target[chunk.start..][0..non_target_count]) |i| {
+            penalties[i] += computeInactivityPenalty(effective_balance_increments[i], try inactivity_scores.get(i), penalty_denominator);
+        }
+    }
+}
+
+const RewardsScan = struct {
+    flags: []const u8,
+    effective_balance_increments: []const u16,
+    reward_penalty_items: []const RewardPenaltyItem,
+    is_in_inactivity_leak: bool,
+    rewards: []u64,
+    penalties: []u64,
+    /// A chunk writes the indices of its eligible attesters that missed the target from its own
+    /// start onward, which still owe the inactivity penalty.
+    non_target: []u32,
+    non_target_counts: []usize,
+};
+
+fn rewardsChunk(scan_ptr: *const RewardsScan, chunk: validator_chunks.Chunk) void {
+    const scan = scan_ptr.*;
+    var non_target_count: usize = 0;
+    for (
+        scan.flags[chunk.start..chunk.end],
+        scan.effective_balance_increments[chunk.start..chunk.end],
+        scan.rewards[chunk.start..chunk.end],
+        scan.penalties[chunk.start..chunk.end],
+        chunk.start..,
+    ) |flag, effective_balance_increment, *reward_out, *penalty_out, i| {
         if (!hasMarkers(flag, FLAG_ELIGIBLE_ATTESTER)) {
-            rewards[i] = 0;
-            penalties[i] = 0;
+            reward_out.* = 0;
+            penalty_out.* = 0;
             continue;
         }
 
-        const effective_balance_increment = effective_balance_increments[i];
-
-        const reward_penalty_item = if (reward_penalty_item_cache[effective_balance_increment]) |rpi| rpi else blk: {
-            const rpi = computeRewardPenaltyItem(cache, effective_balance_increment);
-            reward_penalty_item_cache[effective_balance_increment] = rpi;
-            break :blk rpi;
-        };
-
+        const reward_penalty_item = scan.reward_penalty_items[effective_balance_increment];
         const timely_source_reward = reward_penalty_item.timely_source_reward;
         const timely_source_penalty = reward_penalty_item.timely_source_penalty;
         const timely_target_reward = reward_penalty_item.timely_target_reward;
         const timely_target_penalty = reward_penalty_item.timely_target_penalty;
         const timely_head_reward = reward_penalty_item.timely_head_reward;
+        const is_in_inactivity_leak = scan.is_in_inactivity_leak;
 
         var reward: u64 = 0;
         var penalty: u64 = 0;
@@ -129,19 +170,16 @@ pub fn getRewardsAndPenaltiesAltair(
             }
         } else {
             penalty += timely_target_penalty;
+            scan.non_target[chunk.start + non_target_count] = @intCast(i);
+            non_target_count += 1;
         }
 
         if (hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_UNSLASHED) and !is_in_inactivity_leak) {
             reward += timely_head_reward;
         }
 
-        // Same logic to getInactivityPenaltyDeltas
-        // TODO: if we have limited value in inactivityScores we can provide a cache too
-        if (!hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
-            penalty += computeInactivityPenalty(effective_balance_increment, try inactivity_scores.get(i), penalty_denominator);
-        }
-
-        rewards[i] = reward;
-        penalties[i] = penalty;
+        reward_out.* = reward;
+        penalty_out.* = penalty;
     }
+    scan.non_target_counts[chunk.index] = non_target_count;
 }

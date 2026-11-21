@@ -110,22 +110,22 @@ pub fn init(comptime opts: m.RegistryOpts) void {
             opts,
         ),
         .seconds_since_last_read_sum = BlockStateCacheMetrics.F64Gauge.init(
-            "lodestar_state_cache_seconds_since_last_read_sum",
+            "lodestar_state_cache_since_last_read_seconds_sum",
             .{ .help = "Sum of seconds since block state cache items were last read" },
             opts,
         ),
         .seconds_since_last_read_avg = BlockStateCacheMetrics.F64Gauge.init(
-            "lodestar_state_cache_seconds_since_last_read_avg",
+            "lodestar_state_cache_since_last_read_seconds_avg",
             .{ .help = "Avg of seconds since block state cache items were last read" },
             opts,
         ),
         .seconds_since_last_read_min = BlockStateCacheMetrics.F64Gauge.init(
-            "lodestar_state_cache_seconds_since_last_read_min",
+            "lodestar_state_cache_since_last_read_seconds_min",
             .{ .help = "Min of seconds since block state cache items were last read" },
             opts,
         ),
         .seconds_since_last_read_max = BlockStateCacheMetrics.F64Gauge.init(
-            "lodestar_state_cache_seconds_since_last_read_max",
+            "lodestar_state_cache_since_last_read_seconds_max",
             .{ .help = "Max of seconds since block state cache items were last read" },
             opts,
         ),
