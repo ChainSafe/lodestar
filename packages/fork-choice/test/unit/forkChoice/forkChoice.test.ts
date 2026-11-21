@@ -290,6 +290,53 @@ describe("Forkchoice", () => {
     });
   }
 
+  it("recomputes head when queued attestations from previous slot are processed in updateTime", () => {
+    // Populate simple chain with two competing forks at slot 1: block 1A and block 1B
+    const block1A = {
+      ...getBlock(genesisSlot + 1),
+      blockRoot: getBlockRoot(genesisSlot + 1),
+    };
+    const block1B = {
+      ...getBlock(genesisSlot + 1),
+      blockRoot: toHex(Buffer.alloc(32, 0x1b)),
+      stateRoot: toHex(Buffer.alloc(32, 0x1b)),
+    };
+    protoArr.onBlock(block1A, block1A.slot, null);
+    protoArr.onBlock(block1B, block1B.slot, null);
+
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
+
+    // Initially head is one of the blocks (based on tie-breaking or order)
+    const initialHead = forkchoice.getHead();
+
+    // The other block is the alternate fork
+    const targetBlock = initialHead.blockRoot === block1A.blockRoot ? block1B : block1A;
+
+    // Queue an attestation for targetBlock at currentSlot (slot 1)
+    const currentSlot = fcStore.currentSlot;
+    (forkchoice as any).queuedAttestations
+      .getOrDefault(currentSlot)
+      .getOrDefault(targetBlock.blockRoot)
+      .set(0, PayloadStatus.FULL);
+
+    expect((forkchoice as any).queuedAttestationsPreviousSlot).toBe(0);
+
+    // Advance time to slot 2 (mid-epoch, so didUpdateCheckpoints is false)
+    forkchoice.updateTime(currentSlot + 1);
+
+    // Queued attestations for previous slot should have been processed and counted
+    expect((forkchoice as any).queuedAttestationsPreviousSlot).toBe(1);
+
+    // Head should now be recomputed and moved to targetBlock due to the queued attestation vote
+    expect(forkchoice.getHead().blockRoot).toBe(targetBlock.blockRoot);
+
+    // Advance time again to slot 3 without new attestations
+    forkchoice.updateTime(currentSlot + 2);
+
+    // queuedAttestationsPreviousSlot must reset to 0 rather than accumulating
+    expect((forkchoice as any).queuedAttestationsPreviousSlot).toBe(0);
+  });
+
   // TODO: more unit tests for other apis
 });
 
