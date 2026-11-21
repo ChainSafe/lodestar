@@ -17,27 +17,54 @@ export type PooledExecutionPayloadBid = {
   receivedMs: number;
 };
 
+type BidByParentHashByParentRootBySlot = MapDef<
+  Slot,
+  MapDef<BlockRootHex, Map<BlockHashHex, PooledExecutionPayloadBid>>
+>;
+
+function newBidByParentHashByParentRootBySlot(): BidByParentHashByParentRootBySlot {
+  return new MapDef<Slot, MapDef<BlockRootHex, Map<BlockHashHex, PooledExecutionPayloadBid>>>(
+    () => new MapDef<BlockRootHex, Map<BlockHashHex, PooledExecutionPayloadBid>>(() => new Map())
+  );
+}
+
 /**
  * Store the best signed execution payload bid per slot / (parent block root, parent block hash).
  */
 export class ExecutionPayloadBidPool {
-  private readonly bidByParentHashByParentRootBySlot = new MapDef<
-    Slot,
-    MapDef<BlockRootHex, Map<BlockHashHex, PooledExecutionPayloadBid>>
-  >(() => new MapDef<BlockRootHex, Map<BlockHashHex, PooledExecutionPayloadBid>>(() => new Map()));
+  private readonly bidByParentHashByParentRootBySlot = newBidByParentHashByParentRootBySlot();
+  /**
+   * Bids past the builder's bid limit that a local proposer considers. They are kept apart because
+   * they are not forwarded, so they must not raise the best bid used for gossip validation.
+   */
+  private readonly proposalBidByParentHashByParentRootBySlot = newBidByParentHashByParentRootBySlot();
   private lowestPermissibleSlot = 0;
 
   get size(): number {
     let count = 0;
-    for (const byParentRoot of this.bidByParentHashByParentRootBySlot.values()) {
-      for (const byParentHash of byParentRoot.values()) {
-        count += byParentHash.size;
+    for (const bidsBySlot of [this.bidByParentHashByParentRootBySlot, this.proposalBidByParentHashByParentRootBySlot]) {
+      for (const byParentRoot of bidsBySlot.values()) {
+        for (const byParentHash of byParentRoot.values()) {
+          count += byParentHash.size;
+        }
       }
     }
     return count;
   }
 
   add(bid: gloas.SignedExecutionPayloadBid, receivedMs: number): InsertOutcome {
+    return this.insert(this.bidByParentHashByParentRootBySlot, bid, receivedMs);
+  }
+
+  addForProposal(bid: gloas.SignedExecutionPayloadBid, receivedMs: number): InsertOutcome {
+    return this.insert(this.proposalBidByParentHashByParentRootBySlot, bid, receivedMs);
+  }
+
+  private insert(
+    bidsBySlot: BidByParentHashByParentRootBySlot,
+    bid: gloas.SignedExecutionPayloadBid,
+    receivedMs: number
+  ): InsertOutcome {
     const {slot, parentBlockRoot, parentBlockHash, value} = bid.message;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
@@ -47,7 +74,7 @@ export class ExecutionPayloadBidPool {
 
     const parentRootHex = toRootHex(parentBlockRoot);
     const parentHashHex = toRootHex(parentBlockHash);
-    const bidByParentHash = this.bidByParentHashByParentRootBySlot.getOrDefault(slot).getOrDefault(parentRootHex);
+    const bidByParentHash = bidsBySlot.getOrDefault(slot).getOrDefault(parentRootHex);
     const existing = bidByParentHash.get(parentHashHex);
 
     if (existing) {
@@ -65,8 +92,8 @@ export class ExecutionPayloadBidPool {
   }
 
   /**
-   * Return the highest-value signed bid matching slot, parent block hash, and parent block root.
-   * Used for gossip validation and block production.
+   * Return the highest-value forwarded signed bid matching slot, parent block hash, and parent block root.
+   * Used for gossip validation.
    */
   getBestBid(
     slot: Slot,
@@ -78,7 +105,30 @@ export class ExecutionPayloadBidPool {
     return bidByParentHash?.get(parentBlockHash) ?? null;
   }
 
+  /**
+   * Return the highest-value signed bid a local proposer can select, including bids past the builder's bid limit.
+   * Used for block production.
+   */
+  getBestBidForProposal(
+    slot: Slot,
+    parentBlockHash: BlockHashHex | null,
+    parentBlockRoot: BlockRootHex
+  ): PooledExecutionPayloadBid | null {
+    const bestBid = this.getBestBid(slot, parentBlockHash, parentBlockRoot);
+    if (parentBlockHash === null) return bestBid;
+    const proposalBid =
+      this.proposalBidByParentHashByParentRootBySlot.get(slot)?.get(parentBlockRoot)?.get(parentBlockHash) ?? null;
+    if (
+      proposalBid !== null &&
+      (bestBid === null || proposalBid.signedBid.message.value > bestBid.signedBid.message.value)
+    ) {
+      return proposalBid;
+    }
+    return bestBid;
+  }
+
   prune(clockSlot: Slot): void {
     this.lowestPermissibleSlot = pruneBySlot(this.bidByParentHashByParentRootBySlot, clockSlot, SLOTS_RETAINED);
+    pruneBySlot(this.proposalBidByParentHashByParentRootBySlot, clockSlot, SLOTS_RETAINED);
   }
 }

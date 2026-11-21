@@ -72,6 +72,7 @@ describe("validateGossipExecutionPayloadBid", () => {
     proposerPreferences.message.validatorIndex = proposerIndex;
     vi.mocked(chain.proposerPreferencesPool.get).mockReturnValue(proposerPreferences);
     chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
+    chain.executionPayloadBidPool.getBestBidForProposal.mockReturnValue(null);
     chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder: activeBuilder(ETH_TO_GWEI)}));
     signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     signedBid.message.slot = 2;
@@ -83,7 +84,7 @@ describe("validateGossipExecutionPayloadBid", () => {
   });
 
   it("accepts a valid bid", async () => {
-    expect(await validateGossipExecutionPayloadBid(chain, signedBid)).toEqual({proposerIndex});
+    expect(await validateGossipExecutionPayloadBid(chain, signedBid)).toEqual({proposerIndex, bidLimitError: null});
     expect(chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
     expect(
       chain.seenExecutionPayloadBids.get(
@@ -130,6 +131,26 @@ describe("validateGossipExecutionPayloadBid", () => {
     });
     // the bid past the limit is dropped before state regen
     expect(chain.regen.getBlockSlotState).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns a bid past the bid limit to a local proposer without counting it", async () => {
+    chain.beaconProposerCache.has.mockReturnValue(true);
+    signedBid.message.value = 1;
+    await validateGossipExecutionPayloadBid(chain, signedBid);
+    signedBid.message.value = 2;
+    expect(await validateGossipExecutionPayloadBid(chain, signedBid)).toMatchObject({
+      proposerIndex,
+      bidLimitError: {type: {code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED, bidLimit: 1}},
+    });
+    expect(chain.beaconProposerCache.has).toHaveBeenCalledWith(proposerIndex);
+    expect(
+      chain.seenExecutionPayloadBids.get(
+        signedBid.message.slot,
+        signedBid.message.builderIndex,
+        toRootHex(parentBlockHash),
+        toRootHex(parentBlockRoot)
+      )
+    ).toEqual({count: 1, limit: 1});
   });
 
   it("ignores a bid from a builder with less than 1 ETH of balance", async () => {

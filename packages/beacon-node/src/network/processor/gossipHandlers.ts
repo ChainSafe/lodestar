@@ -1332,7 +1332,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.execution_payload_bid>) => {
       const {serializedData} = gossipData;
       const executionPayloadBid = sszDeserialize(topic, serializedData);
-      const {proposerIndex} = await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
+      const {proposerIndex, bidLimitError} = await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
+
+      if (bidLimitError !== null) {
+        const elapsedSec = chain.clock.secFromSlot(executionPayloadBid.message.slot, seenTimestampSec);
+        chain.executionPayloadBidPool.addForProposal(executionPayloadBid, Math.floor(elapsedSec * 1000));
+        throw bidLimitError;
+      }
 
       // Handler - deferred to next event loop so the validation result propagates first
       callInNextEventLoop(() => {

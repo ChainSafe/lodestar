@@ -1008,7 +1008,7 @@ export function getValidatorApi(
       const builderBidExpected =
         builderConfig.builders.length > 0 ||
         (!circuitBreakerActive &&
-          chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
+          chain.executionPayloadBidPool.getBestBidForProposal(slot, bidParentBlockHash, parentBlockRootHex) !== null);
 
       // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
       // not delay the proposal when a builder bid block is available (and vice versa)
@@ -1039,7 +1039,7 @@ export function getValidatorApi(
 
         let p2pBid: PooledExecutionPayloadBid | null = circuitBreakerActive
           ? null
-          : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+          : chain.executionPayloadBidPool.getBestBidForProposal(slot, bidParentBlockHash, parentBlockRootHex);
         // Discard p2p bids below the proposer's configured floor on the total payment.
         // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
         if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {

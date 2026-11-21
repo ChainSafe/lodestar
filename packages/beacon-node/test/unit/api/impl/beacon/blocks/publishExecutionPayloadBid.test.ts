@@ -36,7 +36,7 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
     vi.clearAllMocks();
     modules = getApiTestModules({config});
     modules.network.publishSignedExecutionPayloadBid = vi.fn().mockResolvedValue(5);
-    vi.mocked(validateGossipExecutionPayloadBid).mockResolvedValue({proposerIndex: 7});
+    vi.mocked(validateGossipExecutionPayloadBid).mockResolvedValue({proposerIndex: 7, bidLimitError: null});
   });
 
   it("validates the bid before publishing by default", async () => {
@@ -55,6 +55,24 @@ describe("api - beacon - publishExecutionPayloadBid", () => {
     expect(validateGossipExecutionPayloadBid).not.toHaveBeenCalled();
     expect(modules.chain.executionPayloadBidPool.add).not.toHaveBeenCalled();
     expect(modules.network.publishSignedExecutionPayloadBid).toHaveBeenCalledWith(signedBid);
+  });
+
+  it("keeps a bid past the bid limit for a local proposer without publishing it", async () => {
+    const bidLimitError = new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED,
+      builderIndex: 3,
+      slot: 1,
+      parentBlockRoot: "0x00",
+      parentBlockHash: "0x00",
+      bidLimit: 1,
+    });
+    vi.mocked(validateGossipExecutionPayloadBid).mockResolvedValue({proposerIndex: 7, bidLimitError});
+    const api = getBeaconBlockApi(defaultApiOptions, modules);
+    await expect(api.publishExecutionPayloadBid({signedExecutionPayloadBid: signedBid})).rejects.toThrow(bidLimitError);
+
+    expect(modules.chain.executionPayloadBidPool.addForProposal).toHaveBeenCalledWith(signedBid, expect.any(Number));
+    expect(modules.chain.executionPayloadBidPool.add).not.toHaveBeenCalled();
+    expect(modules.network.publishSignedExecutionPayloadBid).not.toHaveBeenCalled();
   });
 
   it("does not publish a bid that fails the reject checks", async () => {

@@ -1032,8 +1032,16 @@ export function getBeaconBlockApi(
 
       if (!opts.disableBidValidation) {
         const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
-        const {proposerIndex} = await validateGossipExecutionPayloadBid(chain, signedExecutionPayloadBid);
+        const {proposerIndex, bidLimitError} = await validateGossipExecutionPayloadBid(
+          chain,
+          signedExecutionPayloadBid
+        );
         validationTimer?.();
+
+        if (bidLimitError !== null) {
+          chain.executionPayloadBidPool.addForProposal(signedExecutionPayloadBid, Math.floor(elapsedSec * 1000));
+          throw bidLimitError;
+        }
 
         // Gossip does not deliver our own messages back to us, so a validated bid is added to the
         // pool here to allow a proposer on this node to select it

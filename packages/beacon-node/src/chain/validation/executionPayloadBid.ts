@@ -83,17 +83,26 @@ function isBidCompatibleWithHead(
   return buildsOnParentPayload;
 }
 
+export type ExecutionPayloadBidValidationResult = {
+  proposerIndex: ValidatorIndex;
+  /**
+   * Set if the bid is past the builder's bid limit and the proposer for `bid.slot` is a local validator.
+   * The proposer considers the bid for its block, but it is still ignored for gossip.
+   */
+  bidLimitError: ExecutionPayloadBidError | null;
+};
+
 export async function validateGossipExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-): Promise<{proposerIndex: ValidatorIndex}> {
+): Promise<ExecutionPayloadBidValidationResult> {
   return validateExecutionPayloadBid(chain, signedExecutionPayloadBid);
 }
 
 async function validateExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-): Promise<{proposerIndex: ValidatorIndex}> {
+): Promise<ExecutionPayloadBidValidationResult> {
   const bid = signedExecutionPayloadBid.message;
   const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
   const bidParentBlockHash = toRootHex(bid.parentBlockHash);
@@ -162,26 +171,6 @@ async function validateExecutionPayloadBid(
       parentBlockRoot: bidParentBlockRoot,
       parentBlockHash: bidParentBlockHash,
       headBlockRoot: head.blockRoot,
-    });
-  }
-
-  // [IGNORE] The builder has not reached its bid limit, checked against the limit of its last valid bid.
-  // Bids for the same slot and parent root are validated against the same state, so bids past the
-  // limit can be dropped before state regeneration and the other expensive validation steps.
-  const seenBids = chain.seenExecutionPayloadBids.get(
-    bid.slot,
-    bid.builderIndex,
-    bidParentBlockHash,
-    bidParentBlockRoot
-  );
-  if (seenBids !== undefined && seenBids.count >= seenBids.limit) {
-    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED,
-      builderIndex: bid.builderIndex,
-      slot: bid.slot,
-      parentBlockRoot: bidParentBlockRoot,
-      parentBlockHash: bidParentBlockHash,
-      bidLimit: seenBids.limit,
     });
   }
 
@@ -286,6 +275,44 @@ async function validateExecutionPayloadBid(
     });
   }
 
+  // A local proposer for `bid.slot` still considers bids past the builder's bid limit for its block,
+  // but they are ignored for gossip
+  const isLocalProposer = chain.beaconProposerCache.has(proposerPreferences.message.validatorIndex);
+
+  // [IGNORE] The builder has not reached its bid limit, checked against the limit of its last valid bid.
+  // Bids for the same slot and parent root are validated against the same state, so bids past the
+  // limit can be dropped before state regeneration and the other expensive validation steps.
+  const seenBids = chain.seenExecutionPayloadBids.get(
+    bid.slot,
+    bid.builderIndex,
+    bidParentBlockHash,
+    bidParentBlockRoot
+  );
+  if (seenBids !== undefined && seenBids.count >= seenBids.limit) {
+    if (!isLocalProposer) {
+      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+        code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED,
+        builderIndex: bid.builderIndex,
+        slot: bid.slot,
+        parentBlockRoot: bidParentBlockRoot,
+        parentBlockHash: bidParentBlockHash,
+        bidLimit: seenBids.limit,
+      });
+    }
+    const bestBidForProposal = chain.executionPayloadBidPool.getBestBidForProposal(
+      bid.slot,
+      bidParentBlockHash,
+      bidParentBlockRoot
+    );
+    if (bestBidForProposal !== null && bid.value <= bestBidForProposal.signedBid.message.value) {
+      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+        code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
+        bidValue: bid.value,
+        currentHighestBid: bestBidForProposal.signedBid.message.value,
+      });
+    }
+  }
+
   // Use the bid's parent branch state for builder checks
   const state = await chain.regen
     .getBlockSlotState(parentBlock, bid.slot, {dontTransferCache: true}, RegenCaller.validateGossipExecutionPayloadBid)
@@ -377,6 +404,7 @@ async function validateExecutionPayloadBid(
   // not owed in pending withdrawals, `get_builder_bid_limit(state, bid.builder_index)`.
   const bidLimit = state.getBuilderBidLimit(bid.builderIndex);
   if (
+    !isLocalProposer &&
     (chain.seenExecutionPayloadBids.get(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)?.count ??
       0) >= bidLimit
   ) {
@@ -456,7 +484,7 @@ async function validateExecutionPayloadBid(
     (chain.seenExecutionPayloadBids.get(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)?.count ??
       0) >= bidLimit
   ) {
-    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+    const bidLimitError = new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
@@ -464,10 +492,15 @@ async function validateExecutionPayloadBid(
       parentBlockHash: bidParentBlockHash,
       bidLimit,
     });
+    if (!isLocalProposer) {
+      throw bidLimitError;
+    }
+    // Not counted against the bid limit since it is ignored for gossip
+    return {proposerIndex: proposerPreferences.message.validatorIndex, bidLimitError};
   }
 
   // Valid
   chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot, bidLimit);
 
-  return {proposerIndex: proposerPreferences.message.validatorIndex};
+  return {proposerIndex: proposerPreferences.message.validatorIndex, bidLimitError: null};
 }

@@ -170,7 +170,9 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       },
       executionPayloadBidPool: {
         add: vi.fn(),
+        addForProposal: vi.fn(),
         getBestBid: vi.fn(),
+        getBestBidForProposal: vi.fn(),
       },
       proposerPreferencesPool: {
         add: vi.fn(),
