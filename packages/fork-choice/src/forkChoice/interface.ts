@@ -184,7 +184,8 @@ export interface IForkChoice {
    * ## Notes:
    *
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
-   * will not be run here.
+   * will not be run here, except that its indices may be unsorted and may combine votes whose
+   * signatures were verified one by one.
    */
   onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void;
   /**
