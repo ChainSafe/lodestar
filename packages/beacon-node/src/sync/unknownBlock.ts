@@ -753,7 +753,8 @@ export class BlockInputSync {
    */
   private pruneUnresolvedBlocks = (): void => {
     const nowSec = Date.now() / 1000;
-    const maxSecInCache = (PRUNE_UNRESOLVED_SLOT_EPOCHS * SLOTS_PER_EPOCH * this.config.SLOT_DURATION_MS) / 1000;
+    const slotDurationMs = this.config.getSlotDurationMs(this.config.getForkName(this.chain.clock.currentSlot));
+    const maxSecInCache = (PRUNE_UNRESOLVED_SLOT_EPOCHS * SLOTS_PER_EPOCH * slotDurationMs) / 1000;
     for (const pendingBlock of this.pendingBlocks.values()) {
       if (
         isPendingBlockInput(pendingBlock) &&
