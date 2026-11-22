@@ -658,11 +658,15 @@ export function getBeaconBlockApi(
             : parseInt(blockId, 10);
       if (!Number.isNaN(slot)) {
         const head = chain.forkChoice.getHead();
+        // The head can be the FULL variant, a block reports the status of the payload it builds on
+        const executionOptimistic = isOptimisticBlock(
+          chain.forkChoice.getBlockHexDefaultStatus(head.blockRoot) ?? head
+        );
 
         if (slot === head.slot) {
           return {
             data: {root: fromHex(head.blockRoot)},
-            meta: {executionOptimistic: isOptimisticBlock(head), finalized: false},
+            meta: {executionOptimistic, finalized: false},
           };
         }
 
@@ -671,7 +675,7 @@ export function getBeaconBlockApi(
           return {
             data: {root: state.getBlockRootAtSlot(slot)},
             meta: {
-              executionOptimistic: isOptimisticBlock(head),
+              executionOptimistic,
               finalized: computeEpochAtSlot(slot) <= chain.forkChoice.getFinalizedCheckpoint().epoch,
             },
           };
@@ -680,7 +684,10 @@ export function getBeaconBlockApi(
         const head = chain.forkChoice.getHead();
         return {
           data: {root: fromHex(head.blockRoot)},
-          meta: {executionOptimistic: isOptimisticBlock(head), finalized: false},
+          meta: {
+            executionOptimistic: isOptimisticBlock(chain.forkChoice.getBlockHexDefaultStatus(head.blockRoot) ?? head),
+            finalized: false,
+          },
         };
       }
 
@@ -1195,10 +1202,14 @@ export function getBeaconBlockApi(
         data = [];
       }
 
+      // Post-gloas sidecars belong to the block's own payload, its FULL variant
+      const payload = finalized ? null : chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
       return {
         data,
         meta: {
-          executionOptimistic,
+          executionOptimistic: isForkPostGloas(fork)
+            ? payload !== null && isOptimisticBlock(payload)
+            : executionOptimistic,
           finalized,
           version: config.getForkName(block.message.slot),
         },
@@ -1296,10 +1307,14 @@ export function getBeaconBlockApi(
         blobs = [];
       }
 
+      // Post-gloas blobs belong to the block's own payload, its FULL variant
+      const payload = finalized ? null : chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
       return {
         data: blobs,
         meta: {
-          executionOptimistic,
+          executionOptimistic: isForkPostGloas(fork)
+            ? payload !== null && isOptimisticBlock(payload)
+            : executionOptimistic,
           finalized,
         },
       };
