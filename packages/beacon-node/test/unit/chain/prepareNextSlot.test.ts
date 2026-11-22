@@ -466,7 +466,7 @@ describe("PrepareNextSlot scheduler", () => {
     }
 
     function fcuParentHashes(): string[] {
-      return executionEngineStub.notifyForkchoiceUpdate.mock.calls.map((call) => call[1]);
+      return executionEngineStub.notifyForkchoiceUpdate.mock.calls.map((call) => call[2]);
     }
 
     function emitPtcQuorum(slot: number, verdict: boolean): void {
