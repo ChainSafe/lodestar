@@ -264,8 +264,15 @@ export class AttestationDutiesService {
     if (!priorDependentRoot || dependentRootChanged) {
       const dutiesByIndex = new Map<ValidatorIndex, AttDutyAndProof>();
       for (const duty of relevantDuties) {
-        const dutyAndProof = await this.getDutyAndProof(duty);
-        dutiesByIndex.set(duty.validatorIndex, dutyAndProof);
+        try {
+          dutiesByIndex.set(duty.validatorIndex, await this.getDutyAndProof(duty));
+        } catch (e) {
+          this.logger.error(
+            "Error signing attestation selection proof",
+            {epoch, validatorIndex: duty.validatorIndex},
+            e as Error
+          );
+        }
       }
       this.dutiesByIndexByEpoch.set(epoch, {dependentRoot, dutiesByIndex});
 
@@ -280,20 +287,25 @@ export class AttestationDutiesService {
     } else {
       const existingDuties = dutiesAtEpoch.dutiesByIndex;
       const existingDutiesCount = existingDuties.size;
-      const discoveredNewDuties = relevantDuties.length > existingDutiesCount;
-
-      if (discoveredNewDuties) {
-        for (const duty of relevantDuties) {
-          if (!existingDuties.has(duty.validatorIndex)) {
-            const dutyAndProof = await this.getDutyAndProof(duty);
-            existingDuties.set(duty.validatorIndex, dutyAndProof);
+      for (const duty of relevantDuties) {
+        if (!existingDuties.has(duty.validatorIndex)) {
+          try {
+            existingDuties.set(duty.validatorIndex, await this.getDutyAndProof(duty));
+          } catch (e) {
+            this.logger.error(
+              "Error signing attestation selection proof",
+              {epoch, validatorIndex: duty.validatorIndex},
+              e as Error
+            );
           }
         }
+      }
 
+      if (existingDuties.size > existingDutiesCount) {
         this.logger.debug("Discovered new attester duties", {
           epoch,
           dependentRoot,
-          count: relevantDuties.length - existingDutiesCount,
+          count: existingDuties.size - existingDutiesCount,
         });
       }
     }

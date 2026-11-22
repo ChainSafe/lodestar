@@ -248,8 +248,10 @@ export class BlockDutiesService {
     signal: AbortSignal
   ): Promise<void> {
     const nextSlot = currentSlot + 1;
+    const currentFork = this.config.getForkName(currentSlot);
     const lookAheadMs =
-      this.config.SLOT_DURATION_MS - this.config.getSlotComponentDurationMs(BLOCK_DUTIES_LOOKAHEAD_BPS);
+      this.config.getSlotDurationMs(currentFork) -
+      this.config.getSlotComponentDurationMs(currentFork, BLOCK_DUTIES_LOOKAHEAD_BPS);
     await sleep(this.clock.msToSlot(nextSlot) - lookAheadMs, signal);
     this.logger.debug("Polling proposers for the next epoch", {nextEpoch, currentSlot});
     await this.pollBeaconProposers(nextEpoch);

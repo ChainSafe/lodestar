@@ -66,7 +66,7 @@ describe("chain / blocks / processBlocks", () => {
     block.message.proposerIndex = proposerIndex;
     const blockRoot = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message));
     blockInput = new MockBlockInput({forkName: ForkName.deneb, slot, blockRootHex: blockRoot});
-    blockInput._block = block;
+    blockInput.block = block;
 
     vi.mocked(verifyBlocksSanityChecks).mockReturnValue({
       relevantBlocks: [blockInput],
@@ -134,6 +134,37 @@ describe("chain / blocks / processBlocks", () => {
 
     expect(seenBlockProposers.isKnown(slot, proposerIndex)).toBe(true);
     expect(importBlock).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    {
+      name: "stamps the block with the fractional import time when opts carry no seen timestamp",
+      opts: {},
+      expected: 12.75,
+    },
+    {name: "prefers the seen timestamp passed in opts", opts: {seenTimestampSec: 3.5}, expected: 3.5},
+  ])("$name", async ({opts, expected}) => {
+    const dateNow = vi.spyOn(Date, "now").mockReturnValue(12_750);
+    vi.mocked(verifyBlocksInEpoch).mockResolvedValue({
+      postStates: [{forkName: ForkName.deneb} as IBeaconStateView],
+      proposerBalanceDeltas: [0],
+      segmentExecStatus: {
+        execAborted: null,
+        executionStatuses: [ExecutionStatus.Valid],
+        executionTime: 0,
+      },
+      blockDAStatuses: [DataAvailabilityStatus.Available],
+      payloadDAStatuses: new Map(),
+      indexedAttestationsByBlock: [[]],
+    });
+
+    try {
+      await processBlocks.call(chain, [blockInput], null, opts);
+    } finally {
+      dateNow.mockRestore();
+    }
+
+    expect(importBlock).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({seenTimestampSec: expected}), opts);
   });
 
   it.each([

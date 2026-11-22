@@ -33,7 +33,7 @@ describe("api/validator - submitBuilderPreferences", () => {
     }
 
     expect(error).toBeInstanceOf(IndexedError);
-    expect((error as IndexedError).failures).toEqual([{index: 0, message: "Builder url must be valid UTF-8"}]);
+    expect((error as IndexedError).failures).toEqual([{index: 0, message: "\ufffd: Builder url must be valid UTF-8"}]);
     expect(modules.chain.builderApiClient.submitBuilderPreferences).toHaveBeenCalledOnce();
     expect(modules.chain.builderApiClient.submitBuilderPreferences).toHaveBeenCalledWith(
       "https://builder.example.com",
@@ -62,7 +62,9 @@ describe("api/validator - submitBuilderPreferences", () => {
     }
 
     expect(error).toBeInstanceOf(IndexedError);
-    expect((error as IndexedError).failures).toEqual([{index: 1, message: "builder unavailable"}]);
+    expect((error as IndexedError).failures).toEqual([
+      {index: 1, message: "https://builder-b.example.com: builder unavailable"},
+    ]);
     expect(modules.chain.builderApiClient.submitBuilderPreferences).toHaveBeenCalledTimes(2);
   });
 
@@ -87,7 +89,7 @@ describe("api/validator - submitBuilderPreferences", () => {
 
     expect(error).toBeInstanceOf(IndexedError);
     expect((error as IndexedError).failures).toEqual([
-      {index: 0, message: "Invalid proposer pubkey for builder preferences slot=1"},
+      {index: 0, message: "https://builder.example.com: Invalid proposer pubkey for builder preferences slot=1"},
     ]);
     expect(modules.chain.builderApiClient.submitBuilderPreferences).not.toHaveBeenCalled();
   });

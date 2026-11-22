@@ -2,10 +2,10 @@ import {FastifyInstance} from "fastify";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {defer, sleep} from "@lodestar/utils";
+import {defer, fetch, sleep} from "@lodestar/utils";
 import {getClient} from "../../../../src/beacon/client/events.js";
 import {BeaconEvent, Endpoints, EventType, getDefinitions} from "../../../../src/beacon/routes/events.js";
-import {getRoutes} from "../../../../src/beacon/server/events.js";
+import {SSE_KEEP_ALIVE_INTERVAL_MS, getRoutes} from "../../../../src/beacon/server/events.js";
 import {getMockApi, getTestServer} from "../../../utils/utils.js";
 import {eventTestData} from "../testData/events.js";
 
@@ -100,6 +100,71 @@ describe("beacon / events", () => {
     });
 
     expect(eventsReceived).toEqual(eventsToSend);
+  });
+
+  it("Send the response headers before the first event", async () => {
+    mockApi.eventstream.mockImplementation(async () => {});
+
+    // Resolves once the response headers are received
+    const res = await fetch(`${baseUrl}/eth/v1/events?topics=${EventType.chainReorg}`, {signal: controller.signal});
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("text/event-stream");
+  });
+
+  it("Write keep-alive comments to an idle stream", async () => {
+    vi.useFakeTimers({toFake: ["setInterval", "clearInterval"]});
+    try {
+      mockApi.eventstream.mockImplementation(async () => {});
+
+      const res = await fetch(`${baseUrl}/eth/v1/events?topics=${EventType.chainReorg}`, {signal: controller.signal});
+      const reader = res.body?.getReader();
+      if (reader === undefined) throw Error("Missing response body");
+
+      vi.advanceTimersByTime(SSE_KEEP_ALIVE_INTERVAL_MS);
+      const {value} = await reader.read();
+
+      expect(new TextDecoder().decode(value)).toBe(":\n\n");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("Ignore keep-alive comments on the client", async () => {
+    vi.useFakeTimers({toFake: ["setInterval", "clearInterval"]});
+    try {
+      const eventHead: BeaconEvent = {
+        type: EventType.head,
+        message: eventTestData[EventType.head],
+      };
+      const subscribed = defer<(event: BeaconEvent) => void>();
+      const received = defer<void>();
+      const eventsReceived: BeaconEvent[] = [];
+      const errorsReceived: Error[] = [];
+      mockApi.eventstream.mockImplementation(async ({onEvent}) => subscribed.resolve(onEvent));
+
+      void getClient(config, baseUrl).eventstream({
+        topics: [EventType.head],
+        signal: controller.signal,
+        onEvent: (event) => {
+          eventsReceived.push(event);
+          received.resolve();
+        },
+        onError: (e) => {
+          errorsReceived.push(e);
+        },
+      });
+
+      const onEvent = await subscribed.promise;
+      vi.advanceTimersByTime(SSE_KEEP_ALIVE_INTERVAL_MS);
+      onEvent(eventHead);
+      await received.promise;
+
+      expect(eventsReceived).toEqual([eventHead]);
+      expect(errorsReceived).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("Keep the stream alive if an event can not be serialized", async () => {

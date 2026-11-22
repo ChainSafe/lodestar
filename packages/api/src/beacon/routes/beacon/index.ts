@@ -1,15 +1,15 @@
+import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {phase0, ssz} from "@lodestar/types";
+import {ArrayOf, Root, Slot, phase0, ssz} from "@lodestar/types";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {EmptyArgs, EmptyMeta, EmptyMetaCodec, EmptyRequest, EmptyRequestCodec} from "../../../utils/codecs.js";
+import {VersionCodec, VersionMeta} from "../../../utils/metadata.js";
+import {Schema} from "../../../utils/schema.js";
 import {Endpoint, RouteDefinitions} from "../../../utils/types.js";
 import * as block from "./block.js";
 import * as pool from "./pool.js";
 import * as rewards from "./rewards.js";
 import * as state from "./state.js";
-
-// NOTE: We choose to split the block, pool, state and rewards namespaces so the files are not too big.
-// However, for a consumer all these methods are within the same service "beacon"
-export {block, pool, state, rewards};
 
 export type {BlockHeaderResponse, BlockId} from "./block.js";
 export {BroadcastValidation} from "./block.js";
@@ -27,7 +27,15 @@ export type {
   ValidatorIdentities,
   ValidatorResponse,
   ValidatorStatus,
+  ValidatorStatusFilter,
 } from "./state.js";
+// NOTE: We choose to split the block, pool, state and rewards namespaces so the files are not too big.
+// However, for a consumer all these methods are within the same service "beacon"
+export {block, pool, rewards, state};
+
+const SignedProposerPreferencesListType = ArrayOf(ssz.gloas.SignedProposerPreferences);
+
+type SignedProposerPreferencesList = ValueOf<typeof SignedProposerPreferencesListType>;
 
 export type Endpoints = block.Endpoints &
   pool.Endpoints &
@@ -41,6 +49,18 @@ export type Endpoints = block.Endpoints &
       phase0.Genesis,
       EmptyMeta
     >;
+
+    /**
+     * Get proposer preferences
+     * Retrieves the signed proposer preferences known by the node for upcoming proposal slots.
+     */
+    getProposerPreferences: Endpoint<
+      "GET",
+      {slot?: Slot; dependentRoot?: Root},
+      {query: {slot?: number; dependent_root?: string}},
+      SignedProposerPreferencesList,
+      VersionMeta
+    >;
   };
 
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
@@ -52,6 +72,24 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: ssz.phase0.Genesis,
         meta: EmptyMetaCodec,
+      },
+    },
+    getProposerPreferences: {
+      url: "/eth/v1/beacon/proposer_preferences",
+      method: "GET",
+      req: {
+        writeReq: ({slot, dependentRoot}) => ({
+          query: {slot, dependent_root: dependentRoot && toRootHex(dependentRoot)},
+        }),
+        parseReq: ({query}) => ({
+          slot: query.slot,
+          dependentRoot: query.dependent_root ? fromHex(query.dependent_root) : undefined,
+        }),
+        schema: {query: {slot: Schema.Uint, dependent_root: Schema.String}},
+      },
+      resp: {
+        data: SignedProposerPreferencesListType,
+        meta: VersionCodec,
       },
     },
     ...block.getDefinitions(config),

@@ -3,6 +3,7 @@ import {describe, expect, it, vi} from "vitest";
 import {BeaconPreset, ForkName} from "../../src/index.js";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
 import {minimalPreset} from "../../src/presets/minimal.js";
+// biome-ignore lint/correctness/useImportExtensions: false positive, the import resolves through a symlink to a .json file
 import specTests from "../spec-tests-version.json" with {type: "json"};
 import {loadConfigYaml} from "../yaml.js";
 
@@ -13,11 +14,7 @@ import {loadConfigYaml} from "../yaml.js";
  */
 const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [];
 
-const ignoredRemotePresetFields: string[] = [
-  // TODO GLOAS: The pinned v1.7.0-beta.0 still includes these; remove the exclusions once the pin includes consensus-specs#5613
-  "MAX_DATA_COLUMN_SIDECAR_SIZE",
-  "MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE",
-];
+const ignoredRemotePresetFields: string[] = [];
 
 describe("Ensure config is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});

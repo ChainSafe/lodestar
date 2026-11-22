@@ -18,7 +18,16 @@ export interface ISlashingProtection {
    */
   hasAttestedInEpoch(pubKey: BLSPubkey, epoch: Epoch): Promise<boolean>;
 
-  importInterchange(interchange: Interchange, genesisValidatorsRoot: Uint8Array | Root, logger?: Logger): Promise<void>;
+  /**
+   * Import an EIP-3076 interchange, rejects attestations with a target epoch more than one epoch after `currentEpoch`
+   * (or genesis if earlier)
+   */
+  importInterchange(
+    interchange: Interchange,
+    genesisValidatorsRoot: Uint8Array | Root,
+    logger?: Logger,
+    currentEpoch?: Epoch
+  ): Promise<void>;
   exportInterchange(
     genesisValidatorsRoot: Uint8Array | Root,
     pubkeys: BLSPubkey[],

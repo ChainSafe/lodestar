@@ -1,14 +1,64 @@
+import os from "node:os";
 import {describe, expect, it} from "vitest";
-import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {ArchiveMode, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
-import {NetworkArgs, parseArgs as parseNetworkArgs} from "../../../src/options/beaconNodeOptions/network.js";
+import {
+  NetworkArgs,
+  hasGlobalIPv6Address,
+  parseListenArgs,
+  parseArgs as parseNetworkArgs,
+} from "../../../src/options/beaconNodeOptions/network.js";
 
 describe("options / beaconNodeOptions", () => {
+  it.each([
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [9, 10],
+    [10, 11],
+    [25, 27],
+    [100, 110],
+  ])("defaults maxPeers above targetPeers=%s to %s", (targetPeers, maxPeers) => {
+    expect(parseNetworkArgs({targetPeers, listenAddress: "127.0.0.1"})).toMatchObject({targetPeers, maxPeers});
+  });
+
+  it("preserves the network defaults when targetPeers is omitted", () => {
+    expect(parseNetworkArgs({listenAddress: "127.0.0.1"})).toMatchObject({
+      targetPeers: defaultOptions.network.targetPeers,
+      maxPeers: defaultOptions.network.maxPeers,
+    });
+  });
+
+  it.each([1, 5])("preserves an explicit maxPeers=%s", (maxPeers) => {
+    expect(parseNetworkArgs({targetPeers: 1, "network.maxPeers": maxPeers, listenAddress: "127.0.0.1"})).toMatchObject({
+      targetPeers: 1,
+      maxPeers,
+    });
+  });
+
+  it.each([
+    [-1, undefined],
+    [-0.5, undefined],
+    [-100, undefined],
+    [-1, 2],
+  ])("rejects targetPeers=%s with maxPeers=%s", (targetPeers, maxPeers) => {
+    expect(() => parseNetworkArgs({targetPeers, "network.maxPeers": maxPeers, listenAddress: "127.0.0.1"})).toThrow(
+      "targetPeers must be greater than or equal to 0"
+    );
+  });
+
+  it("still rejects an explicit maxPeers below targetPeers", () => {
+    expect(() => parseNetworkArgs({targetPeers: 2, "network.maxPeers": 1, listenAddress: "127.0.0.1"})).toThrow(
+      "network.maxPeers must be greater than or equal to targetPeers"
+    );
+  });
+
   it("Should parse BeaconNodeArgs", () => {
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
       "api.maxGindicesInProof": 1000,
+      "api.disableBidValidation": true,
       "rest.namespace": [],
       "rest.cors": "*",
       rest: true,
@@ -22,15 +72,17 @@ describe("options / beaconNodeOptions", () => {
       "chain.blsVerifyAllMainThread": true,
       "chain.disableBlsBatchVerify": true,
       "chain.persistProducedBlocks": true,
+      "chain.persistProducedPayloadEnvelopes": true,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoost": false,
       "chain.proposerBoostReorg": false,
+      "chain.dedupePayloads": false,
       "chain.disableImportExecutionFcU": false,
       "chain.preaggregateSlotDistance": 1,
+      "chain.singleAttestationIgnoreProposalDuty": true,
       "chain.attDataCacheSlotDistance": 2,
       "chain.computeUnrealized": true,
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
       "chain.disableProposerSlashings": true,
       "chain.archiveStateEpochFrequency": 1024,
@@ -53,6 +105,7 @@ describe("options / beaconNodeOptions", () => {
       builder: false,
       "builder.url": "http://localhost:8661",
       "builder.timeout": 12000,
+      "builder.bidDeadline": 500,
       "builder.faultInspectionWindow": 32,
       "builder.allowedFaults": 8,
 
@@ -77,15 +130,12 @@ describe("options / beaconNodeOptions", () => {
       targetPeers: 25,
       subscribeAllSubnets: true,
       slotsToSubscribeBeforeAggregatorDuty: 1,
+      slotsToSubscribeBeforeProposalDuty: 4,
       disablePeerScoring: true,
       mdns: false,
       "network.maxPeers": 30,
       "network.connectToDiscv5Bootnodes": true,
       "network.discv5FirstQueryDelayMs": 1000,
-      "network.requestCountPeerLimit": 5,
-      "network.blockCountTotalLimit": 1000,
-      "network.blockCountPeerLimit": 500,
-      "network.rateTrackerTimeoutMs": 60000,
       "network.dontSendGossipAttestationsToForkchoice": true,
       "network.allowPublishToZeroPeers": true,
       "network.gossipsubD": 4,
@@ -101,13 +151,13 @@ describe("options / beaconNodeOptions", () => {
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
-      "sync.backfillBatchSize": 64,
       "sync.disableRangeSync": false,
     } as BeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       api: {
         maxGindicesInProof: 1000,
+        disableBidValidation: true,
         rest: {
           api: [],
           cors: "*",
@@ -124,15 +174,17 @@ describe("options / beaconNodeOptions", () => {
         blsVerifyAllMainThread: true,
         disableBlsBatchVerify: true,
         persistProducedBlocks: true,
+        persistProducedPayloadEnvelopes: true,
         persistInvalidSszObjects: true,
         proposerBoost: false,
         proposerBoostReorg: false,
+        dedupePayloads: false,
         disableImportExecutionFcU: false,
         preaggregateSlotDistance: 1,
+        singleAttestationIgnoreProposalDuty: true,
         attDataCacheSlotDistance: 2,
         computeUnrealized: true,
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
         disableProposerSlashings: true,
         archiveStateEpochFrequency: 1024,
@@ -143,12 +195,13 @@ describe("options / beaconNodeOptions", () => {
         archiveMode: ArchiveMode.Frequency,
         graffitiAppend: false,
         nHistoricalStatesFileDataStore: true,
-        nativeStateView: false,
+        nativeStateTransition: true,
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
         maxCPStateEpochsOnDisk: 1000,
         faultInspectionWindow: 32,
         allowedFaults: 8,
+        pruneHistory: true,
       },
       executionEngine: {
         urls: ["http://localhost:8551"],
@@ -160,6 +213,7 @@ describe("options / beaconNodeOptions", () => {
         enabled: false,
         url: "http://localhost:8661",
         timeout: 12000,
+        bidDeadline: 500,
         faultInspectionWindow: 32,
         allowedFaults: 8,
       },
@@ -190,6 +244,7 @@ describe("options / beaconNodeOptions", () => {
         localMultiaddrs: ["/ip4/127.0.0.1/udp/9003/quic-v1", "/ip4/127.0.0.1/tcp/9001"],
         subscribeAllSubnets: true,
         slotsToSubscribeBeforeAggregatorDuty: 1,
+        slotsToSubscribeBeforeProposalDuty: 4,
         disablePeerScoring: true,
         connectToDiscv5Bootnodes: true,
         discv5FirstQueryDelayMs: 1000,
@@ -213,13 +268,22 @@ describe("options / beaconNodeOptions", () => {
         isSingleNode: true,
         slotImportTolerance: 32,
         disableProcessAsChainSegment: true,
-        backfillBatchSize: 64,
         disableRangeSync: false,
       },
     };
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
     expect(options).toEqual(expectedOptions);
+  });
+
+  it("should prune history by default unless serving historical state", () => {
+    expect(parseBeaconNodeArgs({} as BeaconNodeArgs).chain?.pruneHistory).toBe(true);
+    expect(parseBeaconNodeArgs({serveHistoricalState: true} as BeaconNodeArgs).chain?.pruneHistory).toBe(false);
+    expect(
+      parseBeaconNodeArgs({serveHistoricalState: true, "chain.pruneHistory": true} as BeaconNodeArgs).chain
+        ?.pruneHistory
+    ).toBe(true);
+    expect(parseBeaconNodeArgs({"chain.pruneHistory": false} as BeaconNodeArgs).chain?.pruneHistory).toBe(false);
   });
 });
 
@@ -327,5 +391,76 @@ describe("options / network / tcp and quic flags", () => {
         quic: true,
       } as NetworkArgs)
     ).toThrow(/discoveryPort6 and quicPort6 must not collide/);
+  });
+});
+
+describe("options / network / listen address defaults", () => {
+  it("should bind IPv4 and IPv6 by default when the host has a global IPv6 address", () => {
+    const result = parseListenArgs({} as NetworkArgs, true);
+    expect(result.listenAddress).toBe("0.0.0.0");
+    expect(result.listenAddress6).toBe("::");
+    expect(result.port6).toBe(9000);
+  });
+
+  it("should bind IPv4 only by default when the host has no global IPv6 address", () => {
+    const result = parseListenArgs({} as NetworkArgs, false);
+    expect(result.listenAddress).toBe("0.0.0.0");
+    expect(result.listenAddress6).toBeUndefined();
+    expect(result.port6).toBeUndefined();
+    expect(result.discoveryPort6).toBeUndefined();
+  });
+
+  it("should bind IPv6 when listenAddress6 is set explicitly without a global IPv6 address", () => {
+    const result = parseListenArgs({listenAddress6: "::"} as NetworkArgs, false);
+    expect(result.listenAddress6).toBe("::");
+    expect(result.listenAddress).toBeUndefined();
+  });
+
+  it("should not bind IPv6 when listenAddress is set explicitly", () => {
+    const result = parseListenArgs({listenAddress: "0.0.0.0"} as NetworkArgs, true);
+    expect(result.listenAddress6).toBeUndefined();
+  });
+});
+
+describe("options / network / hasGlobalIPv6Address", () => {
+  const iface = (address: string, family: "IPv4" | "IPv6", internal = false): os.NetworkInterfaceInfo =>
+    ({address, family, internal, netmask: "", mac: "", cidr: null, scopeid: 0}) as os.NetworkInterfaceInfo;
+
+  it("should be false with only loopback, link-local and unique local IPv6 addresses", () => {
+    const interfaces = {
+      lo: [iface("127.0.0.1", "IPv4", true), iface("::1", "IPv6", true)],
+      eth0: [iface("172.18.0.3", "IPv4"), iface("fe80::42:acff:fe12:3", "IPv6"), iface("fd00::3", "IPv6")],
+    };
+    expect(hasGlobalIPv6Address(interfaces)).toBe(false);
+  });
+
+  it("should be false with no IPv6 address", () => {
+    expect(hasGlobalIPv6Address({eth0: [iface("172.18.0.3", "IPv4")]})).toBe(false);
+  });
+
+  it("should be false with only special-purpose addresses", () => {
+    const interfaces = {
+      eth0: [
+        iface("2001:db8::1", "IPv6"),
+        iface("3fff::1", "IPv6"),
+        iface("2001:2::1", "IPv6"),
+        iface("2001::1", "IPv6"),
+        iface("2001:0:1234::1", "IPv6"),
+        iface("2002:c000:201::1", "IPv6"),
+        iface("fec0::1", "IPv6"),
+        iface("::ffff:10.0.0.1", "IPv6"),
+        iface("100::1", "IPv6"),
+        iface("64:ff9b::a00:1", "IPv6"),
+      ],
+    };
+    expect(hasGlobalIPv6Address(interfaces)).toBe(false);
+  });
+
+  it("should be true with a global unicast IPv6 address", () => {
+    const interfaces = {
+      eth0: [iface("172.18.0.3", "IPv4"), iface("fe80::1", "IPv6"), iface("2a01:4ff:f4:3c4a::1", "IPv6")],
+    };
+    expect(hasGlobalIPv6Address(interfaces)).toBe(true);
+    expect(hasGlobalIPv6Address({eth0: [iface("2003::1", "IPv6")]})).toBe(true);
   });
 });

@@ -61,4 +61,13 @@ export const sepoliaChainConfig: ChainConfig = {
       MAX_BLOBS_PER_BLOCK: 21,
     },
   ],
+
+  // Gas Limit Scheduling
+  // ---------------------------------------------------------------
+  GAS_LIMIT_SCHEDULE: [
+    {
+      EPOCH: 353024,
+      GAS_LIMIT: 200000000,
+    },
+  ],
 };

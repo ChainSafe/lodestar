@@ -6,7 +6,9 @@ import {RootHex, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {
   ExecutionStatus,
+  FastConfirmationRule,
   ForkChoice,
+  ForkChoiceMetrics,
   IForkChoiceStore,
   PayloadStatus,
   ProtoArray,
@@ -76,6 +78,45 @@ describe("fast confirmation pause/resume", () => {
     };
   }
 
+  function makeMetrics(): ForkChoiceMetrics {
+    const gauge = () => ({set: vi.fn()});
+    const counter = () => ({inc: vi.fn()});
+    const histogram = () => ({startTimer: vi.fn(() => vi.fn())});
+
+    return {
+      fastConfirmation: {
+        totalDuration: histogram(),
+        stepsDuration: histogram(),
+        confirmedEpoch: gauge(),
+        votesTracked: gauge(),
+        paused: gauge(),
+        resets: counter(),
+        slot: gauge(),
+        reorgs: counter(),
+        fallbacks: counter(),
+        restarts: counter(),
+      },
+      forkChoice: {
+        computeDeltas: {
+          duration: histogram(),
+          deltasCount: gauge(),
+          zeroDeltasCount: gauge(),
+          equivocatingValidators: gauge(),
+          oldInactiveValidators: gauge(),
+          newInactiveValidators: gauge(),
+          unchangedVoteValidators: gauge(),
+          newVoteValidators: gauge(),
+        },
+        votes: {...gauge(), addCollect: vi.fn()},
+        queuedAttestations: gauge(),
+        validatedAttestationDatas: gauge(),
+        balancesLength: gauge(),
+        nodes: gauge(),
+        indices: gauge(),
+      },
+    } as unknown as ForkChoiceMetrics;
+  }
+
   it("pins confirmed root to finalized and emits the event while paused", () => {
     const notify = vi.fn();
     const fcStore = makeFcStore(notify);
@@ -134,6 +175,64 @@ describe("fast confirmation pause/resume", () => {
     });
 
     forkchoice.updateTime((genesisSlot + 2) as Slot);
+    expect(notify).toHaveBeenCalledTimes(1);
+  });
+
+  it("reverts confirmed root to finalized and emits the event when the rule throws", () => {
+    const notify = vi.fn();
+    const fcStore = makeFcStore(notify);
+    const metrics = makeMetrics();
+    const forkchoice = new ForkChoice(config, fcStore, makeProtoArr(), validatorCount, metrics, {
+      fastConfirmation: true,
+    });
+    const spy = vi
+      .spyOn(FastConfirmationRule.prototype, "onSlotStartAfterPastAttestationsApplied")
+      .mockImplementation(() => {
+        throw new Error("Head state not found");
+      });
+
+    try {
+      fcStore.confirmedRoot = `0x${"12".repeat(32)}`;
+      forkchoice.updateTime((genesisSlot + 2) as Slot);
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(fcStore.confirmedRoot).toBe(finalizedRoot);
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith({block: finalizedRoot, slot: genesisSlot, currentSlot: genesisSlot + 2});
+    expect(metrics.fastConfirmation.resets.inc).toHaveBeenCalledTimes(1);
+    expect(metrics.fastConfirmation.fallbacks.inc).toHaveBeenCalledTimes(1);
+    expect(metrics.fastConfirmation.confirmedEpoch.set).toHaveBeenLastCalledWith(genesisEpoch);
+    expect(metrics.fastConfirmation.slot.set).toHaveBeenLastCalledWith(genesisSlot);
+  });
+
+  it("keeps the confirmed root when notifying subscribers throws", () => {
+    const notify = vi.fn((_data: {block: RootHex; slot: Slot; currentSlot: Slot}) => {
+      throw new Error("Subscriber failed");
+    });
+    const fcStore = makeFcStore(notify);
+    const forkchoice = new ForkChoice(config, fcStore, makeProtoArr(), validatorCount, null, {
+      fastConfirmation: true,
+    });
+    const confirmedRoot = `0x${"12".repeat(32)}`;
+    const confirmedBlock = {...forkchoice.getFinalizedBlock(), blockRoot: confirmedRoot, slot: 1 as Slot};
+    const getBlock = forkchoice.getBlockHexDefaultStatus.bind(forkchoice);
+    const getBlockSpy = vi
+      .spyOn(forkchoice, "getBlockHexDefaultStatus")
+      .mockImplementation((root) => (root === confirmedRoot ? confirmedBlock : getBlock(root)));
+    const ruleSpy = vi
+      .spyOn(FastConfirmationRule.prototype, "onSlotStartAfterPastAttestationsApplied")
+      .mockReturnValue({confirmedRoot});
+
+    try {
+      forkchoice.updateTime((genesisSlot + 2) as Slot);
+    } finally {
+      ruleSpy.mockRestore();
+      getBlockSpy.mockRestore();
+    }
+
+    expect(fcStore.confirmedRoot).toBe(confirmedRoot);
     expect(notify).toHaveBeenCalledTimes(1);
   });
 });

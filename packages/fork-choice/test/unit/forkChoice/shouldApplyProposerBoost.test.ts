@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
-import {IBeaconStateView} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
-import {ForkChoice, IForkChoiceStore, PayloadStatus, ProtoArray} from "../../../src/index.js";
+import {ExecutionStatus, ForkChoice, IForkChoiceStore, PayloadStatus, ProtoArray} from "../../../src/index.js";
 import {getBlockRoot} from "../../utils/index.js";
 import {
   BALANCE_INCREMENT,
@@ -198,5 +198,35 @@ describe("Forkchoice / shouldApplyProposerBoost", () => {
     forkChoice.updateHead();
 
     expect(appliedBoost(protoArray, childRoot)).toBe(0n);
+  });
+
+  it("keeps the boost root for the payload tiebreak while the boost weight is withheld", () => {
+    // The parent's payload is known but not PTC-timely and the boosted child extends the parent's
+    // EMPTY variant. should_extend_payload reads store.proposer_boost_root regardless of
+    // should_apply_proposer_boost, so EMPTY must win over FULL and the head must follow the child
+    // rather than stop at the parent's FULL variant. One vote keeps the parent weak but ahead of
+    // its sibling.
+    const store = makeStore();
+    store.currentSlot = headSlot;
+    const {forkChoice, protoArray, parentRoot, childRoot} = setup({
+      sibling: {ptcTimeliness: true},
+      parentVotes: 1,
+      store,
+    });
+    protoArray.onExecutionPayload(
+      parentRoot,
+      store.currentSlot,
+      "0xpayload_full",
+      parentSlot,
+      30_000_000,
+      childRoot,
+      ExecutionStatus.Valid,
+      DataAvailabilityStatus.Available
+    );
+
+    const head = forkChoice.updateHead();
+
+    expect(appliedBoost(protoArray, childRoot)).toBe(0n);
+    expect(head.blockRoot).toBe(childRoot);
   });
 });

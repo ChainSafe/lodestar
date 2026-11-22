@@ -3,6 +3,7 @@ import {chainConfig} from "@lodestar/config/default";
 import {ForkName, activePreset} from "@lodestar/params";
 import {fetch} from "@lodestar/utils";
 import {specConstants} from "../../../../src/api/impl/config/constants.js";
+// biome-ignore lint/correctness/useImportExtensions: false positive, the import resolves through a symlink to a .json file
 import specTestVersion from "../../../spec-tests-version.json" with {type: "json"};
 
 const CONSTANT_NAMES_SKIP_LIST = new Set([
@@ -13,9 +14,6 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   "PAYLOAD_STATUS_VALID",
   "PAYLOAD_STATUS_INVALIDATED",
   "PAYLOAD_STATUS_NOT_VALIDATED",
-  // TODO GLOAS: Remove these exclusions once the spec pin includes consensus-specs#5613
-  "MAX_DATA_COLUMN_SIDECAR_SIZE",
-  "MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE",
 ]);
 
 describe("api / impl / config", () => {

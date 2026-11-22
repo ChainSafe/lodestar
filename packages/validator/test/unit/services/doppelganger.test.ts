@@ -5,15 +5,16 @@ import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {DoppelgangerService, DoppelgangerStatus} from "../../../src/services/doppelgangerService.js";
 import {IndicesService} from "../../../src/services/indices.js";
-import {mockApiResponse} from "../../utils/apiStub.js";
+import {mockApiErrorResponse, mockApiResponse} from "../../utils/apiStub.js";
 import {ClockMock} from "../../utils/clock.js";
 import {testLogger} from "../../utils/logger.js";
 import {SlashingProtectionMock} from "../../utils/slashingProtectionMock.js";
 
 // At genesis start validating immediately
 
-type IsLivePrevEpoch = boolean;
-type IsLiveCurrEpoch = boolean;
+/** `null` = liveness request for that epoch fails */
+type IsLivePrevEpoch = boolean | null;
+type IsLiveCurrEpoch = boolean | null;
 
 type DoppelgangerTest = [IsLivePrevEpoch, IsLiveCurrEpoch, DoppelgangerStatus][];
 const noop = (): null => null;
@@ -75,12 +76,29 @@ const testCases: Record<string, DoppelgangerTest> = {
     [false, false, DoppelgangerStatus.Unverified],
     [false, true, DoppelgangerStatus.DoppelgangerDetected],
   ],
+
+  // Liveness request failures
+
+  "curr epoch request fails at final poll": [
+    [false, false, DoppelgangerStatus.Unverified],
+    [false, false, DoppelgangerStatus.Unverified],
+    [false, null, DoppelgangerStatus.Unverified], // curr epoch not observed, wait for next poll
+    [false, false, DoppelgangerStatus.VerifiedSafe],
+  ],
+  "isLive in epoch whose curr epoch request failed": [
+    [false, false, DoppelgangerStatus.Unverified],
+    [false, false, DoppelgangerStatus.Unverified],
+    [false, null, DoppelgangerStatus.Unverified],
+    [true, false, DoppelgangerStatus.DoppelgangerDetected], // detected when queried as prev epoch
+  ],
 };
 
 describe("doppelganger service", () => {
   for (const [id, testCase] of Object.entries(testCases)) {
     it(id, async () => {
-      const livenessMap = new MapDef<Epoch, Map<ValidatorIndex, boolean>>(() => new Map<ValidatorIndex, boolean>());
+      const livenessMap = new MapDef<Epoch, Map<ValidatorIndex, boolean | null>>(
+        () => new Map<ValidatorIndex, boolean | null>()
+      );
       const index = 0;
       const pubkeyHex = "0x" + "aa".repeat(48);
 
@@ -192,18 +210,21 @@ class MapDef<K, V> extends Map<K, V> {
   }
 }
 
-type LivenessMap = Map<Epoch, Map<ValidatorIndex, boolean>>;
+type LivenessMap = Map<Epoch, Map<ValidatorIndex, boolean | null>>;
 
 function getMockBeaconApi(livenessMap: LivenessMap): ApiClient {
   return {
     validator: {
       async getLiveness({epoch, indices}) {
+        const livenessEpoch = livenessMap.get(epoch);
+        if (!livenessEpoch) throw Error(`Unknown epoch ${epoch}`);
+        if (indices.some((index) => livenessEpoch.get(index) === null)) {
+          return mockApiErrorResponse(503, {code: 503, message: "beacon node overloaded"});
+        }
         return mockApiResponse({
           data: indices.map((index) => {
-            const livenessEpoch = livenessMap.get(epoch);
-            if (!livenessEpoch) throw Error(`Unknown epoch ${epoch}`);
             const isLive = livenessEpoch.get(index);
-            if (isLive === undefined) throw Error(`No liveness for epoch ${epoch} index ${index}`);
+            if (isLive === undefined || isLive === null) throw Error(`No liveness for epoch ${epoch} index ${index}`);
             return {index, isLive};
           }),
         });
