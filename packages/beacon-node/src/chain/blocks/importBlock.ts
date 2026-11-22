@@ -31,7 +31,6 @@ import {
   Attestation,
   BeaconBlock,
   Epoch,
-  ValidatorIndex,
   altair,
   capella,
   electra,
@@ -293,10 +292,7 @@ export async function importBlock(
         // A validator can hold multiple PTC positions and its vote counts for all of them,
         // even if the aggregate only has some of its bits set
         const ptc = postState.getPayloadTimelinessCommittee(payloadAttestation.data.slot);
-        const attesters = new Set<ValidatorIndex>();
-        for (const i of payloadAttestation.aggregationBits.getTrueBitIndexes()) {
-          attesters.add(ptc[i]);
-        }
+        const attesters = new Set(payloadAttestation.aggregationBits.intersectValues(ptc));
         const ptcIndices: number[] = [];
         for (let i = 0; i < ptc.length; i++) {
           if (attesters.has(ptc[i])) {
