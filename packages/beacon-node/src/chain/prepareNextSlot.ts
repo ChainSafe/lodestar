@@ -87,7 +87,8 @@ type PreparedPayload = {
   headRoot: RootHex;
   /** Whether the payload builds on the parent's full payload or its empty variant, `null` pre-Gloas */
   buildOnFull: boolean | null;
-  feeRecipient: string;
+  /** `undefined` if the proposer is not ours, only the payload attributes event was emitted */
+  feeRecipient: string | undefined;
 };
 
 /**
@@ -480,10 +481,6 @@ export class PrepareNextSlotScheduler {
         feeRecipient,
         payloadAttributes
       );
-      this.lastPrepared = {prepareSlot, proposerIndex, headRoot: head.blockRoot, buildOnFull, feeRecipient};
-      if (reason !== PreparePayloadReason.scheduled) {
-        this.metrics?.blockPayload.payloadReprepare.inc({reason, result: "changed"});
-      }
       this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
         prepareSlot,
         proposerIndex,
@@ -492,6 +489,14 @@ export class PrepareNextSlotScheduler {
         headRoot: head.blockRoot,
         buildOnFull,
       });
+    }
+
+    // Builders take the parent from the payload attributes event, so re-prepare whenever it was emitted
+    if (feeRecipient !== undefined || payloadAttributes !== undefined) {
+      this.lastPrepared = {prepareSlot, proposerIndex, headRoot: head.blockRoot, buildOnFull, feeRecipient};
+      if (reason !== PreparePayloadReason.scheduled) {
+        this.metrics?.blockPayload.payloadReprepare.inc({reason, result: "changed"});
+      }
     }
   }
 
@@ -549,7 +554,7 @@ export class PrepareNextSlotScheduler {
 
   /**
    * Re-run the payload preparation for the next slot after its inputs may have changed. Waits for an in-flight
-   * preparation, drops the request if no payload was prepared for the next slot (not our proposal).
+   * preparation, drops the request if neither a payload nor payload attributes were prepared for the next slot.
    */
   private requestReprepare(reason: PreparePayloadReason): void {
     const prepareSlot = this.chain.clock.currentSlot + 1;
@@ -594,12 +599,13 @@ export class PrepareNextSlotScheduler {
 
     // Same head resolution as the scheduled run, the head may have changed since
     const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
-    const proposerHead = this.chain.predictProposerHead();
-    const head = proposerHead.blockRoot !== headBlock.blockRoot ? proposerHead : headBlock;
-    const feeRecipient = this.getFeeRecipient(fork, prepareSlot, head.blockRoot, prepared.proposerIndex);
-    if (feeRecipient === undefined) {
+    const feeRecipient = this.getFeeRecipient(fork, prepareSlot, headBlock.blockRoot, prepared.proposerIndex);
+    if (feeRecipient === undefined && this.chain.opts.emitPayloadAttributes !== true) {
       return;
     }
+    const isEpochTransition = computeEpochAtSlot(prepareSlot) > computeEpochAtSlot(prepareSlot - 1);
+    const proposerHead = feeRecipient !== undefined || isEpochTransition ? this.chain.predictProposerHead() : headBlock;
+    const head = proposerHead.blockRoot !== headBlock.blockRoot ? proposerHead : headBlock;
 
     const buildOnFull = isForkPostGloas(fork) ? this.chain.forkChoice.shouldBuildOnFull(head, prepareSlot) : null;
     const logCtx = {prepareSlot, reason, headRoot: head.blockRoot, buildOnFull};
@@ -618,7 +624,6 @@ export class PrepareNextSlotScheduler {
       prevBuildOnFull: prepared.buildOnFull,
     });
 
-    const isEpochTransition = computeEpochAtSlot(prepareSlot) > computeEpochAtSlot(prepareSlot - 1);
     const state = await this.chain.regen.getBlockSlotState(
       head,
       prepareSlot,

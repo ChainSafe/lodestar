@@ -568,7 +568,27 @@ describe("PrepareNextSlot scheduler", () => {
       expect(fcuParentHashes()).toEqual([fullParentHash]);
     });
 
-    it("does not re-prepare without a payload prepared for the next slot", async () => {
+    it("re-emits the payload attributes on the new parent when not proposing", async () => {
+      const spy = vi.fn();
+      chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
+      beaconProposerCacheStub.has.mockReturnValue(false);
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      await runScheduled();
+
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      emitPtcQuorum(clockSlot, false);
+      await flush();
+
+      expect(spy.mock.calls.map((call) => toRootHex(call[0].data.parentBlockHash))).toEqual([
+        fullParentHash,
+        emptyParentHash,
+      ]);
+      expect(fcuParentHashes()).toEqual([]);
+      expect(chainStub.predictProposerHead).not.toHaveBeenCalled();
+      expect(loggerStub.error).not.toHaveBeenCalled();
+    });
+
+    it("does not re-prepare without a payload or payload attributes prepared for the next slot", async () => {
       beaconProposerCacheStub.has.mockReturnValue(false);
       await runScheduled();
       expect(fcuParentHashes()).toEqual([]);
