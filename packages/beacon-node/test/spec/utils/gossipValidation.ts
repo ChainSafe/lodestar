@@ -48,6 +48,8 @@ import {validateGossipAttesterSlashing} from "../../../src/chain/validation/atte
 import {validateGossipBlock} from "../../../src/chain/validation/block.js";
 import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
 import {validateGossipInclusionList} from "../../../src/chain/validation/inclusionList.js";
+import {validateGossipPayloadAttestationMessage} from "../../../src/chain/validation/payloadAttestationMessage.js";
+import {validateGossipProposerPreferences} from "../../../src/chain/validation/proposerPreferences.js";
 import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
 import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCommittee.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../src/chain/validation/syncCommitteeContributionAndProof.js";
@@ -151,7 +153,7 @@ type MetaPayloadStatus = "VALID" | "NOT_VALIDATED" | "INVALIDATED";
 
 interface MetaYaml {
   topic: GossipType;
-  blocks?: {block: string; failed?: boolean; payload_status?: MetaPayloadStatus}[];
+  blocks?: {block: string; failed?: boolean; pending?: boolean; payload_status?: MetaPayloadStatus}[];
   finalized_checkpoint?: {epoch: bigint; root?: string; block?: string};
   messages: {
     current_time_ms?: bigint;
@@ -173,6 +175,8 @@ const gossipTopicByHandler = {
   gossip_sync_committee_contribution_and_proof: GossipType.sync_committee_contribution_and_proof,
   gossip_bls_to_execution_change: GossipType.bls_to_execution_change,
   gossip_inclusion_list: GossipType.inclusion_list,
+  gossip_payload_attestation_message: GossipType.payload_attestation_message,
+  gossip_proposer_preferences: GossipType.proposer_preferences,
 } as const satisfies Record<string, GossipType>;
 
 export function isGossipValidationHandler(topicHandler: string): topicHandler is keyof typeof gossipTopicByHandler {
@@ -438,6 +442,12 @@ export async function runGossipValidationTest(
             );
           }
           blockStatesByRoot.set(blockRootHex, anchorStateView);
+          continue;
+        }
+
+        // A pending block has been seen but is still queued for processing. Lodestar only tracks
+        // blocks once they are imported, so leave it out of fork-choice.
+        if (blockEntry.pending) {
           continue;
         }
 
@@ -735,6 +745,27 @@ async function validateMessageForTopic(
       const {committeeIndices} = await validateGossipInclusionList(chain, signedInclusionList);
       // Mirror gossip handler: store the list so later vectors see it
       chain.inclusionListStore.process(signedInclusionList, committeeIndices, true);
+      break;
+    }
+
+    case GossipType.payload_attestation_message: {
+      const payloadAttestationMessage = rejectOnInvalidSerializedBytes(() =>
+        ssz.gloas.PayloadAttestationMessage.deserialize(bytes)
+      );
+
+      if (failedBlockRoots.has(toRootHex(payloadAttestationMessage.data.beaconBlockRoot))) {
+        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_BLOCK_FAILED_VALIDATION"});
+      }
+
+      await validateGossipPayloadAttestationMessage(chain, payloadAttestationMessage);
+      break;
+    }
+
+    case GossipType.proposer_preferences: {
+      const signedProposerPreferences = rejectOnInvalidSerializedBytes(() =>
+        ssz.gloas.SignedProposerPreferences.deserialize(bytes)
+      );
+      await validateGossipProposerPreferences(chain, signedProposerPreferences);
       break;
     }
 

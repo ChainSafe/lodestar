@@ -59,13 +59,28 @@ function runNetworkingFnTests(testHandler: string, testSuite: string, testSuiteD
   }
 }
 
+/** Matched against `<handler>/<testCase>` */
+const skippedGossipTests: RegExp[] = [
+  // These vectors start from a pre-Gloas anchor state and cross the fork, but the gossip harness loads the
+  // state and blocks with the types of a single fork.
+  /^gossip_proposer_preferences\/gossip_proposer_preferences__(ignore_pre_gloas_epoch|valid_at_gloas_fork_epoch)$/,
+  // The proposer lookahead for a head older than the dependent epoch comes from the checkpoint state that
+  // PrepareNextSlotScheduler precomputes, which the gossip harness does not run.
+  /^gossip_proposer_preferences\/gossip_proposer_preferences__valid_dependent_block_is_head$/,
+];
+
 const networking: TestRunnerCustom = (fork, testHandler, testSuite, testSuiteDirpath) => {
   if (isGossipValidationHandler(testHandler)) {
     for (const testCaseName of readdirSyncSpec(testSuiteDirpath)) {
       const testCaseDir = path.join(testSuiteDirpath, testCaseName);
-      it(testCaseName, async () => {
-        await runGossipValidationTest(fork, testHandler, testCaseDir);
-      }, 30_000);
+      const skip = skippedGossipTests.some((skippedMatch) => `${testHandler}/${testCaseName}`.match(skippedMatch));
+      it.skipIf(skip)(
+        testCaseName,
+        async () => {
+          await runGossipValidationTest(fork, testHandler, testCaseDir);
+        },
+        30_000
+      );
     }
   } else if (networkingFns[testHandler] !== undefined) {
     runNetworkingFnTests(testHandler, testSuite, testSuiteDirpath);
