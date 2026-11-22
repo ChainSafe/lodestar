@@ -146,6 +146,13 @@ export function cacheByRangeResponses({
     }
   }
 
+  if (parentPayload && getFullPayloadBlockHash(parentPayload.blockRootHex) !== null) {
+    const incomplete = getIncompleteFullInput(parentPayload.blockRootHex, payloadEnvelopes.get(parentPayload.slot));
+    if (incomplete) {
+      payloadEnvelopes.set(parentPayload.slot, incomplete);
+    }
+  }
+
   const blocks = responses.validatedBlocks ?? [];
   for (let i = 0; i < blocks.length; i++) {
     const {block, blockRoot} = blocks[i];

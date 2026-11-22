@@ -200,7 +200,7 @@ export class Batch {
     this.requests = this.getRequests([]);
   }
 
-  private shouldDownloadParentEnvelope(firstBlock?: SignedBeaconBlock): boolean {
+  private needsParentPayload(firstBlock?: SignedBeaconBlock): boolean {
     if (!this.isFirstBatchInChain) return false;
 
     if (this.startSlot === 0 || !isForkPostGloas(this.config.getForkName(this.startSlot - 1))) {
@@ -212,15 +212,18 @@ export class Batch {
     const firstBlockBid = (firstBlock.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message;
     return (
       byteArrayEquals(firstBlock.message.parentRoot, this.parentPayload.blockRoot) &&
-      byteArrayEquals(firstBlockBid.parentBlockHash, this.parentPayload.bid.blockHash) &&
-      this.getFullPayloadBlockHash?.(this.parentPayload.blockRootHex) !== toRootHex(firstBlockBid.parentBlockHash)
+      byteArrayEquals(firstBlockBid.parentBlockHash, this.parentPayload.bid.blockHash)
     );
   }
 
-  getParentPayload(): ParentPayload {
-    if (this.parentPayload === undefined) {
-      throw new Error("Coding error: getParentPayload called without parentPayload");
-    }
+  private isParentPayloadImported(): boolean {
+    return (
+      this.parentPayload !== undefined &&
+      this.getFullPayloadBlockHash?.(this.parentPayload.blockRootHex) === toRootHex(this.parentPayload.bid.blockHash)
+    );
+  }
+
+  getParentPayload(): ParentPayload | undefined {
     return this.parentPayload;
   }
 
@@ -352,8 +355,7 @@ export class Batch {
     }
 
     // Only the first batch of a SyncChain may need the dangling-parent payload by-root.
-    if (blocks.length > 0 && this.shouldDownloadParentEnvelope(blocks[0].getBlock())) {
-      // shouldDownloadParentEnvelope() = true means there are at least 1 block
+    if (blocks.length > 0 && this.needsParentPayload(blocks[0].getBlock())) {
       const parentRoot = blocks[0].getBlock().message.parentRoot;
       if (!byteArrayEquals(parentRoot, ZERO_HASH)) {
         const parentRootHex = toRootHex(parentRoot);
@@ -367,10 +369,13 @@ export class Batch {
           }
         }
 
-        const needsEnvelope = !parentPayloadInput?.hasPayloadEnvelope();
+        const parentImported = this.isParentPayloadImported();
+        const needsEnvelope = !parentImported && !parentPayloadInput?.hasPayloadEnvelope();
         const missingColumns = parentPayloadInput
           ? parentPayloadInput.getMissingSampledColumnMeta().missing
-          : this.custodyConfig.sampledColumns;
+          : parentImported
+            ? []
+            : this.custodyConfig.sampledColumns;
 
         if (needsEnvelope || missingColumns.length > 0) {
           requests.parentPayloadRequest = {
@@ -581,16 +586,17 @@ export class Batch {
     // First batch of a sync chain must additionally have the dangling-parent payload fully
     // present, otherwise `processBlocks` will throw PARENT_PAYLOAD_UNKNOWN. The parent's
     // `PayloadEnvelopeInput` is identified by `blockRootHex` matching `blocks[0].parentRoot`.
-    if (allComplete && blocks.length > 0 && this.shouldDownloadParentEnvelope(blocks[0].getBlock())) {
+    if (allComplete && blocks.length > 0 && this.needsParentPayload(blocks[0].getBlock())) {
       const parentRoot = blocks[0].getBlock().message.parentRoot;
       // Genesis has no parent payload — nothing to wait for.
       if (!byteArrayEquals(parentRoot, ZERO_HASH)) {
         const parentRootHex = toRootHex(parentRoot);
-        let parentPayloadComplete = false;
+        let parentPayloadComplete = this.isParentPayloadImported();
         if (newPayloadEnvelopes) {
           for (const payloadInput of newPayloadEnvelopes.values()) {
             if (payloadInput.blockRootHex === parentRootHex) {
-              parentPayloadComplete = payloadInput.hasPayloadEnvelope() && payloadInput.hasComputedAllData();
+              parentPayloadComplete =
+                (parentPayloadComplete || payloadInput.hasPayloadEnvelope()) && payloadInput.hasComputedAllData();
               break;
             }
           }

@@ -570,7 +570,14 @@ describe("cacheByRangeResponses", () => {
     {path: "previous batch download", inBatch: false, inSeenCache: false},
     {path: "in-batch block", inBatch: true, inSeenCache: true},
     {path: "dangling parent", inBatch: false, inSeenCache: true},
-  ])("completes columns for an imported FULL payload from the $path", ({inBatch, inSeenCache}) => {
+    {
+      path: "cached parent before the first column request",
+      inBatch: false,
+      inSeenCache: true,
+      responseHasColumn: false,
+    },
+  ])("completes columns for an imported FULL payload from the $path", (options) => {
+    const {inBatch, inSeenCache, responseHasColumn = true} = options;
     const reconstructionThreshold = NUMBER_OF_COLUMNS / 2;
     const sampledColumns = Array.from({length: reconstructionThreshold + 2}, (_, index) => index);
     const input = PayloadEnvelopeInput.createFromBid({
@@ -605,16 +612,16 @@ describe("cacheByRangeResponses", () => {
       inBatch,
       imported: true,
       existingInput: inSeenCache ? undefined : input,
-      columnSidecars: [columns[reconstructionThreshold]],
+      columnSidecars: responseHasColumn ? [columns[reconstructionThreshold]] : [],
     });
     expect(partial?.get(block.message.slot)).toBe(input);
-    expect(input.hasColumn(reconstructionThreshold)).toBe(true);
+    expect(input.hasColumn(reconstructionThreshold)).toBe(responseHasColumn);
     expect(input.hasComputedAllData()).toBe(false);
 
     cacheEnvelope(entries, {
       imported: true,
       existingInput: partial?.get(block.message.slot),
-      columnSidecars: [columns[reconstructionThreshold + 1]],
+      columnSidecars: columns.slice(reconstructionThreshold + (responseHasColumn ? 1 : 0)),
     });
     expect(input.hasComputedAllData()).toBe(true);
     expect(input.getPayloadEnvelope()).toBe(importedEnvelope);

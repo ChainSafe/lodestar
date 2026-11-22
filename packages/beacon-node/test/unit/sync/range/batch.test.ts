@@ -417,6 +417,81 @@ describe("sync / range / batch", async () => {
         }
       });
 
+      it.each([false, true])("keeps downloading parent columns when imported initially=%s", (initiallyImported) => {
+        const {startSlot} = getBatchSlotRange(startEpoch);
+        const sampledColumns = Array.from({length: 66}, (_, index) => index);
+        const {blockInput: parentBlock, payloadInput: parentInput} = buildGloasBlockWithEnvelope({
+          slot: startSlot - 1,
+          blobCount: 1,
+          sampledColumns,
+          addAllColumns: false,
+        });
+        const parent = parentBlock.getBlock() as SignedBeaconBlock<typeof ForkName.gloas>;
+        const parentRoot = ssz.gloas.BeaconBlock.hashTreeRoot(parent.message);
+        const parentPayload: ParentPayload = {
+          blockRoot: parentRoot,
+          blockRootHex: toRootHex(parentRoot),
+          slot: parent.message.slot,
+          proposerIndex: parent.message.proposerIndex,
+          forkName: ForkName.gloas,
+          bid: parent.message.body.signedExecutionPayloadBid.message,
+        };
+        const columns = sampledColumns.map((index) => ({
+          ...ssz.gloas.DataColumnSidecar.defaultValue(),
+          index,
+          slot: parent.message.slot,
+          beaconBlockRoot: parentRoot,
+        }));
+        for (const columnSidecar of columns.slice(0, 64)) {
+          parentInput.addColumn({columnSidecar, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec});
+        }
+        expect(parentInput.hasAllData()).toBe(true);
+        expect(parentInput.hasComputedAllData()).toBe(false);
+        let imported = initiallyImported;
+        const batch = new Batch(startEpoch, config, clock, custodyConfig, true, parentPayload, startSlot, () =>
+          imported ? parentInput.getBlockHashHex() : null
+        );
+        const {blockInput, payloadInput: childInput} = buildGloasBlockWithEnvelope({
+          slot: startSlot,
+          parentRoot,
+          parentBlockHash: parentPayload.bid.blockHash,
+        });
+        const inputs = new Map([
+          [parentInput.slot, parentInput],
+          [childInput.slot, childInput],
+        ]);
+        const peerMeta = {...peerSyncMeta, custodyColumns: sampledColumns};
+
+        batch.startDownloading(peerMeta);
+        batch.downloadingSuccess(peer, [blockInput], inputs);
+        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+        expect(batch.requests.parentPayloadRequest?.envelopeBlockRoot).toBeUndefined();
+        expect(batch.requests.parentPayloadRequest?.columns).toEqual([64, 65]);
+
+        batch.startDownloading(peerMeta);
+        // Import can complete at the reconstruction threshold while this request is in flight.
+        imported = true;
+        parentInput.addColumn({
+          columnSidecar: columns[64],
+          source: PayloadEnvelopeInputSource.byRange,
+          seenTimestampSec,
+        });
+        batch.downloadingSuccess(peer, [blockInput], inputs);
+        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+        expect(batch.requests.parentPayloadRequest?.envelopeBlockRoot).toBeUndefined();
+        expect(batch.requests.parentPayloadRequest?.columns).toEqual([65]);
+
+        batch.startDownloading(peerMeta);
+        parentInput.addColumn({
+          columnSidecar: columns[65],
+          source: PayloadEnvelopeInputSource.byRange,
+          seenTimestampSec,
+        });
+        batch.downloadingSuccess(peer, [blockInput], inputs);
+        expect(parentInput.hasComputedAllData()).toBe(true);
+        expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
+      });
+
       it("transitions to AwaitingProcessing when every block has a complete payload envelope", () => {
         const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
         batch.startDownloading(peerSyncMeta);

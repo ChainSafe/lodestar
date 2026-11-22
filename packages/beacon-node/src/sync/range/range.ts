@@ -317,7 +317,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       batchBlocks,
       downloadedPayloadEnvelopes,
       existingPayloadEnvelopes: batch.getPayloadEnvelopes(),
-      parentPayload,
+      parentPayload: batch.getParentPayload(),
       custodyConfig: this.chain.custodyConfig,
       seenTimestampSec: Date.now() / 1000,
     });
