@@ -1606,8 +1606,8 @@ export class BeaconChain implements IBeaconChain {
   }
 
   /**
-   * Invalid state root error is critical and it causes the node to stale most of the time so we want to always
-   * persist preState, postState and block for further investigation.
+   * Invalid state root error is critical and it causes the node to stale most of the time so we want to persist
+   * preState, postState and block for further investigation.
    */
   async persistInvalidStateRoot(
     preState: IBeaconStateView,

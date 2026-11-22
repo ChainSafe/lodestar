@@ -207,7 +207,7 @@ export async function processBlocks(
     } else if (!opts.disableOnBlockError) {
       this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
 
-      if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
+      if (err.type.code === BlockErrorCode.INVALID_SIGNATURE && this.opts.persistInvalidSszObjects) {
         const {signedBlock} = err;
         const blockSlot = signedBlock.message.slot;
         const {state} = err.type;
@@ -225,7 +225,7 @@ export async function processBlocks(
           toRootHex(state.hashTreeRoot()),
           `${state.slot}_invalid_signature`
         );
-      } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
+      } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT && this.opts.persistInvalidSszObjects) {
         const {signedBlock} = err;
         const blockSlot = signedBlock.message.slot;
         const {preState, postState} = err.type;
