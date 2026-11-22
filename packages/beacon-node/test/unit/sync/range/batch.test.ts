@@ -783,7 +783,7 @@ describe("sync / range / batch", async () => {
         }
       );
 
-      it("EXECUTION_ENGINE_INVALID => executionErrorAttempts, peer attributable", () => {
+      it("EXECUTION_ENGINE_INVALID => executionErrorAttempts, not peer attributable", () => {
         const batch = downloadedBatch();
         batch.startProcessing();
         batch.processingError(executionInvalidBlockError());
@@ -791,8 +791,8 @@ describe("sync / range / batch", async () => {
         // shares the EL budget rather than the processing budget
         expect(batch.failedProcessingAttempts.length).toBe(0);
         expect(batch.executionErrorAttempts.length).toBe(1);
-        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(true);
-        expect(batch.getPeerAttributableAttempts().flatMap((a) => a.peers)).toEqual([peer]);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(false);
+        expect(batch.getPeerAttributableAttempts()).toEqual([]);
       });
 
       // Under this PR, processBlocks passes PayloadError through UNWRAPPED, so range sync sees it
@@ -813,7 +813,7 @@ describe("sync / range / batch", async () => {
         expect(batch.executionErrorAttempts[0].peerAttributable).toBe(false);
       });
 
-      it("PayloadError EXECUTION_ENGINE_INVALID => executionErrorAttempts, peer attributable", () => {
+      it("PayloadError EXECUTION_ENGINE_INVALID => executionErrorAttempts, not peer attributable", () => {
         const batch = downloadedBatch();
         batch.startProcessing();
         batch.processingError(
@@ -825,7 +825,7 @@ describe("sync / range / batch", async () => {
         );
 
         expect(batch.executionErrorAttempts.length).toBe(1);
-        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(true);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(false);
       });
 
       it("non execution error => failedProcessingAttempts, peer attributable", () => {
@@ -837,6 +837,38 @@ describe("sync / range / batch", async () => {
         expect(batch.failedProcessingAttempts.length).toBe(1);
         expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(true);
         expect(batch.getFailedPeers()).toContain(peer);
+      });
+
+      it.each([
+        {source: PayloadEnvelopeInputSource.gossip, peerAttributable: false},
+        {source: PayloadEnvelopeInputSource.byRoot, peerAttributable: false},
+        {source: PayloadEnvelopeInputSource.byRange, peerAttributable: true},
+      ])("attributes envelope failures by the envelope's $source source", ({source, peerAttributable}) => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+
+        const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+        const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+        const envelopeInput = PayloadEnvelopeInput.createFromBlock({
+          block,
+          blockRootHex: toRootHex(blockRoot),
+          forkName: ForkName.gloas,
+          sampledColumns: [],
+          custodyColumns: [],
+          seenTimestampSec: 0,
+          source: PayloadEnvelopeInputSource.byRange,
+          daOutOfRange: false,
+        });
+        const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+        envelope.message.beaconBlockRoot = blockRoot;
+        envelopeInput.addPayloadEnvelope({envelope, source, seenTimestampSec: 0, peerIdStr: peer});
+
+        batch.processingError(
+          new PayloadError(envelopeInput, {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "invalid"})
+        );
+
+        expect(batch.failedProcessingAttempts).toHaveLength(1);
+        expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(peerAttributable);
       });
 
       it("PER_BLOCK_PROCESSING_ERROR (invalid block) => failedProcessingAttempts, peer attributable", () => {
@@ -965,13 +997,13 @@ describe("sync / range / batch", async () => {
         expect(batch.getPeerAttributableAttempts()).toEqual([]);
       });
 
-      it("EXECUTION_ENGINE_INVALID => executionErrorAttempts, peer attributable", () => {
+      it("EXECUTION_ENGINE_INVALID => executionErrorAttempts, not peer attributable", () => {
         const batch = batchAwaitingValidation();
         batch.validationError(executionInvalidBlockError());
 
         expect(batch.executionErrorAttempts.length).toBe(1);
-        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(true);
-        expect(batch.getPeerAttributableAttempts().length).toBe(1);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(false);
+        expect(batch.getPeerAttributableAttempts()).toEqual([]);
       });
 
       it("PayloadError EXECUTION_ENGINE_ERROR => executionErrorAttempts, not peer attributable", () => {
@@ -1008,16 +1040,15 @@ describe("sync / range / batch", async () => {
       expect(batch.getFailedPeers()).not.toContain(peer);
     });
 
-    it("getFailedPeers includes a peer that served a definitively invalid payload (BlockError)", () => {
+    it("getFailedPeers excludes a peer that served an execution-invalid payload (BlockError)", () => {
       const batch = downloadedBatch();
       batch.startProcessing();
       batch.processingError(executionInvalidBlockError());
 
-      // stored in executionErrorAttempts but peer-attributable => must not be retried
-      expect(batch.getFailedPeers()).toContain(peer);
+      expect(batch.getFailedPeers()).not.toContain(peer);
     });
 
-    it("getFailedPeers includes a peer that served a definitively invalid payload (PayloadError)", () => {
+    it("getFailedPeers excludes a peer that served an execution-invalid payload (PayloadError)", () => {
       const batch = downloadedBatch();
       batch.startProcessing();
       batch.processingError(
@@ -1028,7 +1059,7 @@ describe("sync / range / batch", async () => {
         })
       );
 
-      expect(batch.getFailedPeers()).toContain(peer);
+      expect(batch.getFailedPeers()).not.toContain(peer);
     });
   });
 
@@ -1073,7 +1104,7 @@ describe("sync / range / batch", async () => {
       expect(batch.failedProcessingAttempts[0].peers).toEqual([peer]);
     });
 
-    it("preserves the original peer across retain: an EL INVALID on reprocess is attributable", () => {
+    it("preserves the original peer across retain without attributing an EL INVALID to it", () => {
       const batch = batchInProcessing();
       batch.retainForReprocessing();
       batch.startProcessing();
@@ -1086,10 +1117,9 @@ describe("sync / range / batch", async () => {
       );
 
       expect(batch.executionErrorAttempts).toHaveLength(1);
-      expect(batch.executionErrorAttempts[0].peerAttributable).toBe(true);
+      expect(batch.executionErrorAttempts[0].peerAttributable).toBe(false);
       expect(batch.executionErrorAttempts[0].peers).toEqual([peer]);
-      // and it must be excluded from the next retry
-      expect(batch.getFailedPeers()).toContain(peer);
+      expect(batch.getFailedPeers()).not.toContain(peer);
     });
   });
 });

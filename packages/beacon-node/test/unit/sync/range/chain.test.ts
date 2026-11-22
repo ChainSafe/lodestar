@@ -724,7 +724,7 @@ describe("sync / range / chain", () => {
       expect(reportPeerSpy).not.toHaveBeenCalled();
     });
 
-    it("reports only the offending peers when teardown is caused by INVALID payloads", async () => {
+    it("does not report peers when teardown is caused by execution-invalid payloads", async () => {
       const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
         throw new BlockError(blocks[0].getBlock(), {
           code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
@@ -736,15 +736,7 @@ describe("sync / range / chain", () => {
       const {reportPeerSpy, err} = await runToTeardown(RangeSyncType.Finalized, processChainSegment);
 
       expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS);
-      expect(reportPeerSpy).toHaveBeenCalled();
-
-      const reportedPeers = reportPeerSpy.mock.calls.map(([peerId]) => peerId);
-      // only the peers that actually served an INVALID attempt, each reported once
-      expect(new Set(reportedPeers).size).toBe(reportedPeers.length);
-      expect(reportedPeers.length).toBeLessThan(6);
-      for (const call of reportPeerSpy.mock.calls) {
-        expect(call[2]).toBe("SyncChainMaxExecutionEngineErrorAttempts");
-      }
+      expect(reportPeerSpy).not.toHaveBeenCalled();
     });
 
     it("reports only the offending peers when teardown trips MAX_PROCESSING_ATTEMPTS", async () => {
