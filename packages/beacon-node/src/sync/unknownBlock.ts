@@ -1284,9 +1284,9 @@ export class BlockInputSync {
         pendingBlock.status = PendingBlockInputStatus.pending;
         // Not retried on every search, any gossip message with an unknown root triggers one
         pendingBlock.failedDownloads = (pendingBlock.failedDownloads ?? 0) + 1;
+        const slotDurationMs = this.config.getSlotDurationMs(this.config.getForkName(this.chain.clock.currentSlot));
         pendingBlock.retryAtMs =
-          Date.now() +
-          Math.min(DOWNLOAD_RETRY_BASE_MS * 2 ** (pendingBlock.failedDownloads - 1), this.config.SLOT_DURATION_MS);
+          Date.now() + Math.min(DOWNLOAD_RETRY_BASE_MS * 2 ** (pendingBlock.failedDownloads - 1), slotDurationMs);
         this.scheduleDownloadRetry(pendingBlock.retryAtMs);
       }
     }
