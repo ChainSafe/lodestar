@@ -193,6 +193,21 @@ test "PersistentCheckpointStateCache reload falls back past missing and invalid 
     try testing.expectError(error.NoSeedState, h.cache.getOrReload(io, h.cp(1, 1)));
 }
 
+test "PersistentCheckpointStateCache latest reload skips NoSeedState like TS while direct reload propagates it" {
+    const h = try Harness.init(.{ .memory = 0 });
+    defer h.deinit();
+    try h.add(0, 1);
+    try h.persist(h.cp(0, 1));
+    try testing.expectError(error.NoSeedState, h.cache.getOrReload(io, h.cp(0, 1)));
+    try testing.expect(try h.cache.getOrReloadLatest(io, @splat(1), null) == null);
+    const seed = try h.make(1);
+    defer seed.unref();
+    try h.block.add(io, seed, false);
+    const restored = (try h.cache.getOrReloadLatest(io, @splat(1), null)).?;
+    defer restored.unref();
+    try testing.expectEqual(h.base_epoch * spe, try restored.get().state.slot());
+}
+
 test "PersistentCheckpointStateCache failed writes retain residents and can retry" {
     const h = try Harness.init(.{ .memory = 0 });
     defer h.deinit();

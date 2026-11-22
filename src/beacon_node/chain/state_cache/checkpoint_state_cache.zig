@@ -22,6 +22,7 @@ const tier_count = 17; // 16^16 exceeds u64; only offset zero can reach the last
 pub const DiskRetention = union(enum) { tiered, flat: usize };
 pub const CacheError = Allocator.Error || error{ InvalidCheckpoint, InvalidState, PoolExhausted, StateTooLarge };
 pub const ReloadError = FileStore.ReadError || CachedBeaconState.LoadError || error{ NoSeedState, InvalidCheckpoint };
+pub const ReloadLatestError = error{ OutOfMemory, PoolExhausted, Canceled };
 pub const PersistError = FileStore.WriteError || CacheError;
 pub const PruneError = FileStore.RemoveError;
 pub const ProcessError = PersistError || PruneError || error{BlockRootUnavailable};
@@ -324,14 +325,18 @@ pub const PersistentCheckpointStateCache = struct {
         return owner;
     }
 
-    pub fn getOrReloadLatest(self: *Self, io: std.Io, root: Root, max_epoch: ?Epoch) ReloadError!?*StateRc {
+    /// Like TS, latest lookup skips unusable candidates, including NoSeedState.
+    /// Direct getOrReload still reports NoSeedState. Resource failures propagate.
+    pub fn getOrReloadLatest(self: *Self, io: std.Io, root: Root, max_epoch: ?Epoch) ReloadLatestError!?*StateRc {
         var bound = max_epoch;
         // Each attempt strictly decreases the epoch, bounded by the tracked epoch count.
         var remaining = self.epoch_index.count();
         while (remaining > 0) : (remaining -= 1) {
             const cp = self.latestCheckpoint(root, bound) orelse return null;
             const state = self.getOrReload(io, cp) catch |err| switch (err) {
-                error.OutOfMemory, error.PoolExhausted, error.Canceled => return err,
+                error.OutOfMemory => return error.OutOfMemory,
+                error.PoolExhausted => return error.PoolExhausted,
+                error.Canceled => return error.Canceled,
                 else => null,
             };
             if (state) |found| return found;
