@@ -915,6 +915,53 @@ describe("UnknownBlockSync", () => {
       }
     });
 
+    it("backs off a download that fails after replacing the entry with a partial result", async () => {
+      const peerA = await getRandPeerIdStr();
+      const rootHex = toRootHex(Buffer.alloc(32, 0xcc));
+
+      vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout", "Date"]});
+      const {service: svc, chainEmitter} = setupBlockSyncTest({
+        processBlock: vi.fn(),
+        sendBeaconBlocksByRoot: vi.fn(),
+        peer: peerA,
+      });
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+      // Like a Fulu download that got the block and some columns, the entry is replaced before the fetch throws
+      const fetchBlockInput = vi
+        .spyOn(svc as unknown as {fetchBlockInput: () => Promise<never>}, "fetchBlockInput")
+        .mockImplementation(async () => {
+          pendingBlocks.set(rootHex, {
+            status: PendingBlockInputStatus.pending,
+            rootHex,
+            timeAddedSec: 0,
+            peerIdStrings: new Set([peerA]),
+          });
+          throw Error("missing columns");
+        });
+
+      try {
+        chainEmitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: peerA, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+        expect(fetchBlockInput).toHaveBeenCalledOnce();
+
+        (svc as unknown as {triggerUnknownBlockSearch: () => void}).triggerUnknownBlockSearch();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(fetchBlockInput).toHaveBeenCalledOnce();
+
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(fetchBlockInput).toHaveBeenCalledTimes(2);
+
+        // the backoff doubles even though every failure leaves a fresh entry behind
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(fetchBlockInput).toHaveBeenCalledTimes(2);
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(fetchBlockInput).toHaveBeenCalledTimes(3);
+      } finally {
+        svc.close();
+        vi.useRealTimers();
+      }
+    });
+
     it("evicts unknown roots nothing waits on before a pending block and its parent", async () => {
       const peerA = await getRandPeerIdStr();
       const block = ssz.phase0.SignedBeaconBlock.defaultValue();

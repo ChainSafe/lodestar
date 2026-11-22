@@ -1189,10 +1189,15 @@ export class BlockInputSync {
       this.metrics?.blockInputSync.downloadedBlocksError.inc();
       this.logger.debug("Failed to download unknown block root, retained for retry", logCtx, res.err);
       const pendingBlock = this.pendingBlocks.get(rootHex);
-      if (pendingBlock && pendingBlock.status === PendingBlockInputStatus.fetching) {
+      // A partial download replaces the entry with a pending one that does not carry the failure count
+      if (
+        pendingBlock &&
+        (pendingBlock.status === PendingBlockInputStatus.fetching ||
+          pendingBlock.status === PendingBlockInputStatus.pending)
+      ) {
         pendingBlock.status = PendingBlockInputStatus.pending;
         // Not retried on every search, any gossip message with an unknown root triggers one
-        pendingBlock.failedDownloads = (pendingBlock.failedDownloads ?? 0) + 1;
+        pendingBlock.failedDownloads = (block.failedDownloads ?? 0) + 1;
         const slotDurationMs = this.config.getSlotDurationMs(this.config.getForkName(this.chain.clock.currentSlot));
         pendingBlock.retryAtMs =
           Date.now() + Math.min(DOWNLOAD_RETRY_BASE_MS * 2 ** (pendingBlock.failedDownloads - 1), slotDurationMs);
