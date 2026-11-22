@@ -190,7 +190,7 @@ export function getDebugApi({
         dataColumnSidecars = [];
       }
 
-      // Post-gloas sidecars belong to the block's own payload, its FULL variant
+      // Post-gloas sidecars belong to the block's own payload, its FULL variant only exists once imported
       const payload = finalized ? null : chain.forkChoice.getBlockHex(toRootHex(blockRoot), PayloadStatus.FULL);
       return {
         data: (indices
@@ -198,7 +198,7 @@ export function getDebugApi({
           : dataColumnSidecars) as DataColumnSidecars,
         meta: {
           executionOptimistic: isForkPostGloas(fork)
-            ? payload !== null && isOptimisticBlock(payload)
+            ? !finalized && (payload === null || isOptimisticBlock(payload))
             : executionOptimistic,
           finalized,
           version: fork,

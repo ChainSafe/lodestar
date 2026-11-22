@@ -1202,13 +1202,13 @@ export function getBeaconBlockApi(
         data = [];
       }
 
-      // Post-gloas sidecars belong to the block's own payload, its FULL variant
+      // Post-gloas sidecars belong to the block's own payload, its FULL variant only exists once imported
       const payload = finalized ? null : chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
       return {
         data,
         meta: {
           executionOptimistic: isForkPostGloas(fork)
-            ? payload !== null && isOptimisticBlock(payload)
+            ? !finalized && (payload === null || isOptimisticBlock(payload))
             : executionOptimistic,
           finalized,
           version: config.getForkName(block.message.slot),
@@ -1307,13 +1307,13 @@ export function getBeaconBlockApi(
         blobs = [];
       }
 
-      // Post-gloas blobs belong to the block's own payload, its FULL variant
+      // Post-gloas blobs belong to the block's own payload, its FULL variant only exists once imported
       const payload = finalized ? null : chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
       return {
         data: blobs,
         meta: {
           executionOptimistic: isForkPostGloas(fork)
-            ? payload !== null && isOptimisticBlock(payload)
+            ? !finalized && (payload === null || isOptimisticBlock(payload))
             : executionOptimistic,
           finalized,
         },
