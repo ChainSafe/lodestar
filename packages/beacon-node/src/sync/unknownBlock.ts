@@ -47,7 +47,7 @@ import {
   isPendingPayloadEnvelope,
   isPendingPayloadInput,
 } from "./types.js";
-import {DownloadByRootError, downloadByRoot} from "./utils/downloadByRoot.js";
+import {DownloadByRootError, DownloadByRootErrorCode, downloadByRoot} from "./utils/downloadByRoot.js";
 import {getAllDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
 import {getRateLimitedUntilMs} from "./utils/rateLimit.js";
 
@@ -543,8 +543,9 @@ export class BlockInputSync {
   /**
    * Limit pending blocks to prevent DOS attacks that cause OOM. Any gossip message with an unknown root adds a root-only
    * entry before validation, so those nothing waits on are evicted before a block or a root a pending block waits on.
-   * A downloaded block is only checked against its root, so this only applies while blocks and the roots they wait on
-   * fill at most half the cap, otherwise they could pin it and evict every new root on insertion.
+   * A downloaded block is only checked against its root and proposer signature, not that the proposer is due at its
+   * slot, so this only applies while blocks and the roots they wait on fill at most half the cap, otherwise they could
+   * pin it and evict every new root on insertion.
    */
   private prunePendingBlocks(): void {
     if (this.pendingBlocks.size <= this.maxPendingBlocks) {
@@ -1285,6 +1286,15 @@ export class BlockInputSync {
         return;
       }
 
+      if (
+        res.err instanceof DownloadByRootError &&
+        res.err.type.code === DownloadByRootErrorCode.BELOW_FINALIZED_SLOT
+      ) {
+        this.logger.debug("Downloaded block is before finalized slot", logCtx, res.err);
+        this.removeAllDescendants(block, DroppedItemReason.belowFinalized);
+        return;
+      }
+
       this.metrics?.blockInputSync.downloadedBlocksError.inc();
       this.logger.debug("Failed to download unknown block root, retained for retry", logCtx, res.err);
       const pendingBlock = this.pendingBlocks.get(rootHex);
@@ -1317,7 +1327,8 @@ export class BlockInputSync {
     pendingBlock.status = PendingBlockInputStatus.processing;
     // this prevents unbundling attack
     // see https://lighthouse-blog.sigmaprime.io/mev-unbundling-rpc.html
-    const {slot: blockSlot, proposerIndex} = pendingBlock.blockInput.getBlock().message;
+    const block = pendingBlock.blockInput.getBlock();
+    const {slot: blockSlot, proposerIndex} = block.message;
     const blockRootHex = pendingBlock.blockInput.blockRootHex;
     const logCtx = {
       slot: blockSlot,
@@ -1352,6 +1363,12 @@ export class BlockInputSync {
         // there could be finalized/head sync at the same time so we need to ignore if finalized
         // see https://github.com/ChainSafe/lodestar/issues/5650
         ignoreIfFinalized: true,
+        // skip only a verified signature, range sync may have filled the block input without checking it
+        validProposerSignature: this.chain.seenBlockInputCache.isVerifiedProposerSignature(
+          blockSlot,
+          blockRootHex,
+          block.signature
+        ),
         blsVerifyOnMainThread: true,
       })
     );
@@ -2033,6 +2050,16 @@ export class BlockInputSync {
         if (e instanceof DownloadByRootError) {
           const errorCode = e.type.code;
           downloadByRootMetrics?.error.inc({code: errorCode, client: peerClient});
+          if (errorCode === DownloadByRootErrorCode.BELOW_FINALIZED_SLOT) {
+            throw e;
+          }
+          // Root excludes the signature: keep it retryable, not Fatal as honest peers may serve unverified copies
+          if (
+            errorCode === DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID ||
+            errorCode === DownloadByRootErrorCode.UNKNOWN_PROPOSER
+          ) {
+            this.network.reportPeer(peerId, PeerAction.LowToleranceError, errorCode);
+          }
           excludedPeers.add(peerId);
         } else if (e instanceof RequestError) {
           // should look into req_resp metrics in this case
