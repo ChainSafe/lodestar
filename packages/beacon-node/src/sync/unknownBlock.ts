@@ -856,20 +856,11 @@ export class BlockInputSync {
         const isAwaited = (block: BlockInputSyncCacheItem): boolean =>
           isPendingBlockInput(block) || awaitedRoots.has(block.rootHex);
 
-        const now = Date.now();
-        let nextRetryAtMs: number | undefined;
         // Most of the time there is exactly 1 unknown block
         for (const block of [...unknowns.filter(isAwaited), ...unknowns.filter((block) => !isAwaited(block))]) {
-          if (block.retryAtMs !== undefined && block.retryAtMs > now) {
-            nextRetryAtMs = Math.min(nextRetryAtMs ?? block.retryAtMs, block.retryAtMs);
-            continue;
-          }
           this.downloadBlock(block).catch((e) => {
             this.logger.debug("Unexpected error - downloadBlock", {root: getBlockInputSyncCacheItemRootHex(block)}, e);
           });
-        }
-        if (nextRetryAtMs !== undefined) {
-          this.scheduleDownloadRetry(nextRetryAtMs);
         }
       }
     } else if (ancestors.length > 0) {
@@ -1093,6 +1084,10 @@ export class BlockInputSync {
 
   private async downloadBlock(block: BlockInputSyncCacheItem): Promise<void> {
     if (block.status !== PendingBlockInputStatus.pending) {
+      return;
+    }
+    if (block.retryAtMs !== undefined && block.retryAtMs > Date.now()) {
+      this.scheduleDownloadRetry(block.retryAtMs);
       return;
     }
 

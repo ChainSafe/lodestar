@@ -1757,6 +1757,40 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
     });
 
+    it("backs off the block download of an envelope waiting on its block", async () => {
+      vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout", "Date"]});
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex, envelope} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+      const sendBeaconBlocksByRoot = vi.fn().mockRejectedValue(new Error("no block"));
+      const {emitter} = setupPayloadSyncTest({
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot, sendBeaconBlocksByRoot},
+        peers: [{peerId: peer}],
+      });
+
+      try {
+        emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+          rootHex: blockRootHex,
+          peer,
+          source: BlockInputSource.gossip,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledOnce();
+        expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+
+        // every search reconciles the envelope, which must not retry its block before the backoff expires
+        (service as unknown as {triggerUnknownBlockSearch: () => void}).triggerUnknownBlockSearch();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(sendBeaconBlocksByRoot).toHaveBeenCalledTimes(2);
+      } finally {
+        service.close();
+        vi.useRealTimers();
+      }
+    });
+
     it("defers envelope validation until the block is in fork choice when payload input is seeded from the block body", async () => {
       const peer = await getRandPeerIdStr();
       const {block, blockRoot, blockRootHex, payloadInput, envelope} = buildPayloadFixture({
