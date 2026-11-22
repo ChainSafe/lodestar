@@ -91,3 +91,33 @@ temp/
 # Local development artifacts
 .venv/
 checkpoint_states/
+
+# Zig build and test artifacts
+.zig-cache/
+zig-out/
+zig-pkg
+test/spec/spec_tests/
+test/spec/test_case/
+test/fuzz/zig-pkg
+*.ssz
+test/spec/ssz/generic_tests.zig
+test/spec/ssz/static_tests.zig
+test/spec/bls/spec_tests.zig
+*.era
+*.pkix
+
+# perf
+flamegraph.html
+perf.data
+perf.data.old
+benchmark_data/
+
+# js
+node_modules/
+
+# Claude Code local config
+.claude/settings.local.json
+.claude/plans/
+test/fixtures/ere/
+
+/fixtures/era

@@ -73,7 +73,7 @@ jobs:
 
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 24
+          node: 26
           # Required for OIDC publish under pnpm v11 — without registry-url
           # setup-node skips writing the registry to .npmrc and the npm OIDC
           # auth flow rejects the token. Matches publish-dev.yml's setup.
@@ -90,7 +90,7 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

@@ -161,7 +161,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
 
     blockPayload: {
       payloadAdvancePrepTime: register.histogram({
-        name: "beacon_block_payload_prepare_time",
+        name: "beacon_block_payload_prepare_time_seconds",
         help: "Time for preparing payload in advance",
         buckets: [0.1, 1, 3, 5, 10],
       }),
@@ -176,7 +176,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         buckets: [0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1],
       }),
       payloadFetchedTime: register.histogram<{prepType: PayloadPreparationType}>({
-        name: "beacon_block_payload_fetched_time",
+        name: "beacon_block_payload_fetched_time_seconds",
         help: "Time to fetch the payload from EL",
         labelNames: ["prepType"],
         buckets: [0.1, 0.2, 0.3, 0.5, 0.7, 1, 2],
@@ -192,36 +192,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
     },
 
-    blobs: {
-      getBlobsV1Requests: register.gauge({
-        name: "beacon_get_blobs_v1_calls_total",
-        help: "Number of getBlobsV1 requests that get made",
-      }),
-      getBlobsV1RequestedBlobCount: register.gauge({
-        name: "beacon_get_blobs_v1_requested_blobs_count_total",
-        help: "Number of versioned hashes that get sent in getBlobsV1 request",
-      }),
-      getBlobsV1Error: register.gauge({
-        name: "beacon_get_blobs_v1_response_error_total",
-        help: "Number of getBlobsV1 calls that errored ",
-      }),
-      getBlobsV1Miss: register.gauge({
-        name: "beacon_get_blobs_v1_missing_blob_response_total",
-        help: "Number of getBlobsV1 misses where a versioned hash returns a null",
-      }),
-      getBlobsV1Hit: register.gauge({
-        name: "beacon_get_blobs_v1_blob_returned_response_total",
-        help: "Number of getBlobsV1 hits where a versioned hash returns blob",
-      }),
-      getBlobsV1HitButArrivedWhileWaiting: register.gauge({
-        name: "beacon_get_blobs_v1_blob_returned_but_arrived_during_response_total",
-        help: "Number of getBlobsV1 hits where a versioned hash returns blob but the blob already arrived via gossip",
-      }),
-      getBlobsV1HitUseful: register.gauge({
-        name: "beacon_get_blobs_v1_blob_useful_response_total",
-        help: "Number of getBlobsV1 hits where a versioned hash returns blob and the blob is needed so call is useful",
-      }),
-    },
     payloadEnvelopeReconstruction: {
       envelopes: register.counter<{result: "success" | "unavailable" | "mismatch"}>({
         name: "beacon_payload_envelope_reconstruction_envelopes_total",
@@ -369,6 +339,15 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_data_column_sidecar_computation_seconds",
         help: "Time taken to compute data column sidecars, including cells and inclusion proof",
         buckets: [0.1, 0.25, 0.5, 0.75, 1, 2, 5],
+      }),
+      dataColumnSidecarProposerSignatureChecks: register.counter<{result: "cache_hit" | "verification"}>({
+        name: "beacon_data_column_sidecar_proposer_signature_checks_total",
+        help: "Gossip data column proposer signature checks answered by the cache or by a started verification",
+        labelNames: ["result"],
+      }),
+      dataColumnSidecarProposerSignatureBlocks: register.counter({
+        name: "beacon_data_column_sidecar_proposer_signature_blocks_total",
+        help: "Blocks whose proposer signature a gossip data column verified and cached first",
       }),
       dataColumnSidecarInclusionProofVerificationTime: register.histogram({
         name: "beacon_data_column_sidecar_inclusion_proof_verification_seconds",

@@ -38,6 +38,16 @@ describe("SeenAggregatedAttestations.isKnown", () => {
         {bits: [0b00000011], isKnown: false},
       ],
     },
+    {
+      id: "Seen bits span bytes the checked bits leave empty",
+      seenAttestingBits: [0b11111111, 0b00001111],
+      checkAttestingBits: [
+        {bits: [0b00001111, 0b00000000], isKnown: true},
+        {bits: [0b00000000, 0b00000011], isKnown: true},
+        {bits: [0b00000000, 0b00010000], isKnown: false},
+        {bits: [0b00001111], isKnown: false},
+      ],
+    },
   ];
 
   const targetEpoch = 10;
@@ -46,7 +56,7 @@ describe("SeenAggregatedAttestations.isKnown", () => {
   for (const {id, seenAttestingBits, checkAttestingBits} of testCases) {
     it(id, () => {
       const cache = new SeenAggregatedAttestations(null);
-      const aggregationBits = new BitArray(new Uint8Array(seenAttestingBits), 8);
+      const aggregationBits = new BitArray(new Uint8Array(seenAttestingBits), seenAttestingBits.length * 8);
       cache.add(
         targetEpoch,
         0,
@@ -56,7 +66,7 @@ describe("SeenAggregatedAttestations.isKnown", () => {
       );
       for (const {bits, isKnown} of checkAttestingBits) {
         // expect(cache.participantsKnown(subsetContribution)).to.equal(isKnown);
-        const toCheckAggBits = new BitArray(new Uint8Array(bits), 8);
+        const toCheckAggBits = new BitArray(new Uint8Array(bits), bits.length * 8);
         expect(cache.isKnown(targetEpoch, 0, attDataRoot, toCheckAggBits)).toBe(isKnown);
       }
     });

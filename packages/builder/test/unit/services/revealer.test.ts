@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {SecretKey} from "@lodestar/native/blst";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -64,16 +64,13 @@ describe("Revealer", () => {
     signedBid.message.parentBlockHash = payload.executionPayload.parentHash;
     signedBid.message.parentBlockRoot = Buffer.alloc(32, 4);
     signedBid.message.blockHash = payload.executionPayload.blockHash;
+    signedBid.message.value = 5;
     signedBid.message.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(payload.executionRequests);
     const blockHash = toRootHex(signedBid.message.blockHash);
 
     if (recordBid) {
       ledger.recordBid({
-        slot,
-        parentBlockHash: toRootHex(signedBid.message.parentBlockHash),
-        parentBlockRoot: toRootHex(signedBid.message.parentBlockRoot),
-        blockHash,
-        valueGwei: 5,
+        signedBid,
         signedBidRoot: toRootHex(ssz.gloas.SignedExecutionPayloadBid.hashTreeRoot(signedBid)),
       });
     }

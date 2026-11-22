@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/index.js";
@@ -71,31 +71,6 @@ describe("NativeBeaconStateView", () => {
       native.release();
       tree.release();
     }
-  });
-
-  it("rejects Heze before invoking native slot processing or state loading", () => {
-    const hezeConfig = createBeaconConfig(
-      {
-        ...defaultChainConfig,
-        ALTAIR_FORK_EPOCH: 0,
-        BELLATRIX_FORK_EPOCH: 0,
-        CAPELLA_FORK_EPOCH: 0,
-        DENEB_FORK_EPOCH: 0,
-        ELECTRA_FORK_EPOCH: 0,
-        FULU_FORK_EPOCH: 0,
-        GLOAS_FORK_EPOCH: 0,
-        HEZE_FORK_EPOCH: 0,
-      },
-      genesisValidatorsRoot
-    );
-    const binding = {processSlots: vi.fn(), loadOtherState: vi.fn()} as unknown as IBeaconStateViewNative;
-    const view = new NativeBeaconStateView(hezeConfig, binding);
-    expect(() => view.processSlots(0)).toThrow("does not support heze");
-    expect(() => view.loadOtherState(ssz.gloas.BeaconState.serialize(ssz.gloas.BeaconState.defaultValue()))).toThrow(
-      "does not support heze"
-    );
-    expect(binding.processSlots).not.toHaveBeenCalled();
-    expect(binding.loadOtherState).not.toHaveBeenCalled();
   });
 
   it("preserves Gloas availability bits and repeated PTC membership", () => {

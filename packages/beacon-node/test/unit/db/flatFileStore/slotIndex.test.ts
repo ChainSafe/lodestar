@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import {mkdir, mkdtemp, rm, writeFile} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, describe, expect, it} from "vitest";
@@ -8,7 +8,7 @@ describe("SlotIndex", () => {
   let tmpDir: string | undefined;
 
   afterEach(async () => {
-    if (tmpDir) await fs.promises.rm(tmpDir, {recursive: true, force: true});
+    if (tmpDir) await rm(tmpDir, {recursive: true, force: true});
   });
 
   it("should add, deduplicate, and remove slots", () => {
@@ -24,10 +24,10 @@ describe("SlotIndex", () => {
   });
 
   it("should rebuild from canonical top-level directories", async () => {
-    tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-slot-index-"));
-    await fs.promises.mkdir(path.join(tmpDir, "000000000100"));
-    await fs.promises.mkdir(path.join(tmpDir, "100"));
-    await fs.promises.writeFile(path.join(tmpDir, "000000000200"), new Uint8Array());
+    tmpDir = await mkdtemp(path.join(os.tmpdir(), "lodestar-slot-index-"));
+    await mkdir(path.join(tmpDir, "000000000100"));
+    await mkdir(path.join(tmpDir, "100"));
+    await writeFile(path.join(tmpDir, "000000000200"), new Uint8Array());
 
     const index = new SlotIndex();
     const stats = await index.rebuildFromDisk(tmpDir);
