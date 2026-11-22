@@ -226,7 +226,13 @@ pub const FileCPStateDatastore = struct {
     /// Open handle to the checkpoint-states directory, created in `initStore`.
     dir: ?std.Io.Dir,
 
-    pub fn init(allocator: Allocator, data_dir: []const u8) !FileCPStateDatastore {
+    pub const InitError = std.Io.Dir.CreateDirPathOpenError || std.Io.Dir.Iterator.Error || std.Io.Dir.DeleteFileError;
+    pub const ReadError = std.Io.Dir.ReadFileAllocError || error{DatastoreNotInitialized};
+    pub const WriteError = std.Io.Dir.AccessError || std.Io.Dir.WriteFileError || std.Io.Dir.RenameError || error{DatastoreNotInitialized};
+    pub const RemoveError = std.Io.Dir.DeleteFileError || error{DatastoreNotInitialized};
+    pub const ReadKeysError = Allocator.Error || std.Io.Dir.Iterator.Error || error{DatastoreNotInitialized};
+
+    pub fn init(allocator: Allocator, data_dir: []const u8) Allocator.Error!FileCPStateDatastore {
         const dir_path = try std.fs.path.join(allocator, &.{ data_dir, SUBDIR });
         return .{ .allocator = allocator, .dir_path = dir_path, .dir = null };
     }
@@ -259,6 +265,10 @@ pub const FileCPStateDatastore = struct {
 
     fn initImpl(ctx: *anyopaque, io: std.Io) anyerror!void {
         const self: *FileCPStateDatastore = @ptrCast(@alignCast(ctx));
+        return self.initStore(io);
+    }
+
+    pub fn initStore(self: *FileCPStateDatastore, io: std.Io) InitError!void {
         if (self.dir) |dir| {
             dir.close(io);
             self.dir = null;
@@ -277,6 +287,11 @@ pub const FileCPStateDatastore = struct {
 
     fn writeImpl(ctx: *anyopaque, io: std.Io, key: Checkpoint, state_bytes: []const u8) anyerror!DatastoreKey {
         const self: *FileCPStateDatastore = @ptrCast(@alignCast(ctx));
+        return self.write(io, key, state_bytes);
+    }
+
+    /// A directory belongs to one writer. Serialize writes and removals for each key.
+    pub fn write(self: *FileCPStateDatastore, io: std.Io, key: Checkpoint, state_bytes: []const u8) WriteError!DatastoreKey {
         const dir = self.dir orelse return error.DatastoreNotInitialized;
         const dk = datastoreKey(key);
 
@@ -299,28 +314,34 @@ pub const FileCPStateDatastore = struct {
     }
 
     /// Delete one state file. Per-key unit shared by `removeImpl` and the `removeMany` fan-out.
-    fn removeOne(self: *FileCPStateDatastore, io: std.Io, dk: DatastoreKey) anyerror!void {
+    pub fn remove(self: *FileCPStateDatastore, io: std.Io, dk: DatastoreKey) RemoveError!void {
+        _ = try self.removeIfExists(io, dk);
+    }
+
+    /// Reports whether a file was removed; an already absent file returns false.
+    pub fn removeIfExists(self: *FileCPStateDatastore, io: std.Io, dk: DatastoreKey) RemoveError!bool {
         const dir = self.dir orelse return error.DatastoreNotInitialized;
 
         const name = fileName(dk);
         dir.deleteFile(io, &name) catch |err| switch (err) {
-            error.FileNotFound => {},
+            error.FileNotFound => return false,
             else => return err,
         };
+        return true;
     }
 
     fn removeImpl(ctx: *anyopaque, io: std.Io, dk: DatastoreKey) anyerror!void {
         const self: *FileCPStateDatastore = @ptrCast(@alignCast(ctx));
-        return self.removeOne(io, dk);
+        return self.remove(io, dk);
     }
 
     fn removeManyImpl(ctx: *anyopaque, io: std.Io, allocator: Allocator, keys: []const DatastoreKey) anyerror!void {
         const self: *FileCPStateDatastore = @ptrCast(@alignCast(ctx));
         if (keys.len == 0) return;
-        const futures = try allocator.alloc(std.Io.Future(anyerror!void), keys.len);
+        const futures = try allocator.alloc(std.Io.Future(RemoveError!void), keys.len);
         defer allocator.free(futures);
 
-        for (keys, 0..) |dk, i| futures[i] = io.async(removeOne, .{ self, io, dk });
+        for (keys, 0..) |dk, i| futures[i] = io.async(remove, .{ self, io, dk });
 
         var first_err: ?anyerror = null;
         for (futures) |*f| f.await(io) catch |err| {
@@ -331,10 +352,15 @@ pub const FileCPStateDatastore = struct {
 
     fn readImpl(ctx: *anyopaque, io: std.Io, allocator: Allocator, dk: DatastoreKey) anyerror!?[]u8 {
         const self: *FileCPStateDatastore = @ptrCast(@alignCast(ctx));
+        return self.read(io, allocator, dk, .unlimited);
+    }
+
+    /// Caller owns the returned bytes. The limit is checked before allocating the whole file.
+    pub fn read(self: *FileCPStateDatastore, io: std.Io, allocator: Allocator, dk: DatastoreKey, limit: std.Io.Limit) ReadError!?[]u8 {
         const dir = self.dir orelse return error.DatastoreNotInitialized;
 
         const name = fileName(dk);
-        return dir.readFileAlloc(io, &name, allocator, .unlimited) catch |err| switch (err) {
+        return dir.readFileAlloc(io, &name, allocator, limit) catch |err| switch (err) {
             error.FileNotFound => null,
             error.IsDir => null,
             else => err,
@@ -359,6 +385,10 @@ pub const FileCPStateDatastore = struct {
 
     fn readKeysImpl(ctx: *anyopaque, io: std.Io, allocator: Allocator) anyerror![]DatastoreKey {
         const self: *FileCPStateDatastore = @ptrCast(@alignCast(ctx));
+        return self.readKeys(io, allocator);
+    }
+
+    pub fn readKeys(self: *FileCPStateDatastore, io: std.Io, allocator: Allocator) ReadKeysError![]DatastoreKey {
         const dir = self.dir orelse return error.DatastoreNotInitialized;
 
         var keys: std.ArrayList(DatastoreKey) = .empty;
@@ -372,10 +402,10 @@ pub const FileCPStateDatastore = struct {
 
             var dk: DatastoreKey = undefined;
             // A foreign file matching only the length + "0x" prefix decodes to a non-hex char; skip it.
-            // Length/space errors are pre-checked away, so any other error is unexpected and propagates.
+            // The fixed filename and output lengths rule out length/space errors.
             _ = hex.hexToBytes(&dk, entry.name) catch |e| switch (e) {
                 error.InvalidCharacter => continue,
-                else => return e,
+                else => unreachable,
             };
             try keys.append(allocator, dk);
         }
