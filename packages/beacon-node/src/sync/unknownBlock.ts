@@ -542,7 +542,9 @@ export class BlockInputSync {
 
   /**
    * Limit pending blocks to prevent DOS attacks that cause OOM. Any gossip message with an unknown root adds a root-only
-   * entry before validation, so those nothing waits on are evicted before a block or a root a pending item waits on.
+   * entry before validation, so those nothing waits on are evicted before a block or a root a pending block waits on.
+   * A downloaded block is only checked against its root, so this only applies while blocks and the roots they wait on
+   * fill at most half the cap, otherwise they could pin it and evict every new root on insertion.
    */
   private prunePendingBlocks(): void {
     if (this.pendingBlocks.size <= this.maxPendingBlocks) {
@@ -555,15 +557,25 @@ export class BlockInputSync {
         awaitedRoots.add(pendingBlock.blockInput.parentRootHex);
       }
     }
+    const isKept = (rootHex: RootHex, pendingBlock: BlockInputSyncCacheItem): boolean =>
+      isPendingBlockInput(pendingBlock) || awaitedRoots.has(rootHex);
+    let keptCount = 0;
+    for (const [rootHex, pendingBlock] of this.pendingBlocks) {
+      if (isKept(rootHex, pendingBlock)) {
+        keptCount++;
+      }
+    }
 
     let prunedItemCount = 0;
-    for (const [rootHex, pendingBlock] of this.pendingBlocks) {
-      if (this.pendingBlocks.size <= this.maxPendingBlocks) {
-        break;
-      }
-      if (!isPendingBlockInput(pendingBlock) && !awaitedRoots.has(rootHex) && !this.pendingPayloads.has(rootHex)) {
-        this.pendingBlocks.delete(rootHex);
-        prunedItemCount++;
+    if (keptCount <= this.maxPendingBlocks / 2) {
+      for (const [rootHex, pendingBlock] of this.pendingBlocks) {
+        if (this.pendingBlocks.size <= this.maxPendingBlocks) {
+          break;
+        }
+        if (!isKept(rootHex, pendingBlock)) {
+          this.pendingBlocks.delete(rootHex);
+          prunedItemCount++;
+        }
       }
     }
     for (const [rootHex, pendingBlock] of this.pendingBlocks) {
@@ -937,9 +949,9 @@ export class BlockInputSync {
       if (!hasConnectedPeers) {
         this.logger.debug("No connected peers, skipping unknown block download.");
       } else {
-        // Blocks and roots a pending item waits on are downloaded first, any gossip message with an unknown root adds
+        // Blocks and roots a pending block waits on are downloaded first, any gossip message with an unknown root adds
         // another root, and they all share the per-peer request budget
-        const awaitedRoots = new Set<RootHex>(this.pendingPayloads.keys());
+        const awaitedRoots = new Set<RootHex>();
         for (const pendingBlock of this.pendingBlocks.values()) {
           if (isPendingBlockInput(pendingBlock)) {
             awaitedRoots.add(pendingBlock.blockInput.parentRootHex);
@@ -948,20 +960,11 @@ export class BlockInputSync {
         const isAwaited = (block: BlockInputSyncCacheItem): boolean =>
           isPendingBlockInput(block) || awaitedRoots.has(block.rootHex);
 
-        const now = Date.now();
-        let nextRetryAtMs: number | undefined;
         // Most of the time there is exactly 1 unknown block
         for (const block of [...unknowns.filter(isAwaited), ...unknowns.filter((block) => !isAwaited(block))]) {
-          if (block.retryAtMs !== undefined && block.retryAtMs > now) {
-            nextRetryAtMs = Math.min(nextRetryAtMs ?? block.retryAtMs, block.retryAtMs);
-            continue;
-          }
           this.downloadBlock(block).catch((e) => {
             this.logger.debug("Unexpected error - downloadBlock", {root: getBlockInputSyncCacheItemRootHex(block)}, e);
           });
-        }
-        if (nextRetryAtMs !== undefined) {
-          this.scheduleDownloadRetry(nextRetryAtMs);
         }
       }
     } else if (ancestors.length > 0) {
@@ -1187,6 +1190,10 @@ export class BlockInputSync {
     if (block.status !== PendingBlockInputStatus.pending) {
       return;
     }
+    if (block.retryAtMs !== undefined && block.retryAtMs > Date.now()) {
+      this.scheduleDownloadRetry(block.retryAtMs);
+      return;
+    }
 
     const rootHex = getBlockInputSyncCacheItemRootHex(block);
     const blockSlot = getBlockInputSyncCacheItemSlot(block);
@@ -1281,10 +1288,15 @@ export class BlockInputSync {
       this.metrics?.blockInputSync.downloadedBlocksError.inc();
       this.logger.debug("Failed to download unknown block root, retained for retry", logCtx, res.err);
       const pendingBlock = this.pendingBlocks.get(rootHex);
-      if (pendingBlock && pendingBlock.status === PendingBlockInputStatus.fetching) {
+      // A partial download replaces the entry with a pending one that does not carry the failure count
+      if (
+        pendingBlock &&
+        (pendingBlock.status === PendingBlockInputStatus.fetching ||
+          pendingBlock.status === PendingBlockInputStatus.pending)
+      ) {
         pendingBlock.status = PendingBlockInputStatus.pending;
         // Not retried on every search, any gossip message with an unknown root triggers one
-        pendingBlock.failedDownloads = (pendingBlock.failedDownloads ?? 0) + 1;
+        pendingBlock.failedDownloads = (block.failedDownloads ?? 0) + 1;
         const slotDurationMs = this.config.getSlotDurationMs(this.config.getForkName(this.chain.clock.currentSlot));
         pendingBlock.retryAtMs =
           Date.now() + Math.min(DOWNLOAD_RETRY_BASE_MS * 2 ** (pendingBlock.failedDownloads - 1), slotDurationMs);
