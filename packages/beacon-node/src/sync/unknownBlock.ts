@@ -537,7 +537,7 @@ export class BlockInputSync {
 
   /**
    * Limit pending blocks to prevent DOS attacks that cause OOM. Any gossip message with an unknown root adds a root-only
-   * entry before validation, so those nothing waits on are evicted before a block or a root a pending item waits on.
+   * entry before validation, so those nothing waits on are evicted before a block or a root a pending block waits on.
    */
   private prunePendingBlocks(): void {
     if (this.pendingBlocks.size <= this.maxPendingBlocks) {
@@ -556,7 +556,7 @@ export class BlockInputSync {
       if (this.pendingBlocks.size <= this.maxPendingBlocks) {
         break;
       }
-      if (!isPendingBlockInput(pendingBlock) && !awaitedRoots.has(rootHex) && !this.pendingPayloads.has(rootHex)) {
+      if (!isPendingBlockInput(pendingBlock) && !awaitedRoots.has(rootHex)) {
         this.pendingBlocks.delete(rootHex);
         prunedItemCount++;
       }
@@ -845,9 +845,9 @@ export class BlockInputSync {
       if (!hasConnectedPeers) {
         this.logger.debug("No connected peers, skipping unknown block download.");
       } else {
-        // Blocks and roots a pending item waits on are downloaded first, any gossip message with an unknown root adds
+        // Blocks and roots a pending block waits on are downloaded first, any gossip message with an unknown root adds
         // another root, and they all share the per-peer request budget
-        const awaitedRoots = new Set<RootHex>(this.pendingPayloads.keys());
+        const awaitedRoots = new Set<RootHex>();
         for (const pendingBlock of this.pendingBlocks.values()) {
           if (isPendingBlockInput(pendingBlock)) {
             awaitedRoots.add(pendingBlock.blockInput.parentRootHex);

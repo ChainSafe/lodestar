@@ -962,6 +962,34 @@ describe("UnknownBlockSync", () => {
       }
     });
 
+    it("does not keep unknown roots over a new one because a payload search shares them", async () => {
+      const peerA = await getRandPeerIdStr();
+      const {service: svc, chainEmitter} = setupBlockSyncTest({
+        processBlock: vi.fn(),
+        sendBeaconBlocksByRoot: vi.fn().mockReturnValue(new Promise(() => {})),
+        peer: peerA,
+      });
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+
+      // A gossip attestation with index 1 searches its unknown root as a block and as a payload before validation
+      for (let i = 0; i < 100; i++) {
+        const rootHex = toRootHex(Buffer.alloc(32, 0).fill(i + 1, 0, 4));
+        chainEmitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: peerA, source: BlockInputSource.gossip});
+        chainEmitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex, peer: peerA, source: BlockInputSource.gossip});
+      }
+      const newRootHex = toRootHex(Buffer.alloc(32, 0xdd));
+      chainEmitter.emit(ChainEvent.unknownBlockRoot, {
+        rootHex: newRootHex,
+        peer: peerA,
+        source: BlockInputSource.gossip,
+      });
+
+      expect(pendingBlocks.size).toBe(100);
+      expect(pendingBlocks.has(newRootHex)).toBe(true);
+
+      svc.close();
+    });
+
     it("evicts unknown roots nothing waits on before a pending block and its parent", async () => {
       const peerA = await getRandPeerIdStr();
       const block = ssz.phase0.SignedBeaconBlock.defaultValue();
