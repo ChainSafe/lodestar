@@ -538,6 +538,8 @@ export class BlockInputSync {
   /**
    * Limit pending blocks to prevent DOS attacks that cause OOM. Any gossip message with an unknown root adds a root-only
    * entry before validation, so those nothing waits on are evicted before a block or a root a pending block waits on.
+   * A downloaded block is only checked against its root, so this only applies while blocks and the roots they wait on
+   * fill at most half the cap, otherwise they could pin it and evict every new root on insertion.
    */
   private prunePendingBlocks(): void {
     if (this.pendingBlocks.size <= this.maxPendingBlocks) {
@@ -550,15 +552,25 @@ export class BlockInputSync {
         awaitedRoots.add(pendingBlock.blockInput.parentRootHex);
       }
     }
+    const isKept = (rootHex: RootHex, pendingBlock: BlockInputSyncCacheItem): boolean =>
+      isPendingBlockInput(pendingBlock) || awaitedRoots.has(rootHex);
+    let keptCount = 0;
+    for (const [rootHex, pendingBlock] of this.pendingBlocks) {
+      if (isKept(rootHex, pendingBlock)) {
+        keptCount++;
+      }
+    }
 
     let prunedItemCount = 0;
-    for (const [rootHex, pendingBlock] of this.pendingBlocks) {
-      if (this.pendingBlocks.size <= this.maxPendingBlocks) {
-        break;
-      }
-      if (!isPendingBlockInput(pendingBlock) && !awaitedRoots.has(rootHex)) {
-        this.pendingBlocks.delete(rootHex);
-        prunedItemCount++;
+    if (keptCount <= this.maxPendingBlocks / 2) {
+      for (const [rootHex, pendingBlock] of this.pendingBlocks) {
+        if (this.pendingBlocks.size <= this.maxPendingBlocks) {
+          break;
+        }
+        if (!isKept(rootHex, pendingBlock)) {
+          this.pendingBlocks.delete(rootHex);
+          prunedItemCount++;
+        }
       }
     }
     prunedItemCount += pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);

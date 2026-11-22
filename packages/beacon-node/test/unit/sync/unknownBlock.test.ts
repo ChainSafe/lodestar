@@ -990,6 +990,47 @@ describe("UnknownBlockSync", () => {
       svc.close();
     });
 
+    it("does not evict a new unknown root for pending blocks and the parents they wait on", async () => {
+      const peerA = await getRandPeerIdStr();
+      const {service: svc, chainEmitter} = setupBlockSyncTest({
+        processBlock: vi.fn(),
+        sendBeaconBlocksByRoot: vi.fn().mockReturnValue(new Promise(() => {})),
+        peer: peerA,
+      });
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+
+      // A block downloaded by root is only checked against the root, a peer can make us hold blocks it crafted
+      for (let i = 0; i < 100; i++) {
+        const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+        block.message.slot = i + 1;
+        block.message.parentRoot = Buffer.alloc(32, 0).fill(i + 1, 0, 4);
+        const blockRootHex = toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+        chainEmitter.emit(ChainEvent.blockUnknownParent, {
+          blockInput: BlockInputPreData.createFromBlock({
+            block,
+            blockRootHex,
+            forkName: ForkName.phase0,
+            daOutOfRange: false,
+            seenTimestampSec: 0,
+            source: BlockInputSource.byRoot,
+            peerIdStr: peerA,
+          }),
+          peer: peerA,
+          source: BlockInputSource.byRoot,
+        });
+      }
+      const newRootHex = toRootHex(Buffer.alloc(32, 0xdd));
+      chainEmitter.emit(ChainEvent.unknownBlockRoot, {
+        rootHex: newRootHex,
+        peer: peerA,
+        source: BlockInputSource.gossip,
+      });
+
+      expect(pendingBlocks.has(newRootHex)).toBe(true);
+
+      svc.close();
+    });
+
     it("evicts unknown roots nothing waits on before a pending block and its parent", async () => {
       const peerA = await getRandPeerIdStr();
       const block = ssz.phase0.SignedBeaconBlock.defaultValue();
