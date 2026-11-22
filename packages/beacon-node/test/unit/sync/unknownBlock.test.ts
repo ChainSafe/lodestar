@@ -10,7 +10,7 @@ import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeStartSlotAtEpoch, getBlockProposerSignatureSet, interopSecretKey} from "@lodestar/state-transition";
 import {SignedBeaconBlock, gloas, phase0, ssz} from "@lodestar/types";
-import {defer, notNullish, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {defer, notNullish, sleep, toRootHex} from "@lodestar/utils";
 import {BlockInputNoData, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../src/chain/blocks/importExecutionPayload.js";
@@ -1511,43 +1511,6 @@ describe("UnknownBlockSync", () => {
         svc.close();
       }
     });
-
-    it("only skips re-verifying the exact proposer signature verified on download", async () => {
-      const [rangePeer, honest] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
-      const block = signBlock(1, 0);
-      const resigned = resign(block, 1);
-      const otherBlock = signBlock(2, 1);
-      const {svc, emitter, connect, processBlock, seenBlockInputCache} = setupSignatureTest(
-        new Map([[honest, [block, otherBlock]]])
-      );
-
-      try {
-        seenBlockInputCache.getByBlock({
-          block: resigned,
-          blockRootHex: getRootHex(resigned),
-          source: BlockInputSource.byRange,
-          seenTimestampSec: 0,
-          peerIdStr: rangePeer,
-        });
-        connect(honest);
-        for (const rootHex of [getRootHex(block), getRootHex(otherBlock)]) {
-          emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: honest, source: BlockInputSource.gossip});
-        }
-        await vi.advanceTimersByTimeAsync(0);
-
-        expect(processBlock).toHaveBeenCalledTimes(2);
-        const validProposerSignatureBySignature = new Map(
-          processBlock.mock.calls.map(([blockInput, opts]) => [
-            toHex(blockInput.getBlock().signature),
-            opts?.validProposerSignature,
-          ])
-        );
-        expect(validProposerSignatureBySignature.get(toHex(resigned.signature))).toBe(false);
-        expect(validProposerSignatureBySignature.get(toHex(otherBlock.signature))).toBe(true);
-      } finally {
-        svc.close();
-      }
-    });
   });
 
   describe("payload sync flows", () => {
@@ -1603,10 +1566,7 @@ describe("UnknownBlockSync", () => {
           getOrReload: vi.fn().mockResolvedValue(undefined),
           remove: vi.fn(),
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-        seenBlockInputCache: {
-          prune: vi.fn(),
-          isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
-        } as unknown as SeenBlockInput,
+        seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
         seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
         forkChoice: {
           hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),

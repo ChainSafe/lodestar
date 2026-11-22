@@ -94,11 +94,7 @@ describe("downloadByRoot.ts", () => {
         expect(verifySignatureSets).toHaveBeenCalledExactlyOnceWith([expect.objectContaining({index: proposerIndex})], {
           verifyOnMainThread: false,
         });
-        expect(chain.seenBlockInputCache.markVerifiedProposerSignature).toHaveBeenCalledExactlyOnceWith(
-          block.message.slot,
-          toRootHex(blockRoot),
-          block.signature
-        );
+        expect(chain.seenBlockInputCache.markVerifiedProposerSignature).not.toHaveBeenCalled();
       });
 
       it(`should throw error when a ${forkName} block with matching root has an invalid proposer signature`, async () => {

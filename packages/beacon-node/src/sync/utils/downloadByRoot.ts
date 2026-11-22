@@ -1,15 +1,14 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostFulu, ForkPostGloas, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
+import {getBlockProposerSignatureSet} from "@lodestar/state-transition";
 import {ColumnIndex, SignedBeaconBlock, Slot, ValidatorIndex, fulu} from "@lodestar/types";
 import {LodestarError, byteArrayEquals, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ChainEventEmitter} from "../../chain/emitter.js";
-import {BlockErrorCode, BlockGossipError} from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
-import {verifyBlockProposerSignature} from "../../chain/validation/block.js";
 import {validateFuluBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/interface.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
@@ -300,10 +299,10 @@ export async function fetchAndValidateBlock({
       proposerIndex,
     });
   }
-  try {
-    await verifyBlockProposerSignature(chain, block, blockRootHex, {verifyOnMainThread: false});
-  } catch (e) {
-    if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PROPOSAL_SIGNATURE_INVALID) {
+  // Not marked as verified, the block has not passed proposer or ancestry checks yet
+  if (!chain.seenBlockInputCache.isVerifiedProposerSignature(slot, blockRootHex, block.signature)) {
+    const signatureSet = getBlockProposerSignatureSet(chain.config, block);
+    if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: false}))) {
       throw new DownloadByRootError({
         code: DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID,
         peer: prettyPrintPeerIdStr(peerIdStr),
@@ -311,7 +310,6 @@ export async function fetchAndValidateBlock({
         blockRoot: blockRootHex,
       });
     }
-    throw e;
   }
   return block;
 }

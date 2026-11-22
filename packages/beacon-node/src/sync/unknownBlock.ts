@@ -1327,8 +1327,7 @@ export class BlockInputSync {
     pendingBlock.status = PendingBlockInputStatus.processing;
     // this prevents unbundling attack
     // see https://lighthouse-blog.sigmaprime.io/mev-unbundling-rpc.html
-    const block = pendingBlock.blockInput.getBlock();
-    const {slot: blockSlot, proposerIndex} = block.message;
+    const {slot: blockSlot, proposerIndex} = pendingBlock.blockInput.getBlock().message;
     const blockRootHex = pendingBlock.blockInput.blockRootHex;
     const logCtx = {
       slot: blockSlot,
@@ -1363,12 +1362,6 @@ export class BlockInputSync {
         // there could be finalized/head sync at the same time so we need to ignore if finalized
         // see https://github.com/ChainSafe/lodestar/issues/5650
         ignoreIfFinalized: true,
-        // skip only a verified signature, range sync may have filled the block input without checking it
-        validProposerSignature: this.chain.seenBlockInputCache.isVerifiedProposerSignature(
-          blockSlot,
-          blockRootHex,
-          block.signature
-        ),
         blsVerifyOnMainThread: true,
       })
     );
