@@ -4,6 +4,7 @@ import {
   ProtoBlock,
   PtcQuorumEvent,
   getFinalizedExecutionBlockHash,
+  getPtcVerdict,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {
@@ -524,8 +525,8 @@ export class PrepareNextSlotScheduler {
 
   /**
    * A payload of the current slot's block imported after the scheduled run moves the head to its full variant.
-   * Only react to a payload the PTC will vote present, seen before the payload deadline with all its data. A late
-   * one will be voted absent and the re-prepare undone by the verdict.
+   * Only react to a payload the PTC votes present: seen before the payload deadline with all its data, or already
+   * voted present. A late one without that verdict will likely be voted absent and the re-prepare undone.
    */
   private onExecutionPayloadImported = ({slot, blockRoot}: {slot: Slot; blockRoot: RootHex}): void => {
     if (slot !== this.chain.clock.currentSlot) {
@@ -536,7 +537,11 @@ export class PrepareNextSlotScheduler {
       return;
     }
     const seenSec = this.chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec);
-    if (seenSec >= this.config.getPayloadDueMs(this.config.getForkName(slot)) / 1000) {
+    const quorum = this.chain.forkChoice.getPtcQuorum(blockRoot);
+    if (
+      seenSec >= this.config.getPayloadDueMs(this.config.getForkName(slot)) / 1000 &&
+      (quorum === null || getPtcVerdict(quorum) !== true)
+    ) {
       return;
     }
     this.requestReprepare(PreparePayloadReason.payloadImported);
@@ -620,6 +625,10 @@ export class PrepareNextSlotScheduler {
       {dontTransferCache: !isEpochTransition},
       head === headBlock ? RegenCaller.precomputeEpoch : RegenCaller.predictProposerHead
     );
+    // Block production owns the engine head once the proposal slot started, a late fcU could move it back
+    if (this.chain.clock.currentSlot >= prepareSlot) {
+      return;
+    }
 
     await this.preparePayload({
       reason,

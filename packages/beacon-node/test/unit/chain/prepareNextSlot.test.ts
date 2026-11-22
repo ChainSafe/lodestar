@@ -433,6 +433,7 @@ describe("PrepareNextSlot scheduler", () => {
         executionPayloadGasLimit: 30_000_000,
       } as ProtoBlock);
       forkChoiceStub.getDependentRoot.mockReturnValue(zeroProtoBlock.blockRoot);
+      forkChoiceStub.getPtcQuorum.mockReturnValue(null);
       chainStub.getParentExecutionRequests.mockResolvedValue(ssz.gloas.ExecutionRequests.defaultValue());
       const gloasConfig = createBeaconConfig(getConfig(ForkName.gloas), new Uint8Array(32));
       const makeState = (slot: number) => {
@@ -542,6 +543,18 @@ describe("PrepareNextSlot scheduler", () => {
       await flush();
 
       expect(fcuParentHashes()).toEqual([emptyParentHash]);
+    });
+
+    it("re-prepares on a late payload the PTC already voted present", async () => {
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      await runScheduled();
+
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      forkChoiceStub.getPtcQuorum.mockReturnValue({payloadPresent: true, blobDataAvailable: true});
+      emitPayloadImported(config.getPayloadDueMs(ForkName.gloas) / 1000 + 1);
+      await flush();
+
+      expect(fcuParentHashes()).toEqual([emptyParentHash, fullParentHash]);
     });
 
     it("ignores a PTC verdict for another slot", async () => {
