@@ -146,6 +146,19 @@ describe("chain / blocks / utils / chainSegment / assertLinearChainSegment with 
     expect(warnings).toBe(null);
   });
 
+  it("uses an imported FULL payload when the batch has no envelope for it", () => {
+    const execHash = Buffer.alloc(32, 0x11);
+    const first = gloasBlockInput(10, Buffer.alloc(32, 0xaa), Buffer.alloc(32, 0x99), execHash);
+    const firstRoot = ssz.gloas.BeaconBlock.hashTreeRoot(first.getBlock().message as gloas.BeaconBlock);
+    const second = gloasBlockInput(11, firstRoot, execHash);
+
+    const {warnings} = assertLinearChainSegment(config, [first, second], null, null, (root) =>
+      root === first.blockRootHex ? toRootHex(execHash) : null
+    );
+
+    expect(warnings).toBe(null);
+  });
+
   it("passes when the FIRST block's payload is orphaned by the next block (range batch boundary)", () => {
     // Regression for the range-sync wedge: a batch starts at the block whose payload is orphaned.
     // bi1 builds on grandparent G and reveals payload P; bi2 builds on G again (skipping P),

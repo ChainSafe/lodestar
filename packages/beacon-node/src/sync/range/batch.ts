@@ -183,7 +183,8 @@ export class Batch {
     custodyConfig: CustodyConfig,
     isFirstBatchInChain: boolean,
     parentPayload: ParentPayload | undefined,
-    targetSlot: Slot
+    targetSlot: Slot,
+    private readonly getFullPayloadBlockHash?: (blockRoot: RootHex) => RootHex | null
   ) {
     this.config = config;
     this.clock = clock;
@@ -211,7 +212,8 @@ export class Batch {
     const firstBlockBid = (firstBlock.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message;
     return (
       byteArrayEquals(firstBlock.message.parentRoot, this.parentPayload.blockRoot) &&
-      byteArrayEquals(firstBlockBid.parentBlockHash, this.parentPayload.bid.blockHash)
+      byteArrayEquals(firstBlockBid.parentBlockHash, this.parentPayload.bid.blockHash) &&
+      this.getFullPayloadBlockHash?.(this.parentPayload.blockRootHex) !== toRootHex(firstBlockBid.parentBlockHash)
     );
   }
 

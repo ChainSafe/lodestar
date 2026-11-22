@@ -370,6 +370,13 @@ describe("sync / range / batch", async () => {
             expected: true,
           },
           {
+            name: "parent payload is already imported",
+            parentRoot,
+            parentBlockHash: parentBid.blockHash,
+            imported: true,
+            expected: false,
+          },
+          {
             name: "parent block hash matches but parent root does not",
             parentRoot: Buffer.alloc(32, 0x44),
             parentBlockHash: parentBid.blockHash,
@@ -383,7 +390,7 @@ describe("sync / range / batch", async () => {
           },
         ];
 
-        for (const {name, parentRoot, parentBlockHash, expected} of testCases) {
+        for (const {name, parentRoot, parentBlockHash, imported, expected} of testCases) {
           const batch = new Batch(
             startEpoch,
             config,
@@ -391,7 +398,8 @@ describe("sync / range / batch", async () => {
             custodyConfig,
             true,
             parentPayload,
-            Number.MAX_SAFE_INTEGER
+            Number.MAX_SAFE_INTEGER,
+            () => (imported ? toRootHex(parentBid.blockHash) : null)
           );
           batch.startDownloading(peerSyncMeta);
           const {blockInput, payloadInput} = buildGloasBlockWithEnvelope({
