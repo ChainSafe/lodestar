@@ -242,12 +242,12 @@ export async function toXmssSigners(
   );
 
   // Only a proposal needs a VRF tree, and each takes about a second of one core: they are built
-  // behind the client's start, one at a time so that signing has the other threads
+  // behind the client's start, one at a time on one thread, so that duties have the others
   void (async () => {
     for (const signer of xmssSigners) {
       if (signer.type !== SignerType.Xmss) continue;
       try {
-        await signer.signer.getVrfRoot();
+        await signer.signer.getVrfRoot(1);
       } catch (e) {
         logger.error(
           "No VRF tree for validator: it cannot propose",

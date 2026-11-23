@@ -12,6 +12,6 @@ export const isValidVrfProof = vrfTree.isValidProof;
 
 // The native method throws on a malformed argument before it returns a promise: reject instead.
 const nativeBuild = VrfTree.build;
-VrfTree.build = async function (seed, populatedDepth, records = new Uint8Array(0)) {
-  return nativeBuild.call(this, seed, populatedDepth, records);
+VrfTree.build = async function (seed, populatedDepth, records = new Uint8Array(0), threads = 0) {
+  return nativeBuild.call(this, seed, populatedDepth, records, threads);
 };

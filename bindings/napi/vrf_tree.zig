@@ -21,10 +21,13 @@ const BuildTask = struct {
     populated_depth: u8,
     /// The tree's own record, copied: the task outlives the call.
     state: ?[vrf_tree.state_record_size]u8 = null,
+    /// Threads to hash on. Zero is one per CPU.
+    threads: u32,
     tree: ?vrf_tree.VrfTree = null,
 
     pub fn compute(self: *BuildTask) !void {
-        self.tree = try vrf_tree.VrfTree.init(allocator, &self.seed, self.populated_depth, if (self.state) |*state| state else null, std.Thread.getCpuCount() catch 1);
+        const threads = if (self.threads != 0) self.threads else std.Thread.getCpuCount() catch 1;
+        self.tree = try vrf_tree.VrfTree.init(allocator, &self.seed, self.populated_depth, if (self.state) |*state| state else null, threads);
     }
 
     pub fn resolve(self: *BuildTask, env: napi.Env) !napi.Value {
@@ -70,14 +73,15 @@ pub const VrfTree = struct {
 
     /// Resolves with the tree of `seed`, which is all of its secret material.
     /// Slots from `2^populated_depth` on get no proof. `records`, if not empty,
-    /// holds the precomputed states among which the tree finds its own.
-    pub fn build(seed: js.Uint8Array, populated_depth: js.Number, records: js.Uint8Array) !js.Value {
+    /// holds the precomputed states among which the tree finds its own. It
+    /// hashes on `threads` threads, one per CPU if zero.
+    pub fn build(seed: js.Uint8Array, populated_depth: js.Number, records: js.Uint8Array, threads: js.Number) !js.Value {
         const slice = try seed.toSlice();
         if (slice.len != SEED_SIZE) return error.InvalidSeedLength;
         const depth = try populated_depth.toU32Exact();
         if (depth > vrf_tree.depth) return error.InvalidDepth;
         const records_slice = try records.toSlice();
-        var task: BuildTask = .{ .seed = slice[0..SEED_SIZE].*, .populated_depth = @intCast(depth) };
+        var task: BuildTask = .{ .seed = slice[0..SEED_SIZE].*, .populated_depth = @intCast(depth), .threads = try threads.toU32Exact() };
         if (records_slice.len != 0) {
             if (records_slice.len % vrf_tree.state_record_size != 0) return error.InvalidStateRecords;
             task.state = (vrf_tree.findState(&task.seed, records_slice) orelse return error.NoMatchingState).*;

@@ -141,7 +141,7 @@ export class XmssSigner {
   private constructor(
     readonly publicKey: Uint8Array,
     private readonly key: XmssSecretKey,
-    private readonly buildVrfTree: () => Promise<VrfTree>,
+    private readonly buildVrfTree: (threads?: number) => Promise<VrfTree>,
     private readonly treeStore?: SealedTrees
   ) {}
 
@@ -151,7 +151,9 @@ export class XmssSigner {
    */
   static async init(seed: Uint8Array, vrfSeed: Uint8Array, vrfPopulatedDepth: number): Promise<XmssSigner> {
     const key = await XmssSecretKey.fromSeed(seed);
-    return new XmssSigner(key.toPublicKey(), key, () => VrfTree.build(vrfSeed, vrfPopulatedDepth));
+    return new XmssSigner(key.toPublicKey(), key, (threads) =>
+      VrfTree.build(vrfSeed, vrfPopulatedDepth, undefined, threads)
+    );
   }
 
   /**
@@ -177,7 +179,7 @@ export class XmssSigner {
     return new XmssSigner(
       key.toPublicKey(),
       key,
-      () => VrfTree.build(vrfSeed, KEYSTORE_VRF_POPULATED_DEPTH, opts.vrfStates),
+      (threads) => VrfTree.build(vrfSeed, KEYSTORE_VRF_POPULATED_DEPTH, opts.vrfStates, threads),
       stored
     );
   }
@@ -191,9 +193,12 @@ export class XmssSigner {
    * Builds the VRF tree at the first call. Only a proposal needs it, and it takes about a second
    * of one core, so a signer is made without it. Rejects if the tree cannot be built, or is not
    * the one the state holds the root of.
+   *
+   * It is built on `threads` threads, every CPU if not given: a proposal waits for it. Ahead of
+   * any proposal one thread does, and leaves the others to the validators' duties.
    */
-  async getVrfRoot(): Promise<Uint8Array> {
-    this.vrfTree ??= this.buildVrfTree();
+  async getVrfRoot(threads?: number): Promise<Uint8Array> {
+    this.vrfTree ??= this.buildVrfTree(threads);
     const root = (await this.vrfTree).root();
     if (this.registeredVrfRoot && Buffer.compare(root, this.registeredVrfRoot) !== 0) {
       throw Error(
