@@ -164,6 +164,11 @@ export class XmssSigner {
     return xmssPublicParameter(keystoreXmssSeed(secretKey));
   }
 
+  /** Whether `treeStore` holds trees that `fromBlsSecretKey` accepts as those of the key */
+  static hasStoredTrees(secretKey: Uint8Array, treeStore: XmssTreeStore): boolean {
+    return new SealedTrees(treeStore, keystoreXmssSeed(secretKey)).read() !== null;
+  }
+
   get vrfRoot(): Uint8Array {
     return this.vrfTree.root();
   }

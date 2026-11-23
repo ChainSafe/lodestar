@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {LogLevel, Logger, fetch, isValidHttpUrl, retry, toHex} from "@lodestar/utils";
+import {LogLevel, Logger, fetch, isFetchError, isValidHttpUrl, retry, toHex} from "@lodestar/utils";
 import {XmssTreeSource} from "@lodestar/validator";
 
 /**
@@ -70,10 +70,13 @@ async function readRecord(url: string, index: number): Promise<Uint8Array> {
           signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         });
         // 200 is the whole file: the server ignored the range
-        if (res.status !== 206) throw Error(`Range request failed with status ${res.status}`);
+        if (res.status !== 206) {
+          await res.body?.cancel();
+          throw Error(`Range request failed with status ${res.status}`);
+        }
         return new Uint8Array(await res.arrayBuffer());
       },
-      {retries: FETCH_RETRIES, retryDelay: FETCH_RETRY_DELAY_MS}
+      {retries: FETCH_RETRIES, retryDelay: FETCH_RETRY_DELAY_MS, shouldRetry: isFetchError}
     );
   } else {
     const fd = fs.openSync(url.replace(/^file:\/\//, ""), "r");

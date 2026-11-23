@@ -77,7 +77,7 @@ describe("devnetXmssTreeSource", () => {
     await vi.runAllTimersAsync();
 
     expect(await (await pending)(publicParameter)).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(logger.warn).toHaveBeenCalledOnce();
   });
 });
@@ -137,7 +137,7 @@ describe("toXmssSigners", () => {
 
   it("asks for no trees of a key whose trees are stored", async () => {
     const secretKey = interopSecretKey(0);
-    fs.writeFileSync(path.join(tmpDir.name, `${secretKey.toPublicKey().toHex()}.bin`), new Uint8Array(1));
+    vi.spyOn(XmssSigner, "hasStoredTrees").mockReturnValue(true);
     const publicParameterFromBlsSecretKey = vi.spyOn(XmssSigner, "publicParameterFromBlsSecretKey");
     const fetchMock = vi.fn<typeof fetch>();
     vi.stubGlobal("fetch", fetchMock);
@@ -148,5 +148,19 @@ describe("toXmssSigners", () => {
 
     expect(publicParameterFromBlsSecretKey).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("asks for the trees of a key whose stored trees are invalid", async () => {
+    const secretKey = interopSecretKey(0);
+    fs.writeFileSync(path.join(tmpDir.name, `${secretKey.toPublicKey().toHex()}.bin`), new Uint8Array(1));
+    vi.spyOn(XmssSigner, "publicParameterFromBlsSecretKey").mockReturnValue(publicParameter);
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => rangeResponse(init));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(XmssSigner, "fromBlsSecretKey").mockResolvedValue({} as XmssSigner);
+
+    const logger = {info: vi.fn(), warn: vi.fn(), error: vi.fn()};
+    await toXmssSigners([{type: SignerType.Local, secretKey}], undefined, CACHE_URL, tmpDir.name, logger);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

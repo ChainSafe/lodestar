@@ -199,8 +199,9 @@ export async function toXmssSigners(
     if (signer.type !== SignerType.Local) continue;
     const treeStore = xmssTreeStore(path.join(treesDir, `${signer.secretKey.toPublicKey().toHex()}.bin`));
     treeStores.set(signer, treeStore);
-    if (xmssCacheUrl && treeStore.read() === null) {
-      uncached.push(XmssSigner.publicParameterFromBlsSecretKey(signer.secretKey.toBytes()));
+    const secretKey = signer.secretKey.toBytes();
+    if (xmssCacheUrl && !XmssSigner.hasStoredTrees(secretKey, treeStore)) {
+      uncached.push(XmssSigner.publicParameterFromBlsSecretKey(secretKey));
     }
   }
   const treeSource = xmssCacheUrl ? await devnetXmssTreeSource(xmssCacheUrl, uncached, logger) : undefined;
