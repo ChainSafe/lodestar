@@ -1,5 +1,9 @@
 const std = @import("std");
 
+comptime {
+    std.debug.assert(@import("builtin").is_test);
+}
+
 pub const Seccomp = struct {
     pub const Instruction = extern struct { code: u16, jt: u8, jf: u8, k: u32 };
     const Program = extern struct { len: c_ushort, filter: [*]const Instruction };
