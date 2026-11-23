@@ -352,7 +352,7 @@ export class Builder {
    * Counts the slots with a head announced since the last payload attributes. A beacon node emitting them for every
    * slot keeps the count at 0 or 1, the attributes for the next slot follow each head. Head events prove the event
    * stream is delivering, the builder is not just starting up or disconnected.
-   */ 
+   */
   private checkPayloadAttributesEmitted(headSlot: Slot): void {
     // The head of a slot can be announced more than once, e.g. when its payload becomes available
     if (this.latestHeadSlot !== null && headSlot <= this.latestHeadSlot) return;
