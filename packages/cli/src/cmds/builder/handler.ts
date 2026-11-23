@@ -166,7 +166,9 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
   }
 }
 
-function getBuilderApiAuthData(args: IBuilderCliArgs): Uint8Array {
+export function getBuilderApiAuthData(
+  args: Pick<IBuilderCliArgs, "builderApi.authData" | "builderApi.publicUrl">
+): Uint8Array {
   if (args["builderApi.authData"] !== undefined) {
     const authData = fromHex(args["builderApi.authData"]);
     if (authData.length === 0) {
@@ -175,8 +177,20 @@ function getBuilderApiAuthData(args: IBuilderCliArgs): Uint8Array {
     return authData;
   }
   if (args["builderApi.publicUrl"] !== undefined) {
+    let hostname: string;
+    try {
+      hostname = new URL(args["builderApi.publicUrl"]).hostname;
+    } catch {
+      hostname = "";
+    }
+    // A URL without a scheme has no hostname, e.g. builder.example.com:18550 parses as scheme and path
+    if (hostname === "") {
+      throw new YargsError(
+        "--builderApi.publicUrl must be a URL with a scheme and a hostname, e.g. https://builder.example.com"
+      );
+    }
     // Same derivation as the default auth data of the validator client
-    return new TextEncoder().encode(new URL(args["builderApi.publicUrl"]).hostname);
+    return new TextEncoder().encode(hostname);
   }
   throw new YargsError("--builderApi requires either --builderApi.publicUrl or --builderApi.authData");
 }
