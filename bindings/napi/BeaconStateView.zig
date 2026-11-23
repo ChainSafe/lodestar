@@ -1160,8 +1160,13 @@ pub fn createMultiProof(self: *BeaconStateView, descriptor: js.Uint8Array) !js_t
         cached_state.state.nodePool(),
         root_node,
         proof_input,
-    ) catch {
-        return throwNullAs(js_types.MultiProof, "STATE_ERROR", "Failed to create proof");
+    ) catch |err| switch (err) {
+        error.InvalidProofTraversal => return throwNullAs(
+            js_types.MultiProof,
+            "INVALID_PROOF_TRAVERSAL",
+            "Proof descriptor requests children of a terminal chunk",
+        ),
+        else => return throwNullAs(js_types.MultiProof, "STATE_ERROR", "Failed to create proof"),
     };
     defer proof.deinit(allocator);
 

@@ -54,7 +54,8 @@ export const options: CliCommandOptions<ApiArgs> = {
   "api.maxGindicesInProof": {
     hidden: true,
     type: "number",
-    description: "Limit max number of gindices in a single proof request. DoS vector protection",
+    description:
+      "Limit proof descriptor bytes to twice this value, capped at 2048 bytes. Zero rejects all proofs. Must be a non-negative integer",
     defaultDescription: String(defaultOptions.api.maxGindicesInProof),
     group: "api",
   },

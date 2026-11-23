@@ -1,0 +1,148 @@
+import {describe, expect, it} from "vitest";
+import {
+  BranchNode,
+  LeafNode,
+  Node,
+  ProofType,
+  Tree,
+  computeDescriptor,
+  createProof,
+} from "@chainsafe/persistent-merkle-tree";
+// biome-ignore lint/correctness/useImportExtensions: the fixture is JSON and requires its .json extension
+import vectors from "../../../../../docs/static/proofs/compact-proof-vectors.json" with {type: "json"};
+import {CompactMultiProofType} from "../../../src/beacon/routes/proof.js";
+import {
+  decodeCompactProofJson,
+  decodeCompactProofSsz,
+  decodeHex,
+  reconstructCompactProof,
+  verifyCompactProof,
+} from "../../utils/compactProofReference.js";
+
+const hex = (bytes: Uint8Array) => `0x${Buffer.from(bytes).toString("hex")}`;
+
+describe.each(vectors.vectors)("compact proof vector: $name", (vector) => {
+  const proof = decodeCompactProofJson(vector);
+  const targets = new Map(vector.expectedTargets.map(({gindex, root}) => [BigInt(gindex), decodeHex(root)]));
+
+  it("verifies the frozen root and intended nodes with the independent decoder", () => {
+    const nodes = verifyCompactProof(proof, decodeHex(vector.expectedRoot), targets);
+    expect(hex(nodes.get(1n) ?? new Uint8Array())).toBe(vector.expectedRoot);
+    for (const [i, gindex] of vector.leafGindices.entries()) {
+      expect(hex(nodes.get(BigInt(gindex)) ?? new Uint8Array()), `leaf ${i}`).toBe(vector.leaves[i]);
+    }
+  });
+
+  it("matches the production descriptor and tree reconstruction", () => {
+    expect(hex(computeDescriptor(vector.requestedGindices.map(BigInt)))).toBe(vector.descriptor);
+    const tree = Tree.createFromProof({...proof, type: ProofType.compactMulti});
+    expect(hex(tree.root)).toBe(vector.expectedRoot);
+    for (const {gindex, root} of vector.expectedTargets) {
+      expect(hex(tree.getNode(BigInt(gindex)).root), gindex).toBe(root);
+    }
+  });
+
+  it("matches JSON and exact SSZ bytes without a proof-type discriminator", () => {
+    const json = CompactMultiProofType.toJson(proof);
+    expect(json).toEqual({leaves: vector.leaves, descriptor: vector.descriptor});
+    expect(hex(CompactMultiProofType.serialize(proof))).toBe(vector.ssz);
+    for (const decoded of [
+      decodeCompactProofJson(json),
+      decodeCompactProofSsz(decodeHex(vector.ssz)),
+      CompactMultiProofType.deserialize(decodeHex(vector.ssz)),
+      CompactMultiProofType.fromJson(json),
+    ]) {
+      expect(hex(decoded.descriptor), "descriptor round trip").toBe(vector.descriptor);
+      verifyCompactProof(decoded, decodeHex(vector.expectedRoot), targets);
+    }
+  });
+
+  if (!vector.fixture.includes("-state") && !vector.fixture.includes("-block")) {
+    it("generates the frozen frontier from the independently described binary tree", () => {
+      const leaf = (i: number) => LeafNode.fromRoot(new Uint8Array(32).fill(i));
+      let node: Node = leaf(0);
+      if (vector.fixture === "deep-left-60") {
+        for (let i = 1; i <= 60; i++) node = new BranchNode(node, leaf(i));
+      } else if (vector.fixture !== "zero-root") {
+        const four = new BranchNode(new BranchNode(leaf(0), leaf(1)), new BranchNode(leaf(2), leaf(3)));
+        node =
+          vector.fixture === "binary-depth-2"
+            ? four
+            : new BranchNode(four, new BranchNode(new BranchNode(leaf(4), leaf(5)), new BranchNode(leaf(6), leaf(7))));
+      }
+      const actual = createProof(node, {type: ProofType.compactMulti, descriptor: proof.descriptor});
+      expect(actual.type).toBe(ProofType.compactMulti);
+      if (actual.type !== ProofType.compactMulti) throw Error("Unexpected proof type");
+      expect(actual.leaves.map(hex)).toEqual(vector.leaves);
+    });
+  }
+});
+
+describe("invalid compact proofs", () => {
+  const proof = {descriptor: decodeHex("0x60"), leaves: [new Uint8Array(32), new Uint8Array(32).fill(1)]};
+
+  it.each([
+    ["empty", "0x"],
+    ["unfinished branch", "0x00"],
+    ["missing right subtree", "0x40"],
+    ["extra root byte", "0x8000"],
+    ["extra branch byte", "0x6000"],
+    ["nonzero root padding", "0x81"],
+    ["nonzero branch padding", "0x61"],
+  ])("rejects %s descriptors", (_name, descriptor) => {
+    const invalid = {...proof, descriptor: decodeHex(descriptor)};
+    expect(() => reconstructCompactProof(invalid)).toThrow();
+    expect(() => Tree.createFromProof({...invalid, type: ProofType.compactMulti})).toThrow();
+  });
+
+  it.each([0, 1, 3])("rejects an incorrect leaf count of %i", (count) => {
+    const invalid = {...proof, leaves: Array.from({length: count}, () => new Uint8Array(32))};
+    expect(() => reconstructCompactProof(invalid)).toThrow();
+    expect(() => Tree.createFromProof({...invalid, type: ProofType.compactMulti})).toThrow();
+  });
+
+  it.each([0, 31, 33])("rejects a %i-byte leaf", (length) => {
+    expect(() => reconstructCompactProof({...proof, leaves: [new Uint8Array(length), proof.leaves[1]]})).toThrow(
+      "32 bytes"
+    );
+  });
+
+  it("rejects an empty target descriptor generated by the production helper", () => {
+    expect(computeDescriptor([]).length).toBe(0);
+    expect(() => reconstructCompactProof({...proof, descriptor: computeDescriptor([])})).toThrow();
+  });
+
+  it("requires the expected root and target value, not just a well-formed tree", () => {
+    const root = reconstructCompactProof(proof).get(1n);
+    if (!root) throw Error("Missing reconstructed root");
+    expect(() => verifyCompactProof(proof, new Uint8Array(32), new Map())).toThrow("Unexpected proof root");
+    expect(() => verifyCompactProof(proof, root, new Map([[3n, proof.leaves[0]]]))).toThrow("Unexpected value");
+    expect(() => verifyCompactProof(proof, root, new Map([[6n, proof.leaves[0]]]))).toThrow("not exposed");
+    const modified = {...proof, leaves: [new Uint8Array(32).fill(2), proof.leaves[1]]};
+    expect(() => verifyCompactProof(modified, root, new Map())).toThrow("Unexpected proof root");
+  });
+
+  it.each(["60", "0x6", "0xzz"])("rejects noncanonical JSON hex %s", (descriptor) => {
+    expect(() => decodeCompactProofJson({descriptor, leaves: []})).toThrow();
+  });
+
+  it.each([
+    ["truncated header", "0x08000000"],
+    ["first offset", "0x09000000090000000080"],
+    ["reversed offsets", "0x0800000004000000"],
+    ["offset outside body", "0x0800000060000000"],
+    ["misaligned leaves", "0x08000000090000000080"],
+  ])("rejects SSZ with %s", (_name, bytes) => {
+    expect(() => decodeCompactProofSsz(decodeHex(bytes))).toThrow();
+    expect(() => CompactMultiProofType.deserialize(decodeHex(bytes))).toThrow();
+  });
+
+  it("enforces the response descriptor limit", () => {
+    expect(() => reconstructCompactProof({...proof, descriptor: new Uint8Array(2049)})).toThrow();
+    const bytes = new Uint8Array(8 + 32 + 2049);
+    new DataView(bytes.buffer).setUint32(0, 8, true);
+    new DataView(bytes.buffer).setUint32(4, 40, true);
+    expect(() => decodeCompactProofSsz(bytes)).toThrow("limit exceeded");
+    expect(() => CompactMultiProofType.deserialize(bytes)).toThrow();
+  });
+});

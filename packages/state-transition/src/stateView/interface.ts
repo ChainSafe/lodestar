@@ -146,6 +146,10 @@ export interface IBeaconStateView {
   // Proofs
   getFinalizedRootProof(): Uint8Array[];
   getSingleProof(gindex: bigint): Uint8Array[];
+  /**
+   * Throws an error with code INVALID_PROOF_TRAVERSAL if the descriptor requests children of a terminal chunk.
+   * Other errors retain their original classification.
+   */
   createMultiProof(descriptor: Uint8Array): CompactMultiProof;
 
   // Fork choice

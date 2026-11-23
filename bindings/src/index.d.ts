@@ -455,6 +455,10 @@ export declare class BeaconStateView {
   serializedValidatorsSize(): number;
   serializeValidatorsToBytes(output: {uint8Array: Uint8Array; dataView: DataView}, offset: number): number;
   hashTreeRoot(): Uint8Array;
+  /**
+   * Throws an Error with code `INVALID_PROOF_TRAVERSAL` if the descriptor requests children of a terminal chunk.
+   * Other proof-generation failures retain code `STATE_ERROR`.
+   */
   createMultiProof(descriptor: Uint8Array): CompactMultiProof;
 
   /** Serialize this call with other STF operations and cache teardown within this thread. */

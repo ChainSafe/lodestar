@@ -20,6 +20,7 @@ describe("Gloas native state view", () => {
       ["--import", "tsx", fileURLToPath(new URL("./fixtures/gloasRelease.ts", import.meta.url))],
       {cwd: new URL("..", import.meta.url), encoding: "utf8", timeout: 30_000}
     );
+    expect(result.error).toBeUndefined();
     expect(result.signal, result.stderr).toBeNull();
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout.trim()).toBe("completed");
@@ -180,11 +181,9 @@ describe("Gloas native state view", () => {
       const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
       const stateRanges = ssz.gloas.BeaconState.getFieldRanges(data, 0, bytes.length);
       const builders = stateRanges[Object.keys(ssz.gloas.BeaconState.fields).indexOf("builders")];
-      const builderRanges = ssz.gloas.Builder.getFieldRanges(
-        data,
-        builders.start,
-        builders.start + ssz.gloas.Builder.fixedSize
-      );
+      const builderSize = ssz.gloas.Builder.fixedSize;
+      if (builderSize === null) throw Error("Expected a fixed-size builder");
+      const builderRanges = ssz.gloas.Builder.getFieldRanges(data, builders.start, builders.start + builderSize);
       data.setBigUint64(
         builders.start + builderRanges[Object.keys(ssz.gloas.Builder.fields).indexOf("balance")].start,
         balance,

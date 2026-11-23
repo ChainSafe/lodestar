@@ -5,6 +5,7 @@ import {LevelDbController} from "@lodestar/db/controller/level";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {BeaconDb} from "../../../db/index.js";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../../metrics/index.js";
+import {QueueError} from "../../../util/queue/errors.js";
 import {JobFnQueue} from "../../../util/queue/fnQueue.js";
 import {QueueMetrics} from "../../../util/queue/options.js";
 import {getHistoricalState} from "./getHistoricalState.js";
@@ -63,9 +64,16 @@ const api: HistoricalStateWorkerApi = {
   async getHistoricalState(slot) {
     historicalStateRegenMetrics?.regenRequestCount.inc();
 
-    const stateBytes = await queue.push<Uint8Array>(() =>
-      getHistoricalState(slot, config, db, workerData.nativeStateTransition, historicalStateRegenMetrics)
-    );
+    let stateBytes: Uint8Array | null;
+    try {
+      stateBytes = await queue.push<Uint8Array | null>(() =>
+        getHistoricalState(slot, config, db, workerData.nativeStateTransition, historicalStateRegenMetrics)
+      );
+    } catch (error) {
+      if (error instanceof QueueError) return {error: error.type.code};
+      throw error;
+    }
+    if (stateBytes === null) return null;
     const result = Transfer(stateBytes, [stateBytes.buffer]) as unknown as Uint8Array;
 
     historicalStateRegenMetrics?.regenSuccessCount.inc();
