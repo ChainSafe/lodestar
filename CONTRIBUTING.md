@@ -51,7 +51,8 @@ Most of all, it is disrespectful to our time. Please be respectful to our mainta
 2. Create your [own fork](https://github.com/ChainSafe/lodestar/fork) of this repository.
 3. Make your changes in your local fork.
 4. If you've made a code change, make sure to lint and test your changes (`pnpm lint`, `pnpm check-types` and `pnpm test:unit`).
-5. Make an open pull request when you're ready for it to be reviewed. We review PRs on a regular basis. See Pull request etiquette for more information.
+5. Any change that affects Lodestar's consensus behavior needs, at minimum, an A/B test on a [Kurtosis](https://github.com/ethpandaops/ethereum-package) devnet. Run the same network config once on `unstable` and once on your branch. Put the config, the commands and the results from both runs in the PR so a maintainer can reproduce them.
+6. Make an open pull request when you're ready for it to be reviewed. We review PRs on a regular basis. See Pull request etiquette for more information.
 
 > [!IMPORTANT]
 > Please note that trivial, non-code contributions such as spelling, grammar, typos, corrections, comments and link fixes are not acceptable pull requests.
