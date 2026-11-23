@@ -2046,8 +2046,9 @@ export class BlockInputSync {
           if (errorCode === DownloadByRootErrorCode.BELOW_FINALIZED_SLOT) {
             throw e;
           }
-          // Root excludes the signature: keep it retryable, not Fatal as honest peers may serve unverified copies
+          // Low as in range sync, not Fatal as peers may serve unverified copies of a root with a bad signature
           if (
+            errorCode === DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT ||
             errorCode === DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID ||
             errorCode === DownloadByRootErrorCode.UNKNOWN_PROPOSER
           ) {
