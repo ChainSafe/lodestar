@@ -41,15 +41,25 @@ export class ProposerDutiesTracker {
     );
   }
 
-  /** Returns null for slots outside of the current and next epoch */
+  /**
+   * Returns null for slots outside of the previous, current and next epoch.
+   * The previous epoch is only resolved from the duties that were cached while it was the current epoch,
+   * this covers requests for its last slots that arrive after the epoch ended.
+   */
   async getProposer(slot: Slot): Promise<routes.validator.ProposerDuty | null> {
     const epoch = computeEpochAtSlot(slot);
     const currentEpoch = this.clock.getCurrentEpoch();
-    if (epoch < currentEpoch || epoch > currentEpoch + 1) {
+    if (epoch < currentEpoch - 1 || epoch > currentEpoch + 1) {
       return null;
     }
 
-    const proposers = this.proposersByEpoch.get(epoch) ?? (await this.fetchProposers(epoch));
+    let proposers = this.proposersByEpoch.get(epoch);
+    if (proposers === undefined) {
+      if (epoch < currentEpoch) {
+        return null;
+      }
+      proposers = await this.fetchProposers(epoch);
+    }
     return proposers.bySlot.get(slot) ?? null;
   }
 
@@ -66,6 +76,10 @@ export class ProposerDutiesTracker {
   private refetchIfChanged(epoch: Epoch, dependentRoot: RootHex): void {
     const proposers = this.proposersByEpoch.get(epoch);
     if (proposers === undefined || proposers.dependentRoot === dependentRoot) {
+      return;
+    }
+    // The duties of an epoch that ended are only kept for late requests
+    if (epoch < this.clock.getCurrentEpoch()) {
       return;
     }
 
@@ -92,9 +106,10 @@ export class ProposerDutiesTracker {
     };
     this.proposersByEpoch.set(epoch, proposers);
 
+    // The previous epoch is kept for requests that arrive after it ended
     const currentEpoch = this.clock.getCurrentEpoch();
     for (const cachedEpoch of this.proposersByEpoch.keys()) {
-      if (cachedEpoch < currentEpoch) {
+      if (cachedEpoch < currentEpoch - 1) {
         this.proposersByEpoch.delete(cachedEpoch);
       }
     }

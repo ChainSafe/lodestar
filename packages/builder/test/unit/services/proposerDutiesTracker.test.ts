@@ -60,12 +60,40 @@ describe("ProposerDutiesTracker", () => {
     expect((await tracker.getProposer(SLOTS_PER_EPOCH + 1))?.validatorIndex).toBe(SLOTS_PER_EPOCH + 1);
   });
 
-  it("returns null for slots outside of the current and next epoch", async () => {
+  it("returns null for slots outside of the previous, current and next epoch", async () => {
+    clock.currentSlot = 2 * SLOTS_PER_EPOCH;
+
+    expect(await tracker.getProposer(SLOTS_PER_EPOCH - 1)).toBeNull();
+    expect(await tracker.getProposer(4 * SLOTS_PER_EPOCH)).toBeNull();
+    expect(api.validator.getProposerDutiesV2).not.toHaveBeenCalled();
+  });
+
+  it("resolves a slot of the previous epoch from the duties cached while it was the current epoch", async () => {
+    const lastSlot = SLOTS_PER_EPOCH - 1;
+    expect((await tracker.getProposer(lastSlot))?.validatorIndex).toBe(lastSlot);
+
+    clock.currentSlot = SLOTS_PER_EPOCH;
+    await tracker.getProposer(SLOTS_PER_EPOCH);
+
+    expect((await tracker.getProposer(lastSlot))?.validatorIndex).toBe(lastSlot);
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not fetch the duties of the previous epoch", async () => {
     clock.currentSlot = SLOTS_PER_EPOCH;
 
     expect(await tracker.getProposer(SLOTS_PER_EPOCH - 1)).toBeNull();
-    expect(await tracker.getProposer(3 * SLOTS_PER_EPOCH)).toBeNull();
     expect(api.validator.getProposerDutiesV2).not.toHaveBeenCalled();
+  });
+
+  it("drops the duties of epochs before the previous one", async () => {
+    await tracker.getProposer(1);
+    clock.currentSlot = 2 * SLOTS_PER_EPOCH;
+    await tracker.getProposer(2 * SLOTS_PER_EPOCH);
+
+    // Epoch 0 is the previous epoch again, it would be resolved if its duties were still cached
+    clock.currentSlot = SLOTS_PER_EPOCH;
+    expect(await tracker.getProposer(1)).toBeNull();
   });
 
   it("fetches the duties of an epoch once for concurrent requests", async () => {
@@ -159,6 +187,15 @@ describe("ProposerDutiesTracker", () => {
     );
     expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(3);
     expect(api.validator.getProposerDutiesV2).toHaveBeenLastCalledWith({epoch: 1});
+  });
+
+  it("does not fetch the duties of the previous epoch again", async () => {
+    await tracker.getProposer(3);
+    clock.currentSlot = SLOTS_PER_EPOCH;
+
+    tracker.onHead(head(SLOTS_PER_EPOCH - 1, root(8), root(2)));
+
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledExactlyOnceWith({epoch: 0});
   });
 
   it("keeps the cached duties if fetching them again fails", async () => {
