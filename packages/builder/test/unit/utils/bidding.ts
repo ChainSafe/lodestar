@@ -12,6 +12,7 @@ import {BidPublisher} from "../../../src/services/bidPublisher.js";
 import {BidSelector} from "../../../src/services/bidSelector.js";
 import {BuilderSigner} from "../../../src/services/builderSigner.js";
 import {EnvelopePublisher} from "../../../src/services/envelopePublisher.js";
+import {HeadTracker} from "../../../src/services/headTracker.js";
 import {PayloadOrchestrator} from "../../../src/services/payloadOrchestrator.js";
 import {PayloadSource} from "../../../src/services/payloadSource.js";
 import {PayloadStore} from "../../../src/services/payloadStore.js";
@@ -42,6 +43,7 @@ export function createBiddingModules({
   clock,
   builderSigner,
   proposerPreferencesTracker,
+  headTracker = new HeadTracker(),
   payloadStore,
   payloadSource,
   signal,
@@ -54,6 +56,7 @@ export function createBiddingModules({
   clock: IClock;
   builderSigner: BuilderSigner;
   proposerPreferencesTracker: ProposerPreferencesTracker;
+  headTracker?: HeadTracker;
   payloadStore: PayloadStore;
   payloadSource: PayloadSource;
   signal: AbortSignal;
@@ -84,6 +87,7 @@ export function createBiddingModules({
         hasPayload: ({blockHash}) => payloadStore.has(blockHash),
       }),
       proposerPreferencesTracker,
+      headTracker,
       getBuilderStatus,
       builderIndex: index,
       executionFeeRecipient: Buffer.alloc(20, 9),

@@ -131,6 +131,16 @@ async function validatePayloadAttestationMessage(
     });
   }
 
+  // Re-check after the await: concurrent messages from the same validator all pass the check above
+  if (chain.seenPayloadAttesters.isKnown(data.slot, validatorIndex)) {
+    throw new PayloadAttestationError(GossipAction.IGNORE, {
+      code: PayloadAttestationErrorCode.PAYLOAD_ATTESTATION_ALREADY_KNOWN,
+      validatorIndex,
+      slot: data.slot,
+      blockRoot: toRootHex(data.beaconBlockRoot),
+    });
+  }
+
   // Valid
   chain.seenPayloadAttesters.add(data.slot, validatorIndex);
 
