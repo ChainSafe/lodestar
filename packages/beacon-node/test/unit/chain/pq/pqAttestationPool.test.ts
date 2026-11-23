@@ -140,6 +140,19 @@ describe("PqAttestationPool", () => {
     expect(other.source).toBe("empty");
   }, 120_000);
 
+  it("merges a block's first proof however little time is left, and has the block wait for it", async () => {
+    const pool = new PqAttestationPool();
+    const blockSlot = data.slot + MIN_ATTESTATION_INCLUSION_DELAY_PQ;
+    const all: PqAttestationFilters = {isIncludable: () => true, isOnChain: () => () => false};
+    pool.addSingle(0, data, dataRootHex, 0, 2, signed[0]);
+    pool.addSingle(0, data, dataRootHex, 1, 2, signed[1]);
+
+    const preparing = pool.prepareBlock(blockSlot, all, 0);
+    expect((await pool.getAttestationsForBlock(blockSlot, all, 0)).source).toBe("late");
+    expect((await pool.getAttestationsForBlock(blockSlot, all, 60_000)).source).toBe("prepared");
+    await preparing;
+  }, 120_000);
+
   it("accepts an empty proof for no claims only", async () => {
     expect(await verifier.verifyProofSets([{claims: new Uint8Array(0), proof: new Uint8Array(0)}])).toBe(true);
     expect(await verifier.verifyProofSets([{claims: new Uint8Array(0), proof: new Uint8Array(1)}])).toBe(false);

@@ -349,7 +349,7 @@ export class BeaconChain implements IBeaconChain {
         schedule: pqSchedule,
       });
     }
-    this.pqAttestationPool = new PqAttestationPool(this.pqTiming);
+    this.pqAttestationPool = new PqAttestationPool(this.pqTiming, metrics);
     this.anchorStateLatestBlockSlot = anchorState.latestBlockHeader.slot;
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot;
     this.executionEngine = executionEngine;

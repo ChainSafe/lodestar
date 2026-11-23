@@ -17,6 +17,7 @@ import {
   ScannedSlotsTerminationReason,
 } from "../../chain/opPools/aggregatedAttestationPool.js";
 import {InclusionListInsertOutcome} from "../../chain/opPools/inclusionListStore.js";
+import type {PqBlockAttestations, PqProofKind} from "../../chain/opPools/pqAttestationPool.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
@@ -1239,6 +1240,31 @@ export function createLodestarMetrics(
       }),
     },
     opPool: {
+      pqAttestationPool: {
+        proofTime: register.histogram<{work: PqProofKind}>({
+          name: "lodestar_oppool_pq_attestation_pool_proof_time_seconds",
+          help: "Time to prove a committee's signatures or merge a block's proofs, the wait for the prover included",
+          labelNames: ["work"],
+          buckets: [0.1, 0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 10],
+        }),
+        proofChildren: register.histogram<{work: PqProofKind}>({
+          name: "lodestar_oppool_pq_attestation_pool_proof_children",
+          help: "Proofs a proof merges",
+          labelNames: ["work"],
+          buckets: [1, 2, 4, 8, 16, 32, 64],
+        }),
+        proofSignatures: register.histogram<{work: PqProofKind}>({
+          name: "lodestar_oppool_pq_attestation_pool_proof_signatures",
+          help: "Signatures a proof proves itself, those of the proofs it merges not counted",
+          labelNames: ["work"],
+          buckets: [1, 8, 32, 64, 128, 256, 512, 1024],
+        }),
+        blockSource: register.counter<{source: PqBlockAttestations["source"]}>({
+          name: "lodestar_oppool_pq_attestation_pool_block_source_total",
+          help: "Blocks packed, by where their attestations are from",
+          labelNames: ["source"],
+        }),
+      },
       aggregatedAttestationPool: {
         size: register.gauge({
           name: "lodestar_oppool_aggregated_attestation_pool_size",

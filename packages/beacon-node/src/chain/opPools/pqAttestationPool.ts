@@ -14,6 +14,7 @@ import {
 import {IBeaconStateView, IBeaconStateViewAltair, computeEpochAtSlot} from "@lodestar/state-transition";
 import {CommitteeIndex, Epoch, RootHex, Slot, phase0, pq} from "@lodestar/types";
 import {MapDef, byteArrayEquals, sleep} from "@lodestar/utils";
+import {Metrics} from "../../metrics/metrics.js";
 import {PqExperiment, PqTiming, PqTimingFields, PqTimingJob, proofId} from "../pq/timing.js";
 import {canonicalClaims} from "../pq/verifier.js";
 import {InsertOutcome} from "./types.js";
@@ -58,6 +59,9 @@ export type PqBlockAttestations = {
   source: "prepared" | "merged" | "empty" | "late";
 };
 
+/** What a proof is for: an aggregator's committee, a block ahead of its slot, or a block in it */
+export type PqProofKind = "committee" | "prepare" | "fallback";
+
 /** What a state accepts and what it already has, for a block at one slot */
 export type PqAttestationFilters = {
   /** Whether the state accepts an attestation's data: its target epoch and source checkpoint */
@@ -90,7 +94,10 @@ export type PqPreparedBlock = {
   round: number;
 };
 
-/** A merge is taken to last this many times the last one, plus the slack, when asking if it fits */
+/**
+ * A merge that would replace one held is taken to last this many times the last one, plus the
+ * slack, when asking if it fits
+ */
 const MERGE_TIME_FACTOR = 1.6;
 const MERGE_TIME_SLACK_MS = 500;
 
@@ -108,10 +115,15 @@ export class PqAttestationPool {
   private lowestPermissibleSlot = 0;
   /** Attestations merged ahead of the slot of the block they are for */
   private readonly preparedBySlot = new Map<Slot, PqPreparedBlock>();
-  private preparing = false;
+  /** The merge `prepareBlock` is waiting on */
+  private preparation: {blockSlot: Slot; done: Promise<void>} | null = null;
+  private merging = false;
   private lastMergeMs = 0;
 
-  constructor(private readonly timing: PqTiming | null = null) {}
+  constructor(
+    private readonly timing: PqTiming | null = null,
+    private readonly metrics: Metrics | null = null
+  ) {}
 
   /**
    * Adds a single attestation whose signature is verified. `signed` is its packed signed claim:
@@ -175,7 +187,9 @@ export class PqAttestationPool {
     if (proven) return {data: dataAttestations.data, aggregate: proven};
 
     const job = this.timing?.job("committee", slot, 0);
-    const aggregate = await proveSigned(committee, job, {committee: committeeIndex});
+    const aggregate = await this.observe("committee", 0, committee.signed.size, () =>
+      proveSigned(committee, job, {committee: committeeIndex})
+    );
     job?.emit("candidate_ready", "ready", {committee: committeeIndex, proof_id: proofId(aggregate.aggregate.proof)});
     committee.aggregates.push(aggregate);
     return {data: dataAttestations.data, aggregate};
@@ -184,18 +198,28 @@ export class PqAttestationPool {
   /**
    * Merges the attestations for a block at `blockSlot` ahead of the slot, for
    * `getAttestationsForBlock` to return. Called again, it merges anew if the pool now has more
-   * attesters to add than what it holds and the merge is likely to end within `msToSlot`: a merge
-   * holds the prover while it runs.
+   * attesters to add than what it holds.
    */
   async prepareBlock(blockSlot: Slot, filters: PqAttestationFilters, msToSlot: number): Promise<void> {
-    const prepared = await this.mergeForBlock(blockSlot, filters, msToSlot, this.preparedBySlot.get(blockSlot) ?? null);
-    if (prepared) this.preparedBySlot.set(blockSlot, prepared);
+    const done = this.mergeForBlock(blockSlot, filters, msToSlot, this.preparedBySlot.get(blockSlot) ?? null).then(
+      (prepared) => {
+        if (prepared) this.preparedBySlot.set(blockSlot, prepared);
+      }
+    );
+    this.preparation = {blockSlot, done};
+    try {
+      await done;
+    } finally {
+      if (this.preparation?.done === done) this.preparation = null;
+    }
   }
 
   /**
    * What `prepareBlock` merges, returned and not kept: the merge of the attestations for a block
-   * at `blockSlot`, if it adds attesters to `held`, the merge before it, and is likely to end
-   * within `msToSlot`. Null otherwise. `experiment` is what an observer merges for.
+   * at `blockSlot`, if it adds attesters to `held`, the merge before it. Null otherwise. A merge
+   * holds the prover while it runs, so one that would replace a `held` the state still accepts
+   * also has to be likely to end within `msToSlot`; with nothing to lose, it runs regardless.
+   * `experiment` is what an observer merges for.
    */
   async mergeForBlock(
     blockSlot: Slot,
@@ -204,12 +228,12 @@ export class PqAttestationPool {
     held: PqPreparedBlock | null,
     experiment?: PqExperiment
   ): Promise<PqPreparedBlock | null> {
-    if (this.preparing) return null;
+    if (this.merging) return null;
     const selection = this.select(blockSlot, filters);
     const participation = countNew(selection.committees, filters);
     const isHeldIncludable = held?.attestations.every(({data}) => filters.isIncludable(data)) === true;
     if (participation <= (isHeldIncludable ? countNew(held.committees, filters) : 0)) return null;
-    if (this.lastMergeMs * MERGE_TIME_FACTOR + MERGE_TIME_SLACK_MS > msToSlot) return null;
+    if (isHeldIncludable && this.lastMergeMs * MERGE_TIME_FACTOR + MERGE_TIME_SLACK_MS > msToSlot) return null;
 
     const round = (held?.round ?? 0) + 1;
     const job = this.timing?.job(round === 1 ? "initial" : "improvement", blockSlot, round, experiment);
@@ -221,12 +245,14 @@ export class PqAttestationPool {
     // One aggregate and nothing else is its own merge
     const isReuse = selection.children.length === 1 && selection.signed.length === 0;
 
-    this.preparing = true;
+    this.merging = true;
     try {
       const start = Date.now();
       const {proof} = isReuse
         ? selection.children[0]
-        : await timed(job, fields, () => merge(selection.children, selection.signed));
+        : await this.observe("prepare", selection.children.length, selection.signed.length, () =>
+            timed(job, fields, () => merge(selection.children, selection.signed))
+          );
       if (isReuse) {
         job?.emit("job_outcome", "reused", {proof_id: proofId(proof)});
       } else {
@@ -240,7 +266,7 @@ export class PqAttestationPool {
       });
       return {attestations: selection.attestations, proof, committees: selection.committees, participation, round};
     } finally {
-      this.preparing = false;
+      this.merging = false;
     }
   }
 
@@ -275,7 +301,25 @@ export class PqAttestationPool {
     filters: PqAttestationFilters,
     timeoutMs: number
   ): Promise<PqBlockAttestations> {
-    const prepared = this.getPrepared(blockSlot, filters);
+    const packed = await this.packBlock(blockSlot, filters, timeoutMs);
+    this.metrics?.opPool.pqAttestationPool.blockSource.inc({source: packed.source});
+    return packed;
+  }
+
+  private async packBlock(
+    blockSlot: Slot,
+    filters: PqAttestationFilters,
+    timeoutMs: number
+  ): Promise<PqBlockAttestations> {
+    const deadlineMs = Date.now() + timeoutMs;
+    let prepared = this.getPrepared(blockSlot, filters);
+    let isPreparing = false;
+    if (!prepared && this.preparation?.blockSlot === blockSlot) {
+      // The prover runs one proof at a time: a merge started now would only wait behind this one
+      const settled = this.preparation.done.catch(() => {}).then(() => false);
+      isPreparing = await Promise.race([settled, sleep(timeoutMs).then(() => true)]);
+      prepared = this.getPrepared(blockSlot, filters);
+    }
     this.timing?.onProposal(
       blockSlot,
       prepared && {
@@ -285,20 +329,42 @@ export class PqAttestationPool {
       }
     );
     if (prepared) return {attestations: prepared.attestations, proof: prepared.proof, source: "prepared"};
+    if (isPreparing) return {attestations: [], proof: new Uint8Array(0), source: "late"};
 
     const {attestations, children, signed, committees} = this.select(blockSlot, filters);
     if (attestations.length === 0) return {attestations, proof: new Uint8Array(0), source: "empty"};
 
-    const merging = timed(
-      this.timing?.job("fallback", blockSlot, 1),
-      {input_proof_count: children.length, records: attestations.length, participation: countNew(committees, filters)},
-      () => merge(children, signed)
+    const job = this.timing?.job("fallback", blockSlot, 1);
+    const fields = {
+      input_proof_count: children.length,
+      records: attestations.length,
+      participation: countNew(committees, filters),
+    };
+    const merging = this.observe("fallback", children.length, signed.length, () =>
+      timed(job, fields, () => merge(children, signed))
     );
     // Once given up, its failure is no one's to handle
     merging.catch(() => {});
-    const merged = await Promise.race([merging, sleep(timeoutMs).then(() => null)]);
+    const merged = await Promise.race([merging, sleep(Math.max(deadlineMs - Date.now(), 0)).then(() => null)]);
     if (merged === null) return {attestations: [], proof: new Uint8Array(0), source: "late"};
     return {attestations, proof: merged.proof, source: "merged"};
+  }
+
+  private async observe<T>(
+    work: PqProofKind,
+    children: number,
+    signatures: number,
+    prove: () => Promise<T>
+  ): Promise<T> {
+    const metrics = this.metrics?.opPool.pqAttestationPool;
+    metrics?.proofChildren.observe({work}, children);
+    metrics?.proofSignatures.observe({work}, signatures);
+    const timer = metrics?.proofTime.startTimer({work});
+    try {
+      return await prove();
+    } finally {
+      timer?.();
+    }
   }
 
   /** What was merged for a block at `blockSlot`, if the state accepts every attestation of it */
