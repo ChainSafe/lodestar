@@ -1239,6 +1239,12 @@ packages:
     os: [linux]
     libc: [musl]
 
+  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.6':
+    resolution: {integrity: sha512-kgqOO6Thrjj/XpdWzDSdY0WWrzEjb4GNpXQK6w0rb0TQBW3oB1zt0gx86Bi1tJ67gwkU8GLZmZZozTvqfVtb2Q==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
   '@chainsafe/libp2p-quic@2.1.6':
     resolution: {integrity: sha512-u6iByTD7rE9ooeDq93AVAGa3jJJOlW4zjlJM5x49y8fDGuyhNPR6GUBAtk9vVs/L4OqbvWvuDKH3lbBRewyqmQ==}
     engines: {node: '>= 22'}
@@ -6534,6 +6540,9 @@ snapshots:
   '@chainsafe/libp2p-quic-linux-x64-musl@2.1.6':
     optional: true
 
+  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.6':
+    optional: true
+
   '@chainsafe/libp2p-quic@2.1.6':
     dependencies:
       '@libp2p/crypto': 5.1.25
@@ -6551,6 +6560,7 @@ snapshots:
       '@chainsafe/libp2p-quic-linux-arm64-musl': 2.1.6
       '@chainsafe/libp2p-quic-linux-x64-gnu': 2.1.6
       '@chainsafe/libp2p-quic-linux-x64-musl': 2.1.6
+      '@chainsafe/libp2p-quic-win32-x64-msvc': 2.1.6
 
   '@chainsafe/netmask@2.0.0':
     dependencies:
