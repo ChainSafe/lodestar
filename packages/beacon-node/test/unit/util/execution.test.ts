@@ -14,9 +14,9 @@ import {
   reconstructExecutionPayloadEnvelopes,
   reconstructExecutionPayloadEnvelopesByRange,
 } from "../../../src/util/execution.js";
-import {toSignedHeaderEnvelope} from "../../../src/util/headerEnvelope.js";
+import {toHeaderEnvelope} from "../../../src/util/headerEnvelope.js";
 import {startIsolatedTmpBeaconDb} from "../../utils/db.js";
-import {generateSignedExecutionPayloadEnvelope, payloadBodiesOf} from "../../utils/typeGenerator.js";
+import {generateExecutionPayloadEnvelope, payloadBodiesOf} from "../../utils/typeGenerator.js";
 
 describe("reconstructExecutionPayloadEnvelopesByRange", () => {
   const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
@@ -37,18 +37,15 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
   const bodyOf = payloadBodiesOf;
 
   // Seed the archive with the header form (the write seam does this at hot→cold migration).
-  async function seed(slot: number): Promise<gloas.SignedExecutionPayloadEnvelope> {
-    const full = generateSignedExecutionPayloadEnvelope(slot);
-    await db.executionPayloadEnvelopeArchive.putBinary(
-      slot,
-      encodeArchivedHeaderEnvelope(toSignedHeaderEnvelope(full))
-    );
+  async function seed(slot: number): Promise<gloas.ExecutionPayloadEnvelope> {
+    const full = generateExecutionPayloadEnvelope(slot);
+    await db.executionPayloadEnvelopeArchive.putBinary(slot, encodeArchivedHeaderEnvelope(toHeaderEnvelope(full)));
     return full;
   }
 
   // Mock the EL to return each seeded envelope's real bodies (incl. BAL), keyed by blockHash.
-  function elServes(fulls: gloas.SignedExecutionPayloadEnvelope[]): void {
-    const byHash = new Map(fulls.map((f) => [toRootHex(f.message.payload.blockHash), bodyOf(f)]));
+  function elServes(fulls: gloas.ExecutionPayloadEnvelope[]): void {
+    const byHash = new Map(fulls.map((f) => [toRootHex(f.payload.blockHash), bodyOf(f)]));
     getPayloadBodiesByHashV2.mockImplementation(async (hashes: string[]) => hashes.map((h) => byHash.get(h) ?? null));
   }
 
@@ -57,7 +54,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
   async function rangeWith(
     start: number,
     end: number
-  ): Promise<{out: {slot: number; envelope: gloas.SignedExecutionPayloadEnvelope}[]; unservableSlot: number | null}> {
+  ): Promise<{out: {slot: number; envelope: gloas.ExecutionPayloadEnvelope}[]; unservableSlot: number | null}> {
     const out = [];
     try {
       for await (const {slot, envelopeBytes} of reconstructExecutionPayloadEnvelopesByRange(
@@ -68,7 +65,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
         start,
         end
       )) {
-        out.push({slot, envelope: ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(envelopeBytes)});
+        out.push({slot, envelope: ssz.gloas.ExecutionPayloadEnvelope.deserialize(envelopeBytes)});
       }
     } catch (e) {
       if (
@@ -85,7 +82,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
   async function range(
     start: number,
     end: number
-  ): Promise<{slot: number; envelope: gloas.SignedExecutionPayloadEnvelope}[]> {
+  ): Promise<{slot: number; envelope: gloas.ExecutionPayloadEnvelope}[]> {
     return (await rangeWith(start, end)).out;
   }
 
@@ -103,13 +100,13 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
 
     expect(out.map((o) => o.slot)).toEqual([10, 11, 12]);
     for (const {slot, envelope} of out) {
-      const original = fulls.find((f) => f.message.payload.slotNumber === slot);
+      const original = fulls.find((f) => f.payload.slotNumber === slot);
       if (original === undefined) throw Error(`no seeded envelope for slot ${slot}`);
-      expect(ssz.gloas.SignedExecutionPayloadEnvelope.equals(envelope, original)).toBe(true);
+      expect(ssz.gloas.ExecutionPayloadEnvelope.equals(envelope, original)).toBe(true);
     }
     // all three slots fit in one batch → a single EL round-trip with all three hashes
     expect(getPayloadBodiesByHashV2).toHaveBeenCalledTimes(1);
-    expect(getPayloadBodiesByHashV2).toHaveBeenCalledWith(fulls.map((f) => toRootHex(f.message.payload.blockHash)));
+    expect(getPayloadBodiesByHashV2).toHaveBeenCalledWith(fulls.map((f) => toRootHex(f.payload.blockHash)));
   });
 
   it("chunks EL fetches at MAX_BODIES_PER_REQUEST (32), not one per slot", async () => {
@@ -127,9 +124,9 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
   });
 
   // Seed a full entry (--chain.dedupePayloads=false) in the same archive.
-  async function seedFull(slot: number): Promise<gloas.SignedExecutionPayloadEnvelope> {
-    const full = generateSignedExecutionPayloadEnvelope(slot);
-    await db.executionPayloadEnvelopeArchive.putBinary(slot, ssz.gloas.SignedExecutionPayloadEnvelope.serialize(full));
+  async function seedFull(slot: number): Promise<gloas.ExecutionPayloadEnvelope> {
+    const full = generateExecutionPayloadEnvelope(slot);
+    await db.executionPayloadEnvelopeArchive.putBinary(slot, ssz.gloas.ExecutionPayloadEnvelope.serialize(full));
     return full;
   }
 
@@ -141,11 +138,11 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
     const out = await range(10, 13);
 
     expect(out.map((o) => o.slot)).toEqual([10, 11, 12]);
-    expect(ssz.gloas.SignedExecutionPayloadEnvelope.equals(out[1].envelope, archivedFull)).toBe(true);
+    expect(ssz.gloas.ExecutionPayloadEnvelope.equals(out[1].envelope, archivedFull)).toBe(true);
     // only the two header entries go to the EL
     expect(getPayloadBodiesByHashV2).toHaveBeenCalledTimes(1);
     expect(getPayloadBodiesByHashV2.mock.calls[0][0]).toHaveLength(2);
-    expect(getPayloadBodiesByHashV2.mock.calls[0][0]).not.toContain(toRootHex(archivedFull.message.payload.blockHash));
+    expect(getPayloadBodiesByHashV2.mock.calls[0][0]).not.toContain(toRootHex(archivedFull.payload.blockHash));
   });
 
   it("serves a full-only range without calling the EL", async () => {
@@ -207,7 +204,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
   it("yields the first batch before an EL failure on the second batch surfaces", async () => {
     const fulls = [];
     for (let slot = 0; slot < 33; slot++) fulls.push(await seed(slot));
-    const byHash = new Map(fulls.map((f) => [toRootHex(f.message.payload.blockHash), bodyOf(f)]));
+    const byHash = new Map(fulls.map((f) => [toRootHex(f.payload.blockHash), bodyOf(f)]));
     // First round-trip (32 hashes) succeeds, second (1 hash) fails, the real-world partial-response shape
     getPayloadBodiesByHashV2
       .mockImplementationOnce(async (hashes: string[]) => hashes.map((h) => byHash.get(h) ?? null))
@@ -253,7 +250,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
     getPayloadBodiesByHashV2.mockResolvedValue([
       {...bodyOf(full), transactions: SerializedList.fromArray([Uint8Array.from([0xff])])},
     ]);
-    const [result] = await reconstructExecutionPayloadEnvelopes(executionEngine, null, [toSignedHeaderEnvelope(full)]);
+    const [result] = await reconstructExecutionPayloadEnvelopes(executionEngine, null, [toHeaderEnvelope(full)]);
     if (!isRebuildMiss(result) || result.reason !== "mismatch") throw Error("expected a mismatch miss");
     expect(result.slot).toBe(10);
     expect(result.error.type.code).toBe(EnvelopeReconstructionErrorCode.BODY_ROOT_MISMATCH);
@@ -262,7 +259,7 @@ describe("reconstructExecutionPayloadEnvelopesByRange", () => {
   it("reports an unavailable miss carrying BODY_UNAVAILABLE on the batch getter path when the EL cannot serve the bodies", async () => {
     const full = await seed(10);
     getPayloadBodiesByHashV2.mockResolvedValue([null]);
-    const [result] = await reconstructExecutionPayloadEnvelopes(executionEngine, null, [toSignedHeaderEnvelope(full)]);
+    const [result] = await reconstructExecutionPayloadEnvelopes(executionEngine, null, [toHeaderEnvelope(full)]);
     if (!isRebuildMiss(result) || result.reason !== "unavailable") throw Error("expected an unavailable miss");
     expect(result.slot).toBe(10);
     expect(result.error.type.code).toBe(EnvelopeReconstructionErrorCode.BODY_UNAVAILABLE);

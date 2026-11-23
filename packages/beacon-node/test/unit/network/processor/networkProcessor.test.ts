@@ -146,10 +146,10 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
 
   /** An execution payload for an unknown block (there is only ever one payload per block). */
   function processExecutionPayload(rootByte = 0xdd): void {
-    const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    signedEnvelope.message.payload.slotNumber = clockSlot;
-    signedEnvelope.message.beaconBlockRoot = Buffer.alloc(32, rootByte);
-    const data = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(signedEnvelope);
+    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    envelope.payload.slotNumber = clockSlot;
+    envelope.beaconBlockRoot = Buffer.alloc(32, rootByte);
+    const data = ssz.gloas.ExecutionPayloadEnvelope.serialize(envelope);
     emit(GossipType.execution_payload, ForkName.gloas, data);
   }
 

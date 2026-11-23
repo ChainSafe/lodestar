@@ -833,9 +833,8 @@ function isPeerAttributableFailure(code: BlockErrorCode | PayloadErrorCode | nul
     // EL returned a definitive INVALID verdict on the payload
     case BlockErrorCode.EXECUTION_ENGINE_INVALID:
     case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
-    // a block or envelope signature is invalid
+    // a block signature is invalid
     case BlockErrorCode.INVALID_SIGNATURE:
-    case PayloadErrorCode.INVALID_SIGNATURE:
     // the block's state transition produced an invalid state root, or failed per_slot/per_block processing
     case BlockErrorCode.INVALID_STATE_ROOT:
     case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:

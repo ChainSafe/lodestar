@@ -85,8 +85,8 @@ describe("sync / range / per-block processing", () => {
       seenTimestampSec: 0,
     });
     if (hasEnvelope) {
-      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      envelope.message.beaconBlockRoot = blockRoot;
+      const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+      envelope.beaconBlockRoot = blockRoot;
       payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 1});
     }
 
@@ -115,7 +115,6 @@ describe.each([{disableProcessAsChainSegment: false}, {disableProcessAsChainSegm
     });
 
     it.each<{errorType: PayloadErrorType; evicted: boolean}>([
-      {errorType: {code: PayloadErrorCode.INVALID_SIGNATURE}, evicted: true},
       {
         errorType: {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
         evicted: true,
@@ -174,8 +173,8 @@ describe.each([{disableProcessAsChainSegment: false}, {disableProcessAsChainSegm
         source: PayloadEnvelopeInputSource.byRange,
         seenTimestampSec: 0,
       });
-      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      envelope.message.beaconBlockRoot = blockRoot;
+      const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+      envelope.beaconBlockRoot = blockRoot;
       payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 1});
 
       const error = new PayloadError(payloadInput, errorType);

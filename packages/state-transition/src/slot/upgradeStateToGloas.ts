@@ -77,6 +77,7 @@ export function upgradeStateToGloas(
     parentBlockHash: stateFulu.latestExecutionPayloadHeader.parentHash,
     parentBlockRoot: stateFulu.latestBlockHeader.parentRoot,
     blockHash: stateFulu.latestExecutionPayloadHeader.blockHash,
+    payloadRoot: ssz.Root.defaultValue(),
     prevRandao: stateFulu.latestExecutionPayloadHeader.prevRandao,
     feeRecipient: ssz.ExecutionAddress.defaultValue(),
     gasLimit: BigInt(stateFulu.latestExecutionPayloadHeader.gasLimit),

@@ -139,7 +139,7 @@ export function assertLinearChainSegment(
       if (payloadEnvelope !== null) {
         // Verify the envelope references this block's root
         const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message));
-        const envelopeBlockRoot = toRootHex(payloadEnvelope.message.beaconBlockRoot);
+        const envelopeBlockRoot = toRootHex(payloadEnvelope.beaconBlockRoot);
         if (blockRoot !== envelopeBlockRoot) {
           throw new BlockError(block, {
             code: BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH,
@@ -151,7 +151,7 @@ export function assertLinearChainSegment(
         // FULL variant: save state before advancing, then advance
         prevExecHash = currentExecHash;
         lastFullSlot = slot;
-        currentExecHash = toRootHex(payloadEnvelope.message.payload.blockHash);
+        currentExecHash = toRootHex(payloadEnvelope.payload.blockHash);
       }
       // EMPTY variant: currentExecHash unchanged
     }

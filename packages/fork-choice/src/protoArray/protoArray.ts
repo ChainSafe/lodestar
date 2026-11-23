@@ -2124,7 +2124,7 @@ export class ProtoArray {
 
   /**
    * Check if a FULL payload variant (execution payload envelope) exists for this block root.
-   * Returns true once the SignedExecutionPayloadEnvelope for this block has been received and processed.
+   * Returns true once the ExecutionPayloadEnvelope for this block has been received and processed.
    */
   hasPayload(blockRoot: RootHex): boolean {
     // we should also make sure this blockRoot is a gloas block, however we only call this function

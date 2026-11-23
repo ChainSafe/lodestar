@@ -1,13 +1,8 @@
 import {describe, expect, it, vi} from "vitest";
 import {HttpStatusCode, routes} from "@lodestar/api";
-import {createBeaconConfig} from "@lodestar/config";
-import {getConfig} from "@lodestar/config/test-utils";
-import {SecretKey} from "@lodestar/native/blst";
-import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {defer, fromHex, toRootHex} from "@lodestar/utils";
 import {BidLedger, BidLedgerErrorCode} from "../../../src/services/bidLedger.js";
-import {BuilderSigner} from "../../../src/services/builderSigner.js";
 import {
   EnvelopePublisher,
   EnvelopePublisherError,
@@ -17,14 +12,8 @@ import {
 import type {ExecutionPayloadEnvelopeContents} from "../../../src/services/executionPayloadEnvelope.js";
 import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "../utils/apiStub.js";
 
-const builderIndex = 7;
-const signer = new BuilderSigner(
-  createBeaconConfig(getConfig(ForkName.gloas), Buffer.alloc(32, 9)),
-  keypair(Buffer.alloc(32, 1))
-);
-
 describe("EnvelopePublisher", () => {
-  it("signs, records, and submits an exact selected envelope", async () => {
+  it("records and submits an exact selected envelope", async () => {
     const contents = createContents();
     const {api, ledger, publisher} = createPublisher();
 
@@ -33,8 +22,8 @@ describe("EnvelopePublisher", () => {
     expect(result.status).toBe("published");
     expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledWith(
       {
-        signedEnvelopeOrContents: {
-          signedExecutionPayloadEnvelope: expect.objectContaining({message: contents.envelope}),
+        envelopeOrContents: {
+          executionPayloadEnvelope: contents.envelope,
           kzgProofs: contents.kzgProofs,
           blobs: contents.blobs,
         },
@@ -45,25 +34,6 @@ describe("EnvelopePublisher", () => {
     const identity = selectionIdentity(contents);
     expect(ledger.hasRevealed(identity.blockRoot)).toBe(true);
     expect(ledger.hasPublishedReveal(identity.blockRoot)).toBe(true);
-  });
-
-  it("rejects an envelope for another Builder before publication", async () => {
-    const contents = createContents();
-    contents.envelope.builderIndex++;
-    const {api, ledger, publisher} = createPublisher();
-
-    await expect(publisher.publish(contents, new AbortController().signal)).rejects.toThrowError(
-      new EnvelopePublisherError(
-        {
-          code: EnvelopePublisherErrorCode.BUILDER_INDEX_MISMATCH,
-          builderIndex,
-          envelopeBuilderIndex: contents.envelope.builderIndex,
-        },
-        `Envelope builder index does not match local builder index builderIndex=${builderIndex} envelopeBuilderIndex=${contents.envelope.builderIndex}`
-      )
-    );
-    expect(ledger.hasRevealed(toRootHex(contents.envelope.beaconBlockRoot))).toBe(false);
-    expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
   });
 
   it("rejects an envelope without an exact recorded selection", async () => {
@@ -268,13 +238,12 @@ function createPublisher({win = true}: {win?: boolean} = {}) {
   if (win) {
     ledger.recordWin({...bidIdentity, signedBidRoot}, blockRoot);
   }
-  const publisher = new EnvelopePublisher({api, signer, ledger, builderIndex});
+  const publisher = new EnvelopePublisher({api, ledger});
   return {api, ledger, publisher};
 }
 
 function createContents(): ExecutionPayloadEnvelopeContents {
   const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
-  envelope.builderIndex = builderIndex;
   envelope.payload.slotNumber = 10;
   envelope.payload.parentHash = Buffer.alloc(32, 2);
   envelope.parentBeaconBlockRoot = Buffer.alloc(32, 3);
@@ -295,9 +264,4 @@ function selectionIdentity(contents: ExecutionPayloadEnvelopeContents): Envelope
     blockHash: toRootHex(contents.envelope.payload.blockHash),
     blockRoot: toRootHex(contents.envelope.beaconBlockRoot),
   };
-}
-
-function keypair(secretKeyBytes: Uint8Array) {
-  const secretKey = SecretKey.fromBytes(secretKeyBytes);
-  return {secretKey, publicKey: secretKey.toPublicKey()};
 }

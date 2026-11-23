@@ -183,9 +183,9 @@ export class BlockProposingService {
    * 3. Reveal the execution payload envelope:
    *    - Self-build: the proposer signs and publishes the envelope
    *      - Stateless (`payloadLocal=false`): envelope and blobs are already available from step 1,
-   *        publish `SignedExecutionPayloadEnvelopeContents` which can be sent via any beacon node
+   *        publish `ExecutionPayloadEnvelopeContents` which can be sent via any beacon node
    *      - Stateful (`payloadLocal=true`): fetch the envelope from the beacon node that produced the
-   *        block, then publish the bare `SignedExecutionPayloadEnvelope` back to it; that node
+   *        block, then publish the bare `ExecutionPayloadEnvelope` back to it; that node
    *        attaches the cached blobs and KZG proofs
    *    - Builder bid: the builder reveals the envelope, so the proposer does nothing further
    */
@@ -329,18 +329,11 @@ export class BlockProposingService {
         // Stateless flow: envelope and blobs are already available from block production
         const {executionPayloadEnvelope, kzgProofs, blobs} = blockOrContents as BlockContents<ForkPostGloas>;
 
-        // Step 3: Sign and publish the envelope with blobs and KZG proofs
-        const signedEnvelope = await this.validatorStore.signExecutionPayloadEnvelope(
-          pubkey,
-          executionPayloadEnvelope,
-          slot,
-          this.logger
-        );
-
+        // Step 3: Publish the envelope with blobs and KZG proofs
         (
           await this.api.beacon
             .publishExecutionPayloadEnvelope({
-              signedEnvelopeOrContents: {signedExecutionPayloadEnvelope: signedEnvelope, kzgProofs, blobs},
+              envelopeOrContents: {executionPayloadEnvelope, kzgProofs, blobs},
               broadcastValidation,
             })
             .catch((e: Error) => {
@@ -366,18 +359,11 @@ export class BlockProposingService {
 
         this.logger.debug("Retrieved execution payload envelope", debugLogCtx);
 
-        // Step 3: Sign and publish the envelope, beacon node attaches blobs and KZG proofs from its cache
-        const signedEnvelope = await this.validatorStore.signExecutionPayloadEnvelope(
-          pubkey,
-          envelope,
-          slot,
-          this.logger
-        );
-
+        // Step 3: Publish the envelope, beacon node attaches blobs and KZG proofs from its cache
         (
           await this.api.beacon
             .publishExecutionPayloadEnvelope({
-              signedEnvelopeOrContents: signedEnvelope,
+              envelopeOrContents: envelope,
               broadcastValidation,
             })
             .catch((e: Error) => {

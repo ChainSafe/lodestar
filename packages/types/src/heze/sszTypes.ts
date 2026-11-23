@@ -45,7 +45,7 @@ export const ExecutionPayloadBid = new ProgressiveContainerType(
     ...gloasSsz.ExecutionPayloadBid.fields,
     inclusionListBits: InclusionListBits, // [New in Heze:EIP7805]
   },
-  activeFields(13),
+  activeFields(14),
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
 );
 

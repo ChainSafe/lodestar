@@ -156,19 +156,6 @@ describe("web3signer signature test", () => {
     await assertSameSignature("signVoluntaryExit", pubkeyBytes, validatorIndex, epoch);
   });
 
-  it("signExecutionPayloadEnvelope", async ({skip}) => {
-    if (ForkSeq.gloas > externalSigner.supportedForkSeq) {
-      skip();
-      return;
-    }
-
-    const slot = computeStartSlotAtEpoch(config.GLOAS_FORK_EPOCH);
-    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
-    envelope.payload.slotNumber = slot;
-
-    await assertSameSignature("signExecutionPayloadEnvelope", pubkeyBytes, envelope, slot);
-  });
-
   it("signPayloadAttestation", async ({skip}) => {
     if (ForkSeq.gloas > externalSigner.supportedForkSeq) {
       skip();

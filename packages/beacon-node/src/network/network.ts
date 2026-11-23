@@ -510,14 +510,11 @@ export class Network implements INetwork {
     );
   }
 
-  async publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number> {
-    const epoch = computeEpochAtSlot(signedEnvelope.message.payload.slotNumber);
+  async publishExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): Promise<number> {
+    const epoch = computeEpochAtSlot(envelope.payload.slotNumber);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
-    return this.publishGossip<GossipType.execution_payload>(
-      {type: GossipType.execution_payload, boundary},
-      signedEnvelope
-    );
+    return this.publishGossip<GossipType.execution_payload>({type: GossipType.execution_payload, boundary}, envelope);
   }
 
   async publishSignedExecutionPayloadBid(signedBid: gloas.SignedExecutionPayloadBid): Promise<number> {
@@ -696,7 +693,7 @@ export class Network implements INetwork {
   async sendExecutionPayloadEnvelopesByRange(
     peerId: PeerIdStr,
     request: gloas.ExecutionPayloadEnvelopesByRangeRequest
-  ): Promise<gloas.SignedExecutionPayloadEnvelope[]> {
+  ): Promise<gloas.ExecutionPayloadEnvelope[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.ExecutionPayloadEnvelopesByRange, [Version.V1], request),
       request.count,
@@ -709,7 +706,7 @@ export class Network implements INetwork {
   async sendExecutionPayloadEnvelopesByRoot(
     peerId: PeerIdStr,
     request: ExecutionPayloadEnvelopesByRootRequest
-  ): Promise<gloas.SignedExecutionPayloadEnvelope[]> {
+  ): Promise<gloas.ExecutionPayloadEnvelope[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.ExecutionPayloadEnvelopesByRoot, [Version.V1], request),
       request.length,

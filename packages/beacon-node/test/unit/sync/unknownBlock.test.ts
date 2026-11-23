@@ -67,7 +67,7 @@ function buildPayloadFixture({
   blockRootHex: string;
   blockRoot: Uint8Array;
   payloadInput: PayloadEnvelopeInput;
-  envelope: gloas.SignedExecutionPayloadEnvelope;
+  envelope: gloas.ExecutionPayloadEnvelope;
   columnSidecars: gloas.DataColumnSidecar[];
 } {
   const block = ssz.gloas.SignedBeaconBlock.defaultValue();
@@ -92,9 +92,9 @@ function buildPayloadFixture({
     daOutOfRange: false,
   });
 
-  const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-  envelope.message.beaconBlockRoot = blockRoot;
-  envelope.message.payload.slotNumber = slot;
+  const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+  envelope.beaconBlockRoot = blockRoot;
+  envelope.payload.slotNumber = slot;
 
   const columnSidecars = sampledColumns.map((index) => {
     const columnSidecar = ssz.gloas.DataColumnSidecar.defaultValue();
@@ -2031,7 +2031,7 @@ describe("UnknownBlockSync", () => {
       async (initial) => {
         const peer = await getRandPeerIdStr();
         const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
-        const firstFetch = defer<gloas.SignedExecutionPayloadEnvelope[]>();
+        const firstFetch = defer<gloas.ExecutionPayloadEnvelope[]>();
         const sendExecutionPayloadEnvelopesByRoot = vi
           .fn()
           .mockReturnValueOnce(firstFetch.promise)
@@ -2174,7 +2174,12 @@ describe("UnknownBlockSync", () => {
           expect(sendDataColumnSidecarsByRoot).toHaveBeenCalledOnce();
 
           if (stage === "validation failure") {
-            validation.reject(new PayloadError(payloadInput, {code: PayloadErrorCode.INVALID_SIGNATURE}));
+            validation.reject(
+              new PayloadError(payloadInput, {
+                code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
+                message: "payload root mismatch",
+              })
+            );
           } else validation.resolve();
           reload.resolve(payloadInput);
           await vi.advanceTimersByTimeAsync(0);
@@ -2240,8 +2245,8 @@ describe("UnknownBlockSync", () => {
         sampledColumns: [],
         slot: 1,
       });
-      const oldFetch = defer<gloas.SignedExecutionPayloadEnvelope[]>();
-      const currentFetch = defer<gloas.SignedExecutionPayloadEnvelope[]>();
+      const oldFetch = defer<gloas.ExecutionPayloadEnvelope[]>();
+      const currentFetch = defer<gloas.ExecutionPayloadEnvelope[]>();
       const sendExecutionPayloadEnvelopesByRoot = vi
         .fn()
         .mockReturnValueOnce(oldFetch.promise)
@@ -2305,7 +2310,12 @@ describe("UnknownBlockSync", () => {
         await vi.advanceTimersByTimeAsync(0);
         expect(processExecutionPayload).toHaveBeenCalledTimes(2);
 
-        oldProcess.reject(new PayloadError(payloadInput, {code: PayloadErrorCode.INVALID_SIGNATURE}));
+        oldProcess.reject(
+          new PayloadError(payloadInput, {
+            code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
+            message: "payload root mismatch",
+          })
+        );
         await vi.advanceTimersByTimeAsync(0);
         expect(removeInvalid).not.toHaveBeenCalled();
         emitter.emit(ChainEvent.incompletePayloadEnvelope, {payloadInput, peer, source: BlockInputSource.gossip});
@@ -2844,7 +2854,6 @@ describe("UnknownBlockSync", () => {
     });
 
     it.each<PayloadErrorType>([
-      {code: PayloadErrorCode.INVALID_SIGNATURE},
       {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
       {
         code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,

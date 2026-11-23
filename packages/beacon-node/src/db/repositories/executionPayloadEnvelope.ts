@@ -6,21 +6,21 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
 type BlockRoot = Root;
 
 /**
- * Used to store unfinalized `SignedExecutionPayloadEnvelope`
+ * Used to store unfinalized `ExecutionPayloadEnvelope`
  *
  * Indexed by beacon block root (root of the beacon block that contains the bid)
  */
-export class ExecutionPayloadEnvelopeRepository extends Repository<BlockRoot, gloas.SignedExecutionPayloadEnvelope> {
+export class ExecutionPayloadEnvelopeRepository extends Repository<BlockRoot, gloas.ExecutionPayloadEnvelope> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.gloas_executionPayloadEnvelope;
-    super(config, db, bucket, ssz.gloas.SignedExecutionPayloadEnvelope, getBucketNameByValue(bucket));
+    super(config, db, bucket, ssz.gloas.ExecutionPayloadEnvelope, getBucketNameByValue(bucket));
   }
 
   /**
    * Id is the beacon block root (not execution payload hash)
    * This allows correlation with the block that contains the bid
    */
-  getId(value: gloas.SignedExecutionPayloadEnvelope): BlockRoot {
-    return value.message.beaconBlockRoot;
+  getId(value: gloas.ExecutionPayloadEnvelope): BlockRoot {
+    return value.beaconBlockRoot;
   }
 }

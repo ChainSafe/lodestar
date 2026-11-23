@@ -21,6 +21,7 @@ export enum ExecutionPayloadEnvelopeErrorCode {
   PARENT_BLOCK_ROOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PARENT_BLOCK_ROOT_MISMATCH",
   PARENT_BLOCK_HASH_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PARENT_BLOCK_HASH_MISMATCH",
   BLOCK_HASH_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BLOCK_HASH_MISMATCH",
+  PAYLOAD_ROOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PAYLOAD_ROOT_MISMATCH",
   BUILDER_INDEX_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BUILDER_INDEX_MISMATCH",
   BLOB_KZG_COMMITMENTS_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BLOB_KZG_COMMITMENTS_MISMATCH",
   EXECUTION_REQUESTS_ROOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_EXECUTION_REQUESTS_ROOT_MISMATCH",
@@ -57,6 +58,11 @@ export type ExecutionPayloadEnvelopeErrorType =
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH;
       bidBlockHash: RootHex;
       payloadBlockHash: RootHex;
+    }
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ROOT_MISMATCH;
+      bidPayloadRoot: RootHex;
+      payloadRoot: RootHex;
     };
 
 export class ExecutionPayloadEnvelopeError extends LodestarError<ExecutionPayloadEnvelopeErrorType> {}
@@ -124,6 +130,15 @@ export function createExecutionPayloadEnvelopeContents({
     );
   }
 
+  const payloadRoot = ssz.gloas.ExecutionPayload.hashTreeRoot(payload.executionPayload);
+  if (!byteArrayEquals(payloadRoot, selectedBid.payloadRoot)) {
+    throw new ExecutionPayloadEnvelopeError({
+      code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ROOT_MISMATCH,
+      bidPayloadRoot: toRootHex(selectedBid.payloadRoot),
+      payloadRoot: toRootHex(payloadRoot),
+    });
+  }
+
   if (
     !ssz.gloas.ExecutionPayloadBid.fields.blobKzgCommitments.equals(
       selectedBid.blobKzgCommitments,
@@ -146,7 +161,6 @@ export function createExecutionPayloadEnvelopeContents({
     envelope: {
       payload: payload.executionPayload,
       executionRequests: payload.executionRequests,
-      builderIndex,
       beaconBlockRoot: fromHex(blockRoot),
       parentBeaconBlockRoot: selectedBid.parentBlockRoot,
     },

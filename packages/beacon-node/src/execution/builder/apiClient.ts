@@ -182,7 +182,7 @@ export class BuilderApiClient {
   /**
    * Submit the signed beacon block to the builder whose bid was included. The builder is
    * then responsible for constructing and broadcasting the corresponding
-   * `SignedExecutionPayloadEnvelope`, no further action is required by the proposer.
+   * `ExecutionPayloadEnvelope`, no further action is required by the proposer.
    */
   async submitSignedBeaconBlock(
     url: BuilderUrl,

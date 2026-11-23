@@ -557,7 +557,7 @@ export type Endpoints = {
   /**
    * Get execution payload envelope.
    * Retrieves the cached execution payload envelope for a given slot and beacon block root,
-   * to be signed and published via `publishExecutionPayloadEnvelope`.
+   * to be published via `publishExecutionPayloadEnvelope`.
    * Used in the stateful (`includePayload=false`) local build flow.
    */
   getExecutionPayloadEnvelope: Endpoint<

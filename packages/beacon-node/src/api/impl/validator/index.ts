@@ -2,7 +2,6 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {
-  BUILDER_INDEX_SELF_BUILD,
   ForkName,
   ForkPostBellatrix,
   ForkPostDeneb,
@@ -1335,7 +1334,6 @@ export function getValidatorApi(
           executionPayloadEnvelope: {
             payload: executionPayload,
             executionRequests,
-            builderIndex: BUILDER_INDEX_SELF_BUILD,
             beaconBlockRoot: fromHex(blockRoot),
             parentBeaconBlockRoot: parentBlockRoot,
           },
@@ -2380,7 +2378,6 @@ export function getValidatorApi(
       const envelope: gloas.ExecutionPayloadEnvelope = {
         payload: executionPayload,
         executionRequests: executionRequests,
-        builderIndex: BUILDER_INDEX_SELF_BUILD,
         beaconBlockRoot,
         parentBeaconBlockRoot: parentBlockRoot,
       };

@@ -27,7 +27,6 @@ describe("createExecutionPayloadEnvelopeContents", () => {
     expect(contents.envelope).toEqual({
       payload: payload.executionPayload,
       executionRequests: payload.executionRequests,
-      builderIndex,
       beaconBlockRoot: fromHex(blockRoot),
       parentBeaconBlockRoot: selectedBid.parentBlockRoot,
     });
@@ -97,12 +96,14 @@ describe("createExecutionPayloadEnvelopeContents", () => {
 
   it.each([
     ["builderIndex", ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH],
+    ["payloadRoot", ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ROOT_MISMATCH],
     ["blobKzgCommitments", ExecutionPayloadEnvelopeErrorCode.BLOB_KZG_COMMITMENTS_MISMATCH],
     ["executionRequestsRoot", ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH],
   ] as const)("rejects a selected bid with a different %s", (field, code) => {
     const payload = createBuiltPayload();
     const selectedBid = bidIdentity(payload);
     if (field === "builderIndex") selectedBid.builderIndex++;
+    if (field === "payloadRoot") selectedBid.payloadRoot = Buffer.alloc(32, 9);
     if (field === "blobKzgCommitments") selectedBid.blobKzgCommitments = [Buffer.alloc(48, 9)];
     if (field === "executionRequestsRoot") selectedBid.executionRequestsRoot = Buffer.alloc(32, 9);
 
@@ -187,6 +188,7 @@ function bidIdentity(payload: BuiltPayload): gloas.ExecutionPayloadBid {
     parentBlockHash: Uint8Array.from(payload.executionPayload.parentHash),
     parentBlockRoot: fromHex(root(3)),
     blockHash: Uint8Array.from(payload.executionPayload.blockHash),
+    payloadRoot: ssz.gloas.ExecutionPayload.hashTreeRoot(payload.executionPayload),
     builderIndex,
     blobKzgCommitments: payload.blobsBundle.commitments.map((commitment) => Uint8Array.from(commitment)),
     executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(payload.executionRequests),

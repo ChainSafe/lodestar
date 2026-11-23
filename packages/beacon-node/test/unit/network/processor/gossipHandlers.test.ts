@@ -142,10 +142,10 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
     ] as SequentialGossipHandler<GossipType.data_column_sidecar>;
 
     function createEnvelope(transactionCount = 0) {
-      const envelope = forkTypes.SignedExecutionPayloadEnvelope.defaultValue();
-      envelope.message.beaconBlockRoot = blockRoot;
-      envelope.message.payload.slotNumber = 1;
-      envelope.message.payload.transactions = SerializedList.fromArray(
+      const envelope = forkTypes.ExecutionPayloadEnvelope.defaultValue();
+      envelope.beaconBlockRoot = blockRoot;
+      envelope.payload.slotNumber = 1;
+      envelope.payload.transactions = SerializedList.fromArray(
         Array.from({length: transactionCount}, () => new Uint8Array(1))
       );
       return envelope;
@@ -155,7 +155,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
     async function validateEnvelope(transactionCount = 0): Promise<void> {
       await envelopeHandler({
         gossipData: {
-          serializedData: forkTypes.SignedExecutionPayloadEnvelope.serialize(createEnvelope(transactionCount)),
+          serializedData: forkTypes.ExecutionPayloadEnvelope.serialize(createEnvelope(transactionCount)),
         },
         topic: {boundary: {fork, epoch: 0}, type: GossipType.execution_payload},
         peerIdStr,
@@ -198,10 +198,7 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
   }
 
   // What BlockInputSync does when a by-root response lands, see toPendingPayloadInput
-  function addByRootIfMissing(
-    payloadInput: PayloadEnvelopeInput,
-    envelope: gloas.SignedExecutionPayloadEnvelope
-  ): void {
+  function addByRootIfMissing(payloadInput: PayloadEnvelopeInput, envelope: gloas.ExecutionPayloadEnvelope): void {
     if (!payloadInput.hasPayloadEnvelope()) {
       payloadInput.addPayloadEnvelope({
         envelope,
@@ -224,7 +221,9 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
     await vi.advanceTimersByTimeAsync(0);
 
     expect(onGossip).toHaveBeenCalledOnce();
-    expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validSignature: true});
+    expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {
+      validExecutionRequestsRoot: true,
+    });
   });
 
   it("still emits and imports if another source added the envelope while gossip validation was running", async () => {
@@ -238,8 +237,10 @@ describe.each([ForkName.gloas, ForkName.heze] as const)("incomplete payload goss
 
     expect(payloadInput.getPayloadEnvelope()).toBe(byRootEnvelope);
     expect(onGossip).toHaveBeenCalledOnce();
-    // The stored envelope is not the one gossip validated, so its signature must be verified at import
-    expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {validSignature: false});
+    // The stored envelope is not the one gossip validated, so it must be verified at import
+    expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput, {
+      validExecutionRequestsRoot: false,
+    });
   });
 
   it("requests missing columns at the configured payload deadline when only the envelope arrives", async () => {
@@ -493,7 +494,6 @@ describe("getGossipHandlers", () => {
   });
 
   it.each<PayloadErrorType>([
-    {code: PayloadErrorCode.INVALID_SIGNATURE},
     {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
     {
       code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
@@ -508,7 +508,6 @@ describe("getGossipHandlers", () => {
   });
 
   it.each<PayloadErrorType>([
-    {code: PayloadErrorCode.INVALID_SIGNATURE},
     {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: "parent_beacon_block_root mismatch"},
     {
       code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
@@ -578,12 +577,12 @@ async function runExecutionPayloadProcessingError(
     source: PayloadEnvelopeInputSource.gossip,
     seenTimestampSec: 0,
   });
-  const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-  signedEnvelope.message.beaconBlockRoot = blockRoot;
-  signedEnvelope.message.payload.slotNumber = 1;
+  const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+  envelope.beaconBlockRoot = blockRoot;
+  envelope.payload.slotNumber = 1;
 
   if (opts.addedByAnotherSource) {
-    const byRootEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(signedEnvelope);
+    const byRootEnvelope = ssz.gloas.ExecutionPayloadEnvelope.clone(envelope);
     payloadInput.addPayloadEnvelope({
       envelope: byRootEnvelope,
       source: PayloadEnvelopeInputSource.byRoot,
@@ -624,7 +623,7 @@ async function runExecutionPayloadProcessingError(
   ] as SequentialGossipHandler<GossipType.execution_payload>;
 
   await executionPayloadHandler({
-    gossipData: {serializedData: ssz.gloas.SignedExecutionPayloadEnvelope.serialize(signedEnvelope)},
+    gossipData: {serializedData: ssz.gloas.ExecutionPayloadEnvelope.serialize(envelope)},
     peerIdStr,
     seenTimestampSec: 0,
     topic: {

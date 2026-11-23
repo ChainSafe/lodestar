@@ -210,7 +210,7 @@ export class Builder {
         clock,
         bidSelector: new BidSelector({config, ledger, builderIndex: index}),
         payloadStore,
-        envelopePublisher: new EnvelopePublisher({api, signer: builderSigner, ledger, builderIndex: index}),
+        envelopePublisher: new EnvelopePublisher({api, ledger}),
         builderIndex: index,
         metrics: opts.metrics,
         signal,

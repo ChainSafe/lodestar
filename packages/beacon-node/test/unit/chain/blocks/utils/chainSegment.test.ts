@@ -55,10 +55,10 @@ describe("chain / blocks / utils / chainSegment / assertLinearChainSegment with 
       source: PayloadEnvelopeInputSource.byRange,
       daOutOfRange: false,
     });
-    const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    envelope.message.beaconBlockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message as gloas.BeaconBlock);
-    envelope.message.payload.slotNumber = block.message.slot;
-    envelope.message.payload.blockHash = payloadBlockHash;
+    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    envelope.beaconBlockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message as gloas.BeaconBlock);
+    envelope.payload.slotNumber = block.message.slot;
+    envelope.payload.blockHash = payloadBlockHash;
     payloadInput.addPayloadEnvelope({
       envelope,
       source: PayloadEnvelopeInputSource.byRange,
@@ -208,10 +208,10 @@ describe("chain / blocks / utils / chainSegment / assertLinearChainSegment bound
       source: PayloadEnvelopeInputSource.byRange,
       daOutOfRange: false,
     });
-    const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    envelope.message.beaconBlockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message as gloas.BeaconBlock);
-    envelope.message.payload.slotNumber = block.message.slot;
-    envelope.message.payload.blockHash = payloadBlockHash;
+    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    envelope.beaconBlockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message as gloas.BeaconBlock);
+    envelope.payload.slotNumber = block.message.slot;
+    envelope.payload.blockHash = payloadBlockHash;
     payloadInput.addPayloadEnvelope({
       envelope,
       source: PayloadEnvelopeInputSource.byRange,

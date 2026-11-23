@@ -48,7 +48,8 @@ type RejectPeerActionRule = {default: PeerAction; byCode?: Record<string, PeerAc
 
 /**
  * PeerAction mapping based on the topic and specific codes.
- * Invalid signatures are Fatal on every topic.
+ * Invalid signatures are Fatal on every topic, as is a payload root mismatch which takes
+ * the place of the signature for the unsigned execution payload envelope.
  */
 const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
   [GossipType.beacon_block]: {
@@ -61,7 +62,7 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
   },
   [GossipType.execution_payload]: {
     default: PeerAction.LowToleranceError,
-    byCode: {[ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+    byCode: {[ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ROOT_MISMATCH]: PeerAction.Fatal},
   },
   [GossipType.beacon_aggregate_and_proof]: {
     default: PeerAction.MidToleranceError,

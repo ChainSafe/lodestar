@@ -34,7 +34,6 @@ export enum SignableMessageType {
   SYNC_COMMITTEE_SELECTION_PROOF = "SYNC_COMMITTEE_SELECTION_PROOF",
   SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF = "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
   VALIDATOR_REGISTRATION = "VALIDATOR_REGISTRATION",
-  EXECUTION_PAYLOAD_ENVELOPE = "EXECUTION_PAYLOAD_ENVELOPE",
   PAYLOAD_ATTESTATION_MESSAGE = "PAYLOAD_ATTESTATION_MESSAGE",
   PROPOSER_PREFERENCES = "PROPOSER_PREFERENCES",
   BUILDER_REQUEST_AUTH = "BUILDER_REQUEST_AUTH",
@@ -88,7 +87,6 @@ export type SignableMessage =
   | {type: SignableMessageType.SYNC_COMMITTEE_SELECTION_PROOF; data: ValueOf<typeof SyncAggregatorSelectionDataType>}
   | {type: SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF; data: altair.ContributionAndProof}
   | {type: SignableMessageType.VALIDATOR_REGISTRATION; data: ValidatorRegistrationV1}
-  | {type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE; data: gloas.ExecutionPayloadEnvelope}
   | {type: SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE; data: gloas.PayloadAttestationData}
   | {type: SignableMessageType.PROPOSER_PREFERENCES; data: gloas.ProposerPreferences}
   | {type: SignableMessageType.BUILDER_REQUEST_AUTH; data: gloas.BuilderRequestAuth}
@@ -107,7 +105,6 @@ const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.SYNC_COMMITTEE_SELECTION_PROOF]: true,
   [SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF]: true,
   [SignableMessageType.VALIDATOR_REGISTRATION]: false,
-  [SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE]: true,
   [SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE]: true,
   [SignableMessageType.PROPOSER_PREFERENCES]: true,
   [SignableMessageType.BUILDER_REQUEST_AUTH]: false,
@@ -283,16 +280,6 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
 
     case SignableMessageType.VALIDATOR_REGISTRATION:
       return {validator_registration: ssz.bellatrix.ValidatorRegistrationV1.toJson(payload.data)};
-
-    case SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE: {
-      const slot = payload.data.payload.slotNumber;
-      return {
-        execution_payload_envelope: {
-          version: config.getForkName(slot).toUpperCase(),
-          data: config.getForkTypes<ForkPostGloas>(slot).ExecutionPayloadEnvelope.toJson(payload.data),
-        },
-      };
-    }
 
     case SignableMessageType.PAYLOAD_ATTESTATION_MESSAGE: {
       const slot = payload.data.slot;

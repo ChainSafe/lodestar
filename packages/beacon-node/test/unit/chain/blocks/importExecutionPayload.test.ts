@@ -10,7 +10,6 @@ import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 
 vi.mock("../../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js", () => ({
   verifyExecutionPayloadEnvelope: vi.fn(),
-  verifyExecutionPayloadEnvelopeSignature: vi.fn().mockResolvedValue(true),
 }));
 vi.mock("@lodestar/state-transition", async (importActual) => ({
   ...(await importActual<typeof import("@lodestar/state-transition")>()),
@@ -56,10 +55,10 @@ describe("chain / blocks / importExecutionPayload INVALID verdict", () => {
       blockRootHex,
       getBlockHashHex: () => blockHashHex,
       getVersionedHashes: () => [],
-      getPayloadEnvelope: () => ({message: {payload: {slotNumber: slot, parentHash}}}),
+      getPayloadEnvelope: () => ({payload: {slotNumber: slot, parentHash}}),
     } as unknown as PayloadEnvelopeInput;
     const run = importExecutionPayload.call(chain, payloadInput, DataAvailabilityStatus.Available, {
-      validSignature: true,
+      validExecutionRequestsRoot: true,
     });
     return {run, invalidateExecutionPayloads};
   }

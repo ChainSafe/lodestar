@@ -23,7 +23,7 @@ function buildPayloadEnvelopeInput({
   forkName?: ForkName;
 }): {
   payloadInput: PayloadEnvelopeInput;
-  signedEnvelope: gloas.SignedExecutionPayloadEnvelope;
+  envelope: gloas.ExecutionPayloadEnvelope;
 } {
   const block = ssz.gloas.SignedBeaconBlock.defaultValue();
   block.message.slot = 0;
@@ -44,16 +44,16 @@ function buildPayloadEnvelopeInput({
     daOutOfRange,
   });
 
-  const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-  signedEnvelope.message.beaconBlockRoot = blockRoot;
+  const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+  envelope.beaconBlockRoot = blockRoot;
 
   payloadInput.addPayloadEnvelope({
-    envelope: signedEnvelope,
+    envelope,
     source: PayloadEnvelopeInputSource.gossip,
     seenTimestampSec: Date.now() / 1000,
   });
 
-  return {payloadInput, signedEnvelope};
+  return {payloadInput, envelope};
 }
 
 function buildColumnSidecar(index: ColumnIndex): gloas.DataColumnSidecar {
@@ -212,7 +212,7 @@ describe("PayloadEnvelopeInput.waitForEnvelopeAndAllData", () => {
   }: {
     blobCount: number;
     sampledColumns: ColumnIndex[];
-  }): {payloadInput: PayloadEnvelopeInput; signedEnvelope: gloas.SignedExecutionPayloadEnvelope} {
+  }): {payloadInput: PayloadEnvelopeInput; envelope: gloas.ExecutionPayloadEnvelope} {
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = 0;
     const commitments = Array.from({length: blobCount}, () => Buffer.alloc(48, 0x77));
@@ -232,10 +232,10 @@ describe("PayloadEnvelopeInput.waitForEnvelopeAndAllData", () => {
       daOutOfRange: false,
     });
 
-    const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    signedEnvelope.message.beaconBlockRoot = blockRoot;
+    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    envelope.beaconBlockRoot = blockRoot;
 
-    return {payloadInput, signedEnvelope};
+    return {payloadInput, envelope};
   }
 
   it("resolves immediately when already complete", async () => {
@@ -247,7 +247,7 @@ describe("PayloadEnvelopeInput.waitForEnvelopeAndAllData", () => {
 
   it("waits for envelope and columns, then resolves", async () => {
     const sampled = [0, 1];
-    const {payloadInput, signedEnvelope} = buildPayloadInputNoEnvelope({blobCount: 1, sampledColumns: sampled});
+    const {payloadInput, envelope} = buildPayloadInputNoEnvelope({blobCount: 1, sampledColumns: sampled});
     expect(payloadInput.isComplete()).toBe(false);
 
     const controller = new AbortController();
@@ -256,7 +256,7 @@ describe("PayloadEnvelopeInput.waitForEnvelopeAndAllData", () => {
     // Envelope + columns arrive asynchronously
     await new Promise((resolve) => setTimeout(resolve, 5));
     payloadInput.addPayloadEnvelope({
-      envelope: signedEnvelope,
+      envelope,
       source: PayloadEnvelopeInputSource.gossip,
       seenTimestampSec: Date.now() / 1000,
     });
@@ -291,9 +291,9 @@ describe("PayloadEnvelopeInput.waitForEnvelopeAndAllData", () => {
 
   it("rejects with timeout when columns never arrive", async () => {
     const sampled = [0, 1];
-    const {payloadInput, signedEnvelope} = buildPayloadInputNoEnvelope({blobCount: 1, sampledColumns: sampled});
+    const {payloadInput, envelope} = buildPayloadInputNoEnvelope({blobCount: 1, sampledColumns: sampled});
     payloadInput.addPayloadEnvelope({
-      envelope: signedEnvelope,
+      envelope,
       source: PayloadEnvelopeInputSource.gossip,
       seenTimestampSec: Date.now() / 1000,
     });

@@ -28,14 +28,14 @@ export type PayloadEnvelopeInputState =
       hasPayload: true;
       hasAllData: false;
       hasComputedAllData: false;
-      payloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
+      payloadEnvelope: gloas.ExecutionPayloadEnvelope;
       payloadEnvelopeSource: SourceMeta;
     }
   | {
       hasPayload: true;
       hasAllData: true;
       hasComputedAllData: boolean;
-      payloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
+      payloadEnvelope: gloas.ExecutionPayloadEnvelope;
       payloadEnvelopeSource: SourceMeta;
       timeCompleteSec: number;
     };
@@ -81,7 +81,7 @@ export class PayloadEnvelopeInput {
 
   private timeCreatedSec: number;
 
-  private readonly payloadEnvelopeDataPromise: PromiseParts<gloas.SignedExecutionPayloadEnvelope>;
+  private readonly payloadEnvelopeDataPromise: PromiseParts<gloas.ExecutionPayloadEnvelope>;
   private readonly allDataPromise: PromiseParts<gloas.DataColumnSidecar[]>;
   private readonly columnsDataPromise: PromiseParts<gloas.DataColumnSidecar[]>;
 
@@ -184,7 +184,7 @@ export class PayloadEnvelopeInput {
     if (this.state.hasPayload) {
       throw new Error(`Payload envelope already set for block ${this.blockRootHex}`);
     }
-    if (toRootHex(props.envelope.message.beaconBlockRoot) !== this.blockRootHex) {
+    if (toRootHex(props.envelope.beaconBlockRoot) !== this.blockRootHex) {
       throw new Error("Payload envelope beacon_block_root mismatch");
     }
 
@@ -296,7 +296,7 @@ export class PayloadEnvelopeInput {
     return this.state.hasPayload;
   }
 
-  getPayloadEnvelope(): gloas.SignedExecutionPayloadEnvelope {
+  getPayloadEnvelope(): gloas.ExecutionPayloadEnvelope {
     if (!this.state.hasPayload) throw new Error("Payload envelope not set");
     return this.state.payloadEnvelope;
   }
@@ -402,7 +402,7 @@ export class PayloadEnvelopeInput {
     return this.state.hasPayload && this.state.hasAllData;
   }
 
-  async waitForData(): Promise<gloas.SignedExecutionPayloadEnvelope> {
+  async waitForData(): Promise<gloas.ExecutionPayloadEnvelope> {
     return this.payloadEnvelopeDataPromise.promise;
   }
 

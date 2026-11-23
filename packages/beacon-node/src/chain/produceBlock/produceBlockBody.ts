@@ -379,6 +379,7 @@ export async function produceBlockBody<T extends BlockType>(
       parentBlockHash,
       parentBlockRoot,
       blockHash: executionPayload.blockHash,
+      payloadRoot: ssz.gloas.ExecutionPayload.hashTreeRoot(executionPayload as gloas.ExecutionPayload),
       prevRandao: currentState.getRandaoMix(currentState.epoch),
       feeRecipient: executionPayload.feeRecipient,
       gasLimit: BigInt(executionPayload.gasLimit),

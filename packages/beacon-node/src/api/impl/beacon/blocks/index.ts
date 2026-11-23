@@ -34,7 +34,7 @@ import {
   fulu,
   gloas,
   isDenebBlockContents,
-  isSignedExecutionPayloadEnvelopeContents,
+  isExecutionPayloadEnvelopeContents,
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, prettyGweiToEth, sleep, toHex, toRootHex} from "@lodestar/utils";
@@ -702,23 +702,22 @@ export function getBeaconBlockApi(
     publishBlockV2,
     publishBlindedBlockV2,
 
-    async publishExecutionPayloadEnvelope({signedEnvelopeOrContents, broadcastValidation}) {
+    async publishExecutionPayloadEnvelope({envelopeOrContents, broadcastValidation}) {
       const seenTimestampSec = Date.now() / 1000;
 
-      const blobDataIncluded = isSignedExecutionPayloadEnvelopeContents(signedEnvelopeOrContents);
-      let signedExecutionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
+      const blobDataIncluded = isExecutionPayloadEnvelopeContents(envelopeOrContents);
+      let envelope: gloas.ExecutionPayloadEnvelope;
       // Blobs and KZG proofs submitted alongside the envelope in the stateless flow
       let submittedContents: {kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs} | null = null;
 
       if (blobDataIncluded) {
-        signedExecutionPayloadEnvelope = signedEnvelopeOrContents.signedExecutionPayloadEnvelope;
-        submittedContents = {kzgProofs: signedEnvelopeOrContents.kzgProofs, blobs: signedEnvelopeOrContents.blobs};
+        envelope = envelopeOrContents.executionPayloadEnvelope;
+        submittedContents = {kzgProofs: envelopeOrContents.kzgProofs, blobs: envelopeOrContents.blobs};
       } else {
         // Stateful flow, blobs and KZG proofs are attached from the block production cache below
-        signedExecutionPayloadEnvelope = signedEnvelopeOrContents;
+        envelope = envelopeOrContents;
       }
 
-      const envelope = signedExecutionPayloadEnvelope.message;
       const slot = envelope.payload.slotNumber;
       const fork = config.getForkName(slot);
       const blockRootHex = toRootHex(envelope.beaconBlockRoot);
@@ -747,7 +746,8 @@ export function getBeaconBlockApi(
         throw new ApiError(400, `Envelope slot ${slot} does not match block slot ${block.slot}`);
       }
 
-      const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
+      const builderIndex = chain.seenPayloadEnvelopeInputCache.get(blockRootHex)?.getBuilderIndex();
+      const isSelfBuild = builderIndex === BUILDER_INDEX_SELF_BUILD;
       const cachedResult = chain.blockProductionCache.get(blockRootHex);
       // Only use the cached result if it contains payload data, blocks committing to a bid are cached without it
       const cachedGloasResult =
@@ -763,7 +763,7 @@ export function getBeaconBlockApi(
         slot,
         blockRoot: blockRootHex,
         blockHash: blockHashHex,
-        builderIndex: envelope.builderIndex,
+        builderIndex,
         isSelfBuild,
         blobDataIncluded,
         broadcastValidation,
@@ -772,13 +772,13 @@ export function getBeaconBlockApi(
       try {
         switch (broadcastValidation) {
           case routes.beacon.BroadcastValidation.gossip: {
-            await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+            await validateApiExecutionPayloadEnvelope(chain, envelope);
             break;
           }
 
           case routes.beacon.BroadcastValidation.consensusAndEquivocation:
           case routes.beacon.BroadcastValidation.consensus: {
-            await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+            await validateApiExecutionPayloadEnvelope(chain, envelope);
 
             // Verify the envelope against the post-block state
             const blockState = await chain.regen
@@ -794,7 +794,7 @@ export function getBeaconBlockApi(
               );
             }
             try {
-              // Signature and executionRequestsRoot are already verified by gossip validation above
+              // executionRequestsRoot is already verified by gossip validation above
               verifyExecutionPayloadEnvelope(chain.config, blockState, envelope, {verifyExecutionRequestsRoot: false});
             } catch (error) {
               chain.logger.error(
@@ -929,7 +929,7 @@ export function getBeaconBlockApi(
         chain.logger.debug("Execution payload envelope already added during publishing", valLogMeta);
       } else {
         payloadInput.addPayloadEnvelope({
-          envelope: signedExecutionPayloadEnvelope,
+          envelope,
           source: PayloadEnvelopeInputSource.api,
           seenTimestampSec,
           peerIdStr: undefined,
@@ -949,7 +949,7 @@ export function getBeaconBlockApi(
 
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
-      chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.api, delaySec, signedExecutionPayloadEnvelope);
+      chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.api, delaySec, envelope);
 
       chain.logger.info("Publishing execution payload envelope", {
         ...valLogMeta,
@@ -957,16 +957,16 @@ export function getBeaconBlockApi(
       });
 
       const publishPromises = [
-        // Gossip the signed execution payload envelope first
-        () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
+        // Gossip the execution payload envelope first
+        () => network.publishExecutionPayloadEnvelope(envelope),
         // Publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
         // Import execution payload
         () =>
           chain.processExecutionPayload(payloadInput, {
-            // Signature is verified during broadcast validation only for the submitted envelope,
+            // Only the submitted envelope is validated during broadcast validation,
             // an envelope cached by another source is verified at import
-            validSignature: payloadInput.getPayloadEnvelope() === signedExecutionPayloadEnvelope,
+            validExecutionRequestsRoot: payloadInput.getPayloadEnvelope() === envelope,
           }),
       ];
 
@@ -976,7 +976,7 @@ export function getBeaconBlockApi(
 
       chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
         slot,
-        builderIndex: envelope.builderIndex,
+        builderIndex: payloadInput.getBuilderIndex(),
         blockHash: blockHashHex,
         blockRoot: blockRootHex,
       });
@@ -1092,7 +1092,7 @@ export function getBeaconBlockApi(
         throw new ApiError(404, `Execution payload envelope not found for slot=${slot}, blockRoot=${blockRootHex}`);
       }
 
-      let data: Uint8Array | gloas.SignedExecutionPayloadEnvelope | null;
+      let data: Uint8Array | gloas.ExecutionPayloadEnvelope | null;
       try {
         data = context?.returnBytes
           ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)

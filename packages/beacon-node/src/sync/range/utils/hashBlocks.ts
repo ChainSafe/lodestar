@@ -6,8 +6,8 @@ import {PayloadEnvelopeInput} from "../../../chain/blocks/payloadEnvelopeInput/p
 
 const ROOT_SIZE = 32;
 const SIGNATURE_SIZE = 96;
-/** Every block and every payload envelope contributes a fixed-size (root, signature) entry */
-const ENTRY_SIZE = ROOT_SIZE + SIGNATURE_SIZE;
+/** Every block contributes a fixed-size (root, signature) entry, every payload envelope its root */
+const BLOCK_ENTRY_SIZE = ROOT_SIZE + SIGNATURE_SIZE;
 /** uint32 LE counts of block and envelope entries, so the variable-length sections are self-describing */
 const COUNT_SIZE = 4;
 const HEADER_SIZE = COUNT_SIZE * 2;
@@ -16,14 +16,13 @@ const HEADER_SIZE = COUNT_SIZE * 2;
  * Root uniquely identifying a batch attempt (its blocks AND payloads). Used for peer scoring and to
  * compare if two attempts are equivalent.
  *
- * Signatures are part of the id for BOTH blocks and payload envelopes, not just their message roots:
- * a peer serving a correct message with a garbage signature would otherwise produce the same id as
- * the honest attempt and escape scoring in `SyncChain.advanceChain`. Signatures are not verified at
- * download time, only during processChainSegment (block signatures in verifyBlocksSignatures,
- * envelope signatures in importExecutionPayload).
+ * Block signatures are part of the id, not just the block roots: a peer serving a correct block
+ * with a garbage signature would otherwise produce the same id as the honest attempt and escape
+ * scoring in `SyncChain.advanceChain`. Block signatures are not verified at download time, only
+ * during processChainSegment (verifyBlocksSignatures). Payload envelopes are not signed.
  *
  * Entries are written as raw bytes into a single exactly-sized buffer and digested once, so an
- * `Attempt` retains 32 bytes rather than the ~16 KB a full 32-slot gloas batch would need if the
+ * `Attempt` retains 32 bytes rather than the ~10 KB a full 32-slot gloas batch would need if the
  * roots and signatures were concatenated as hex. sha256 (not a 64-bit hash) because a peer that
  * could force a collision with the winning attempt would escape peer scoring.
  */
@@ -37,7 +36,7 @@ export function hashBlocks(blocks: IBlockInput[], payloadEnvelopes: Map<Slot, Pa
           .sort(([slotA], [slotB]) => slotA - slotB)
       : [];
 
-  const buf = Buffer.allocUnsafe(HEADER_SIZE + (blocks.length + envelopes.length) * ENTRY_SIZE);
+  const buf = Buffer.allocUnsafe(HEADER_SIZE + blocks.length * BLOCK_ENTRY_SIZE + envelopes.length * ROOT_SIZE);
   buf.writeUInt32LE(blocks.length, 0);
   buf.writeUInt32LE(envelopes.length, COUNT_SIZE);
   let offset = HEADER_SIZE;
@@ -50,12 +49,9 @@ export function hashBlocks(blocks: IBlockInput[], payloadEnvelopes: Map<Slot, Pa
   }
 
   for (const [, envelope] of envelopes) {
-    const signedEnvelope = envelope.getPayloadEnvelope();
     // envelope's root is cached thanks to cachePermanentRootStruct, so this avoids re-hashing
-    buf.set(ssz.gloas.ExecutionPayloadEnvelope.hashTreeRoot(signedEnvelope.message), offset);
+    buf.set(ssz.gloas.ExecutionPayloadEnvelope.hashTreeRoot(envelope.getPayloadEnvelope()), offset);
     offset += ROOT_SIZE;
-    buf.set(signedEnvelope.signature, offset);
-    offset += SIGNATURE_SIZE;
   }
 
   return toRootHex(digest(buf));

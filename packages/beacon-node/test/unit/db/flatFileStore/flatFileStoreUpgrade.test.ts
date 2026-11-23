@@ -15,7 +15,7 @@ import type {IBeaconChain} from "../../../../src/chain/interface.js";
 import {BeaconDb} from "../../../../src/db/beacon.js";
 import {encodeArchivedHeaderEnvelope} from "../../../../src/db/repositories/index.js";
 import {onDataColumnSidecarsByRange} from "../../../../src/network/reqresp/handlers/dataColumnSidecarsByRange.js";
-import {toSignedHeaderEnvelope} from "../../../../src/util/headerEnvelope.js";
+import {toHeaderEnvelope} from "../../../../src/util/headerEnvelope.js";
 
 describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)", (fork) => {
   const config = createChainForkConfig({FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: fork === "gloas" ? 0 : Infinity});
@@ -70,12 +70,12 @@ describe.each(["fulu", "gloas"] as const)("flat-file upgrade range serving (%s)"
       await db.dataColumns.putManyBinary({slot, blockRoot: toRootHex(root)}, columns);
     }
     if (fork === "gloas") {
-      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      envelope.message.beaconBlockRoot = root;
-      envelope.message.payload.slotNumber = slot;
+      const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+      envelope.beaconBlockRoot = root;
+      envelope.payload.slotNumber = slot;
       await db.executionPayloadEnvelopeArchive.putBinary(
         slot,
-        encodeArchivedHeaderEnvelope(toSignedHeaderEnvelope(envelope))
+        encodeArchivedHeaderEnvelope(toHeaderEnvelope(envelope))
       );
     }
     return {block, columns: columns.map(({data}) => data)};

@@ -323,9 +323,9 @@ describe("sync / range / batch", async () => {
           daOutOfRange: false,
         });
         if (addEnvelope) {
-          const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-          envelope.message.beaconBlockRoot = blockRoot;
-          envelope.message.payload.slotNumber = slot;
+          const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+          envelope.beaconBlockRoot = blockRoot;
+          envelope.payload.slotNumber = slot;
           payloadInput.addPayloadEnvelope({
             envelope,
             source: PayloadEnvelopeInputSource.byRange,

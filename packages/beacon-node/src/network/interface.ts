@@ -91,11 +91,11 @@ export interface INetwork extends INetworkCorePublic {
   sendExecutionPayloadEnvelopesByRange(
     peerId: PeerIdStr,
     request: gloas.ExecutionPayloadEnvelopesByRangeRequest
-  ): Promise<gloas.SignedExecutionPayloadEnvelope[]>;
+  ): Promise<gloas.ExecutionPayloadEnvelope[]>;
   sendExecutionPayloadEnvelopesByRoot(
     peerId: PeerIdStr,
     request: ExecutionPayloadEnvelopesByRootRequest
-  ): Promise<gloas.SignedExecutionPayloadEnvelope[]>;
+  ): Promise<gloas.ExecutionPayloadEnvelope[]>;
 
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
@@ -112,7 +112,7 @@ export interface INetwork extends INetworkCorePublic {
   publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<number>;
   publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number>;
   publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number>;
-  publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number>;
+  publishExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): Promise<number>;
   publishSignedExecutionPayloadBid(signedBid: gloas.SignedExecutionPayloadBid): Promise<number>;
   publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number>;
   publishProposerPreferences(signedProposerPreferences: gloas.SignedProposerPreferences): Promise<number>;

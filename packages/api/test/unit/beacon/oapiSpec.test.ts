@@ -52,7 +52,13 @@ const testDatas = {
   ...validatorTestData,
 };
 
-const ignoredOperations: string[] = [];
+// The unsigned ExecutionPayloadEnvelope (ethereum/consensus-specs#5820) is not yet in beacon-APIs
+const ignoredOperations: string[] = [
+  "publishExecutionPayloadEnvelope",
+  "getSignedExecutionPayloadEnvelope",
+  "produceBlockV4",
+  "getExecutionPayloadEnvelope",
+];
 
 const ignoredProperties: Record<string, IgnoredProperty> = {
   /*
@@ -65,7 +71,8 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
 const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, ignoredProperties);
 
-const ignoredTopics: string[] = [];
+// The ExecutionPayloadBid `payload_root` (ethereum/consensus-specs#5820) is not yet in beacon-APIs
+const ignoredTopics: string[] = ["execution_payload_bid"];
 
 // eventstream types are defined as comments in the description of "examples".
 // The function runTestCheckAgainstSpec() can't handle those, so the custom code before:

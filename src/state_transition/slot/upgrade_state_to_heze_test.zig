@@ -22,6 +22,7 @@ test "Heze upgrade preserves bid fields and initializes inclusion list bits" {
     value.latest_execution_payload_bid.parent_block_hash = @splat(1);
     value.latest_execution_payload_bid.parent_block_root = @splat(2);
     value.latest_execution_payload_bid.block_hash = @splat(3);
+    value.latest_execution_payload_bid.payload_root = @splat(13);
     value.latest_execution_payload_bid.prev_randao = @splat(4);
     value.latest_execution_payload_bid.fee_recipient = @splat(5);
     value.latest_execution_payload_bid.gas_limit = 30_000_000;

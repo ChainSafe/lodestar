@@ -110,9 +110,9 @@ describe("chain / blocks / PayloadEnvelopeProcessor", () => {
     );
     vi.mocked(importExecutionPayload).mockResolvedValue(undefined);
 
-    await processor.processPayloadEnvelopeJob(payloadInput, {validSignature: true});
+    await processor.processPayloadEnvelopeJob(payloadInput, {validExecutionRequestsRoot: true});
     expect(importExecutionPayload).toHaveBeenCalledWith(payloadInput, DataAvailabilityStatus.NotRequired, {
-      validSignature: true,
+      validExecutionRequestsRoot: true,
     });
   });
 

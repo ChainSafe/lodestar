@@ -22,24 +22,19 @@ describe("sync / range / utils / hashBlocks", () => {
     } as unknown as IBlockInput;
   }
 
-  // `builderIndex` distinguishes envelopes; ExecutionPayloadEnvelope has no slot field, the slot only
+  // `seed` distinguishes envelopes; ExecutionPayloadEnvelope has no slot field, the slot only
   // exists as the Map key that hashBlocks sorts on.
-  function fakeEnvelope(
-    builderIndex: number,
-    hasPayload = true,
-    signature = Buffer.alloc(96, 0)
-  ): PayloadEnvelopeInput {
-    const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    signedEnvelope.message.builderIndex = builderIndex;
-    signedEnvelope.signature = signature;
+  function fakeEnvelope(seed: number, hasPayload = true): PayloadEnvelopeInput {
+    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    envelope.beaconBlockRoot = Buffer.alloc(32, seed);
     return {
       hasPayloadEnvelope: () => hasPayload,
-      getPayloadEnvelope: () => signedEnvelope,
+      getPayloadEnvelope: () => envelope,
     } as unknown as PayloadEnvelopeInput;
   }
 
   // The id is retained on every Attempt, so it must not grow with batch size. Concatenating roots
-  // and signatures instead of digesting them would be ~16 KB for a full 32-slot gloas batch.
+  // and signatures instead of digesting them would be ~10 KB for a full 32-slot gloas batch.
   it("returns a fixed-size root regardless of batch size", () => {
     const one = hashBlocks([fakeBlock(rootHex(0xaa))], null);
     const manyBlocks = Array.from({length: 32}, (_, i) => fakeBlock(rootHex(i)));
@@ -111,17 +106,6 @@ describe("sync / range / utils / hashBlocks", () => {
     const other = new Map([[1, fakeEnvelope(22)]]);
 
     expect(hashBlocks(blocks, one)).not.toBe(hashBlocks(blocks, other));
-  });
-
-  // Same hole as the block-side signature case: the envelope id is the root of the message, so
-  // without folding in the signature a forged-signature envelope collides with the honest one and
-  // escapes peer scoring, even though it fails with PayloadErrorCode.INVALID_SIGNATURE.
-  it("identical envelope messages with different signatures produce different ids", () => {
-    const blocks = [fakeBlock(rootHex(0xaa))];
-    const honest = new Map([[1, fakeEnvelope(11, true, Buffer.alloc(96, 0))]]);
-    const forgedSignature = new Map([[1, fakeEnvelope(11, true, Buffer.alloc(96, 1))]]);
-
-    expect(hashBlocks(blocks, honest)).not.toBe(hashBlocks(blocks, forgedSignature));
   });
 
   // The id is built in an allocUnsafe buffer, so every allocated byte must be written. A batch where

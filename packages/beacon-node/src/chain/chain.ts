@@ -980,7 +980,7 @@ export class BeaconChain implements IBeaconChain {
     onMiss: ReconstructMissPolicy = "throw"
   ): Promise<(Uint8Array | null)[]> {
     const out: (Uint8Array | null)[] = new Array(requests.length).fill(null);
-    const headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[] = [];
+    const headerEnvelopes: gloas.ExecutionPayloadHeaderEnvelope[] = [];
     const headerEnvelopeIdxs: number[] = [];
 
     for (let i = 0; i < requests.length; i++) {
@@ -989,7 +989,7 @@ export class BeaconChain implements IBeaconChain {
       const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
       if (payloadInput?.hasPayloadEnvelope()) {
         const envelope = payloadInput.getPayloadEnvelope();
-        out[i] = this.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+        out[i] = this.serializedCache.get(envelope) ?? ssz.gloas.ExecutionPayloadEnvelope.serialize(envelope);
         continue;
       }
 
@@ -1026,7 +1026,7 @@ export class BeaconChain implements IBeaconChain {
           );
           continue;
         }
-        out[headerEnvelopeIdxs[j]] = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(result);
+        out[headerEnvelopeIdxs[j]] = ssz.gloas.ExecutionPayloadEnvelope.serialize(result);
       }
     }
 
@@ -1036,7 +1036,7 @@ export class BeaconChain implements IBeaconChain {
   async getExecutionPayloadEnvelope(
     blockSlot: Slot,
     blockRootHex: string
-  ): Promise<gloas.SignedExecutionPayloadEnvelope | null> {
+  ): Promise<gloas.ExecutionPayloadEnvelope | null> {
     const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
     if (payloadInput?.hasPayloadEnvelope()) {
       return payloadInput.getPayloadEnvelope();
@@ -1049,7 +1049,7 @@ export class BeaconChain implements IBeaconChain {
     if (archivedBytes === null) return null;
     const archived = decodeArchivedEnvelope(archivedBytes);
     if (archived.envelopeBytes !== undefined) {
-      return ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes);
+      return ssz.gloas.ExecutionPayloadEnvelope.deserialize(archived.envelopeBytes);
     }
     const [result] = await reconstructExecutionPayloadEnvelopes(this.executionEngine, this.metrics, [
       archived.headerEnvelope,
@@ -1069,11 +1069,11 @@ export class BeaconChain implements IBeaconChain {
     // executionRequests is kept in the header envelope, so read it without reconstructing
     const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
     if (payloadInput?.hasPayloadEnvelope()) {
-      return payloadInput.getPayloadEnvelope().message.executionRequests;
+      return payloadInput.getPayloadEnvelope().executionRequests;
     }
 
     const hot = await this.db.executionPayloadEnvelope.get(fromHex(parentBlockRootHex));
-    if (hot !== null) return hot.message.executionRequests;
+    if (hot !== null) return hot.executionRequests;
 
     const archivedBytes = await this.db.executionPayloadEnvelopeArchive.getBinary(parentBlockSlot);
     if (archivedBytes === null) {
@@ -1081,8 +1081,8 @@ export class BeaconChain implements IBeaconChain {
     }
     const archived = decodeArchivedEnvelope(archivedBytes);
     return archived.envelopeBytes !== undefined
-      ? ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(archived.envelopeBytes).message.executionRequests
-      : archived.headerEnvelope.message.executionRequests;
+      ? ssz.gloas.ExecutionPayloadEnvelope.deserialize(archived.envelopeBytes).executionRequests
+      : archived.headerEnvelope.executionRequests;
   }
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {

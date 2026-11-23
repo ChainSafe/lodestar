@@ -7,7 +7,6 @@ import {
   DOMAIN_AGGREGATE_AND_PROOF,
   DOMAIN_APPLICATION_BUILDER,
   DOMAIN_BEACON_ATTESTER,
-  DOMAIN_BEACON_BUILDER,
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_BUILDER_REQUEST_AUTH,
   DOMAIN_CONTRIBUTION_AND_PROOF,
@@ -703,40 +702,6 @@ export class ValidatorStore {
       message: blindedOrFull,
       signature: await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage),
     } as SignedBeaconBlock | SignedBlindedBeaconBlock;
-  }
-
-  async signExecutionPayloadEnvelope(
-    pubkey: BLSPubkey,
-    envelope: gloas.ExecutionPayloadEnvelope,
-    currentSlot: Slot,
-    logger?: LoggerVc
-  ): Promise<gloas.SignedExecutionPayloadEnvelope> {
-    // Make sure the envelope slot is not higher than the current slot to avoid potential attacks.
-    if (envelope.payload.slotNumber > currentSlot) {
-      throw Error(
-        `Not signing envelope with slot ${envelope.payload.slotNumber} greater than current slot ${currentSlot}`
-      );
-    }
-
-    const signingSlot = envelope.payload.slotNumber;
-    const domain = this.config.getDomain(signingSlot, DOMAIN_BEACON_BUILDER);
-    const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
-
-    logger?.debug("Signing execution payload envelope", {
-      slot: signingSlot,
-      beaconBlockRoot: toRootHex(envelope.beaconBlockRoot),
-      signingRoot: toRootHex(signingRoot),
-    });
-
-    const signableMessage: SignableMessage = {
-      type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE,
-      data: envelope,
-    };
-
-    return {
-      message: envelope,
-      signature: await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage),
-    };
   }
 
   async signRandao(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {

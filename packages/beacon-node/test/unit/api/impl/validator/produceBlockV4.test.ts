@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {BUILDER_INDEX_SELF_BUILD, ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
+import {ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {defer, fromHex, toRootHex} from "@lodestar/utils";
 import {EngineBlockSelectionReason, getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
@@ -770,7 +770,6 @@ describe("api/validator - produceBlockV4", () => {
     const expectedEnvelope: gloas.ExecutionPayloadEnvelope = {
       payload,
       executionRequests: produceResult.executionRequests,
-      builderIndex: BUILDER_INDEX_SELF_BUILD,
       beaconBlockRoot,
       parentBeaconBlockRoot: produceResult.parentBlockRoot,
     };

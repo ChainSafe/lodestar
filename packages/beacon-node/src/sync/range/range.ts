@@ -247,8 +247,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     } catch (e) {
       if (
         e instanceof PayloadError &&
-        (e.type.code === PayloadErrorCode.INVALID_SIGNATURE ||
-          e.type.code === PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR ||
+        (e.type.code === PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR ||
           e.type.code === PayloadErrorCode.EXECUTION_ENGINE_INVALID)
       ) {
         const {payloadInput} = e;

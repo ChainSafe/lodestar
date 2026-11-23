@@ -1,36 +1,28 @@
 import {type ApiClient, routes} from "@lodestar/api";
-import {type BuilderIndex, type RootHex, type gloas, ssz} from "@lodestar/types";
+import {type RootHex, type gloas, ssz} from "@lodestar/types";
 import {LodestarError, defer, toRootHex} from "@lodestar/utils";
 import type {BidIdentity, BidLedger} from "./bidLedger.js";
-import type {BuilderSigner} from "./builderSigner.js";
 import type {ExecutionPayloadEnvelopeContents} from "./executionPayloadEnvelope.js";
 
 export type EnvelopeSelectionIdentity = BidIdentity & {blockRoot: RootHex};
 
 export type EnvelopePublisherModules = {
   api: ApiClient;
-  signer: BuilderSigner;
   ledger: BidLedger;
-  builderIndex: BuilderIndex;
 };
 
 export enum EnvelopePublisherErrorCode {
-  BUILDER_INDEX_MISMATCH = "ENVELOPE_PUBLISHER_ERROR_BUILDER_INDEX_MISMATCH",
   SELECTION_NOT_RECORDED = "ENVELOPE_PUBLISHER_ERROR_SELECTION_NOT_RECORDED",
 }
 
-export type EnvelopePublisherErrorType =
-  | {
-      code: EnvelopePublisherErrorCode.BUILDER_INDEX_MISMATCH;
-      builderIndex: BuilderIndex;
-      envelopeBuilderIndex: BuilderIndex;
-    }
-  | ({code: EnvelopePublisherErrorCode.SELECTION_NOT_RECORDED} & EnvelopeSelectionIdentity);
+export type EnvelopePublisherErrorType = {
+  code: EnvelopePublisherErrorCode.SELECTION_NOT_RECORDED;
+} & EnvelopeSelectionIdentity;
 
 export class EnvelopePublisherError extends LodestarError<EnvelopePublisherErrorType> {}
 
 export type EnvelopePublicationResult =
-  | {status: "published"; signedEnvelope: gloas.SignedExecutionPayloadEnvelope}
+  | {status: "published"; envelope: gloas.ExecutionPayloadEnvelope}
   | {status: "duplicate"};
 
 type ActivePublication = {
@@ -39,7 +31,7 @@ type ActivePublication = {
   waiters: number;
 };
 
-/** Signs and submits an envelope for a recorded local selection. */
+/** Submits an envelope for a recorded local selection. */
 export class EnvelopePublisher {
   private readonly activePublications = new Map<RootHex, ActivePublication>();
 
@@ -48,18 +40,8 @@ export class EnvelopePublisher {
   async publish(contents: ExecutionPayloadEnvelopeContents, signal: AbortSignal): Promise<EnvelopePublicationResult> {
     signal.throwIfAborted();
 
-    const {api, builderIndex, ledger, signer} = this.modules;
+    const {api, ledger} = this.modules;
     const {envelope} = contents;
-    if (envelope.builderIndex !== builderIndex) {
-      throw new EnvelopePublisherError(
-        {
-          code: EnvelopePublisherErrorCode.BUILDER_INDEX_MISMATCH,
-          builderIndex,
-          envelopeBuilderIndex: envelope.builderIndex,
-        },
-        `Envelope builder index does not match local builder index builderIndex=${builderIndex} envelopeBuilderIndex=${envelope.builderIndex}`
-      );
-    }
 
     const identity: EnvelopeSelectionIdentity = {
       slot: envelope.payload.slotNumber,
@@ -87,13 +69,11 @@ export class EnvelopePublisher {
       publication = {
         controller,
         waiters: 0,
-        promise: this.publishEnvelope(contents, identity, envelopeRoot, api, ledger, signer, controller.signal).finally(
-          () => {
-            if (this.activePublications.get(identity.blockRoot)?.controller === controller) {
-              this.activePublications.delete(identity.blockRoot);
-            }
+        promise: this.publishEnvelope(contents, identity, envelopeRoot, api, ledger, controller.signal).finally(() => {
+          if (this.activePublications.get(identity.blockRoot)?.controller === controller) {
+            this.activePublications.delete(identity.blockRoot);
           }
-        ),
+        }),
       };
       this.activePublications.set(identity.blockRoot, publication);
     }
@@ -131,15 +111,12 @@ export class EnvelopePublisher {
     envelopeRoot: RootHex,
     api: ApiClient,
     ledger: BidLedger,
-    signer: BuilderSigner,
     signal: AbortSignal
   ): Promise<EnvelopePublicationResult> {
-    const signedEnvelope = signer.signExecutionPayloadEnvelope(contents.envelope);
-
     const response = await api.beacon.publishExecutionPayloadEnvelope(
       {
-        signedEnvelopeOrContents: {
-          signedExecutionPayloadEnvelope: signedEnvelope,
+        envelopeOrContents: {
+          executionPayloadEnvelope: contents.envelope,
           kzgProofs: contents.kzgProofs,
           blobs: contents.blobs,
         },
@@ -149,6 +126,6 @@ export class EnvelopePublisher {
     );
     response.assertOk();
     ledger.recordRevealPublished(identity.slot, identity.blockRoot, identity.blockHash, envelopeRoot);
-    return {status: "published", signedEnvelope};
+    return {status: "published", envelope: contents.envelope};
   }
 }

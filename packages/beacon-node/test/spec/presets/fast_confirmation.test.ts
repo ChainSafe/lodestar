@@ -40,10 +40,7 @@ import {
 } from "../../../src/chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
-import {
-  verifyExecutionPayloadEnvelope,
-  verifyExecutionPayloadEnvelopeSignature,
-} from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
+import {verifyExecutionPayloadEnvelope} from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
@@ -362,10 +359,10 @@ const fastConfirmationTest =
               if (!envelope) throw Error(`No execution payload envelope ${step.execution_payload}`);
 
               try {
-                const beaconBlockRoot = toHex(envelope.message.beaconBlockRoot);
-                const blockHash = toHex(envelope.message.payload.blockHash);
-                const blockNumber = envelope.message.payload.blockNumber;
-                const gasLimit = envelope.message.payload.gasLimit;
+                const beaconBlockRoot = toHex(envelope.beaconBlockRoot);
+                const blockHash = toHex(envelope.payload.blockHash);
+                const blockNumber = envelope.payload.blockNumber;
+                const gasLimit = envelope.payload.gasLimit;
 
                 // Verify envelope against the state
                 const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
@@ -376,20 +373,7 @@ const fastConfirmationTest =
                   {dontTransferCache: true},
                   RegenCaller.processBlock
                 );
-                verifyExecutionPayloadEnvelope(beaconConfig, blockState as IBeaconStateViewGloas, envelope.message);
-
-                // fast_confirmation vectors are generated with bls_setting=2 (signatures are not
-                // required to be valid), so only verify signatures when bls_setting=1.
-                if (testcase.meta?.bls_setting === BigInt(1)) {
-                  const sigValid = await verifyExecutionPayloadEnvelopeSignature(
-                    beaconConfig,
-                    blockState as IBeaconStateViewGloas,
-                    envelope,
-                    blockState.latestBlockHeader.proposerIndex,
-                    chain.bls
-                  );
-                  if (!sigValid) throw Error("Invalid execution payload envelope signature");
-                }
+                verifyExecutionPayloadEnvelope(beaconConfig, blockState as IBeaconStateViewGloas, envelope);
 
                 // Add predefined VALID status for the payload's block hash so the EL mock accepts it
                 executionEngineBackend.addPredefinedPayloadStatus(blockHash, {
@@ -592,14 +576,14 @@ const fastConfirmationTest =
           [COLUMN_FILE_NAME]: ssz.fulu.DataColumnSidecar,
           [ATTESTATION_FILE_NAME]: sszTypesFor(fork).Attestation,
           [ATTESTER_SLASHING_FILE_NAME]: sszTypesFor(fork).AttesterSlashing,
-          [EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME]: ssz.gloas.SignedExecutionPayloadEnvelope,
+          [EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME]: ssz.gloas.ExecutionPayloadEnvelope,
         },
         mapToTestCase: (t: Record<string, any>) => {
           // t has input file name as key
           const blocks = new Map<string, SignedBeaconBlock>();
           const blobs = new Map<string, deneb.Blobs>();
           const columns = new Map<string, fulu.DataColumnSidecar>();
-          const executionPayloadEnvelopes = new Map<string, gloas.SignedExecutionPayloadEnvelope>();
+          const executionPayloadEnvelopes = new Map<string, gloas.ExecutionPayloadEnvelope>();
           const attestations = new Map<string, Attestation>();
           const attesterSlashings = new Map<string, AttesterSlashing>();
           for (const key in t) {
@@ -760,7 +744,7 @@ type FastConfirmationTestCase = {
   blocks: Map<string, SignedBeaconBlock>;
   blobs: Map<string, deneb.Blobs>;
   columns: Map<string, fulu.DataColumnSidecar>;
-  executionPayloadEnvelopes: Map<string, gloas.SignedExecutionPayloadEnvelope>;
+  executionPayloadEnvelopes: Map<string, gloas.ExecutionPayloadEnvelope>;
   attestations: Map<string, Attestation>;
   attesterSlashings: Map<string, AttesterSlashing>;
 };

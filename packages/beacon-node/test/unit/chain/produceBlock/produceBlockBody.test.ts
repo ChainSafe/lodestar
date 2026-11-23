@@ -232,7 +232,7 @@ describe("Gloas engine body", () => {
     (modules.chain.executionEngine as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache =
       new PayloadIdCache();
     modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
-    const executionPayload = ssz.fulu.ExecutionPayload.defaultValue();
+    const executionPayload = ssz.gloas.ExecutionPayload.defaultValue();
     executionPayload.blockHash = new Uint8Array(32).fill(9);
     modules.chain.executionEngine.getPayload.mockResolvedValue({
       executionPayload,

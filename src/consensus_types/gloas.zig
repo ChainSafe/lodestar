@@ -285,6 +285,7 @@ pub const ExecutionPayloadBid = ssz.VariableProgressiveContainerType(struct {
     parent_block_hash: p.Bytes32,
     parent_block_root: p.Root,
     block_hash: p.Bytes32,
+    payload_root: p.Root,
     prev_randao: p.Bytes32,
     fee_recipient: p.ExecutionAddress,
     gas_limit: p.Uint64,
@@ -294,7 +295,7 @@ pub const ExecutionPayloadBid = ssz.VariableProgressiveContainerType(struct {
     execution_payment: p.Uint64,
     blob_kzg_commitments: BlobKzgCommitments,
     execution_requests_root: p.Root,
-}, &@as([12]u1, @splat(1)));
+}, &@as([13]u1, @splat(1)));
 
 pub const SignedExecutionPayloadBid = ssz.VariableContainerType(struct {
     message: ExecutionPayloadBid,
@@ -304,15 +305,9 @@ pub const SignedExecutionPayloadBid = ssz.VariableContainerType(struct {
 pub const ExecutionPayloadEnvelope = ssz.VariableProgressiveContainerType(struct {
     payload: ExecutionPayload,
     execution_requests: ExecutionRequests,
-    builder_index: BuilderIndex,
     beacon_block_root: p.Root,
     parent_beacon_block_root: p.Root,
-}, &@as([5]u1, @splat(1)));
-
-pub const SignedExecutionPayloadEnvelope = ssz.VariableContainerType(struct {
-    message: ExecutionPayloadEnvelope,
-    signature: p.BLSSignature,
-});
+}, &@as([4]u1, @splat(1)));
 
 pub const BeaconBlockBody = ssz.VariableProgressiveContainerType(struct {
     randao_reveal: p.BLSSignature,

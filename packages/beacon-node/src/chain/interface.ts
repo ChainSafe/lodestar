@@ -176,7 +176,7 @@ export interface IBeaconChain {
   close(): Promise<void>;
   /** Chain has seen the specified block root or not. The block may not be processed yet, use forkchoice.hasBlock to check it  */
   seenBlock(blockRoot: RootHex): boolean;
-  /** Chain has seen a SignedExecutionPayloadEnvelope for this block root (via seenCache or fork choice FULL variant) */
+  /** Chain has seen an ExecutionPayloadEnvelope for this block root (via seenCache or fork choice FULL variant) */
   seenPayloadEnvelope(blockRoot: RootHex): boolean;
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   loadFromDisk(): Promise<void>;
@@ -246,10 +246,7 @@ export interface IBeaconChain {
     requests: {blockSlot: Slot; blockRootHex: RootHex}[],
     onMiss?: ReconstructMissPolicy
   ): Promise<(Uint8Array | null)[]>;
-  getExecutionPayloadEnvelope(
-    blockSlot: Slot,
-    blockRootHex: string
-  ): Promise<gloas.SignedExecutionPayloadEnvelope | null>;
+  getExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<gloas.ExecutionPayloadEnvelope | null>;
   getParentExecutionRequests(parentBlockSlot: Slot, parentBlockRootHex: RootHex): Promise<gloas.ExecutionRequests>;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;

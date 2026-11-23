@@ -66,7 +66,7 @@ export enum ChainEvent {
   updateStatus = "updateStatus",
   /**
    * Trigger BlockInputSync to find parent of a SignedBeaconBlock received
-   * Post-gloas, missing parent could be a SignedBeaconBlock and/or a SignedExecutionPayloadEnvelope
+   * Post-gloas, missing parent could be a SignedBeaconBlock and/or an ExecutionPayloadEnvelope
    */
   blockUnknownParent = "blockUnknownParent",
   /**
@@ -74,7 +74,7 @@ export enum ChainEvent {
    */
   unknownBlockRoot = "unknownBlockRoot",
   /**
-   * Trigger BlockInputSync to find a SignedExecutionPayloadEnvelope with specified block root.
+   * Trigger BlockInputSync to find an ExecutionPayloadEnvelope with specified block root.
    */
   unknownEnvelopeBlockRoot = "unknownEnvelopeBlockRoot",
   /**

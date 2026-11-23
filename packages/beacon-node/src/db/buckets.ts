@@ -70,8 +70,8 @@ export enum Bucket {
   allForks_dataColumnSidecars = 57, // BeaconBlockRoot -> DataColumnSidecars
   allForks_dataColumnSidecarsArchive = 58, // BeaconBlockSlot -> DataColumnSidecars
 
-  gloas_executionPayloadEnvelope = 59, // GLOAS BeaconBlockRoot -> SignedExecutionPayloadEnvelope
-  gloas_executionPayloadEnvelopeArchive = 60, // GLOAS Slot -> SignedExecutionPayloadEnvelope, or 0x00 + SignedExecutionPayloadHeaderEnvelope
+  gloas_executionPayloadEnvelope = 59, // GLOAS BeaconBlockRoot -> ExecutionPayloadEnvelope
+  gloas_executionPayloadEnvelopeArchive = 60, // GLOAS Slot -> ExecutionPayloadEnvelope, or 0x00 + ExecutionPayloadHeaderEnvelope
   earliestAvailableSlot = 61, // singleton -> Slot
   gloas_proposerPreferences = 62, // Slot || DependentRoot -> SignedProposerPreferences
 }

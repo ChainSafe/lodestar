@@ -582,6 +582,9 @@ export class SyncChain {
           case DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH:
           case DownloadByRangeErrorCode.INVALID_ENVELOPE_BEACON_BLOCK_ROOT:
           case DownloadByRangeErrorCode.INVALID_ENVELOPE_BLOCK_HASH:
+          case DownloadByRangeErrorCode.INVALID_ENVELOPE_PAYLOAD_ROOT:
+          case DownloadByRangeErrorCode.INVALID_ENVELOPE_EXECUTION_REQUESTS_ROOT:
+          case DownloadByRangeErrorCode.INVALID_ENVELOPE_PARENT_BEACON_BLOCK_ROOT:
           case DownloadByRangeErrorCode.INVALID_ENVELOPE_SLOT:
           case DownloadByRangeErrorCode.INVALID_CHAIN_SEGMENT:
           case DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT:
