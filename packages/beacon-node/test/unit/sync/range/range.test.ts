@@ -1,6 +1,7 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {IBeaconStateViewGloas} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
@@ -17,6 +18,7 @@ import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {getMockedNetwork} from "../../../mocks/mockedNetwork.js";
 import {validPeerIdStr} from "../../../utils/peer.js";
+import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 vi.mock("../../../../src/sync/range/chain.js", () => ({
   SyncChain: vi.fn().mockImplementation(function MockedSyncChain(...args: ConstructorParameters<typeof SyncChain>) {
@@ -41,10 +43,14 @@ describe("sync / range / per-block processing", () => {
     {hasEnvelope: false, blobCount: 1},
     {hasEnvelope: true, blobCount: 0},
     {hasEnvelope: true, blobCount: 1},
-  ])("hasEnvelope=$hasEnvelope, blobCount=$blobCount", async ({hasEnvelope, blobCount}) => {
+    {hasEnvelope: true, blobCount: 1, imported: true, disableProcessAsChainSegment: true},
+    {hasEnvelope: true, blobCount: 1, imported: true, disableProcessAsChainSegment: false},
+  ])("processes the batch with payload options %j", async (options) => {
+    const {hasEnvelope, blobCount, imported = false, disableProcessAsChainSegment = true} = options;
     const gloasConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
     const chain = getMockedBeaconChain({config: gloasConfig});
     chain.processExecutionPayload = vi.fn().mockResolvedValue(undefined);
+    chain.processChainSegment = vi.fn().mockResolvedValue({orphaned: [], skipped: false});
     chain.getHeadState.mockReturnValue({
       forkName: ForkName.gloas,
       latestBlockHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
@@ -52,7 +58,7 @@ describe("sync / range / per-block processing", () => {
     } as IBeaconStateViewGloas);
     const rangeSync = new RangeSync(
       {chain, network: getMockedNetwork(), config: chain.config, logger: chain.logger, metrics: null},
-      {disableProcessAsChainSegment: true}
+      {disableProcessAsChainSegment}
     );
     const localStatus = ssz.fulu.Status.defaultValue();
     rangeSync.addPeer(validPeerIdStr, localStatus, {...localStatus, finalizedEpoch: 1});
@@ -90,13 +96,32 @@ describe("sync / range / per-block processing", () => {
       payloadInput.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 1});
     }
 
+    if (imported) {
+      const full = generateProtoBlock({
+        blockRoot: blockRootHex,
+        payloadStatus: PayloadStatus.FULL,
+        executionPayloadBlockHash: payloadInput.getBlockHashHex(),
+      });
+      chain.forkChoice.getBlockHex.mockImplementation((root, status) =>
+        root === blockRootHex && status === PayloadStatus.FULL ? full : null
+      );
+    }
+
     await processChainSegment([blockInput], new Map([[block.message.slot, payloadInput]]), RangeSyncType.Finalized);
 
+    if (!disableProcessAsChainSegment) {
+      expect(chain.processChainSegment).toHaveBeenCalledExactlyOnceWith(
+        [blockInput],
+        new Map(),
+        expect.objectContaining({fromRangeSync: true})
+      );
+      return;
+    }
     expect(chain.processBlock).toHaveBeenCalledExactlyOnceWith(
       blockInput,
       expect.objectContaining({fromRangeSync: true})
     );
-    if (hasEnvelope) {
+    if (hasEnvelope && !imported) {
       expect(chain.processExecutionPayload).toHaveBeenCalledExactlyOnceWith(payloadInput);
       expect(chain.processBlock.mock.invocationCallOrder[0]).toBeLessThan(
         chain.processExecutionPayload.mock.invocationCallOrder[0]
