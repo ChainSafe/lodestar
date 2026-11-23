@@ -56,9 +56,6 @@ Most of all, it is disrespectful to our time. Please be respectful to our mainta
 > [!NOTE]
 > Step 5 is a **must** for new contributors. For regular contributors, there is naturally more trust  in their output. Whether A/B testing is necessary for such contributors will be judged on case-by-case basis.
 
-> [!NOTE]
-> Step 5 is necessary for new contributors. For regular contributors, there is naturally more trust in their output. Whether A/B testing is necessary for such contributors will be judged on case-by-case basis.
-
 6. Make an open pull request when you're ready for it to be reviewed. We review PRs on a regular basis. See Pull request etiquette for more information.
 
 
