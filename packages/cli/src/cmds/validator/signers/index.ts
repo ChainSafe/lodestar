@@ -192,14 +192,25 @@ export async function toXmssSigners(
     logger.warn("No vrfStateUrl: VRF trees hold their first 2^20 slots and zeros after, not full trees");
   }
 
-  const treeSource = xmssCacheUrl ? devnetXmssTreeSource(xmssCacheUrl, logger) : undefined;
   fs.mkdirSync(treesDir, {recursive: true});
+  const treeStores = new Map<Signer, XmssTreeStore>();
+  const uncached: Uint8Array[] = [];
+  for (const signer of signers) {
+    if (signer.type !== SignerType.Local) continue;
+    const treeStore = xmssTreeStore(path.join(treesDir, `${signer.secretKey.toPublicKey().toHex()}.bin`));
+    treeStores.set(signer, treeStore);
+    if (xmssCacheUrl && treeStore.read() === null) {
+      uncached.push(XmssSigner.publicParameterFromBlsSecretKey(signer.secretKey.toBytes()));
+    }
+  }
+  const treeSource = xmssCacheUrl ? await devnetXmssTreeSource(xmssCacheUrl, uncached, logger) : undefined;
+
   logger.info("Deriving leanXMSS keys and VRF trees from keystores", {count: localCount});
   return Promise.all(
     signers.map(async (signer): Promise<Signer> => {
       if (signer.type !== SignerType.Local) return signer;
       const secretKey = signer.secretKey.toBytes();
-      const treeStore = xmssTreeStore(path.join(treesDir, `${signer.secretKey.toPublicKey().toHex()}.bin`));
+      const treeStore = treeStores.get(signer);
       try {
         return {
           type: SignerType.Xmss,

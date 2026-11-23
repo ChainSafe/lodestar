@@ -149,7 +149,7 @@ export class XmssSigner {
     secretKey: Uint8Array,
     opts: {vrfStates?: Uint8Array; treeStore?: XmssTreeStore; treeSource?: XmssTreeSource} = {}
   ): Promise<XmssSigner> {
-    const seed = createHash("sha256").update("leanxmss-seed").update(secretKey).digest();
+    const seed = keystoreXmssSeed(secretKey);
     const vrfSeed = createHash("sha256").update("vrf-seed").update(secretKey).digest();
     const stored = opts.treeStore && new SealedTrees(opts.treeStore, seed);
     const [key, vrfTree] = await Promise.all([
@@ -157,6 +157,11 @@ export class XmssSigner {
       VrfTree.build(vrfSeed, KEYSTORE_VRF_POPULATED_DEPTH, opts.vrfStates),
     ]);
     return new XmssSigner(key.toPublicKey(), key, vrfTree, stored);
+  }
+
+  /** What an `XmssTreeSource` is asked for the key of `fromBlsSecretKey` by */
+  static publicParameterFromBlsSecretKey(secretKey: Uint8Array): Uint8Array {
+    return xmssPublicParameter(keystoreXmssSeed(secretKey));
   }
 
   get vrfRoot(): Uint8Array {
@@ -191,6 +196,10 @@ export class XmssSigner {
   async sign(signingRoot: Uint8Array, leafIndex: number): Promise<Uint8Array> {
     return this.key.sign(signingRoot, leafIndex);
   }
+}
+
+function keystoreXmssSeed(secretKey: Uint8Array): Uint8Array {
+  return createHash("sha256").update("leanxmss-seed").update(secretKey).digest();
 }
 
 /** A leaf index names its bottom tree above this many bits */

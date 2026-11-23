@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {LogLevel, Logger, fetch, isValidHttpUrl, toHex} from "@lodestar/utils";
+import {LogLevel, Logger, fetch, isValidHttpUrl, retry, toHex} from "@lodestar/utils";
 import {XmssTreeSource} from "@lodestar/validator";
 
 /**
@@ -18,14 +18,20 @@ const PUBLIC_PARAMETER_SIZE = 16;
 /** A key's record in a file of tree caches: its top tree, then two bottom trees */
 const CACHE_RECORD_SIZE = 4096 + 2 * 5300;
 const FETCH_TIMEOUT_MS = 10_000;
+const FETCH_RETRIES = 3;
+const FETCH_RETRY_DELAY_MS = 1000;
 
 /**
- * Trees of the devnet's keys, from a file of them at `url`: the record of key `i` of the mnemonic
- * is the `i`th. A key is found by its public parameter among the devnet's public keys, which the
- * trees are then checked against, so the file itself is not trusted. Any other key has no trees
- * here.
+ * Trees of the devnet's keys with `publicParameters`, from a file of them at `url`: the record of
+ * key `i` of the mnemonic is the `i`th. A key is found by its public parameter among the devnet's
+ * public keys, which the trees are then checked against, so the file itself is not trusted. Any
+ * other key has no trees here. The records are all read before this resolves.
  */
-export function devnetXmssTreeSource(url: string, logger: Pick<Logger, LogLevel.warn>): XmssTreeSource {
+export async function devnetXmssTreeSource(
+  url: string,
+  publicParameters: Uint8Array[],
+  logger: Pick<Logger, LogLevel.warn>
+): Promise<XmssTreeSource> {
   const publicKeys = fs.readFileSync(DEVNET_PUBLIC_KEYS_PATH);
   const indexByParameter = new Map<string, number>();
   for (let index = 0; index < publicKeys.length / PUBLIC_KEY_SIZE; index++) {
@@ -33,32 +39,42 @@ export function devnetXmssTreeSource(url: string, logger: Pick<Logger, LogLevel.
     indexByParameter.set(toHex(publicKeys.subarray(end - PUBLIC_PARAMETER_SIZE, end)), index);
   }
 
-  return async (publicParameter) => {
-    const index = indexByParameter.get(toHex(publicParameter));
-    if (index === undefined) return null;
-    try {
-      return {
-        publicKey: publicKeys.subarray(index * PUBLIC_KEY_SIZE, (index + 1) * PUBLIC_KEY_SIZE),
-        trees: await readRecord(url, index),
-      };
-    } catch (e) {
-      logger.warn("No leanXMSS trees from xmssCacheUrl: building them", {index}, e as Error);
-      return null;
-    }
-  };
+  const found = new Map<string, {publicKey: Uint8Array; trees: Uint8Array}>();
+  await Promise.all(
+    publicParameters.map(async (publicParameter) => {
+      const parameter = toHex(publicParameter);
+      const index = indexByParameter.get(parameter);
+      if (index === undefined) return;
+      try {
+        found.set(parameter, {
+          publicKey: publicKeys.subarray(index * PUBLIC_KEY_SIZE, (index + 1) * PUBLIC_KEY_SIZE),
+          trees: await readRecord(url, index),
+        });
+      } catch (e) {
+        logger.warn("No leanXMSS trees from xmssCacheUrl: building them", {index}, e as Error);
+      }
+    })
+  );
+
+  return async (publicParameter) => found.get(toHex(publicParameter)) ?? null;
 }
 
 async function readRecord(url: string, index: number): Promise<Uint8Array> {
   const start = index * CACHE_RECORD_SIZE;
   let record: Uint8Array;
   if (isValidHttpUrl(url)) {
-    const res = await fetch(url, {
-      headers: {Range: `bytes=${start}-${start + CACHE_RECORD_SIZE - 1}`},
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-    // 200 is the whole file: the server ignored the range
-    if (res.status !== 206) throw Error(`Range request failed with status ${res.status}`);
-    record = new Uint8Array(await res.arrayBuffer());
+    record = await retry(
+      async () => {
+        const res = await fetch(url, {
+          headers: {Range: `bytes=${start}-${start + CACHE_RECORD_SIZE - 1}`},
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        });
+        // 200 is the whole file: the server ignored the range
+        if (res.status !== 206) throw Error(`Range request failed with status ${res.status}`);
+        return new Uint8Array(await res.arrayBuffer());
+      },
+      {retries: FETCH_RETRIES, retryDelay: FETCH_RETRY_DELAY_MS}
+    );
   } else {
     const fd = fs.openSync(url.replace(/^file:\/\//, ""), "r");
     try {
