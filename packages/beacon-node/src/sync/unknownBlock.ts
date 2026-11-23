@@ -52,7 +52,7 @@ import {
   isPendingPayloadEnvelope,
   isPendingPayloadInput,
 } from "./types.js";
-import {DownloadByRootError, downloadByRoot} from "./utils/downloadByRoot.js";
+import {DownloadByRootError, DownloadByRootErrorCode, downloadByRoot} from "./utils/downloadByRoot.js";
 import {getAllDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
 import {getRateLimitedUntilMs} from "./utils/rateLimit.js";
 
@@ -549,8 +549,9 @@ export class BlockInputSync {
   /**
    * Limit pending blocks to prevent DOS attacks that cause OOM. Any gossip message with an unknown root adds a root-only
    * entry before validation, so those nothing waits on are evicted before a block or a root a pending block waits on.
-   * A downloaded block is only checked against its root, so this only applies while blocks and the roots they wait on
-   * fill at most half the cap, otherwise they could pin it and evict every new root on insertion.
+   * A downloaded block is only checked against its root and proposer signature, not that the proposer is due at its
+   * slot, so this only applies while blocks and the roots they wait on fill at most half the cap, otherwise they could
+   * pin it and evict every new root on insertion.
    */
   private prunePendingBlocks(): void {
     if (this.pendingBlocks.size <= this.maxPendingBlocks) {
@@ -1288,6 +1289,15 @@ export class BlockInputSync {
           // peer is still in backoff and would retry it later than needed
           this.triggerUnknownBlockSearch();
         }
+        return;
+      }
+
+      if (
+        res.err instanceof DownloadByRootError &&
+        res.err.type.code === DownloadByRootErrorCode.BELOW_FINALIZED_SLOT
+      ) {
+        this.logger.debug("Downloaded block is before finalized slot", logCtx, res.err);
+        this.removeAllDescendants(block, DroppedItemReason.belowFinalized);
         return;
       }
 
@@ -2060,6 +2070,17 @@ export class BlockInputSync {
         if (e instanceof DownloadByRootError) {
           const errorCode = e.type.code;
           downloadByRootMetrics?.error.inc({code: errorCode, client: peerClient});
+          if (errorCode === DownloadByRootErrorCode.BELOW_FINALIZED_SLOT) {
+            throw e;
+          }
+          // Low as in range sync, not Fatal as peers may serve unverified copies of a root with a bad signature
+          if (
+            errorCode === DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT ||
+            errorCode === DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID ||
+            errorCode === DownloadByRootErrorCode.UNKNOWN_PROPOSER
+          ) {
+            this.network.reportPeer(peerId, PeerAction.LowToleranceError, errorCode);
+          }
           excludedPeers.add(peerId);
         } else if (e instanceof RequestError) {
           // should look into req_resp metrics in this case
