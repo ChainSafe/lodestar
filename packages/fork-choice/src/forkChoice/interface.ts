@@ -211,7 +211,7 @@ export interface IForkChoice {
   ): void;
   /**
    * Notify fork choice that an execution payload has arrived (Gloas fork)
-   * Creates the FULL variant of a Gloas block when the payload becomes available
+   * Creates the FULL variant of a Gloas block when the payload becomes available and refreshes the cached head
    *
    * ## Specification
    *

@@ -150,6 +150,8 @@ export class ForkChoice implements IForkChoice {
 
   /** Cached head */
   private head: ProtoBlock;
+  /** Slot of the last `updateHead()`, scores and best child links reflect votes, boost and viability at that slot */
+  private updateHeadSlot = 0;
   /**
    * Only cache attestation data root hex if it's tree backed since it's available.
    **/
@@ -694,6 +696,7 @@ export class ForkChoice implements IForkChoice {
 
     // findHead returns the ProtoNode representing the head
     this.head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
+    this.updateHeadSlot = currentSlot;
     return this.head;
   }
 
@@ -1148,7 +1151,7 @@ export class ForkChoice implements IForkChoice {
 
   /**
    * Notify fork choice that an execution payload has arrived (Gloas fork)
-   * Creates the FULL variant of a Gloas block when the payload becomes available
+   * Creates the FULL variant of a Gloas block when the payload becomes available and refreshes the cached head
    * Spec: gloas/fork-choice.md#new-on_execution_payload
    */
   onExecutionPayload(
@@ -1172,9 +1175,10 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
+    const currentSlot = this.fcStore.currentSlot;
     this.protoArray.onExecutionPayload(
       blockRoot,
-      this.fcStore.currentSlot,
+      currentSlot,
       executionPayloadBlockHash,
       executionPayloadNumber,
       executionPayloadGasLimit,
@@ -1182,6 +1186,11 @@ export class ForkChoice implements IForkChoice {
       executionStatus,
       dataAvailabilityStatus
     );
+    if (currentSlot === this.updateHeadSlot) {
+      this.head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
+    } else {
+      this.updateHead();
+    }
   }
 
   /**

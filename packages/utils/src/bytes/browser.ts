@@ -126,21 +126,6 @@ import {toBigIntBE, toBigIntLE, toBufferBE, toBufferLE} from "@vekexasia/bigint-
 
 type Endianness = "le" | "be";
 
-const hexByByte: string[] = [];
-/**
- * @deprecated Use toHex() instead.
- */
-export function toHexString(bytes: Uint8Array): string {
-  let hex = "0x";
-  for (const byte of bytes) {
-    if (!hexByByte[byte]) {
-      hexByByte[byte] = byte < 16 ? "0" + byte.toString(16) : byte.toString(16);
-    }
-    hex += hexByByte[byte];
-  }
-  return hex;
-}
-
 /**
  * Return a byte array from a number or BigInt
  */

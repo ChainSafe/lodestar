@@ -165,6 +165,8 @@ export async function downloadByRoot({
       timeSyncedSec,
       timeAddedSec: cacheItem.timeAddedSec,
       peerIdStrings: cacheItem.peerIdStrings,
+      retainedBy: isPendingBlockInput(cacheItem) ? cacheItem.retainedBy : undefined,
+      retainedBytes: isPendingBlockInput(cacheItem) ? cacheItem.retainedBytes : undefined,
     },
     warnings,
   };
