@@ -33,6 +33,7 @@ export enum RevealResult {
 export enum BidRequestResult {
   served = "served",
   noBid = "no_bid",
+  rejected = "rejected",
 }
 
 export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitData) {
@@ -78,7 +79,7 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
     api: {
       bidRequests: register.gauge<{result: BidRequestResult}>({
         name: "bc_builder_api_bid_requests_total",
-        help: "Total count of authenticated bid requests received over the builder API by result",
+        help: "Total count of bid requests received over the builder API by result",
         labelNames: ["result"],
       }),
       blockSubmissions: register.gauge({

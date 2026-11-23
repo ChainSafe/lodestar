@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, it} from "vitest";
+import {Mock, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {SecretKey} from "@lodestar/native/blst";
@@ -7,6 +7,7 @@ import {ZERO_HASH, computeDomain, computeSigningRoot} from "@lodestar/state-tran
 import {gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BuilderApi, getBuilderApi} from "../../../src/api/impl.js";
+import {BidRequestResult, Metrics} from "../../../src/metrics.js";
 import {BidLedger} from "../../../src/services/bidLedger.js";
 import {ProposerDutiesTracker} from "../../../src/services/proposerDutiesTracker.js";
 import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "../utils/apiStub.js";
@@ -30,6 +31,7 @@ describe("builder api", () => {
   let ledger: BidLedger;
   let builderApi: BuilderApi;
   let signedBid: gloas.SignedExecutionPayloadBid;
+  let bidRequests: Mock;
 
   beforeEach(() => {
     api = getApiClientStub();
@@ -48,6 +50,8 @@ describe("builder api", () => {
     clock.currentSlot = slot;
     ledger = new BidLedger();
     const logger = getMockedLogger();
+    bidRequests = vi.fn();
+    const metrics = {api: {bidRequests: {inc: bidRequests}, blockSubmissions: {inc: vi.fn()}}} as unknown as Metrics;
     builderApi = getBuilderApi(
       {
         config,
@@ -57,7 +61,7 @@ describe("builder api", () => {
         ledger,
         proposerDutiesTracker: new ProposerDutiesTracker(api, clock, logger),
         builderIndex,
-        metrics: null,
+        metrics,
       },
       {authData}
     );
@@ -113,12 +117,14 @@ describe("builder api", () => {
       const response = await builderApi.getExecutionPayloadBid(bidRequest());
 
       expect(response).toEqual({data: signedBid, meta: {version: ForkName.gloas}});
+      expect(bidRequests).toHaveBeenCalledExactlyOnceWith({result: BidRequestResult.served});
     });
 
     it("returns no content if there is no bid on the requested parent", async () => {
       const response = await builderApi.getExecutionPayloadBid(bidRequest({parentHash: Buffer.alloc(32, 9)}));
 
       expect(response).toEqual({data: undefined, meta: {version: ForkName.gloas}, status: 204});
+      expect(bidRequests).toHaveBeenCalledExactlyOnceWith({result: BidRequestResult.noBid});
     });
 
     it("serves a bid for two slots after its slot", async () => {
@@ -147,6 +153,14 @@ describe("builder api", () => {
       {id: "malformed auth signature", requestAuth: {...signAuth(), signature: Buffer.alloc(96, 1)}, statusCode: 401},
     ])("rejects $id", async ({requestAuth, statusCode}) => {
       await expect(builderApi.getExecutionPayloadBid(bidRequest({requestAuth}))).rejects.toMatchObject({statusCode});
+      expect(bidRequests).toHaveBeenCalledExactlyOnceWith({result: BidRequestResult.rejected});
+    });
+
+    it("does not count a request as rejected if the proposer duties cannot be fetched", async () => {
+      api.validator.getProposerDutiesV2.mockRejectedValue(new Error("beacon node unavailable"));
+
+      await expect(builderApi.getExecutionPayloadBid(bidRequest())).rejects.toThrow("beacon node unavailable");
+      expect(bidRequests).not.toHaveBeenCalled();
     });
 
     it("rejects a requester that is not the proposer of the slot", async () => {

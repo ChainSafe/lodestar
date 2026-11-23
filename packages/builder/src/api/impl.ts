@@ -92,13 +92,20 @@ export function getBuilderApi(modules: BuilderApiModules, opts: BuilderApiOption
     },
 
     async getExecutionPayloadBid({slot, parentHash, parentRoot, proposerPubkey, requestAuth}) {
-      if (requestAuth.message.slot !== slot) {
-        throw new ApiError(
-          400,
-          "Invalid SignedBuilderRequestAuth: auth.message.slot does not match the proposal slot in the request path"
-        );
+      try {
+        if (requestAuth.message.slot !== slot) {
+          throw new ApiError(
+            400,
+            "Invalid SignedBuilderRequestAuth: auth.message.slot does not match the proposal slot in the request path"
+          );
+        }
+        await assertValidRequestAuth(requestAuth, proposerPubkey);
+      } catch (e) {
+        if (e instanceof ApiError) {
+          metrics?.api.bidRequests.inc({result: BidRequestResult.rejected});
+        }
+        throw e;
       }
-      await assertValidRequestAuth(requestAuth, proposerPubkey);
 
       const parentBlockHash = toRootHex(parentHash);
       const parentBlockRoot = toRootHex(parentRoot);
