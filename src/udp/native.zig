@@ -67,6 +67,12 @@ pub fn reportDestination(handle: net.Socket.Handle, family: std.meta.Tag(net.IpA
 /// MTU probes rather than being constrained by ICMP messages the transport has not validated.
 pub fn preventFragmentation(handle: net.Socket.Handle, family: std.meta.Tag(net.IpAddress)) std.posix.E {
     const p = std.posix;
+    if (os == .linux and family == .ip6) {
+        // Linux's IPv6 append path checks DONTFRAG separately from the PMTU policy.
+        const enabled: c_int = 1;
+        const err = p.errno(p.system.setsockopt(handle, p.IPPROTO.IPV6, linux.IPV6.DONTFRAG, std.mem.asBytes(&enabled), @sizeOf(c_int)));
+        if (err != .SUCCESS) return err;
+    }
     const level: i32, const option: u32 = switch (family) {
         .ip4 => .{ p.IPPROTO.IP, if (os == .linux) linux.IP.MTU_DISCOVER else ip_dontfrag },
         .ip6 => .{ p.IPPROTO.IPV6, if (os == .linux) linux.IPV6.MTU_DISCOVER else ipv6_dontfrag },

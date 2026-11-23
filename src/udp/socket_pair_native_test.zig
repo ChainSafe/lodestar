@@ -34,6 +34,8 @@ test "UDP native listeners disable fragmentation and Linux cached PMTU enforceme
             .ip6 => .{ std.posix.IPPROTO.IPV6, if (os == .linux) linux.IPV6.MTU_DISCOVER else 62, if (os == .linux) linux.IPV6.PMTUDISC_PROBE else 1 },
         };
         try std.testing.expectEqual(expected, try socketOption(socket.handle, level, option));
+        if (os == .linux and socket.address == .ip6)
+            try std.testing.expectEqual(@as(c_int, 1), try socketOption(socket.handle, std.posix.IPPROTO.IPV6, linux.IPV6.DONTFRAG));
     }
 }
 
