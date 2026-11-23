@@ -11,6 +11,7 @@ import {
 } from "@lodestar/beacon-node";
 import {Builder, EnginePayloadResult, EnginePayloadSource, getMetrics} from "@lodestar/builder";
 import {getNodeLogger} from "@lodestar/logger/node";
+import {MAX_BUILDER_AUTH_DATA_SIZE} from "@lodestar/params";
 import {fromHex, toPrintableUrl} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
@@ -173,6 +174,10 @@ export function getBuilderApiAuthData(
     const authData = fromHex(args["builderApi.authData"]);
     if (authData.length === 0) {
       throw new YargsError("--builderApi.authData must not be empty");
+    }
+    // Proposers cannot sign request auth with more data, it does not fit into BuilderRequestAuth
+    if (authData.length > MAX_BUILDER_AUTH_DATA_SIZE) {
+      throw new YargsError(`--builderApi.authData must not be longer than ${MAX_BUILDER_AUTH_DATA_SIZE} bytes`);
     }
     return authData;
   }

@@ -1,5 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {chainConfig} from "@lodestar/config/default";
+import {MAX_BUILDER_AUTH_DATA_SIZE} from "@lodestar/params";
 import {LogLevel} from "@lodestar/utils";
 import {builderHandler, getBuilderApiAuthData} from "../../../../src/cmds/builder/handler.js";
 import {IBuilderCliArgs} from "../../../../src/cmds/builder/options.js";
@@ -66,6 +67,20 @@ describe("cmds / builder / getBuilderApiAuthData", () => {
   it("Should reject empty auth data", () => {
     expect(() => getBuilderApiAuthData({"builderApi.authData": "0x"})).toThrow(
       "--builderApi.authData must not be empty"
+    );
+  });
+
+  it("Should accept auth data of the maximum size", () => {
+    const authData = getBuilderApiAuthData({"builderApi.authData": "0x" + "01".repeat(MAX_BUILDER_AUTH_DATA_SIZE)});
+
+    expect(authData).toHaveLength(MAX_BUILDER_AUTH_DATA_SIZE);
+  });
+
+  it("Should reject auth data proposers cannot sign", () => {
+    const authData = "0x" + "01".repeat(MAX_BUILDER_AUTH_DATA_SIZE + 1);
+
+    expect(() => getBuilderApiAuthData({"builderApi.authData": authData})).toThrow(
+      `--builderApi.authData must not be longer than ${MAX_BUILDER_AUTH_DATA_SIZE} bytes`
     );
   });
 
