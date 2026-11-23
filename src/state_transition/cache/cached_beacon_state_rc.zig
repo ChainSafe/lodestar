@@ -2,8 +2,9 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const CachedBeaconState = @import("state_cache.zig").CachedBeaconState;
 
-/// Shared ownership of one state allocation. Its config, node pool, pubkey cache,
-/// and allocator backing must outlive every reference, including final cleanup.
+/// Shared ownership of one state allocation. Owners must keep its config,
+/// node pool and allocators alive through the last unref(). The shared pubkey
+/// cache must remain alive during state operations; destruction does not use it.
 /// Reference counting does not synchronize access to the state or its resources.
 pub const CachedBeaconStateRc = struct {
     allocator: Allocator,

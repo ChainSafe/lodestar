@@ -53,7 +53,8 @@ pub const StateOrLoadedBytes = union(enum) {
 
 /// Serialize entire calls, including I/O, against cache mutation and destruction.
 /// Resident snapshots are immutable; clone before mutation.
-/// Config, pool, shared caches and allocator backing must outlive every StateRc.
+/// Config, pool and allocator backing must outlive every StateRc.
+/// State operations require the shared pubkey cache; destruction does not use it.
 /// One cache owns its filesystem directory.
 pub const PersistentCheckpointStateCache = struct {
     const Self = @This();
@@ -604,9 +605,9 @@ pub const PersistentCheckpointStateCache = struct {
         return persisted;
     }
 
-    /// Runs maintenance without sleeping. The host calls pruneFinalized before its
-    /// slot timer, then calls processState when persistence is due (~67% of the slot).
-    /// Retains the supplied snapshot across pruning and storage calls.
+    /// Runs finalized pruning, persistence, and pending file deletions without sleeping.
+    /// Borrows state and retains it internally across pruning and storage calls.
+    /// The caller keeps its reference on success and failure.
     /// Ordinary delete failures are recorded and retried without blocking writes or
     /// losing their count. Cancellation propagates.
     pub fn processState(self: *Self, io: std.Io, block_root: Root, state: *StateRc) ProcessError!usize {

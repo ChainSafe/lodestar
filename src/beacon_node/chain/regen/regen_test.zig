@@ -83,7 +83,7 @@ const Harness = struct {
         try block.hashTreeRoot(allocator, &h.anchor.root);
         h.anchor.state = try own(try h.helper.cached_state.clone(allocator, .{ .transfer_cache = false }));
         errdefer h.anchor.state.unref();
-        h.fork_choice = try fc.Store.init(allocator, h.helper.config, h.anchor.state.get(), block, .valid, .{ .ctx = &Provider.context, .vtable = &Provider.vtable });
+        h.fork_choice = try fc.Store.init(allocator, io, h.helper.config, h.anchor.state.get(), block, .valid, .{ .ctx = &Provider.context, .vtable = &Provider.vtable });
         errdefer h.fork_choice.deinit();
         h.block_cache = try caches.BlockStateCache.init(allocator, .{});
         errdefer h.block_cache.deinit();
@@ -148,7 +148,7 @@ const Harness = struct {
         const block: AnyBeaconBlock = .{ .full_electra = &signed.message };
         try block.hashTreeRoot(allocator, &root);
         try h.fork_choice.onTick(@max(h.fork_choice.time_ms, h.fork_choice.timing.timeAtSlotMs(slot)));
-        try h.fork_choice.onBlock(block, root, post.get(), .valid);
+        try h.fork_choice.onBlock(io, block, root, post.get(), .valid);
         const bytes = try allocator.alloc(u8, ct.electra.SignedBeaconBlock.serializedSize(&signed));
         defer allocator.free(bytes);
         _ = ct.electra.SignedBeaconBlock.serializeIntoBytes(&signed, bytes);
@@ -218,7 +218,7 @@ const Harness = struct {
         if (full_parent and parent.state.get().state.forkSeq() == .gloas) {
             try h.fork_choice.onExecutionPayloadEnvelope(parent.root, .valid, null);
         }
-        try h.fork_choice.onBlock(block, root, post.get(), .valid);
+        try h.fork_choice.onBlock(io, block, root, post.get(), .valid);
         const bytes = try allocator.alloc(u8, ct.gloas.SignedBeaconBlock.serializedSize(&signed));
         defer allocator.free(bytes);
         _ = ct.gloas.SignedBeaconBlock.serializeIntoBytes(&signed, bytes);
@@ -605,10 +605,18 @@ test "StateRegenerator verifies the fork choice state root before cache admissio
     defer block.state.unref();
     const bad_root: Root = @splat(254);
     h.fork_choice.blocks.items(.state_root)[h.fork_choice.blockIndex(block.root).?] = bad_root;
-    try testing.expectError(error.InvalidStateRoot, h.regen.getState(io, bad_root, true, null));
+    var diagnostics: regen.Diagnostics = .{};
+    try testing.expectError(error.InvalidStateRoot, h.regen.getState(io, bad_root, true, &diagnostics));
+    const mismatch = diagnostics.invalid_state_root.?;
+    try testing.expectEqual(try block.slot(), mismatch.slot);
+    try testing.expectEqual(bad_root, mismatch.expected);
+    try testing.expectEqual(try block.stateRoot(), mismatch.actual);
     try testing.expect(h.block_cache.get(io, bad_root) == null);
     try testing.expect(h.block_cache.get(io, try block.stateRoot()) == null);
     try testing.expectEqual(@as(u32, 2), h.anchor.state.ref_count.load(.monotonic));
+    const state = try h.regen.getState(io, try h.anchor.stateRoot(), false, &diagnostics);
+    defer state.unref();
+    try testing.expect(diagnostics.invalid_state_root == null);
 }
 
 test "StateRegenerator replay bound counts blocks and accepts the exact limit" {

@@ -2,11 +2,14 @@ import {Gauge, Histogram} from "prom-client";
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {ChainConfig} from "@lodestar/config";
+import {NativeForkChoice, PayloadStatus} from "@lodestar/fork-choice";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, phase0} from "@lodestar/types";
 import {ChainEvent, ReorgEventData} from "../../../../src/chain/emitter.js";
+import {NativeStateRegenerator} from "../../../../src/chain/regen/native.js";
+import {NativeCheckpointStateCache} from "../../../../src/chain/stateCache/nativeCheckpointStateCache.js";
 import {CacheItemType} from "../../../../src/chain/stateCache/types.js";
 import {ReorgedForkChoice} from "../../../mocks/fork-choice/reorg.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
@@ -19,12 +22,12 @@ import {getAndInitDevValidators} from "../../../utils/node/validator.js";
  * This includes several tests which make >6 min to pass in CI, so let's only run 1 of them and leave remaining ones
  * for local investigation.
  */
-describe("regen/reload states with n-historical states configuration", () => {
+describe.each([false, true])("n-historical states, nativeRegen=%s", (nativeRegen) => {
   vi.setConfig({testTimeout: 96_000});
 
   const validatorCount = 8;
   const ELECTRA_FORK_EPOCH = 0;
-  const FULU_FORK_EPOCH = 1;
+  const FULU_FORK_EPOCH = 0;
   const SLOT_DURATION_MS = 2 * 1000;
   const testParams: Partial<ChainConfig> = {
     SLOT_DURATION_MS,
@@ -36,7 +39,7 @@ describe("regen/reload states with n-historical states configuration", () => {
     FULU_FORK_EPOCH: FULU_FORK_EPOCH,
     BLOB_SCHEDULE: [
       {
-        EPOCH: 1,
+        EPOCH: FULU_FORK_EPOCH,
         MAX_BLOBS_PER_BLOCK: 3,
       },
     ],
@@ -48,6 +51,7 @@ describe("regen/reload states with n-historical states configuration", () => {
       const callback = afterEachCallbacks.pop();
       if (callback) await callback();
     }
+    vi.restoreAllMocks();
   });
 
   // all tests run until this slot
@@ -319,6 +323,7 @@ describe("regen/reload states with n-historical states configuration", () => {
       // stop bn after validators
       afterEachCallbacks.push(() => reorgedBn.close());
 
+      const nativeCacheInit = vi.spyOn(NativeCheckpointStateCache.prototype, "init");
       const followupBn = await getDevBeaconNode({
         params: testParams,
         options: {
@@ -331,6 +336,9 @@ describe("regen/reload states with n-historical states configuration", () => {
             maxBlockStates,
             maxCPStateEpochsInMemory,
             proposerBoost: true,
+            nativeStateTransition: nativeRegen,
+            nativeForkChoice: nativeRegen,
+            nativeRegen,
           },
           metrics: {enabled: true},
         },
@@ -340,6 +348,11 @@ describe("regen/reload states with n-historical states configuration", () => {
       });
 
       afterEachCallbacks.push(() => followupBn.close());
+
+      if (nativeRegen) {
+        expect(followupBn.chain).toHaveProperty("nativeRegen", expect.any(NativeStateRegenerator));
+        expect(followupBn.chain.forkChoice).toBeInstanceOf(NativeForkChoice);
+      }
 
       const connected = Promise.all([onPeerConnect(followupBn.network), onPeerConnect(reorgedBn.network)]);
       await connect(followupBn.network, reorgedBn.network);
@@ -378,8 +391,22 @@ describe("regen/reload states with n-historical states configuration", () => {
 
       // setup reorg data for both bns
       for (const bn of [reorgedBn, followupBn]) {
-        (bn.chain.forkChoice as ReorgedForkChoice).reorgedSlot = reorgedSlot;
-        (bn.chain.forkChoice as ReorgedForkChoice).reorgDistance = reorgDistance;
+        const forkChoice = bn.chain.forkChoice;
+        if (forkChoice instanceof ReorgedForkChoice) {
+          forkChoice.reorgedSlot = reorgedSlot;
+          forkChoice.reorgDistance = reorgDistance;
+        } else if (forkChoice instanceof NativeForkChoice) {
+          // Match ReorgedForkChoice's forced head selection while retaining the native store for regen.
+          const updateHead = forkChoice.updateHead.bind(forkChoice);
+          let head = forkChoice.getHead();
+          vi.spyOn(forkChoice, "getHead").mockImplementation(() => head);
+          vi.spyOn(forkChoice, "updateHead").mockImplementation(() => {
+            head = updateHead();
+            const tip = forkChoice.getAllNodes().findLast((node) => node.payloadStatus === PayloadStatus.FULL);
+            if (tip && tip.slot > reorgedSlot) head = tip;
+            return head;
+          });
+        }
       }
 
       // both nodes see the reorg event
@@ -409,15 +436,35 @@ describe("regen/reload states with n-historical states configuration", () => {
       expect(checkpoints2[0].epoch).toEqual(4);
 
       // wait for 1 more slot to persist states
-      await waitForEvent<{slot: Slot}>(
-        reorgedBn.chain.emitter,
-        routes.events.EventType.block,
-        240000,
-        ({slot}) => slot === LAST_SLOT
+      await Promise.all(
+        [reorgedBn, followupBn].map((bn) =>
+          waitForEvent<{slot: Slot}>(
+            bn.chain.emitter,
+            routes.events.EventType.block,
+            240000,
+            ({slot}) => slot === LAST_SLOT
+          )
+        )
       );
 
       const metrics = followupBn.metrics;
       if (metrics === null) throw Error("followupBn metrics are not enabled");
+
+      if (nativeRegen) {
+        const cache = nativeCacheInit.mock.contexts[0];
+        if (!(cache instanceof NativeCheckpointStateCache)) throw Error("Native checkpoint cache was not initialized");
+        const stats = cache.binding.stats();
+        expect(stats.reloads).toEqual(reloadCount);
+        expect(stats.persists).toEqual(persistCount);
+        expect(stats.inMemory).toEqual(numStatesInMemory);
+        expect(stats.persisted).toEqual(numStatesPersisted);
+        const checkpoints = cache.binding.getCheckpoints();
+        expect(new Set(checkpoints.filter((cp) => cp.inMemory).map((cp) => cp.epoch)).size).toEqual(numEpochsInMemory);
+        expect(new Set(checkpoints.filter((cp) => !cp.inMemory).map((cp) => cp.epoch)).size).toEqual(
+          numEpochsPersisted
+        );
+        return;
+      }
 
       const reloadMetricValues = await (metrics.cpStateCache.stateReloadDuration as Histogram).get();
       expect(

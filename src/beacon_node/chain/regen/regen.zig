@@ -47,6 +47,7 @@ pub const Error = cp_cache.ReloadLatestError || cp_cache.CacheError || error{
 pub const Diagnostics = struct {
     transition_error: ?[]const u8 = null,
     transition: st.Diagnostics = .{},
+    invalid_state_root: ?struct { slot: Slot, expected: Root, actual: Root } = null,
 };
 
 pub const StateRegenerationOpts = struct {
@@ -70,6 +71,7 @@ pub const StateRegenerator = struct {
         block_state_cache: *caches.BlockStateCache,
         checkpoint_state_cache: *caches.PersistentCheckpointStateCache,
         seen_block: *const SeenBlock,
+        validator_monitor: ?*st.ValidatorMonitor = null,
     };
 
     const ReplayBlock = struct {
@@ -169,16 +171,22 @@ pub const StateRegenerator = struct {
                 .transfer_cache = true,
                 .block_external_data = .{ .execution_payload_status = .valid, .data_availability_status = .available },
                 .source = .regen,
-            }, null) catch |err| return toTransitionError(err, diagnostics);
+            }, self.modules.validator_monitor) catch |err| return toTransitionError(err, diagnostics);
             const owned = try self.toStateRc(post);
             state.unref();
             state = owned;
             const actual = state.get().state.hashTreeRoot() catch |err| return stateAccessError(err);
             if (!std.mem.eql(u8, actual, &descriptor.state_root)) {
+                if (diagnostics) |diag| diag.invalid_state_root = .{
+                    .slot = descriptor.slot,
+                    .expected = descriptor.state_root,
+                    .actual = actual.*,
+                };
                 log.debug("code=InvalidStateRoot slot={d} expected={x} actual={x}", .{ descriptor.slot, descriptor.state_root, actual.* });
                 return error.InvalidStateRoot;
             }
             if (allow_disk_reload) {
+                // add borrows state; this call keeps the reference returned to the caller.
                 self.modules.block_state_cache.add(io, state, false) catch |err| return stateAccessError(err);
             }
         }
@@ -209,6 +217,7 @@ pub const StateRegenerator = struct {
             types.phase0.BeaconBlockHeader.hashTreeRoot(&header, &cp.root) catch |err| switch (err) {
                 error.InvalidInput => unreachable, // Fixed-size header merkleization has no variable input lengths.
             };
+            // add borrows state and retains a separate cache reference.
             try self.modules.checkpoint_state_cache.add(io, cp, state);
             // TODO: Publish ChainEvent.checkpoint when host event delivery is available.
             if (count >= 1) {
@@ -250,7 +259,7 @@ pub const StateRegenerator = struct {
         const cloned = state.get().clone(self.allocator, .{ .transfer_cache = !opts.dont_transfer_cache }) catch |err| return stateAccessError(err);
         const owner = try self.toStateRc(cloned);
         errdefer owner.unref();
-        st.processSlots(self.allocator, io, cloned, slot, null) catch |err| return toTransitionError(err, opts.diagnostics);
+        st.processSlots(self.allocator, io, cloned, slot, self.modules.validator_monitor) catch |err| return toTransitionError(err, opts.diagnostics);
         return owner;
     }
 

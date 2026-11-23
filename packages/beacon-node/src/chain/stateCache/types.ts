@@ -20,8 +20,11 @@ export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
  * The cache key is state root
  */
 export interface BlockStateCache {
+  /** Returns a shared JS view. Callers must not mutate or release cached views. */
   get(rootHex: RootHex): IBeaconStateView | null;
+  /** Keeps the supplied JS view; native storage independently retains its state reference. */
   add(item: IBeaconStateView): void;
+  /** Keeps the supplied JS view if it inserts the state. */
   setHeadState(item: IBeaconStateView | null): void;
   /**
    * Get a seed state for state reload.
@@ -60,12 +63,15 @@ export interface CheckpointStateCache {
   init?: () => Promise<void>;
   getOrReload(cp: CheckpointHex): Promise<IBeaconStateView | null>;
   getStateOrBytes(cp: CheckpointHex): Promise<IBeaconStateView | Uint8Array | null>;
+  /** Returns a shared JS view. Callers must not mutate or release cached views. */
   get(cpOrKey: CheckpointHex | string): IBeaconStateView | null;
+  /** Keeps the supplied JS view; native storage independently retains its state reference. */
   add(cp: phase0.Checkpoint, state: IBeaconStateView): void;
   getLatest(rootHex: RootHex, maxEpoch: Epoch): IBeaconStateView | null;
   getOrReloadLatest(rootHex: RootHex, maxEpoch: Epoch): Promise<IBeaconStateView | null>;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
   onCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void;
+  /** Borrows state until the promise settles. The caller must not release it while processing is pending. */
   processState(blockRootHex: RootHex, state: IBeaconStateView): Promise<number>;
   clear(): Promise<void>;
   dumpSummary(): routes.lodestar.StateCacheItem[];

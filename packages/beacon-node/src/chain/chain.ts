@@ -30,6 +30,7 @@ import {
   EffectiveBalanceIncrements,
   EpochShuffling,
   IBeaconStateView,
+  NativeBeaconStateView,
   computeEndSlotAtEpoch,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -61,7 +62,16 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
+import {
+  LodestarError,
+  Logger,
+  fromHex,
+  gweiToWei,
+  isErrorAborted,
+  pruneSetToMax,
+  sleep,
+  toRootHex,
+} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, HALF_SLOT_BPS, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -119,7 +129,8 @@ import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {ProposerTracker} from "./proposerTracker.js";
-import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
+import {IStateRegeneratorInternal, QueuedStateRegenerator, RegenCaller, StateRegenerator} from "./regen/index.js";
+import {NativeStateRegenerator} from "./regen/native.js";
 import {ReprocessController} from "./reprocess.js";
 import {
   PayloadEnvelopeInput,
@@ -141,8 +152,10 @@ import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datasto
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
+import {NativeBlockStateCache} from "./stateCache/nativeBlockStateCache.js";
+import {NativeCheckpointStateCache} from "./stateCache/nativeCheckpointStateCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
-import {CheckpointStateCache} from "./stateCache/types.js";
+import {BlockStateCache, CheckpointStateCache} from "./stateCache/types.js";
 import {validateApiProposerSlashing} from "./validation/proposerSlashing.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
@@ -192,6 +205,7 @@ export class BeaconChain implements IBeaconChain {
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
   readonly regen: QueuedStateRegenerator;
+  readonly nativeRegen?: NativeStateRegenerator;
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly archiveStore: ArchiveStore;
@@ -321,6 +335,7 @@ export class BeaconChain implements IBeaconChain {
       builderApiClientOpts?: BuilderApiClientOpts;
     }
   ) {
+    const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
     this.opts = opts;
     this.config = config;
     this.db = db;
@@ -334,11 +349,6 @@ export class BeaconChain implements IBeaconChain {
     this.executionBuilder = executionBuilder;
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
-    // by default, verify signatures on both main threads and worker threads
-    const bls = opts.blsVerifyAllMainThread
-      ? new BlsSingleThreadVerifier({metrics})
-      : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
-
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
@@ -403,64 +413,121 @@ export class BeaconChain implements IBeaconChain {
     // Global cache of validators pubkey/index mapping
     this.pubkeyCache = pubkeyCache;
 
-    const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
-    const blockStateCache = new FIFOBlockStateCache(this.opts, {metrics});
     this.bufferPool = new BufferPool(anchorState.serializedSize(), metrics);
-
     this.cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(this.db);
-    const checkpointStateCache: CheckpointStateCache = new PersistentCheckpointStateCache(
-      {
-        config,
-        metrics,
-        logger,
-        clock,
-        blockStateCache,
-        bufferPool: this.bufferPool,
-        datastore: this.cpStateDatastore,
-      },
-      this.opts
-    );
-
     const {checkpoint} = anchorState.computeAnchorCheckpoint();
-    blockStateCache.add(anchorState);
-    blockStateCache.setHeadState(anchorState);
-    checkpointStateCache.add(checkpoint, anchorState);
+    const initializeForkChoiceFromCaches = (
+      blockStateCache: BlockStateCache,
+      checkpointStateCache: CheckpointStateCache
+    ): IForkChoice => {
+      blockStateCache.add(anchorState);
+      blockStateCache.setHeadState(anchorState);
+      checkpointStateCache.add(checkpoint, anchorState);
 
-    const forkChoiceStateGetter: ForkChoiceStateGetter = ({stateRoot, checkpoint}) => {
-      if (stateRoot) return blockStateCache.get(stateRoot);
+      const forkChoiceStateGetter: ForkChoiceStateGetter = ({stateRoot, checkpoint}) => {
+        if (stateRoot) return blockStateCache.get(stateRoot);
 
-      if (checkpoint) return checkpointStateCache.get({epoch: checkpoint.epoch, rootHex: checkpoint.rootHex});
+        if (checkpoint) return checkpointStateCache.get({epoch: checkpoint.epoch, rootHex: checkpoint.rootHex});
 
-      return null;
+        return null;
+      };
+
+      return initializeForkChoice(
+        config,
+        emitter,
+        clock.currentSlot,
+        anchorState,
+        isAnchorStateFinalized,
+        opts,
+        this.justifiedBalancesGetter.bind(this),
+        forkChoiceStateGetter,
+        metrics,
+        logger
+      );
     };
 
-    const forkChoice = initializeForkChoice(
+    const regenModules = {
       config,
-      emitter,
-      clock.currentSlot,
-      anchorState,
-      isAnchorStateFinalized,
-      opts,
-      this.justifiedBalancesGetter.bind(this),
-      forkChoiceStateGetter,
-      metrics,
-      logger
-    );
-
-    const regen = new QueuedStateRegenerator({
-      config,
-      forkChoice,
-      blockStateCache,
-      checkpointStateCache,
-      seenBlockInputCache: this.seenBlockInputCache,
-      serializedCache: this.serializedCache,
-      db,
       metrics,
       validatorMonitor,
       logger,
       emitter,
+    };
+    let blockStateCache: BlockStateCache;
+    let checkpointStateCache: CheckpointStateCache;
+    let forkChoice: IForkChoice;
+    let regenerator: IStateRegeneratorInternal;
+    if (opts.nativeRegen) {
+      let nativeBlockStateCache: NativeBlockStateCache | undefined;
+      let nativeCheckpointStateCache: NativeCheckpointStateCache | undefined;
+      try {
+        if (!(anchorState instanceof NativeBeaconStateView) || !opts.nativeForkChoice || !fileDataStore) {
+          throw new LodestarError({code: "NATIVE_REGEN_REQUIRES_NATIVE_STATE_FORK_CHOICE_AND_FILE_STORE"});
+        }
+        if (!isAnchorStateFinalized) {
+          throw new LodestarError({code: "NATIVE_REGEN_REQUIRES_FINALIZED_ANCHOR"});
+        }
+        nativeBlockStateCache = new NativeBlockStateCache({config, anchorState, signal, metrics}, opts);
+        nativeCheckpointStateCache = new NativeCheckpointStateCache(
+          {config, blockStateCache: nativeBlockStateCache, dataDir, logger, signal, clock, metrics},
+          opts
+        );
+        blockStateCache = nativeBlockStateCache;
+        checkpointStateCache = nativeCheckpointStateCache;
+        forkChoice = initializeForkChoiceFromCaches(blockStateCache, checkpointStateCache);
+        this.nativeRegen = new NativeStateRegenerator({
+          ...regenModules,
+          forkChoice,
+          blockStateCache: nativeBlockStateCache,
+          checkpointStateCache: nativeCheckpointStateCache,
+          signal,
+        });
+        regenerator = this.nativeRegen;
+      } catch (error) {
+        this.abortController.abort();
+        nativeCheckpointStateCache?.close();
+        nativeBlockStateCache?.close();
+        throw error;
+      }
+      logger.info("Using experimental native state regeneration", {blockDbFallback: false});
+    } else {
+      blockStateCache = new FIFOBlockStateCache(opts, {metrics});
+      checkpointStateCache = new PersistentCheckpointStateCache(
+        {
+          config,
+          metrics,
+          logger,
+          clock,
+          blockStateCache,
+          bufferPool: this.bufferPool,
+          datastore: this.cpStateDatastore,
+        },
+        opts
+      );
+      forkChoice = initializeForkChoiceFromCaches(blockStateCache, checkpointStateCache);
+      regenerator = new StateRegenerator({
+        ...regenModules,
+        forkChoice,
+        blockStateCache,
+        checkpointStateCache,
+        seenBlockInputCache: this.seenBlockInputCache,
+        serializedCache: this.serializedCache,
+        db,
+      });
+    }
+    const regen = new QueuedStateRegenerator(regenerator, {
+      forkChoice,
+      blockStateCache,
+      checkpointStateCache,
+      metrics,
+      logger,
       signal,
     });
+
+    // by default, verify signatures on both main threads and worker threads
+    const bls = opts.blsVerifyAllMainThread
+      ? new BlsSingleThreadVerifier({metrics})
+      : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
     if (!opts.disableLightClientServer) {
       this.lightClientServer = new LightClientServer(opts, {config, clock, db, metrics, emitter, logger, signal});

@@ -14,7 +14,7 @@ const preset = @import("preset").preset;
 const ct = @import("consensus_types");
 const pool = @import("./pool.zig");
 const BeaconConfig = @import("./BeaconConfig.zig");
-const OwnedConfigRc = BeaconConfig.OwnedConfigRc;
+const StateRc = st.CachedBeaconStateRc;
 const pubkey = @import("./pubkeys.zig");
 const js_types = @import("./js_types.zig");
 const sszValueToNapiValue = @import("./to_napi_value.zig").sszValueToNapiValue;
@@ -75,9 +75,9 @@ pub const js_meta = js.class(.{ .properties = .{
     .builderPendingWithdrawals = js.prop(.{ .get = true, .set = false }),
 } });
 
-cached_state: ?*CachedBeaconState = null,
+state_rc: ?*StateRc = null,
 pool_rc: @TypeOf(pool.state.pool_rc) = null,
-config_rc: ?*OwnedConfigRc = null,
+config_rc: ?*BeaconConfig.OwnedConfigRc = null,
 active_calls: u32 = 0,
 release_requested: bool = false,
 const BeaconStateView = @This();
@@ -89,11 +89,9 @@ pub fn init() BeaconStateView {
 pub fn deinit(self: *BeaconStateView) void {
     std.debug.assert(self.active_calls == 0);
     self.release_requested = true;
-    if (self.cached_state) |cached_state| {
-        const allocator = cached_state.allocator;
-        cached_state.deinit();
-        allocator.destroy(cached_state);
-        self.cached_state = null;
+    if (self.state_rc) |rc| {
+        rc.unref();
+        self.state_rc = null;
     }
     if (self.config_rc) |rc| {
         rc.unref();
@@ -161,9 +159,12 @@ pub fn createFromBytes(bytes: js.Uint8Array, config: *const BeaconConfig) !Beaco
 
     const io = js.io();
     try initCachedState(allocator, cached_state, io, state, &config_rc.instance.config, null);
-
+    errdefer {
+        cached_state.epoch_cache.deinit();
+        cached_state.slashings_cache.deinit();
+    }
     return .{
-        .cached_state = cached_state,
+        .state_rc = try StateRc.create(allocator, cached_state),
         .pool_rc = pool_rc.ref(),
         .config_rc = config_rc.ref(),
     };
@@ -1341,7 +1342,7 @@ pub fn loadOtherState(
     }
 
     return .{
-        .cached_state = new_cached_state,
+        .state_rc = try StateRc.create(allocator, new_cached_state),
         .pool_rc = self.pool_rc.?.ref(),
         .config_rc = self.config_rc.?.ref(),
     };
@@ -1509,7 +1510,7 @@ pub fn processSlots(self: *BeaconStateView, slot_arg: js.Number, options: ?js.Va
     );
 
     return .{
-        .cached_state = post_state,
+        .state_rc = try StateRc.create(allocator, post_state),
         .pool_rc = self.pool_rc.?.ref(),
         .config_rc = self.config_rc.?.ref(),
     };
@@ -1566,8 +1567,12 @@ pub fn stateTransition(
         }
         return err;
     };
+    errdefer {
+        post_state.deinit();
+        allocator.destroy(post_state);
+    }
     return .{
-        .cached_state = post_state,
+        .state_rc = try StateRc.create(allocator, post_state),
         .pool_rc = self.pool_rc.?.ref(),
         .config_rc = self.config_rc.?.ref(),
     };
@@ -1835,7 +1840,7 @@ pub fn withParentPayloadApplied(self: *BeaconStateView, execution_requests_bytes
     }
     try post_state.state.commit();
     return .{
-        .cached_state = post_state,
+        .state_rc = try StateRc.create(allocator, post_state),
         .pool_rc = self.pool_rc.?.ref(),
         .config_rc = self.config_rc.?.ref(),
     };
@@ -2157,7 +2162,7 @@ pub fn getExpectedWithdrawals(self: *BeaconStateView) !js.Value {
 // Keep its resources alive through every call's deferred cleanup, including error paths.
 fn acquireState(self: *BeaconStateView) !*CachedBeaconState {
     if (self.release_requested) return error.InvalidState;
-    const cached_state = self.cached_state orelse return error.InvalidState;
+    const cached_state = (self.state_rc orelse return error.InvalidState).get();
     self.active_calls = std.math.add(u32, self.active_calls, 1) catch return error.StateCallDepthExceeded;
     return cached_state;
 }

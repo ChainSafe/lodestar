@@ -16,6 +16,7 @@ import {
   BeaconStateAllForks,
   BeaconStateView,
   computeEpochAtSlot,
+  createBeaconStateView,
   createCachedBeaconState,
 } from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
@@ -128,14 +129,11 @@ export async function getDevBeaconNode(
 
   const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
   pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
-  const cachedState = createCachedBeaconState(
-    anchorState,
-    {
-      config: beaconConfig,
-      pubkeyCache,
-    },
-    {skipSyncPubkeys: true}
-  );
+  const stateView = options.chain?.nativeStateTransition
+    ? createBeaconStateView({nativeStateTransition: true, config: beaconConfig, stateBytes: anchorState.serialize()})
+    : new BeaconStateView(
+        createCachedBeaconState(anchorState, {config: beaconConfig, pubkeyCache}, {skipSyncPubkeys: true})
+      );
 
   return BeaconNode.init({
     opts: options as IBeaconNodeOptions,
@@ -148,9 +146,9 @@ export async function getDevBeaconNode(
     dataDir: tmpDir.name,
     dataColumnDir: path.join(tmpDir.name, "data_columns"),
     peerStoreDir,
-    anchorState: new BeaconStateView(cachedState),
+    anchorState: stateView,
     isAnchorStateFinalized: true,
-    earliestAvailableSlot: cachedState.slot,
+    earliestAvailableSlot: stateView.slot,
   });
 }
 

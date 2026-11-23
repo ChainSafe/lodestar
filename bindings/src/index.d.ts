@@ -476,6 +476,10 @@ export declare class BeaconConfig {
 }
 
 declare const bindings: {
+  SeenBlock: typeof import("./regen.js").SeenBlock;
+  BlockStateCache: typeof import("./regen.js").BlockStateCache;
+  CheckpointStateCache: typeof import("./regen.js").CheckpointStateCache;
+  StateRegenerator: typeof import("./regen.js").StateRegenerator;
   stateTransition: {
     /** Callers must exclude STF operations in this thread until teardown returns. */
     deinitReusedEpochTransitionCache: () => void;

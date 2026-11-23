@@ -35,6 +35,10 @@
       "types": "./src/fork-choice.d.ts",
       "import": "./src/fork-choice.js"
     },
+    "./regen": {
+      "types": "./src/regen.d.ts",
+      "import": "./src/regen.js"
+    },
     "./metrics": {
       "types": "./src/metrics.d.ts",
       "import": "./src/metrics.js"

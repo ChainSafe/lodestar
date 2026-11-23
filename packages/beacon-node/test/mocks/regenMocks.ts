@@ -6,5 +6,10 @@ export type MockedQueuedStateRegenerator = Mocked<QueuedStateRegenerator>;
 vi.mock("../../src/chain/regen/index.js");
 
 export function getMockedQueuedStateRegenerator(): MockedQueuedStateRegenerator {
-  return vi.mocked(new QueuedStateRegenerator({} as any));
+  return vi.mocked(
+    new QueuedStateRegenerator(
+      {} as ConstructorParameters<typeof QueuedStateRegenerator>[0],
+      {} as ConstructorParameters<typeof QueuedStateRegenerator>[1]
+    )
+  );
 }

@@ -38,6 +38,7 @@ export type ChainArgs = {
   "chain.nHistoricalStatesFileDataStore"?: boolean;
   "chain.nativeStateTransition"?: boolean;
   "chain.nativeForkChoice"?: boolean;
+  "chain.nativeRegen"?: boolean;
   "chain.maxBlockStates"?: number;
   "chain.maxCPStateEpochsInMemory"?: number;
   "chain.maxCPStateEpochsOnDisk"?: number;
@@ -84,6 +85,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
     nativeStateTransition: args["chain.nativeStateTransition"] ?? defaultOptions.chain.nativeStateTransition,
     nativeForkChoice: args["chain.nativeForkChoice"] ?? defaultOptions.chain.nativeForkChoice,
+    nativeRegen: args["chain.nativeRegen"] ?? defaultOptions.chain.nativeRegen,
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
@@ -338,6 +340,14 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
+  "chain.nativeRegen": {
+    description:
+      "Use experimental native state caches and replay (requires native STF, native fork choice and file checkpoint storage)",
+    type: "boolean",
+    default: defaultOptions.chain.nativeRegen,
+    group: "chain",
+    hidden: true,
+  },
   "chain.nativeForkChoice": {
     hidden: true,
     description: "Use native (Zig) fork choice instead of JS implementation",

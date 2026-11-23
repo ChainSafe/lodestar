@@ -57,6 +57,7 @@ pub const BlockStateCache = struct {
     };
 
     allocator: Allocator,
+    stats: struct { lookups: u64 = 0, hits: u64 = 0, adds: u64 = 0 } = .{},
     max_states: usize,
     /// O(1) lookup. Insertion order is NOT tracked here (the insertion list owns that) and map
     /// iteration order is never used, so eviction may `swapRemove`.
@@ -155,6 +156,7 @@ pub const BlockStateCache = struct {
 
         // new state
         metrics.block().adds.incr();
+        self.stats.adds += 1;
         self.insertItem(key, state.ref(), is_head);
         self.prune(key);
     }
@@ -184,8 +186,10 @@ pub const BlockStateCache = struct {
 
     fn lookup(self: *Self, io: std.Io, key: Root) ?*Entry {
         metrics.block().lookups.incr();
+        self.stats.lookups += 1;
         const entry = self.map.get(key) orelse return null;
         metrics.block().hits.incr();
+        self.stats.hits += 1;
         metrics.block().state_cloned_count.observe(entry.state.get().cloned_count);
         recordRead(io, entry);
         return entry;
