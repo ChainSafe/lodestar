@@ -5,17 +5,25 @@ import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "@lodes
 import {config as minimalConfig} from "@lodestar/config/default";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
+import {
+  computeStartSlotAtEpoch,
+  getBlockProposerSignatureSet,
+  interopSecretKey,
+  signedBlockToSignedHeader,
+} from "@lodestar/state-transition";
+import {SignedBeaconBlock, fulu, gloas, phase0, ssz} from "@lodestar/types";
 import {defer, notNullish, sleep, toRootHex} from "@lodestar/utils";
 import {BlockInputNoData, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {BlsSingleThreadVerifier} from "../../../src/chain/bls/singleThread.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
+import {DataColumnSidecarErrorCode} from "../../../src/chain/errors/dataColumnSidecarError.js";
 import {
   ExecutionPayloadEnvelopeError,
   ExecutionPayloadEnvelopeErrorCode,
@@ -27,7 +35,7 @@ import {SeenBlockInput} from "../../../src/chain/seenCache/seenGossipBlockInput.
 import {validateGloasBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadEnvelope} from "../../../src/chain/validation/executionPayloadEnvelope.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/index.js";
-import {INetwork, NetworkEvent, NetworkEventBus} from "../../../src/network/index.js";
+import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
 import {
@@ -38,12 +46,19 @@ import {
   PendingPayloadRootHex,
 } from "../../../src/sync/types.js";
 import {BlockInputSync, PAYLOAD_POLL_INTERVAL_MS, UnknownBlockPeerBalancer} from "../../../src/sync/unknownBlock.js";
+import {DownloadByRootErrorCode} from "../../../src/sync/utils/downloadByRoot.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
+import {SerializedCache} from "../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
+import {config as blocksAndDataConfig, generateBlockWithColumnSidecars, slots} from "../../utils/blocksAndData.js";
 import {getRandPeerIdStr, getRandPeerSyncMeta} from "../../utils/peer.js";
+
+for (let i = 0; i < 2; i++) {
+  pubkeyCache.append(i, interopSecretKey(i).toPublicKey().toBytes());
+}
 
 vi.mock("../../../src/chain/validation/executionPayloadEnvelope.js", () => ({
   validateGossipExecutionPayloadEnvelope: vi.fn().mockResolvedValue(undefined),
@@ -441,6 +456,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
         clock: new ClockStopped(0),
         forkChoice: forkChoice as IForkChoice,
         genesisTime: 0,
+        pubkeyCache,
         custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
         processBlock: async (blockInput, opts) => {
           const block = blockInput.getBlock();
@@ -491,6 +507,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
             }),
           prune: () => {},
           remove: () => {},
+          isVerifiedProposerSignature: () => true,
         } as unknown as SeenBlockInput,
         seenPayloadEnvelopeInputCache: {
           add: vi.fn(),
@@ -713,6 +730,7 @@ describe("UnknownBlockSync", () => {
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
           genesisTime: 0,
+          pubkeyCache,
           custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
           processBlock,
           seenBlockInputCache: {
@@ -739,6 +757,7 @@ describe("UnknownBlockSync", () => {
                 peerIdStr,
               }),
             prune: vi.fn(),
+            isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
           } as unknown as SeenBlockInput,
           seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
           seenPayloadEnvelopeInputCache: {
@@ -1273,6 +1292,437 @@ describe("UnknownBlockSync", () => {
     });
   });
 
+  describe("downloaded block proposer signature", () => {
+    const sigConfig = createBeaconConfig(minimalConfig, Buffer.alloc(32, 0x01));
+    const parentRoot = Buffer.alloc(32, 0xaa);
+    const parentRootHex = toRootHex(parentRoot);
+
+    function signBlock(slot: number, proposerIndex: number, signerIndex = proposerIndex): phase0.SignedBeaconBlock {
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      block.message.proposerIndex = proposerIndex;
+      block.message.parentRoot = parentRoot;
+      const {signingRoot} = getBlockProposerSignatureSet(sigConfig, block);
+      block.signature = interopSecretKey(signerIndex).sign(signingRoot).toBytes();
+      return block;
+    }
+
+    function resign(block: phase0.SignedBeaconBlock, signerIndex: number): phase0.SignedBeaconBlock {
+      const resigned = ssz.phase0.SignedBeaconBlock.clone(block);
+      const {signingRoot} = getBlockProposerSignatureSet(sigConfig, resigned);
+      resigned.signature = interopSecretKey(signerIndex).sign(signingRoot).toBytes();
+      return resigned;
+    }
+
+    function getRootHex(block: phase0.SignedBeaconBlock): string {
+      return toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+    }
+
+    function setupSignatureTest(servedBlocks: Map<PeerIdStr, phase0.SignedBeaconBlock[]>, finalizedSlot = 0) {
+      const emitter = new ChainEventEmitter();
+      const networkEvents = new NetworkEventBus();
+      const clock = new ClockStopped(1);
+      const custodyConfig = {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig;
+      const seenBlockInputCache = new SeenBlockInput({
+        config: sigConfig,
+        custodyConfig,
+        clock,
+        chainEvents: emitter,
+        signal: new AbortController().signal,
+        serializedCache: new SerializedCache(),
+        metrics: null,
+      });
+      const bls = new BlsSingleThreadVerifier({metrics: null});
+      const processBlock = vi.fn<IBeaconChain["processBlock"]>().mockResolvedValue(undefined);
+      const connectedPeers = new Set<PeerIdStr>();
+      const reportPeer = vi.fn<INetwork["reportPeer"]>();
+      const sendBeaconBlocksByRoot = vi.fn(async (peerId: PeerIdStr, roots: Uint8Array[]) => {
+        const block = servedBlocks.get(peerId)?.find((b) => getRootHex(b) === toRootHex(roots[0]));
+        return block ? [ssz.phase0.SignedBeaconBlock.deserialize(ssz.phase0.SignedBeaconBlock.serialize(block))] : [];
+      });
+
+      const network = {
+        events: networkEvents,
+        getConnectedPeers: () => Array.from(connectedPeers),
+        getConnectedPeerSyncMeta: (peerId: PeerIdStr) => ({
+          peerId,
+          client: "signature-test-client",
+          custodyColumns: [],
+          earliestAvailableSlot: 0,
+        }),
+        custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
+        sendBeaconBlocksByRoot,
+        reportPeer,
+      } as unknown as INetwork;
+
+      const chainForTest = {
+        config: sigConfig,
+        emitter,
+        clock,
+        genesisTime: 0,
+        forkChoice: {
+          hasBlockHex: (root: string) => root === parentRootHex,
+          getBlockHexDefaultStatus: (root: string) => (root === parentRootHex ? ({slot: 0} as ProtoBlock) : null),
+          hasPayloadHexUnsafe: () => false,
+          getFinalizedBlock: () => ({slot: finalizedSlot}) as ProtoBlock,
+        } as unknown as IForkChoice,
+        custodyConfig,
+        processBlock,
+        pubkeyCache,
+        bls,
+        seenBlockInputCache,
+        seenBlockProposers: {isKnown: () => false} as unknown as SeenBlockProposers,
+        seenPayloadEnvelopeInputCache: {
+          add: vi.fn(),
+          get: vi.fn().mockReturnValue(undefined),
+          getOrReload: vi.fn().mockResolvedValue(undefined),
+          remove: vi.fn(),
+        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+      } as unknown as IBeaconChain;
+
+      const svc = new BlockInputSync(sigConfig, network, chainForTest, logger, null, defaultSyncOptions);
+      svc.subscribeToNetwork();
+      const connect = (peer: PeerIdStr): void => {
+        connectedPeers.add(peer);
+        networkEvents.emit(NetworkEvent.peerConnected, {
+          peer,
+          status: {} as never,
+          custodyColumns: [],
+          clientAgent: "signature-test-client",
+        });
+      };
+      const pendingBlocks = (svc as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+
+      return {
+        svc,
+        emitter,
+        connect,
+        pendingBlocks,
+        processBlock,
+        reportPeer,
+        seenBlockInputCache,
+        bls,
+        sendBeaconBlocksByRoot,
+      };
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout", "Date"]});
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("reports only the peer serving an invalid proposer signature and imports the root from another peer", async () => {
+      const [attacker, honest, forwarder] = await Promise.all([
+        getRandPeerIdStr(),
+        getRandPeerIdStr(),
+        getRandPeerIdStr(),
+      ]);
+      const block = signBlock(1, 0);
+      const resigned = resign(block, 1);
+      const rootHex = getRootHex(block);
+      const {svc, emitter, connect, pendingBlocks, processBlock, reportPeer, seenBlockInputCache} = setupSignatureTest(
+        new Map([
+          [attacker, [resigned]],
+          [honest, [block]],
+        ])
+      );
+
+      try {
+        connect(attacker);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: forwarder, source: BlockInputSource.gossip});
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: attacker, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
+          attacker,
+          PeerAction.LowToleranceError,
+          DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID
+        );
+        expect(processBlock).not.toHaveBeenCalled();
+        expect(seenBlockInputCache.get(rootHex)).toBeUndefined();
+        expect(pendingBlocks.get(rootHex)?.status).toBe(PendingBlockInputStatus.pending);
+
+        connect(honest);
+        await vi.advanceTimersByTimeAsync(1_000);
+
+        expect(processBlock).toHaveBeenCalledOnce();
+        expect(processBlock.mock.calls[0][0].getBlock().signature).toEqual(block.signature);
+        expect(new Set(reportPeer.mock.calls.map(([peer]) => peer))).toEqual(new Set([attacker]));
+        expect(pendingBlocks.has(rootHex)).toBe(false);
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("rejects a downloaded block whose proposer is outside the pubkey cache without verifying it", async () => {
+      const attacker = await getRandPeerIdStr();
+      const block = signBlock(1, pubkeyCache.size, 0);
+      const rootHex = getRootHex(block);
+      const {svc, emitter, connect, pendingBlocks, processBlock, reportPeer, seenBlockInputCache, bls} =
+        setupSignatureTest(new Map([[attacker, [block]]]));
+      const verifySignatureSets = vi.spyOn(bls, "verifySignatureSets");
+
+      try {
+        connect(attacker);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: attacker, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
+          attacker,
+          PeerAction.LowToleranceError,
+          DownloadByRootErrorCode.UNKNOWN_PROPOSER
+        );
+        expect(verifySignatureSets).not.toHaveBeenCalled();
+        expect(processBlock).not.toHaveBeenCalled();
+        expect(seenBlockInputCache.get(rootHex)).toBeUndefined();
+        expect(pendingBlocks.get(rootHex)?.status).toBe(PendingBlockInputStatus.pending);
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("drops a block below the finalized slot, such as unsigned genesis, without reporting peers", async () => {
+      const [honest, otherHonest] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const genesisBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const rootHex = getRootHex(genesisBlock);
+      const {
+        svc,
+        emitter,
+        connect,
+        pendingBlocks,
+        processBlock,
+        reportPeer,
+        seenBlockInputCache,
+        bls,
+        sendBeaconBlocksByRoot,
+      } = setupSignatureTest(
+        new Map([
+          [honest, [genesisBlock]],
+          [otherHonest, [genesisBlock]],
+        ]),
+        1
+      );
+      const verifySignatureSets = vi.spyOn(bls, "verifySignatureSets");
+
+      try {
+        connect(honest);
+        connect(otherHonest);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: honest, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(1_000);
+
+        expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+        expect(reportPeer).not.toHaveBeenCalled();
+        expect(verifySignatureSets).not.toHaveBeenCalled();
+        expect(processBlock).not.toHaveBeenCalled();
+        expect(seenBlockInputCache.get(rootHex)).toBeUndefined();
+        expect(pendingBlocks.has(rootHex)).toBe(false);
+      } finally {
+        svc.close();
+      }
+    });
+  });
+
+  describe("downloaded column sidecars", () => {
+    const fuluConfig = createBeaconConfig(blocksAndDataConfig, Buffer.alloc(32, 0x01));
+    const sampledColumns = [0, 1];
+    const parentRoot = Buffer.alloc(32, 0xbb);
+    const parentRootHex = toRootHex(parentRoot);
+
+    function generateFuluBlock(): {
+      block: SignedBeaconBlock<ForkName.fulu>;
+      rootHex: string;
+      columns: fulu.DataColumnSidecar[];
+    } {
+      const generated = generateBlockWithColumnSidecars({forkName: ForkName.fulu, slot: slots.fulu, parentRoot});
+      // A clone, the generated values cache their hash tree roots
+      const block = ssz.fulu.SignedBeaconBlock.clone(generated.block);
+      block.message.proposerIndex = 0;
+      const signedBlockHeader = signedBlockToSignedHeader(fuluConfig, block);
+      const rootHex = toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message));
+      return {block, rootHex, columns: generated.columnSidecars.map((column) => ({...column, signedBlockHeader}))};
+    }
+
+    function setupColumnTest(
+      block: SignedBeaconBlock<ForkName.fulu>,
+      servedColumns: Map<PeerIdStr, fulu.DataColumnSidecar[]>
+    ) {
+      const emitter = new ChainEventEmitter();
+      const networkEvents = new NetworkEventBus();
+      const clock = new ClockStopped(block.message.slot + 1);
+      const custodyConfig = {sampledColumns, custodyColumns: sampledColumns} as unknown as CustodyConfig;
+      const seenBlockInputCache = new SeenBlockInput({
+        config: fuluConfig,
+        custodyConfig,
+        clock,
+        chainEvents: emitter,
+        signal: new AbortController().signal,
+        serializedCache: new SerializedCache(),
+        metrics: null,
+      });
+      // Block and column headers carry the block signature, only a different header signature is verified
+      const rootHex = toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message));
+      seenBlockInputCache.markVerifiedProposerSignature(block.message.slot, rootHex, block.signature);
+      const bls = new BlsSingleThreadVerifier({metrics: null});
+      const verifySignatureSets = vi.spyOn(bls, "verifySignatureSets").mockResolvedValue(false);
+      const processBlock = vi.fn<IBeaconChain["processBlock"]>().mockResolvedValue(undefined);
+      const connectedPeers = new Set<PeerIdStr>();
+      const reportPeer = vi.fn<INetwork["reportPeer"]>();
+
+      const network = {
+        events: networkEvents,
+        getConnectedPeers: () => Array.from(connectedPeers),
+        getConnectedPeerSyncMeta: (peerId: PeerIdStr) => ({
+          peerId,
+          client: "column-test-client",
+          custodyColumns: sampledColumns,
+          earliestAvailableSlot: 0,
+        }),
+        custodyConfig: {sampledColumns, sampleGroups: sampledColumns.map((c) => [c])} as unknown as CustodyConfig,
+        sendBeaconBlocksByRoot: vi.fn(async () => [block]),
+        // Capped at the requested count like collectMaxResponseTyped
+        sendDataColumnSidecarsByRoot: vi.fn<INetwork["sendDataColumnSidecarsByRoot"]>(async (peerId, request) =>
+          (servedColumns.get(peerId) ?? []).slice(
+            0,
+            request.reduce((total, {columns}) => total + columns.length, 0)
+          )
+        ),
+        reportPeer,
+      } as unknown as INetwork;
+
+      const chainForTest = {
+        config: fuluConfig,
+        emitter,
+        clock,
+        genesisTime: 0,
+        forkChoice: {
+          hasBlockHex: (root: string) => root === parentRootHex,
+          getBlockHexDefaultStatus: (root: string) => (root === parentRootHex ? ({slot: 0} as ProtoBlock) : null),
+          hasPayloadHexUnsafe: () => false,
+          getFinalizedBlock: () => ({slot: 0}) as ProtoBlock,
+        } as unknown as IForkChoice,
+        custodyConfig,
+        processBlock,
+        pubkeyCache,
+        bls,
+        seenBlockInputCache,
+        seenBlockProposers: {isKnown: () => false} as unknown as SeenBlockProposers,
+        seenPayloadEnvelopeInputCache: {
+          add: vi.fn(),
+          get: vi.fn().mockReturnValue(undefined),
+          getOrReload: vi.fn().mockResolvedValue(undefined),
+          remove: vi.fn(),
+        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+      } as unknown as IBeaconChain;
+
+      const svc = new BlockInputSync(fuluConfig, network, chainForTest, logger, null, defaultSyncOptions);
+      svc.subscribeToNetwork();
+      const connect = (peer: PeerIdStr): void => {
+        connectedPeers.add(peer);
+        networkEvents.emit(NetworkEvent.peerConnected, {
+          peer,
+          status: {} as never,
+          custodyColumns: sampledColumns,
+          clientAgent: "column-test-client",
+        });
+      };
+
+      return {svc, emitter, connect, processBlock, reportPeer, verifySignatureSets};
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout", "Date"]});
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("reports a peer serving columns with an invalid KZG proof and imports the root from another peer", async () => {
+      const [attacker, honest] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const [column0, column1] = columns;
+      const badColumn0 = {...column0, kzgProofs: column1.kzgProofs};
+      const {svc, emitter, connect, processBlock, reportPeer} = setupColumnTest(
+        block,
+        new Map([
+          [attacker, [badColumn0, column1]],
+          [honest, [column0, column1]],
+        ])
+      );
+
+      try {
+        connect(attacker);
+        connect(honest);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: attacker, source: BlockInputSource.gossip});
+        // Column KZG proofs are verified off the event loop, fake timers alone do not wait for them
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+
+        expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
+          attacker,
+          PeerAction.LowToleranceError,
+          DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH
+        );
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("reports and excludes a peer serving columns that were not requested", async () => {
+      const [attacker, honest] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const {svc, emitter, connect, processBlock, reportPeer} = setupColumnTest(
+        block,
+        new Map([
+          [attacker, [columns[0], columns[2]]],
+          [honest, [columns[1]]],
+        ])
+      );
+
+      try {
+        connect(attacker);
+        connect(honest);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: attacker, source: BlockInputSource.gossip});
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+
+        expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
+          attacker,
+          PeerAction.LowToleranceError,
+          DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED
+        );
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("does not report a peer serving columns with an invalid header signature", async () => {
+      const [peer, otherPeer] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const otherHeader = {...columns[0].signedBlockHeader, signature: new Uint8Array(96)};
+      const {svc, emitter, connect, processBlock, reportPeer, verifySignatureSets} = setupColumnTest(
+        block,
+        new Map([
+          [peer, columns.slice(0, 2).map((column) => ({...column, signedBlockHeader: otherHeader}))],
+          [otherPeer, columns.slice(0, 2)],
+        ])
+      );
+
+      try {
+        connect(peer);
+        connect(otherPeer);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer, source: BlockInputSource.gossip});
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+
+        expect(verifySignatureSets).toHaveBeenCalledOnce();
+        expect(reportPeer).not.toHaveBeenCalled();
+      } finally {
+        svc.close();
+      }
+    });
+  });
+
   describe("payload sync flows", () => {
     const gloasConfig = createBeaconConfig(
       {...minimalConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0},
@@ -1316,6 +1766,7 @@ describe("UnknownBlockSync", () => {
         custodyConfig,
         genesisTime: 0,
         metrics: null,
+        pubkeyCache,
         serializedCache: {delete: vi.fn()} as unknown as IBeaconChain["serializedCache"],
         getBlockByRoot: vi.fn().mockResolvedValue(null),
         processExecutionPayload: vi.fn().mockResolvedValue(undefined),
@@ -1987,6 +2438,7 @@ describe("UnknownBlockSync", () => {
                 source,
               }),
             prune: vi.fn(),
+            isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
           } as unknown as SeenBlockInput,
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -2127,6 +2579,7 @@ describe("UnknownBlockSync", () => {
                 source,
               }),
             prune: vi.fn(),
+            isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
           } as unknown as SeenBlockInput,
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -2234,6 +2687,7 @@ describe("UnknownBlockSync", () => {
                 source,
               }),
             prune: vi.fn(),
+            isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
           } as unknown as SeenBlockInput,
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
@@ -3383,6 +3837,7 @@ describe("UnknownBlockSync", () => {
       custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
       genesisTime: 0,
       metrics: null,
+      pubkeyCache,
       processBlock,
       forkChoice: {
         getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
@@ -3403,7 +3858,10 @@ describe("UnknownBlockSync", () => {
         getOrReload: vi.fn().mockResolvedValue(undefined),
         remove: vi.fn(),
       } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-      seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
+      seenBlockInputCache: {
+        prune: vi.fn(),
+        isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
+      } as unknown as SeenBlockInput,
       seenBlockProposers: {
         isKnown: vi.fn().mockReturnValue(false),
       } as unknown as SeenBlockProposers,

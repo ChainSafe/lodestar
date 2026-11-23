@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {GENESIS_SLOT} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
 import {Logger, prettyPrintIndices} from "@lodestar/utils";
@@ -12,6 +13,9 @@ import {Metrics} from "../../../metrics/index.js";
  * long period of non-finality.
  */
 export const MAX_PRUNE_BLOCK_SLOTS_PER_RUN = 4096;
+
+// Genesis is kept so the block and state stay available via the API, e.g. for checkpoint providers
+const FIRST_PRUNABLE_SLOT = GENESIS_SLOT + 1;
 
 export async function pruneHistory(
   config: ChainForkConfig,
@@ -30,11 +34,12 @@ export async function pruneHistory(
     // ensure that during (extremely lol) long periods of non-finality we don't delete unfinalized epoch data
     finalizedEpoch
   );
-  const firstBlockSlot = (await db.blockArchive.firstKey()) ?? 0;
+  const [firstBlockSlot = FIRST_PRUNABLE_SLOT] = await db.blockArchive.keys({gte: FIRST_PRUNABLE_SLOT, limit: 1});
   const blockCutoffSlot = Math.min(computeStartSlotAtEpoch(blockCutoffEpoch), firstBlockSlot + maxBlockSlots);
   // The latest archived state is the anchor on restart and can trail finalization by a few epochs
   const lastArchivedStateSlot = (await db.stateArchive.lastKey()) ?? 0;
   const stateCutoffSlot = Math.min(computeStartSlotAtEpoch(finalizedEpoch), lastArchivedStateSlot);
+  const stateStartSlot = Math.max(statePruneFromSlot, FIRST_PRUNABLE_SLOT);
 
   logger.debug("Preparing to prune history", {
     currentEpoch,
@@ -46,9 +51,9 @@ export async function pruneHistory(
 
   const step0 = metrics?.pruneHistory.fetchKeys.startTimer();
   const [blocks, envelopes, states] = await Promise.all([
-    db.blockArchive.keys({gte: 0, lt: blockCutoffSlot}),
-    db.executionPayloadEnvelopeArchive.keys({gte: 0, lt: blockCutoffSlot}),
-    stateCutoffSlot > statePruneFromSlot ? db.stateArchive.keys({gte: statePruneFromSlot, lt: stateCutoffSlot}) : [],
+    db.blockArchive.keys({gte: FIRST_PRUNABLE_SLOT, lt: blockCutoffSlot}),
+    db.executionPayloadEnvelopeArchive.keys({gte: FIRST_PRUNABLE_SLOT, lt: blockCutoffSlot}),
+    stateCutoffSlot > stateStartSlot ? db.stateArchive.keys({gte: stateStartSlot, lt: stateCutoffSlot}) : [],
   ]);
   step0?.();
 

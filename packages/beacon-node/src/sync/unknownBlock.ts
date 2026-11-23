@@ -13,6 +13,8 @@ import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/
 import {
   BlockError,
   BlockErrorCode,
+  DataColumnSidecarErrorCode,
+  DataColumnSidecarValidationError,
   ExecutionPayloadEnvelopeError,
   ExecutionPayloadEnvelopeErrorCode,
 } from "../chain/errors/index.js";
@@ -52,7 +54,7 @@ import {
   isPendingPayloadEnvelope,
   isPendingPayloadInput,
 } from "./types.js";
-import {DownloadByRootError, downloadByRoot} from "./utils/downloadByRoot.js";
+import {DownloadByRootError, DownloadByRootErrorCode, downloadByRoot} from "./utils/downloadByRoot.js";
 import {getAllDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
 import {getRateLimitedUntilMs} from "./utils/rateLimit.js";
 
@@ -549,8 +551,9 @@ export class BlockInputSync {
   /**
    * Limit pending blocks to prevent DOS attacks that cause OOM. Any gossip message with an unknown root adds a root-only
    * entry before validation, so those nothing waits on are evicted before a block or a root a pending block waits on.
-   * A downloaded block is only checked against its root, so this only applies while blocks and the roots they wait on
-   * fill at most half the cap, otherwise they could pin it and evict every new root on insertion.
+   * A downloaded block is only checked against its root and proposer signature, not that the proposer is due at its
+   * slot, so this only applies while blocks and the roots they wait on fill at most half the cap, otherwise they could
+   * pin it and evict every new root on insertion.
    */
   private prunePendingBlocks(): void {
     if (this.pendingBlocks.size <= this.maxPendingBlocks) {
@@ -1288,6 +1291,15 @@ export class BlockInputSync {
           // peer is still in backoff and would retry it later than needed
           this.triggerUnknownBlockSearch();
         }
+        return;
+      }
+
+      if (
+        res.err instanceof DownloadByRootError &&
+        res.err.type.code === DownloadByRootErrorCode.BELOW_FINALIZED_SLOT
+      ) {
+        this.logger.debug("Downloaded block is before finalized slot", logCtx, res.err);
+        this.removeAllDescendants(block, DroppedItemReason.belowFinalized);
         return;
       }
 
@@ -2046,8 +2058,12 @@ export class BlockInputSync {
           for (const warning of warnings) {
             this.logger.debug("BlockInputSync.fetchBlockInput: downloaded with warning", logCtx, warning);
             this.metrics?.blockInputSync.downloadByRoot.warn.inc({code: warning.type.code, client: peerClient});
+            // A partial response is legal, columns that were not requested are not
+            if (warning.type.code === DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED) {
+              this.network.reportPeer(peerId, PeerAction.LowToleranceError, warning.type.code);
+              excludedPeers.add(peerId);
+            }
           }
-          // TODO: penalize peer?
         }
       } catch (e) {
         this.logger.debug(
@@ -2056,10 +2072,36 @@ export class BlockInputSync {
           e as Error
         );
         const downloadByRootMetrics = this.metrics?.blockInputSync.downloadByRoot;
-        // TODO: penalize peer?
         if (e instanceof DownloadByRootError) {
           const errorCode = e.type.code;
           downloadByRootMetrics?.error.inc({code: errorCode, client: peerClient});
+          if (errorCode === DownloadByRootErrorCode.BELOW_FINALIZED_SLOT) {
+            throw e;
+          }
+          // Low as in range sync, not Fatal as peers may serve unverified copies of a root with a bad signature
+          if (
+            errorCode === DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT ||
+            errorCode === DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID ||
+            errorCode === DownloadByRootErrorCode.UNKNOWN_PROPOSER
+          ) {
+            this.network.reportPeer(peerId, PeerAction.LowToleranceError, errorCode);
+          }
+          excludedPeers.add(peerId);
+        } else if (e instanceof DataColumnSidecarValidationError) {
+          const errorCode = e.type.code;
+          downloadByRootMetrics?.error.inc({code: errorCode, client: peerClient});
+          // Not PROPOSAL_SIGNATURE_INVALID or INCORRECT_HEADER_ROOT, which compares signatures too: the spec does not
+          // require verifying the header signature of req/resp columns, so honest peers may serve a bad one
+          switch (errorCode) {
+            case DataColumnSidecarErrorCode.INCORRECT_BLOCK:
+            case DataColumnSidecarErrorCode.INVALID_INDEX:
+            case DataColumnSidecarErrorCode.INCORRECT_CELL_COUNT:
+            case DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT:
+            case DataColumnSidecarErrorCode.INCORRECT_KZG_PROOF_COUNT:
+            case DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID:
+            case DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
+              this.network.reportPeer(peerId, PeerAction.LowToleranceError, errorCode);
+          }
           excludedPeers.add(peerId);
         } else if (e instanceof RequestError) {
           // should look into req_resp metrics in this case
