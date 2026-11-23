@@ -76,7 +76,8 @@ pub const SendError = net.Socket.SendError || error{
     DatagramTooLarge,
     WouldBlock,
     /// Local policy, such as an egress firewall rule, refused the datagram to this destination
-    /// (EPERM). Native single and batch sends name it on Linux and macOS.
+    /// (EPERM), or on Linux the pinned IPv6 source is not an address of this host (EINVAL).
+    /// Native single and batch sends name it on Linux and macOS.
     DestinationRefused,
 };
 
@@ -122,8 +123,8 @@ pub const SendDrops = struct {
     }
 };
 /// Payload-only datagrams. Payloads are borrowed for the duration of sendMany.
-/// `from` pins the source address; its port is ignored. Null or an unspecified address leaves
-/// the choice to the kernel.
+/// `from` pins the source address; its port is ignored. Null or an unspecified address of the
+/// destination's family leaves the choice to the kernel.
 pub const Outgoing = struct { to: Address, bytes: []const u8, from: ?Address = null };
 /// Exclusively borrowed during sendMany; no pointers are retained after it returns.
 pub const BatchScratch = union {
