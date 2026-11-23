@@ -322,6 +322,7 @@ export declare class BeaconStateView {
   builderPendingWithdrawals: BuilderPendingWithdrawal[];
   getBuilder(index: number): Builder;
   canBuilderCoverBid(builderIndex: number, bidAmount: number): boolean;
+  getBuilderBidLimit(builderIndex: number): number;
   getEpochPTCs(epoch: number): Uint32Array[];
   getPayloadTimelinessCommittee(slot: number): Uint32Array;
   getInclusionListCommittee(slot: number): Uint32Array;

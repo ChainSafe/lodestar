@@ -2,7 +2,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {FAR_FUTURE_EPOCH, ForkName, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
-import {IBeaconStateView} from "@lodestar/state-transition";
+import {ETH_TO_GWEI, IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadBidErrorCode} from "../../../../src/chain/errors/index.js";
@@ -32,6 +32,14 @@ describe("validateGossipExecutionPayloadBid", () => {
   let chain: MockedBeaconChain;
   let signedBid: ReturnType<typeof ssz.gloas.SignedExecutionPayloadBid.defaultValue>;
 
+  function activeBuilder(balance: number): ReturnType<typeof ssz.gloas.Builder.defaultValue> {
+    const builder = ssz.gloas.Builder.defaultValue();
+    builder.depositEpoch = 0;
+    builder.withdrawableEpoch = FAR_FUTURE_EPOCH;
+    builder.balance = balance;
+    return builder;
+  }
+
   function mockState(overrides: Partial<{builder: ReturnType<typeof ssz.gloas.Builder.defaultValue>}> = {}) {
     const builder = overrides.builder ?? ssz.gloas.Builder.defaultValue();
     return {
@@ -42,6 +50,7 @@ describe("validateGossipExecutionPayloadBid", () => {
       getBuilder: () => builder,
       getRandaoMix: () => randaoMix,
       canBuilderCoverBid: () => true,
+      getBuilderBidLimit: () => Math.floor(builder.balance / ETH_TO_GWEI),
       latestExecutionPayloadBid: {blockHash: Buffer.alloc(32, 0)},
     } as unknown as IBeaconStateView;
   }
@@ -63,10 +72,7 @@ describe("validateGossipExecutionPayloadBid", () => {
     proposerPreferences.message.validatorIndex = proposerIndex;
     vi.mocked(chain.proposerPreferencesPool.get).mockReturnValue(proposerPreferences);
     chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
-    const builder = ssz.gloas.Builder.defaultValue();
-    builder.depositEpoch = 0;
-    builder.withdrawableEpoch = FAR_FUTURE_EPOCH;
-    chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder}));
+    chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder: activeBuilder(ETH_TO_GWEI)}));
     signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     signedBid.message.slot = 2;
     signedBid.message.parentBlockRoot = parentBlockRoot;
@@ -80,13 +86,13 @@ describe("validateGossipExecutionPayloadBid", () => {
     expect(await validateGossipExecutionPayloadBid(chain, signedBid)).toEqual({proposerIndex});
     expect(chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
     expect(
-      chain.seenExecutionPayloadBids.isKnown(
+      chain.seenExecutionPayloadBids.get(
         signedBid.message.slot,
         signedBid.message.builderIndex,
         toRootHex(parentBlockHash),
         toRootHex(parentBlockRoot)
       )
-    ).toBe(true);
+    ).toEqual({count: 1, limit: 1});
   });
 
   it("rejects a bid whose block hash equals its parent block hash", async () => {
@@ -112,10 +118,37 @@ describe("validateGossipExecutionPayloadBid", () => {
     });
   });
 
-  it("ignores an already known bid", async () => {
-    await validateGossipExecutionPayloadBid(chain, signedBid);
+  it("accepts one bid per ETH of builder balance for the same slot and parent", async () => {
+    chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder: activeBuilder(2 * ETH_TO_GWEI)}));
+    for (const value of [1, 2]) {
+      signedBid.message.value = value;
+      await validateGossipExecutionPayloadBid(chain, signedBid);
+    }
+    signedBid.message.value = 3;
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
-      type: {code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN},
+      type: {code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED, bidLimit: 2},
+    });
+    // the bid past the limit is dropped before state regen
+    expect(chain.regen.getBlockSlotState).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores a bid from a builder with less than 1 ETH of balance", async () => {
+    chain.regen.getBlockSlotState.mockResolvedValue(mockState({builder: activeBuilder(ETH_TO_GWEI - 1)}));
+    await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
+      type: {code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED, bidLimit: 0},
+    });
+  });
+
+  it("does not exceed the bid limit with concurrent bids", async () => {
+    const higherBid = ssz.gloas.SignedExecutionPayloadBid.clone(signedBid);
+    higherBid.message.value = signedBid.message.value + 1;
+    const results = await Promise.allSettled([
+      validateGossipExecutionPayloadBid(chain, signedBid),
+      validateGossipExecutionPayloadBid(chain, higherBid),
+    ]);
+    expect(results.map((result) => result.status).sort()).toEqual(["fulfilled", "rejected"]);
+    expect(results.find((result) => result.status === "rejected")?.reason).toMatchObject({
+      type: {code: ExecutionPayloadBidErrorCode.BID_LIMIT_REACHED},
     });
   });
 
@@ -185,6 +218,16 @@ describe("validateGossipExecutionPayloadBid", () => {
     expect(chain.regen.getBlockSlotState).not.toHaveBeenCalled();
   });
 
+  it("accepts a bid 1 gwei above the current best bid", async () => {
+    const bestBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    bestBid.message.value = 100;
+    chain.executionPayloadBidPool.getBestBid.mockReturnValue({signedBid: bestBid, receivedMs: 0} as ReturnType<
+      typeof chain.executionPayloadBidPool.getBestBid
+    >);
+    signedBid.message.value = 101;
+    expect(await validateGossipExecutionPayloadBid(chain, signedBid)).toEqual({proposerIndex});
+  });
+
   it("rejects a wrong randao mix", async () => {
     signedBid.message.prevRandao = Buffer.alloc(32, 2);
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({
@@ -230,10 +273,7 @@ describe("validateGossipExecutionPayloadBid", () => {
   });
 
   it("rejects on insufficient builder balance", async () => {
-    const builder = ssz.gloas.Builder.defaultValue();
-    builder.depositEpoch = 0;
-    builder.withdrawableEpoch = FAR_FUTURE_EPOCH;
-    const mockedState = mockState({builder});
+    const mockedState = mockState({builder: activeBuilder(ETH_TO_GWEI)});
     (mockedState as any).canBuilderCoverBid = () => false;
     chain.regen.getBlockSlotState.mockResolvedValue(mockedState);
     await expect(validateGossipExecutionPayloadBid(chain, signedBid)).rejects.toMatchObject({

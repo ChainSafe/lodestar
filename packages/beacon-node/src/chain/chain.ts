@@ -701,7 +701,8 @@ export class BeaconChain implements IBeaconChain {
       const state = await this.regen.getBlockSlotState(block, slot, {dontTransferCache: true}, RegenCaller.restApi);
       return {
         state,
-        executionOptimistic: isOptimisticBlock(block),
+        // The canonical variant can be FULL, a state reports the status of the payload its block builds on
+        executionOptimistic: isOptimisticBlock(this.forkChoice.getBlockHexDefaultStatus(block.blockRoot) ?? block),
         finalized: slot === finalizedBlock.slot && finalizedBlock.slot !== GENESIS_SLOT,
       };
     }
@@ -717,7 +718,7 @@ export class BeaconChain implements IBeaconChain {
     return (
       state && {
         state,
-        executionOptimistic: isOptimisticBlock(block),
+        executionOptimistic: isOptimisticBlock(this.forkChoice.getBlockHexDefaultStatus(block.blockRoot) ?? block),
         finalized: slot === finalizedBlock.slot && finalizedBlock.slot !== GENESIS_SLOT,
       }
     );
@@ -865,7 +866,9 @@ export class BeaconChain implements IBeaconChain {
     const finalizedBlock = this.forkChoice.getFinalizedBlock();
     if (slot > finalizedBlock.slot) {
       // Unfinalized slot, attempt to find in fork-choice
-      const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
+      const canonicalBlock = this.forkChoice.getCanonicalBlockAtSlot(slot);
+      // The canonical variant can be FULL, a block reports the status of the payload it builds on
+      const block = canonicalBlock && this.forkChoice.getBlockHexDefaultStatus(canonicalBlock.blockRoot);
       if (block) {
         // Block found in fork-choice.
         // It may be in the block input cache, awaiting full DA reconstruction, check there first
@@ -1606,38 +1609,76 @@ export class BeaconChain implements IBeaconChain {
   }
 
   /**
-   * Invalid state root error is critical and it causes the node to stale most of the time so we want to always
-   * persist preState, postState and block for further investigation.
+   * Invalid state root error is critical and it causes the node to stale most of the time so we want to persist
+   * preState, postState and block for further investigation.
    */
   async persistInvalidStateRoot(
     preState: IBeaconStateView,
     postState: IBeaconStateView,
     block: SignedBeaconBlock
   ): Promise<void> {
+    if (!this.opts.persistInvalidSszObjects) {
+      return;
+    }
     const blockSlot = block.message.slot;
-    const blockType = this.config.getForkTypes(blockSlot).SignedBeaconBlock;
-    const postStateRoot = postState.hashTreeRoot();
-    const logStr = `slot_${blockSlot}_invalid_state_root_${toRootHex(postStateRoot)}`;
-    await Promise.all([
-      this.persistSszObject(
-        `SignedBeaconBlock_slot_${blockSlot}`,
-        blockType.serialize(block),
-        toRootHex(this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message)),
-        `${logStr}_block`
-      ),
-      this.persistSszObject(
-        `preState_slot_${preState.slot}_BeaconState`,
-        preState.serialize(),
-        toRootHex(preState.hashTreeRoot()),
-        `${logStr}_pre_state`
-      ),
-      this.persistSszObject(
-        `postState_slot_${postState.slot}_BeaconState`,
-        postState.serialize(),
-        toRootHex(postStateRoot),
-        `${logStr}_post_state`
-      ),
-    ]);
+    const forkTypes = this.config.getForkTypes(blockSlot);
+    const preStateRoot = toRootHex(preState.hashTreeRoot());
+    const postStateRoot = toRootHex(postState.hashTreeRoot());
+    const logStr = `slot_${blockSlot}_invalid_state_root_${postStateRoot}`;
+    try {
+      await Promise.all([
+        this.persistSszObject(
+          `SignedBeaconBlock_slot_${blockSlot}`,
+          forkTypes.SignedBeaconBlock.serialize(block),
+          toRootHex(forkTypes.BeaconBlock.hashTreeRoot(block.message)),
+          `${logStr}_block`
+        ),
+        this.persistSszObject(
+          `preState_slot_${preState.slot}_BeaconState`,
+          preState.serialize(),
+          preStateRoot,
+          `${logStr}_pre_state`
+        ),
+        this.persistSszObject(
+          `postState_slot_${postState.slot}_BeaconState`,
+          postState.serialize(),
+          postStateRoot,
+          `${logStr}_post_state`
+        ),
+      ]);
+    } catch (e) {
+      this.logger.error(
+        "Error persisting invalid state root objects",
+        {slot: blockSlot, preStateRoot, postStateRoot},
+        e as Error
+      );
+    }
+  }
+
+  async persistInvalidSignature(state: IBeaconStateView, block: SignedBeaconBlock): Promise<void> {
+    if (!this.opts.persistInvalidSszObjects) {
+      return;
+    }
+    const blockSlot = block.message.slot;
+    const forkTypes = this.config.getForkTypes(blockSlot);
+    try {
+      await Promise.all([
+        this.persistSszObject(
+          forkTypes.SignedBeaconBlock.typeName,
+          forkTypes.SignedBeaconBlock.serialize(block),
+          toRootHex(forkTypes.BeaconBlock.hashTreeRoot(block.message)),
+          `${blockSlot}_invalid_signature`
+        ),
+        this.persistSszObject(
+          "BeaconState",
+          state.serialize(),
+          toRootHex(state.hashTreeRoot()),
+          `${state.slot}_invalid_signature`
+        ),
+      ]);
+    } catch (e) {
+      this.logger.error("Error persisting invalid signature objects", {slot: blockSlot}, e as Error);
+    }
   }
 
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void {
@@ -1649,12 +1690,6 @@ export class BeaconChain implements IBeaconChain {
         rootHex ?? toRootHex(type.hashTreeRoot(sszObject)),
         suffix
       );
-    }
-  }
-
-  persistInvalidSszBytes(typeName: string, sszBytes: Uint8Array, rootHex: RootHex, suffix?: string): void {
-    if (this.opts.persistInvalidSszObjects) {
-      void this.persistSszObject(typeName, sszBytes, rootHex, suffix);
     }
   }
 
