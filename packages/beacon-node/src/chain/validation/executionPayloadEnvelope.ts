@@ -122,6 +122,17 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
+  // [REJECT] `envelope.parent_beacon_block_root == block.parent_root`
+  if (toRootHex(envelope.parentBeaconBlockRoot) !== block.parentRoot) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.PARENT_BEACON_BLOCK_ROOT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      envelopeParentBeaconBlockRoot: toRootHex(envelope.parentBeaconBlockRoot),
+      blockParentRoot: block.parentRoot,
+    });
+  }
+
   // [REJECT] `payload.block_hash == bid.block_hash`
   if (toRootHex(payload.blockHash) !== payloadInput.getBlockHashHex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
