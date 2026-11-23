@@ -303,6 +303,79 @@ describe("Builder", () => {
     expect(modules.proposerPreferencesTracker.get(0, toRootHex(preferences.message.dependentRoot))).toBe(preferences);
   });
 
+  describe("missing payload attributes", () => {
+    const headEvent = (slot: number) =>
+      ({
+        type: EventType.headV2,
+        message: {
+          version: ForkName.gloas,
+          data: {
+            slot,
+            block: toRootHex(Buffer.alloc(32, slot)),
+            state: toRootHex(Buffer.alloc(32, 2)),
+            payloadStatus: "empty",
+            epochTransition: false,
+            currentEpochDependentRoot: toRootHex(Buffer.alloc(32, 3)),
+            nextEpochDependentRoot: toRootHex(Buffer.alloc(32, 4)),
+            executionOptimistic: false,
+          },
+        },
+      }) as const;
+    const payloadAttributesEvent = (proposalSlot: number) => {
+      const data = ssz.gloas.SSEPayloadAttributes.defaultValue();
+      data.proposalSlot = proposalSlot;
+      return {type: EventType.payloadAttributes, message: {version: ForkName.gloas, data}} as const;
+    };
+    const warning = expect.stringContaining("Beacon node is not emitting payload attributes, unable to bid");
+
+    it("warns once when heads are announced without payload attributes", () => {
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+      onEvent(headEvent(1));
+      onEvent(headEvent(2));
+      // The same slot announced again does not count
+      onEvent(headEvent(2));
+      expect(logger.warn).not.toHaveBeenCalled();
+
+      onEvent(headEvent(3));
+      expect(logger.warn).toHaveBeenCalledExactlyOnceWith(warning, {headSlot: 3, slotsWithoutPayloadAttributes: 3});
+
+      onEvent(headEvent(4));
+      onEvent(headEvent(5));
+      onEvent(headEvent(6));
+      expect(logger.warn).toHaveBeenCalledOnce();
+    });
+
+    it("does not warn while payload attributes are emitted for every slot", () => {
+      vi.spyOn(modules.bidder, "onPayloadAttributes").mockResolvedValue();
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+      // Payload attributes of the first head were emitted before connecting
+      onEvent(headEvent(1));
+      for (let slot = 2; slot <= 8; slot++) {
+        onEvent(payloadAttributesEvent(slot));
+        onEvent(headEvent(slot));
+      }
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it("warns again if payload attributes stop after they were received", () => {
+      vi.spyOn(modules.bidder, "onPayloadAttributes").mockResolvedValue();
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+      for (let slot = 1; slot <= 3; slot++) onEvent(headEvent(slot));
+      expect(logger.warn).toHaveBeenCalledOnce();
+
+      onEvent(payloadAttributesEvent(4));
+      onEvent(headEvent(4));
+      for (let slot = 5; slot <= 7; slot++) onEvent(headEvent(slot));
+      expect(logger.warn).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it("ignores unrelated topics", () => {
     const processBlock = vi.spyOn(modules.blockObserver, "processBlockEvent");
     const trackPreferences = vi.spyOn(modules.proposerPreferencesTracker, "onProposerPreferences");
