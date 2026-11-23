@@ -120,8 +120,14 @@ jobs:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
+      - name: Verify coverage report guard
+        run: node --test scripts/assert_coverage_report.test.mjs
+
       - name: Unit tests
         run: pnpm vitest run --project unit --project unit-minimal --coverage
+
+      - name: Require executed TypeScript coverage
+        run: node scripts/assert_coverage_report.mjs
 
       - name: Save interop pubkey cache
         if: ${{ always() && steps.interop-pubkey-cache.outputs.cache-hit != 'true' }}

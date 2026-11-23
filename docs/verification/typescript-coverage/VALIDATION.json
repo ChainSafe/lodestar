@@ -1,0 +1,32 @@
+{
+  "source_base": "bc568792ae8bb6eb3a5b9d2f26c5e7c55ed74096",
+  "guard_unit_cases": 6,
+  "guard_controls": [
+    {
+      "case": "old-empty-report",
+      "bytes": 0,
+      "exit": 1,
+      "output": ""
+    },
+    {
+      "case": "corrected-real-typescript",
+      "bytes": 1076056,
+      "exit": 0,
+      "output": "Verified 11 executed package TypeScript coverage records"
+    }
+  ],
+  "targeted_vitest": {
+    "source": "4e224659179dc8050344b48a397f1791450bf24c",
+    "passed": 62,
+    "skipped": 0,
+    "corrected_glob_applied_by_cli": true,
+    "executed_own_typescript_records": 11,
+    "scope": "Unchanged bytes test/source on the frozen workspace; reused installed toolchain, not a full latest-upstream build."
+  },
+  "full_corrected_coverage": "in_progress",
+  "limitations": [
+    "New-worktree pnpm attempted dependency synchronization and safely aborted without a TTY; shared dependencies were not purged.",
+    "Biome worktree symlink resolution panicked; exact changed content passed Biome check/fix through stdin in the existing workspace, with shared source byte equality verified.",
+    "Upstream hosted checks remain subject to maintainer workflow approval."
+  ]
+}
