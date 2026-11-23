@@ -1,4 +1,6 @@
-//! Native UDP operations. Linux batches preserve the caller's datagram boundaries.
+//! Linux and macOS system calls for SocketPair's native path: destination and source control
+//! messages on both, sendmmsg, recvmmsg and GSO on Linux. Batches keep the caller's datagram
+//! boundaries.
 const std = @import("std");
 const builtin = @import("builtin");
 const compat = @import("compat.zig");
@@ -21,21 +23,11 @@ const ControlHeader = if (os == .linux) linux.cmsghdr else extern struct { len: 
 const control_alignment = if (os == .linux) @sizeOf(usize) else @sizeOf(u32);
 const control_data = std.mem.alignForward(usize, @sizeOf(ControlHeader), control_alignment);
 // Darwin's values from netinet/in.h and netinet6/in6.h are absent from std.posix in Zig 0.16.
-const ip_pktinfo = switch (os) {
-    .linux => linux.IP.PKTINFO,
-    .macos => 26,
-    else => @compileError("IP_PKTINFO is not defined for " ++ @tagName(os)),
-};
-const ipv6_recvpktinfo = switch (os) {
-    .linux => linux.IPV6.RECVPKTINFO,
-    .macos => 61,
-    else => @compileError("IPV6_RECVPKTINFO is not defined for " ++ @tagName(os)),
-};
-const ipv6_pktinfo = switch (os) {
-    .linux => linux.IPV6.PKTINFO,
-    .macos => 46,
-    else => @compileError("IPV6_PKTINFO is not defined for " ++ @tagName(os)),
-};
+const ip_pktinfo = if (os == .linux) linux.IP.PKTINFO else 26;
+const ipv6_recvpktinfo = if (os == .linux) linux.IPV6.RECVPKTINFO else 61;
+const ipv6_pktinfo = if (os == .linux) linux.IPV6.PKTINFO else 46;
+const ip_dontfrag = 28;
+const ipv6_dontfrag = 62;
 pub const control_size = 64;
 pub const Control = [control_size]u8;
 comptime {
@@ -71,7 +63,27 @@ pub fn reportDestination(handle: net.Socket.Handle, family: std.meta.Tag(net.IpA
     return p.errno(p.system.setsockopt(handle, level, option, std.mem.asBytes(&enabled), @sizeOf(c_int)));
 }
 
+/// Disables fragmentation. Linux PROBE ignores cached path MTUs so QUIC can validate its own
+/// MTU probes rather than being constrained by ICMP messages the transport has not validated.
+pub fn preventFragmentation(handle: net.Socket.Handle, family: std.meta.Tag(net.IpAddress)) std.posix.E {
+    const p = std.posix;
+    if (os == .linux and family == .ip6) {
+        // Linux's IPv6 append path checks DONTFRAG separately from the PMTU policy.
+        const enabled: c_int = 1;
+        const err = p.errno(p.system.setsockopt(handle, p.IPPROTO.IPV6, linux.IPV6.DONTFRAG, std.mem.asBytes(&enabled), @sizeOf(c_int)));
+        if (err != .SUCCESS) return err;
+    }
+    const level: i32, const option: u32 = switch (family) {
+        .ip4 => .{ p.IPPROTO.IP, if (os == .linux) linux.IP.MTU_DISCOVER else ip_dontfrag },
+        .ip6 => .{ p.IPPROTO.IPV6, if (os == .linux) linux.IPV6.MTU_DISCOVER else ipv6_dontfrag },
+    };
+    const value: c_int = if (os == .linux) linux.IP.PMTUDISC_PROBE else 1;
+    return p.errno(p.system.setsockopt(handle, level, option, std.mem.asBytes(&value), @sizeOf(c_int)));
+}
+
 /// The local address a datagram was sent to, with `port`. Null when the control data names none.
+/// Rejects unspecified, multicast and broadcast destinations. macOS leaves spec_dst unset, so
+/// an IPv4 subnet broadcast passes.
 pub fn destination(control: []const u8, port: u16) error{InvalidDestinationAddress}!?Address {
     const p = std.posix;
     var offset: usize = 0;
@@ -287,6 +299,10 @@ fn segmentationRefused(errno: std.posix.E) bool {
     };
 }
 
+/// Fills `scratch` with one sendmmsg header per group and returns the group count. With
+/// `segment` a group is a run of equal-sized datagrams to one peer from one source; the last
+/// may be shorter. Each group records where it ends in `messages`, so a partial send maps back
+/// to a datagram count.
 fn prepareSend(messages: []const SocketPair.Outgoing, scratch: *SendScratch, segment: bool) usize {
     for (messages, 0..) |message, i|
         scratch.vectors[i] = .{ .base = @constCast(message.bytes.ptr), .len = message.bytes.len };
