@@ -5,7 +5,7 @@ import {TimestampFormatCode} from "@lodestar/logger";
 import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RootHex, Slot} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils";
 import {ReorgEventData} from "../../../src/chain/emitter.js";
 import {TimelinessForkChoice} from "../../mocks/fork-choice/timeliness.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
@@ -136,10 +136,10 @@ describe("proposer boost reorg", () => {
     expect(reorgEventData.oldHeadBlock).toEqual(reorgBlockRoot);
     expect(reorgEventData.newHeadBlock).toEqual(newBlockEventData.block);
     expect(reorgEventData.depth).toEqual(2);
-    expect(toHexString(newBlock?.block.message.parentRoot)).toEqual(commonAncestorRoot);
+    expect(toHex(newBlock?.block.message.parentRoot)).toEqual(commonAncestorRoot);
     logger.info("New block", {
       slot: newBlock.block.message.slot,
-      parentRoot: toHexString(newBlock.block.message.parentRoot),
+      parentRoot: toHex(newBlock.block.message.parentRoot),
     });
   });
 });
