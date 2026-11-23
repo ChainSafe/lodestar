@@ -1461,6 +1461,12 @@ pub const Store = struct {
 
         // Indices are topological; a Gloas justified block's own payload is not in the checkpoint.
         const justified = self.blockIndex(self.justified_checkpoint.root);
+        var justified_hashes: std.AutoHashMapUnmanaged(Root, void) = .empty;
+        defer justified_hashes.deinit(self.allocator);
+        if (justified) |j| {
+            var justified_chain = self.payloadChain(pendingNode(j));
+            while (justified_chain.next()) |block| try justified_hashes.put(self.allocator, hashes[block], {});
+        }
         chain = self.payloadChain(start);
         for (0..count) |i| {
             const block = chain.next() orelse {
@@ -1468,7 +1474,7 @@ pub const Store = struct {
                 break;
             };
             const conflict = statuses[block] != .syncing;
-            const protected = if (justified) |j| self.payloadProtected(block, j) else false;
+            const protected = if (justified) |j| block < j or justified_hashes.contains(hashes[block]) else false;
             if (!conflict and !protected) continue;
             if (judged == .child_payload and conflict) return .contradiction;
             count = if (judged == .from_block) @min(i, 1) else i;
@@ -1500,24 +1506,6 @@ pub const Store = struct {
         if (own and self.blocks.items(.payload_verified)[block]) return .{ .block = block, .payload_status = .full };
         if (std.mem.eql(u8, &self.blocks.items(.bid_parent_block_hash)[block], hash)) return .{ .block = block, .payload_status = .empty };
         return null;
-    }
-
-    /// Whether invalidating the payload of `block`, on the walk, would cross the justified
-    /// block: proto-array's index bound, or another block carrying the payload is one the
-    /// justified block stands on, as the INVALID write covers every carrier.
-    fn payloadProtected(self: *const Store, block: BlockIndex, justified: BlockIndex) bool {
-        const forks = self.blocks.items(.fork);
-        if (block < justified or (block == justified and forks[block].lt(.gloas))) return true;
-        const hashes = self.blocks.items(.payload_block_hash);
-        for (hashes[0 .. justified + 1], 0..) |*carrier, c| {
-            if (!std.mem.eql(u8, carrier, &hashes[block])) continue;
-            var chain = self.payloadChain(pendingNode(justified));
-            while (chain.next()) |on_chain| {
-                if (on_chain == c) return true;
-                if (on_chain < c) break;
-            }
-        }
-        return false;
     }
 
     /// The worst engine verdict on the payloads `node` stands on, read from the payloads

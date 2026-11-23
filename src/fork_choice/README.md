@@ -112,6 +112,9 @@ to exit there and proto-array does the same. Two entry points change the facts:
   envelope). A zero hash stops at the merge boundary. A null or unknown hash
   invalidates only the from node's own payload for `.from_block` and drops a
   `.child_payload` verdict. Descendants need no walk, the derivation covers them.
+  Unlike proto-array, which reads only the nodes on the walk, a `valid` or `pre_merge`
+  copy of a walked payload in another block makes the verdict `.contradiction`: the
+  same hash is the same payload, so the engine contradicted itself.
 
 Both walks follow the payload chain: `full` nodes and pre-Gloas blocks contribute
 their own payload, `empty` links skip the parent's. Both check the whole walk, in

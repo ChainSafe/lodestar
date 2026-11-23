@@ -1109,6 +1109,51 @@ test "optimistic sync: a valid envelope over an invalidated payload returns Payl
     try testing.expect(!store.blocks.items(.payload_verified)[block]);
 }
 
+test "optimistic sync: a Gloas from_block verdict starts at the node its hash names" {
+    const allocator = testing.allocator;
+    const config_mod = @import("config");
+    const chain_config = config_mod.mainnet.chain_config.merge(.{
+        .ALTAIR_FORK_EPOCH = 0,
+        .BELLATRIX_FORK_EPOCH = 0,
+        .CAPELLA_FORK_EPOCH = 0,
+        .DENEB_FORK_EPOCH = 0,
+        .ELECTRA_FORK_EPOCH = 0,
+        .FULU_FORK_EPOCH = 0,
+        .GLOAS_FORK_EPOCH = 0,
+    });
+    const config = config_mod.BeaconConfig.init(chain_config, config_mod.mainnet.genesis_validators_root);
+    const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .gloas });
+
+    // The bid's parent hash names 0x21's empty node, which stands on 0x20's payload.
+    var store = try Store.initFromSummary(allocator, &config, 0, anchor, Provider.stateProvider());
+    defer store.deinit();
+    try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
+    try store.onTick(store.timing.timeAtSlotMs(8));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
+    try store.onExecutionPayloadEnvelope(tagRoot(0x20), .syncing, null);
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x21, .parent = 0x20, .slot = 2, .fork = .gloas, .bid_parent = 0x20 }));
+    try testing.expectEqual(VerdictResult.applied, try store.onPayloadInvalid(tagRoot(0x21), tagHash(0x20), null, .from_block));
+    try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(fullOf(&store, 0x20)));
+    try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(pendingOf(&store, 0x20)));
+    try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x21)));
+    try testing.expectEqual(.syncing, store.blocks.items(.execution_status)[store.blockIndex(tagRoot(0x21)).?]);
+
+    // A Gloas justified block's own payload is not in the checkpoint: its pending node stays the head.
+    var justified = try Store.initFromSummary(allocator, &config, 0, anchor, Provider.stateProvider());
+    defer justified.deinit();
+    try justified.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
+    try justified.onTick(justified.timing.timeAtSlotMs(8));
+    try justified.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
+    try justified.onExecutionPayloadEnvelope(tagRoot(0x20), .syncing, null);
+    justified.justified_checkpoint.root = tagRoot(0x20);
+    try testing.expectEqual(VerdictResult.applied, try justified.onPayloadInvalid(tagRoot(0x20), tagHash(0x20), null, .from_block));
+    try testing.expectEqual(ExecutionStatus.invalid, try justified.executionStatus(fullOf(&justified, 0x20)));
+    try testing.expectEqual(ExecutionStatus.valid, try justified.executionStatus(pendingOf(&justified, 0x20)));
+    const head = try justified.getHead();
+    try testing.expectEqual(justified.blockIndex(tagRoot(0x20)).?, head.block);
+    try testing.expect(head.payload_status != .full);
+}
+
 test "get_ancestor: a Gloas walk takes each link's payload status from the child" {
     const allocator = testing.allocator;
     const config_mod = @import("config");
