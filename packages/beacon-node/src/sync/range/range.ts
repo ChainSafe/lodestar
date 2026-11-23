@@ -3,13 +3,20 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig} from "@lodestar/config";
 import {IBeaconStateViewGloas, computeStartSlotAtEpoch, isStatePostGloas} from "@lodestar/state-transition";
 import {Epoch, Status, fulu, ssz} from "@lodestar/types";
-import {Logger, byteArrayEquals, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {Logger, byteArrayEquals, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
 import {assertLinearChainSegment} from "../../chain/blocks/utils/chainSegment.js";
-import {BlockError} from "../../chain/errors/index.js";
+import {
+  BlockError,
+  BlockErrorCode,
+  BlockGossipError,
+  DataColumnSidecarErrorCode,
+  DataColumnSidecarValidationError,
+} from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/index.js";
+import {verifyBlockProposerSignature} from "../../chain/validation/block.js";
 import {Metrics} from "../../metrics/index.js";
 import {INetwork} from "../../network/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
@@ -291,7 +298,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       ...requests,
     });
     const {responses, payloadEnvelopes: downloadedPayloadEnvelopes} = result;
-    const {blocks, payloadEnvelopes} = cacheByRangeResponses({
+    const {blocks, payloadEnvelopes, signatureMismatch} = cacheByRangeResponses({
       cache: this.chain.seenBlockInputCache,
       seenPayloadEnvelopeInputCache: this.chain.seenPayloadEnvelopeInputCache,
       peerIdStr: peer.peerId,
@@ -303,6 +310,52 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       custodyConfig: this.chain.custodyConfig,
       seenTimestampSec: Date.now() / 1000,
     });
+
+    if (signatureMismatch !== null) {
+      const {blockInput, columnSidecar} = signatureMismatch;
+      const block = blockInput.getBlock();
+      let isValidBlockSignature: boolean | null = true;
+      try {
+        await verifyBlockProposerSignature(this.chain, block, blockInput.blockRootHex);
+      } catch (e) {
+        isValidBlockSignature =
+          e instanceof BlockGossipError && e.type.code === BlockErrorCode.PROPOSAL_SIGNATURE_INVALID ? false : null;
+      }
+
+      if (isValidBlockSignature) {
+        throw new DataColumnSidecarValidationError(
+          {
+            code: DataColumnSidecarErrorCode.INCORRECT_BLOCK,
+            slot: blockInput.slot,
+            columnIndex: columnSidecar.index,
+            expected: toHex(block.signature),
+            actual: toHex(columnSidecar.signedBlockHeader.signature),
+          },
+          "DataColumnSidecar header signature doesn't match block signature"
+        );
+      }
+
+      // Later downloads reuse a cached block, evict it and the other unverified blocks of a peer
+      // proven to serve invalid signatures
+      const blockPeer = isValidBlockSignature === false ? blockInput.getBlockSource().peerIdStr : undefined;
+      const cache = this.chain.seenBlockInputCache;
+      for (const b of blocks) {
+        const isSuspect = b === blockInput || (blockPeer !== undefined && b.getBlockSource().peerIdStr === blockPeer);
+        if (
+          isSuspect &&
+          cache.get(b.blockRootHex) === b &&
+          !cache.isVerifiedProposerSignature(b.slot, b.blockRootHex, b.getBlock().signature)
+        ) {
+          cache.remove(b.blockRootHex);
+        }
+      }
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.INVALID_CACHED_BLOCK,
+        slot: blockInput.slot,
+        blockRoot: blockInput.blockRootHex,
+        blockPeer,
+      });
+    }
 
     const segmentBlocks = blocks.filter((b) => b.hasBlock()).sort((a, b) => a.slot - b.slot);
     const envelopeSlots = payloadEnvelopes
