@@ -7,6 +7,36 @@ const net = std.Io.net;
 const loopbacks: SocketPair.Bindings = .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } };
 const payload_max = 1_280;
 
+fn socketOption(handle: net.Socket.Handle, level: i32, option: u32) !c_int {
+    const p = std.posix;
+    var value: c_int = 0;
+    var len: p.socklen_t = @sizeOf(c_int);
+    try std.testing.expectEqual(p.E.SUCCESS, p.errno(p.system.getsockopt(handle, level, option, std.mem.asBytes(&value), &len)));
+    try std.testing.expectEqual(@as(p.socklen_t, @sizeOf(c_int)), len);
+    return value;
+}
+
+test "UDP native listeners disable fragmentation and Linux cached PMTU enforcement" {
+    const os = @import("builtin").os.tag;
+    const linux = std.os.linux;
+    const addresses = [_]SocketPair.Bindings{
+        .{ .ip4 = .loopback(0) },
+        .{ .ip4 = .unspecified(0) },
+        .{ .ip6 = .loopback(0) },
+        .{ .ip6 = .unspecified(0) },
+    };
+    for (addresses) |address| {
+        var sockets = try SocketPair.bind(std.testing.io, address);
+        defer sockets.close(std.testing.io);
+        const socket = sockets.primary();
+        const level: i32, const option: u32, const expected: c_int = switch (socket.address) {
+            .ip4 => .{ std.posix.IPPROTO.IP, if (os == .linux) linux.IP.MTU_DISCOVER else 28, if (os == .linux) linux.IP.PMTUDISC_PROBE else 1 },
+            .ip6 => .{ std.posix.IPPROTO.IPV6, if (os == .linux) linux.IPV6.MTU_DISCOVER else 62, if (os == .linux) linux.IPV6.PMTUDISC_PROBE else 1 },
+        };
+        try std.testing.expectEqual(expected, try socketOption(socket.handle, level, option));
+    }
+}
+
 fn timeout(milliseconds: i64) std.Io.Timeout {
     return .{ .duration = .{ .raw = .fromMilliseconds(milliseconds), .clock = .awake } };
 }

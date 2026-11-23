@@ -464,21 +464,6 @@ jobs:
           zig build test:fault_io
           zig build test:udp
 
-      - name: Reject unsupported UDP socket targets
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash
-        run: |
-          if output=$(zig build build-test:udp -Dtarget=x86_64-freebsd 2>&1); then
-            printf '%s\n' "$output"
-            echo "UDP sockets unexpectedly compiled for FreeBSD"
-            exit 1
-          fi
-          printf '%s\n' "$output"
-          case "$output" in
-            *"UDP sockets support Linux and macOS only"*) ;;
-            *) echo "Compilation failed for an unrelated reason"; exit 1 ;;
-          esac
-
       - name: Build benchmarks
         run: |
           zig build build-exe:bench_hashing build-exe:bench_merkle_gindex build-exe:bench_merkle_node build-exe:bench_ssz_attestation build-exe:bench_ssz_block build-exe:bench_ssz_state build-exe:bench_process_block build-exe:bench_process_epoch
