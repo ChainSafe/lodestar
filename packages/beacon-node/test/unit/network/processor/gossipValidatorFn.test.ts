@@ -152,13 +152,10 @@ describe("unknown parent gossip block", () => {
         clientVersion: "test",
         seenTimestampSec: 0,
         msgSlot: null,
+        reportPeer,
       })
     ).toBe(TopicValidatorResult.Reject);
-    expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
-      propagationSource,
-      PeerAction.LowToleranceError,
-      BlockErrorCode.UNKNOWN_PROPOSER
-    );
+    expect(reportPeer).toHaveBeenCalledExactlyOnceWith(PeerAction.LowToleranceError, BlockErrorCode.UNKNOWN_PROPOSER);
     expect(onFatalPeer).not.toHaveBeenCalled();
     expect(verifySignatureSets).not.toHaveBeenCalled();
     expect(onUnknownParent).not.toHaveBeenCalled();
