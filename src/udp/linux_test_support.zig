@@ -1,3 +1,6 @@
+//! test-only utils for making Linux syscalls fail on demand.
+//!
+//! The native UDP path calls the kernel directly, so the `FaultIo` mock can’t inject a failure here.
 const std = @import("std");
 
 comptime {
