@@ -11,7 +11,9 @@ import {createSettlingNetwork} from "../../../utils/nativeSettlingNetwork.js";
 
 it("starts on Hoodi before its scheduled Gloas fork", async () => {
   const key = await generateKeyPair("secp256k1");
-  const scheduled = createBeaconConfig(networksChainConfig.hoodi, fromHex(genesisData.hoodi.genesisValidatorsRoot));
+  const {genesisValidatorsRoot} = genesisData.hoodi;
+  if (genesisValidatorsRoot === null) throw Error("Hoodi has no genesis validators root");
+  const scheduled = createBeaconConfig(networksChainConfig.hoodi, fromHex(genesisValidatorsRoot));
   const {application} = createNativeConfig(
     {...defaultNetworkOptions, tcp: false, localMultiaddrs: ["/ip4/127.0.0.1/udp/0/quic-v1"]},
     scheduled,
