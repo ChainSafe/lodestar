@@ -408,7 +408,7 @@ fn receiveError(errno: std.posix.E) ReceiveError {
 fn sendError(errno: std.posix.E) SendError {
     return switch (errno) {
         .SUCCESS => unreachable,
-        // UDP destinations with port zero produce EINVAL on Linux.
+        // Linux reports EINVAL for an IPv6 source address the host does not own.
         .PERM, .INVAL => error.DestinationRefused,
         .ACCES => error.AccessDenied,
         .ALREADY => error.FastOpenAlreadyInProgress,
