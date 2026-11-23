@@ -16,6 +16,7 @@ import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getGlobalPaths} from "../../paths/global.js";
 import {
+  YargsError,
   cleanOldLogFiles,
   extractJwtHexSecret,
   onGracefulShutdown,
@@ -23,6 +24,7 @@ import {
   parseLoggerArgs,
 } from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
+import {BuilderRestApiServer} from "./apiServer.js";
 import {loadBuilderKeypair} from "./loadKeypair.js";
 import {IBuilderCliArgs, builderMetricsDefaultOptions} from "./options.js";
 
@@ -149,7 +151,32 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
       minOperatingBalanceGwei: args["bidding.minOperatingBalanceGwei"],
     },
     reveal: {cutoffBps: args["reveal.cutoffBps"]},
+    builderApi: args.builderApi ? {authData: getBuilderApiAuthData(args)} : undefined,
   });
 
   onGracefulShutdownCbs.push(() => builder.close());
+
+  if (builder.builderApi !== null) {
+    const builderApiServer = new BuilderRestApiServer(
+      {address: args["builderApi.address"], port: args["builderApi.port"]},
+      {config, logger, api: builder.builderApi, metrics: null}
+    );
+    onGracefulShutdownCbs.push(() => builderApiServer.close());
+    await builderApiServer.listen();
+  }
+}
+
+function getBuilderApiAuthData(args: IBuilderCliArgs): Uint8Array {
+  if (args["builderApi.authData"] !== undefined) {
+    const authData = fromHex(args["builderApi.authData"]);
+    if (authData.length === 0) {
+      throw new YargsError("--builderApi.authData must not be empty");
+    }
+    return authData;
+  }
+  if (args["builderApi.publicUrl"] !== undefined) {
+    // Same derivation as the default auth data of the validator client
+    return new TextEncoder().encode(new URL(args["builderApi.publicUrl"]).hostname);
+  }
+  throw new YargsError("--builderApi requires either --builderApi.publicUrl or --builderApi.authData");
 }

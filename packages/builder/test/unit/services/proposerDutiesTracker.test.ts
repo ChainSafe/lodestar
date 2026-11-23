@@ -1,0 +1,128 @@
+import {beforeEach, describe, expect, it, vi} from "vitest";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import type {Epoch, RootHex, Slot} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
+import {HeadEvent} from "../../../src/services/headTracker.js";
+import {ProposerDutiesTracker} from "../../../src/services/proposerDutiesTracker.js";
+import {getApiClientStub, mockApiResponse} from "../utils/apiStub.js";
+import {ClockMock} from "../utils/clock.js";
+import {MockedLogger, getMockedLogger} from "../utils/logger.js";
+
+function root(value: number): RootHex {
+  return toRootHex(Buffer.alloc(32, value));
+}
+
+function head(slot: Slot, currentEpochDependentRoot: RootHex, nextEpochDependentRoot: RootHex) {
+  return {
+    slot,
+    block: root(100),
+    state: root(101),
+    payloadStatus: "full",
+    epochTransition: slot % SLOTS_PER_EPOCH === 0,
+    currentEpochDependentRoot,
+    nextEpochDependentRoot,
+    executionOptimistic: false,
+  } satisfies HeadEvent["data"];
+}
+
+describe("ProposerDutiesTracker", () => {
+  let api: ReturnType<typeof getApiClientStub>;
+  let clock: ClockMock;
+  let logger: MockedLogger;
+  let tracker: ProposerDutiesTracker;
+  /** Dependent root and validator index offset of the duties the beacon node returns for an epoch */
+  let duties: Map<Epoch, {dependentRoot: RootHex; indexOffset: number}>;
+
+  beforeEach(() => {
+    duties = new Map([
+      [0, {dependentRoot: root(1), indexOffset: 0}],
+      [1, {dependentRoot: root(2), indexOffset: 0}],
+    ]);
+    api = getApiClientStub();
+    api.validator.getProposerDutiesV2.mockImplementation(async ({epoch}) => {
+      const {dependentRoot, indexOffset} = duties.get(epoch) ?? {dependentRoot: root(0), indexOffset: 0};
+      return mockApiResponse({
+        data: Array.from({length: SLOTS_PER_EPOCH}, (_, i) => ({
+          slot: epoch * SLOTS_PER_EPOCH + i,
+          validatorIndex: epoch * SLOTS_PER_EPOCH + i + indexOffset,
+          pubkey: Buffer.alloc(48, i),
+        })),
+        meta: {executionOptimistic: false, dependentRoot},
+      });
+    });
+    clock = new ClockMock();
+    logger = getMockedLogger();
+    tracker = new ProposerDutiesTracker(api, clock, logger);
+  });
+
+  it("returns the proposer of a slot in the current and next epoch", async () => {
+    expect((await tracker.getProposer(3))?.validatorIndex).toBe(3);
+    expect((await tracker.getProposer(SLOTS_PER_EPOCH + 1))?.validatorIndex).toBe(SLOTS_PER_EPOCH + 1);
+  });
+
+  it("returns null for slots outside of the current and next epoch", async () => {
+    clock.currentSlot = SLOTS_PER_EPOCH;
+
+    expect(await tracker.getProposer(SLOTS_PER_EPOCH - 1)).toBeNull();
+    expect(await tracker.getProposer(3 * SLOTS_PER_EPOCH)).toBeNull();
+    expect(api.validator.getProposerDutiesV2).not.toHaveBeenCalled();
+  });
+
+  it("fetches the duties of an epoch once", async () => {
+    await tracker.getProposer(1);
+    await tracker.getProposer(2);
+
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledExactlyOnceWith({epoch: 0});
+  });
+
+  it("keeps the cached duties while the head reports their dependent roots", async () => {
+    await tracker.getProposer(1);
+    await tracker.getProposer(SLOTS_PER_EPOCH);
+
+    tracker.onHead(head(2, root(1), root(2)));
+
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not fetch duties that are not cached when a head is announced", () => {
+    tracker.onHead(head(2, root(8), root(9)));
+
+    expect(api.validator.getProposerDutiesV2).not.toHaveBeenCalled();
+  });
+
+  it("fetches the duties of the head epoch again if their dependent root changed", async () => {
+    expect((await tracker.getProposer(3))?.validatorIndex).toBe(3);
+    await tracker.getProposer(SLOTS_PER_EPOCH);
+
+    duties.set(0, {dependentRoot: root(8), indexOffset: 1000});
+    tracker.onHead(head(2, root(8), root(2)));
+
+    await vi.waitFor(async () => expect((await tracker.getProposer(3))?.validatorIndex).toBe(1003));
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(3);
+    expect(api.validator.getProposerDutiesV2).toHaveBeenLastCalledWith({epoch: 0});
+  });
+
+  it("fetches the duties of the epoch after the head again if their dependent root changed", async () => {
+    await tracker.getProposer(3);
+    expect((await tracker.getProposer(SLOTS_PER_EPOCH))?.validatorIndex).toBe(SLOTS_PER_EPOCH);
+
+    duties.set(1, {dependentRoot: root(9), indexOffset: 1000});
+    tracker.onHead(head(2, root(1), root(9)));
+
+    await vi.waitFor(async () =>
+      expect((await tracker.getProposer(SLOTS_PER_EPOCH))?.validatorIndex).toBe(SLOTS_PER_EPOCH + 1000)
+    );
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(3);
+    expect(api.validator.getProposerDutiesV2).toHaveBeenLastCalledWith({epoch: 1});
+  });
+
+  it("keeps the cached duties if fetching them again fails", async () => {
+    await tracker.getProposer(3);
+    api.validator.getProposerDutiesV2.mockRejectedValueOnce(new Error("beacon node unavailable"));
+
+    tracker.onHead(head(2, root(8), root(2)));
+
+    await vi.waitFor(() => expect(logger.warn).toHaveBeenCalledOnce());
+    expect((await tracker.getProposer(3))?.validatorIndex).toBe(3);
+  });
+});

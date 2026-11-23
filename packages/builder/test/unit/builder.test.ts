@@ -12,6 +12,7 @@ import {BuilderSigner} from "../../src/services/builderSigner.js";
 import {BuilderStatusTracker} from "../../src/services/builderStatusTracker.js";
 import {HeadTracker} from "../../src/services/headTracker.js";
 import {PayloadStore} from "../../src/services/payloadStore.js";
+import {ProposerDutiesTracker} from "../../src/services/proposerDutiesTracker.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
 import {biddingOptions, createBiddingModules, getPayloadSourceStub} from "./utils/bidding.js";
@@ -61,9 +62,11 @@ describe("Builder", () => {
       blockObserver: new BlockObserver(config, logger, api),
       proposerPreferencesTracker,
       headTracker,
+      proposerDutiesTracker: new ProposerDutiesTracker(api, clock, logger),
       clock,
       index: 1,
       payloadStore,
+      builderApi: null,
       ...createBiddingModules({
         api,
         config,
@@ -209,6 +212,7 @@ describe("Builder", () => {
   });
 
   it("tracks announced heads", () => {
+    const onHead = vi.spyOn(modules.proposerDutiesTracker, "onHead");
     new Builder(modules);
     const {onEvent} = api.events.eventstream.mock.calls[0][0];
 
@@ -225,6 +229,7 @@ describe("Builder", () => {
     onEvent({type: EventType.headV2, message: {version: ForkName.gloas, data: head}});
     expect(modules.headTracker.getDependentRoot(head.block, 1)).toBe(head.currentEpochDependentRoot);
     expect(modules.headTracker.getDependentRoot(head.block, SLOTS_PER_EPOCH)).toBe(head.nextEpochDependentRoot);
+    expect(onHead).toHaveBeenCalledExactlyOnceWith(head);
   });
 
   it("settles and prunes won bids on slot ticks", async () => {

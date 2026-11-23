@@ -12,6 +12,7 @@ export function getApiClientStub(): ApiClientStub {
       getProposerPreferences: vi.fn(),
       publishExecutionPayloadBid: vi.fn(),
       publishExecutionPayloadEnvelope: vi.fn(),
+      publishBlockV2: vi.fn(),
     },
     validator: {
       getProposerDutiesV2: vi.fn(),

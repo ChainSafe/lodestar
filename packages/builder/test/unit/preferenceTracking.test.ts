@@ -12,6 +12,7 @@ import {BuilderSigner} from "../../src/services/builderSigner.js";
 import {BuilderStatusTracker} from "../../src/services/builderStatusTracker.js";
 import {HeadTracker} from "../../src/services/headTracker.js";
 import {PayloadStore} from "../../src/services/payloadStore.js";
+import {ProposerDutiesTracker} from "../../src/services/proposerDutiesTracker.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
 import {biddingOptions, createBiddingModules, getPayloadSourceStub} from "./utils/bidding.js";
@@ -55,9 +56,11 @@ describe("Builder preference tracking", () => {
       builderStatusTracker,
       proposerPreferencesTracker,
       headTracker,
+      proposerDutiesTracker: new ProposerDutiesTracker(api, clock, logger),
       clock,
       index: 1,
       payloadStore,
+      builderApi: null,
       ...createBiddingModules({
         api,
         config,
