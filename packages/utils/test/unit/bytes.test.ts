@@ -68,6 +68,11 @@ describe("toHex", () => {
       expect(toHex(input)).toBe(output);
     });
   }
+
+  it("should convert a blob-sized Uint8Array", () => {
+    const size = 131072;
+    expect(toHex(new Uint8Array(size).fill(0xab))).toBe("0x" + "ab".repeat(size));
+  });
 });
 
 describe("toRootHex", () => {
