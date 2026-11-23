@@ -8,7 +8,7 @@
     "@chainsafe/biomejs-config/esm"
   ],
   "files": {
-    "includes": ["src/**/*.ts", "test/**/*.ts", "perf/**/*.ts", "vitest.config.ts"]
+    "includes": ["src/**/*.ts", "src/leveldb.js", "test/**/*.ts", "perf/**/*.ts", "vitest.config.ts"]
   },
   "vcs": {
     "defaultBranch": "unstable",

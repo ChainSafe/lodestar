@@ -4,6 +4,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const js = @import("zapi:zapi").js;
 const pool = @import("./pool.zig");
+pub const NativeLevelDb = @import("./leveldb.zig");
 pub const shuffle = @import("./shuffle.zig");
 pub const metrics = @import("./metrics.zig");
 pub const stateTransition = @import("./stateTransition.zig");
