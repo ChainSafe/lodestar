@@ -12,6 +12,7 @@ import {
   ClientVersion,
   ExecutePayloadResponse,
   ExecutionEngineState,
+  ExecutionEngineSyncingError,
   ExecutionPayloadStatus,
   ForkchoiceUpdatedResult,
   IExecutionEngine,
@@ -373,7 +374,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       case ExecutionPayloadStatus.SYNCING:
         // Throw error on syncing if requested to produce a block, else silently ignore
         if (payloadAttributes) {
-          throw Error("Execution Layer Syncing");
+          throw new ExecutionEngineSyncingError();
         }
         return result;
 
