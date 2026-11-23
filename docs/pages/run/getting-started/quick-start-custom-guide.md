@@ -651,7 +651,7 @@ Mar-31 15:27:20.849[]                 info: Beacon node urls=http://127.0.0.1:95
 Mar-31 15:27:20.867[]                 info: Genesis fetched from the beacon node
 Mar-31 15:27:20.872[]                 info: Verified connected beacon node and validator have same the config
 Mar-31 15:27:20.873[]                 info: Verified connected beacon node and validator have the same genesisValidatorRoot
-Mar-31 15:27:20.873[]                 info: Initializing validator useProduceBlockV3=deneb+, broadcastValidation=consensus, defaultBuilderSelection=default, suggestedFeeRecipient=0x64fdc5a178746d52a5b15e6ac5130b991abaf079, strictFeeRecipientCheck=false
+Mar-31 15:27:20.873[]                 info: Initializing validator broadcastValidation=consensus, defaultBuilderSelection=default, suggestedFeeRecipient=0x64fdc5a178746d52a5b15e6ac5130b991abaf079, strictFeeRecipientCheck=false
 Mar-31 15:27:21.961[]                 info: Started REST API server address=http://127.0.0.1:5062
 Mar-31 15:27:21.961[]                 info: REST api server keymanager bearer access token located at: /data/validator-db/api-token.txt
 Mar-31 15:27:21.973[]                 info: Node is synced slot=3961036, headSlot=3961035, isOptimistic=false, elOffline=false
