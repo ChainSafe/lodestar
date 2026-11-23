@@ -187,7 +187,8 @@ export interface IExecutionEngine {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
+    payloadAttributes?: PayloadAttributes,
+    signal?: AbortSignal
   ): Promise<ForkchoiceUpdatedResult>;
 
   /**
@@ -199,7 +200,8 @@ export interface IExecutionEngine {
    */
   getPayload(
     fork: ForkName,
-    payloadId: PayloadId
+    payloadId: PayloadId,
+    signal?: AbortSignal
   ): Promise<{
     executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;

@@ -54,6 +54,8 @@ export type ReqOpts = {
   retries?: number;
   retryDelay?: number;
   shouldRetry?: (lastError: Error) => boolean;
+  /** Aborts this request only, in addition to the signal of the client */
+  signal?: AbortSignal;
 };
 
 export type JsonRpcHttpClientMetrics = EngineTransportMetrics & {
@@ -164,7 +166,8 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         {
           retries: opts?.retries ?? this.opts?.retries ?? 0,
           retryDelay: opts?.retryDelay ?? this.opts?.retryDelay,
-          shouldRetry: opts?.shouldRetry,
+          // An aborted request is no longer of interest to its caller
+          shouldRetry: (lastError) => !opts?.signal?.aborted && (opts?.shouldRetry?.(lastError) ?? true),
           signal: this.opts?.signal,
           onRetry: () => {
             this.opts?.metrics?.retryCount.inc({routeId});
@@ -244,6 +247,10 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 
     const onParentSignalAbort = (): void => controller.abort();
     this.opts?.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
+    opts?.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
+    if (opts?.signal?.aborted) {
+      controller.abort();
+    }
 
     // Default to "unknown" to prevent mixing metrics with others.
     const routeId = opts?.routeId ?? "unknown";
@@ -306,8 +313,8 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
       if (controller.signal.aborted) {
-        // controller will abort on both parent signal abort + timeout of this specific request
-        if (this.opts?.signal?.aborted) {
+        // controller will abort on parent signal abort, request signal abort + timeout of this specific request
+        if (this.opts?.signal?.aborted || opts?.signal?.aborted) {
           throw new ErrorAborted("request");
         }
         throw new TimeoutError("request");
@@ -319,6 +326,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 
       clearTimeout(timeout);
       this.opts?.signal?.removeEventListener("abort", onParentSignalAbort);
+      opts?.signal?.removeEventListener("abort", onParentSignalAbort);
     }
   }
 }

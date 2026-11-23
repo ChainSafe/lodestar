@@ -154,7 +154,8 @@ export class EngineRestHttpClient {
     // Not AbortSignal.any(), Node retains every composite until the long-lived parent signal aborts
     const onParentSignalAbort = (): void => controller.abort();
     this.opts.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
-    if (this.opts.signal?.aborted) {
+    opts?.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
+    if (this.opts.signal?.aborted || opts?.signal?.aborted) {
       controller.abort();
     }
 
@@ -223,7 +224,7 @@ export class EngineRestHttpClient {
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
       if (controller.signal.aborted) {
-        if (this.opts.signal?.aborted) {
+        if (this.opts.signal?.aborted || opts?.signal?.aborted) {
           throw new ErrorAborted("request");
         }
         throw new TimeoutError("request");
@@ -235,6 +236,7 @@ export class EngineRestHttpClient {
 
       clearTimeout(timeout);
       this.opts.signal?.removeEventListener("abort", onParentSignalAbort);
+      opts?.signal?.removeEventListener("abort", onParentSignalAbort);
     }
   }
 }

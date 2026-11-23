@@ -334,11 +334,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
+    payloadAttributes?: PayloadAttributes,
+    signal?: AbortSignal
   ): Promise<ForkchoiceUpdatedResult> {
     const result = await this.enqueue(() =>
       this.withTransport(fork, undefined, (transport) =>
-        transport.forkchoiceUpdated(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes)
+        transport.forkchoiceUpdated(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes, signal)
       )
     );
     const {
@@ -394,7 +395,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async getPayload(
     fork: ForkName,
-    payloadId: PayloadId
+    payloadId: PayloadId,
+    signal?: AbortSignal
   ): Promise<{
     executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
@@ -402,7 +404,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionRequests?: ExecutionRequests;
     shouldOverrideBuilder?: boolean;
   }> {
-    return this.withTransport(fork, undefined, (transport) => transport.getPayload(fork, payloadId));
+    return this.withTransport(fork, undefined, (transport) => transport.getPayload(fork, payloadId, signal));
   }
 
   async prunePayloadIdCache(): Promise<void> {
