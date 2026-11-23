@@ -13,7 +13,6 @@ import {
   CreateFromBidProps,
   PayloadEnvelopeInputSource,
 } from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
-import {DataColumnSidecarErrorCode} from "../../../../src/chain/errors/dataColumnSidecarError.js";
 import {
   DownloadByRangeErrorCode,
   ParentPayload,
@@ -561,8 +560,8 @@ describe("cacheByRangeResponses", () => {
     columnSidecar.signedBlockHeader.message.slot = cachedBlock.message.slot;
     columnSidecar.signedBlockHeader.signature = downloadedBlock.signature;
 
-    function cacheColumns(): void {
-      cacheByRangeResponses({
+    function cacheColumns(): ReturnType<typeof cacheByRangeResponses> {
+      return cacheByRangeResponses({
         cache: {getByBlock: () => blockInput},
         seenPayloadEnvelopeInputCache: {
           add: () => {
@@ -585,15 +584,13 @@ describe("cacheByRangeResponses", () => {
       });
     }
 
-    expect(cacheColumns).toThrow(
-      expect.objectContaining({
-        type: expect.objectContaining({code: DataColumnSidecarErrorCode.INCORRECT_BLOCK}),
-      })
-    );
+    const {signatureMismatch} = cacheColumns();
+    expect(signatureMismatch?.blockInput).toBe(blockInput);
+    expect(signatureMismatch?.columnSidecar).toBe(columnSidecar);
     expect(blockInput.hasColumn(0)).toBe(false);
 
     columnSidecar.signedBlockHeader.signature = cachedBlock.signature;
-    cacheColumns();
+    expect(cacheColumns().signatureMismatch).toBeNull();
     expect(blockInput.hasColumn(0)).toBe(true);
   });
 });

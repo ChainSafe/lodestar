@@ -13,14 +13,10 @@ import {
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
-import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {BlockInputSource, DAType, IBlockInput, isBlockInputColumns} from "../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/types.js";
-import {
-  DataColumnSidecarErrorCode,
-  DataColumnSidecarValidationError,
-} from "../../chain/errors/dataColumnSidecarError.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {SeenPayloadEnvelopeInput} from "../../chain/seenCache/seenPayloadEnvelopeInput.js";
 import {
@@ -125,7 +121,12 @@ export function cacheByRangeResponses({
   parentPayload,
   custodyConfig,
   seenTimestampSec,
-}: CacheByRangeResponsesProps): {blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null} {
+}: CacheByRangeResponsesProps): {
+  blocks: IBlockInput[];
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+  /** First fulu column whose header signature differs from its cached block, no later column is added */
+  signatureMismatch: {blockInput: IBlockInput; columnSidecar: fulu.DataColumnSidecar} | null;
+} {
   const source = BlockInputSource.byRange;
   const updatedBatchBlocks = new Map<Slot, IBlockInput>(batchBlocks.map((block) => [block.slot, block]));
 
@@ -221,6 +222,7 @@ export function cacheByRangeResponses({
     }
   }
 
+  let signatureMismatch: {blockInput: IBlockInput; columnSidecar: fulu.DataColumnSidecar} | null = null;
   for (const {blockRoot, columnSidecars} of responses.validatedColumnSidecars ?? []) {
     const firstColumn = columnSidecars[0];
     if (!firstColumn) {
@@ -269,21 +271,14 @@ export function cacheByRangeResponses({
       });
     }
 
-    // Honest sidecars carry the block signature, which import verifies. A known root keeps its cached block,
-    // so compare against that one. A different root is reported by addColumn.
-    const blockSignature = existing.getBlock().signature;
-    const headerSignature = fuluColumns[0].signedBlockHeader.signature;
-    if (existing.blockRootHex === blockRootHex && !byteArrayEquals(blockSignature, headerSignature)) {
-      throw new DataColumnSidecarValidationError(
-        {
-          code: DataColumnSidecarErrorCode.INCORRECT_BLOCK,
-          slot: existing.slot,
-          columnIndex: fuluColumns[0].index,
-          expected: toHex(blockSignature),
-          actual: toHex(headerSignature),
-        },
-        "DataColumnSidecar header signature doesn't match block signature"
-      );
+    // Honest sidecars carry the block signature. The cached block may be unverified, the caller decides which side
+    // is invalid. A different root is reported by addColumn.
+    if (
+      existing.blockRootHex === blockRootHex &&
+      !byteArrayEquals(existing.getBlock().signature, fuluColumns[0].signedBlockHeader.signature)
+    ) {
+      signatureMismatch = {blockInput: existing, columnSidecar: fuluColumns[0]};
+      break;
     }
 
     for (const columnSidecar of fuluColumns) {
@@ -301,7 +296,7 @@ export function cacheByRangeResponses({
     }
   }
 
-  return {blocks: Array.from(updatedBatchBlocks.values()), payloadEnvelopes};
+  return {blocks: Array.from(updatedBatchBlocks.values()), payloadEnvelopes, signatureMismatch};
 }
 
 export async function downloadByRange({
@@ -1031,6 +1026,8 @@ export enum DownloadByRangeErrorCode {
 
   /** Block segment + envelopes failed chain-segment linearity / FULL-chain checks */
   INVALID_CHAIN_SEGMENT = "DOWNLOAD_BY_RANGE_ERROR_INVALID_CHAIN_SEGMENT",
+  /** A column header signature differs from a cached block whose proposer signature is invalid or unverifiable */
+  INVALID_CACHED_BLOCK = "DOWNLOAD_BY_RANGE_ERROR_INVALID_CACHED_BLOCK",
 }
 
 export type DownloadByRangeErrorType =
@@ -1127,6 +1124,13 @@ export type DownloadByRangeErrorType =
       code: DownloadByRangeErrorCode.INVALID_CHAIN_SEGMENT;
       slot: Slot;
       reason: string;
+    }
+  | {
+      code: DownloadByRangeErrorCode.INVALID_CACHED_BLOCK;
+      slot: Slot;
+      blockRoot: string;
+      /** Set only when the block proposer signature is invalid */
+      blockPeer?: PeerIdStr;
     };
 
 export class DownloadByRangeError extends LodestarError<DownloadByRangeErrorType> {}

@@ -634,6 +634,26 @@ export class Batch {
   }
 
   /**
+   * Downloading -> AwaitingDownload
+   *
+   * The batch may hold an evicted invalid block, drop every downloaded block and request the whole batch again
+   */
+  downloadingInvalidBlock(peer: PeerIdStr): void {
+    if (this.state.status !== BatchStatus.Downloading) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
+    }
+
+    this.failedDownloadAttempts.push(peer);
+    if (this.failedDownloadAttempts.length > MAX_BATCH_DOWNLOAD_ATTEMPTS) {
+      throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
+    }
+
+    this.successfulDownloads.clear();
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: [], payloadEnvelopes: null};
+    this.resetRequests();
+  }
+
+  /**
    * Downloading -> AwaitingDownload (without counting as a failed attempt).
    * Used when the peer rate-limited us — the request was never actually served.
    */
