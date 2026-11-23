@@ -224,6 +224,29 @@ describe("builder api", () => {
       expect(api.beacon.publishBlockV2).not.toHaveBeenCalled();
     });
 
+    it.each([
+      {id: "value", message: {value: 6}},
+      {id: "fee recipient", message: {feeRecipient: Buffer.alloc(20, 9)}},
+    ])("rejects a block that keeps the block hash of our bid but changes its $id", async ({message}) => {
+      const block = signBlock();
+      block.message.body.signedExecutionPayloadBid = {...signedBid, message: {...signedBid.message, ...message}};
+
+      await expect(builderApi.submitSignedBeaconBlock({signedBlock: {data: block}})).rejects.toMatchObject({
+        statusCode: 400,
+      });
+      expect(api.beacon.publishBlockV2).not.toHaveBeenCalled();
+    });
+
+    it("rejects a block that changes the signature of our bid", async () => {
+      const block = signBlock();
+      block.message.body.signedExecutionPayloadBid = {...signedBid, signature: Buffer.alloc(96, 9)};
+
+      await expect(builderApi.submitSignedBeaconBlock({signedBlock: {data: block}})).rejects.toMatchObject({
+        statusCode: 400,
+      });
+      expect(api.beacon.publishBlockV2).not.toHaveBeenCalled();
+    });
+
     it("rejects a block that commits to a bid that is no longer served", async () => {
       clock.currentSlot = slot + 3;
 

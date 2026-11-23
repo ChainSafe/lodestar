@@ -2,7 +2,7 @@ import {ApiClient, routes} from "@lodestar/api";
 import type {BuilderApiMethods} from "@lodestar/api/builder/server";
 import {ApiError} from "@lodestar/api/server";
 import {BeaconConfig} from "@lodestar/config";
-import {DOMAIN_BEACON_PROPOSER, DOMAIN_BUILDER_REQUEST_AUTH, ForkPostGloas} from "@lodestar/params";
+import {DOMAIN_BEACON_PROPOSER, DOMAIN_BUILDER_REQUEST_AUTH, ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {
   IClock,
   ZERO_HASH,
@@ -11,7 +11,7 @@ import {
   createSingleSignatureSetFromComponents,
   verifySignatureSet,
 } from "@lodestar/state-transition";
-import {BLSPubkey, BuilderIndex, RootHex, SignedBlockContents, Slot, gloas, ssz} from "@lodestar/types";
+import {BLSPubkey, BuilderIndex, RootHex, SignedBlockContents, Slot, gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {Logger, byteArrayEquals, prettyGweiToEth, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {BidRequestResult, Metrics} from "../metrics.js";
 import {BidLedger} from "../services/bidLedger.js";
@@ -123,15 +123,25 @@ export function getBuilderApi(modules: BuilderApiModules, opts: BuilderApiOption
     async submitSignedBeaconBlock({signedBlock}) {
       const block = signedBlock.data;
       const {slot, proposerIndex} = block.message;
+      const fork = config.getForkName(slot);
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `Invalid signed beacon block: slot ${slot} is before Gloas`);
+      }
       const bid = block.message.body.signedExecutionPayloadBid.message;
       const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message));
       const logCtx = {slot, blockRoot, blockHash: toRootHex(bid.blockHash)};
 
+      // The block must carry the bid as we signed it, a bid that only keeps our block hash and signature
+      // passes gossip validation of the beacon node but the block fails to be imported
       const signedBid = getServedBid(slot, toRootHex(bid.parentBlockHash), toRootHex(bid.parentBlockRoot));
+      const signedBidType = sszTypesFor(fork, "SignedExecutionPayloadBid");
       if (
         bid.builderIndex !== builderIndex ||
         signedBid === null ||
-        !byteArrayEquals(signedBid.message.blockHash, bid.blockHash)
+        !byteArrayEquals(
+          signedBidType.hashTreeRoot(signedBid),
+          signedBidType.hashTreeRoot(block.message.body.signedExecutionPayloadBid)
+        )
       ) {
         throw new ApiError(400, "Invalid signed beacon block: does not commit to a bid of this builder");
       }
