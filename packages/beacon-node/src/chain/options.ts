@@ -68,6 +68,8 @@ export type BlockProcessOpts = {
   disableOnBlockError?: boolean;
   /** Used for fork_choice spec tests */
   disablePrepareNextSlot?: boolean;
+  /** Record when pq attestations arrive and how long their proofs take, in runs under `output` */
+  pqTiming?: {output: string; observer: boolean; version: string};
   /**
    * Used to connect beacon in follow mode to an EL,
    * will still issue fcU for block proposal

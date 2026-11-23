@@ -25,7 +25,6 @@ import {
 import {
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
-  IBeaconStateViewAltair,
   type IBeaconStateViewBellatrix,
   computeEpochAtSlot,
   computeTimeAtSlot,
@@ -86,10 +85,14 @@ import {BeaconProposerCache} from "../beaconProposerCache.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
 import {InclusionListStore, ProposerPreferencesPool} from "../opPools/index.js";
+import {getPqAttestationFilters} from "../opPools/pqAttestationPool.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;
+
+/** The share of the time attesters give a block within which its attestation proofs must merge */
+export const PQ_MERGE_DEADLINE_FACTOR = 0.75;
 
 export enum PayloadPreparationType {
   Fresh = "Fresh",
@@ -1165,32 +1168,21 @@ export async function produceCommonBlockBody<T extends BlockType>(
   let proof: Uint8Array | undefined;
   let attestations: Attestation[];
   if (fork === ForkName.pq) {
-    const blockEpoch = computeEpochAtSlot(slot);
+    // What is not merged this long into the slot is left for a later block: attesters wait for
+    // this one no longer than their own deadline
+    const mergeDeadlineMs =
+      computeTimeAtSlot(this.config, slot, this.genesisTime) * 1000 +
+      PQ_MERGE_DEADLINE_FACTOR * this.config.getAttestationDueMs(fork);
     const packed = await this.pqAttestationPool.getAttestationsForBlock(
       slot,
-      (data) => {
-        const justified =
-          data.target.epoch === blockEpoch
-            ? currentState.currentJustifiedCheckpoint
-            : data.target.epoch === blockEpoch - 1
-              ? currentState.previousJustifiedCheckpoint
-              : null;
-        return (
-          justified !== null &&
-          data.source.epoch === justified.epoch &&
-          byteArrayEquals(data.source.root, justified.root)
-        );
-      },
-      (data, committeeIndex) => {
-        const committee = currentState.getBeaconCommittee(data.slot, committeeIndex);
-        const stateAltair = currentState as IBeaconStateViewAltair;
-        const participation =
-          data.target.epoch === blockEpoch
-            ? stateAltair.currentEpochParticipation
-            : stateAltair.previousEpochParticipation;
-        return (position) => participation[committee[position]] !== 0;
-      }
+      getPqAttestationFilters(currentState, slot),
+      Math.max(mergeDeadlineMs - Date.now(), 0)
     );
+    if (packed.source === "late") {
+      this.logger.warn("Proposing without attestations: their proofs did not merge in time", {slot});
+    } else {
+      this.logger.verbose("Packed pq attestations", {slot, source: packed.source, count: packed.attestations.length});
+    }
     attestations = packed.attestations;
     proof = packed.proof;
   } else {

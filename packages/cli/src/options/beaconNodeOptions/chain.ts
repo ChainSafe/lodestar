@@ -29,6 +29,8 @@ export type ChainArgs = {
   "chain.maxSkipSlots"?: number;
   "chain.disableProposerSlashings"?: boolean;
   emitPayloadAttributes?: boolean;
+  pqTimingOutput?: string;
+  pqMeasurement?: boolean;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
   "chain.archiveStateEpochFrequency": number;
@@ -96,6 +98,20 @@ export const options: CliCommandOptions<ChainArgs> = {
     description:
       "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling `produceBlock`.",
     default: defaultOptions.chain.suggestedFeeRecipient,
+    group: "chain",
+  },
+
+  pqTimingOutput: {
+    type: "string",
+    description:
+      "Record when pq attestations arrive and how long their proofs take, one directory per run under this one, in the format of Lighthouse's pq-measurement reports",
+    group: "chain",
+  },
+
+  pqMeasurement: {
+    type: "boolean",
+    description:
+      "Observe a pq network: subscribe to every attestation subnet and, every three slots, prove and merge what arrived as an aggregator and a proposer would, publishing nothing. For a node without validators. Records as `pqTimingOutput` does, by default in the data directory",
     group: "chain",
   },
 

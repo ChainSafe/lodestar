@@ -288,12 +288,12 @@ export class NetworkProcessor {
     this.gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
     this.gossipValidatorFn = getGossipValidatorFn(
       modules.gossipHandlers ?? getGossipHandlers(modules, opts),
-      modules,
+      {...modules, pqTiming: modules.chain.pqTiming},
       this.onFatalPeer
     );
     this.gossipValidatorBatchFn = getGossipValidatorBatchFn(
       modules.gossipHandlers ?? getGossipHandlers(modules, opts),
-      modules,
+      {...modules, pqTiming: modules.chain.pqTiming},
       this.onFatalPeer
     );
 

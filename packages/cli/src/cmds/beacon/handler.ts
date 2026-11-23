@@ -193,6 +193,19 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
       persistOrphanedBlocksDir: beaconPaths.persistOrphanedBlocksDir,
     },
   });
+  // An observer sees every committee
+  if (args.pqMeasurement) beaconNodeOptions.set({network: {subscribeAllSubnets: true}});
+  if (args.pqTimingOutput || args.pqMeasurement) {
+    beaconNodeOptions.set({
+      chain: {
+        pqTiming: {
+          output: args.pqTimingOutput ?? path.join(beaconPaths.dataDir, "pq-timing"),
+          observer: args.pqMeasurement === true,
+          version,
+        },
+      },
+    });
+  }
   // Add metrics metadata to show versioning + network info in Prometheus + Grafana
   beaconNodeOptions.set({metrics: {metadata: {version, commit, network}}});
   // Add detailed version string for API node/version endpoint

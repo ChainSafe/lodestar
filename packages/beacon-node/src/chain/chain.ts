@@ -17,6 +17,7 @@ import {setupXmssAggregation} from "@lodestar/native/leanvm";
 import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
+  ForkName,
   type ForkPostFulu,
   type ForkPostGloas,
   GENESIS_SLOT,
@@ -110,13 +111,21 @@ import {
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
-import {PqAttestationPool} from "./opPools/pqAttestationPool.js";
+import {PROOF_LOG_INV_RATE, PqAttestationPool} from "./opPools/pqAttestationPool.js";
 import {IChainOptions} from "./options.js";
+import {PREPARE_START_BPS, PqBlockPreparer} from "./pq/blockPreparer.js";
 import {IPqVerifier, PqVerifier} from "./pq/index.js";
+import {PqObserver} from "./pq/observer.js";
+import {PqTiming} from "./pq/timing.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
-import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
+import {
+  BlockAttributes,
+  PQ_MERGE_DEADLINE_FACTOR,
+  produceBlockBody,
+  produceCommonBlockBody,
+} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {
@@ -200,7 +209,8 @@ export class BeaconChain implements IBeaconChain {
   // Ops pool
   readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
-  readonly pqAttestationPool = new PqAttestationPool();
+  readonly pqTiming: PqTiming | null = null;
+  readonly pqAttestationPool: PqAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
@@ -322,6 +332,24 @@ export class BeaconChain implements IBeaconChain {
     this.metrics = metrics;
     this.validatorMonitor = validatorMonitor;
     this.genesisTime = anchorState.genesisTime;
+    // An aggregator's proof is made between the attestations' deadline and its own. The observer
+    // proves halfway, as Lighthouse does. A committee of this node's validators is proven when
+    // its aggregator asks.
+    const attestationDueMs = config.getAttestationDueMs(ForkName.pq);
+    const pqSchedule = {
+      committeeCollectionMs: attestationDueMs + (config.getAggregateDueMs(ForkName.pq) - attestationDueMs) / 2,
+      initialMergeMs: config.getSlotComponentDurationMs(ForkName.pq, PREPARE_START_BPS),
+      fallbackDeadlineMs: PQ_MERGE_DEADLINE_FACTOR * attestationDueMs,
+    };
+    if (opts.pqTiming && config.PQ_FORK_EPOCH !== Infinity) {
+      this.pqTiming = new PqTiming(config, logger, {
+        ...opts.pqTiming,
+        proverLogInvRate: PROOF_LOG_INV_RATE,
+        genesisTime: this.genesisTime,
+        schedule: pqSchedule,
+      });
+    }
+    this.pqAttestationPool = new PqAttestationPool(this.pqTiming);
     this.anchorStateLatestBlockSlot = anchorState.latestBlockHeader.slot;
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot;
     this.executionEngine = executionEngine;
@@ -558,6 +586,18 @@ export class BeaconChain implements IBeaconChain {
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
+      new PqBlockPreparer(this, this.config, this.logger, signal);
+      if (this.pqTiming && opts.pqTiming?.observer) {
+        new PqObserver(
+          this,
+          this.config,
+          this.logger,
+          signal,
+          this.pqTiming,
+          pqSchedule.committeeCollectionMs,
+          pqSchedule.initialMergeMs
+        );
+      }
     }
 
     if (metrics) {

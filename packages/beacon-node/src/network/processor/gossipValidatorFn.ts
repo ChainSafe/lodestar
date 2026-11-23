@@ -1,5 +1,7 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {
   AttestationError,
@@ -20,6 +22,7 @@ import {
   SyncCommitteeErrorCode,
   VoluntaryExitErrorCode,
 } from "../../chain/errors/index.js";
+import {PqTiming} from "../../chain/pq/timing.js";
 import {Metrics} from "../../metrics/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetworkCore} from "../core/index.js";
@@ -40,7 +43,60 @@ export type ValidatorFnModules = {
   logger: Logger;
   metrics: Metrics | null;
   core: INetworkCore;
+  pqTiming?: PqTiming | null;
 };
+
+const timedOutcome = {
+  [TopicValidatorResult.Accept]: "accepted",
+  [TopicValidatorResult.Ignore]: "ignored",
+  [TopicValidatorResult.Reject]: "rejected",
+} as const;
+
+/** Records a pq attestation or aggregate and what validation made of it. One that does not decode is not recorded. */
+function recordPqMessage(
+  timing: PqTiming,
+  {topic, msg, msgId, seenTimestampSec}: GossipMessageInfo,
+  result: TopicValidatorResult
+): void {
+  if (topic.boundary.fork !== ForkName.pq) return;
+  try {
+    if (topic.type === GossipType.beacon_attestation) {
+      const {committeeIndex, data} = ssz.pq.SingleAttestation.deserialize(msg.data);
+      timing.onGossipMessage(
+        {
+          kind: "individual",
+          id: msgId,
+          slot: data.slot,
+          committee: committeeIndex,
+          subnet: topic.subnet,
+          bytes: msg.data.length,
+          signers: 1,
+          dataRoot: ssz.phase0.AttestationData.hashTreeRoot(data),
+        },
+        seenTimestampSec,
+        timedOutcome[result]
+      );
+    } else if (topic.type === GossipType.beacon_aggregate_and_proof) {
+      const {aggregate} = ssz.pq.SignedAggregateAndProof.deserialize(msg.data).message;
+      timing.onGossipMessage(
+        {
+          kind: "aggregate",
+          id: msgId,
+          slot: aggregate.data.slot,
+          committee: aggregate.committeeBits.getSingleTrueBit() ?? 0,
+          subnet: null,
+          bytes: msg.data.length,
+          signers: aggregate.aggregationBits.getTrueBitIndexes().length,
+          dataRoot: ssz.phase0.AttestationData.hashTreeRoot(aggregate.data),
+        },
+        seenTimestampSec,
+        timedOutcome[result]
+      );
+    }
+  } catch {
+    // Not a message of its topic's type
+  }
+}
 
 export type OnFatalPeerFn = (peer: PeerIdStr) => void;
 
@@ -134,9 +190,17 @@ export function getGossipValidatorBatchFn(
   modules: ValidatorFnModules,
   onFatalPeer: OnFatalPeerFn
 ): GossipValidatorBatchFn {
-  const {logger, metrics, core} = modules;
+  const {logger, metrics, core, pqTiming} = modules;
 
   return async function gossipValidatorBatchFn(messageInfos: GossipMessageInfo[]) {
+    const results = await validateBatch(messageInfos);
+    if (pqTiming) {
+      for (const [i, messageInfo] of messageInfos.entries()) recordPqMessage(pqTiming, messageInfo, results[i]);
+    }
+    return results;
+  };
+
+  async function validateBatch(messageInfos: GossipMessageInfo[]): Promise<TopicValidatorResult[]> {
     // all messageInfos have same topic type
     const type = messageInfos[0].topic.type;
     try {
@@ -201,7 +265,7 @@ export function getGossipValidatorBatchFn(
       }
       return results;
     }
-  };
+  }
 }
 
 /**
@@ -223,9 +287,15 @@ export function getGossipValidatorFn(
   modules: ValidatorFnModules,
   onFatalPeer: OnFatalPeerFn
 ): GossipValidatorFn {
-  const {logger, metrics, core} = modules;
+  const {logger, metrics, core, pqTiming} = modules;
 
-  return async function gossipValidatorFn({
+  return async function gossipValidatorFn(messageInfo) {
+    const result = await validate(messageInfo);
+    if (pqTiming) recordPqMessage(pqTiming, messageInfo, result);
+    return result;
+  };
+
+  async function validate({
     topic,
     msg,
     propagationSource,
@@ -233,7 +303,7 @@ export function getGossipValidatorFn(
     clientVersion,
     seenTimestampSec,
     msgSlot,
-  }) {
+  }: GossipMessageInfo): Promise<TopicValidatorResult> {
     const type = topic.type;
 
     try {
@@ -284,5 +354,5 @@ export function getGossipValidatorFn(
         }
       }
     }
-  };
+  }
 }

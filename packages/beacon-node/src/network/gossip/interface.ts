@@ -177,6 +177,7 @@ export type GossipModules = {
 export type GossipMessageInfo = {
   topic: GossipTopic;
   msg: Message;
+  msgId: string;
   propagationSource: PeerIdStr;
   clientAgent: string;
   clientVersion: string;

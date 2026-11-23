@@ -1646,7 +1646,11 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
             try {
               // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
               // but don't add to attestation pool, to save CPU and RAM
-              if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
+              // An observer proves what no validator of this node aggregates
+              if (
+                chain.opts.pqTiming?.observer ||
+                aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)
+              ) {
                 const insertOutcome = isPqSingleAttestation(attestation)
                   ? addPqSingleAttestation(
                       chain.config,

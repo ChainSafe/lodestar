@@ -396,6 +396,8 @@ export class BeaconNode {
   async close(): Promise<void> {
     if (this.status === BeaconNodeStatus.started) {
       this.status = BeaconNodeStatus.closing;
+      // First: the record of a run is whole only once closed
+      await this.chain.pqTiming?.close();
       this.sync.close();
       if (this.restApi) await this.restApi.close();
       await this.network.close();

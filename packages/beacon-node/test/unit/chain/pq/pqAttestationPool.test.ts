@@ -3,7 +3,7 @@ import {XMSS_CLAIM_SIZE, XMSS_SIGNED_SIZE, XmssSecretKey} from "@lodestar/native
 import {MIN_ATTESTATION_INCLUSION_DELAY_PQ} from "@lodestar/params";
 import {computeXmssAttestationLeafIndex} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {PqAttestationPool} from "../../../../src/chain/opPools/pqAttestationPool.js";
+import {PqAttestationFilters, PqAttestationPool} from "../../../../src/chain/opPools/pqAttestationPool.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {PqVerifier, canonicalClaims} from "../../../../src/chain/pq/verifier.js";
 
@@ -79,27 +79,65 @@ describe("PqAttestationPool", () => {
       pool.addAggregate(1, data, dataRootHex, aggregationBits, aggregate.proof, Buffer.concat([claims[3], claims[2]]))
     ).toBe(InsertOutcome.Aggregated);
 
-    const none = () => () => false;
-    const tooSoon = await pool.getAttestationsForBlock(data.slot + 1, () => true, none);
+    const blockSlot = data.slot + MIN_ATTESTATION_INCLUSION_DELAY_PQ;
+    const all: PqAttestationFilters = {isIncludable: () => true, isOnChain: () => () => false};
+    const tooSoon = await pool.getAttestationsForBlock(data.slot + 1, all, 60_000);
     expect(tooSoon.attestations).toHaveLength(0);
 
-    const excluded = await pool.getAttestationsForBlock(data.slot + MIN_ATTESTATION_INCLUSION_DELAY_PQ, () => false, none);
-    expect(excluded).toEqual({attestations: [], proof: new Uint8Array(0)});
+    const excluded = await pool.getAttestationsForBlock(blockSlot, {...all, isIncludable: () => false}, 60_000);
+    expect(excluded).toEqual({attestations: [], proof: new Uint8Array(0), source: "empty"});
 
     // Committee 1's attesters are on chain already, so only committee 0 is worth a block's space
     const onlyNew = await pool.getAttestationsForBlock(
-      data.slot + MIN_ATTESTATION_INCLUSION_DELAY_PQ,
-      () => true,
-      (_data, committeeIndex) => () => committeeIndex === 1
+      blockSlot,
+      {...all, isOnChain: (_data, committeeIndex) => () => committeeIndex === 1},
+      60_000
     );
     expect(onlyNew.attestations[0].committeeBits.getTrueBitIndexes()).toEqual([0]);
 
-    const {attestations, proof} = await pool.getAttestationsForBlock(data.slot + MIN_ATTESTATION_INCLUSION_DELAY_PQ, () => true, none);
+    const late = await pool.getAttestationsForBlock(blockSlot, all, 0);
+    expect(late).toEqual({attestations: [], proof: new Uint8Array(0), source: "late"});
+
+    const {attestations, proof, source} = await pool.getAttestationsForBlock(blockSlot, all, 60_000);
+    expect(source).toBe("merged");
     expect(attestations.length).toBe(1);
     expect(attestations[0].committeeBits.getTrueBitIndexes()).toEqual([0, 1]);
     expect(attestations[0].aggregationBits.toBoolArray()).toEqual([true, true, true, true]);
     expect(await verifier.verifyProofSets([{claims: Buffer.concat(claims), proof}])).toBe(true);
     expect(await verifier.verifyProofSets([{claims: Buffer.concat(claims.slice(1)), proof}])).toBe(false);
+  }, 120_000);
+
+  it("merges a block's proof ahead of its slot, and again for more attesters", async () => {
+    const pool = new PqAttestationPool();
+    const blockSlot = data.slot + MIN_ATTESTATION_INCLUSION_DELAY_PQ;
+    const all: PqAttestationFilters = {isIncludable: () => true, isOnChain: () => () => false};
+    pool.addSingle(0, data, dataRootHex, 0, 2, signed[0]);
+
+    await pool.prepareBlock(blockSlot, all, 60_000);
+    const first = await pool.getAttestationsForBlock(blockSlot, all, 0);
+    expect(first.source).toBe("prepared");
+    expect(first.attestations[0].aggregationBits.toBoolArray()).toEqual([true, false]);
+
+    // Nothing new: what is held stays
+    await pool.prepareBlock(blockSlot, all, 60_000);
+    expect((await pool.getAttestationsForBlock(blockSlot, all, 0)).proof).toBe(first.proof);
+
+    // No time for the merge: what is held stays
+    pool.addSingle(0, data, dataRootHex, 1, 2, signed[1]);
+    await pool.prepareBlock(blockSlot, all, 0);
+    expect((await pool.getAttestationsForBlock(blockSlot, all, 0)).proof).toBe(first.proof);
+
+    await pool.prepareBlock(blockSlot, all, 60_000);
+    const second = await pool.getAttestationsForBlock(blockSlot, all, 0);
+    expect(second.source).toBe("prepared");
+    expect(second.attestations[0].aggregationBits.toBoolArray()).toEqual([true, true]);
+    expect(await verifier.verifyProofSets([{claims: Buffer.concat(claims.slice(0, 2)), proof: second.proof}])).toBe(
+      true
+    );
+
+    // A state that does not accept what was merged gets none of it
+    const other = await pool.getAttestationsForBlock(blockSlot, {...all, isIncludable: () => false}, 0);
+    expect(other.source).toBe("empty");
   }, 120_000);
 
   it("accepts an empty proof for no claims only", async () => {
