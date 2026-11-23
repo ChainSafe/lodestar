@@ -49,11 +49,11 @@ export class Revealer {
         const {builderIndex, value} = observed.signedBid.message;
         logger.info("Execution payload bid not selected", {
           slot,
-          blockRoot,
           builderIndex: this.modules.builderIndex,
-          valueGwei: Math.max(...bids.map((bid) => bid.signedBid.message.value)),
+          blockRoot,
+          value: prettyGweiToEth(Math.max(...bids.map((bid) => bid.signedBid.message.value))),
           selectedBuilderIndex: builderIndex === BUILDER_INDEX_SELF_BUILD ? "self-build" : builderIndex,
-          selectedValueGwei: value,
+          selectedValue: prettyGweiToEth(value),
         });
       }
       return;
