@@ -7,7 +7,7 @@ import {ForkName, ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {EngineApiMode} from "../../../src/execution/engine/http.js";
-import {ExecutionEngineSyncingError, PayloadAttributes} from "../../../src/execution/engine/interface.js";
+import {ExecutionEngineErrorCode, PayloadAttributes} from "../../../src/execution/engine/interface.js";
 import {decodeJwtToken} from "../../../src/execution/engine/jwt.js";
 import {
   BlobsRequest,
@@ -437,7 +437,7 @@ describe("ExecutionEngine / rest", () => {
 
       await expect(
         engine.notifyForkchoiceUpdate(ForkName.deneb, hashHex, hashHex, hashHex, attributes)
-      ).rejects.toThrow(ExecutionEngineSyncingError);
+      ).rejects.toMatchObject({type: {code: ExecutionEngineErrorCode.SYNCING}});
     });
 
     it("surfaces problem responses", async () => {

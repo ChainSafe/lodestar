@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import {getClient} from "@lodestar/api";
 import {
-  ExecutionEngineSyncingError,
+  ExecutionEngineError,
+  ExecutionEngineErrorCode,
   ExecutionPayloadStatus,
   RegistryMetricCreator,
   collectNodeJSMetrics,
@@ -122,7 +123,7 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
         return payloadId;
       } catch (e) {
         // Only retry while the execution client is syncing, it has not imported the parent payload yet
-        if (e instanceof ExecutionEngineSyncingError) return null;
+        if (e instanceof ExecutionEngineError && e.type.code === ExecutionEngineErrorCode.SYNCING) return null;
         throw e;
       }
     },

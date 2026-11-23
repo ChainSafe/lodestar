@@ -19,6 +19,7 @@ import {
   capella,
 } from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
+import {LodestarError} from "@lodestar/utils";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBodyV2} from "./types.js";
 import {DATA} from "./utils.js";
@@ -131,15 +132,17 @@ export type PayloadAttributes = {
 
 export type VersionedHashes = Uint8Array[];
 
-/**
- * Thrown by `notifyForkchoiceUpdate` if a payload was requested while the execution client is syncing, the head
- * block is not available to build on yet
- */
-export class ExecutionEngineSyncingError extends Error {
-  constructor() {
-    super("Execution Layer Syncing");
-  }
+export enum ExecutionEngineErrorCode {
+  /**
+   * `notifyForkchoiceUpdate` requested a payload while the execution client is syncing, the head block is not
+   * available to build on yet
+   */
+  SYNCING = "EXECUTION_ENGINE_ERROR_SYNCING",
 }
+
+export type ExecutionEngineErrorType = {code: ExecutionEngineErrorCode.SYNCING};
+
+export class ExecutionEngineError extends LodestarError<ExecutionEngineErrorType> {}
 
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
@@ -190,7 +193,7 @@ export interface IExecutionEngine {
    * Should be called in response to fork-choice head and finalized events.
    *
    * An INVALID verdict is returned, not thrown: the caller feeds it back into fork choice together with the
-   * `latestValidHash`. Only SYNCING while building a payload is an error, thrown as `ExecutionEngineSyncingError`.
+   * `latestValidHash`. Only SYNCING while building a payload is an error, thrown as `ExecutionEngineError` with code `SYNCING`.
    */
   notifyForkchoiceUpdate(
     fork: ForkName,
