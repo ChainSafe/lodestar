@@ -315,6 +315,7 @@ describe("native gossip host execution", () => {
     vi.mocked(f.chain.seenBlockInputCache.getByBlock).mockReturnValue(blockInput);
     f.chain.forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: 0, root: ZERO_HASH, rootHex: ZERO_HASH_HEX});
     f.chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
+    f.chain.pubkeyCache = {size: 1} as typeof f.chain.pubkeyCache;
     const recovery = vi.fn();
     const search = vi.fn();
     f.chain.emitter.on(ChainEvent.blockUnknownParent, recovery);
