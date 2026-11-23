@@ -1,13 +1,17 @@
+import {ApiError} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {IClock} from "@lodestar/state-transition";
 import {BuilderIndex} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, TimeoutError, isFetchError, retry} from "@lodestar/utils";
 import {Metrics, RevealResult} from "../metrics.js";
 import {BidSelector} from "./bidSelector.js";
 import {ObservedBlock} from "./blockObserver.js";
 import {EnvelopePublisher} from "./envelopePublisher.js";
 import {createExecutionPayloadEnvelopeContents} from "./executionPayloadEnvelope.js";
 import {PayloadStore} from "./payloadStore.js";
+
+/** Time in milliseconds to wait before publishing the envelope again after a transient failure */
+const REVEAL_RETRY_DELAY = 200;
 
 export type RevealerOptions = {
   /**
@@ -71,7 +75,22 @@ export class Revealer {
     });
 
     try {
-      await envelopePublisher.publish(contents, this.modules.signal);
+      // The block is only observed once, a transient failure has to be retried here while a reveal may still start.
+      // Publishing the same envelope again is safe, the beacon node treats an already known envelope as published
+      await retry(() => envelopePublisher.publish(contents, this.modules.signal), {
+        retries: Infinity,
+        retryDelay: REVEAL_RETRY_DELAY,
+        signal: this.modules.signal,
+        shouldRetry: (error) =>
+          isRetryableRevealError(error) && clock.msFromSlot(slot) + REVEAL_RETRY_DELAY <= cutoffMs,
+        onRetry: (error, attempt) => {
+          logger.warn(
+            "Retrying execution payload reveal",
+            {...logCtx, attempt, msFromSlot: clock.msFromSlot(slot)},
+            error
+          );
+        },
+      });
     } catch (e) {
       metrics?.reveals.total.inc({result: RevealResult.error});
       throw e;
@@ -85,4 +104,16 @@ export class Revealer {
       secFromSlot: clock.secFromSlot(slot),
     });
   }
+}
+
+/**
+ * Failures that can resolve on their own while the reveal window is open, e.g. the beacon node being briefly
+ * unreachable or overloaded. A rejected envelope is not published again.
+ */
+export function isRetryableRevealError(error: Error): boolean {
+  if (error instanceof ApiError) {
+    return error.status >= 500;
+  }
+
+  return error instanceof TimeoutError || (isFetchError(error) && error.type !== "input");
 }
