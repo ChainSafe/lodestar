@@ -225,7 +225,7 @@ export async function processBlocks(
           toRootHex(state.hashTreeRoot()),
           `${state.slot}_invalid_signature`
         );
-      } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT && this.opts.persistInvalidSszObjects) {
+      } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
         const {signedBlock} = err;
         const blockSlot = signedBlock.message.slot;
         const {preState, postState} = err.type;

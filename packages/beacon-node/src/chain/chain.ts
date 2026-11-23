@@ -1614,6 +1614,9 @@ export class BeaconChain implements IBeaconChain {
     postState: IBeaconStateView,
     block: SignedBeaconBlock
   ): Promise<void> {
+    if (!this.opts.persistInvalidSszObjects) {
+      return;
+    }
     const blockSlot = block.message.slot;
     const blockType = this.config.getForkTypes(blockSlot).SignedBeaconBlock;
     const postStateRoot = postState.hashTreeRoot();
