@@ -83,6 +83,7 @@ describe("data serialization through worker boundary", () => {
       peer: getValidPeerId(),
       peerClient: "Unknown",
     },
+    [NetworkEvent.gossipQueueReady]: null,
     [NetworkEvent.pendingGossipsubMessage]: {
       topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH}},
       msg: {

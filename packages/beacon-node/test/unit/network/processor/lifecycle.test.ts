@@ -2,9 +2,11 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import {gossipQueues} from "@lodestar/native/gossip-queues";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {ChainEvent} from "../../../../src/chain/emitter.js";
 import {IBeaconChain} from "../../../../src/chain/interface.js";
 import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../../../../src/network/events.js";
@@ -15,8 +17,11 @@ import {
   GossipTopic,
   GossipType,
 } from "../../../../src/network/gossip/interface.js";
+import {stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
 import {AggregatorTracker} from "../../../../src/network/processor/aggregatorTracker.js";
 import {NetworkProcessor} from "../../../../src/network/processor/index.js";
+import {NativeGossipProcessor} from "../../../../src/network/processor/native.js";
+import {offerGossip} from "../../../../src/network/processor/nativeIngress.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
 import {PeerIdStr} from "../../../../src/util/peerId.js";
 import {ClockStopped} from "../../../mocks/clock.js";
@@ -59,7 +64,7 @@ function attestation(id: number, payload = false, slot = 64): IncomingMessage {
   );
 }
 
-function fixture() {
+function fixture(native = false) {
   const clock = new ClockStopped(64);
   const events = new NetworkEventBus();
   const logger = getMockedLogger();
@@ -100,20 +105,20 @@ function fixture() {
   const results: Result[] = [];
   events.on(NetworkEvent.gossipMessageValidationResult, (result) => results.push(result));
   const core = {reportPeer: vi.fn()};
-  const processor = new NetworkProcessor(
-    {
-      chain,
-      db: getMockedBeaconDb(),
-      config: createBeaconConfig(defaultConfig, new Uint8Array(32)),
-      aggregatorTracker: new AggregatorTracker(),
-      core: core as unknown as INetworkCore,
-      events,
-      logger,
-      metrics: null,
-      gossipHandlers: handlers,
-    },
-    {}
-  );
+  const config = createBeaconConfig(defaultConfig, new Uint8Array(32));
+  const modules = {
+    chain,
+    db: getMockedBeaconDb(),
+    config,
+    aggregatorTracker: new AggregatorTracker(),
+    core: core as unknown as INetworkCore,
+    events,
+    logger,
+    metrics: null,
+    gossipHandlers: handlers,
+  };
+  const id = native ? gossipQueues.create(1024, 64) : undefined;
+  const processor = id === undefined ? new NetworkProcessor(modules, {}) : new NativeGossipProcessor(id, modules, {});
   return {
     processor,
     clock,
@@ -127,12 +132,27 @@ function fixture() {
     blsThreadPoolCanAcceptWork,
     hasBlockHexUnsafe,
     hasPayloadHexUnsafe,
-    dispatch: (msg: IncomingMessage) => events.emit(NetworkEvent.pendingGossipsubMessage, msg),
+    dispatch: (msg: IncomingMessage) => {
+      if (id === undefined) events.emit(NetworkEvent.pendingGossipsubMessage, msg);
+      else {
+        msg.msg.topic = stringifyGossipTopic(config, msg.topic);
+        if (offerGossip(id, clock, msg)) events.emit(NetworkEvent.gossipQueueReady, null);
+      }
+    },
   };
 }
 
+it("supports exactly the beacon node gossip topics in the native queue", () => {
+  const id = gossipQueues.create(0, 1);
+  try {
+    expect(new Set(Object.keys(gossipQueues.stats(id).topics))).toEqual(new Set(Object.values(GossipType)));
+  } finally {
+    gossipQueues.close(id);
+  }
+});
+
 describe("NetworkProcessor lifecycle", () => {
-  const processors: NetworkProcessor[] = [];
+  const processors: (NetworkProcessor | NativeGossipProcessor)[] = [];
   function setup() {
     const f = fixture();
     processors.push(f.processor);
@@ -208,4 +228,102 @@ describe("NetworkProcessor lifecycle", () => {
       expect(f.processor.dumpGossipQueue(GossipType.beacon_attestation)).toHaveLength(1);
     }
   });
+});
+
+it("resumes native validation on capacity and preserves the libp2p verdict receipt", async () => {
+  const f = fixture(true);
+  try {
+    f.blsThreadPoolCanAcceptWork.mockReturnValue(false);
+    f.dispatch(message(17));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(f.single).not.toHaveBeenCalled();
+    expect(f.processor.dumpGossipQueue(GossipType.voluntary_exit)).toHaveLength(1);
+    f.blsThreadPoolCanAcceptWork.mockReturnValue(true);
+    f.chain.emitter.emit(ChainEvent.validationCapacity);
+    await vi.waitFor(() => expect(f.results).toEqual([{msgId: "17", propagationSource: source, acceptance: "accept"}]));
+    expect(f.single).toHaveBeenCalledTimes(1);
+  } finally {
+    await f.processor.stop();
+  }
+});
+
+it.each(["checks", "drain"] as const)("recovers from a failed native %s without spinning on wakes", async (method) => {
+  vi.useFakeTimers();
+  const f = fixture(true);
+  const fail = (): never => {
+    throw Error("OutOfMemory");
+  };
+  const call = vi.spyOn(gossipQueues, method).mockImplementationOnce(fail).mockImplementationOnce(fail);
+  try {
+    f.dispatch(message(21));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(call).toHaveBeenCalledTimes(1);
+    f.events.emit(NetworkEvent.gossipQueueReady, null);
+    await vi.advanceTimersByTimeAsync(249);
+    expect(call).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(251);
+    expect(f.logger.error).toHaveBeenCalledTimes(1);
+    expect(f.results).toEqual([{msgId: "21", propagationSource: source, acceptance: "accept"}]);
+  } finally {
+    call.mockRestore();
+    await f.processor.stop();
+    vi.useRealTimers();
+  }
+});
+
+it("stops the native processor when its queue has closed", async () => {
+  const checks = gossipQueues.checks;
+  const call = vi.spyOn(gossipQueues, "checks").mockImplementationOnce((id, slot) => {
+    gossipQueues.close(id);
+    return checks(id, slot);
+  });
+  const f = fixture(true);
+  try {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(f.clock.listenerCount(ClockEvent.slot)).toBe(0);
+    expect(call).toHaveBeenCalledTimes(1);
+  } finally {
+    call.mockRestore();
+    await f.processor.stop();
+  }
+});
+
+it("retains attestations for an unknown block and validates the group on import", async () => {
+  const f = fixture(true);
+  try {
+    const att = ssz.phase0.Attestation.defaultValue();
+    att.data.slot = f.clock.currentSlot;
+    att.data.beaconBlockRoot = root;
+    const bytes = ssz.phase0.Attestation.serialize(att);
+    const topic: GossipTopic = {
+      type: GossipType.beacon_attestation,
+      subnet: 0,
+      boundary: {fork: ForkName.phase0, epoch: 0},
+    };
+    f.hasBlockHexUnsafe.mockReturnValue(false);
+    f.dispatch(message(18, topic, bytes));
+    f.dispatch(message(19, topic, bytes));
+    await vi.waitFor(() => expect(f.hasBlockHexUnsafe).toHaveBeenCalledWith(rootHex));
+    expect(f.batch).not.toHaveBeenCalled();
+    f.hasBlockHexUnsafe.mockReturnValue(true);
+    f.chain.emitter.emit(routes.events.EventType.block, {block: rootHex, executionOptimistic: false, slot: 64});
+    await vi.waitFor(() => expect(f.results).toHaveLength(2));
+    expect(f.batch).toHaveBeenCalledTimes(1);
+    expect(f.results.map((result) => result.msgId).sort()).toEqual(["18", "19"]);
+    for (const result of f.results) expect(result.acceptance, result.msgId).toBe("accept");
+  } finally {
+    await f.processor.stop();
+  }
+});
+
+it("returns Reject for an unreadable block slot without calling the handler", async () => {
+  const f = fixture(true);
+  try {
+    f.dispatch(message(20, {type: GossipType.beacon_block, boundary: {fork: ForkName.phase0, epoch: 0}}));
+    await vi.waitFor(() => expect(f.results).toEqual([{msgId: "20", propagationSource: source, acceptance: "reject"}]));
+    expect(f.single).not.toHaveBeenCalled();
+    expect(f.core.reportPeer).toHaveBeenCalledTimes(1);
+  } finally {
+    await f.processor.stop();
+  }
 });

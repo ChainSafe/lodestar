@@ -91,6 +91,11 @@ export function createLodestarMetrics(
         help: "Count of total gossip validation queue dropped jobs",
         labelNames: ["topic"],
       }),
+      nativeDrops: register.gauge<{topic: GossipType; reason: string}>({
+        name: "lodestar_native_gossip_queue_drops_total",
+        help: "Messages discarded by the native gossip queue by topic and reason",
+        labelNames: ["topic", "reason"],
+      }),
       jobTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_job_time_seconds",
         help: "Time to process gossip validation queue job in seconds (accepted messages only)",
@@ -2080,12 +2085,12 @@ export function createLodestarMetrics(
     awaitingBlockGossipMessages: {
       queue: register.gauge<{topic: GossipType}>({
         name: "lodestar_awaiting_block_gossip_messages_total",
-        help: "Total number of gossip messages waiting for block to be processed",
+        help: "Total gossip messages admitted to wait for a block",
         labelNames: ["topic"],
       }),
       countPerSlot: register.gauge({
         name: "lodestar_awaiting_block_gossip_messages_per_slot_total",
-        help: "Total number of gossip messages waiting for block to be processed per slot",
+        help: "Current gossip messages waiting for a block",
       }),
       resolve: register.gauge<{topic: GossipType}>({
         name: "lodestar_awaiting_block_gossip_messages_resolve_total",
@@ -2100,7 +2105,7 @@ export function createLodestarMetrics(
       // having 2 labels here is not great for performance, however it's rarely happening and having the reason label is important for debugging
       reject: register.gauge<{reason: ReprocessRejectReason; topic: GossipType}>({
         name: "lodestar_awaiting_block_gossip_messages_reject_total",
-        help: "Total number of gossip messages are rejected to reprocess",
+        help: "Rejections on entry to the block wait queue and expirations of queued messages",
         labelNames: ["reason", "topic"],
       }),
       waitSecBeforeReject: register.gauge<{reason: ReprocessRejectReason; topic: GossipType}>({
@@ -2114,12 +2119,12 @@ export function createLodestarMetrics(
     awaitingPayloadGossipMessages: {
       queue: register.gauge<{topic: GossipType}>({
         name: "lodestar_awaiting_payload_gossip_messages_total",
-        help: "Total number of gossip messages waiting for payload to be processed",
+        help: "Total gossip messages admitted to wait for a payload",
         labelNames: ["topic"],
       }),
       countPerSlot: register.gauge({
         name: "lodestar_awaiting_payload_gossip_messages_per_slot_total",
-        help: "Total number of gossip messages waiting for payload to be processed per slot",
+        help: "Current gossip messages waiting for a payload",
       }),
       resolve: register.gauge<{topic: GossipType}>({
         name: "lodestar_awaiting_payload_gossip_messages_resolve_total",
@@ -2134,7 +2139,7 @@ export function createLodestarMetrics(
       // having 2 labels here is not great for performance, however it's rarely happening and having the reason label is important for debugging
       reject: register.gauge<{reason: ReprocessRejectReason; topic: GossipType}>({
         name: "lodestar_awaiting_payload_gossip_messages_reject_total",
-        help: "Total number of gossip messages are rejected to reprocess",
+        help: "Rejections on entry to the payload wait queue and expirations of queued messages",
         labelNames: ["reason", "topic"],
       }),
       waitSecBeforeReject: register.gauge<{reason: ReprocessRejectReason; topic: GossipType}>({

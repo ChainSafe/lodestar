@@ -5,6 +5,7 @@ import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
+import {gossipQueues} from "@lodestar/native/gossip-queues";
 import {ForkSeq} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -62,6 +63,7 @@ import {PeerAction, PeerScoreStats} from "./peers/index.js";
 import {PeerSyncMeta} from "./peers/peersData.js";
 import {AggregatorTracker} from "./processor/aggregatorTracker.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
+import {NativeGossipProcessor} from "./processor/native.js";
 import {ReqRespMethod} from "./reqresp/index.js";
 import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
 import {
@@ -81,7 +83,10 @@ type NetworkModules = {
   chain: IBeaconChain;
   networkEventBus: NetworkEventBus;
   aggregatorTracker: AggregatorTracker;
-  networkProcessor: NetworkProcessor;
+  networkProcessor: Pick<
+    NetworkProcessor,
+    "stop" | "searchUnknownBlock" | "searchUnknownEnvelope" | "dropAllJobs" | "dumpGossipQueue"
+  >;
   core: INetworkCore;
 };
 
@@ -121,7 +126,7 @@ export class Network implements INetwork {
   private readonly controller: AbortController;
 
   // TODO: Review
-  private readonly networkProcessor: NetworkProcessor;
+  private readonly networkProcessor: NetworkModules["networkProcessor"];
   private readonly core: INetworkCore;
   private readonly aggregatorTracker: AggregatorTracker;
 
@@ -177,44 +182,57 @@ export class Network implements INetwork {
       logger.info("running libp2p instance in worker thread");
     }
 
-    const core = opts.useWorker
-      ? await WorkerNetworkCore.init({
-          opts: {
-            ...opts,
+    const gossipQueueId = opts.nativeGossipQueues
+      ? gossipQueues.create(activeValidatorCount, opts.maxGossipTopicConcurrency ?? 16384)
+      : undefined;
+    let core: INetworkCore | undefined;
+    let networkProcessor: NetworkModules["networkProcessor"];
+    try {
+      core = opts.useWorker
+        ? await WorkerNetworkCore.init({
+            gossipQueueId,
+            opts: {
+              ...opts,
+              peerStoreDir,
+              metricsEnabled: Boolean(metrics),
+              activeValidatorCount,
+              genesisTime: chain.genesisTime,
+              initialStatus,
+              initialCustodyGroupCount,
+            },
+            config,
+            privateKey,
+            logger,
+            events,
+            metrics,
+            getReqRespHandler,
+          })
+        : await NetworkCore.init({
+            gossipQueueId,
+            opts,
+            config,
+            privateKey,
             peerStoreDir,
-            metricsEnabled: Boolean(metrics),
-            activeValidatorCount,
-            genesisTime: chain.genesisTime,
+            logger,
+            clock: chain.clock,
+            events,
+            getReqRespHandler,
+            metricsRegistry: metrics ? new RegistryMetricCreator() : null,
             initialStatus,
             initialCustodyGroupCount,
-          },
-          config,
-          privateKey,
-          logger,
-          events,
-          metrics,
-          getReqRespHandler,
-        })
-      : await NetworkCore.init({
-          opts,
-          config,
-          privateKey,
-          peerStoreDir,
-          logger,
-          clock: chain.clock,
-          events,
-          getReqRespHandler,
-          metricsRegistry: metrics ? new RegistryMetricCreator() : null,
-          initialStatus,
-          initialCustodyGroupCount,
-          activeValidatorCount,
-        });
+            activeValidatorCount,
+          });
 
-    const networkProcessor = new NetworkProcessor(
-      {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker},
-      opts
-    );
-
+      const modules = {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker};
+      networkProcessor =
+        gossipQueueId === undefined
+          ? new NetworkProcessor(modules, opts)
+          : new NativeGossipProcessor(gossipQueueId, modules, opts);
+    } catch (error) {
+      if (gossipQueueId !== undefined) gossipQueues.close(gossipQueueId);
+      await core?.close();
+      throw error;
+    }
     const multiaddresses = opts.localMultiaddrs?.join(",");
     const peerId = peerIdFromPrivateKey(privateKey);
     logger.info(`PeerId ${peerIdToString(peerId)}, Multiaddrs ${multiaddresses}`);

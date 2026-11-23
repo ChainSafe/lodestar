@@ -4,6 +4,7 @@ import {config} from "@lodestar/config/default";
 import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
+import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {GossipErrorCode} from "../../../../src/chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../../../src/chain/interface.js";
@@ -364,9 +365,7 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   });
 
   describe("expiring old unknown blocks", () => {
-    type Entry = {blockPeerIds?: Set<string>; envelopePeerIds?: Set<string>};
     type Internals = {
-      searchedRootsBySlot: MapDef<number, MapDef<string, Entry>>;
       bufferedRootsBySlot: MapDef<number, Set<string>>;
       awaitingMessagesByBlockRoot: MapDef<string, MapDef<GossipType, Set<PendingGossipsubMessage>>>;
       awaitingMessagesByPayloadBlockRoot: MapDef<string, MapDef<GossipType, Set<PendingGossipsubMessage>>>;
@@ -444,9 +443,10 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       // A message held without a lookup must still expire with its slot
       const p = processor as unknown as Internals;
       for (let i = 0; i < MAX_SEARCHED_ROOTS_PER_SLOT; i++) {
-        p.searchedRootsBySlot.getOrDefault(clockSlot).getOrDefault(`0x${i}`).blockPeerIds = new Set();
+        processor.searchUnknownBlock({slot: clockSlot, root: `0x${i}`}, BlockInputSource.gossip);
       }
 
+      unknownBlockRootSpy.mockClear();
       processExecutionPayload(0xdd);
       expect(unknownBlockRootSpy).not.toHaveBeenCalled();
       expect(bufferedBlockCount()).toBe(1);

@@ -74,6 +74,7 @@ export type NetworkArgs = {
   "network.disableFloodPublish"?: boolean;
   "network.rateLimitMultiplier"?: number;
   "network.maxGossipTopicConcurrency"?: number;
+  "network.nativeGossipQueues"?: boolean;
   "network.useWorker"?: boolean;
   "network.maxYoungGenerationSizeMb"?: number;
   "network.targetGroupPeers"?: number;
@@ -242,6 +243,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     mdns: args.mdns,
     rateLimitMultiplier: args["network.rateLimitMultiplier"],
     maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
+    nativeGossipQueues: args["network.nativeGossipQueues"],
     useWorker: args["network.useWorker"],
     maxYoungGenerationSizeMb: args["network.maxYoungGenerationSizeMb"],
     targetGroupPeers: args["network.targetGroupPeers"] ?? defaultOptions.network.targetGroupPeers,
@@ -489,6 +491,13 @@ export const options: CliCommandOptions<NetworkArgs> = {
     group: "network",
   },
 
+  "network.nativeGossipQueues": {
+    type: "boolean",
+    hidden: true,
+    group: "network",
+    description: "Use shared native queues for inbound libp2p gossip validation",
+    default: false,
+  },
   "network.useWorker": {
     type: "boolean",
     hidden: true,
