@@ -35,7 +35,11 @@ describe("builder api", () => {
     api = getApiClientStub();
     api.validator.getProposerDutiesV2.mockResolvedValue(
       mockApiResponse({
-        data: [{slot, validatorIndex: proposerIndex, pubkey: proposerPubkey}],
+        // The same validator proposes the next slot, a request is then only bound to its slot by the checks of the API
+        data: [
+          {slot, validatorIndex: proposerIndex, pubkey: proposerPubkey},
+          {slot: slot + 1, validatorIndex: proposerIndex, pubkey: proposerPubkey},
+        ],
         meta: {executionOptimistic: false, dependentRoot: "0x00"},
       })
     );
@@ -93,10 +97,10 @@ describe("builder api", () => {
     };
   }
 
-  function signBlock(secretKey = proposerKey): gloas.SignedBeaconBlock {
+  function signBlock(secretKey = proposerKey, blockProposerIndex = proposerIndex): gloas.SignedBeaconBlock {
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = slot;
-    block.message.proposerIndex = proposerIndex;
+    block.message.proposerIndex = blockProposerIndex;
     block.message.body.signedExecutionPayloadBid = signedBid;
     const domain = config.getDomain(slot, DOMAIN_BEACON_PROPOSER);
     const signingRoot = computeSigningRoot(ssz.gloas.BeaconBlock, block.message, domain);
@@ -290,6 +294,15 @@ describe("builder api", () => {
       clock.currentSlot = slot + 3;
 
       await expect(builderApi.submitSignedBeaconBlock({signedBlock: {data: signBlock()}})).rejects.toMatchObject({
+        statusCode: 400,
+      });
+      expect(api.beacon.publishBlockV2).not.toHaveBeenCalled();
+    });
+
+    it("rejects a block with the index of another validator that is signed by the proposer of the slot", async () => {
+      const block = signBlock(proposerKey, proposerIndex + 1);
+
+      await expect(builderApi.submitSignedBeaconBlock({signedBlock: {data: block}})).rejects.toMatchObject({
         statusCode: 400,
       });
       expect(api.beacon.publishBlockV2).not.toHaveBeenCalled();
