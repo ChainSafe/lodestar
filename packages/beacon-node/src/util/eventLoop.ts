@@ -22,9 +22,9 @@ export function callInNextEventLoop(callback: () => void): void {
 }
 
 /**
- * Schedules a callback for the `check` phase. Pending promise continuations run first,
- * and there is no 1ms timer delay.
+ * Schedules a callback for the `check` phase, after the `poll` phase handles ready I/O.
+ * Pending promise continuations run first, and there is no 1ms timer delay.
  */
-export function callImmediate(callback: () => void): void {
+export function callAfterIO(callback: () => void): void {
   setImmediate(callback);
 }

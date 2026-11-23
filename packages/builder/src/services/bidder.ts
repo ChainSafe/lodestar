@@ -120,6 +120,12 @@ export class Bidder {
         getPayloadAt: Date.now() + msToDeadline,
       });
 
+      if (this.modules.headTracker.isHeadOptimistic()) {
+        logger.warn("Beacon node head is optimistic, not bidding", logCtx);
+        metrics?.bids.total.inc({result: BidResult.optimisticHead});
+        return;
+      }
+
       const {status, balance} = this.modules.getBuilderStatus();
       if (status !== "active" || balance === undefined) {
         logger.warn("Builder is not active, not bidding", {...logCtx, status});
