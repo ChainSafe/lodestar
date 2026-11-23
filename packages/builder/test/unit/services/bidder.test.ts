@@ -228,6 +228,28 @@ describe("Bidder", () => {
     }
   );
 
+  it("does not bid while the beacon node head is optimistic", async () => {
+    addProposerPreferences();
+    headTracker.onHead({
+      slot: 0,
+      block: toRootHex(parentBlockRoot),
+      state: toRootHex(Buffer.alloc(32, 1)),
+      payloadStatus: "full",
+      epochTransition: false,
+      currentEpochDependentRoot: dependentRoot,
+      nextEpochDependentRoot: toRootHex(Buffer.alloc(32, 8)),
+      executionOptimistic: true,
+    });
+    const {bidder, ledger} = createBidder();
+
+    const bidding = bidder.onPayloadAttributes(payloadAttributesEvent());
+    await vi.advanceTimersByTimeAsync(msToDeadline);
+    await bidding;
+
+    expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
+    expect(ledger.hasSubmitted(slot, toRootHex(parentBlockHash), toRootHex(parentBlockRoot))).toBe(false);
+  });
+
   it("logs a failed build and bids again for a later attempt", async () => {
     addProposerPreferences();
     payloadSource.getPayload.mockRejectedValueOnce(new Error("unknown payload"));
