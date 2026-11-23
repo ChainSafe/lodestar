@@ -701,7 +701,8 @@ export class BeaconChain implements IBeaconChain {
       const state = await this.regen.getBlockSlotState(block, slot, {dontTransferCache: true}, RegenCaller.restApi);
       return {
         state,
-        executionOptimistic: isOptimisticBlock(block),
+        // The canonical variant can be FULL, a state reports the status of the payload its block builds on
+        executionOptimistic: isOptimisticBlock(this.forkChoice.getBlockHexDefaultStatus(block.blockRoot) ?? block),
         finalized: slot === finalizedBlock.slot && finalizedBlock.slot !== GENESIS_SLOT,
       };
     }
@@ -717,7 +718,7 @@ export class BeaconChain implements IBeaconChain {
     return (
       state && {
         state,
-        executionOptimistic: isOptimisticBlock(block),
+        executionOptimistic: isOptimisticBlock(this.forkChoice.getBlockHexDefaultStatus(block.blockRoot) ?? block),
         finalized: slot === finalizedBlock.slot && finalizedBlock.slot !== GENESIS_SLOT,
       }
     );
@@ -865,7 +866,9 @@ export class BeaconChain implements IBeaconChain {
     const finalizedBlock = this.forkChoice.getFinalizedBlock();
     if (slot > finalizedBlock.slot) {
       // Unfinalized slot, attempt to find in fork-choice
-      const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
+      const canonicalBlock = this.forkChoice.getCanonicalBlockAtSlot(slot);
+      // The canonical variant can be FULL, a block reports the status of the payload it builds on
+      const block = canonicalBlock && this.forkChoice.getBlockHexDefaultStatus(canonicalBlock.blockRoot);
       if (block) {
         // Block found in fork-choice.
         // It may be in the block input cache, awaiting full DA reconstruction, check there first
