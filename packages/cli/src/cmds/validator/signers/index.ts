@@ -12,6 +12,7 @@ import {
   XmssTrees,
   externalSignerGetKeys,
   getXmssPublicParameter,
+  hasXmssTrees,
   interopXmssSigner,
 } from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
@@ -195,15 +196,18 @@ export async function toXmssSigners(
   }
 
   fs.mkdirSync(treesDir, {recursive: true});
-  const getTreesFile = (signer: Signer & {type: SignerType.Local}): string =>
-    path.join(treesDir, `${signer.secretKey.toPublicKey().toHex()}.bin`);
+  const getTreeStore = (signer: Signer & {type: SignerType.Local}): XmssTreeStore =>
+    xmssTreeStore(path.join(treesDir, `${signer.secretKey.toPublicKey().toHex()}.bin`));
 
-  // The trees of keys without a file of their own, before the keys are derived
+  // The trees of keys that have not stored their own, before the keys are derived
   let fetchedTrees = new Map<string, XmssTrees>();
   if (xmssCacheUrl) {
-    const publicParameters = signers
-      .filter((signer) => signer.type === SignerType.Local && !fs.existsSync(getTreesFile(signer)))
-      .map((signer) => getXmssPublicParameter((signer as Signer & {type: SignerType.Local}).secretKey.toBytes()));
+    const publicParameters: Uint8Array[] = [];
+    for (const signer of signers) {
+      if (signer.type !== SignerType.Local) continue;
+      const secretKey = signer.secretKey.toBytes();
+      if (!hasXmssTrees(secretKey, getTreeStore(signer))) publicParameters.push(getXmssPublicParameter(secretKey));
+    }
     fetchedTrees = await fetchDevnetXmssTrees(xmssCacheUrl, publicParameters, logger);
     logger.info("Fetched leanXMSS trees", {count: fetchedTrees.size, wanted: publicParameters.length});
   }
@@ -213,7 +217,7 @@ export async function toXmssSigners(
     signers.map(async (signer): Promise<Signer> => {
       if (signer.type !== SignerType.Local) return signer;
       const secretKey = signer.secretKey.toBytes();
-      const treeStore = xmssTreeStore(getTreesFile(signer));
+      const treeStore = getTreeStore(signer);
       const trees = fetchedTrees.get(toHex(getXmssPublicParameter(secretKey)));
       try {
         return {

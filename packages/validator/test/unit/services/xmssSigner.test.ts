@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {fromHex, toHex} from "@lodestar/utils";
-import {XmssSigner, XmssTreeStore, getXmssPublicParameter} from "../../../src/services/xmssSigner.js";
+import {XmssSigner, XmssTreeStore, getXmssPublicParameter, hasXmssTrees} from "../../../src/services/xmssSigner.js";
 
 describe("XmssSigner", () => {
   // The vector of the Lighthouse and ethPandaOps genesis tooling
@@ -30,6 +30,8 @@ describe("XmssSigner", () => {
     await built.prepare(1);
     expect(writes).toBe(1);
 
+    expect(hasXmssTrees(secretKey, store)).toBe(true);
+    expect(hasXmssTrees(new Uint8Array(32).fill(3), store)).toBe(false);
     const loaded = await XmssSigner.fromBlsSecretKey(secretKey, {treeStore: store});
     expect(loaded.publicKey).toEqual(built.publicKey);
     expect(await loaded.sign(signingRoot, 7)).toEqual(await built.sign(signingRoot, 7));

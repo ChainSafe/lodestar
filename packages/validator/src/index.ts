@@ -17,6 +17,7 @@ export {
   type XmssTreeStore,
   type XmssTrees,
   getXmssPublicParameter,
+  hasXmssTrees,
   interopXmssSigner,
 } from "./services/xmssSigner.js";
 export * from "./slashingProtection/index.js";

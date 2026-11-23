@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {LogLevel, Logger, fetch, isValidHttpUrl, retry, toHex} from "@lodestar/utils";
+import {LogLevel, Logger, fetch, isFetchError, isValidHttpUrl, retry, toHex} from "@lodestar/utils";
 import {XmssTrees} from "@lodestar/validator";
 
 /**
@@ -18,6 +18,8 @@ const PUBLIC_PARAMETER_SIZE = 16;
 /** A key's record in a file of tree caches: its top tree, then two bottom trees */
 const CACHE_RECORD_SIZE = 4096 + 2 * 5300;
 const FETCH_TIMEOUT_MS = 30_000;
+/** Keys read in one request: megabytes, where every key of the devnet would be far more */
+const MAX_RECORDS_PER_REQUEST = 256;
 
 /**
  * Trees of the devnet's keys with `publicParameters`, by public parameter in hex, from a file of
@@ -46,26 +48,33 @@ export async function fetchDevnetXmssTrees(
     .filter((index) => index !== undefined)
     .sort((a, b) => a - b);
 
-  const trees = new Map<string, XmssTrees>();
-  for (let i = 0; i < indices.length; ) {
-    const first = indices[i];
-    let count = 1;
-    while (indices[i + count] === first + count) count++;
-    i += count;
-
-    try {
-      const records = await retry(() => readRecords(url, first, count), {retries: 3, retryDelay: 2000});
-      for (let index = first; index < first + count; index++) {
-        const publicKey = publicKeys.subarray(index * PUBLIC_KEY_SIZE, (index + 1) * PUBLIC_KEY_SIZE);
-        trees.set(toHex(publicKey.subarray(PUBLIC_KEY_SIZE - PUBLIC_PARAMETER_SIZE)), {
-          publicKey,
-          trees: records.subarray((index - first) * CACHE_RECORD_SIZE, (index - first + 1) * CACHE_RECORD_SIZE),
-        });
-      }
-    } catch (e) {
-      logger.warn("No leanXMSS trees from xmssCacheUrl: building them", {first, count}, e as Error);
+  const runs: {first: number; count: number}[] = [];
+  for (const index of indices) {
+    const last = runs.at(-1);
+    if (last && index === last.first + last.count && last.count < MAX_RECORDS_PER_REQUEST) {
+      last.count++;
+    } else {
+      runs.push({first: index, count: 1});
     }
   }
+
+  const trees = new Map<string, XmssTrees>();
+  await Promise.all(
+    runs.map(async ({first, count}) => {
+      try {
+        const records = await readRecords(url, first, count);
+        for (let index = first; index < first + count; index++) {
+          const publicKey = publicKeys.subarray(index * PUBLIC_KEY_SIZE, (index + 1) * PUBLIC_KEY_SIZE);
+          trees.set(toHex(publicKey.subarray(PUBLIC_KEY_SIZE - PUBLIC_PARAMETER_SIZE)), {
+            publicKey,
+            trees: records.subarray((index - first) * CACHE_RECORD_SIZE, (index - first + 1) * CACHE_RECORD_SIZE),
+          });
+        }
+      } catch (e) {
+        logger.warn("No leanXMSS trees from xmssCacheUrl: building them", {first, count}, e as Error);
+      }
+    })
+  );
   return trees;
 }
 
@@ -74,13 +83,22 @@ async function readRecords(url: string, first: number, count: number): Promise<U
   const size = count * CACHE_RECORD_SIZE;
   let records: Uint8Array;
   if (isValidHttpUrl(url)) {
-    const res = await fetch(url, {
-      headers: {Range: `bytes=${start}-${start + size - 1}`},
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-    // 200 is the whole file: the server ignored the range
-    if (res.status !== 206) throw Error(`Range request failed with status ${res.status}`);
-    records = new Uint8Array(await res.arrayBuffer());
+    // A request that fails is made again. A server that answers otherwise will again.
+    records = await retry(
+      async () => {
+        const res = await fetch(url, {
+          headers: {Range: `bytes=${start}-${start + size - 1}`},
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        });
+        // 200 is the whole file: the server ignored the range
+        if (res.status !== 206) {
+          await res.body?.cancel();
+          throw Error(`Range request failed with status ${res.status}`);
+        }
+        return new Uint8Array(await res.arrayBuffer());
+      },
+      {retries: 3, retryDelay: 2000, shouldRetry: isFetchError}
+    );
   } else {
     const fd = fs.openSync(url.replace(/^file:\/\//, ""), "r");
     try {

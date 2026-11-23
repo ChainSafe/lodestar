@@ -109,6 +109,14 @@ class SealedTrees {
   }
 }
 
+/**
+ * Whether `store` holds trees that the leanXMSS key of a BLS keystore wrote: such a key needs
+ * none from elsewhere.
+ */
+export function hasXmssTrees(blsSecretKey: Uint8Array, store: XmssTreeStore): boolean {
+  return new SealedTrees(store, xmssSeed(blsSecretKey)).read() !== null;
+}
+
 /** The key of `seed`, with its stored trees, else `trees`, else built */
 async function loadXmssKey(seed: Uint8Array, stored?: SealedTrees, trees?: XmssTrees): Promise<XmssSecretKey> {
   const cached = stored?.read() ?? trees;
