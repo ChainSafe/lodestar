@@ -15,8 +15,10 @@ import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js"
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import type {Metrics} from "../../../../src/metrics/metrics.js";
+import {PeerAction} from "../../../../src/network/index.js";
 import {BatchError, BatchErrorCode} from "../../../../src/sync/range/batch.js";
 import {ChainTarget, SyncChain, SyncChainFns} from "../../../../src/sync/range/chain.js";
+import {DownloadByRangeError, DownloadByRangeErrorCode} from "../../../../src/sync/utils/downloadByRange.js";
 import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
@@ -545,6 +547,65 @@ describe("sync / range / chain", () => {
     });
 
     expect(downloads).toBeGreaterThanOrEqual(2);
+  });
+
+  it("reports only the block peer for an invalid cached block", async () => {
+    const reportPeerSpy = vi.fn();
+    let downloads = 0;
+
+    const downloadByRange: SyncChainFns["downloadByRange"] = async (_peerMeta, request) => {
+      downloads++;
+      if (downloads === 1) {
+        throw new DownloadByRangeError({
+          code: DownloadByRangeErrorCode.INVALID_CACHED_BLOCK,
+          slot: 0,
+          blockRoot: "0x00",
+          blockPeer: "attacker",
+        });
+      }
+
+      const blocks: IBlockInput[] = [];
+      for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
+        blocks.push(
+          BlockInputPreData.createFromBlock({
+            block: {message: generateEmptyBlock(i), signature: ACCEPT_BLOCK},
+            blockRootHex: "0x00",
+            forkName: config.getForkName(i),
+            seenTimestampSec: 0,
+            daOutOfRange: false,
+            source: BlockInputSource.byRange,
+          })
+        );
+      }
+      return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+    };
+
+    const target: ChainTarget = {slot: computeStartSlotAtEpoch(2), root: ZERO_HASH};
+    await new Promise<void>((resolve, reject) => {
+      const onEnd: SyncChainFns["onEnd"] = (err) => (err ? reject(err) : resolve());
+      const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
+      const initialSync = new SyncChain(
+        0,
+        target,
+        RangeSyncType.Finalized,
+        logSyncChainFns(logger, {
+          processChainSegment: async () => {},
+          downloadByRange,
+          getConnectedPeerSyncMeta,
+          reportPeer: reportPeerSpy,
+          pruneBlockInputs,
+          onEnd,
+        }),
+        {config, logger, clock, custodyConfig, metrics: null},
+        undefined
+      );
+
+      initialSync.addPeer(peer, target);
+      initialSync.startSyncing(0);
+    });
+
+    expect(reportPeerSpy).toHaveBeenCalledExactlyOnceWith("attacker", PeerAction.LowToleranceError, expect.any(String));
+    expect(reportPeerSpy).not.toHaveBeenCalledWith(peer, expect.anything(), expect.anything());
   });
 
   // The retry timer can fire before the backoff expires and the expiry can land between clock reads in its callback.

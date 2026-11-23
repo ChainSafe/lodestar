@@ -601,6 +601,38 @@ describe("sync / range / batch", async () => {
         expect(batch.requests.columnsRequest?.startSlot).toBe(batch.startSlot);
         expect(batch.requests.columnsRequest?.columns.slice().sort((a, b) => a - b)).toEqual(sampledColumns);
       });
+
+      it("drops the downloaded blocks and restarts the batch after an invalid cached block", () => {
+        const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+        const initialRequests = batch.requests;
+
+        const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+        block.message.slot = batch.startSlot;
+        block.message.body.blobKzgCommitments = [Buffer.alloc(48, 0x11)];
+        const blockInput = BlockInputColumns.createFromBlock({
+          block: block as SignedBeaconBlock<typeof ForkName.fulu>,
+          blockRootHex: toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message)),
+          forkName: ForkName.fulu,
+          daOutOfRange: false,
+          seenTimestampSec,
+          source: BlockInputSource.byRange,
+          peerIdStr: peer,
+          sampledColumns: custodyConfig.sampledColumns,
+          custodyColumns: custodyConfig.custodyColumns,
+        });
+        batch.startDownloading(peerSyncMeta);
+        batch.downloadingSuccess(peer, [blockInput], null);
+        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+
+        batch.startDownloading(peerSyncMeta);
+        batch.downloadingInvalidBlock("attacker");
+
+        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+        expect(batch.getBlocks()).toEqual([]);
+        expect(batch.requests).toEqual(initialRequests);
+        expect(batch.getFailedPeers()).toEqual(["attacker"]);
+        expect(batch.hasPeerSucceededCurrentRequest(peerSyncMeta)).toBe(false);
+      });
     });
   });
 

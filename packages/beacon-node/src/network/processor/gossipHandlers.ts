@@ -269,6 +269,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           // The block is retained for unknown parent sync without full validation. Authenticate it first, this
           // does not need the parent state
           const proposerIndex = signedBlock.message.proposerIndex;
+          // An active proposer missing from the cache comes from a branch that finalized validators this node never
+          // processed, range sync recovers that branch from peer status
+          if (proposerIndex >= chain.pubkeyCache.size) {
+            throw new BlockGossipError(GossipAction.REJECT, {
+              code: BlockErrorCode.UNKNOWN_PROPOSER,
+              slot,
+              root: blockRootHex,
+              proposerIndex,
+            });
+          }
           await verifyBlockProposerSignature(chain, signedBlock, blockRootHex);
           chain.seenBlockProposers.observeBlockRoot(
             slot,
@@ -1418,13 +1428,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         try {
           metrics?.inclusionListsValid.inc({source: InclusionListSource.gossip});
           metrics?.inclusionListsValidSize.inc(totalBytes);
-          // A list received before its slot within clock disparity is timely, the spec delays it until the slot
-          // starts. Bounded on receipt time as validation checks the slot after queueing. Late lists are untimely
+          // A list received before its slot is timely, the spec delays it until the slot starts. Only gossip
+          // validation bounds how early a list can be. Late lists are still stored, marked untimely
           const secFromSlot = chain.clock.secFromSlot(slot, seenTimestampSec);
           metrics?.inclusionListArrivalTime.observe(secFromSlot);
-          const isTimely =
-            secFromSlot * 1000 >= -config.MAXIMUM_GOSSIP_CLOCK_DISPARITY &&
-            secFromSlot * 1000 < config.getInclusionListDueMs(config.getForkName(slot));
+          const isTimely = secFromSlot * 1000 < config.getInclusionListDueMs(config.getForkName(slot));
 
           const insertOutcome = chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
           metrics?.inclusionListStore.insertOutcome.inc({insertOutcome});

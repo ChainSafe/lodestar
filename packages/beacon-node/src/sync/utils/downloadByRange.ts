@@ -122,7 +122,12 @@ export function cacheByRangeResponses({
   parentPayload,
   custodyConfig,
   seenTimestampSec,
-}: CacheByRangeResponsesProps): {blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null} {
+}: CacheByRangeResponsesProps): {
+  blocks: IBlockInput[];
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+  /** First fulu column whose header signature differs from its cached block, no later column is added */
+  signatureMismatch: {blockInput: IBlockInput; columnSidecar: fulu.DataColumnSidecar} | null;
+} {
   const source = BlockInputSource.byRange;
   const updatedBatchBlocks = new Map<Slot, IBlockInput>(batchBlocks.map((block) => [block.slot, block]));
 
@@ -218,6 +223,7 @@ export function cacheByRangeResponses({
     }
   }
 
+  let signatureMismatch: {blockInput: IBlockInput; columnSidecar: fulu.DataColumnSidecar} | null = null;
   for (const {blockRoot, columnSidecars} of responses.validatedColumnSidecars ?? []) {
     const firstColumn = columnSidecars[0];
     if (!firstColumn) {
@@ -265,6 +271,17 @@ export function cacheByRangeResponses({
         actual: existing.type,
       });
     }
+
+    // Honest sidecars carry the block signature. The cached block may be unverified, the caller decides which side
+    // is invalid. A different root is reported by addColumn.
+    if (
+      existing.blockRootHex === blockRootHex &&
+      !byteArrayEquals(existing.getBlock().signature, fuluColumns[0].signedBlockHeader.signature)
+    ) {
+      signatureMismatch = {blockInput: existing, columnSidecar: fuluColumns[0]};
+      break;
+    }
+
     for (const columnSidecar of fuluColumns) {
       // will throw if root hex does not match (meaning we are following the wrong chain)
       existing.addColumn(
@@ -280,7 +297,7 @@ export function cacheByRangeResponses({
     }
   }
 
-  return {blocks: Array.from(updatedBatchBlocks.values()), payloadEnvelopes};
+  return {blocks: Array.from(updatedBatchBlocks.values()), payloadEnvelopes, signatureMismatch};
 }
 
 export async function downloadByRange({
@@ -896,7 +913,7 @@ export async function validateColumnsByRangeResponse(
           peerDasMetrics
         )
       : validateFuluBlockDataColumnSidecars(
-          null, // do not pass chain here so we do not validate header signature
+          null, // skip BLS, cacheByRangeResponses matches the header signature against the block
           slot,
           blockRoot,
           blobCount,
@@ -1016,6 +1033,8 @@ export enum DownloadByRangeErrorCode {
 
   /** Block segment + envelopes failed chain-segment linearity / FULL-chain checks */
   INVALID_CHAIN_SEGMENT = "DOWNLOAD_BY_RANGE_ERROR_INVALID_CHAIN_SEGMENT",
+  /** A column header signature differs from a cached block whose proposer signature is invalid or unverifiable */
+  INVALID_CACHED_BLOCK = "DOWNLOAD_BY_RANGE_ERROR_INVALID_CACHED_BLOCK",
 }
 
 export type DownloadByRangeErrorType =
@@ -1116,6 +1135,13 @@ export type DownloadByRangeErrorType =
       code: DownloadByRangeErrorCode.INVALID_CHAIN_SEGMENT;
       slot: Slot;
       reason: string;
+    }
+  | {
+      code: DownloadByRangeErrorCode.INVALID_CACHED_BLOCK;
+      slot: Slot;
+      blockRoot: string;
+      /** Set only when the block proposer signature is invalid */
+      blockPeer?: PeerIdStr;
     };
 
 export class DownloadByRangeError extends LodestarError<DownloadByRangeErrorType> {}

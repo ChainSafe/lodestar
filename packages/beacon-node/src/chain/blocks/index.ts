@@ -282,7 +282,6 @@ async function importPayloadEnvelopesOfKnownBlocks(
       validExecutionRequestsRoot: false,
     });
   }
-  // the new FULL variants are not seen by the head cached from the last block import
   this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
 
   return result;

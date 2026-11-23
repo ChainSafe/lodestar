@@ -105,6 +105,8 @@ export enum DroppedItemReason {
   invalidEnvelope = "invalid_envelope",
   /** an unexpected / unhandled error code led to removal */
   unknown = "unknown",
+  /** a block waiting on its parent was evicted because the peer that gossiped it exceeded its byte budget */
+  peerBudget = "peer_budget",
 }
 
 export enum PendingPayloadInputStatus {
@@ -121,6 +123,12 @@ export type PendingBlockInput = {
   timeAddedSec: number;
   timeSyncedSec?: number;
   peerIdStrings: Set<string>;
+  /** Peer that gossiped a block retained for unknown parent sync */
+  retainedBy?: string;
+  retainedBytes?: number;
+  failedDownloads?: number;
+  /** A failed download is not retried before this time */
+  retryAtMs?: number;
 };
 
 export type PendingRootHex = {
@@ -129,6 +137,9 @@ export type PendingRootHex = {
   timeAddedSec: number;
   timeSyncedSec?: number;
   peerIdStrings: Set<string>;
+  failedDownloads?: number;
+  /** A failed download is not retried before this time */
+  retryAtMs?: number;
 };
 
 export type BlockInputSyncCacheItem = PendingBlockInput | PendingRootHex;

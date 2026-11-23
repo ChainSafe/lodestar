@@ -219,9 +219,12 @@ export const testData: GenericServerTestCases<Endpoints> = {
     },
   },
   postStateValidatorIdentities: {
-    args: {stateId: "head", validatorIds: [1300]},
+    args: {stateId: "head", validatorIds: [1300, 1301]},
     res: {
-      data: [{index: 1300, pubkey: ssz.BLSPubkey.defaultValue(), activationEpoch: 1}],
+      data: [
+        {index: 1300, pubkey: ssz.BLSPubkey.defaultValue(), activationEpoch: 1},
+        {index: 1301, pubkey: ssz.BLSPubkey.defaultValue(), activationEpoch: Infinity},
+      ],
       meta: {executionOptimistic: true, finalized: false},
     },
   },

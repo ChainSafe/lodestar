@@ -605,6 +605,14 @@ export class SyncChain {
           this.scheduleRateLimitBackoffRetry();
           batch.downloadingRateLimited();
           this.triggerBatchDownloader();
+        } else if (
+          res.err instanceof DownloadByRangeError &&
+          res.err.type.code === DownloadByRangeErrorCode.INVALID_CACHED_BLOCK
+        ) {
+          if (res.err.type.blockPeer !== undefined) {
+            this.reportPeer(res.err.type.blockPeer, PeerAction.LowToleranceError, res.err.message);
+          }
+          batch.downloadingInvalidBlock(res.err.type.blockPeer ?? peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
         } else {
           batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
         }
