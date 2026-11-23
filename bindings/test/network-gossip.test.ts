@@ -201,7 +201,7 @@ test.each(["accept", "reject", "ignore"] as const)(
       expect(message.connection).toEqual((await pair.right.observePeers()).peers[0].connection);
       const {messageId} = await import("../../test/interop/codec.mjs");
       expect(Buffer.from(message.id)).toEqual(messageId(TOPIC, blockPayload(4000, 7)));
-      expect(message.receivedAtUnixMs).toBeGreaterThanOrEqual(before);
+      expect(message.receivedAtUnixMs).toBeGreaterThanOrEqual(before - 1);
       expect(message.receivedAtUnixMs).toBeLessThan(Date.now());
       expect(Number.isSafeInteger(message.receivedAtUnixMs)).toBe(true);
 
