@@ -11,7 +11,13 @@
 //!
 //! Native handles on a threaded `std.Io` make system calls directly: batched sends and receives
 //! on Linux, the local destination of each received datagram, source pinning, and route lookups
-//! on unbound probe sockets for wildcard binds. Other providers go through `std.Io`.
+//! on dedicated probe sockets for wildcard binds. SocketPair supports Linux and macOS only.
+//! Other providers go through `std.Io` and must honor the source-selection control messages;
+//! without destination metadata, receives report the bound address instead.
+//!
+//! Native listeners disable IPv4 and IPv6 fragmentation, as required by RFC 9000 section 14.
+//! Linux uses IP[V6]_MTU_DISCOVER=DO; macOS uses IP[V6]_DONTFRAG. Oversized datagrams fail with
+//! MessageOversize rather than being fragmented. Custom providers own their socket configuration.
 //!
 //! Nothing allocates. Batch scratch and receive buffers are fixed-size and supplied by the caller.
 //!
@@ -30,6 +36,11 @@ const family_ip4: usize = 0;
 const family_ip6: usize = 1;
 const SocketPair = @This();
 
+comptime {
+    if (os != .linux and os != .macos)
+        @compileError("UDP sockets support Linux and macOS only");
+}
+
 values: [2]?net.Socket = .{ null, null },
 /// Buffer sizes per family as getsockopt reported them after `requestBuffers`. Linux reports
 /// double the size it grants.
@@ -38,7 +49,9 @@ buffers: [2]?Buffers.Reported = .{ null, null },
 drop_counts: [2]DropCount = @splat(.{}),
 cursor: u1 = 0,
 native: [2]bool = @splat(false),
-/// Unbound sockets per wildcard-bound native family, connected only to ask the kernel for a route.
+/// Dedicated sockets per wildcard-bound native family, connected only to ask the kernel for a
+/// route. On macOS, disconnect retains the auto-bound ephemeral port. Datagrams sent to that
+/// port remain unread, bounded by SO_RCVBUF; close releases the probe and its receive queue.
 probes: [2]?net.Socket.Handle = .{ null, null },
 control: Control align(8) = undefined,
 
@@ -139,6 +152,8 @@ pub const BatchScratch = union {
 };
 /// `to` is the local address the datagram was sent to, with the receiving socket's port. Where
 /// the provider reports no destination it is the socket's bound address, which may be unspecified.
+/// On macOS, IPv4 directed broadcasts are not filtered: `to` can be a subnet broadcast address
+/// that cannot be used as a reply source. A pinned reply then fails with NetworkUnreachable.
 pub const Datagram = struct { from: Address, to: Address, bytes: []u8 };
 pub const Control = native_io.Control;
 pub const receive_batch_max = 16;
@@ -198,6 +213,7 @@ pub fn bind(io: std.Io, addresses: Bindings) BindError!SocketPair {
             if (!native) continue;
             const address = socket.?.address;
             try compat.checkBindError(native_io.reportDestination(socket.?.handle, address));
+            try compat.checkBindError(native_io.preventFragmentation(socket.?.handle, address));
             if (unspecified(address)) probe.* = try compat.open(io, address);
         }
     }
@@ -545,6 +561,7 @@ test {
     _ = @import("socket_pair_test.zig");
     _ = @import("socket_pair_operations_test.zig");
     _ = @import("socket_pair_native_test.zig");
+    _ = @import("socket_pair_fragmentation_test.zig");
     _ = @import("socket_pair_source_test.zig");
     _ = @import("linux_test_support.zig");
 }

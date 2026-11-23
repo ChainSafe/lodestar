@@ -1,4 +1,14 @@
-//! Native UDP operations. Linux batches preserve the caller's datagram boundaries.
+//! Linux and macOS UDP system calls behind SocketPair's threaded-I/O path.
+//!
+//! Packet-info control messages carry receive destinations and pinned send sources. Native
+//! listeners disable IP fragmentation; other I/O providers own their socket configuration.
+//! Linux uses sendmmsg/recvmmsg and optional UDP segmentation offload (GSO) to reduce syscalls
+//! without changing datagram boundaries. macOS sends each datagram separately.
+//!
+//! All descriptors borrow caller-owned payloads and fixed scratch for the duration of a call.
+//! Batches report the exact accepted prefix, so retrying an unsent suffix does not replay sends.
+//! The control-message layout and Darwin option numbers are OS ABI, not portable std.Io data;
+//! compat.zig pins the Zig version whose native handles and address conversions we use.
 const std = @import("std");
 const builtin = @import("builtin");
 const compat = @import("compat.zig");
@@ -71,7 +81,24 @@ pub fn reportDestination(handle: net.Socket.Handle, family: std.meta.Tag(net.IpA
     return p.errno(p.system.setsockopt(handle, level, option, std.mem.asBytes(&enabled), @sizeOf(c_int)));
 }
 
+/// Disables IP fragmentation for a native UDP listener. Returns the setsockopt errno so bind
+/// can fail and close all acquired sockets rather than silently allow fragmented QUIC packets.
+pub fn preventFragmentation(handle: net.Socket.Handle, family: std.meta.Tag(net.IpAddress)) std.posix.E {
+    const p = std.posix;
+    // Linux's DO policy rejects datagrams above the path MTU instead of fragmenting them.
+    // Darwin's IP_DONTFRAG / IPV6_DONTFRAG are absent from Zig 0.16's std.posix.
+    const level: i32, const option: u32 = switch (family) {
+        .ip4 => .{ p.IPPROTO.IP, if (os == .linux) linux.IP.MTU_DISCOVER else 28 },
+        .ip6 => .{ p.IPPROTO.IPV6, if (os == .linux) linux.IPV6.MTU_DISCOVER else 62 },
+    };
+    const value: c_int = if (os == .linux) linux.IP.PMTUDISC_DO else 1;
+    return p.errno(p.system.setsockopt(handle, level, option, std.mem.asBytes(&value), @sizeOf(c_int)));
+}
+
 /// The local address a datagram was sent to, with `port`. Null when the control data names none.
+/// Rejects unspecified, multicast and limited-broadcast destinations. Linux packet info also
+/// identifies directed broadcasts via spec_dst. Darwin leaves spec_dst unset, so IPv4 directed
+/// broadcasts are returned unchanged and are not necessarily usable as reply source addresses.
 pub fn destination(control: []const u8, port: u16) error{InvalidDestinationAddress}!?Address {
     const p = std.posix;
     var offset: usize = 0;
@@ -200,7 +227,8 @@ pub fn send(
 }
 
 /// The source address the kernel routes `peer` from. Connecting a UDP socket sends nothing, and
-/// disconnecting makes the next call resolve afresh.
+/// disconnecting makes the next call resolve afresh. On macOS, disconnect clears the peer but
+/// retains the auto-bound ephemeral port; SocketPair owns that probe until close.
 pub fn route(io: std.Io, probe: net.Socket.Handle, peer: *const net.IpAddress) SocketPair.SourceError!Address {
     const p = std.posix;
     var storage: compat.PosixAddress = undefined;
@@ -287,6 +315,11 @@ fn segmentationRefused(errno: std.posix.E) bool {
     };
 }
 
+/// Builds Linux sendmmsg descriptors without sending or copying payloads; returns the group count.
+/// GSO groups consecutive datagrams with matching addresses and equal sizes, optionally ending
+/// with one shorter datagram. Each group records its byte count and ending input index so a
+/// partial syscall result maps back to the exact accepted prefix. Disabling segmentation builds
+/// one descriptor per datagram for the fallback path. Payloads must live through the ensuing send.
 fn prepareSend(messages: []const SocketPair.Outgoing, scratch: *SendScratch, segment: bool) usize {
     for (messages, 0..) |message, i|
         scratch.vectors[i] = .{ .base = @constCast(message.bytes.ptr), .len = message.bytes.len };
