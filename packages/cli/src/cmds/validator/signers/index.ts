@@ -169,7 +169,7 @@ export async function toXmssSigners(
   vrfStateUrl: string | undefined,
   xmssCacheUrl: string | undefined,
   treesDir: string,
-  logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.error>
+  logger: Pick<Logger, LogLevel.debug | LogLevel.info | LogLevel.warn | LogLevel.error>
 ): Promise<Signer[]> {
   const localCount = signers.filter((signer) => signer.type === SignerType.Local).length;
   if (localCount === 0) return signers;
