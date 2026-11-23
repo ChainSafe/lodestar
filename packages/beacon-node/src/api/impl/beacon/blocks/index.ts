@@ -113,14 +113,6 @@ export function getBeaconBlockApi(
     if (!isForkPostFulu(fork)) {
       throw new ApiError(400, `Publishing blocks is not supported for pre-fulu fork=${fork}`);
     }
-    // A block above MAX_PAYLOAD_SIZE cannot propagate over gossip or req/resp, so reject it before caching or importing
-    const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.value_serializedSize(signedBlock);
-    if (blockBytes > config.MAX_PAYLOAD_SIZE) {
-      throw new ApiError(
-        400,
-        `Signed block size ${blockBytes} exceeds MAX_PAYLOAD_SIZE ${config.MAX_PAYLOAD_SIZE}, slot=${slot}`
-      );
-    }
     const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
 
     const blockForImport = chain.seenBlockInputCache.getByBlock({
