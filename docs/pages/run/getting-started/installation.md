@@ -42,6 +42,24 @@ docker run chainsafe/lodestar --help
 Docker is the recommended setup for Lodestar. Use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart) with Docker for detailed instructions.
 :::
 
+### Container user
+
+Since v2.0, the image runs as the unprivileged user `node` (uid `1000`, gid `1000`). Earlier images ran as `root`.
+
+The directories `/data` and `/logs` exist in the image and are owned by this user, so a new named volume mounted at either path is writable. A volume mounted at any other path, and any bind mount, must be writable by uid `1000`.
+
+A volume created by an image older than v2.0 is owned by `root`. Lodestar exits at startup with a permission error (`EACCES`). Change the owner of each volume once, replacing `<volume>` with its name or host path:
+
+```bash
+docker run --rm --user root --entrypoint chown -v <volume>:/data chainsafe/lodestar -R node:node /data
+```
+
+Alternatively, keep running as `root` with `docker run --user root`, or with `user: root` in a compose file.
+
+The working directory `/usr/app` is not writable. API routes that write files, such as `write_heapdump` and `write_profile`, need a `dirpath` that is writable, for example `/data`.
+
+An image built on top of `chainsafe/lodestar` must switch to `USER root` before it installs packages.
+
 ## Build from Source
 
 ### Prerequisites

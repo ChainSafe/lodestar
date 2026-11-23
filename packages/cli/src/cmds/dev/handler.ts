@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import {rm} from "node:fs/promises";
+import path from "node:path";
 import {nodeUtils} from "@lodestar/beacon-node";
 import {fromHex, toHex} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
@@ -31,7 +32,7 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
 
   // Note: defaults to network "dev", to all paths are custom and don't conflict with networks.
   // Flag --reset cleans up the custom dirs on dev stop
-  const {dbDir: beaconDbDir, pubkeysFile} = getBeaconPaths(args, network);
+  const {dataDir, dbDir: beaconDbDir, pubkeysFile} = getBeaconPaths(args, network);
   const validatorsDbDir = getValidatorPaths(args, network).validatorsDbDir;
 
   // Remove slashing protection db. Otherwise the validators won't be able to propose nor attest
@@ -43,6 +44,7 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
     await rm(pubkeysFile, {recursive: true, force: true});
   }
 
+  mkdir(dataDir);
   mkdir(beaconDbDir);
   mkdir(validatorsDbDir);
 
@@ -64,7 +66,7 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
 
     const state = nodeUtils.initDevState(config, validatorCount, {genesisTime, eth1BlockHash});
 
-    args.genesisStateFile = "genesis.ssz";
+    args.genesisStateFile = path.join(dataDir, "genesis.ssz");
     fs.writeFileSync(args.genesisStateFile, state.serialize());
 
     // Set logger format to Eph with provided genesisTime

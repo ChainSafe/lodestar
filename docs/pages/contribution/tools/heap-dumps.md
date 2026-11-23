@@ -22,7 +22,7 @@ The optional `options` argument, in both cases, is the same and contains two pro
 
 Because heap analysis happens frequently during Lodestar development there is a helper api endpoint to capture a heap dump. **It is IMPORTANT** that this endpoint is not public facing as it will open the threat of DDOS attack.
 
-The endpoint accepts a `POST` request and you may include an optional `dirpath` query parameter to specify the directory where the heap dump will be written. If the `dirpath` is not specified then the heap dump will be written to the current working directory.
+The endpoint accepts a `POST` request and you may include an optional `dirpath` query parameter to specify the directory where the heap dump will be written. If the `dirpath` is not specified then the heap dump will be written to the current working directory. The working directory of the Docker image is not writable, so set `dirpath` to a writable directory such as `/data` there.
 
 To create a Lodestar heap dump you can use the following command:
 

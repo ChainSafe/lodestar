@@ -41,10 +41,17 @@ FROM node:26-slim
 WORKDIR /usr/app
 COPY --from=build_src /usr/app .
 
+# A new named volume takes the ownership of its mount point in the image, creating
+# the conventional mount points here keeps such volumes writable for the node user
+RUN mkdir /data /logs && chown node:node /data /logs
+
 # NodeJS applications have a default memory limit of 4GB on most machines.
 # This limit is bit tight for a Mainnet node, it is recommended to raise the limit
 # since memory may spike during certain network conditions.
 # Node 26 halved V8's default semi-space to 32MB, 64 keeps Node 24's young generation size.
 ENV NODE_OPTIONS="--max-old-space-size=8192 --max-semi-space-size=64"
+
+# The node user of the base image. Numeric, as Kubernetes can only verify runAsNonRoot against a numeric user
+USER 1000:1000
 
 ENTRYPOINT ["node", "./packages/cli/bin/lodestar"]
