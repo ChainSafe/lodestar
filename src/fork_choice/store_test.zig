@@ -15,6 +15,7 @@ const Checkpoint = store_mod.Checkpoint;
 const JustifiedBalances = store_mod.JustifiedBalances;
 const StateProvider = store_mod.StateProvider;
 const NO_BLOCK = store_mod.NO_BLOCK;
+const VerdictResult = store_mod.VerdictResult;
 const vote_targets_mod = @import("vote_targets.zig");
 const FastConfirmation = @import("fast_confirmation.zig").FastConfirmation;
 
@@ -809,7 +810,7 @@ test "optimistic sync: valid walks down to the merge boundary, invalid removes t
     try testing.expect(try store.isOptimistic(pendingOf(&store, 0x31)));
     try testing.expectEqual(ExecutionStatus.pre_merge, try store.executionStatus(pendingOf(&store, 1)));
 
-    try store.onPayloadValid(tagHash(0x30));
+    try testing.expectEqual(VerdictResult.applied, store.onPayloadValid(tagHash(0x30)));
     try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(pendingOf(&store, 0x20)));
     try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(pendingOf(&store, 0x30)));
     try testing.expectEqual(ExecutionStatus.syncing, try store.executionStatus(pendingOf(&store, 0x31)));
@@ -818,7 +819,7 @@ test "optimistic sync: valid walks down to the merge boundary, invalid removes t
     try testing.expect(!try store.isOptimistic(pendingOf(&store, 0x30)));
 
     // The engine rejects a child of 0x31 with latest valid hash 0x30: only 0x31 is invalidated.
-    try store.onPayloadInvalid(tagRoot(0x31), tagHash(0x31), tagHash(0x30));
+    try testing.expectEqual(VerdictResult.applied, try store.onPayloadInvalid(tagRoot(0x31), tagHash(0x31), tagHash(0x30), .child_payload));
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x31)));
     try testing.expectEqual(pendingOf(&store, 0x30), try store.getHead());
     const heads = try store.viableHeads(allocator);
@@ -826,7 +827,7 @@ test "optimistic sync: valid walks down to the merge boundary, invalid removes t
     try testing.expectEqual(@as(usize, 2), heads.len);
     try testing.expectError(error.ParentPayloadInvalid, store.onBlockSummary(optimisticSummary(.{ .tag = 0x32, .parent = 0x31, .slot = 4 })));
 
-    try store.onPayloadInvalid(tagRoot(0x22), tagHash(0x22), tagHash(0x20));
+    try testing.expectEqual(VerdictResult.applied, try store.onPayloadInvalid(tagRoot(0x22), tagHash(0x22), tagHash(0x20), .child_payload));
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x21)));
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x22)));
     try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(pendingOf(&store, 0x20)));
@@ -835,11 +836,12 @@ test "optimistic sync: valid walks down to the merge boundary, invalid removes t
     try testing.expectEqual(@as(usize, 1), only.len);
     try testing.expectEqual(tagRoot(0x30), only[0].root);
 
-    try testing.expectError(error.PayloadInvalidToValid, store.onPayloadValid(tagHash(0x22)));
-    try testing.expectError(error.PayloadValidToInvalid, store.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), tagHash(0x20)));
-    try testing.expectError(error.UnknownLatestValidHash, store.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), tagHash(0x77)));
-    try testing.expectError(error.UnknownPayload, store.onPayloadValid(tagHash(0x77)));
-    try store.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), null);
+    try testing.expectEqual(VerdictResult.contradiction, store.onPayloadValid(tagHash(0x22)));
+    try testing.expectEqual(VerdictResult.already_applied, store.onPayloadValid(tagHash(0x30)));
+    try testing.expectEqual(VerdictResult.unknown_lvh, store.onPayloadValid(tagHash(0x77)));
+    try testing.expectEqual(VerdictResult.contradiction, try store.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), tagHash(0x20), .child_payload));
+    try testing.expectEqual(VerdictResult.contradiction, try store.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), null, .from_block));
+    try testing.expectEqual(VerdictResult.already_applied, try store.onPayloadInvalid(tagRoot(0x22), tagHash(0x22), tagHash(0x20), .child_payload));
     try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(pendingOf(&store, 0x30)));
     try testing.expectEqual(pendingOf(&store, 0x30), try store.getHead());
 }
@@ -862,7 +864,7 @@ test "optimistic sync: a payload verdict applies to every block carrying it" {
     for (blocks) |block| try store.onBlockSummary(optimisticSummary(block));
     try testing.expectEqual(pendingOf(&store, 0x40), try store.getHead());
 
-    try store.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), tagHash(0x20));
+    try testing.expectEqual(VerdictResult.applied, try store.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), tagHash(0x20), .child_payload));
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x30)));
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x31)));
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x40)));
@@ -872,12 +874,84 @@ test "optimistic sync: a payload verdict applies to every block carrying it" {
     defer validated.deinit();
     try validated.onTick(validated.timing.timeAtSlotMs(8));
     for (blocks) |block| try validated.onBlockSummary(optimisticSummary(block));
-    try validated.onPayloadValid(tagHash(0x30));
+    try testing.expectEqual(VerdictResult.applied, validated.onPayloadValid(tagHash(0x30)));
     try testing.expectEqual(ExecutionStatus.valid, try validated.executionStatus(pendingOf(&validated, 0x30)));
     try testing.expectEqual(ExecutionStatus.valid, try validated.executionStatus(pendingOf(&validated, 0x31)));
     try testing.expectEqual(ExecutionStatus.syncing, try validated.executionStatus(pendingOf(&validated, 0x40)));
-    try testing.expectError(error.PayloadValidToInvalid, validated.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), tagHash(0x20)));
+    try testing.expectEqual(VerdictResult.contradiction, try validated.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), tagHash(0x20), .child_payload));
     try testing.expectEqual(ExecutionStatus.valid, try validated.executionStatus(pendingOf(&validated, 0x31)));
+}
+
+test "optimistic sync: an INVALID verdict never crosses the justified block or a resolved payload" {
+    const allocator = testing.allocator;
+    const config = &@import("config").mainnet.config;
+    var store = try Store.initFromSummary(allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
+    defer store.deinit();
+    try store.onTick(store.timing.timeAtSlotMs(8));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 0x20, .slot = 2 }));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x31, .parent = 0x30, .slot = 3 }));
+
+    try testing.expectError(error.UnknownBlock, store.onPayloadInvalid(tagRoot(0x31), tagHash(0x30), null, .from_block));
+
+    // A null or unknown hash leaves a rejected child payload nothing to invalidate.
+    try testing.expectEqual(VerdictResult.unusable_lvh, try store.onPayloadInvalid(tagRoot(0x31), tagHash(0x31), null, .child_payload));
+    try testing.expectEqual(VerdictResult.unusable_lvh, try store.onPayloadInvalid(tagRoot(0x31), tagHash(0x31), tagHash(0x77), .child_payload));
+    try testing.expectEqual(ExecutionStatus.syncing, try store.executionStatus(pendingOf(&store, 0x31)));
+
+    // A justified 0x20 bounds the walk to the merge block: only 0x30 and 0x31 go.
+    store.justified_checkpoint.root = tagRoot(0x20);
+    try testing.expectEqual(VerdictResult.nothing_to_invalidate, try store.onPayloadInvalid(tagRoot(0x20), tagHash(0x20), ZERO, .from_block));
+    try testing.expectEqual(VerdictResult.applied, try store.onPayloadInvalid(tagRoot(0x31), tagHash(0x31), ZERO, .child_payload));
+    try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x30)));
+    try testing.expectEqual(ExecutionStatus.syncing, try store.executionStatus(pendingOf(&store, 0x20)));
+    try testing.expectEqual(pendingOf(&store, 0x20), try store.getHead());
+    try testing.expectEqual(VerdictResult.already_applied, try store.onPayloadInvalid(tagRoot(0x31), tagHash(0x31), ZERO, .child_payload));
+
+    // 0x50 carries the justified 0x40's payload: invalidating it would invalidate 0x40.
+    var carried = try Store.initFromSummary(allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
+    defer carried.deinit();
+    try carried.onTick(carried.timing.timeAtSlotMs(8));
+    try carried.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
+    try carried.onBlockSummary(optimisticSummary(.{ .tag = 0x40, .parent = 0x20, .slot = 2 }));
+    try carried.onBlockSummary(optimisticSummary(.{ .tag = 0x50, .parent = 0x20, .slot = 2, .payload = 0x40 }));
+    carried.justified_checkpoint.root = tagRoot(0x40);
+    try testing.expectEqual(VerdictResult.nothing_to_invalidate, try carried.onPayloadInvalid(tagRoot(0x50), tagHash(0x40), null, .from_block));
+    try testing.expectEqual(ExecutionStatus.syncing, try carried.executionStatus(pendingOf(&carried, 0x40)));
+    try testing.expectEqual(ExecutionStatus.syncing, try carried.executionStatus(pendingOf(&carried, 0x50)));
+
+    // 0x30 carries 0x50's payload below the justified index, but 0x40 does not stand on it.
+    var forked = try Store.initFromSummary(allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
+    defer forked.deinit();
+    try forked.onTick(forked.timing.timeAtSlotMs(8));
+    try forked.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
+    try forked.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 0x20, .slot = 2 }));
+    try forked.onBlockSummary(optimisticSummary(.{ .tag = 0x40, .parent = 0x20, .slot = 3 }));
+    try forked.onBlockSummary(optimisticSummary(.{ .tag = 0x50, .parent = 0x20, .slot = 2, .payload = 0x30 }));
+    forked.justified_checkpoint.root = tagRoot(0x40);
+    try testing.expectEqual(VerdictResult.applied, try forked.onPayloadInvalid(tagRoot(0x50), tagHash(0x30), null, .from_block));
+    try testing.expectEqual(ExecutionStatus.invalid, try forked.executionStatus(pendingOf(&forked, 0x30)));
+    try testing.expectEqual(ExecutionStatus.invalid, try forked.executionStatus(pendingOf(&forked, 0x50)));
+    try testing.expectEqual(ExecutionStatus.syncing, try forked.executionStatus(pendingOf(&forked, 0x40)));
+
+    var resolved = try Store.initFromSummary(allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
+    defer resolved.deinit();
+    try resolved.onTick(resolved.timing.timeAtSlotMs(8));
+    try resolved.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
+    try resolved.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 0x20, .slot = 2, .status = .valid }));
+    try resolved.onBlockSummary(optimisticSummary(.{ .tag = 0x31, .parent = 0x30, .slot = 3 }));
+    try resolved.onBlockSummary(optimisticSummary(.{ .tag = 0x32, .parent = 0x31, .slot = 4 }));
+
+    // A rejected child payload whose hash reaches below a validated payload contradicts it.
+    try testing.expectEqual(VerdictResult.contradiction, try resolved.onPayloadInvalid(tagRoot(0x32), tagHash(0x32), ZERO, .child_payload));
+    try testing.expectEqual(ExecutionStatus.syncing, try resolved.executionStatus(pendingOf(&resolved, 0x32)));
+    // A forkchoiceUpdated verdict falls back to the head's own payload.
+    try testing.expectEqual(VerdictResult.applied, try resolved.onPayloadInvalid(tagRoot(0x32), tagHash(0x32), ZERO, .from_block));
+    try testing.expectEqual(ExecutionStatus.invalid, try resolved.executionStatus(pendingOf(&resolved, 0x32)));
+    try testing.expectEqual(ExecutionStatus.syncing, try resolved.executionStatus(pendingOf(&resolved, 0x31)));
+    try testing.expectEqual(VerdictResult.applied, try resolved.onPayloadInvalid(tagRoot(0x31), tagHash(0x31), null, .from_block));
+    try testing.expectEqual(ExecutionStatus.invalid, try resolved.executionStatus(pendingOf(&resolved, 0x31)));
+    try testing.expectEqual(ExecutionStatus.valid, try resolved.executionStatus(pendingOf(&resolved, 0x30)));
 }
 
 test "payload decisions: a Heze payload failing its inclusion list loses its own slot to EMPTY" {
@@ -945,7 +1019,7 @@ test "optimistic sync: a zero latest valid hash invalidates through the merge bl
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 0x20, .slot = 2 }));
     try testing.expectEqual(pendingOf(&store, 0x30), try store.getHead());
 
-    try store.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), ZERO);
+    try testing.expectEqual(VerdictResult.applied, try store.onPayloadInvalid(tagRoot(0x30), tagHash(0x30), ZERO, .child_payload));
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x20)));
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x30)));
     try testing.expectEqual(pendingOf(&store, 1), try store.getHead());
@@ -992,13 +1066,13 @@ test "optimistic sync: Gloas empty links skip the parent's own payload" {
     try testing.expect(!try store.isOptimistic(pendingOf(&store, 0x21)));
 
     // Invalidating 0x21's payload down to the anchor's leaves 0x20's payload alone.
-    try store.onPayloadInvalid(tagRoot(0x21), tagHash(0x21), tagHash(1));
+    try testing.expectEqual(VerdictResult.applied, try store.onPayloadInvalid(tagRoot(0x21), tagHash(0x21), tagHash(1), .child_payload));
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(fullOf(&store, 0x21)));
     try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(pendingOf(&store, 0x21)));
     try testing.expectEqual(ExecutionStatus.syncing, try store.executionStatus(fullOf(&store, 0x20)));
     try testing.expectError(error.ParentPayloadInvalid, store.onBlockSummary(optimisticSummary(.{ .tag = 0x22, .parent = 0x21, .slot = 3, .fork = .gloas, .bid_parent = 0x21 })));
 
-    try store.onPayloadValid(tagHash(0x20));
+    try testing.expectEqual(VerdictResult.applied, store.onPayloadValid(tagHash(0x20)));
     try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(fullOf(&store, 0x20)));
     try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(fullOf(&store, 0x21)));
 }
@@ -1022,12 +1096,62 @@ test "optimistic sync: a valid envelope over an invalidated payload returns Payl
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
     try store.onExecutionPayloadEnvelope(tagRoot(0x20), .syncing, null);
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x21, .parent = 0x20, .slot = 2, .fork = .gloas, .bid_parent = 0x20 }));
-    try store.onPayloadInvalid(tagRoot(0x20), tagHash(0x20), tagHash(1));
+    // 0x21 has no full node before its envelope arrives.
+    try testing.expectError(error.UnknownBlock, store.onPayloadInvalid(tagRoot(0x21), tagHash(0x21), null, .from_block));
+    try testing.expectError(error.UnknownBlock, store.onPayloadInvalid(tagRoot(0x21), tagHash(0x77), null, .from_block));
+    // The envelope of 0x21 is rejected with a latest valid hash below its parent's payload.
+    try testing.expectEqual(VerdictResult.applied, try store.onPayloadInvalid(tagRoot(0x20), tagHash(0x20), tagHash(1), .child_payload));
+    try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x21)));
 
     try testing.expectError(error.PayloadInvalidToValid, store.onExecutionPayloadEnvelope(tagRoot(0x21), .valid, null));
     const block = store.blockIndex(tagRoot(0x21)).?;
     try testing.expectEqual(.syncing, store.blocks.items(.execution_status)[block]);
     try testing.expect(!store.blocks.items(.payload_verified)[block]);
+}
+
+test "optimistic sync: a Gloas from_block verdict starts at the node its hash names" {
+    const allocator = testing.allocator;
+    const config_mod = @import("config");
+    const chain_config = config_mod.mainnet.chain_config.merge(.{
+        .ALTAIR_FORK_EPOCH = 0,
+        .BELLATRIX_FORK_EPOCH = 0,
+        .CAPELLA_FORK_EPOCH = 0,
+        .DENEB_FORK_EPOCH = 0,
+        .ELECTRA_FORK_EPOCH = 0,
+        .FULU_FORK_EPOCH = 0,
+        .GLOAS_FORK_EPOCH = 0,
+    });
+    const config = config_mod.BeaconConfig.init(chain_config, config_mod.mainnet.genesis_validators_root);
+    const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .gloas });
+
+    // The bid's parent hash names 0x21's empty node, which stands on 0x20's payload.
+    var store = try Store.initFromSummary(allocator, &config, 0, anchor, Provider.stateProvider());
+    defer store.deinit();
+    try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
+    try store.onTick(store.timing.timeAtSlotMs(8));
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
+    try store.onExecutionPayloadEnvelope(tagRoot(0x20), .syncing, null);
+    try store.onBlockSummary(optimisticSummary(.{ .tag = 0x21, .parent = 0x20, .slot = 2, .fork = .gloas, .bid_parent = 0x20 }));
+    try testing.expectEqual(VerdictResult.applied, try store.onPayloadInvalid(tagRoot(0x21), tagHash(0x20), null, .from_block));
+    try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(fullOf(&store, 0x20)));
+    try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(pendingOf(&store, 0x20)));
+    try testing.expectEqual(ExecutionStatus.invalid, try store.executionStatus(pendingOf(&store, 0x21)));
+    try testing.expectEqual(.syncing, store.blocks.items(.execution_status)[store.blockIndex(tagRoot(0x21)).?]);
+
+    // A Gloas justified block's own payload is not in the checkpoint: its pending node stays the head.
+    var justified = try Store.initFromSummary(allocator, &config, 0, anchor, Provider.stateProvider());
+    defer justified.deinit();
+    try justified.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
+    try justified.onTick(justified.timing.timeAtSlotMs(8));
+    try justified.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
+    try justified.onExecutionPayloadEnvelope(tagRoot(0x20), .syncing, null);
+    justified.justified_checkpoint.root = tagRoot(0x20);
+    try testing.expectEqual(VerdictResult.applied, try justified.onPayloadInvalid(tagRoot(0x20), tagHash(0x20), null, .from_block));
+    try testing.expectEqual(ExecutionStatus.invalid, try justified.executionStatus(fullOf(&justified, 0x20)));
+    try testing.expectEqual(ExecutionStatus.valid, try justified.executionStatus(pendingOf(&justified, 0x20)));
+    const head = try justified.getHead();
+    try testing.expectEqual(justified.blockIndex(tagRoot(0x20)).?, head.block);
+    try testing.expect(head.payload_status != .full);
 }
 
 test "get_ancestor: a Gloas walk takes each link's payload status from the child" {
@@ -1197,7 +1321,7 @@ test "optimistic sync: pruning keeps the status a Gloas root inherited from drop
     try testing.expect(try store.isOptimistic(pendingOf(&store, 0x40)));
 
     // Validating 0x40's payload validates the dropped ancestors' too.
-    try store.onPayloadValid(tagHash(0x40));
+    try testing.expectEqual(VerdictResult.applied, store.onPayloadValid(tagHash(0x40)));
     try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(pendingOf(&store, 0x30)));
     try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(fullOf(&store, 0x40)));
     try testing.expectEqual(ExecutionStatus.syncing, try store.executionStatus(fullOf(&store, 0x30)));
