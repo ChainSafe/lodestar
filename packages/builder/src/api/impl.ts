@@ -160,12 +160,18 @@ export function getBuilderApi(modules: BuilderApiModules, opts: BuilderApiOption
       logger.info("Received signed beacon block from proposer", {...logCtx, secFromSlot: clock.secFromSlot(slot)});
 
       // The payload is revealed once the beacon node imported the block and emits its block event
-      (
-        await api.beacon.publishBlockV2({
-          signedBlockContents: {signedBlock: block} as SignedBlockContents<ForkPostGloas>,
-          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
-        })
-      ).assertOk();
+      const res = await api.beacon.publishBlockV2({
+        signedBlockContents: {signedBlock: block} as SignedBlockContents<ForkPostGloas>,
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+      });
+      const error = res.error();
+      if (error !== null) {
+        if (res.status >= 400 && res.status < 500) {
+          // The beacon node rejected the block, the proposer must be told so instead of getting an internal error
+          throw new ApiError(400, `Invalid signed beacon block: ${error.message}`);
+        }
+        throw error;
+      }
 
       return {status: 202};
     },

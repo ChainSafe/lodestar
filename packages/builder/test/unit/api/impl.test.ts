@@ -9,7 +9,7 @@ import {toRootHex} from "@lodestar/utils";
 import {BuilderApi, getBuilderApi} from "../../../src/api/impl.js";
 import {BidLedger} from "../../../src/services/bidLedger.js";
 import {ProposerDutiesTracker} from "../../../src/services/proposerDutiesTracker.js";
-import {getApiClientStub, mockApiResponse} from "../utils/apiStub.js";
+import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "../utils/apiStub.js";
 import {ClockMock} from "../utils/clock.js";
 import {getMockedLogger} from "../utils/logger.js";
 
@@ -245,6 +245,22 @@ describe("builder api", () => {
         statusCode: 400,
       });
       expect(api.beacon.publishBlockV2).not.toHaveBeenCalled();
+    });
+
+    it("rejects a block the beacon node rejects with the status of an invalid block", async () => {
+      api.beacon.publishBlockV2.mockResolvedValue(await mockApiErrorResponse(400, {message: "invalid block"}));
+
+      await expect(builderApi.submitSignedBeaconBlock({signedBlock: {data: signBlock()}})).rejects.toMatchObject({
+        statusCode: 400,
+      });
+    });
+
+    it("does not report a failure of the beacon node as an invalid block", async () => {
+      api.beacon.publishBlockV2.mockResolvedValue(await mockApiErrorResponse(503, {message: "node is syncing"}));
+
+      await expect(builderApi.submitSignedBeaconBlock({signedBlock: {data: signBlock()}})).rejects.toMatchObject({
+        status: 503,
+      });
     });
 
     it("rejects a block that commits to a bid that is no longer served", async () => {
