@@ -269,6 +269,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           // The block is retained for unknown parent sync without full validation. Authenticate it first, this
           // does not need the parent state
           const proposerIndex = signedBlock.message.proposerIndex;
+          // An active proposer missing from the cache comes from a branch that finalized validators this node never
+          // processed, range sync recovers that branch from peer status
+          if (proposerIndex >= chain.pubkeyCache.size) {
+            throw new BlockGossipError(GossipAction.REJECT, {
+              code: BlockErrorCode.UNKNOWN_PROPOSER,
+              slot,
+              root: blockRootHex,
+              proposerIndex,
+            });
+          }
           await verifyBlockProposerSignature(chain, signedBlock, blockRootHex);
           chain.seenBlockProposers.observeBlockRoot(
             slot,
