@@ -3,13 +3,15 @@ import path from "node:path";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {SecretKey} from "@lodestar/native/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
-import {LogLevel, Logger, fetch, isValidHttpUrl, retry, toPubkeyHex} from "@lodestar/utils";
+import {LogLevel, Logger, fetch, isValidHttpUrl, retry, toHex, toPubkeyHex} from "@lodestar/utils";
 import {
   Signer,
   SignerType,
   XmssSigner,
   XmssTreeStore,
+  XmssTrees,
   externalSignerGetKeys,
+  getXmssPublicParameter,
   interopXmssSigner,
 } from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
@@ -21,7 +23,7 @@ import {PersistedKeysBackend} from "../keymanager/persistedKeys.js";
 import {IValidatorCliArgs} from "../options.js";
 import {getAccountPaths} from "../paths.js";
 import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./importExternalKeystores.js";
-import {devnetXmssTreeSource} from "./xmssCache.js";
+import {fetchDevnetXmssTrees} from "./xmssCache.js";
 
 const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 
@@ -192,23 +194,36 @@ export async function toXmssSigners(
     logger.warn("No vrfStateUrl: VRF trees hold their first 2^20 slots and zeros after, not full trees");
   }
 
-  const treeSource = xmssCacheUrl ? devnetXmssTreeSource(xmssCacheUrl, logger) : undefined;
   fs.mkdirSync(treesDir, {recursive: true});
+  const getTreesFile = (signer: Signer & {type: SignerType.Local}): string =>
+    path.join(treesDir, `${signer.secretKey.toPublicKey().toHex()}.bin`);
+
+  // The trees of keys without a file of their own, before the keys are derived
+  let fetchedTrees = new Map<string, XmssTrees>();
+  if (xmssCacheUrl) {
+    const publicParameters = signers
+      .filter((signer) => signer.type === SignerType.Local && !fs.existsSync(getTreesFile(signer)))
+      .map((signer) => getXmssPublicParameter((signer as Signer & {type: SignerType.Local}).secretKey.toBytes()));
+    fetchedTrees = await fetchDevnetXmssTrees(xmssCacheUrl, publicParameters, logger);
+    logger.info("Fetched leanXMSS trees", {count: fetchedTrees.size, wanted: publicParameters.length});
+  }
+
   logger.info("Deriving leanXMSS keys and VRF trees from keystores", {count: localCount});
   return Promise.all(
     signers.map(async (signer): Promise<Signer> => {
       if (signer.type !== SignerType.Local) return signer;
       const secretKey = signer.secretKey.toBytes();
-      const treeStore = xmssTreeStore(path.join(treesDir, `${signer.secretKey.toPublicKey().toHex()}.bin`));
+      const treeStore = xmssTreeStore(getTreesFile(signer));
+      const trees = fetchedTrees.get(toHex(getXmssPublicParameter(secretKey)));
       try {
         return {
           type: SignerType.Xmss,
-          signer: await XmssSigner.fromBlsSecretKey(secretKey, {vrfStates, treeStore, treeSource}),
+          signer: await XmssSigner.fromBlsSecretKey(secretKey, {vrfStates, treeStore, trees}),
         };
       } catch (e) {
         if (!(e as Error).message.includes("NoMatchingState")) throw e;
         // It still attests: only its proposals need the tree
-        const xmssSigner = await XmssSigner.fromBlsSecretKey(secretKey, {treeStore, treeSource});
+        const xmssSigner = await XmssSigner.fromBlsSecretKey(secretKey, {treeStore, trees});
         logger.error("No VRF state for validator: it cannot propose", {pubkey: toPubkeyHex(xmssSigner.publicKey)});
         return {type: SignerType.Xmss, signer: xmssSigner};
       }

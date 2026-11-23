@@ -14,8 +14,9 @@ export {MAX_BUILDER_BOOST_FACTOR, SignerType, ValidatorStore, defaultOptions} fr
 export {
   INTEROP_VRF_POPULATED_DEPTH,
   XmssSigner,
-  type XmssTreeSource,
   type XmssTreeStore,
+  type XmssTrees,
+  getXmssPublicParameter,
   interopXmssSigner,
 } from "./services/xmssSigner.js";
 export * from "./slashingProtection/index.js";

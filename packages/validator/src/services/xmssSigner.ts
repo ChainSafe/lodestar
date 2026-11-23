@@ -57,13 +57,23 @@ export type XmssTreeStore = {
 };
 
 /**
- * Trees built elsewhere for the key with `publicParameter`, and the public key they belong to.
- * The trees are checked against the public key, so they may come from anywhere. The public key
- * may not: a wrong one with trees to match gives a key that signs for no validator.
+ * A key's trees built elsewhere, and the public key they belong to. The trees are checked against
+ * the public key, so they may come from anywhere. The public key may not: a wrong one with trees
+ * to match gives a key that signs for no validator.
  */
-export type XmssTreeSource = (
-  publicParameter: Uint8Array
-) => Promise<{publicKey: Uint8Array; trees: Uint8Array} | null>;
+export type XmssTrees = {publicKey: Uint8Array; trees: Uint8Array};
+
+function xmssSeed(blsSecretKey: Uint8Array): Uint8Array {
+  return createHash("sha256").update("leanxmss-seed").update(blsSecretKey).digest();
+}
+
+/**
+ * The public parameter of the leanXMSS key of a BLS keystore: the last 16 bytes of its public
+ * key, which take no tree to derive. Enough to look the key's trees up before it is built.
+ */
+export function getXmssPublicParameter(blsSecretKey: Uint8Array): Uint8Array {
+  return xmssPublicParameter(xmssSeed(blsSecretKey));
+}
 
 const TREE_TAG_SIZE = 32;
 
@@ -99,9 +109,9 @@ class SealedTrees {
   }
 }
 
-/** The key of `seed`, with its stored trees, else those of `source`, else built */
-async function loadXmssKey(seed: Uint8Array, stored?: SealedTrees, source?: XmssTreeSource): Promise<XmssSecretKey> {
-  const cached = stored?.read() ?? (await source?.(xmssPublicParameter(seed)));
+/** The key of `seed`, with its stored trees, else `trees`, else built */
+async function loadXmssKey(seed: Uint8Array, stored?: SealedTrees, trees?: XmssTrees): Promise<XmssSecretKey> {
+  const cached = stored?.read() ?? trees;
   if (cached) {
     try {
       return await XmssSecretKey.fromCache(seed, cached.publicKey, cached.trees);
@@ -142,18 +152,18 @@ export class XmssSigner {
    * this key's among them. Without `vrfStates` the other leaves are zero, as the genesis tooling
    * had it before it moved to full trees.
    *
-   * The key's trees are loaded from `treeStore`, where the signer keeps them, else from
-   * `treeSource`, else built.
+   * The key's trees are those in `treeStore`, where the signer keeps them, else `trees`, else
+   * built.
    */
   static async fromBlsSecretKey(
     secretKey: Uint8Array,
-    opts: {vrfStates?: Uint8Array; treeStore?: XmssTreeStore; treeSource?: XmssTreeSource} = {}
+    opts: {vrfStates?: Uint8Array; treeStore?: XmssTreeStore; trees?: XmssTrees} = {}
   ): Promise<XmssSigner> {
-    const seed = createHash("sha256").update("leanxmss-seed").update(secretKey).digest();
+    const seed = xmssSeed(secretKey);
     const vrfSeed = createHash("sha256").update("vrf-seed").update(secretKey).digest();
     const stored = opts.treeStore && new SealedTrees(opts.treeStore, seed);
     const [key, vrfTree] = await Promise.all([
-      loadXmssKey(seed, stored, opts.treeSource),
+      loadXmssKey(seed, stored, opts.trees),
       VrfTree.build(vrfSeed, KEYSTORE_VRF_POPULATED_DEPTH, opts.vrfStates),
     ]);
     return new XmssSigner(key.toPublicKey(), key, vrfTree, stored);

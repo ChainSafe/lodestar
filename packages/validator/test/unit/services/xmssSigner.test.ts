@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {fromHex, toHex} from "@lodestar/utils";
-import {XmssSigner, XmssTreeStore} from "../../../src/services/xmssSigner.js";
+import {XmssSigner, XmssTreeStore, getXmssPublicParameter} from "../../../src/services/xmssSigner.js";
 
 describe("XmssSigner", () => {
   // The vector of the Lighthouse and ethPandaOps genesis tooling
@@ -38,17 +38,10 @@ describe("XmssSigner", () => {
     const other = await XmssSigner.fromBlsSecretKey(new Uint8Array(32).fill(3), {treeStore: store});
     expect(other.publicKey).not.toEqual(built.publicKey);
 
-    // Trees from a source load against the public key that comes with them
+    // Trees built elsewhere load against the public key that comes with them
+    expect(getXmssPublicParameter(secretKey)).toEqual(built.publicKey.subarray(16));
     const trees = (stored as unknown as Uint8Array).subarray(32, -32);
-    let asked = 0;
-    const sourced = await XmssSigner.fromBlsSecretKey(secretKey, {
-      treeSource: async (publicParameter) => {
-        asked++;
-        expect(publicParameter).toEqual(built.publicKey.subarray(16));
-        return {publicKey: built.publicKey, trees};
-      },
-    });
-    expect(asked).toBe(1);
-    expect(await sourced.sign(signingRoot, 7)).toEqual(await built.sign(signingRoot, 7));
+    const given = await XmssSigner.fromBlsSecretKey(secretKey, {trees: {publicKey: built.publicKey, trees}});
+    expect(await given.sign(signingRoot, 7)).toEqual(await built.sign(signingRoot, 7));
   }, 120_000);
 });
