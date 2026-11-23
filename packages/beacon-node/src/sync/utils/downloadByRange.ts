@@ -13,10 +13,14 @@ import {
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
-import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputSource, DAType, IBlockInput, isBlockInputColumns} from "../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/types.js";
+import {
+  DataColumnSidecarErrorCode,
+  DataColumnSidecarValidationError,
+} from "../../chain/errors/dataColumnSidecarError.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {SeenPayloadEnvelopeInput} from "../../chain/seenCache/seenPayloadEnvelopeInput.js";
 import {
@@ -264,6 +268,24 @@ export function cacheByRangeResponses({
         actual: existing.type,
       });
     }
+
+    // Honest sidecars carry the block signature, which import verifies. A known root keeps its cached block,
+    // so compare against that one. A different root is reported by addColumn.
+    const blockSignature = existing.getBlock().signature;
+    const headerSignature = fuluColumns[0].signedBlockHeader.signature;
+    if (existing.blockRootHex === blockRootHex && !byteArrayEquals(blockSignature, headerSignature)) {
+      throw new DataColumnSidecarValidationError(
+        {
+          code: DataColumnSidecarErrorCode.INCORRECT_BLOCK,
+          slot: existing.slot,
+          columnIndex: fuluColumns[0].index,
+          expected: toHex(blockSignature),
+          actual: toHex(headerSignature),
+        },
+        "DataColumnSidecar header signature doesn't match block signature"
+      );
+    }
+
     for (const columnSidecar of fuluColumns) {
       // will throw if root hex does not match (meaning we are following the wrong chain)
       existing.addColumn(
@@ -895,7 +917,7 @@ export async function validateColumnsByRangeResponse(
           peerDasMetrics
         )
       : validateFuluBlockDataColumnSidecars(
-          null, // do not pass chain here so we do not validate header signature
+          null, // skip BLS, cacheByRangeResponses matches the header signature against the block
           slot,
           blockRoot,
           blobCount,
