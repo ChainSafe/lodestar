@@ -359,7 +359,7 @@ export class Builder {
     this.latestHeadSlot = headSlot;
 
     if (++this.headSlotsWithoutPayloadAttributes === MISSING_PAYLOAD_ATTRIBUTES_WARN_SLOTS) {
-      this.logger.warn("Beacon node is not emitting payload attributes, unable to bid", {
+      this.logger.warn("Beacon node is not emitting payload attributes, ensure it runs with --emitPayloadAttributes", {
         headSlot,
         slotsWithoutPayloadAttributes: this.headSlotsWithoutPayloadAttributes,
       });
