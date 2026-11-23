@@ -1,7 +1,7 @@
 const std = @import("std");
 const ForkSeq = @import("config").ForkSeq;
 /// Application accounts share IPv4 addresses and IPv6 /64s across identities and ports.
-pub const Source = @import("udp").AddressPrefix(.{ .ip4 = 32, .ip6 = 64 });
+pub const Source = @import("udp").AddressPrefix;
 const PeerId = @import("../wire/peer_id.zig").PeerId;
 const Protocol = @import("protocol.zig").Protocol;
 const quota_config = @import("quotas.zig");
