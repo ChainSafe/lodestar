@@ -53,8 +53,6 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     "builder.maxExecutionPayment"?: string;
     allowDangerousTrustedPayments?: boolean;
 
-    /** @deprecated */
-    useProduceBlockV3?: boolean;
     broadcastValidation?: string;
     blindedLocal?: boolean;
     payloadLocal?: boolean;
@@ -310,12 +308,6 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     description:
       "Allow configuring a builder max execution payment above 0. Trusted execution layer payments are only backed by the builder's promise to pay, not by its staked collateral, a builder that fails to pay cannot be penalized in protocol",
     group: "builder",
-  },
-
-  useProduceBlockV3: {
-    hidden: true,
-    deprecated: true,
-    type: "boolean",
   },
 
   broadcastValidation: {
