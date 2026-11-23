@@ -11,7 +11,7 @@ pub const addressToPosix = std.Io.Threaded.addressToPosix;
 pub const addressFromPosix = std.Io.Threaded.addressFromPosix;
 pub const errnoBug = std.Io.Threaded.errnoBug;
 
-pub const native_sockets = std.options.networking and (os == .linux or os == .macos);
+pub const native_sockets = std.options.networking;
 comptime {
     if (!std.mem.eql(u8, builtin.zig_version_string, "0.16.0"))
         @compileError("UDP Threaded compatibility requires an audit for this Zig version");
