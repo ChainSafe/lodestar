@@ -25,6 +25,7 @@ import {computePayloadTimelinessCommitteesForEpoch} from "./seed.js";
 import {createSingleSignatureSetFromComponents, verifySignatureSet} from "./signatureSets.js";
 import {computeSigningRoot} from "./signingRoot.js";
 import {getActiveValidatorIndices} from "./validator.js";
+import {ETH_TO_GWEI} from "./weakSubjectivity.js";
 
 export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
   return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;
@@ -159,6 +160,16 @@ export function canBuilderCoverBid(
   }
 
   return builder.balance - minBalance >= bidAmount;
+}
+
+/**
+ * Return the number of bids the builder may submit for each slot and parent.
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.5/specs/gloas/p2p-interface.md#new-get_builder_bid_limit
+ */
+export function getBuilderBidLimit(state: CachedBeaconStateGloas, builderIndex: BuilderIndex): number {
+  const builder = state.builders.getReadonly(builderIndex);
+  const pendingBalance = getPendingBalanceToWithdrawForBuilder(state, builderIndex);
+  return Math.floor(Math.max(builder.balance - pendingBalance, 0) / ETH_TO_GWEI);
 }
 
 /**

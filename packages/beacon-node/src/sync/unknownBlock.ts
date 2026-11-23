@@ -376,7 +376,8 @@ export class BlockInputSync {
     // because the payload at the finalized block is not finalized
     const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
     const nowSec = Date.now() / 1000;
-    const maxSecInCache = (PRUNE_UNRESOLVED_SLOT_EPOCHS * SLOTS_PER_EPOCH * this.config.SLOT_DURATION_MS) / 1000;
+    const slotDurationMs = this.config.getSlotDurationMs(this.config.getForkName(this.chain.clock.currentSlot));
+    const maxSecInCache = (PRUNE_UNRESOLVED_SLOT_EPOCHS * SLOTS_PER_EPOCH * slotDurationMs) / 1000;
 
     let belowFinalizedPayloads = 0;
     let agedOutPayloads = 0;

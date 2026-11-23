@@ -232,7 +232,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_validator_monitor_validators",
+          "expr": "validator_monitor_validators",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
