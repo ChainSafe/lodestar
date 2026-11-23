@@ -122,20 +122,20 @@ describe("ValidatorMonitor", () => {
 
   describe("metric ownership", () => {
     const stateDerivedMetricNames = [
-      "lodestar_validator_monitor_prev_epoch_on_chain_balance",
-      "lodestar_validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
-      "lodestar_validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
-      "lodestar_validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
-      "lodestar_validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
-      "lodestar_validator_monitor_prev_epoch_on_chain_target_attester_hit_total",
-      "lodestar_validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
+      "validator_monitor_prev_epoch_on_chain_balance",
+      "validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
+      "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
+      "validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
+      "validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
+      "validator_monitor_prev_epoch_on_chain_target_attester_hit_total",
+      "validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
     ];
     const blockObservedMetricNames = [
-      "lodestar_validator_monitor_prev_epoch_on_chain_attester_hit_total",
-      "lodestar_validator_monitor_prev_epoch_on_chain_attester_miss_total",
-      "lodestar_validator_monitor_prev_epoch_on_chain_attester_correct_head_total",
-      "lodestar_validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total",
-      "lodestar_validator_monitor_prev_epoch_on_chain_inclusion_distance",
+      "validator_monitor_prev_epoch_on_chain_attester_hit_total",
+      "validator_monitor_prev_epoch_on_chain_attester_miss_total",
+      "validator_monitor_prev_epoch_on_chain_attester_correct_head_total",
+      "validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total",
+      "validator_monitor_prev_epoch_on_chain_inclusion_distance",
     ];
 
     it("registers state-derived metrics in TypeScript mode", () => {
@@ -317,20 +317,14 @@ describe("ValidatorMonitor", () => {
 
       monitor.onceEveryEndOfEpoch(createMockHeadState(headSlot));
 
-      expect(await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_hit_total")).toBe(1);
-      expect(await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_miss_total")).toBe(0);
-      expect(
-        await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_correct_head_total")
-      ).toBe(1);
-      expect(
-        await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total")
-      ).toBe(0);
-      expect(
-        await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_inclusion_distance", "count")
-      ).toBe(1);
-      expect(
-        await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_inclusion_distance", "sum")
-      ).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_hit_total")).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_miss_total")).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_correct_head_total")).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total")).toBe(
+        0
+      );
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_inclusion_distance", "count")).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_inclusion_distance", "sum")).toBe(1);
     });
 
     it("records incorrect head for an included attestation with wrong head vote", async () => {
@@ -340,12 +334,10 @@ describe("ValidatorMonitor", () => {
 
       monitor.onceEveryEndOfEpoch(createMockHeadState(headSlot));
 
-      expect(
-        await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_correct_head_total")
-      ).toBe(0);
-      expect(
-        await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total")
-      ).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_correct_head_total")).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total")).toBe(
+        1
+      );
     });
 
     it("records a miss and no head vote for a validator with no included attestation", async () => {
@@ -354,17 +346,13 @@ describe("ValidatorMonitor", () => {
 
       monitor.onceEveryEndOfEpoch(createMockHeadState(headSlot));
 
-      expect(await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_hit_total")).toBe(0);
-      expect(await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_miss_total")).toBe(1);
-      expect(
-        await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_correct_head_total")
-      ).toBe(0);
-      expect(
-        await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total")
-      ).toBe(0);
-      expect(
-        await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_inclusion_distance", "count")
-      ).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_hit_total")).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_miss_total")).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_correct_head_total")).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total")).toBe(
+        0
+      );
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_inclusion_distance", "count")).toBe(0);
     });
 
     it("does not count the same epoch twice", async () => {
@@ -375,13 +363,9 @@ describe("ValidatorMonitor", () => {
       monitor.onceEveryEndOfEpoch(createMockHeadState(headSlot));
       monitor.onceEveryEndOfEpoch(createMockHeadState(headSlot));
 
-      expect(await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_hit_total")).toBe(1);
-      expect(
-        await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_correct_head_total")
-      ).toBe(1);
-      expect(
-        await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_inclusion_distance", "count")
-      ).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_hit_total")).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_correct_head_total")).toBe(1);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_inclusion_distance", "count")).toBe(1);
     });
 
     it("registerValidatorStatuses does not record on-chain attestation metrics", async () => {
@@ -392,14 +376,10 @@ describe("ValidatorMonitor", () => {
       // Epoch transition 2 -> 3 summarizes epoch 1, the same epoch onceEveryEndOfEpoch handles
       monitor.registerValidatorStatuses(2, [], [], [], []);
 
-      expect(await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_hit_total")).toBe(0);
-      expect(await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_miss_total")).toBe(0);
-      expect(
-        await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_attester_correct_head_total")
-      ).toBe(0);
-      expect(
-        await metricValue(register, "lodestar_validator_monitor_prev_epoch_on_chain_inclusion_distance", "count")
-      ).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_hit_total")).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_miss_total")).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_attester_correct_head_total")).toBe(0);
+      expect(await metricValue(register, "validator_monitor_prev_epoch_on_chain_inclusion_distance", "count")).toBe(0);
     });
   });
 });

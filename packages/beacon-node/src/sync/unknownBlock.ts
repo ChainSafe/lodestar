@@ -15,6 +15,8 @@ import {
   BlockErrorCode,
   DataColumnSidecarErrorCode,
   DataColumnSidecarValidationError,
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
 } from "../chain/errors/index.js";
 import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {validateGloasBlockDataColumnSidecars} from "../chain/validation/dataColumnSidecar.js";
@@ -398,7 +400,8 @@ export class BlockInputSync {
     // because the payload at the finalized block is not finalized
     const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
     const nowSec = Date.now() / 1000;
-    const maxSecInCache = (PRUNE_UNRESOLVED_SLOT_EPOCHS * SLOTS_PER_EPOCH * this.config.SLOT_DURATION_MS) / 1000;
+    const slotDurationMs = this.config.getSlotDurationMs(this.config.getForkName(this.chain.clock.currentSlot));
+    const maxSecInCache = (PRUNE_UNRESOLVED_SLOT_EPOCHS * SLOTS_PER_EPOCH * slotDurationMs) / 1000;
 
     let belowFinalizedPayloads = 0;
     let agedOutPayloads = 0;
@@ -1507,7 +1510,7 @@ export class BlockInputSync {
         const pendingPayloadByRoot: PendingPayloadRootHex = {
           status: PendingPayloadInputStatus.pending,
           rootHex,
-          slot: pendingPayload.envelope.message.payload.slotNumber,
+          slot: payloadInput.slot,
           timeAddedSec: pendingPayload.timeAddedSec,
           peerIdStrings: new Set(pendingPayload.peerIdStrings),
         };
@@ -1872,6 +1875,27 @@ export class BlockInputSync {
           }
         } else {
           excludedPeers.add(peerId);
+        }
+
+        if (e instanceof ExecutionPayloadEnvelopeError) {
+          switch (e.type.code) {
+            // Caused by local state, the downloaded envelope may still be valid
+            case ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN:
+            case ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN:
+            case ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING:
+            case ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE:
+              break;
+            // Every copy fails once the block is finalized, only a wrong slot makes the served copy invalid
+            case ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK:
+              if (envelope?.message.payload.slotNumber !== payloadInput?.slot) {
+                envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
+              }
+              break;
+            // The served copy is invalid, take the envelope from payloadInput or another peer on the next attempt
+            default:
+              envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
+              break;
+          }
         }
       } finally {
         this.peerBalancer.onRequestCompleted(peerId);

@@ -958,6 +958,10 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this.binding.canBuilderCoverBid(builderIndex, bidAmount);
   }
 
+  getBuilderBidLimit(builderIndex: BuilderIndex): number {
+    return this.binding.getBuilderBidLimit(builderIndex);
+  }
+
   getEpochPTCs(epoch: Epoch): Uint32Array[] {
     return this.binding.getEpochPTCs(epoch);
   }
