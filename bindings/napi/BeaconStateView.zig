@@ -882,13 +882,11 @@ pub fn getValidatorsByStatus(self: *BeaconStateView, statuses_set: js.Value, cur
     var wanted = std.EnumSet(st.ValidatorStatus).initEmpty();
     for (std.enums.values(st.ValidatorStatus)) |status| {
         const status_str = try env.createStringUtf8(status.toString());
-        if (try (try env.callFunction(has_fn, set_value, .{status_str})).getValueBool()) wanted.insert(status);
-    }
-    for ([_][:0]const u8{ "pending", "active", "exited", "withdrawal" }) |general_status| {
-        const general_status_str = try env.createStringUtf8(general_status);
-        if (!try (try env.callFunction(has_fn, set_value, .{general_status_str})).getValueBool()) continue;
-        for (std.enums.values(st.ValidatorStatus)) |status| {
-            if (status.matchesCategory(general_status)) wanted.insert(status);
+        const category_str = try env.createStringUtf8(status.category());
+        if (try (try env.callFunction(has_fn, set_value, .{status_str})).getValueBool() or
+            try (try env.callFunction(has_fn, set_value, .{category_str})).getValueBool())
+        {
+            wanted.insert(status);
         }
     }
 
