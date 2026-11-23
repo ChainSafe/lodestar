@@ -13,6 +13,8 @@ import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/
 import {
   BlockError,
   BlockErrorCode,
+  DataColumnSidecarErrorCode,
+  DataColumnSidecarValidationError,
   ExecutionPayloadEnvelopeError,
   ExecutionPayloadEnvelopeErrorCode,
 } from "../chain/errors/index.js";
@@ -2056,8 +2058,12 @@ export class BlockInputSync {
           for (const warning of warnings) {
             this.logger.debug("BlockInputSync.fetchBlockInput: downloaded with warning", logCtx, warning);
             this.metrics?.blockInputSync.downloadByRoot.warn.inc({code: warning.type.code, client: peerClient});
+            // A partial response is legal, columns that were not requested are not
+            if (warning.type.code === DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED) {
+              this.network.reportPeer(peerId, PeerAction.LowToleranceError, warning.type.code);
+              excludedPeers.add(peerId);
+            }
           }
-          // TODO: penalize peer?
         }
       } catch (e) {
         this.logger.debug(
@@ -2066,7 +2072,6 @@ export class BlockInputSync {
           e as Error
         );
         const downloadByRootMetrics = this.metrics?.blockInputSync.downloadByRoot;
-        // TODO: penalize peer?
         if (e instanceof DownloadByRootError) {
           const errorCode = e.type.code;
           downloadByRootMetrics?.error.inc({code: errorCode, client: peerClient});
@@ -2080,6 +2085,22 @@ export class BlockInputSync {
             errorCode === DownloadByRootErrorCode.UNKNOWN_PROPOSER
           ) {
             this.network.reportPeer(peerId, PeerAction.LowToleranceError, errorCode);
+          }
+          excludedPeers.add(peerId);
+        } else if (e instanceof DataColumnSidecarValidationError) {
+          const errorCode = e.type.code;
+          downloadByRootMetrics?.error.inc({code: errorCode, client: peerClient});
+          // Not PROPOSAL_SIGNATURE_INVALID or INCORRECT_HEADER_ROOT, which compares signatures too: the spec does not
+          // require verifying the header signature of req/resp columns, so honest peers may serve a bad one
+          switch (errorCode) {
+            case DataColumnSidecarErrorCode.INCORRECT_BLOCK:
+            case DataColumnSidecarErrorCode.INVALID_INDEX:
+            case DataColumnSidecarErrorCode.INCORRECT_CELL_COUNT:
+            case DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT:
+            case DataColumnSidecarErrorCode.INCORRECT_KZG_PROOF_COUNT:
+            case DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID:
+            case DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
+              this.network.reportPeer(peerId, PeerAction.LowToleranceError, errorCode);
           }
           excludedPeers.add(peerId);
         } else if (e instanceof RequestError) {
