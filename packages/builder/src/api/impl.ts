@@ -48,6 +48,8 @@ export type BuilderApiModules = {
 /** Serves the published bids to proposers that request them directly and accepts their signed blocks */
 export function getBuilderApi(modules: BuilderApiModules, opts: BuilderApiOptions): BuilderApi {
   const {api, builderIndex, clock, config, ledger, logger, metrics, proposerDutiesTracker} = modules;
+  /** Roots of the blocks that were accepted and published, repeated submissions of them are not processed again */
+  const acceptedBlockRootsBySlot = new Map<Slot, Set<RootHex>>();
 
   /** The bid published for the slot and parent, null if there is none or it is no longer served */
   function getServedBid(
@@ -131,6 +133,11 @@ export function getBuilderApi(modules: BuilderApiModules, opts: BuilderApiOption
       const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message));
       const logCtx = {slot, blockRoot, blockHash: toRootHex(bid.blockHash)};
 
+      // Signed blocks are public once broadcast, anyone can submit them again
+      if (acceptedBlockRootsBySlot.get(slot)?.has(blockRoot)) {
+        return {status: 202};
+      }
+
       // The block must carry the bid as we signed it, a bid that only keeps our block hash and signature
       // passes gossip validation of the beacon node but the block fails to be imported
       const signedBid = getServedBid(slot, toRootHex(bid.parentBlockHash), toRootHex(bid.parentBlockRoot));
@@ -171,6 +178,18 @@ export function getBuilderApi(modules: BuilderApiModules, opts: BuilderApiOption
           throw new ApiError(400, `Invalid signed beacon block: ${error.message}`);
         }
         throw error;
+      }
+
+      let acceptedBlockRoots = acceptedBlockRootsBySlot.get(slot);
+      if (acceptedBlockRoots === undefined) {
+        acceptedBlockRoots = new Set();
+        acceptedBlockRootsBySlot.set(slot, acceptedBlockRoots);
+      }
+      acceptedBlockRoots.add(blockRoot);
+      for (const acceptedSlot of acceptedBlockRootsBySlot.keys()) {
+        if (acceptedSlot + SERVE_BID_SLOTS < clock.getCurrentSlot()) {
+          acceptedBlockRootsBySlot.delete(acceptedSlot);
+        }
       }
 
       return {status: 202};

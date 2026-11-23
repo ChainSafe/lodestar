@@ -263,6 +263,29 @@ describe("builder api", () => {
       });
     });
 
+    it("accepts a block that was already published without processing it again", async () => {
+      const block = signBlock();
+      await builderApi.submitSignedBeaconBlock({signedBlock: {data: block}});
+
+      const response = await builderApi.submitSignedBeaconBlock({signedBlock: {data: block}});
+
+      expect(response).toEqual({status: 202});
+      expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
+    });
+
+    it("processes a block again that the beacon node did not accept", async () => {
+      const block = signBlock();
+      api.beacon.publishBlockV2.mockResolvedValueOnce(await mockApiErrorResponse(503, {message: "node is syncing"}));
+      await expect(builderApi.submitSignedBeaconBlock({signedBlock: {data: block}})).rejects.toMatchObject({
+        status: 503,
+      });
+
+      const response = await builderApi.submitSignedBeaconBlock({signedBlock: {data: block}});
+
+      expect(response).toEqual({status: 202});
+      expect(api.beacon.publishBlockV2).toHaveBeenCalledTimes(2);
+    });
+
     it("rejects a block that commits to a bid that is no longer served", async () => {
       clock.currentSlot = slot + 3;
 
