@@ -8,8 +8,13 @@ import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
-import {computeStartSlotAtEpoch, getBlockProposerSignatureSet, interopSecretKey} from "@lodestar/state-transition";
-import {SignedBeaconBlock, gloas, phase0, ssz} from "@lodestar/types";
+import {
+  computeStartSlotAtEpoch,
+  getBlockProposerSignatureSet,
+  interopSecretKey,
+  signedBlockToSignedHeader,
+} from "@lodestar/state-transition";
+import {SignedBeaconBlock, fulu, gloas, phase0, ssz} from "@lodestar/types";
 import {defer, notNullish, sleep, toRootHex} from "@lodestar/utils";
 import {BlockInputNoData, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
@@ -18,6 +23,7 @@ import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInp
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {BlsSingleThreadVerifier} from "../../../src/chain/bls/singleThread.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
+import {DataColumnSidecarErrorCode} from "../../../src/chain/errors/dataColumnSidecarError.js";
 import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../src/chain/index.js";
 import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
 import {SeenBlockInput} from "../../../src/chain/seenCache/seenGossipBlockInput.js";
@@ -42,6 +48,7 @@ import {PeerIdStr} from "../../../src/util/peerId.js";
 import {SerializedCache} from "../../../src/util/serializedCache.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
+import {config as blocksAndDataConfig, generateBlockWithColumnSidecars, slots} from "../../utils/blocksAndData.js";
 import {getRandPeerIdStr, getRandPeerSyncMeta} from "../../utils/peer.js";
 
 for (let i = 0; i < 2; i++) {
@@ -1507,6 +1514,196 @@ describe("UnknownBlockSync", () => {
         expect(processBlock).not.toHaveBeenCalled();
         expect(seenBlockInputCache.get(rootHex)).toBeUndefined();
         expect(pendingBlocks.has(rootHex)).toBe(false);
+      } finally {
+        svc.close();
+      }
+    });
+  });
+
+  describe("downloaded column sidecars", () => {
+    const fuluConfig = createBeaconConfig(blocksAndDataConfig, Buffer.alloc(32, 0x01));
+    const sampledColumns = [0, 1];
+    const parentRoot = Buffer.alloc(32, 0xbb);
+    const parentRootHex = toRootHex(parentRoot);
+
+    function generateFuluBlock(): {
+      block: SignedBeaconBlock<ForkName.fulu>;
+      rootHex: string;
+      columns: fulu.DataColumnSidecar[];
+    } {
+      const generated = generateBlockWithColumnSidecars({forkName: ForkName.fulu, slot: slots.fulu, parentRoot});
+      // A clone, the generated values cache their hash tree roots
+      const block = ssz.fulu.SignedBeaconBlock.clone(generated.block);
+      block.message.proposerIndex = 0;
+      const signedBlockHeader = signedBlockToSignedHeader(fuluConfig, block);
+      const rootHex = toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message));
+      return {block, rootHex, columns: generated.columnSidecars.map((column) => ({...column, signedBlockHeader}))};
+    }
+
+    function setupColumnTest(
+      block: SignedBeaconBlock<ForkName.fulu>,
+      servedColumns: Map<PeerIdStr, fulu.DataColumnSidecar[]>
+    ) {
+      const emitter = new ChainEventEmitter();
+      const networkEvents = new NetworkEventBus();
+      const clock = new ClockStopped(block.message.slot + 1);
+      const custodyConfig = {sampledColumns, custodyColumns: sampledColumns} as unknown as CustodyConfig;
+      const seenBlockInputCache = new SeenBlockInput({
+        config: fuluConfig,
+        custodyConfig,
+        clock,
+        chainEvents: emitter,
+        signal: new AbortController().signal,
+        serializedCache: new SerializedCache(),
+        metrics: null,
+      });
+      // Block and column headers carry the block signature, only a different header signature is verified
+      const rootHex = toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message));
+      seenBlockInputCache.markVerifiedProposerSignature(block.message.slot, rootHex, block.signature);
+      const bls = new BlsSingleThreadVerifier({metrics: null});
+      const verifySignatureSets = vi.spyOn(bls, "verifySignatureSets").mockResolvedValue(false);
+      const processBlock = vi.fn<IBeaconChain["processBlock"]>().mockResolvedValue(undefined);
+      const connectedPeers = new Set<PeerIdStr>();
+      const reportPeer = vi.fn<INetwork["reportPeer"]>();
+
+      const network = {
+        events: networkEvents,
+        getConnectedPeers: () => Array.from(connectedPeers),
+        getConnectedPeerSyncMeta: (peerId: PeerIdStr) => ({
+          peerId,
+          client: "column-test-client",
+          custodyColumns: sampledColumns,
+          earliestAvailableSlot: 0,
+        }),
+        custodyConfig: {sampledColumns, sampleGroups: sampledColumns.map((c) => [c])} as unknown as CustodyConfig,
+        sendBeaconBlocksByRoot: vi.fn(async () => [block]),
+        sendDataColumnSidecarsByRoot: vi.fn(async (peerId: PeerIdStr) => servedColumns.get(peerId) ?? []),
+        reportPeer,
+      } as unknown as INetwork;
+
+      const chainForTest = {
+        config: fuluConfig,
+        emitter,
+        clock,
+        genesisTime: 0,
+        forkChoice: {
+          hasBlockHex: (root: string) => root === parentRootHex,
+          getBlockHexDefaultStatus: (root: string) => (root === parentRootHex ? ({slot: 0} as ProtoBlock) : null),
+          hasPayloadHexUnsafe: () => false,
+          getFinalizedBlock: () => ({slot: 0}) as ProtoBlock,
+        } as unknown as IForkChoice,
+        custodyConfig,
+        processBlock,
+        pubkeyCache,
+        bls,
+        seenBlockInputCache,
+        seenBlockProposers: {isKnown: () => false} as unknown as SeenBlockProposers,
+        seenPayloadEnvelopeInputCache: {
+          add: vi.fn(),
+          get: vi.fn().mockReturnValue(undefined),
+          getOrReload: vi.fn().mockResolvedValue(undefined),
+          remove: vi.fn(),
+        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+      } as unknown as IBeaconChain;
+
+      const svc = new BlockInputSync(fuluConfig, network, chainForTest, logger, null, defaultSyncOptions);
+      svc.subscribeToNetwork();
+      const connect = (peer: PeerIdStr): void => {
+        connectedPeers.add(peer);
+        networkEvents.emit(NetworkEvent.peerConnected, {
+          peer,
+          status: {} as never,
+          custodyColumns: sampledColumns,
+          clientAgent: "column-test-client",
+        });
+      };
+
+      return {svc, emitter, connect, processBlock, reportPeer, verifySignatureSets};
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout", "Date"]});
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("reports a peer serving columns with an invalid KZG proof and imports the root from another peer", async () => {
+      const [attacker, honest] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const [column0, column1] = columns;
+      const badColumn0 = {...column0, kzgProofs: column1.kzgProofs};
+      const {svc, emitter, connect, processBlock, reportPeer} = setupColumnTest(
+        block,
+        new Map([
+          [attacker, [badColumn0, column1]],
+          [honest, [column0, column1]],
+        ])
+      );
+
+      try {
+        connect(attacker);
+        connect(honest);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: attacker, source: BlockInputSource.gossip});
+        // Column KZG proofs are verified off the event loop, fake timers alone do not wait for them
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+
+        expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
+          attacker,
+          PeerAction.LowToleranceError,
+          DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH
+        );
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("reports a peer serving columns that were not requested", async () => {
+      const attacker = await getRandPeerIdStr();
+      const {block, rootHex, columns} = generateFuluBlock();
+      const {svc, emitter, connect, processBlock, reportPeer} = setupColumnTest(
+        block,
+        new Map([[attacker, columns.slice(0, 3)]])
+      );
+
+      try {
+        connect(attacker);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: attacker, source: BlockInputSource.gossip});
+        // Column KZG proofs are verified off the event loop, fake timers alone do not wait for them
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+
+        expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
+          attacker,
+          PeerAction.LowToleranceError,
+          DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED
+        );
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("does not report a peer serving columns with an invalid header signature", async () => {
+      const [peer, otherPeer] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const otherHeader = {...columns[0].signedBlockHeader, signature: new Uint8Array(96)};
+      const {svc, emitter, connect, processBlock, reportPeer, verifySignatureSets} = setupColumnTest(
+        block,
+        new Map([
+          [peer, columns.slice(0, 2).map((column) => ({...column, signedBlockHeader: otherHeader}))],
+          [otherPeer, columns.slice(0, 2)],
+        ])
+      );
+
+      try {
+        connect(peer);
+        connect(otherPeer);
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer, source: BlockInputSource.gossip});
+        // Column KZG proofs are verified off the event loop, fake timers alone do not wait for them
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+
+        expect(verifySignatureSets).toHaveBeenCalledOnce();
+        expect(reportPeer).not.toHaveBeenCalled();
       } finally {
         svc.close();
       }
