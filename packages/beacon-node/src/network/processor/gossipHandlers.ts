@@ -1301,13 +1301,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             }
           }
 
-          chain.forkChoice.notifyPtcMessages(
-            toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
-            payloadAttestationMessage.data.slot,
-            validationResult.validatorCommitteeIndices,
-            payloadAttestationMessage.data.payloadPresent,
-            payloadAttestationMessage.data.blobDataAvailable
-          );
+          // Gossip accepts adjacent slots within the clock disparity but fork choice only counts the current slot
+          if (payloadAttestationMessage.data.slot === chain.clock.currentSlot) {
+            chain.forkChoice.notifyPtcMessages(
+              toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+              payloadAttestationMessage.data.slot,
+              validationResult.validatorCommitteeIndices,
+              payloadAttestationMessage.data.payloadPresent,
+              payloadAttestationMessage.data.blobDataAvailable
+            );
+          }
 
           chain.emitter.emit(routes.events.EventType.payloadAttestationMessage, {
             version: config.getForkName(payloadAttestationMessage.data.slot),
