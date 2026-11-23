@@ -13,12 +13,33 @@ type EpochProposers = {
 /** Resolves the proposer of a slot from the proposer duties of the beacon node */
 export class ProposerDutiesTracker {
   private readonly proposersByEpoch = new Map<Epoch, EpochProposers>();
+  /** Fetches in progress, shared by all callers that need the duties of the same epoch */
+  private readonly fetchesByEpoch = new Map<Epoch, Promise<EpochProposers>>();
 
   constructor(
     private readonly api: ApiClient,
     private readonly clock: IClock,
     private readonly logger: Logger
   ) {}
+
+  /**
+   * Fetches the duties of the epoch and the one after it, to be called once the epoch started.
+   * Requests of proposers then find their duties cached and do not have to fetch them.
+   */
+  async prefetch(epoch: Epoch): Promise<void> {
+    await Promise.all(
+      [epoch, epoch + 1].map(async (fetchEpoch) => {
+        if (this.proposersByEpoch.has(fetchEpoch)) {
+          return;
+        }
+        try {
+          await this.fetchProposers(fetchEpoch);
+        } catch (e) {
+          this.logger.warn("Failed to prefetch proposer duties", {epoch: fetchEpoch}, e as Error);
+        }
+      })
+    );
+  }
 
   /** Returns null for slots outside of the current and next epoch */
   async getProposer(slot: Slot): Promise<routes.validator.ProposerDuty | null> {
@@ -54,7 +75,16 @@ export class ProposerDutiesTracker {
     });
   }
 
-  private async fetchProposers(epoch: Epoch): Promise<EpochProposers> {
+  private fetchProposers(epoch: Epoch): Promise<EpochProposers> {
+    let fetch = this.fetchesByEpoch.get(epoch);
+    if (fetch === undefined) {
+      fetch = this.fetchAndCacheProposers(epoch).finally(() => this.fetchesByEpoch.delete(epoch));
+      this.fetchesByEpoch.set(epoch, fetch);
+    }
+    return fetch;
+  }
+
+  private async fetchAndCacheProposers(epoch: Epoch): Promise<EpochProposers> {
     const res = await this.api.validator.getProposerDutiesV2({epoch});
     const proposers: EpochProposers = {
       dependentRoot: res.meta().dependentRoot,

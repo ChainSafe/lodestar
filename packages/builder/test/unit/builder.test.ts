@@ -6,6 +6,7 @@ import {SecretKey} from "@lodestar/native/blst";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ErrorAborted, defer, toRootHex} from "@lodestar/utils";
+import {BuilderApi} from "../../src/api/impl.js";
 import {Builder, BuilderModules} from "../../src/builder.js";
 import {BlockObserver, ObservedBlock} from "../../src/services/blockObserver.js";
 import {BuilderSigner} from "../../src/services/builderSigner.js";
@@ -209,6 +210,26 @@ describe("Builder", () => {
       slot: 0,
       signedBid: block.message.body.signedExecutionPayloadBid,
     });
+  });
+
+  it("prefetches proposer duties on epoch ticks if the builder API is served", async () => {
+    vi.spyOn(modules.builderStatusTracker, "poll").mockResolvedValue();
+    const prefetch = vi.spyOn(modules.proposerDutiesTracker, "prefetch").mockResolvedValue();
+    new Builder({...modules, builderApi: {} as BuilderApi});
+
+    await clock.tickEpochFns(2, controller.signal);
+
+    expect(prefetch).toHaveBeenCalledExactlyOnceWith(2);
+  });
+
+  it("does not prefetch proposer duties if the builder API is not served", async () => {
+    vi.spyOn(modules.builderStatusTracker, "poll").mockResolvedValue();
+    const prefetch = vi.spyOn(modules.proposerDutiesTracker, "prefetch").mockResolvedValue();
+    new Builder(modules);
+
+    await clock.tickEpochFns(2, controller.signal);
+
+    expect(prefetch).not.toHaveBeenCalled();
   });
 
   it("tracks announced heads", () => {

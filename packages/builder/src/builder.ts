@@ -132,6 +132,10 @@ export class Builder {
     this.blockObserver.runOnBlock((block) => this.revealer.onBlock(block));
     this.clock.runEverySlot(async (slot) => this.onSlot(slot));
     this.clock.runEveryEpoch((epoch) => this.builderStatusTracker.poll(epoch));
+    if (builderApi !== null) {
+      // Requests of proposers must not have to wait for their duties to be fetched
+      this.clock.runEveryEpoch((epoch) => this.proposerDutiesTracker.prefetch(epoch));
+    }
     this.clock.start(this.controller.signal);
     this.subscribeToEvents(opts.api);
 

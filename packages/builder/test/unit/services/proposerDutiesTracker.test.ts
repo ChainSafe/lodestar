@@ -68,6 +68,51 @@ describe("ProposerDutiesTracker", () => {
     expect(api.validator.getProposerDutiesV2).not.toHaveBeenCalled();
   });
 
+  it("fetches the duties of an epoch once for concurrent requests", async () => {
+    const proposers = await Promise.all([tracker.getProposer(1), tracker.getProposer(2), tracker.getProposer(3)]);
+
+    expect(proposers.map((proposer) => proposer?.validatorIndex)).toEqual([1, 2, 3]);
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledExactlyOnceWith({epoch: 0});
+  });
+
+  it("fetches the duties again after a failed fetch", async () => {
+    api.validator.getProposerDutiesV2.mockRejectedValueOnce(new Error("beacon node unavailable"));
+
+    await expect(tracker.getProposer(1)).rejects.toThrow("beacon node unavailable");
+    expect((await tracker.getProposer(1))?.validatorIndex).toBe(1);
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(2);
+  });
+
+  it("prefetches the duties of an epoch and the one after it", async () => {
+    await tracker.prefetch(0);
+
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(2);
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledWith({epoch: 0});
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledWith({epoch: 1});
+
+    expect((await tracker.getProposer(3))?.validatorIndex).toBe(3);
+    expect((await tracker.getProposer(SLOTS_PER_EPOCH))?.validatorIndex).toBe(SLOTS_PER_EPOCH);
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(2);
+  });
+
+  it("only prefetches the duties that are not cached", async () => {
+    await tracker.prefetch(0);
+    clock.currentSlot = SLOTS_PER_EPOCH;
+
+    await tracker.prefetch(1);
+
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(3);
+    expect(api.validator.getProposerDutiesV2).toHaveBeenLastCalledWith({epoch: 2});
+  });
+
+  it("does not fail if the duties cannot be prefetched", async () => {
+    api.validator.getProposerDutiesV2.mockRejectedValue(new Error("beacon node unavailable"));
+
+    await tracker.prefetch(0);
+
+    expect(logger.warn).toHaveBeenCalledTimes(2);
+  });
+
   it("fetches the duties of an epoch once", async () => {
     await tracker.getProposer(1);
     await tracker.getProposer(2);
