@@ -33,6 +33,8 @@ describe("BidPublisher", () => {
     expect(ledger.recordWin({...bidIdentity(bid), signedBidRoot}, toRootHex(Buffer.alloc(32, 8)))?.blockHash).toBe(
       blockHash
     );
+    const {slot, parentBlockHash, parentBlockRoot} = bidIdentity(bid);
+    expect(ledger.getSignedBid(slot, parentBlockHash, parentBlockRoot)).toBe(signedBid);
   });
 
   it("signs all Heze bid fields under the Heze fork", async () => {

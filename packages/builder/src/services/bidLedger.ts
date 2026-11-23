@@ -1,21 +1,23 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import type {Epoch, RootHex, Slot} from "@lodestar/types";
-import {LodestarError} from "@lodestar/utils";
+import type {Epoch, RootHex, Slot, gloas} from "@lodestar/types";
+import {LodestarError, toRootHex} from "@lodestar/utils";
 
 export type SubmittedBid = {
+  signedBid: gloas.SignedExecutionPayloadBid;
+  signedBidRoot: RootHex;
+};
+
+export type BidIdentity = {
   slot: Slot;
   parentBlockHash: RootHex;
   parentBlockRoot: RootHex;
   blockHash: RootHex;
-  valueGwei: number;
-  signedBidRoot: RootHex;
 };
 
-export type BidIdentity = Pick<SubmittedBid, "slot" | "parentBlockHash" | "parentBlockRoot" | "blockHash">;
-
-export type BidLedgerRecord = SubmittedBid & {
-  wonBlockRoots: RootHex[];
-};
+export type BidLedgerRecord = SubmittedBid &
+  BidIdentity & {
+    wonBlockRoots: RootHex[];
+  };
 
 type RevealedPayload = {
   slot: Slot;
@@ -25,6 +27,10 @@ type RevealedPayload = {
 };
 
 type MutableBidLedgerRecord = SubmittedBid & {
+  /** Derived from the signed bid when it is recorded */
+  identity: BidIdentity;
+  /** Value of the signed bid when it is recorded, later changes to the signed bid do not affect the liability */
+  valueGwei: number;
   wonBlockRoots: Set<RootHex>;
   paymentSettled: boolean;
 };
@@ -85,7 +91,7 @@ export class BidLedger {
     slot,
     parentBlockHash,
     parentBlockRoot,
-  }: Pick<SubmittedBid, "slot" | "parentBlockHash" | "parentBlockRoot">): void {
+  }: Pick<BidIdentity, "slot" | "parentBlockHash" | "parentBlockRoot">): void {
     if (slot < this.pruneCutoffSlot) {
       throw new BidLedgerError({code: BidLedgerErrorCode.BID_TOO_OLD, slot, pruneCutoffSlot: this.pruneCutoffSlot});
     }
@@ -97,30 +103,49 @@ export class BidLedger {
     }
   }
 
-  recordBid(bid: SubmittedBid): BidLedgerRecord {
-    if (!Number.isSafeInteger(bid.valueGwei) || bid.valueGwei < 0) {
+  recordBid({signedBid, signedBidRoot}: SubmittedBid): BidLedgerRecord {
+    const bid = signedBid.message;
+    const valueGwei = bid.value;
+    if (!Number.isSafeInteger(valueGwei) || valueGwei < 0) {
       throw new BidLedgerError(
-        {code: BidLedgerErrorCode.INVALID_BID_VALUE, valueGwei: bid.valueGwei},
-        `Invalid bid value valueGwei=${bid.valueGwei}`
+        {code: BidLedgerErrorCode.INVALID_BID_VALUE, valueGwei},
+        `Invalid bid value valueGwei=${valueGwei}`
       );
     }
 
-    this.assertCanRecordBid(bid);
-    let bidsForSlot = this.bidsBySlot.get(bid.slot);
+    const identity: BidIdentity = {
+      slot: bid.slot,
+      parentBlockHash: toRootHex(bid.parentBlockHash),
+      parentBlockRoot: toRootHex(bid.parentBlockRoot),
+      blockHash: toRootHex(bid.blockHash),
+    };
+    this.assertCanRecordBid(identity);
+    let bidsForSlot = this.bidsBySlot.get(identity.slot);
     if (bidsForSlot === undefined) {
       bidsForSlot = new Map();
-      this.bidsBySlot.set(bid.slot, bidsForSlot);
+      this.bidsBySlot.set(identity.slot, bidsForSlot);
     }
 
-    const key = tupleKey(bid.parentBlockHash, bid.parentBlockRoot);
-    const record = {...bid, wonBlockRoots: new Set<RootHex>(), paymentSettled: false};
+    const key = tupleKey(identity.parentBlockHash, identity.parentBlockRoot);
+    const record = {
+      signedBid,
+      signedBidRoot,
+      identity,
+      valueGwei,
+      wonBlockRoots: new Set<RootHex>(),
+      paymentSettled: false,
+    };
     bidsForSlot.set(key, record);
     return toRecord(record);
   }
 
   recordWin(identity: BidIdentity & Pick<SubmittedBid, "signedBidRoot">, blockRoot: RootHex): BidLedgerRecord | null {
     const record = this.getBid(identity.slot, identity.parentBlockHash, identity.parentBlockRoot);
-    if (record === null || record.blockHash !== identity.blockHash || record.signedBidRoot !== identity.signedBidRoot) {
+    if (
+      record === null ||
+      record.identity.blockHash !== identity.blockHash ||
+      record.signedBidRoot !== identity.signedBidRoot
+    ) {
       return null;
     }
 
@@ -130,13 +155,13 @@ export class BidLedger {
 
   hasWon(identity: BidIdentity, blockRoot: RootHex): boolean {
     const record = this.getBid(identity.slot, identity.parentBlockHash, identity.parentBlockRoot);
-    return record !== null && record.blockHash === identity.blockHash && record.wonBlockRoots.has(blockRoot);
+    return record !== null && record.identity.blockHash === identity.blockHash && record.wonBlockRoots.has(blockRoot);
   }
 
   /** Release a winning bid liability only after its payment is known to be reflected in Builder balance. */
   recordPaymentSettled(identity: BidIdentity): BidLedgerRecord | null {
     const record = this.getBid(identity.slot, identity.parentBlockHash, identity.parentBlockRoot);
-    if (record === null || record.blockHash !== identity.blockHash || record.wonBlockRoots.size === 0) {
+    if (record === null || record.identity.blockHash !== identity.blockHash || record.wonBlockRoots.size === 0) {
       return null;
     }
 
@@ -225,6 +250,11 @@ export class BidLedger {
     return total;
   }
 
+  /** Returns the signed bid recorded for the slot and parent, null if no bid was recorded for it */
+  getSignedBid(slot: Slot, parentBlockHash: RootHex, parentBlockRoot: RootHex): gloas.SignedExecutionPayloadBid | null {
+    return this.getBid(slot, parentBlockHash, parentBlockRoot)?.signedBid ?? null;
+  }
+
   getBidsForSlot(slot: Slot): BidLedgerRecord[] {
     return Array.from(this.bidsBySlot.get(slot)?.values() ?? [], toRecord);
   }
@@ -268,11 +298,8 @@ function tupleKey(parentBlockHash: RootHex, parentBlockRoot: RootHex): string {
 
 function toRecord(record: MutableBidLedgerRecord): BidLedgerRecord {
   return {
-    slot: record.slot,
-    parentBlockHash: record.parentBlockHash,
-    parentBlockRoot: record.parentBlockRoot,
-    blockHash: record.blockHash,
-    valueGwei: record.valueGwei,
+    ...record.identity,
+    signedBid: record.signedBid,
     signedBidRoot: record.signedBidRoot,
     wonBlockRoots: Array.from(record.wonBlockRoots),
   };
