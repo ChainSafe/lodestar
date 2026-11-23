@@ -99,7 +99,7 @@
   },
   "devDependencies": {
     "@chainsafe/benchmark": "2.1.0",
-    "@chainsafe/ssz": "^1.9.0",
+    "@chainsafe/ssz": "^1.9.1",
     "@libp2p/crypto": "5.1.23",
     "@libp2p/peer-id": "6.0.15",
     "@multiformats/multiaddr": "13.0.3"

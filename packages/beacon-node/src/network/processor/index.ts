@@ -1,7 +1,7 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {routes} from "@lodestar/api";
 import {ForkSeq, NUMBER_OF_COLUMNS, isForkPostGloas} from "@lodestar/params";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
 import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../../chain/blocks/blockInput/types.js";
@@ -953,8 +953,13 @@ export class NetworkProcessor {
       this.bufferedRootsBySlot.delete(slot);
     }
 
+    // A slot's search budget lives as long as gossip accepts messages for it, a pruned budget would start over
+    const minSearchedSlot = Math.min(
+      clockSlot - DEFAULT_EARLIEST_PERMISSIBLE_SLOT_DISTANCE,
+      computeStartSlotAtEpoch(computeEpochAtSlot(clockSlot) - 1)
+    );
     for (const slot of this.searchedRootsBySlot.keys()) {
-      if (slot <= minSlot) this.searchedRootsBySlot.delete(slot);
+      if (slot < minSearchedSlot) this.searchedRootsBySlot.delete(slot);
     }
 
     for (const [peer, slot] of this.fatalPeers) {
