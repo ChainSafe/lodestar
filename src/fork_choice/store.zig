@@ -1429,7 +1429,8 @@ pub const Store = struct {
     /// `from_block_hash` name and marks payloads `invalid` down to `latest_valid_hash`,
     /// exclusive, in every block carrying them, as equivocating blocks can share a payload;
     /// a zero hash invalidates through the merge block. Descendants are derived invalid by
-    /// `getHead`.
+    /// `getHead`. A pair naming no node, such as a Gloas `.full` node before its payload
+    /// arrived, is `error.UnknownBlock`.
     ///
     /// A verdict never flips a payload the engine already resolved and never reaches the
     /// payloads the justified block stands on. A null or unknown hash leaves only the claim
@@ -1438,13 +1439,9 @@ pub const Store = struct {
     /// verdict is dropped.
     pub fn onPayloadInvalid(self: *Store, from_root: Root, from_block_hash: Root, latest_valid_hash: ?Root, judged: InvalidJudged) Error!VerdictResult {
         const from = self.blockIndex(from_root) orelse return error.UnknownBlock;
+        const start = self.nodeByPayloadHash(from, &from_block_hash) orelse return error.UnknownBlock;
         const hashes = self.blocks.items(.payload_block_hash);
         const statuses = self.blocks.items(.execution_status);
-        const forks = self.blocks.items(.fork);
-        const start: ForkChoiceNode = if (forks[from].lt(.gloas))
-            pendingNode(from)
-        else
-            .{ .block = from, .payload_status = if (std.mem.eql(u8, &hashes[from], &from_block_hash)) .full else .empty };
         switch (self.payloadChainStatus(start)) {
             .syncing => {},
             .invalid => return .already_applied,
@@ -1471,7 +1468,7 @@ pub const Store = struct {
                 break;
             };
             const conflict = statuses[block] != .syncing;
-            const protected = if (justified) |j| self.payloadProtected(&hashes[block], j) else false;
+            const protected = if (justified) |j| self.payloadProtected(block, j) else false;
             if (!conflict and !protected) continue;
             if (judged == .child_payload and conflict) return .contradiction;
             count = if (judged == .from_block) @min(i, 1) else i;
@@ -1495,14 +1492,30 @@ pub const Store = struct {
         return .applied;
     }
 
-    /// Whether a block carrying `hash` is the justified block or below it. The INVALID write
-    /// covers every carrier, so one protected carrier protects the payload.
-    fn payloadProtected(self: *const Store, hash: *const Root, justified: BlockIndex) bool {
-        const hashes = self.blocks.items(.payload_block_hash);
+    /// The node of `block` whose payload is `hash`, as proto-array's
+    /// `getNodeIndexByRootAndBlockHash`: a Gloas `.full` node exists once its payload arrived.
+    fn nodeByPayloadHash(self: *const Store, block: BlockIndex, hash: *const Root) ?ForkChoiceNode {
+        const own = std.mem.eql(u8, &self.blocks.items(.payload_block_hash)[block], hash);
+        if (self.blocks.items(.fork)[block].lt(.gloas)) return if (own) pendingNode(block) else null;
+        if (own and self.blocks.items(.payload_verified)[block]) return .{ .block = block, .payload_status = .full };
+        if (std.mem.eql(u8, &self.blocks.items(.bid_parent_block_hash)[block], hash)) return .{ .block = block, .payload_status = .empty };
+        return null;
+    }
+
+    /// Whether invalidating the payload of `block`, on the walk, would cross the justified
+    /// block: proto-array's index bound, or another block carrying the payload is one the
+    /// justified block stands on, as the INVALID write covers every carrier.
+    fn payloadProtected(self: *const Store, block: BlockIndex, justified: BlockIndex) bool {
         const forks = self.blocks.items(.fork);
-        for (hashes[0 .. justified + 1], forks[0 .. justified + 1], 0..) |*carrier, fork, block| {
-            if (!std.mem.eql(u8, carrier, hash)) continue;
-            if (block < justified or fork.lt(.gloas)) return true;
+        if (block < justified or (block == justified and forks[block].lt(.gloas))) return true;
+        const hashes = self.blocks.items(.payload_block_hash);
+        for (hashes[0 .. justified + 1], 0..) |*carrier, c| {
+            if (!std.mem.eql(u8, carrier, &hashes[block])) continue;
+            var chain = self.payloadChain(pendingNode(justified));
+            while (chain.next()) |on_chain| {
+                if (on_chain == c) return true;
+                if (on_chain < c) break;
+            }
         }
         return false;
     }

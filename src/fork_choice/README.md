@@ -104,7 +104,8 @@ to exit there and proto-array does the same. Two entry points change the facts:
   `onExecutionPayloadEnvelope` mark every `syncing` payload below the node `valid`,
   stopping at the first `valid` or `pre_merge` one.
 - `onPayloadInvalid(from_root, from_block_hash, latest_valid_hash, judged)` is the
-  `validateLatestHash` of proto-array: the walk starts at the from node and marks
+  `validateLatestHash` of proto-array: the walk starts at the from node, which
+  `from_block_hash` must name as proto-array's `getNodeIndexByRootAndBlockHash` does, and marks
   payloads `invalid` down to the latest valid hash, exclusive. `judged` names the
   payload the engine rejected: the from node's own (`.from_block`, a `forkchoiceUpdated`
   head) or a child not in the store (`.child_payload`, a `newPayload` block or
