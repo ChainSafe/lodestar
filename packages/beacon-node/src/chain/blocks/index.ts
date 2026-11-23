@@ -280,7 +280,6 @@ async function importPayloadEnvelopesOfKnownBlocks(
     });
     await importExecutionPayload.call(this, payloadInputs[i], dataAvailabilityStatuses[i], {validSignature: false});
   }
-  // the new FULL variants are not seen by the head cached from the last block import
   this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
 
   return result;
