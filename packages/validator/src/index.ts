@@ -14,6 +14,7 @@ export {MAX_BUILDER_BOOST_FACTOR, SignerType, ValidatorStore, defaultOptions} fr
 export {
   INTEROP_VRF_POPULATED_DEPTH,
   XmssSigner,
+  type XmssTreeSource,
   type XmssTreeStore,
   interopXmssSigner,
 } from "./services/xmssSigner.js";

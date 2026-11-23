@@ -63,6 +63,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     importKeystoresPassword?: string;
     disableKeystoresThreadPool?: boolean;
     vrfStateUrl?: string;
+    xmssCacheUrl?: string;
 
     "http.requestWireFormat"?: string;
     "http.responseWireFormat"?: string;
@@ -355,6 +356,12 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   vrfStateUrl: {
     description:
       "On a network that starts at the pq fork: a URL or a path of precomputed states of full VRF trees, 1028 bytes per validator. A validator hashes only the first 2^20 slots of its tree and takes the rest from its state. Without it, the rest of a tree is zero, which a genesis with full trees does not accept",
+    type: "string",
+  },
+
+  xmssCacheUrl: {
+    description:
+      "On a network that starts at the pq fork: a URL or a path of precomputed leanXMSS trees of the pq devnet's keys, 14696 bytes per key. A validator loads its trees from it in place of building them, which takes seconds a key, and keeps them in its cache directory after. Only the record of each key is fetched",
     type: "string",
   },
 

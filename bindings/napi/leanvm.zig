@@ -233,6 +233,13 @@ pub fn setup() !js.Value {
     return js.spawn(SetupTask, .{}, "leanvm.setup");
 }
 
+/// The second half of the public key of `seed`'s key. Throws on a wrong length.
+pub fn publicParameter(seed: js.Uint8Array) !js.Uint8Array {
+    try ensureAvailable();
+    const key_seed = try fixed(xmss.seed_len, seed, error.InvalidSeedLength);
+    return js.Uint8Array.from(&try xmss.publicParameter(&key_seed));
+}
+
 /// Whether `signature` is `public_key`'s on `message`. Throws on a wrong length.
 pub fn verify(public_key: js.Uint8Array, message: js.Uint8Array, signature: js.Uint8Array) !js.Boolean {
     try ensureAvailable();

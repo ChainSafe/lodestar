@@ -18,6 +18,7 @@ test "sign, aggregate, verify" {
     defer second.deinit();
     try std.testing.expectEqual(@as(xmss.Seed, @splat(1)), try first.seed());
     try first.prepare(7);
+    try std.testing.expectEqualSlices(u8, (try first.publicKey())[16..], &try xmss.publicParameter(&@splat(1)));
 
     const message_a: xmss.Message = @splat(0xaa);
     const message_b: xmss.Message = @splat(0xbb);

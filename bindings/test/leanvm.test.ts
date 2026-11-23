@@ -10,6 +10,7 @@ import {
   aggregateXmssSignatures,
   verifyXmssAggregate,
   verifyXmssSignature,
+  xmssPublicParameter,
 } from "../src/leanvm.js";
 
 const LOG_INV_RATE = 2;
@@ -53,6 +54,7 @@ describe.skipIf(!LEANVM_AVAILABLE)("leanvm", () => {
 
   it("loads a key from its tree cache", async () => {
     const cache = first.toCache();
+    expect(xmssPublicParameter(first.toSeed())).toEqual(first.toPublicKey().subarray(16));
     const loaded = await XmssSecretKey.fromCache(first.toSeed(), first.toPublicKey(), cache);
     expect(await loaded.sign(MESSAGE_A, 7)).toEqual(signatures[0]);
     await expect(XmssSecretKey.fromCache(first.toSeed(), second.toPublicKey(), cache)).rejects.toThrow("InvalidCache");

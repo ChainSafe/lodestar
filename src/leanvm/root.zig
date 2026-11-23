@@ -89,6 +89,7 @@ const c = struct {
     ) Status;
     /// Free `out_bytes` with `leanvm_bytes_free`.
     extern fn leanvm_xmss_secret_key_cache(key: *const xmss.SecretKey, out_bytes: *[*]u8, out_len: *usize) void;
+    extern fn leanvm_xmss_public_parameter(seed: *const xmss.Seed, out_parameter: *xmss.PublicParameter) void;
     extern fn leanvm_xmss_secret_key_free(key: *xmss.SecretKey) void;
     extern fn leanvm_xmss_secret_key_seed(key: *const xmss.SecretKey, out_seed: *xmss.Seed) void;
     extern fn leanvm_xmss_secret_key_public_key(key: *const xmss.SecretKey, out_public_key: *xmss.PublicKey) void;
@@ -191,13 +192,15 @@ pub const xmss = struct {
     pub const public_key_size = 32;
     pub const signature_size = 2404;
     /// Bottom trees a key keeps, the ones it used last.
-    pub const cached_bottom_trees = 8;
+    pub const cached_bottom_trees = 4;
 
     /// All of a key's secret material.
     pub const Seed = [seed_len]u8;
     pub const Message = [message_len]u8;
     pub const PublicKey = [public_key_size]u8;
     pub const Signature = [signature_size]u8;
+    /// The second half of a public key, which a seed gives without building a tree.
+    pub const PublicParameter = [public_key_size / 2]u8;
     /// Its top 16 bits name a bottom tree, its low 16 bits the leaf in it.
     pub const LeafIndex = u32;
 
@@ -286,6 +289,13 @@ pub const xmss = struct {
             return out;
         }
     };
+
+    pub fn publicParameter(key_seed: *const Seed) Error!PublicParameter {
+        if (!available) return error.Unavailable;
+        var out: PublicParameter = undefined;
+        c.leanvm_xmss_public_parameter(key_seed, &out);
+        return out;
+    }
 
     /// Fails with `error.InvalidSignature`.
     pub fn verify(public_key: *const PublicKey, message: *const Message, signature: *const Signature) Error!void {

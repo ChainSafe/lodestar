@@ -48,7 +48,7 @@ export declare class XmssSecretKey {
   toPublicKey(): Uint8Array;
   /**
    * Builds the bottom tree `leafIndex` is in: the 2^16 leaf indices that share its top 16 bits.
-   * The first `sign` in a bottom tree otherwise pays for it. A key keeps the 8 bottom trees it
+   * The first `sign` in a bottom tree otherwise pays for it. A key keeps the 4 bottom trees it
    * used last.
    */
   prepare(leafIndex: number): Promise<void>;
@@ -60,6 +60,12 @@ export declare class XmssSecretKey {
    */
   sign(message: Uint8Array, leafIndex: number): Promise<Uint8Array>;
 }
+
+/**
+ * The last 16 bytes of the public key of `seed`'s key, which take no tree to derive: enough to find
+ * the public key in a list. Throws when `seed` has the wrong length.
+ */
+export declare function xmssPublicParameter(seed: Uint8Array): Uint8Array;
 
 /** Whether `signature` is `publicKey`'s on `message`. Throws when an argument has the wrong length. */
 export declare function verifyXmssSignature(publicKey: Uint8Array, message: Uint8Array, signature: Uint8Array): boolean;

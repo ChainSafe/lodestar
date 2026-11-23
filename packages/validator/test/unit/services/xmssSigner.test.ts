@@ -25,17 +25,30 @@ describe("XmssSigner", () => {
       },
     };
 
-    const built = await XmssSigner.fromBlsSecretKey(secretKey, undefined, store);
+    const built = await XmssSigner.fromBlsSecretKey(secretKey, {treeStore: store});
     await built.prepare(0);
     await built.prepare(1);
     expect(writes).toBe(1);
 
-    const loaded = await XmssSigner.fromBlsSecretKey(secretKey, undefined, store);
+    const loaded = await XmssSigner.fromBlsSecretKey(secretKey, {treeStore: store});
     expect(loaded.publicKey).toEqual(built.publicKey);
     expect(await loaded.sign(signingRoot, 7)).toEqual(await built.sign(signingRoot, 7));
 
-    // Trees of another key are not loaded
-    const other = await XmssSigner.fromBlsSecretKey(new Uint8Array(32).fill(3), undefined, store);
+    // What the store holds is not loaded unless this key wrote it
+    const other = await XmssSigner.fromBlsSecretKey(new Uint8Array(32).fill(3), {treeStore: store});
     expect(other.publicKey).not.toEqual(built.publicKey);
+
+    // Trees from a source load against the public key that comes with them
+    const trees = (stored as unknown as Uint8Array).subarray(32, -32);
+    let asked = 0;
+    const sourced = await XmssSigner.fromBlsSecretKey(secretKey, {
+      treeSource: async (publicParameter) => {
+        asked++;
+        expect(publicParameter).toEqual(built.publicKey.subarray(16));
+        return {publicKey: built.publicKey, trees};
+      },
+    });
+    expect(asked).toBe(1);
+    expect(await sourced.sign(signingRoot, 7)).toEqual(await built.sign(signingRoot, 7));
   }, 120_000);
 });

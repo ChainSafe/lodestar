@@ -28,6 +28,7 @@ for (const target of [XmssSecretKey, XmssSecretKey.prototype]) {
 
 XmssSecretKey.generate = async () => XmssSecretKey.fromSeed(crypto.getRandomValues(new Uint8Array(XMSS_SEED_SIZE)));
 
+export const xmssPublicParameter = leanvm.publicParameter;
 export const verifyXmssSignature = leanvm.verify;
 
 /** @type {typeof import("./leanvm.d.ts").setupXmssAggregation} */

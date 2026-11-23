@@ -24,6 +24,7 @@
     "lib",
     "bin",
     ".git-data.json",
+    "pq-devnet-0-xmss-pubkeys.bin",
     "!**/*.tsbuildinfo"
   ],
   "bin": {

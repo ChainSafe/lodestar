@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "aggregation"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "claims",
  "fiat_shamir_prover",
@@ -25,7 +25,7 @@ dependencies = [
 [[package]]
 name = "claims"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "lean_sphincs",
  "lean_xmss",
@@ -34,7 +34,7 @@ dependencies = [
 [[package]]
 name = "experimental_keccak_gkr"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "experimental_parallel",
  "experimental_pcs",
@@ -47,7 +47,7 @@ dependencies = [
 [[package]]
 name = "experimental_lean_vm_core"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "experimental_keccak_gkr",
  "experimental_parallel",
@@ -62,7 +62,7 @@ dependencies = [
 [[package]]
 name = "experimental_parallel"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "libc",
 ]
@@ -70,7 +70,7 @@ dependencies = [
 [[package]]
 name = "experimental_pcs"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "experimental_parallel",
  "experimental_primitives",
@@ -82,7 +82,7 @@ dependencies = [
 [[package]]
 name = "experimental_primitives"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "experimental_parallel",
  "fiat_shamir_prover",
@@ -92,7 +92,7 @@ dependencies = [
 [[package]]
 name = "fiat_shamir_prover"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "keccak256",
  "verifier",
@@ -101,7 +101,7 @@ dependencies = [
 [[package]]
 name = "isa"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "verifier",
 ]
@@ -109,12 +109,12 @@ dependencies = [
 [[package]]
 name = "keccak256"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 
 [[package]]
 name = "lean_da"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "keccak256",
  "stable_pcs",
@@ -126,7 +126,7 @@ dependencies = [
 [[package]]
 name = "lean_sphincs"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "keccak256",
 ]
@@ -134,7 +134,7 @@ dependencies = [
 [[package]]
 name = "lean_vm"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "aggregation",
  "claims",
@@ -150,7 +150,7 @@ dependencies = [
 [[package]]
 name = "lean_xmss"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "keccak256",
 ]
@@ -166,6 +166,7 @@ name = "lodestar-leanvm"
 version = "0.0.0"
 dependencies = [
  "lean_vm",
+ "lean_xmss",
 ]
 
 [[package]]
@@ -201,7 +202,7 @@ dependencies = [
 [[package]]
 name = "stable_keccak_gkr"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "fiat_shamir_prover",
  "stable_parallel",
@@ -214,7 +215,7 @@ dependencies = [
 [[package]]
 name = "stable_lean_vm_core"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "fiat_shamir_prover",
  "isa",
@@ -229,12 +230,12 @@ dependencies = [
 [[package]]
 name = "stable_parallel"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 
 [[package]]
 name = "stable_pcs"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "fiat_shamir_prover",
  "stable_parallel",
@@ -246,7 +247,7 @@ dependencies = [
 [[package]]
 name = "stable_primitives"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "fiat_shamir_prover",
  "isa",
@@ -305,12 +306,12 @@ checksum = "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563"
 [[package]]
 name = "verifier"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 
 [[package]]
 name = "zkdsl_compiler"
 version = "0.1.0"
-source = "git+https://github.com/leanEthereum/leanVM?rev=ed054a05fe55df30c253e4b76222d024e95a3a9d#ed054a05fe55df30c253e4b76222d024e95a3a9d"
+source = "git+https://github.com/leanEthereum/leanVM?rev=c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764#c5ee9d239e42d0bc8113eb4aee3e2cae5faf1764"
 dependencies = [
  "isa",
  "keccak256",

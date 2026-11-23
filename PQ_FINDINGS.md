@@ -1,6 +1,6 @@
 # PQ fork findings
 
-Working notes from implementing the consensus-specs `pq` feature (commit `2f43bc0`) in Lodestar with leanVM (`ed054a05f`, experimental prover) as the prover. The leanXMSS and aggregation measurements were taken at leanVM `1e674918a`. Three kinds of finding: spec deficiencies, implementation difficulties, and measurements.
+Working notes from implementing the consensus-specs `pq` feature (commit `2f43bc0`) in Lodestar with leanVM (`c5ee9d239`, experimental prover) as the prover. The leanXMSS and aggregation measurements were taken at leanVM `1e674918a`. Three kinds of finding: spec deficiencies, implementation difficulties, and measurements.
 
 Measurements are from one machine, an AMD Threadripper 1950X (16 cores, 32 threads, no AVX-512), with `zig build build-exe:bench_pq_signer -Doptimize=ReleaseFast`. They are single runs.
 
@@ -26,7 +26,7 @@ Measurements are from one machine, an AMD Threadripper 1950X (16 cores, 32 threa
 18. **A voluntary exit needs an execution transaction.** A validator can no longer exit by gossip: somebody pays gas on the execution layer. The `voluntary_exit` topic, the operation pool and `POST /eth/v1/beacon/pool/voluntary_exits` have no PQ form, and this client refuses the endpoint from PQ on. Nothing replaces them for a validator whose operator has only a beacon node.
 19. **Leaves the signer picks need an allocator that outlives the key's host.** A preregistration and an exit are signed at "any reserved leaf", and a bid at any of the `2^30` bid leaves, each used at most once. The record of used leaves is one more thing that must survive restarts and move with the key, beside what each attestation and slot leaf signed. Nothing here signs at these leaves yet. A verifier reads a bid's leaf from the signature with `GetLeafIndex`, which a leanXMSS signature carries in its first 4 bytes.
 20. **One aggregate per committee is a BLS limit the spec kept.** `compute_on_chain_aggregate` takes one network aggregate per committee and `MergeProofs` concatenates statement lists, so two aggregates of one committee that overlap cannot become the one statement `process_stark` checks, and their attesters cannot all be included. A recursive proof has no such limit: leanVM merges overlapping children and publishes the union of their claims. The `stark` interface should define a merge as that union, and the validator guide should let a proposer combine a committee's aggregates and the single attestations none of them covers.
-21. **A proof is tied to the prover's build, and nothing names it.** A leanVM proof binds the bytecode of the aggregation guest, so a change to the guest or to its compiler changes which proofs verify. Proofs made at leanVM `283686575` do not verify at `ed054a05f` and cannot be merged there, though signatures are byte for byte the same. Every client on a network must run the same guest, so the spec has to pin it, and changing it is a fork.
+21. **A proof is tied to the prover's build, and nothing names it.** A leanVM proof binds the bytecode of the aggregation guest, so a change to the guest or to its compiler changes which proofs verify. Proofs made at leanVM `283686575` do not verify at `ed054a05f` or later and cannot be merged there, though signatures are byte for byte the same. Every client on a network must run the same guest, so the spec has to pin it, and changing it is a fork.
 
 ## Implementation difficulties
 
@@ -65,11 +65,11 @@ Aggregation at `log_inv_rate = 2`:
 
 Merging two aggregates into one takes 0.4 to 0.6 s whatever their size, more than proving 64 signatures from scratch. Through the Node addon 1,400 signatures take 2.9 s. leanVM's own CLI proves them in 2.6 s on this machine, and a 16-to-1 merge of such aggregates in 2.9 s.
 
-Memory, before leanVM kept one level of each tree: about 2 MiB per loaded key, and 2 MiB more once it has signed. A key now keeps 16 KiB a tree. A VRF tree keeps 6 MiB, of which 2 MiB is needed between proofs.
+Memory, before leanVM kept one level of each tree: about 2 MiB per loaded key, and 2 MiB more once it has signed. A key now keeps 4 KiB a tree. A VRF tree keeps 6 MiB, of which 2 MiB is needed between proofs.
 
 On the devnet below (8 validators, one per committee, minimal preset, node and validator client on this machine) a block was published a median of 0.76 s into its slot and at most 1.5 s, over 47 blocks. That includes proving the block's attestations. It finalized epoch 3 in 47 slots, with two blocks orphaned by the slow signature described above.
 
-A validator client keeps each key's trees in its cache directory (52 KiB a key: the top tree and two bottom trees) and loads them at the next start. For 32 keys, on libuv's four threads: 44 s to derive the keys and 89 s to build their bottom trees without the files, 2.2 s and 0.01 s with them. What is left is the VRF trees' first `2^20` leaves.
+A validator client keeps each key's trees in its cache directory (the top tree and two bottom trees) and loads them at the next start. For 32 keys, on libuv's four threads, measured when a tree kept `2^10` nodes: 44 s to derive the keys and 89 s to build their bottom trees without the files, 2.2 s and 0.01 s with them. What is left is the VRF trees' first `2^20` leaves. A first start takes the trees from `--xmssCacheUrl`, the devnet's file of them, 14,696 bytes a key. The file is indexed by the key's place in the mnemonic and the trees are checked against the public key, neither of which a client with only a keystore has before it builds the key, so the client carries the devnet's 10,000 public keys and finds its own by the public parameter, as Lighthouse does. A network that is not the devnet has no such list: the cache needs a trusted source of public keys, which the beacon state could be.
 
 ## Not implemented
 

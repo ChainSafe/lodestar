@@ -21,6 +21,7 @@ import {PersistedKeysBackend} from "../keymanager/persistedKeys.js";
 import {IValidatorCliArgs} from "../options.js";
 import {getAccountPaths} from "../paths.js";
 import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./importExternalKeystores.js";
+import {devnetXmssTreeSource} from "./xmssCache.js";
 
 const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 
@@ -166,6 +167,7 @@ export async function getSignersFromArgs(
 export async function toXmssSigners(
   signers: Signer[],
   vrfStateUrl: string | undefined,
+  xmssCacheUrl: string | undefined,
   treesDir: string,
   logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.error>
 ): Promise<Signer[]> {
@@ -190,6 +192,7 @@ export async function toXmssSigners(
     logger.warn("No vrfStateUrl: VRF trees hold their first 2^20 slots and zeros after, not full trees");
   }
 
+  const treeSource = xmssCacheUrl ? devnetXmssTreeSource(xmssCacheUrl, logger) : undefined;
   fs.mkdirSync(treesDir, {recursive: true});
   logger.info("Deriving leanXMSS keys and VRF trees from keystores", {count: localCount});
   return Promise.all(
@@ -198,11 +201,14 @@ export async function toXmssSigners(
       const secretKey = signer.secretKey.toBytes();
       const treeStore = xmssTreeStore(path.join(treesDir, `${signer.secretKey.toPublicKey().toHex()}.bin`));
       try {
-        return {type: SignerType.Xmss, signer: await XmssSigner.fromBlsSecretKey(secretKey, vrfStates, treeStore)};
+        return {
+          type: SignerType.Xmss,
+          signer: await XmssSigner.fromBlsSecretKey(secretKey, {vrfStates, treeStore, treeSource}),
+        };
       } catch (e) {
         if (!(e as Error).message.includes("NoMatchingState")) throw e;
         // It still attests: only its proposals need the tree
-        const xmssSigner = await XmssSigner.fromBlsSecretKey(secretKey, undefined, treeStore);
+        const xmssSigner = await XmssSigner.fromBlsSecretKey(secretKey, {treeStore, treeSource});
         logger.error("No VRF state for validator: it cannot propose", {pubkey: toPubkeyHex(xmssSigner.publicKey)});
         return {type: SignerType.Xmss, signer: xmssSigner};
       }

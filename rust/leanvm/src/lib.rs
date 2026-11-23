@@ -35,7 +35,7 @@ const _: () = {
     assert!(lean_xmss::MESSAGE_LEN == 32);
     assert!(lean_xmss::PUB_KEY_SIZE == 32);
     assert!(lean_xmss::SIG_SIZE == 2404);
-    assert!(lean_xmss::MAX_CACHED_BOTTOM_TREES == 8);
+    assert!(lean_xmss::MAX_CACHED_BOTTOM_TREES == 4);
     assert!(lean_vm::MAX_RECURSIONS == 16);
     assert!(lean_vm::MIN_LOG_INV_RATE == 1);
     assert!(lean_vm::MAX_LOG_INV_RATE == 4);
@@ -166,6 +166,12 @@ pub unsafe extern "C" fn leanvm_xmss_secret_key_cache(
         out_len.write(bytes.len());
         out_bytes.write(Box::into_raw(bytes).cast());
     }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn leanvm_xmss_public_parameter(seed: *const lean_xmss::SecretKey, out_parameter: *mut [u8; 16]) {
+    use ::lean_xmss::internals::{public_param, scheme_seed};
+    unsafe { out_parameter.write(public_param(&scheme_seed(&*seed))) };
 }
 
 #[unsafe(no_mangle)]
