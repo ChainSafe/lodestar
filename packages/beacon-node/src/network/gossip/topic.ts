@@ -12,7 +12,7 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {TypeSizes} from "@lodestar/reqresp";
-import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
+import {SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {computeMaxGloasDataColumnSidecarSize} from "../../util/sszBytes.js";
 import {NetworkConfig} from "../networkConfig.js";
@@ -168,19 +168,6 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
   const sszType = getGossipSSZType(topic);
   try {
     return sszType.deserialize(serializedData) as SSZTypeOfGossipTopic<T>;
-  } catch (_e) {
-    throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
-  }
-}
-
-/**
- * @deprecated
- * Deserialize a gossip serialized data into an Attestation object.
- * No longer used post-electra. Use `sszDeserializeSingleAttestation` instead
- */
-export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8Array): Attestation {
-  try {
-    return sszTypesFor(fork).Attestation.deserialize(serializedData);
   } catch (_e) {
     throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }

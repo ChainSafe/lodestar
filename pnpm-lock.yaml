@@ -156,8 +156,8 @@ importers:
         specifier: 2.1.0
         version: 2.1.0(encoding@0.1.13)
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
 
   packages/api:
     dependencies:
@@ -165,8 +165,8 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -226,8 +226,8 @@ importers:
         specifier: ^0.5.2
         version: 0.5.2
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -401,8 +401,8 @@ importers:
   packages/builder:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -450,8 +450,8 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -583,8 +583,8 @@ importers:
         specifier: ^1.2.5
         version: 1.2.5
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -598,8 +598,8 @@ importers:
   packages/db:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -638,8 +638,8 @@ importers:
   packages/fork-choice:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -675,8 +675,8 @@ importers:
         version: 4.6.0
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -733,8 +733,8 @@ importers:
         version: 3.0.2
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@libp2p/crypto':
         specifier: ^5.1.25
         version: 5.1.25
@@ -757,8 +757,8 @@ importers:
         specifier: ^0.5.2
         version: 0.5.2
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/types':
         specifier: workspace:^
         version: link:../types
@@ -778,8 +778,8 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -843,8 +843,8 @@ importers:
   packages/types:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -883,8 +883,8 @@ importers:
   packages/validator:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -1264,8 +1264,8 @@ packages:
   '@chainsafe/snappy-wasm@0.5.2':
     resolution: {integrity: sha512-RcjdySH0LuUgCv4tx+FsS3YBbVOc5lIXklWR6HItbriGpEcPSxuHsH8RNw1vqaSDvkA0C18Kl8Tk3kECJnAvUQ==}
 
-  '@chainsafe/ssz@1.9.0':
-    resolution: {integrity: sha512-JU0WnYLtFlajllDBLF779+9OS/R6RVN44thKdxljJeN3ngR+OVL/s/p3Lv6SdgDvfI3RuZHgt6f4SGlBymumHw==}
+  '@chainsafe/ssz@1.9.1':
+    resolution: {integrity: sha512-DFiJbxnuimgnyHAVlHmWX4QgjsALF+Ixzb9kMRnm3SbdZsp+wDDEgXuxiCZr+qx56hOvzGjpT5/xPzGQ7e9evg==}
 
   '@chainsafe/threads@1.11.3':
     resolution: {integrity: sha512-wTIHTOOJ3MMRFtnJJT6KJCuauyv8pgs79m5ipspyPjHdKM9HJnkeZcoo06G3qArx2xMvd6MqNj1TLfnh5iFvaQ==}
@@ -6578,7 +6578,7 @@ snapshots:
 
   '@chainsafe/snappy-wasm@0.5.2': {}
 
-  '@chainsafe/ssz@1.9.0':
+  '@chainsafe/ssz@1.9.1':
     dependencies:
       '@chainsafe/as-sha256': 1.2.5
       '@chainsafe/persistent-merkle-tree': 1.3.1
