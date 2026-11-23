@@ -62,6 +62,7 @@ import {
   VersionMeta,
   VersionType,
 } from "../../utils/metadata.js";
+import {ApiPubkey} from "../../utils/pubkey.js";
 import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
 import {WireFormat} from "../../utils/wireFormat.js";
 
@@ -129,7 +130,7 @@ export type ProduceBlockV4Meta = ValueOf<typeof ProduceBlockV4MetaType> & {
 export const AttesterDutyType = new ContainerType(
   {
     /** The validator's public key, uniquely identifying them */
-    pubkey: ssz.BLSPubkey,
+    pubkey: ApiPubkey,
     /** Index of validator in validator registry */
     validatorIndex: ssz.ValidatorIndex,
     /** Index of the committee */
@@ -142,6 +143,8 @@ export const AttesterDutyType = new ContainerType(
     validatorCommitteeIndex: ssz.UintNum64,
     /** The slot at which the validator must attest */
     slot: ssz.Slot,
+    /** From pq, whether the state names the validator an aggregator of its committee. False before */
+    isAggregator: ssz.Boolean,
   },
   {jsonCase: "eth2"}
 );
@@ -150,19 +153,7 @@ export const ProposerDutyType = new ContainerType(
   {
     slot: ssz.Slot,
     validatorIndex: ssz.ValidatorIndex,
-    pubkey: ssz.BLSPubkey,
-  },
-  {jsonCase: "eth2"}
-);
-
-export const AggregatorDutyType = new ContainerType(
-  {
-    /** Index of validator in the registry. */
-    validatorIndex: ssz.ValidatorIndex,
-    /** The committee the validator aggregates for. */
-    committeeIndex: ssz.CommitteeIndex,
-    /** The slot at which the validator aggregates. */
-    slot: ssz.Slot,
+    pubkey: ApiPubkey,
   },
   {jsonCase: "eth2"}
 );
@@ -170,7 +161,7 @@ export const AggregatorDutyType = new ContainerType(
 export const PtcDutyType = new ContainerType(
   {
     /** Public key of the validator in the registry  */
-    pubkey: ssz.BLSPubkey,
+    pubkey: ApiPubkey,
     /** Index of validator in the registry. */
     validatorIndex: ssz.ValidatorIndex,
     /** The slot at which the validator must perform PTC duties. */
@@ -268,7 +259,6 @@ export const ValidatorIndicesType = ArrayOf(ssz.ValidatorIndex);
 export const AttesterDutyListType = ArrayOf(AttesterDutyType);
 export const ProposerDutyListType = ArrayOf(ProposerDutyType);
 export const PtcDutyListType = ArrayOf(PtcDutyType);
-export const AggregatorDutyListType = ArrayOf(AggregatorDutyType);
 export const SyncDutyListType = ArrayOf(SyncDutyType);
 export const SignedAggregateAndProofListPhase0Type = ArrayOf(ssz.phase0.SignedAggregateAndProof);
 export const SignedAggregateAndProofListElectraType = ArrayOf(ssz.electra.SignedAggregateAndProof);
@@ -383,8 +373,6 @@ export type AttesterDuty = ValueOf<typeof AttesterDutyType>;
 export type AttesterDutyList = ValueOf<typeof AttesterDutyListType>;
 export type ProposerDuty = ValueOf<typeof ProposerDutyType>;
 export type ProposerDutyList = ValueOf<typeof ProposerDutyListType>;
-export type AggregatorDuty = ValueOf<typeof AggregatorDutyType>;
-export type AggregatorDutyList = ValueOf<typeof AggregatorDutyListType>;
 export type PtcDuty = ValueOf<typeof PtcDutyType>;
 export type PtcDutyList = ValueOf<typeof PtcDutyListType>;
 export type SyncDuty = ValueOf<typeof SyncDutyType>;
@@ -513,24 +501,6 @@ export type Endpoints = {
     },
     {params: {epoch: Epoch}; body: unknown},
     PtcDutyList,
-    ExecutionOptimisticAndDependentRootMeta
-  >;
-
-  /**
-   * Get aggregator duties
-   * From pq aggregators do not select themselves: the state names each committee's. Requests the
-   * beacon node to provide the committees the given validators aggregate for in an epoch.
-   */
-  getAggregatorDuties: Endpoint<
-    "POST",
-    {
-      /** Must not be greater than the next epoch */
-      epoch: Epoch;
-      /** An array of the validator indices for which to obtain the duties */
-      indices: ValidatorIndices;
-    },
-    {params: {epoch: Epoch}; body: unknown},
-    AggregatorDutyList,
     ExecutionOptimisticAndDependentRootMeta
   >;
 
@@ -982,24 +952,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
       resp: {
         data: PtcDutyListType,
-        meta: ExecutionOptimisticAndDependentRootCodec,
-      },
-    },
-    getAggregatorDuties: {
-      url: "/eth/v1/validator/duties/aggregator/{epoch}",
-      method: "POST",
-      req: {
-        writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
-        parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
-        writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
-        parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
-        schema: {
-          params: {epoch: Schema.UintRequired},
-          body: Schema.StringArray,
-        },
-      },
-      resp: {
-        data: AggregatorDutyListType,
         meta: ExecutionOptimisticAndDependentRootCodec,
       },
     },

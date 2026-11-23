@@ -29,6 +29,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
           committeeLength: 4,
           committeesAtSlot: 5,
           validatorCommitteeIndex: 6,
+          isAggregator: false,
           slot: 7,
         },
       ],
@@ -60,13 +61,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {epoch: 1000, indices: [1, 2, 3]},
     res: {
       data: [{pubkey: new Uint8Array(48).fill(1), validatorIndex: 2, slot: 3}],
-      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
-    },
-  },
-  getAggregatorDuties: {
-    args: {epoch: 1000, indices: [1, 2, 3]},
-    res: {
-      data: [{validatorIndex: 2, committeeIndex: 1, slot: 3}],
       meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
     },
   },

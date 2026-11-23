@@ -26,6 +26,7 @@ import {
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
 } from "../../../utils/metadata.js";
+import {ApiPubkey} from "../../../utils/pubkey.js";
 import {fromBuilderIdsStr, fromValidatorIdsStr, toBuilderIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
 import {WireFormat} from "../../../utils/wireFormat.js";
 import {RootResponse, RootResponseType} from "./block.js";
@@ -83,7 +84,7 @@ export const BuilderResponseType = new ContainerType({
 export const ValidatorIdentityType = new ContainerType(
   {
     index: ssz.ValidatorIndex,
-    pubkey: ssz.BLSPubkey,
+    pubkey: ApiPubkey,
     activationEpoch: ssz.UintNum64,
   },
   {jsonCase: "eth2"}

@@ -261,18 +261,11 @@ export class AttestationDutiesService {
     const priorDependentRoot = dutiesAtEpoch?.dependentRoot;
     const dependentRootChanged = priorDependentRoot !== undefined && priorDependentRoot !== dependentRoot;
 
-    // From pq aggregators do not select themselves: the state names each committee's
-    let aggregators: Set<ValidatorIndex> | null = null;
-    if (this.validatorStore.isPqEpoch(epoch)) {
-      const aggregatorDuties = (await this.api.validator.getAggregatorDuties({epoch, indices: indexArr})).value();
-      aggregators = new Set(aggregatorDuties.map((duty) => duty.validatorIndex));
-    }
-
     if (!priorDependentRoot || dependentRootChanged) {
       const dutiesByIndex = new Map<ValidatorIndex, AttDutyAndProof>();
       for (const duty of relevantDuties) {
         try {
-          dutiesByIndex.set(duty.validatorIndex, await this.getDutyAndProof(duty, aggregators));
+          dutiesByIndex.set(duty.validatorIndex, await this.getDutyAndProof(duty));
         } catch (e) {
           this.logger.error(
             "Error signing attestation selection proof",
@@ -297,7 +290,7 @@ export class AttestationDutiesService {
       for (const duty of relevantDuties) {
         if (!existingDuties.has(duty.validatorIndex)) {
           try {
-            existingDuties.set(duty.validatorIndex, await this.getDutyAndProof(duty, aggregators));
+            existingDuties.set(duty.validatorIndex, await this.getDutyAndProof(duty));
           } catch (e) {
             this.logger.error(
               "Error signing attestation selection proof",
@@ -438,13 +431,11 @@ export class AttestationDutiesService {
     }
   }
 
-  private async getDutyAndProof(
-    duty: routes.validator.AttesterDuty,
-    aggregators: Set<ValidatorIndex> | null
-  ): Promise<AttDutyAndProof> {
-    // An aggregator from pq has no selection proof. An empty one marks it as an aggregator.
-    if (aggregators !== null) {
-      return {duty, selectionProof: aggregators.has(duty.validatorIndex) ? new Uint8Array(0) : null};
+  private async getDutyAndProof(duty: routes.validator.AttesterDuty): Promise<AttDutyAndProof> {
+    // From pq the state names each committee's aggregators, and the duty says whether this is one.
+    // It has no selection proof: an empty one marks it as an aggregator.
+    if (this.validatorStore.isPqEpoch(computeEpochAtSlot(duty.slot))) {
+      return {duty, selectionProof: duty.isAggregator ? new Uint8Array(0) : null};
     }
 
     const selectionProof = await this.validatorStore.signAttestationSelectionProof(duty.pubkey, duty.slot);

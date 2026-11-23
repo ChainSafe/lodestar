@@ -1721,6 +1721,8 @@ export function getValidatorApi(
         );
       }
       const committeeAssignments = calculateCommitteeAssignments(shuffling, indices);
+      // From pq aggregators do not select themselves: the state names each committee's
+      const isPq = config.getForkName(computeStartSlotAtEpoch(epoch)) === ForkName.pq;
       const duties: routes.validator.AttesterDuty[] = [];
       for (let i = 0, len = indices.length; i < len; i++) {
         const validatorIndex = indices[i];
@@ -1729,6 +1731,11 @@ export function getValidatorApi(
           // Mutate existing object instead of re-creating another new object with spread operator
           // Should be faster and require less memory
           duty.pubkey = pubkeys[i];
+          duty.isAggregator =
+            isPq &&
+            (state as IBeaconStateViewGloas)
+              .getAggregationCommittee(duty.slot, duty.committeeIndex)
+              .includes(validatorIndex);
           duties.push(duty);
         }
       }
@@ -1739,42 +1746,6 @@ export function getValidatorApi(
         data: duties,
         meta: {
           dependentRoot: toRootHex(dependentRoot),
-          executionOptimistic: isOptimisticBlock(head),
-        },
-      };
-    },
-
-    async getAggregatorDuties({epoch, indices}) {
-      notWhileSyncing(chain, sync.state);
-
-      const startSlot = computeStartSlotAtEpoch(epoch);
-      if (config.getForkName(startSlot) !== ForkName.pq) {
-        throw new ApiError(400, "Before pq aggregators select themselves");
-      }
-
-      await waitForNextClosestEpoch();
-
-      if (epoch > chain.clock.currentEpoch + 1) {
-        throw new ApiError(400, "Cannot get aggregator duties for epoch more than one ahead");
-      }
-
-      const head = chain.forkChoice.getHead();
-      const state = (await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties)) as IBeaconStateViewGloas;
-      const wanted = new Set(indices);
-      const committeesPerSlot = state.getShufflingAtEpoch(epoch).committeesPerSlot;
-      const duties: routes.validator.AggregatorDuty[] = [];
-      for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
-        for (let committeeIndex = 0; committeeIndex < committeesPerSlot; committeeIndex++) {
-          for (const validatorIndex of state.getAggregationCommittee(slot, committeeIndex)) {
-            if (wanted.has(validatorIndex)) duties.push({validatorIndex, committeeIndex, slot});
-          }
-        }
-      }
-
-      return {
-        data: duties,
-        meta: {
-          dependentRoot: state.getShufflingDecisionRoot(epoch),
           executionOptimistic: isOptimisticBlock(head),
         },
       };

@@ -44,6 +44,7 @@ describe("web3signer signature test", () => {
     committeeLength: 120,
     committeesAtSlot: 120,
     validatorCommitteeIndex: 0,
+    isAggregator: false,
     validatorIndex,
     pubkey: pubkeyBytes,
   };

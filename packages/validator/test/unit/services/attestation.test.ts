@@ -107,6 +107,7 @@ describe("AttestationService", () => {
               committeeLength: 120,
               committeesAtSlot: 120,
               validatorCommitteeIndex: 1,
+              isAggregator: false,
               validatorIndex: 0,
               pubkey: pubkeys[0],
             },
