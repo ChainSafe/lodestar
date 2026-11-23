@@ -54,6 +54,12 @@ export class ProposerDutiesTracker {
     }
 
     let proposers = this.proposersByEpoch.get(epoch);
+    const fetch = this.fetchesByEpoch.get(epoch);
+    if (fetch !== undefined) {
+      // The duties are being fetched, e.g. after a reorg changed them. The cached duties are replaced
+      // once the fetch finished and are only used if it fails
+      proposers = await fetch.catch(() => proposers);
+    }
     if (proposers === undefined) {
       if (epoch < currentEpoch) {
         return null;
@@ -74,12 +80,22 @@ export class ProposerDutiesTracker {
   }
 
   private refetchIfChanged(epoch: Epoch, dependentRoot: RootHex): void {
-    const proposers = this.proposersByEpoch.get(epoch);
-    if (proposers === undefined || proposers.dependentRoot === dependentRoot) {
-      return;
-    }
     // The duties of an epoch that ended are only kept for late requests
     if (epoch < this.clock.getCurrentEpoch()) {
+      return;
+    }
+
+    const fetch = this.fetchesByEpoch.get(epoch);
+    if (fetch !== undefined) {
+      // The response in flight may still be for the dependent root this head replaced,
+      // compare again once it is cached
+      const refetchIfChanged = (): void => this.refetchIfChanged(epoch, dependentRoot);
+      fetch.then(refetchIfChanged, refetchIfChanged);
+      return;
+    }
+
+    const proposers = this.proposersByEpoch.get(epoch);
+    if (proposers === undefined || proposers.dependentRoot === dependentRoot) {
       return;
     }
 

@@ -1,12 +1,15 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {ApiClient} from "@lodestar/api";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import type {Epoch, RootHex, Slot} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {defer, toRootHex} from "@lodestar/utils";
 import {HeadEvent} from "../../../src/services/headTracker.js";
 import {ProposerDutiesTracker} from "../../../src/services/proposerDutiesTracker.js";
 import {getApiClientStub, mockApiResponse} from "../utils/apiStub.js";
 import {ClockMock} from "../utils/clock.js";
 import {MockedLogger, getMockedLogger} from "../utils/logger.js";
+
+type DutiesResponse = Awaited<ReturnType<ApiClient["validator"]["getProposerDutiesV2"]>>;
 
 function root(value: number): RootHex {
   return toRootHex(Buffer.alloc(32, value));
@@ -39,21 +42,24 @@ describe("ProposerDutiesTracker", () => {
       [1, {dependentRoot: root(2), indexOffset: 0}],
     ]);
     api = getApiClientStub();
-    api.validator.getProposerDutiesV2.mockImplementation(async ({epoch}) => {
-      const {dependentRoot, indexOffset} = duties.get(epoch) ?? {dependentRoot: root(0), indexOffset: 0};
-      return mockApiResponse({
-        data: Array.from({length: SLOTS_PER_EPOCH}, (_, i) => ({
-          slot: epoch * SLOTS_PER_EPOCH + i,
-          validatorIndex: epoch * SLOTS_PER_EPOCH + i + indexOffset,
-          pubkey: Buffer.alloc(48, i),
-        })),
-        meta: {executionOptimistic: false, dependentRoot},
-      });
-    });
+    api.validator.getProposerDutiesV2.mockImplementation(async ({epoch}) => dutiesResponse(epoch));
     clock = new ClockMock();
     logger = getMockedLogger();
     tracker = new ProposerDutiesTracker(api, clock, logger);
   });
+
+  /** Response of the beacon node with the duties currently set for the epoch */
+  function dutiesResponse(epoch: Epoch): DutiesResponse {
+    const {dependentRoot, indexOffset} = duties.get(epoch) ?? {dependentRoot: root(0), indexOffset: 0};
+    return mockApiResponse({
+      data: Array.from({length: SLOTS_PER_EPOCH}, (_, i) => ({
+        slot: epoch * SLOTS_PER_EPOCH + i,
+        validatorIndex: epoch * SLOTS_PER_EPOCH + i + indexOffset,
+        pubkey: Buffer.alloc(48, i),
+      })),
+      meta: {executionOptimistic: false, dependentRoot},
+    });
+  }
 
   it("returns the proposer of a slot in the current and next epoch", async () => {
     expect((await tracker.getProposer(3))?.validatorIndex).toBe(3);
@@ -195,6 +201,60 @@ describe("ProposerDutiesTracker", () => {
 
     tracker.onHead(head(SLOTS_PER_EPOCH - 1, root(8), root(2)));
 
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledExactlyOnceWith({epoch: 0});
+  });
+
+  it("waits for duties that are being fetched again before resolving a proposer", async () => {
+    await tracker.getProposer(3);
+    const refetch = defer<DutiesResponse>();
+    api.validator.getProposerDutiesV2.mockReturnValueOnce(refetch.promise);
+    duties.set(0, {dependentRoot: root(8), indexOffset: 1000});
+    tracker.onHead(head(2, root(8), root(2)));
+
+    const proposer = tracker.getProposer(3);
+    refetch.resolve(dutiesResponse(0));
+
+    expect((await proposer)?.validatorIndex).toBe(1003);
+  });
+
+  it("resolves a proposer from the cached duties if fetching them again fails", async () => {
+    await tracker.getProposer(3);
+    const refetch = defer<DutiesResponse>();
+    api.validator.getProposerDutiesV2.mockReturnValueOnce(refetch.promise);
+    tracker.onHead(head(2, root(8), root(2)));
+
+    const proposer = tracker.getProposer(3);
+    refetch.reject(new Error("beacon node unavailable"));
+
+    expect((await proposer)?.validatorIndex).toBe(3);
+  });
+
+  it("fetches duties again if the head changed their dependent root while they were fetched", async () => {
+    const fetch = defer<DutiesResponse>();
+    api.validator.getProposerDutiesV2.mockReturnValueOnce(fetch.promise);
+    const proposer = tracker.getProposer(3);
+    // The response in flight is for the dependent root the head replaces
+    const staleResponse = dutiesResponse(0);
+    duties.set(0, {dependentRoot: root(8), indexOffset: 1000});
+    tracker.onHead(head(2, root(8), root(2)));
+
+    fetch.resolve(staleResponse);
+
+    expect((await proposer)?.validatorIndex).toBe(3);
+    await vi.waitFor(async () => expect((await tracker.getProposer(3))?.validatorIndex).toBe(1003));
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not fetch duties again if the head reports the dependent root they are fetched for", async () => {
+    const fetch = defer<DutiesResponse>();
+    api.validator.getProposerDutiesV2.mockReturnValueOnce(fetch.promise);
+    const proposer = tracker.getProposer(3);
+    tracker.onHead(head(2, root(1), root(2)));
+
+    fetch.resolve(dutiesResponse(0));
+
+    expect((await proposer)?.validatorIndex).toBe(3);
+    await tracker.getProposer(4);
     expect(api.validator.getProposerDutiesV2).toHaveBeenCalledExactlyOnceWith({epoch: 0});
   });
 
