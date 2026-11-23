@@ -10,7 +10,12 @@ import {isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
-import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
+import {
+  BlockError,
+  BlockErrorCode,
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
+} from "../chain/errors/index.js";
 import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {validateGloasBlockDataColumnSidecars} from "../chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadEnvelope} from "../chain/validation/executionPayloadEnvelope.js";
@@ -1305,7 +1310,7 @@ export class BlockInputSync {
         const pendingPayloadByRoot: PendingPayloadRootHex = {
           status: PendingPayloadInputStatus.pending,
           rootHex,
-          slot: pendingPayload.envelope.message.payload.slotNumber,
+          slot: payloadInput.slot,
           timeAddedSec: pendingPayload.timeAddedSec,
           peerIdStrings: new Set(pendingPayload.peerIdStrings),
         };
@@ -1670,6 +1675,27 @@ export class BlockInputSync {
           }
         } else {
           excludedPeers.add(peerId);
+        }
+
+        if (e instanceof ExecutionPayloadEnvelopeError) {
+          switch (e.type.code) {
+            // Caused by local state, the downloaded envelope may still be valid
+            case ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN:
+            case ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN:
+            case ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING:
+            case ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE:
+              break;
+            // Every copy fails once the block is finalized, only a wrong slot makes the served copy invalid
+            case ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK:
+              if (envelope?.message.payload.slotNumber !== payloadInput?.slot) {
+                envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
+              }
+              break;
+            // The served copy is invalid, take the envelope from payloadInput or another peer on the next attempt
+            default:
+              envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
+              break;
+          }
         }
       } finally {
         this.peerBalancer.onRequestCompleted(peerId);

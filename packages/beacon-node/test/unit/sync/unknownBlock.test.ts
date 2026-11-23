@@ -16,6 +16,11 @@ import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../src/cha
 import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
+import {
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
+} from "../../../src/chain/errors/executionPayloadEnvelope.js";
+import {GossipAction} from "../../../src/chain/errors/gossipValidation.js";
 import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../src/chain/index.js";
 import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
 import {SeenBlockInput} from "../../../src/chain/seenCache/seenGossipBlockInput.js";
@@ -1137,6 +1142,76 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
       expect(payloadInput.hasPayloadEnvelope()).toBe(true);
       expect(payloadInput.hasAllData()).toBe(true);
+    });
+
+    it("downloads the envelope from another peer when the first peer serves an invalid one", async () => {
+      const invalidPeer = await getRandPeerIdStr();
+      const validPeer = await getRandPeerIdStr();
+      const {blockRoot, blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+        blobCount: 0,
+        sampledColumns: [],
+        slot: 1,
+      });
+      const invalidEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(envelope);
+      invalidEnvelope.signature = Buffer.alloc(96, 0xff);
+
+      vi.mocked(validateGossipExecutionPayloadEnvelope).mockImplementation(async (_chain, signedEnvelope) => {
+        if (signedEnvelope === invalidEnvelope) {
+          throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+            code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
+            slot: 1,
+            root: blockRootHex,
+          });
+        }
+      });
+
+      const sendExecutionPayloadEnvelopesByRoot = vi
+        .fn()
+        .mockImplementation(async (peerId: PeerIdStr) => [peerId === invalidPeer ? invalidEnvelope : envelope]);
+      const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          seenPayloadEnvelopeInputCache: {
+            add: vi.fn(),
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            remove: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        // enough sample groups to allow more than one download attempt per fetch
+        custodyConfig: {
+          sampledColumns: [],
+          sampleGroups: Array.from({length: gloasConfig.SAMPLES_PER_SLOT}, () => []),
+        } as unknown as CustodyConfig,
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: invalidPeer}, {peerId: validPeer}],
+      });
+
+      // the root is gossiped by the peer serving the invalid envelope, so it is asked first
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: blockRootHex,
+        peer: invalidPeer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(50);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(2);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenNthCalledWith(1, invalidPeer, [blockRoot]);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenNthCalledWith(2, validPeer, [blockRoot]);
+      expect(payloadInput.getPayloadEnvelope()).toBe(envelope);
+      expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
     });
 
     it("retries a rate-limited payload download when the backoff expires around the retry timer", async () => {
