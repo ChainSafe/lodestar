@@ -4,7 +4,6 @@ const testing = @import("linux_test_support.zig");
 const Seccomp = testing.Seccomp;
 
 test "UDP seccomp distinguishes unavailable capability from a malformed filter" {
-    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
     const Worker = struct {
         denied: bool,
         installation: Seccomp.Installation = undefined,
@@ -47,7 +46,6 @@ test "UDP seccomp distinguishes unavailable capability from a malformed filter" 
 }
 
 test "UDP send filter selects descriptor and flags and ends with its thread" {
-    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
     var selected = try udp.SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer selected.close(std.testing.io);
     var other = try udp.SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });

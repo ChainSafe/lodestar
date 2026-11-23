@@ -1,3 +1,6 @@
+//! Test-only utilities for making Linux system calls fail on demand.
+//!
+//! The native UDP path calls the kernel directly, so the `FaultIo` mock cannot inject a failure here.
 const std = @import("std");
 
 comptime {
@@ -103,5 +106,6 @@ pub const SendFilter = struct {
 };
 
 test {
+    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
     _ = @import("linux_test_support_test.zig");
 }
