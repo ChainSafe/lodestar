@@ -289,13 +289,15 @@ export function getBeaconPoolApi({
             );
             metrics?.opPool.payloadAttestationPool.apiInsertOutcome.inc({insertOutcome});
 
-            chain.forkChoice.notifyPtcMessages(
-              toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
-              payloadAttestationMessage.data.slot,
-              validatorCommitteeIndices,
-              payloadAttestationMessage.data.payloadPresent,
-              payloadAttestationMessage.data.blobDataAvailable
-            );
+            if (slot === chain.clock.currentSlot) {
+              chain.forkChoice.notifyPtcMessages(
+                toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+                payloadAttestationMessage.data.slot,
+                validatorCommitteeIndices,
+                payloadAttestationMessage.data.payloadPresent,
+                payloadAttestationMessage.data.blobDataAvailable
+              );
+            }
 
             chain.emitter.emit(routes.events.EventType.payloadAttestationMessage, {
               version: chain.config.getForkName(slot),
