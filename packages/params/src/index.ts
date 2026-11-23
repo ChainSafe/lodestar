@@ -312,11 +312,6 @@ export const NEXT_SYNC_COMMITTEE_INDEX = 23;
 export const MAX_REQUEST_LIGHT_CLIENT_UPDATES = 128;
 export const MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES = 128;
 
-/**
- * Optimistic sync
- * @deprecated All networks have completed the merge transition, blocks are always safe to import optimistically.
- */
-export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
 export const BASIS_POINTS = 10000;
 
 // EIP-4844: Crypto const
