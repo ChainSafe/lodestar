@@ -317,8 +317,6 @@ export const MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES = 128;
  * @deprecated All networks have completed the merge transition, blocks are always safe to import optimistically.
  */
 export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
-/** @deprecated */
-export const INTERVALS_PER_SLOT = 3;
 export const BASIS_POINTS = 10000;
 
 // EIP-4844: Crypto const
