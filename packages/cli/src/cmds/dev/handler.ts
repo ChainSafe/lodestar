@@ -4,7 +4,7 @@ import {nodeUtils} from "@lodestar/beacon-node";
 import {fromHex, toHex} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
-import {mkdir, onGracefulShutdown} from "../../util/index.js";
+import {mkdir} from "../../util/index.js";
 import {beaconHandler} from "../beacon/handler.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {validatorHandler} from "../validator/handler.js";
@@ -47,9 +47,10 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
   mkdir(validatorsDbDir);
 
   if (args.reset) {
-    onGracefulShutdown(async () => {
-      await rm(beaconDbDir, {recursive: true, force: true});
-      await rm(validatorsDbDir, {recursive: true, force: true});
+    // Runs once the beacon node and validator client are closed
+    process.once("exit", () => {
+      fs.rmSync(beaconDbDir, {recursive: true, force: true});
+      fs.rmSync(validatorsDbDir, {recursive: true, force: true});
     });
   }
 
@@ -83,6 +84,7 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
     // - metrics
     // - monitoring
     // - keymanager server
-    await validatorHandler(args);
+    // The beacon handler exits the process once the beacon node is closed
+    await validatorHandler(args, {exitOnShutdown: false});
   }
 }

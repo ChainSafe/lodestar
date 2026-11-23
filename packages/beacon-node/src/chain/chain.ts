@@ -93,7 +93,7 @@ import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
-import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
+import {ColumnReconstructionTracker, RECONSTRUCTED_COLUMNS_WAIT_BPS} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter, ReorgEventData} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
 import {ForkChoiceExecutionEngine} from "./forkChoiceExecutionEngine.js";
@@ -1129,6 +1129,17 @@ export class BeaconChain implements IBeaconChain {
       // After gloas, columns are tracked in PayloadEnvelopeInput
       const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
       if (payloadInput) {
+        // Available with half the columns, peers that saw it attested expect the reconstructed rest
+        if (
+          !payloadInput.hasComputedAllData() &&
+          payloadInput.hasAllData() &&
+          indices.some((index) => !payloadInput.hasColumn(index))
+        ) {
+          this.columnReconstructionTracker.triggerColumnReconstruction(payloadInput);
+          await payloadInput
+            .waitForComputedAllData(this.config.getSlotComponentDurationMs(fork, RECONSTRUCTED_COLUMNS_WAIT_BPS))
+            .catch(() => this.logger.debug("Columns not reconstructed in time", {slot: blockSlot, root: blockRootHex}));
+        }
         for (let i = 0; i < indices.length; i++) {
           const index = indices[i];
           const sidecar = payloadInput.getColumn(index);
@@ -1149,6 +1160,17 @@ export class BeaconChain implements IBeaconChain {
       if (blockInput) {
         if (!isBlockInputColumns(blockInput)) {
           throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
+        }
+        // Available with half the columns, peers that saw it attested expect the reconstructed rest
+        if (
+          !blockInput.hasComputedAllData() &&
+          blockInput.hasAllData() &&
+          indices.some((index) => !blockInput.hasColumn(index))
+        ) {
+          this.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
+          await blockInput
+            .waitForComputedAllData(this.config.getSlotComponentDurationMs(fork, RECONSTRUCTED_COLUMNS_WAIT_BPS))
+            .catch(() => this.logger.debug("Columns not reconstructed in time", {slot: blockSlot, root: blockRootHex}));
         }
         for (let i = 0; i < indices.length; i++) {
           const index = indices[i];
@@ -1476,9 +1498,10 @@ export class BeaconChain implements IBeaconChain {
 
   /**
    * Emit `head` and `head_v2` when the fork choice head differs between two observations. Every caller that
-   * can move the head, `updateAndGetHead()` and `updateTime()`, must capture the head before and pass both.
+   * can move the head, `updateAndGetHead()`, `updateTime()` and `onExecutionPayload()`, must capture the head before
+   * and pass both.
    */
-  private emitHeadEvents(prevHead: ProtoBlock, head: ProtoBlock): void {
+  emitHeadEvents(prevHead: ProtoBlock, head: ProtoBlock): void {
     const headRootChanged = head.blockRoot !== prevHead.blockRoot;
 
     if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) {
