@@ -23,7 +23,33 @@
     "executed_own_typescript_records": 11,
     "scope": "Unchanged bytes test/source on the frozen workspace; reused installed toolchain, not a full latest-upstream build."
   },
-  "full_corrected_coverage": "in_progress",
+  "full_corrected_coverage": {
+    "source": "4e224659179dc8050344b48a397f1791450bf24c",
+    "tests_passed": 5547,
+    "tests_skipped": 9,
+    "test_files_passed": 478,
+    "test_files_skipped": 1,
+    "executed_own_typescript_records": 821,
+    "statement_percent": 63.4,
+    "branch_percent": 55.73,
+    "function_percent": 60.57,
+    "line_percent": 63.47,
+    "scope": "Frozen source, corrected include through CLI; not latest-upstream full CI or native-code coverage.",
+    "command": [
+      "/projects/eth2030/qualification/node26/node",
+      "node_modules/vitest/vitest.mjs",
+      "run",
+      "--project",
+      "unit",
+      "--project",
+      "unit-minimal",
+      "--coverage",
+      "--coverage.include=packages/**/src/**/*.ts",
+      "--coverage.reportsDirectory=/projects/eth2030/qualification/remaining-20261123/coverage-full-corrected",
+      "--maxWorkers=2"
+    ],
+    "lcov_sha256": "6f824c0915b78d7047e1d1700787ae3cfb8386c37d8dbdffce156a55d60647d5"
+  },
   "limitations": [
     "New-worktree pnpm attempted dependency synchronization and safely aborted without a TTY; shared dependencies were not purged.",
     "Biome worktree symlink resolution panicked; exact changed content passed Biome check/fix through stdin in the existing workspace, with shared source byte equality verified.",
