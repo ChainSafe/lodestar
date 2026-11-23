@@ -3,7 +3,7 @@ import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {SecretKey} from "@lodestar/native/blst";
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ErrorAborted, defer, toRootHex} from "@lodestar/utils";
 import {Builder, BuilderModules} from "../../src/builder.js";
@@ -229,7 +229,30 @@ describe("Builder", () => {
       onEvent(blockEvent(1, modules.index + 1));
 
       expect(processBlock).not.toHaveBeenCalled();
-      expect(api.beacon.getBlockV2).not.toHaveBeenCalled();
+    });
+
+    it("does not fetch a self-built block in a slot without own bid", () => {
+      const processBlock = vi.spyOn(modules.blockObserver, "processBlockEvent").mockResolvedValue();
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+      onEvent(blockEvent(1, BUILDER_INDEX_SELF_BUILD));
+
+      expect(processBlock).not.toHaveBeenCalled();
+    });
+
+    it("fetches a self-built block in a slot with own bid", () => {
+      const processBlock = vi.spyOn(modules.blockObserver, "processBlockEvent").mockResolvedValue();
+      const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+      signedBid.message.slot = 1;
+      modules.ledger.recordBid({signedBid, signedBidRoot: toRootHex(Buffer.alloc(32, 5))});
+      new Builder(modules);
+      const {onEvent, signal} = api.events.eventstream.mock.calls[0][0];
+
+      const event = blockEvent(1, BUILDER_INDEX_SELF_BUILD);
+      onEvent(event);
+
+      expect(processBlock).toHaveBeenCalledExactlyOnceWith(event.message, signal);
     });
 
     it("fetches a block of another builder in a slot with own bid", () => {

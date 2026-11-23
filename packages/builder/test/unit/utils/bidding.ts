@@ -102,6 +102,7 @@ export function createBiddingModules({
       logger,
       clock,
       bidSelector: new BidSelector({config, ledger, builderIndex: index}),
+      ledger,
       payloadStore,
       envelopePublisher: new EnvelopePublisher({api, signer: builderSigner, ledger, builderIndex: index}),
       builderIndex: index,

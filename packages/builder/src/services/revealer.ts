@@ -1,8 +1,10 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {BUILDER_INDEX_SELF_BUILD} from "@lodestar/params";
 import {IClock} from "@lodestar/state-transition";
 import {BuilderIndex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics, RevealResult} from "../metrics.js";
+import {BidLedger} from "./bidLedger.js";
 import {BidSelector} from "./bidSelector.js";
 import {ObservedBlock} from "./blockObserver.js";
 import {EnvelopePublisher} from "./envelopePublisher.js";
@@ -22,6 +24,7 @@ export type RevealerModules = {
   logger: Logger;
   clock: IClock;
   bidSelector: BidSelector;
+  ledger: BidLedger;
   payloadStore: PayloadStore;
   envelopePublisher: EnvelopePublisher;
   builderIndex: BuilderIndex;
@@ -37,14 +40,26 @@ export class Revealer {
   ) {}
 
   async onBlock(observed: ObservedBlock): Promise<void> {
-    const {bidSelector, clock, config, envelopePublisher, logger, metrics, payloadStore} = this.modules;
+    const {bidSelector, clock, config, envelopePublisher, ledger, logger, metrics, payloadStore} = this.modules;
+    const {blockRoot, slot} = observed;
     const selection = bidSelector.match(observed);
     if (selection.status !== "selected") {
+      const bids = ledger.getBidsForSlot(slot);
+      if (bids.length > 0) {
+        const {builderIndex, value} = observed.signedBid.message;
+        logger.info("Execution payload bid not selected", {
+          slot,
+          blockRoot,
+          builderIndex: this.modules.builderIndex,
+          valueGwei: Math.max(...bids.map((bid) => bid.signedBid.message.value)),
+          selectedBuilderIndex: builderIndex === BUILDER_INDEX_SELF_BUILD ? "self-build" : builderIndex,
+          selectedValueGwei: value,
+        });
+      }
       return;
     }
     metrics?.bids.won.inc();
 
-    const {blockRoot, slot} = observed;
     const {blockHash} = selection.bid;
     const logCtx = {slot, blockRoot, blockHash};
 

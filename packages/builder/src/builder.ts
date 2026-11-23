@@ -209,6 +209,7 @@ export class Builder {
         logger,
         clock,
         bidSelector: new BidSelector({config, ledger, builderIndex: index}),
+        ledger,
         payloadStore,
         envelopePublisher: new EnvelopePublisher({api, signer: builderSigner, ledger, builderIndex: index}),
         builderIndex: index,
@@ -312,7 +313,7 @@ export class Builder {
 
   /**
    * Only blocks that selected one of our bids have to be fetched to reveal the payload. Blocks of slots we bid on
-   * are fetched as well, they show which bid was selected over ours. A block that selected our builder is always
+   * are fetched as well, the revealer logs which bid was selected over ours. A block that selected our builder is always
    * fetched, even if no bid is recorded for its slot, to surface the inconsistency.
    */
   private isRelevantBlock(event: routes.events.EventData[routes.events.EventType.block]): boolean {

@@ -2,7 +2,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {SecretKey} from "@lodestar/native/blst";
-import {ForkName} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BidLedger} from "../../../src/services/bidLedger.js";
@@ -120,6 +120,37 @@ describe("Revealer", () => {
 
     expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
     expect(ledger.getUnsettledValueGwei(0)).toBe(0);
+    expect(logger.info).toHaveBeenCalledWith("Execution payload bid not selected", {
+      slot,
+      blockRoot: observed.blockRoot,
+      builderIndex,
+      valueGwei: 5,
+      selectedBuilderIndex: builderIndex + 1,
+      selectedValueGwei: 5,
+    });
+  });
+
+  it("logs a self-built block in a slot with own bid", async () => {
+    const observed = selectedBlock();
+    observed.signedBid.message.builderIndex = BUILDER_INDEX_SELF_BUILD;
+    observed.signedBid.message.value = 0;
+
+    await revealer.onBlock(observed);
+
+    expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+    expect(logger.info).toHaveBeenCalledWith(
+      "Execution payload bid not selected",
+      expect.objectContaining({selectedBuilderIndex: "self-build", selectedValueGwei: 0})
+    );
+  });
+
+  it("does not log a block of another builder in a slot without own bid", async () => {
+    const observed = selectedBlock({recordBid: false});
+    observed.signedBid.message.builderIndex = builderIndex + 1;
+
+    await revealer.onBlock(observed);
+
+    expect(logger.info).not.toHaveBeenCalledWith("Execution payload bid not selected", expect.anything());
   });
 
   it("records the win but cannot reveal a payload that is not retained", async () => {
