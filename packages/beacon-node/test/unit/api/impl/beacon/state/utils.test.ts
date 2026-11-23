@@ -122,6 +122,7 @@ describe("beacon state api utils", () => {
       clock: {currentSlot: 10 * SLOTS_PER_EPOCH},
       forkChoice: {
         getHead: () => ({slot: 0, stateRoot: "0x00"}),
+        getBlockHexDefaultStatus: () => null,
         getFinalizedCheckpoint: () => ({rootHex: "0x00", epoch: 0}),
         getJustifiedCheckpoint: () => ({rootHex: "0x00", epoch: 0}),
         getFinalizedBlock: () => ({slot: 0}),
@@ -147,17 +148,21 @@ describe("beacon state api utils", () => {
   });
 
   describe("getStateResponseWithRegen head", () => {
-    const head = {slot: 15902, stateRoot: "0xaa", executionStatus: ExecutionStatus.Valid};
+    const head = {slot: 15902, blockRoot: "0xcc", stateRoot: "0xaa", executionStatus: ExecutionStatus.Valid};
     const headPostState = {epoch: 496, slot: 15902};
     // Anchor state at the epoch boundary after the head block, slots 15903-15904 skipped
     const anchorState = {epoch: 497, slot: 15904};
     const sync = {state: SyncState.Synced} as unknown as IBeaconSync;
 
-    function getChain(cachedState: unknown): {chain: IBeaconChain; getHeadState: Mock} {
+    function getChain(
+      cachedState: unknown,
+      headExecutionStatus = ExecutionStatus.Valid
+    ): {chain: IBeaconChain; getHeadState: Mock} {
       const getHeadState = vi.fn(() => anchorState);
       const chain = {
         forkChoice: {
-          getHead: () => head,
+          getHead: () => ({...head, executionStatus: headExecutionStatus}),
+          getBlockHexDefaultStatus: (blockRoot: string) => (blockRoot === head.blockRoot ? head : null),
           getFinalizedCheckpoint: () => ({rootHex: "0xbb", epoch: 497}),
         },
         regen: {getStateSync: (stateRoot: string) => (stateRoot === head.stateRoot ? cachedState : null)},
@@ -173,6 +178,12 @@ describe("beacon state api utils", () => {
       expect(res.finalized).toBe(true);
       expect(res.executionOptimistic).toBe(false);
       expect(getHeadState).not.toHaveBeenCalled();
+    });
+
+    it("reports the status of the payload the head block builds on, not of a FULL head", async () => {
+      const {chain} = getChain(headPostState, ExecutionStatus.Syncing);
+      const res = await getStateResponseWithRegen(chain, sync, "head");
+      expect(res.executionOptimistic).toBe(false);
     });
 
     it("falls back to the closest head state if the head block's post-state is not cached (anchor at skipped boundary slot)", async () => {
