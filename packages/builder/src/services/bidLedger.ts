@@ -158,7 +158,7 @@ export class BidLedger {
     return record !== null && record.identity.blockHash === identity.blockHash && record.wonBlockRoots.has(blockRoot);
   }
 
-  /** Release a winning bid liability only after its payment is known to be reflected in Builder balance. */
+  /** Release a winning bid liability only after its payment is known to be reflected in the polled Builder state. */
   recordPaymentSettled(identity: BidIdentity): BidLedgerRecord | null {
     const record = this.getBid(identity.slot, identity.parentBlockHash, identity.parentBlockRoot);
     if (record === null || record.identity.blockHash !== identity.blockHash || record.wonBlockRoots.size === 0) {
@@ -215,7 +215,10 @@ export class BidLedger {
     }
   }
 
-  /** Marks won bids before the given slot as settled, by then their payment is reflected in the builder balance. */
+  /**
+   * Marks won bids before the given slot as settled, their payment is accounted for by the builder state polled
+   * from the beacon node, either as pending payment, pending withdrawal or already debited from the balance.
+   */
   settlePaymentsBefore(slot: Slot): void {
     for (const [bidSlot, bidsForSlot] of this.bidsBySlot) {
       if (bidSlot >= slot) {

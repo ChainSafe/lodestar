@@ -22,6 +22,18 @@ function head(slot: Slot, block: number, currentEpochDependentRoot: number, next
 }
 
 describe("HeadTracker", () => {
+  it("returns the slot of the latest announced head", () => {
+    const tracker = new HeadTracker();
+    expect(tracker.getHeadSlot()).toBeNull();
+
+    tracker.onHead(head(5, 1, 10, 11));
+    expect(tracker.getHeadSlot()).toBe(5);
+
+    // Reorg to a head at an earlier slot
+    tracker.onHead(head(4, 2, 10, 11));
+    expect(tracker.getHeadSlot()).toBe(4);
+  });
+
   it("returns the dependent root for proposals in the epoch of the head and the one after", () => {
     const tracker = new HeadTracker();
     tracker.onHead(head(SLOTS_PER_EPOCH + 3, 1, 10, 11));

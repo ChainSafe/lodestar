@@ -19,10 +19,17 @@ type TrackedHead = {
  */
 export class HeadTracker {
   private readonly heads = new Map<RootHex, TrackedHead>();
+  private headSlot: Slot | null = null;
 
   onHead(data: HeadEvent["data"]): void {
     const {slot, block, currentEpochDependentRoot, nextEpochDependentRoot} = data;
     this.heads.set(block, {slot, currentEpochDependentRoot, nextEpochDependentRoot});
+    this.headSlot = slot;
+  }
+
+  /** Slot of the latest head announced by the beacon node, null before the first head event */
+  getHeadSlot(): Slot | null {
+    return this.headSlot;
   }
 
   /**

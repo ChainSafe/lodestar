@@ -50,6 +50,11 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
       help: "Current builder balance in gwei",
     }),
 
+    builderPendingPayments: register.gauge({
+      name: "bc_builder_pending_payments_gwei",
+      help: "Value of won bids the builder still has to pay in gwei, pending payments and pending withdrawals",
+    }),
+
     bids: {
       total: register.gauge<{result: BidResult}>({
         name: "bc_builder_bids_total",

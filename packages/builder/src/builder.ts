@@ -1,8 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
-import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
+import {BuilderIndex, Epoch, ExecutionAddress} from "@lodestar/types";
 import {Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
@@ -23,12 +22,6 @@ import {PayloadSource} from "./services/payloadSource.js";
 import {PayloadStore} from "./services/payloadStore.js";
 import {ProposerPreferencesTracker} from "./services/proposerPreferencesTracker.js";
 import {Revealer} from "./services/revealer.js";
-
-// Payments of won bids are assumed to be reflected in the builder balance after this many slots.
-// The payment is queued as a builder withdrawal at the epoch transition after the bid epoch and only debited once that
-// withdrawal is processed, so with a backlog of withdrawals the ledger releases the reservation before the balance drops.
-// Reconciling against the pending payments and pending withdrawals of the state is a follow-up.
-const PAYMENT_SETTLEMENT_SLOTS = 3 * SLOTS_PER_EPOCH;
 
 export type BuilderModules = {
   opts: BuilderOptions;
@@ -119,7 +112,7 @@ export class Builder {
 
     this.blockObserver.runOnBlock((block) => this.revealer.onBlock(block));
     this.clock.runEverySlot(async (slot) => this.onSlot(slot));
-    this.clock.runEveryEpoch((epoch) => this.builderStatusTracker.poll(epoch));
+    this.clock.runEveryEpoch((epoch) => this.pollBuilderStatus(epoch));
     this.clock.start(this.controller.signal);
     this.subscribeToEvents(opts.api);
 
@@ -238,8 +231,21 @@ export class Builder {
     this.payloadStore.prune(slot);
     this.proposerPreferencesTracker.prune(slot);
     this.headTracker.prune(slot);
-    this.ledger.settlePaymentsBefore(slot - PAYMENT_SETTLEMENT_SLOTS);
     this.ledger.prune(slot);
+  }
+
+  /**
+   * Reconciles the bid ledger with the polled builder state. The payment of a won bid is part of the state from
+   * the block that selected it, first as pending payment, then as pending withdrawal and finally debited from the
+   * balance. Bids won up to the head announced before the poll are covered by the polled state and no longer
+   * reserved by the ledger, a block that is not part of the head state was reorged out and has no payment.
+   */
+  private async pollBuilderStatus(epoch: Epoch): Promise<void> {
+    const headSlot = this.headTracker.getHeadSlot();
+    const reconciled = await this.builderStatusTracker.poll(epoch);
+    if (reconciled && headSlot !== null) {
+      this.ledger.settlePaymentsBefore(headSlot + 1);
+    }
   }
 
   private subscribeToEvents(api: ApiClient): void {
