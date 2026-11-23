@@ -6,7 +6,7 @@ const PeerId = @import("../wire/peer_id.zig").PeerId;
 const assert = std.debug.assert;
 const score_mod = @import("score.zig");
 const options_mod = @import("options.zig");
-const Source = @import("udp").AddressPrefix(.{ .ip4 = 32, .ip6 = 64 });
+const Source = @import("udp").AddressPrefix;
 
 pub const capacity = constants.retained_peers_cap;
 pub const outbound_reserve = 32;
