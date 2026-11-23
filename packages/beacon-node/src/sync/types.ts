@@ -123,6 +123,9 @@ export type PendingBlockInput = {
   timeAddedSec: number;
   timeSyncedSec?: number;
   peerIdStrings: Set<string>;
+  failedDownloads?: number;
+  /** A failed download is not retried before this time */
+  retryAtMs?: number;
 };
 
 export type PendingRootHex = {
@@ -131,6 +134,9 @@ export type PendingRootHex = {
   timeAddedSec: number;
   timeSyncedSec?: number;
   peerIdStrings: Set<string>;
+  failedDownloads?: number;
+  /** A failed download is not retried before this time */
+  retryAtMs?: number;
 };
 
 export type BlockInputSyncCacheItem = PendingBlockInput | PendingRootHex;
