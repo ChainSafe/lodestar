@@ -364,6 +364,7 @@ describe("FlatFileStore reqresp handler integration", () => {
               type: DAType.Columns,
               forkName: "fulu",
               getColumn: (index: number) => (index === cachedColumn.index ? cachedColumn : undefined),
+              hasComputedAllData: () => true,
             }),
           },
           seenPayloadEnvelopeInputCache: {get: vi.fn().mockReturnValue(undefined)},

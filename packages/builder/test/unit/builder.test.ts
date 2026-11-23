@@ -10,6 +10,7 @@ import {Builder, BuilderModules} from "../../src/builder.js";
 import {BlockObserver, ObservedBlock} from "../../src/services/blockObserver.js";
 import {BuilderSigner} from "../../src/services/builderSigner.js";
 import {BuilderStatusTracker} from "../../src/services/builderStatusTracker.js";
+import {HeadTracker} from "../../src/services/headTracker.js";
 import {PayloadStore} from "../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
@@ -19,7 +20,7 @@ import {getMockedLogger} from "./utils/logger.js";
 import {mockBuiltPayload} from "./utils/payload.js";
 
 const {EventType} = routes.events;
-const topics = [EventType.block, EventType.proposerPreferences, EventType.payloadAttributes];
+const topics = [EventType.headV2, EventType.block, EventType.proposerPreferences, EventType.payloadAttributes];
 
 describe("Builder", () => {
   let api: ReturnType<typeof getApiClientStub>;
@@ -39,6 +40,7 @@ describe("Builder", () => {
     const keypair = {secretKey, publicKey: secretKey.toPublicKey()};
     const builderSigner = new BuilderSigner(createBeaconConfig(config, Buffer.alloc(32)), keypair);
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
+    const headTracker = new HeadTracker();
     const payloadStore = new PayloadStore();
     const payloadSource = getPayloadSourceStub();
     modules = {
@@ -58,6 +60,7 @@ describe("Builder", () => {
       builderStatusTracker: new BuilderStatusTracker(api, logger, 1, null),
       blockObserver: new BlockObserver(config, logger, api),
       proposerPreferencesTracker,
+      headTracker,
       clock,
       index: 1,
       payloadStore,
@@ -68,6 +71,7 @@ describe("Builder", () => {
         clock,
         builderSigner,
         proposerPreferencesTracker,
+        headTracker,
         payloadStore,
         payloadSource,
         signal: controller.signal,
@@ -204,21 +208,38 @@ describe("Builder", () => {
     });
   });
 
-  it("settles and prunes won bids on slot ticks", async () => {
-    const bid = {
+  it("tracks announced heads", () => {
+    new Builder(modules);
+    const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+    const head = {
       slot: 1,
-      parentBlockHash: toRootHex(Buffer.alloc(32, 2)),
-      parentBlockRoot: toRootHex(Buffer.alloc(32, 3)),
-      blockHash: toRootHex(Buffer.alloc(32, 4)),
-      valueGwei: 5,
-      signedBidRoot: toRootHex(Buffer.alloc(32, 5)),
+      block: toRootHex(Buffer.alloc(32, 1)),
+      state: toRootHex(Buffer.alloc(32, 2)),
+      payloadStatus: "empty" as const,
+      epochTransition: false,
+      currentEpochDependentRoot: toRootHex(Buffer.alloc(32, 3)),
+      nextEpochDependentRoot: toRootHex(Buffer.alloc(32, 4)),
+      executionOptimistic: false,
     };
-    modules.ledger.recordBid(bid);
+    onEvent({type: EventType.headV2, message: {version: ForkName.gloas, data: head}});
+    expect(modules.headTracker.getDependentRoot(head.block, 1)).toBe(head.currentEpochDependentRoot);
+    expect(modules.headTracker.getDependentRoot(head.block, SLOTS_PER_EPOCH)).toBe(head.nextEpochDependentRoot);
+  });
+
+  it("settles and prunes won bids on slot ticks", async () => {
+    const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    signedBid.message.slot = 1;
+    signedBid.message.parentBlockHash = Buffer.alloc(32, 2);
+    signedBid.message.parentBlockRoot = Buffer.alloc(32, 3);
+    signedBid.message.blockHash = Buffer.alloc(32, 4);
+    signedBid.message.value = 5;
+    const bid = modules.ledger.recordBid({signedBid, signedBidRoot: toRootHex(Buffer.alloc(32, 5))});
     modules.ledger.recordWin(bid, toRootHex(Buffer.alloc(32, 6)));
     new Builder(modules);
 
     await clock.tickSlotFns(bid.slot + 3 * SLOTS_PER_EPOCH, controller.signal);
-    expect(modules.ledger.getUnsettledValueGwei(0)).toBe(bid.valueGwei);
+    expect(modules.ledger.getUnsettledValueGwei(0)).toBe(signedBid.message.value);
 
     await clock.tickSlotFns(bid.slot + 3 * SLOTS_PER_EPOCH + 1, controller.signal);
     expect(modules.ledger.getUnsettledValueGwei(0)).toBe(0);
