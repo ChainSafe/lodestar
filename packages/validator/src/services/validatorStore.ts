@@ -298,9 +298,9 @@ export class ValidatorStore {
     // Consumers will call this function every epoch forever. If everyone has been discovered, skip
     return this.indicesService.indexCount >= this.validators.size
       ? Promise.resolve([])
-      : this.indicesService.pollValidatorIndices(Array.from(this.validators.keys()), (pubkeyHex) => {
+      : this.indicesService.pollValidatorIndices(Array.from(this.validators.keys()), (pubkeyHex, vrfRoot) => {
           const signer = this.validators.get(pubkeyHex)?.signer;
-          return signer?.type === SignerType.Xmss ? signer.signer.vrfRoot : undefined;
+          if (signer?.type === SignerType.Xmss) signer.signer.setRegisteredVrfRoot(vrfRoot);
         });
   }
 
@@ -1241,7 +1241,7 @@ export class ValidatorStore {
         const target = getXmssSigningTarget(signableMessage, signingSlot);
         let signature: Uint8Array;
         if ("vrfSlot" in target) {
-          signature = signer.signer.vrfProof(target.vrfSlot);
+          signature = await signer.signer.vrfProof(target.vrfSlot);
         } else {
           await this.slashingProtection.checkAndInsertXmssLeaf(fromHex(pubkeyHex), target.leafIndex, signingRoot);
           signature = await signer.signer.sign(signingRoot, target.leafIndex);

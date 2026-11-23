@@ -1,51 +1,45 @@
 import fs from "node:fs";
-import path from "node:path";
-import {fileURLToPath} from "node:url";
 import {LogLevel, Logger, fetch, isFetchError, isValidHttpUrl, retry, toHex} from "@lodestar/utils";
 import {XmssTrees} from "@lodestar/validator";
 
-/**
- * The leanXMSS public keys of the first 10000 keys of the pq devnet's mnemonic, 32 bytes each: the
- * first half of each record of ethereum-package's `static_files/xmss-keys/b9dec4e1daa17dfe.bin`.
- */
-const DEVNET_PUBLIC_KEYS_PATH = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../../../../pq-devnet-0-xmss-pubkeys.bin"
-);
 const PUBLIC_KEY_SIZE = 32;
 const PUBLIC_PARAMETER_SIZE = 16;
 
 /** A key's record in a file of tree caches: its top tree, then two bottom trees */
 const CACHE_RECORD_SIZE = 4096 + 2 * 5300;
 const FETCH_TIMEOUT_MS = 30_000;
-/** Keys read in one request: megabytes, where every key of the devnet would be far more */
+/** Keys read in one request: megabytes, where every key of a network would be far more */
 const MAX_RECORDS_PER_REQUEST = 256;
 
 /**
- * Trees of the devnet's keys with `publicParameters`, by public parameter in hex, from a file of
- * them at `url`: the record of key `i` of the mnemonic is the `i`th. A key is found by its public
- * parameter among the devnet's public keys, which its trees are then checked against, so the file
- * itself is not trusted. Any other key has no trees here.
+ * Trees of the keys with `publicParameters`, by public parameter in hex, from a file of them at
+ * `url`: the record of validator `i` is the `i`th. `registryPublicKeys` are the leanXMSS public
+ * keys of the validators, by index, as a beacon node gives them. A key is found among them by its
+ * public parameter, the last bytes of a public key, and its trees are then checked against the
+ * public key found, so the file itself is not trusted. A key that is no validator's has no trees
+ * here.
  *
- * Keys that follow one another in the mnemonic, as a validator client's do, are read at once.
- * This is to run before the keys are derived: that work fills the thread pool a request resolves
- * its host on, and a request made beside it waits past its timeout.
+ * Validators that follow one another, as a validator client's do, are read at once. This is to
+ * run before the keys are derived: that work fills the thread pool a request resolves its host
+ * on, and a request made beside it waits past its timeout.
  */
-export async function fetchDevnetXmssTrees(
+export async function fetchXmssTrees(
   url: string,
   publicParameters: Uint8Array[],
+  registryPublicKeys: Uint8Array[],
   logger: Pick<Logger, LogLevel.warn>
 ): Promise<Map<string, XmssTrees>> {
-  const publicKeys = fs.readFileSync(DEVNET_PUBLIC_KEYS_PATH);
-  const indexByParameter = new Map<string, number>();
-  for (let index = 0; index < publicKeys.length / PUBLIC_KEY_SIZE; index++) {
-    const end = (index + 1) * PUBLIC_KEY_SIZE;
-    indexByParameter.set(toHex(publicKeys.subarray(end - PUBLIC_PARAMETER_SIZE, end)), index);
+  // A public parameter two validators share names neither
+  const indexByParameter = new Map<string, number | null>();
+  for (const [index, publicKey] of registryPublicKeys.entries()) {
+    if (publicKey?.length !== PUBLIC_KEY_SIZE) continue;
+    const parameter = toHex(publicKey.subarray(PUBLIC_KEY_SIZE - PUBLIC_PARAMETER_SIZE));
+    indexByParameter.set(parameter, indexByParameter.has(parameter) ? null : index);
   }
 
   const indices = publicParameters
     .map((publicParameter) => indexByParameter.get(toHex(publicParameter)))
-    .filter((index) => index !== undefined)
+    .filter((index) => index != null)
     .sort((a, b) => a - b);
 
   const runs: {first: number; count: number}[] = [];
@@ -64,7 +58,7 @@ export async function fetchDevnetXmssTrees(
       try {
         const records = await readRecords(url, first, count);
         for (let index = first; index < first + count; index++) {
-          const publicKey = publicKeys.subarray(index * PUBLIC_KEY_SIZE, (index + 1) * PUBLIC_KEY_SIZE);
+          const publicKey = registryPublicKeys[index];
           trees.set(toHex(publicKey.subarray(PUBLIC_KEY_SIZE - PUBLIC_PARAMETER_SIZE)), {
             publicKey,
             trees: records.subarray((index - first) * CACHE_RECORD_SIZE, (index - first + 1) * CACHE_RECORD_SIZE),

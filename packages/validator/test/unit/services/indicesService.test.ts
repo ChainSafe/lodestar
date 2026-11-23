@@ -1,5 +1,5 @@
 import {toBufferBE} from "@vekexasia/bigint-buffer2";
-import {beforeAll, describe, expect, it} from "vitest";
+import {beforeAll, describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@lodestar/native/blst";
 import {toRequestPubkey} from "@lodestar/state-transition";
@@ -49,7 +49,7 @@ describe("IndicesService", () => {
     });
   });
 
-  it("names a pq validator by its bare key to the API and checks its VRF root", async () => {
+  it("names a pq validator by its bare key to the API and gives its VRF root", async () => {
     const xmssPubkey = new Uint8Array(32).fill(7);
     const known = toHex(toRequestPubkey(xmssPubkey));
     const validator = {...ssz.pq.Validator.defaultValue(), pubkey: xmssPubkey, vrfRoot: new Uint8Array(32).fill(1)};
@@ -59,12 +59,12 @@ describe("IndicesService", () => {
         meta: {executionOptimistic: false, finalized: false},
       })
     );
-    const errors: string[] = [];
-    const indicesService = new IndicesService({...logger, error: (message: string) => errors.push(message)}, api, null);
+    const indicesService = new IndicesService(logger, api, null);
+    const onVrfRoot = vi.fn();
 
-    expect(await indicesService.pollValidatorIndices([known], () => new Uint8Array(32).fill(2))).toEqual([5]);
+    expect(await indicesService.pollValidatorIndices([known], onVrfRoot)).toEqual([5]);
     expect(api.beacon.postStateValidators).toHaveBeenCalledWith({stateId: "head", validatorIds: [toHex(xmssPubkey)]});
     expect(indicesService.pubkey2index.get(known)).toBe(5);
-    expect(errors).toHaveLength(1);
+    expect(onVrfRoot).toHaveBeenCalledWith(known, validator.vrfRoot);
   });
 });

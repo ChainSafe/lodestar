@@ -2,13 +2,20 @@ import fs from "node:fs";
 import path from "node:path";
 import tmp from "tmp";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {fromHex, toHex} from "@lodestar/utils";
-import {fetchDevnetXmssTrees} from "../../../../src/cmds/validator/signers/xmssCache.js";
+import {toHex} from "@lodestar/utils";
+import {fetchXmssTrees} from "../../../../src/cmds/validator/signers/xmssCache.js";
 
 const RECORD_SIZE = 14696;
 
-describe("fetchDevnetXmssTrees", () => {
+describe("fetchXmssTrees", () => {
   let tmpDir: tmp.DirResult;
+  // The validators' public keys, by index. The last two share a public parameter.
+  const registry = [0, 1, 2, 3, 4, 4].map((byte, index) => {
+    const publicKey = new Uint8Array(32).fill(byte + 1, 16);
+    publicKey[0] = index;
+    return publicKey;
+  });
+  const parameterOf = (index: number): Uint8Array => registry[index].subarray(16);
 
   beforeEach(() => {
     tmpDir = tmp.dirSync({unsafeCleanup: true});
@@ -18,38 +25,34 @@ describe("fetchDevnetXmssTrees", () => {
     tmpDir.removeCallback();
   });
 
-  it("reads the records of devnet keys, found by their public parameters", async () => {
+  it("reads the records of validators, found by their public parameters", async () => {
     const file = path.join(tmpDir.name, "trees.xmss");
-    fs.writeFileSync(file, Buffer.concat([0, 1, 2, 3].map((index) => Buffer.alloc(RECORD_SIZE, index))));
+    fs.writeFileSync(file, Buffer.concat(registry.map((_, index) => Buffer.alloc(RECORD_SIZE, index))));
     const logger = {warn: vi.fn()};
 
-    // The devnet mnemonic's keys 2 and 3, and a key that is not of the devnet
-    const publicKeys = [
-      fromHex("0x9fdea071c029316bd6d677e83cf393af28dec171ddcc42b9fbcbaa3d6d1bb428"),
-      fromHex("0xff5253ca9999583977b32bbc8804bf696280f80785ba6f5b12e5716b9cd84cf5"),
-    ];
-    const trees = await fetchDevnetXmssTrees(
+    // Validators 3 and 2, a key that is no validator's, and one whose public parameter two share
+    const trees = await fetchXmssTrees(
       file,
-      [publicKeys[1].subarray(16), new Uint8Array(16), publicKeys[0].subarray(16)],
+      [parameterOf(3), new Uint8Array(16), parameterOf(2), parameterOf(4)],
+      registry,
       logger
     );
 
     expect(trees.size).toBe(2);
-    for (const [i, publicKey] of publicKeys.entries()) {
-      const found = trees.get(toHex(publicKey.subarray(16)));
-      expect(found && Buffer.from(found.publicKey)).toEqual(Buffer.from(publicKey));
-      expect(found && Buffer.from(found.trees)).toEqual(Buffer.alloc(RECORD_SIZE, i + 2));
+    for (const index of [2, 3]) {
+      const found = trees.get(toHex(parameterOf(index)));
+      expect(found && Buffer.from(found.publicKey)).toEqual(Buffer.from(registry[index]));
+      expect(found && Buffer.from(found.trees)).toEqual(Buffer.alloc(RECORD_SIZE, index));
     }
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
   it("leaves keys whose records cannot be read to be built", async () => {
     const logger = {warn: vi.fn()};
-    const publicKey = fromHex("0x9fdea071c029316bd6d677e83cf393af28dec171ddcc42b9fbcbaa3d6d1bb428");
     const file = path.join(tmpDir.name, "short.xmss");
     fs.writeFileSync(file, Buffer.alloc(RECORD_SIZE));
-    const trees = await fetchDevnetXmssTrees(file, [publicKey.subarray(16)], logger);
+    const trees = await fetchXmssTrees(file, [parameterOf(2)], registry, logger);
     expect(trees.size).toBe(0);
     expect(logger.warn).toHaveBeenCalledOnce();
-  }, 20_000);
+  });
 });

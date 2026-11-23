@@ -361,7 +361,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   xmssCacheUrl: {
     description:
-      "On a network that starts at the pq fork: a URL or a path of precomputed leanXMSS trees of the pq devnet's keys, 14696 bytes per key. A validator loads its trees from it in place of building them, which takes seconds a key, and keeps them in its cache directory after. Only the record of each key is fetched",
+      "On a network that starts at the pq fork: a URL or a path of precomputed leanXMSS trees, 14696 bytes per validator, in the order of the validator registry. A validator found in the beacon node's registry loads its trees from it in place of building them, which takes seconds a key, and keeps them in its cache directory after. Only the records of its own keys are fetched",
     type: "string",
   },
 

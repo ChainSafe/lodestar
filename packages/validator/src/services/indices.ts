@@ -1,7 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {fromRequestPubkey, isLegacyPubkey, toApiPubkey} from "@lodestar/state-transition";
 import {ValidatorIndex} from "@lodestar/types";
-import {Logger, MapDef, byteArrayEquals, fromHex, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, fromHex, toHex, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {batchItems} from "../util/index.js";
 
@@ -76,10 +76,10 @@ export class IndicesService {
     return this.index2pubkey.has(index);
   }
 
-  /** `getVrfRoot` gives the root of the VRF tree held for a pq validator, to check against the state's */
+  /** `onVrfRoot` is given the VRF root the state holds for each pq validator found */
   async pollValidatorIndices(
     pubkeysHex: PubkeyHex[],
-    getVrfRoot?: (pubkeyHex: PubkeyHex) => Uint8Array | undefined
+    onVrfRoot?: (pubkeyHex: PubkeyHex, vrfRoot: Uint8Array) => void
   ): Promise<ValidatorIndex[]> {
     // Ensures pollValidatorIndicesInternal() is not called more than once at the same time.
     // AttestationDutiesService, SyncCommitteeDutiesService and DoppelgangerService will call this function at the same time, so this will
@@ -88,7 +88,7 @@ export class IndicesService {
       return this.pollValidatorIndicesPromise;
     }
 
-    this.pollValidatorIndicesPromise = this.pollValidatorIndicesInternal(pubkeysHex, getVrfRoot).finally(() => {
+    this.pollValidatorIndicesPromise = this.pollValidatorIndicesInternal(pubkeysHex, onVrfRoot).finally(() => {
       // Once the pollValidatorIndicesInternal() resolves or rejects null the cached promise so it can be called again.
       this.pollValidatorIndicesPromise = null;
     });
@@ -108,7 +108,7 @@ export class IndicesService {
       validator indices. Returns the new discovered indexes */
   private async pollValidatorIndicesInternal(
     pubkeysHex: PubkeyHex[],
-    getVrfRoot?: (pubkeyHex: PubkeyHex) => Uint8Array | undefined
+    onVrfRoot?: (pubkeyHex: PubkeyHex, vrfRoot: Uint8Array) => void
   ): Promise<ValidatorIndex[]> {
     const pubkeysHexToDiscover = pubkeysHex.filter((pubkey) => !this.pubkey2index.has(pubkey));
 
@@ -122,7 +122,7 @@ export class IndicesService {
 
     const newIndices: number[] = [];
     for (const pubkeysHexBatch of pubkeysHexBatches) {
-      const validatorIndicesArr = await this.fetchValidatorIndices(pubkeysHexBatch, getVrfRoot);
+      const validatorIndicesArr = await this.fetchValidatorIndices(pubkeysHexBatch, onVrfRoot);
       newIndices.push(...validatorIndicesArr);
     }
 
@@ -133,7 +133,7 @@ export class IndicesService {
 
   private async fetchValidatorIndices(
     pubkeysHex: string[],
-    getVrfRoot?: (pubkeyHex: PubkeyHex) => Uint8Array | undefined
+    onVrfRoot?: (pubkeyHex: PubkeyHex, vrfRoot: Uint8Array) => void
   ): Promise<ValidatorIndex[]> {
     // A pq validator is known here by the 48 byte form of its public key, and to the API by the key
     const validatorIds = pubkeysHex.map((pubkeyHex) => {
@@ -157,14 +157,7 @@ export class IndicesService {
           validatorIndex: validator.index,
           pubKey: pubkeyHex,
         });
-        const vrfRoot = getVrfRoot?.(pubkeyHex);
-        if (vrfRoot && "vrfRoot" in validator.validator && !byteArrayEquals(vrfRoot, validator.validator.vrfRoot)) {
-          this.logger.error("VRF tree is not the validator's in the state: it cannot propose", {
-            validatorIndex: validator.index,
-            vrfRoot: toRootHex(vrfRoot),
-            stateVrfRoot: toRootHex(validator.validator.vrfRoot),
-          });
-        }
+        if ("vrfRoot" in validator.validator) onVrfRoot?.(pubkeyHex, validator.validator.vrfRoot);
         this.pubkey2index.set(pubkeyHex, validator.index);
         this.index2pubkey.set(validator.index, pubkeyHex);
         newIndices.push(validator.index);

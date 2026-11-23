@@ -24,7 +24,7 @@ import {PersistedKeysBackend} from "../keymanager/persistedKeys.js";
 import {IValidatorCliArgs} from "../options.js";
 import {getAccountPaths} from "../paths.js";
 import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./importExternalKeystores.js";
-import {fetchDevnetXmssTrees} from "./xmssCache.js";
+import {fetchXmssTrees} from "./xmssCache.js";
 
 const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 
@@ -169,9 +169,19 @@ export async function getSignersFromArgs(
  */
 export async function toXmssSigners(
   signers: Signer[],
-  vrfStateUrl: string | undefined,
-  xmssCacheUrl: string | undefined,
-  treesDir: string,
+  {
+    vrfStateUrl,
+    xmssCacheUrl,
+    treesDir,
+    listXmssPublicKeys,
+  }: {
+    vrfStateUrl?: string;
+    xmssCacheUrl?: string;
+    /** Where each key keeps its trees between runs */
+    treesDir: string;
+    /** The leanXMSS public keys of the validators, by index, from a beacon node */
+    listXmssPublicKeys: () => Promise<Uint8Array[]>;
+  },
   logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.error>
 ): Promise<Signer[]> {
   const localCount = signers.filter((signer) => signer.type === SignerType.Local).length;
@@ -208,31 +218,48 @@ export async function toXmssSigners(
       const secretKey = signer.secretKey.toBytes();
       if (!hasXmssTrees(secretKey, getTreeStore(signer))) publicParameters.push(getXmssPublicParameter(secretKey));
     }
-    fetchedTrees = await fetchDevnetXmssTrees(xmssCacheUrl, publicParameters, logger);
-    logger.info("Fetched leanXMSS trees", {count: fetchedTrees.size, wanted: publicParameters.length});
+    if (publicParameters.length > 0) {
+      try {
+        fetchedTrees = await fetchXmssTrees(xmssCacheUrl, publicParameters, await listXmssPublicKeys(), logger);
+      } catch (e) {
+        logger.warn("No leanXMSS trees from xmssCacheUrl: building them", {}, e as Error);
+      }
+      logger.info("Fetched leanXMSS trees", {count: fetchedTrees.size, wanted: publicParameters.length});
+    }
   }
 
-  logger.info("Deriving leanXMSS keys and VRF trees from keystores", {count: localCount});
-  return Promise.all(
+  logger.info("Deriving leanXMSS keys from keystores", {count: localCount});
+  const xmssSigners = await Promise.all(
     signers.map(async (signer): Promise<Signer> => {
       if (signer.type !== SignerType.Local) return signer;
       const secretKey = signer.secretKey.toBytes();
-      const treeStore = getTreeStore(signer);
       const trees = fetchedTrees.get(toHex(getXmssPublicParameter(secretKey)));
-      try {
-        return {
-          type: SignerType.Xmss,
-          signer: await XmssSigner.fromBlsSecretKey(secretKey, {vrfStates, treeStore, trees}),
-        };
-      } catch (e) {
-        if (!(e as Error).message.includes("NoMatchingState")) throw e;
-        // It still attests: only its proposals need the tree
-        const xmssSigner = await XmssSigner.fromBlsSecretKey(secretKey, {treeStore, trees});
-        logger.error("No VRF state for validator: it cannot propose", {pubkey: toPubkeyHex(xmssSigner.publicKey)});
-        return {type: SignerType.Xmss, signer: xmssSigner};
-      }
+      return {
+        type: SignerType.Xmss,
+        signer: await XmssSigner.fromBlsSecretKey(secretKey, {vrfStates, treeStore: getTreeStore(signer), trees}),
+      };
     })
   );
+
+  // Only a proposal needs a VRF tree, and each takes about a second of one core: they are built
+  // behind the client's start, one at a time so that signing has the other threads
+  void (async () => {
+    for (const signer of xmssSigners) {
+      if (signer.type !== SignerType.Xmss) continue;
+      try {
+        await signer.signer.getVrfRoot();
+      } catch (e) {
+        logger.error(
+          "No VRF tree for validator: it cannot propose",
+          {pubkey: toPubkeyHex(signer.signer.publicKey)},
+          e as Error
+        );
+      }
+    }
+    logger.info("Built VRF trees", {count: localCount});
+  })();
+
+  return xmssSigners;
 }
 
 function xmssTreeStore(filepath: string): XmssTreeStore {

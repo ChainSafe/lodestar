@@ -1,6 +1,6 @@
 import {setMaxListeners} from "node:events";
 import path from "node:path";
-import {WireFormat, routes} from "@lodestar/api";
+import {WireFormat, getClient, routes} from "@lodestar/api";
 import {
   MonitoringService,
   RegistryMetricCreator,
@@ -9,6 +9,7 @@ import {
 } from "@lodestar/beacon-node";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {getNodeLogger} from "@lodestar/logger/node";
+import {retry} from "@lodestar/utils";
 import {
   ProcessShutdownCallback,
   SlashingProtection,
@@ -114,7 +115,28 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   let signers = await getSignersFromArgs(args, network, {logger, signal: abortController.signal});
   if (config.PQ_FORK_EPOCH === 0) {
     const treesDir = path.join(accountPaths.cacheDir, "xmss-trees");
-    signers = await toXmssSigners(signers, args.vrfStateUrl, args.xmssCacheUrl, treesDir, logger);
+    signers = await toXmssSigners(
+      signers,
+      {
+        vrfStateUrl: args.vrfStateUrl,
+        xmssCacheUrl: args.xmssCacheUrl,
+        treesDir,
+        listXmssPublicKeys: async () => {
+          const api = getClient(
+            {urls: args.beaconNodes, globalInit: {signal: abortController.signal}},
+            {config, logger}
+          );
+          const validators = await retry(async () => (await api.beacon.getStateValidators({stateId: "head"})).value(), {
+            retries: 5,
+            retryDelay: 2000,
+          });
+          const publicKeys: Uint8Array[] = [];
+          for (const {index, validator} of validators) publicKeys[index] = validator.pubkey;
+          return publicKeys;
+        },
+      },
+      logger
+    );
   }
 
   // Ensure the validator has at least one key

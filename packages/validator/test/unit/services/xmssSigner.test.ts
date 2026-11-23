@@ -9,7 +9,14 @@ describe("XmssSigner", () => {
       fromHex("0x2892f3ba475c3640a67fe730798ad9c4eed3a6d934db85f91c41cfc837ce8834")
     );
     expect(toHex(signer.publicKey)).toBe("0x155a29b971da2b771fdf52c768af63fa03f78f25487e3e0ed03d012b7039d88b");
-    expect(toHex(signer.vrfRoot)).toBe("0x46f6772a35c14c7f8467e9d8791450ed3c6853191129876fc50e769ec9bac18d");
+    const vrfRoot = "0x46f6772a35c14c7f8467e9d8791450ed3c6853191129876fc50e769ec9bac18d";
+    expect(toHex(await signer.getVrfRoot())).toBe(vrfRoot);
+
+    // A tree the state holds another root for is not the validator's: it opens no slot
+    signer.setRegisteredVrfRoot(fromHex(vrfRoot));
+    expect(await signer.vrfProof(3)).toHaveLength(1024);
+    signer.setRegisteredVrfRoot(new Uint8Array(32));
+    await expect(signer.vrfProof(3)).rejects.toThrow("is not the validator's in the state");
   }, 60_000);
 
   it("stores a key's trees and loads them in place of building them", async () => {

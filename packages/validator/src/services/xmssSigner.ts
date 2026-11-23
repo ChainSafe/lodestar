@@ -10,6 +10,7 @@ import {
 } from "@lodestar/params";
 import {computeEpochAtSlot, computeXmssAttestationLeafIndex, computeXmssLeafIndex} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
 import {SignableMessage, SignableMessageType} from "../util/externalSignerClient.js";
 
 /** What a pq validator answers a signing request with: a leaf to sign at, or its VRF proof for a slot */
@@ -134,11 +135,13 @@ async function loadXmssKey(seed: Uint8Array, stored?: SealedTrees, trees?: XmssT
 export class XmssSigner {
   /** Bottom trees of the key that `treeStore` holds */
   private readonly storedTrees = new Set<number>();
+  private vrfTree: Promise<VrfTree> | null = null;
+  private registeredVrfRoot: Uint8Array | null = null;
 
   private constructor(
     readonly publicKey: Uint8Array,
     private readonly key: XmssSecretKey,
-    private readonly vrfTree: VrfTree,
+    private readonly buildVrfTree: () => Promise<VrfTree>,
     private readonly treeStore?: SealedTrees
   ) {}
 
@@ -147,18 +150,18 @@ export class XmssSigner {
    * networks only.
    */
   static async init(seed: Uint8Array, vrfSeed: Uint8Array, vrfPopulatedDepth: number): Promise<XmssSigner> {
-    const [key, vrfTree] = await Promise.all([XmssSecretKey.fromSeed(seed), VrfTree.build(vrfSeed, vrfPopulatedDepth)]);
-    return new XmssSigner(key.toPublicKey(), key, vrfTree);
+    const key = await XmssSecretKey.fromSeed(seed);
+    return new XmssSigner(key.toPublicKey(), key, () => VrfTree.build(vrfSeed, vrfPopulatedDepth));
   }
 
   /**
    * The pq validator of a BLS keystore, as the devnet genesis tooling derives it: both seeds are
    * hashes of the keystore's secret key.
    *
-   * Only the first 2^20 slots of its VRF tree are hashed here. A full tree takes 2^32 hashes, so
-   * what stands above those slots comes from `vrfStates`, precomputed states of full trees with
-   * this key's among them. Without `vrfStates` the other leaves are zero, as the genesis tooling
-   * had it before it moved to full trees.
+   * Only the first 2^20 slots of its VRF tree are hashed. A full tree takes 2^32 hashes, so what
+   * stands above those slots comes from `vrfStates`, precomputed states of full trees with this
+   * key's among them. Without `vrfStates` the other leaves are zero, as the genesis tooling had it
+   * before it moved to full trees.
    *
    * The key's trees are those in `treeStore`, where the signer keeps them, else `trees`, else
    * built.
@@ -170,20 +173,40 @@ export class XmssSigner {
     const seed = xmssSeed(secretKey);
     const vrfSeed = createHash("sha256").update("vrf-seed").update(secretKey).digest();
     const stored = opts.treeStore && new SealedTrees(opts.treeStore, seed);
-    const [key, vrfTree] = await Promise.all([
-      loadXmssKey(seed, stored, opts.trees),
-      VrfTree.build(vrfSeed, KEYSTORE_VRF_POPULATED_DEPTH, opts.vrfStates),
-    ]);
-    return new XmssSigner(key.toPublicKey(), key, vrfTree, stored);
+    const key = await loadXmssKey(seed, stored, opts.trees);
+    return new XmssSigner(
+      key.toPublicKey(),
+      key,
+      () => VrfTree.build(vrfSeed, KEYSTORE_VRF_POPULATED_DEPTH, opts.vrfStates),
+      stored
+    );
   }
 
-  get vrfRoot(): Uint8Array {
-    return this.vrfTree.root();
+  /** The VRF root the state holds for the validator. A tree with another root is not its own. */
+  setRegisteredVrfRoot(root: Uint8Array): void {
+    this.registeredVrfRoot = root;
+  }
+
+  /**
+   * Builds the VRF tree at the first call. Only a proposal needs it, and it takes about a second
+   * of one core, so a signer is made without it. Rejects if the tree cannot be built, or is not
+   * the one the state holds the root of.
+   */
+  async getVrfRoot(): Promise<Uint8Array> {
+    this.vrfTree ??= this.buildVrfTree();
+    const root = (await this.vrfTree).root();
+    if (this.registeredVrfRoot && Buffer.compare(root, this.registeredVrfRoot) !== 0) {
+      throw Error(
+        `VRF tree with root ${toHex(root)} is not the validator's in the state, ${toHex(this.registeredVrfRoot)}`
+      );
+    }
+    return root;
   }
 
   /** The leaf of `slot` then its Merkle branch, concatenated */
-  vrfProof(slot: Slot): Uint8Array {
-    return this.vrfTree.proof(slot);
+  async vrfProof(slot: Slot): Promise<Uint8Array> {
+    await this.getVrfRoot();
+    return (await (this.vrfTree as Promise<VrfTree>)).proof(slot);
   }
 
   /**

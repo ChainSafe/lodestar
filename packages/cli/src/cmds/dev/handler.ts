@@ -99,5 +99,5 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
 /** The registry entries of the validators that `interopXmssSigner` gives the validator client */
 async function interopPqValidators(count: number): Promise<nodeUtils.PqGenesisValidator[]> {
   const signers = await Promise.all(Array.from({length: count}, (_, index) => interopXmssSigner(index)));
-  return signers.map((signer) => ({pubkey: signer.publicKey, vrfRoot: signer.vrfRoot}));
+  return Promise.all(signers.map(async (signer) => ({pubkey: signer.publicKey, vrfRoot: await signer.getVrfRoot()})));
 }
