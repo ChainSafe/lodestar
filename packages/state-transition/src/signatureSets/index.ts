@@ -1,12 +1,18 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkSeq} from "@lodestar/params";
 import {IndexedAttestation, SignedBeaconBlock, altair, capella, gloas} from "@lodestar/types";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {IBeaconStateView, IBeaconStateViewGloas} from "../stateView/interface.js";
-import {EpochShuffling, ISignatureSet, createAggregateSignatureSetFromComponents} from "../util/index.js";
+import {
+  EpochShuffling,
+  ISignatureSet,
+  createAggregateSignatureSetFromComponents,
+  createSingleSignatureSetFromComponents,
+} from "../util/index.js";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
 import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
+import {getExecutionPayloadBidSigningRoot} from "./executionPayloadBid.js";
 import {getAttestationsSignatureSets} from "./indexedAttestation.js";
 import {getPayloadAttestationDataSigningRoot} from "./indexedPayloadAttestation.js";
 import {getBlockProposerSignatureSet} from "./proposer.js";
@@ -86,8 +92,26 @@ export function getBlockSignatureSets(
   }
 
   if (fork >= ForkSeq.gloas) {
-    for (const payloadAttestation of (signedBlock as gloas.SignedBeaconBlock).message.body.payloadAttestations) {
-      const ptc = (state as IBeaconStateViewGloas).getPayloadTimelinessCommittee(payloadAttestation.data.slot);
+    const gloasState = state as IBeaconStateViewGloas;
+    const {payloadAttestations, signedExecutionPayloadBid} = (signedBlock as gloas.SignedBeaconBlock).message.body;
+
+    const {builderIndex} = signedExecutionPayloadBid.message;
+    // `state` may be the pre-state of an earlier block of the same epoch. That is still the right pubkey:
+    // `is_active_builder` requires `deposit_epoch < finalized_checkpoint.epoch`, and a builder index is only
+    // assigned or reassigned to a builder deposited in the current epoch, which block processing rejects as
+    // inactive. For the same reason a builder missing from `state` needs no signature set.
+    if (builderIndex !== BUILDER_INDEX_SELF_BUILD && builderIndex < gloasState.getBuildersLength()) {
+      signatureSets.push(
+        createSingleSignatureSetFromComponents(
+          gloasState.getBuilder(builderIndex).pubkey,
+          getExecutionPayloadBidSigningRoot(config, signedExecutionPayloadBid.message),
+          signedExecutionPayloadBid.signature
+        )
+      );
+    }
+
+    for (const payloadAttestation of payloadAttestations) {
+      const ptc = gloasState.getPayloadTimelinessCommittee(payloadAttestation.data.slot);
       signatureSets.push(
         createAggregateSignatureSetFromComponents(
           payloadAttestation.aggregationBits.intersectValues(ptc),
