@@ -321,7 +321,7 @@ export class NativeForkChoice implements IForkChoice {
 
   /**
    * Spec `get_proposer_head`. `msFromSlot` is how far into `slot` the proposer is, which the
-   * store reads from its own clock, so the clock is brought up to that moment first.
+   * store reads from its own clock, so fork choice is first brought up to that moment.
    */
   getProposerHead(
     headBlock: ProtoBlock,
@@ -341,6 +341,7 @@ export class NativeForkChoice implements IForkChoice {
       return {proposerHead: headBlock, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotAvailable};
     }
 
+    this.updateTime(slot);
     this.store.onTick(this.store.timeAtSlotMs(slot) + Math.max(0, Math.floor(msFromSlot)));
     const decision = this.store.getProposerHead(headNode, slot);
     if (typeof decision === "string") {
