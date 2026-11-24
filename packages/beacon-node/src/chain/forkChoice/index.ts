@@ -337,12 +337,13 @@ export function initializeNativeForkChoice(
       const isKnown = blockRoot === anchorRoot || unfinalizedAncestors.some((b) => b.blockRoot === blockRoot);
       if (isKnown || blockRoot === ZERO_HASH_HEX) continue;
       const isGloas = config.getForkSeq(slot) >= ForkSeq.gloas;
+      const targetSlot = computeStartSlotAtEpoch(computeEpochAtSlot(slot));
       unfinalizedAncestors.push({
         slot,
         blockRoot,
         parentRoot: unfinalizedAncestors.at(-1)?.blockRoot ?? ZERO_HASH_HEX,
         stateRoot: ZERO_HASH_HEX,
-        targetRoot: blockRoot,
+        targetRoot: targetSlot === slot ? blockRoot : toRootHex(state.getBlockRootAtSlot(targetSlot)),
         timeliness: false,
         ptcTimeliness: false,
         importedTimely: false,

@@ -71,6 +71,10 @@ describe("native fork choice from an unfinalized state", () => {
       anchorRoot,
     ]);
     expect(forkChoice.getAncestor(anchorRoot, 3 * SLOTS_PER_EPOCH).blockRoot).toBe(toRootHex(epochCheckpointRoot));
+    expect(forkChoice.getBlockHexDefaultStatus(toRootHex(parentRoot))?.targetRoot).toBe(toRootHex(epochCheckpointRoot));
+    expect(forkChoice.getBlockHexDefaultStatus(toRootHex(epochCheckpointRoot))?.targetRoot).toBe(
+      toRootHex(epochCheckpointRoot)
+    );
     expect(forkChoice.getAncestor(anchorRoot, SLOTS_PER_EPOCH).blockRoot).toBe(toRootHex(finalizedCheckpoint.root));
     expect(forkChoice.prune(toRootHex(finalizedCheckpoint.root))).toEqual([]);
   });
