@@ -10,7 +10,7 @@ const address4 = test_support.address4;
 const endpoint = test_support.endpoint;
 const driver = @import("driver.zig");
 const fault_io = @import("fault_io");
-const Sockets = @import("udp").Sockets;
+const SocketPair = @import("udp").SocketPair;
 
 test "transport rejects missing expiry storage before advancing" {
     var instance: Transport = undefined;
@@ -138,7 +138,7 @@ test "transport cancels a discovery call dropped by local pressure without recor
     try std.testing.expectError(error.SystemResources, pair.transport_a.startCall(faults.io(), endpoint(&pair.record_b), &pair.record_b, &request, try Transport.monotonicMilliseconds(faults.io())));
     try std.testing.expectEqual(@as(usize, 1), faults.send_calls);
     try std.testing.expectEqual(@as(usize, 0), pair.transport_a.engine.calls.count());
-    const pressure = @intFromEnum(Sockets.SendDrops.Reason.system_resources);
+    const pressure = @intFromEnum(SocketPair.SendDrops.Reason.system_resources);
     try std.testing.expectEqual(@as(u64, 1), pair.transport_a.send_drops.datagrams[pressure]);
     try std.testing.expect(pair.transport_a.send_drops.bytes[pressure] > 0);
     var expired: [4]CallTable.Expired = undefined;
