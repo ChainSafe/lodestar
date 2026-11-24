@@ -267,6 +267,8 @@ export class Builder {
           void this.onEvent(event);
         },
         onOpen: () => {
+          // Heads announced before a reconnect say nothing about the payload attributes emitted while disconnected
+          this.headSlotsWithoutPayloadAttributes = 0;
           void this.fetchProposerPreferences(api);
         },
         onError: (error) => {
@@ -349,11 +351,14 @@ export class Builder {
   }
 
   /**
-   * Counts the slots with a head announced since the last payload attributes. A beacon node emitting them for every
+   * Counts the slots with a timely head announced since the last payload attributes. A beacon node emitting them for every
    * slot keeps the count at 0 or 1, the attributes for the next slot follow each head. Head events prove the event
    * stream is delivering, the builder is not just starting up or disconnected.
    */
   private checkPayloadAttributesEmitted(headSlot: Slot): void {
+    // A beacon node that is catching up announces heads of past slots in a burst, payload attributes are only
+    // emitted once per slot and for the current slot
+    if (headSlot < this.clock.getCurrentSlot()) return;
     // The head of a slot can be announced more than once, e.g. when its payload becomes available
     if (this.latestHeadSlot !== null && headSlot <= this.latestHeadSlot) return;
     this.latestHeadSlot = headSlot;

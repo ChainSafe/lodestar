@@ -326,7 +326,7 @@ describe("Builder", () => {
       data.proposalSlot = proposalSlot;
       return {type: EventType.payloadAttributes, message: {version: ForkName.gloas, data}} as const;
     };
-    const warning = expect.stringContaining("Beacon node is not emitting payload attributes, unable to bid");
+    const warning = expect.stringContaining("Beacon node is not emitting payload attributes");
 
     it("warns once when heads are announced without payload attributes", () => {
       new Builder(modules);
@@ -359,6 +359,36 @@ describe("Builder", () => {
         onEvent(headEvent(slot));
       }
       expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it("does not count heads of past slots announced while the beacon node catches up", () => {
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+      clock.currentSlot = 10;
+
+      for (let slot = 1; slot <= 9; slot++) onEvent(headEvent(slot));
+      expect(logger.warn).not.toHaveBeenCalled();
+
+      for (let slot = 10; slot <= 12; slot++) {
+        clock.currentSlot = slot;
+        onEvent(headEvent(slot));
+      }
+      expect(logger.warn).toHaveBeenCalledOnce();
+    });
+
+    it("starts counting again when the event stream reconnects", () => {
+      new Builder(modules);
+      const {onEvent, onOpen} = api.events.eventstream.mock.calls[0][0];
+
+      onEvent(headEvent(1));
+      onEvent(headEvent(2));
+      onOpen?.();
+      onEvent(headEvent(3));
+      onEvent(headEvent(4));
+      expect(logger.warn).not.toHaveBeenCalled();
+
+      onEvent(headEvent(5));
+      expect(logger.warn).toHaveBeenCalledOnce();
     });
 
     it("warns again if payload attributes stop after they were received", () => {
