@@ -488,6 +488,7 @@ declare const bindings: {
   };
   BeaconStateView: typeof BeaconStateView;
   BeaconConfig: typeof BeaconConfig;
+  ForkChoice: typeof import("./fork-choice.js").ForkChoice;
 };
 
 export default bindings;

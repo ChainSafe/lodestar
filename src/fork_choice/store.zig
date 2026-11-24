@@ -48,6 +48,9 @@ pub const PTC_TIMELINESS_INDEX = 1;
 
 pub const Error = error{
     AnchorStateRootMismatch,
+    TooManyAnchorAncestors,
+    InvalidAnchorAncestor,
+    AnchorCheckpointNotAncestor,
     PreGenesisTime,
     TooManyBlocks,
     UnknownParent,
@@ -302,6 +305,19 @@ pub const BlockSummary = struct {
     }
 };
 
+/// An ancestor of an unfinalized anchor, known only by root. `slot` is at or after the
+/// block's real slot. It keeps the block tree connected down to the finalized checkpoint.
+/// Its payload is unknown: the payloads a node stands on end at the anchor. The store
+/// accepts a block on top of it; a caller without the ancestor's state cannot produce one.
+pub const AnchorAncestor = struct {
+    root: Root,
+    slot: Slot,
+};
+
+/// The finalized block, the justified block, the anchor's parent, and for the anchor's
+/// epoch and the one before the checkpoint block and the block before it.
+pub const MAX_ANCHOR_ANCESTORS = 7;
+
 /// Balances of the justified checkpoint state (spec `store.checkpoint_states[store.justified_checkpoint]`).
 /// Owned by the store once returned from `StateProvider`.
 pub const JustifiedBalances = struct {
@@ -464,6 +480,8 @@ pub const Store = struct {
     /// whose ancestors count as validated; `prune` carries the dropped ancestors'
     /// derived status here so a Gloas root's `pending` and `empty` nodes keep it.
     root_base_status: ExecutionStatus,
+    /// The first blocks of the table are this many `AnchorAncestor`s.
+    anchor_ancestor_count: BlockIndex,
 
     /// Spec `get_forkchoice_store`. `execution_status` is the verdict on the anchor's own
     /// payload: `.valid` at genesis, `.syncing` for a checkpoint the engine has not seen.
@@ -495,6 +513,56 @@ pub const Store = struct {
         provider: StateProvider,
     ) !Store {
         const checkpoint: Checkpoint = .{ .epoch = computeEpochAtSlot(anchor.slot), .root = anchor.root };
+        return initAnchored(allocator, config, genesis_time, anchor, &.{}, .{
+            .justified = checkpoint,
+            .finalized = checkpoint,
+            .unrealized_justified = checkpoint,
+            .unrealized_finalized = checkpoint,
+        }, provider);
+    }
+
+    /// A store anchored at a block that is not finalized. Unlike `get_forkchoice_store`,
+    /// the store starts at the anchor state's own checkpoints, so the anchor can still be
+    /// reorged and finality only moves with the chain. `ancestors` run oldest first from
+    /// the finalized block to the anchor and must contain the justified and the finalized
+    /// checkpoint blocks, unless the anchor is that block itself. A checkpoint the chain can
+    /// still justify must be among them too: `get_head` fails once the justified block is
+    /// one the store does not hold. `provider.justifiedBalances`
+    /// is asked for the justified checkpoint, whose state the caller usually does not have;
+    /// the anchor state's balances are the closest substitute.
+    pub fn initFromUnfinalizedSummary(
+        allocator: Allocator,
+        config: *const BeaconConfig,
+        genesis_time: u64,
+        anchor: BlockSummary,
+        ancestors: []const AnchorAncestor,
+        provider: StateProvider,
+    ) !Store {
+        return initAnchored(allocator, config, genesis_time, anchor, ancestors, .{
+            .justified = anchor.justified_checkpoint,
+            .finalized = anchor.finalized_checkpoint,
+            .unrealized_justified = anchor.unrealized_justified_checkpoint,
+            .unrealized_finalized = anchor.unrealized_finalized_checkpoint,
+        }, provider);
+    }
+
+    const AnchorCheckpoints = struct {
+        justified: Checkpoint,
+        finalized: Checkpoint,
+        unrealized_justified: Checkpoint,
+        unrealized_finalized: Checkpoint,
+    };
+
+    fn initAnchored(
+        allocator: Allocator,
+        config: *const BeaconConfig,
+        genesis_time: u64,
+        anchor: BlockSummary,
+        ancestors: []const AnchorAncestor,
+        checkpoints: AnchorCheckpoints,
+        provider: StateProvider,
+    ) !Store {
+        if (ancestors.len > MAX_ANCHOR_ANCESTORS) return error.TooManyAnchorAncestors;
         // Owned by `self` from here on: `self.deinit` is the only cleanup.
         const vote_targets = try VoteTargets.init(allocator);
         var self: Store = .{
@@ -503,10 +571,10 @@ pub const Store = struct {
             .timing = SlotTiming.init(config, secondsToMilliseconds(genesis_time)),
             .time_ms = 0,
             .genesis_time_ms = secondsToMilliseconds(genesis_time),
-            .justified_checkpoint = checkpoint,
-            .finalized_checkpoint = checkpoint,
-            .unrealized_justified_checkpoint = checkpoint,
-            .unrealized_finalized_checkpoint = checkpoint,
+            .justified_checkpoint = checkpoints.justified,
+            .finalized_checkpoint = checkpoints.finalized,
+            .unrealized_justified_checkpoint = checkpoints.unrealized_justified,
+            .unrealized_finalized_checkpoint = checkpoints.unrealized_finalized,
             .proposer_boost_root = constants.ZERO_HASH,
             .equivocating_indices = .{},
             .blocks = .empty,
@@ -524,30 +592,78 @@ pub const Store = struct {
             .provider = provider,
             .head_cache = .empty,
             .root_base_status = .pre_merge,
+            .anchor_ancestor_count = @intCast(ancestors.len),
         };
         errdefer self.deinit();
         self.time_ms = self.timing.timeAtSlotMs(anchor.slot);
         try checkExecutionStatus(&anchor);
+
+        var parent: BlockIndex = NO_BLOCK;
+        var parent_fork: ForkSeq = anchor.fork;
+        for (ancestors) |ancestor| {
+            // The zero root is the store's "no block": an ancestor may not take it.
+            if (std.mem.eql(u8, &ancestor.root, &constants.ZERO_HASH)) return error.InvalidAnchorAncestor;
+            if (std.mem.eql(u8, &ancestor.root, &anchor.root) or self.hasBlock(ancestor.root)) return error.InvalidAnchorAncestor;
+            if (ancestor.slot >= anchor.slot) return error.InvalidAnchorAncestor;
+            if (parent != NO_BLOCK and ancestor.slot <= self.blockSlot(parent)) return error.InvalidAnchorAncestor;
+            const fork = config.forkSeq(ancestor.slot);
+            const index: BlockIndex = @intCast(self.blocks.len);
+            try self.appendBlock(.{
+                .root = ancestor.root,
+                .parent = parent,
+                .slot = ancestor.slot,
+                .proposer_index = 0,
+                .state_root = constants.ZERO_HASH,
+                .fork = fork,
+                .justified_checkpoint = checkpoints.justified,
+                .finalized_checkpoint = checkpoints.finalized,
+                .unrealized_justified_checkpoint = checkpoints.unrealized_justified,
+                .timely = .{ false, false },
+                .parent_payload_status = anchorLinkStatus(fork, parent_fork, parent),
+                .payload_block_hash = constants.ZERO_HASH,
+                .bid_parent_block_hash = constants.ZERO_HASH,
+                .execution_status = .pre_merge,
+                .payload_verified = false,
+                .inclusion_list_satisfaction = .unknown,
+            });
+            parent = index;
+            parent_fork = fork;
+        }
+
+        const anchor_index: BlockIndex = @intCast(self.blocks.len);
         try self.appendBlock(.{
             .root = anchor.root,
-            .parent = NO_BLOCK,
+            .parent = parent,
             .slot = anchor.slot,
             .proposer_index = anchor.proposer_index,
             .state_root = anchor.state_root,
             .fork = anchor.fork,
             .justified_checkpoint = anchor.justified_checkpoint,
             .finalized_checkpoint = anchor.finalized_checkpoint,
-            .unrealized_justified_checkpoint = checkpoint,
+            .unrealized_justified_checkpoint = checkpoints.unrealized_justified,
             .timely = .{ true, true },
-            .parent_payload_status = .pending,
+            .parent_payload_status = anchorLinkStatus(anchor.fork, parent_fork, parent),
             .payload_block_hash = anchor.payload_block_hash,
             .bid_parent_block_hash = anchor.bid_parent_block_hash,
             .execution_status = anchor.execution_status,
             .payload_verified = false,
             .inclusion_list_satisfaction = .unknown,
         });
+        // `get_head` starts at the justified block and `on_block` checks the finalized one.
+        for ([_]Checkpoint{ checkpoints.justified, checkpoints.finalized }) |checkpoint| {
+            const block = self.getCheckpointBlock(anchor_index, checkpoint.epoch);
+            if (!std.mem.eql(u8, &self.blockRoot(block), &checkpoint.root)) return error.AnchorCheckpointNotAncestor;
+        }
         self.installJustifiedBalances(try self.loadJustifiedBalances(self.justified_checkpoint));
         return self;
+    }
+
+    /// The node of `parent` an anchor block or one of its ancestors hangs from. An
+    /// ancestor's payload is unknown, so a Gloas block hangs from its `.empty` node,
+    /// the one that always exists.
+    fn anchorLinkStatus(fork: ForkSeq, parent_fork: ForkSeq, parent: BlockIndex) PayloadStatus {
+        if (parent == NO_BLOCK) return .pending;
+        return if (fork.gte(.gloas) and parent_fork.gte(.gloas)) .empty else .pending;
     }
 
     pub fn deinit(self: *Store) void {
@@ -1343,7 +1459,8 @@ pub const Store = struct {
 
     // --- optimistic sync --------------------------------------------------------------
 
-    /// The payloads a node stands on, nearest first. A block's own payload is on the
+    /// The payloads a node stands on, nearest first, ending above the anchor's ancestors,
+    /// whose payloads are unknown. A block's own payload is on the
     /// chain before Gloas and for its `.full` node; `.pending` and `.empty` Gloas nodes
     /// stand on the parent payload the bid names, reached through `parent_payload_status`.
     const PayloadChain = struct {
@@ -1352,12 +1469,14 @@ pub const Store = struct {
 
         fn next(self: *PayloadChain) ?BlockIndex {
             while (self.node) |node| {
+                if (node.block < self.store.anchor_ancestor_count) break;
                 const blocks = self.store.blocks;
                 const own_on_chain = blocks.items(.fork)[node.block].lt(.gloas) or node.payload_status == .full;
                 const parent = blocks.items(.parent)[node.block];
                 self.node = if (parent == NO_BLOCK) null else .{ .block = parent, .payload_status = blocks.items(.parent_payload_status)[node.block] };
                 if (own_on_chain) return node.block;
             }
+            self.node = null;
             return null;
         }
     };
@@ -1475,7 +1594,9 @@ pub const Store = struct {
                 break;
             };
             const conflict = statuses[block] != .syncing;
-            const protected = if (justified) |j| block < j or justified_hashes.contains(hashes[block]) else false;
+            // A stand-in justified block has no payloads, so its chain protects nothing above it
+            const protected = (self.anchor_ancestor_count > 0 and block <= self.anchor_ancestor_count) or
+                if (justified) |j| block < j or justified_hashes.contains(hashes[block]) else false;
             if (!conflict and !protected) continue;
             if (judged == .child_payload and conflict) return .contradiction;
             count = if (judged == .from_block) @min(i, 1) else i;
@@ -1632,6 +1753,7 @@ pub const Store = struct {
             self.blocks.set(target, block);
             self.ptc_votes.items[target] = self.ptc_votes.items[i];
         }
+        self.anchor_ancestor_count -|= finalized;
         self.blocks.shrinkRetainingCapacity(kept);
         self.ptc_votes.shrinkRetainingCapacity(kept);
         self.index_by_root.clearRetainingCapacity();
