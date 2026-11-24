@@ -84,7 +84,7 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
       }),
       blockSubmissions: register.gauge({
         name: "bc_builder_api_block_submissions_total",
-        help: "Total count of valid signed beacon blocks received over the builder API",
+        help: "Total count of signed beacon blocks received over the builder API and published to the beacon node",
       }),
     },
 
