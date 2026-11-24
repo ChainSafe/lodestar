@@ -64,6 +64,9 @@ const skippedGossipTests: RegExp[] = [
   // The pinned vector predates consensus-specs#5821, its payload carries withdrawals the block's post-state
   // does not expect. Unskip with the next spec release.
   /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__valid_max_withdrawals$/,
+  // The bid in this vector has a gas limit of 0, so the envelope is ignored by the transaction count bound
+  // before the empty transaction check rejects it. Not part of the pinned vectors yet.
+  /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__reject_empty_transaction$/,
 ];
 
 const networking: TestRunnerCustom = (fork, testHandler, testSuite, testSuiteDirpath) => {
