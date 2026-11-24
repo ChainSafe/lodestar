@@ -2022,6 +2022,14 @@ export class BlockInputSync {
           );
         }
 
+        if (
+          isPendingBlockInput(cacheItem) &&
+          isBlockInputColumns(cacheItem.blockInput) &&
+          cacheItem.blockInput.hasBlockAndAllData()
+        ) {
+          break;
+        }
+
         // no more peer with needed columns to try, throw error
         const message = `Error fetching UnknownBlockRoot slot=${slot} root=${rootHex} after ${i}: cannot find peer with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`;
         this.metrics?.blockInputSync.fetchTime.observe(
@@ -2169,8 +2177,27 @@ export class BlockInputSync {
 
     if (isBlockInputColumns(cacheItem.blockInput)) {
       const missing = cacheItem.blockInput.getMissingSampledColumnMeta().missing;
-      if (missing.length) {
+      if (missing.length && !cacheItem.blockInput.hasAllData()) {
         throw new Error(`${message} Missing column indices=${prettyPrintIndices(missing)}.`);
+      }
+      if (missing.length) {
+        // Peers cannot serve the remaining columns, half of them is enough to reconstruct the rest
+        this.logger.verbose("BlockInputSync.fetchBlockInput: reconstructing columns peers could not serve", {
+          slot,
+          rootHex,
+          missing: missing.length,
+        });
+        this.chain.columnReconstructionTracker.triggerColumnReconstruction(cacheItem.blockInput);
+        cacheItem = {...cacheItem, status: PendingBlockInputStatus.downloaded, timeSyncedSec: Date.now() / 1000};
+        if (this.pendingBlocks.has(rootHex)) {
+          this.pendingBlocks.set(rootHex, cacheItem);
+        }
+        const result = this.chain.forkChoice.hasBlockHex(cacheItem.blockInput.parentRootHex)
+          ? FetchResult.SuccessResolved
+          : FetchResult.SuccessMissingParent;
+        this.metrics?.blockInputSync.fetchTime.observe({result}, Date.now() / 1000 - fetchStartSec);
+        this.metrics?.blockInputSync.fetchPeers.set({result}, i - 1);
+        return cacheItem;
       }
     }
 

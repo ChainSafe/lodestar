@@ -6,7 +6,7 @@ import {config as minimalConfig} from "@lodestar/config/default";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {
   computeStartSlotAtEpoch,
@@ -16,7 +16,11 @@ import {
 } from "@lodestar/state-transition";
 import {SignedBeaconBlock, fulu, gloas, phase0, ssz} from "@lodestar/types";
 import {defer, notNullish, sleep, toRootHex} from "@lodestar/utils";
-import {BlockInputNoData, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
+import {
+  BlockInputNoData,
+  BlockInputPreData,
+  isBlockInputColumns,
+} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -1717,6 +1721,176 @@ describe("UnknownBlockSync", () => {
 
         expect(verifySignatureSets).toHaveBeenCalledOnce();
         expect(reportPeer).not.toHaveBeenCalled();
+      } finally {
+        svc.close();
+      }
+    });
+  });
+
+  describe("column sync for a supernode", () => {
+    const fuluConfig = createBeaconConfig(blocksAndDataConfig, Buffer.alloc(32, 0x01));
+    const allColumns = Array.from({length: NUMBER_OF_COLUMNS}, (_, i) => i);
+    const firstHalf = allColumns.slice(0, NUMBER_OF_COLUMNS / 2);
+    const secondHalf = allColumns.slice(NUMBER_OF_COLUMNS / 2);
+    const parentRoot = Buffer.alloc(32, 0xcc);
+    const parentRootHex = toRootHex(parentRoot);
+
+    function generateFuluBlock(): {
+      block: SignedBeaconBlock<ForkName.fulu>;
+      rootHex: string;
+      columns: fulu.DataColumnSidecar[];
+    } {
+      const generated = generateBlockWithColumnSidecars({forkName: ForkName.fulu, slot: slots.fulu, parentRoot});
+      // A clone, the generated values cache their hash tree roots
+      const block = ssz.fulu.SignedBeaconBlock.clone(generated.block);
+      block.message.proposerIndex = 0;
+      const signedBlockHeader = signedBlockToSignedHeader(fuluConfig, block);
+      const rootHex = toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message));
+      return {block, rootHex, columns: generated.columnSidecars.map((column) => ({...column, signedBlockHeader}))};
+    }
+
+    function setupSupernodeSyncTest(
+      block: SignedBeaconBlock<ForkName.fulu>,
+      columns: fulu.DataColumnSidecar[],
+      peerCustody: Map<PeerIdStr, number[]>
+    ) {
+      const emitter = new ChainEventEmitter();
+      const networkEvents = new NetworkEventBus();
+      const clock = new ClockStopped(block.message.slot + 1);
+      const custodyConfig = {sampledColumns: allColumns, custodyColumns: allColumns} as unknown as CustodyConfig;
+      const seenBlockInputCache = new SeenBlockInput({
+        config: fuluConfig,
+        custodyConfig,
+        clock,
+        chainEvents: emitter,
+        signal: new AbortController().signal,
+        serializedCache: new SerializedCache(),
+        metrics: null,
+      });
+      const rootHex = toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message));
+      seenBlockInputCache.markVerifiedProposerSignature(block.message.slot, rootHex, block.signature);
+      const processBlock = vi.fn<IBeaconChain["processBlock"]>().mockResolvedValue(undefined);
+      const triggerColumnReconstruction = vi.fn();
+      const connectedPeers = new Set<PeerIdStr>();
+      const sendDataColumnSidecarsByRoot = vi.fn<INetwork["sendDataColumnSidecarsByRoot"]>(async (peerId, request) =>
+        columns.filter(
+          (column) =>
+            (peerCustody.get(peerId) ?? []).includes(column.index) && request[0].columns.includes(column.index)
+        )
+      );
+
+      const network = {
+        events: networkEvents,
+        getConnectedPeers: () => Array.from(connectedPeers),
+        getConnectedPeerSyncMeta: (peerId: PeerIdStr) => ({
+          peerId,
+          client: "column-test-client",
+          custodyColumns: peerCustody.get(peerId) ?? [],
+          earliestAvailableSlot: 0,
+        }),
+        custodyConfig: {
+          sampledColumns: allColumns,
+          sampleGroups: allColumns.map((c) => [c]),
+        } as unknown as CustodyConfig,
+        sendBeaconBlocksByRoot: vi.fn(async () => [block]),
+        sendDataColumnSidecarsByRoot,
+        reportPeer: vi.fn(),
+      } as unknown as INetwork;
+
+      const chainForTest = {
+        config: fuluConfig,
+        emitter,
+        clock,
+        genesisTime: 0,
+        forkChoice: {
+          hasBlockHex: (root: string) => root === parentRootHex,
+          getBlockHexDefaultStatus: (root: string) => (root === parentRootHex ? ({slot: 0} as ProtoBlock) : null),
+          hasPayloadHexUnsafe: () => false,
+          getFinalizedBlock: () => ({slot: 0}) as ProtoBlock,
+        } as unknown as IForkChoice,
+        custodyConfig,
+        processBlock,
+        pubkeyCache,
+        bls: new BlsSingleThreadVerifier({metrics: null}),
+        columnReconstructionTracker: {triggerColumnReconstruction},
+        seenBlockInputCache,
+        seenBlockProposers: {isKnown: () => false} as unknown as SeenBlockProposers,
+        seenPayloadEnvelopeInputCache: {
+          add: vi.fn(),
+          get: vi.fn().mockReturnValue(undefined),
+          getOrReload: vi.fn().mockResolvedValue(undefined),
+          remove: vi.fn(),
+        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+      } as unknown as IBeaconChain;
+
+      const svc = new BlockInputSync(fuluConfig, network, chainForTest, logger, null, defaultSyncOptions);
+      svc.subscribeToNetwork();
+      for (const [peer, custodyColumns] of peerCustody) {
+        connectedPeers.add(peer);
+        networkEvents.emit(NetworkEvent.peerConnected, {
+          peer,
+          status: {} as never,
+          custodyColumns,
+          clientAgent: "column-test-client",
+        });
+      }
+
+      return {svc, emitter, processBlock, triggerColumnReconstruction, sendDataColumnSidecarsByRoot};
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout", "Date"]});
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("downloads the columns past half from another peer instead of reconstructing them", async () => {
+      const [firstPeer, secondPeer] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const {svc, emitter, processBlock, triggerColumnReconstruction, sendDataColumnSidecarsByRoot} =
+        setupSupernodeSyncTest(
+          block,
+          columns,
+          new Map([
+            [firstPeer, firstHalf],
+            [secondPeer, secondHalf],
+          ])
+        );
+
+      try {
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: firstPeer, source: BlockInputSource.gossip});
+        // Column KZG proofs are verified off the event loop, fake timers alone do not wait for them
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+
+        expect(new Set(sendDataColumnSidecarsByRoot.mock.calls.map(([peer]) => peer))).toEqual(
+          new Set([firstPeer, secondPeer])
+        );
+        const blockInput = processBlock.mock.calls[0][0];
+        expect(isBlockInputColumns(blockInput) && blockInput.hasComputedAllData()).toBe(true);
+        expect(triggerColumnReconstruction).not.toHaveBeenCalled();
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("reconstructs the columns no peer can serve once half of them are downloaded", async () => {
+      const peer = await getRandPeerIdStr();
+      const {block, rootHex, columns} = generateFuluBlock();
+      const {svc, emitter, processBlock, triggerColumnReconstruction} = setupSupernodeSyncTest(
+        block,
+        columns,
+        new Map([[peer, firstHalf]])
+      );
+
+      try {
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer, source: BlockInputSource.gossip});
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+
+        const blockInput = processBlock.mock.calls[0][0];
+        expect(blockInput.hasAllData()).toBe(true);
+        expect(triggerColumnReconstruction).toHaveBeenCalledExactlyOnceWith(blockInput);
       } finally {
         svc.close();
       }
