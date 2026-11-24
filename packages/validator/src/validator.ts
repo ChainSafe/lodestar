@@ -103,6 +103,12 @@ enum Status {
 }
 
 /**
+ * How far ahead of a slot the leanXMSS keys' bottom trees for it are built: long enough for one
+ * thread to build a tree for every key of a large validator client
+ */
+const XMSS_PREPARE_AHEAD_SLOTS = 2048;
+
+/**
  * Main class for the Validator client.
  */
 export class Validator {
@@ -252,7 +258,9 @@ export class Validator {
       valProposerConfig
     );
     await validatorStore.prepareXmssSigners(Math.max(getCurrentSlot(config, clock.genesisTime), 0));
-    clock.runEveryEpoch((epoch) => validatorStore.prepareXmssSigners(computeStartSlotAtEpoch(epoch + 1)));
+    clock.runEveryEpoch((epoch) =>
+      validatorStore.prepareXmssSignersAhead(computeStartSlotAtEpoch(epoch + 1) + XMSS_PREPARE_AHEAD_SLOTS)
+    );
     pollPrepareBeaconProposer(config, loggerVc, api, clock, validatorStore, metrics);
     pollBuilderValidatorRegistration(config, loggerVc, api, clock, validatorStore, metrics);
     pollExternalSignerPubkeys(config, loggerVc, controller.signal, validatorStore, opts.externalSigner);

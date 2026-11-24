@@ -226,6 +226,7 @@ export class ValidatorStore {
   private readonly validators = new Map<PubkeyHex, ValidatorData>();
   /** Initially true because there are no validators */
   private pubkeysToDiscover: PubkeyHex[] = [];
+  private preparingXmssSignersAhead = false;
   private readonly defaultProposerConfig: DefaultProposerConfig;
 
   constructor(modules: ValidatorStoreModules, valProposerConfig: ValidatorProposerConfig) {
@@ -283,6 +284,23 @@ export class ValidatorStore {
       if (signer.type === SignerType.Xmss) prepared.push(signer.signer.prepare(slot));
     }
     await Promise.all(prepared);
+  }
+
+  /**
+   * The same for a `slot` far ahead, one key at a time. A bottom tree takes seconds of a thread
+   * to build and every key enters its next one at the same slot: built together when it comes,
+   * they hold the threads the signatures of that slot and the ones after need.
+   */
+  async prepareXmssSignersAhead(slot: Slot): Promise<void> {
+    if (this.preparingXmssSignersAhead) return;
+    this.preparingXmssSignersAhead = true;
+    try {
+      for (const {signer} of Array.from(this.validators.values())) {
+        if (signer.type === SignerType.Xmss) await signer.signer.prepare(slot);
+      }
+    } finally {
+      this.preparingXmssSignersAhead = false;
+    }
   }
 
   /** Return all known indices from the validatorStore pubkeys */
