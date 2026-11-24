@@ -36,8 +36,12 @@ describe("Revealer", () => {
     logger = getMockedLogger();
     clock = new ClockMock();
     payloadStore = new PayloadStore();
+    ({ledger, revealer} = createModules());
+  });
+
+  function createModules(requestTimeout?: number): ReturnType<typeof createBiddingModules> {
     const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
-    ({ledger, revealer} = createBiddingModules({
+    return createBiddingModules({
       api,
       config,
       logger,
@@ -51,8 +55,9 @@ describe("Revealer", () => {
       payloadSource: getPayloadSourceStub(),
       signal: new AbortController().signal,
       index: builderIndex,
-    }));
-  });
+      requestTimeout,
+    });
+  }
 
   /** Block that selected a bid for a payload, optionally recorded as our bid and retained */
   function selectedBlock({recordBid = true, retainPayload = true} = {}): ObservedBlock {
@@ -174,11 +179,29 @@ describe("Revealer", () => {
     expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledTimes(2);
     // Each request is limited to less than the reveal window, the default request timeout would use it up
     const cutoffMs = config.getSlotComponentDurationMs(ForkName.gloas, config.PAYLOAD_ATTESTATION_DUE_BPS);
-    for (const [, init] of api.beacon.publishExecutionPayloadEnvelope.mock.calls) {
-      expect(init?.timeoutMs).toBeLessThan(cutoffMs);
+    for (const [i, [, init]] of api.beacon.publishExecutionPayloadEnvelope.mock.calls.entries()) {
+      expect(init?.timeoutMs, `publish call ${i}`).toBeLessThan(cutoffMs);
     }
     expect(ledger.hasPublishedReveal(observed.blockRoot)).toBe(true);
   });
+
+  it.each([
+    {requestTimeout: 500, attemptTimeout: 500},
+    {requestTimeout: 10_000, attemptTimeout: 2000},
+  ])(
+    "limits a publish request to $attemptTimeout ms with a request timeout of $requestTimeout ms",
+    async ({requestTimeout, attemptTimeout}) => {
+      ({ledger, revealer} = createModules(requestTimeout));
+      api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(mockApiResponse({}));
+
+      await revealer.onBlock(selectedBlock());
+
+      expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledExactlyOnceWith(
+        expect.anything(),
+        expect.objectContaining({timeoutMs: attemptTimeout})
+      );
+    }
+  );
 
   it("only retries failures that can resolve while the reveal window is open", () => {
     const fetchFailure = new FetchError(

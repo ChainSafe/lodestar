@@ -49,6 +49,7 @@ export function createBiddingModules({
   signal,
   index = 1,
   getBuilderStatus = () => ({status: "active", balance: 10_000_000_000}),
+  requestTimeout,
 }: {
   api: ApiClient;
   config: ChainForkConfig;
@@ -60,6 +61,8 @@ export function createBiddingModules({
   payloadStore: PayloadStore;
   payloadSource: PayloadSource;
   signal: AbortSignal;
+  /** Timeout in milliseconds of requests to the beacon node */
+  requestTimeout?: number;
   index?: BuilderIndex;
   getBuilderStatus?: () => {status: BuilderStatus | undefined; balance: number | undefined};
 }): {ledger: BidLedger; bidder: Bidder; revealer: Revealer} {
@@ -108,7 +111,7 @@ export function createBiddingModules({
       metrics: null,
       signal,
     },
-    {cutoffBps: config.PAYLOAD_ATTESTATION_DUE_BPS}
+    {cutoffBps: config.PAYLOAD_ATTESTATION_DUE_BPS, requestTimeout}
   );
   return {ledger, bidder, revealer};
 }

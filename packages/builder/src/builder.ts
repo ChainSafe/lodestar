@@ -65,6 +65,8 @@ export type BuilderOptions = {
   reveal: {
     /** Defaults to PAYLOAD_ATTESTATION_DUE_BPS of the network */
     cutoffBps?: number;
+    /** Timeout in milliseconds of requests to the beacon node, limits a single attempt to publish the envelope */
+    requestTimeout?: number;
   };
 };
 
@@ -215,7 +217,10 @@ export class Builder {
         metrics: opts.metrics,
         signal,
       },
-      {cutoffBps: opts.reveal.cutoffBps ?? config.PAYLOAD_ATTESTATION_DUE_BPS}
+      {
+        cutoffBps: opts.reveal.cutoffBps ?? config.PAYLOAD_ATTESTATION_DUE_BPS,
+        requestTimeout: opts.reveal.requestTimeout,
+      }
     );
 
     return new Builder({

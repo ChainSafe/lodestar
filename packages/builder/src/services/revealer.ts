@@ -14,8 +14,8 @@ import {PayloadStore} from "./payloadStore.js";
 const REVEAL_RETRY_DELAY = 200;
 
 /**
- * Time in milliseconds a single publish request may take. Shorter than the request timeout of the api client, which
- * exceeds the reveal window, to leave time to publish again if the beacon node does not respond.
+ * Maximum time in milliseconds a single publish request may take. The default request timeout of the api client
+ * exceeds the reveal window, the cap leaves time to publish again if the beacon node does not respond.
  */
 const REVEAL_ATTEMPT_TIMEOUT = 2000;
 
@@ -25,6 +25,11 @@ export type RevealerOptions = {
    * Defaults to the network's PAYLOAD_ATTESTATION_DUE_BPS
    */
   cutoffBps: number;
+  /**
+   * Timeout in milliseconds of requests to the beacon node. A publish request is not given more time than that,
+   * the cap of a reveal attempt only shortens it.
+   */
+  requestTimeout?: number;
 };
 
 export type RevealerModules = {
@@ -83,7 +88,8 @@ export class Revealer {
     try {
       // The block is only observed once, a transient failure has to be retried here while a reveal may still start.
       // Publishing the same envelope again is safe, the beacon node treats an already known envelope as published
-      await retry(() => envelopePublisher.publish(contents, this.modules.signal, REVEAL_ATTEMPT_TIMEOUT), {
+      const attemptTimeout = Math.min(this.opts.requestTimeout ?? REVEAL_ATTEMPT_TIMEOUT, REVEAL_ATTEMPT_TIMEOUT);
+      await retry(() => envelopePublisher.publish(contents, this.modules.signal, attemptTimeout), {
         retries: Infinity,
         retryDelay: REVEAL_RETRY_DELAY,
         signal: this.modules.signal,
