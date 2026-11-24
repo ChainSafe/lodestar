@@ -242,10 +242,7 @@ export class NativeForkChoice implements IForkChoice {
 
   updateHead(): ProtoBlock {
     this.previousProposerBoostRoot = this.getProposerBoostRoot();
-    const head = this.nodes[this.store.getHead()];
-    if (head === undefined) {
-      throw Error("Native fork choice head has no block summary");
-    }
+    const head = this.storeHead();
     this.head = head;
 
     const computeDeltasMetrics = this.metrics?.forkChoice.computeDeltas;
@@ -255,6 +252,14 @@ export class NativeForkChoice implements IForkChoice {
       computeDeltasMetrics.equivocatingValidators.set(this.store.equivocatingCount);
       computeDeltasMetrics.newVoteValidators.set(voteChangesTotal - this.voteChangesTotal);
       this.voteChangesTotal = voteChangesTotal;
+    }
+    return head;
+  }
+
+  private storeHead(): ProtoBlock {
+    const head = this.nodes[this.store.getHead()];
+    if (head === undefined) {
+      throw Error("Native fork choice head has no block summary");
     }
     return head;
   }
@@ -945,6 +950,8 @@ export class NativeForkChoice implements IForkChoice {
       dataAvailabilityStatus,
     };
     this.refreshExecutionStatuses();
+    // The FULL variant can move the head, and `getHead()` returns the cached one
+    this.head = this.storeHead();
   }
 
   validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean}): boolean {
