@@ -158,8 +158,6 @@ type NativeScores = {weights: BigUint64Array; attestationScores: BigUint64Array;
  *   before it
  */
 export class NativeForkChoice implements IForkChoice {
-  irrecoverableError?: Error;
-
   private readonly store: NativeStore;
   /** By node id. A pre-Gloas block has its single FULL variant in the PENDING slot */
   private nodes: (ProtoBlock | undefined)[] = [];
@@ -593,6 +591,17 @@ export class NativeForkChoice implements IForkChoice {
       this.queuedAttestationsPreviousSlot = queuedVoteCount - this.store.queuedVoteCount;
       this.fcStore.currentSlot = slot;
       const didUpdateCheckpoints = this.syncCheckpoints();
+      if (didUpdateCheckpoints) {
+        // Throw before fast confirmation, which swallows head computation errors
+        const justified = this.fcStore.justified.checkpoint;
+        if (this.getBlockHexDefaultStatus(justified.rootHex)?.executionStatus === ExecutionStatus.Invalid) {
+          throw new ForkChoiceError({
+            code: ForkChoiceErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS,
+            epoch: justified.epoch,
+            root: justified.rootHex,
+          });
+        }
+      }
       const didRecomputeHead = this.runFastConfirmation();
       // A checkpoint pulled up at the epoch boundary can move the head before the next block arrives
       if (didUpdateCheckpoints && !didRecomputeHead) {
@@ -1002,14 +1011,7 @@ export class NativeForkChoice implements IForkChoice {
    * Returns whether any status changed.
    */
   private refreshExecutionStatuses(): boolean {
-    let statuses: Uint8Array;
-    try {
-      statuses = this.store.executionStatuses();
-    } catch (e) {
-      // The justified block stands on an invalidated payload: there is no head to compute
-      this.irrecoverableError = e as Error;
-      return false;
-    }
+    const statuses = this.store.executionStatuses();
     let changed = false;
     for (let id = 0; id < this.nodes.length; id++) {
       const node = this.nodes[id];

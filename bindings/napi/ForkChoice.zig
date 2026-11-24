@@ -566,10 +566,11 @@ pub fn bestChildren(self: *ForkChoice) !js.Uint32Array {
     return js.Uint32Array.from(store.head_cache.best_child.items);
 }
 
-/// The worst engine verdict on the payloads each node id stands on.
+/// The worst engine verdict on the payloads each node id stands on. Still returned when the
+/// justified block stands on an invalidated payload and there is no head.
 pub fn executionStatuses(self: *ForkChoice) !js.Uint8Array {
     const store = &self.inner.store;
-    try fork_choice.head.ensureComputed(store);
+    fork_choice.head.ensureComputed(store) catch |err| if (err != error.InvalidJustifiedPayload) return err;
     return js.Uint8Array.from(@ptrCast(store.head_cache.execution.items));
 }
 

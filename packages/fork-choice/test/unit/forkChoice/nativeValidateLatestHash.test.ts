@@ -88,7 +88,6 @@ describe("NativeForkChoice validateLatestHash", () => {
       applied: false,
       reason: LVHNotAppliedReason.Contradiction,
     });
-    expect(forkChoice.irrecoverableError).toBeUndefined();
     expect(
       forkChoice.validateLatestHash({
         ...invalid,

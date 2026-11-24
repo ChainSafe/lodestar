@@ -288,6 +288,7 @@ fn compute(store: *Store) !void {
 
     const justified = store.blockIndex(store.justified_checkpoint.root) orelse return error.UnknownBlock;
     var head = Store.pendingNode(justified);
+    // `execution` is complete here: callers may still read it after this error.
     if (exec[nodeId(head)] == .invalid) return error.InvalidJustifiedPayload;
     if (forks[justified].gte(.gloas) and !flags[nodeId(head)].viable) {
         head = .{ .block = justified, .payload_status = .empty };

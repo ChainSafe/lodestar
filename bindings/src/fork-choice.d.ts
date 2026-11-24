@@ -235,7 +235,7 @@ export declare class ForkChoice {
   attestationScores(): BigUint64Array;
   /** Best child of each node id, `NO_NODE` without a viable child */
   bestChildren(): Uint32Array;
-  /** Worst engine verdict on the payloads each node id stands on */
+  /** Worst engine verdict on the payloads each node id stands on, also when the justified block has no head */
   executionStatuses(): Uint8Array;
   viableHeads(): {root: Uint8Array; payloadStatus: PayloadStatus; weight: bigint}[];
 
