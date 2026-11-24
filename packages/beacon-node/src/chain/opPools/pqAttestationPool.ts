@@ -398,19 +398,21 @@ export class PqAttestationPool {
         const bits: boolean[] = [];
         for (const committeeIndex of Array.from(byCommittee.keys()).sort((a, b) => a - b)) {
           const committee = byCommittee.get(committeeIndex) as CommitteeAttestations;
+          // The largest aggregate, and beside it the single attestations it lacks: one that came
+          // after the aggregator proved, or all of them if no aggregate reached this node
           const best = bestAggregate(committee);
-          // No aggregate may have reached this node, or none as large as its single attestations
-          const useAggregate =
-            best !== null && best.aggregationBits.getTrueBitIndexes().length >= committee.signed.size;
-          const committeeBitsArr = useAggregate ? best.aggregationBits : signedBits(committee);
+          const committeeBitsArr = best ? best.aggregationBits.clone() : BitArray.fromBitLen(committee.committeeSize);
+          const lacking: Uint8Array[] = [];
+          for (const [position, signedClaim] of committee.signed) {
+            if (committeeBitsArr.get(position)) continue;
+            committeeBitsArr.set(position, true);
+            lacking.push(signedClaim);
+          }
           const positions = committeeBitsArr.getTrueBitIndexes();
           if (positions.every(isOnChain(data, committeeIndex))) continue;
 
-          if (useAggregate) {
-            children.push(best.aggregate);
-          } else {
-            signed.push(...committee.signed.values());
-          }
+          if (best) children.push(best.aggregate);
+          signed.push(...lacking);
           bits.push(...committeeBitsArr.toBoolArray());
           committeeBits.set(committeeIndex, true);
           committees.push({data, committeeIndex, positions});

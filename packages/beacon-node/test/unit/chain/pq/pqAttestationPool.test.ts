@@ -107,6 +107,26 @@ describe("PqAttestationPool", () => {
     expect(await verifier.verifyProofSets([{claims: Buffer.concat(claims.slice(1)), proof}])).toBe(false);
   }, 120_000);
 
+  it("merges a committee's aggregate with the single attestations it lacks", async () => {
+    const other = new PqAttestationPool();
+    other.addSingle(0, data, dataRootHex, 0, 3, signed[0]);
+    other.addSingle(0, data, dataRootHex, 1, 3, signed[1]);
+    const networkAggregate = await other.getAggregate(data.slot, dataRootHex, 0);
+    if (networkAggregate === null) throw Error("no aggregate");
+    const {aggregationBits, aggregate} = networkAggregate.aggregate;
+
+    const pool = new PqAttestationPool();
+    pool.addAggregate(0, data, dataRootHex, aggregationBits, aggregate.proof, Buffer.concat(claims.slice(0, 2)));
+    pool.addSingle(0, data, dataRootHex, 1, 3, signed[1]);
+    pool.addSingle(0, data, dataRootHex, 2, 3, signed[2]);
+
+    const blockSlot = data.slot + MIN_ATTESTATION_INCLUSION_DELAY_PQ;
+    const all: PqAttestationFilters = {isIncludable: () => true, isOnChain: () => () => false};
+    const {attestations, proof} = await pool.getAttestationsForBlock(blockSlot, all, 60_000);
+    expect(attestations[0].aggregationBits.toBoolArray()).toEqual([true, true, true]);
+    expect(await verifier.verifyProofSets([{claims: Buffer.concat(claims.slice(0, 3)), proof}])).toBe(true);
+  }, 120_000);
+
   it("merges a block's proof ahead of its slot, and again for more attesters", async () => {
     const pool = new PqAttestationPool();
     const blockSlot = data.slot + MIN_ATTESTATION_INCLUSION_DELAY_PQ;
