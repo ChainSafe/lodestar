@@ -407,11 +407,21 @@ describe("getGossipHandlers", () => {
     expect(core.reportPeer).not.toHaveBeenCalled();
   });
 
+  it("keeps the cached block input when block data is unavailable", async () => {
+    const {prune} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.DATA_UNAVAILABLE);
+
+    expect(prune).not.toHaveBeenCalled();
+  });
+
   it("reports the gossip peer when block processing gets a definitive execution INVALID verdict", async () => {
-    const {core, peerIdStr} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.EXECUTION_ENGINE_INVALID);
+    const {core, peerIdStr, prune} = await runBeaconBlockProcessingError(
+      denebConfig,
+      BlockErrorCode.EXECUTION_ENGINE_INVALID
+    );
 
     expect(core.reportPeer).toHaveBeenCalledOnce();
     expect(core.reportPeer).toHaveBeenCalledWith(peerIdStr, PeerAction.LowToleranceError, "ExecutionEngineInvalid");
+    expect(prune).toHaveBeenCalledOnce();
   });
 
   it("imports a signature-verified REPEAT_PROPOSAL (equivocating) block into fork choice but keeps IGNORE", async () => {
@@ -648,6 +658,7 @@ async function runBeaconBlockProcessingError(
 ): Promise<{
   core: Pick<INetworkCore, "reportPeer">;
   peerIdStr: PeerIdStr;
+  prune: ReturnType<typeof vi.fn>;
 }> {
   const logger = testLogger();
   const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
@@ -665,6 +676,7 @@ async function runBeaconBlockProcessingError(
   });
   const error = getExecutionBlockError(signedBlock, code);
   const core = {reportPeer: vi.fn()} as Pick<INetworkCore, "reportPeer">;
+  const prune = vi.fn();
   const chain = {
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
@@ -678,7 +690,7 @@ async function runBeaconBlockProcessingError(
       getByBlock: vi.fn().mockReturnValue(blockInput),
       markValidatingBlock: vi.fn(),
       unmarkValidatingBlock: vi.fn(),
-      prune: vi.fn(),
+      prune,
     } as unknown as SeenBlockInput,
     seenPayloadEnvelopeInputCache: {
       add: vi.fn(),
@@ -719,7 +731,7 @@ async function runBeaconBlockProcessingError(
   await new Promise((resolve) => setTimeout(resolve, 0));
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  return {core, peerIdStr};
+  return {core, peerIdStr, prune};
 }
 
 async function runBeaconBlockRepeatProposal(
