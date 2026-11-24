@@ -1999,7 +1999,20 @@ export class BlockInputSync {
 
     let i = 0;
     let deferredByRateLimit = false;
+    let requestedWhenReconstructable = false;
     while (i++ < this.getMaxDownloadAttempts()) {
+      const reconstructable =
+        isPendingBlockInput(cacheItem) &&
+        isBlockInputColumns(cacheItem.blockInput) &&
+        cacheItem.blockInput.hasBlockAndAllData();
+      // Reconstruction recovers whole rows however many columns are missing, so only one more request is worth it,
+      // further peers could each hold the import until their response times out
+      if (reconstructable) {
+        if (requestedWhenReconstructable) {
+          break;
+        }
+        requestedWhenReconstructable = true;
+      }
       const pendingColumns =
         isPendingBlockInput(cacheItem) && isBlockInputColumns(cacheItem.blockInput)
           ? new Set(cacheItem.blockInput.getMissingSampledColumnMeta().missing)
@@ -2014,11 +2027,7 @@ export class BlockInputSync {
         now
       );
       if (peerMeta === null) {
-        if (
-          isPendingBlockInput(cacheItem) &&
-          isBlockInputColumns(cacheItem.blockInput) &&
-          cacheItem.blockInput.hasBlockAndAllData()
-        ) {
+        if (reconstructable) {
           break;
         }
 

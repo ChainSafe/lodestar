@@ -1930,6 +1930,37 @@ describe("UnknownBlockSync", () => {
       }
     });
 
+    it("makes one more request once half the columns are present and then reconstructs", async () => {
+      const [firstPeer, ...otherPeers] = await Promise.all([
+        getRandPeerIdStr(),
+        getRandPeerIdStr(),
+        getRandPeerIdStr(),
+        getRandPeerIdStr(),
+      ]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const {svc, emitter, processBlock, triggerColumnReconstruction, sendDataColumnSidecarsByRoot} =
+        setupSupernodeSyncTest(
+          block,
+          columns,
+          new Map([[firstPeer, firstHalf], ...otherPeers.map((peer) => [peer, secondHalf] as [PeerIdStr, number[]])])
+        );
+      // The other peers claim the remaining columns but each serves a single one
+      sendDataColumnSidecarsByRoot.mockImplementation(async (peerId, request) => {
+        const requested = columns.filter((column) => request[0].columns.includes(column.index));
+        return peerId === firstPeer ? requested : requested.slice(0, 1);
+      });
+
+      try {
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: firstPeer, source: BlockInputSource.gossip});
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+
+        expect(sendDataColumnSidecarsByRoot).toHaveBeenCalledTimes(2);
+        expect(triggerColumnReconstruction).toHaveBeenCalledExactlyOnceWith(processBlock.mock.calls[0][0]);
+      } finally {
+        svc.close();
+      }
+    });
+
     it("reconstructs the columns no peer can serve once half of them are downloaded", async () => {
       const peer = await getRandPeerIdStr();
       const {block, rootHex, columns} = generateFuluBlock();
