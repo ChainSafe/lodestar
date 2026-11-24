@@ -1360,8 +1360,9 @@ export class NativeForkChoice implements IForkChoice {
   }
 
   /**
-   * `nonAncestors` are the EMPTY, FULL and pre-Gloas variants of every block imported up to the
-   * start block that are not on its chain, the root block aside. A PENDING start block's own
+   * `nonAncestors` are the EMPTY, FULL and pre-Gloas variants of every block that is neither on the
+   * start block's chain nor descends from it, the root block aside. Unlike proto-array, this includes
+   * blocks imported after the start block, since `prune` drops them. A PENDING start block's own
    * EMPTY and FULL are left out: its payload is undecided, and the archiver deletes FULL non-ancestors.
    */
   getAllAncestorAndNonAncestorBlocks(
@@ -1386,13 +1387,26 @@ export class NativeForkChoice implements IForkChoice {
     const startBlock = Math.floor(startId / 3);
     const firstBlock = this.nodes[startId]?.payloadStatus === PayloadStatus.PENDING ? startBlock - 1 : startBlock;
     const nonAncestors: ProtoBlock[] = [];
-    for (let blockIndex = firstBlock; blockIndex > 0; blockIndex--) {
+    const pushVariants = (blockIndex: number): void => {
       for (const status of [SPEC_FULL, SPEC_EMPTY, SPEC_PENDING]) {
         const id = blockIndex * 3 + status;
         const node = this.nodes[id];
         if (node !== undefined && node.payloadStatus !== PayloadStatus.PENDING && !ancestorIds.has(id)) {
           nonAncestors.push(node);
         }
+      }
+    };
+    for (let blockIndex = firstBlock; blockIndex > 0; blockIndex--) {
+      pushVariants(blockIndex);
+    }
+    const descendants = new Set<number>([startBlock]);
+    const blockCount = Math.ceil(this.nodes.length / 3);
+    for (let blockIndex = startBlock + 1; blockIndex < blockCount; blockIndex++) {
+      const parentId = this.parentNodes[blockIndex];
+      if (parentId !== undefined && descendants.has(Math.floor(parentId / 3))) {
+        descendants.add(blockIndex);
+      } else {
+        pushVariants(blockIndex);
       }
     }
     return {ancestors, nonAncestors};

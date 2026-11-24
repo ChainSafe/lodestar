@@ -77,6 +77,12 @@ describe("native fork choice from an unfinalized state", () => {
       toRootHex(epochCheckpointRoot)
     );
     expect(forkChoice.getAncestor(anchorRoot, SLOTS_PER_EPOCH).blockRoot).toBe(toRootHex(finalizedCheckpoint.root));
+    for (const checkpoint of [finalizedCheckpoint, justifiedCheckpoint]) {
+      expect(
+        forkChoice.getAllAncestorAndNonAncestorBlocksDefaultStatus(toRootHex(checkpoint.root)).nonAncestors,
+        `non-ancestors of the epoch ${checkpoint.epoch} checkpoint`
+      ).toEqual([]);
+    }
     expect(forkChoice.prune(toRootHex(finalizedCheckpoint.root))).toEqual([]);
   });
 
