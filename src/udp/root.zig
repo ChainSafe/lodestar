@@ -6,5 +6,6 @@ pub const SocketPair = @import("SocketPair.zig");
 
 test {
     _ = Address;
+    _ = @import("address_prefix.zig");
     _ = @import("SocketPair.zig");
 }
