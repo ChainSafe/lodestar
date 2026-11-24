@@ -965,6 +965,16 @@ export class NativeForkChoice implements IForkChoice {
     if (!isGloasBlock(pendingNode)) {
       throw new ProtoArrayError({code: ProtoArrayErrorCode.PRE_GLOAS_BLOCK, root: blockRoot});
     }
+    if (pendingNode.executionStatus === ExecutionStatus.Invalid) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.INVALID_BLOCK,
+        err: {
+          code: InvalidBlockCode.PARENT_EXECUTION_INVALID,
+          root: pendingNode.parentRoot,
+          hash: pendingNode.executionPayloadBlockHash,
+        },
+      });
+    }
     if (this.nodes[blockIndex * 3 + SPEC_FULL] !== undefined) {
       return;
     }
