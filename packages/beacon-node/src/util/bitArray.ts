@@ -22,63 +22,42 @@ export enum IntersectResult {
  * | 11110000 | 00001111 | A exclude B   |
  * | 11111100 | 00111111 | A intersect B |
  *
- * For all bytes in BitArray:
- * - equals = MAYBE ONLY equals
- * - excludes = MUST ONLY equals
- * - superset = MUST superset MAYBE equal
- * - subset = MUST subset MAYBE equal
- * - intersect = any other condition
+ * For all bytes in BitArray, bytes missing from the shorter array count as zero:
+ * - equals = neither has a bit the other lacks
+ * - superset = only A has bits B lacks
+ * - subset = only B has bits A lacks
+ * - exclude = both have bits the other lacks, none shared
+ * - intersect = both have bits the other lacks, some shared
  */
 export function intersectUint8Arrays(aUA: Uint8Array, bUA: Uint8Array): IntersectResult {
-  const len = aUA.length;
+  const len = Math.max(aUA.length, bUA.length);
 
-  let someEquals = false;
-  let someExcludes = false;
-  let someSuperset = false;
-  let someSubset = false;
+  let aHasExtra = false;
+  let bHasExtra = false;
+  let hasShared = false;
 
   for (let i = 0; i < len; i++) {
-    const a = aUA[i];
-    const b = bUA[i];
+    const a = aUA[i] ?? 0;
+    const b = bUA[i] ?? 0;
 
-    if (a === 0 && b === 0) {
-      // zero, skip
-    } else if (a === b) {
-      // A equals B
-      someEquals = true;
-    } else if ((a & b) === 0) {
-      // A excludes B
-      someExcludes = true;
-    } else if ((a & b) === b) {
-      // A superset B
-      if (someSubset) return IntersectResult.Intersect;
-      someSuperset = true;
-    } else if ((a & b) === a) {
-      // A subset B
-      if (someSuperset) return IntersectResult.Intersect;
-      someSubset = true;
-    } else {
-      // A diff B
-      return IntersectResult.Intersect;
-    }
+    if ((a & b) !== 0) hasShared = true;
+    if ((a & ~b) !== 0) aHasExtra = true;
+    if ((b & ~a) !== 0) bHasExtra = true;
+
+    if (aHasExtra && bHasExtra && hasShared) return IntersectResult.Intersect;
   }
 
-  // equals = MAYBE ONLY equals
-  if (!someExcludes && !someSuperset && !someSubset) return IntersectResult.Equal;
-  // excludes = MUST ONLY equals
-  if (!someEquals && someExcludes && !someSuperset && !someSubset) return IntersectResult.Exclusive;
-  // superset = MUST superset MAYBE equal
-  if (!someExcludes && someSuperset && !someSubset) return IntersectResult.Superset;
-  // subset = MUST subset MAYBE equal
-  if (!someExcludes && !someSuperset && someSubset) return IntersectResult.Subset;
-  // intersect = any other condition
-  return IntersectResult.Intersect;
+  if (!aHasExtra && !bHasExtra) return IntersectResult.Equal;
+  if (!bHasExtra) return IntersectResult.Superset;
+  if (!aHasExtra) return IntersectResult.Subset;
+  return hasShared ? IntersectResult.Intersect : IntersectResult.Exclusive;
 }
 
 /**
  * Check if first BitArray is equal to or superset of the second
  */
 export function isSuperSetOrEqual(superSet: BitArray, toCheck: BitArray): boolean {
+  if (superSet.bitLen !== toCheck.bitLen) return false;
   const intersectionResult = intersectUint8Arrays(superSet.uint8Array, toCheck.uint8Array);
   return intersectionResult === IntersectResult.Superset || intersectionResult === IntersectResult.Equal;
 }

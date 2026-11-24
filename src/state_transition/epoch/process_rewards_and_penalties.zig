@@ -10,6 +10,7 @@ const getRewardsAndPenaltiesAltair = @import("./get_rewards_and_penalties.zig").
 
 pub fn processRewardsAndPenalties(
     comptime fork: ForkSeq,
+    io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
     state: *BeaconState(fork),
@@ -23,7 +24,7 @@ pub fn processRewardsAndPenalties(
 
     const rewards = cache.validator_scratch;
     const penalties = cache.penalties;
-    try getRewardsAndPenalties(fork, config, epoch_cache, state, cache, rewards, penalties);
+    try getRewardsAndPenalties(fork, io, config, epoch_cache, state, cache, rewards, penalties);
 
     var balances_view = try state.balances();
     try balances_view.commit();
@@ -51,6 +52,7 @@ pub fn processRewardsAndPenalties(
 
 pub fn getRewardsAndPenalties(
     comptime fork: ForkSeq,
+    io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
     state: *BeaconState(fork),
@@ -61,7 +63,7 @@ pub fn getRewardsAndPenalties(
     if (comptime fork == .phase0) {
         return try getAttestationDeltas(epoch_cache, cache, try state.finalizedEpoch(), rewards, penalties);
     }
-    return try getRewardsAndPenaltiesAltair(fork, config, epoch_cache, state, cache, rewards, penalties);
+    return try getRewardsAndPenaltiesAltair(fork, io, config, epoch_cache, state, cache, rewards, penalties);
 }
 
 test {

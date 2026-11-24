@@ -529,7 +529,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "(time() - lodestar_genesis_time) / 12"
+              "options": "(time() - lodestar_genesis_time_seconds) / 12"
             },
             "properties": [
               {
@@ -659,7 +659,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "round((time() - lodestar_genesis_time) / 12)",
+          "expr": "round((time() - lodestar_genesis_time_seconds) / 12)",
           "hide": false,
           "instant": false,
           "interval": "",
@@ -1385,7 +1385,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(lodestar_gossip_block_elapsed_time_till_received_sum{source=\"gossip\"}[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_received_count{source=\"gossip\"}[$rate_interval])",
+          "expr": "rate(lodestar_gossip_block_elapsed_time_till_received_seconds_sum{source=\"gossip\"}[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_received_seconds_count{source=\"gossip\"}[$rate_interval])",
           "interval": "",
           "legendFormat": "till received",
           "range": true,
@@ -1397,7 +1397,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(lodestar_gossip_block_elapsed_time_till_processed_sum[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval])",
+          "expr": "rate(lodestar_gossip_block_elapsed_time_till_processed_seconds_sum[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_processed_seconds_count[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "till processed",

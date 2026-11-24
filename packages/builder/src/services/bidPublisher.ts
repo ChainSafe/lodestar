@@ -86,7 +86,7 @@ export class BidPublisher {
     const signedBidRoot = toRootHex(
       sszTypesFor(fork, "SignedExecutionPayloadBid").hashTreeRoot(signedExecutionPayloadBid)
     );
-    ledger.recordBid({...identity, valueGwei: bid.value, signedBidRoot});
+    ledger.recordBid({signedBid: signedExecutionPayloadBid, signedBidRoot});
 
     const response = await api.beacon.publishExecutionPayloadBid({signedExecutionPayloadBid}, {signal});
     response.assertOk();

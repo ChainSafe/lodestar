@@ -1,5 +1,6 @@
+import {BitArray} from "@chainsafe/ssz";
 import {BLS_VERIFIER_SET_TYPE, type BlsSignatureSet, verifySignatureSets} from "@lodestar/native/bls-verifier";
-import {Root} from "@lodestar/types";
+import {Root, Slot} from "@lodestar/types";
 
 export enum SignatureSetType {
   single = "single",
@@ -9,6 +10,11 @@ export enum SignatureSetType {
    * Pubkey lookup is deferred to verification time.
    */
   indexed = "indexed",
+  /**
+   * Aggregate signature of an attestation over whole committees of one slot.
+   * Pubkeys come from the committee aggregates of the shuffling, see `computeCommitteePubkeys()`.
+   */
+  committee = "committee",
 }
 
 /**
@@ -44,7 +50,22 @@ export type AggregatedSignatureSet = {
   signature: Uint8Array;
 };
 
-export type ISignatureSet = SingleSignatureSet | IndexedSignatureSet | AggregatedSignatureSet;
+/**
+ * Aggregate signature of an attestation over the committees `committeeIndices` of `slot`.
+ * `indices` lists the participants, aggregated instead when the committee pubkeys are not cached.
+ */
+export type CommitteeSignatureSet = {
+  type: SignatureSetType.committee;
+  indices: number[];
+  committeePubkeysId: number;
+  slot: Slot;
+  committeeIndices: number[];
+  aggregationBits: BitArray;
+  signingRoot: Root;
+  signature: Uint8Array;
+};
+
+export type ISignatureSet = SingleSignatureSet | IndexedSignatureSet | AggregatedSignatureSet | CommitteeSignatureSet;
 
 export function toBlsSignatureSet(signatureSet: ISignatureSet): BlsSignatureSet {
   switch (signatureSet.type) {
@@ -76,6 +97,28 @@ export function toBlsSignatureSet(signatureSet: ISignatureSet): BlsSignatureSet 
       return {
         type: BLS_VERIFIER_SET_TYPE.aggregate,
         indices,
+        message: signatureSet.signingRoot,
+        signature: signatureSet.signature,
+      };
+    }
+
+    case SignatureSetType.committee: {
+      const indices = new Uint32Array(signatureSet.indices.length);
+      for (const [i, index] of signatureSet.indices.entries()) {
+        if (!Number.isInteger(index) || index < 0 || index > 0xffffffff) {
+          throw new RangeError(`Invalid validator index ${index}`);
+        }
+        indices[i] = index;
+      }
+
+      return {
+        type: BLS_VERIFIER_SET_TYPE.committee,
+        indices,
+        committeePubkeysId: signatureSet.committeePubkeysId,
+        slot: signatureSet.slot,
+        committeeIndices: Uint32Array.from(signatureSet.committeeIndices),
+        aggregationBits: signatureSet.aggregationBits.uint8Array,
+        bitLen: signatureSet.aggregationBits.bitLen,
         message: signatureSet.signingRoot,
         signature: signatureSet.signature,
       };

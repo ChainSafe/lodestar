@@ -92,6 +92,7 @@ export enum ForkChoiceErrorCode {
   UNABLE_TO_SET_JUSTIFIED_CHECKPOINT = "FORKCHOICE_ERROR_UNABLE_TO_SET_JUSTIFIED_CHECKPOINT",
   AFTER_BLOCK_FAILED = "FORKCHOICE_ERROR_AFTER_BLOCK_FAILED",
   MISSING_EXECUTION_PAYLOAD_BLOCK_HASH = "FORKCHOICE_ERROR_MISSING_EXECUTION_PAYLOAD_BLOCK_HASH",
+  INVALID_JUSTIFIED_EXECUTION_STATUS = "FORKCHOICE_ERROR_INVALID_JUSTIFIED_EXECUTION_STATUS",
 }
 
 export type ForkChoiceErrorType =
@@ -107,6 +108,7 @@ export type ForkChoiceErrorType =
   | {code: ForkChoiceErrorCode.FORK_CHOICE_STORE_ERROR; error: Error}
   | {code: ForkChoiceErrorCode.UNABLE_TO_SET_JUSTIFIED_CHECKPOINT; error: Error}
   | {code: ForkChoiceErrorCode.AFTER_BLOCK_FAILED; error: Error}
-  | {code: ForkChoiceErrorCode.MISSING_EXECUTION_PAYLOAD_BLOCK_HASH; root: RootHex; slot: Slot};
+  | {code: ForkChoiceErrorCode.MISSING_EXECUTION_PAYLOAD_BLOCK_HASH; root: RootHex; slot: Slot}
+  | {code: ForkChoiceErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS; epoch: Epoch; root: RootHex};
 
 export class ForkChoiceError extends LodestarError<ForkChoiceErrorType> {}

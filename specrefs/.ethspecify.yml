@@ -21,6 +21,9 @@ exceptions:
     - UINT64_MAX#phase0
     - UINT64_MAX_SQRT#phase0
 
+    # bellatrix
+    - SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY#bellatrix
+
     # fulu
     - UINT256_MAX#fulu
 

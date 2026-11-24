@@ -160,7 +160,7 @@ jobs:
         run: scripts/run_e2e_env.sh start
 
       - name: E2E tests
-        run: pnpm test:e2e
+        run: pnpm vitest run --project e2e --project e2e-mainnet
         env:
           GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL!=0 && secrets.GOERLI_RPC_URL || env.GOERLI_RPC_DEFAULT_URL }}
 
@@ -173,6 +173,24 @@ jobs:
         with:
           name: debug-e2e-test-logs-node-${{matrix.node}}
           path: test-logs/e2e-test-env
+
+  e2e-sync-tests:
+    name: E2E Sync Tests
+    runs-on: warp-ubuntu-2204-x64-4x
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [26]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: "./.github/actions/restore-build"
+        with:
+          node: ${{ matrix.node }}
+
+      - name: E2E sync tests
+        run: pnpm vitest run --project e2e-sync
 
   browser-tests:
     name: Browser Tests
@@ -253,13 +271,12 @@ jobs:
       fail-fast: false
       matrix:
         node: [26]
-        preset: [mainnet]
+        preset: [mainnet, minimal]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/restore-build"
         with:
           node: ${{ matrix.node }}
-          preset: ${{ matrix.preset }}
 
       # Download spec tests with cache
       - name: Restore spec tests cache
@@ -441,7 +458,7 @@ jobs:
 
       - name: Build benchmarks
         run: |
-          zig build build-exe:bench_hashing build-exe:bench_merkle_gindex build-exe:bench_merkle_node build-exe:bench_ssz_attestation build-exe:bench_ssz_block build-exe:bench_ssz_state build-exe:bench_process_block build-exe:bench_process_epoch build-exe:bench_fork_choice_update_head build-exe:bench_fork_choice_on_attestation
+          zig build build-exe:bench_hashing build-exe:bench_merkle_gindex build-exe:bench_merkle_node build-exe:bench_ssz_attestation build-exe:bench_ssz_block build-exe:bench_ssz_state build-exe:bench_process_block build-exe:bench_process_epoch build-exe:bench_fork_choice_update_head build-exe:bench_fork_choice_on_attestation build-exe:bench_fork_choice_on_tick
       - name: Build gnosis bindings
         run: |
           zig build build-lib:bindings -Dpreset=gnosis
@@ -608,8 +625,15 @@ jobs:
           - transition
           - random
           - fork
+          - fork_choice
           - finality
           - merkle_proof
+          - sync
+          - fast_confirmation
+        exclude:
+          # The fast confirmation vectors ship for the minimal preset only.
+          - preset: mainnet
+            runner: fast_confirmation
         include:
           - preset: minimal
             optimize: Debug
@@ -637,8 +661,10 @@ jobs:
           name: zig-spec-test-generated
           path: test/spec
       - name: Run spec tests - ${{ matrix.preset }} (${{ matrix.runner }})
+        # Filters match test names by substring. Each runner's tests are generated into
+        # <runner>_tests.zig, and that file name is part of every test name.
         run: |
-          zig build test:spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=${{ matrix.optimize }} -Dbuild_options.expensive_safety_checks=true -Dspec_tests.filters=${{ matrix.runner }}
+          zig build test:spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=${{ matrix.optimize }} -Dbuild_options.expensive_safety_checks=true -Dspec_tests.filters=${{ matrix.runner }}_tests --summary line
 
   zig-build-fuzz:
     name: Zig fuzz build
@@ -688,7 +714,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: native-platform-bindings
-          path: bindings/artifacts/*/bindings.node
+          path: bindings/artifacts/*/bindings-*.node
           if-no-files-found: error
           overwrite: true
           retention-days: 3

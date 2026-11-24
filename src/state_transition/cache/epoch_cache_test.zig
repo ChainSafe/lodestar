@@ -231,7 +231,7 @@ test "memory_safety: afterProcessEpoch releases copied indices when RC allocatio
         failing.fail_index = failing.alloc_index + 1;
         try std.testing.expectError(
             error.OutOfMemory,
-            epoch_cache.afterProcessEpoch(test_state.cached_state.state, transition_cache),
+            epoch_cache.afterProcessEpoch(std.testing.io, test_state.cached_state.state, transition_cache),
         );
         try std.testing.expect(failing.has_induced_failure);
         const copied_bytes = transition_cache.next_shuffling_active_indices.len * @sizeOf(u32);
@@ -267,6 +267,7 @@ test "memory_safety: afterProcessEpoch should preserve shuffling state when deci
     try std.testing.expectError(
         error.SlotTooBig,
         epoch_cache.afterProcessEpoch(
+            std.testing.io,
             test_state.cached_state.state,
             test_state.epoch_transition_cache,
         ),

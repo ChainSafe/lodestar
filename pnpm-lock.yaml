@@ -149,15 +149,15 @@ importers:
   bindings:
     dependencies:
       '@chainsafe/zapi':
-        specifier: 4.3.0
-        version: 4.3.0
+        specifier: 4.5.0
+        version: 4.5.0
     devDependencies:
       '@chainsafe/benchmark':
         specifier: 2.1.0
         version: 2.1.0(encoding@0.1.13)
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
 
   packages/api:
     dependencies:
@@ -165,8 +165,8 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -214,8 +214,8 @@ importers:
         specifier: ^17.0.0
         version: 17.0.0
       '@chainsafe/libp2p-quic':
-        specifier: ^2.1.5
-        version: 2.1.5
+        specifier: ^2.1.6
+        version: 2.1.6
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.1
         version: 1.3.1
@@ -226,8 +226,8 @@ importers:
         specifier: ^0.5.2
         version: 0.5.2
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -401,8 +401,8 @@ importers:
   packages/builder:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -450,8 +450,8 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -583,8 +583,8 @@ importers:
         specifier: ^1.2.5
         version: 1.2.5
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -598,8 +598,8 @@ importers:
   packages/db:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -638,8 +638,8 @@ importers:
   packages/fork-choice:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -678,8 +678,8 @@ importers:
         version: 4.6.0
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -736,8 +736,8 @@ importers:
         version: 3.0.2
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@libp2p/crypto':
         specifier: ^5.1.25
         version: 5.1.25
@@ -760,8 +760,8 @@ importers:
         specifier: ^0.5.2
         version: 0.5.2
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/types':
         specifier: workspace:^
         version: link:../types
@@ -781,8 +781,8 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -846,8 +846,8 @@ importers:
   packages/types:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -886,8 +886,8 @@ importers:
   packages/validator:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.9.1
+        version: 1.9.1
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -1202,54 +1202,54 @@ packages:
   '@chainsafe/libp2p-noise@17.0.0':
     resolution: {integrity: sha512-vwrmY2Y+L1xYhIDiEpl61KHxwrLCZoXzTpwhyk34u+3+6zCAZPL3GxH3i2cs+u5IYNoyLptORdH17RKFXy7upA==}
 
-  '@chainsafe/libp2p-quic-darwin-arm64@2.1.5':
-    resolution: {integrity: sha512-c2snL79+juXP2TjhquzshCimAEnvMHW9kv3NRQswvLFIIoudPBABeTCchj60Qb+ABsgyEgAUQ+W+H9BgY4DrQg==}
+  '@chainsafe/libp2p-quic-darwin-arm64@2.1.6':
+    resolution: {integrity: sha512-7EaKtoXNHriiSsdb9x2tlrZPXAkw1Gj96EJNhFir76yd1pPzZly77oVYxl8mA1HY2HjQYtD0AD5oiKExoT50pQ==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
 
-  '@chainsafe/libp2p-quic-darwin-x64@2.1.5':
-    resolution: {integrity: sha512-+GAcR2uX/DTiCYME7oZDuzTrPCQvEiOOIoUUaNM0XSUxZfaZ6fymocpGg+8pRSM/k96UXR2wM8wWo68ZbHkHNA==}
+  '@chainsafe/libp2p-quic-darwin-x64@2.1.6':
+    resolution: {integrity: sha512-0yyJhnYD8Py5khz4L9i6Z/LAUYd+lmjv2A8JDUw3HB7HkClh9k0dAaElBp9vez7U6+BC02VmU9e0Nzjh+i56QA==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
 
-  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.1.5':
-    resolution: {integrity: sha512-6SDQ9jA6VHNRUwCD33UbRP5uwM15blCp83u8lHbOsCGroAoyHI6gP1FCeXsnqiTbgXBg8dn5ALj03nCq99EBrA==}
+  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.1.6':
+    resolution: {integrity: sha512-uXv6uG7BDj/BzQ8vc6GYUSbgKb/hPsfXT4JMBsC8xvPYOWK9kfrlLSlc5sIDUTb+1KuNfjX2DCuo0gwKxnFjEg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/libp2p-quic-linux-arm64-musl@2.1.5':
-    resolution: {integrity: sha512-6W0+zFrnsxjFO4QMEhxZlbdQ+7HPihMsW3Qw2u/8I6SC00WQOGLkAyDko7hz8BpfQzpY/EbmYd1ve3fZ018fag==}
+  '@chainsafe/libp2p-quic-linux-arm64-musl@2.1.6':
+    resolution: {integrity: sha512-aTPzbmp4GgUDDtoQgV5xDCHz1vlnWGFYzkDT+1olO/k1ZYF1QB4Phr8m65Srx2vLoXWIPIvDCdSxnLrn9UD2dw==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/libp2p-quic-linux-x64-gnu@2.1.5':
-    resolution: {integrity: sha512-SRglDp0QZbmWqeYsZfvr9YRP5Q12zf34Q7fp+XnoyU2NyDxJ4UCs7uYdCEZkViD1RphyQ7TvBfWFsJYDbJpBMg==}
+  '@chainsafe/libp2p-quic-linux-x64-gnu@2.1.6':
+    resolution: {integrity: sha512-b7KbHMXQ0lTs6xecB8e9Sixw27sofa3awE6dGPZQvUDt3/4ZvLA7yNumsX/Q7F9MnbVRkWKNdBh1BsqsQHFiHA==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/libp2p-quic-linux-x64-musl@2.1.5':
-    resolution: {integrity: sha512-Dx49Hoo2CdtygSVtlBT0y1RkcYDFXmzeXfNnjHdI1gnxmNlXwyz5v0/1pQNChAqoaH+FbGGbVqLgwpeEvJErIA==}
+  '@chainsafe/libp2p-quic-linux-x64-musl@2.1.6':
+    resolution: {integrity: sha512-g4INGYNH3ILzk4gG3czk16A1JmM+kS3pl8YlzfgNuyZqX9f34nayBo8zns+odGGeKaE/OfZD92soimyL3Pcbmg==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.5':
-    resolution: {integrity: sha512-MDNQL0CryvA7y9NOZAIyksrcurdA/EfbtLap+0oHTJjK6Bk6k6cNkYr/rGb+rXzkZR3UZasRILkLjnR0jyhTOw==}
+  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.6':
+    resolution: {integrity: sha512-kgqOO6Thrjj/XpdWzDSdY0WWrzEjb4GNpXQK6w0rb0TQBW3oB1zt0gx86Bi1tJ67gwkU8GLZmZZozTvqfVtb2Q==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
 
-  '@chainsafe/libp2p-quic@2.1.5':
-    resolution: {integrity: sha512-U/4P2ApgPVAEC7PCfUgtneCQvmdLiPSFNYkbK1OTXj23Vpguk2rKQFSp9onfT/wEbOGTwWwBs53wgT/NToOKSw==}
+  '@chainsafe/libp2p-quic@2.1.6':
+    resolution: {integrity: sha512-u6iByTD7rE9ooeDq93AVAGa3jJJOlW4zjlJM5x49y8fDGuyhNPR6GUBAtk9vVs/L4OqbvWvuDKH3lbBRewyqmQ==}
     engines: {node: '>= 22'}
 
   '@chainsafe/netmask@2.0.0':
@@ -1267,14 +1267,14 @@ packages:
   '@chainsafe/snappy-wasm@0.5.2':
     resolution: {integrity: sha512-RcjdySH0LuUgCv4tx+FsS3YBbVOc5lIXklWR6HItbriGpEcPSxuHsH8RNw1vqaSDvkA0C18Kl8Tk3kECJnAvUQ==}
 
-  '@chainsafe/ssz@1.9.0':
-    resolution: {integrity: sha512-JU0WnYLtFlajllDBLF779+9OS/R6RVN44thKdxljJeN3ngR+OVL/s/p3Lv6SdgDvfI3RuZHgt6f4SGlBymumHw==}
+  '@chainsafe/ssz@1.9.1':
+    resolution: {integrity: sha512-DFiJbxnuimgnyHAVlHmWX4QgjsALF+Ixzb9kMRnm3SbdZsp+wDDEgXuxiCZr+qx56hOvzGjpT5/xPzGQ7e9evg==}
 
   '@chainsafe/threads@1.11.3':
     resolution: {integrity: sha512-wTIHTOOJ3MMRFtnJJT6KJCuauyv8pgs79m5ipspyPjHdKM9HJnkeZcoo06G3qArx2xMvd6MqNj1TLfnh5iFvaQ==}
 
-  '@chainsafe/zapi@4.3.0':
-    resolution: {integrity: sha512-ahd/Ri/wDe8OczwJCodIb5TpMSKFFREdb2sbf6O+ochy1RYsbA9xUxYAo1T7NWGJJS18RN3+uQvFmbjZw6WPlA==}
+  '@chainsafe/zapi@4.5.0':
+    resolution: {integrity: sha512-mElQsSjOupKibf07ywLS/62ZSpiY4BOrNhG/VsCip/bUuYFnnhOpuV3bm0LW6WK8BTrWzhftWh9jhRGcqQQenw==}
     hasBin: true
 
   '@colors/colors@1.5.0':
@@ -6525,28 +6525,28 @@ snapshots:
       uint8arrays: 5.1.0
       wherearewe: 2.0.1
 
-  '@chainsafe/libp2p-quic-darwin-arm64@2.1.5':
+  '@chainsafe/libp2p-quic-darwin-arm64@2.1.6':
     optional: true
 
-  '@chainsafe/libp2p-quic-darwin-x64@2.1.5':
+  '@chainsafe/libp2p-quic-darwin-x64@2.1.6':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.1.5':
+  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.1.6':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-arm64-musl@2.1.5':
+  '@chainsafe/libp2p-quic-linux-arm64-musl@2.1.6':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-x64-gnu@2.1.5':
+  '@chainsafe/libp2p-quic-linux-x64-gnu@2.1.6':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-x64-musl@2.1.5':
+  '@chainsafe/libp2p-quic-linux-x64-musl@2.1.6':
     optional: true
 
-  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.5':
+  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.6':
     optional: true
 
-  '@chainsafe/libp2p-quic@2.1.5':
+  '@chainsafe/libp2p-quic@2.1.6':
     dependencies:
       '@libp2p/crypto': 5.1.25
       '@libp2p/interface': 3.4.0
@@ -6557,13 +6557,13 @@ snapshots:
       race-signal: 1.1.3
       uint8arraylist: 2.4.8
     optionalDependencies:
-      '@chainsafe/libp2p-quic-darwin-arm64': 2.1.5
-      '@chainsafe/libp2p-quic-darwin-x64': 2.1.5
-      '@chainsafe/libp2p-quic-linux-arm64-gnu': 2.1.5
-      '@chainsafe/libp2p-quic-linux-arm64-musl': 2.1.5
-      '@chainsafe/libp2p-quic-linux-x64-gnu': 2.1.5
-      '@chainsafe/libp2p-quic-linux-x64-musl': 2.1.5
-      '@chainsafe/libp2p-quic-win32-x64-msvc': 2.1.5
+      '@chainsafe/libp2p-quic-darwin-arm64': 2.1.6
+      '@chainsafe/libp2p-quic-darwin-x64': 2.1.6
+      '@chainsafe/libp2p-quic-linux-arm64-gnu': 2.1.6
+      '@chainsafe/libp2p-quic-linux-arm64-musl': 2.1.6
+      '@chainsafe/libp2p-quic-linux-x64-gnu': 2.1.6
+      '@chainsafe/libp2p-quic-linux-x64-musl': 2.1.6
+      '@chainsafe/libp2p-quic-win32-x64-msvc': 2.1.6
 
   '@chainsafe/netmask@2.0.0':
     dependencies:
@@ -6581,7 +6581,7 @@ snapshots:
 
   '@chainsafe/snappy-wasm@0.5.2': {}
 
-  '@chainsafe/ssz@1.9.0':
+  '@chainsafe/ssz@1.9.1':
     dependencies:
       '@chainsafe/as-sha256': 1.2.5
       '@chainsafe/persistent-merkle-tree': 1.3.1
@@ -6597,7 +6597,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@chainsafe/zapi@4.3.0': {}
+  '@chainsafe/zapi@4.5.0': {}
 
   '@colors/colors@1.5.0': {}
 
