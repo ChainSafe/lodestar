@@ -37,6 +37,7 @@ const MAX_DATA_COLUMN_PER_ROOT = MAX_AWAITING_MESSAGES_PER_ROOT[GossipType.data_
 // These tests exercise both limits, and check that a real block is still recovered when an attacker floods.
 const PARENT_ROOT_HEX = `0x${"aa".repeat(32)}`;
 const VALID_SIGNATURE = Buffer.alloc(96, 0x01);
+const SEEN_BLOCK_MAX_TRANSACTIONS = 2;
 
 describe("NetworkProcessor: handling gossip that points at an unknown block", () => {
   const clockSlot = 1000;
@@ -199,6 +200,7 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     bid.builderIndex = BUILDER_INDEX_SELF_BUILD;
     bid.blockHash = Buffer.alloc(32, 0x11);
     bid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(ssz.gloas.ExecutionRequests.defaultValue());
+    bid.gasLimit = BigInt(SEEN_BLOCK_MAX_TRANSACTIONS * config.MIN_TRANSACTION_GAS);
     seenBlocks.set(`0x${rootByte.toString(16).padStart(2, "0").repeat(32)}`, block);
   }
 
@@ -206,12 +208,20 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   function processSeenBlockEnvelope(
     rootByte: number,
     peer: PeerIdStr,
-    opts: {signature?: Uint8Array; blockHash?: Uint8Array; builderIndex?: number} = {}
+    opts: {signature?: Uint8Array; blockHash?: Uint8Array; builderIndex?: number; transactionCount?: number} = {}
   ): void {
     const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
     signedEnvelope.message.payload.slotNumber = clockSlot;
     signedEnvelope.message.payload.blockHash = opts.blockHash ?? Buffer.alloc(32, 0x11);
     signedEnvelope.message.builderIndex = opts.builderIndex ?? BUILDER_INDEX_SELF_BUILD;
+    signedEnvelope.message.payload.gasLimit = SEEN_BLOCK_MAX_TRANSACTIONS * config.MIN_TRANSACTION_GAS;
+    const transactionCount = opts.transactionCount ?? 0;
+    // one-byte transactions: offsets first, then the bytes
+    const transactions = new Uint8Array(5 * transactionCount);
+    for (let i = 0; i < transactionCount; i++) {
+      new DataView(transactions.buffer).setUint32(4 * i, 4 * transactionCount + i, true);
+    }
+    signedEnvelope.message.payload.transactions = ssz.gloas.Transactions.deserialize(transactions);
     signedEnvelope.message.beaconBlockRoot = Buffer.alloc(32, rootByte);
     signedEnvelope.message.parentBeaconBlockRoot = Buffer.from(PARENT_ROOT_HEX.slice(2), "hex");
     signedEnvelope.signature = opts.signature ?? VALID_SIGNATURE;
@@ -468,6 +478,26 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       );
       expect(bufferedBlockCount()).toBe(0);
       expect(verifiedEarlyEnvelopes().size).toBe(0);
+    });
+
+    it("checks one envelope per peer per clock slot, further ones go to the early envelope queue", async () => {
+      seeBlock(0xdd);
+      processSeenBlockEnvelope(0xdd, attacker, {signature: Buffer.alloc(96, 0x02)});
+      processSeenBlockEnvelope(0xdd, attacker, {signature: Buffer.alloc(96, 0x03)});
+      await settle();
+      expect(reportPeerSpy).toHaveBeenCalledTimes(1);
+      expect(heldEnvelopePeers(0xdd)).toEqual([attacker]);
+    });
+
+    it("does not check an envelope with more transactions than the bid's gas limit allows", async () => {
+      seeBlock(0xdd);
+      processSeenBlockEnvelope(0xdd, attacker, {
+        signature: Buffer.alloc(96, 0x02),
+        transactionCount: SEEN_BLOCK_MAX_TRANSACTIONS + 1,
+      });
+      await settle();
+      expect(reportPeerSpy).not.toHaveBeenCalled();
+      expect(heldEnvelopePeers(0xdd)).toEqual([attacker]);
     });
 
     it("falls back to the buffer caps if the builder's key cannot be read because the head is not the parent", async () => {

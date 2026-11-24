@@ -23,6 +23,7 @@ import {
   getParentBlockRootFromSignedExecutionPayloadBidSerialized,
   getParentRootFromSignedBeaconBlockSerialized,
   getPayloadPresentFromPayloadAttestationMessageSerialized,
+  getTransactionCountFromExecutionPayloadEnvelopeSerialized,
 } from "../../util/sszBytes.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
@@ -300,6 +301,8 @@ export class NetworkProcessor {
   private readonly earlyEnvelopePeers = new Set<PeerIdStr>();
   /** One envelope per block root verified against the bid of its seen block, held outside the buffer caps */
   private readonly verifiedEarlyEnvelopes = new Map<RootHex, PendingGossipsubMessage>();
+  /** Peers that already had an envelope checked against a seen block in the current clock slot */
+  private readonly earlyEnvelopeCheckPeers = new Set<PeerIdStr>();
   /** peer -> clock slot when it was Fatal'ed */
   private readonly fatalPeers = new Map<PeerIdStr, Slot>();
 
@@ -388,6 +391,7 @@ export class NetworkProcessor {
     this.earlyEnvelopes.clear();
     this.earlyEnvelopePeers.clear();
     this.verifiedEarlyEnvelopes.clear();
+    this.earlyEnvelopeCheckPeers.clear();
     this.fatalPeers.clear();
   }
 
@@ -792,6 +796,21 @@ export class NetworkProcessor {
     message: PendingGossipsubMessage
   ): Promise<void> {
     const topicType = GossipType.execution_payload;
+    // The check runs before any queue, so bound its work: one check per peer per clock slot, and no deserialization
+    // of an envelope with more transactions than the bid's gas limit allows
+    const transactionCount = getTransactionCountFromExecutionPayloadEnvelopeSerialized(message.msg.data);
+    const maxTransactionCount =
+      block.body.signedExecutionPayloadBid.message.gasLimit / BigInt(this.chain.config.MIN_TRANSACTION_GAS);
+    if (
+      this.earlyEnvelopeCheckPeers.has(message.propagationSource) ||
+      transactionCount === null ||
+      BigInt(transactionCount) > maxTransactionCount
+    ) {
+      this.maybeAwaitBlock(root, topicType, slot, message);
+      return;
+    }
+    this.earlyEnvelopeCheckPeers.add(message.propagationSource);
+
     const generation = this.jobGeneration;
     let verified = false;
     try {
@@ -1076,6 +1095,7 @@ export class NetworkProcessor {
     }
 
     this.earlyEnvelopePeers.clear();
+    this.earlyEnvelopeCheckPeers.clear();
     for (const [message, rootHex] of this.earlyEnvelopes) {
       // msgSlot is always set before buffering, a missing one expires rather than leaks
       if ((message.msgSlot ?? minSlot) > minSlot) continue;
