@@ -13,7 +13,7 @@ import {
   ProtoBlock,
   ForkChoiceOpts as RawForkChoiceOpts,
 } from "@lodestar/fork-choice";
-import {ForkSeq, ZERO_HASH_HEX} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT, ZERO_HASH_HEX} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   IBeaconStateView,
@@ -209,8 +209,8 @@ export function initializeForkChoiceFromFinalizedState(
 /**
  * Initialize the native fork choice. A finalized anchor is both the justified and the finalized
  * checkpoint, as in the spec's `get_forkchoice_store`. An unfinalized one keeps its state's
- * checkpoints, with stand-ins for the ancestors that connect it to them: the anchor can still be
- * reorged, and nothing is reported as finalized that the chain has not finalized.
+ * checkpoints, with stand-ins for the ancestors that connect it to them: nothing is reported as
+ * finalized that the chain has not finalized.
  */
 export function initializeNativeForkChoice(
   config: ChainForkConfig,
@@ -235,8 +235,15 @@ export function initializeNativeForkChoice(
 
   // The store aliases no root to genesis, so a checkpoint the chain never moved off genesis is
   // given the genesis block root. Only possible while that root is still in the state's history.
-  const withGenesisRoot = (cp: phase0.Checkpoint): phase0.Checkpoint =>
-    ssz.Root.equals(cp.root, ZERO_HASH) ? {epoch: cp.epoch, root: state.getBlockRootAtSlot(GENESIS_SLOT)} : cp;
+  const withGenesisRoot = (cp: phase0.Checkpoint): phase0.Checkpoint => {
+    if (!ssz.Root.equals(cp.root, ZERO_HASH)) return cp;
+    if (state.slot > GENESIS_SLOT + SLOTS_PER_HISTORICAL_ROOT) {
+      throw Error(
+        `The native fork choice cannot start from an unfinalized state at slot ${state.slot} of a chain that never justified a checkpoint: the genesis block root has left the state's block roots. Start without --chain.nativeForkChoice`
+      );
+    }
+    return {epoch: cp.epoch, root: state.getBlockRootAtSlot(GENESIS_SLOT)};
+  };
   const justifiedCheckpoint = isFinalizedState ? anchorCheckpoint : withGenesisRoot(state.currentJustifiedCheckpoint);
   const finalizedCheckpoint = isFinalizedState ? anchorCheckpoint : withGenesisRoot(state.finalizedCheckpoint);
   const justifiedRoot = toRootHex(justifiedCheckpoint.root);
@@ -315,25 +322,30 @@ export function initializeNativeForkChoice(
   };
 
   // Ancestors of the anchor known by root only: the finalized block, the justified block, the
-  // anchor's parent, and the checkpoint blocks of the anchor's epoch and the one before, which
-  // the chain can still justify and which current votes target. Their slots are upper bounds and
-  // their payloads unknown, so they carry none.
+  // anchor's parent, and for the anchor's epoch and the one before the checkpoint block, which the
+  // chain can still justify and which current votes target, and the block before it, the
+  // dependent root of the next epoch's duties. Their slots are upper bounds and their payloads
+  // unknown, so they carry none.
   const unfinalizedAncestors: ProtoBlock[] = [];
   if (!isFinalizedState) {
+    const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+    const candidates: [string, Slot][] = [
+      [finalizedRoot, finalizedSlot],
+      [justifiedRoot, computeStartSlotAtEpoch(justifiedCheckpoint.epoch)],
+      [block.parentRoot, blockHeader.slot - 1],
+    ];
     const anchorEpoch = computeEpochAtSlot(state.slot);
-    const epochBoundaries: [string, Slot][] = [];
     for (const epoch of [anchorEpoch - 1, anchorEpoch]) {
-      const slot = computeStartSlotAtEpoch(epoch);
-      if (epoch > justifiedCheckpoint.epoch && slot < blockHeader.slot) {
-        epochBoundaries.push([toRootHex(state.getBlockRootAtSlot(slot)), slot]);
+      const checkpointSlot = computeStartSlotAtEpoch(epoch);
+      for (const slot of [checkpointSlot - 1, checkpointSlot]) {
+        if (slot > finalizedSlot && slot < blockHeader.slot) {
+          candidates.push([toRootHex(state.getBlockRootAtSlot(slot)), slot]);
+        }
       }
     }
-    for (const [blockRoot, slot] of [
-      [finalizedRoot, computeStartSlotAtEpoch(finalizedCheckpoint.epoch)],
-      [justifiedRoot, computeStartSlotAtEpoch(justifiedCheckpoint.epoch)],
-      ...epochBoundaries,
-      [block.parentRoot, blockHeader.slot - 1],
-    ] as const) {
+    // Roots repeat over skipped slots: a block keeps the lowest slot it is known at
+    candidates.sort((a, b) => a[1] - b[1]);
+    for (const [blockRoot, slot] of candidates) {
       const isKnown = blockRoot === anchorRoot || unfinalizedAncestors.some((b) => b.blockRoot === blockRoot);
       if (isKnown || blockRoot === ZERO_HASH_HEX) continue;
       const isGloas = config.getForkSeq(slot) >= ForkSeq.gloas;
