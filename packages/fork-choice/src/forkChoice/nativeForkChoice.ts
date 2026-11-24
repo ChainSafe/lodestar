@@ -1040,10 +1040,9 @@ export class NativeForkChoice implements IForkChoice {
     if (finalizedIndex === undefined) {
       throw new ProtoArrayError({code: ProtoArrayErrorCode.FINALIZED_NODE_UNKNOWN, root: finalizedRoot});
     }
+    // A lagging archive job; the job for the current root prunes once its sweep has listed what prune drops
     if (finalizedRoot !== this.fcStore.finalizedCheckpoint.rootHex) {
-      throw Error(
-        `Cannot prune to ${finalizedRoot}, the finalized root is ${this.fcStore.finalizedCheckpoint.rootHex}`
-      );
+      return [];
     }
     if (finalizedIndex < this.pruneThreshold) {
       return [];

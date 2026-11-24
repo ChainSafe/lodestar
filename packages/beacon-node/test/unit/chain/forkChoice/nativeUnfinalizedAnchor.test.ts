@@ -84,6 +84,8 @@ describe("native fork choice from an unfinalized state", () => {
       ).toEqual([]);
     }
     expect(forkChoice.prune(toRootHex(finalizedCheckpoint.root))).toEqual([]);
+    // A lagging archive job's root
+    expect(forkChoice.prune(toRootHex(justifiedCheckpoint.root))).toEqual([]);
   });
 
   it("makes a finalized anchor both checkpoints", () => {
