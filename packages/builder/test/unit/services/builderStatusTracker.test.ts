@@ -87,9 +87,21 @@ describe("BuilderStatusTracker", () => {
       ],
     });
 
-    await expect(builderStatusTracker.poll(epoch)).resolves.toBe(true);
+    const pendingPayments = await builderStatusTracker.poll(epoch);
+
+    expect(pendingPayments?.slice(0, 3).map(({withdrawal}) => withdrawal.amount)).toEqual([3, 100, 4]);
 
     expect(builderStatusTracker.getStatus()).toEqual({status: "active", balance: 1, pendingPaymentsGwei: 12});
+  });
+
+  it("reads builder, pending payments and pending withdrawals from the same state", async () => {
+    const stateId = "0x" + "ab".repeat(32);
+
+    await builderStatusTracker.poll(epoch, stateId);
+
+    expect(api.beacon.getBuilderPendingPayments).toHaveBeenCalledExactlyOnceWith({stateId});
+    expect(api.beacon.getBuilderPendingWithdrawals).toHaveBeenCalledExactlyOnceWith({stateId});
+    expect(api.beacon.getStateBuilders).toHaveBeenCalledExactlyOnceWith({stateId, builderIds: [builderIndex]});
   });
 
   it("reads the pending payments before the balance they are debited from", async () => {
@@ -111,7 +123,7 @@ describe("BuilderStatusTracker", () => {
     );
     api.beacon.getBuilderPendingWithdrawals.mockResolvedValue(await mockApiErrorResponse(500));
 
-    await expect(builderStatusTracker.poll(epoch)).resolves.toBe(false);
+    await expect(builderStatusTracker.poll(epoch)).resolves.toBeNull();
 
     expect(builderStatusTracker.getStatus()).toEqual({status: "exited", balance: 1, pendingPaymentsGwei: 3});
     expect(logger.warn).toHaveBeenCalledWith("Couldn't fetch the builder pending payments", {}, expect.any(Error));

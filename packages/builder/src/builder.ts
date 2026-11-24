@@ -1,6 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
-import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Clock, ClockOptions, IClock, computeEpochAtSlot} from "@lodestar/state-transition";
 import {BuilderIndex, Epoch, ExecutionAddress} from "@lodestar/types";
 import {Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
@@ -70,6 +71,8 @@ export class Builder {
   readonly headTracker: HeadTracker;
   private readonly blockObserver: BlockObserver;
   private readonly builderStatusTracker: BuilderStatusTracker;
+  /** Whether the last poll of the builder failed, balance and pending payments are older than an epoch */
+  private builderStatusStale: boolean;
   private readonly controller: AbortController;
   private readonly clock: IClock;
   private readonly index: BuilderIndex;
@@ -112,6 +115,7 @@ export class Builder {
 
     this.blockObserver.runOnBlock((block) => this.revealer.onBlock(block));
     this.clock.runEverySlot(async (slot) => this.onSlot(slot));
+    this.builderStatusStale = this.builderStatusTracker.getStatus().balance === undefined;
     this.clock.runEveryEpoch((epoch) => this.pollBuilderStatus(epoch));
     this.clock.start(this.controller.signal);
     this.subscribeToEvents(opts.api);
@@ -232,20 +236,34 @@ export class Builder {
     this.proposerPreferencesTracker.prune(slot);
     this.headTracker.prune(slot);
     this.ledger.prune(slot);
+
+    // Do not wait an epoch for balance and pending payments after a failed poll, the epoch start has its own poll
+    if (this.builderStatusStale && slot % SLOTS_PER_EPOCH !== 0) {
+      await this.pollBuilderStatus(computeEpochAtSlot(slot));
+    }
   }
 
   /**
    * Reconciles the bid ledger with the polled builder state. The payment of a won bid is part of the state from
    * the block that selected it, first as pending payment, then as pending withdrawal and finally debited from the
-   * balance. Bids won up to the head announced before the poll are covered by the polled state and no longer
-   * reserved by the ledger, a block that is not part of the head state was reorged out and has no payment.
+   * balance. Balance, pending payments and pending withdrawals are read from the state of the head announced
+   * before the poll, the ledger stops reserving the bids whose payment that state accounts for.
    */
   private async pollBuilderStatus(epoch: Epoch): Promise<void> {
-    const headSlot = this.headTracker.getHeadSlot();
-    const reconciled = await this.builderStatusTracker.poll(epoch);
-    if (reconciled && headSlot !== null) {
-      this.ledger.settlePaymentsBefore(headSlot + 1);
+    const head = this.headTracker.getHead();
+    const pendingPayments = await this.builderStatusTracker.poll(epoch, head?.state);
+    this.builderStatusStale = pendingPayments === null;
+    if (pendingPayments === null || head === null) {
+      return;
     }
+
+    const headEpoch = computeEpochAtSlot(head.slot);
+    this.ledger.settlePayments(head.slot, (bidSlot, valueGwei) => {
+      // Payments of the epoch of the state are in the second half, payments of the previous epoch in the first half
+      const epochOffset = computeEpochAtSlot(bidSlot) === headEpoch ? SLOTS_PER_EPOCH : 0;
+      const payment = pendingPayments.at(epochOffset + (bidSlot % SLOTS_PER_EPOCH));
+      return payment?.withdrawal.builderIndex === this.index && payment.withdrawal.amount === valueGwei;
+    });
   }
 
   private subscribeToEvents(api: ApiClient): void {

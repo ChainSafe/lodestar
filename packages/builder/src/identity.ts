@@ -33,10 +33,11 @@ export async function resolveBuilderIdentity(
 export async function getBuilderStatus(
   api: ApiClient,
   logger: Logger,
-  id: routes.beacon.BuilderId
+  id: routes.beacon.BuilderId,
+  stateId: routes.beacon.StateId = "head"
 ): Promise<{status: BuilderStatus; balance: number} | null> {
   try {
-    const builderEntry = await fetchBuilder(api, logger, id);
+    const builderEntry = await fetchBuilder(api, logger, id, stateId);
     if (builderEntry) {
       return {
         status: builderEntry.status,
@@ -110,11 +111,12 @@ async function waitForBuilder(
 async function fetchBuilder(
   api: ApiClient,
   logger: Logger,
-  id: routes.beacon.BuilderId
+  id: routes.beacon.BuilderId,
+  stateId: routes.beacon.StateId = "head"
 ): Promise<routes.beacon.BuilderResponse | null> {
   try {
     const builderRes = await api.beacon.getStateBuilders({
-      stateId: "head",
+      stateId,
       builderIds: [id],
     });
 

@@ -1,4 +1,5 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import type {Epoch, RootHex, Slot, gloas} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 
@@ -216,17 +217,26 @@ export class BidLedger {
   }
 
   /**
-   * Marks won bids before the given slot as settled, their payment is accounted for by the builder state polled
-   * from the beacon node, either as pending payment, pending withdrawal or already debited from the balance.
+   * Marks won bids as settled once their payment is accounted for by a builder state polled from the beacon node.
+   * `hasPendingPayment` tells whether the pending payments of the state at `stateSlot` hold the payment of a bid.
+   * The payment of a bid stays there until the end of the epoch after its slot, a state past that has it as
+   * pending withdrawal or debited from the balance. A bid won in a block that is not part of the state has no
+   * payment in it and stays reserved, the block can still become canonical.
    */
-  settlePaymentsBefore(slot: Slot): void {
+  settlePayments(stateSlot: Slot, hasPendingPayment: (bidSlot: Slot, valueGwei: number) => boolean): void {
+    const stateEpoch = computeEpochAtSlot(stateSlot);
     for (const [bidSlot, bidsForSlot] of this.bidsBySlot) {
-      if (bidSlot >= slot) {
+      if (bidSlot > stateSlot) {
         continue;
       }
 
+      const pastPendingPayments = stateEpoch - computeEpochAtSlot(bidSlot) > 1;
       for (const record of bidsForSlot.values()) {
-        if (record.wonBlockRoots.size > 0) {
+        if (record.wonBlockRoots.size === 0 || record.paymentSettled) {
+          continue;
+        }
+        // A bid without value does not create a payment
+        if (pastPendingPayments || record.valueGwei === 0 || hasPendingPayment(bidSlot, record.valueGwei)) {
           record.paymentSettled = true;
         }
       }

@@ -22,13 +22,19 @@ export function mockGetStateBuildersResponse(
   });
 }
 
-/** Mocks the pending payments and pending withdrawals of the head state, each entry is [builderIndex, amount] */
+/**
+ * Mocks the pending payments and pending withdrawals of a state, each entry is [builderIndex, amount]. A payment can
+ * name its position in the pending payments as third item, it defaults to the position in the list.
+ */
 export function mockPendingPayments(
   api: ApiClientStub,
-  {payments = [], withdrawals = []}: {payments?: [BuilderIndex, number][]; withdrawals?: [BuilderIndex, number][]} = {}
+  {
+    payments = [],
+    withdrawals = [],
+  }: {payments?: [BuilderIndex, number, number?][]; withdrawals?: [BuilderIndex, number][]} = {}
 ): void {
   const meta = {executionOptimistic: false, finalized: false, version: ForkName.gloas};
-  const toWithdrawal = ([builderIndex, amount]: [BuilderIndex, number]) => ({
+  const toWithdrawal = ([builderIndex, amount]: [BuilderIndex, number, number?]) => ({
     ...ssz.gloas.BuilderPendingWithdrawal.defaultValue(),
     builderIndex,
     amount,
@@ -36,7 +42,7 @@ export function mockPendingPayments(
 
   const pendingPayments = ssz.gloas.BuilderPendingPayments.defaultValue();
   for (const [i, payment] of payments.entries()) {
-    pendingPayments[i].withdrawal = toWithdrawal(payment);
+    pendingPayments[payment[2] ?? i].withdrawal = toWithdrawal(payment);
   }
   api.beacon.getBuilderPendingPayments.mockResolvedValue(mockApiResponse({data: pendingPayments, meta}));
   api.beacon.getBuilderPendingWithdrawals.mockResolvedValue(
