@@ -278,6 +278,45 @@ describe("Gloas light client server", () => {
     expect(update.finalizedHeader).toEqual(zeroUpdate.finalizedHeader);
     expect(update.finalityBranch).toEqual(zeroUpdate.finalityBranch);
   });
+
+  it("serves the finality update when the best update inputs are missing", async () => {
+    const putBestUpdate = vi.fn();
+    const db = {
+      bestLightClientUpdate: {get: vi.fn(async () => null), put: putBestUpdate},
+      syncCommitteeWitness: {get: vi.fn(async () => null)},
+    } as unknown as IBeaconDb;
+    const logger = {debug: vi.fn(), error: vi.fn()};
+    const server = new LightClientServer(
+      {},
+      {
+        config,
+        db,
+        clock: {currentSlot: gloasSlot + 1} as never,
+        metrics: null,
+        emitter: {emit: vi.fn()} as never,
+        logger: logger as never,
+        signal: new AbortController().signal,
+      }
+    );
+    const attestedHeader = ssz.gloas.LightClientHeader.defaultValue();
+    attestedHeader.beacon.slot = gloasSlot;
+    const blockRoot = new Uint8Array(32).fill(1);
+    const finalityBranch = Array.from({length: FINALIZED_ROOT_DEPTH_GLOAS}, (_, i) => new Uint8Array(32).fill(i + 1));
+    server["prevHeadData"].set(toRootHex(blockRoot), {
+      attestedHeader,
+      blockRoot,
+      finalizedCheckpoint: {epoch: 0, root: new Uint8Array(32)},
+      finalityBranch,
+    });
+    const syncAggregate = ssz.altair.SyncAggregate.defaultValue();
+    syncAggregate.syncCommitteeBits.set(0, true);
+
+    await server["onSyncAggregate"](0, syncAggregate, gloasSlot + 1, blockRoot);
+
+    expect(server.getFinalityUpdate()?.finalityBranch).toEqual(finalityBranch);
+    expect(putBestUpdate).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledOnce();
+  });
 });
 
 function createServerForFinalityTest(): {
@@ -321,7 +360,6 @@ async function storeBestUpdate(
   signatureSlot: number,
   attestedData: SyncAttestedData
 ): Promise<void> {
-  const built = await server["buildUpdate"](attestedData, syncAggregate, signatureSlot);
-  if (!built) throw Error("Expected a built light-client update");
-  await server["maybeStoreNewBestUpdate"](0, built);
+  const finality = await server["getFinality"](attestedData);
+  await server["maybeStoreNewBestUpdate"](0, syncAggregate, signatureSlot, attestedData, finality);
 }

@@ -65,6 +65,7 @@ export type LightClientServerOpts = {
 type DependentRootHex = RootHex;
 type BlockRooHex = RootHex;
 type LightClientZeroFinality = Pick<LightClientUpdate, "finalityBranch" | "finalizedHeader">;
+type LightClientFinality = LightClientZeroFinality & {hasFinality: boolean};
 
 export type SyncAttestedData = {
   attestedHeader: LightClientHeader;
@@ -527,18 +528,18 @@ export class LightClientServer {
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_head_update"});
     }
 
-    const builtUpdate = await this.buildUpdate(attestedData, syncAggregate, signatureSlot);
+    const finality = await this.getFinality(attestedData);
     if (
-      builtUpdate?.hasFinality &&
+      finality.hasFinality &&
       (!this.finalized ||
-        builtUpdate.update.finalizedHeader.beacon.slot > this.finalized.finalizedHeader.beacon.slot ||
+        finality.finalizedHeader.beacon.slot > this.finalized.finalizedHeader.beacon.slot ||
         syncAggregateParticipation > sumBits(this.finalized.syncAggregate.syncCommitteeBits))
     ) {
       this.finalized = {
         attestedHeader,
-        finalizedHeader: builtUpdate.update.finalizedHeader,
+        finalizedHeader: finality.finalizedHeader,
         syncAggregate,
-        finalityBranch: builtUpdate.update.finalityBranch,
+        finalityBranch: finality.finalityBranch,
         signatureSlot,
       };
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
@@ -554,9 +555,7 @@ export class LightClientServer {
 
     // Check if this update is better, otherwise ignore
     try {
-      if (builtUpdate) {
-        await this.maybeStoreNewBestUpdate(syncPeriod, builtUpdate);
-      }
+      await this.maybeStoreNewBestUpdate(syncPeriod, syncAggregate, signatureSlot, attestedData, finality);
     } catch (e) {
       this.logger.error(
         "Error updating best LightClientUpdate",
@@ -572,49 +571,88 @@ export class LightClientServer {
    */
   private async maybeStoreNewBestUpdate(
     syncPeriod: SyncPeriod,
-    built: {update: LightClientUpdate; summary: LightClientUpdateSummary}
+    syncAggregate: altair.SyncAggregate,
+    signatureSlot: Slot,
+    attestedData: SyncAttestedData,
+    finality: LightClientFinality
   ): Promise<void> {
     const prevBestUpdate = await this.db.bestLightClientUpdate.get(syncPeriod);
-    if (prevBestUpdate && !isBetterUpdate(built.summary, toLightClientUpdateSummary(prevBestUpdate))) {
-      this.metrics?.lightclientServer.updateNotBetter.inc();
-      return;
+    if (prevBestUpdate) {
+      const nextBestUpdate: LightClientUpdateSummary = {
+        activeParticipants: sumBits(syncAggregate.syncCommitteeBits),
+        attestedHeaderSlot: attestedData.attestedHeader.beacon.slot,
+        signatureSlot,
+        finalizedHeaderSlot: finality.finalizedHeader.beacon.slot,
+        // All updates include a valid `nextSyncCommitteeBranch`, see buildUpdate
+        isSyncCommitteeUpdate: true,
+        isFinalityUpdate: finality.hasFinality,
+      };
+      if (!isBetterUpdate(nextBestUpdate, toLightClientUpdateSummary(prevBestUpdate))) {
+        this.metrics?.lightclientServer.updateNotBetter.inc();
+        return;
+      }
     }
+
+    const update = await this.buildUpdate(attestedData, syncAggregate, signatureSlot, finality);
 
     // attestedData and the block of syncAggregate may not be in same sync period
     // should not use attested data slot as sync period
     // see https://github.com/ChainSafe/lodestar/issues/3933
-    await this.db.bestLightClientUpdate.put(syncPeriod, built.update);
+    await this.db.bestLightClientUpdate.put(syncPeriod, update);
     this.logger.debug("Stored new PartialLightClientUpdate", {
       syncPeriod,
-      isFinalized: built.summary.isFinalityUpdate,
-      participation: sumBits(built.update.syncAggregate.syncCommitteeBits) / SYNC_COMMITTEE_SIZE,
+      isFinalized: finality.hasFinality,
+      participation: sumBits(syncAggregate.syncCommitteeBits) / SYNC_COMMITTEE_SIZE,
     });
 
     // Count total persisted updates per type. DB metrics don't diff between each type.
     // The frequency of finalized vs non-finalized is critical to debug if finalizedHeader is not available
     this.metrics?.lightclientServer.onSyncAggregate.inc({
-      event: built.summary.isFinalityUpdate ? "store_finalized_update" : "store_nonfinalized_update",
+      event: finality.hasFinality ? "store_finalized_update" : "store_nonfinalized_update",
     });
     this.metrics?.lightclientServer.highestSlot.set(
-      {item: built.summary.isFinalityUpdate ? "best_finalized_update" : "best_nonfinalized_update"},
-      built.update.attestedHeader.beacon.slot
+      {item: finality.hasFinality ? "best_finalized_update" : "best_nonfinalized_update"},
+      update.attestedHeader.beacon.slot
     );
   }
 
   /**
-   * Build the update for `syncAggregate` attesting to `attestedData`.
-   *
    * Finality is indicated whenever it can be proven, in one of three ways:
    * - the finalized checkpoint is genesis: the branch is served, the header stays empty, since
-   *   genesis cannot be proven by a header and the branch alone proves that `finalized_root` is zero
+   *   the state records the genesis finalized root as zero and the branch proves that zero leaf
    * - the finalized header is available locally: both the header and the branch are served
    * - the finalized header is not available: neither is served, and `hasFinality` is false
    */
+  private async getFinality(attestedData: SyncAttestedData): Promise<LightClientFinality> {
+    const {attestedHeader, finalizedCheckpoint} = attestedData;
+    const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
+    const zeroFinality = this.getZeroFinality(attestedFork, attestedHeader.beacon.slot);
+
+    if (finalizedCheckpoint.epoch === GENESIS_EPOCH) {
+      return {
+        finalizedHeader: zeroFinality.finalizedHeader,
+        finalityBranch: attestedData.finalityBranch,
+        hasFinality: true,
+      };
+    }
+
+    let finalizedHeader = await this.getFinalizedHeader(finalizedCheckpoint.root);
+    if (!finalizedHeader) {
+      return {...zeroFinality, hasFinality: false};
+    }
+    // Fork of LightClientUpdate is based off on attested header's fork
+    if (this.config.getForkName(finalizedHeader.beacon.slot) !== attestedFork) {
+      finalizedHeader = upgradeLightClientHeader(this.config, attestedFork, finalizedHeader);
+    }
+    return {finalizedHeader, finalityBranch: attestedData.finalityBranch, hasFinality: true};
+  }
+
   private async buildUpdate(
     attestedData: SyncAttestedData,
     syncAggregate: altair.SyncAggregate,
-    signatureSlot: Slot
-  ): Promise<{update: LightClientUpdate; summary: LightClientUpdateSummary; hasFinality: boolean} | null> {
+    signatureSlot: Slot,
+    finality: LightClientFinality
+  ): Promise<LightClientUpdate> {
     const {attestedHeader} = attestedData;
 
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(attestedData.blockRoot);
@@ -644,41 +682,15 @@ export class LightClientServer {
     }
     const nextSyncCommitteeBranch = getNextSyncCommitteeBranch(syncCommitteeWitness);
 
-    const zeroFinality = this.getZeroFinality(attestedFork, attestedHeader.beacon.slot);
-    const {finalizedCheckpoint} = attestedData;
-    let finalityBranch = zeroFinality.finalityBranch;
-    let finalizedHeader = zeroFinality.finalizedHeader;
-    let hasFinality = false;
-
-    if (finalizedCheckpoint.epoch === GENESIS_EPOCH) {
-      // Genesis cannot be proven by a header, the branch alone proves that finalized_root is zero
-      finalityBranch = attestedData.finalityBranch;
-      hasFinality = true;
-    } else {
-      const finalizedHeaderAttested = await this.getFinalizedHeader(finalizedCheckpoint.root);
-      // If the finalized block is not available locally, both stay empty
-      if (finalizedHeaderAttested) {
-        finalityBranch = attestedData.finalityBranch;
-        finalizedHeader = finalizedHeaderAttested;
-        hasFinality = true;
-        // Fork of LightClientUpdate is based off on attested header's fork
-        if (this.config.getForkName(finalizedHeader.beacon.slot) !== attestedFork) {
-          finalizedHeader = upgradeLightClientHeader(this.config, attestedFork, finalizedHeader);
-        }
-      }
-    }
-
-    const update = {
+    return {
       attestedHeader,
       nextSyncCommittee,
       nextSyncCommitteeBranch,
-      finalizedHeader,
-      finalityBranch,
+      finalizedHeader: finality.finalizedHeader,
+      finalityBranch: finality.finalityBranch,
       syncAggregate,
       signatureSlot,
     } as LightClientUpdate;
-
-    return {update, summary: toLightClientUpdateSummary(update), hasFinality};
   }
 
   private getZeroFinality(attestedFork: ForkName, attestedSlot: Slot): LightClientZeroFinality {
