@@ -200,33 +200,6 @@ test "computeBlockHash for each fork" {
     }
 }
 
-test "computeTransactionsRoot of no transactions is the empty trie root" {
-    try testing.expectEqual(block_hash.empty_trie_root, try block_hash.computeTransactionsRoot(""));
-}
-
-// Two transactions give a branch of two 1-nibble leaves whose RLP is `len + 3` bytes, so 29 is the
-// first length where a leaf must be referenced by hash instead of embedded.
-test "computeTransactionsRoot at the embedded node boundary" {
-    const vectors = [_]struct { usize, *const [64]u8 }{
-        .{ 28, "82e166a9e47bc8433e181fb2138bffdc162e41a762c2d660ef45c697bfb38db6" },
-        .{ 29, "0c42afb5b79fcf46c778821c0cb377f861d4294e525a32b6dc0fc47c0f6d2633" },
-        .{ 30, "5f1cb94549b53525083956ff42b869d3f7ede982e74d3011d6ab0c1a52acc3e2" },
-    };
-    for (vectors) |vector| {
-        const len, const expected = vector;
-        var items: [2][30]u8 = undefined;
-        for (&items, 0..) |*item, seed| {
-            for (item, 0..) |*byte, j| byte.* = @truncate(seed * 31 + j * 7);
-            item[0] = 0x02;
-        }
-        var list: std.ArrayList(u8) = .empty;
-        defer list.deinit(testing.allocator);
-        try appendByteLists(testing.allocator, &list, &.{ items[0][0..len], items[1][0..len] });
-
-        try expectHash(expected, try block_hash.computeTransactionsRoot(list.items));
-    }
-}
-
 test "computeBlockHash rejects malformed input" {
     var arena_state = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena_state.deinit();

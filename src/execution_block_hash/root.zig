@@ -1,15 +1,16 @@
 //! Execution block hash of a consensus `ExecutionPayload`: keccak256 of the
 //! RLP-encoded execution block header, bellatrix through heze.
 //!
-//! Inputs are SSZ serializations, read at their fixed offsets. The payload
-//! layout only appends fields from one fork to the next, and so does the
-//! header, whose field order follows `class Header` in execution-specs
-//! `src/ethereum/forks/<el_fork>/blocks.py`.
+//! Inputs are SSZ serializations, read in place at the field offsets of the
+//! consensus types. The header field order follows `class Header` in
+//! execution-specs `src/ethereum/forks/<el_fork>/blocks.py`.
 //!
 //! Nothing here allocates. Transactions are hashed in place.
 
 const std = @import("std");
 const ForkSeq = @import("config").ForkSeq;
+const ForkTypes = @import("fork_types").ForkTypes;
+const Withdrawal = @import("consensus_types").capella.Withdrawal;
 const assert = std.debug.assert;
 const Keccak256 = std.crypto.hash.sha3.Keccak256;
 const Sha256 = std.crypto.hash.sha2.Sha256;
@@ -32,48 +33,62 @@ pub const Error = error{
 /// keccak256(rlp([])), the ommers hash of every post-merge block.
 const empty_ommers_hash = hashFromHex("1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347");
 /// keccak256(rlp("")), the root of a trie without entries.
-pub const empty_trie_root = hashFromHex("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
+const empty_trie_root = hashFromHex("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
 
-/// Byte offsets of the fixed part of an SSZ `ExecutionPayload`.
-const field = struct {
-    const parent_hash = 0;
-    const fee_recipient = 32;
-    const state_root = 52;
-    const receipts_root = 84;
-    const logs_bloom = 116;
-    const prev_randao = 372;
-    const block_number = 404;
-    const gas_limit = 412;
-    const gas_used = 420;
-    const timestamp = 428;
-    const extra_data_offset = 436;
-    const base_fee_per_gas = 440;
-    const transactions_offset = 504;
-    // capella
-    const withdrawals_offset = 508;
-    // deneb
-    const blob_gas_used = 512;
-    const excess_blob_gas = 520;
-    // gloas
-    const block_access_list_offset = 528;
-    const slot_number = 532;
+/// Where the fixed part of an SSZ `ExecutionPayload` holds each header field,
+/// or the 4-byte offset of a variable-size one. Null before the field's fork.
+const Layout = struct {
+    fixed_end: usize,
+    parent_hash: usize,
+    fee_recipient: usize,
+    state_root: usize,
+    receipts_root: usize,
+    logs_bloom: usize,
+    prev_randao: usize,
+    block_number: usize,
+    gas_limit: usize,
+    gas_used: usize,
+    timestamp: usize,
+    extra_data: usize,
+    base_fee_per_gas: usize,
+    transactions: usize,
+    withdrawals: ?usize,
+    blob_gas_used: ?usize,
+    excess_blob_gas: ?usize,
+    block_access_list: ?usize,
+    slot_number: ?usize,
+
+    fn init(comptime Payload: type) Layout {
+        @setEvalBranchQuota(10_000);
+        var layout: Layout = undefined;
+        for (std.meta.fields(Layout)) |layout_field| {
+            const name = layout_field.name;
+            @field(layout, name) = if (std.mem.eql(u8, name, "fixed_end"))
+                Payload.fixed_end
+            else if (@hasField(Payload.Fields, name))
+                fieldOffset(Payload, name)
+            else
+                null;
+        }
+        return layout;
+    }
+
+    fn get(fork: ForkSeq) Error!Layout {
+        return switch (fork) {
+            .phase0, .altair => error.InvalidFork,
+            inline else => |f| comptime init(ForkTypes(f).ExecutionPayload),
+        };
+    }
 };
 
+fn fieldOffset(comptime Container: type, comptime name: []const u8) usize {
+    return Container.field_offsets[std.meta.fieldIndex(Container.Fields, name).?];
+}
+
 const max_extra_data_bytes = 32;
-const withdrawal_ssz_bytes = 44;
 /// list header, three u64 scalars, and a 20-byte address
 const withdrawal_rlp_bytes_max = 1 + 3 * 9 + 21;
 const header_rlp_bytes_max = 1024;
-
-fn payloadFixedBytes(fork: ForkSeq) Error!usize {
-    return switch (fork) {
-        .phase0, .altair => error.InvalidFork,
-        .bellatrix => 508,
-        .capella => 512,
-        .deneb, .electra, .fulu => 528,
-        .gloas, .heze => 540,
-    };
-}
 
 /// Block hash of the SSZ-serialized `ExecutionPayload` of `fork`.
 ///
@@ -85,28 +100,28 @@ pub fn computeBlockHash(
     parent_beacon_block_root: ?*const Hash,
     execution_requests: ?[]const u8,
 ) Error!Hash {
-    const fixed_bytes = try payloadFixedBytes(fork);
-    if (payload.len < fixed_bytes) return error.InvalidPayload;
+    const layout = try Layout.get(fork);
+    if (payload.len < layout.fixed_end) return error.InvalidPayload;
 
     // Variable fields in serialization order, each ending where the next begins
     var bounds: [5]usize = undefined;
     var bounds_len: usize = 0;
-    bounds[bounds_len] = readU32(payload, field.extra_data_offset);
+    bounds[bounds_len] = readU32(payload, layout.extra_data);
     bounds_len += 1;
-    bounds[bounds_len] = readU32(payload, field.transactions_offset);
+    bounds[bounds_len] = readU32(payload, layout.transactions);
     bounds_len += 1;
     if (fork.gte(.capella)) {
-        bounds[bounds_len] = readU32(payload, field.withdrawals_offset);
+        bounds[bounds_len] = readU32(payload, layout.withdrawals.?);
         bounds_len += 1;
     }
     if (fork.gte(.gloas)) {
-        bounds[bounds_len] = readU32(payload, field.block_access_list_offset);
+        bounds[bounds_len] = readU32(payload, layout.block_access_list.?);
         bounds_len += 1;
     }
     bounds[bounds_len] = payload.len;
     bounds_len += 1;
 
-    if (bounds[0] != fixed_bytes) return error.InvalidPayload;
+    if (bounds[0] != layout.fixed_end) return error.InvalidPayload;
     for (bounds[0 .. bounds_len - 1], bounds[1..bounds_len]) |start, end| {
         if (start > end) return error.InvalidPayload;
     }
@@ -117,37 +132,37 @@ pub fn computeBlockHash(
 
     var buffer: [header_rlp_bytes_max]u8 = undefined;
     var header: Writer = .{ .buffer = &buffer };
-    header.string(payload[field.parent_hash..][0..32]);
+    header.string(payload[layout.parent_hash..][0..32]);
     header.string(&empty_ommers_hash);
-    header.string(payload[field.fee_recipient..][0..20]);
-    header.string(payload[field.state_root..][0..32]);
+    header.string(payload[layout.fee_recipient..][0..20]);
+    header.string(payload[layout.state_root..][0..32]);
     header.string(&orderedTrieRoot(.{ .transactions = transactions }));
-    header.string(payload[field.receipts_root..][0..32]);
-    header.string(payload[field.logs_bloom..][0..256]);
+    header.string(payload[layout.receipts_root..][0..32]);
+    header.string(payload[layout.logs_bloom..][0..256]);
     // difficulty
     header.uint(0);
-    header.uint(readU64(payload, field.block_number));
-    header.uint(readU64(payload, field.gas_limit));
-    header.uint(readU64(payload, field.gas_used));
-    header.uint(readU64(payload, field.timestamp));
+    header.uint(readU64(payload, layout.block_number));
+    header.uint(readU64(payload, layout.gas_limit));
+    header.uint(readU64(payload, layout.gas_used));
+    header.uint(readU64(payload, layout.timestamp));
     header.string(extra_data);
     // mix_hash
-    header.string(payload[field.prev_randao..][0..32]);
+    header.string(payload[layout.prev_randao..][0..32]);
     // nonce
     header.string(&([_]u8{0} ** 8));
-    header.uint(std.mem.readInt(u256, payload[field.base_fee_per_gas..][0..32], .little));
+    header.uint(std.mem.readInt(u256, payload[layout.base_fee_per_gas..][0..32], .little));
 
     // EIP-4895 withdrawals_root
     if (fork.gte(.capella)) {
         const withdrawals = payload[bounds[2]..bounds[3]];
-        if (withdrawals.len % withdrawal_ssz_bytes != 0) return error.InvalidPayload;
+        if (withdrawals.len % Withdrawal.fixed_size != 0) return error.InvalidPayload;
         header.string(&orderedTrieRoot(.{ .withdrawals = withdrawals }));
     }
 
     // EIP-4844 blob_gas_used, excess_blob_gas, EIP-4788 parent_beacon_block_root
     if (fork.gte(.deneb)) {
-        header.uint(readU64(payload, field.blob_gas_used));
-        header.uint(readU64(payload, field.excess_blob_gas));
+        header.uint(readU64(payload, layout.blob_gas_used.?));
+        header.uint(readU64(payload, layout.excess_blob_gas.?));
         header.string(parent_beacon_block_root orelse return error.MissingParentBeaconBlockRoot);
     }
 
@@ -163,7 +178,7 @@ pub fn computeBlockHash(
         var block_access_list_hash: Hash = undefined;
         Keccak256.hash(payload[bounds[3]..bounds[4]], &block_access_list_hash, .{});
         header.string(&block_access_list_hash);
-        header.uint(readU64(payload, field.slot_number));
+        header.uint(readU64(payload, layout.slot_number.?));
     }
 
     var prefix_buffer: [list_prefix_bytes_max]u8 = undefined;
@@ -178,17 +193,15 @@ pub fn computeBlockHash(
     return block_hash;
 }
 
-/// Root of the transactions trie of an SSZ-serialized transactions list.
-pub fn computeTransactionsRoot(transactions: []const u8) Error!Hash {
-    return orderedTrieRoot(.{ .transactions = try Transactions.init(transactions) });
-}
-
 /// EIP-7685 requests hash over the type-prefixed, non-empty request lists.
 ///
 /// The lists have fixed-size elements, so each one's SSZ serialization is
 /// already its `requests_data`, and the list's position is its request type.
 fn computeRequestsHash(fork: ForkSeq, requests: []const u8) Error!Hash {
-    const lists_len: usize = if (fork.gte(.gloas)) 5 else 3;
+    const lists_len: usize = switch (fork) {
+        .phase0, .altair, .bellatrix, .capella, .deneb => unreachable,
+        inline else => |f| ForkTypes(f).ExecutionRequests.fields.len,
+    };
     const fixed_bytes = lists_len * 4;
     if (requests.len < fixed_bytes) return error.InvalidExecutionRequests;
 
@@ -254,7 +267,7 @@ const Items = union(enum) {
     fn count(self: Items) u32 {
         return switch (self) {
             .transactions => |transactions| transactions.count,
-            .withdrawals => |bytes| @intCast(bytes.len / withdrawal_ssz_bytes),
+            .withdrawals => |bytes| @intCast(bytes.len / Withdrawal.fixed_size),
         };
     }
 
@@ -264,13 +277,13 @@ const Items = union(enum) {
             .transactions => |transactions| return transactions.get(index),
             .withdrawals => |bytes| {
                 // Field order follows `class Withdrawal` in execution-specs `src/ethereum/forks/shanghai/blocks.py`
-                const withdrawal = bytes[@as(usize, index) * withdrawal_ssz_bytes ..][0..withdrawal_ssz_bytes];
+                const withdrawal = bytes[@as(usize, index) * Withdrawal.fixed_size ..][0..Withdrawal.fixed_size];
                 var body_buffer: [withdrawal_rlp_bytes_max - 1]u8 = undefined;
                 var body: Writer = .{ .buffer = &body_buffer };
-                body.uint(readU64(withdrawal, 0));
-                body.uint(readU64(withdrawal, 8));
-                body.string(withdrawal[16..36]);
-                body.uint(readU64(withdrawal, 36));
+                body.uint(readU64(withdrawal, comptime fieldOffset(Withdrawal, "index")));
+                body.uint(readU64(withdrawal, comptime fieldOffset(Withdrawal, "validator_index")));
+                body.string(withdrawal[comptime fieldOffset(Withdrawal, "address")..][0..20]);
+                body.uint(readU64(withdrawal, comptime fieldOffset(Withdrawal, "amount")));
 
                 var out: Writer = .{ .buffer = scratch };
                 out.lengthPrefix(0xc0, body.len);

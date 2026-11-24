@@ -13,6 +13,3 @@ export declare function computeExecutionBlockHash(
   parentBeaconBlockRoot?: Uint8Array,
   executionRequests?: Uint8Array
 ): Uint8Array;
-
-/** Root of the transactions trie of an SSZ-serialized transactions list. Throws on an empty transaction. */
-export declare function computeTransactionsRoot(transactions: Uint8Array): Uint8Array;

@@ -24,8 +24,3 @@ pub fn computeExecutionBlockHash(
     const hash = try block_hash.computeBlockHash(fork, try payload.toSlice(), root, requests);
     return js.Uint8Array.from(&hash);
 }
-
-pub fn computeTransactionsRoot(transactions: js.Uint8Array) !js.Uint8Array {
-    const root = try block_hash.computeTransactionsRoot(try transactions.toSlice());
-    return js.Uint8Array.from(&root);
-}

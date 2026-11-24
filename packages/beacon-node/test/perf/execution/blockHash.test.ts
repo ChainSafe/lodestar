@@ -1,10 +1,7 @@
 import crypto from "node:crypto";
 import {bench, describe} from "@chainsafe/benchmark";
 import {SerializedList} from "@chainsafe/ssz";
-import {
-  computeExecutionBlockHash as computeExecutionBlockHashNative,
-  computeTransactionsRoot,
-} from "@lodestar/native/execution-block-hash";
+import {computeExecutionBlockHash as computeExecutionBlockHashNative} from "@lodestar/native/execution-block-hash";
 import {ForkName, ForkSeq, MAX_WITHDRAWALS_PER_PAYLOAD} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {computeExecutionBlockHash} from "../../../src/execution/engine/blockHash.js";
@@ -49,14 +46,6 @@ describe("execution / engine / computeExecutionBlockHash", () => {
 
     bench(`zig - block hash of serialized payload ${name}`, () => {
       computeExecutionBlockHashNative(ForkSeq.gloas, payloadBytes, parentBeaconBlockRoot, executionRequestsBytes);
-    });
-
-    bench(`JS  - transactions trie ${name}`, () => {
-      reference.computeOrderedTrieRoot(transactions);
-    });
-
-    bench(`zig - transactions trie ${name}`, () => {
-      computeTransactionsRoot(payload.transactions.bytes);
     });
   }
 });

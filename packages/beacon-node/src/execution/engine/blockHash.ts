@@ -1,5 +1,5 @@
 import {computeExecutionBlockHash as computeExecutionBlockHashNative} from "@lodestar/native/execution-block-hash";
-import {ForkPostBellatrix, ForkPostElectra, ForkSeq} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, isForkPostElectra} from "@lodestar/params";
 import {ExecutionPayload, ExecutionRequests, Root, sszTypesFor} from "@lodestar/types";
 
 /**
@@ -20,8 +20,8 @@ export function computeExecutionBlockHash(
     ForkSeq[fork],
     sszTypesFor(fork).ExecutionPayload.serialize(payload),
     parentBeaconBlockRoot ?? undefined,
-    executionRequests !== null && ForkSeq[fork] >= ForkSeq.electra
-      ? sszTypesFor(fork as ForkPostElectra).ExecutionRequests.serialize(executionRequests)
+    executionRequests !== null && isForkPostElectra(fork)
+      ? sszTypesFor(fork).ExecutionRequests.serialize(executionRequests)
       : undefined
   );
 }
