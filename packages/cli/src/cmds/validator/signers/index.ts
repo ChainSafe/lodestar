@@ -229,6 +229,7 @@ export async function toXmssSigners(
   }
 
   logger.info("Deriving leanXMSS keys from keystores", {count: localCount});
+  const deriveStart = Date.now();
   const xmssSigners = await Promise.all(
     signers.map(async (signer): Promise<Signer> => {
       if (signer.type !== SignerType.Local) return signer;
@@ -241,14 +242,24 @@ export async function toXmssSigners(
     })
   );
 
+  const treesSources = {stored: 0, given: 0, built: 0};
+  for (const signer of xmssSigners) {
+    if (signer.type === SignerType.Xmss) treesSources[signer.signer.treesSource]++;
+  }
+  // A key that built its trees took seconds of a thread to derive: the others loaded theirs
+  logger.info("Derived leanXMSS keys", {...treesSources, seconds: (Date.now() - deriveStart) / 1000});
+
   // Only a proposal needs a VRF tree, and each takes about a second of one core: they are built
   // behind the client's start, one at a time on one thread, so that duties have the others
   void (async () => {
+    const vrfStart = Date.now();
+    let failed = 0;
     for (const signer of xmssSigners) {
       if (signer.type !== SignerType.Xmss) continue;
       try {
         await signer.signer.getVrfRoot(1);
       } catch (e) {
+        failed++;
         logger.error(
           "No VRF tree for validator: it cannot propose",
           {pubkey: toPubkeyHex(signer.signer.publicKey)},
@@ -256,7 +267,7 @@ export async function toXmssSigners(
         );
       }
     }
-    logger.info("Built VRF trees", {count: localCount});
+    logger.info("Built VRF trees", {count: localCount - failed, failed, seconds: (Date.now() - vrfStart) / 1000});
   })();
 
   return xmssSigners;

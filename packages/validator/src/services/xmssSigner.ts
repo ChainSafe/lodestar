@@ -118,23 +118,34 @@ export function hasXmssTrees(blsSecretKey: Uint8Array, store: XmssTreeStore): bo
   return new SealedTrees(store, xmssSeed(blsSecretKey)).read() !== null;
 }
 
+/** Where a key's trees are from: those it stored, those it was given, or none, so it built them */
+export type XmssTreesSource = "stored" | "given" | "built";
+
 /** The key of `seed`, with its stored trees, else `trees`, else built */
-async function loadXmssKey(seed: Uint8Array, stored?: SealedTrees, trees?: XmssTrees): Promise<XmssSecretKey> {
-  const cached = stored?.read() ?? trees;
+async function loadXmssKey(
+  seed: Uint8Array,
+  stored?: SealedTrees,
+  trees?: XmssTrees
+): Promise<{key: XmssSecretKey; treesSource: XmssTreesSource}> {
+  const storedTrees = stored?.read();
+  const cached = storedTrees ?? trees;
   if (cached) {
     try {
-      return await XmssSecretKey.fromCache(seed, cached.publicKey, cached.trees);
+      const key = await XmssSecretKey.fromCache(seed, cached.publicKey, cached.trees);
+      return {key, treesSource: storedTrees ? "stored" : "given"};
     } catch (e) {
       if (!(e as Error).message.includes("InvalidCache")) throw e;
     }
   }
-  return XmssSecretKey.fromSeed(seed);
+  return {key: await XmssSecretKey.fromSeed(seed), treesSource: "built"};
 }
 
 /** A pq validator's secrets: its leanXMSS key and its VRF tree */
 export class XmssSigner {
   /** Bottom trees of the key that `treeStore` holds */
   private readonly storedTrees = new Set<number>();
+  /** Bottom trees `prepare` was called for */
+  private readonly preparedTrees = new Set<number>();
   private vrfTree: Promise<VrfTree> | null = null;
   private registeredVrfRoot: Uint8Array | null = null;
 
@@ -142,6 +153,7 @@ export class XmssSigner {
     readonly publicKey: Uint8Array,
     private readonly key: XmssSecretKey,
     private readonly buildVrfTree: (threads?: number) => Promise<VrfTree>,
+    readonly treesSource: XmssTreesSource,
     private readonly treeStore?: SealedTrees
   ) {}
 
@@ -151,8 +163,11 @@ export class XmssSigner {
    */
   static async init(seed: Uint8Array, vrfSeed: Uint8Array, vrfPopulatedDepth: number): Promise<XmssSigner> {
     const key = await XmssSecretKey.fromSeed(seed);
-    return new XmssSigner(key.toPublicKey(), key, (threads) =>
-      VrfTree.build(vrfSeed, vrfPopulatedDepth, undefined, threads)
+    return new XmssSigner(
+      key.toPublicKey(),
+      key,
+      (threads) => VrfTree.build(vrfSeed, vrfPopulatedDepth, undefined, threads),
+      "built"
     );
   }
 
@@ -175,11 +190,12 @@ export class XmssSigner {
     const seed = xmssSeed(secretKey);
     const vrfSeed = createHash("sha256").update("vrf-seed").update(secretKey).digest();
     const stored = opts.treeStore && new SealedTrees(opts.treeStore, seed);
-    const key = await loadXmssKey(seed, stored, opts.trees);
+    const {key, treesSource} = await loadXmssKey(seed, stored, opts.trees);
     return new XmssSigner(
       key.toPublicKey(),
       key,
       (threads) => VrfTree.build(vrfSeed, KEYSTORE_VRF_POPULATED_DEPTH, opts.vrfStates, threads),
+      treesSource,
       stored
     );
   }
@@ -218,16 +234,23 @@ export class XmssSigner {
    * Builds the two bottom trees of the key that hold the leaves of `slot`, one for its attestation
    * and one for its other messages. The first signature in a bottom tree otherwise waits seconds
    * for it. The key keeps the trees it used last.
+   *
+   * Returns whether it asked for a tree for the first time: one the key built, unless it came
+   * with the trees the key was loaded from.
    */
-  async prepare(slot: Slot): Promise<void> {
+  async prepare(slot: Slot): Promise<boolean> {
     const leaves = [computeXmssAttestationLeafIndex(computeEpochAtSlot(slot)), computeXmssLeafIndex(slot, 0)];
     await Promise.all(leaves.map((leaf) => this.key.prepare(leaf)));
 
-    if (!this.treeStore) return;
     const trees = leaves.map((leaf) => leaf >>> XMSS_BOTTOM_TREE_HEIGHT);
-    if (trees.every((tree) => this.storedTrees.has(tree))) return;
-    this.treeStore.write(this.publicKey, this.key.toCache());
-    for (const tree of trees) this.storedTrees.add(tree);
+    const isFirst = trees.some((tree) => !this.preparedTrees.has(tree));
+    for (const tree of trees) this.preparedTrees.add(tree);
+
+    if (this.treeStore && !trees.every((tree) => this.storedTrees.has(tree))) {
+      this.treeStore.write(this.publicKey, this.key.toCache());
+      for (const tree of trees) this.storedTrees.add(tree);
+    }
+    return isFirst;
   }
 
   /**

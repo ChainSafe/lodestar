@@ -307,6 +307,24 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
       buckets: [0.0001, 0.001, 0.01, 0.1],
     }),
 
+    xmssSignTime: register.histogram({
+      name: "vc_xmss_sign_time_seconds",
+      help: "Histogram of sign time for any leanXMSS signature or VRF proof, the wait for a thread and for a tree not yet built included",
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 15, 60],
+    }),
+
+    xmssTreeBuildTime: register.histogram<{when: "start" | "ahead"}>({
+      name: "vc_xmss_tree_build_time_seconds",
+      help: "Histogram of the time to have one leanXMSS key's bottom trees for a slot, where this process had not asked for them before",
+      labelNames: ["when"],
+      buckets: [0.01, 0.1, 1, 2, 5, 10, 30, 60],
+    }),
+
+    xmssTreesAheadRemaining: register.gauge({
+      name: "vc_xmss_trees_ahead_remaining_count",
+      help: "leanXMSS keys still waiting for their bottom trees in the pass that builds them ahead. 0 between passes",
+    }),
+
     remoteSignTime: register.histogram({
       name: "vc_remote_sign_time_seconds",
       help: "Histogram of sign time for any signature with remote signer",

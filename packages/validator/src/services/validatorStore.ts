@@ -187,6 +187,9 @@ export const defaultOptions = {
 
 export const MAX_BUILDER_BOOST_FACTOR = 2n ** 64n - 1n;
 
+/** How often a pass that builds leanXMSS trees ahead logs how far it is */
+const XMSS_PREPARE_LOG_INTERVAL_MS = 60_000;
+
 /** Pre-Gloas there is no in-protocol builder so the default is local-only, post-Gloas bids are used */
 export function getDefaultBuilderSelection(isPostGloas: boolean): routes.validator.BuilderSelection {
   return isPostGloas ? defaultOptions.builderAliasSelection : defaultOptions.builderSelection;
@@ -278,12 +281,15 @@ export class ValidatorStore {
   }
 
   /** Has every leanXMSS key ready to sign at `slot` without building a bottom tree first */
-  async prepareXmssSigners(slot: Slot): Promise<void> {
-    const prepared: Promise<void>[] = [];
+  async prepareXmssSigners(slot: Slot, logger: LoggerVc): Promise<void> {
+    const start = Date.now();
+    const prepared: Promise<boolean>[] = [];
     for (const {signer} of this.validators.values()) {
-      if (signer.type === SignerType.Xmss) prepared.push(signer.signer.prepare(slot));
+      if (signer.type === SignerType.Xmss) prepared.push(this.prepareXmssSigner(signer.signer, slot, "start"));
     }
+    if (prepared.length === 0) return;
     await Promise.all(prepared);
+    logger.info("Prepared leanXMSS keys", {slot, keys: prepared.length, seconds: (Date.now() - start) / 1000});
   }
 
   /**
@@ -291,16 +297,39 @@ export class ValidatorStore {
    * to build and every key enters its next one at the same slot: built together when it comes,
    * they hold the threads the signatures of that slot and the ones after need.
    */
-  async prepareXmssSignersAhead(slot: Slot): Promise<void> {
+  async prepareXmssSignersAhead(slot: Slot, logger: LoggerVc): Promise<void> {
     if (this.preparingXmssSignersAhead) return;
     this.preparingXmssSignersAhead = true;
+    const start = Date.now();
+    let lastLogged = start;
+    let built = 0;
     try {
-      for (const {signer} of Array.from(this.validators.values())) {
-        if (signer.type === SignerType.Xmss) await signer.signer.prepare(slot);
+      const signers: XmssSigner[] = [];
+      for (const {signer} of this.validators.values()) {
+        if (signer.type === SignerType.Xmss) signers.push(signer.signer);
+      }
+      for (const [i, signer] of signers.entries()) {
+        this.metrics?.xmssTreesAheadRemaining.set(signers.length - i);
+        if (await this.prepareXmssSigner(signer, slot, "ahead")) built++;
+        if (Date.now() - lastLogged >= XMSS_PREPARE_LOG_INTERVAL_MS) {
+          lastLogged = Date.now();
+          logger.info("Building leanXMSS trees ahead", {slot, keys: signers.length, done: i + 1, built});
+        }
+      }
+      if (built > 0) {
+        logger.info("Built leanXMSS trees ahead", {slot, keys: built, seconds: (Date.now() - start) / 1000});
       }
     } finally {
+      this.metrics?.xmssTreesAheadRemaining.set(0);
       this.preparingXmssSignersAhead = false;
     }
+  }
+
+  private async prepareXmssSigner(signer: XmssSigner, slot: Slot, when: "start" | "ahead"): Promise<boolean> {
+    const start = Date.now();
+    const isFirst = await signer.prepare(slot);
+    if (isFirst) this.metrics?.xmssTreeBuildTime.observe({when}, (Date.now() - start) / 1000);
+    return isFirst;
   }
 
   /** Return all known indices from the validatorStore pubkeys */
@@ -1255,7 +1284,7 @@ export class ValidatorStore {
       }
 
       case SignerType.Xmss: {
-        const timer = this.metrics?.localSignTime.startTimer();
+        const timer = this.metrics?.xmssSignTime.startTimer();
         const target = getXmssSigningTarget(signableMessage, signingSlot);
         let signature: Uint8Array;
         if ("vrfSlot" in target) {

@@ -257,9 +257,9 @@ export class Validator {
       signers,
       valProposerConfig
     );
-    await validatorStore.prepareXmssSigners(Math.max(getCurrentSlot(config, clock.genesisTime), 0));
+    await validatorStore.prepareXmssSigners(Math.max(getCurrentSlot(config, clock.genesisTime), 0), loggerVc);
     clock.runEveryEpoch((epoch) =>
-      validatorStore.prepareXmssSignersAhead(computeStartSlotAtEpoch(epoch + 1) + XMSS_PREPARE_AHEAD_SLOTS)
+      validatorStore.prepareXmssSignersAhead(computeStartSlotAtEpoch(epoch + 1) + XMSS_PREPARE_AHEAD_SLOTS, loggerVc)
     );
     pollPrepareBeaconProposer(config, loggerVc, api, clock, validatorStore, metrics);
     pollBuilderValidatorRegistration(config, loggerVc, api, clock, validatorStore, metrics);
