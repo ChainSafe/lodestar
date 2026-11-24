@@ -23,7 +23,10 @@ import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInp
 import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {BlsSingleThreadVerifier} from "../../../src/chain/bls/singleThread.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
-import {DataColumnSidecarErrorCode} from "../../../src/chain/errors/dataColumnSidecarError.js";
+import {
+  DataColumnSidecarErrorCode,
+  DataColumnSidecarValidationError,
+} from "../../../src/chain/errors/dataColumnSidecarError.js";
 import {
   ExecutionPayloadEnvelopeError,
   ExecutionPayloadEnvelopeErrorCode,
@@ -1955,6 +1958,244 @@ describe("UnknownBlockSync", () => {
       expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenNthCalledWith(2, validPeer, [blockRoot]);
       expect(payloadInput.getPayloadEnvelope()).toBe(envelope);
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
+    });
+
+    describe("peer penalties", () => {
+      // enough sample groups to allow more than one download attempt per fetch
+      const sampleGroups = Array.from({length: gloasConfig.SAMPLES_PER_SLOT}, (_, i) => (i === 0 ? [0] : []));
+
+      function knownBlockOverrides(blockRootHex: string, payloadInput: PayloadEnvelopeInput): Partial<IBeaconChain> {
+        return {
+          processExecutionPayload: vi.fn().mockResolvedValue(undefined),
+          seenPayloadEnvelopeInputCache: {
+            add: vi.fn(),
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            getOrReload: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            remove: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        };
+      }
+
+      it("reports a peer that serves the envelope of another block", async () => {
+        const badPeer = await getRandPeerIdStr();
+        const goodPeer = await getRandPeerIdStr();
+        const {blockRoot, blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+          blobCount: 0,
+          sampledColumns: [],
+          slot: 1,
+        });
+        const otherEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(envelope);
+        otherEnvelope.message.beaconBlockRoot = Buffer.alloc(32, 0x99);
+
+        const sendExecutionPayloadEnvelopesByRoot = vi
+          .fn()
+          .mockImplementation(async (peerId: PeerIdStr) => [peerId === badPeer ? otherEnvelope : envelope]);
+        const reportPeer = vi.fn();
+        const {emitter} = setupPayloadSyncTest({
+          chainOverrides: knownBlockOverrides(blockRootHex, payloadInput),
+          custodyConfig: {sampledColumns: [], sampleGroups} as unknown as CustodyConfig,
+          networkOverrides: {sendExecutionPayloadEnvelopesByRoot, reportPeer},
+          peers: [{peerId: badPeer}, {peerId: goodPeer}],
+        });
+
+        emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+          rootHex: blockRootHex,
+          peer: badPeer,
+          source: BlockInputSource.gossip,
+        });
+        await sleep(50);
+
+        expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenNthCalledWith(1, badPeer, [blockRoot]);
+        expect(reportPeer).toHaveBeenCalledOnce();
+        expect(reportPeer).toHaveBeenCalledWith(
+          badPeer,
+          PeerAction.LowToleranceError,
+          DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT
+        );
+        expect(payloadInput.getPayloadEnvelope()).toBe(envelope);
+      });
+
+      it.each<{code: ExecutionPayloadEnvelopeErrorCode; reported: boolean}>([
+        {code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH, reported: true},
+        {code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH, reported: true},
+        // Range sync stores envelopes before these are checked, an honest peer may serve such an envelope
+        {code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH, reported: false},
+        {code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE, reported: false},
+      ])("reports a peer serving an envelope that fails with $code: $reported", async ({code, reported}) => {
+        const badPeer = await getRandPeerIdStr();
+        const goodPeer = await getRandPeerIdStr();
+        const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+          blobCount: 0,
+          sampledColumns: [],
+          slot: 1,
+        });
+        const invalidEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(envelope);
+        vi.mocked(validateGossipExecutionPayloadEnvelope).mockImplementation(async (_chain, signedEnvelope) => {
+          if (signedEnvelope === invalidEnvelope) {
+            throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {code, slot: 1, root: blockRootHex} as never);
+          }
+        });
+
+        const sendExecutionPayloadEnvelopesByRoot = vi
+          .fn()
+          .mockImplementation(async (peerId: PeerIdStr) => [peerId === badPeer ? invalidEnvelope : envelope]);
+        const reportPeer = vi.fn();
+        const {emitter} = setupPayloadSyncTest({
+          chainOverrides: knownBlockOverrides(blockRootHex, payloadInput),
+          custodyConfig: {sampledColumns: [], sampleGroups} as unknown as CustodyConfig,
+          networkOverrides: {sendExecutionPayloadEnvelopesByRoot, reportPeer},
+          peers: [{peerId: badPeer}, {peerId: goodPeer}],
+        });
+
+        emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+          rootHex: blockRootHex,
+          peer: badPeer,
+          source: BlockInputSource.gossip,
+        });
+        await sleep(50);
+
+        expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(2);
+        if (reported) {
+          expect(reportPeer).toHaveBeenCalledOnce();
+          expect(reportPeer).toHaveBeenCalledWith(badPeer, PeerAction.LowToleranceError, code);
+        } else {
+          expect(reportPeer).not.toHaveBeenCalled();
+        }
+        expect(payloadInput.getPayloadEnvelope()).toBe(envelope);
+      });
+
+      it("reports the peer that served the envelope when it is validated with the peer of a later attempt", async () => {
+        const envelopePeer = await getRandPeerIdStr();
+        const laterPeer = await getRandPeerIdStr();
+        const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+          blobCount: 0,
+          sampledColumns: [],
+          slot: 1,
+        });
+        // The block state is missing on the first validation, the second one finds the mismatch
+        vi.mocked(validateGossipExecutionPayloadEnvelope)
+          .mockRejectedValueOnce(
+            new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+              code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE,
+              blockRoot: blockRootHex,
+              slot: 1,
+            })
+          )
+          .mockRejectedValueOnce(
+            new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+              code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+              slot: 1,
+              root: blockRootHex,
+              envelopeBlockHash: toRootHex(Buffer.alloc(32, 0x01)),
+              bidBlockHash: toRootHex(Buffer.alloc(32, 0x02)),
+            })
+          );
+
+        const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+        const reportPeer = vi.fn();
+        const {emitter} = setupPayloadSyncTest({
+          chainOverrides: knownBlockOverrides(blockRootHex, payloadInput),
+          custodyConfig: {sampledColumns: [], sampleGroups} as unknown as CustodyConfig,
+          networkOverrides: {sendExecutionPayloadEnvelopesByRoot, reportPeer},
+          peers: [{peerId: envelopePeer}, {peerId: laterPeer}],
+        });
+
+        emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+          rootHex: blockRootHex,
+          peer: envelopePeer,
+          source: BlockInputSource.gossip,
+        });
+        await sleep(50);
+
+        expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenNthCalledWith(1, envelopePeer, expect.anything());
+        expect(validateGossipExecutionPayloadEnvelope).toHaveBeenCalledTimes(2);
+        expect(reportPeer).toHaveBeenCalledOnce();
+        expect(reportPeer).toHaveBeenCalledWith(
+          envelopePeer,
+          PeerAction.LowToleranceError,
+          ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH
+        );
+      });
+
+      it.each<{response: "invalid" | "unrequested" | "empty"; code: string | null}>([
+        {response: "invalid", code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH},
+        {response: "unrequested", code: DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED},
+        // Peers may not have the columns yet
+        {response: "empty", code: null},
+      ])("reports a peer serving $response payload columns: $code", async ({response, code}) => {
+        const badPeer = await getRandPeerIdStr();
+        const goodPeer = await getRandPeerIdStr();
+        const {blockRootHex, payloadInput, envelope, columnSidecars} = buildPayloadFixture({
+          blobCount: 1,
+          sampledColumns: [0],
+          slot: 1,
+        });
+        payloadInput.addPayloadEnvelope({
+          envelope,
+          source: PayloadEnvelopeInputSource.gossip,
+          seenTimestampSec: Date.now() / 1000,
+          peerIdStr: goodPeer,
+        });
+
+        const invalidColumns = [ssz.gloas.DataColumnSidecar.clone(columnSidecars[0])];
+        const unrequestedColumn = ssz.gloas.DataColumnSidecar.clone(columnSidecars[0]);
+        unrequestedColumn.index = 1;
+        const badResponse = {invalid: invalidColumns, unrequested: [unrequestedColumn], empty: []}[response];
+        vi.mocked(validateGloasBlockDataColumnSidecars).mockImplementation(
+          async (_slot, _root, _commitments, columns) => {
+            if (columns === invalidColumns) {
+              throw new DataColumnSidecarValidationError({
+                code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH,
+                slot: 1,
+                reason: "test",
+              });
+            }
+          }
+        );
+
+        const sendDataColumnSidecarsByRoot = vi
+          .fn()
+          .mockImplementation(async (peerId: PeerIdStr) => (peerId === badPeer ? badResponse : columnSidecars));
+        const reportPeer = vi.fn();
+        const chainOverrides = knownBlockOverrides(blockRootHex, payloadInput);
+        const {emitter} = setupPayloadSyncTest({
+          chainOverrides,
+          custodyConfig: {sampledColumns: [0], sampleGroups} as unknown as CustodyConfig,
+          networkOverrides: {sendDataColumnSidecarsByRoot, reportPeer},
+          peers: [
+            {peerId: badPeer, custodyColumns: [0]},
+            {peerId: goodPeer, custodyColumns: [0]},
+          ],
+        });
+
+        emitter.emit(ChainEvent.incompletePayloadEnvelope, {
+          payloadInput,
+          peer: badPeer,
+          source: BlockInputSource.gossip,
+        });
+        await sleep(50);
+
+        expect(sendDataColumnSidecarsByRoot).toHaveBeenCalledTimes(2);
+        expect(sendDataColumnSidecarsByRoot).toHaveBeenNthCalledWith(1, badPeer, expect.anything());
+        if (code !== null) {
+          expect(reportPeer).toHaveBeenCalledOnce();
+          expect(reportPeer).toHaveBeenCalledWith(badPeer, PeerAction.LowToleranceError, code);
+        } else {
+          expect(reportPeer).not.toHaveBeenCalled();
+        }
+        expect(payloadInput.hasAllData()).toBe(true);
+        expect(chainOverrides.processExecutionPayload).toHaveBeenCalledWith(payloadInput);
+      });
     });
 
     it("retries a rate-limited payload download when the backoff expires around the retry timer", async () => {

@@ -1722,6 +1722,8 @@ export class BlockInputSync {
       ? cacheItem.payloadInput
       : await this.chain.seenPayloadEnvelopeInputCache.getOrReload(rootHex);
     let envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
+    // An envelope downloaded in an earlier attempt is validated with the peer of a later one
+    let envelopePeerId: PeerIdStr | undefined;
 
     const fetchStartSec = Date.now() / 1000;
     if (typeof slot === "number") {
@@ -1769,6 +1771,7 @@ export class BlockInputSync {
       try {
         if (!envelope) {
           envelope = await this.fetchExecutionPayloadEnvelope(peerId, blockRoot, rootHex);
+          envelopePeerId = peerId;
           cacheItem.peerIdStrings.add(peerId);
           const slotWasUnknown = typeof slot !== "number";
           slot = envelope.message.payload.slotNumber;
@@ -1877,6 +1880,11 @@ export class BlockInputSync {
           excludedPeers.add(peerId);
         }
 
+        // Honest peers serve the requested root and columns, and every path that stores payload columns verifies them
+        if (e instanceof DownloadByRootError || e instanceof DataColumnSidecarValidationError) {
+          this.network.reportPeer(peerId, PeerAction.LowToleranceError, e.type.code);
+        }
+
         if (e instanceof ExecutionPayloadEnvelopeError) {
           switch (e.type.code) {
             // Caused by local state, the downloaded envelope may still be valid
@@ -1888,8 +1896,20 @@ export class BlockInputSync {
             // Every copy fails once the block is finalized, only a wrong slot makes the served copy invalid
             case ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK:
               if (envelope?.message.payload.slotNumber !== payloadInput?.slot) {
+                if (envelopePeerId !== undefined) {
+                  this.network.reportPeer(envelopePeerId, PeerAction.LowToleranceError, e.type.code);
+                }
                 envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
               }
+              break;
+            // Range sync stores an envelope after checking only its root, slot and block hash, so an honest peer
+            // may serve one that fails the other checks
+            case ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH:
+            case ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH:
+              if (envelopePeerId !== undefined) {
+                this.network.reportPeer(envelopePeerId, PeerAction.LowToleranceError, e.type.code);
+              }
+              envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
               break;
             // The served copy is invalid, take the envelope from payloadInput or another peer on the next attempt
             default:
@@ -1931,7 +1951,12 @@ export class BlockInputSync {
 
     const receivedRootHex = toRootHex(envelope.message.beaconBlockRoot);
     if (receivedRootHex !== rootHex) {
-      throw new Error(`Execution payload envelope root mismatch requested=${rootHex} received=${receivedRootHex}`);
+      throw new DownloadByRootError({
+        code: DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT,
+        peer: prettyPrintPeerIdStr(peerIdStr),
+        requestedBlockRoot: rootHex,
+        receivedBlockRoot: receivedRootHex,
+      });
     }
 
     return envelope;
@@ -1960,9 +1985,13 @@ export class BlockInputSync {
     const requestedColumnsSet = new Set(requestedColumns);
     const extraColumns = columnSidecars.filter((columnSidecar) => !requestedColumnsSet.has(columnSidecar.index));
     if (extraColumns.length > 0) {
-      throw new Error(
-        `Received unexpected payload data columns indices=${prettyPrintIndices(extraColumns.map((column) => column.index))}`
-      );
+      throw new DownloadByRootError({
+        code: DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED,
+        peer: prettyPrintPeerIdStr(peerIdStr),
+        slot: payloadInput.slot,
+        blockRoot: payloadInput.blockRootHex,
+        invalidIndices: prettyPrintIndices(extraColumns.map((column) => column.index)),
+      });
     }
 
     // PayloadEnvelopeInput already carries the block slot, root, and commitments, so reuse the
