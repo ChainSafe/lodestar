@@ -129,9 +129,9 @@ describe("execution / engine / blockHash", () => {
 
   it("computeExecutionBlockHash matches the EL hash of a Sepolia gloas envelope", () => {
     // Finalized Sepolia envelope at slot 11451369 from the beacon API, with 72 transactions and an execution request
-    const fixture = path.resolve(__dirname, "../../../fixtures/gloas/sepoliaExecutionPayloadEnvelope11451369.json");
-    const {payload, parentBeaconBlockRoot, executionRequests} = ssz.gloas.SignedExecutionPayloadEnvelope.fromJson(
-      JSON.parse(fs.readFileSync(fixture, "utf8"))
+    const fixture = path.resolve(__dirname, "../../../fixtures/gloas/sepoliaExecutionPayloadEnvelope11451369.ssz");
+    const {payload, parentBeaconBlockRoot, executionRequests} = ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(
+      fs.readFileSync(fixture)
     ).message;
 
     expect(toHex(computeExecutionBlockHash(ForkName.gloas, payload, parentBeaconBlockRoot, executionRequests))).toBe(

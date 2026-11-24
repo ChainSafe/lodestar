@@ -1,5 +1,4 @@
 import {PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {isForkPostGloas} from "@lodestar/params";
 import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
@@ -282,13 +281,9 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] The payload's block hash is computed correctly
-  const fork = chain.config.getForkName(block.slot);
-  if (!isForkPostGloas(fork)) {
-    throw new Error(`Expected gloas+ fork for execution payload envelope validation, got fork=${fork}`);
-  }
   const timer = chain.metrics?.gossipExecutionPayloadEnvelope.blockHashTime.startTimer();
   const computedBlockHash = computeExecutionBlockHash(
-    fork,
+    blockState.forkName,
     payload,
     envelope.parentBeaconBlockRoot,
     envelope.executionRequests

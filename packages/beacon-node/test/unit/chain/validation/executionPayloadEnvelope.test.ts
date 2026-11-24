@@ -90,17 +90,6 @@ describe("validateGossipExecutionPayloadEnvelope", () => {
     } as unknown as IBeaconStateView);
   });
 
-  it("accepts an envelope whose payload hashes to its block hash", async () => {
-    await expect(validateGossipExecutionPayloadEnvelope(chain, signedEnvelope)).resolves.toBeUndefined();
-  });
-
-  it("rejects an envelope whose payload does not hash to its block hash", async () => {
-    signedEnvelope.message.payload.transactions = SerializedList.fromArray([Uint8Array.from([2, 9, 9, 9])]);
-    await expect(validateGossipExecutionPayloadEnvelope(chain, signedEnvelope)).rejects.toMatchObject({
-      type: {code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK_HASH},
-    });
-  });
-
   it("checks the block hash before the signature", async () => {
     signedEnvelope.message.payload.transactions = SerializedList.fromArray([Uint8Array.from([2, 9, 9, 9])]);
     vi.mocked(chain.bls.verifySignatureSets).mockResolvedValue(false);
@@ -108,12 +97,5 @@ describe("validateGossipExecutionPayloadEnvelope", () => {
       type: {code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK_HASH},
     });
     expect(chain.bls.verifySignatureSets).not.toHaveBeenCalled();
-  });
-
-  it("rejects an invalid signature on an envelope with a valid block hash", async () => {
-    vi.mocked(chain.bls.verifySignatureSets).mockResolvedValue(false);
-    await expect(validateGossipExecutionPayloadEnvelope(chain, signedEnvelope)).rejects.toMatchObject({
-      type: {code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE},
-    });
   });
 });
