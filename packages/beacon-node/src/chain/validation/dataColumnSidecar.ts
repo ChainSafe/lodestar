@@ -249,19 +249,59 @@ export async function validateGossipGloasDataColumnSidecar(
     });
   }
 
+  await validateGloasDataColumnSidecarAgainstBlock(
+    block.slot,
+    payloadInput.getBlobKzgCommitments(),
+    dataColumnSidecar,
+    gossipSubnet,
+    chain,
+    metrics
+  );
+}
+
+/**
+ * Checks a column against a block that passed gossip validation but is not imported yet, so the real column can be
+ * told apart from junk before it is buffered for the import. Throws the same errors as gossip validation.
+ */
+export async function validateEarlyGloasDataColumnSidecar(
+  chain: IBeaconChain,
+  block: gloas.BeaconBlock,
+  dataColumnSidecar: gloas.DataColumnSidecar,
+  gossipSubnet: SubnetID,
+  metrics: Metrics | null
+): Promise<void> {
+  await validateGloasDataColumnSidecarAgainstBlock(
+    block.slot,
+    block.body.signedExecutionPayloadBid.message.blobKzgCommitments,
+    dataColumnSidecar,
+    gossipSubnet,
+    chain,
+    metrics
+  );
+}
+
+async function validateGloasDataColumnSidecarAgainstBlock(
+  blockSlot: Slot,
+  kzgCommitments: Uint8Array[],
+  dataColumnSidecar: gloas.DataColumnSidecar,
+  gossipSubnet: SubnetID,
+  chain: IBeaconChain,
+  metrics: Metrics | null
+): Promise<void> {
+  const blockRootHex = toRootHex(dataColumnSidecar.beaconBlockRoot);
+
   // [REJECT] The sidecar slot matches the slot of the block with root beacon_block_root.
-  if (block.slot !== dataColumnSidecar.slot) {
+  if (blockSlot !== dataColumnSidecar.slot) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_SLOT,
       root: blockRootHex,
       columnIndex: dataColumnSidecar.index,
-      expected: block.slot,
+      expected: blockSlot,
       actual: dataColumnSidecar.slot,
     });
   }
 
   // [REJECT] The sidecar must pass verify_data_column_sidecar against the block commitments
-  const kzgCommitments = payloadInput.getBlobKzgCommitments();
   verifyGloasDataColumnSidecar(dataColumnSidecar, kzgCommitments, blockRootHex);
 
   // [REJECT] The sidecar must be on the correct subnet

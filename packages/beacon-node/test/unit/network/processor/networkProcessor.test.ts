@@ -3,13 +3,14 @@ import {Mock, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {BUILDER_INDEX_SELF_BUILD, ForkName, GENESIS_EPOCH} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkName, GENESIS_EPOCH, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {MapDef, byteArrayEquals} from "@lodestar/utils";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {GossipErrorCode} from "../../../../src/chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../../../src/chain/interface.js";
+import {computeSubnetForDataColumnSidecar} from "../../../../src/chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../../../../src/db/interface.js";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network/events.js";
 import {GossipType} from "../../../../src/network/gossip/interface.js";
@@ -26,6 +27,7 @@ import {
 import {PendingGossipsubMessage} from "../../../../src/network/processor/types.js";
 import {PeerIdStr} from "../../../../src/util/peerId.js";
 import {ClockStopped} from "../../../mocks/clock.js";
+import {generateBlockWithColumnSidecars} from "../../../utils/blocksAndData.js";
 
 // per-(root, topic) message caps, read from the source so the tests track the real limits
 const MAX_BID_PER_ROOT = MAX_AWAITING_MESSAGES_PER_ROOT[GossipType.execution_payload_bid] as number;
@@ -107,9 +109,9 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     processor = new NetworkProcessor(modules, {});
   });
 
-  function emit(topicType: GossipType, fork: ForkName, data: Uint8Array, peer = peerIdStr): void {
+  function emit(topicType: GossipType, fork: ForkName, data: Uint8Array, peer = peerIdStr, subnet?: number): void {
     (processor as unknown as {events: NetworkEventBus}).events.emit(NetworkEvent.pendingGossipsubMessage, {
-      topic: {type: topicType, boundary: {fork, epoch: GENESIS_EPOCH}},
+      topic: {type: topicType, boundary: {fork, epoch: GENESIS_EPOCH}, subnet},
       msg: {data},
       msgId: "id",
       propagationSource: peer,
@@ -509,6 +511,79 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       await settle();
       expect(reportPeerSpy).not.toHaveBeenCalled();
       expect(verifiedEarlyEnvelopes().size).toBe(0);
+      expect(bufferedBlockCount()).toBe(1);
+    });
+  });
+
+  // Columns can also arrive while their block passed gossip validation but is still being imported. They are checked
+  // against the block's bid, so junk that arrived first cannot keep them out of the buffer.
+  describe("data columns for a block that is seen but not imported", () => {
+    const attacker = "16Uiu2HAmAttacker" as PeerIdStr;
+    const honest = "16Uiu2HAmHonest" as PeerIdStr;
+    const {block, rootHex, columnSidecars} = generateBlockWithColumnSidecars({
+      forkName: ForkName.gloas,
+      slot: clockSlot,
+    });
+    const columns = columnSidecars as gloas.DataColumnSidecar[];
+
+    function processColumn(column: gloas.DataColumnSidecar, peer: PeerIdStr): void {
+      const subnet = computeSubnetForDataColumnSidecar(config, column);
+      emit(GossipType.data_column_sidecar, ForkName.gloas, ssz.gloas.DataColumnSidecar.serialize(column), peer, subnet);
+    }
+
+    function verifiedEarlyColumns(): Map<string, Map<number, PendingGossipsubMessage>> {
+      return (processor as unknown as {verifiedEarlyColumns: Map<string, Map<number, PendingGossipsubMessage>>})
+        .verifiedEarlyColumns;
+    }
+
+    beforeEach(() => {
+      seenBlocks.set(rootHex, block as gloas.SignedBeaconBlock);
+    });
+
+    it("holds real columns after junk filled the slot's root budget, and releases them on import", async () => {
+      for (let i = 1; i <= MAX_BUFFERED_ROOTS_PER_SLOT; i++) {
+        processAggregate(i);
+      }
+      processColumn(columns[0], honest);
+      processColumn(columns[1], honest);
+      await vi.waitFor(() => expect(verifiedEarlyColumns().get(rootHex)?.size).toBe(2));
+
+      const pushSpy = vi
+        .spyOn(
+          processor as unknown as {pushPendingGossipsubMessageToQueue: () => void},
+          "pushPendingGossipsubMessageToQueue"
+        )
+        .mockImplementation(() => {});
+      emitter.emit(routes.events.EventType.block, {slot: clockSlot, block: rootHex, executionOptimistic: false});
+      expect(pushSpy).toHaveBeenCalledTimes(2);
+      expect(verifiedEarlyColumns().size).toBe(0);
+    });
+
+    it("rejects a column that fails the KZG check before it takes a buffer slot", async () => {
+      const junk = ssz.gloas.DataColumnSidecar.clone(columns[0]);
+      junk.kzgProofs = junk.kzgProofs.map((proof) => proof.map((b) => b ^ 1));
+      processColumn(junk, attacker);
+      await vi.waitFor(() =>
+        expect(reportPeerSpy).toHaveBeenCalledWith(
+          attacker,
+          PeerAction.LowToleranceError,
+          "DATA_COLUMN_SIDECAR_ERROR_INVALID_KZG_PROOF"
+        )
+      );
+      expect(bufferedBlockCount()).toBe(0);
+      expect(verifiedEarlyColumns().size).toBe(0);
+    });
+
+    it("sends columns past the per-peer check budget to the buffer caps unchecked", async () => {
+      (processor as unknown as {earlyColumnChecksByPeer: Map<PeerIdStr, number>}).earlyColumnChecksByPeer.set(
+        attacker,
+        NUMBER_OF_COLUMNS
+      );
+      const junk = ssz.gloas.DataColumnSidecar.clone(columns[0]);
+      junk.kzgProofs = junk.kzgProofs.map((proof) => proof.map((b) => b ^ 1));
+      processColumn(junk, attacker);
+      await settle();
+      expect(reportPeerSpy).not.toHaveBeenCalled();
       expect(bufferedBlockCount()).toBe(1);
     });
   });

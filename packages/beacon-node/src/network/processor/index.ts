@@ -2,13 +2,14 @@ import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {routes} from "@lodestar/api";
 import {ForkSeq, NUMBER_OF_COLUMNS, isForkPostGloas} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {RootHex, Slot, SlotRootHex, gloas, ssz} from "@lodestar/types";
+import {RootHex, Slot, SlotRootHex, SubnetID, gloas, ssz} from "@lodestar/types";
 import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../../chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";
-import {ExecutionPayloadEnvelopeError, GossipAction} from "../../chain/errors/index.js";
+import {DataColumnSidecarGossipError, ExecutionPayloadEnvelopeError, GossipAction} from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
+import {validateEarlyGloasDataColumnSidecar} from "../../chain/validation/dataColumnSidecar.js";
 import {validateEarlyExecutionPayloadEnvelope} from "../../chain/validation/executionPayloadEnvelope.js";
 import {IBeaconDb} from "../../db/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -219,6 +220,7 @@ export enum CannotAcceptWorkReason {
 enum PreprocessAction {
   AwaitBlock,
   AwaitSeenBlock,
+  AwaitSeenBlockColumn,
   AwaitEnvelope,
   PushToQueue,
 }
@@ -227,6 +229,7 @@ type PreprocessResult =
   | {action: PreprocessAction.PushToQueue}
   | {action: PreprocessAction.AwaitBlock; root: RootHex}
   | {action: PreprocessAction.AwaitSeenBlock; root: RootHex; block: gloas.BeaconBlock}
+  | {action: PreprocessAction.AwaitSeenBlockColumn; root: RootHex; block: gloas.BeaconBlock; subnet: SubnetID}
   | {action: PreprocessAction.AwaitEnvelope; root: RootHex};
 
 enum SearchTarget {
@@ -303,6 +306,10 @@ export class NetworkProcessor {
   private readonly verifiedEarlyEnvelopes = new Map<RootHex, PendingGossipsubMessage>();
   /** Peers that already had an envelope checked against a seen block in the current clock slot */
   private readonly earlyEnvelopeCheckPeers = new Set<PeerIdStr>();
+  /** Columns per block root and index verified against the bid of their seen block, held outside the buffer caps */
+  private readonly verifiedEarlyColumns = new Map<RootHex, Map<number, PendingGossipsubMessage>>();
+  /** Columns each peer had checked against a seen block in the current clock slot */
+  private readonly earlyColumnChecksByPeer = new Map<PeerIdStr, number>();
   /** peer -> clock slot when it was Fatal'ed */
   private readonly fatalPeers = new Map<PeerIdStr, Slot>();
 
@@ -392,6 +399,8 @@ export class NetworkProcessor {
     this.earlyEnvelopePeers.clear();
     this.verifiedEarlyEnvelopes.clear();
     this.earlyEnvelopeCheckPeers.clear();
+    this.verifiedEarlyColumns.clear();
+    this.earlyColumnChecksByPeer.clear();
     this.fatalPeers.clear();
   }
 
@@ -652,6 +661,20 @@ export class NetworkProcessor {
             // do not await the envelope, we can do gossip validation
             // also do not reset preprocessResult, we may already await for the block
           }
+          if (
+            preprocessResult.action === PreprocessAction.AwaitBlock &&
+            message.topic.type === GossipType.data_column_sidecar
+          ) {
+            const blockInput = this.chain.seenBlockInputCache.get(root);
+            if (blockInput?.hasBlock() && isForkPostGloas(blockInput.forkName)) {
+              preprocessResult = {
+                action: PreprocessAction.AwaitSeenBlockColumn,
+                root,
+                block: (blockInput.getBlock() as gloas.SignedBeaconBlock).message,
+                subnet: message.topic.subnet,
+              };
+            }
+          }
           break;
         }
         case GossipType.execution_payload: {
@@ -715,6 +738,15 @@ export class NetworkProcessor {
         this.awaitSeenBlock(preprocessResult.root, preprocessResult.block, slot, message).catch((e) =>
           this.logger.error("awaitSeenBlock must not throw", {}, e)
         );
+        break;
+      case PreprocessAction.AwaitSeenBlockColumn:
+        this.awaitSeenBlockColumn(
+          preprocessResult.root,
+          preprocessResult.block,
+          preprocessResult.subnet,
+          slot,
+          message
+        ).catch((e) => this.logger.error("awaitSeenBlockColumn must not throw", {}, e));
         break;
       case PreprocessAction.AwaitEnvelope:
         this.maybeAwaitPayload(preprocessResult.root, topicType, slot, message);
@@ -852,6 +884,73 @@ export class NetworkProcessor {
     this.maybeAwaitBlock(root, topicType, slot, message);
   }
 
+  /**
+   * Buffer a column whose block passed gossip validation but is not imported yet. A column verified against the
+   * block's bid skips the caps of maybeAwaitBlock, so junk sent ahead of it cannot keep it out.
+   */
+  private async awaitSeenBlockColumn(
+    root: RootHex,
+    block: gloas.BeaconBlock,
+    subnet: SubnetID,
+    slot: Slot,
+    message: PendingGossipsubMessage
+  ): Promise<void> {
+    const topicType = GossipType.data_column_sidecar;
+    // The check runs before any queue, so bound it: a peer forwards at most one column per index for a block
+    const checks = this.earlyColumnChecksByPeer.get(message.propagationSource) ?? 0;
+    if (checks >= NUMBER_OF_COLUMNS) {
+      this.maybeAwaitBlock(root, topicType, slot, message);
+      return;
+    }
+    this.earlyColumnChecksByPeer.set(message.propagationSource, checks + 1);
+
+    const generation = this.jobGeneration;
+    let index: number | null = null;
+    try {
+      const dataColumnSidecar = ssz.gloas.DataColumnSidecar.deserialize(message.msg.data);
+      await validateEarlyGloasDataColumnSidecar(this.chain, block, dataColumnSidecar, subnet, this.metrics);
+      index = dataColumnSidecar.index;
+    } catch (e) {
+      if (e instanceof DataColumnSidecarGossipError && e.action === GossipAction.REJECT) {
+        const {propagationSource} = message;
+        const code = e.type.code;
+        const peerAction = rejectPeerAction(topicType, code);
+        if (peerAction === PeerAction.Fatal) this.onFatalPeer(propagationSource);
+        this.metrics?.networkProcessor.gossipValidationReject.inc({topic: topicType});
+        this.core.reportPeer(propagationSource, peerAction, code);
+        this.logger.debug("Gossip validation data_column_sidecar rejected before block import", {
+          peer: propagationSource,
+          peerAction,
+          ...e.getMetadata(),
+        });
+        this.events.emit(NetworkEvent.gossipMessageValidationResult, {
+          msgId: message.msgId,
+          propagationSource,
+          acceptance: TopicValidatorResult.Reject,
+        });
+        return;
+      }
+      // malformed or not checkable yet, gossip validation decides once the block is imported
+    }
+    if (generation !== this.jobGeneration) return;
+
+    if (this.chain.forkChoice.hasBlockHexUnsafe(root)) {
+      this.pushPendingGossipsubMessageToQueue(message);
+      return;
+    }
+    let columns = this.verifiedEarlyColumns.get(root);
+    if (index !== null && !columns?.has(index)) {
+      if (columns === undefined) {
+        columns = new Map();
+        this.verifiedEarlyColumns.set(root, columns);
+      }
+      this.metrics?.awaitingBlockGossipMessages.queue.inc({topic: topicType});
+      columns.set(index, message);
+      return;
+    }
+    this.maybeAwaitBlock(root, topicType, slot, message);
+  }
+
   /** Payload counterpart of maybeAwaitBlock */
   private maybeAwaitPayload(root: RootHex, topicType: GossipType, slot: Slot, message: PendingGossipsubMessage): void {
     const metric = this.metrics?.awaitingPayloadGossipMessages;
@@ -940,6 +1039,14 @@ export class NetworkProcessor {
       this.verifiedEarlyEnvelopes.delete(rootHex);
       this.metrics?.awaitingBlockGossipMessages.resolve.inc({topic: GossipType.execution_payload});
       this.pushPendingGossipsubMessageToQueue(verifiedEnvelope);
+    }
+    const verifiedColumns = this.verifiedEarlyColumns.get(rootHex);
+    if (verifiedColumns !== undefined) {
+      this.verifiedEarlyColumns.delete(rootHex);
+      for (const column of verifiedColumns.values()) {
+        this.metrics?.awaitingBlockGossipMessages.resolve.inc({topic: GossipType.data_column_sidecar});
+        this.pushPendingGossipsubMessageToQueue(column);
+      }
     }
 
     const messagesByTopic = this.awaitingMessagesByBlockRoot.get(rootHex);
@@ -1111,6 +1218,18 @@ export class NetworkProcessor {
       this.metrics?.awaitingBlockGossipMessages.waitSecBeforeReject.set(
         {topic: topicType, reason: ReprocessRejectReason.expired},
         nowSec - message.seenTimestampSec
+      );
+    }
+
+    this.earlyColumnChecksByPeer.clear();
+    for (const [rootHex, columns] of this.verifiedEarlyColumns) {
+      // all columns of a root share the block's slot
+      const message = columns.values().next().value;
+      if ((message?.msgSlot ?? minSlot) > minSlot) continue;
+      this.verifiedEarlyColumns.delete(rootHex);
+      this.metrics?.awaitingBlockGossipMessages.reject.inc(
+        {topic: GossipType.data_column_sidecar, reason: ReprocessRejectReason.expired},
+        columns.size
       );
     }
 
