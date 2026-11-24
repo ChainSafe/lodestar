@@ -78,7 +78,9 @@ const ForkChoice = @This();
 /// `pulledUpBalanceSource(root, epoch)` turns on the fast confirmation rule; both return
 /// `{effectiveBalanceIncrements, zeroInactiveIncrements, activeIndices}` of the state
 /// at the checkpoint, or of block `root`'s state advanced to the start of `epoch`.
-pub fn init(config: *const BeaconConfig, genesis_time: js.Number, anchor: js.Value, provider: js.Value) !ForkChoice {
+/// With `unfinalized_ancestors` the anchor is not finalized: the store starts at the
+/// anchor's checkpoints, see `Store.initFromUnfinalizedSummary`.
+pub fn init(config: *const BeaconConfig, genesis_time: js.Number, anchor: js.Value, provider: js.Value, unfinalized_ancestors: ?js.Array) !ForkChoice {
     const env = js.env();
     const provider_value = provider.toValue();
     const justified_balances = try functionRef(env, provider_value, "justifiedBalances");
@@ -96,6 +98,8 @@ pub fn init(config: *const BeaconConfig, genesis_time: js.Number, anchor: js.Val
     const beacon_config = &config_rc.instance.config;
     const summary = try blockSummary(beacon_config, anchor.toValue());
     const genesis = try genesis_time.toSafeInteger();
+    var ancestors_buffer: [fork_choice.MAX_ANCHOR_ANCESTORS]fork_choice.AnchorAncestor = undefined;
+    const ancestors = if (unfinalized_ancestors) |array| try anchorAncestors(array, &ancestors_buffer) else null;
 
     const inner = try allocator.create(Inner);
     errdefer allocator.destroy(inner);
@@ -107,7 +111,11 @@ pub fn init(config: *const BeaconConfig, genesis_time: js.Number, anchor: js.Val
         .checkpoint_balance_source = checkpoint_balance_source,
         .pulled_up_balance_source = pulled_up_balance_source,
     };
-    inner.store = try Store.initFromSummary(allocator, beacon_config, genesis, summary, .{ .ctx = inner, .vtable = &provider_vtable });
+    const state_provider: fork_choice.StateProvider = .{ .ctx = inner, .vtable = &provider_vtable };
+    inner.store = if (ancestors) |list|
+        try Store.initFromUnfinalizedSummary(allocator, beacon_config, genesis, summary, list, state_provider)
+    else
+        try Store.initFromSummary(allocator, beacon_config, genesis, summary, state_provider);
     if (fast_confirmation) inner.fast_confirmation = .init(&inner.store);
     return .{ .inner = inner };
 }
@@ -284,6 +292,19 @@ fn blockSummary(config: *const @import("config").BeaconConfig, object: napi.Valu
     const arrival = try object.getNamedProperty("arrivalMsIntoSlot");
     if (try isPresent(arrival)) summary.arrival_ms_into_slot = try toU64(arrival);
     return summary;
+}
+
+fn anchorAncestors(array: js.Array, buffer: *[fork_choice.MAX_ANCHOR_ANCESTORS]fork_choice.AnchorAncestor) ![]const fork_choice.AnchorAncestor {
+    const len = try array.length();
+    if (len > buffer.len) return error.TooManyAnchorAncestors;
+    for (buffer[0..len], 0..) |*ancestor, i| {
+        const object = (try array.get(@intCast(i))).toValue();
+        ancestor.* = .{
+            .root = try toRoot(try object.getNamedProperty("root")),
+            .slot = try toU64(try object.getNamedProperty("slot")),
+        };
+    }
+    return buffer[0..len];
 }
 
 fn toAttestationData(object: napi.Value) !AttestationData {

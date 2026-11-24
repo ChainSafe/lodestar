@@ -79,6 +79,13 @@ export type NativeForkChoiceAnchor = {
   payloadBlockHash: Root | null;
   /** The anchor block's Gloas bid `parent_block_hash` */
   bidParentBlockHash: Root | null;
+  /**
+   * Set when the anchor is not finalized: the store then starts at `justifiedCheckpoint` and
+   * `finalizedCheckpoint` instead of at the anchor. Stand-ins for the anchor's ancestors, oldest
+   * first from the finalized block, holding both checkpoint blocks. Only `blockRoot` and `slot`
+   * reach the store; a stand-in is Gloas iff its slot is.
+   */
+  unfinalizedAncestors?: ProtoBlock[];
 };
 
 // Node ids are `blockIndex * 3 + <spec payload status>`, the numbering of the native store
@@ -129,7 +136,7 @@ type NativeScores = {weights: BigUint64Array; attestationScores: BigUint64Array;
  * the store; it asks for justified balances and committees through the provider callbacks.
  *
  * Differences from `ForkChoice`, all following the spec the store is written against:
- * - the anchor is both the justified and the finalized checkpoint
+ * - a finalized anchor is both the justified and the finalized checkpoint
  * - `should_override_forkchoice_update` is gone from the spec, so `shouldOverrideForkChoiceUpdate`
  *   never overrides and `predictProposerHead` is the head
  * - `prune` drops every block that does not descend from the finalized block, not only the ones
@@ -205,10 +212,15 @@ export class NativeForkChoice implements IForkChoice {
                 this.providePulledUpBalanceSource(root, epoch),
             }
           : {}),
-      }
+      },
+      anchor.unfinalizedAncestors?.map((ancestor) => ({root: fromHex(ancestor.blockRoot), slot: ancestor.slot}))
     );
     this.fastConfirmation = opts?.fastConfirmation === true;
-    this.insertBlock(0, block);
+    const ancestors = anchor.unfinalizedAncestors ?? [];
+    for (const [blockIndex, ancestor] of ancestors.entries()) {
+      this.insertBlock(blockIndex, ancestor);
+    }
+    this.insertBlock(ancestors.length, block);
 
     // Bring the clock up to the slot the caller starts at; the anchor may be older
     this.store.onTick(this.store.timeAtSlotMs(Math.max(fcStore.currentSlot, this.store.currentSlot)));

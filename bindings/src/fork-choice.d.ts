@@ -49,6 +49,16 @@ export interface BlockSummary {
   arrivalMsIntoSlot?: number;
 }
 
+/**
+ * An ancestor of an unfinalized anchor, known only by root. `slot` is at or after the block's
+ * real slot. Its payload is unknown. The store accepts a block on top of it, but a caller without
+ * the ancestor's state cannot produce one.
+ */
+export interface AnchorAncestor {
+  root: Uint8Array;
+  slot: number;
+}
+
 export interface AttestationData {
   slot: number;
   index: number;
@@ -110,8 +120,24 @@ export type KeepHeadReason =
  * until `prune`. Failed calls throw an `Error` whose `code` is the Zig error name.
  */
 export declare class ForkChoice {
-  /** `anchor.slot` is the anchor state's slot and its checkpoints are that state's */
-  constructor(config: BeaconConfig, genesisTime: number, anchor: BlockSummary, provider: StateProvider);
+  /**
+   * `anchor.slot` is the anchor state's slot and its checkpoints are that state's.
+   *
+   * Without `unfinalizedAncestors` the anchor is the justified and the finalized checkpoint, as in
+   * spec `get_forkchoice_store`. With them the anchor is not finalized and the store starts at the
+   * anchor's checkpoints instead. The ancestors run oldest first from the finalized block to the
+   * anchor, at most seven, with distinct non-zero roots and ascending slots, and must contain the
+   * justified and the finalized checkpoint blocks unless the anchor is that block itself. They
+   * should also hold the checkpoint blocks of the anchor's epoch and the one before: the head
+   * cannot be computed once the chain justifies a block the store does not hold.
+   */
+  constructor(
+    config: BeaconConfig,
+    genesisTime: number,
+    anchor: BlockSummary,
+    provider: StateProvider,
+    unfinalizedAncestors?: AnchorAncestor[]
+  );
 
   readonly timeMs: number;
   readonly currentSlot: number;
