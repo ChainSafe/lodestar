@@ -109,6 +109,7 @@ export async function getDevBeaconNode(
           maxPeers: defaultNetworkOptions.maxPeers,
         },
         chain: {
+          nativeStateTransition: false,
           // configure supernode does not work because we don't get through cli
           initialCustodyGroupCount: config.NUMBER_OF_CUSTODY_GROUPS,
         },

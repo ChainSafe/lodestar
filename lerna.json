@@ -3,7 +3,7 @@
     "packages/*",
     "bindings"
   ],
-  "version": "1.50.1",
+  "version": "1.51.0",
   "npmClient": "pnpm",
   "stream": true,
   "command": {

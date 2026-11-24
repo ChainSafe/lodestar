@@ -231,7 +231,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       processProposerEquivocation: vi.fn(),
       persistInvalidSszValue: vi.fn(),
       persistExecutionPayloadEnvelope: vi.fn(),
-      persistInvalidSszBytes: vi.fn(),
+      persistInvalidSignature: vi.fn(),
       regenStateForAttestationVerification: vi.fn(),
       close: vi.fn(),
       logger,

@@ -22,10 +22,11 @@ pnpm build
 pnpm test:native
 ```
 
-For native-only changes, rebuild with `pnpm build:native`. The output is
-`bindings/zig-out/lib/bindings.node`. Use
-`pnpm --filter @lodestar/native prepare-minimal` or `prepare-gnosis` to select another
-preset. Rebuild before switching presets; they share an output directory.
+For native-only changes, rebuild with `pnpm build:native`. It builds one addon per preset
+into `bindings/zig-out/lib/bindings-<preset>.node`, and `LODESTAR_PRESET` selects which one
+is loaded (default `mainnet`). Use `pnpm --filter @lodestar/native prepare-mainnet`,
+`prepare-minimal` or `prepare-gnosis` to rebuild a single preset. Do not run them
+concurrently; they share an intermediate output file.
 
 Bindings use their own Vitest configuration and the root workspace lockfile.
 Consensus spec vectors are pinned in [`build.zig.zon`](../build.zig.zon).

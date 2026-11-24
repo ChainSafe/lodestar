@@ -148,7 +148,7 @@ describe("gossip execution payload envelope block hash", () => {
     const {committed, payloadInput, send, variant} = setup();
 
     await expect(send(variant([tx, new Uint8Array(0)]))).rejects.toMatchObject({
-      type: {code: ExecutionPayloadEnvelopeErrorCode.ZERO_LENGTH_TRANSACTION},
+      type: {code: ExecutionPayloadEnvelopeErrorCode.EMPTY_TRANSACTION},
     });
     expect(payloadInput.hasPayloadEnvelope()).toBe(false);
 
