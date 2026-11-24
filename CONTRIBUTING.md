@@ -76,7 +76,7 @@ When using MacOS, there are a couple of extra prerequisites that are required.
 
 ## Getting Started
 
-- :gear: Run `corepack enable` to enable [Corepack](https://nodejs.org/api/corepack.html).
+- :gear: Run `corepack enable` to enable [Corepack](https://nodejs.org/api/corepack.html). On Node.js 26, run `npm install -g corepack` first since it is no longer bundled.
 - :gear: Run `pnpm` to install dependencies.
 - :gear: Run `pnpm build` to build lib from source.
 - :package: A `lodestar` binary will be bundled in `./packages/cli/bin`.
@@ -159,8 +159,9 @@ pnpm --filter @lodestar/native test
 pnpm --filter @lodestar/native lint
 ```
 
-Use `prepare-minimal` or `prepare-gnosis` for other presets. These scripts share an
-output directory, so do not run builds for different presets concurrently. Keep
+`pnpm build:native` builds the addon for every preset. `prepare-mainnet`, `prepare-minimal`
+and `prepare-gnosis` rebuild one, and `LODESTAR_PRESET` selects which one is loaded. These
+scripts share an intermediate output file, so do not run them concurrently. Keep
 JavaScript wrappers and type declarations synchronized with native exports.
 
 ## Devcontainer

@@ -10,9 +10,10 @@ import {
   ForkPostCapella,
   ForkSeq,
   SLOTS_PER_EPOCH,
+  isForkPostElectra,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {ExecutionPayload, RootHex, bellatrix, deneb, gloas, ssz} from "@lodestar/types";
+import {ExecutionPayload, RootHex, bellatrix, deneb, gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {INTEROP_BLOCK_HASH} from "../../node/utils/interop/state.js";
@@ -401,16 +402,13 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
         (executionPayload as gloas.ExecutionPayload).slotNumber = payloadAttributes.slotNumber;
       }
 
-      const executionRequests =
-        ForkSeq[fork] >= ForkSeq.gloas
-          ? ssz.gloas.ExecutionRequests.defaultValue()
-          : ssz.electra.ExecutionRequests.defaultValue();
+      const executionRequests = isForkPostElectra(fork) ? sszTypesFor(fork).ExecutionRequests.defaultValue() : null;
 
       executionPayload.blockHash = computeExecutionBlockHash(
         fork,
         executionPayload,
         payloadAttributes.parentBeaconBlockRoot ?? null,
-        ForkSeq[fork] >= ForkSeq.electra ? executionRequests : null
+        executionRequests
       );
 
       this.preparingPayloads.set(payloadId, {
@@ -420,7 +418,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
           blobs,
           proofs,
         }),
-        executionRequests: serializeExecutionRequests(fork, executionRequests),
+        executionRequests: executionRequests !== null ? serializeExecutionRequests(fork, executionRequests) : [],
       });
 
       // IF the payload is deemed VALID and the build process has begun

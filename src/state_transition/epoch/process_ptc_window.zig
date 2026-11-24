@@ -13,6 +13,7 @@ const computeEpochShufflingForFork = @import("../utils/epoch_shuffling.zig").com
 pub fn processPtcWindow(
     comptime fork: ForkSeq,
     allocator: std.mem.Allocator,
+    io: std.Io,
     epoch_cache: *const EpochCache,
     state: *BeaconState(fork),
     cache: *EpochTransitionCache,
@@ -23,7 +24,7 @@ pub fn processPtcWindow(
     const shuffling = if (cache.next_shuffling) |shared| shared.get() else blk: {
         const indices = try allocator.dupe(u32, cache.next_shuffling_active_indices);
         errdefer allocator.free(indices);
-        owned_shuffling = try computeEpochShufflingForFork(fork, allocator, state, indices, next_epoch);
+        owned_shuffling = try computeEpochShufflingForFork(fork, allocator, io, state, indices, next_epoch);
         break :blk owned_shuffling.?;
     };
     const committees = try computePayloadTimelinessCommitteesForEpoch(fork, state, next_epoch, shuffling, epoch_cache.getEffectiveBalanceIncrements().items);

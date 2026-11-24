@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/builder",
-  "version": "1.50.1",
+  "version": "1.51.0",
   "description": "A Typescript implementation of the builder client",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -46,7 +46,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/ssz": "^1.9.0",
+    "@chainsafe/ssz": "^1.9.1",
     "@lodestar/api": "workspace:^",
     "@lodestar/config": "workspace:^",
     "@lodestar/native": "workspace:^",

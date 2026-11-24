@@ -1,5 +1,4 @@
 import {PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {isForkPostGloas} from "@lodestar/params";
 import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
@@ -7,7 +6,7 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
-import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {computeExecutionBlockHash} from "../../execution/engine/blockHash.js";
 import {
   getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
@@ -133,13 +132,12 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `envelope.parent_beacon_block_root == block.parent_root`
-  const envelopeParentRoot = toRootHex(envelope.parentBeaconBlockRoot);
-  if (envelopeParentRoot !== block.parentRoot) {
+  if (toRootHex(envelope.parentBeaconBlockRoot) !== block.parentRoot) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.PARENT_BEACON_BLOCK_ROOT_MISMATCH,
       slot: payload.slotNumber,
       root: blockRootHex,
-      envelopeParentRoot,
+      envelopeParentBeaconBlockRoot: toRootHex(envelope.parentBeaconBlockRoot),
       blockParentRoot: block.parentRoot,
     });
   }
@@ -163,8 +161,8 @@ async function validateExecutionPayloadEnvelope(
       code: ExecutionPayloadEnvelopeErrorCode.PREV_RANDAO_MISMATCH,
       slot: payload.slotNumber,
       root: blockRootHex,
-      payloadPrevRandao: toHex(payload.prevRandao),
-      bidPrevRandao: toHex(bid.prevRandao),
+      envelopePrevRandao: toRootHex(payload.prevRandao),
+      bidPrevRandao: toRootHex(bid.prevRandao),
     });
   }
 
@@ -174,7 +172,7 @@ async function validateExecutionPayloadEnvelope(
       code: ExecutionPayloadEnvelopeErrorCode.GAS_LIMIT_MISMATCH,
       slot: payload.slotNumber,
       root: blockRootHex,
-      payloadGasLimit: payload.gasLimit,
+      envelopeGasLimit: payload.gasLimit,
       bidGasLimit: bid.gasLimit,
     });
   }
@@ -218,6 +216,7 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
+  // Get the block state to verify the payload against it and the builder's signature.
   const blockState = await chain.regen
     .getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope)
     .catch(() => {
@@ -237,7 +236,7 @@ async function validateExecutionPayloadEnvelope(
       code: ExecutionPayloadEnvelopeErrorCode.PARENT_HASH_MISMATCH,
       slot: payload.slotNumber,
       root: blockRootHex,
-      payloadParentHash: toRootHex(payload.parentHash),
+      envelopeParentHash: toRootHex(payload.parentHash),
       latestBlockHash: toRootHex(blockState.latestBlockHash),
     });
   }
@@ -246,48 +245,45 @@ async function validateExecutionPayloadEnvelope(
   const expectedTimestamp = computeTimeAtSlot(chain.config, block.slot, blockState.genesisTime);
   if (payload.timestamp !== expectedTimestamp) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
-      code: ExecutionPayloadEnvelopeErrorCode.INVALID_TIMESTAMP,
+      code: ExecutionPayloadEnvelopeErrorCode.INCORRECT_TIMESTAMP,
       slot: payload.slotNumber,
       root: blockRootHex,
-      payloadTimestamp: payload.timestamp,
+      envelopeTimestamp: payload.timestamp,
       expectedTimestamp,
     });
   }
 
-  // [REJECT] `hash_tree_root(payload.withdrawals) == hash_tree_root(state.payload_expected_withdrawals)`
-  const payloadWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(payload.withdrawals);
-  const expectedWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(blockState.payloadExpectedWithdrawals);
-  if (!byteArrayEquals(payloadWithdrawalsRoot, expectedWithdrawalsRoot)) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
-      code: ExecutionPayloadEnvelopeErrorCode.WITHDRAWALS_MISMATCH,
-      slot: payload.slotNumber,
-      root: blockRootHex,
-      payloadWithdrawalsRoot: toRootHex(payloadWithdrawalsRoot),
-      expectedWithdrawalsRoot: toRootHex(expectedWithdrawalsRoot),
-    });
-  }
-
+  // [REJECT] The payload contains no empty transactions
   // An empty transaction is a deletion in the transactions trie, so trailing empty transactions would not change
   // the block hash. The EL rejects such a payload, as `verify_and_notify_new_payload` does before hashing.
   for (let i = 0; i < payload.transactions.length; i++) {
     if (payload.transactions.getSize(i) === 0) {
       throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
-        code: ExecutionPayloadEnvelopeErrorCode.ZERO_LENGTH_TRANSACTION,
+        code: ExecutionPayloadEnvelopeErrorCode.EMPTY_TRANSACTION,
         slot: payload.slotNumber,
         root: blockRootHex,
-        index: i,
+        transactionIndex: i,
       });
     }
   }
 
-  // [REJECT] The payload's block hash is computed correctly
-  const fork = chain.config.getForkName(block.slot);
-  if (!isForkPostGloas(fork)) {
-    throw new Error(`Expected gloas+ fork for execution payload envelope validation, got fork=${fork}`);
+  // [REJECT] `hash_tree_root(payload.withdrawals) == hash_tree_root(state.payload_expected_withdrawals)`
+  const withdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(payload.withdrawals);
+  const expectedWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(blockState.payloadExpectedWithdrawals);
+  if (!byteArrayEquals(withdrawalsRoot, expectedWithdrawalsRoot)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.WITHDRAWALS_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      envelopeWithdrawalsRoot: toRootHex(withdrawalsRoot),
+      expectedWithdrawalsRoot: toRootHex(expectedWithdrawalsRoot),
+    });
   }
+
+  // [REJECT] The payload's block hash is computed correctly
   const timer = chain.metrics?.gossipExecutionPayloadEnvelope.blockHashTime.startTimer();
   const computedBlockHash = computeExecutionBlockHash(
-    fork,
+    blockState.forkName,
     payload,
     envelope.parentBeaconBlockRoot,
     envelope.executionRequests

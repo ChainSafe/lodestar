@@ -254,6 +254,16 @@ pub fn ListBasicTreeView(comptime ST: type) type {
             try self.chunks.set(index, value, list_length);
         }
 
+        pub const Editor = if (ST.opts.chunked_leaf)
+            Chunks.Editor
+        else
+            @compileError("ListBasicTreeView.Editor requires a chunked-leaf list");
+
+        /// Returns an editor over the current length. The caller must `deinit` it.
+        pub fn editor(self: *Self) !Editor {
+            return Editor.init(&self.chunks.state, try self.length());
+        }
+
         /// Caller must free the returned slice with the same allocator.
         pub fn getAll(self: *Self, allocator: ?Allocator) ![]Element {
             const list_length = try self.length();
