@@ -173,7 +173,10 @@ export declare class ForkChoice {
 
   /** Spec `on_block`. Returns the block's index */
   onBlock(block: BlockSummary): number;
-  /** Spec `on_attestation` for an attestation verified against its target state */
+  /**
+   * Spec `on_attestation` for an attestation verified against its target state. Throws if an
+   * index is not below `validatorCount`, the registry length of the states it may be verified against
+   */
   onAttestation(
     slot: number,
     index: number,
@@ -181,14 +184,16 @@ export declare class ForkChoice {
     targetEpoch: number,
     targetRoot: Uint8Array,
     attestingIndices: Uint32Array,
-    isFromBlock: boolean
+    isFromBlock: boolean,
+    validatorCount: number
   ): void;
-  /** Spec `on_attester_slashing`; both index lists sorted ascending */
+  /** Spec `on_attester_slashing`; both index lists sorted ascending and below `validatorCount` */
   onAttesterSlashing(
     data1: AttestationData,
     indices1: Uint32Array,
     data2: AttestationData,
-    indices2: Uint32Array
+    indices2: Uint32Array,
+    validatorCount: number
   ): void;
   /** Spec `notify_ptc_messages` for one indexed payload attestation; `positions` are the PTC positions that voted */
   onPtcVotes(

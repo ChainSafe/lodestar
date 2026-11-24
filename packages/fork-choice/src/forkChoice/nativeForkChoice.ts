@@ -174,6 +174,8 @@ export class NativeForkChoice implements IForkChoice {
   /** Balances the provider last handed to the store, for the checkpoint they belong to */
   private providedBalances: {checkpoint: CheckpointWithHex; balances: EffectiveBalanceIncrements} | null = null;
   private scores: NativeScores | null = null;
+  /** The largest registry length among the states seen, which bounds every verified validator index */
+  private validatorCount: number;
 
   private readonly fastConfirmation: boolean;
   private fastConfirmationPaused = false;
@@ -190,6 +192,7 @@ export class NativeForkChoice implements IForkChoice {
       throw Error("The native fork choice always applies proposer boost");
     }
 
+    this.validatorCount = fcStore.justified.balances.length;
     const {block} = anchor;
     const anchorHasPayload = anchor.payloadBlockHash !== null && !ssz.Root.equals(anchor.payloadBlockHash, ZERO_HASH);
     this.store = new NativeStore(
@@ -821,6 +824,7 @@ export class NativeForkChoice implements IForkChoice {
       this.syncCheckpoints();
       this.importingState = null;
     }
+    this.validatorCount = Math.max(this.validatorCount, state.validatorCount);
 
     const [timeliness, ptcTimeliness] = this.store.blockTimeliness(blockIndex);
     const targetSlot = computeStartSlotAtEpoch(blockEpoch);
@@ -902,7 +906,8 @@ export class NativeForkChoice implements IForkChoice {
         data.target.epoch,
         data.target.root,
         Uint32Array.from(attestingIndices),
-        forceImport === true
+        forceImport === true,
+        this.validatorCount
       );
     } catch (e) {
       throw this.toInvalidAttestationError(e, data);
@@ -916,7 +921,8 @@ export class NativeForkChoice implements IForkChoice {
       toNativeAttestationData(attestation1.data),
       Uint32Array.from(attestation1.attestingIndices),
       toNativeAttestationData(attestation2.data),
-      Uint32Array.from(attestation2.attestingIndices)
+      Uint32Array.from(attestation2.attestingIndices),
+      this.validatorCount
     );
     for (const validatorIndex of getAttesterSlashableIndices(slashing)) {
       this.fcStore.equivocatingIndices.add(validatorIndex);

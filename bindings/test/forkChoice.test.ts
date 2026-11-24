@@ -143,7 +143,7 @@ describe("ForkChoice", () => {
     // Without votes the higher root wins
     expect(forkChoice.getHead()).toBe(pendingNode(2));
 
-    forkChoice.onAttestation(1, 0, root(0x0a), 0, ANCHOR, Uint32Array.from([0, 1, 2]), false);
+    forkChoice.onAttestation(1, 0, root(0x0a), 0, ANCHOR, Uint32Array.from([0, 1, 2]), false, VALIDATOR_COUNT);
     expect(forkChoice.queuedVoteCount).toBe(3);
     expect(forkChoice.getHead()).toBe(pendingNode(2));
     expect(forkChoice.voteChangesTotal).toBe(0);
@@ -186,7 +186,7 @@ describe("ForkChoice", () => {
     forkChoice.onBlock(summary(0x0a, ANCHOR, 1));
     forkChoice.onBlock(summary(0x0b, ANCHOR, 1));
     forkChoice.onTick(forkChoice.timeAtSlotMs(2));
-    forkChoice.onAttestation(1, 0, root(0x0a), 0, ANCHOR, Uint32Array.from([0, 1]), false);
+    forkChoice.onAttestation(1, 0, root(0x0a), 0, ANCHOR, Uint32Array.from([0, 1]), false, VALIDATOR_COUNT);
     expect(forkChoice.getHead()).toBe(pendingNode(1));
 
     const data = {index: 0, slot: 1, source: anchorCheckpoint, target: anchorCheckpoint};
@@ -194,7 +194,8 @@ describe("ForkChoice", () => {
       {...data, beaconBlockRoot: root(0x0a)},
       Uint32Array.from([0, 1]),
       {...data, beaconBlockRoot: root(0x0b)},
-      Uint32Array.from([0, 1, 5])
+      Uint32Array.from([0, 1, 5]),
+      VALIDATOR_COUNT
     );
     expect(forkChoice.equivocatingCount).toBe(2);
     expect(forkChoice.getHead()).toBe(pendingNode(2));
@@ -204,7 +205,8 @@ describe("ForkChoice", () => {
         {...data, beaconBlockRoot: root(0x0a)},
         Uint32Array.from([3]),
         {...data, beaconBlockRoot: root(0x0a)},
-        Uint32Array.from([3])
+        Uint32Array.from([3]),
+        VALIDATOR_COUNT
       )
     ).toThrow("NotSlashableAttestationData");
   });
@@ -248,15 +250,18 @@ describe("ForkChoice", () => {
     expect(() => forkChoice.onBlock(summary(0x0a, ANCHOR, 1, {executionStatus: ExecutionStatus.Valid}))).toThrow(
       "ExecutionStatusMismatch"
     );
-    expect(() => forkChoice.onAttestation(1, 0, root(0x55), 0, ANCHOR, Uint32Array.from([0]), false)).toThrow(
-      "UnknownAttestationBlock"
-    );
+    expect(() =>
+      forkChoice.onAttestation(1, 0, root(0x55), 0, ANCHOR, Uint32Array.from([0]), false, VALIDATOR_COUNT)
+    ).toThrow("UnknownAttestationBlock");
     expect(forkChoice.blockCount).toBe(1);
   });
 
   it("validates JavaScript-controlled arguments", () => {
     const forkChoice = createForkChoice();
     expect(() => forkChoice.parentNode(1)).toThrow("InvalidBlockIndex");
+    expect(() =>
+      forkChoice.onAttestation(0, 0, ANCHOR, 0, ANCHOR, Uint32Array.from([VALIDATOR_COUNT]), false, VALIDATOR_COUNT)
+    ).toThrow("ValidatorIndexOutOfRange");
     expect(() => forkChoice.getAncestor(3, 0)).toThrow("InvalidNodeId");
     expect(() => forkChoice.blockIndex(new Uint8Array(31))).toThrow("InvalidRootLength");
     expect(() => forkChoice.onBlock(summary(0x0a, new Uint8Array(4), 0))).toThrow("InvalidRootLength");
@@ -301,7 +306,7 @@ describe("ForkChoice", () => {
       forkChoice.onTick(forkChoice.timeAtSlotMs(1));
       forkChoice.onBlock(summary(2, ANCHOR, 1));
       const everyone = Uint32Array.from({length: VALIDATOR_COUNT}, (_, i) => i);
-      forkChoice.onAttestation(1, 0, root(2), 0, ANCHOR, everyone, false);
+      forkChoice.onAttestation(1, 0, root(2), 0, ANCHOR, everyone, false, VALIDATOR_COUNT);
       forkChoice.onTick(forkChoice.timeAtSlotMs(2));
       forkChoice.onFastConfirmation();
 

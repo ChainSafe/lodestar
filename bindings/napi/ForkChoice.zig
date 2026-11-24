@@ -317,11 +317,16 @@ fn toAttestationData(object: napi.Value) !AttestationData {
     };
 }
 
-fn widenIndices(list: *std.ArrayList(ValidatorIndex), indices: []const u32) ![]const ValidatorIndex {
+/// The store keeps per-validator slots up to the largest index, so indices are bounded by
+/// the registry length of the states the attestation could have been verified against.
+fn widenIndices(list: *std.ArrayList(ValidatorIndex), indices: []const u32, validator_count: u64) ![]const ValidatorIndex {
     if (indices.len > max_attesting_indices) return error.TooManyAttestingIndices;
     list.clearRetainingCapacity();
     try list.ensureTotalCapacity(allocator, indices.len);
-    for (indices) |index| list.appendAssumeCapacity(index);
+    for (indices) |index| {
+        if (index >= validator_count) return error.ValidatorIndexOutOfRange;
+        list.appendAssumeCapacity(index);
+    }
     return list.items;
 }
 
@@ -373,7 +378,8 @@ pub fn onBlock(self: *ForkChoice, block: js.Value) !js.Number {
     return js.Number.from(store.blockIndex(summary.root).?);
 }
 
-/// Spec `on_attestation` for an attestation verified against its target state.
+/// Spec `on_attestation` for an attestation verified against its target state, whose
+/// indices are below `validator_count`.
 pub fn onAttestation(
     self: *ForkChoice,
     slot: js.Number,
@@ -383,6 +389,7 @@ pub fn onAttestation(
     target_root: js.Uint8Array,
     attesting_indices: js.Uint32Array,
     is_from_block: js.Boolean,
+    validator_count: js.Number,
 ) !void {
     const data: AttestationData = .{
         .slot = try slot.toSafeInteger(),
@@ -391,23 +398,26 @@ pub fn onAttestation(
         .source = .{ .epoch = 0, .root = constants.ZERO_HASH },
         .target = .{ .epoch = try target_epoch.toSafeInteger(), .root = try rootArg(target_root) },
     };
-    const indices = try widenIndices(&self.inner.indices, try attesting_indices.toSlice());
+    const indices = try widenIndices(&self.inner.indices, try attesting_indices.toSlice(), try validator_count.toSafeInteger());
     try self.inner.store.onAttestationData(&data, indices, try is_from_block.toBool());
 }
 
 /// Spec `on_attester_slashing` for two attestations verified against the justified
-/// state, each `{slot, index, beaconBlockRoot, source, target}` with its sorted indices.
+/// state, each `{slot, index, beaconBlockRoot, source, target}` with its sorted indices
+/// below `validator_count`.
 pub fn onAttesterSlashing(
     self: *ForkChoice,
     data_1: js.Value,
     indices_1: js.Uint32Array,
     data_2: js.Value,
     indices_2: js.Uint32Array,
+    validator_count: js.Number,
 ) !void {
+    const count = try validator_count.toSafeInteger();
     const attestation_1 = try toAttestationData(data_1.toValue());
     const attestation_2 = try toAttestationData(data_2.toValue());
-    const wide_1 = try widenIndices(&self.inner.indices, try indices_1.toSlice());
-    const wide_2 = try widenIndices(&self.inner.indices_2, try indices_2.toSlice());
+    const wide_1 = try widenIndices(&self.inner.indices, try indices_1.toSlice(), count);
+    const wide_2 = try widenIndices(&self.inner.indices_2, try indices_2.toSlice(), count);
     try self.inner.store.onAttesterSlashingData(&attestation_1, wide_1, &attestation_2, wide_2);
 }
 
