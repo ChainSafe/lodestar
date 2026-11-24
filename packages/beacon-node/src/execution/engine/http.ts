@@ -2,7 +2,7 @@ import {Logger} from "@lodestar/logger";
 import {ForkName, ForkPostFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {isErrorAborted} from "@lodestar/utils";
+import {ErrorAborted, isErrorAborted} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
@@ -337,11 +337,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     payloadAttributes?: PayloadAttributes,
     signal?: AbortSignal
   ): Promise<ForkchoiceUpdatedResult> {
-    const result = await this.enqueue(() =>
-      this.withTransport(fork, undefined, (transport) =>
+    const result = await this.enqueue(() => {
+      // Aborted while waiting in the queue, do not select a transport and sign a request that is not sent
+      if (signal?.aborted) {
+        throw new ErrorAborted("notifyForkchoiceUpdate");
+      }
+      return this.withTransport(fork, undefined, (transport) =>
         transport.forkchoiceUpdated(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes, signal)
-      )
-    );
+      );
+    });
     const {
       payloadStatus: {status},
       payloadId,

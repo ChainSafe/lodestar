@@ -2,6 +2,7 @@ import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {ErrorAborted, Gauge, Histogram, TimeoutError, fetch, isValidHttpUrl, retry} from "@lodestar/utils";
 import {JwtClaim, encodeJwtToken} from "./jwt.js";
+import {withRequestSignal} from "./signal.js";
 import {EngineTransportMetrics} from "./transportMetrics.js";
 import {IJson, RpcPayload} from "./utils.js";
 
@@ -159,20 +160,23 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     return this.wrapWithEvents(async () => {
       const routeId = opts?.routeId ?? "unknown";
 
-      const res = await retry<RpcResponse<R>>(
-        async (_attempt) => {
-          return this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
-        },
-        {
-          retries: opts?.retries ?? this.opts?.retries ?? 0,
-          retryDelay: opts?.retryDelay ?? this.opts?.retryDelay,
-          // An aborted request is no longer of interest to its caller
-          shouldRetry: (lastError) => !opts?.signal?.aborted && (opts?.shouldRetry?.(lastError) ?? true),
-          signal: this.opts?.signal,
-          onRetry: () => {
-            this.opts?.metrics?.retryCount.inc({routeId});
+      // The delay between retries has to end with the request signal as well
+      const res = await withRequestSignal(this.opts?.signal, opts?.signal, (signal) =>
+        retry<RpcResponse<R>>(
+          async (_attempt) => {
+            return this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
           },
-        }
+          {
+            retries: opts?.retries ?? this.opts?.retries ?? 0,
+            retryDelay: opts?.retryDelay ?? this.opts?.retryDelay,
+            // An aborted request is no longer of interest to its caller
+            shouldRetry: (lastError) => !opts?.signal?.aborted && (opts?.shouldRetry?.(lastError) ?? true),
+            signal,
+            onRetry: () => {
+              this.opts?.metrics?.retryCount.inc({routeId});
+            },
+          }
+        )
       );
       return parseRpcResponse(res, payload);
     }, payload);
