@@ -13,6 +13,12 @@ import {PayloadStore} from "./payloadStore.js";
 /** Time in milliseconds to wait before publishing the envelope again after a transient failure */
 const REVEAL_RETRY_DELAY = 200;
 
+/**
+ * Time in milliseconds a single publish request may take. Shorter than the request timeout of the api client, which
+ * exceeds the reveal window, to leave time to publish again if the beacon node does not respond.
+ */
+const REVEAL_ATTEMPT_TIMEOUT = 2000;
+
 export type RevealerOptions = {
   /**
    * Latest point within the block's slot at which a reveal may start, in basis points.
@@ -77,18 +83,19 @@ export class Revealer {
     try {
       // The block is only observed once, a transient failure has to be retried here while a reveal may still start.
       // Publishing the same envelope again is safe, the beacon node treats an already known envelope as published
-      await retry(() => envelopePublisher.publish(contents, this.modules.signal), {
+      await retry(() => envelopePublisher.publish(contents, this.modules.signal, REVEAL_ATTEMPT_TIMEOUT), {
         retries: Infinity,
         retryDelay: REVEAL_RETRY_DELAY,
         signal: this.modules.signal,
         shouldRetry: (error) =>
           isRetryableRevealError(error) && clock.msFromSlot(slot) + REVEAL_RETRY_DELAY <= cutoffMs,
         onRetry: (error, attempt) => {
-          logger.warn(
-            "Retrying execution payload reveal",
-            {...logCtx, attempt, msFromSlot: clock.msFromSlot(slot)},
-            error
-          );
+          logger.debug("Retrying execution payload reveal", {
+            ...logCtx,
+            attempt,
+            msFromSlot: clock.msFromSlot(slot),
+            error: error.message,
+          });
         },
       });
     } catch (e) {

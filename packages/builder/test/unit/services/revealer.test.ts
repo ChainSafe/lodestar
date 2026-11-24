@@ -1,16 +1,17 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {ApiError} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {SecretKey} from "@lodestar/native/blst";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
-import {BidLedger} from "../../../src/services/bidLedger.js";
+import {ErrorAborted, FetchError, TimeoutError, toRootHex} from "@lodestar/utils";
+import {BidLedger, BidLedgerError, BidLedgerErrorCode, BidLedgerErrorType} from "../../../src/services/bidLedger.js";
 import {ObservedBlock} from "../../../src/services/blockObserver.js";
 import {BuilderSigner} from "../../../src/services/builderSigner.js";
 import {PayloadStore} from "../../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../../src/services/proposerPreferencesTracker.js";
-import {Revealer} from "../../../src/services/revealer.js";
+import {Revealer, isRetryableRevealError} from "../../../src/services/revealer.js";
 import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "../utils/apiStub.js";
 import {createBiddingModules, getPayloadSourceStub} from "../utils/bidding.js";
 import {ClockMock} from "../utils/clock.js";
@@ -154,8 +155,59 @@ describe("Revealer", () => {
     await revealer.onBlock(observed);
 
     expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledTimes(2);
-    expect(logger.warn).toHaveBeenCalledOnce();
+    expect(logger.debug).toHaveBeenCalledWith(
+      "Retrying execution payload reveal",
+      expect.objectContaining({attempt: 2})
+    );
+    expect(logger.warn).not.toHaveBeenCalled();
     expect(ledger.hasPublishedReveal(observed.blockRoot)).toBe(true);
+  });
+
+  it("retries a publish request that timed out", async () => {
+    const observed = selectedBlock();
+    api.beacon.publishExecutionPayloadEnvelope
+      .mockRejectedValueOnce(new TimeoutError("request"))
+      .mockResolvedValueOnce(mockApiResponse({}));
+
+    await revealer.onBlock(observed);
+
+    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledTimes(2);
+    // Each request is limited to less than the reveal window, the default request timeout would use it up
+    const cutoffMs = config.getSlotComponentDurationMs(ForkName.gloas, config.PAYLOAD_ATTESTATION_DUE_BPS);
+    for (const [, init] of api.beacon.publishExecutionPayloadEnvelope.mock.calls) {
+      expect(init?.timeoutMs).toBeLessThan(cutoffMs);
+    }
+    expect(ledger.hasPublishedReveal(observed.blockRoot)).toBe(true);
+  });
+
+  it("only retries failures that can resolve while the reveal window is open", () => {
+    const fetchFailure = new FetchError(
+      "http://127.0.0.1:9596",
+      new TypeError("fetch failed", {
+        cause: Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:9596"), {code: "ECONNREFUSED"}),
+      })
+    );
+    const inputError = new FetchError(
+      "invalid-url",
+      new TypeError("Failed to parse URL from invalid-url", {
+        cause: Object.assign(new Error("Invalid URL"), {input: "invalid-url", code: "ERR_INVALID_URL"}),
+      })
+    );
+    const ledgerError = new BidLedgerError(
+      {code: BidLedgerErrorCode.INVALID_BID_VALUE} as BidLedgerErrorType,
+      "invalid bid value"
+    );
+    const route = "publishExecutionPayloadEnvelope";
+
+    expect(isRetryableRevealError(new ApiError("unavailable", 503, route))).toBe(true);
+    expect(isRetryableRevealError(new TimeoutError("request"))).toBe(true);
+    expect(isRetryableRevealError(fetchFailure)).toBe(true);
+    expect(isRetryableRevealError(new ApiError("bad request", 400, route))).toBe(false);
+    expect(isRetryableRevealError(new ApiError("not found", 404, route))).toBe(false);
+    expect(isRetryableRevealError(inputError)).toBe(false);
+    expect(isRetryableRevealError(new ErrorAborted("request"))).toBe(false);
+    expect(isRetryableRevealError(ledgerError)).toBe(false);
+    expect(isRetryableRevealError(Error("decode failed"))).toBe(false);
   });
 
   it("does not retry a rejected envelope", async () => {
