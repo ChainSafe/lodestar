@@ -1207,16 +1207,20 @@ export class ProtoArray {
    * A node's execution status is that of the payload in its `executionPayloadBlockHash`: its own for FULL, the
    * inherited parent payload for gloas PENDING and EMPTY. Once that payload is VALID every node carrying it is, not
    * only the chain the validation walked up (e.g. siblings, blocks on a sibling's EMPTY variant, or an equivocating
-   * block with the same payload). A parent has a lower index than its children, so the scan flips a node carrying
-   * the payload before its descendants that inherit it.
+   * block with the same payload). A node is only flipped below a Valid parent, otherwise a later INVALID for the
+   * parent would reach it. A parent has a lower index than its children, so the scan updates it first.
    */
   private validatePayloadDependents(payloadHashes: Set<RootHex>): void {
     for (let nodeIndex = 0; nodeIndex < this.nodes.length; nodeIndex++) {
       const node = this.nodes[nodeIndex];
+      const parentStatus = node.parent !== undefined ? this.nodes[node.parent].executionStatus : undefined;
       if (
         node.executionStatus === ExecutionStatus.Syncing &&
         node.executionPayloadBlockHash !== null &&
-        payloadHashes.has(node.executionPayloadBlockHash)
+        payloadHashes.has(node.executionPayloadBlockHash) &&
+        (parentStatus === undefined ||
+          parentStatus === ExecutionStatus.Valid ||
+          parentStatus === ExecutionStatus.PreMerge)
       ) {
         // Also flips the sibling EMPTY variant
         this.validateNodeByIndex(nodeIndex);
