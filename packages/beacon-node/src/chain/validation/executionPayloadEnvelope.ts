@@ -1,4 +1,5 @@
 import {PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {BUILDER_INDEX_SELF_BUILD} from "@lodestar/params";
 import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
@@ -29,6 +30,110 @@ export async function validateGossipExecutionPayloadEnvelope(
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
   return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+}
+
+/**
+ * Checks an envelope against the bid of a block that passed gossip validation but is not imported yet, so the real
+ * envelope can be told apart from junk before it is buffered for the import. Throws a REJECT for an envelope that
+ * cannot belong to the block. Returns whether the signature was verified: a self-built envelope is signed by the
+ * proposer, a builder's pubkey is only read from the head state if the head is the block's parent.
+ */
+export async function validateEarlyExecutionPayloadEnvelope(
+  chain: IBeaconChain,
+  signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  block: gloas.BeaconBlock
+): Promise<boolean> {
+  const envelope = signedEnvelope.message;
+  const {payload} = envelope;
+  const bid = block.body.signedExecutionPayloadBid.message;
+  const root = toRootHex(envelope.beaconBlockRoot);
+  const slot = payload.slotNumber;
+
+  if (block.slot !== slot) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
+      slot,
+      root,
+      envelopeSlot: slot,
+      blockSlot: block.slot,
+    });
+  }
+  if (!byteArrayEquals(envelope.parentBeaconBlockRoot, block.parentRoot)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.PARENT_BEACON_BLOCK_ROOT_MISMATCH,
+      slot,
+      root,
+      envelopeParentBeaconBlockRoot: toRootHex(envelope.parentBeaconBlockRoot),
+      blockParentRoot: toRootHex(block.parentRoot),
+    });
+  }
+  if (envelope.builderIndex !== bid.builderIndex) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
+      slot,
+      root,
+      envelopeBuilderIndex: envelope.builderIndex,
+      bidBuilderIndex: bid.builderIndex,
+    });
+  }
+  if (!byteArrayEquals(payload.prevRandao, bid.prevRandao)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.PREV_RANDAO_MISMATCH,
+      slot,
+      root,
+      envelopePrevRandao: toRootHex(payload.prevRandao),
+      bidPrevRandao: toRootHex(bid.prevRandao),
+    });
+  }
+  if (BigInt(payload.gasLimit) !== bid.gasLimit) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.GAS_LIMIT_MISMATCH,
+      slot,
+      root,
+      envelopeGasLimit: payload.gasLimit,
+      bidGasLimit: bid.gasLimit,
+    });
+  }
+  if (!byteArrayEquals(payload.blockHash, bid.blockHash)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+      slot,
+      root,
+      envelopeBlockHash: toRootHex(payload.blockHash),
+      bidBlockHash: toRootHex(bid.blockHash),
+    });
+  }
+  const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+  if (!byteArrayEquals(requestsRoot, bid.executionRequestsRoot)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
+      slot,
+      root,
+      envelopeRequestsRoot: toRootHex(requestsRoot),
+      bidRequestsRoot: toRootHex(bid.executionRequestsRoot),
+    });
+  }
+
+  if (
+    envelope.builderIndex !== BUILDER_INDEX_SELF_BUILD &&
+    chain.forkChoice.getHead().blockRoot !== toRootHex(block.parentRoot)
+  ) {
+    return false;
+  }
+  const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
+    chain.config,
+    chain.getHeadState(),
+    signedEnvelope,
+    block.proposerIndex
+  );
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
+      slot,
+      root,
+    });
+  }
+  return true;
 }
 
 /**

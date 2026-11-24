@@ -1,10 +1,12 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {Mock, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
+import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
-import {MapDef} from "@lodestar/utils";
+import {BUILDER_INDEX_SELF_BUILD, ForkName, GENESIS_EPOCH} from "@lodestar/params";
+import {ISignatureSet} from "@lodestar/state-transition";
+import {gloas, ssz} from "@lodestar/types";
+import {MapDef, byteArrayEquals} from "@lodestar/utils";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {GossipErrorCode} from "../../../../src/chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../../../src/chain/interface.js";
@@ -33,6 +35,9 @@ const MAX_DATA_COLUMN_PER_ROOT = MAX_AWAITING_MESSAGES_PER_ROOT[GossipType.data_
 // A malicious peer could flood us with messages pointing at blocks that will never arrive, so we put two
 // limits in place: how much we're willing to hold in memory, and how many block lookups we'll start.
 // These tests exercise both limits, and check that a real block is still recovered when an attacker floods.
+const PARENT_ROOT_HEX = `0x${"aa".repeat(32)}`;
+const VALID_SIGNATURE = Buffer.alloc(96, 0x01);
+
 describe("NetworkProcessor: handling gossip that points at an unknown block", () => {
   const clockSlot = 1000;
   const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
@@ -43,6 +48,8 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   let unknownEnvelopeBlockRootSpy: Mock<(data: unknown) => void>;
   let unknownEnvelopeBlockRootSlotSpy: Mock<(data: unknown) => void>;
   let reportPeerSpy: Mock<(peer: PeerIdStr, action: PeerAction, actionName: string) => void>;
+  let seenBlocks: Map<string, gloas.SignedBeaconBlock>;
+  let headRoot: string;
 
   beforeEach(() => {
     emitter = new ChainEventEmitter();
@@ -50,6 +57,8 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     unknownEnvelopeBlockRootSpy = vi.fn();
     unknownEnvelopeBlockRootSlotSpy = vi.fn();
     reportPeerSpy = vi.fn();
+    seenBlocks = new Map();
+    headRoot = PARENT_ROOT_HEX;
     // the unknown-root search (recovery signal to BlockInputSync) is emitted here - our observable surface
     emitter.on(ChainEvent.unknownBlockRoot, (data) => unknownBlockRootSpy(data));
     emitter.on(ChainEvent.unknownEnvelopeBlockRoot, (data) => unknownEnvelopeBlockRootSpy(data));
@@ -66,7 +75,22 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       },
       seenBlock: vi.fn().mockReturnValue(false),
       seenPayloadEnvelope: vi.fn().mockReturnValue(false),
+      // blocks that passed gossip validation but are not imported yet
+      seenBlockInputCache: {
+        get: (root: string) => {
+          const block = seenBlocks.get(root);
+          return block && {hasBlock: () => true, forkName: ForkName.gloas, getBlock: () => block};
+        },
+      },
     } as unknown as IBeaconChain;
+    Object.assign(chain, {
+      config: createBeaconConfig(config, Buffer.alloc(32, 0x01)),
+      getHeadState: () => ({forkName: ForkName.gloas}),
+      bls: {
+        verifySignatureSets: async (sets: ISignatureSet[]) => byteArrayEquals(sets[0].signature, VALID_SIGNATURE),
+      },
+    });
+    Object.assign(chain.forkChoice, {getHead: () => ({blockRoot: headRoot})});
 
     const modules = {
       chain,
@@ -164,6 +188,49 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       .get(`0x${rootByte.toString(16).padStart(2, "0").repeat(32)}`)
       ?.get(GossipType.execution_payload);
     return Array.from(messages ?? [], (message) => message.propagationSource);
+  }
+
+  /** A block for root `rootByte` that passed gossip validation but is not imported, self-built on PARENT_ROOT_HEX */
+  function seeBlock(rootByte: number): void {
+    const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+    block.message.slot = clockSlot;
+    block.message.parentRoot = Buffer.from(PARENT_ROOT_HEX.slice(2), "hex");
+    const bid = block.message.body.signedExecutionPayloadBid.message;
+    bid.builderIndex = BUILDER_INDEX_SELF_BUILD;
+    bid.blockHash = Buffer.alloc(32, 0x11);
+    bid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(ssz.gloas.ExecutionRequests.defaultValue());
+    seenBlocks.set(`0x${rootByte.toString(16).padStart(2, "0").repeat(32)}`, block);
+  }
+
+  /** A self-built envelope matching the bid of seeBlock(rootByte), unless overridden */
+  function processSeenBlockEnvelope(
+    rootByte: number,
+    peer: PeerIdStr,
+    opts: {signature?: Uint8Array; blockHash?: Uint8Array; builderIndex?: number} = {}
+  ): void {
+    const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+    signedEnvelope.message.payload.slotNumber = clockSlot;
+    signedEnvelope.message.payload.blockHash = opts.blockHash ?? Buffer.alloc(32, 0x11);
+    signedEnvelope.message.builderIndex = opts.builderIndex ?? BUILDER_INDEX_SELF_BUILD;
+    signedEnvelope.message.beaconBlockRoot = Buffer.alloc(32, rootByte);
+    signedEnvelope.message.parentBeaconBlockRoot = Buffer.from(PARENT_ROOT_HEX.slice(2), "hex");
+    signedEnvelope.signature = opts.signature ?? VALID_SIGNATURE;
+    emit(
+      GossipType.execution_payload,
+      ForkName.gloas,
+      ssz.gloas.SignedExecutionPayloadEnvelope.serialize(signedEnvelope),
+      peer
+    );
+  }
+
+  function verifiedEarlyEnvelopes(): Map<string, PendingGossipsubMessage> {
+    return (processor as unknown as {verifiedEarlyEnvelopes: Map<string, PendingGossipsubMessage>})
+      .verifiedEarlyEnvelopes;
+  }
+
+  /** let the async signature check of an envelope for a seen block finish */
+  async function settle(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
   function bufferedBlockCount(): number {
@@ -346,6 +413,73 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       );
       expect(earlyEnvelopes.size).toBe(0);
       expect(bufferedBlockCount()).toBe(0);
+    });
+  });
+
+  // An envelope can arrive while its block passed gossip validation but is still being imported. The block's bid
+  // tells the real envelope apart from junk, so junk that arrived first cannot keep it out of the buffer.
+  describe("execution payload envelopes for a block that is seen but not imported", () => {
+    const attacker = "16Uiu2HAmAttacker" as PeerIdStr;
+    const honest = "16Uiu2HAmHonest" as PeerIdStr;
+    const rootHex = `0x${"dd".repeat(32)}`;
+
+    it("holds the real envelope outside a full early envelope queue, and releases it on import", async () => {
+      for (let i = 0; i < MAX_EARLY_ENVELOPES; i++) {
+        processExecutionPayload(0x10, `16Uiu2HAmEarly${i}` as PeerIdStr);
+      }
+      seeBlock(0xdd);
+      processSeenBlockEnvelope(0xdd, honest);
+      await settle();
+      expect(verifiedEarlyEnvelopes().get(rootHex)?.propagationSource).toBe(honest);
+      // nothing was evicted for it
+      expect(heldEnvelopePeers(0x10)).toHaveLength(MAX_EARLY_ENVELOPES);
+
+      const pushSpy = vi
+        .spyOn(
+          processor as unknown as {pushPendingGossipsubMessageToQueue: () => void},
+          "pushPendingGossipsubMessageToQueue"
+        )
+        .mockImplementation(() => {});
+      emitter.emit(routes.events.EventType.block, {slot: clockSlot, block: rootHex, executionOptimistic: false});
+      expect(pushSpy).toHaveBeenCalledTimes(1);
+      expect(verifiedEarlyEnvelopes().size).toBe(0);
+    });
+
+    it("rejects an envelope that does not match the bid before it takes a buffer slot", async () => {
+      seeBlock(0xdd);
+      processSeenBlockEnvelope(0xdd, attacker, {blockHash: Buffer.alloc(32, 0x22)});
+      await settle();
+      expect(reportPeerSpy).toHaveBeenCalledWith(
+        attacker,
+        PeerAction.LowToleranceError,
+        "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BLOCK_HASH_MISMATCH"
+      );
+      expect(bufferedBlockCount()).toBe(0);
+    });
+
+    it("rejects a self-built envelope with a bad signature as Fatal", async () => {
+      seeBlock(0xdd);
+      processSeenBlockEnvelope(0xdd, attacker, {signature: Buffer.alloc(96, 0x02)});
+      await settle();
+      expect(reportPeerSpy).toHaveBeenCalledWith(
+        attacker,
+        PeerAction.Fatal,
+        "EXECUTION_PAYLOAD_ENVELOPE_ERROR_INVALID_SIGNATURE"
+      );
+      expect(bufferedBlockCount()).toBe(0);
+      expect(verifiedEarlyEnvelopes().size).toBe(0);
+    });
+
+    it("falls back to the buffer caps if the builder's key cannot be read because the head is not the parent", async () => {
+      headRoot = `0x${"bb".repeat(32)}`;
+      seeBlock(0xdd);
+      const bid = seenBlocks.get(rootHex)?.message.body.signedExecutionPayloadBid.message;
+      if (bid) bid.builderIndex = 3;
+      processSeenBlockEnvelope(0xdd, honest, {builderIndex: 3});
+      await settle();
+      expect(reportPeerSpy).not.toHaveBeenCalled();
+      expect(verifiedEarlyEnvelopes().size).toBe(0);
+      expect(bufferedBlockCount()).toBe(1);
     });
   });
 

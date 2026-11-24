@@ -2,12 +2,14 @@ import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {routes} from "@lodestar/api";
 import {ForkSeq, NUMBER_OF_COLUMNS, isForkPostGloas} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
+import {RootHex, Slot, SlotRootHex, gloas, ssz} from "@lodestar/types";
 import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../../chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";
+import {ExecutionPayloadEnvelopeError, GossipAction} from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
+import {validateEarlyExecutionPayloadEnvelope} from "../../chain/validation/executionPayloadEnvelope.js";
 import {IBeaconDb} from "../../db/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {ClockEvent} from "../../util/clock.js";
@@ -31,6 +33,7 @@ import {
   GossipValidatorBatchFn,
   GossipValidatorFn,
 } from "../gossip/interface.js";
+import {PeerAction} from "../peers/index.js";
 import {MAX_PEERS_PER_ROOT} from "./constants.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
 import {GossipHandlerOpts, ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
@@ -214,6 +217,7 @@ export enum CannotAcceptWorkReason {
  */
 enum PreprocessAction {
   AwaitBlock,
+  AwaitSeenBlock,
   AwaitEnvelope,
   PushToQueue,
 }
@@ -221,6 +225,7 @@ enum PreprocessAction {
 type PreprocessResult =
   | {action: PreprocessAction.PushToQueue}
   | {action: PreprocessAction.AwaitBlock; root: RootHex}
+  | {action: PreprocessAction.AwaitSeenBlock; root: RootHex; block: gloas.BeaconBlock}
   | {action: PreprocessAction.AwaitEnvelope; root: RootHex};
 
 enum SearchTarget {
@@ -293,6 +298,8 @@ export class NetworkProcessor {
   private readonly earlyEnvelopes = new Map<PendingGossipsubMessage, RootHex>();
   /** Peers that already had an early envelope buffered in the current clock slot */
   private readonly earlyEnvelopePeers = new Set<PeerIdStr>();
+  /** One envelope per block root verified against the bid of its seen block, held outside the buffer caps */
+  private readonly verifiedEarlyEnvelopes = new Map<RootHex, PendingGossipsubMessage>();
   /** peer -> clock slot when it was Fatal'ed */
   private readonly fatalPeers = new Map<PeerIdStr, Slot>();
 
@@ -380,6 +387,7 @@ export class NetworkProcessor {
     this.bufferedRootsBySlot.clear();
     this.earlyEnvelopes.clear();
     this.earlyEnvelopePeers.clear();
+    this.verifiedEarlyEnvelopes.clear();
     this.fatalPeers.clear();
   }
 
@@ -650,7 +658,15 @@ export class NetworkProcessor {
             this.searchUnknownRoot({slot, root: blockRoot}, peerId, {target: SearchTarget.Block});
             // We always want to await the block
             // This allows us to properly forward the payload envelope
-            preprocessResult = {action: PreprocessAction.AwaitBlock, root: blockRoot};
+            const blockInput = this.chain.seenBlockInputCache.get(blockRoot);
+            preprocessResult =
+              blockInput?.hasBlock() && isForkPostGloas(blockInput.forkName)
+                ? {
+                    action: PreprocessAction.AwaitSeenBlock,
+                    root: blockRoot,
+                    block: (blockInput.getBlock() as gloas.SignedBeaconBlock).message,
+                  }
+                : {action: PreprocessAction.AwaitBlock, root: blockRoot};
           }
           break;
         }
@@ -690,6 +706,11 @@ export class NetworkProcessor {
         break;
       case PreprocessAction.AwaitBlock:
         this.maybeAwaitBlock(preprocessResult.root, topicType, slot, message);
+        break;
+      case PreprocessAction.AwaitSeenBlock:
+        this.awaitSeenBlock(preprocessResult.root, preprocessResult.block, slot, message).catch((e) =>
+          this.logger.error("awaitSeenBlock must not throw", {}, e)
+        );
         break;
       case PreprocessAction.AwaitEnvelope:
         this.maybeAwaitPayload(preprocessResult.root, topicType, slot, message);
@@ -758,6 +779,58 @@ export class NetworkProcessor {
     metric?.queue.inc({topic: topicType});
     this.awaitingMessagesByBlockRoot.getOrDefault(root).getOrDefault(topicType).add(message);
     this.awaitingBlockMessageCount++;
+  }
+
+  /**
+   * Buffer an envelope whose block passed gossip validation but is not imported yet. An envelope verified against
+   * the block's bid skips the caps of maybeAwaitBlock, so junk sent ahead of it cannot keep it out.
+   */
+  private async awaitSeenBlock(
+    root: RootHex,
+    block: gloas.BeaconBlock,
+    slot: Slot,
+    message: PendingGossipsubMessage
+  ): Promise<void> {
+    const topicType = GossipType.execution_payload;
+    const generation = this.jobGeneration;
+    let verified = false;
+    try {
+      const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(message.msg.data);
+      verified = await validateEarlyExecutionPayloadEnvelope(this.chain, signedEnvelope, block);
+    } catch (e) {
+      if (e instanceof ExecutionPayloadEnvelopeError && e.action === GossipAction.REJECT) {
+        const {propagationSource} = message;
+        const code = e.type.code;
+        const peerAction = rejectPeerAction(topicType, code);
+        if (peerAction === PeerAction.Fatal) this.onFatalPeer(propagationSource);
+        this.metrics?.networkProcessor.gossipValidationReject.inc({topic: topicType});
+        this.core.reportPeer(propagationSource, peerAction, code);
+        this.logger.debug("Gossip validation execution_payload rejected before block import", {
+          peer: propagationSource,
+          peerAction,
+          ...e.getMetadata(),
+        });
+        this.events.emit(NetworkEvent.gossipMessageValidationResult, {
+          msgId: message.msgId,
+          propagationSource,
+          acceptance: TopicValidatorResult.Reject,
+        });
+        return;
+      }
+      // malformed or not checkable yet, gossip validation decides once the block is imported
+    }
+    if (generation !== this.jobGeneration) return;
+
+    if (this.chain.forkChoice.hasBlockHexUnsafe(root)) {
+      this.pushPendingGossipsubMessageToQueue(message);
+      return;
+    }
+    if (verified && !this.verifiedEarlyEnvelopes.has(root)) {
+      this.metrics?.awaitingBlockGossipMessages.queue.inc({topic: topicType});
+      this.verifiedEarlyEnvelopes.set(root, message);
+      return;
+    }
+    this.maybeAwaitBlock(root, topicType, slot, message);
   }
 
   /** Payload counterpart of maybeAwaitBlock */
@@ -843,6 +916,13 @@ export class NetworkProcessor {
   }
 
   private onBlockProcessed = async ({block: rootHex}: {block: string; executionOptimistic: boolean}): Promise<void> => {
+    const verifiedEnvelope = this.verifiedEarlyEnvelopes.get(rootHex);
+    if (verifiedEnvelope !== undefined) {
+      this.verifiedEarlyEnvelopes.delete(rootHex);
+      this.metrics?.awaitingBlockGossipMessages.resolve.inc({topic: GossipType.execution_payload});
+      this.pushPendingGossipsubMessageToQueue(verifiedEnvelope);
+    }
+
     const messagesByTopic = this.awaitingMessagesByBlockRoot.get(rootHex);
     if (messagesByTopic === undefined) {
       return;
@@ -1012,6 +1092,16 @@ export class NetworkProcessor {
         {topic: topicType, reason: ReprocessRejectReason.expired},
         nowSec - message.seenTimestampSec
       );
+    }
+
+    for (const [rootHex, message] of this.verifiedEarlyEnvelopes) {
+      // msgSlot is always set before buffering, a missing one expires rather than leaks
+      if ((message.msgSlot ?? minSlot) > minSlot) continue;
+      this.verifiedEarlyEnvelopes.delete(rootHex);
+      this.metrics?.awaitingBlockGossipMessages.reject.inc({
+        topic: GossipType.execution_payload,
+        reason: ReprocessRejectReason.expired,
+      });
     }
 
     // A slot's search budget lives as long as gossip accepts messages for it, a pruned budget would start over
