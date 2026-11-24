@@ -64,6 +64,8 @@ const Inner = struct {
     fast_confirmation: ?FastConfirmation = null,
     indices: std.ArrayList(ValidatorIndex) = .empty,
     indices_2: std.ArrayList(ValidatorIndex) = .empty,
+    /// Set while a provider runs: the store is mid-call, so JS must not re-enter it.
+    in_provider: bool = false,
 };
 
 inner: *Inner,
@@ -139,10 +141,16 @@ fn functionRef(env: napi.Env, object: napi.Value, comptime name: [:0]const u8) !
     return env.createReference(function, 0);
 }
 
-fn callbackValue(ref: napi.Ref) !napi.Value {
+fn callProvider(inner: *Inner, env: napi.Env, ref: napi.Ref, args: anytype) !napi.Value {
     const value = try ref.getValue();
     if (value.value == null) return error.ProviderCollected;
-    return value;
+    inner.in_provider = true;
+    defer inner.in_provider = false;
+    return env.callFunction(value, try env.getUndefined(), args);
+}
+
+fn enter(self: *ForkChoice) !void {
+    if (self.inner.in_provider) return error.ReentrantCall;
 }
 
 const provider_vtable: fork_choice.StateProvider.VTable = .{
@@ -155,7 +163,7 @@ const provider_vtable: fork_choice.StateProvider.VTable = .{
 fn providerJustifiedBalances(ctx: *anyopaque, gpa: std.mem.Allocator, checkpoint: Checkpoint) anyerror!fork_choice.JustifiedBalances {
     const inner: *Inner = @ptrCast(@alignCast(ctx));
     const env = js.env();
-    const result = try env.callFunction(try callbackValue(inner.justified_balances), try env.getUndefined(), .{
+    const result = try callProvider(inner, env, inner.justified_balances, .{
         try env.createDouble(@floatFromInt(checkpoint.epoch)),
         js.Uint8Array.from(&checkpoint.root).toValue(),
     });
@@ -173,7 +181,7 @@ fn providerJustifiedBalances(ctx: *anyopaque, gpa: std.mem.Allocator, checkpoint
 fn providerSlotCommitteeMembers(ctx: *anyopaque, gpa: std.mem.Allocator, root: Root, slot: Slot, out: *std.ArrayList(ValidatorIndex)) anyerror!void {
     const inner: *Inner = @ptrCast(@alignCast(ctx));
     const env = js.env();
-    const result = try env.callFunction(try callbackValue(inner.slot_committee_members), try env.getUndefined(), .{
+    const result = try callProvider(inner, env, inner.slot_committee_members, .{
         js.Uint8Array.from(&root).toValue(),
         try env.createDouble(@floatFromInt(slot)),
     });
@@ -188,7 +196,7 @@ fn providerCheckpointBalanceSource(ctx: *anyopaque, gpa: std.mem.Allocator, chec
     const inner: *Inner = @ptrCast(@alignCast(ctx));
     const ref = inner.checkpoint_balance_source orelse return error.FastConfirmationUnsupported;
     const env = js.env();
-    const result = try env.callFunction(try callbackValue(ref), try env.getUndefined(), .{
+    const result = try callProvider(inner, env, ref, .{
         try env.createDouble(@floatFromInt(checkpoint.epoch)),
         js.Uint8Array.from(&checkpoint.root).toValue(),
     });
@@ -199,7 +207,7 @@ fn providerPulledUpBalanceSource(ctx: *anyopaque, gpa: std.mem.Allocator, root: 
     const inner: *Inner = @ptrCast(@alignCast(ctx));
     const ref = inner.pulled_up_balance_source orelse return error.FastConfirmationUnsupported;
     const env = js.env();
-    const result = try env.callFunction(try callbackValue(ref), try env.getUndefined(), .{
+    const result = try callProvider(inner, env, ref, .{
         js.Uint8Array.from(&root).toValue(),
         try env.createDouble(@floatFromInt(epoch)),
     });
@@ -358,11 +366,13 @@ pub fn currentSlot(self: *ForkChoice) js.Number {
 
 /// Spec `compute_time_at_slot_ms`.
 pub fn timeAtSlotMs(self: *ForkChoice, slot: js.Number) !js.Number {
+    try self.enter();
     return js.Number.from(self.inner.store.timing.timeAtSlotMs(try slot.toSafeInteger()));
 }
 
 /// Spec `on_tick`. Time does not run backwards: an earlier `time_ms` is ignored.
 pub fn onTick(self: *ForkChoice, time_ms: js.Number) !void {
+    try self.enter();
     const time = try time_ms.toSafeInteger();
     if (time <= self.inner.store.time_ms) return;
     try self.inner.store.onTick(time);
@@ -372,6 +382,7 @@ pub fn onTick(self: *ForkChoice, time_ms: js.Number) !void {
 
 /// Spec `on_block` from the block's facts. Returns the block's index.
 pub fn onBlock(self: *ForkChoice, block: js.Value) !js.Number {
+    try self.enter();
     const store = &self.inner.store;
     const summary = try blockSummary(store.config, block.toValue());
     try store.onBlockSummary(summary);
@@ -391,6 +402,7 @@ pub fn onAttestation(
     is_from_block: js.Boolean,
     validator_count: js.Number,
 ) !void {
+    try self.enter();
     const data: AttestationData = .{
         .slot = try slot.toSafeInteger(),
         .index = try index.toSafeInteger(),
@@ -413,6 +425,7 @@ pub fn onAttesterSlashing(
     indices_2: js.Uint32Array,
     validator_count: js.Number,
 ) !void {
+    try self.enter();
     const count = try validator_count.toSafeInteger();
     const attestation_1 = try toAttestationData(data_1.toValue());
     const attestation_2 = try toAttestationData(data_2.toValue());
@@ -431,6 +444,7 @@ pub fn onPtcVotes(
     payload_present: js.Boolean,
     blob_data_available: js.Boolean,
 ) !void {
+    try self.enter();
     try self.inner.store.onPtcVotes(
         try rootArg(beacon_block_root),
         try slot.toSafeInteger(),
@@ -448,6 +462,7 @@ pub fn onExecutionPayload(
     execution_status: js.Number,
     inclusion_list_satisfied: ?js.Boolean,
 ) !void {
+    try self.enter();
     const satisfied: ?bool = if (inclusion_list_satisfied) |value| try value.toBool() else null;
     try self.inner.store.onExecutionPayloadEnvelope(
         try rootArg(beacon_block_root),
@@ -458,11 +473,13 @@ pub fn onExecutionPayload(
 
 /// Returns whether the verdict changed.
 pub fn recordInclusionListSatisfaction(self: *ForkChoice, block: js.Number, satisfied: js.Boolean) !js.Boolean {
+    try self.enter();
     return js.Boolean.from(self.inner.store.recordInclusionListSatisfaction(try self.blockArg(block), try satisfied.toBool()));
 }
 
 /// The recorded verdict, `undefined` when the engine reported none.
 pub fn inclusionListSatisfaction(self: *ForkChoice, block: js.Number) !?js.Boolean {
+    try self.enter();
     return switch (self.inner.store.blocks.items(.inclusion_list_satisfaction)[try self.blockArg(block)]) {
         .unknown => null,
         .unsatisfied => js.Boolean.from(false),
@@ -471,12 +488,14 @@ pub fn inclusionListSatisfaction(self: *ForkChoice, block: js.Number) !?js.Boole
 }
 
 pub fn isPayloadInclusionListSatisfied(self: *ForkChoice, block: js.Number) !js.Boolean {
+    try self.enter();
     return js.Boolean.from(self.inner.store.isPayloadInclusionListSatisfied(try self.blockArg(block)));
 }
 
 /// Optimistic sync: the payload with `block_hash` and those below it are valid. Returns
 /// the `Store.VerdictResult` tag.
 pub fn onPayloadValid(self: *ForkChoice, block_hash: js.Uint8Array) !js.String {
+    try self.enter();
     return js.String.from(@tagName(self.inner.store.onPayloadValid(try rootArg(block_hash))));
 }
 
@@ -490,6 +509,7 @@ pub fn onPayloadInvalid(
     latest_valid_hash: ?js.Uint8Array,
     judged: js.String,
 ) !js.String {
+    try self.enter();
     const lvh: ?Root = if (latest_valid_hash) |hash| try rootArg(hash) else null;
     var buf: [16]u8 = undefined;
     const judged_tag = std.meta.stringToEnum(fork_choice.store.InvalidJudged, try judged.toSlice(&buf)) orelse return error.InvalidJudged;
@@ -501,6 +521,7 @@ pub fn onPayloadInvalid(
 /// index of each old block index, `0xffffffff` for a dropped block, or `undefined` when
 /// nothing was dropped.
 pub fn prune(self: *ForkChoice) !?js.Uint32Array {
+    try self.enter();
     const store = &self.inner.store;
     const old_count = store.blockCount();
     const old_roots = try allocator.dupe(Root, store.blocks.items(.root));
@@ -515,12 +536,14 @@ pub fn prune(self: *ForkChoice) !?js.Uint32Array {
 
 /// Spec `get_head` as a node id.
 pub fn getHead(self: *ForkChoice) !js.Number {
+    try self.enter();
     return nodeNumber(try self.inner.store.getHead());
 }
 
 /// Spec `get_proposer_head` for the head node `head` and proposal `slot`: the node id to
 /// build on when the head is reorged out, otherwise the reason it is kept.
 pub fn getProposerHead(self: *ForkChoice, head: js.Number, slot: js.Number) !js.Value {
+    try self.enter();
     const env = js.env();
     const decision = try fork_choice.proposer_head.decide(&self.inner.store, try self.nodeArg(head), try slot.toSafeInteger());
     return switch (decision) {
@@ -531,6 +554,7 @@ pub fn getProposerHead(self: *ForkChoice, head: js.Number, slot: js.Number) !js.
 
 /// Spec `is_head_weak`.
 pub fn isHeadWeak(self: *ForkChoice, block: js.Number) !js.Boolean {
+    try self.enter();
     const store = &self.inner.store;
     const index = try self.blockArg(block);
     try fork_choice.head.ensureComputed(store);
@@ -539,6 +563,7 @@ pub fn isHeadWeak(self: *ForkChoice, block: js.Number) !js.Boolean {
 
 /// Spec `is_parent_strong` for the parent of `block`.
 pub fn isParentStrong(self: *ForkChoice, block: js.Number) !js.Boolean {
+    try self.enter();
     const store = &self.inner.store;
     const index = try self.blockArg(block);
     if (store.blocks.items(.parent)[index] == NO_BLOCK) return error.UnknownParent;
@@ -548,11 +573,13 @@ pub fn isParentStrong(self: *ForkChoice, block: js.Number) !js.Boolean {
 
 /// Spec `is_proposer_equivocation`.
 pub fn isProposerEquivocation(self: *ForkChoice, block: js.Number) !js.Boolean {
+    try self.enter();
     return js.Boolean.from(fork_choice.proposer_head.isProposerEquivocation(&self.inner.store, try self.blockArg(block)));
 }
 
 /// Spec `get_weight` per node id, in Gwei.
 pub fn weights(self: *ForkChoice) !js.BigUint64Array {
+    try self.enter();
     const store = &self.inner.store;
     try fork_choice.head.ensureComputed(store);
     const out = try js.BigUint64Array.alloc(store.blockCount() * fork_choice.store.NODES_PER_BLOCK);
@@ -564,6 +591,7 @@ pub fn weights(self: *ForkChoice) !js.BigUint64Array {
 
 /// Spec `get_attestation_score` per node id, in Gwei.
 pub fn attestationScores(self: *ForkChoice) !js.BigUint64Array {
+    try self.enter();
     const store = &self.inner.store;
     try fork_choice.head.ensureComputed(store);
     return js.BigUint64Array.from(store.head_cache.weight.items);
@@ -571,6 +599,7 @@ pub fn attestationScores(self: *ForkChoice) !js.BigUint64Array {
 
 /// The best child of each node id, `0xffffffff` for a node without a viable child.
 pub fn bestChildren(self: *ForkChoice) !js.Uint32Array {
+    try self.enter();
     const store = &self.inner.store;
     try fork_choice.head.ensureComputed(store);
     return js.Uint32Array.from(store.head_cache.best_child.items);
@@ -579,6 +608,7 @@ pub fn bestChildren(self: *ForkChoice) !js.Uint32Array {
 /// The worst engine verdict on the payloads each node id stands on. Still returned when the
 /// justified block stands on an invalidated payload and there is no head.
 pub fn executionStatuses(self: *ForkChoice) !js.Uint8Array {
+    try self.enter();
     const store = &self.inner.store;
     fork_choice.head.ensureComputed(store) catch |err| if (err != error.InvalidJustifiedPayload) return err;
     return js.Uint8Array.from(@ptrCast(store.head_cache.execution.items));
@@ -586,6 +616,7 @@ pub fn executionStatuses(self: *ForkChoice) !js.Uint8Array {
 
 /// Leaves of the filtered block tree as `{root, payloadStatus, weight}`.
 pub fn viableHeads(self: *ForkChoice) !js.Array {
+    try self.enter();
     const env = js.env();
     const heads = try self.inner.store.viableHeads(allocator);
     defer allocator.free(heads);
@@ -642,16 +673,19 @@ fn fastConfirmation(self: *ForkChoice) !*FastConfirmation {
 /// Spec `on_fast_confirmation`: once per slot, after the tick that applies the past
 /// slots' votes.
 pub fn onFastConfirmation(self: *ForkChoice) !void {
+    try self.enter();
     try (try self.fastConfirmation()).onFastConfirmation(&self.inner.store);
 }
 
 /// Spec `fcr_store.confirmed_root`.
 pub fn confirmedRoot(self: *ForkChoice) !js.Uint8Array {
+    try self.enter();
     return js.Uint8Array.from(&(try self.fastConfirmation()).confirmed_root);
 }
 
 /// The spec `FastConfirmationStore` fields, checkpoints as `{epoch, root}`.
 pub fn fastConfirmationStore(self: *ForkChoice) !js.Value {
+    try self.enter();
     const env = js.env();
     const fcr = try self.fastConfirmation();
     const object = try env.createObject();
@@ -666,6 +700,7 @@ pub fn fastConfirmationStore(self: *ForkChoice) !js.Value {
 
 /// The store's four checkpoints as `{epoch, root}`.
 pub fn checkpoints(self: *ForkChoice) !js.Value {
+    try self.enter();
     const env = js.env();
     const store = &self.inner.store;
     const object = try env.createObject();
@@ -678,12 +713,14 @@ pub fn checkpoints(self: *ForkChoice) !js.Value {
 
 /// The index of the block with `root`, `undefined` when the store does not have it.
 pub fn blockIndex(self: *ForkChoice, root: js.Uint8Array) !?js.Number {
+    try self.enter();
     const index = self.inner.store.blockIndex(try rootArg(root)) orelse return null;
     return js.Number.from(index);
 }
 
 /// The node id the block's `pending` node hangs from, `undefined` for the root block.
 pub fn parentNode(self: *ForkChoice, block: js.Number) !?js.Number {
+    try self.enter();
     const store = &self.inner.store;
     const index = try self.blockArg(block);
     const parent = store.blocks.items(.parent)[index];
@@ -693,11 +730,13 @@ pub fn parentNode(self: *ForkChoice, block: js.Number) !?js.Number {
 
 /// Spec `get_ancestor` on node ids.
 pub fn getAncestor(self: *ForkChoice, node: js.Number, slot: js.Number) !js.Number {
+    try self.enter();
     return nodeNumber(self.inner.store.getAncestor(try self.nodeArg(node), try slot.toSafeInteger()));
 }
 
 /// Whether the block descends from, or is, the store's finalized block.
 pub fn isFinalizedDescendant(self: *ForkChoice, block: js.Number) !js.Boolean {
+    try self.enter();
     const store = &self.inner.store;
     const ancestor = store.getCheckpointBlock(try self.blockArg(block), store.finalized_checkpoint.epoch);
     return js.Boolean.from(std.mem.eql(u8, &store.blockRoot(ancestor), &store.finalized_checkpoint.root));
@@ -705,6 +744,7 @@ pub fn isFinalizedDescendant(self: *ForkChoice, block: js.Number) !js.Boolean {
 
 /// Spec `[proposer-timely, PTC-timely]` of `store.block_timeliness[root]`.
 pub fn blockTimeliness(self: *ForkChoice, block: js.Number) !js.Array {
+    try self.enter();
     const env = js.env();
     const timely = self.inner.store.blocks.items(.timely)[try self.blockArg(block)];
     const out = try env.createArrayWithLength(timely.len);
@@ -714,17 +754,20 @@ pub fn blockTimeliness(self: *ForkChoice, block: js.Number) !js.Array {
 
 /// One byte per PTC position: bit 0 voted, bit 1 payload present, bit 2 blob data available.
 pub fn ptcVotes(self: *ForkChoice, block: js.Number) !js.Uint8Array {
+    try self.enter();
     const votes = &self.inner.store.ptc_votes.items[try self.blockArg(block)];
     return js.Uint8Array.from(@ptrCast(votes));
 }
 
 /// Spec `should_extend_payload`. The block must be from the slot before the store's.
 pub fn shouldExtendPayload(self: *ForkChoice, block: js.Number) !js.Boolean {
+    try self.enter();
     return js.Boolean.from(try self.inner.store.shouldExtendPayload(try self.blockArg(block)));
 }
 
 /// Spec `should_build_on_full` for an `empty` or `full` head node.
 pub fn shouldBuildOnFull(self: *ForkChoice, head: js.Number, slot: js.Number) !js.Boolean {
+    try self.enter();
     const node = try self.nodeArg(head);
     if (node.payload_status == .pending) return error.PendingHeadNode;
     return js.Boolean.from(self.inner.store.shouldBuildOnFull(node, try slot.toSafeInteger()));
@@ -733,6 +776,7 @@ pub fn shouldBuildOnFull(self: *ForkChoice, head: js.Number, slot: js.Number) !j
 /// Every validator's latest message: its slot (`NaN` for none) and the node id it
 /// counts on (`0xffffffff` for none or a pruned block).
 pub fn latestMessages(self: *ForkChoice) !js.Value {
+    try self.enter();
     const env = js.env();
     const store = &self.inner.store;
     const votes = store.latest_votes.items;

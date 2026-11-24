@@ -211,6 +211,36 @@ describe("ForkChoice", () => {
     ).toThrow("NotSlashableAttestationData");
   });
 
+  it("rejects a provider re-entering the store", () => {
+    let reentry: unknown;
+    const forkChoice: ForkChoice = createForkChoice({
+      slotCommitteeMembers: () => {
+        try {
+          forkChoice.prune();
+        } catch (e) {
+          reentry = e;
+        }
+        return new Uint32Array(0);
+      },
+    });
+    forkChoice.onTick(forkChoice.timeAtSlotMs(1));
+    forkChoice.onBlock(summary(0x0a, ANCHOR, 1));
+    forkChoice.onBlock(summary(0x0b, ANCHOR, 1));
+    const data = {index: 0, slot: 1, source: anchorCheckpoint, target: anchorCheckpoint};
+    forkChoice.onAttesterSlashing(
+      {...data, beaconBlockRoot: root(0x0a)},
+      Uint32Array.from([0]),
+      {...data, beaconBlockRoot: root(0x0b)},
+      Uint32Array.from([0]),
+      VALIDATOR_COUNT
+    );
+    forkChoice.getHead();
+
+    forkChoice.isHeadWeak(1);
+    expect(String(reentry)).toContain("ReentrantCall");
+    expect(forkChoice.isHeadWeak(1)).toBe(true);
+  });
+
   it("reports why the head is kept for a proposal", () => {
     const forkChoice = createForkChoice();
     forkChoice.onTick(forkChoice.timeAtSlotMs(1));
