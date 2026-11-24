@@ -170,7 +170,6 @@ export function getBuilderApi(modules: BuilderApiModules, opts: BuilderApiOption
         throw new ApiError(400, "Invalid signed beacon block: signature verification failed");
       }
 
-      metrics?.api.blockSubmissions.inc();
       logger.info("Received signed beacon block from proposer", {...logCtx, secFromSlot: clock.secFromSlot(slot)});
 
       // The payload is revealed once the beacon node imported the block and emits its block event
@@ -193,6 +192,9 @@ export function getBuilderApi(modules: BuilderApiModules, opts: BuilderApiOption
         acceptedBlockRootsBySlot.set(slot, acceptedBlockRoots);
       }
       acceptedBlockRoots.add(blockRoot);
+      // Only counted once the beacon node accepted the block, the block reaches it over gossip as well
+      // and a failing submission would otherwise go unnoticed
+      metrics?.api.blockSubmissions.inc();
       for (const acceptedSlot of acceptedBlockRootsBySlot.keys()) {
         if (acceptedSlot + SERVE_BID_SLOTS < clock.getCurrentSlot()) {
           acceptedBlockRootsBySlot.delete(acceptedSlot);

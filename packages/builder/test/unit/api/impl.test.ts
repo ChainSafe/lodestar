@@ -32,6 +32,7 @@ describe("builder api", () => {
   let builderApi: BuilderApi;
   let signedBid: gloas.SignedExecutionPayloadBid;
   let bidRequests: Mock;
+  let blockSubmissions: Mock;
 
   beforeEach(() => {
     api = getApiClientStub();
@@ -51,7 +52,10 @@ describe("builder api", () => {
     ledger = new BidLedger();
     const logger = getMockedLogger();
     bidRequests = vi.fn();
-    const metrics = {api: {bidRequests: {inc: bidRequests}, blockSubmissions: {inc: vi.fn()}}} as unknown as Metrics;
+    blockSubmissions = vi.fn();
+    const metrics = {
+      api: {bidRequests: {inc: bidRequests}, blockSubmissions: {inc: blockSubmissions}},
+    } as unknown as Metrics;
     builderApi = getBuilderApi(
       {
         config,
@@ -214,6 +218,7 @@ describe("builder api", () => {
       expect(api.beacon.publishBlockV2).toHaveBeenCalledExactlyOnceWith(
         expect.objectContaining({signedBlockContents: {signedBlock: block}})
       );
+      expect(blockSubmissions).toHaveBeenCalledOnce();
     });
 
     it("rejects a block that commits to the bid of another builder", async () => {
@@ -271,6 +276,7 @@ describe("builder api", () => {
       await expect(builderApi.submitSignedBeaconBlock({signedBlock: {data: signBlock()}})).rejects.toMatchObject({
         statusCode: 400,
       });
+      expect(blockSubmissions).not.toHaveBeenCalled();
     });
 
     it("does not report a failure of the beacon node as an invalid block", async () => {
@@ -289,6 +295,7 @@ describe("builder api", () => {
 
       expect(response).toEqual({status: 202});
       expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
+      expect(blockSubmissions).toHaveBeenCalledOnce();
     });
 
     it("processes a block again that the beacon node did not accept", async () => {
