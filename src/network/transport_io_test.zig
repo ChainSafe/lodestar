@@ -211,7 +211,7 @@ test "transport treats temporary route failures as loss on authenticated connect
         try std.testing.expectEqual(@as(usize, 64), try client.transport.engine.write(stream, &(@as([64]u8, @splat(1))), false));
         var faults: FaultIo = .{ .send = .{}, .send_failure = err };
         var progress: Transport.Progress = .{ .now = try Now.read(std.testing.io) };
-        const reason = @intFromEnum(udp_mod.Sockets.SendDrops.Reason.destination_unreachable);
+        const reason = @intFromEnum(udp_mod.SocketPair.SendDrops.Reason.destination_unreachable);
         const before = client.transport.send_drops.datagrams[reason];
         try client.transport.flush(faults.io(), progress.now, &progress);
         try std.testing.expectEqual(@as(u32, 0), progress.send_failures);
@@ -323,7 +323,7 @@ test "transport rotates dirty connections under one aggregate send allowance" {
     node.transport.work_limits.burst_per_connection = 1;
     const loopback = net.IpAddress{ .ip4 = .loopback(0) };
     var receive_buffer: [constants.datagram_size_max]u8 = undefined;
-    var sink = try udp_mod.Sockets.bind(std.testing.io, .single(loopback));
+    var sink = try udp_mod.SocketPair.bind(std.testing.io, .single(loopback));
     defer sink.close(std.testing.io);
     const destination = sink.localAddress();
     const now = try Now.read(std.testing.io);
@@ -400,7 +400,7 @@ test "transport isolates a failing destination in a mixed-owner batch" {
     try node.init(16);
     defer node.deinit();
     var receive_buffer: [constants.datagram_size_max]u8 = undefined;
-    var sink = try udp_mod.Sockets.bind(std.testing.io, .{ .ip4 = .loopback(0) });
+    var sink = try udp_mod.SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer sink.close(std.testing.io);
     const healthy_address = sink.localAddress();
     const failing_address = types.Address{ .ip4 = .{
@@ -518,7 +518,7 @@ test "transport bounds each turn's receive drain without active connections" {
     try node.init(17);
     defer node.deinit();
     node.transport.work_limits.receive_per_turn_max = 2;
-    var source = try udp_mod.Sockets.bind(std.testing.io, .{ .ip4 = .loopback(0) });
+    var source = try udp_mod.SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer source.close(std.testing.io);
     const destination = node.transport.localAddress();
     for (0..3) |_| try source.sendTo(std.testing.io, destination, null, &.{0}, constants.datagram_size_max);
@@ -541,7 +541,7 @@ test "transport drains dirty connections across small send budgets" {
     defer node.deinit();
     node.transport.work_limits.send_per_turn_max = 2;
     node.transport.work_limits.burst_per_connection = 1;
-    var sink = try udp_mod.Sockets.bind(std.testing.io, .{ .ip4 = .loopback(0) });
+    var sink = try udp_mod.SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer sink.close(std.testing.io);
     const destination = sink.localAddress();
     const now = try Now.read(std.testing.io);
@@ -679,7 +679,7 @@ test "transport receive cancellation retains progress and events while deferring
     var node: Node = .{};
     try node.init(36);
     defer node.deinit();
-    var sink = try udp_mod.Sockets.bind(std.testing.io, .{ .ip4 = .loopback(0) });
+    var sink = try udp_mod.SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer sink.close(std.testing.io);
     const destination = sink.localAddress();
     const now = try Now.read(std.testing.io);
@@ -832,7 +832,7 @@ test "transport drops a pressure suffix once and preserves every connection and 
         try std.testing.expectEqual(@as(u32, @intCast(prefix)), result.datagrams_sent);
         try std.testing.expectEqual(@as(u32, 0), result.send_failures);
         try std.testing.expectEqual(@as(u8, 0), node.transport.batch_len);
-        const reason = @intFromEnum(udp_mod.Sockets.SendDrops.Reason.system_resources);
+        const reason = @intFromEnum(udp_mod.SocketPair.SendDrops.Reason.system_resources);
         try std.testing.expectEqual(@as(u64, 3 - prefix), node.transport.send_drops.datagrams[reason]);
         try std.testing.expectEqual(@as(u64, Prefix.dropped_bytes), node.transport.send_drops.bytes[reason]);
         try std.testing.expect(Prefix.dropped_bytes > 0);
@@ -858,7 +858,7 @@ test "transport recovers a locally dropped first flight through QUIC loss recove
     const handle = try client.transport.dialPeer(faults.io(), server.transport.localAddress(), server.transport.peerId(), try Now.read(faults.io()));
     try std.testing.expectEqual(@as(usize, 1), faults.send_calls);
     try std.testing.expectEqual(@as(u64, 0), client.transport.counters.sent_datagrams);
-    const reason = @intFromEnum(udp_mod.Sockets.SendDrops.Reason.system_resources);
+    const reason = @intFromEnum(udp_mod.SocketPair.SendDrops.Reason.system_resources);
     try std.testing.expectEqual(@as(u64, 1), client.transport.send_drops.datagrams[reason]);
     const c = @import("quic/binding.zig").c;
     var stats: c.quiche_stats = undefined;
@@ -908,7 +908,7 @@ test "transport pressure drops later families with exact cumulative accounting" 
     try std.testing.expectEqual(@as(u32, 0), result.send_failures);
     try std.testing.expectEqual(@as(u64, 1), node.counters.sent_datagrams);
     try std.testing.expectEqual(node.batch.outgoing[0].bytes.len, node.counters.sent_bytes);
-    const reason = @intFromEnum(udp_mod.Sockets.SendDrops.Reason.system_resources);
+    const reason = @intFromEnum(udp_mod.SocketPair.SendDrops.Reason.system_resources);
     try std.testing.expectEqual(@as(u64, 2), node.send_drops.datagrams[reason]);
     try std.testing.expectEqual(node.batch.outgoing[1].bytes.len + node.batch.outgoing[2].bytes.len, node.send_drops.bytes[reason]);
     for (owners) |owner| {
@@ -956,7 +956,7 @@ test "transport cancellation stops final and capacity flushes without failing ow
             try std.testing.expectEqual(Canceled.accepted_bytes, node.counters.sent_bytes);
             try std.testing.expectEqual(@as(u32, 0), result.send_failures);
             try std.testing.expectEqual(@as(u8, 0), node.batch_len);
-            try std.testing.expectEqualDeep(udp_mod.Sockets.SendDrops{}, node.send_drops);
+            try std.testing.expectEqualDeep(udp_mod.SocketPair.SendDrops{}, node.send_drops);
             for (owners[0..count]) |owner| {
                 try std.testing.expectEqual(@as(?Engine.Handle, owner), node.engine.sendOwner(owner.index));
                 try std.testing.expect(node.engine.registry.timers.get(owner.index) != null);
@@ -1024,7 +1024,7 @@ test "established transport survives canceled output and recovers its lost paylo
     try std.testing.expectEqual(@as(usize, 1), fault.send_calls);
     try std.testing.expectEqual(@as(u32, 0), stopped.progress.send_failures);
     try std.testing.expectEqual(@as(?Engine.Handle, handle), client.transport.engine.sendOwner(handle.index));
-    try std.testing.expectEqualDeep(udp_mod.Sockets.SendDrops{}, client.transport.send_drops);
+    try std.testing.expectEqualDeep(udp_mod.SocketPair.SendDrops{}, client.transport.send_drops);
     var incoming: ?Engine.StreamHandle = null;
     var recovered: [payload.len]u8 = undefined;
     var count: usize = 0;
@@ -1062,11 +1062,11 @@ test "transport caps the final receive batch at the remaining budget including t
     try node.init(43);
     defer node.deinit();
     const transport = &node.transport;
-    transport.work_limits.receive_per_turn_max = udp_mod.Sockets.receive_batch_max + 1;
+    transport.work_limits.receive_per_turn_max = udp_mod.SocketPair.receive_batch_max + 1;
     const oversized = [_]u8{0} ** (constants.datagram_size_max + 1);
     const socket = transport.sockets.primary();
     for (0..20) |i| {
-        const payload: []const u8 = if (i == udp_mod.Sockets.receive_batch_max) &oversized else &.{0};
+        const payload: []const u8 = if (i == udp_mod.SocketPair.receive_batch_max) &oversized else &.{0};
         try socket.send(std.testing.io, &socket.address, payload);
     }
     try support.awaitDatagrams(socket, 20);
