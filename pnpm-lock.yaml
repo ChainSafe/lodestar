@@ -535,8 +535,8 @@ importers:
         specifier: ^1.2.5
         version: 1.2.5
       '@ethereumjs/rlp':
-        specifier: ^4.0.1
-        version: 4.0.1
+        specifier: ^10.1.1
+        version: 10.1.1
       '@lodestar/test-utils':
         specifier: workspace:^
         version: link:../test-utils
