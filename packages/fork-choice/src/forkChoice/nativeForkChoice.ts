@@ -876,7 +876,7 @@ export class NativeForkChoice implements IForkChoice {
 
     this.insertBlock(blockIndex, protoBlock);
     this.refreshExecutionStatuses();
-    return protoBlock;
+    return {...(this.nodes[blockIndex * 3 + SPEC_PENDING] as ProtoBlock)};
   }
 
   onAttestation(attestation: IndexedAttestation, _attDataRoot: string, forceImport?: boolean): void {
