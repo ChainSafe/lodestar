@@ -254,16 +254,17 @@ pub const BlockSummary = struct {
 };
 
 /// An ancestor of an unfinalized anchor, known only by root. `slot` is at or after the
-/// block's real slot. It keeps the block tree connected down to the finalized checkpoint;
-/// no block can be imported on top of it, since its state is not available.
+/// block's real slot. It keeps the block tree connected down to the finalized checkpoint.
+/// Its payload is unknown: the payloads a node stands on end at the anchor. The store
+/// accepts a block on top of it; a caller without the ancestor's state cannot produce one.
 pub const AnchorAncestor = struct {
     root: Root,
     slot: Slot,
 };
 
-/// The finalized block, the justified block, the checkpoint blocks of the anchor's epoch
-/// and the one before, and the anchor's parent.
-pub const MAX_ANCHOR_ANCESTORS = 5;
+/// The finalized block, the justified block, the anchor's parent, and for the anchor's
+/// epoch and the one before the checkpoint block and the block before it.
+pub const MAX_ANCHOR_ANCESTORS = 7;
 
 /// Balances of the justified checkpoint state (spec `store.checkpoint_states[store.justified_checkpoint]`).
 /// Owned by the store once returned from `StateProvider`.
@@ -382,6 +383,8 @@ pub const Store = struct {
     /// whose ancestors count as validated; `prune` carries the dropped ancestors'
     /// derived status here so a Gloas root's `pending` and `empty` nodes keep it.
     root_base_status: ExecutionStatus,
+    /// The first blocks of the table are this many `AnchorAncestor`s.
+    anchor_ancestor_count: BlockIndex,
 
     /// Spec `get_forkchoice_store`. `execution_status` is the verdict on the anchor's own
     /// payload: `.valid` at genesis, `.syncing` for a checkpoint the engine has not seen.
@@ -488,6 +491,7 @@ pub const Store = struct {
             .provider = provider,
             .head_cache = .empty,
             .root_base_status = .pre_merge,
+            .anchor_ancestor_count = @intCast(ancestors.len),
         };
         errdefer self.deinit();
         self.time_ms = self.timing.timeAtSlotMs(anchor.slot);
@@ -1217,7 +1221,8 @@ pub const Store = struct {
 
     // --- optimistic sync --------------------------------------------------------------
 
-    /// The payloads a node stands on, nearest first. A block's own payload is on the
+    /// The payloads a node stands on, nearest first, ending above the anchor's ancestors,
+    /// whose payloads are unknown. A block's own payload is on the
     /// chain before Gloas and for its `.full` node; `.pending` and `.empty` Gloas nodes
     /// stand on the parent payload the bid names, reached through `parent_payload_status`.
     const PayloadChain = struct {
@@ -1226,12 +1231,14 @@ pub const Store = struct {
 
         fn next(self: *PayloadChain) ?BlockIndex {
             while (self.node) |node| {
+                if (node.block < self.store.anchor_ancestor_count) break;
                 const blocks = self.store.blocks;
                 const own_on_chain = blocks.items(.fork)[node.block].lt(.gloas) or node.payload_status == .full;
                 const parent = blocks.items(.parent)[node.block];
                 self.node = if (parent == NO_BLOCK) null else .{ .block = parent, .payload_status = blocks.items(.parent_payload_status)[node.block] };
                 if (own_on_chain) return node.block;
             }
+            self.node = null;
             return null;
         }
     };
@@ -1438,6 +1445,7 @@ pub const Store = struct {
             self.blocks.set(target, block);
             self.ptc_votes.items[target] = self.ptc_votes.items[i];
         }
+        self.anchor_ancestor_count -|= finalized;
         self.blocks.shrinkRetainingCapacity(kept);
         self.ptc_votes.shrinkRetainingCapacity(kept);
         self.index_by_root.clearRetainingCapacity();

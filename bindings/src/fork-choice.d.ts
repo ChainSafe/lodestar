@@ -51,7 +51,8 @@ export interface BlockSummary {
 
 /**
  * An ancestor of an unfinalized anchor, known only by root. `slot` is at or after the block's
- * real slot. No block can be imported on top of it.
+ * real slot. Its payload is unknown. The store accepts a block on top of it, but a caller without
+ * the ancestor's state cannot produce one.
  */
 export interface AnchorAncestor {
   root: Uint8Array;
@@ -125,7 +126,7 @@ export declare class ForkChoice {
    * Without `unfinalizedAncestors` the anchor is the justified and the finalized checkpoint, as in
    * spec `get_forkchoice_store`. With them the anchor is not finalized and the store starts at the
    * anchor's checkpoints instead. The ancestors run oldest first from the finalized block to the
-   * anchor, at most five, with distinct non-zero roots and ascending slots, and must contain the
+   * anchor, at most seven, with distinct non-zero roots and ascending slots, and must contain the
    * justified and the finalized checkpoint blocks unless the anchor is that block itself. They
    * should also hold the checkpoint blocks of the anchor's epoch and the one before: the head
    * cannot be computed once the chain justifies a block the store does not hold.

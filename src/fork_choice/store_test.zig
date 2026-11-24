@@ -1163,7 +1163,7 @@ test "unfinalized anchor: ancestors must be ordered, distinct and hold both chec
     ancestors[2].slot = unfinalized_anchor_slot;
     try testing.expectError(error.InvalidAnchorAncestor, Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &ancestors, provider));
 
-    const too_many = unfinalized_ancestors ++ unfinalized_ancestors;
+    const too_many = unfinalized_ancestors ++ unfinalized_ancestors ++ unfinalized_ancestors;
     try testing.expectError(error.TooManyAnchorAncestors, Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &too_many, provider));
 }
 
@@ -1194,4 +1194,27 @@ test "unfinalized anchor: a Gloas anchor hangs from its ancestors' empty nodes" 
     try store.onBlockSummary(unfinalizedSummary(.{ .tag = 0x20, .parent = 1, .slot = unfinalized_anchor_slot + 1, .fork = .gloas, .bid_parent = 1 }));
     try testing.expectEqual(store.blockIndex(tagRoot(0x20)).?, (try store.getHead()).block);
     try testing.expectEqual(ExecutionStatus.valid, try store.executionStatus(pendingOf(&store, 0x20)));
+}
+
+test "unfinalized anchor: a zero latest valid hash does not reach the ancestors" {
+    const allocator = testing.allocator;
+    const config = &@import("config").mainnet.config;
+    const anchor = unfinalizedSummary(.{ .tag = 1, .parent = 0x0b, .slot = unfinalized_anchor_slot });
+    var store = try Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &unfinalized_ancestors, Provider.stateProvider());
+    defer store.deinit();
+
+    try store.onTick(store.timing.timeAtSlotMs(unfinalized_anchor_slot + 2));
+    try store.onBlockSummary(unfinalizedSummary(.{ .tag = 0x20, .parent = 1, .slot = unfinalized_anchor_slot + 1 }));
+    try testing.expectError(error.UnknownLatestValidHash, store.onPayloadInvalid(tagRoot(0x20), tagHash(0x20), ZERO));
+    try testing.expectEqual(ExecutionStatus.syncing, try store.executionStatus(pendingOf(&store, 1)));
+    try testing.expectEqual(pendingOf(&store, 0x20), try store.getHead());
+
+    // The cut-off follows the ancestors through a prune.
+    var finalizing = unfinalizedSummary(.{ .tag = 0x21, .parent = 0x20, .slot = unfinalized_anchor_slot + 2 });
+    finalizing.finalized_checkpoint = unfinalized_justified;
+    finalizing.unrealized_finalized_checkpoint = unfinalized_justified;
+    try store.onBlockSummary(finalizing);
+    try testing.expectEqual(@as(usize, 1), try store.prune());
+    try testing.expectError(error.UnknownLatestValidHash, store.onPayloadInvalid(tagRoot(0x21), tagHash(0x21), ZERO));
+    try testing.expectEqual(pendingOf(&store, 0x21), try store.getHead());
 }

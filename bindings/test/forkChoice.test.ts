@@ -106,7 +106,7 @@ describe("ForkChoice", () => {
     expect(() => new ForkChoice(config, 0, anchor, provider, ancestors.slice(1))).toThrow(
       "AnchorCheckpointNotAncestor"
     );
-    expect(() => new ForkChoice(config, 0, anchor, provider, [...ancestors, ...ancestors])).toThrow(
+    expect(() => new ForkChoice(config, 0, anchor, provider, [...ancestors, ...ancestors, ...ancestors])).toThrow(
       "TooManyAnchorAncestors"
     );
   });
