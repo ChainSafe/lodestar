@@ -2071,6 +2071,10 @@ export class BlockInputSync {
               this.network.reportPeer(peerId, PeerAction.LowToleranceError, warning.type.code);
               excludedPeers.add(peerId);
             }
+            // Not picked again for this block, it would be preferred as a previous source of it
+            if (warning.type.code === DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED) {
+              excludedPeers.add(peerId);
+            }
           }
         }
       } catch (e) {
