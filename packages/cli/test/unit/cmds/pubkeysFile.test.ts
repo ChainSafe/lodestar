@@ -50,14 +50,31 @@ describe("cmds / beacon / pubkeysFile", () => {
 
   it("loads a saved cache matching the anchor state", () => {
     const pubkeys = interopPubkeys(0, 8);
-    saveCacheWith(pubkeys, filepath);
+    saveCacheWith(pubkeys.slice(0, 6), filepath);
 
-    loadWithAnchorPubkeys(filepath, pubkeys.slice(0, 6));
+    loadWithAnchorPubkeys(filepath, pubkeys);
 
-    expect(pubkeyCache.size).toBe(pubkeys.length);
-    for (let i = 0; i < pubkeys.length; i++) {
+    expect(pubkeyCache.size).toBe(6);
+    for (let i = 0; i < 6; i++) {
       expect(pubkeyCache.getPubkeyBytes(i), `wrong pubkey at index ${i}`).toEqual(pubkeys[i]);
     }
+  });
+
+  it("drops saved entries beyond the anchor state so another branch can assign their indices", () => {
+    const pubkeys = interopPubkeys(0, 8);
+    const anchorPubkeys = pubkeys.slice(0, 6);
+    saveCacheWith(pubkeys, filepath);
+
+    loadWithAnchorPubkeys(filepath, anchorPubkeys);
+
+    expect(pubkeyCache.size).toBe(anchorPubkeys.length);
+    for (let i = 0; i < anchorPubkeys.length; i++) {
+      expect(pubkeyCache.getPubkeyBytes(i), `wrong pubkey at index ${i}`).toEqual(anchorPubkeys[i]);
+    }
+    expect(pubkeyCache.getIndex(pubkeys[6])).toBeNull();
+
+    pubkeyCache.append(6, pubkeys[7]);
+    expect(pubkeyCache.getPubkeyBytes(6)).toEqual(pubkeys[7]);
   });
 
   it("discards a saved cache not matching the anchor state", () => {

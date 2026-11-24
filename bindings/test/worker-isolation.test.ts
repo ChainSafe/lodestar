@@ -67,6 +67,7 @@ describe("worker isolation", () => {
       save: string | null;
       load: string | null;
       reset: string | null;
+      truncate: string | null;
     }>("pubkeys");
 
     expect(result).toEqual({
@@ -74,6 +75,7 @@ describe("worker isolation", () => {
       pubkey: expected,
       reset: "PubkeyCacheControlEnvironmentOnly",
       save: "PubkeyCacheControlEnvironmentOnly",
+      truncate: "PubkeyCacheControlEnvironmentOnly",
     });
     expect(pubkeyCache.size).toBe(1);
     expect(pubkeyCache.getOrThrow(0).toBytes()).toEqual(expected);

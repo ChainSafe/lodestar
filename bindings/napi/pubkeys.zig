@@ -110,6 +110,18 @@ pub fn reset() !void {
     committee_pubkeys.state.clear(js.io());
 }
 
+/// Also drops the committee pubkeys, which may aggregate the dropped keys.
+///
+/// JS: pubkeys.truncate(size)
+pub fn truncate(new_size: js.Number) !void {
+    if (!state.initialized) return error.PubkeyIndexNotInitialized;
+    try state.requireControlEnvironment(js.env());
+
+    const new_len = try new_size.toU32Exact();
+    try state.cache.truncate(js.io(), new_len);
+    committee_pubkeys.state.clear(js.io());
+}
+
 /// JS: pubkeys.getIndex(pubkeyBytes) → number | null
 pub fn getIndex(pubkey: js.Uint8Array) !js.Value {
     if (!state.initialized) return error.PubkeyIndexNotInitialized;

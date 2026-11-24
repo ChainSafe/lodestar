@@ -115,6 +115,7 @@ describe("pubkeys", () => {
       expect(() => pubkeyCache.append(index, keypairs[0].pubkeyBytes)).toThrow("InvalidUnsignedInteger");
       expect(() => pubkeyCache.ensureCapacity(index)).toThrow("InvalidUnsignedInteger");
       expect(() => pubkeyCache.load(tempPkixPath, index)).toThrow("InvalidUnsignedInteger");
+      expect(() => pubkeyCache.truncate(index)).toThrow("InvalidUnsignedInteger");
     }
   });
 
@@ -166,6 +167,19 @@ describe("pubkeys", () => {
     const after = pubkeyCache.getOrThrow(0);
     expect(after).not.toBe(before);
     expect(after.toBytes()).toEqual(keypairs[1].pubkeyBytes);
+  });
+
+  it("truncate drops a suffix from both lookup directions so its indices can be reassigned", () => {
+    pubkeyCache.truncate(keypairs.length);
+    expectCacheContents();
+
+    pubkeyCache.truncate(1);
+    expectCacheContents(1);
+    expect(pubkeyCache.getIndex(keypairs[1].pubkeyBytes)).toBeNull();
+
+    pubkeyCache.append(1, keypairs[2].pubkeyBytes);
+    expect(pubkeyCache.getIndex(keypairs[2].pubkeyBytes)).toBe(1);
+    expect(pubkeyCache.getOrThrow(1).toBytes()).toEqual(keypairs[2].pubkeyBytes);
   });
 
   it("save replaces an existing file and load restores cache contents", () => {

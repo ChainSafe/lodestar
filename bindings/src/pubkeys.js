@@ -62,6 +62,10 @@ export const pubkeyCache = {
     native.reset();
   },
 
+  truncate(size) {
+    native.truncate(size);
+  },
+
   save(filepath) {
     native.save(filepath);
   },

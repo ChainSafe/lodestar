@@ -87,8 +87,8 @@ pub const max_capacity: usize = @min(
 /// ArrayHashMap storage may move when it grows, so every access is protected by
 /// the cache-owned read/write lock. Readers copy values out before releasing
 /// the shared lock; no pointer into the map escapes. Production mutations only
-/// append (and occasionally grow). `clear` exists for tests/API compatibility
-/// and retains all allocated capacity.
+/// append (and occasionally grow), apart from `truncate` at startup. `clear`
+/// exists for tests/API compatibility and retains all allocated capacity.
 pub const PubkeyCache = struct {
     allocator: std.mem.Allocator,
     entries: PubkeyMap,
@@ -150,6 +150,18 @@ pub const PubkeyCache = struct {
         try self.lock.lock(io);
         defer self.lock.unlock(io);
         self.entries.clearRetainingCapacity();
+    }
+
+    /// Keep the first `new_len` entries and drop the rest, retaining capacity.
+    /// A no-op when the cache holds at most `new_len` entries.
+    ///
+    /// Startup-only. A later append may assign a dropped index to a different
+    /// key, so no live state may hold more than `new_len` validators.
+    pub fn truncate(self: *PubkeyCache, io: std.Io, new_len: usize) !void {
+        try self.lock.lock(io);
+        defer self.lock.unlock(io);
+        if (new_len >= self.entries.count()) return;
+        self.entries.shrinkRetainingCapacityContext(new_len, self.hashContext());
     }
 
     pub fn count(self: *const PubkeyCache, io: std.Io) u32 {

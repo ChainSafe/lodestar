@@ -168,6 +168,34 @@ test "append and clear preserve dense storage invariants" {
     try testing.expectEqual(@as(u64, 0), cache.get(testing.io, pubkeys[3]).?);
 }
 
+test "truncate drops a suffix so its indices can be reassigned" {
+    var pubkeys: [4]types.primitive.BLSPubkey.Type = undefined;
+    try interop.interopPubkeysCached(pubkeys.len, &pubkeys);
+
+    var cache = PubkeyCache.init(testing.allocator, testing.io);
+    defer cache.deinit();
+
+    for (pubkeys[0..3], 0..) |pubkey, index| {
+        try cache.append(testing.io, pubkey, index);
+    }
+    const capacity = cache.capacity(testing.io);
+
+    try cache.truncate(testing.io, 3);
+    try testing.expectEqual(@as(u32, 3), cache.count(testing.io));
+
+    try cache.truncate(testing.io, 2);
+    try testing.expectEqual(@as(u32, 2), cache.count(testing.io));
+    try testing.expectEqual(capacity, cache.capacity(testing.io));
+    try testing.expectEqual(@as(u64, 1), cache.get(testing.io, pubkeys[1]).?);
+    try testing.expect(cache.get(testing.io, pubkeys[2]) == null);
+    try testing.expect(cache.getPubkey(testing.io, 2) == null);
+
+    try cache.append(testing.io, pubkeys[3], 2);
+    try cache.append(testing.io, pubkeys[2], 3);
+    try testing.expectEqual(@as(u64, 2), cache.get(testing.io, pubkeys[3]).?);
+    try testing.expectEqual(@as(u64, 3), cache.get(testing.io, pubkeys[2]).?);
+}
+
 test "explicit capacity is exact, non-shrinking, and guarded" {
     const unsupported = cache_module.max_capacity + 1;
     try testing.expectError(

@@ -26,6 +26,7 @@ switch (workerData) {
       pubkey: pubkeyCache.getOrThrow(0).toBytes(),
       reset: capture(() => pubkeyCache.reset()),
       save: capture(() => pubkeyCache.save("")),
+      truncate: capture(() => pubkeyCache.truncate(0)),
     });
     break;
   }

@@ -36,6 +36,9 @@ export function loadPubkeysFile(
     }
   }
 
+  // Indices beyond the anchor registry are not final: another branch may assign them to different pubkeys.
+  pubkeyCache.truncate(anchorValidatorCount);
+
   logger.debug("Loaded pubkeys file", {filepath, count: pubkeyCache.size, durationMs: Date.now() - start});
 }
 

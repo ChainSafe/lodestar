@@ -53,6 +53,12 @@ export interface PubkeyCache {
    * Also drops the committee pubkeys aggregated from the cleared keys.
    */
   reset(): void;
+  /**
+   * Keep the first `size` entries and drop the rest, from the control environment while no workers are using the
+   * cache. Also drops the committee pubkeys. Startup-only: a later append may assign a dropped index to a
+   * different public key, so no state may hold more than `size` validators.
+   */
+  truncate(size: number): void;
   /** Save from the control environment. */
   save(filepath: string): void;
   /** Reserve exact native capacity when growing; existing larger capacity is retained. */
