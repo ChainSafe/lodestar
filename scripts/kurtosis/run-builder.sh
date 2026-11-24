@@ -43,6 +43,7 @@ if [ ! -d "$TEMP"/derived ]; then
 fi
 
 # download network config and jwt secret
+rm -rf "$TEMP"/netcfg "$TEMP"/jwt
 kurtosis files download builder-dev el_cl_genesis_data "$TEMP"/netcfg
 kurtosis files download builder-dev jwt_file "$TEMP"/jwt
 
