@@ -15,7 +15,7 @@ const configuration = @import("configuration.zig");
 const policy_fixture = @import("reqresp/policy_fixture.zig");
 const network_core_test_support = @import("network_core_test_support.zig");
 const fault_io = @import("fault_io");
-const Sockets = @import("udp").Sockets;
+const SocketPair = @import("udp").SocketPair;
 const udp = @import("udp");
 const PeerId = @import("wire/peer_id.zig").PeerId;
 
@@ -457,7 +457,7 @@ test "network owner progresses and shuts down while UDP sends are under local pr
     try std.testing.expect(progress.failure == null);
     try std.testing.expect(faults.send_calls > 0 and faults.send_calls <= transport.Transport.send_burst_max);
     try std.testing.expect(node.phase() == .running);
-    try std.testing.expect(node.transport.send_drops.datagrams[@intFromEnum(Sockets.SendDrops.Reason.system_resources)] > 0);
+    try std.testing.expect(node.transport.send_drops.datagrams[@intFromEnum(SocketPair.SendDrops.Reason.system_resources)] > 0);
     node.shutdown(node.last_now);
     const sends = faults.send_calls;
     node.deinit(faults.io());

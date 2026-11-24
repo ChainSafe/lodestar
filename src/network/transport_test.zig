@@ -167,7 +167,7 @@ test "transport validates socket work limits before startup allocation" {
 }
 
 test "transport requests configured socket buffers and records the kernel's sizes" {
-    const Buffers = @import("udp").Sockets.Buffers;
+    const Buffers = @import("udp").SocketPair.Buffers;
     const key = try keys.KeyPair.fromSecretKey(&([_]u8{0} ** 31 ++ [_]u8{31}));
     const invalid = [_]Buffers{
         .{ .receive = Buffers.bytes_min - 1, .send = Buffers.bytes_min },
