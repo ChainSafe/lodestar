@@ -54,7 +54,7 @@ describe("Revealer", () => {
   });
 
   /** Block that selected a bid for a payload, optionally recorded as our bid and retained */
-  function selectedBlock({recordBid = true, retainPayload = true} = {}): ObservedBlock {
+  function selectedBlock({recordBid = true, retainPayload = true, value = 5} = {}): ObservedBlock {
     const payload = mockBuiltPayload({slot});
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = slot;
@@ -64,13 +64,14 @@ describe("Revealer", () => {
     signedBid.message.parentBlockHash = payload.executionPayload.parentHash;
     signedBid.message.parentBlockRoot = Buffer.alloc(32, 4);
     signedBid.message.blockHash = payload.executionPayload.blockHash;
-    signedBid.message.value = 5;
+    signedBid.message.value = value;
     signedBid.message.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(payload.executionRequests);
     const blockHash = toRootHex(signedBid.message.blockHash);
 
     if (recordBid) {
+      // The ledger holds the bid we signed, not the one decoded from the block
       ledger.recordBid({
-        signedBid,
+        signedBid: ssz.gloas.SignedExecutionPayloadBid.clone(signedBid),
         signedBidRoot: toRootHex(ssz.gloas.SignedExecutionPayloadBid.hashTreeRoot(signedBid)),
       });
     }
@@ -112,8 +113,9 @@ describe("Revealer", () => {
   });
 
   it("ignores a block that selected another builder", async () => {
-    const observed = selectedBlock();
+    const observed = selectedBlock({value: 1_000_000_000});
     observed.signedBid.message.builderIndex = builderIndex + 1;
+    observed.signedBid.message.value = 2_500_000_000;
     observed.blockRoot = toRootHex(config.getForkTypes(observed.slot).BeaconBlock.hashTreeRoot(observed.block.message));
 
     await revealer.onBlock(observed);
@@ -124,14 +126,14 @@ describe("Revealer", () => {
       slot,
       blockRoot: observed.blockRoot,
       builderIndex,
-      valueGwei: 5,
+      value: "1.00000 ETH",
       selectedBuilderIndex: builderIndex + 1,
-      selectedValueGwei: 5,
+      selectedValue: "2.50000 ETH",
     });
   });
 
   it("logs a self-built block in a slot with own bid", async () => {
-    const observed = selectedBlock();
+    const observed = selectedBlock({value: 1_000_000_000});
     observed.signedBid.message.builderIndex = BUILDER_INDEX_SELF_BUILD;
     observed.signedBid.message.value = 0;
 
@@ -140,7 +142,7 @@ describe("Revealer", () => {
     expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
     expect(logger.info).toHaveBeenCalledWith(
       "Execution payload bid not selected",
-      expect.objectContaining({selectedBuilderIndex: "self-build", selectedValueGwei: 0})
+      expect.objectContaining({value: "1.00000 ETH", selectedBuilderIndex: "self-build", selectedValue: "0.00000 ETH"})
     );
   });
 

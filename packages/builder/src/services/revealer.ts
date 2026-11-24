@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {BUILDER_INDEX_SELF_BUILD} from "@lodestar/params";
 import {IClock} from "@lodestar/state-transition";
 import {BuilderIndex} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, prettyGweiToEth} from "@lodestar/utils";
 import {Metrics, RevealResult} from "../metrics.js";
 import {BidLedger} from "./bidLedger.js";
 import {BidSelector} from "./bidSelector.js";
