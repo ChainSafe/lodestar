@@ -1,5 +1,6 @@
 import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {Mock, beforeEach, describe, expect, it, vi} from "vitest";
+import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
@@ -14,6 +15,7 @@ import {PeerAction} from "../../../../src/network/peers/score/interface.js";
 import {
   MAX_AWAITING_MESSAGES_PER_ROOT,
   MAX_BUFFERED_ROOTS_PER_SLOT,
+  MAX_EARLY_ENVELOPES,
   MAX_SEARCHED_ROOTS_PER_SLOT,
   MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE,
   NetworkProcessor,
@@ -25,7 +27,6 @@ import {ClockStopped} from "../../../mocks/clock.js";
 
 // per-(root, topic) message caps, read from the source so the tests track the real limits
 const MAX_BID_PER_ROOT = MAX_AWAITING_MESSAGES_PER_ROOT[GossipType.execution_payload_bid] as number;
-const MAX_EXECUTION_PAYLOAD_PER_ROOT = MAX_AWAITING_MESSAGES_PER_ROOT[GossipType.execution_payload] as number;
 const MAX_DATA_COLUMN_PER_ROOT = MAX_AWAITING_MESSAGES_PER_ROOT[GossipType.data_column_sidecar] as number;
 
 // When a gossip message points at a block we don't have yet, we hold the message and look the block up.
@@ -81,12 +82,12 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
     processor = new NetworkProcessor(modules, {});
   });
 
-  function emit(topicType: GossipType, fork: ForkName, data: Uint8Array): void {
+  function emit(topicType: GossipType, fork: ForkName, data: Uint8Array, peer = peerIdStr): void {
     (processor as unknown as {events: NetworkEventBus}).events.emit(NetworkEvent.pendingGossipsubMessage, {
       topic: {type: topicType, boundary: {fork, epoch: GENESIS_EPOCH}},
       msg: {data},
       msgId: "id",
-      propagationSource: peerIdStr,
+      propagationSource: peer,
       clientAgent: "",
       clientVersion: "",
       seenTimestampSec: 0,
@@ -145,12 +146,24 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
   }
 
   /** An execution payload for an unknown block (there is only ever one payload per block). */
-  function processExecutionPayload(rootByte = 0xdd): void {
+  function processExecutionPayload(rootByte = 0xdd, peer = peerIdStr): void {
     const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
     signedEnvelope.message.payload.slotNumber = clockSlot;
     signedEnvelope.message.beaconBlockRoot = Buffer.alloc(32, rootByte);
     const data = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(signedEnvelope);
-    emit(GossipType.execution_payload, ForkName.gloas, data);
+    emit(GossipType.execution_payload, ForkName.gloas, data, peer);
+  }
+
+  /** peers whose envelopes we hold for the unknown block `rootByte`, in arrival order */
+  function heldEnvelopePeers(rootByte: number): PeerIdStr[] {
+    const messages = (
+      processor as unknown as {
+        awaitingMessagesByBlockRoot: MapDef<string, MapDef<GossipType, Set<PendingGossipsubMessage>>>;
+      }
+    ).awaitingMessagesByBlockRoot
+      .get(`0x${rootByte.toString(16).padStart(2, "0").repeat(32)}`)
+      ?.get(GossipType.execution_payload);
+    return Array.from(messages ?? [], (message) => message.propagationSource);
   }
 
   function bufferedBlockCount(): number {
@@ -257,14 +270,82 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       // can't push genuine columns out (a missing column would block import), then stop
       expect(bufferedBlockCount()).toBe(MAX_DATA_COLUMN_PER_ROOT);
     });
+  });
 
-    it("holds a limited number of execution payloads for one block", () => {
-      for (let i = 0; i < MAX_EXECUTION_PAYLOAD_PER_ROOT + 2; i++) {
-        processExecutionPayload();
+  // An envelope can arrive before its block, and until the block is known anyone can send one claiming any root.
+  // Junk must not be able to keep the real envelope out of the buffer.
+  describe("execution payload envelopes that arrive before their block", () => {
+    const attacker = "16Uiu2HAmAttacker" as PeerIdStr;
+    const honest = "16Uiu2HAmHonest" as PeerIdStr;
+
+    it("holds the real envelope after one peer sent junk for the same block", () => {
+      processExecutionPayload(0xdd, attacker);
+      processExecutionPayload(0xdd, attacker);
+      processExecutionPayload(0xdd, honest);
+      expect(heldEnvelopePeers(0xdd)).toEqual([attacker, honest]);
+    });
+
+    it("holds the real envelope after junk for other blocks filled the slot's root budget", () => {
+      for (let i = 1; i <= MAX_BUFFERED_ROOTS_PER_SLOT; i++) {
+        processAggregate(i);
+        processExecutionPayload(0x10 + i, attacker);
       }
-      // a block has exactly one genuine payload; we keep one extra slot so a malformed front-runner
-      // doesn't push the genuine payload out, then drop further messages
-      expect(bufferedBlockCount()).toBe(MAX_EXECUTION_PAYLOAD_PER_ROOT);
+      processExecutionPayload(0xdd, honest);
+      expect(heldEnvelopePeers(0xdd)).toEqual([honest]);
+    });
+
+    it("evicts the oldest envelope when full, so pushing one out takes that many peers sending after it", () => {
+      for (let i = 0; i < MAX_EARLY_ENVELOPES; i++) {
+        processExecutionPayload(0x10, `16Uiu2HAmEarly${i}` as PeerIdStr);
+      }
+      processExecutionPayload(0xdd, honest);
+      expect(bufferedBlockCount()).toBe(MAX_EARLY_ENVELOPES);
+      expect(heldEnvelopePeers(0x10)).not.toContain("16Uiu2HAmEarly0");
+
+      for (let i = 0; i < MAX_EARLY_ENVELOPES - 1; i++) {
+        processExecutionPayload(0x20, `16Uiu2HAmLate${i}` as PeerIdStr);
+      }
+      expect(heldEnvelopePeers(0xdd)).toEqual([honest]);
+      processExecutionPayload(0x20, "16Uiu2HAmLateLast" as PeerIdStr);
+      expect(heldEnvelopePeers(0xdd)).toEqual([]);
+      expect(bufferedBlockCount()).toBe(MAX_EARLY_ENVELOPES);
+    });
+
+    it("holds one envelope per peer per clock slot", () => {
+      processExecutionPayload(0x10, attacker);
+      processExecutionPayload(0x20, attacker);
+      expect(bufferedBlockCount()).toBe(1);
+
+      (processor as unknown as {onClockSlot: (slot: number) => void}).onClockSlot(clockSlot + 1);
+      processExecutionPayload(0x20, attacker);
+      expect(bufferedBlockCount()).toBe(2);
+    });
+
+    it("frees the entries of envelopes released by a block import or expired", () => {
+      const pushSpy = vi
+        .spyOn(
+          processor as unknown as {pushPendingGossipsubMessageToQueue: () => void},
+          "pushPendingGossipsubMessageToQueue"
+        )
+        .mockImplementation(() => {});
+      const earlyEnvelopes = (processor as unknown as {earlyEnvelopes: Map<PendingGossipsubMessage, string>})
+        .earlyEnvelopes;
+      processExecutionPayload(0xdd, honest);
+      processExecutionPayload(0xee, attacker);
+
+      emitter.emit(routes.events.EventType.block, {
+        slot: clockSlot,
+        block: `0x${"dd".repeat(32)}`,
+        executionOptimistic: false,
+      });
+      expect(pushSpy).toHaveBeenCalledTimes(1);
+      expect(earlyEnvelopes.size).toBe(1);
+
+      (processor as unknown as {onClockSlot: (slot: number) => void}).onClockSlot(
+        clockSlot + MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE
+      );
+      expect(earlyEnvelopes.size).toBe(0);
+      expect(bufferedBlockCount()).toBe(0);
     });
   });
 

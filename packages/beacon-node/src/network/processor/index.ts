@@ -86,9 +86,15 @@ export const MAX_SEARCHED_ROOTS_PER_SLOT = 32;
  */
 export const MAX_AWAITING_MESSAGES_PER_ROOT: Partial<Record<GossipType, number>> = {
   [GossipType.data_column_sidecar]: 2 * NUMBER_OF_COLUMNS,
-  [GossipType.execution_payload]: 2,
   [GossipType.execution_payload_bid]: 8,
 };
+
+/**
+ * Envelopes that arrive before their block wait in one FIFO across all roots instead of the per-root and per-slot
+ * caps. The oldest entry is evicted when full, so junk parked ahead of the real envelope goes first. Each peer gets
+ * one entry per clock slot, so pushing out a real envelope takes this many other peers sending after it.
+ */
+export const MAX_EARLY_ENVELOPES = 16;
 
 /**
  * Track the forwarded peers we already emit to UnknownBlockInput sync.
@@ -175,6 +181,14 @@ export enum ReprocessRejectReason {
    * Too many gossip messages are already buffered for this (root, topic) (MAX_AWAITING_MESSAGES_PER_ROOT).
    */
   reached_topic_limit = "reached_topic_limit",
+  /**
+   * The peer already has an envelope buffered in this clock slot (MAX_EARLY_ENVELOPES).
+   */
+  reached_peer_limit = "reached_peer_limit",
+  /**
+   * The oldest early envelope was evicted to make room for a new one (MAX_EARLY_ENVELOPES).
+   */
+  evicted = "evicted",
   /**
    * The awaiting gossip message is pruned per clock slot.
    */
@@ -275,6 +289,10 @@ export class NetworkProcessor {
     () => new MapDef<RootHex, SearchedRootEntry>(() => ({}))
   );
   private bufferedRootsBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
+  /** Envelopes waiting for their block, in eviction order. Also held in awaitingMessagesByBlockRoot */
+  private readonly earlyEnvelopes = new Map<PendingGossipsubMessage, RootHex>();
+  /** Peers that already had an early envelope buffered in the current clock slot */
+  private readonly earlyEnvelopePeers = new Set<PeerIdStr>();
   /** peer -> clock slot when it was Fatal'ed */
   private readonly fatalPeers = new Map<PeerIdStr, Slot>();
 
@@ -360,6 +378,8 @@ export class NetworkProcessor {
     this.awaitingPayloadMessageCount = 0;
     this.searchedRootsBySlot.clear();
     this.bufferedRootsBySlot.clear();
+    this.earlyEnvelopes.clear();
+    this.earlyEnvelopePeers.clear();
     this.fatalPeers.clear();
   }
 
@@ -685,6 +705,7 @@ export class NetworkProcessor {
    * - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE: message slot already pruned by onClockSlot, so not bounded by the per-slot root budget
    * - MAX_BUFFERED_ROOTS_PER_SLOT: distinct roots we buffer messages for, per slot
    * - MAX_AWAITING_MESSAGES_PER_ROOT[topic]: messages buffered per (root, topic)
+   * Envelopes skip the last two caps and use the MAX_EARLY_ENVELOPES FIFO instead.
    */
   private maybeAwaitBlock(root: RootHex, topicType: GossipType, slot: Slot, message: PendingGossipsubMessage): void {
     const metric = this.metrics?.awaitingBlockGossipMessages;
@@ -695,6 +716,29 @@ export class NetworkProcessor {
     }
     if (slot <= this.chain.clock.currentSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE) {
       metric?.reject.inc({reason: ReprocessRejectReason.expired, topic: topicType});
+      return;
+    }
+    if (topicType === GossipType.execution_payload) {
+      if (this.earlyEnvelopePeers.has(message.propagationSource)) {
+        metric?.reject.inc({reason: ReprocessRejectReason.reached_peer_limit, topic: topicType});
+        return;
+      }
+      this.earlyEnvelopePeers.add(message.propagationSource);
+      if (this.earlyEnvelopes.size >= MAX_EARLY_ENVELOPES) {
+        const [oldest, oldestRoot] = this.earlyEnvelopes.entries().next().value as [PendingGossipsubMessage, RootHex];
+        this.earlyEnvelopes.delete(oldest);
+        const oldestByTopic = this.awaitingMessagesByBlockRoot.get(oldestRoot);
+        if (oldestByTopic?.get(topicType)?.delete(oldest)) {
+          this.awaitingBlockMessageCount--;
+          if (oldestByTopic.get(topicType)?.size === 0) oldestByTopic.delete(topicType);
+          if (oldestByTopic.size === 0) this.awaitingMessagesByBlockRoot.delete(oldestRoot);
+        }
+        metric?.reject.inc({reason: ReprocessRejectReason.evicted, topic: topicType});
+      }
+      metric?.queue.inc({topic: topicType});
+      this.earlyEnvelopes.set(message, root);
+      this.awaitingMessagesByBlockRoot.getOrDefault(root).getOrDefault(topicType).add(message);
+      this.awaitingBlockMessageCount++;
       return;
     }
     // per-(root, topic) message cap: e.g. <= NUMBER_OF_COLUMNS columns per root
@@ -816,6 +860,9 @@ export class NetworkProcessor {
     if (this.awaitingMessagesByBlockRoot.delete(rootHex)) {
       this.awaitingBlockMessageCount -= total;
     }
+    for (const message of messagesByTopic.get(GossipType.execution_payload) ?? []) {
+      this.earlyEnvelopes.delete(message);
+    }
 
     const generation = this.jobGeneration;
     const nowSec = Date.now() / 1000;
@@ -900,6 +947,7 @@ export class NetworkProcessor {
             // msgSlot is always set before buffering, a missing one expires rather than leaks
             if ((message.msgSlot ?? minSlot) > minSlot) continue;
             messages.delete(message);
+            this.earlyEnvelopes.delete(message);
             this.awaitingBlockMessageCount--;
             const topicType = message.topic.type;
             this.metrics?.awaitingBlockGossipMessages.reject.inc({
@@ -945,6 +993,25 @@ export class NetworkProcessor {
       }
 
       this.bufferedRootsBySlot.delete(slot);
+    }
+
+    this.earlyEnvelopePeers.clear();
+    for (const [message, rootHex] of this.earlyEnvelopes) {
+      // msgSlot is always set before buffering, a missing one expires rather than leaks
+      if ((message.msgSlot ?? minSlot) > minSlot) continue;
+      this.earlyEnvelopes.delete(message);
+      const messagesByTopic = this.awaitingMessagesByBlockRoot.get(rootHex);
+      const topicType = message.topic.type;
+      if (messagesByTopic?.get(topicType)?.delete(message)) {
+        this.awaitingBlockMessageCount--;
+        if (messagesByTopic.get(topicType)?.size === 0) messagesByTopic.delete(topicType);
+        if (messagesByTopic.size === 0) this.awaitingMessagesByBlockRoot.delete(rootHex);
+      }
+      this.metrics?.awaitingBlockGossipMessages.reject.inc({topic: topicType, reason: ReprocessRejectReason.expired});
+      this.metrics?.awaitingBlockGossipMessages.waitSecBeforeReject.set(
+        {topic: topicType, reason: ReprocessRejectReason.expired},
+        nowSec - message.seenTimestampSec
+      );
     }
 
     // A slot's search budget lives as long as gossip accepts messages for it, a pruned budget would start over
