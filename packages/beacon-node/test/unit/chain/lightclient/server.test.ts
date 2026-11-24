@@ -15,7 +15,7 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {BeaconStateGloas, createBeaconStateView, isStatePostAltair} from "@lodestar/state-transition";
-import {LightClientUpdate, gloas, ssz} from "@lodestar/types";
+import {LightClientUpdate, altair, gloas, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {
   LightClientServer,
@@ -124,7 +124,7 @@ describe("Gloas light client server", () => {
 
       const attestedData = server["prevHeadData"].get(toRootHex(blockRoot));
       if (!attestedData) throw Error("Expected the native finalized checkpoint proof");
-      await server["maybeStoreNewBestUpdate"](0, ssz.altair.SyncAggregate.defaultValue(), block.slot + 1, attestedData);
+      await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), block.slot + 1, attestedData);
       const update = await db.bestLightClientUpdate.get(0);
       if (!update) throw Error("Expected a persisted light-client update");
       expect(() => ssz.gloas.LightClientUpdate.serialize(update as gloas.LightClientUpdate)).not.toThrow();
@@ -228,8 +228,8 @@ describe("Gloas light client server", () => {
       finalityBranch: zeroBranch(FINALIZED_ROOT_DEPTH_GLOAS),
     };
 
-    await server["maybeStoreNewBestUpdate"](0, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
-    await server["maybeStoreNewBestUpdate"](0, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
+    await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
+    await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
 
     expect(putBestUpdate).toHaveBeenCalledTimes(2);
     const update = putBestUpdate.mock.calls[0][1] as gloas.LightClientUpdate;
@@ -248,7 +248,7 @@ describe("Gloas light client server", () => {
 
     const attestedHeader = ssz.gloas.LightClientHeader.defaultValue();
     attestedHeader.beacon.slot = gloasSlot;
-    await server["maybeStoreNewBestUpdate"](0, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, {
+    await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, {
       attestedHeader,
       blockRoot: new Uint8Array(32),
       finalizedCheckpoint: {epoch: 0, root: new Uint8Array(32)},
@@ -266,7 +266,7 @@ describe("Gloas light client server", () => {
 
     const attestedHeader = ssz.gloas.LightClientHeader.defaultValue();
     attestedHeader.beacon.slot = gloasSlot;
-    await server["maybeStoreNewBestUpdate"](0, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, {
+    await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, {
       attestedHeader,
       blockRoot: new Uint8Array(32),
       finalizedCheckpoint: {epoch: 1, root: new Uint8Array(32).fill(0xcc)},
@@ -313,4 +313,15 @@ function createServerForFinalityTest(): {
     }
   );
   return {server, putBestUpdate};
+}
+
+async function storeBestUpdate(
+  server: LightClientServer,
+  syncAggregate: altair.SyncAggregate,
+  signatureSlot: number,
+  attestedData: SyncAttestedData
+): Promise<void> {
+  const built = await server["buildUpdate"](attestedData, syncAggregate, signatureSlot);
+  if (!built) throw Error("Expected a built light-client update");
+  await server["maybeStoreNewBestUpdate"](0, built);
 }

@@ -554,7 +554,9 @@ export class LightClientServer {
 
     // Check if this update is better, otherwise ignore
     try {
-      await this.maybeStoreNewBestUpdate(syncPeriod, syncAggregate, signatureSlot, attestedData);
+      if (builtUpdate) {
+        await this.maybeStoreNewBestUpdate(syncPeriod, builtUpdate);
+      }
     } catch (e) {
       this.logger.error(
         "Error updating best LightClientUpdate",
@@ -570,15 +572,8 @@ export class LightClientServer {
    */
   private async maybeStoreNewBestUpdate(
     syncPeriod: SyncPeriod,
-    syncAggregate: altair.SyncAggregate,
-    signatureSlot: Slot,
-    attestedData: SyncAttestedData
+    built: {update: LightClientUpdate; summary: LightClientUpdateSummary}
   ): Promise<void> {
-    const built = await this.buildUpdate(attestedData, syncAggregate, signatureSlot);
-    if (!built) {
-      return;
-    }
-
     const prevBestUpdate = await this.db.bestLightClientUpdate.get(syncPeriod);
     if (prevBestUpdate && !isBetterUpdate(built.summary, toLightClientUpdateSummary(prevBestUpdate))) {
       this.metrics?.lightclientServer.updateNotBetter.inc();
@@ -592,7 +587,7 @@ export class LightClientServer {
     this.logger.debug("Stored new PartialLightClientUpdate", {
       syncPeriod,
       isFinalized: built.summary.isFinalityUpdate,
-      participation: sumBits(syncAggregate.syncCommitteeBits) / SYNC_COMMITTEE_SIZE,
+      participation: sumBits(built.update.syncAggregate.syncCommitteeBits) / SYNC_COMMITTEE_SIZE,
     });
 
     // Count total persisted updates per type. DB metrics don't diff between each type.
