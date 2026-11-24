@@ -96,10 +96,8 @@ export function getBlockSignatureSets(
     const {payloadAttestations, signedExecutionPayloadBid} = (signedBlock as gloas.SignedBeaconBlock).message.body;
 
     const {builderIndex} = signedExecutionPayloadBid.message;
-    // `state` may be the pre-state of an earlier block of the same epoch. That is still the right pubkey:
-    // `is_active_builder` requires `deposit_epoch < finalized_checkpoint.epoch`, and a builder index is only
-    // assigned or reassigned to a builder deposited in the current epoch, which block processing rejects as
-    // inactive. For the same reason a builder missing from `state` needs no signature set.
+    // `state` may be the pre-state of an earlier block in the epoch. An active builder was deposited before the
+    // finalized epoch, so `state` already has its pubkey. Block processing rejects a bid from any other builder.
     if (builderIndex !== BUILDER_INDEX_SELF_BUILD && builderIndex < gloasState.getBuildersLength()) {
       signatureSets.push(
         createSingleSignatureSetFromComponents(
