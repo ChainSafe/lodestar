@@ -898,7 +898,11 @@ export class NetworkProcessor {
     const topicType = GossipType.data_column_sidecar;
     // The check runs before any queue, so bound it: a peer forwards at most one column per index for a block
     const checks = this.earlyColumnChecksByPeer.get(message.propagationSource) ?? 0;
-    if (checks >= NUMBER_OF_COLUMNS) {
+    const {maxGossipTopicConcurrency} = this.opts;
+    if (
+      checks >= NUMBER_OF_COLUMNS ||
+      (maxGossipTopicConcurrency !== undefined && this.gossipTopicConcurrency[topicType] > maxGossipTopicConcurrency)
+    ) {
       this.maybeAwaitBlock(root, topicType, slot, message);
       return;
     }
@@ -906,6 +910,7 @@ export class NetworkProcessor {
 
     const generation = this.jobGeneration;
     let index: number | null = null;
+    this.gossipTopicConcurrency[topicType]++;
     try {
       const dataColumnSidecar = ssz.gloas.DataColumnSidecar.deserialize(message.msg.data);
       await validateEarlyGloasDataColumnSidecar(this.chain, block, dataColumnSidecar, subnet, this.metrics);
@@ -931,6 +936,8 @@ export class NetworkProcessor {
         return;
       }
       // malformed or not checkable yet, gossip validation decides once the block is imported
+    } finally {
+      this.gossipTopicConcurrency[topicType]--;
     }
     if (generation !== this.jobGeneration) return;
 

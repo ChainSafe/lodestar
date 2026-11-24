@@ -574,6 +574,21 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       expect(verifiedEarlyColumns().size).toBe(0);
     });
 
+    it("sends columns to the buffer caps unchecked while the topic is at its concurrency limit", async () => {
+      const internals = processor as unknown as {
+        opts: {maxGossipTopicConcurrency?: number};
+        gossipTopicConcurrency: Record<GossipType, number>;
+      };
+      internals.opts.maxGossipTopicConcurrency = 0;
+      internals.gossipTopicConcurrency[GossipType.data_column_sidecar] = 1;
+      const junk = ssz.gloas.DataColumnSidecar.clone(columns[0]);
+      junk.kzgProofs = junk.kzgProofs.map((proof) => proof.map((b) => b ^ 1));
+      processColumn(junk, attacker);
+      await settle();
+      expect(reportPeerSpy).not.toHaveBeenCalled();
+      expect(bufferedBlockCount()).toBe(1);
+    });
+
     it("sends columns past the per-peer check budget to the buffer caps unchecked", async () => {
       (processor as unknown as {earlyColumnChecksByPeer: Map<PeerIdStr, number>}).earlyColumnChecksByPeer.set(
         attacker,
