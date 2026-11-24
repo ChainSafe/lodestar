@@ -1471,9 +1471,10 @@ export class BeaconChain implements IBeaconChain {
 
   /**
    * Emit `head` and `head_v2` when the fork choice head differs between two observations. Every caller that
-   * can move the head, `updateAndGetHead()` and `updateTime()`, must capture the head before and pass both.
+   * can move the head, `updateAndGetHead()`, `updateTime()` and `onExecutionPayload()`, must capture the head before
+   * and pass both.
    */
-  private emitHeadEvents(prevHead: ProtoBlock, head: ProtoBlock): void {
+  emitHeadEvents(prevHead: ProtoBlock, head: ProtoBlock): void {
     const headRootChanged = head.blockRoot !== prevHead.blockRoot;
 
     if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) {

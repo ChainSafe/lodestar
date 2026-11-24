@@ -115,7 +115,7 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
  * 3. Regenerate state for envelope verification
  * 4. Verify envelope (fields against state, signature, and EL in parallel where possible)
  * 5. Persist verified payload envelope to hot DB (waits for write-queue space for backpressure)
- * 6. Update fork choice (transitions the block's PENDING variant to FULL)
+ * 6. Update fork choice (transitions the block's PENDING variant to FULL) and emit head events if the head changed
  * 7. Queue notifyForkchoiceUpdate to engine api
  * 8. Record metrics for payload envelope and column sources
  * 9. Emit `execution_payload` event
@@ -337,6 +337,7 @@ export async function importExecutionPayload(
 
   // 6. Update fork choice, transitions the block's PENDING variant to FULL
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
+  const prevHead = this.forkChoice.getHead();
   try {
     this.forkChoice.onExecutionPayload(
       blockRootHex,
@@ -357,9 +358,13 @@ export async function importExecutionPayload(
     }
     throw e;
   }
+  const head = this.forkChoice.getHead();
+  this.emitHeadEvents(prevHead, head);
+  if (head.blockRoot !== prevHead.blockRoot) {
+    this.onHeadChanged(prevHead, head);
+  }
 
   // 7. Queue notifyForkchoiceUpdate to engine api
-  const head = this.forkChoice.getHead();
   if (
     !this.opts.disableImportExecutionFcU &&
     blockRootHex === head.blockRoot &&
