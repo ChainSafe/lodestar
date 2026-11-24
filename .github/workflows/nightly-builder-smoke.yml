@@ -103,10 +103,14 @@ jobs:
           # the beacon node of the validators must have requested bids from the builder API
           # and forwarded the signed blocks that selected them
           SERVED="$(metric 'bc_builder_api_bid_requests_total{result="served"}')"
+          REJECTED="$(metric 'bc_builder_api_bid_requests_total{result="rejected"}')"
           SUBMISSIONS="$(metric 'bc_builder_api_block_submissions_total')"
-          echo "api_bids_served=${SERVED:-0} api_block_submissions=${SUBMISSIONS:-0}"
+          echo "api_bids_served=${SERVED:-0} api_bids_rejected=${REJECTED:-0} api_block_submissions=${SUBMISSIONS:-0}"
           if [ "${SERVED:-0}" -lt 1 ] || [ "${SUBMISSIONS:-0}" -lt 1 ]; then
             echo "builder API was not used by the proposers"; exit 1
+          fi
+          if [ "${REJECTED:-0}" -ne 0 ]; then
+            echo "builder API rejected requests of the proposers"; exit 1
           fi
 
           echo "smoke check passed"
