@@ -1875,6 +1875,37 @@ describe("UnknownBlockSync", () => {
       }
     });
 
+    it("reconstructs instead of waiting when the peer with the remaining columns is rate limited", async () => {
+      const [firstPeer, secondPeer] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const {svc, emitter, processBlock, triggerColumnReconstruction, sendDataColumnSidecarsByRoot} =
+        setupSupernodeSyncTest(
+          block,
+          columns,
+          new Map([
+            [firstPeer, firstHalf],
+            [secondPeer, secondHalf],
+          ])
+        );
+      const serveColumns = sendDataColumnSidecarsByRoot.getMockImplementation();
+      sendDataColumnSidecarsByRoot.mockImplementation(async (peerId, request) => {
+        if (peerId === secondPeer) {
+          throw new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs: Date.now() + 10_000});
+        }
+        return serveColumns ? serveColumns(peerId, request) : [];
+      });
+
+      try {
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: firstPeer, source: BlockInputSource.gossip});
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+
+        expect(sendDataColumnSidecarsByRoot.mock.calls.map(([peer]) => peer)).toEqual([firstPeer, secondPeer]);
+        expect(triggerColumnReconstruction).toHaveBeenCalledExactlyOnceWith(processBlock.mock.calls[0][0]);
+      } finally {
+        svc.close();
+      }
+    });
+
     it("reconstructs the columns no peer can serve once half of them are downloaded", async () => {
       const peer = await getRandPeerIdStr();
       const {block, rootHex, columns} = generateFuluBlock();
