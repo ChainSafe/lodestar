@@ -391,6 +391,18 @@ describe("Builder", () => {
       expect(logger.warn).toHaveBeenCalledOnce();
     });
 
+    it("does not warn again after a reconnect while payload attributes are still missing", () => {
+      new Builder(modules);
+      const {onEvent, onOpen} = api.events.eventstream.mock.calls[0][0];
+
+      for (let slot = 1; slot <= 3; slot++) onEvent(headEvent(slot));
+      expect(logger.warn).toHaveBeenCalledOnce();
+
+      onOpen?.();
+      for (let slot = 4; slot <= 9; slot++) onEvent(headEvent(slot));
+      expect(logger.warn).toHaveBeenCalledOnce();
+    });
+
     it("warns again if payload attributes stop after they were received", () => {
       vi.spyOn(modules.bidder, "onPayloadAttributes").mockResolvedValue();
       new Builder(modules);

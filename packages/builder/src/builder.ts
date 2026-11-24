@@ -92,6 +92,8 @@ export class Builder {
   private readonly revealer: Revealer;
   private latestHeadSlot: Slot | null = null;
   private headSlotsWithoutPayloadAttributes = 0;
+  /** Set once warned about missing payload attributes, until payload attributes are received again */
+  private missingPayloadAttributesWarned = false;
 
   constructor({
     opts,
@@ -336,6 +338,7 @@ export class Builder {
           break;
         case routes.events.EventType.payloadAttributes:
           this.headSlotsWithoutPayloadAttributes = 0;
+          this.missingPayloadAttributesWarned = false;
           await this.bidder.onPayloadAttributes(event.message);
           break;
       }
@@ -351,9 +354,9 @@ export class Builder {
   }
 
   /**
-   * Counts the slots with a timely head announced since the last payload attributes. A beacon node emitting them for every
-   * slot keeps the count at 0 or 1, the attributes for the next slot follow each head. Head events prove the event
-   * stream is delivering, the builder is not just starting up or disconnected.
+   * Counts the slots with a timely head announced since the last payload attributes. A beacon node emitting them
+   * for every slot keeps the count at 0 or 1, the attributes for the next slot follow each head. Head events prove
+   * the event stream is delivering, the builder is not just starting up or disconnected.
    */
   private checkPayloadAttributesEmitted(headSlot: Slot): void {
     // A beacon node that is catching up announces heads of past slots in a burst, payload attributes are only
@@ -363,7 +366,12 @@ export class Builder {
     if (this.latestHeadSlot !== null && headSlot <= this.latestHeadSlot) return;
     this.latestHeadSlot = headSlot;
 
-    if (++this.headSlotsWithoutPayloadAttributes === MISSING_PAYLOAD_ATTRIBUTES_WARN_SLOTS) {
+    // The count starts again when the event stream reconnects, only warn once until payload attributes are received
+    if (
+      ++this.headSlotsWithoutPayloadAttributes >= MISSING_PAYLOAD_ATTRIBUTES_WARN_SLOTS &&
+      !this.missingPayloadAttributesWarned
+    ) {
+      this.missingPayloadAttributesWarned = true;
       this.logger.warn("Beacon node is not emitting payload attributes, ensure it runs with --emitPayloadAttributes", {
         headSlot,
         slotsWithoutPayloadAttributes: this.headSlotsWithoutPayloadAttributes,
