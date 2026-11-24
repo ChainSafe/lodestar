@@ -165,6 +165,8 @@ export class NativeForkChoice implements IForkChoice {
   private parentNodes: (number | undefined)[] = [];
   private blockIndexByRoot = new Map<RootHex, number>();
   private head: ProtoBlock;
+  /** Slot of the last `updateHead()`, as `ForkChoice.updateHeadSlot` */
+  private updateHeadSlot = 0;
   private pruneThreshold = DEFAULT_PRUNE_THRESHOLD;
   private previousProposerBoostRoot: RootHex = HEX_ZERO_HASH;
   private queuedAttestationsPreviousSlot = 0;
@@ -267,11 +269,9 @@ export class NativeForkChoice implements IForkChoice {
 
   updateHead(): ProtoBlock {
     this.previousProposerBoostRoot = this.getProposerBoostRoot();
-    const head = this.nodes[this.store.getHead()];
-    if (head === undefined) {
-      throw Error("Native fork choice head has no block summary");
-    }
+    const head = this.storeHead();
     this.head = head;
+    this.updateHeadSlot = this.fcStore.currentSlot;
 
     const computeDeltasMetrics = this.metrics?.forkChoice.computeDeltas;
     if (computeDeltasMetrics) {
@@ -975,22 +975,27 @@ export class NativeForkChoice implements IForkChoice {
         },
       });
     }
-    if (this.nodes[blockIndex * 3 + SPEC_FULL] !== undefined) {
-      return;
+    if (this.nodes[blockIndex * 3 + SPEC_FULL] === undefined) {
+      this.mutated();
+      this.store.onExecutionPayload(fromHex(blockRoot), EXECUTION_STATUS_TO_NATIVE[executionStatus]);
+      this.nodes[blockIndex * 3 + SPEC_FULL] = {
+        ...pendingNode,
+        payloadStatus: PayloadStatus.FULL,
+        executionStatus,
+        executionPayloadBlockHash,
+        executionPayloadNumber,
+        executionPayloadGasLimit,
+        dataAvailabilityStatus,
+      };
+      this.refreshExecutionStatuses();
     }
 
-    this.mutated();
-    this.store.onExecutionPayload(fromHex(blockRoot), EXECUTION_STATUS_TO_NATIVE[executionStatus]);
-    this.nodes[blockIndex * 3 + SPEC_FULL] = {
-      ...pendingNode,
-      payloadStatus: PayloadStatus.FULL,
-      executionStatus,
-      executionPayloadBlockHash,
-      executionPayloadNumber,
-      executionPayloadGasLimit,
-      dataAvailabilityStatus,
-    };
-    this.refreshExecutionStatuses();
+    // Unlike ForkChoice, a same-slot refresh also counts the votes received since the last updateHead()
+    if (this.fcStore.currentSlot === this.updateHeadSlot) {
+      this.head = this.storeHead();
+    } else {
+      this.updateHead();
+    }
   }
 
   validateLatestHash(execResponse: LVHExecResponse): LVHVerdictResult {
@@ -1576,6 +1581,14 @@ export class NativeForkChoice implements IForkChoice {
       if (node !== undefined) count++;
     }
     return count;
+  }
+
+  private storeHead(): ProtoBlock {
+    const head = this.nodes[this.store.getHead()];
+    if (head === undefined) {
+      throw Error("Native fork choice head has no block summary");
+    }
+    return head;
   }
 
   private mutated(): void {
