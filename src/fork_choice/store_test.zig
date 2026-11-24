@@ -1495,3 +1495,21 @@ test "unfinalized anchor: a zero latest valid hash does not reach the ancestors"
     try testing.expectEqual(VerdictResult.unusable_lvh, try store.onPayloadInvalid(tagRoot(0x21), tagHash(0x21), ZERO, .child_payload));
     try testing.expectEqual(pendingOf(&store, 0x21), try store.getHead());
 }
+
+test "unfinalized anchor: an invalid verdict does not reach the anchor's payload" {
+    const allocator = testing.allocator;
+    const config = &@import("config").mainnet.config;
+    const anchor = unfinalizedSummary(.{ .tag = 1, .parent = 0x0b, .slot = unfinalized_anchor_slot });
+    var store = try Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &unfinalized_ancestors, Provider.stateProvider());
+    defer store.deinit();
+
+    try store.onTick(store.timing.timeAtSlotMs(unfinalized_anchor_slot + 2));
+    try testing.expectEqual(VerdictResult.nothing_to_invalidate, try store.onPayloadInvalid(tagRoot(1), tagHash(1), null, .from_block));
+    try testing.expectEqual(pendingOf(&store, 1), try store.getHead());
+
+    // A descendant's payload is still invalidated, and the head falls back to the anchor
+    try store.onBlockSummary(unfinalizedSummary(.{ .tag = 0x20, .parent = 1, .slot = unfinalized_anchor_slot + 1 }));
+    try testing.expectEqual(VerdictResult.applied, try store.onPayloadInvalid(tagRoot(0x20), tagHash(0x20), null, .from_block));
+    try testing.expectEqual(ExecutionStatus.syncing, try store.executionStatus(pendingOf(&store, 1)));
+    try testing.expectEqual(pendingOf(&store, 1), try store.getHead());
+}

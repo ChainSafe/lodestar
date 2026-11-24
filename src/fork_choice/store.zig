@@ -1594,7 +1594,9 @@ pub const Store = struct {
                 break;
             };
             const conflict = statuses[block] != .syncing;
-            const protected = if (justified) |j| block < j or justified_hashes.contains(hashes[block]) else false;
+            // A stand-in justified block has no payloads, so its chain protects nothing above it
+            const protected = (self.anchor_ancestor_count > 0 and block <= self.anchor_ancestor_count) or
+                if (justified) |j| block < j or justified_hashes.contains(hashes[block]) else false;
             if (!conflict and !protected) continue;
             if (judged == .child_payload and conflict) return .contradiction;
             count = if (judged == .from_block) @min(i, 1) else i;

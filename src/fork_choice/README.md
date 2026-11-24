@@ -314,7 +314,9 @@ Behaviour that differs from proto-array under the flag:
   proto-array, the justified balances are the anchor state's. Unlike proto-array, those
   ancestors carry no payload, so the safe and finalized block hashes sent to the engine
   are zero until the safe and finalized blocks are ones the store imported, and the
-  payloads a node stands on end at the anchor.
+  payloads a node stands on end at the anchor. While they are in the store, an invalid
+  walk never reaches the anchor's payloads either: the justified block's chain protects
+  nothing above a stand-in.
 - `shouldOverrideForkChoiceUpdate` never overrides and `predictProposerHead` returns the
   head (see Deviations).
 - `prune` drops every block that does not descend from the finalized block, not only
