@@ -160,6 +160,7 @@ pub const processPayloadAttestation = @import("block/process_payload_attestation
 pub const processBuilderPendingPayments = @import("epoch/process_builder_pending_payments.zig").processBuilderPendingPayments;
 pub const processPtcWindow = @import("epoch/process_ptc_window.zig").processPtcWindow;
 pub const canBuilderCoverBid = @import("utils/gloas.zig").canBuilderCoverBid;
+pub const getBuilderBidLimit = @import("utils/gloas.zig").getBuilderBidLimit;
 pub const getPayloadTimelinessCommittee = @import("utils/gloas.zig").getPayloadTimelinessCommittee;
 
 pub const upgradeStateToGloas = @import("slot/upgrade_state_to_gloas.zig").upgradeStateToGloas;
