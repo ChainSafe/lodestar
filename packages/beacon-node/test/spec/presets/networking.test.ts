@@ -61,14 +61,11 @@ function runNetworkingFnTests(testHandler: string, testSuite: string, testSuiteD
 
 /** Matched against `<handler>/<testCase>` */
 const skippedGossipTests: RegExp[] = [
-  // Blocks that failed validation are not tracked, so the envelope is ignored as one for an unknown block
-  // instead of rejected
-  /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__reject_block_failed_validation$/,
   // The pinned vector predates consensus-specs#5821, its payload carries withdrawals the block's post-state
   // does not expect. Unskip with the next spec release.
   /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__valid_max_withdrawals$/,
   // The bid in this vector has a gas limit of 0, so the envelope is ignored by the transaction count bound
-  // before the empty transaction check rejects it. Not part of the pinned vectors yet.
+  // before the empty transaction check rejects it. Fixed by consensus-specs#5802, unskip once it is released.
   /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__reject_empty_transaction$/,
 ];
 
