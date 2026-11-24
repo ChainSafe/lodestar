@@ -1,20 +1,28 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
-import {createChainForkConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {IBeaconStateViewGloas} from "@lodestar/state-transition";
+import {IBeaconStateView, IBeaconStateViewGloas} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputColumns, BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode, PayloadErrorType} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {DataColumnSidecarErrorCode} from "../../../../src/chain/errors/index.js";
+import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
+import {Batch} from "../../../../src/sync/range/batch.js";
 import {SyncChain} from "../../../../src/sync/range/chain.js";
 import {RangeSync} from "../../../../src/sync/range/range.js";
+import {
+  DownloadByRangeErrorCode,
+  cacheByRangeResponses,
+  downloadByRange,
+} from "../../../../src/sync/utils/downloadByRange.js";
 import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
-import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {getMockedNetwork} from "../../../mocks/mockedNetwork.js";
 import {validPeerIdStr} from "../../../utils/peer.js";
 
@@ -29,6 +37,12 @@ vi.mock("../../../../src/sync/range/chain.js", () => ({
       startSyncing: vi.fn(),
     };
   }),
+}));
+
+vi.mock("../../../../src/sync/utils/downloadByRange.js", async (importActual) => ({
+  ...(await importActual<typeof import("../../../../src/sync/utils/downloadByRange.js")>()),
+  downloadByRange: vi.fn(),
+  cacheByRangeResponses: vi.fn(),
 }));
 
 describe("sync / range / per-block processing", () => {
@@ -194,3 +208,103 @@ describe.each([{disableProcessAsChainSegment: false}, {disableProcessAsChainSegm
     });
   }
 );
+
+describe("sync / range / column header signature mismatch", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each<{
+    verdict: string;
+    mockVerify: (verify: MockedBeaconChain["bls"]["verifySignatureSets"]) => void;
+    error: Record<string, unknown>;
+    removed: ("poisoned" | "sibling")[];
+  }>([
+    {
+      verdict: "valid",
+      mockVerify: (verify) => verify.mockResolvedValue(true),
+      error: {code: DataColumnSidecarErrorCode.INCORRECT_BLOCK},
+      removed: [],
+    },
+    {
+      verdict: "invalid",
+      mockVerify: (verify) => verify.mockResolvedValue(false),
+      error: {code: DownloadByRangeErrorCode.INVALID_CACHED_BLOCK, blockPeer: "attacker"},
+      removed: ["poisoned", "sibling"],
+    },
+    {
+      verdict: "unverifiable",
+      mockVerify: (verify) => verify.mockRejectedValue(new Error("no pubkey")),
+      error: {code: DownloadByRangeErrorCode.INVALID_CACHED_BLOCK, blockPeer: undefined},
+      removed: ["poisoned"],
+    },
+  ])("cached block signature $verdict", async ({verdict, mockVerify, error, removed}) => {
+    const forkConfig = createChainForkConfig({...config, FULU_FORK_EPOCH: 0});
+    const beaconConfig = createBeaconConfig(forkConfig, ZERO_HASH);
+    const chain = getMockedBeaconChain({config: beaconConfig});
+    chain.getHeadState.mockReturnValue({forkName: ForkName.fulu} as IBeaconStateView);
+    const rangeSync = new RangeSync({
+      chain,
+      network: getMockedNetwork(),
+      config: beaconConfig,
+      logger: chain.logger,
+      metrics: null,
+    });
+    const localStatus = ssz.fulu.Status.defaultValue();
+    rangeSync.addPeer(validPeerIdStr, localStatus, {...localStatus, finalizedEpoch: 1});
+    const {downloadByRange: downloadBatch} = vi.mocked(SyncChain).mock.calls[0][3];
+
+    function createBlockInput(slot: number, peerIdStr: string): BlockInputColumns {
+      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      return BlockInputColumns.createFromBlock({
+        block,
+        blockRootHex: toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message)),
+        forkName: ForkName.fulu,
+        daOutOfRange: false,
+        source: BlockInputSource.byRange,
+        seenTimestampSec: 0,
+        peerIdStr,
+        sampledColumns: [0],
+        custodyColumns: [0],
+      });
+    }
+    const poisoned = createBlockInput(1, "attacker");
+    const sibling = createBlockInput(2, "attacker");
+    const other = createBlockInput(3, "honest");
+    const columnSidecar = ssz.fulu.DataColumnSidecar.defaultValue();
+    columnSidecar.signedBlockHeader.signature = Buffer.alloc(96, 0xbb);
+
+    vi.mocked(downloadByRange).mockResolvedValue({result: {responses: {}, payloadEnvelopes: null}, warnings: null});
+    vi.mocked(cacheByRangeResponses).mockReturnValue({
+      blocks: [poisoned, sibling, other],
+      payloadEnvelopes: null,
+      signatureMismatch: {blockInput: poisoned, columnSidecar},
+    });
+    chain.seenBlockInputCache.get.mockImplementation((root) =>
+      [poisoned, sibling, other].find((b) => b.blockRootHex === root)
+    );
+    mockVerify(chain.bls.verifySignatureSets);
+
+    const batch = {
+      getBlocks: () => [],
+      getRequestsForPeer: () => ({}),
+      getPayloadEnvelopes: () => null,
+    } as unknown as Batch;
+    const peer = {peerId: "honest", client: "lodestar", custodyColumns: []};
+
+    await expect(downloadBatch(peer, batch, RangeSyncType.Finalized)).rejects.toMatchObject({type: error});
+
+    if (verdict === "valid") {
+      expect(chain.seenBlockInputCache.markVerifiedProposerSignature).toHaveBeenCalledExactlyOnceWith(
+        poisoned.slot,
+        poisoned.blockRootHex,
+        poisoned.getBlock().signature
+      );
+    }
+    const removedRoots = {poisoned: poisoned.blockRootHex, sibling: sibling.blockRootHex};
+    expect(chain.seenBlockInputCache.remove.mock.calls.map(([root]) => root)).toEqual(
+      removed.map((name) => removedRoots[name])
+    );
+  });
+});
