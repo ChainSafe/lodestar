@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/native",
-  "version": "1.50.1",
+  "version": "2.0.0",
   "description": "Native consensus modules for Lodestar",
   "files": [
     "src/"
