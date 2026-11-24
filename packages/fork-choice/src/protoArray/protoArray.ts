@@ -711,8 +711,14 @@ export class ProtoArray {
       this.propagateValidExecutionStatusByIndex(pendingIndex);
     }
 
-    // Update bestChild for PENDING node (may now prefer FULL over EMPTY)
-    this.maybeUpdateBestChildAndDescendant(pendingIndex, fullIndex, currentSlot, proposerBoostRoot);
+    // A zero-weight leaf only changes best child and descendant links on its path to the root
+    let childIndex = fullIndex;
+    let parentIndex: number | undefined = pendingIndex;
+    while (parentIndex !== undefined) {
+      this.maybeUpdateBestChildAndDescendant(parentIndex, childIndex, currentSlot, proposerBoostRoot);
+      childIndex = parentIndex;
+      parentIndex = this.nodes[childIndex].parent;
+    }
   }
 
   /** Count blocks selected as FULL or EMPTY by the supplied head chain in the inclusive slot range. */

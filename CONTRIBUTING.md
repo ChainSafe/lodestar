@@ -121,7 +121,7 @@ Run the tests relevant to your changes, for example:
 
 ```sh
 zig build test:ssz
-zig build test:ssz -Dtest:ssz.filters="my full test name"
+zig build test:ssz -Dssz.filters="my full test name"
 zig fmt --check .
 zig build test:tidy
 ```

@@ -278,6 +278,21 @@ describe("NetworkProcessor: handling gossip that points at an unknown block", ()
       expect(unknownBlockRootSpy).toHaveBeenCalledTimes(MAX_SEARCHED_ROOTS_PER_SLOT);
     });
 
+    it("does not give an older slot a fresh lookup budget on the next slot", () => {
+      const oldSlot = clockSlot - 5;
+      for (let i = 1; i <= MAX_SEARCHED_ROOTS_PER_SLOT; i++) {
+        processAggregate(i, oldSlot);
+      }
+      expect(unknownBlockRootSpy).toHaveBeenCalledTimes(MAX_SEARCHED_ROOTS_PER_SLOT);
+
+      // gossip still accepts messages for the slot, so its budget must not start over
+      (processor as unknown as {onClockSlot: (slot: number) => void}).onClockSlot(clockSlot + 1);
+      for (let i = MAX_SEARCHED_ROOTS_PER_SLOT + 1; i <= 2 * MAX_SEARCHED_ROOTS_PER_SLOT; i++) {
+        processAggregate(i, oldSlot);
+      }
+      expect(unknownBlockRootSpy).toHaveBeenCalledTimes(MAX_SEARCHED_ROOTS_PER_SLOT);
+    });
+
     it("looks up a block only once, no matter how many messages point at it", () => {
       processAggregate(1);
       processAggregate(1); // another message for the same unknown block

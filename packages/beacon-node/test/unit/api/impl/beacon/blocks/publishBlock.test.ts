@@ -151,7 +151,40 @@ describe("api - beacon - publishBlockV2", () => {
       ).resolves.toBeUndefined();
 
       expect(validateGossipBlock).not.toHaveBeenCalled();
+      expect(modules.chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
       expect(modules.chain.processBlock).toHaveBeenCalledOnce();
+    });
+
+    it("does not publish a locally produced block with an invalid proposer signature", async () => {
+      const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+      const blockRoot = toRootHex(
+        modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+      );
+      const blockInput = BlockInputColumns.createFromBlock({
+        forkName: ForkName.fulu,
+        block: signedBlock,
+        blockRootHex: blockRoot,
+        source: BlockInputSource.api,
+        seenTimestampSec: 0,
+        daOutOfRange: false,
+        sampledColumns: [0],
+        custodyColumns: [0],
+      });
+      modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
+      modules.chain.blockProductionCache.set(blockRoot, {} as never);
+      modules.chain.bls.verifySignatureSets.mockResolvedValueOnce(false);
+
+      const api = getBeaconBlockApi(defaultApiOptions, modules);
+      await expect(
+        api.publishBlockV2({
+          signedBlockContents: {signedBlock},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).rejects.toMatchObject({type: {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID}});
+
+      expect(validateGossipBlock).not.toHaveBeenCalled();
+      expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+      expect(modules.chain.processBlock).not.toHaveBeenCalled();
     });
 
     it("rejects a repeat proposal", async () => {

@@ -180,3 +180,40 @@ pub const SignedBeaconBlock = ssz.VariableContainerType(struct {
 
 // Blob sidecar reuses Electra definition
 pub const BlobSidecar = electra.BlobSidecar;
+
+// Req/resp messages
+// =================
+
+pub const StatusV2 = ssz.FixedContainerType(struct {
+    fork_digest: p.ForkDigest,
+    finalized_root: p.Root,
+    finalized_epoch: p.Epoch,
+    head_root: p.Root,
+    head_slot: p.Slot,
+    earliest_available_slot: p.Slot,
+});
+
+pub const MetaDataV3 = ssz.FixedContainerType(struct {
+    seq_number: p.Uint64,
+    attnets: ssz.BitVectorType(c.ATTESTATION_SUBNET_COUNT),
+    syncnets: ssz.BitVectorType(c.SYNC_COMMITTEE_SUBNET_COUNT),
+    custody_group_count: p.Uint64,
+});
+
+pub const DataColumnSidecarsByRangeRequest = ssz.VariableContainerType(struct {
+    start_slot: p.Slot,
+    count: p.Uint64,
+    columns: DataColumnIndices,
+});
+
+pub const DataColumnsByRootIdentifiers = ssz.VariableListType(
+    DataColumnsByRootIdentifier,
+    c.MAX_REQUEST_BLOCKS_DENEB,
+);
+
+comptime {
+    const assert = @import("std").debug.assert;
+    assert(StatusV2.fixed_size == 92);
+    assert(MetaDataV3.fixed_size == 25);
+    assert(DataColumnSidecarsByRangeRequest.min_size == 20);
+}
