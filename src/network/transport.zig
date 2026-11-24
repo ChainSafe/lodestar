@@ -7,15 +7,15 @@ const multiaddr = @import("wire/multiaddr.zig");
 const peer_id = @import("wire/peer_id.zig");
 const tls = @import("tls/context.zig");
 const types = @import("types.zig");
-const Sockets = @import("udp").Sockets;
+const SocketPair = @import("udp").SocketPair;
 
 const assert = std.debug.assert;
 
 pub const Transport = struct {
     engine: Engine = undefined,
-    sockets: Sockets = .{},
+    sockets: SocketPair = .{},
     counters: Counters = .{},
-    send_drops: Sockets.SendDrops = .{},
+    send_drops: SocketPair.SendDrops = .{},
     work_limits: WorkLimits = .{},
     batch: SendBatch = .{},
     batch_len: u8 = 0,
@@ -23,11 +23,11 @@ pub const Transport = struct {
 
     pub const Options = struct {
         host: *const keys.KeyPair,
-        bind: Sockets.Bindings,
+        bind: SocketPair.Bindings,
         limits: Engine.Limits = .{},
         work_limits: WorkLimits = .{},
         /// Null keeps the system's default socket buffer sizes.
-        socket_buffers: ?Sockets.Buffers = null,
+        socket_buffers: ?SocketPair.Buffers = null,
     };
 
     pub const InitError = tls.Error || Engine.Error || std.Io.net.IpAddress.BindError ||
@@ -54,16 +54,16 @@ pub const Transport = struct {
     /// datagrams for segmentation offload; owners and budgets always count individual datagrams.
     pub const SendBatch = struct {
         buffers: [constants.send_batch_max][constants.datagram_size_max]u8 = undefined,
-        outgoing: [constants.send_batch_max]Sockets.Outgoing = undefined,
+        outgoing: [constants.send_batch_max]SocketPair.Outgoing = undefined,
         release_times: [constants.send_batch_max]u64 = undefined,
-        scratch: Sockets.BatchScratch = undefined,
+        scratch: SocketPair.BatchScratch = undefined,
         owners: [constants.send_batch_max]types.Handle = undefined,
     };
 
     pub const ReceiveBatch = struct {
-        buffers: [Sockets.receive_batch_max][constants.datagram_size_max]u8,
-        slots: [Sockets.receive_batch_max]Sockets.ReceiveSlot,
-        scratch: Sockets.ReceiveScratch,
+        buffers: [SocketPair.receive_batch_max][constants.datagram_size_max]u8,
+        slots: [SocketPair.receive_batch_max]SocketPair.ReceiveSlot,
+        scratch: SocketPair.ReceiveScratch,
     };
 
     /// Configured QUIC windows and packet batches, excluding native overhead.
@@ -74,8 +74,8 @@ pub const Transport = struct {
         receive_batch_storage_bytes: u64 = @sizeOf(ReceiveBatch),
     };
 
-    pub const AdvanceError = Sockets.DatagramError;
-    pub const DialError = Sockets.SendError || Engine.DialError || error{ DestinationUnreachable, MissingPeerId, SourceUnavailable };
+    pub const AdvanceError = SocketPair.DatagramError;
+    pub const DialError = SocketPair.SendError || Engine.DialError || error{ DestinationUnreachable, MissingPeerId, SourceUnavailable };
 
     pub const Progress = struct {
         now: Engine.Now,
@@ -126,7 +126,7 @@ pub const Transport = struct {
         var context = try tls.Context.init(options.host, now.unixSeconds(), serial);
         var context_owned = true;
         errdefer if (context_owned) context.deinit();
-        target.sockets = try Sockets.bind(io, options.bind);
+        target.sockets = try SocketPair.bind(io, options.bind);
         errdefer target.sockets.close(io);
         if (options.socket_buffers) |request| target.sockets.requestBuffersLogged(request, .network_quic);
         target.engine = try Engine.init(allocator, .{
@@ -213,7 +213,7 @@ pub const Transport = struct {
         self.engine.sent(handle.index, keyClock(io, now), drained);
         if (failure) |err| {
             _ = self.engine.abandon(handle);
-            return if (Sockets.destinationUnreachable(err)) error.DestinationUnreachable else err;
+            return if (SocketPair.destinationUnreachable(err)) error.DestinationUnreachable else err;
         }
         return handle;
     }
@@ -332,12 +332,12 @@ pub const Transport = struct {
 
     /// QUIC already accounts for produced packets as sent. Local pressure and transient routing failures on
     /// authenticated connections drop bytes for loss recovery; unreachable handshakes fail immediately.
-    fn submit(self: *Transport, io: std.Io, result: *Progress) ?Sockets.SendError {
+    fn submit(self: *Transport, io: std.Io, result: *Progress) ?SocketPair.SendError {
         const count = self.batch_len;
         if (count == 0) return null;
         defer self.batch_len = 0;
         if (builtin.mode == .Debug) assertReleased(io, self.batch.release_times[0..count]);
-        var first: ?Sockets.SendError = null;
+        var first: ?SocketPair.SendError = null;
         var begin: usize = 0;
         while (begin < count) {
             result.send_calls += 1;
@@ -350,7 +350,7 @@ pub const Transport = struct {
             result.datagrams_sent += @intCast(outcome.sent);
             begin += outcome.sent;
             const err = outcome.failure orelse break;
-            if (Sockets.SendDrops.Reason.fromError(err)) |reason| {
+            if (SocketPair.SendDrops.Reason.fromError(err)) |reason| {
                 for (self.batch.outgoing[begin..count]) |unsent| self.send_drops.add(reason, unsent.bytes.len);
                 break;
             }
@@ -358,7 +358,7 @@ pub const Transport = struct {
             const owner = self.batch.owners[begin];
             var end = begin + 1;
             while (end < count and std.meta.eql(self.batch.owners[end], owner)) : (end += 1) {}
-            if (Sockets.destinationUnreachable(err) and self.engine.peerId(owner) != null) {
+            if (SocketPair.destinationUnreachable(err) and self.engine.peerId(owner) != null) {
                 for (self.batch.outgoing[begin..end]) |unsent| self.send_drops.add(.destination_unreachable, unsent.bytes.len);
             } else {
                 first = first orelse err;
@@ -386,7 +386,7 @@ pub const Transport = struct {
             self.counters.receive_budget_exhausted +|= @intFromBool(count == self.work_limits.receive_per_turn_max);
         }
         while (count < self.work_limits.receive_per_turn_max) {
-            const room = @min(Sockets.receive_batch_max, self.work_limits.receive_per_turn_max - count);
+            const room = @min(SocketPair.receive_batch_max, self.work_limits.receive_per_turn_max - count);
             const slots = self.receive_batch.slots[0..room];
             for (slots, self.receive_batch.buffers[0..room]) |*slot, *buffer|
                 slot.* = .{ .buffer = buffer };
@@ -408,7 +408,7 @@ pub const Transport = struct {
         }
     }
 
-    fn receivePacket(self: *Transport, io: std.Io, result: *Progress, datagram: *const Sockets.Datagram) AdvanceError!void {
+    fn receivePacket(self: *Transport, io: std.Io, result: *Progress, datagram: *const SocketPair.Datagram) AdvanceError!void {
         result.datagrams_received += 1;
         // Version negotiation and retry replies use the idle send batch buffer.
         const outcome = self.engine.receive(datagram.bytes, &datagram.from, &datagram.to, result.now, &self.batch.buffers[0]);
@@ -441,9 +441,9 @@ pub const Transport = struct {
         }
     }
 
-    fn sendReply(self: *Transport, io: std.Io, destination: types.Address, from: types.Address, bytes: []const u8) Sockets.SendError!void {
+    fn sendReply(self: *Transport, io: std.Io, destination: types.Address, from: types.Address, bytes: []const u8) SocketPair.SendError!void {
         self.sockets.sendTo(io, destination, from, bytes, constants.datagram_size_max) catch |err| {
-            if (Sockets.SendDrops.Reason.fromError(err)) |reason| self.send_drops.add(reason, bytes.len);
+            if (SocketPair.SendDrops.Reason.fromError(err)) |reason| self.send_drops.add(reason, bytes.len);
             return err;
         };
         self.counters.sent_bytes +|= bytes.len;
