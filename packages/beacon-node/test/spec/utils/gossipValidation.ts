@@ -810,10 +810,6 @@ async function validateMessageForTopic(
       );
       const blockRootHex = toRootHex(signedEnvelope.message.beaconBlockRoot);
 
-      if (failedBlockRoots.has(blockRootHex)) {
-        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_BLOCK_FAILED_VALIDATION"});
-      }
-
       await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
       // Mirror gossip handler: attach the envelope so duplicate detection works
       chain.seenPayloadEnvelopeInputCache.get(blockRootHex)?.addPayloadEnvelope({
