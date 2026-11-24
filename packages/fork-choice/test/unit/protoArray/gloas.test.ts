@@ -956,6 +956,54 @@ describe("Gloas Fork Choice", () => {
       expect(payloadStatus("0x0b", PayloadStatus.FULL)).toBe(ExecutionStatus.Valid);
       expect(payloadStatus("0x0c", PayloadStatus.PENDING)).toBe(ExecutionStatus.Valid);
     });
+
+    it("VALID for a pre-gloas twin's payload validates the other twin below the first gloas block", () => {
+      protoArray = ProtoArray.initialize(createTestBlock(0, genesisRoot, "0x00"), 0);
+      // 0x1a and 0x1d equivocate in the last pre-gloas slot with the same payload
+      for (const root of ["0x1a", "0x1d"]) {
+        protoArray.onBlock(
+          {
+            ...createTestBlock(gloasForkSlot - 1, root, genesisRoot),
+            executionPayloadBlockHash: "0xee",
+            executionStatus: ExecutionStatus.Syncing,
+          } as ProtoBlock,
+          gloasForkSlot - 1,
+          null
+        );
+      }
+      // The first gloas block builds on 0x1a and inherits its payload
+      protoArray.onBlock(
+        {
+          ...createTestBlock(gloasForkSlot, "0x1c", "0x1a", "0xee"),
+          executionPayloadBlockHash: "0xee",
+          executionStatus: ExecutionStatus.Syncing,
+        } as ProtoBlock,
+        gloasForkSlot,
+        null
+      );
+
+      expect(
+        protoArray.validateLatestHash(
+          {executionStatus: ExecutionStatus.Valid, latestValidExecHash: "0xee", blockRoot: "0x1d"},
+          gloasForkSlot
+        )
+      ).toEqual({applied: true});
+      expect(payloadStatus("0x1a", PayloadStatus.FULL)).toBe(ExecutionStatus.Valid);
+      expect(payloadStatus("0x1c", PayloadStatus.PENDING)).toBe(ExecutionStatus.Valid);
+
+      expect(
+        protoArray.validateLatestHash(
+          {
+            executionStatus: ExecutionStatus.Invalid,
+            latestValidExecHash: genesisRoot,
+            invalidateFromBlockRoot: "0x1a",
+            invalidateFromBlockHash: "0xee",
+            judged: LVHInvalidJudged.FromBlock,
+          },
+          gloasForkSlot
+        )
+      ).toEqual({applied: false, reason: LVHNotAppliedReason.Contradiction});
+    });
   });
 
   describe("validateLatestHash() lenient policies on gloas variants", () => {
