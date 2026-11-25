@@ -175,7 +175,8 @@ export declare class ForkChoice {
   onBlock(block: BlockSummary): number;
   /**
    * Spec `on_attestation` for an attestation verified against its target state. Throws if an
-   * index is not below `validatorCount`, the registry length of the states it may be verified against
+   * index is not below `validatorCount`, a bound on the registry length of the states it may be
+   * verified against
    */
   onAttestation(
     slot: number,

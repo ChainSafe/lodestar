@@ -11,7 +11,7 @@ import {
   ForkChoice as NativeStore,
   type VerdictResult as NativeVerdictResult,
 } from "@lodestar/native/fork-choice";
-import {PTC_SIZE, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {MAX_PENDING_DEPOSITS_PER_EPOCH, PTC_SIZE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -174,7 +174,7 @@ export class NativeForkChoice implements IForkChoice {
   /** Balances the provider last handed to the store, for the checkpoint they belong to */
   private providedBalances: {checkpoint: CheckpointWithHex; balances: EffectiveBalanceIncrements} | null = null;
   private scores: NativeScores | null = null;
-  /** The largest registry length among the states seen, which bounds every verified validator index */
+  /** The largest registry length among the states seen */
   private validatorCount: number;
 
   private readonly fastConfirmation: boolean;
@@ -911,11 +911,17 @@ export class NativeForkChoice implements IForkChoice {
         data.target.root,
         Uint32Array.from(attestingIndices),
         forceImport === true,
-        this.validatorCount
+        this.validatorLimit()
       );
     } catch (e) {
       throw this.toInvalidAttestationError(e, data);
     }
+  }
+
+  /** Each epoch transition since finality, one ahead of the clock, adds at most MAX_PENDING_DEPOSITS_PER_EPOCH validators */
+  private validatorLimit(): number {
+    const epochs = computeEpochAtSlot(this.fcStore.currentSlot) + 1 - this.fcStore.finalizedCheckpoint.epoch;
+    return this.validatorCount + MAX_PENDING_DEPOSITS_PER_EPOCH * Math.max(1, epochs);
   }
 
   onAttesterSlashing(slashing: AttesterSlashing): void {
@@ -926,7 +932,7 @@ export class NativeForkChoice implements IForkChoice {
       Uint32Array.from(attestation1.attestingIndices),
       toNativeAttestationData(attestation2.data),
       Uint32Array.from(attestation2.attestingIndices),
-      this.validatorCount
+      this.validatorLimit()
     );
     for (const validatorIndex of getAttesterSlashableIndices(slashing)) {
       this.fcStore.equivocatingIndices.add(validatorIndex);
