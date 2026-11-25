@@ -793,6 +793,18 @@ export class PeerManager {
       return false;
     }
 
+    // The heartbeat only disconnects peers that are already connected, a peer with a bad score
+    // could otherwise reconnect right after and stay connected until the next heartbeat
+    const scoreState = this.peerRpcScores.getScoreState(remotePeer);
+    if (scoreState !== ScoreState.Healthy && !this.gossipsub.isDirectPeer(remotePeerStr)) {
+      this.logger.debug("Peer with bad score connected, disconnecting", {peer: remotePeerPrettyStr, scoreState});
+      void this.goodbyeAndDisconnect(
+        remotePeer,
+        scoreState === ScoreState.Banned ? GoodByeReasonCode.BANNED : GoodByeReasonCode.SCORE_TOO_LOW
+      );
+      return false;
+    }
+
     if (!opts.overwriteExisting && this.connectedPeers.has(remotePeerStr)) {
       return false;
     }

@@ -283,6 +283,50 @@ describe("network / peers / PeerManager", () => {
     await peerConnectedPromise;
   });
 
+  it.each([
+    {name: "banned", action: PeerAction.Fatal, actionCount: 1, reason: GoodByeReasonCode.BANNED},
+    {name: "low-score", action: PeerAction.LowToleranceError, actionCount: 3, reason: GoodByeReasonCode.SCORE_TOO_LOW},
+  ])("disconnects a $name peer as soon as it connects", async ({action, actionCount, reason}) => {
+    const {libp2p, reqResp, peerManager} = await mockModules();
+    reqResp.sendGoodbye.mockResolvedValue(undefined);
+    const hangUp = vi.spyOn(libp2p, "hangUp").mockResolvedValue(undefined);
+    for (let i = 0; i < actionCount; i++) {
+      peerManager.reportPeer(peerId1, action, "test");
+    }
+
+    const libp2pConnectionInbound = {
+      ...libp2pConnectionOutboud,
+      direction: "inbound",
+      timeline: {open: Date.now()},
+    } as Connection;
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [libp2pConnectionInbound]});
+    libp2p.services.components.events.dispatchEvent(
+      new CustomEvent("connection:open", {detail: libp2pConnectionInbound})
+    );
+
+    expect(peerManager["connectedPeers"].has(peerId1.toString())).toBe(false);
+    expect(reqResp.sendGoodbye).toHaveBeenCalledExactlyOnceWith(peerId1, BigInt(reason));
+    await sleep(0);
+    expect(hangUp).toHaveBeenCalledExactlyOnceWith(peerId1);
+  });
+
+  it("keeps a banned direct peer connected when it connects", async () => {
+    const {libp2p, reqResp, peerManager, gossip} = await mockModules();
+    gossip.isDirectPeer.mockImplementation((peerIdStr) => peerIdStr === peerId1.toString());
+    const hangUp = vi.spyOn(libp2p, "hangUp").mockResolvedValue(undefined);
+    peerManager.reportPeer(peerId1, PeerAction.Fatal, "test");
+
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [libp2pConnectionOutboud]});
+    libp2p.services.components.events.dispatchEvent(
+      new CustomEvent("connection:open", {detail: libp2pConnectionOutboud})
+    );
+
+    expect(peerManager["connectedPeers"].has(peerId1.toString())).toBe(true);
+    expect(reqResp.sendGoodbye).not.toHaveBeenCalled();
+    await sleep(0);
+    expect(hangUp).not.toHaveBeenCalled();
+  });
+
   it("Bootstraps already-open outbound connections at startup", async () => {
     const {reqResp, peerManager} = await mockModules({preOpenConnections: [libp2pConnectionOutboud]});
 
