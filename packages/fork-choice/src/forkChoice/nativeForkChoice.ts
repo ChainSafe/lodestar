@@ -675,16 +675,14 @@ export class NativeForkChoice implements IForkChoice {
       });
     }
     const committeeCount = state.getBeaconCommitteeCountPerSlot(computeEpochAtSlot(slot));
-    const committees: Uint32Array[] = [];
     let memberCount = 0;
     for (let index = 0; index < committeeCount; index++) {
-      const committee = state.getBeaconCommittee(slot, index);
-      committees.push(committee);
-      memberCount += committee.length;
+      memberCount += state.getBeaconCommittee(slot, index).length;
     }
     const members = new Uint32Array(memberCount);
     let offset = 0;
-    for (const committee of committees) {
+    for (let index = 0; index < committeeCount; index++) {
+      const committee = state.getBeaconCommittee(slot, index);
       members.set(committee, offset);
       offset += committee.length;
     }
