@@ -4,9 +4,9 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
 import {Slot, phase0, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {ExecutionStatus, NativeForkChoice, PayloadStatus} from "../../../src/index.js";
+import {ExecutionStatus, NativeForkChoice, PayloadStatus, UpdateHeadOpt} from "../../../src/index.js";
 import {getBlockRoot} from "../../utils/index.js";
-import {genesisSlot, gloasConfig, makeStore, toProtoBlock} from "./proposerHeadTestUtils.js";
+import {VALIDATOR_COUNT, genesisSlot, gloasConfig, makeStore, toProtoBlock} from "./proposerHeadTestUtils.js";
 
 describe("NativeForkChoice getProposerHead", () => {
   const genesisRoot = fromHexString(getBlockRoot(genesisSlot));
@@ -32,10 +32,10 @@ describe("NativeForkChoice getProposerHead", () => {
     } as unknown as IBeaconStateView;
   }
 
-  it("brings fork choice to the proposal slot before reading the store", () => {
+  function createForkChoice(currentSlot: Slot): NativeForkChoice {
     const store = makeStore();
-    store.currentSlot = SLOTS_PER_EPOCH;
-    const forkChoice = new NativeForkChoice(
+    store.currentSlot = currentSlot;
+    return new NativeForkChoice(
       gloasConfig,
       store,
       {
@@ -56,6 +56,10 @@ describe("NativeForkChoice getProposerHead", () => {
       null,
       {computeUnrealized: true, proposerBoostReorg: true}
     );
+  }
+
+  it("brings fork choice to the proposal slot before reading the store", () => {
+    const forkChoice = createForkChoice(SLOTS_PER_EPOCH);
 
     // J justifies itself, which the store realizes at the next epoch start
     const justifiedBlock = gloasBlock(SLOTS_PER_EPOCH, genesisRoot);
@@ -79,5 +83,43 @@ describe("NativeForkChoice getProposerHead", () => {
       root: fromHexString(justifiedRoot),
       rootHex: justifiedRoot,
     });
+  });
+  it("applies votes queued for the previous slot before choosing the proposer head", () => {
+    const forkChoice = createForkChoice(genesisSlot + 1);
+    const state = {
+      ...stateWithUnrealizedJustified(genesisCheckpoint),
+      validatorCount: VALIDATOR_COUNT,
+    } as unknown as IBeaconStateView;
+    const blockA = gloasBlock(genesisSlot + 1, genesisRoot);
+    const blockB = gloasBlock(genesisSlot + 1, genesisRoot);
+    blockB.proposerIndex = 1;
+    for (const block of [blockA, blockB]) {
+      forkChoice.onBlock(block, state, 0, 0, block.slot, ExecutionStatus.Syncing, DataAvailabilityStatus.Available);
+    }
+    const rootA = ssz.gloas.BeaconBlock.hashTreeRoot(blockA);
+    const rootB = ssz.gloas.BeaconBlock.hashTreeRoot(blockB);
+    const votedRoot = forkChoice.updateHead().blockRoot === toRootHex(rootA) ? rootB : rootA;
+    forkChoice.onAttestation(
+      {
+        attestingIndices: Array.from({length: VALIDATOR_COUNT}, (_, i) => i),
+        data: {
+          slot: genesisSlot + 1,
+          index: 0,
+          beaconBlockRoot: votedRoot,
+          source: genesisCheckpoint,
+          target: genesisCheckpoint,
+        },
+        signature: new Uint8Array(96),
+      },
+      "",
+      false
+    );
+
+    const {head} = forkChoice.updateAndGetHead({
+      mode: UpdateHeadOpt.GetProposerHead,
+      msFromSlot: 0,
+      slot: genesisSlot + 2,
+    });
+    expect(head.blockRoot).toBe(toRootHex(votedRoot));
   });
 });

@@ -292,6 +292,10 @@ export class NativeForkChoice implements IForkChoice {
     isHeadTimely?: boolean;
     notReorgedReason?: NotReorgedReason;
   } {
+    if (opt.mode === UpdateHeadOpt.GetProposerHead) {
+      // The tick into the proposal slot applies queued votes, which can move the head
+      this.updateTime(opt.slot);
+    }
     const canonicalHeadBlock = opt.mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
     switch (opt.mode) {
       case UpdateHeadOpt.GetPredictedProposerHead:
