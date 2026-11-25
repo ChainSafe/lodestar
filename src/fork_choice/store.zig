@@ -1039,14 +1039,14 @@ pub const Store = struct {
     /// so the same call can be retried.
     pub fn onBlockSummary(self: *Store, summary: BlockSummary) !void {
         if (self.hasBlock(summary.root)) return;
+        try self.validateSummary(&summary);
         try self.importBlock(&summary, &.{});
     }
 
     /// Every check and fallible load runs before the block's row is written, and
     /// `markChainValid` writes nothing when it fails: a failed import leaves the store as
-    /// it was, so a retry is not skipped as a known block.
+    /// it was, so a retry is not skipped as a known block. Callers ran `validateSummary`.
     fn importBlock(self: *Store, summary: *const BlockSummary, ptc_messages: []const PtcMessage) !void {
-        try self.validateSummary(summary);
         try checkExecutionStatus(summary);
         const parent = self.blockIndex(summary.parent_root).?;
 
