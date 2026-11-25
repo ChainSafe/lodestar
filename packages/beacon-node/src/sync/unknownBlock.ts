@@ -1502,16 +1502,15 @@ export class BlockInputSync {
       }
       if (validationResult.err) {
         const err = validationResult.err;
+        const {envelopePeerId} = pendingPayload;
         // Same penalties as for an envelope validated right after download in fetchPayloadInput
         if (
-          pendingPayload.envelopePeerId !== undefined &&
+          envelopePeerId !== undefined &&
           err instanceof ExecutionPayloadEnvelopeError &&
-          (err.type.code === ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH ||
-            err.type.code === ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH ||
-            (err.type.code === ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK &&
-              pendingPayload.envelope.message.payload.slotNumber !== payloadInput.slot))
+          (pendingPayload.envelope.message.payload.slotNumber !== payloadInput.slot ||
+            toRootHex(pendingPayload.envelope.message.payload.blockHash) !== payloadInput.getBlockHashHex())
         ) {
-          this.network.reportPeer(pendingPayload.envelopePeerId, PeerAction.LowToleranceError, err.type.code);
+          this.network.reportPeer(envelopePeerId, PeerAction.LowToleranceError, err.type.code);
         }
 
         this.logger.debug(
@@ -1527,6 +1526,10 @@ export class BlockInputSync {
           timeAddedSec: pendingPayload.timeAddedSec,
           peerIdStrings: new Set(pendingPayload.peerIdStrings),
         };
+        // Do not prefer the peer whose envelope just failed validation
+        if (envelopePeerId !== undefined) {
+          pendingPayloadByRoot.peerIdStrings.delete(envelopePeerId);
+        }
         this.pendingPayloads.set(rootHex, pendingPayloadByRoot);
 
         if (this.network.getConnectedPeers().length > 0) {
@@ -1900,35 +1903,33 @@ export class BlockInputSync {
         }
 
         if (e instanceof ExecutionPayloadEnvelopeError) {
-          switch (e.type.code) {
-            // Caused by local state, the downloaded envelope may still be valid
-            case ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN:
-            case ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN:
-            case ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING:
-            case ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE:
-              break;
-            // Every copy fails once the block is finalized, only a wrong slot makes the served copy invalid
-            case ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK:
-              if (envelope?.message.payload.slotNumber !== payloadInput?.slot) {
-                if (envelopePeerId !== undefined) {
-                  this.network.reportPeer(envelopePeerId, PeerAction.LowToleranceError, e.type.code);
-                }
+          // Range sync stores an envelope after checking only its root, slot and block hash, so an honest peer may
+          // serve one that fails the other checks. Compared directly since validation stops at the first failure.
+          if (
+            envelope !== undefined &&
+            payloadInput &&
+            (envelope.message.payload.slotNumber !== payloadInput.slot ||
+              toRootHex(envelope.message.payload.blockHash) !== payloadInput.getBlockHashHex())
+          ) {
+            if (envelopePeerId !== undefined) {
+              this.network.reportPeer(envelopePeerId, PeerAction.LowToleranceError, e.type.code);
+            }
+            envelope = payloadInput.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
+          } else {
+            switch (e.type.code) {
+              // Caused by local state, the downloaded envelope may still be valid
+              case ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN:
+              case ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN:
+              case ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING:
+              case ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE:
+              // Every copy fails once the block is finalized
+              case ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK:
+                break;
+              // The served copy is invalid, take the envelope from payloadInput or another peer on the next attempt
+              default:
                 envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
-              }
-              break;
-            // Range sync stores an envelope after checking only its root, slot and block hash, so an honest peer
-            // may serve one that fails the other checks
-            case ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH:
-            case ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH:
-              if (envelopePeerId !== undefined) {
-                this.network.reportPeer(envelopePeerId, PeerAction.LowToleranceError, e.type.code);
-              }
-              envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
-              break;
-            // The served copy is invalid, take the envelope from payloadInput or another peer on the next attempt
-            default:
-              envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
-              break;
+                break;
+            }
           }
         }
       } finally {
