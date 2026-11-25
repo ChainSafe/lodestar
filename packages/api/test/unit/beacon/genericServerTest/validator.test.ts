@@ -1,5 +1,6 @@
 import {describe} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {ssz} from "@lodestar/types";
 import {getClient} from "../../../../src/beacon/client/validator.js";
 import {Endpoints} from "../../../../src/beacon/routes/validator.js";
 import {getRoutes} from "../../../../src/beacon/server/validator.js";
@@ -8,11 +9,28 @@ import {testData} from "../testData/validator.js";
 
 describe("beacon / validator", () => {
   runGenericServerTest<Endpoints>(
-    createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0}),
+    createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0}),
     getClient,
     getRoutes,
     testData
   );
+
+  describe("heze", () => {
+    const signedExecutionPayloadBid = ssz.heze.SignedExecutionPayloadBid.defaultValue();
+    signedExecutionPayloadBid.message.inclusionListBits.set(0, true);
+    runGenericServerTest<Endpoints>(
+      createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0, HEZE_FORK_EPOCH: 0}),
+      getClient,
+      getRoutes,
+      {
+        ...testData,
+        produceBlockV4WithBid: {
+          ...testData.produceBlockV4WithBid,
+          args: {...testData.produceBlockV4WithBid.args, signedExecutionPayloadBid},
+        },
+      }
+    );
+  });
 
   // TODO: Extra tests to implement maybe
 

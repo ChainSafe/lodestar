@@ -1189,11 +1189,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             builder_boost_factor: builderBoostFactor.toString(),
             include_payload: includePayload,
           },
-          body: ssz.gloas.SignedExecutionPayloadBid.toJson(signedExecutionPayloadBid),
+          body: getPostGloasForkTypes(config.getForkName(slot)).SignedExecutionPayloadBid.toJson(
+            signedExecutionPayloadBid
+          ),
           headers: {[MetaHeader.Version]: config.getForkName(slot)},
         }),
         parseReqJson: ({params, query, body, headers}) => {
-          toForkName(fromHeaders(headers, MetaHeader.Version));
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
             slot: params.slot,
             randaoReveal: fromHex(query.randao_reveal),
@@ -1203,7 +1205,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             strictFeeRecipientCheck: query.strict_fee_recipient_check,
             builderBoostFactor: BigInt(query.builder_boost_factor),
             includePayload: query.include_payload,
-            signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.fromJson(body),
+            signedExecutionPayloadBid: getPostGloasForkTypes(fork).SignedExecutionPayloadBid.fromJson(body),
           };
         },
         writeReqSsz: ({
@@ -1227,11 +1229,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             builder_boost_factor: builderBoostFactor.toString(),
             include_payload: includePayload,
           },
-          body: ssz.gloas.SignedExecutionPayloadBid.serialize(signedExecutionPayloadBid),
+          body: getPostGloasForkTypes(config.getForkName(slot)).SignedExecutionPayloadBid.serialize(
+            signedExecutionPayloadBid
+          ),
           headers: {[MetaHeader.Version]: config.getForkName(slot)},
         }),
         parseReqSsz: ({params, query, body, headers}) => {
-          toForkName(fromHeaders(headers, MetaHeader.Version));
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
             slot: params.slot,
             randaoReveal: fromHex(query.randao_reveal),
@@ -1241,7 +1245,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             strictFeeRecipientCheck: query.strict_fee_recipient_check,
             builderBoostFactor: BigInt(query.builder_boost_factor),
             includePayload: query.include_payload,
-            signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.deserialize(body),
+            signedExecutionPayloadBid: getPostGloasForkTypes(fork).SignedExecutionPayloadBid.deserialize(body),
           };
         },
         schema: {
