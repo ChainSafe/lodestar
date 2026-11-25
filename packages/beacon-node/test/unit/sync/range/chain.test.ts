@@ -38,13 +38,17 @@ describe("sync / range / chain", () => {
       targetEpoch: 16,
     },
     {
-      // due to BATCH_BUFFER_SIZE and MAX_LOOK_AHEAD_EPOCHS, lodestar cannot deal with unlimited skipped slots
-      // having a test with 2 epochs of skipped slots is enough to test the logic
-      // this hasn't happened in any networks as of Aug 2025
       id: "Simulate sync with 2 epochs of skipped slots",
       startEpoch: 0,
       targetEpoch: 16,
       skippedSlots: new Set(linspace(3 * SLOTS_PER_EPOCH, 4 * SLOTS_PER_EPOCH)),
+    },
+    {
+      // Longer than both MAX_LOOK_AHEAD_EPOCHS and BATCH_BUFFER_SIZE
+      id: "Simulate sync with 11 empty epochs in a row",
+      startEpoch: 0,
+      targetEpoch: 16,
+      skippedSlots: new Set(linspace(3 * SLOTS_PER_EPOCH, 14 * SLOTS_PER_EPOCH - 1)),
     },
     // As of https://github.com/ChainSafe/lodestar/pull/8150, we abort the batch after a single processing error
     // {

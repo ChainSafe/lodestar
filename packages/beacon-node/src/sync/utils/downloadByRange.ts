@@ -569,17 +569,11 @@ export async function validateResponses({
     validatedResponses.validatedBlocks?.length ? validatedResponses.validatedBlocks : undefined
   );
 
-  if (!blocksForDataValidation.length) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-        ...requestsLogMeta({blobsRequest, columnsRequest}),
-      },
-      "No blocks in data request slot range to validate data response against"
-    );
-  }
+  // A range with no blocks has no sidecars to validate. Whether the range is really empty is settled by the
+  // SyncChain, which keeps the batch in AwaitingValidation until a later block links back across it.
+  const hasBlocksForDataValidation = blocksForDataValidation.length > 0;
 
-  if (blobsRequest) {
+  if (blobsRequest && hasBlocksForDataValidation) {
     if (!blobSidecars) {
       throw new DownloadByRangeError(
         {
@@ -596,7 +590,7 @@ export async function validateResponses({
     );
   }
 
-  if (columnsRequest) {
+  if (columnsRequest && hasBlocksForDataValidation) {
     if (!columnSidecars) {
       throw new DownloadByRangeError(
         {
@@ -692,21 +686,15 @@ export function validateBlockByRangeResponse(
   // There are instances where clients return no blocks though.  Need to monitor this via the warns to see
   // if what the correct behavior should be
   if (!blocks.length) {
-    throw new DownloadByRangeError({
-      code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-      ...requestsLogMeta({blocksRequest}),
-    });
-    // TODO: this was causing deadlock again. need to come back and fix this so that its possible to process through
-    //       an empty epoch for periods with poor liveness
-    // return {
-    //   result: [],
-    //   warnings: [
-    //     new DownloadByRangeError({
-    //       code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-    //       ...requestsLogMeta({blocksRequest}),
-    //     }),
-    //   ],
-    // };
+    return {
+      result: [],
+      warnings: [
+        new DownloadByRangeError({
+          code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
+          ...requestsLogMeta({blocksRequest}),
+        }),
+      ],
+    };
   }
 
   if (blocks.length > count) {
