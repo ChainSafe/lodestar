@@ -728,12 +728,12 @@ pub fn latestMessages(self: *ForkChoice) !js.Value {
     const votes = store.latest_votes.items;
     const slots = try js.Float64Array.alloc(votes.len);
     const nodes = try js.Uint32Array.alloc(votes.len);
-    const messages = store.vote_targets.messages.items;
-    const target_nodes = store.vote_targets.nodes.items;
+    const messages = store.distinct_votes.messages.items;
+    const vote_nodes = store.distinct_votes.nodes.items;
     for (votes, try slots.toSlice(), try nodes.toSlice()) |id, *slot, *node| {
-        const voted = id != fork_choice.vote_targets.NO_TARGET;
+        const voted = id != fork_choice.distinct_votes.NO_VOTE;
         slot.* = if (voted) @floatFromInt(messages[id].slot) else std.math.nan(f64);
-        node.* = target_nodes[id];
+        node.* = vote_nodes[id];
     }
     const object = try env.createObject();
     try object.setNamedProperty("slots", slots.toValue());

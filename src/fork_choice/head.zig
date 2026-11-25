@@ -40,9 +40,9 @@ const Root = store_mod.Root;
 const Epoch = store_mod.Epoch;
 const computeEpochAtSlot = store_mod.computeEpochAtSlot;
 const computeStartSlotAtEpoch = store_mod.computeStartSlotAtEpoch;
-const vote_targets = @import("vote_targets.zig");
-const TargetId = vote_targets.TargetId;
-const NO_TARGET = vote_targets.NO_TARGET;
+const distinct_votes = @import("distinct_votes.zig");
+const VoteId = distinct_votes.VoteId;
+const NO_VOTE = distinct_votes.NO_VOTE;
 
 const NodeFlags = packed struct(u8) {
     exists: bool = false,
@@ -73,8 +73,8 @@ pub const Cache = struct {
     best_child: std.ArrayList(u32) = .empty,
     /// Per node: the weight of the latest messages that land on it, kept across runs.
     vote_weight: std.ArrayList(u64) = .empty,
-    /// Per validator: the vote target counted in `vote_weight`, `NO_TARGET` if none.
-    applied_votes: std.ArrayList(TargetId) = .empty,
+    /// Per validator: the distinct vote counted in `vote_weight`, `NO_VOTE` if none.
+    applied_votes: std.ArrayList(VoteId) = .empty,
     /// Validators below `applied_votes.items.len` whose message or weight changed since the last run.
     changed_votes: std.DynamicBitSetUnmanaged = .{},
     /// Set bits in `changed_votes`, so a run with no changes skips scanning it.
@@ -100,8 +100,8 @@ pub const Cache = struct {
 
     /// Moves the counted votes from the `old` to the `new` per-validator vote increments.
     /// A validator whose weight changed is marked, so the next run re-checks whether its
-    /// vote counts at all. `target_nodes` is `VoteTargets.nodes`.
-    pub fn applyBalanceChange(self: *Cache, target_nodes: []const NodeId, old: []const u16, new: []const u16) void {
+    /// vote counts at all. `vote_nodes` is `DistinctVotes.nodes`.
+    pub fn applyBalanceChange(self: *Cache, vote_nodes: []const NodeId, old: []const u16, new: []const u16) void {
         if (self.rescan_votes) return;
         const validator_count = self.applied_votes.items.len;
         const shared = @min(validator_count, old.len, new.len);
@@ -111,18 +111,18 @@ pub const Cache = struct {
         while (start < shared) : (start += chunk) {
             const end = @min(start + chunk, shared);
             if (std.mem.eql(u16, old[start..end], new[start..end])) continue;
-            for (start..end) |validator_index| self.moveVoteWeight(target_nodes, validator_index, old[validator_index], new[validator_index]);
+            for (start..end) |validator_index| self.moveVoteWeight(vote_nodes, validator_index, old[validator_index], new[validator_index]);
         }
         for (shared..validator_count) |validator_index| {
             const old_increment = if (validator_index < old.len) old[validator_index] else 0;
             const new_increment = if (validator_index < new.len) new[validator_index] else 0;
-            self.moveVoteWeight(target_nodes, validator_index, old_increment, new_increment);
+            self.moveVoteWeight(vote_nodes, validator_index, old_increment, new_increment);
         }
     }
 
-    fn moveVoteWeight(self: *Cache, target_nodes: []const NodeId, validator_index: usize, old_increment: u64, new_increment: u64) void {
+    fn moveVoteWeight(self: *Cache, vote_nodes: []const NodeId, validator_index: usize, old_increment: u64, new_increment: u64) void {
         if (old_increment == new_increment) return;
-        const node = target_nodes[self.applied_votes.items[validator_index]];
+        const node = vote_nodes[self.applied_votes.items[validator_index]];
         if (node != NO_NODE) {
             self.vote_weight.items[node] -= old_increment * preset.EFFECTIVE_BALANCE_INCREMENT;
             self.vote_weight.items[node] += new_increment * preset.EFFECTIVE_BALANCE_INCREMENT;
@@ -307,7 +307,7 @@ fn updateVoteWeights(store: *Store, node_count: usize) !void {
     const allocator = store.allocator;
     const cache = &store.head_cache;
     const validator_count = store.latest_votes.items.len;
-    const target_nodes = store.vote_targets.nodes.items;
+    const vote_nodes = store.distinct_votes.nodes.items;
     std.debug.assert(cache.rescan_votes or (node_count >= cache.vote_weight.items.len and validator_count >= cache.applied_votes.items.len));
     try cache.vote_weight.ensureTotalCapacity(allocator, node_count);
     try cache.applied_votes.ensureTotalCapacity(allocator, validator_count);
@@ -331,12 +331,12 @@ fn updateVoteWeights(store: *Store, node_count: usize) !void {
     for (0..cache.changed_count) |_| {
         const validator_index = changed.next().?;
         const applied = &cache.applied_votes.items[validator_index];
-        const counted = countedTarget(store, validator_index);
+        const counted = countedVote(store, validator_index);
         if (counted == applied.*) continue;
         // `applyBalanceChange` keeps the applied weight at the current balance.
         const message_weight = voteWeight(store, validator_index);
-        const from = target_nodes[applied.*];
-        const to = target_nodes[counted];
+        const from = vote_nodes[applied.*];
+        const to = vote_nodes[counted];
         if (from != NO_NODE) vote_weight[from] -= message_weight;
         if (to != NO_NODE) vote_weight[to] += message_weight;
         applied.* = counted;
@@ -347,21 +347,21 @@ fn updateVoteWeights(store: *Store, node_count: usize) !void {
     const applied = cache.applied_votes.addManyAsSliceAssumeCapacity(validator_count - applied_count);
     for (store.latest_votes.items[applied_count..], applied, applied_count..) |id, *counted, validator_index| {
         const message_weight = voteWeight(store, validator_index);
-        const node = target_nodes[id];
+        const node = vote_nodes[id];
         const counts = message_weight != 0 and node != NO_NODE and !store.isEquivocating(validator_index);
-        counted.* = if (counts) id else NO_TARGET;
+        counted.* = if (counts) id else NO_VOTE;
         if (counts) vote_weight[node] += message_weight;
     }
 }
 
 /// Spec `get_attestation_score`: the latest message of an active, unslashed,
-/// non-equivocating validator counts on `get_supported_node`, which `VoteTargets`
-/// resolved per target.
-fn countedTarget(store: *const Store, validator_index: usize) TargetId {
+/// non-equivocating validator counts on `get_supported_node`, which `DistinctVotes`
+/// resolved per distinct vote.
+fn countedVote(store: *const Store, validator_index: usize) VoteId {
     const id = store.latest_votes.items[validator_index];
-    if (store.vote_targets.nodes.items[id] == NO_NODE) return NO_TARGET;
-    if (voteWeight(store, validator_index) == 0) return NO_TARGET;
-    if (store.isEquivocating(validator_index)) return NO_TARGET;
+    if (store.distinct_votes.nodes.items[id] == NO_NODE) return NO_VOTE;
+    if (voteWeight(store, validator_index) == 0) return NO_VOTE;
+    if (store.isEquivocating(validator_index)) return NO_VOTE;
     return id;
 }
 

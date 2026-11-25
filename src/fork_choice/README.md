@@ -14,7 +14,7 @@ and what is still missing. It stays here while the rewrite is under review.
 | `store.zig`                        | `Store`: the spec `Store` minus beacon states, every handler, optimistic sync      | `get_forkchoice_store`, `on_tick`, `on_block`, `on_attestation`, `on_attester_slashing`, `on_payload_attestation_message`, `on_execution_payload_envelope`, `get_ancestor`, `get_checkpoint_block`, `update_checkpoints`, `should_extend_payload`, `payload_timeliness`, `should_build_on_full` |
 | `head.zig`                         | Head computation as array passes, persistent vote totals                           | `get_weight`, `filter_node_tree`, `get_head`, `get_supported_node`, `should_apply_proposer_boost`, `is_head_weak`, `is_parent_strong`                                                                                                                                                           |
 | `proposer_head.zig`                | Proposer reorg helpers                                                             | `get_proposer_head` and its predicates                                                                                                                                                                                                                                                          |
-| `vote_targets.zig`                 | Interned vote targets: the distinct latest messages and the node each counts on    | `get_supported_node` (cached per target)                                                                                                                                                                                                                                                        |
+| `distinct_votes.zig`               | Interned distinct votes: the distinct latest messages and the node each counts on  | `get_supported_node` (cached per distinct vote)                                                                                                                                                                                                                                                 |
 | `fast_confirmation.zig`            | Fast confirmation rule: the spec `FastConfirmationStore` and one run per slot      | `get_fast_confirmation_store`, `on_fast_confirmation`, `get_latest_confirmed`, `find_latest_confirmed_descendant`, `is_one_confirmed`, `is_confirmed_chain_safe`, the FFG helpers, `get_safe_execution_block_hash`                                                                              |
 | `store_test.zig`                   | Unit tests on a real two-branch chain                                              |                                                                                                                                                                                                                                                                                                 |
 | `test/spec/runner/fork_choice.zig` | Spec vector runner, plays the role of `block_states` and `checkpoint_states`       |                                                                                                                                                                                                                                                                                                 |
@@ -35,7 +35,7 @@ its post-state: slot, parent, proposer, realized and unrealized checkpoints,
 timeliness bits, Gloas bid hashes, payload flags.
 
 Latest messages are a dense array indexed by validator holding 4-byte ids into
-`vote_targets.zig`, a table of the distinct `LatestMessage`s. Hundreds of thousands
+`distinct_votes.zig`, a table of the distinct `LatestMessage`s. Hundreds of thousands
 of validators vote alike, so an epoch adds a few hundred entries; each entry also
 caches the node it counts on (`get_supported_node`). Queued votes, those whose slot
 is not yet past, are a second id array of the same shape: the first vote of a slot
@@ -185,11 +185,11 @@ derived data in an arena:
 
 - Per balance source (the previous and current observed justified checkpoints), one
   pass over `latest_votes` sums active, unslashed, non-equivocating balances per
-  vote target, then a child-to-parent pass over the block array turns that into
+  distinct vote, then a child-to-parent pass over the block array turns that into
   every block's `get_attestation_score`. `is_one_confirmed` then reads one number
   instead of scanning the validators for each block it checks.
-- `get_current_target_score` sums the pulled-up head state's balances per vote
-  target too and computes each target's checkpoint once, not once per validator.
+- `get_current_target_score` sums the pulled-up head state's balances per distinct
+  vote too and computes each target's checkpoint once, not once per validator.
 - Committee membership is one byte per validator per epoch (the slot it attests
   in), built from the head state's shuffling only when a range query needs it:
   empty slots before a block or equivocators in the range.
@@ -199,9 +199,9 @@ derived data in an arena:
 ### Pruning
 
 The spec never drops blocks. `prune` drops everything that is not the finalized block
-or one of its descendants and compacts the block table. Votes hold target ids, so it
-renumbers the blocks in the vote target table and the per-node vote totals, and never
-touches a validator's vote. A target on a dropped block keeps its slot, so the spec's
+or one of its descendants and compacts the block table. Votes hold vote ids, so it
+renumbers the blocks in the distinct vote table and the per-node vote totals, and never
+touches a validator's vote. A distinct vote on a dropped block keeps its slot, so the spec's
 replacement rule still holds, and stops counting. The spec runner calls `prune` once
 at the end of every vector and checks that the head stays put.
 
@@ -214,9 +214,9 @@ at the end of every vector and checks that the head stays put.
 | Head weights                        | cached per node, deltas from a scan of every vote           | vote totals per node updated for changed votes only; tree passes per call  | low: 506 vectors agree          |
 | Equivocators                        | sorted array walked in `computeDeltas`                      | bitset check skips the vote                                                | low                             |
 | Proposer boost                      | previous and current boost deltas                           | path marked each pass                                                      | low                             |
-| Prune                               | threshold, slices node array                                | compacts rows, renumbers the vote target table                             | low                             |
+| Prune                               | threshold, slices node array                                | compacts rows, renumbers the distinct vote table                             | low                             |
 | Optimistic sync                     | execution status per node, `validateLatestHash`             | verdict per payload, node status derived                                   | low: 5 sync vectors, unit tests |
-| Fast confirmation                   | in the package                                              | `fast_confirmation.zig`, scores per vote target folded up the block array  | low: 1431 vectors               |
+| Fast confirmation                   | in the package                                              | `fast_confirmation.zig`, scores per distinct vote folded up the block array  | low: 1431 vectors               |
 | `should_override_forkchoice_update` | implemented                                                 | omitted, removed from the spec                                             | low, see Deviations             |
 | Beacon states                       | `stateGetter` inside the store                              | `StateProvider`, balances and committees only                              | low                             |
 | Test coverage                       | vectors, nightly compliance vectors, unit tests, production | 506 minimal + 256 mainnet vectors, 10311 compliance vectors, 11 unit tests | blocking: no production time    |
@@ -245,8 +245,8 @@ Apple Silicon, ReleaseFast, 2026-11-09:
 0.37 ms.
 
 The epoch events, measured separately on the same workload: the balance diff for
-10k changed balances takes about 0.35 ms, `prune` about 0.007 ms, and the vote
-target compaction (about every 40 epochs) about 3.5 ms. The tick that starts a slot
+10k changed balances takes about 0.35 ms, `prune` about 0.007 ms, and the distinct
+vote compaction (about every 40 epochs) about 3.5 ms. The tick that starts a slot
 applies the ~25.3k votes queued during the previous one in about 0.46 ms
 (`bench/fork_choice/on_tick.zig`).
 

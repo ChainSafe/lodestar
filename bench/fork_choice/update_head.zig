@@ -15,19 +15,19 @@ const std = @import("std");
 const builtin = @import("builtin");
 const zbench = @import("zbench");
 const fork_choice = @import("fork_choice");
-const TargetId = fork_choice.TargetId;
-const NO_TARGET = fork_choice.vote_targets.NO_TARGET;
+const VoteId = fork_choice.VoteId;
+const NO_VOTE = fork_choice.distinct_votes.NO_VOTE;
 const util = @import("util.zig");
 
 const UpdateHeadBench = struct {
     bench: util.Bench,
-    votes: [2]std.ArrayList(TargetId),
+    votes: [2]std.ArrayList(VoteId),
     /// Heap-allocated because zbench copies this struct for every iteration.
     flip: *bool,
     /// Next validator to flip when only `changed_per_run` votes change.
     cursor: *usize,
     changed_per_run: ?u32,
-    vote_ids: [2]TargetId,
+    vote_ids: [2]VoteId,
     /// Validators flipped in turn when only `changed_per_run` votes change.
     order: []u32,
     recount: bool,
@@ -63,12 +63,12 @@ const UpdateHeadBench = struct {
     }
 };
 
-fn everyoneVotes(allocator: std.mem.Allocator, id: TargetId, opts: util.Opts) !std.ArrayList(TargetId) {
-    var votes: std.ArrayList(TargetId) = .empty;
+fn everyoneVotes(allocator: std.mem.Allocator, id: VoteId, opts: util.Opts) !std.ArrayList(VoteId) {
+    var votes: std.ArrayList(VoteId) = .empty;
     errdefer votes.deinit(allocator);
     try votes.appendNTimes(allocator, id, opts.initial_validator_count);
     for (votes.items, 0..) |*vote, i| {
-        if (!util.isActive(i, opts.initial_validator_count, opts.active_validator_count)) vote.* = NO_TARGET;
+        if (!util.isActive(i, opts.initial_validator_count, opts.active_validator_count)) vote.* = NO_VOTE;
     }
     return votes;
 }
@@ -96,7 +96,7 @@ fn setupBench(allocator: std.mem.Allocator, case: Case) !UpdateHeadBench {
         std.debug.print("head is the anchor: {any} blocks={d} justified={d} gloas={}\n", .{ head, bench.store.blockCount(), bench.store.justified_checkpoint.epoch, opts.gloas_boosted });
         return error.HeadIsAnchor;
     }
-    const vote_ids = [2]TargetId{ try util.voteTarget(bench.store, vote1), try util.voteTarget(bench.store, vote2) };
+    const vote_ids = [2]VoteId{ try util.voteId(bench.store, vote1), try util.voteId(bench.store, vote2) };
     var votes_1 = try everyoneVotes(allocator, vote_ids[0], opts);
     errdefer votes_1.deinit(allocator);
     var votes_2 = try everyoneVotes(allocator, vote_ids[1], opts);

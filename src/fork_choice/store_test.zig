@@ -16,7 +16,7 @@ const JustifiedBalances = store_mod.JustifiedBalances;
 const StateProvider = store_mod.StateProvider;
 const NO_BLOCK = store_mod.NO_BLOCK;
 const VerdictResult = store_mod.VerdictResult;
-const vote_targets_mod = @import("vote_targets.zig");
+const distinct_votes_mod = @import("distinct_votes.zig");
 const FastConfirmation = @import("fast_confirmation.zig").FastConfirmation;
 
 const validator_count = 64;
@@ -367,7 +367,7 @@ fn expectVoteWeightsMatchRecount(store: *Store) !void {
     try testing.expectEqualSlices(u64, cache.vote_weight.items, weights);
     // A vote on a pruned block may keep its target id where a recount records none;
     // both count nowhere, so compare where each applied vote lands.
-    const nodes = store.vote_targets.nodes.items;
+    const nodes = store.distinct_votes.nodes.items;
     for (cache.applied_votes.items, applied) |recounted, incremental| {
         try testing.expectEqual(nodes[recounted], nodes[incremental]);
     }
@@ -475,14 +475,14 @@ test "vote weights: incremental updates match a full recount" {
             const target_root = store.blockRoot(store.getCheckpointBlock(kept_vote.block, target_epoch));
             var repeat_indices = [_]u64{0};
             var repeat = indexedAttestation(&repeat_indices, kept_vote.slot, store.blockRoot(kept_vote.block), .{ .epoch = target_epoch, .root = target_root });
-            const targets_before = store.vote_targets.len();
+            const targets_before = store.distinct_votes.len();
             try store.onAttestation(.{ .electra = &repeat }, true);
-            try testing.expectEqual(targets_before, store.vote_targets.len());
+            try testing.expectEqual(targets_before, store.distinct_votes.len());
         }
     }
 }
 
-test "vote targets: identical votes share an entry and the table stays bounded" {
+test "distinct votes: identical votes share an entry and the table stays bounded" {
     const allocator = testing.allocator;
     const config = &@import("config").mainnet.config;
     const zero: [32]u8 = @splat(0);
@@ -525,13 +525,13 @@ test "vote targets: identical votes share an entry and the table stays bounded" 
         });
     }
 
-    const before = store.vote_targets.len();
+    const before = store.distinct_votes.len();
     for (0..2) |validator| {
         var indices = [_]u64{validator};
         var vote = indexedAttestation(&indices, 3, roots[0], .{ .epoch = 0, .root = anchor_root });
         try store.onAttestation(.{ .electra = &vote }, true);
     }
-    try testing.expectEqual(before + 1, store.vote_targets.len());
+    try testing.expectEqual(before + 1, store.distinct_votes.len());
 
     // Without finality `prune` never runs, yet every slot adds a target.
     for (3..last_slot + 1) |slot| {
@@ -545,7 +545,7 @@ test "vote targets: identical votes share an entry and the table stays bounded" 
         if (slot % 16 == 0) try expectVoteWeightsMatchRecount(&store);
     }
     // About 5000 targets were added, so the table only stays this small by compacting.
-    try testing.expect(store.vote_targets.len() < vote_targets_mod.MIN_COMPACT_AT);
+    try testing.expect(store.distinct_votes.len() < distinct_votes_mod.MIN_COMPACT_AT);
     for (0..validator_count) |validator| {
         const newest = last_slot - (last_slot + validator_count - validator) % validator_count;
         const message = store.latestMessage(validator).?;

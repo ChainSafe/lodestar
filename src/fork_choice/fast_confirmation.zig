@@ -3,7 +3,7 @@
 //!
 //! `FastConfirmation` holds the spec `FastConfirmationStore` fields and reads the fork
 //! choice `Store` passed to each call. A run sums each balance source's votes once per
-//! vote target and folds them up the block array, so `is_one_confirmed` reads a block's
+//! distinct vote and folds them up the block array, so `is_one_confirmed` reads a block's
 //! attestation score instead of scanning every validator. Committee membership is one
 //! byte per validator per epoch, built once per run from the head state's shuffling.
 
@@ -11,7 +11,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const preset = @import("preset").preset;
 const store_mod = @import("store.zig");
-const vote_targets_mod = @import("vote_targets.zig");
+const distinct_votes_mod = @import("distinct_votes.zig");
 const Store = store_mod.Store;
 const BalanceSource = store_mod.BalanceSource;
 const BlockIndex = store_mod.BlockIndex;
@@ -22,7 +22,7 @@ const Slot = store_mod.Slot;
 const Epoch = store_mod.Epoch;
 const ValidatorIndex = store_mod.ValidatorIndex;
 const NO_BLOCK = store_mod.NO_BLOCK;
-const NO_TARGET = vote_targets_mod.NO_TARGET;
+const NO_VOTE = distinct_votes_mod.NO_VOTE;
 const computeEpochAtSlot = store_mod.computeEpochAtSlot;
 const computeStartSlotAtEpoch = store_mod.computeStartSlotAtEpoch;
 const computeSlotsSinceEpochStart = store_mod.computeSlotsSinceEpochStart;
@@ -226,12 +226,12 @@ const Run = struct {
         return &self.pulled_up.?;
     }
 
-    /// Votes of active, unslashed, non-equivocating validators summed per vote target.
-    fn targetWeights(self: *const Run, balances: *const BalanceSource) ![]u64 {
-        const weights = try self.allocator.alloc(u64, self.store.vote_targets.len());
+    /// Votes of active, unslashed, non-equivocating validators summed per distinct vote.
+    fn voteWeights(self: *const Run, balances: *const BalanceSource) ![]u64 {
+        const weights = try self.allocator.alloc(u64, self.store.distinct_votes.len());
         @memset(weights, 0);
         for (self.store.latest_votes.items, 0..) |target, validator| {
-            if (target == NO_TARGET or self.store.isEquivocating(validator)) continue;
+            if (target == NO_VOTE or self.store.isEquivocating(validator)) continue;
             weights[target] += unslashedWeight(balances, validator);
         }
         return weights;
@@ -240,10 +240,10 @@ const Run = struct {
     /// Spec `get_attestation_score` for every block: a vote counts toward each ancestor of
     /// the block it supports, which a child-to-parent pass over the block array adds up.
     fn blockScores(self: *const Run, balances: *const BalanceSource) ![]u64 {
-        const target_weights = try self.targetWeights(balances);
+        const vote_weights = try self.voteWeights(balances);
         const scores = try self.allocator.alloc(u64, self.store.blocks.len);
         @memset(scores, 0);
-        for (self.store.vote_targets.messages.items, target_weights) |message, weight| {
+        for (self.store.distinct_votes.messages.items, vote_weights) |message, weight| {
             if (weight == 0 or message.block == NO_BLOCK) continue;
             scores[message.block] += weight;
         }
@@ -299,10 +299,10 @@ const Run = struct {
     fn nodeSupportBetweenSlots(self: *Run, balances: *const BalanceSource, node: ForkChoiceNode, start_slot: Slot, end_slot: Slot) !u64 {
         if (start_slot > end_slot) return 0;
         const node_id = store_mod.nodeId(node);
-        const target_nodes = self.store.vote_targets.nodes.items;
+        const vote_nodes = self.store.distinct_votes.nodes.items;
         var support: u64 = 0;
         for (self.store.latest_votes.items, 0..) |target, validator| {
-            if (target == NO_TARGET or target_nodes[target] != node_id) continue;
+            if (target == NO_VOTE or vote_nodes[target] != node_id) continue;
             if (self.store.isEquivocating(validator)) continue;
             const weight = unslashedWeight(balances, validator);
             if (weight == 0) continue;
@@ -398,9 +398,9 @@ const Run = struct {
     fn currentTargetScore(self: *Run) !u64 {
         const src = try self.pulledUpSource();
         const target = self.currentTarget();
-        const weights = try self.targetWeights(&src.balances);
+        const weights = try self.voteWeights(&src.balances);
         var score: u64 = 0;
-        for (self.store.vote_targets.messages.items, weights) |message, weight| {
+        for (self.store.distinct_votes.messages.items, weights) |message, weight| {
             if (weight == 0 or message.block == NO_BLOCK) continue;
             if (self.isCheckpointOf(target, message.block, computeEpochAtSlot(message.slot))) score += weight;
         }
