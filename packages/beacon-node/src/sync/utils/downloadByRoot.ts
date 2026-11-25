@@ -115,9 +115,8 @@ export async function downloadByRoot({
     });
   }
 
-  const hasAllDataPreDownload = blockInput.hasBlockAndAllData();
-
-  if (isBlockInputColumns(blockInput) && !hasAllDataPreDownload) {
+  // Like range sync, download every sampled column, half of them only counts as available for reconstruction
+  if (isBlockInputColumns(blockInput) && !blockInput.hasComputedAllData()) {
     // columnSidecars could be undefined if gossip resulted in full block+columns so we don't download any
     if (!columnSidecars) {
       throw new DownloadByRootError({
@@ -154,7 +153,10 @@ export async function downloadByRoot({
 
   let status: PendingBlockInputStatus;
   let timeSyncedSec: number | undefined;
-  if (blockInput.hasBlockAndAllData()) {
+  if (
+    blockInput.hasBlock() &&
+    (isBlockInputColumns(blockInput) ? blockInput.hasComputedAllData() : blockInput.hasAllData())
+  ) {
     status = PendingBlockInputStatus.downloaded;
     timeSyncedSec = Date.now() / 1000;
   } else {
@@ -201,7 +203,7 @@ export async function fetchByRoot({
     }
 
     const forkName = config.getForkName(block.message.slot);
-    if (!cacheItem.blockInput.hasAllData() && isBlockInputColumns(cacheItem.blockInput)) {
+    if (isBlockInputColumns(cacheItem.blockInput) && !cacheItem.blockInput.hasComputedAllData()) {
       columnSidecarResult = await fetchAndValidateColumns({
         config,
         chain,
