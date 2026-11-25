@@ -889,13 +889,16 @@ pub const Store = struct {
     /// Spec `update_checkpoints` with the unrealized checkpoints, at an epoch start. Their
     /// balances are held, so the pull-up cannot fail.
     fn pullUpCheckpoints(self: *Store) void {
-        var update: CheckpointUpdate = .{
-            .justified = newerCheckpoint(self.justified_checkpoint, self.unrealized_justified_checkpoint),
-            .finalized = newerCheckpoint(self.finalized_checkpoint, self.unrealized_finalized_checkpoint),
-            .unrealized_justified = self.unrealized_justified_checkpoint,
-            .unrealized_finalized = self.unrealized_finalized_checkpoint,
-        };
-        self.commitCheckpoints(&update);
+        if (self.unrealized_justified_checkpoint.epoch > self.justified_checkpoint.epoch) {
+            const held = self.unrealized_justified_balances.?;
+            std.debug.assert(checkpointEql(held.checkpoint, self.unrealized_justified_checkpoint));
+            self.unrealized_justified_balances = null;
+            self.installJustifiedBalances(held);
+        }
+        if (self.unrealized_finalized_checkpoint.epoch > self.finalized_checkpoint.epoch) {
+            self.finalized_checkpoint = self.unrealized_finalized_checkpoint;
+            self.head_cache.dirty = true;
+        }
     }
 
     fn loadJustifiedBalances(self: *const Store, checkpoint: Checkpoint) !LoadedBalances {
