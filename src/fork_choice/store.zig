@@ -40,7 +40,6 @@ pub const PayloadAttestationData = ct.gloas.PayloadAttestationData.Type;
 
 pub const BlockIndex = u32;
 pub const NO_BLOCK: BlockIndex = std.math.maxInt(BlockIndex);
-pub const BASIS_POINTS: u64 = 10_000;
 pub const PAYLOAD_TIMELY_THRESHOLD: u64 = preset.PTC_SIZE / 2;
 pub const DATA_AVAILABILITY_TIMELY_THRESHOLD: u64 = preset.PTC_SIZE / 2;
 pub const ATTESTATION_TIMELINESS_INDEX = 0;
@@ -702,7 +701,7 @@ pub const Store = struct {
     /// Spec `get_slot_component_duration_ms` for the fork of the current slot.
     pub fn slotComponentDurationMs(self: *const Store, basis_points: u64) u64 {
         const fork = self.config.forkSeq(self.currentSlot());
-        return basis_points * self.config.getSlotDurationMs(fork) / BASIS_POINTS;
+        return self.config.getSlotComponentDurationMs(fork, basis_points);
     }
 
     /// Spec `get_attestation_due_ms`.

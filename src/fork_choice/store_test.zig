@@ -171,6 +171,8 @@ test "anchor store: head is the anchor and time starts at the anchor slot" {
     try testing.expectEqual(anchor_slot + 1, store.currentSlot());
     try testing.expectEqual(@as(u64, 0), store.timeIntoSlotMs());
     try testing.expectError(error.PreGenesisTime, store.onTick(0));
+    // 3333 basis points round to a third of the slot
+    try testing.expectEqual(store.config.chain.SLOT_DURATION_MS / 3, store.attestationDueMs());
 
     const heads = try store.viableHeads(testing.allocator);
     defer testing.allocator.free(heads);

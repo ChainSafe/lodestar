@@ -220,7 +220,6 @@ at the end of every vector and checks that the head stays put.
 | Fast confirmation                   | in the package                                              | `fast_confirmation.zig`, scores per vote target folded up the block array  | low: 1431 vectors               |
 | `should_override_forkchoice_update` | implemented                                                 | omitted, removed from the spec                                             | low, see Deviations             |
 | Beacon states                       | `stateGetter` inside the store                              | `StateProvider`, balances and committees only                              | low                             |
-| Slot component timing               | rounds                                                      | floors, as the spec does                                                   | low, 1 ms, no vector hits it    |
 | Test coverage                       | vectors, nightly compliance vectors, unit tests, production | 506 minimal + 256 mainnet vectors, 10311 compliance vectors, 11 unit tests | blocking: no production time    |
 
 ## Benchmarks
@@ -347,8 +346,6 @@ Behaviour that differs from proto-array under the flag:
 
 - `getAncestor` stops at the parentless anchor instead of failing as the spec's dict
   lookup would. Harmless for anchors at epoch boundaries.
-- Slot component durations use the spec's floor division. `BeaconConfig.getSlotComponentDurationMs`
-  rounds; the two disagree by at most one millisecond.
 - The spec store never prunes, so the runner prunes only after the last step of a
   vector, where the head must not move. Pruning mid-vector rejected block attestations
   for dropped branches that the spec still accepts.
