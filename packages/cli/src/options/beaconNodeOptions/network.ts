@@ -77,15 +77,6 @@ export type NetworkArgs = {
   "network.useWorker"?: boolean;
   "network.maxYoungGenerationSizeMb"?: number;
   "network.targetGroupPeers"?: number;
-
-  /** @deprecated This option is deprecated and should be removed in next major release. */
-  "network.requestCountPeerLimit"?: number;
-  /** @deprecated This option is deprecated and should be removed in next major release. */
-  "network.blockCountTotalLimit"?: number;
-  /** @deprecated This option is deprecated and should be removed in next major release. */
-  "network.blockCountPeerLimit"?: number;
-  /** @deprecated This option is deprecated and should be removed in next major release. */
-  "network.rateTrackerTimeoutMs"?: number;
 };
 
 function validateMultiaddrArg<T extends Record<string, string | undefined>>(args: T, key: keyof T): void {
@@ -193,7 +184,12 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const quicMu6 = listenAddress6 && quic ? `${muArgs.listenAddress6}${muArgs.quicPort6}` : undefined;
 
   const targetPeers = args.targetPeers;
-  const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
+  if (targetPeers != null && targetPeers < 0) {
+    throw new YargsError("targetPeers must be greater than or equal to 0");
+  }
+  const maxPeers =
+    args["network.maxPeers"] ??
+    (targetPeers !== undefined ? Math.max(Math.floor(targetPeers * 1.1), targetPeers + 1) : undefined);
   if (targetPeers != null && maxPeers != null && targetPeers > maxPeers) {
     throw new YargsError("network.maxPeers must be greater than or equal to targetPeers");
   }
@@ -429,38 +425,6 @@ export const options: CliCommandOptions<NetworkArgs> = {
     hidden: true,
     defaultDescription: String(defaultOptions.network.discv5FirstQueryDelayMs),
     group: "network",
-  },
-
-  "network.requestCountPeerLimit": {
-    type: "number",
-    description: "Max block req/resp requests per peer per rateTrackerTimeoutMs",
-    hidden: true,
-    group: "network",
-    deprecated: true,
-  },
-
-  "network.blockCountTotalLimit": {
-    type: "number",
-    description: "Max block count requested per rateTrackerTimeoutMs",
-    hidden: true,
-    group: "network",
-    deprecated: true,
-  },
-
-  "network.blockCountPeerLimit": {
-    type: "number",
-    description: "Max block count requested per peer per rateTrackerTimeoutMs",
-    hidden: true,
-    group: "network",
-    deprecated: true,
-  },
-
-  "network.rateTrackerTimeoutMs": {
-    type: "number",
-    description: "Time window to track rate limit in milliseconds",
-    hidden: true,
-    group: "network",
-    deprecated: true,
   },
 
   "network.dontSendGossipAttestationsToForkchoice": {

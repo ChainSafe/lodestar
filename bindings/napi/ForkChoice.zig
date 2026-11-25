@@ -78,7 +78,9 @@ const ForkChoice = @This();
 /// `pulledUpBalanceSource(root, epoch)` turns on the fast confirmation rule; both return
 /// `{effectiveBalanceIncrements, zeroInactiveIncrements, activeIndices}` of the state
 /// at the checkpoint, or of block `root`'s state advanced to the start of `epoch`.
-pub fn init(config: *const BeaconConfig, genesis_time: js.Number, anchor: js.Value, provider: js.Value) !ForkChoice {
+/// With `unfinalized_ancestors` the anchor is not finalized: the store starts at the
+/// anchor's checkpoints, see `Store.initFromUnfinalizedSummary`.
+pub fn init(config: *const BeaconConfig, genesis_time: js.Number, anchor: js.Value, provider: js.Value, unfinalized_ancestors: ?js.Array) !ForkChoice {
     const env = js.env();
     const provider_value = provider.toValue();
     const justified_balances = try functionRef(env, provider_value, "justifiedBalances");
@@ -96,6 +98,8 @@ pub fn init(config: *const BeaconConfig, genesis_time: js.Number, anchor: js.Val
     const beacon_config = &config_rc.instance.config;
     const summary = try blockSummary(beacon_config, anchor.toValue());
     const genesis = try genesis_time.toSafeInteger();
+    var ancestors_buffer: [fork_choice.MAX_ANCHOR_ANCESTORS]fork_choice.AnchorAncestor = undefined;
+    const ancestors = if (unfinalized_ancestors) |array| try anchorAncestors(array, &ancestors_buffer) else null;
 
     const inner = try allocator.create(Inner);
     errdefer allocator.destroy(inner);
@@ -107,7 +111,11 @@ pub fn init(config: *const BeaconConfig, genesis_time: js.Number, anchor: js.Val
         .checkpoint_balance_source = checkpoint_balance_source,
         .pulled_up_balance_source = pulled_up_balance_source,
     };
-    inner.store = try Store.initFromSummary(allocator, beacon_config, genesis, summary, .{ .ctx = inner, .vtable = &provider_vtable });
+    const state_provider: fork_choice.StateProvider = .{ .ctx = inner, .vtable = &provider_vtable };
+    inner.store = if (ancestors) |list|
+        try Store.initFromUnfinalizedSummary(allocator, beacon_config, genesis, summary, list, state_provider)
+    else
+        try Store.initFromSummary(allocator, beacon_config, genesis, summary, state_provider);
     if (fast_confirmation) inner.fast_confirmation = .init(&inner.store);
     return .{ .inner = inner };
 }
@@ -286,6 +294,19 @@ fn blockSummary(config: *const @import("config").BeaconConfig, object: napi.Valu
     return summary;
 }
 
+fn anchorAncestors(array: js.Array, buffer: *[fork_choice.MAX_ANCHOR_ANCESTORS]fork_choice.AnchorAncestor) ![]const fork_choice.AnchorAncestor {
+    const len = try array.length();
+    if (len > buffer.len) return error.TooManyAnchorAncestors;
+    for (buffer[0..len], 0..) |*ancestor, i| {
+        const object = (try array.get(@intCast(i))).toValue();
+        ancestor.* = .{
+            .root = try toRoot(try object.getNamedProperty("root")),
+            .slot = try toU64(try object.getNamedProperty("slot")),
+        };
+    }
+    return buffer[0..len];
+}
+
 fn toAttestationData(object: napi.Value) !AttestationData {
     return .{
         .slot = try toU64(try object.getNamedProperty("slot")),
@@ -311,13 +332,13 @@ fn blockArg(self: *const ForkChoice, value: js.Number) !BlockIndex {
 }
 
 fn nodeArg(self: *const ForkChoice, value: js.Number) !ForkChoiceNode {
-    const id = try value.toU32Exact();
-    if (id / 3 >= self.inner.store.blockCount()) return error.InvalidNodeId;
-    return .{ .block = id / 3, .payload_status = @enumFromInt(id % 3) };
+    const node = fork_choice.store.nodeAt(try value.toU32Exact());
+    if (node.block >= self.inner.store.blockCount()) return error.InvalidNodeId;
+    return node;
 }
 
 fn nodeNumber(node: ForkChoiceNode) js.Number {
-    return js.Number.from(fork_choice.head.nodeId(node));
+    return js.Number.from(fork_choice.store.nodeId(node));
 }
 
 // --- time -------------------------------------------------------------------------
@@ -443,21 +464,27 @@ pub fn isPayloadInclusionListSatisfied(self: *ForkChoice, block: js.Number) !js.
     return js.Boolean.from(self.inner.store.isPayloadInclusionListSatisfied(try self.blockArg(block)));
 }
 
-/// Optimistic sync: the payload with `block_hash` and those below it are valid.
-pub fn onPayloadValid(self: *ForkChoice, block_hash: js.Uint8Array) !void {
-    try self.inner.store.onPayloadValid(try rootArg(block_hash));
+/// Optimistic sync: the payload with `block_hash` and those below it are valid. Returns
+/// the `Store.VerdictResult` tag.
+pub fn onPayloadValid(self: *ForkChoice, block_hash: js.Uint8Array) !js.String {
+    return js.String.from(@tagName(self.inner.store.onPayloadValid(try rootArg(block_hash))));
 }
 
-/// Optimistic sync: the engine rejected a block whose parent is `parent_root` and whose
-/// payload builds on `parent_block_hash`. See `Store.onPayloadInvalid`.
+/// Optimistic sync: the engine judged a payload INVALID, starting from block `from_root`
+/// whose payload chain holds `from_block_hash`. `judged` is a `Store.InvalidJudged` tag.
+/// Returns the `Store.VerdictResult` tag. See `Store.onPayloadInvalid`.
 pub fn onPayloadInvalid(
     self: *ForkChoice,
-    parent_root: js.Uint8Array,
-    parent_block_hash: js.Uint8Array,
+    from_root: js.Uint8Array,
+    from_block_hash: js.Uint8Array,
     latest_valid_hash: ?js.Uint8Array,
-) !void {
+    judged: js.String,
+) !js.String {
     const lvh: ?Root = if (latest_valid_hash) |hash| try rootArg(hash) else null;
-    try self.inner.store.onPayloadInvalid(try rootArg(parent_root), try rootArg(parent_block_hash), lvh);
+    var buf: [16]u8 = undefined;
+    const judged_tag = std.meta.stringToEnum(fork_choice.store.InvalidJudged, try judged.toSlice(&buf)) orelse return error.InvalidJudged;
+    const result = try self.inner.store.onPayloadInvalid(try rootArg(from_root), try rootArg(from_block_hash), lvh, judged_tag);
+    return js.String.from(@tagName(result));
 }
 
 /// Drops every block that does not descend from the finalized block. Returns the new
@@ -518,9 +545,9 @@ pub fn isProposerEquivocation(self: *ForkChoice, block: js.Number) !js.Boolean {
 pub fn weights(self: *ForkChoice) !js.BigUint64Array {
     const store = &self.inner.store;
     try fork_choice.head.ensureComputed(store);
-    const out = try js.BigUint64Array.alloc(store.blockCount() * 3);
+    const out = try js.BigUint64Array.alloc(store.blockCount() * fork_choice.store.NODES_PER_BLOCK);
     for (try out.toSlice(), 0..) |*weight, id| {
-        weight.* = fork_choice.head.weight(store, .{ .block = @intCast(id / 3), .payload_status = @enumFromInt(id % 3) });
+        weight.* = fork_choice.head.weight(store, fork_choice.store.nodeAt(@intCast(id)));
     }
     return out;
 }
@@ -539,10 +566,11 @@ pub fn bestChildren(self: *ForkChoice) !js.Uint32Array {
     return js.Uint32Array.from(store.head_cache.best_child.items);
 }
 
-/// The worst engine verdict on the payloads each node id stands on.
+/// The worst engine verdict on the payloads each node id stands on. Still returned when the
+/// justified block stands on an invalidated payload and there is no head.
 pub fn executionStatuses(self: *ForkChoice) !js.Uint8Array {
     const store = &self.inner.store;
-    try fork_choice.head.ensureComputed(store);
+    fork_choice.head.ensureComputed(store) catch |err| if (err != error.InvalidJustifiedPayload) return err;
     return js.Uint8Array.from(@ptrCast(store.head_cache.execution.items));
 }
 

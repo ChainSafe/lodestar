@@ -48,7 +48,10 @@ export interface PubkeyCache {
    * recorded in the file is discarded above this limit.
    */
   load(filepath: string, maxCapacity: number): void;
-  /** Testing-only reset from the control environment while no workers are using the cache. */
+  /**
+   * Testing-only reset from the control environment while no workers are using the cache.
+   * Also drops the committee pubkeys aggregated from the cleared keys.
+   */
   reset(): void;
   /** Save from the control environment. */
   save(filepath: string): void;

@@ -69,6 +69,48 @@ describe("ForkChoice", () => {
     expect(finalized).toEqual(anchorCheckpoint);
   });
 
+  it("starts from an unfinalized anchor at its own checkpoints", () => {
+    const finalized = {epoch: 1, root: root(0x0f)};
+    const justified = {epoch: 2, root: root(0x0a)};
+    const anchorSlot = 3 * SLOTS_PER_EPOCH + 2;
+    const checkpoints = {
+      finalizedCheckpoint: finalized,
+      justifiedCheckpoint: justified,
+      unrealizedFinalizedCheckpoint: finalized,
+      unrealizedJustifiedCheckpoint: justified,
+    };
+    const config = new bindings.BeaconConfig(chainConfig, new Uint8Array(32));
+    const provider: StateProvider = {
+      justifiedBalances: () => new Uint16Array(VALIDATOR_COUNT).fill(32),
+      slotCommitteeMembers: () => new Uint32Array(0),
+    };
+    const anchor = summary(1, root(0x0b), anchorSlot, checkpoints);
+    const ancestors = [
+      {root: finalized.root, slot: SLOTS_PER_EPOCH},
+      {root: justified.root, slot: 2 * SLOTS_PER_EPOCH},
+      {root: root(0x0b), slot: anchorSlot - 1},
+    ];
+    const forkChoice = new ForkChoice(config, 0, anchor, provider, ancestors);
+
+    expect(forkChoice.blockCount).toBe(4);
+    expect(forkChoice.blockIndex(finalized.root)).toBe(0);
+    expect(forkChoice.getHead()).toBe(pendingNode(3));
+    expect(forkChoice.parentNode(3)).toBe(pendingNode(2));
+    expect(forkChoice.checkpoints().justified).toEqual(justified);
+    expect(forkChoice.checkpoints().finalized).toEqual(finalized);
+
+    forkChoice.onTick(forkChoice.timeAtSlotMs(anchorSlot + 1));
+    expect(forkChoice.onBlock(summary(0x20, ANCHOR, anchorSlot + 1, checkpoints))).toBe(4);
+    expect(forkChoice.getHead()).toBe(pendingNode(4));
+
+    expect(() => new ForkChoice(config, 0, anchor, provider, ancestors.slice(1))).toThrow(
+      "AnchorCheckpointNotAncestor"
+    );
+    expect(() => new ForkChoice(config, 0, anchor, provider, [...ancestors, ...ancestors, ...ancestors])).toThrow(
+      "TooManyAnchorAncestors"
+    );
+  });
+
   it("asks the provider for the anchor's justified balances", () => {
     const calls: {epoch: number; root: Uint8Array}[] = [];
     createForkChoice({

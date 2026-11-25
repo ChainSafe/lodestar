@@ -19,6 +19,11 @@ const RECONSTRUCTION_DELAY_MIN_BPS = 667;
  */
 const RECONSTRUCTION_DELAY_MAX_BPS = 1000;
 
+/**
+ * Maximum time a column request waits for a pending reconstruction, covers the delay and the recovery itself
+ */
+export const RECONSTRUCTED_COLUMNS_WAIT_BPS = 2500;
+
 const QUEUE_MAX_LENGTH = 16;
 
 export type ColumnReconstructionInput = BlockInputColumns | PayloadEnvelopeInput;

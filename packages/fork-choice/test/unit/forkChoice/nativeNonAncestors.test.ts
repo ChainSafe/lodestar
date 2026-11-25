@@ -1,24 +1,29 @@
 import {describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {RootHex, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ExecutionStatus, NativeForkChoice, PayloadStatus} from "../../../src/index.js";
 import {getBlockRoot} from "../../utils/index.js";
 import {genesisSlot, gloasConfig, makeStore, toProtoBlock} from "./proposerHeadTestUtils.js";
 
 describe("NativeForkChoice non-ancestors", () => {
-  it("leaves out a PENDING start block's own EMPTY and FULL", () => {
-    const genesisRoot = fromHexString(getBlockRoot(genesisSlot));
-    const genesisCheckpoint = {epoch: 0, root: genesisRoot};
-    const zeroHex = toRootHex(new Uint8Array(32));
-    const anchorPayload = new Uint8Array(32).fill(0x22);
-    const anchorParentPayload = new Uint8Array(32).fill(0x33);
-    const forkChoice = new NativeForkChoice(
+  const genesisRoot = fromHexString(getBlockRoot(genesisSlot));
+  const genesisCheckpoint = {epoch: 0, root: genesisRoot};
+  const anchorPayload = new Uint8Array(32).fill(0x22);
+  const anchorParentPayload = new Uint8Array(32).fill(0x33);
+  const state = {
+    currentJustifiedCheckpoint: genesisCheckpoint,
+    finalizedCheckpoint: genesisCheckpoint,
+    getBlockRootAtSlot: () => genesisRoot,
+  } as unknown as IBeaconStateView;
+
+  function newForkChoice(): NativeForkChoice {
+    return new NativeForkChoice(
       gloasConfig,
       makeStore(),
       {
-        block: toProtoBlock(genesisSlot, zeroHex, true, {
+        block: toProtoBlock(genesisSlot, toRootHex(new Uint8Array(32)), true, {
           parentBlockHash: toRootHex(anchorParentPayload),
           executionPayloadBlockHash: toRootHex(anchorParentPayload),
           executionStatus: ExecutionStatus.Syncing,
@@ -34,29 +39,25 @@ describe("NativeForkChoice non-ancestors", () => {
       },
       null
     );
+  }
 
+  // Every block carries the anchor's bid parent hash, so it hangs from its parent's EMPTY variant
+  function importBlock(forkChoice: NativeForkChoice, slot: Slot, parentRoot: Uint8Array): RootHex {
     const block = ssz.gloas.BeaconBlock.defaultValue();
-    block.slot = genesisSlot + 1;
-    block.parentRoot = genesisRoot;
+    block.slot = slot;
+    block.parentRoot = parentRoot;
     block.body.signedExecutionPayloadBid.message.parentBlockHash = anchorParentPayload;
-    block.body.signedExecutionPayloadBid.message.blockHash = new Uint8Array(32).fill(0x11);
-    const state = {
-      currentJustifiedCheckpoint: genesisCheckpoint,
-      finalizedCheckpoint: genesisCheckpoint,
-      getBlockRootAtSlot: () => genesisRoot,
-    } as unknown as IBeaconStateView;
-    const {blockRoot} = forkChoice.onBlock(
-      block,
-      state,
-      0,
-      0,
-      block.slot,
-      ExecutionStatus.Syncing,
-      DataAvailabilityStatus.Available
-    );
+    block.body.signedExecutionPayloadBid.message.blockHash = new Uint8Array(32).fill(slot);
+    return forkChoice.onBlock(block, state, 0, 0, slot, ExecutionStatus.Syncing, DataAvailabilityStatus.Available)
+      .blockRoot;
+  }
+
+  it("leaves out a PENDING start block's own EMPTY and FULL", () => {
+    const forkChoice = newForkChoice();
+    const blockRoot = importBlock(forkChoice, genesisSlot + 1, genesisRoot);
     forkChoice.onExecutionPayload(
       blockRoot,
-      toRootHex(block.body.signedExecutionPayloadBid.message.blockHash),
+      toRootHex(new Uint8Array(32).fill(genesisSlot + 1)),
       1,
       30_000_000,
       ExecutionStatus.Valid,
@@ -70,5 +71,15 @@ describe("NativeForkChoice non-ancestors", () => {
     expect(forkChoice.getAllNonAncestorBlocks(blockRoot, PayloadStatus.FULL).map((b) => b.payloadStatus)).toEqual([
       PayloadStatus.EMPTY,
     ]);
+  });
+
+  it("lists a block imported after the start block that does not descend from it", () => {
+    const forkChoice = newForkChoice();
+    const startRoot = importBlock(forkChoice, genesisSlot + 1, genesisRoot);
+    const orphanRoot = importBlock(forkChoice, genesisSlot + 2, genesisRoot);
+    importBlock(forkChoice, genesisSlot + 3, fromHexString(startRoot));
+
+    const {nonAncestors} = forkChoice.getAllAncestorAndNonAncestorBlocksDefaultStatus(startRoot);
+    expect(nonAncestors.map((b) => [b.blockRoot, b.payloadStatus])).toEqual([[orphanRoot, PayloadStatus.EMPTY]]);
   });
 });

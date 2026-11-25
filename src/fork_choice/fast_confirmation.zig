@@ -11,7 +11,6 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const preset = @import("preset").preset;
 const store_mod = @import("store.zig");
-const head_mod = @import("head.zig");
 const vote_targets_mod = @import("vote_targets.zig");
 const Store = store_mod.Store;
 const BalanceSource = store_mod.BalanceSource;
@@ -54,7 +53,11 @@ pub const FastConfirmation = struct {
     }
 
     /// Spec `on_fast_confirmation`. Call once per slot, after the past slots' attestations.
+    /// A failed call may already have updated the slot's variables, so do not call again in
+    /// the same slot: a second update would shift them again. On failure `confirmed_root`
+    /// falls back to the finalized root.
     pub fn onFastConfirmation(self: *FastConfirmation, store: *Store) !void {
+        errdefer self.confirmed_root = store.finalized_checkpoint.root;
         try self.updateFastConfirmationVariables(store);
         var arena = std.heap.ArenaAllocator.init(store.allocator);
         defer arena.deinit();
@@ -64,8 +67,9 @@ pub const FastConfirmation = struct {
 
     /// Spec `update_fast_confirmation_variables`.
     fn updateFastConfirmationVariables(self: *FastConfirmation, store: *Store) !void {
+        const head_root = store.blockRoot((try store.getHead()).block);
         self.previous_slot_head = self.current_slot_head;
-        self.current_slot_head = store.blockRoot((try store.getHead()).block);
+        self.current_slot_head = head_root;
         const current_slot = store.currentSlot();
         if (isStartSlotAtEpoch(current_slot + 1)) {
             self.previous_epoch_greatest_unrealized_checkpoint = store.unrealized_justified_checkpoint;
@@ -294,7 +298,7 @@ const Run = struct {
     /// Spec `get_node_support_between_slots`.
     fn nodeSupportBetweenSlots(self: *Run, balances: *const BalanceSource, node: ForkChoiceNode, start_slot: Slot, end_slot: Slot) !u64 {
         if (start_slot > end_slot) return 0;
-        const node_id = head_mod.nodeId(node);
+        const node_id = store_mod.nodeId(node);
         const target_nodes = self.store.vote_targets.nodes.items;
         var support: u64 = 0;
         for (self.store.latest_votes.items, 0..) |target, validator| {

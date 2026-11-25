@@ -41,12 +41,16 @@ of validators vote alike, so an epoch adds a few hundred entries; each entry als
 caches the node it counts on (`get_supported_node`). Queued votes, those whose slot
 is not yet past, are a second id array of the same shape: the first vote of a slot
 wins, as applying them in order at the next slot would, a vote for a later slot
-replaces an earlier one, and each tick walks both arrays in lockstep applying what
-became past. `prune` renumbers only the table's entries, never a validator's vote,
-and the table compacts itself once it doubles, so it stays small without finality.
+replaces an earlier one, and a bitset of the validators with a queued vote lets each
+tick visit only those and apply what became past. `prune` renumbers only the table's
+entries, never a validator's vote, and the table compacts itself once it doubles, so
+it stays small without finality.
 Equivocators are a bitset. Justified balances arrive through
 a `StateProvider` callback when the justified checkpoint changes and are kept as raw
-effective-balance increments plus an active-and-unslashed bitset.
+effective-balance increments plus an active-and-unslashed bitset. Block import also
+loads the balances of an unrealized justified checkpoint that gets ahead of the
+justified one, and the store holds them until an epoch start pulls the checkpoint up,
+so `onTick` never loads and cannot fail after genesis.
 
 Only the vote accounting is carried between calls: the per-node vote totals, the
 target each validator's vote is counted on, and a bitset with a count of the
@@ -99,17 +103,25 @@ to exit there and proto-array does the same. Two entry points change the facts:
 - `onPayloadValid(block_hash)` and a `.valid` verdict on `onBlock` or
   `onExecutionPayloadEnvelope` mark every `syncing` payload below the node `valid`,
   stopping at the first `valid` or `pre_merge` one.
-- `onPayloadInvalid(parent_root, parent_block_hash, latest_valid_hash)` is the
-  `validateLatestHash` of proto-array: the rejected block is never in the store, so
-  the walk starts at its parent node and marks payloads `invalid` down to the latest
-  valid hash, exclusive. A zero hash stops at the merge boundary; a null or unknown
-  hash names the rejected block itself and changes nothing. Descendants need no walk,
-  the derivation covers them.
+- `onPayloadInvalid(from_root, from_block_hash, latest_valid_hash, judged)` is the
+  `validateLatestHash` of proto-array: the walk starts at the from node, which
+  `from_block_hash` must name as proto-array's `getNodeIndexByRootAndBlockHash` does, and marks
+  payloads `invalid` down to the latest valid hash, exclusive. `judged` names the
+  payload the engine rejected: the from node's own (`.from_block`, a `forkchoiceUpdated`
+  head) or a child not in the store (`.child_payload`, a `newPayload` block or
+  envelope). A zero hash stops at the merge boundary. A null or unknown hash
+  invalidates only the from node's own payload for `.from_block` and drops a
+  `.child_payload` verdict. Descendants need no walk, the derivation covers them.
+  Unlike proto-array, which reads only the nodes on the walk, a `valid` or `pre_merge`
+  copy of a walked payload in another block makes the verdict `.contradiction`: the
+  same hash is the same payload, so the engine contradicted itself.
 
 Both walks follow the payload chain: `full` nodes and pre-Gloas blocks contribute
-their own payload, `empty` links skip the parent's. Both check the whole walk before
-writing, so a `valid` to `invalid` or `invalid` to `valid` transition is reported as a
-consensus failure with nothing changed.
+their own payload, `empty` links skip the parent's. Both check the whole walk, in
+every block carrying the payload, before writing. A verdict never flips a payload the
+engine already resolved, and an invalid walk never reaches the payloads the justified
+block stands on; both return a `VerdictResult` that says why nothing changed.
+`onBlock` and `onExecutionPayloadEnvelope` fail with `error.PayloadInvalidToValid` instead.
 
 The root block hangs from nothing, so the store keeps the status of the node it hung
 from in `root_base_status`: `pre_merge` for an anchor, whose ancestors count as
@@ -132,7 +144,7 @@ as children; child blocks hang off `empty` or `full` according to
 The spec `Store` holds full `block_states` and `checkpoint_states`; a client cannot.
 The boundary:
 
-- `onBlock(block, root, post_state, execution_status)` reads the post-state once
+- `onBlock(io, block, root, post_state, execution_status)` reads the post-state once
   (checkpoints, unrealized checkpoints, payload attestations) and does not keep it.
   `execution_status` is the engine's `newPayload` verdict; an `invalid` one never
   reaches `onBlock`, it goes to `onPayloadInvalid`. `onBlockSummary` takes the same
@@ -159,7 +171,10 @@ The boundary:
 - `executionStatus(node)` and `isOptimistic(node)` answer from the head cache, for
   `execution_optimistic` in API responses and for block production.
 - `StateProvider` supplies justified balances and, for `is_head_weak` with
-  equivocators, the beacon committee members of a slot. Two optional hooks serve the
+  equivocators, the beacon committee members of a slot. A missing checkpoint state
+  must not fail the balances: the provider falls back to the closest state it still
+  holds. An error fails the call that asked (`init`, a block import,
+  `updateCheckpoints`) and leaves the store unchanged. Two optional hooks serve the
   fast confirmation rule: the balance source at a checkpoint and the pulled-up head
   state's. A caller that does not run the rule leaves them null.
 
@@ -234,7 +249,9 @@ Apple Silicon, ReleaseFast, 2026-11-09:
 
 The epoch events, measured separately on the same workload: the balance diff for
 10k changed balances takes about 0.35 ms, `prune` about 0.007 ms, and the vote
-target compaction (about every 40 epochs) about 3.5 ms.
+target compaction (about every 40 epochs) about 3.5 ms. The tick that starts a slot
+applies the ~25.3k votes queued during the previous one in about 0.46 ms
+(`bench/fork_choice/on_tick.zig`).
 
 A one-off comparison on the same workload with silver (`gattaca-com/silver`
 `a467bc4`) and Lighthouse `proto_array` (`unstable` `eab341b`), using harnesses that
@@ -258,6 +275,7 @@ Run with:
 ```
 zig build run:bench_fork_choice_update_head -Doptimize=ReleaseFast
 zig build run:bench_fork_choice_on_attestation -Doptimize=ReleaseFast
+zig build run:bench_fork_choice_on_tick -Doptimize=ReleaseFast
 ```
 
 ## Lodestar integration
@@ -285,9 +303,20 @@ LODESTAR_NATIVE_FORK_CHOICE=true pnpm vitest run --project spec-minimal test/spe
 
 Behaviour that differs from proto-array under the flag:
 
-- The anchor is both the justified and the finalized checkpoint, as in
+- A finalized anchor is both the justified and the finalized checkpoint, as in
   `get_forkchoice_store`. Proto-array starts with the justified epoch one ahead.
-- Only a finalized anchor state is supported; starting from an unfinalized state throws.
+- An unfinalized anchor (`--unsafeCheckpointState`, `--lastPersistedCheckpointState`)
+  starts at its state's own checkpoints (`Store.initFromUnfinalizedSummary`). The
+  finalized block, the justified block, the anchor's parent, and for the anchor's epoch
+  and the one before the checkpoint block and the block before it enter the store as
+  ancestors known by root only, so finality only moves with the chain. The store would
+  accept a block on one of them, but the node has no state to import it with. As with
+  proto-array, the justified balances are the anchor state's. Unlike proto-array, those
+  ancestors carry no payload, so the safe and finalized block hashes sent to the engine
+  are zero until the safe and finalized blocks are ones the store imported, and the
+  payloads a node stands on end at the anchor. While they are in the store, an invalid
+  walk never reaches the anchor's payloads either: the justified block's chain protects
+  nothing above a stand-in.
 - `shouldOverrideForkChoiceUpdate` never overrides and `predictProposerHead` returns the
   head (see Deviations).
 - `prune` drops every block that does not descend from the finalized block, not only

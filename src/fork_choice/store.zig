@@ -48,6 +48,9 @@ pub const PTC_TIMELINESS_INDEX = 1;
 
 pub const Error = error{
     AnchorStateRootMismatch,
+    TooManyAnchorAncestors,
+    InvalidAnchorAncestor,
+    AnchorCheckpointNotAncestor,
     PreGenesisTime,
     TooManyBlocks,
     UnknownParent,
@@ -75,11 +78,32 @@ pub const Error = error{
     ExecutionStatusMismatch,
     ParentPayloadInvalid,
     InvalidJustifiedPayload,
-    UnknownPayload,
-    UnknownLatestValidHash,
     PayloadInvalidToValid,
-    PayloadValidToInvalid,
 } || Allocator.Error;
+
+/// Which payload the engine judged `INVALID`, relative to the node the walk starts from.
+pub const InvalidJudged = enum {
+    /// The from node's own payload, as the head in `forkchoiceUpdated`.
+    from_block,
+    /// A payload built on the from node that is not in the store, as one `newPayload` rejected.
+    child_payload,
+};
+
+/// Whether an engine verdict changed the store, and if not, why. Mirrors proto-array's
+/// `LVHNotAppliedReason`.
+pub const VerdictResult = enum {
+    applied,
+    /// A `VALID` verdict whose latest valid hash is not in the store.
+    unknown_lvh,
+    /// The store already holds the verdict.
+    already_applied,
+    /// The verdict contradicts a status the engine already resolved.
+    contradiction,
+    /// An `INVALID` verdict on a payload not in the store, with a null or unknown latest valid hash.
+    unusable_lvh,
+    /// An `INVALID` verdict that covers no payload above the latest valid hash or the justified block.
+    nothing_to_invalidate,
+};
 
 /// Spec `PayloadStatus` values; the numeric values are what the spec test vectors report.
 pub const PayloadStatus = enum(u8) {
@@ -110,6 +134,20 @@ pub const ForkChoiceNode = struct {
         return a.block == b.block and a.payload_status == b.payload_status;
     }
 };
+
+/// Index of a `ForkChoiceNode` into the per-node arrays: `block * NODES_PER_BLOCK + status`.
+pub const NodeId = u32;
+pub const NO_NODE: NodeId = std.math.maxInt(NodeId);
+/// One node per `PayloadStatus`.
+pub const NODES_PER_BLOCK: comptime_int = @typeInfo(PayloadStatus).@"enum".fields.len;
+
+pub fn nodeId(node: ForkChoiceNode) NodeId {
+    return node.block * NODES_PER_BLOCK + @intFromEnum(node.payload_status);
+}
+
+pub fn nodeAt(id: NodeId) ForkChoiceNode {
+    return .{ .block = id / NODES_PER_BLOCK, .payload_status = @enumFromInt(id % NODES_PER_BLOCK) };
+}
 
 /// Spec `LatestMessage`. The attestation slot is kept for every fork; pre-Gloas
 /// comparisons use its epoch, which `validateOnAttestation` ties to the target epoch.
@@ -148,6 +186,23 @@ pub const PtcPositions = struct {
 
     pub fn slice(self: *const PtcPositions) []const u16 {
         return self.buffer[0..self.len];
+    }
+};
+
+/// One payload attestation from a block, indexed but not yet written to `ptc_votes`.
+const PtcMessage = struct {
+    block: BlockIndex,
+    positions: std.StaticBitSet(preset.PTC_SIZE),
+    payload_present: bool,
+    blob_data_available: bool,
+};
+
+const PtcMessages = struct {
+    items: [preset.MAX_PAYLOAD_ATTESTATIONS]PtcMessage = undefined,
+    len: usize = 0,
+
+    fn slice(self: *const PtcMessages) []const PtcMessage {
+        return self.items[0..self.len];
     }
 };
 
@@ -215,7 +270,7 @@ pub const BlockSummary = struct {
 
     /// `execution_status` is the engine's `newPayload` verdict; it is normalized to
     /// `.pre_merge` for blocks without a payload and `.syncing` for Gloas blocks.
-    pub fn fromBlock(allocator: Allocator, block: AnyBeaconBlock, post_state: *CachedBeaconState, execution_status: ExecutionStatus) !BlockSummary {
+    pub fn fromBlock(allocator: Allocator, io: std.Io, block: AnyBeaconBlock, post_state: *CachedBeaconState, execution_status: ExecutionStatus) !BlockSummary {
         var root: Root = undefined;
         try block.hashTreeRoot(allocator, &root);
         const state = post_state.state;
@@ -223,7 +278,7 @@ pub const BlockSummary = struct {
         try state.currentJustifiedCheckpoint(&justified);
         var finalized: Checkpoint = undefined;
         try state.finalizedCheckpoint(&finalized);
-        const unrealized = try state_transition.computeUnrealizedCheckpoints(allocator, post_state);
+        const unrealized = try state_transition.computeUnrealizedCheckpoints(allocator, io, post_state);
         var summary: BlockSummary = .{
             .root = root,
             .parent_root = block.parentRoot().*,
@@ -250,6 +305,19 @@ pub const BlockSummary = struct {
     }
 };
 
+/// An ancestor of an unfinalized anchor, known only by root. `slot` is at or after the
+/// block's real slot. It keeps the block tree connected down to the finalized checkpoint.
+/// Its payload is unknown: the payloads a node stands on end at the anchor. The store
+/// accepts a block on top of it; a caller without the ancestor's state cannot produce one.
+pub const AnchorAncestor = struct {
+    root: Root,
+    slot: Slot,
+};
+
+/// The finalized block, the justified block, the anchor's parent, and for the anchor's
+/// epoch and the one before the checkpoint block and the block before it.
+pub const MAX_ANCHOR_ANCESTORS = 7;
+
 /// Balances of the justified checkpoint state (spec `store.checkpoint_states[store.justified_checkpoint]`).
 /// Owned by the store once returned from `StateProvider`.
 pub const JustifiedBalances = struct {
@@ -264,6 +332,38 @@ pub const JustifiedBalances = struct {
         allocator.free(self.effective_balance_increments);
         self.active_unslashed.deinit(allocator);
         self.* = .empty;
+    }
+};
+
+/// A justified checkpoint with its balances, loaded but not yet installed.
+const LoadedBalances = struct {
+    checkpoint: Checkpoint,
+    balances: JustifiedBalances,
+    /// `balances.effective_balance_increments`, zero for validators not active and unslashed.
+    vote_increments: []u16,
+    total_increments: u64,
+
+    fn deinit(self: *LoadedBalances, allocator: Allocator) void {
+        allocator.free(self.vote_increments);
+        self.balances.deinit(allocator);
+        self.* = undefined;
+    }
+};
+
+/// The checkpoints `update_checkpoints` and `update_unrealized_checkpoints` will leave,
+/// with the balances the store does not hold yet, prepared before the handler's first write.
+const CheckpointUpdate = struct {
+    justified: Checkpoint,
+    finalized: Checkpoint,
+    unrealized_justified: Checkpoint,
+    unrealized_finalized: Checkpoint,
+    justified_balances: ?LoadedBalances = null,
+    unrealized_justified_balances: ?LoadedBalances = null,
+
+    fn deinit(self: *CheckpointUpdate, allocator: Allocator) void {
+        if (self.justified_balances) |*loaded| loaded.deinit(allocator);
+        if (self.unrealized_justified_balances) |*loaded| loaded.deinit(allocator);
+        self.* = undefined;
     }
 };
 
@@ -289,7 +389,11 @@ pub const StateProvider = struct {
     vtable: *const VTable,
 
     pub const VTable = struct {
-        /// Balances of the state at `checkpoint`, allocated with `allocator`.
+        /// Balances of the state at `checkpoint`, allocated with `allocator`. Must not fail
+        /// because that state is gone: fall back to the closest state still held. A later
+        /// state of the same epoch on its chain differs only in validators slashed or added
+        /// since the epoch start. An error fails the call that asked (`init`, a block import,
+        /// `updateCheckpoints`) and leaves the store unchanged.
         justifiedBalances: *const fn (ctx: *anyopaque, allocator: Allocator, checkpoint: Checkpoint) anyerror!JustifiedBalances,
         /// Members of every beacon committee of `slot`, taken from the state of block `root`
         /// (spec `is_head_weak`). Appended to `out`.
@@ -354,6 +458,11 @@ pub const Store = struct {
     /// by the tick that makes their slot past. The spec rejects such attestations and
     /// expects the caller to retry; gossip delivers them in their own slot.
     queued_votes: std.ArrayList(TargetId),
+    /// The validators with a queued vote. Few validators attest per slot, so the tick
+    /// visits these instead of every entry of `queued_votes`.
+    queued_validators: std.DynamicBitSetUnmanaged,
+    /// Set bits in `queued_validators`, so a tick with nothing queued skips scanning it.
+    queued_count: usize,
     vote_targets: VoteTargets,
     justified_balances: JustifiedBalances,
     /// `effective_balance_increments` with inactive and slashed validators zeroed:
@@ -361,17 +470,24 @@ pub const Store = struct {
     justified_vote_increments: []u16,
     /// Sum of `justified_vote_increments` in Gwei (`get_total_balance` of the active unslashed set).
     justified_total_balance: u64,
+    /// Balances of `unrealized_justified_checkpoint`, held while it is ahead of
+    /// `justified_checkpoint`. Block import loads them, so the epoch start that pulls the
+    /// checkpoint up has nothing to load.
+    unrealized_justified_balances: ?LoadedBalances,
     provider: StateProvider,
     head_cache: head_mod.Cache,
     /// The status of the node the root block hangs from. `.pre_merge` for an anchor,
     /// whose ancestors count as validated; `prune` carries the dropped ancestors'
     /// derived status here so a Gloas root's `pending` and `empty` nodes keep it.
     root_base_status: ExecutionStatus,
+    /// The first blocks of the table are this many `AnchorAncestor`s.
+    anchor_ancestor_count: BlockIndex,
 
     /// Spec `get_forkchoice_store`. `execution_status` is the verdict on the anchor's own
     /// payload: `.valid` at genesis, `.syncing` for a checkpoint the engine has not seen.
     pub fn init(
         allocator: Allocator,
+        io: std.Io,
         config: *const BeaconConfig,
         anchor_state: *CachedBeaconState,
         anchor_block: AnyBeaconBlock,
@@ -381,7 +497,7 @@ pub const Store = struct {
         const state = anchor_state.state;
         const state_root = try state.hashTreeRoot();
         if (!std.mem.eql(u8, state_root, anchor_block.stateRoot())) return error.AnchorStateRootMismatch;
-        var summary = try BlockSummary.fromBlock(allocator, anchor_block, anchor_state, execution_status);
+        var summary = try BlockSummary.fromBlock(allocator, io, anchor_block, anchor_state, execution_status);
         summary.unrealized_justified_checkpoint = summary.justified_checkpoint;
         summary.unrealized_finalized_checkpoint = summary.finalized_checkpoint;
         return initFromSummary(allocator, config, try state.genesisTime(), summary, provider);
@@ -397,6 +513,56 @@ pub const Store = struct {
         provider: StateProvider,
     ) !Store {
         const checkpoint: Checkpoint = .{ .epoch = computeEpochAtSlot(anchor.slot), .root = anchor.root };
+        return initAnchored(allocator, config, genesis_time, anchor, &.{}, .{
+            .justified = checkpoint,
+            .finalized = checkpoint,
+            .unrealized_justified = checkpoint,
+            .unrealized_finalized = checkpoint,
+        }, provider);
+    }
+
+    /// A store anchored at a block that is not finalized. Unlike `get_forkchoice_store`,
+    /// the store starts at the anchor state's own checkpoints, so the anchor can still be
+    /// reorged and finality only moves with the chain. `ancestors` run oldest first from
+    /// the finalized block to the anchor and must contain the justified and the finalized
+    /// checkpoint blocks, unless the anchor is that block itself. A checkpoint the chain can
+    /// still justify must be among them too: `get_head` fails once the justified block is
+    /// one the store does not hold. `provider.justifiedBalances`
+    /// is asked for the justified checkpoint, whose state the caller usually does not have;
+    /// the anchor state's balances are the closest substitute.
+    pub fn initFromUnfinalizedSummary(
+        allocator: Allocator,
+        config: *const BeaconConfig,
+        genesis_time: u64,
+        anchor: BlockSummary,
+        ancestors: []const AnchorAncestor,
+        provider: StateProvider,
+    ) !Store {
+        return initAnchored(allocator, config, genesis_time, anchor, ancestors, .{
+            .justified = anchor.justified_checkpoint,
+            .finalized = anchor.finalized_checkpoint,
+            .unrealized_justified = anchor.unrealized_justified_checkpoint,
+            .unrealized_finalized = anchor.unrealized_finalized_checkpoint,
+        }, provider);
+    }
+
+    const AnchorCheckpoints = struct {
+        justified: Checkpoint,
+        finalized: Checkpoint,
+        unrealized_justified: Checkpoint,
+        unrealized_finalized: Checkpoint,
+    };
+
+    fn initAnchored(
+        allocator: Allocator,
+        config: *const BeaconConfig,
+        genesis_time: u64,
+        anchor: BlockSummary,
+        ancestors: []const AnchorAncestor,
+        checkpoints: AnchorCheckpoints,
+        provider: StateProvider,
+    ) !Store {
+        if (ancestors.len > MAX_ANCHOR_ANCESTORS) return error.TooManyAnchorAncestors;
         // Owned by `self` from here on: `self.deinit` is the only cleanup.
         const vote_targets = try VoteTargets.init(allocator);
         var self: Store = .{
@@ -405,10 +571,10 @@ pub const Store = struct {
             .timing = SlotTiming.init(config, secondsToMilliseconds(genesis_time)),
             .time_ms = 0,
             .genesis_time_ms = secondsToMilliseconds(genesis_time),
-            .justified_checkpoint = checkpoint,
-            .finalized_checkpoint = checkpoint,
-            .unrealized_justified_checkpoint = checkpoint,
-            .unrealized_finalized_checkpoint = checkpoint,
+            .justified_checkpoint = checkpoints.justified,
+            .finalized_checkpoint = checkpoints.finalized,
+            .unrealized_justified_checkpoint = checkpoints.unrealized_justified,
+            .unrealized_finalized_checkpoint = checkpoints.unrealized_finalized,
             .proposer_boost_root = constants.ZERO_HASH,
             .equivocating_indices = .{},
             .blocks = .empty,
@@ -416,45 +582,98 @@ pub const Store = struct {
             .ptc_votes = .empty,
             .latest_votes = .empty,
             .queued_votes = .empty,
+            .queued_validators = .{},
+            .queued_count = 0,
             .vote_targets = vote_targets,
             .justified_balances = .empty,
             .justified_vote_increments = &.{},
             .justified_total_balance = 0,
+            .unrealized_justified_balances = null,
             .provider = provider,
             .head_cache = .empty,
             .root_base_status = .pre_merge,
+            .anchor_ancestor_count = @intCast(ancestors.len),
         };
         errdefer self.deinit();
         self.time_ms = self.timing.timeAtSlotMs(anchor.slot);
         try checkExecutionStatus(&anchor);
+
+        var parent: BlockIndex = NO_BLOCK;
+        var parent_fork: ForkSeq = anchor.fork;
+        for (ancestors) |ancestor| {
+            // The zero root is the store's "no block": an ancestor may not take it.
+            if (std.mem.eql(u8, &ancestor.root, &constants.ZERO_HASH)) return error.InvalidAnchorAncestor;
+            if (std.mem.eql(u8, &ancestor.root, &anchor.root) or self.hasBlock(ancestor.root)) return error.InvalidAnchorAncestor;
+            if (ancestor.slot >= anchor.slot) return error.InvalidAnchorAncestor;
+            if (parent != NO_BLOCK and ancestor.slot <= self.blockSlot(parent)) return error.InvalidAnchorAncestor;
+            const fork = config.forkSeq(ancestor.slot);
+            const index: BlockIndex = @intCast(self.blocks.len);
+            try self.appendBlock(.{
+                .root = ancestor.root,
+                .parent = parent,
+                .slot = ancestor.slot,
+                .proposer_index = 0,
+                .state_root = constants.ZERO_HASH,
+                .fork = fork,
+                .justified_checkpoint = checkpoints.justified,
+                .finalized_checkpoint = checkpoints.finalized,
+                .unrealized_justified_checkpoint = checkpoints.unrealized_justified,
+                .timely = .{ false, false },
+                .parent_payload_status = anchorLinkStatus(fork, parent_fork, parent),
+                .payload_block_hash = constants.ZERO_HASH,
+                .bid_parent_block_hash = constants.ZERO_HASH,
+                .execution_status = .pre_merge,
+                .payload_verified = false,
+                .inclusion_list_satisfaction = .unknown,
+            });
+            parent = index;
+            parent_fork = fork;
+        }
+
+        const anchor_index: BlockIndex = @intCast(self.blocks.len);
         try self.appendBlock(.{
             .root = anchor.root,
-            .parent = NO_BLOCK,
+            .parent = parent,
             .slot = anchor.slot,
             .proposer_index = anchor.proposer_index,
             .state_root = anchor.state_root,
             .fork = anchor.fork,
             .justified_checkpoint = anchor.justified_checkpoint,
             .finalized_checkpoint = anchor.finalized_checkpoint,
-            .unrealized_justified_checkpoint = checkpoint,
+            .unrealized_justified_checkpoint = checkpoints.unrealized_justified,
             .timely = .{ true, true },
-            .parent_payload_status = .pending,
+            .parent_payload_status = anchorLinkStatus(anchor.fork, parent_fork, parent),
             .payload_block_hash = anchor.payload_block_hash,
             .bid_parent_block_hash = anchor.bid_parent_block_hash,
             .execution_status = anchor.execution_status,
             .payload_verified = false,
             .inclusion_list_satisfaction = .unknown,
         });
-        try self.refreshJustifiedBalances(self.justified_checkpoint);
+        // `get_head` starts at the justified block and `on_block` checks the finalized one.
+        for ([_]Checkpoint{ checkpoints.justified, checkpoints.finalized }) |checkpoint| {
+            const block = self.getCheckpointBlock(anchor_index, checkpoint.epoch);
+            if (!std.mem.eql(u8, &self.blockRoot(block), &checkpoint.root)) return error.AnchorCheckpointNotAncestor;
+        }
+        self.installJustifiedBalances(try self.loadJustifiedBalances(self.justified_checkpoint));
         return self;
+    }
+
+    /// The node of `parent` an anchor block or one of its ancestors hangs from. An
+    /// ancestor's payload is unknown, so a Gloas block hangs from its `.empty` node,
+    /// the one that always exists.
+    fn anchorLinkStatus(fork: ForkSeq, parent_fork: ForkSeq, parent: BlockIndex) PayloadStatus {
+        if (parent == NO_BLOCK) return .pending;
+        return if (fork.gte(.gloas) and parent_fork.gte(.gloas)) .empty else .pending;
     }
 
     pub fn deinit(self: *Store) void {
         self.head_cache.deinit(self.allocator);
+        if (self.unrealized_justified_balances) |*loaded| loaded.deinit(self.allocator);
         self.allocator.free(self.justified_vote_increments);
         self.justified_balances.deinit(self.allocator);
         self.latest_votes.deinit(self.allocator);
         self.queued_votes.deinit(self.allocator);
+        self.queued_validators.deinit(self.allocator);
         self.vote_targets.deinit(self.allocator);
         self.ptc_votes.deinit(self.allocator);
         self.index_by_root.deinit(self.allocator);
@@ -532,11 +751,20 @@ pub const Store = struct {
     }
 
     fn appendBlock(self: *Store, block: Block) !void {
+        try self.reserveBlock();
+        self.appendBlockAssumeCapacity(block);
+    }
+
+    fn reserveBlock(self: *Store) !void {
         if (self.blocks.len >= NO_BLOCK) return error.TooManyBlocks;
-        const index: BlockIndex = @intCast(self.blocks.len);
         try self.blocks.ensureUnusedCapacity(self.allocator, 1);
         try self.ptc_votes.ensureUnusedCapacity(self.allocator, 1);
-        try self.index_by_root.putNoClobber(self.allocator, block.root, index);
+        try self.index_by_root.ensureUnusedCapacity(self.allocator, 1);
+    }
+
+    fn appendBlockAssumeCapacity(self: *Store, block: Block) void {
+        const index: BlockIndex = @intCast(self.blocks.len);
+        self.index_by_root.putAssumeCapacityNoClobber(block.root, index);
         self.blocks.appendAssumeCapacity(block);
         self.ptc_votes.appendAssumeCapacity(@splat(.{}));
         self.head_cache.dirty = true;
@@ -585,27 +813,93 @@ pub const Store = struct {
 
     /// Spec `update_checkpoints`.
     pub fn updateCheckpoints(self: *Store, justified: Checkpoint, finalized: Checkpoint) !void {
-        if (justified.epoch > self.justified_checkpoint.epoch) {
-            try self.refreshJustifiedBalances(justified);
-            self.justified_checkpoint = justified;
+        var update = try self.prepareCheckpoints(justified, finalized, self.unrealized_justified_checkpoint, self.unrealized_finalized_checkpoint);
+        defer update.deinit(self.allocator);
+        self.commitCheckpoints(&update);
+    }
+
+    /// The fallible half of `update_checkpoints` followed by `update_unrealized_checkpoints`:
+    /// loads the balances of a newer justified checkpoint, and of a newer unrealized one
+    /// that stays ahead of it, unless the store holds them. Writes nothing, so a handler
+    /// calls it before its first write.
+    fn prepareCheckpoints(
+        self: *const Store,
+        justified: Checkpoint,
+        finalized: Checkpoint,
+        unrealized_justified: Checkpoint,
+        unrealized_finalized: Checkpoint,
+    ) !CheckpointUpdate {
+        var update: CheckpointUpdate = .{
+            .justified = newerCheckpoint(self.justified_checkpoint, justified),
+            .finalized = newerCheckpoint(self.finalized_checkpoint, finalized),
+            .unrealized_justified = newerCheckpoint(self.unrealized_justified_checkpoint, unrealized_justified),
+            .unrealized_finalized = newerCheckpoint(self.unrealized_finalized_checkpoint, unrealized_finalized),
+        };
+        errdefer update.deinit(self.allocator);
+        if (update.justified.epoch > self.justified_checkpoint.epoch and !self.holdsUnrealizedBalances(update.justified)) {
+            update.justified_balances = try self.loadJustifiedBalances(update.justified);
         }
-        if (finalized.epoch > self.finalized_checkpoint.epoch) {
-            self.finalized_checkpoint = finalized;
+        if (update.unrealized_justified.epoch > update.justified.epoch and !self.holdsUnrealizedBalances(update.unrealized_justified)) {
+            update.unrealized_justified_balances = try self.loadJustifiedBalances(update.unrealized_justified);
+        }
+        return update;
+    }
+
+    fn holdsUnrealizedBalances(self: *const Store, checkpoint: Checkpoint) bool {
+        const held = self.unrealized_justified_balances orelse return false;
+        return checkpointEql(held.checkpoint, checkpoint);
+    }
+
+    /// Moves the balances out of `update`, which stays safe to `deinit`. Balances `update`
+    /// does not carry come from `unrealized_justified_balances`.
+    fn commitCheckpoints(self: *Store, update: *CheckpointUpdate) void {
+        var held = self.unrealized_justified_balances;
+        self.unrealized_justified_balances = null;
+        if (update.justified.epoch > self.justified_checkpoint.epoch) {
+            if (update.justified_balances) |loaded| {
+                self.installJustifiedBalances(loaded);
+                update.justified_balances = null;
+            } else {
+                std.debug.assert(checkpointEql(held.?.checkpoint, update.justified));
+                self.installJustifiedBalances(held.?);
+                held = null;
+            }
+        }
+        if (update.finalized.epoch > self.finalized_checkpoint.epoch) {
+            self.finalized_checkpoint = update.finalized;
             self.head_cache.dirty = true;
         }
+        self.unrealized_justified_checkpoint = update.unrealized_justified;
+        self.unrealized_finalized_checkpoint = update.unrealized_finalized;
+        if (update.unrealized_justified.epoch > self.justified_checkpoint.epoch) {
+            if (update.unrealized_justified_balances) |loaded| {
+                self.unrealized_justified_balances = loaded;
+                update.unrealized_justified_balances = null;
+            } else {
+                std.debug.assert(checkpointEql(held.?.checkpoint, update.unrealized_justified));
+                self.unrealized_justified_balances = held;
+                held = null;
+            }
+        }
+        if (held) |*stale| stale.deinit(self.allocator);
+        if (self.unrealized_justified_balances) |kept| {
+            std.debug.assert(checkpointEql(kept.checkpoint, self.unrealized_justified_checkpoint));
+        }
     }
 
-    /// Spec `update_unrealized_checkpoints`.
-    pub fn updateUnrealizedCheckpoints(self: *Store, justified: Checkpoint, finalized: Checkpoint) void {
-        if (justified.epoch > self.unrealized_justified_checkpoint.epoch) {
-            self.unrealized_justified_checkpoint = justified;
-        }
-        if (finalized.epoch > self.unrealized_finalized_checkpoint.epoch) {
-            self.unrealized_finalized_checkpoint = finalized;
-        }
+    /// Spec `update_checkpoints` with the unrealized checkpoints, at an epoch start. Their
+    /// balances are held, so the pull-up cannot fail.
+    fn pullUpCheckpoints(self: *Store) void {
+        var update: CheckpointUpdate = .{
+            .justified = newerCheckpoint(self.justified_checkpoint, self.unrealized_justified_checkpoint),
+            .finalized = newerCheckpoint(self.finalized_checkpoint, self.unrealized_finalized_checkpoint),
+            .unrealized_justified = self.unrealized_justified_checkpoint,
+            .unrealized_finalized = self.unrealized_finalized_checkpoint,
+        };
+        self.commitCheckpoints(&update);
     }
 
-    fn refreshJustifiedBalances(self: *Store, checkpoint: Checkpoint) !void {
+    fn loadJustifiedBalances(self: *const Store, checkpoint: Checkpoint) !LoadedBalances {
         var balances = try self.provider.justifiedBalances(self.allocator, checkpoint);
         errdefer balances.deinit(self.allocator);
         const increments = balances.effective_balance_increments;
@@ -616,12 +910,18 @@ pub const Store = struct {
             out.* = if (active) increment else 0;
             total += out.*;
         }
-        self.head_cache.applyBalanceChange(self.vote_targets.nodes.items, self.justified_vote_increments, vote_increments);
+        return .{ .checkpoint = checkpoint, .balances = balances, .vote_increments = vote_increments, .total_increments = total };
+    }
+
+    /// Takes ownership of `loaded`.
+    fn installJustifiedBalances(self: *Store, loaded: LoadedBalances) void {
+        self.head_cache.applyBalanceChange(self.vote_targets.nodes.items, self.justified_vote_increments, loaded.vote_increments);
         self.justified_balances.deinit(self.allocator);
         self.allocator.free(self.justified_vote_increments);
-        self.justified_balances = balances;
-        self.justified_vote_increments = vote_increments;
-        self.justified_total_balance = total * preset.EFFECTIVE_BALANCE_INCREMENT;
+        self.justified_balances = loaded.balances;
+        self.justified_vote_increments = loaded.vote_increments;
+        self.justified_total_balance = loaded.total_increments * preset.EFFECTIVE_BALANCE_INCREMENT;
+        self.justified_checkpoint = loaded.checkpoint;
         self.head_cache.dirty = true;
     }
 
@@ -638,19 +938,20 @@ pub const Store = struct {
 
     // --- on_tick ----------------------------------------------------------------------
 
-    /// Spec `on_tick`.
-    pub fn onTick(self: *Store, time_ms: u64) !void {
+    /// Spec `on_tick`. Fails only before genesis: the epoch start pulls up balances that
+    /// block import loaded when it raised the unrealized justified checkpoint.
+    pub fn onTick(self: *Store, time_ms: u64) error{PreGenesisTime}!void {
         if (time_ms < self.genesis_time_ms) return error.PreGenesisTime;
         const tick_slot = self.timing.slotAtTimeMs(time_ms);
         while (self.currentSlot() < tick_slot) {
             const next_slot = self.currentSlot() + 1;
-            try self.onTickPerSlot(self.timing.timeAtSlotMs(next_slot));
+            self.onTickPerSlot(self.timing.timeAtSlotMs(next_slot));
         }
-        try self.onTickPerSlot(time_ms);
+        self.onTickPerSlot(time_ms);
     }
 
     /// Spec `on_tick_per_slot`.
-    fn onTickPerSlot(self: *Store, time_ms: u64) !void {
+    fn onTickPerSlot(self: *Store, time_ms: u64) void {
         const previous_slot = self.currentSlot();
         self.time_ms = time_ms;
         self.head_cache.dirty = true;
@@ -659,7 +960,7 @@ pub const Store = struct {
             self.proposer_boost_root = constants.ZERO_HASH;
         }
         if (current_slot > previous_slot and computeSlotsSinceEpochStart(current_slot) == 0) {
-            try self.updateCheckpoints(self.unrealized_justified_checkpoint, self.unrealized_finalized_checkpoint);
+            self.pullUpCheckpoints();
         }
         if (current_slot > previous_slot) self.drainQueuedMessages(current_slot);
     }
@@ -717,32 +1018,57 @@ pub const Store = struct {
     /// already validated by the caller. The store reads it and does not keep it.
     /// `execution_status` is the engine's verdict on the block's payload, see
     /// `BlockSummary.fromBlock`; an `.invalid` payload never reaches the store
-    /// (`onPayloadInvalid` takes its parent instead).
-    pub fn onBlock(self: *Store, block: AnyBeaconBlock, block_root: Root, post_state: *CachedBeaconState, execution_status: ExecutionStatus) !void {
+    /// (`onPayloadInvalid` takes its parent instead). On error the store is unchanged, so
+    /// the same call can be retried.
+    pub fn onBlock(self: *Store, io: std.Io, block: AnyBeaconBlock, block_root: Root, post_state: *CachedBeaconState, execution_status: ExecutionStatus) !void {
         if (self.hasBlock(block_root)) return;
         try self.validateBlock(block, block_root);
-        var summary = try BlockSummary.fromBlock(self.allocator, block, post_state, execution_status);
+        var summary = try BlockSummary.fromBlock(self.allocator, io, block, post_state, execution_status);
         summary.root = block_root;
-        try self.onBlockSummary(summary);
-        if (block.forkSeq().gte(.gloas)) try self.notifyPtcMessages(block, post_state);
+        var ptc_messages: PtcMessages = .{};
+        if (block.forkSeq().gte(.gloas)) try self.indexPtcMessages(block, post_state, &ptc_messages);
+        try self.importBlock(&summary, ptc_messages.slice());
     }
 
     /// Spec `on_block` from the block's facts, without its payload attestations
     /// (feed those through `onPayloadAttestationMessage`). Optimistic sync: a block whose
     /// parent node stands on an invalidated payload is rejected, and a `.valid` payload
-    /// validates every not yet validated payload below it.
+    /// validates every not yet validated payload below it. On error the store is unchanged,
+    /// so the same call can be retried.
     pub fn onBlockSummary(self: *Store, summary: BlockSummary) !void {
         if (self.hasBlock(summary.root)) return;
-        try self.validateSummary(&summary);
-        try checkExecutionStatus(&summary);
+        try self.importBlock(&summary, &.{});
+    }
+
+    /// Every check and fallible load runs before the block's row is written, and
+    /// `markChainValid` writes nothing when it fails: a failed import leaves the store as
+    /// it was, so a retry is not skipped as a known block.
+    fn importBlock(self: *Store, summary: *const BlockSummary, ptc_messages: []const PtcMessage) !void {
+        try self.validateSummary(summary);
+        try checkExecutionStatus(summary);
         const parent = self.blockIndex(summary.parent_root).?;
 
         const head = try self.getHead();
-        const parent_node: ForkChoiceNode = .{ .block = parent, .payload_status = self.parentPayloadStatus(&summary, parent) };
-        if (self.head_cache.execution.items[head_mod.nodeId(parent_node)] == .invalid) return error.ParentPayloadInvalid;
+        const parent_node: ForkChoiceNode = .{ .block = parent, .payload_status = self.parentPayloadStatus(summary, parent) };
+        if (head_mod.execution(self, parent_node) == .invalid) return error.ParentPayloadInvalid;
+
+        // Spec `update_checkpoints` for the block, then `compute_pulled_up_tip`:
+        // `update_unrealized_checkpoints`, and `update_checkpoints` again for a block from a
+        // past epoch. Only the net result needs balances.
+        var justified = summary.justified_checkpoint;
+        var finalized = summary.finalized_checkpoint;
+        if (computeEpochAtSlot(summary.slot) < self.currentEpoch()) {
+            justified = newerCheckpoint(justified, summary.unrealized_justified_checkpoint);
+            finalized = newerCheckpoint(finalized, summary.unrealized_finalized_checkpoint);
+        }
+        var checkpoints = try self.prepareCheckpoints(justified, finalized, summary.unrealized_justified_checkpoint, summary.unrealized_finalized_checkpoint);
+        defer checkpoints.deinit(self.allocator);
+
+        try self.reserveBlock();
+        if (summary.execution_status == .valid) try self.markChainValid(parent_node);
 
         const index: BlockIndex = @intCast(self.blocks.len);
-        try self.appendBlock(.{
+        self.appendBlockAssumeCapacity(.{
             .root = summary.root,
             .parent = parent,
             .slot = summary.slot,
@@ -760,17 +1086,16 @@ pub const Store = struct {
             .payload_verified = false,
             .inclusion_list_satisfaction = .unknown,
         });
-        if (summary.execution_status == .valid) try self.markChainValid(parent_node);
-
+        for (ptc_messages) |*message| {
+            const votes = &self.ptc_votes.items[message.block];
+            var positions = message.positions.iterator(.{});
+            while (positions.next()) |position| {
+                votes[position] = .{ .voted = true, .payload_present = message.payload_present, .blob_data_available = message.blob_data_available };
+            }
+        }
         self.recordBlockTimeliness(index, summary.arrival_ms_into_slot orelse self.timeIntoSlotMs());
         self.updateProposerBoostRoot(head.block, index);
-        try self.updateCheckpoints(summary.justified_checkpoint, summary.finalized_checkpoint);
-
-        // Spec `compute_pulled_up_tip`
-        self.updateUnrealizedCheckpoints(summary.unrealized_justified_checkpoint, summary.unrealized_finalized_checkpoint);
-        if (computeEpochAtSlot(summary.slot) < self.currentEpoch()) {
-            try self.updateCheckpoints(summary.unrealized_justified_checkpoint, summary.unrealized_finalized_checkpoint);
-        }
+        self.commitCheckpoints(&checkpoints);
     }
 
     /// Spec `get_parent_payload_status`; `.pending` when either side predates Gloas.
@@ -803,22 +1128,39 @@ pub const Store = struct {
         }
     }
 
-    /// Spec `notify_ptc_messages`: the block's payload attestations, indexed with the
-    /// block's post-state.
-    fn notifyPtcMessages(self: *Store, block: AnyBeaconBlock, post_state: *CachedBeaconState) !void {
+    /// Spec `notify_ptc_messages` up to its writes: indexes the block's payload attestations
+    /// with the block's post-state. `importBlock` writes the votes.
+    fn indexPtcMessages(self: *const Store, block: AnyBeaconBlock, post_state: *CachedBeaconState, out: *PtcMessages) !void {
         if (try post_state.state.slot() == 0) return;
         switch (block.forkSeq()) {
             inline .gloas, .heze => |fork| {
                 const typed = block.castToFork(.full, fork);
                 const state = post_state.state.castToFork(fork);
-                for (typed.body().inner.payload_attestations.items) |*payload_attestation| {
+                const payload_attestations = typed.body().inner.payload_attestations.items;
+                std.debug.assert(out.len == 0);
+                std.debug.assert(payload_attestations.len <= out.items.len);
+                for (payload_attestations) |*payload_attestation| {
                     const data = &payload_attestation.data;
                     var ptc: ForkTypes(fork).PayloadTimelinessCommittee.Type = undefined;
                     try state_transition.getPayloadTimelinessCommittee(fork, self.config, state, data.slot, &ptc);
+                    var message: PtcMessage = .{
+                        .block = undefined,
+                        .positions = .initEmpty(),
+                        .payload_present = data.payload_present,
+                        .blob_data_available = data.blob_data_available,
+                    };
                     for (ptc, 0..) |validator_index, i| {
                         if (!try payload_attestation.aggregation_bits.get(i)) continue;
-                        try self.onPayloadAttestationMessage(data, validator_index, &ptc, true);
+                        // Spec `on_payload_attestation_message` votes at every position the
+                        // validator holds, not only the attested bit.
+                        var positions: PtcPositions = .{};
+                        try self.validatePayloadAttestationMessage(data, validator_index, &ptc, true, &positions);
+                        for (positions.slice()) |position| message.positions.set(position);
                     }
+                    if (message.positions.count() == 0) continue;
+                    message.block = self.blockIndex(data.beacon_block_root).?;
+                    out.items[out.len] = message;
+                    out.len += 1;
                 }
             },
             else => unreachable,
@@ -878,7 +1220,10 @@ pub const Store = struct {
         };
         const queue = self.currentSlot() < data.slot + 1;
         try self.ensureValidatorSlots(&self.latest_votes, indices);
-        if (queue) try self.ensureValidatorSlots(&self.queued_votes, indices);
+        if (queue) {
+            try self.ensureValidatorSlots(&self.queued_votes, indices);
+            try self.queued_validators.resize(self.allocator, self.queued_votes.items.len, false);
+        }
         const id = try self.internVoteTarget(message);
         if (queue) return self.queueVotes(indices, id, message);
         for (indices) |index| self.applyVote(index, id, message);
@@ -897,7 +1242,7 @@ pub const Store = struct {
         if (self.vote_targets.needsCompaction()) {
             try self.vote_targets.compact(self.allocator, &.{ self.latest_votes.items, self.queued_votes.items, self.head_cache.applied_votes.items });
         }
-        return self.vote_targets.getOrInsert(self.allocator, message, head_mod.nodeId(head_mod.supportedNode(self, message)));
+        return self.vote_targets.getOrInsert(self.allocator, message, nodeId(head_mod.supportedNode(self, message)));
     }
 
     /// The replacement rule of spec `update_latest_messages` for one validator: a later
@@ -922,7 +1267,13 @@ pub const Store = struct {
         for (attesting_indices) |index| {
             if (self.isEquivocating(index)) continue;
             const queued = &self.queued_votes.items[index];
-            if (queued.* == NO_TARGET or message.slot > messages[queued.*].slot) queued.* = id;
+            if (queued.* == NO_TARGET) {
+                self.queued_validators.set(index);
+                self.queued_count += 1;
+                queued.* = id;
+            } else if (message.slot > messages[queued.*].slot) {
+                queued.* = id;
+            }
         }
     }
 
@@ -930,20 +1281,24 @@ pub const Store = struct {
     fn drainQueuedMessages(self: *Store, current_slot: Slot) void {
         const queued = self.queued_votes.items;
         std.debug.assert(queued.len <= self.latest_votes.items.len);
-        for (queued, 0..) |*id, index| {
-            if (id.* == NO_TARGET) continue;
+        var validators = self.queued_validators.iterator(.{});
+        // Bounded by the count, so the scan skips the empty words after the last queued validator.
+        for (0..self.queued_count) |_| {
+            const index = validators.next().?;
+            const id = &queued[index];
+            std.debug.assert(id.* != NO_TARGET);
             const message = self.vote_targets.messages.items[id.*];
             if (message.slot >= current_slot) continue;
             self.applyVote(index, id.*, message);
             id.* = NO_TARGET;
+            self.queued_validators.unset(index);
+            self.queued_count -= 1;
         }
     }
 
     /// Validators with a vote waiting for its slot to pass.
     pub fn queuedVoteCount(self: *const Store) usize {
-        var count: usize = 0;
-        for (self.queued_votes.items) |id| count += @intFromBool(id != NO_TARGET);
-        return count;
+        return self.queued_count;
     }
 
     pub fn latestMessage(self: *const Store, validator_index: ValidatorIndex) ?LatestMessage {
@@ -1083,29 +1438,29 @@ pub const Store = struct {
     /// Spec `on_execution_payload_envelope` after the caller verified the envelope and
     /// data availability. `execution_status` is the engine's verdict on the payload,
     /// `.valid` or `.syncing`; `inclusion_list_satisfied` carries the Heze engine verdict.
+    /// `error.PayloadInvalidToValid` means the engine contradicted an earlier verdict; the
+    /// store is unchanged.
     pub fn onExecutionPayloadEnvelope(self: *Store, beacon_block_root: Root, execution_status: ExecutionStatus, inclusion_list_satisfied: ?bool) Error!void {
         const block = self.blockIndex(beacon_block_root) orelse return error.UnknownBlock;
         if (execution_status != .valid and execution_status != .syncing) return error.ExecutionStatusMismatch;
         const statuses = self.blocks.items(.execution_status);
-        switch (statuses[block]) {
-            .invalid => return error.PayloadInvalidToValid,
-            .valid => {},
-            .syncing, .pre_merge => statuses[block] = execution_status,
+        if (statuses[block] == .invalid) return error.PayloadInvalidToValid;
+        const parent = self.blocks.items(.parent)[block];
+        if (execution_status == .valid and parent != NO_BLOCK) {
+            try self.markChainValid(.{ .block = parent, .payload_status = self.blocks.items(.parent_payload_status)[block] });
         }
+        if (statuses[block] != .valid) statuses[block] = execution_status;
         if (inclusion_list_satisfied) |satisfied| {
             self.blocks.items(.inclusion_list_satisfaction)[block] = if (satisfied) .satisfied else .unsatisfied;
         }
         self.blocks.items(.payload_verified)[block] = true;
         self.head_cache.dirty = true;
-        const parent = self.blocks.items(.parent)[block];
-        if (execution_status == .valid and parent != NO_BLOCK) {
-            try self.markChainValid(.{ .block = parent, .payload_status = self.blocks.items(.parent_payload_status)[block] });
-        }
     }
 
     // --- optimistic sync --------------------------------------------------------------
 
-    /// The payloads a node stands on, nearest first. A block's own payload is on the
+    /// The payloads a node stands on, nearest first, ending above the anchor's ancestors,
+    /// whose payloads are unknown. A block's own payload is on the
     /// chain before Gloas and for its `.full` node; `.pending` and `.empty` Gloas nodes
     /// stand on the parent payload the bid names, reached through `parent_payload_status`.
     const PayloadChain = struct {
@@ -1114,12 +1469,14 @@ pub const Store = struct {
 
         fn next(self: *PayloadChain) ?BlockIndex {
             while (self.node) |node| {
+                if (node.block < self.store.anchor_ancestor_count) break;
                 const blocks = self.store.blocks;
                 const own_on_chain = blocks.items(.fork)[node.block].lt(.gloas) or node.payload_status == .full;
                 const parent = blocks.items(.parent)[node.block];
                 self.node = if (parent == NO_BLOCK) null else .{ .block = parent, .payload_status = blocks.items(.parent_payload_status)[node.block] };
                 if (own_on_chain) return node.block;
             }
+            self.node = null;
             return null;
         }
     };
@@ -1130,96 +1487,166 @@ pub const Store = struct {
 
     /// Optimistic sync `NOT_VALIDATED -> VALID` for the payload with `block_hash`, in every
     /// block carrying it, and, as the spec requires, every not yet validated payload below it.
-    pub fn onPayloadValid(self: *Store, block_hash: Root) Error!void {
+    /// Every carrier's walk is checked before any write.
+    pub fn onPayloadValid(self: *Store, block_hash: Root) VerdictResult {
         const hashes = self.blocks.items(.payload_block_hash);
         var found = false;
+        var changes = false;
         for (hashes, 0..) |*hash, i| {
             if (!std.mem.eql(u8, hash, &block_hash)) continue;
             found = true;
-            const index: BlockIndex = @intCast(i);
-            const node: ForkChoiceNode = if (self.blocks.items(.fork)[i].gte(.gloas)) .{ .block = index, .payload_status = .full } else pendingNode(index);
-            try self.markChainValid(node);
+            const walk = self.validWalk(self.ownPayloadNode(@intCast(i))) catch return .contradiction;
+            if (walk.count > 0 or walk.validates_root_base) changes = true;
         }
-        if (!found) return error.UnknownPayload;
+        if (!found) return .unknown_lvh;
+        if (!changes) return .already_applied;
+        for (hashes, 0..) |*hash, i| {
+            if (!std.mem.eql(u8, hash, &block_hash)) continue;
+            self.markChainValid(self.ownPayloadNode(@intCast(i))) catch unreachable;
+        }
+        return .applied;
+    }
+
+    /// The node whose payload chain starts with `block`'s own payload.
+    fn ownPayloadNode(self: *const Store, block: BlockIndex) ForkChoiceNode {
+        return if (self.blocks.items(.fork)[block].gte(.gloas)) .{ .block = block, .payload_status = .full } else pendingNode(block);
+    }
+
+    const ValidWalk = struct { count: usize, validates_root_base: bool };
+
+    /// The `.syncing` payloads from `node` down to the first `.valid` or `.pre_merge` one,
+    /// and whether the walk reaches the root's still open base.
+    fn validWalk(self: *const Store, node: ForkChoiceNode) error{PayloadInvalidToValid}!ValidWalk {
+        const statuses = self.blocks.items(.execution_status);
+        var count: usize = 0;
+        var chain = self.payloadChain(node);
+        while (chain.next()) |block| {
+            switch (statuses[block]) {
+                .invalid => return error.PayloadInvalidToValid,
+                .valid, .pre_merge => return .{ .count = count, .validates_root_base = false },
+                .syncing => count += 1,
+            }
+        }
+        if (self.root_base_status == .invalid) return error.PayloadInvalidToValid;
+        return .{ .count = count, .validates_root_base = self.root_base_status == .syncing };
     }
 
     /// Marks the `.syncing` payloads from `node` down `.valid`, stopping at the first payload
     /// already `.valid` or `.pre_merge`. Writes nothing when an `.invalid` payload comes first.
     /// A payload just marked `.valid` passes the node it hangs from, not its own.
-    fn markChainValid(self: *Store, node: ForkChoiceNode) Error!void {
+    fn markChainValid(self: *Store, node: ForkChoiceNode) error{PayloadInvalidToValid}!void {
+        const walk = try self.validWalk(node);
+        if (walk.count == 0 and !walk.validates_root_base) return;
         const statuses = self.blocks.items(.execution_status);
-        var count: usize = 0;
         var chain = self.payloadChain(node);
-        var reached_root = true;
-        while (chain.next()) |block| {
-            switch (statuses[block]) {
-                .invalid => return error.PayloadInvalidToValid,
-                .valid, .pre_merge => {
-                    reached_root = false;
-                    break;
-                },
-                .syncing => count += 1,
-            }
-        }
-        if (reached_root and self.root_base_status == .invalid) return error.PayloadInvalidToValid;
-        const validates_root_base = reached_root and self.root_base_status == .syncing;
-        if (count == 0 and !validates_root_base) return;
-        chain = self.payloadChain(node);
-        while (count > 0) : (count -= 1) statuses[chain.next().?] = .valid;
-        if (validates_root_base) self.root_base_status = .valid;
+        for (0..walk.count) |_| statuses[chain.next().?] = .valid;
+        if (walk.validates_root_base) self.root_base_status = .valid;
         self.head_cache.dirty = true;
     }
 
-    /// Optimistic sync `NOT_VALIDATED -> INVALIDATED` from an engine `INVALID` verdict on
-    /// a block that is not in the store: `parent_root` and `parent_block_hash` are the
-    /// rejected block's parent and its payload's `parent_hash`. Every payload from the
-    /// parent down to `latest_valid_hash` (exclusive) is invalidated in every block carrying
-    /// it, as equivocating blocks can share a payload; a zero hash
-    /// invalidates through the merge block. A null or unknown hash names the rejected
-    /// block itself, so nothing changes. Descendants of an invalidated payload are
-    /// derived invalid by `getHead`.
-    pub fn onPayloadInvalid(self: *Store, parent_root: Root, parent_block_hash: Root, latest_valid_hash: ?Root) Error!void {
-        const parent = self.blockIndex(parent_root) orelse return error.UnknownParent;
-        const lvh = latest_valid_hash orelse return;
+    /// Optimistic sync `NOT_VALIDATED -> INVALIDATED` from an engine `INVALID` verdict, the
+    /// `validateLatestHash` of proto-array. The walk starts at the node `from_root` and
+    /// `from_block_hash` name and marks payloads `invalid` down to `latest_valid_hash`,
+    /// exclusive, in every block carrying them, as equivocating blocks can share a payload;
+    /// a zero hash invalidates through the merge block. Descendants are derived invalid by
+    /// `getHead`. A pair naming no node, such as a Gloas `.full` node before its payload
+    /// arrived, is `error.UnknownBlock`.
+    ///
+    /// A verdict never flips a payload the engine already resolved and never reaches the
+    /// payloads the justified block stands on. A null or unknown hash leaves only the claim
+    /// about the judged payload: with `.from_block` the from node's own payload is
+    /// invalidated, with `.child_payload` the judged payload is not in the store and the
+    /// verdict is dropped.
+    pub fn onPayloadInvalid(self: *Store, from_root: Root, from_block_hash: Root, latest_valid_hash: ?Root, judged: InvalidJudged) Error!VerdictResult {
+        const from = self.blockIndex(from_root) orelse return error.UnknownBlock;
+        const start = self.nodeByPayloadHash(from, &from_block_hash) orelse return error.UnknownBlock;
         const hashes = self.blocks.items(.payload_block_hash);
         const statuses = self.blocks.items(.execution_status);
-        const start: ForkChoiceNode = if (self.blocks.items(.fork)[parent].lt(.gloas))
-            pendingNode(parent)
-        else
-            .{ .block = parent, .payload_status = if (std.mem.eql(u8, &hashes[parent], &parent_block_hash)) .full else .empty };
-        var count: usize = 0;
-        var found = false;
-        var chain = self.payloadChain(start);
-        while (chain.next()) |block| {
-            if (std.mem.eql(u8, &hashes[block], &lvh)) {
-                found = true;
-                break;
-            }
-            count += 1;
+        switch (self.payloadChainStatus(start)) {
+            .syncing => {},
+            .invalid => return .already_applied,
+            .valid, .pre_merge => return .contradiction,
         }
-        if (!found) return error.UnknownLatestValidHash;
+
+        var count: usize = 0;
+        var chain = self.payloadChain(start);
+        const lvh_found = if (latest_valid_hash) |lvh| while (chain.next()) |block| {
+            if (std.mem.eql(u8, &hashes[block], &lvh)) break true;
+            count += 1;
+        } else false else false;
+        if (!lvh_found) {
+            if (judged == .child_payload) return .unusable_lvh;
+            count = 1;
+        }
+
+        // Indices are topological; a Gloas justified block's own payload is not in the checkpoint.
+        const justified = self.blockIndex(self.justified_checkpoint.root);
+        var justified_hashes: std.AutoHashMapUnmanaged(Root, void) = .empty;
+        defer justified_hashes.deinit(self.allocator);
+        if (justified) |j| {
+            var justified_chain = self.payloadChain(pendingNode(j));
+            while (justified_chain.next()) |block| try justified_hashes.put(self.allocator, hashes[block], {});
+        }
+        chain = self.payloadChain(start);
+        for (0..count) |i| {
+            const block = chain.next() orelse {
+                count = i;
+                break;
+            };
+            const conflict = statuses[block] != .syncing;
+            // A stand-in justified block has no payloads, so its chain protects nothing above it
+            const protected = (self.anchor_ancestor_count > 0 and block <= self.anchor_ancestor_count) or
+                if (justified) |j| block < j or justified_hashes.contains(hashes[block]) else false;
+            if (!conflict and !protected) continue;
+            if (judged == .child_payload and conflict) return .contradiction;
+            count = if (judged == .from_block) @min(i, 1) else i;
+            break;
+        }
+        if (count == 0) return .nothing_to_invalidate;
+
         var invalid_hashes: std.AutoHashMapUnmanaged(Root, void) = .empty;
         defer invalid_hashes.deinit(self.allocator);
+        try invalid_hashes.ensureTotalCapacity(self.allocator, @intCast(count));
         chain = self.payloadChain(start);
-        for (0..count) |_| try invalid_hashes.put(self.allocator, hashes[chain.next().?], {});
-        if (invalid_hashes.count() == 0) return;
+        for (0..count) |_| invalid_hashes.putAssumeCapacity(hashes[chain.next().?], {});
         for (hashes, statuses) |*hash, status| {
             if (!invalid_hashes.contains(hash.*)) continue;
-            switch (status) {
-                .valid, .pre_merge => return error.PayloadValidToInvalid,
-                .syncing, .invalid => {},
-            }
+            if (status == .valid or status == .pre_merge) return .contradiction;
         }
         for (hashes, statuses) |*hash, *status| {
             if (invalid_hashes.contains(hash.*)) status.* = .invalid;
         }
         self.head_cache.dirty = true;
+        return .applied;
+    }
+
+    /// The node of `block` whose payload is `hash`, as proto-array's
+    /// `getNodeIndexByRootAndBlockHash`: a Gloas `.full` node exists once its payload arrived.
+    fn nodeByPayloadHash(self: *const Store, block: BlockIndex, hash: *const Root) ?ForkChoiceNode {
+        const own = std.mem.eql(u8, &self.blocks.items(.payload_block_hash)[block], hash);
+        if (self.blocks.items(.fork)[block].lt(.gloas)) return if (own) pendingNode(block) else null;
+        if (own and self.blocks.items(.payload_verified)[block]) return .{ .block = block, .payload_status = .full };
+        if (std.mem.eql(u8, &self.blocks.items(.bid_parent_block_hash)[block], hash)) return .{ .block = block, .payload_status = .empty };
+        return null;
+    }
+
+    /// The worst engine verdict on the payloads `node` stands on, read from the payloads
+    /// themselves, so it needs no head computation.
+    fn payloadChainStatus(self: *const Store, node: ForkChoiceNode) ExecutionStatus {
+        const statuses = self.blocks.items(.execution_status);
+        var status = self.root_base_status;
+        var chain = self.payloadChain(node);
+        while (chain.next()) |block| {
+            if (statuses[block] == .invalid) return .invalid;
+            status = status.worst(statuses[block]);
+        }
+        return status;
     }
 
     /// The worst engine verdict on the payloads `node` stands on, valid after `getHead`.
     pub fn executionStatus(self: *Store, node: ForkChoiceNode) !ExecutionStatus {
         try head_mod.ensureComputed(self);
-        return self.head_cache.execution.items[head_mod.nodeId(node)];
+        return head_mod.execution(self, node);
     }
 
     /// Spec `is_optimistic`: some payload below `node` is still `NOT_VALIDATED`.
@@ -1316,7 +1743,7 @@ pub const Store = struct {
         self.head_cache.remapVoteWeight(remap, kept);
         if (parents[finalized] != NO_BLOCK) {
             const hung_from: ForkChoiceNode = .{ .block = parents[finalized], .payload_status = self.blocks.items(.parent_payload_status)[finalized] };
-            self.root_base_status = self.head_cache.execution.items[head_mod.nodeId(hung_from)];
+            self.root_base_status = head_mod.execution(self, hung_from);
         }
         for (0..n) |i| {
             const target = remap[i];
@@ -1326,6 +1753,7 @@ pub const Store = struct {
             self.blocks.set(target, block);
             self.ptc_votes.items[target] = self.ptc_votes.items[i];
         }
+        self.anchor_ancestor_count -|= finalized;
         self.blocks.shrinkRetainingCapacity(kept);
         self.ptc_votes.shrinkRetainingCapacity(kept);
         self.index_by_root.clearRetainingCapacity();
@@ -1378,6 +1806,11 @@ pub fn computeSlotsSinceEpochStart(slot: Slot) Slot {
 pub fn computeShufflingDependentSlot(epoch: Epoch) Slot {
     const lookahead_epoch = epoch -| preset.MIN_SEED_LOOKAHEAD;
     return computeStartSlotAtEpoch(lookahead_epoch) -| 1;
+}
+
+/// The checkpoint `update_checkpoints` keeps when `candidate` is offered over `current`.
+fn newerCheckpoint(current: Checkpoint, candidate: Checkpoint) Checkpoint {
+    return if (candidate.epoch > current.epoch) candidate else current;
 }
 
 pub fn checkpointEql(a: Checkpoint, b: Checkpoint) bool {

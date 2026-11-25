@@ -49,6 +49,16 @@ export interface BlockSummary {
   arrivalMsIntoSlot?: number;
 }
 
+/**
+ * An ancestor of an unfinalized anchor, known only by root. `slot` is at or after the block's
+ * real slot. Its payload is unknown. The store accepts a block on top of it, but a caller without
+ * the ancestor's state cannot produce one.
+ */
+export interface AnchorAncestor {
+  root: Uint8Array;
+  slot: number;
+}
+
 export interface AttestationData {
   slot: number;
   index: number;
@@ -92,6 +102,18 @@ export interface FastConfirmationStore {
   currentSlotHead: Uint8Array;
 }
 
+/** `Store.InvalidJudged`: which payload the engine judged INVALID */
+export type InvalidJudged = "from_block" | "child_payload";
+
+/** `Store.VerdictResult`: whether a payload verdict was applied, and if not, why */
+export type VerdictResult =
+  | "applied"
+  | "unknown_lvh"
+  | "already_applied"
+  | "contradiction"
+  | "unusable_lvh"
+  | "nothing_to_invalidate";
+
 export type KeepHeadReason =
   | "head_timely"
   | "shuffling_not_stable"
@@ -110,8 +132,24 @@ export type KeepHeadReason =
  * until `prune`. Failed calls throw an `Error` whose `code` is the Zig error name.
  */
 export declare class ForkChoice {
-  /** `anchor.slot` is the anchor state's slot and its checkpoints are that state's */
-  constructor(config: BeaconConfig, genesisTime: number, anchor: BlockSummary, provider: StateProvider);
+  /**
+   * `anchor.slot` is the anchor state's slot and its checkpoints are that state's.
+   *
+   * Without `unfinalizedAncestors` the anchor is the justified and the finalized checkpoint, as in
+   * spec `get_forkchoice_store`. With them the anchor is not finalized and the store starts at the
+   * anchor's checkpoints instead. The ancestors run oldest first from the finalized block to the
+   * anchor, at most seven, with distinct non-zero roots and ascending slots, and must contain the
+   * justified and the finalized checkpoint blocks unless the anchor is that block itself. They
+   * should also hold the checkpoint blocks of the anchor's epoch and the one before: the head
+   * cannot be computed once the chain justifies a block the store does not hold.
+   */
+  constructor(
+    config: BeaconConfig,
+    genesisTime: number,
+    anchor: BlockSummary,
+    provider: StateProvider,
+    unfinalizedAncestors?: AnchorAncestor[]
+  );
 
   readonly timeMs: number;
   readonly currentSlot: number;
@@ -172,9 +210,14 @@ export declare class ForkChoice {
   inclusionListSatisfaction(blockIndex: number): boolean | undefined;
   isPayloadInclusionListSatisfied(blockIndex: number): boolean;
   /** Optimistic sync: the payload with `blockHash` and those below it are valid */
-  onPayloadValid(blockHash: Uint8Array): void;
-  /** Optimistic sync: the engine rejected a block on `parentRoot` whose payload builds on `parentBlockHash` */
-  onPayloadInvalid(parentRoot: Uint8Array, parentBlockHash: Uint8Array, latestValidHash?: Uint8Array): void;
+  onPayloadValid(blockHash: Uint8Array): VerdictResult;
+  /** Optimistic sync: the engine judged a payload INVALID, from block `fromRoot` whose payload chain holds `fromBlockHash` */
+  onPayloadInvalid(
+    fromRoot: Uint8Array,
+    fromBlockHash: Uint8Array,
+    latestValidHash: Uint8Array | undefined,
+    judged: InvalidJudged
+  ): VerdictResult;
   /** New index of each old block index (`NO_BLOCK` when dropped), `undefined` when nothing was dropped */
   prune(): Uint32Array | undefined;
 
@@ -192,7 +235,7 @@ export declare class ForkChoice {
   attestationScores(): BigUint64Array;
   /** Best child of each node id, `NO_NODE` without a viable child */
   bestChildren(): Uint32Array;
-  /** Worst engine verdict on the payloads each node id stands on */
+  /** Worst engine verdict on the payloads each node id stands on, also when the justified block has no head */
   executionStatuses(): Uint8Array;
   viableHeads(): {root: Uint8Array; payloadStatus: PayloadStatus; weight: bigint}[];
 

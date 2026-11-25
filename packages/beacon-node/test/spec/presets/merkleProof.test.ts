@@ -63,7 +63,8 @@ const merkleProof: TestRunnerFn<MerkleTestCase, {leaf: string; branch: string[];
         proof: InputType.YAML,
       },
       getSszTypes: () => ({
-        object: sszTypesFor(fork).BeaconBlockBody,
+        // Some vectors have uint64 values above 2^53-1, testFunction decodes `object_raw` with the right type
+        object: replaceUintTypeWithUintBigintType(sszTypesFor(fork).BeaconBlockBody),
       }),
       timeout: 10000,
       getExpected: (testCase) => testCase.proof,

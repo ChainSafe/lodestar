@@ -6,6 +6,19 @@ const spec_test_options = @import("spec_test_options");
 pub fn main(init: std.process.Init) !void {
     const allocator = std.heap.smp_allocator;
     const io = init.io;
+    // The fork choice compliance vectors are large, so they download only when asked for.
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
+    if (args.len > 1) {
+        if (args.len > 2 or !std.mem.eql(u8, args[1], "comptests")) return error.UnknownSpecTestArchive;
+        return download_and_extract_spec_test(
+            allocator,
+            io,
+            spec_test_options.spec_test_url,
+            spec_test_options.spec_test_version,
+            "comptests",
+            spec_test_options.spec_test_out_dir,
+        );
+    }
     const tests = &[_][]const u8{
         "general",
         "minimal",

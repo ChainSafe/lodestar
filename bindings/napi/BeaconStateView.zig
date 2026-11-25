@@ -865,6 +865,7 @@ pub fn getAllBalances(self: *BeaconStateView) !js.Array {
 }
 
 /// Get validators whose status is in the provided Set<string>.
+/// A validator matches by its status or by its general status (pending, active, exited, withdrawal).
 /// Arguments:
 /// - statuses: JS Set<string>
 /// - currentEpoch: Epoch (number)
@@ -878,16 +879,24 @@ pub fn getValidatorsByStatus(self: *BeaconStateView, statuses_set: js.Value, cur
     const set_value = statuses_set.toValue();
     const has_fn = try set_value.getNamedProperty("has");
 
+    var wanted = std.EnumSet(st.ValidatorStatus).initEmpty();
+    for (std.enums.values(st.ValidatorStatus)) |status| {
+        const status_str = try env.createStringUtf8(status.toString());
+        const category_str = try env.createStringUtf8(status.category());
+        if (try (try env.callFunction(has_fn, set_value, .{status_str})).getValueBool() or
+            try (try env.callFunction(has_fn, set_value, .{category_str})).getValueBool())
+        {
+            wanted.insert(status);
+        }
+    }
+
     const validators = try cached_state.state.validatorsSlice(allocator);
     defer allocator.free(validators);
 
     const result = try env.createArray();
     var out_idx: u32 = 0;
     for (validators) |*validator| {
-        const status = st.getValidatorStatus(validator, current_epoch);
-        const status_str = try env.createStringUtf8(status.toString());
-        const has_result = try env.callFunction(has_fn, set_value, .{status_str});
-        if (try has_result.getValueBool()) {
+        if (wanted.contains(st.getValidatorStatus(validator, current_epoch))) {
             const v_napi = try sszValueToNapiValue(env, ct.phase0.Validator, validator);
             try result.setElement(out_idx, v_napi);
             out_idx += 1;
@@ -1195,7 +1204,7 @@ pub fn computeUnrealizedCheckpoints(self: *BeaconStateView) !js_types.Unrealized
     const cached_state = try self.acquireState();
     defer self.finishState();
     const allocator = cached_state.allocator;
-    const result = try st.computeUnrealizedCheckpoints(allocator, cached_state);
+    const result = try st.computeUnrealizedCheckpoints(allocator, js.io(), cached_state);
 
     const obj = try env.createObject();
     try obj.setNamedProperty(
@@ -1729,6 +1738,16 @@ pub fn canBuilderCoverBid(self: *BeaconStateView, builder_index: js.Number, bid_
     };
 }
 
+pub fn getBuilderBidLimit(self: *BeaconStateView, builder_index: js.Number) !js.Number {
+    const cached_state = try self.acquireState();
+    defer self.finishState();
+    const index = builder_index.toSafeInteger() catch return error.InvalidBuilderIndex;
+    return switch (cached_state.state.forkSeq()) {
+        inline .gloas, .heze => |f| js.Number.from(try st.getBuilderBidLimit(f, cached_state.state.castToFork(f), index)),
+        else => error.InvalidAtFork,
+    };
+}
+
 fn readPayloadTimelinessCommittee(cached_state: *CachedBeaconState, slot_value: u64, out: *[preset.PTC_SIZE]u64) !void {
     const epoch_value = st.computeEpochAtSlot(slot_value);
     const current_epoch = cached_state.epoch_cache.epoch;
@@ -1888,7 +1907,7 @@ pub fn computeAttestationsRewards(self: *BeaconStateView, validator_ids: ?js.Val
     if (cached_state.state.forkSeq() == .phase0) return error.AttestationsRewardsUnsupportedFork;
     const filters = try parseAttestationRewardFilters(allocator, validator_ids);
     defer if (filters) |indices| allocator.free(indices);
-    const rewards = try st.computeAttestationsRewards(allocator, cached_state, filters);
+    const rewards = try st.computeAttestationsRewards(allocator, js.io(), cached_state, filters);
     defer rewards.deinit(allocator);
 
     const env = js.env();

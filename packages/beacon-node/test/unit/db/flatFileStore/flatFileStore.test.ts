@@ -190,6 +190,18 @@ describe("FlatFileStore", () => {
       expect(await store.getDataColumnsBinary(200, ROOT_B, [0])).toEqual([new Uint8Array(20)]);
     });
 
+    it("should prune at most maxSlots slots, the oldest first", async () => {
+      for (const slot of [150, 100, 120, 200]) {
+        await store.putDataColumnsBinary(slot, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
+      }
+
+      await expect(store.pruneBefore(200, 2)).resolves.toEqual([100, 120]);
+      expect(await store.getDataColumnsBinary(150, ROOT_A, [0])).toEqual([new Uint8Array(20)]);
+      await expect(store.pruneBefore(200, 2)).resolves.toEqual([150]);
+      await expect(store.pruneBefore(200, 2)).resolves.toEqual([]);
+      expect(await store.getDataColumnsBinary(200, ROOT_A, [0])).toEqual([new Uint8Array(20)]);
+    });
+
     it("should prune empty column slot directories retained in the index", async () => {
       const slotDir = path.join(tmpDir, "data_columns", "000000000100");
       await store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);

@@ -9,6 +9,7 @@ import {
   type AttestationData as NativeAttestationData,
   ExecutionStatus as NativeExecutionStatus,
   ForkChoice as NativeStore,
+  type VerdictResult as NativeVerdictResult,
 } from "@lodestar/native/fork-choice";
 import {PTC_SIZE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
@@ -41,6 +42,9 @@ import {
   ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,
+  LVHInvalidJudged,
+  LVHNotAppliedReason,
+  LVHVerdictResult,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
@@ -79,6 +83,13 @@ export type NativeForkChoiceAnchor = {
   payloadBlockHash: Root | null;
   /** The anchor block's Gloas bid `parent_block_hash` */
   bidParentBlockHash: Root | null;
+  /**
+   * Set when the anchor is not finalized: the store then starts at `justifiedCheckpoint` and
+   * `finalizedCheckpoint` instead of at the anchor. Stand-ins for the anchor's ancestors, oldest
+   * first from the finalized block, holding both checkpoint blocks. Only `blockRoot` and `slot`
+   * reach the store; a stand-in is Gloas iff its slot is.
+   */
+  unfinalizedAncestors?: ProtoBlock[];
 };
 
 // Node ids are `blockIndex * 3 + <spec payload status>`, the numbering of the native store
@@ -102,6 +113,17 @@ const KEEP_HEAD_REASONS: Record<KeepHeadReason, NotReorgedReason> = {
   proposer_boost_not_worn_off: NotReorgedReason.ProposerBoostNotWornOff,
   head_not_weak: NotReorgedReason.HeadBlockNotWeak,
   parent_not_strong: NotReorgedReason.ParentBlockNotStrong,
+};
+
+const NOT_APPLIED_REASONS: Record<
+  Exclude<NativeVerdictResult, "applied">,
+  Exclude<LVHNotAppliedReason, LVHNotAppliedReason.Error>
+> = {
+  unknown_lvh: LVHNotAppliedReason.UnknownLVH,
+  already_applied: LVHNotAppliedReason.AlreadyApplied,
+  contradiction: LVHNotAppliedReason.Contradiction,
+  unusable_lvh: LVHNotAppliedReason.UnusableLVH,
+  nothing_to_invalidate: LVHNotAppliedReason.NothingToInvalidate,
 };
 
 const EXECUTION_STATUS_FROM_NATIVE: Record<number, ExecutionStatus> = {
@@ -129,15 +151,13 @@ type NativeScores = {weights: BigUint64Array; attestationScores: BigUint64Array;
  * the store; it asks for justified balances and committees through the provider callbacks.
  *
  * Differences from `ForkChoice`, all following the spec the store is written against:
- * - the anchor is both the justified and the finalized checkpoint
+ * - a finalized anchor is both the justified and the finalized checkpoint
  * - `should_override_forkchoice_update` is gone from the spec, so `shouldOverrideForkChoiceUpdate`
  *   never overrides and `predictProposerHead` is the head
  * - `prune` drops every block that does not descend from the finalized block, not only the ones
  *   before it
  */
 export class NativeForkChoice implements IForkChoice {
-  irrecoverableError?: Error;
-
   private readonly store: NativeStore;
   /** By node id. A pre-Gloas block has its single FULL variant in the PENDING slot */
   private nodes: (ProtoBlock | undefined)[] = [];
@@ -205,10 +225,15 @@ export class NativeForkChoice implements IForkChoice {
                 this.providePulledUpBalanceSource(root, epoch),
             }
           : {}),
-      }
+      },
+      anchor.unfinalizedAncestors?.map((ancestor) => ({root: fromHex(ancestor.blockRoot), slot: ancestor.slot}))
     );
     this.fastConfirmation = opts?.fastConfirmation === true;
-    this.insertBlock(0, block);
+    const ancestors = anchor.unfinalizedAncestors ?? [];
+    for (const [blockIndex, ancestor] of ancestors.entries()) {
+      this.insertBlock(blockIndex, ancestor);
+    }
+    this.insertBlock(ancestors.length, block);
 
     // Bring the clock up to the slot the caller starts at; the anchor may be older
     this.store.onTick(this.store.timeAtSlotMs(Math.max(fcStore.currentSlot, this.store.currentSlot)));
@@ -566,6 +591,17 @@ export class NativeForkChoice implements IForkChoice {
       this.queuedAttestationsPreviousSlot = queuedVoteCount - this.store.queuedVoteCount;
       this.fcStore.currentSlot = slot;
       const didUpdateCheckpoints = this.syncCheckpoints();
+      if (didUpdateCheckpoints) {
+        // Throw before fast confirmation, which swallows head computation errors
+        const justified = this.fcStore.justified.checkpoint;
+        if (this.getBlockHexDefaultStatus(justified.rootHex)?.executionStatus === ExecutionStatus.Invalid) {
+          throw new ForkChoiceError({
+            code: ForkChoiceErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS,
+            epoch: justified.epoch,
+            root: justified.rootHex,
+          });
+        }
+      }
       const didRecomputeHead = this.runFastConfirmation();
       // A checkpoint pulled up at the epoch boundary can move the head before the next block arrives
       if (didUpdateCheckpoints && !didRecomputeHead) {
@@ -938,6 +974,16 @@ export class NativeForkChoice implements IForkChoice {
     if (!isGloasBlock(pendingNode)) {
       throw new ProtoArrayError({code: ProtoArrayErrorCode.PRE_GLOAS_BLOCK, root: blockRoot});
     }
+    if (pendingNode.executionStatus === ExecutionStatus.Invalid) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.INVALID_BLOCK,
+        err: {
+          code: InvalidBlockCode.PARENT_EXECUTION_INVALID,
+          root: pendingNode.parentRoot,
+          hash: pendingNode.executionPayloadBlockHash,
+        },
+      });
+    }
     if (this.nodes[blockIndex * 3 + SPEC_FULL] !== undefined) {
       return;
     }
@@ -956,29 +1002,27 @@ export class NativeForkChoice implements IForkChoice {
     this.refreshExecutionStatuses();
   }
 
-  validateLatestHash(execResponse: LVHExecResponse, opts?: {strict?: boolean}): boolean {
+  validateLatestHash(execResponse: LVHExecResponse): LVHVerdictResult {
     this.mutated();
-    const strict = opts?.strict ?? true;
+    let verdict: NativeVerdictResult;
     try {
-      if (execResponse.executionStatus === ExecutionStatus.Valid) {
-        this.store.onPayloadValid(fromHex(execResponse.latestValidExecHash));
-      } else {
-        this.store.onPayloadInvalid(
-          fromHex(execResponse.invalidateFromParentBlockRoot),
-          fromHex(execResponse.invalidateFromParentBlockHash),
-          execResponse.latestValidExecHash === null ? undefined : fromHex(execResponse.latestValidExecHash)
-        );
-      }
+      verdict =
+        execResponse.executionStatus === ExecutionStatus.Valid
+          ? this.store.onPayloadValid(fromHex(execResponse.latestValidExecHash))
+          : this.store.onPayloadInvalid(
+              fromHex(execResponse.invalidateFromBlockRoot),
+              fromHex(execResponse.invalidateFromBlockHash),
+              execResponse.latestValidExecHash === null ? undefined : fromHex(execResponse.latestValidExecHash),
+              execResponse.judged === LVHInvalidJudged.FromBlock ? "from_block" : "child_payload"
+            );
     } catch (e) {
-      const code = nativeErrorCode(e);
-      // The engine contradicting a verdict it already gave is a consensus failure, unless the verdict is a
-      // forkchoiceUpdated reply, which is applied leniently: one wrong reply must not shut the node down
-      if (strict && (code === "PayloadInvalidToValid" || code === "PayloadValidToInvalid")) {
-        this.irrecoverableError = e as Error;
-      }
-      return false;
+      return {applied: false, reason: LVHNotAppliedReason.Error, error: e as Error};
     }
-    return this.refreshExecutionStatuses();
+    if (verdict !== "applied") {
+      return {applied: false, reason: NOT_APPLIED_REASONS[verdict]};
+    }
+    this.refreshExecutionStatuses();
+    return {applied: true};
   }
 
   /**
@@ -986,14 +1030,7 @@ export class NativeForkChoice implements IForkChoice {
    * Returns whether any status changed.
    */
   private refreshExecutionStatuses(): boolean {
-    let statuses: Uint8Array;
-    try {
-      statuses = this.store.executionStatuses();
-    } catch (e) {
-      // The justified block stands on an invalidated payload: there is no head to compute
-      this.irrecoverableError = e as Error;
-      return false;
-    }
+    const statuses = this.store.executionStatuses();
     let changed = false;
     for (let id = 0; id < this.nodes.length; id++) {
       const node = this.nodes[id];
@@ -1012,10 +1049,9 @@ export class NativeForkChoice implements IForkChoice {
     if (finalizedIndex === undefined) {
       throw new ProtoArrayError({code: ProtoArrayErrorCode.FINALIZED_NODE_UNKNOWN, root: finalizedRoot});
     }
+    // A lagging archive job; the job for the current root prunes once its sweep has listed what prune drops
     if (finalizedRoot !== this.fcStore.finalizedCheckpoint.rootHex) {
-      throw Error(
-        `Cannot prune to ${finalizedRoot}, the finalized root is ${this.fcStore.finalizedCheckpoint.rootHex}`
-      );
+      return [];
     }
     if (finalizedIndex < this.pruneThreshold) {
       return [];
@@ -1344,8 +1380,9 @@ export class NativeForkChoice implements IForkChoice {
   }
 
   /**
-   * `nonAncestors` are the EMPTY, FULL and pre-Gloas variants of every block imported up to the
-   * start block that are not on its chain, the root block aside. A PENDING start block's own
+   * `nonAncestors` are the EMPTY, FULL and pre-Gloas variants of every block that is neither on the
+   * start block's chain nor descends from it, the root block aside. Unlike proto-array, this includes
+   * blocks imported after the start block, since `prune` drops them. A PENDING start block's own
    * EMPTY and FULL are left out: its payload is undecided, and the archiver deletes FULL non-ancestors.
    */
   getAllAncestorAndNonAncestorBlocks(
@@ -1370,13 +1407,26 @@ export class NativeForkChoice implements IForkChoice {
     const startBlock = Math.floor(startId / 3);
     const firstBlock = this.nodes[startId]?.payloadStatus === PayloadStatus.PENDING ? startBlock - 1 : startBlock;
     const nonAncestors: ProtoBlock[] = [];
-    for (let blockIndex = firstBlock; blockIndex > 0; blockIndex--) {
+    const pushVariants = (blockIndex: number): void => {
       for (const status of [SPEC_FULL, SPEC_EMPTY, SPEC_PENDING]) {
         const id = blockIndex * 3 + status;
         const node = this.nodes[id];
         if (node !== undefined && node.payloadStatus !== PayloadStatus.PENDING && !ancestorIds.has(id)) {
           nonAncestors.push(node);
         }
+      }
+    };
+    for (let blockIndex = firstBlock; blockIndex > 0; blockIndex--) {
+      pushVariants(blockIndex);
+    }
+    const descendants = new Set<number>([startBlock]);
+    const blockCount = Math.ceil(this.nodes.length / 3);
+    for (let blockIndex = startBlock + 1; blockIndex < blockCount; blockIndex++) {
+      const parentId = this.parentNodes[blockIndex];
+      if (parentId !== undefined && descendants.has(Math.floor(parentId / 3))) {
+        descendants.add(blockIndex);
+      } else {
+        pushVariants(blockIndex);
       }
     }
     return {ancestors, nonAncestors};
