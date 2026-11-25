@@ -2010,7 +2010,20 @@ export class BlockInputSync {
 
     let i = 0;
     let deferredByRateLimit = false;
+    let requestedWhenReconstructable = false;
     while (i++ < this.getMaxDownloadAttempts()) {
+      const reconstructable =
+        isPendingBlockInput(cacheItem) &&
+        isBlockInputColumns(cacheItem.blockInput) &&
+        cacheItem.blockInput.hasBlockAndAllData();
+      // Reconstruction recovers whole rows however many columns are missing, so only one more request is worth it,
+      // further peers could each hold the import until their response times out
+      if (reconstructable) {
+        if (requestedWhenReconstructable) {
+          break;
+        }
+        requestedWhenReconstructable = true;
+      }
       const pendingColumns =
         isPendingBlockInput(cacheItem) && isBlockInputColumns(cacheItem.blockInput)
           ? new Set(cacheItem.blockInput.getMissingSampledColumnMeta().missing)
@@ -2025,6 +2038,10 @@ export class BlockInputSync {
         now
       );
       if (peerMeta === null) {
+        if (reconstructable) {
+          break;
+        }
+
         const retryAt = this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers, now);
         if (retryAt !== null) {
           throw new UnknownBlockRateLimitedError(
@@ -2072,6 +2089,10 @@ export class BlockInputSync {
             // A partial response is legal, columns that were not requested are not
             if (warning.type.code === DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED) {
               this.network.reportPeer(peerId, PeerAction.LowToleranceError, warning.type.code);
+              excludedPeers.add(peerId);
+            }
+            // Not picked again for this block, it would be preferred as a previous source of it
+            if (warning.type.code === DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED) {
               excludedPeers.add(peerId);
             }
           }
@@ -2164,6 +2185,30 @@ export class BlockInputSync {
     } // end while loop over peers
 
     const message = `Error fetching BlockInput with slot=${slot} root=${rootHex} after ${i - 1} attempts.`;
+
+    if (
+      isPendingBlockInput(cacheItem) &&
+      isBlockInputColumns(cacheItem.blockInput) &&
+      cacheItem.blockInput.hasBlockAndAllData()
+    ) {
+      // Peers cannot serve the remaining columns now, half of them is enough to reconstruct the rest
+      this.logger.verbose("BlockInputSync.fetchBlockInput: reconstructing columns peers could not serve", {
+        slot,
+        rootHex,
+        missing: cacheItem.blockInput.getMissingSampledColumnMeta().missing.length,
+      });
+      this.chain.columnReconstructionTracker.triggerColumnReconstruction(cacheItem.blockInput);
+      cacheItem = {...cacheItem, status: PendingBlockInputStatus.downloaded, timeSyncedSec: Date.now() / 1000};
+      if (this.pendingBlocks.has(rootHex)) {
+        this.pendingBlocks.set(rootHex, cacheItem);
+      }
+      const result = this.chain.forkChoice.hasBlockHex(cacheItem.blockInput.parentRootHex)
+        ? FetchResult.SuccessResolved
+        : FetchResult.SuccessMissingParent;
+      this.metrics?.blockInputSync.fetchTime.observe({result}, Date.now() / 1000 - fetchStartSec);
+      this.metrics?.blockInputSync.fetchPeers.set({result}, i - 1);
+      return cacheItem;
+    }
 
     const retryAt = deferredByRateLimit ? this.peerBalancer.getNextRateLimitRetryAt() : null;
     if (retryAt !== null) {
