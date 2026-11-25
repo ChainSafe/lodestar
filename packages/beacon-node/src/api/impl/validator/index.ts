@@ -2172,6 +2172,17 @@ export function getValidatorApi(
 
             if (e instanceof ProposerPreferencesError && e.type.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
               attachedValidatorIndices.push(signed.message.validatorIndex);
+              // A previous publish may have failed after the pool accepted these preferences
+              const known = chain.proposerPreferencesPool.get(signed.message.proposalSlot, logCtx.dependentRoot);
+              if (known && ssz.gloas.SignedProposerPreferences.equals(known, signed)) {
+                try {
+                  await network.publishProposerPreferences(signed);
+                } catch (publishError) {
+                  failures.push({index: i, message: (publishError as Error).message});
+                  logger.verbose(`Error on submitProposerPreferences [${i}]`, logCtx, publishError as Error);
+                }
+                return;
+              }
               logger.debug("Ignoring known signed proposer preferences", logCtx);
               return;
             }

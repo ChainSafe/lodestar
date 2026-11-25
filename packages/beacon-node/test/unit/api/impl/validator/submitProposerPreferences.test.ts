@@ -69,6 +69,62 @@ describe("api/validator - submitProposerPreferences", () => {
     expect(modules.network.publishProposerPreferences).toHaveBeenCalledOnce();
   });
 
+  it("publishes known preferences again if the pool holds the same message", async () => {
+    const signed = signedPreferences(0);
+    vi.mocked(validateGossipProposerPreferences).mockRejectedValueOnce(
+      new ProposerPreferencesError(GossipAction.IGNORE, {
+        code: ProposerPreferencesErrorCode.ALREADY_KNOWN,
+        proposalSlot: 160,
+        validatorIndex: 0,
+        dependentRoot: "0x",
+      })
+    );
+    modules.chain.proposerPreferencesPool.get.mockReturnValue(ssz.gloas.SignedProposerPreferences.clone(signed));
+
+    await api.submitProposerPreferences({signedProposerPreferences: [signed]});
+
+    expect(modules.network.publishProposerPreferences).toHaveBeenCalledExactlyOnceWith(signed);
+    expect(modules.chain.proposerPreferencesPool.add).not.toHaveBeenCalled();
+  });
+
+  it("does not publish known preferences if the pool holds a different message", async () => {
+    const signed = signedPreferences(0);
+    const other = signedPreferences(0);
+    other.message.targetGasLimit = BigInt(1);
+    vi.mocked(validateGossipProposerPreferences).mockRejectedValueOnce(
+      new ProposerPreferencesError(GossipAction.IGNORE, {
+        code: ProposerPreferencesErrorCode.ALREADY_KNOWN,
+        proposalSlot: 160,
+        validatorIndex: 0,
+        dependentRoot: "0x",
+      })
+    );
+    modules.chain.proposerPreferencesPool.get.mockReturnValue(other);
+
+    await api.submitProposerPreferences({signedProposerPreferences: [signed]});
+
+    expect(modules.network.publishProposerPreferences).not.toHaveBeenCalled();
+  });
+
+  it("reports a failed publish of known preferences", async () => {
+    const signed = signedPreferences(0);
+    vi.mocked(validateGossipProposerPreferences).mockRejectedValueOnce(
+      new ProposerPreferencesError(GossipAction.IGNORE, {
+        code: ProposerPreferencesErrorCode.ALREADY_KNOWN,
+        proposalSlot: 160,
+        validatorIndex: 0,
+        dependentRoot: "0x",
+      })
+    );
+    modules.chain.proposerPreferencesPool.get.mockReturnValue(signed);
+    modules.network.publishProposerPreferences = vi.fn().mockRejectedValue(new Error("no peers"));
+
+    await expect(api.submitProposerPreferences({signedProposerPreferences: [signed]})).rejects.toThrow(
+      "Error processing signed proposer preferences"
+    );
+    expect(modules.chain.updateAttachedValidators).toHaveBeenCalledOnce();
+  });
+
   it("does not track anything if every preference is rejected", async () => {
     vi.mocked(validateGossipProposerPreferences).mockRejectedValueOnce(
       new ProposerPreferencesError(GossipAction.REJECT, {
