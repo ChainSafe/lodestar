@@ -54,6 +54,14 @@ case $OS in
         ;;
 esac
 
+# The bundled Node.js runtime needs libatomic
+LDCONFIG=$(command -v ldconfig || echo /sbin/ldconfig)
+if [ -x "$LDCONFIG" ] && ! "$LDCONFIG" -p | grep -q "libatomic.so.1"; then
+    echo "Lodestar requires libatomic1, which is not installed."
+    echo "Install it with 'sudo apt-get install libatomic1' (Debian/Ubuntu) or 'sudo dnf install libatomic' (Fedora/RHEL) and run this script again."
+    exit 1
+fi
+
 # Construct the download URL
 URL="https://github.com/ChainSafe/lodestar/releases/download/$VERSION/lodestar-$VERSION-$PLATFORM.tar.gz"
 echo "Downloading from: $URL"
