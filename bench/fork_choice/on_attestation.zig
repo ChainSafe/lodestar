@@ -6,6 +6,11 @@
 //! all for the head at slot 63 while the store is at slot 64. Each iteration also
 //! hashes every attestation's data, as the TS benchmark does inside its timed loop.
 //!
+//! The `compacts` cases time one attestation whose distinct vote table is due for
+//! compaction, against the same call without it. Every one of the mainnet registry's
+//! ~2.43M validators has a vote and a queued slot, and all `MIN_COMPACT_AT` entries
+//! stay referenced, so each compaction scans and keeps the most it can.
+//!
 //! Run with: zig build run:bench_fork_choice_on_attestation -Doptimize=ReleaseFast
 
 const std = @import("std");
@@ -45,6 +50,63 @@ const OnAttestationBench = struct {
         self.bench.deinit(allocator);
     }
 };
+
+const MAINNET_VALIDATOR_COUNT: u32 = 2_430_000;
+
+const CompactBench = struct {
+    bench: util.Bench,
+    attestation: *IndexedAttestation,
+    compacts: bool,
+
+    pub fn run(self: *CompactBench, _: std.mem.Allocator) void {
+        const votes = &self.bench.store.distinct_votes;
+        if (self.compacts) votes.compact_at = votes.len();
+        self.bench.store.onAttestation(.{ .phase0 = self.attestation }, false) catch unreachable;
+    }
+
+    fn deinit(self: *CompactBench, allocator: std.mem.Allocator) void {
+        self.attestation.attesting_indices.deinit(allocator);
+        allocator.destroy(self.attestation);
+        self.bench.deinit(allocator);
+    }
+};
+
+fn setupCompactBench(allocator: std.mem.Allocator, compacts: bool) !CompactBench {
+    const block_count = 64;
+    var bench = try util.initStore(allocator, .{ .initial_block_count = block_count, .initial_validator_count = MAINNET_VALIDATOR_COUNT });
+    errdefer bench.deinit(allocator);
+    const store = bench.store;
+
+    var ids: [fork_choice.distinct_votes.MIN_COMPACT_AT - 1]fork_choice.VoteId = undefined;
+    for (&ids, 0..) |*id, i| {
+        const block: fork_choice.BlockIndex = @intCast(i % block_count);
+        const message: fork_choice.LatestMessage = .{ .slot = store.blockSlot(block) + i / block_count, .block = block, .payload_present = false };
+        id.* = try store.distinct_votes.getOrInsert(allocator, message, fork_choice.store.nodeId(fork_choice.head.supportedNode(store, message)));
+    }
+    try store.latest_votes.ensureTotalCapacity(allocator, MAINNET_VALIDATOR_COUNT);
+    for (0..MAINNET_VALIDATOR_COUNT) |i| store.latest_votes.appendAssumeCapacity(ids[i % ids.len]);
+    try store.queued_votes.appendNTimes(allocator, fork_choice.distinct_votes.NO_VOTE, MAINNET_VALIDATOR_COUNT);
+    try store.queued_validators.resize(allocator, MAINNET_VALIDATOR_COUNT, false);
+    const head = try store.getHead();
+    const att_slot: u64 = block_count - 1;
+    const target_epoch = att_slot / preset.SLOTS_PER_EPOCH;
+    const attestation = try allocator.create(IndexedAttestation);
+    errdefer allocator.destroy(attestation);
+    attestation.* = .{
+        .attesting_indices = .empty,
+        .data = .{
+            .slot = att_slot,
+            .index = 0,
+            .beacon_block_root = store.blockRoot(head.block),
+            .source = .{ .epoch = 0, .root = @splat(0) },
+            .target = .{ .epoch = target_epoch, .root = store.blockRoot(store.getCheckpointBlock(head.block, target_epoch)) },
+        },
+        .signature = @splat(0),
+    };
+    errdefer attestation.attesting_indices.deinit(allocator);
+    for (0..VALIDATORS_PER_COMMITTEE) |i| try attestation.attesting_indices.append(allocator, i);
+    return .{ .bench = bench, .attestation = attestation, .compacts = compacts };
+}
 
 fn setupBench(allocator: std.mem.Allocator) !OnAttestationBench {
     const block_count = 64;
@@ -102,5 +164,12 @@ pub fn main(init: std.process.Init) !void {
     var runner = zbench.Benchmark.init(allocator, .{});
     defer runner.deinit();
     try runner.addParam("onAttestation 1109 attestations (vc=600000 bc=64)", @as(*const OnAttestationBench, &bench), .{});
+
+    var steady = try setupCompactBench(allocator, false);
+    defer steady.deinit(allocator);
+    try runner.addParam("onAttestation 1 attestation (vc=2430000 bc=64)", @as(*const CompactBench, &steady), .{});
+    var compacting = try setupCompactBench(allocator, true);
+    defer compacting.deinit(allocator);
+    try runner.addParam("onAttestation 1 attestation compacts (vc=2430000 bc=64)", @as(*const CompactBench, &compacting), .{});
     try runner.run(init.io, std.Io.File.stdout());
 }

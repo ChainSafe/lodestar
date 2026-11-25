@@ -246,7 +246,8 @@ Apple Silicon, ReleaseFast, 2026-11-09:
 
 The epoch events, measured separately on the same workload: the balance diff for
 10k changed balances takes about 0.35 ms, `prune` about 0.007 ms, and the distinct
-vote compaction (about every 40 epochs) about 3.5 ms. The tick that starts a slot
+vote compaction (about every 40 epochs) about 3.7 ms at 2.43M validators, paid by the
+`onAttestation` that triggers it (`bench/fork_choice/on_attestation.zig`). The tick that starts a slot
 applies the ~25.3k votes queued during the previous one in about 0.46 ms
 (`bench/fork_choice/on_tick.zig`).
 
