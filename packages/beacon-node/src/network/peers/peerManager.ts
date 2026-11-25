@@ -449,7 +449,8 @@ export class PeerManager {
         .catch((e) => this.logger.verbose("cannot tag peer", {peerId: peer.toString()}, e as Error));
       peerData.relevantStatus = RelevantPeerStatus.relevant;
     }
-    if (getConnection(this.libp2p, peer.toString())) {
+    // A peer rejected on connect is not tracked and may still send a status before its goodbye completes
+    if (peerData && getConnection(this.libp2p, peer.toString())) {
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
       // TODO(fulu): Are we sure we've run Metadata before this?
       const custodyGroupCount = peerData?.metadata?.custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
