@@ -3,7 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {SecretKey} from "@lodestar/native/blst";
-import {ForkSeq} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {AttestationService, AttestationServiceOpts} from "../../../src/services/attestation.js";
@@ -165,4 +165,78 @@ describe("AttestationService", () => {
       });
     });
   }
+
+  it("Should publish each pq attestation once it is signed, without waiting for the others", async () => {
+    const slot = 0;
+    const clock = new ClockMock();
+    const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 0, PQ_FORK_EPOCH: 0});
+    expect(config.getForkName(slot)).toBe(ForkName.pq);
+    const attestationService = new AttestationService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      emitter,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null,
+      config,
+      {}
+    );
+
+    const attestations = [0, 1].map((attesterIndex) => ({
+      ...ssz.electra.SingleAttestation.defaultValue(),
+      attesterIndex,
+    }));
+    const duties: AttDutyAndProof[] = attestations.map(({attesterIndex}) => ({
+      duty: {
+        slot,
+        committeeIndex: 0,
+        committeeLength: attestations.length,
+        committeesAtSlot: 1,
+        validatorCommitteeIndex: attesterIndex,
+        isAggregator: false,
+        validatorIndex: attesterIndex,
+        pubkey: pubkeys[0],
+      },
+      selectionProof: null,
+    }));
+
+    api.beacon.postStateValidators.mockResolvedValue(
+      mockApiResponse({data: [], meta: {executionOptimistic: false, finalized: false}})
+    );
+    api.validator.getAttesterDuties.mockResolvedValue(
+      mockApiResponse({data: [], meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})
+    );
+    vi.spyOn(attestationService["dutiesService"], "getDutiesAtSlot").mockImplementation(() => duties);
+    api.validator.produceAttestationData.mockResolvedValue(mockApiResponse({data: attestations[0].data}));
+    api.beacon.submitPoolAttestationsV2.mockResolvedValue(mockApiResponse({}));
+
+    // The second signature stays pending until the first attestation is seen published
+    let finishSecondSignature: () => void = () => {};
+    const secondSignature = new Promise<void>((resolve) => {
+      finishSecondSignature = resolve;
+    });
+    validatorStore.signAttestation.mockImplementation(async (duty) => {
+      if (duty.validatorIndex === 1) await secondSignature;
+      return attestations[duty.validatorIndex];
+    });
+
+    const ticked = clock.tickSlotFns(slot, controller.signal);
+
+    await vi.waitFor(() => {
+      expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledOnce();
+    });
+    expect(api.beacon.submitPoolAttestationsV2).toHaveBeenLastCalledWith({signedAttestations: [attestations[0]]});
+
+    finishSecondSignature();
+    await vi.waitFor(() => {
+      expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledTimes(2);
+    });
+    expect(api.beacon.submitPoolAttestationsV2).toHaveBeenLastCalledWith({signedAttestations: [attestations[1]]});
+
+    // Stops the wait for the aggregation deadline
+    controller.abort();
+    await ticked;
+  });
 });

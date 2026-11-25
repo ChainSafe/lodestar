@@ -140,9 +140,52 @@ export class AttestationService {
     attestationNoCommittee: phase0.AttestationData,
     duties: AttDutyAndProof[]
   ): Promise<void> {
-    const signedAttestations: SingleAttestation[] = [];
+    const unpublished: SingleAttestation[] = [];
     const headRootHex = toRootHex(attestationNoCommittee.beaconBlockRoot);
     const currentEpoch = computeEpochAtSlot(slot);
+    let isPublishing = false;
+    let waitedAfterBlock = false;
+    let published = 0;
+
+    const publishSigned = async (): Promise<void> => {
+      if (isPublishing || unpublished.length === 0) return;
+      isPublishing = true;
+
+      if (!waitedAfterBlock) {
+        waitedAfterBlock = true;
+        // signAndPublishAttestations() may be called before the ATTESTATION_DUE_BPS cutoff time if the block was received early.
+        // If we produced the block or we got the block sooner than our peers, our attestations can be dropped because
+        // they reach our peers before the block. To prevent that, we wait 2 extra seconds AFTER block arrival, but
+        // never beyond the ATTESTATION_DUE_BPS cutoff time.
+        // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
+        const attestationDueMs = this.config.getAttestationDueMs(fork);
+        const msToCutoffTime = attestationDueMs - this.clock.msFromSlot(slot);
+        // submitting attestations asap to avoid busy time at around ATTESTATION_DUE_BPS of slot
+        const afterBlockDelayMs =
+          this.clock.getSlotDurationMs(slot) *
+          (this.opts?.afterBlockDelaySlotFraction ?? DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION);
+        await sleep(Math.min(msToCutoffTime, afterBlockDelayMs));
+
+        this.metrics?.attesterStepCallPublishAttestation.observe(
+          this.clock.secFromSlot(slot) - attestationDueMs / 1000
+        );
+      }
+
+      // Signatures that finish while a request is in flight go out in the next one
+      while (unpublished.length > 0) {
+        const signedAttestations = unpublished.splice(0);
+        try {
+          (await this.api.beacon.submitPoolAttestationsV2({signedAttestations})).assertOk();
+          published += signedAttestations.length;
+          this.metrics?.publishedAttestations.inc(signedAttestations.length);
+        } catch (e) {
+          // Note: metric counts only 1 since we don't know how many signedAttestations are invalid
+          this.metrics?.attestaterError.inc({error: "publish"});
+          this.logger.error("Error publishing attestations", {slot}, e as Error);
+        }
+      }
+      isPublishing = false;
+    };
 
     await Promise.all(
       duties.map(async ({duty}) => {
@@ -155,43 +198,24 @@ export class AttestationService {
         const logCtxValidator = {slot, index, head: headRootHex, validatorIndex: duty.validatorIndex};
 
         try {
-          signedAttestations.push(await this.validatorStore.signAttestation(duty, attestationData, currentEpoch));
+          unpublished.push(await this.validatorStore.signAttestation(duty, attestationData, currentEpoch));
           this.logger.debug("Signed attestation", logCtxValidator);
         } catch (e) {
           this.metrics?.attestaterError.inc({error: "sign"});
           this.logger.error("Error signing attestation", logCtxValidator, e as Error);
+          return;
         }
+
+        // A leanXMSS signature takes a variable share of a second on one thread, so the last of a slot's
+        // signatures is ready long after the first. Publish each when it is signed instead of with the last.
+        if (fork === ForkName.pq) await publishSigned();
       })
     );
 
-    // signAndPublishAttestations() may be called before the ATTESTATION_DUE_BPS cutoff time if the block was received early.
-    // If we produced the block or we got the block sooner than our peers, our attestations can be dropped because
-    // they reach our peers before the block. To prevent that, we wait 2 extra seconds AFTER block arrival, but
-    // never beyond the ATTESTATION_DUE_BPS cutoff time.
-    // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
-    const attestationDueMs = this.config.getAttestationDueMs(fork);
-    const msToCutoffTime = attestationDueMs - this.clock.msFromSlot(slot);
-    // submitting attestations asap to avoid busy time at around ATTESTATION_DUE_BPS of slot
-    const afterBlockDelayMs =
-      this.clock.getSlotDurationMs(slot) *
-      (this.opts?.afterBlockDelaySlotFraction ?? DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION);
-    await sleep(Math.min(msToCutoffTime, afterBlockDelayMs));
+    await publishSigned();
 
-    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot) - attestationDueMs / 1000);
-
-    // Step 2. Publish all `Attestations` in one go
-    try {
-      (await this.api.beacon.submitPoolAttestationsV2({signedAttestations})).assertOk();
-      this.logger.info("Published attestations", {
-        slot,
-        head: prettyBytes(headRootHex),
-        count: signedAttestations.length,
-      });
-      this.metrics?.publishedAttestations.inc(signedAttestations.length);
-    } catch (e) {
-      // Note: metric counts only 1 since we don't know how many signedAttestations are invalid
-      this.metrics?.attestaterError.inc({error: "publish"});
-      this.logger.error("Error publishing attestations", {slot}, e as Error);
+    if (published > 0) {
+      this.logger.info("Published attestations", {slot, head: prettyBytes(headRootHex), count: published});
     }
   }
 
