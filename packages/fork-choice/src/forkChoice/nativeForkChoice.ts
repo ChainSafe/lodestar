@@ -674,12 +674,19 @@ export class NativeForkChoice implements IForkChoice {
         error: Error(`Missing state for isHeadWeak, blockRoot=${blockRoot}`),
       });
     }
-    const members: number[] = [];
     const committeeCount = state.getBeaconCommitteeCountPerSlot(computeEpochAtSlot(slot));
+    let memberCount = 0;
     for (let index = 0; index < committeeCount; index++) {
-      members.push(...state.getBeaconCommittee(slot, index));
+      memberCount += state.getBeaconCommittee(slot, index).length;
     }
-    return Uint32Array.from(members);
+    const members = new Uint32Array(memberCount);
+    let offset = 0;
+    for (let index = 0; index < committeeCount; index++) {
+      const committee = state.getBeaconCommittee(slot, index);
+      members.set(committee, offset);
+      offset += committee.length;
+    }
+    return members;
   }
 
   private provideCheckpointBalanceSource(epoch: number, root: Uint8Array): BalanceSource {
