@@ -8,15 +8,16 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStatePreHeze,
   EpochTransitionCache,
   beforeProcessEpoch,
 } from "@lodestar/state-transition";
 import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {createSpecTestMetrics, expectNoProgressiveBalancesMismatches} from "../utils/progressiveBalances.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
@@ -27,7 +28,7 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
     const fork = state.config.getForkSeq(state.slot);
     epochFns.processEffectiveBalanceUpdates(fork, state, epochTransitionCache);
   },
-  eth1_data_reset: epochFns.processEth1DataReset,
+  eth1_data_reset: (state, cache) => epochFns.processEth1DataReset(state as CachedBeaconStatePreHeze, cache),
   historical_roots_update: epochFns.processHistoricalRootsUpdate,
   inactivity_updates: epochFns.processInactivityUpdates as EpochTransitionFn,
   justification_and_finalization: epochFns.processJustificationAndFinalization,
@@ -84,11 +85,12 @@ const epochProcessing =
     }
 
     return {
-      testFunction: (testcase) => {
+      testFunction: async (testcase, _directoryName, testCaseName) => {
         const stateTB = testcase.pre.clone();
         const state = createCachedBeaconStateTest(stateTB, config);
+        const {metrics, register} = createSpecTestMetrics();
 
-        const epochTransitionCache = beforeProcessEpoch(state, {assertCorrectProgressiveBalances});
+        const epochTransitionCache = beforeProcessEpoch(state, metrics);
 
         if (testcase.post === undefined) {
           // If post.ssz_snappy is not value, the sub-transition processing is aborted
@@ -97,6 +99,8 @@ const epochProcessing =
         } else {
           epochTransitionFn(state, epochTransitionCache);
         }
+
+        await expectNoProgressiveBalancesMismatches(register, testCaseName);
 
         state.commit();
 
@@ -110,6 +114,9 @@ const epochProcessing =
           pre_epoch: ssz[fork].BeaconState,
           post_epoch: ssz[fork].BeaconState,
         },
+        // Lodestar rejects a pre-state uint64 above Number.MAX_SAFE_INTEGER on decode, e.g. invalid_large_withdrawable_epoch
+        shouldErrorOnInput: (error: Error, inputNames: Set<string>) =>
+          !inputNames.has("post") && /Invalid serialized number > MAX_SAFE_INTEGER/.test(error.message),
         getExpected: (testCase) => testCase.post,
         expectFunc: (_testCase, expected, actual) => {
           expectEqualBeaconState(fork, expected, actual);
@@ -124,11 +131,6 @@ const epochProcessing =
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
   epoch_processing: {
     type: RunnerType.default,
-    fn: epochProcessing([
-      // TODO: invalid_large_withdrawable_epoch asserts an overflow on a u64 for its exit epoch.
-      // Currently unable to reproduce in Lodestar, skipping for now
-      // https://github.com/ethereum/consensus-specs/blob/3212c419f6335e80ed825b4855a071f76bef70c3/tests/core/pyspec/eth2spec/test/phase0/epoch_processing/test_process_registry_updates.py#L349
-      "invalid_large_withdrawable_epoch",
-    ]),
+    fn: epochProcessing(),
   },
 });

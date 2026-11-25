@@ -2,9 +2,16 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateAllForks, BeaconStateView} from "@lodestar/state-transition";
-import {Slot} from "@lodestar/types";
-import {SYNC_TOLERANCE_EPOCHS, getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
+import {
+  BeaconStateAllForks,
+  BeaconStateFulu,
+  BeaconStateView,
+  computeAnchorCheckpoint,
+} from "@lodestar/state-transition";
+import {Slot, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
+import {SYNC_TOLERANCE_EPOCHS} from "../../../../../../src/api/impl/utils.js";
+import {getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants/index.js";
 import {SyncState} from "../../../../../../src/sync/interface.js";
@@ -35,7 +42,7 @@ describe("get proposers api impl", () => {
     modules.chain.getHeadStateAtCurrentEpoch.mockResolvedValue(new BeaconStateView(cachedState));
     modules.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
     modules.forkChoice.getFinalizedBlock.mockReturnValue(zeroProtoBlock);
-    modules.db.block.get.mockResolvedValue({message: {stateRoot: Buffer.alloc(32)}} as any);
+    modules.db.block.get.mockResolvedValue(ssz.fulu.SignedBeaconBlock.defaultValue());
 
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
   });
@@ -53,6 +60,10 @@ describe("get proposers api impl", () => {
       },
       config
     );
+    (state as BeaconStateFulu).proposerLookahead = ssz.fulu.ProposerLookahead.toViewDU([
+      ...Array.from({length: SLOTS_PER_EPOCH}, () => 0),
+      ...Array.from({length: SLOTS_PER_EPOCH}, () => 1),
+    ]);
     cachedState = createCachedBeaconStateTest(state, config);
 
     vi.spyOn(cachedState.epochCtx, "getBeaconProposersNextEpoch");
@@ -61,8 +72,41 @@ describe("get proposers api impl", () => {
   }
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
+
+  it.each([6000, 24000])(
+    "uses the preparing slot for the lookahead when the requested duration is %i ms",
+    async (nextDuration) => {
+      const nextEpoch = currentEpoch + 1;
+      const boundarySlot = nextEpoch * SLOTS_PER_EPOCH;
+      initializeState(boundarySlot);
+      modules.chain.regen.getCheckpointStateSync.mockReturnValue(new BeaconStateView(cachedState));
+      vi.spyOn(config, "getForkName").mockImplementation((slot) =>
+        slot < boundarySlot ? ForkName.fulu : ForkName.gloas
+      );
+      vi.spyOn(config, "getSlotDurationMs").mockImplementation((fork) =>
+        fork === ForkName.fulu ? 12000 : nextDuration
+      );
+
+      vi.setSystemTime(boundarySlot * 12000 - 4001);
+      await expect(api.getProposerDutiesV2({epoch: nextEpoch + 1})).rejects.toThrow("must not be more than 3");
+      expect(modules.chain.regen.getCheckpointStateSync).not.toHaveBeenCalled();
+
+      vi.setSystemTime(boundarySlot * 12000 - 3999);
+      const result = await api.getProposerDutiesV2({epoch: nextEpoch + 1});
+      expect(result.data).toEqual(
+        Array.from({length: SLOTS_PER_EPOCH}, (_, i) =>
+          expect.objectContaining({slot: (nextEpoch + 1) * SLOTS_PER_EPOCH + i})
+        )
+      );
+      expect(modules.chain.regen.getCheckpointStateSync).toHaveBeenCalledWith({
+        epoch: nextEpoch,
+        rootHex: zeroProtoBlock.blockRoot,
+      });
+    }
+  );
 
   it("should raise error if node head is behind", async () => {
     vi.advanceTimersByTime((SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH + 1) * config.SLOT_DURATION_MS);
@@ -107,6 +151,48 @@ describe("get proposers api impl", () => {
     );
   });
 
+  // Regression #9380: v1 getProposerDuties for next epoch must not throw on the dependent root.
+  // The requested-epoch decision slot is the last slot of the current epoch (in the future for a
+  // head state), so it falls back to the state-epoch decision root (last block of previous epoch),
+  // which is stable and, post-Fulu, identical to v2.
+  it("should get v1 proposers for next epoch with stable dependent root", async () => {
+    const nextEpoch = currentEpoch + 1;
+    const v1 = (await api.getProposerDuties({epoch: nextEpoch})) as {meta: {dependentRoot: string}};
+    const v2 = (await api.getProposerDutiesV2({epoch: nextEpoch})) as {meta: {dependentRoot: string}};
+
+    const expected = toRootHex(new BeaconStateView(cachedState).getBlockRootAtSlot(currentSlot - 1));
+    expect(v1.meta.dependentRoot).toBe(expected);
+    expect(v2.meta.dependentRoot).toBe(expected);
+  });
+
+  it("should use the genesis block root as dependent root at genesis", async () => {
+    vi.setSystemTime(0);
+    initializeState(0);
+    modules.chain.getHeadStateAtCurrentEpoch.mockResolvedValue(new BeaconStateView(cachedState));
+    const genesisBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    genesisBlock.message.stateRoot = state.hashTreeRoot();
+    modules.chain.getCanonicalBlockAtSlot.mockResolvedValue({
+      block: genesisBlock,
+      executionOptimistic: false,
+      finalized: true,
+    });
+
+    const {meta} = (await api.getProposerDutiesV2({epoch: 0})) as {meta: {dependentRoot: string}};
+
+    expect(meta.dependentRoot).toBe(toRootHex(computeAnchorCheckpoint(config, state).checkpoint.root));
+  });
+
+  it("should get v1 proposers for next epoch from a mid-epoch head state", async () => {
+    vi.advanceTimersByTime(15 * config.SLOT_DURATION_MS);
+    initializeState(currentSlot + 15);
+    modules.chain.getHeadStateAtCurrentEpoch.mockResolvedValue(new BeaconStateView(cachedState));
+
+    const v1 = (await api.getProposerDuties({epoch: currentEpoch + 1})) as {meta: {dependentRoot: string}};
+
+    const expected = toRootHex(new BeaconStateView(cachedState).getBlockRootAtSlot(currentSlot - 1));
+    expect(v1.meta.dependentRoot).toBe(expected);
+  });
+
   it("should get proposers for historical epoch", async () => {
     const historicalEpoch = currentEpoch - 2;
     initializeState(currentSlot - 2 * SLOTS_PER_EPOCH + 1);
@@ -129,7 +215,7 @@ describe("get proposers api impl", () => {
 
   it("should raise error for more than one epoch in the future", async () => {
     await expect(api.getProposerDutiesV2({epoch: currentEpoch + 2})).rejects.toThrow(
-      "Requested epoch 4 must not be more than one epoch in the future"
+      "Requested epoch 4 must not be more than 3, currentEpoch=2, v2=true"
     );
   });
 
@@ -141,11 +227,10 @@ describe("get proposers api impl", () => {
       data: routes.validator.ProposerDutyList;
     };
 
-    // Public keys should be different, but for tests we are generating a static list of validators with same public key
-    expect(currentProposers.map((p) => p.pubkey)).toEqual(nextProposers.map((p) => p.pubkey));
+    expect(currentProposers.map((p) => p.pubkey)).not.toEqual(nextProposers.map((p) => p.pubkey));
   });
 
-  it("should have different proposer validator indexes for current and next epoch", async () => {
+  it("should get proposer validator indexes from the state lookahead", async () => {
     const {data: currentProposers} = (await api.getProposerDutiesV2({epoch: currentEpoch})) as {
       data: routes.validator.ProposerDutyList;
     };
@@ -153,7 +238,8 @@ describe("get proposers api impl", () => {
       data: routes.validator.ProposerDutyList;
     };
 
-    expect(currentProposers.map((p) => p.validatorIndex)).not.toEqual(nextProposers.map((p) => p.validatorIndex));
+    expect(currentProposers.map((p) => p.validatorIndex)).toEqual(Array.from({length: SLOTS_PER_EPOCH}, () => 0));
+    expect(nextProposers.map((p) => p.validatorIndex)).toEqual(Array.from({length: SLOTS_PER_EPOCH}, () => 1));
   });
 
   it("should have different proposer slots for current and next epoch", async () => {

@@ -53,6 +53,9 @@ export const chainConfig: ChainConfig = {
   // GLOAS
   GLOAS_FORK_VERSION: b("0x07000001"),
   GLOAS_FORK_EPOCH: Infinity,
+  // HEZE
+  HEZE_FORK_VERSION: b("0x08000001"),
+  HEZE_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
@@ -60,6 +63,8 @@ export const chainConfig: ChainConfig = {
   SECONDS_PER_SLOT: 6,
   // [customized] 6000 milliseconds, 6 seconds
   SLOT_DURATION_MS: 6000,
+  // [customized] 6000 milliseconds, 6 seconds
+  SLOT_DURATION_MS_HEZE: 6000,
   // 14 (estimate from Eth1 mainnet)
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs
@@ -70,6 +75,8 @@ export const chainConfig: ChainConfig = {
   SHARD_COMMITTEE_PERIOD: 64,
   // [customized] process deposits more quickly, but insecure
   ETH1_FOLLOW_DISTANCE: 16,
+  // 67% of `SLOT_DURATION_MS`
+  INCLUSION_LIST_DUE_BPS: 6667,
   // 1667 basis points, ~17% of SLOT_DURATION_MS
   PROPOSER_REORG_CUTOFF_BPS: 1667,
   // 3333 basis points, ~33% of SLOT_DURATION_MS
@@ -93,8 +100,8 @@ export const chainConfig: ChainConfig = {
   CONTRIBUTION_DUE_BPS_GLOAS: 5000,
   // 75% of SLOT_DURATION_MS
   PAYLOAD_ATTESTATION_DUE_BPS: 7500,
-  // 75% of SLOT_DURATION_MS
-  PAYLOAD_DUE_BPS: 7500,
+  // 50% of SLOT_DURATION_MS
+  PAYLOAD_DUE_BPS: 5000,
 
   // Validator cycle
   // ---------------------------------------------------------------
@@ -184,12 +191,32 @@ export const chainConfig: ChainConfig = {
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000,
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096,
+  // [customized] 2**12 * 8 * 6,000 (= 196,608,000) milliseconds, ~2.3 days
+  MIN_BLOB_DATA_RETENTION_MS: 196608000,
 
   // Gloas
   // 2**7 (= 128) payloads
   MAX_REQUEST_PAYLOADS: 128,
+  // `2**12` (= 4096 gas)
+  MIN_TRANSACTION_GAS: 4096,
 
   // Blob Scheduling
   // ---------------------------------------------------------------
   BLOB_SCHEDULE: [],
+
+  // Gas Limit Scheduling
+  // ---------------------------------------------------------------
+  GAS_LIMIT_SCHEDULE: [],
+
+  // HEZE
+  // 2**4 (= 16)
+  MAX_REQUEST_INCLUSION_LIST: 16,
+  // 1 slots
+  MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: 1,
+  // 2**13 (=8192)
+  MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST: 8192,
+
+  // Fast Confirmation Rule
+  // ---------------------------------------------------------------
+  CONFIRMATION_BYZANTINE_THRESHOLD: 25,
 };

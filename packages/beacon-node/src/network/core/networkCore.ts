@@ -8,8 +8,9 @@ import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {isForkPostFulu} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {Epoch, Status, fulu, sszTypesFor} from "@lodestar/types";
+import {Epoch, Slot, Status, fulu, sszTypesFor} from "@lodestar/types";
 import {formatNodePeer} from "../../api/impl/node/utils.js";
+import {GoodByeReasonCode} from "../../constants/index.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
@@ -69,6 +70,15 @@ export type BaseNetworkInit = {
   initialStatus: Status;
   initialCustodyGroupCount: number;
 };
+
+/** Counts of what is still keeping this thread's event loop alive, e.g. `TCPWrap=3,Timeout=1` */
+function formatActiveResources(): string {
+  const counts = new Map<string, number>();
+  for (const resource of process.getActiveResourcesInfo()) {
+    counts.set(resource, (counts.get(resource) ?? 0) + 1);
+  }
+  return Array.from(counts, ([name, count]) => `${name}=${count}`).join(",");
+}
 
 /**
  * This class is meant to work both:
@@ -289,7 +299,10 @@ export class NetworkCore implements INetworkCore {
     this.attnetsService.close();
     this.syncnetsService.close();
     await this.libp2p.stop();
-    this.logger.debug("network lib2p closed");
+    // Diagnostic for the shutdown hang, this thread can spin in `Environment::CleanupHandles()` on
+    // a handle that never closes and `Worker.terminate()` then never resolves. Diffing this list
+    // between a clean and a stuck shutdown should narrow down which handle it is
+    this.logger.debug("network lib2p closed", {activeResources: formatActiveResources()});
 
     this.closed = true;
   }
@@ -320,12 +333,21 @@ export class NetworkCore implements INetworkCore {
     this.peerManager.reStatusPeers(peers);
   }
 
+  async goodbyeAndDisconnect(peer: PeerIdStr, reason: GoodByeReasonCode): Promise<void> {
+    await this.peerManager.goodbyeAndDisconnect(peerIdFromString(peer), reason);
+  }
+
   /**
    * Request att subnets up `toSlot`. Network will ensure to mantain some peers for each
    */
   async prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     this.attnetsService.addCommitteeSubscriptions(subscriptions);
     if (subscriptions.length > 0) this.peerManager.onCommitteeSubscriptions();
+  }
+
+  async addLocalProposalSlots(slots: Slot[]): Promise<void> {
+    // no peerManager.onCommitteeSubscriptions(): the extra subscription relies on connected peers, no discovery
+    this.attnetsService.addLocalProposalSlots(slots);
   }
 
   async prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {

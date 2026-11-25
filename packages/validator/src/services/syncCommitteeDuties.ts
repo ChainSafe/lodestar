@@ -2,6 +2,7 @@ import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {
+  IClock,
   computeEpochAtSlot,
   computeSyncPeriodAtEpoch,
   computeSyncPeriodAtSlot,
@@ -12,7 +13,7 @@ import {BLSSignature, Epoch, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/t
 import {toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
-import {IClock, LoggerVc} from "../util/index.js";
+import {LoggerVc} from "../util/index.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {syncCommitteeIndicesToSubnets} from "./utils.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -128,11 +129,19 @@ export class SyncCommitteeDutiesService {
     const dutiesByIndex = this.dutiesByIndexByPeriod.get(period);
     if (dutiesByIndex) {
       for (const dutyAtPeriod of dutiesByIndex.values()) {
-        // Validator always has a duty during the entire period
-        duties.push({
-          duty: dutyAtPeriod.duty,
-          selectionProofs: await this.getSelectionProofs(slot, dutyAtPeriod.duty),
-        });
+        try {
+          // Validator always has a duty during the entire period
+          duties.push({
+            duty: dutyAtPeriod.duty,
+            selectionProofs: await this.getSelectionProofs(slot, dutyAtPeriod.duty),
+          });
+        } catch (e) {
+          this.logger.error(
+            "Error signing sync committee selection proofs",
+            {slot, validatorIndex: dutyAtPeriod.duty.validatorIndex},
+            e as Error
+          );
+        }
       }
 
       if (this.opts?.distributedAggregationSelection) {

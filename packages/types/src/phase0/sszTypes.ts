@@ -146,7 +146,8 @@ export const DepositEvent = new ContainerType(
 export const Eth1Data = new ContainerType(
   {
     depositRoot: Root,
-    depositCount: UintNum64,
+    // Proposer can set any value, must cover the full uint64 range
+    depositCount: UintBn64,
     blockHash: Bytes32,
   },
   {typeName: "Eth1Data", jsonCase: "eth2"}

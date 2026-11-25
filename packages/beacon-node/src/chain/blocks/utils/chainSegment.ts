@@ -22,7 +22,7 @@ export type ChainSegmentResult = {warnings: OrphanedPayloadEnvelope[] | null};
  * - Verifies parent root + slot linearity
  * - For gloas: verifies bid.parentBlockHash matches the tracked execution hash; if not, the
  *   previous FULL envelope is treated as orphaned (segment continues as if previous slot was EMPTY)
- * - If an envelope exists for this slot: verifies it references this block's root
+ * - If an envelope exists for this slot (or the parent's slot): verifies it references this block's root
  * - Advances the tracked execution hash (FULL if envelope present, EMPTY if not)
  */
 export function assertLinearChainSegment(
@@ -31,23 +31,54 @@ export function assertLinearChainSegment(
   payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
   parentBlock: ProtoBlock | null
 ): ChainSegmentResult {
+  if (blocks.length === 0) {
+    return {warnings: null};
+  }
+
   const warnings: OrphanedPayloadEnvelope[] = [];
 
-  // Track the expected execution payload block hash through the segment.
-  // Starts from the known forkchoice parent's execution hash.
-  // - FULL variant (envelope present for slot): advances to envelope.payload.blockHash
-  // - EMPTY variant (no envelope for slot): execution hash is unchanged
-  let currentExecHash: string | null = parentBlock?.executionPayloadBlockHash ?? null;
-  // Checkpoint sync first batch: parent is the anchor PENDING whose executionPayloadBlockHash
-  // is the inherited parentBlockHash semantic (= grandparent's payload), not its own payload.
-  // If parent's own payload envelope arrives in this batch, advance currentExecHash to that
-  // payload's blockHash so the segment validation sees the true EL chain head.
+  // Track the expected execution payload block hash through the segment, seeded from the FIRST
+  // block's own bid
+  const firstBlockMessage = blocks[0].getBlock().message;
+  let currentExecHash: string | null = isGloasBeaconBlock(firstBlockMessage)
+    ? toRootHex(firstBlockMessage.body.signedExecutionPayloadBid.message.parentBlockHash)
+    : null;
+
+  let parentExecHash: string | null = parentBlock?.executionPayloadBlockHash ?? null;
   if (parentBlock !== null) {
     const parentPayloadInput = payloadEnvelopes?.get(parentBlock.slot);
     if (parentPayloadInput?.hasPayloadEnvelope()) {
-      currentExecHash = parentPayloadInput.getBlockHashHex();
+      // Envelopes are served by slot, the one at the parent's slot must reference the parent block. Without this
+      // check an envelope of a sibling block is taken as orphaned and only fails downstream in the payload import
+      if (parentPayloadInput.blockRootHex !== parentBlock.blockRoot) {
+        throw new BlockError(blocks[0].getBlock(), {
+          code: BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH,
+          envelopeBlockRoot: parentPayloadInput.blockRootHex,
+          blockRoot: parentBlock.blockRoot,
+        });
+      }
+      const parentPayloadBlockHash = parentPayloadInput.getBlockHashHex();
+      if (currentExecHash === parentPayloadBlockHash) {
+        // Checkpoint-sync first batch: the anchor is stored PENDING with the inherited (grandparent)
+        // hash, its own payload is in this batch and is the real parent EL head
+        parentExecHash = parentPayloadBlockHash;
+      } else {
+        // First block builds on the parent's EMPTY variant, the parent's payload in this batch is orphaned
+        warnings.push({slot: parentBlock.slot, payloadEnvelopeInput: parentPayloadInput});
+      }
     }
   }
+
+  // First block must build on the parent's EL head. PARENT_PAYLOAD_UNKNOWN (vs the in-segment
+  // NON_LINEAR_PAYLOAD_ROOTS below) tells range sync this is a parent-link problem, not an in-batch one.
+  if (parentExecHash !== null && currentExecHash !== null && currentExecHash !== parentExecHash) {
+    throw new BlockError(blocks[0].getBlock(), {
+      code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+      parentRoot: toRootHex(firstBlockMessage.parentRoot),
+      parentBlockHash: currentExecHash,
+    });
+  }
+
   // Track the execution hash before the last FULL advancement so we can recover
   // if the next block reveals that envelope was orphaned.
   let prevExecHash: string | null = currentExecHash;
@@ -76,8 +107,7 @@ export function assertLinearChainSegment(
     }
 
     if (isGloasBeaconBlock(block.message)) {
-      // Bid check fires only when we have a seeded execution hash. With parentBlock=null the
-      // chain is seeded mid-segment by the first FULL envelope.
+      // currentExecHash and prevExecHash are only null for a pre-gloas first block (fork-transition segment); always set post-gloas.
       if (currentExecHash !== null) {
         // Verify the bid's parentBlockHash matches the tracked execution hash.
         // This ensures the block was built on the correct FULL or EMPTY variant of its parent.
@@ -86,10 +116,12 @@ export function assertLinearChainSegment(
           // Maybe the previous slot's FULL envelope was orphaned — try falling back.
           // If even prevExecHash doesn't match, the segment is non-linear.
           if (bidParentHash !== prevExecHash) {
+            // Broken link inside the segment: throw NON_LINEAR_PAYLOAD_ROOTS instead of PARENT_PAYLOAD_UNKNOWN
+            // this is important for range sync to handle accordingly
             throw new BlockError(block, {
-              code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
-              parentRoot: toRootHex(block.message.parentRoot),
+              code: BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS,
               parentBlockHash: bidParentHash,
+              expectedBlockHash: currentExecHash,
             });
           }
           if (lastFullSlot !== null && payloadEnvelopes !== null) {

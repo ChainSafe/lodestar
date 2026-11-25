@@ -131,12 +131,13 @@ function translateParticipation(
 
   for (const attestation of pendingAttesations.getAllReadonly()) {
     const data = attestation.data;
-    const attestationFlags = getAttestationParticipationStatus(
+    const {flags: attestationFlags} = getAttestationParticipationStatus(
       ForkSeq.altair,
       data,
       attestation.inclusionDelay,
       epochCtx.epoch,
       rootCache,
+      null,
       null
     );
 

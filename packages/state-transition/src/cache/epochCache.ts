@@ -1,5 +1,6 @@
-import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig, ChainConfig, createBeaconConfig} from "@lodestar/config";
+import {PublicKey} from "@lodestar/native/blst";
+import {type PubkeyCache, pubkeyCache as defaultPubkeyCache} from "@lodestar/native/pubkeys";
 import {
   ATTESTATION_SUBNET_COUNT,
   DOMAIN_BEACON_PROPOSER,
@@ -53,9 +54,9 @@ import {
 } from "../util/shuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
+import {BuilderDepositSignatureCache} from "./builderDepositSignatureCache.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {EpochTransitionCache} from "./epochTransitionCache.js";
-import {PubkeyCache, createPubkeyCache, syncPubkeys} from "./pubkeyCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateFulu, CachedBeaconStateGloas} from "./stateCache.js";
 import {
   SyncCommitteeCache,
@@ -112,6 +113,13 @@ export class EpochCache {
    * Couples both index→pubkey and pubkey→index lookups, keeping them in sync atomically.
    */
   pubkeyCache: PubkeyCache;
+  /**
+   * Shared across all clones of the same chain head. Holds builder deposit signature validity
+   * pre-verified by the prepareForNextSlot scheduler in the `GLOAS_PREVERIFY_WINDOW_EPOCHS` epochs
+   * leading up to GLOAS_FORK_EPOCH, so `onboardBuildersFromPendingDeposits()` at the fork transition
+   * can skip the bulk verification cost. There should only exist one for the entire application.
+   */
+  builderDepositSignatureCache: BuilderDepositSignatureCache;
   /**
    * Indexes of the block proposers for the current epoch.
    * For pre-fulu, this is computed and cached from the current shuffling.
@@ -170,6 +178,8 @@ export class EpochCache {
    * Update freq: once per epoch after `process_effective_balance_updates()`
    */
   baseRewardPerIncrement: number;
+  /** As baseRewardPerIncrement but priced at the previous epoch's slot duration */
+  baseRewardPerIncrementPrevEpoch: number;
   /**
    * Total active balance for current epoch, to be used instead of getTotalBalance()
    */
@@ -245,6 +255,7 @@ export class EpochCache {
   constructor(data: {
     config: BeaconConfig;
     pubkeyCache: PubkeyCache;
+    builderDepositSignatureCache: BuilderDepositSignatureCache;
     proposers: number[];
     proposersPrevEpoch: number[] | null;
     proposersNextEpoch: ProposersDeferred;
@@ -260,6 +271,7 @@ export class EpochCache {
     syncParticipantReward: number;
     syncProposerReward: number;
     baseRewardPerIncrement: number;
+    baseRewardPerIncrementPrevEpoch: number;
     totalActiveBalanceIncrements: number;
     churnLimit: number;
     activationChurnLimit: number;
@@ -277,6 +289,7 @@ export class EpochCache {
   }) {
     this.config = data.config;
     this.pubkeyCache = data.pubkeyCache;
+    this.builderDepositSignatureCache = data.builderDepositSignatureCache;
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
     this.proposersNextEpoch = data.proposersNextEpoch;
@@ -292,6 +305,7 @@ export class EpochCache {
     this.syncParticipantReward = data.syncParticipantReward;
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
+    this.baseRewardPerIncrementPrevEpoch = data.baseRewardPerIncrementPrevEpoch;
     this.totalActiveBalanceIncrements = data.totalActiveBalanceIncrements;
     this.churnLimit = data.churnLimit;
     this.activationChurnLimit = data.activationChurnLimit;
@@ -331,10 +345,10 @@ export class EpochCache {
     const validators = state.validators.getAllReadonlyValues();
     const validatorCount = validators.length;
 
-    // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
+    // syncPubkeys here to ensure EpochCacheImmutableData is populated before computing the rest of caches
     // - computeSyncCommitteeCache() needs a fully populated pubkeyCache
     if (!opts?.skipSyncPubkeys) {
-      syncPubkeys(pubkeyCache, validators);
+      pubkeyCache.syncPubkeys(validators);
     }
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
@@ -408,12 +422,17 @@ export class EpochCache {
 
     const nextShuffling = cachedNextShuffling ?? computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
-    const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
-
-    let proposers: number[];
+    let proposers: ValidatorIndex[];
+    let proposersNextEpoch: ProposersDeferred;
     if (currentEpoch >= config.FULU_FORK_EPOCH) {
-      // Overwrite proposers with state.proposerLookahead
-      proposers = (state as CachedBeaconStateFulu).proposerLookahead.getAll().slice(0, SLOTS_PER_EPOCH);
+      // After fulu, use state.proposerLookahead for current and next epoch proposers.
+      // Computing from the unfiltered active shuffling would include slashed validators in gloas.
+      const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
+      proposers = proposerLookahead.slice(0, SLOTS_PER_EPOCH);
+      proposersNextEpoch = {
+        computed: true,
+        indexes: proposerLookahead.slice(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH * 2),
+      };
     } else {
       // We need to calculate Pre-fulu
       // Allow to create CachedBeaconState for empty states, or no active validators
@@ -421,26 +440,30 @@ export class EpochCache {
         currentShuffling.activeIndices.length > 0
           ? computeProposers(
               config.getForkSeqAtEpoch(currentEpoch),
-              currentProposerSeed,
+              getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER),
               currentShuffling,
               effectiveBalanceIncrements
             )
           : [];
+      proposersNextEpoch = {
+        computed: false,
+        seed: getSeed(state, nextEpoch, DOMAIN_BEACON_PROPOSER),
+      };
     }
-
-    const proposersNextEpoch: ProposersDeferred = {
-      computed: false,
-      seed: getSeed(state, nextEpoch, DOMAIN_BEACON_PROPOSER),
-    };
 
     // Only after altair, compute the indices of the current sync committee
     const afterAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
 
     // Values syncParticipantReward, syncProposerReward, baseRewardPerIncrement are only used after altair.
     // However, since they are very cheap to compute they are computed always to simplify upgradeState function.
-    const syncParticipantReward = computeSyncParticipantReward(totalActiveBalanceIncrements);
+    const syncParticipantReward = computeSyncParticipantReward(config, currentEpoch, totalActiveBalanceIncrements);
     const syncProposerReward = Math.floor(syncParticipantReward * PROPOSER_WEIGHT_FACTOR);
-    const baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveBalanceIncrements);
+    const baseRewardPerIncrement = computeBaseRewardPerIncrement(config, currentEpoch, totalActiveBalanceIncrements);
+    const baseRewardPerIncrementPrevEpoch = computeBaseRewardPerIncrement(
+      config,
+      Math.max(currentEpoch - 1, GENESIS_EPOCH),
+      totalActiveBalanceIncrements
+    );
 
     let currentSyncCommitteeIndexed: SyncCommitteeCache;
     let nextSyncCommitteeIndexed: SyncCommitteeCache;
@@ -510,6 +533,8 @@ export class EpochCache {
     return new EpochCache({
       config,
       pubkeyCache,
+      // Created once per application (shared by-reference through clone()).
+      builderDepositSignatureCache: new BuilderDepositSignatureCache(),
       proposers,
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
       proposersPrevEpoch: null,
@@ -526,6 +551,7 @@ export class EpochCache {
       syncParticipantReward,
       syncProposerReward,
       baseRewardPerIncrement,
+      baseRewardPerIncrementPrevEpoch,
       totalActiveBalanceIncrements,
       churnLimit,
       activationChurnLimit,
@@ -554,6 +580,8 @@ export class EpochCache {
       config: this.config,
       // Common append-only structures shared with all states, no need to clone
       pubkeyCache: this.pubkeyCache,
+      // Singleton per application, shared by-reference across clones
+      builderDepositSignatureCache: this.builderDepositSignatureCache,
       // Immutable data
       proposers: this.proposers,
       proposersPrevEpoch: this.proposersPrevEpoch,
@@ -573,6 +601,7 @@ export class EpochCache {
       syncParticipantReward: this.syncParticipantReward,
       syncProposerReward: this.syncProposerReward,
       baseRewardPerIncrement: this.baseRewardPerIncrement,
+      baseRewardPerIncrementPrevEpoch: this.baseRewardPerIncrementPrevEpoch,
       totalActiveBalanceIncrements: this.totalActiveBalanceIncrements,
       churnLimit: this.churnLimit,
       activationChurnLimit: this.activationChurnLimit,
@@ -667,9 +696,22 @@ export class EpochCache {
 
     this.totalActiveBalanceIncrements = epochTransitionCache.nextEpochTotalActiveBalanceByIncrement;
     if (upcomingEpoch >= this.config.ALTAIR_FORK_EPOCH) {
-      this.syncParticipantReward = computeSyncParticipantReward(this.totalActiveBalanceIncrements);
+      this.syncParticipantReward = computeSyncParticipantReward(
+        this.config,
+        upcomingEpoch,
+        this.totalActiveBalanceIncrements
+      );
       this.syncProposerReward = Math.floor(this.syncParticipantReward * PROPOSER_WEIGHT_FACTOR);
-      this.baseRewardPerIncrement = computeBaseRewardPerIncrement(this.totalActiveBalanceIncrements);
+      this.baseRewardPerIncrement = computeBaseRewardPerIncrement(
+        this.config,
+        upcomingEpoch,
+        this.totalActiveBalanceIncrements
+      );
+      this.baseRewardPerIncrementPrevEpoch = computeBaseRewardPerIncrement(
+        this.config,
+        Math.max(upcomingEpoch - 1, GENESIS_EPOCH),
+        this.totalActiveBalanceIncrements
+      );
     }
 
     this.previousTargetUnslashedBalanceIncrements = this.currentTargetUnslashedBalanceIncrements;
@@ -713,17 +755,10 @@ export class EpochCache {
       // Populate proposer cache with lookahead from state
       const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
       this.proposers = proposerLookahead.slice(0, SLOTS_PER_EPOCH);
-
-      if (proposerLookahead.length >= SLOTS_PER_EPOCH * 2) {
-        this.proposersNextEpoch = {
-          computed: true,
-          indexes: proposerLookahead.slice(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH * 2),
-        };
-      } else {
-        // This should not happen unless MIN_SEED_LOOKAHEAD is set to 0
-        // this ensures things don't break if the proposer lookahead is not long enough
-        this.proposersNextEpoch = {computed: false, seed: getSeed(state, epochAfterUpcoming, DOMAIN_BEACON_PROPOSER)};
-      }
+      this.proposersNextEpoch = {
+        computed: true,
+        indexes: proposerLookahead.slice(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH * 2),
+      };
     } else {
       // Need to calculate proposers pre-fulu
       const upcomingProposerSeed = getSeed(state, upcomingEpoch, DOMAIN_BEACON_PROPOSER);
@@ -897,7 +932,7 @@ export class EpochCache {
   }
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    this.pubkeyCache.set(index, pubkey);
+    this.pubkeyCache.append(index, pubkey);
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {
@@ -1112,7 +1147,6 @@ export function createEmptyEpochCacheImmutableData(
 ): EpochCacheImmutableData {
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
-    // This is a test state, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache: defaultPubkeyCache,
   };
 }

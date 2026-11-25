@@ -1,6 +1,11 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {EPOCHS_PER_HISTORICAL_VECTOR, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {
+  EPOCHS_PER_HISTORICAL_VECTOR,
+  MIN_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SUBNET_SIZE,
+} from "@lodestar/params";
 import {
   IBeaconStateView,
   computeEpochAtSlot,
@@ -9,13 +14,24 @@ import {
   isStatePostAltair,
   isStatePostElectra,
   isStatePostFulu,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
-import {ValidatorIndex, getValidatorStatus, ssz} from "@lodestar/types";
+import {
+  BuilderIndex,
+  ValidatorIndex,
+  getBuilderStatus,
+  getValidatorStatus,
+  mapToGeneralStatus,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
 import {
   filterStateValidatorsByStatus,
+  getBuilderIndexByPubkey,
+  getStateBuilderIndex,
   getStateResponseWithRegen,
   getStateValidatorIndex,
   toValidatorResponse,
@@ -24,11 +40,12 @@ import {
 export function getBeaconStateApi({
   chain,
   config,
-}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.beacon.state.Endpoints> {
+  sync,
+}: Pick<ApiModules, "chain" | "config" | "sync">): ApplicationMethods<routes.beacon.state.Endpoints> {
   async function getState(
     stateId: routes.beacon.StateId
   ): Promise<{state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean}> {
-    const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+    const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, sync, stateId);
 
     return {
       state: state instanceof Uint8Array ? chain.getHeadState().loadOtherState(state) : state,
@@ -97,7 +114,8 @@ export function getBeaconStateApi({
           if (resp.valid) {
             const validatorIndex = resp.validatorIndex;
             const validator = state.getValidator(validatorIndex);
-            if (statuses.length && !statuses.includes(getValidatorStatus(validator, currentEpoch))) {
+            const status = getValidatorStatus(validator, currentEpoch);
+            if (statuses.length && !statuses.includes(status) && !statuses.includes(mapToGeneralStatus(status))) {
               continue;
             }
             const validatorResponse = toValidatorResponse(
@@ -141,6 +159,62 @@ export function getBeaconStateApi({
 
     async postStateValidators(args, context) {
       return this.getStateValidators(args, context);
+    },
+
+    async getStateBuilders({stateId, builderIds = [], statuses = []}) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      if (!isStatePostGloas(state)) {
+        throw new ApiError(400, `Builders are not supported for pre-gloas state fork=${state.forkName}`);
+      }
+      const finalizedEpoch = state.finalizedCheckpoint.epoch;
+
+      const builderResponses: routes.beacon.BuilderResponse[] = [];
+      if (builderIds.length) {
+        assertUniqueItems(builderIds, "Duplicate builder IDs provided");
+
+        // There is no builder pubkey cache, scan the registry at most once per request
+        let builderIndexByPubkey: Map<string, BuilderIndex> | null = null;
+        const getBuilderIndexByPubkeyMap = () => {
+          builderIndexByPubkey ??= getBuilderIndexByPubkey(state);
+          return builderIndexByPubkey;
+        };
+
+        for (const id of builderIds) {
+          const resp = getStateBuilderIndex(id, state, getBuilderIndexByPubkeyMap);
+          if (resp.valid) {
+            const builderIndex = resp.builderIndex;
+            const builder = state.getBuilder(builderIndex);
+            const status = getBuilderStatus(builder, finalizedEpoch);
+            if (statuses.length && !statuses.includes(status)) {
+              continue;
+            }
+            builderResponses.push({index: builderIndex, status, builder});
+          }
+        }
+        return {
+          data: builderResponses,
+          meta: {executionOptimistic, finalized},
+        };
+      }
+
+      if (statuses.length) {
+        assertUniqueItems(statuses, "Duplicate statuses provided");
+      }
+
+      const buildersLength = state.getBuildersLength();
+      for (let builderIndex = 0; builderIndex < buildersLength; builderIndex++) {
+        const builder = state.getBuilder(builderIndex);
+        const status = getBuilderStatus(builder, finalizedEpoch);
+        if (statuses.length && !statuses.includes(status)) {
+          continue;
+        }
+        builderResponses.push({index: builderIndex, status, builder});
+      }
+
+      return {
+        data: builderResponses,
+        meta: {executionOptimistic, finalized},
+      };
     },
 
     async postStateValidatorIdentities({stateId, validatorIds = []}) {
@@ -322,6 +396,28 @@ export function getBeaconStateApi({
       };
     },
 
+    async getStatePtc({stateId, slot}) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      if (!isStatePostGloas(state)) {
+        throw new ApiError(400, `Cannot retrieve PTC for pre-gloas state fork=${state.forkName}`);
+      }
+
+      const usedSlot = slot ?? state.slot;
+      const epoch = computeEpochAtSlot(usedSlot);
+      const stateEpoch = computeEpochAtSlot(state.slot);
+      if (epoch < config.GLOAS_FORK_EPOCH) {
+        throw new ApiError(400, `Cannot retrieve PTC for pre-gloas slot=${usedSlot}`);
+      }
+      if (epoch < stateEpoch - 1 || epoch > stateEpoch + MIN_SEED_LOOKAHEAD) {
+        throw new ApiError(400, `Slot ${usedSlot} is outside the PTC window of state epoch ${stateEpoch}`);
+      }
+
+      return {
+        data: {slot: usedSlot, validators: Array.from(state.getPayloadTimelinessCommittee(usedSlot))},
+        meta: {executionOptimistic, finalized},
+      };
+    },
+
     async getPendingDeposits({stateId}, context) {
       const {state, executionOptimistic, finalized} = await getState(stateId);
       const fork = state.forkName;
@@ -333,7 +429,9 @@ export function getBeaconStateApi({
       const pendingDeposits = state.pendingDeposits;
 
       return {
-        data: context?.returnBytes ? ssz.electra.PendingDeposits.serialize(pendingDeposits) : pendingDeposits,
+        data: context?.returnBytes
+          ? sszTypesFor(state.forkName).PendingDeposits.serialize(pendingDeposits)
+          : pendingDeposits,
         meta: {executionOptimistic, finalized, version: fork},
       };
     },
@@ -350,7 +448,7 @@ export function getBeaconStateApi({
 
       return {
         data: context?.returnBytes
-          ? ssz.electra.PendingPartialWithdrawals.serialize(pendingPartialWithdrawals)
+          ? sszTypesFor(state.forkName).PendingPartialWithdrawals.serialize(pendingPartialWithdrawals)
           : pendingPartialWithdrawals,
         meta: {executionOptimistic, finalized, version: fork},
       };
@@ -368,7 +466,7 @@ export function getBeaconStateApi({
 
       return {
         data: context?.returnBytes
-          ? ssz.electra.PendingConsolidations.serialize(pendingConsolidations)
+          ? sszTypesFor(state.forkName).PendingConsolidations.serialize(pendingConsolidations)
           : pendingConsolidations,
         meta: {executionOptimistic, finalized, version: fork},
       };
@@ -386,6 +484,42 @@ export function getBeaconStateApi({
 
       return {
         data: context?.returnBytes ? ssz.fulu.ProposerLookahead.serialize(proposerLookahead) : proposerLookahead,
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getBuilderPendingPayments({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = state.forkName;
+
+      if (!isStatePostGloas(state)) {
+        throw new ApiError(400, `Cannot retrieve pending builder payments for pre-gloas state fork=${fork}`);
+      }
+
+      const builderPendingPayments = state.builderPendingPayments;
+
+      return {
+        data: context?.returnBytes
+          ? ssz.gloas.BuilderPendingPayments.serialize(builderPendingPayments)
+          : builderPendingPayments,
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getBuilderPendingWithdrawals({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = state.forkName;
+
+      if (!isStatePostGloas(state)) {
+        throw new ApiError(400, `Cannot retrieve pending builder withdrawals for pre-gloas state fork=${fork}`);
+      }
+
+      const builderPendingWithdrawals = state.builderPendingWithdrawals;
+
+      return {
+        data: context?.returnBytes
+          ? ssz.gloas.BuilderPendingWithdrawals.serialize(builderPendingWithdrawals)
+          : builderPendingWithdrawals,
         meta: {executionOptimistic, finalized, version: fork},
       };
     },

@@ -1848,6 +1848,18 @@
           "interval": "",
           "legendFormat": "block proposing errors {{error}}",
           "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "rate(vc_payload_envelope_proposing_errors_total[$rate_interval])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "payload envelope proposing errors {{error}}",
+          "refId": "D"
         }
       ],
       "title": "Block produced, published, errored",

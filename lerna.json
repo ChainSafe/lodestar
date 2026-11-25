@@ -1,8 +1,10 @@
 {
   "packages": [
-    "packages/*"
+    "packages/*",
+    "bindings"
   ],
-  "version": "1.43.0",
+  "version": "1.51.0",
+  "npmClient": "pnpm",
   "stream": true,
   "command": {
     "version": {

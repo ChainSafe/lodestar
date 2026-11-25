@@ -1,5 +1,9 @@
-import {PublicKey} from "@chainsafe/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
+
+export type SameMessageSignatureSet = {
+  index: number;
+  signature: Uint8Array;
+};
 
 export type VerifySignatureOpts = {
   /**
@@ -18,6 +22,8 @@ export type VerifySignatureOpts = {
   verifyOnMainThread?: boolean;
   /**
    * Some signature sets are more important than others, and should be verified first.
+   * Non-batchable priority jobs are posted to an idle worker before this call returns, so the caller
+   * can run synchronous work right after without delaying the verification.
    */
   priority?: boolean;
 };
@@ -53,8 +59,8 @@ export interface IBlsVerifier {
    *   - only support `batchable` option
    */
   verifySignatureSetsSameMessage(
-    sets: {publicKey: PublicKey; signature: Uint8Array}[],
-    messsage: Uint8Array,
+    sets: SameMessageSignatureSet[],
+    message: Uint8Array,
     opts?: Omit<VerifySignatureOpts, "verifyOnMainThread">
   ): Promise<boolean[]>;
 

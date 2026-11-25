@@ -1,8 +1,8 @@
 import {randomBytes} from "node:crypto";
 import {BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT} from "@crate-crypto/node-eth-kzg";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {SIGNATURE_LENGTH_UNCOMPRESSED} from "@chainsafe/blst";
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {ChainForkConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {Signature} from "@lodestar/native/blst";
 import {
   ForkPostCapella,
   ForkPostDeneb,
@@ -17,11 +17,11 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {BeaconBlockBody, SignedBeaconBlock, Slot, deneb, fulu, gloas, ssz} from "@lodestar/types";
+import {BeaconBlockBody, SignedBeaconBlock, Slot, deneb, fulu, gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {VersionedHashes} from "../../src/execution/index.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/index.js";
-import {getBlobSidecars, kzgCommitmentToVersionedHash} from "../../src/util/blobs.js";
+import {computePreFuluKzgCommitmentsInclusionProof, kzgCommitmentToVersionedHash} from "../../src/util/blobs.js";
 import {Clock} from "../../src/util/clock.js";
 import {
   CustodyConfig,
@@ -36,6 +36,7 @@ export const DENEB_FORK_EPOCH = 10;
 export const ELECTRA_FORK_EPOCH = 20;
 export const FULU_FORK_EPOCH = 30;
 export const GLOAS_FORK_EPOCH = 40;
+export const HEZE_FORK_EPOCH = 50;
 export const config = createChainForkConfig({
   ...defaultChainConfig,
   CAPELLA_FORK_EPOCH,
@@ -43,6 +44,9 @@ export const config = createChainForkConfig({
   ELECTRA_FORK_EPOCH,
   FULU_FORK_EPOCH,
   GLOAS_FORK_EPOCH,
+  HEZE_FORK_EPOCH,
+  // keep the wall-clock retention window at epoch-count semantics across the heze fork
+  SLOT_DURATION_MS_HEZE: defaultChainConfig.SLOT_DURATION_MS,
 });
 export const clock = new Clock({
   config,
@@ -60,17 +64,18 @@ export const slots: Record<ForkPostCapella, number> = {
   electra: computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH),
   fulu: computeStartSlotAtEpoch(FULU_FORK_EPOCH),
   gloas: computeStartSlotAtEpoch(GLOAS_FORK_EPOCH),
+  heze: computeStartSlotAtEpoch(HEZE_FORK_EPOCH),
 };
 
 /**
  * Value used in c-kzg
- * https://github.com/matthewkeil/c-kzg-4844/blob/cc7c4e90669efc777a92b375574036a64f8ae9ae/bindings/node.js/test/kzg.test.ts#L42
+ * https://github.com/matthewkeil/c-kzg-4844/blob/cc7c4e90669efc777a92b375574036a64f8ae9ae/packages/native/node.js/test/kzg.test.ts#L42
  */
 const MAX_TOP_BYTE = 114;
 
 /**
  * Generates a random blob of the correct length for the KZG library
- * https://github.com/matthewkeil/c-kzg-4844/blob/cc7c4e90669efc777a92b375574036a64f8ae9ae/bindings/node.js/test/kzg.test.ts#L87
+ * https://github.com/matthewkeil/c-kzg-4844/blob/cc7c4e90669efc777a92b375574036a64f8ae9ae/packages/native/node.js/test/kzg.test.ts#L87
  */
 export function generateRandomBlob(): Uint8Array {
   return new Uint8Array(
@@ -115,7 +120,7 @@ function generateBeaconBlock<F extends ForkPostCapella>({
   block.message.stateRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
   block.message.proposerIndex = generateProposerIndex();
   // signature is obviously not valid so can generate it now instead of after commitments are attached
-  block.signature = Uint8Array.from(randomBytes(SIGNATURE_LENGTH_UNCOMPRESSED));
+  block.signature = Uint8Array.from(randomBytes(Signature.COMPRESS_SIZE));
   return block;
 }
 
@@ -132,6 +137,26 @@ function generateRoots<F extends ForkPostCapella>(
     blockRoot,
     rootHex,
   };
+}
+
+function getBlobSidecars(
+  config: ChainForkConfig,
+  signedBlock: SignedBeaconBlock,
+  blobs: deneb.Blobs,
+  proofs: deneb.KZGProofs
+): deneb.BlobSidecars {
+  const blobKzgCommitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
+  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
+  const fork = config.getForkName(signedBlockHeader.message.slot);
+
+  return blobKzgCommitments.map((kzgCommitment, index) => ({
+    index,
+    blob: blobs[index],
+    kzgCommitment,
+    kzgProof: proofs[index],
+    signedBlockHeader,
+    kzgCommitmentInclusionProof: computePreFuluKzgCommitmentsInclusionProof(fork, signedBlock.message.body, index),
+  }));
 }
 
 function generateBlobSidecars(
@@ -183,7 +208,7 @@ function generateColumnSidecars<F extends ForkPostFulu>(
   if (isForkPostGloas(forkName)) {
     (block.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message.blobKzgCommitments = kzgCommitments;
 
-    const beaconBlockRoot = ssz[forkName as ForkPostGloas].BeaconBlock.hashTreeRoot(
+    const beaconBlockRoot = sszTypesFor(forkName as ForkPostGloas).BeaconBlock.hashTreeRoot(
       block.message as SignedBeaconBlock<ForkPostGloas>["message"]
     );
     columnSidecars = getGloasDataColumnSidecars(

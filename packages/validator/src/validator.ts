@@ -1,9 +1,22 @@
 import {ApiClient, ApiRequestInit, defaultInit, getClient, routes} from "@lodestar/api";
-import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
-import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
+import {
+  BeaconConfig,
+  ChainForkConfig,
+  NotEqualParamsError,
+  assertEqualParams,
+  createBeaconConfig,
+} from "@lodestar/config";
+import {
+  Clock,
+  ClockOptions,
+  IClock,
+  computeEpochAtSlot,
+  getCurrentSlot,
+  getSlotDurations,
+} from "@lodestar/state-transition";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {Genesis} from "@lodestar/types/phase0";
-import {Logger, toPrintableUrl, toRootHex} from "@lodestar/utils";
+import {Logger, prettyGweiToEth, toPrintableUrl, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
@@ -14,17 +27,24 @@ import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
+import {InclusionListService} from "./services/inclusionList.js";
 import {IndicesService} from "./services/indices.js";
 import {pollBuilderValidatorRegistration, pollPrepareBeaconProposer} from "./services/prepareBeaconProposer.js";
-import {ProposerPreferencesService} from "./services/proposerPreferences.js";
+import {ProposalPreferencesService} from "./services/proposalPreferences.js";
 import {PtcService} from "./services/ptc.js";
 import {SyncCommitteeService} from "./services/syncCommittee.js";
 import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
-import {Signer, ValidatorProposerConfig, ValidatorStore, defaultOptions} from "./services/validatorStore.js";
+import {
+  Signer,
+  ValidatorProposerConfig,
+  ValidatorStore,
+  defaultOptions,
+  getBuilderBoostFactor,
+  getDefaultBuilderSelection,
+} from "./services/validatorStore.js";
 import {ISlashingProtection, Interchange, InterchangeFormatVersion} from "./slashingProtection/index.js";
 import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
-import {Clock, ClockOptions, IClock} from "./util/clock.js";
-import {NotEqualParamsError, assertEqualParams, getLoggerVc} from "./util/index.js";
+import {getLoggerVc} from "./util/index.js";
 
 export type ValidatorModules = {
   opts: ValidatorOptions;
@@ -34,6 +54,7 @@ export type ValidatorModules = {
   blockProposingService: BlockProposingService;
   attestationService: AttestationService;
   ptcService: PtcService;
+  inclusionListService: InclusionListService;
   syncCommitteeService: SyncCommitteeService;
   config: BeaconConfig;
   api: ApiClient;
@@ -66,6 +87,7 @@ export type ValidatorOptions = {
   distributed?: boolean;
   broadcastValidation?: routes.beacon.BroadcastValidation;
   blindedLocal?: boolean;
+  payloadLocal?: boolean;
   externalSigner?: ExternalSignerOptions;
   clock?: ClockOptions;
 };
@@ -89,10 +111,11 @@ export class Validator {
   private readonly blockProposingService: BlockProposingService;
   private readonly attestationService: AttestationService;
   private readonly ptcService: PtcService;
+  private readonly inclusionListService: InclusionListService;
   private readonly syncCommitteeService: SyncCommitteeService;
   private readonly config: BeaconConfig;
   private readonly api: ApiClient;
-  private readonly clock: IClock;
+  readonly clock: IClock;
   private readonly chainHeaderTracker: ChainHeaderTracker;
   readonly syncingStatusTracker: SyncingStatusTracker;
   private readonly logger: Logger;
@@ -108,6 +131,7 @@ export class Validator {
     blockProposingService,
     attestationService,
     ptcService,
+    inclusionListService,
     syncCommitteeService,
     config,
     api,
@@ -125,6 +149,7 @@ export class Validator {
     this.blockProposingService = blockProposingService;
     this.attestationService = attestationService;
     this.ptcService = ptcService;
+    this.inclusionListService = inclusionListService;
     this.syncCommitteeService = syncCommitteeService;
     this.config = config;
     this.api = api;
@@ -189,7 +214,9 @@ export class Validator {
           globalInit: {
             signal: controller.signal,
             ...globalInit,
-            timeoutMs: globalInit?.timeoutMs ?? config.SLOT_DURATION_MS,
+            timeoutMs:
+              globalInit?.timeoutMs ??
+              Math.min(...getSlotDurations(config).map(([, slotDurationMs]) => slotDurationMs)),
           },
         },
         {config, logger, metrics: metrics?.restApiClient}
@@ -256,6 +283,9 @@ export class Validator {
       {
         broadcastValidation: opts.broadcastValidation ?? defaultOptions.broadcastValidation,
         blindedLocal: opts.blindedLocal ?? defaultOptions.blindedLocal,
+        // Default to keeping the payload local to the beacon node if only a single node is
+        // configured, with multiple nodes the stateless flow allows publishing via any of them
+        payloadLocal: opts.payloadLocal ?? api.httpClient.urlsInits.length <= 1,
       }
     );
 
@@ -287,6 +317,17 @@ export class Validator {
       metrics
     );
 
+    const inclusionListService = new InclusionListService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      syncingStatusTracker,
+      emitter
+    );
+
     const syncCommitteeService = new SyncCommitteeService(
       config,
       loggerVc,
@@ -303,7 +344,16 @@ export class Validator {
       }
     );
 
-    new ProposerPreferencesService(config, loggerVc, api, clock, validatorStore, blockDutiesService, metrics);
+    new ProposalPreferencesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      blockDutiesService,
+      syncingStatusTracker,
+      metrics
+    );
 
     return new Validator({
       opts,
@@ -313,6 +363,7 @@ export class Validator {
       blockProposingService,
       attestationService,
       ptcService,
+      inclusionListService,
       syncCommitteeService,
       config,
       api,
@@ -341,7 +392,8 @@ export class Validator {
         urls: urls.map(toPrintableUrl).toString(),
         requestWireFormat: globalInit?.requestWireFormat ?? defaultInit.requestWireFormat,
         responseWireFormat: globalInit?.responseWireFormat ?? defaultInit.responseWireFormat,
-        requestTimeoutMs: globalInit?.timeoutMs ?? config.SLOT_DURATION_MS,
+        requestTimeoutMs:
+          globalInit?.timeoutMs ?? Math.min(...getSlotDurations(config).map(([, slotDurationMs]) => slotDurationMs)),
       });
     } else {
       api = clientOrUrls;
@@ -352,14 +404,15 @@ export class Validator {
 
     const res = await api.config.getSpec();
     assertEqualParams(config, res.value());
-    logger.info("Verified connected beacon node and validator have same the config");
+    logger.info("Verified connected beacon node and validator have the same config");
 
     await assertEqualGenesis(opts, genesis);
     logger.info("Verified connected beacon node and validator have the same genesisValidatorRoot");
 
     const {broadcastValidation = defaultOptions.broadcastValidation, valProposerConfig} = opts;
+    const gloasScheduled = config.GLOAS_FORK_EPOCH !== Infinity;
     const defaultBuilderSelection =
-      valProposerConfig?.defaultConfig.builder?.selection ?? defaultOptions.builderSelection;
+      valProposerConfig?.defaultConfig.builder?.selection ?? getDefaultBuilderSelection(gloasScheduled);
     const strictFeeRecipientCheck = valProposerConfig?.defaultConfig.strictFeeRecipientCheck ?? false;
     const suggestedFeeRecipient = valProposerConfig?.defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient;
 
@@ -372,6 +425,23 @@ export class Validator {
 
     metrics?.defaultConfiguration.set({builderSelection: defaultBuilderSelection, broadcastValidation}, 1);
 
+    if (gloasScheduled) {
+      const defaultBuilderConfig = valProposerConfig?.defaultConfig.builder;
+      const defaultBuilders = defaultBuilderConfig?.builders ?? [];
+
+      logger.info("Builder config", {
+        builders: defaultBuilders.map((entry) => toPrintableUrl(entry.url)).join(",") || "p2p only",
+        boostFactor: getBuilderBoostFactor(
+          defaultBuilderSelection,
+          defaultBuilderConfig?.boostFactor ?? defaultOptions.builderBoostFactor
+        ),
+        minBid: prettyGweiToEth(defaultBuilderConfig?.minBid ?? defaultOptions.builderMinBid),
+        maxExecutionPayment: prettyGweiToEth(
+          defaultBuilderConfig?.maxExecutionPayment ?? defaultOptions.builderMaxExecutionPayment
+        ),
+      });
+    }
+
     // Instantiates block and attestation services and runs them once the chain has been started.
     return Validator.init(opts, genesis, metrics);
   }
@@ -380,6 +450,7 @@ export class Validator {
     this.blockProposingService.removeDutiesForKey(pubkey);
     this.attestationService.removeDutiesForKey(pubkey);
     this.ptcService.removeDutiesForKey(pubkey);
+    this.inclusionListService.removeDutiesForKey(pubkey);
     this.syncCommitteeService.removeDutiesForKey(pubkey);
   }
 
@@ -394,7 +465,12 @@ export class Validator {
   }
 
   async importInterchange(interchange: Interchange): Promise<void> {
-    return this.slashingProtection.importInterchange(interchange, this.genesis.genesisValidatorsRoot);
+    return this.slashingProtection.importInterchange(
+      interchange,
+      this.genesis.genesisValidatorsRoot,
+      undefined,
+      this.clock.currentEpoch
+    );
   }
 
   async exportInterchange(pubkeys: BLSPubkey[], formatVersion: InterchangeFormatVersion): Promise<Interchange> {

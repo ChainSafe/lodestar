@@ -15,6 +15,7 @@ import {
 import {generatePerfTestCachedStateElectra} from "@lodestar/state-transition/test-utils";
 import {electra, ssz} from "@lodestar/types";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
+import {SingleAttestationPool} from "../../../../src/chain/opPools/singleAttestationPool.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 
 const vc = 1_500_000;
@@ -67,6 +68,9 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
           executionStatus: ExecutionStatus.PreMerge,
 
           timeliness: false,
+          importedTimely: false,
+          ptcTimeliness: false,
+          proposerIndex: 0,
           dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
           parentBlockHash: null,
@@ -95,6 +99,9 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
             executionPayloadBlockHash: null,
             executionStatus: ExecutionStatus.PreMerge,
             timeliness: false,
+            importedTimely: false,
+            ptcTimeliness: false,
+            proposerIndex: 0,
             dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
             parentBlockHash: null,
@@ -137,6 +144,25 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
         },
         justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
         equivocatingIndices: new Set(),
+        confirmedRoot: toHexString(finalizedCheckpoint.root),
+        previousEpochObservedJustifiedCheckpoint: {
+          ...justifiedCheckpoint,
+          rootHex: toHexString(justifiedCheckpoint.root),
+        },
+        currentEpochObservedJustifiedCheckpoint: {
+          ...justifiedCheckpoint,
+          rootHex: toHexString(justifiedCheckpoint.root),
+        },
+        previousEpochGreatestUnrealizedCheckpoint: {
+          ...justifiedCheckpoint,
+          rootHex: toHexString(justifiedCheckpoint.root),
+        },
+        previousEpochObservedJustifiedBalances: originalState.epochCtx.effectiveBalanceIncrements,
+        currentEpochObservedJustifiedBalances: originalState.epochCtx.effectiveBalanceIncrements,
+        previousEpochGreatestUnrealizedBalances: originalState.epochCtx.effectiveBalanceIncrements,
+        previousSlotHead: toHexString(finalizedCheckpoint.root),
+        currentSlotHead: toHexString(finalizedCheckpoint.root),
+        stateGetter: () => null,
       };
       forkchoice = new ForkChoice(originalState.config, fcStore, protoArray, originalState.validators.length, null);
     },
@@ -192,7 +218,13 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
         return {state, pool, shufflingCache};
       },
       fn: ({state, pool, shufflingCache}) => {
-        pool.getAttestationsForBlock(originalState.config.getForkName(state.slot), forkchoice, shufflingCache, state);
+        pool.getAttestationsForBlock(
+          originalState.config.getForkName(state.slot),
+          forkchoice,
+          shufflingCache,
+          state,
+          new SingleAttestationPool()
+        );
       },
     });
   }

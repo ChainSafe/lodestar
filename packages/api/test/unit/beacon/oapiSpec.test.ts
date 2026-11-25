@@ -20,14 +20,15 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v5.0.0-alpha.2";
+const version = "v5.0.0-beta.0";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
   version: RegExp(version),
 };
 
-const config = createChainForkConfig({...defaultChainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
+// Blinded block fixtures use slot 0, before Gloas.
+const config = createChainForkConfig({...defaultChainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 1});
 
 const definitions = {
   ...routes.beacon.getDefinitions(config),
@@ -51,10 +52,7 @@ const testDatas = {
   ...validatorTestData,
 };
 
-const ignoredOperations = [
-  // TODO GLOAS: not yet implemented
-  "getExecutionPayloadBid",
-];
+const ignoredOperations: string[] = [];
 
 const ignoredProperties: Record<string, IgnoredProperty> = {
   /*
@@ -67,14 +65,7 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
 const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, ignoredProperties);
 
-const ignoredTopics: string[] = [
-  // TODO GLOAS: required by v5.0.0-alpha.1
-  "payload_attestation_message",
-  "execution_payload_bid",
-  // TODO: not yet implemented, added in v5.0.0-alpha.2
-  "head_v2",
-  "fast_confirmation",
-];
+const ignoredTopics: string[] = [];
 
 // eventstream types are defined as comments in the description of "examples".
 // The function runTestCheckAgainstSpec() can't handle those, so the custom code before:
@@ -96,7 +87,10 @@ describe("eventstream event data", () => {
     }
   });
 
-  const eventSerdes = routes.events.getEventSerdes(config);
+  // Spec event examples use Gloas fields even in the first epoch.
+  const eventSerdes = routes.events.getEventSerdes(
+    createChainForkConfig({...defaultChainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0})
+  );
   const knownTopics = new Set<string>(Object.values(routes.events.eventTypes));
 
   for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {}).filter(

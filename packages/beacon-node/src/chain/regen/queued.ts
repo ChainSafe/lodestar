@@ -67,9 +67,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.jobQueue.jobLen < REGEN_CAN_ACCEPT_WORK_THRESHOLD;
   }
 
-  dropCache(): void {
+  async dropCache(): Promise<void> {
     this.blockStateCache.clear();
-    this.checkpointStateCache.clear();
+    await this.checkpointStateCache.clear();
   }
 
   dumpCacheSummary(): routes.lodestar.StateCacheItem[] {
@@ -138,9 +138,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.blockStateCache.get(head.stateRoot);
   }
 
-  pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void {
-    this.checkpointStateCache.prune(finalizedEpoch, justifiedEpoch);
-    this.blockStateCache.prune(headStateRoot);
+  onCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void {
+    this.checkpointStateCache.onCheckpoint(finalizedEpoch, justifiedEpoch);
+    this.blockStateCache.onCheckpoint(headStateRoot);
   }
 
   processState(blockRootHex: RootHex, postState: IBeaconStateView): void {
@@ -154,18 +154,20 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.checkpointStateCache.add(cp, item);
   }
 
-  updateHeadState(newHead: ProtoBlock, maybeHeadState: IBeaconStateView): void {
+  updateHeadState(newHead: ProtoBlock, maybeHeadState?: IBeaconStateView): void {
     const {stateRoot: newHeadStateRoot, blockRoot: newHeadBlockRoot, slot: newHeadSlot} = newHead;
-    const maybeHeadStateRoot = toRootHex(maybeHeadState.hashTreeRoot());
+    const maybeHeadStateRoot = maybeHeadState ? toRootHex(maybeHeadState.hashTreeRoot()) : undefined;
     const logCtx = {
       newHeadSlot,
       newHeadBlockRoot,
       newHeadStateRoot,
-      maybeHeadSlot: maybeHeadState.slot,
+      maybeHeadSlot: maybeHeadState?.slot,
       maybeHeadStateRoot,
     };
     const headState =
-      newHeadStateRoot === maybeHeadStateRoot ? maybeHeadState : this.blockStateCache.get(newHeadStateRoot);
+      maybeHeadState && newHeadStateRoot === maybeHeadStateRoot
+        ? maybeHeadState
+        : this.blockStateCache.get(newHeadStateRoot);
 
     if (headState) {
       this.blockStateCache.setHeadState(headState);

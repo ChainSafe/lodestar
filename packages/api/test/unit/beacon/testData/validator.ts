@@ -1,4 +1,5 @@
-import {ForkName} from "@lodestar/params";
+import {SerializedList} from "@chainsafe/ssz";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {BuilderSelection, Endpoints} from "../../../../src/beacon/routes/validator.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
@@ -9,6 +10,12 @@ const randaoReveal = new Uint8Array(96).fill(1);
 const selectionProof = new Uint8Array(96).fill(1);
 const graffiti = "a".repeat(32);
 const feeRecipient = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const builderAuth = {
+  ...ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+  message: {data: new TextEncoder().encode("builder.example.com"), slot: 32000},
+};
+const signedProposerPreferences = ssz.gloas.SignedProposerPreferences.defaultValue();
+signedProposerPreferences.message.proposalSlot = SLOTS_PER_EPOCH;
 
 export const testData: GenericServerTestCases<Endpoints> = {
   getAttesterDuties: {
@@ -85,16 +92,32 @@ export const testData: GenericServerTestCases<Endpoints> = {
       randaoReveal,
       graffiti,
       skipRandaoVerification: true,
-      builderBoostFactor: 0n,
       feeRecipient,
-      builderSelection: BuilderSelection.ExecutionAlways,
       strictFeeRecipientCheck: true,
+      includePayload: true,
+      builderConfig: {
+        minBid: 0n,
+        builderBoostFactor: 100n,
+        builders: [
+          {
+            url: new TextEncoder().encode("https://builder.example.com"),
+            auth: builderAuth,
+            builderPubkeys: [],
+            maxExecutionPayment: 0n,
+            minBid: 0n,
+            builderBoostFactor: 100n,
+          },
+        ],
+      },
     },
     res: {
-      data: ssz.gloas.BeaconBlock.defaultValue(),
+      data: ssz.gloas.BlockContents.defaultValue(),
       meta: {
         version: ForkName.gloas,
         consensusBlockValue: ssz.Wei.defaultValue(),
+        executionPayloadValue: ssz.Wei.defaultValue(),
+        executionPayloadIncluded: true,
+        builderUrl: "https://builder.example.com",
       },
     },
   },
@@ -117,17 +140,9 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {slot: 32000, subcommitteeIndex: 2, beaconBlockRoot: ZERO_HASH},
     res: {data: ssz.altair.SyncCommitteeContribution.defaultValue()},
   },
-  getAggregatedAttestation: {
-    args: {attestationDataRoot: ZERO_HASH, slot: 32000},
-    res: {data: ssz.phase0.Attestation.defaultValue()},
-  },
   getAggregatedAttestationV2: {
     args: {attestationDataRoot: ZERO_HASH, slot: 32000, committeeIndex: 2},
     res: {data: ssz.electra.Attestation.defaultValue(), meta: {version: ForkName.electra}},
-  },
-  publishAggregateAndProofs: {
-    args: {signedAggregateAndProofs: [ssz.phase0.SignedAggregateAndProof.defaultValue()]},
-    res: undefined,
   },
   publishAggregateAndProofsV2: {
     args: {signedAggregateAndProofs: [ssz.electra.SignedAggregateAndProof.defaultValue()]},
@@ -163,6 +178,45 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   registerValidator: {
     args: {registrations: [ssz.bellatrix.SignedValidatorRegistrationV1.defaultValue()]},
+    res: undefined,
+  },
+  submitProposerPreferences: {
+    args: {signedProposerPreferences: [signedProposerPreferences]},
+    res: undefined,
+  },
+  submitBuilderPreferences: {
+    args: {
+      builderPreferences: [
+        {
+          proposerPubkey: new Uint8Array(48).fill(1),
+          url: new TextEncoder().encode("https://builder.example.com"),
+          auth: builderAuth,
+          maxExecutionPayment: 0n,
+        },
+      ],
+    },
+    res: undefined,
+  },
+  getInclusionListCommitteeDuties: {
+    args: {epoch: 1000, indices: [1, 2, 3]},
+    res: {
+      data: [
+        {
+          pubkey: new Uint8Array(48).fill(1),
+          validatorIndex: 2,
+          slot: 7,
+          dependentRoot: new Uint8Array(32).fill(3),
+        },
+      ],
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
+    },
+  },
+  produceInclusionList: {
+    args: {slot: 10},
+    res: {data: SerializedList.fromArray([new Uint8Array([1, 2, 3])]), meta: {version: ForkName.heze}},
+  },
+  publishInclusionList: {
+    args: {signedInclusionList: ssz.heze.SignedInclusionList.defaultValue()},
     res: undefined,
   },
 };

@@ -48,6 +48,14 @@ describe("bytes utils", async () => {
       runsFactor,
     });
 
+    /**
+     * Node v24.21.0 benchmark results for a 131072 bytes blob:
+     *
+     * Function          | nodejs (Buffer)  | browser (loop)
+     * ------------------|------------------|----------------
+     * fromHex(blob)     | 154 μs/op        | 1.08 ms/op
+     * fromHexInto(blob) | 118 μs/op        | 1.07 ms/op
+     */
     bench({
       id: `${name} fromHex(blob)`,
       fn: () => {
@@ -64,16 +72,6 @@ describe("bytes utils", async () => {
       fn: () => {
         for (let i = 0; i < runsFactor; i++) {
           impl.fromHexInto(blobHex, buffer);
-        }
-      },
-      runsFactor,
-    });
-
-    bench({
-      id: `${name} block root to RootHex using the deprecated toHexString`,
-      fn: () => {
-        for (let i = 0; i < runsFactor; i++) {
-          impl.toHexString(blockRoot);
         }
       },
       runsFactor,

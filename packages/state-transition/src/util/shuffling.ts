@@ -1,4 +1,4 @@
-import {ForkName, ForkSeq, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
+import {ForkName, ForkSeq, INCLUSION_LIST_COMMITTEE_SIZE, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
 import {
   Attestation,
   CommitteeIndex,
@@ -15,14 +15,15 @@ import {IBeaconStateView} from "../stateView/interface.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {EpochShuffling} from "./epochShuffling.js";
+import {InclusionListCommittee} from "./inclusionListCommittee.js";
 
 /**
  * Block root that decided the proposer shuffling for `proposalEpoch` (keys that shuffling).
  * Computed for the requested epoch, not `state.epoch`, so it is correct when `state` is one
  * epoch off the requested epoch (e.g. serving next-epoch duties from the current state).
  *
- * Returns `null` when the genesis block decides its own shuffling (caller falls back to the
- * genesis block root).
+ * Returns `null` when the decision block is not in the state's past (the genesis block decides
+ * its own shuffling, or it has not been produced yet); caller supplies the fallback.
  */
 export function proposerShufflingDecisionRoot(
   fork: ForkName,
@@ -30,7 +31,8 @@ export function proposerShufflingDecisionRoot(
   proposalEpoch: Epoch
 ): Root | null {
   const decisionSlot = proposerShufflingDecisionSlot(fork, proposalEpoch);
-  if (state.slot === decisionSlot) {
+  // Return null when the decision block is not in the state's past or the getBlockRootAtSlot() api will throw
+  if (decisionSlot >= state.slot) {
     return null;
   }
   return state.getBlockRootAtSlot(decisionSlot);
@@ -193,6 +195,50 @@ export function getAttestingIndices(epochShuffling: EpochShuffling, fork: ForkSe
  */
 export function getBeaconCommittee(epochShuffling: EpochShuffling, slot: Slot, index: CommitteeIndex): Uint32Array {
   return getBeaconCommittees(epochShuffling, slot, [index])[0];
+}
+
+/** Inclusion list committees of a shuffling by slot index, computed on first use and freed with the shuffling */
+// TODO HEZE: replace this module-level map with an extended EpochShuffling tracked by the beacon-node ShufflingCache
+const inclusionListCommitteesByShuffling = new WeakMap<EpochShuffling, InclusionListCommittee[]>();
+
+/** Spec get_inclusion_list_committee: cycle over the slot's concatenated beacon committees */
+export function getInclusionListCommittee(epochShuffling: EpochShuffling, slot: Slot): InclusionListCommittee {
+  let committees = inclusionListCommitteesByShuffling.get(epochShuffling);
+  if (committees === undefined) {
+    committees = [];
+    inclusionListCommitteesByShuffling.set(epochShuffling, committees);
+  }
+  const slotIndex = slot % SLOTS_PER_EPOCH;
+  let committee = committees[slotIndex];
+  if (committee === undefined) {
+    committee = new InclusionListCommittee(computeInclusionListCommittee(epochShuffling.committees[slotIndex]));
+    committees[slotIndex] = committee;
+  }
+  return committee;
+}
+
+function computeInclusionListCommittee(slotCommittees: Uint32Array[]): Uint32Array {
+  let totalLen = 0;
+  for (const committee of slotCommittees) {
+    totalLen += committee.length;
+  }
+
+  const result = new Uint32Array(INCLUSION_LIST_COMMITTEE_SIZE);
+  if (totalLen === 0) {
+    return result;
+  }
+
+  for (let i = 0; i < INCLUSION_LIST_COMMITTEE_SIZE; i++) {
+    let offset = i % totalLen;
+    for (const committee of slotCommittees) {
+      if (offset < committee.length) {
+        result[i] = committee[offset];
+        break;
+      }
+      offset -= committee.length;
+    }
+  }
+  return result;
 }
 
 /**

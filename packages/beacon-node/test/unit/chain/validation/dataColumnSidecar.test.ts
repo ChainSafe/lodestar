@@ -1,12 +1,22 @@
-import {describe, expect, it} from "vitest";
-import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {gloas, ssz} from "@lodestar/types";
-import {DataColumnSidecarValidationError} from "../../../../src/chain/errors/dataColumnSidecarError.js";
+import {beforeEach, describe, expect, it, vi} from "vitest";
+import {ProtoBlock} from "@lodestar/fork-choice";
+import {ForkName, NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {IBeaconStateView} from "@lodestar/state-transition";
+import {fulu, gloas, ssz} from "@lodestar/types";
 import {
+  DataColumnSidecarErrorCode,
+  DataColumnSidecarValidationError,
+} from "../../../../src/chain/errors/dataColumnSidecarError.js";
+import {
+  computeSubnetForDataColumnSidecar,
   validateFuluBlockDataColumnSidecars,
   validateGloasBlockDataColumnSidecars,
+  validateGossipFuluDataColumnSidecar,
 } from "../../../../src/chain/validation/dataColumnSidecar.js";
-import {generateBlockWithColumnSidecars} from "../../../utils/blocksAndData.js";
+import {ZERO_HASH} from "../../../../src/constants/index.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
+import {FULU_FORK_EPOCH, config, generateBlockWithColumnSidecars} from "../../../utils/blocksAndData.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 
 describe("validateFuluBlockDataColumnSidecars", () => {
   const {block, blockRoot, columnSidecars} = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
@@ -232,5 +242,75 @@ describe("validateGloasBlockDataColumnSidecars", () => {
     await expect(
       validateGloasBlockDataColumnSidecars(block.message.slot, blockRoot, blockKzgCommitments, [invalidSidecar])
     ).rejects.toThrow(DataColumnSidecarValidationError);
+  });
+});
+
+describe("validateGossipFuluDataColumnSidecar - proposer lookup", () => {
+  // Block deep inside fulu so its recent-epoch parents are also post-fulu.
+  const deepFulu = generateBlockWithColumnSidecars({
+    forkName: ForkName.fulu,
+    slot: (FULU_FORK_EPOCH + 2) * SLOTS_PER_EPOCH,
+  }).columnSidecars[0] as fulu.DataColumnSidecar;
+  // Block at the very first fulu slot, so a parent one slot back is pre-fulu (fork transition boundary).
+  const fuluBoundary = generateBlockWithColumnSidecars({
+    forkName: ForkName.fulu,
+    slot: FULU_FORK_EPOCH * SLOTS_PER_EPOCH,
+  }).columnSidecars[0] as fulu.DataColumnSidecar;
+
+  let chain: MockedBeaconChain;
+
+  beforeEach(() => {
+    chain = getMockedBeaconChain({config});
+  });
+
+  // Wire the mocked chain to reach step 13 for `sidecar` with the parent at `parentSlot`. A wrong expected
+  // proposer forces a REJECT there (before signature/inclusion/kzg), isolating the state-lookup branch.
+  function setup(sidecar: fulu.DataColumnSidecar, parentSlot: number): number {
+    const wrongProposer = sidecar.signedBlockHeader.message.proposerIndex + 1;
+    vi.spyOn(chain.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(
+      sidecar.signedBlockHeader.message.slot
+    );
+    chain.forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: 0, root: ZERO_HASH, rootHex: ""});
+    chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue({slot: parentSlot, stateRoot: "0x00"} as ProtoBlock);
+    const stateStub = {getBeaconProposer: () => wrongProposer} as unknown as IBeaconStateView;
+    chain.regen.getState.mockResolvedValue(stateStub);
+    chain.regen.getBlockSlotState.mockResolvedValue(stateStub);
+    return computeSubnetForDataColumnSidecar(chain.config, sidecar);
+  }
+
+  it("reads the proposer via getState (no dial) when a post-fulu parent is within MIN_SEED_LOOKAHEAD", async () => {
+    const subnet = setup(deepFulu, deepFulu.signedBlockHeader.message.slot - 1);
+
+    await expectRejectedWithLodestarError(
+      validateGossipFuluDataColumnSidecar(chain, deepFulu, subnet, null),
+      DataColumnSidecarErrorCode.INCORRECT_PROPOSER
+    );
+
+    expect(chain.regen.getState).toHaveBeenCalledOnce();
+    expect(chain.regen.getBlockSlotState).not.toHaveBeenCalled();
+  });
+
+  it("dials via getBlockSlotState when the block is more than MIN_SEED_LOOKAHEAD epochs after its parent", async () => {
+    const subnet = setup(deepFulu, deepFulu.signedBlockHeader.message.slot - 2 * SLOTS_PER_EPOCH);
+
+    await expectRejectedWithLodestarError(
+      validateGossipFuluDataColumnSidecar(chain, deepFulu, subnet, null),
+      DataColumnSidecarErrorCode.INCORRECT_PROPOSER
+    );
+
+    expect(chain.regen.getBlockSlotState).toHaveBeenCalledOnce();
+    expect(chain.regen.getState).not.toHaveBeenCalled();
+  });
+
+  it("dials via getBlockSlotState when the parent is pre-fulu (fork transition boundary)", async () => {
+    const subnet = setup(fuluBoundary, fuluBoundary.signedBlockHeader.message.slot - 1);
+
+    await expectRejectedWithLodestarError(
+      validateGossipFuluDataColumnSidecar(chain, fuluBoundary, subnet, null),
+      DataColumnSidecarErrorCode.INCORRECT_PROPOSER
+    );
+
+    expect(chain.regen.getBlockSlotState).toHaveBeenCalledOnce();
+    expect(chain.regen.getState).not.toHaveBeenCalled();
   });
 });

@@ -14,6 +14,7 @@ import {NetworkCoreMetrics} from "../core/metrics.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventData} from "../events.js";
 import {Eth2Gossipsub} from "../gossip/gossipsub.js";
+import {GossipType} from "../gossip/interface.js";
 import {Libp2p} from "../interface.js";
 import {SubnetType} from "../metadata.js";
 import {NetworkConfig} from "../networkConfig.js";
@@ -415,8 +416,10 @@ export class PeerManager {
       );
       if (irrelevantReasonType === null) {
         isIrrelevant = false;
+        this.metrics?.peerManager.relevanceCheck.inc({result: "relevant"});
       } else {
         isIrrelevant = true;
+        this.metrics?.peerManager.relevanceCheck.inc({result: irrelevantReasonType.code});
         this.logger.debug("Irrelevant peer", {
           peer: prettyPrintPeerId(peer),
           reason: renderIrrelevantPeerType(irrelevantReasonType),
@@ -424,6 +427,7 @@ export class PeerManager {
       }
     } catch (e) {
       this.logger.error("Irrelevant peer - unexpected error", {peer: prettyPrintPeerId(peer)}, e as Error);
+      this.metrics?.peerManager.relevanceCheck.inc({result: "error"});
       isIrrelevant = true;
     }
 
@@ -550,17 +554,25 @@ export class PeerManager {
     // ban and disconnect peers with bad score, collect rest of healthy peers
     const connectedHealthyPeers: PeerId[] = [];
     for (const peer of connectedPeers) {
+      // Direct peers are trusted by the operator, a bad score never disconnects them
+      if (this.gossipsub.isDirectPeer(peer.toString())) {
+        connectedHealthyPeers.push(peer);
+        continue;
+      }
       switch (this.peerRpcScores.getScoreState(peer)) {
         case ScoreState.Banned:
+          this.metrics?.peerManager.peersPruned.inc({reason: "banned"});
           void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.BANNED);
           break;
         case ScoreState.Disconnected:
+          this.metrics?.peerManager.peersPruned.inc({reason: "score_too_low"});
           void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.SCORE_TOO_LOW);
           break;
         case ScoreState.Healthy:
           connectedHealthyPeers.push(peer);
       }
     }
+    this.metrics?.peerManager.peersEvaluated.observe(connectedHealthyPeers.length);
 
     const status = this.statusCache.get();
     const starved =
@@ -571,12 +583,17 @@ export class PeerManager {
     this.lastStatus = status;
     this.metrics?.peerManager.starved.set(starved ? 1 : 0);
     const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
+    const boundary = this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch);
+    const connectedHealthyPeerIds = new Set(connectedHealthyPeers.map((peer) => peer.toString()));
 
+    const prioritizeTimer = this.metrics?.peerManager.prioritizePeersDuration.startTimer();
     const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries, custodyGroupQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => {
-        const peerData = this.connectedPeers.get(peer.toString());
+        const peerIdStr = peer.toString();
+        const peerData = this.connectedPeers.get(peerIdStr);
         return {
           id: peer,
+          direct: this.gossipsub.isDirectPeer(peerIdStr),
           direction: peerData?.direction ?? null,
           status: peerData?.status ?? null,
           attnets: peerData?.metadata?.attnets ?? null,
@@ -587,8 +604,30 @@ export class PeerManager {
         };
       }),
       // Collect subnets which we need peers for in the current slot
-      this.attnetsService.getActiveSubnets(),
-      this.syncnetsService.getActiveSubnets(),
+      this.attnetsService.getActiveSubnets().map((request) => {
+        const subscribers = this.gossipsub.getSubscribersWithOutboundStream({
+          type: GossipType.beacon_attestation,
+          boundary,
+          subnet: request.subnet,
+        });
+        let peerCount = 0;
+        for (const peer of subscribers) {
+          if (connectedHealthyPeerIds.has(peer)) peerCount++;
+        }
+        return {...request, peerCount};
+      }),
+      this.syncnetsService.getActiveSubnets().map((request) => {
+        const subscribers = this.gossipsub.getSubscribersWithOutboundStream({
+          type: GossipType.sync_committee,
+          boundary,
+          subnet: request.subnet,
+        });
+        let peerCount = 0;
+        for (const peer of subscribers) {
+          if (connectedHealthyPeerIds.has(peer)) peerCount++;
+        }
+        return {...request, peerCount};
+      }),
       // ignore samplingGroups for pre-fulu forks
       forkSeq >= ForkSeq.fulu ? this.networkConfig.custodyConfig.sampleGroups : undefined,
       {
@@ -601,6 +640,7 @@ export class PeerManager {
       this.config,
       this.metrics
     );
+    prioritizeTimer?.();
 
     const queriesMerged: SubnetDiscvQueryMs[] = [];
     for (const {type, queries} of [
@@ -632,6 +672,7 @@ export class PeerManager {
     // disconnect first to have more slots before we dial new peers
     for (const [reason, peers] of peersToDisconnect) {
       this.metrics?.peersRequestedToDisconnect.inc({reason}, peers.length);
+      this.metrics?.peerManager.peersPruned.inc({reason}, peers.length);
       for (const peer of peers) {
         void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.TOO_MANY_PEERS);
       }
@@ -659,6 +700,8 @@ export class PeerManager {
       }
     }
 
+    this.metrics?.peerManager.connectedPeersMapSize.set(this.connectedPeers.size);
+
     timer?.();
 
     this.logger.debug("peerManager heartbeat result", {
@@ -672,6 +715,10 @@ export class PeerManager {
   private updateGossipsubScores(): void {
     const gossipsubScores = new Map<string, number>();
     for (const peerIdStr of this.connectedPeers.keys()) {
+      // Direct peers are never disconnected, they must not take the negative score allowance of other peers
+      if (this.gossipsub.isDirectPeer(peerIdStr)) {
+        continue;
+      }
       gossipsubScores.set(peerIdStr, this.gossipsub.getScore(peerIdStr));
     }
 
@@ -882,7 +929,7 @@ export class PeerManager {
     }
   }
 
-  private async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
+  async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
     const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
     const peerIdStr = peer.toString();
     try {

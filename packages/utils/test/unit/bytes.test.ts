@@ -6,7 +6,6 @@ import {
   fromHexInto,
   intToBytes,
   toHex,
-  toHexString,
   toPubkeyHex,
   toRootHex,
 } from "../../src/index.js";
@@ -69,6 +68,11 @@ describe("toHex", () => {
       expect(toHex(input)).toBe(output);
     });
   }
+
+  it("should convert a blob-sized Uint8Array", () => {
+    const size = 131072;
+    expect(toHex(new Uint8Array(size).fill(0xab))).toBe("0x" + "ab".repeat(size));
+  });
 });
 
 describe("toRootHex", () => {
@@ -145,23 +149,20 @@ describe("fromHex and fromHexInto", () => {
       expect(toHex(buffer)).toBe(toHex(output));
     });
   }
-});
 
-describe("toHexString", () => {
-  const testCases: {input: Uint8Array; output: string}[] = [
-    {input: new Uint8Array([1, 2, 3]), output: "0x010203"},
-    {input: new Uint8Array([72, 101, 108, 108, 111]), output: "0x48656c6c6f"},
-    {input: new Uint8Array([]), output: "0x"},
-    {input: new Uint8Array([0, 0, 0, 0]), output: "0x00000000"},
-    {input: new Uint8Array([15, 255, 16, 0, 127]), output: "0x0fff10007f"},
-    {input: new Uint8Array(5).fill(255), output: "0x" + "ff".repeat(5)},
-  ];
+  it.each(["0xzzzz", "0x0011zz2233", "0xgg", "0x00-1", "zzzz"])(
+    "should reject hex string %s with invalid characters",
+    (input) => {
+      expect(() => fromHex(input)).toThrow();
+      const buffer = new Uint8Array(input.replace(/^0x/, "").length / 2);
+      expect(() => fromHexInto(input, buffer)).toThrow();
+    }
+  );
 
-  for (const {input, output} of testCases) {
-    it(`should convert Uint8Array to hex string ${output}`, () => {
-      expect(toHexString(input)).toBe(output);
-    });
-  }
+  it("should reject hex string with a length not matching the buffer", () => {
+    expect(() => fromHexInto("0x0011", new Uint8Array(1))).toThrow();
+    expect(() => fromHexInto("0x0011", new Uint8Array(3))).toThrow();
+  });
 });
 
 describe("formatBytes", () => {

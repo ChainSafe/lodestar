@@ -1,10 +1,10 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
-import {ForkPostDeneb, ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {ForkPostDeneb, ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {BeaconState, DataColumnSidecar, DataColumnSidecars, type SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
@@ -39,7 +39,8 @@ function toPayloadStatusName(status: PayloadStatus): "pending" | "empty" | "full
 export function getDebugApi({
   chain,
   config,
-}: Pick<ApiModules, "chain" | "config" | "db">): ApplicationMethods<routes.debug.Endpoints> {
+  sync,
+}: Pick<ApiModules, "chain" | "config" | "db" | "sync">): ApplicationMethods<routes.debug.Endpoints> {
   return {
     async getDebugChainHeadsV2() {
       const heads = chain.forkChoice.getHeads();
@@ -73,46 +74,59 @@ export function getDebugApi({
 
     async getDebugForkChoiceV2() {
       const {forkChoice} = chain;
+      const nodes = forkChoice.getAllNodes();
+      const head = forkChoice.getHead();
       return {
         data: {
           justifiedCheckpoint: forkChoice.getJustifiedCheckpoint(),
           finalizedCheckpoint: forkChoice.getFinalizedCheckpoint(),
-          forkChoiceNodes: forkChoice.getAllNodes().map((node) => {
-            // Payload-specific fields apply only to a revealed Gloas payload = the FULL variant of a
-            // Gloas block
-            const ptc = node.payloadStatus === PayloadStatus.FULL ? forkChoice.getPTCVoteCounts(node.blockRoot) : null;
+          forkChoiceNodes: nodes.map((node) => {
+            const parent = node.parent === undefined ? undefined : nodes[node.parent];
+            const ptc = forkChoice.getPTCVoteCounts(node.blockRoot);
             return {
-              payloadStatus: toPayloadStatusName(node.payloadStatus),
               slot: node.slot,
               blockRoot: node.blockRoot,
-              parentRoot: node.parentRoot,
+              payloadStatus: toPayloadStatusName(node.payloadStatus),
+              parentRoot:
+                node.parentBlockHash !== null && node.payloadStatus !== PayloadStatus.PENDING
+                  ? node.blockRoot
+                  : node.parentRoot,
+              parentPayloadStatus: parent === undefined ? null : toPayloadStatusName(parent.payloadStatus),
+              justifiedCheckpoint: {epoch: node.justifiedEpoch, root: fromHex(node.justifiedRoot)},
+              finalizedCheckpoint: {epoch: node.finalizedEpoch, root: fromHex(node.finalizedRoot)},
               weight: node.weight,
               validity: toForkChoiceValidity(node.executionStatus),
               executionBlockHash: node.executionPayloadBlockHash ?? ZERO_HASH_HEX,
+              payloadAttesterCount: ptc?.attesterCount ?? 0,
+              payloadAvailabilityYesCount: ptc?.payloadPresentCount ?? 0,
+              payloadDataAvailabilityYesCount: ptc?.dataAvailableCount ?? 0,
               extraData: {
+                attestationScore: node.attestationScore,
                 executionOptimistic: isOptimisticBlock(node),
-                timestamp: computeTimeAtSlot(config, node.slot, chain.genesisTime),
-                target: node.targetRoot,
-                justifiedEpoch: node.justifiedEpoch,
-                finalizedEpoch: node.finalizedEpoch,
-                unrealizedJustifiedEpoch: node.unrealizedJustifiedEpoch,
-                unrealizedFinalizedEpoch: node.unrealizedFinalizedEpoch,
-                payloadAttesterCount: ptc?.attesterCount ?? null,
-                payloadAvailabilityYesCount: ptc?.payloadPresentCount ?? null,
-                payloadDataAvailabilityYesCount: ptc?.dataAvailableCount ?? null,
                 gasLimit:
-                  node.payloadStatus === PayloadStatus.FULL && "executionPayloadGasLimit" in node
+                  node.payloadStatus === PayloadStatus.FULL && node.executionStatus !== ExecutionStatus.PreMerge
                     ? node.executionPayloadGasLimit
+                    : null,
+                timestamp: computeTimeAtSlot(config, node.slot, chain.genesisTime),
+                stateRoot: node.stateRoot,
+                target: node.targetRoot,
+                unrealizedJustifiedEpoch: node.unrealizedJustifiedEpoch,
+                unrealizedJustifiedRoot: node.unrealizedJustifiedRoot,
+                unrealizedFinalizedEpoch: node.unrealizedFinalizedEpoch,
+                unrealizedFinalizedRoot: node.unrealizedFinalizedRoot,
+                inclusionListSatisfied:
+                  node.payloadStatus === PayloadStatus.FULL
+                    ? forkChoice.getPayloadInclusionListSatisfaction(node.blockRoot)
                     : null,
               },
             };
           }),
           extraData: {
-            unrealizedJustifiedCheckpoint: forkChoice.getUnrealizedJustifiedCheckpoint(),
-            unrealizedFinalizedCheckpoint: forkChoice.getUnrealizedFinalizedCheckpoint(),
+            head: {blockRoot: head.blockRoot, payloadStatus: toPayloadStatusName(head.payloadStatus)},
             proposerBoostRoot: forkChoice.getProposerBoostRoot(),
             previousProposerBoostRoot: forkChoice.getPreviousProposerBoostRoot(),
-            headRoot: forkChoice.getHeadRoot(),
+            unrealizedJustifiedCheckpoint: forkChoice.getUnrealizedJustifiedCheckpoint(),
+            unrealizedFinalizedCheckpoint: forkChoice.getUnrealizedFinalizedCheckpoint(),
           },
         },
       };
@@ -132,7 +146,7 @@ export function getDebugApi({
     },
 
     async getStateV2({stateId}, context) {
-      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, sync, stateId);
       let slot: number, data: Uint8Array | BeaconState;
       if (state instanceof Uint8Array) {
         slot = getStateSlotFromBytes(state);
@@ -176,12 +190,16 @@ export function getDebugApi({
         dataColumnSidecars = [];
       }
 
+      // Post-gloas sidecars belong to the block's own payload, its FULL variant only exists once imported
+      const payload = finalized ? null : chain.forkChoice.getBlockHex(toRootHex(blockRoot), PayloadStatus.FULL);
       return {
         data: (indices
           ? dataColumnSidecars.filter(({index}) => indices.includes(index))
           : dataColumnSidecars) as DataColumnSidecars,
         meta: {
-          executionOptimistic,
+          executionOptimistic: isForkPostGloas(fork)
+            ? !finalized && (payload === null || isOptimisticBlock(payload))
+            : executionOptimistic,
           finalized,
           version: fork,
         },

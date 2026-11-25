@@ -51,7 +51,7 @@ describe("LodestarForkChoice", () => {
   justifiedBalances[2] = 3;
   const executionStatus = ExecutionStatus.PreMerge;
   const dataAvailabilityStatus = DataAvailabilityStatus.PreData;
-  const blockDelaySec = 0;
+  const blockDelayMs = 0;
 
   const hashBlock = (block: phase0.BeaconBlock): string => toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block));
 
@@ -72,6 +72,7 @@ describe("LodestarForkChoice", () => {
       true,
       {},
       (_: CheckpointWithHex) => justifiedBalances,
+      () => null,
       null
     );
   });
@@ -103,31 +104,31 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         targetBlock.message,
         targetState,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       forkChoice.onBlock(
         orphanedBlock.message,
         orphanedState,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       let head = forkChoice.getHead();
       expect(head.slot).toBe(orphanedBlock.message.slot);
       forkChoice.onBlock(
         parentBlock.message,
         parentState,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       // tie break condition causes head to be orphaned block (based on hex root comparison)
       head = forkChoice.getHead();
@@ -135,11 +136,11 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         childBlock.message,
         childState,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       head = forkChoice.getHead();
       // without vote, head gets stuck at orphaned block
@@ -202,56 +203,56 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         block08.message,
         state08,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       forkChoice.onBlock(
         block12.message,
         state12,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       forkChoice.onBlock(
         block16.message,
         state16,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       forkChoice.onBlock(
         block20.message,
         state20,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       forkChoice.onBlock(
         block24.message,
         state24,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       forkChoice.onBlock(
         block28.message,
         state28,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message), PayloadStatus.FULL)).toHaveLength(4);
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message), PayloadStatus.FULL)).toHaveLength(6);
@@ -262,11 +263,11 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         block32.message,
         state32,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       forkChoice.prune(hashBlock(block16.message));
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message), PayloadStatus.FULL).length).toBeWithMessage(
@@ -300,38 +301,38 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         targetBlock.message,
         targetState,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       forkChoice.onBlock(
         orphanedBlock.message,
         orphanedState,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       forkChoice.onBlock(
         parentBlock.message,
         parentState,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       forkChoice.onBlock(
         childBlock.message,
         childState,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         currentSlot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
       const childBlockRoot = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(childBlock.message));
       // the old way to get non canonical blocks
@@ -363,7 +364,7 @@ describe("LodestarForkChoice", () => {
      * To simplify, go with epoch 0, 1, 2 instead of 9, 10, 11
      */
     it.skip("should not filter blocks with unrealized checkpoints = store checkpoints", () => {
-      const blockDelaySec = 0;
+      const blockDelayMs = 0;
       // C9 is the justified/finalized block
       const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
@@ -375,11 +376,11 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         blockW.message,
         stateW,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         blockW.message.slot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
 
       // X
@@ -388,11 +389,11 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         blockX.message,
         stateX,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         blockX.message.slot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
 
       // Y, same epoch to X
@@ -401,11 +402,11 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         blockY.message,
         stateY,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         blockY.message.slot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
 
       // Y and Z are candidates for new head, make more attestations on Y
@@ -443,11 +444,11 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(
         blockZ.message,
         stateZ,
-        blockDelaySec,
+        blockDelayMs,
+        blockDelayMs,
         blockZ.message.slot,
         executionStatus,
-        dataAvailabilityStatus,
-        null
+        dataAvailabilityStatus
       );
 
       const head = forkChoice.updateHead();

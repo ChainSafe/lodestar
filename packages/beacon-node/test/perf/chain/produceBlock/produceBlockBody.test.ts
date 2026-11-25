@@ -40,7 +40,10 @@ describe("produceBlockBody", () => {
       logger: testLogger("executionEngine"),
     });
 
-    db = new BeaconDb(state.config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
+    db = new BeaconDb(state.config, await LevelDbController.create({name: ".tmpdb"}, {logger}), {
+      dataColumnDir: ".tmpdb-data-columns",
+      logger,
+    });
     chain = new BeaconChain(
       {
         proposerBoost: true,
@@ -66,6 +69,7 @@ describe("produceBlockBody", () => {
         validatorMonitor: null,
         anchorState: new BeaconStateView(state),
         isAnchorStateFinalized: true,
+        earliestAvailableSlot: state.slot,
         executionEngine,
       }
     );
@@ -80,13 +84,14 @@ describe("produceBlockBody", () => {
 
   bench({
     id: "proposeBlockBody type=full, size=empty",
+    threshold: 5,
     minRuns: 5,
     maxMs: Infinity,
     timeoutBench: 60 * 1000,
     beforeEach: async () => {
       const head = chain.forkChoice.getHead();
       const proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
-      const proposerPubKey = state.epochCtx.pubkeyCache.getOrThrow(proposerIndex).toBytes();
+      const proposerPubKey = state.epochCtx.pubkeyCache.getPubkeyBytesOrThrow(proposerIndex);
 
       return {chain, state: new BeaconStateView(state), head, proposerIndex, proposerPubKey};
     },

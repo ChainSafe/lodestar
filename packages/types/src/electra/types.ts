@@ -21,6 +21,7 @@ export type ConsolidationRequests = ValueOf<typeof ssz.ConsolidationRequests>;
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
+export type NewPayloadRequest = ValueOf<typeof ssz.NewPayloadRequest>;
 export type ExecutionRequests = ValueOf<typeof ssz.ExecutionRequests>;
 
 export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;

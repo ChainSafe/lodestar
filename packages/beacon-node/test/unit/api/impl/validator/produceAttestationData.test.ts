@@ -1,6 +1,8 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
@@ -43,6 +45,117 @@ describe("api - validator - produceAttestationData", () => {
     );
   });
 
+  describe("optimistic head", () => {
+    // Head in epoch 1, past the target at its start slot, so head and target differ
+    const headSlot = SLOTS_PER_EPOCH + 1;
+    const headRoot = Buffer.alloc(32, 1);
+    const targetRoot = Buffer.alloc(32, 2);
+    const gloasConfig = createChainForkConfig({
+      ...defaultChainConfig,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    });
+
+    function setup(config = modules.config, headStatus = ExecutionStatus.Syncing): void {
+      modules = getApiTestModules({config});
+      modules.config = config;
+      api = getValidatorApi(defaultApiOptions, modules);
+
+      vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(headSlot + 1);
+      vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
+      modules.chain.getHeadState.mockReturnValue({
+        slot: headSlot,
+        getBlockRootAtSlot: () => targetRoot,
+      } as unknown as IBeaconStateView);
+      modules.forkChoice.getHead.mockReturnValue({blockRoot: toRootHex(headRoot)} as ProtoBlock);
+      // Only the head is optimistic, the target is validated
+      modules.forkChoice.getBlockDefaultStatus.mockImplementation(
+        (root) =>
+          ({
+            executionStatus: toRootHex(root) === toRootHex(targetRoot) ? ExecutionStatus.Valid : headStatus,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
+          }) as ProtoBlock
+      );
+      Object.defineProperty(modules.chain, "getHeadStateAtEpoch", {
+        value: vi.fn().mockResolvedValue({currentJustifiedCheckpoint: {epoch: 0, root: Buffer.alloc(32)}}),
+      });
+    }
+
+    it("Should throw when the head is optimistic but the target is not", async () => {
+      setup();
+
+      await expect(api.produceAttestationData({committeeIndex: 0, slot: headSlot + 1})).rejects.toThrow(
+        "Node is syncing"
+      );
+    });
+
+    it("Should throw post-gloas when the FULL head is optimistic", async () => {
+      // The head's PENDING variant is valid, its payload (FULL variant) is not
+      setup(gloasConfig, ExecutionStatus.Valid);
+      modules.forkChoice.getCanonicalBlockByRoot.mockReturnValue({
+        slot: headSlot,
+        blockRoot: toRootHex(headRoot),
+        payloadStatus: PayloadStatus.FULL,
+        executionStatus: ExecutionStatus.Syncing,
+      } as ProtoBlock);
+
+      await expect(api.produceAttestationData({committeeIndex: 0, slot: headSlot + 1})).rejects.toThrow(
+        "Node is syncing"
+      );
+    });
+
+    it("Should vote for the FULL head post-gloas when its payload is validated", async () => {
+      setup(gloasConfig, ExecutionStatus.Valid);
+      modules.forkChoice.getCanonicalBlockByRoot.mockReturnValue({
+        slot: headSlot,
+        blockRoot: toRootHex(headRoot),
+        payloadStatus: PayloadStatus.FULL,
+        executionStatus: ExecutionStatus.Valid,
+      } as ProtoBlock);
+
+      const {data} = await api.produceAttestationData({committeeIndex: 0, slot: headSlot + 1});
+      if (data instanceof Uint8Array) {
+        throw Error("Expected attestation data object");
+      }
+      expect(data.index).toBe(1);
+      expect(toRootHex(data.beaconBlockRoot)).toBe(toRootHex(headRoot));
+    });
+
+    it("Should vote same-slot post-gloas when only the FULL head is optimistic", async () => {
+      // Same-slot votes support the PENDING variant, which is valid
+      setup(gloasConfig, ExecutionStatus.Valid);
+      modules.forkChoice.getCanonicalBlockByRoot.mockReturnValue({
+        slot: headSlot,
+        blockRoot: toRootHex(headRoot),
+        payloadStatus: PayloadStatus.FULL,
+        executionStatus: ExecutionStatus.Syncing,
+      } as ProtoBlock);
+
+      const {data} = await api.produceAttestationData({committeeIndex: 0, slot: headSlot});
+      if (data instanceof Uint8Array) {
+        throw Error("Expected attestation data object");
+      }
+      expect(data.index).toBe(0);
+    });
+
+    it("Should throw same-slot post-gloas when the PENDING head is optimistic", async () => {
+      setup(gloasConfig, ExecutionStatus.Syncing);
+      modules.forkChoice.getCanonicalBlockByRoot.mockReturnValue({
+        slot: headSlot,
+        blockRoot: toRootHex(headRoot),
+        payloadStatus: PayloadStatus.FULL,
+        executionStatus: ExecutionStatus.Syncing,
+      } as ProtoBlock);
+
+      await expect(api.produceAttestationData({committeeIndex: 0, slot: headSlot})).rejects.toThrow("Node is syncing");
+    });
+  });
+
   describe("producePayloadAttestationData", () => {
     it("Should throw before Gloas", async () => {
       await expect(api.producePayloadAttestationData({slot: 0})).rejects.toThrow(
@@ -77,7 +190,7 @@ describe("api - validator - produceAttestationData", () => {
       } as PayloadEnvelopeInput);
 
       const res = await api.producePayloadAttestationData({slot: 0});
-      if (res.data instanceof Uint8Array) {
+      if (res.data === undefined || res.data instanceof Uint8Array) {
         throw Error("Expected payload attestation data object");
       }
 
@@ -87,7 +200,7 @@ describe("api - validator - produceAttestationData", () => {
       expect(res.data.blobDataAvailable).toBe(true);
     });
 
-    it("Should throw 404 when no canonical block has been seen for the assigned slot", async () => {
+    it("Should return no data when no canonical block has been seen for the assigned slot", async () => {
       const gloasConfig = createChainForkConfig({
         ...defaultChainConfig,
         ALTAIR_FORK_EPOCH: 0,
@@ -104,7 +217,8 @@ describe("api - validator - produceAttestationData", () => {
 
       modules.forkChoice.getCanonicalBlockAtSlot.mockReturnValue(null);
 
-      await expect(api.producePayloadAttestationData({slot: 1})).rejects.toThrow("No canonical block found at slot=1");
+      const res = await api.producePayloadAttestationData({slot: 1});
+      expect(res.data).toBeUndefined();
     });
   });
 });

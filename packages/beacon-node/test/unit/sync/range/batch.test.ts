@@ -1,7 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ForkName} from "@lodestar/params";
-import {SignedBeaconBlock, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
   BlockInputColumns,
@@ -9,11 +9,15 @@ import {
   BlockInputPreData,
 } from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
+import {PayloadError, PayloadErrorCode} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
+import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
 import {Batch, BatchError, BatchErrorCode, BatchStatus} from "../../../../src/sync/range/batch.js";
 import {getBatchSlotRange} from "../../../../src/sync/range/utils/index.js";
+import {ParentPayload} from "../../../../src/sync/utils/downloadByRange.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {clock, config} from "../../../utils/blocksAndData.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
@@ -132,10 +136,37 @@ describe("sync / range / batch", async () => {
   const custodyConfig = new CustodyConfig({config, nodeId});
   const peer = validPeerIdStr;
   const peerSyncMeta = {peerId: peer, client: "lodestar", custodyColumns: custodyConfig.sampledColumns};
+  // Minimal PayloadError context; these tests only read err.type, not the payloadInput.
+  const payloadInput = {slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput;
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
+
+  function downloadBlock(batch: Batch): void {
+    batch.startDownloading(peerSyncMeta);
+    batch.downloadingSuccess(
+      peer,
+      [
+        BlockInputPreData.createFromBlock({
+          block: ssz.capella.SignedBeaconBlock.defaultValue(),
+          blockRootHex: "0x1234",
+          source: BlockInputSource.byRoot,
+          seenTimestampSec: Date.now() / 1000,
+          forkName: ForkName.capella,
+          daOutOfRange: false,
+        }),
+      ],
+      null
+    );
+  }
+
+  function batchInProcessing(startEpoch = 0): Batch {
+    const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+    downloadBlock(batch);
+    batch.startProcessing();
+    return batch;
+  }
 
   describe("getRequests", () => {
     describe("PreDeneb", () => {
@@ -145,7 +176,6 @@ describe("sync / range / batch", async () => {
       it("should make default pre-deneb requests if no existing blocks are passed", () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
       });
 
@@ -156,33 +186,10 @@ describe("sync / range / batch", async () => {
       let batch: Batch;
       const startEpoch = config.DENEB_FORK_EPOCH + 1;
 
-      it("should make default ForkDABlobs requests if no existing blocks are passed", () => {
+      it("should make blocks-only requests for deneb-era epochs (blob download removed)", () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toEqual({startSlot: batch.startSlot, count: batch.count});
-        expect(batch.requests.columnsRequest).toBeUndefined();
-      });
-
-      it("should make default ForkDABlobs requests if current epoch is the last in request range", () => {
-        vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
-          startEpoch + config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-        );
-        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
-
-        expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toEqual({startSlot: batch.startSlot, count: batch.count});
-        expect(batch.requests.columnsRequest).toBeUndefined();
-      });
-
-      it("should not make ForkDABlobs requests if current epoch is ahead of request range", () => {
-        vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
-          startEpoch + config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS + 1
-        );
-        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
-
-        expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
       });
     });
@@ -197,7 +204,6 @@ describe("sync / range / batch", async () => {
 
       it("should make ForkDAColumns requests if no existing blocks are passed", () => {
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toEqual({
           startSlot: batch.startSlot,
           count: batch.count,
@@ -212,7 +218,6 @@ describe("sync / range / batch", async () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toEqual({
           startSlot: batch.startSlot,
           count: batch.count,
@@ -227,7 +232,6 @@ describe("sync / range / batch", async () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
       });
     });
@@ -236,7 +240,6 @@ describe("sync / range / batch", async () => {
       const startEpoch = config.CAPELLA_FORK_EPOCH - 1;
       const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
       expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-      expect(batch.requests.blobsRequest).toBeUndefined();
       expect(batch.requests.columnsRequest).toBeUndefined();
     });
 
@@ -252,7 +255,6 @@ describe("sync / range / batch", async () => {
       const startEpoch = config.FULU_FORK_EPOCH + 1;
       const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
       expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-      expect(batch.requests.blobsRequest).toBeUndefined();
       expect(batch.requests.columnsRequest).toEqual({
         startSlot: batch.startSlot,
         count: batch.count,
@@ -277,12 +279,16 @@ describe("sync / range / batch", async () => {
 
       function buildGloasBlockWithEnvelope({
         slot,
+        parentRoot,
+        parentBlockHash,
         blobCount = 0,
         sampledColumns = [],
         addEnvelope = true,
         addAllColumns = true,
       }: {
         slot: number;
+        parentRoot?: Uint8Array;
+        parentBlockHash?: Uint8Array;
         blobCount?: number;
         sampledColumns?: number[];
         addEnvelope?: boolean;
@@ -290,6 +296,8 @@ describe("sync / range / batch", async () => {
       }): {blockInput: BlockInputNoData; payloadInput: PayloadEnvelopeInput} {
         const block = ssz.gloas.SignedBeaconBlock.defaultValue();
         block.message.slot = slot;
+        if (parentRoot) block.message.parentRoot = parentRoot;
+        if (parentBlockHash) block.message.body.signedExecutionPayloadBid.message.parentBlockHash = parentBlockHash;
         block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = Array.from({length: blobCount}, () =>
           Buffer.alloc(48, 0x11)
         );
@@ -310,7 +318,8 @@ describe("sync / range / batch", async () => {
           forkName: ForkName.gloas,
           sampledColumns,
           custodyColumns: sampledColumns,
-          timeCreatedSec: seenTimestampSec,
+          seenTimestampSec,
+          source: PayloadEnvelopeInputSource.byRange,
           daOutOfRange: false,
         });
         if (addEnvelope) {
@@ -340,6 +349,65 @@ describe("sync / range / batch", async () => {
         }
         return {blockInput, payloadInput};
       }
+
+      it("requests the dangling parent payload only if the first block builds on the FULL variant of the parent", () => {
+        const parentBid = ssz.gloas.ExecutionPayloadBid.defaultValue();
+        parentBid.blockHash = Buffer.alloc(32, 0x22);
+        const parentRoot = Buffer.alloc(32, 0x33);
+        const parentPayload: ParentPayload = {
+          blockRoot: parentRoot,
+          blockRootHex: toRootHex(parentRoot),
+          slot: getBatchSlotRange(startEpoch).startSlot - 1,
+          proposerIndex: 0,
+          forkName: ForkName.gloas,
+          bid: parentBid,
+        };
+        const testCases = [
+          {
+            name: "parent root and parent block hash match",
+            parentRoot,
+            parentBlockHash: parentBid.blockHash,
+            expected: true,
+          },
+          {
+            name: "parent block hash matches but parent root does not",
+            parentRoot: Buffer.alloc(32, 0x44),
+            parentBlockHash: parentBid.blockHash,
+            expected: false,
+          },
+          {
+            name: "parent root matches but the block builds on the EMPTY variant",
+            parentRoot,
+            parentBlockHash: Buffer.alloc(32, 0x55),
+            expected: false,
+          },
+        ];
+
+        for (const {name, parentRoot, parentBlockHash, expected} of testCases) {
+          const batch = new Batch(
+            startEpoch,
+            config,
+            clock,
+            custodyConfig,
+            true,
+            parentPayload,
+            Number.MAX_SAFE_INTEGER
+          );
+          batch.startDownloading(peerSyncMeta);
+          const {blockInput, payloadInput} = buildGloasBlockWithEnvelope({
+            slot: batch.startSlot + 1,
+            parentRoot,
+            parentBlockHash,
+          });
+
+          batch.downloadingSuccess(peer, [blockInput], new Map([[blockInput.slot, payloadInput]]));
+
+          expect(batch.requests.parentPayloadRequest !== undefined, name).toBe(expected);
+          expect(batch.state.status, name).toBe(
+            expected ? BatchStatus.AwaitingDownload : BatchStatus.AwaitingProcessing
+          );
+        }
+      });
 
       it("transitions to AwaitingProcessing when every block has a complete payload envelope", () => {
         const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
@@ -421,6 +489,63 @@ describe("sync / range / batch", async () => {
         expect(batch.requests.columnsRequest?.startSlot).toBe(bi2.slot);
         expect(batch.requests.columnsRequest?.columns).toEqual(sampledColumns);
       });
+
+      it.each([
+        {name: "processing error", err: new Error("processing failed")},
+        {
+          name: "execution engine error",
+          err: new PayloadError(payloadInput, {
+            code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+            execStatus: ExecutionPayloadStatus.ELERROR,
+            errorMessage: "el is down",
+          }),
+        },
+      ])("requests the whole batch again after a $name following a partial download", ({err}) => {
+        // count=1 so the first round returns every block of the batch
+        const {startSlot} = getBatchSlotRange(startEpoch);
+        const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, startSlot);
+        const initialRequests = batch.requests;
+
+        // first round returns the block and envelope but not its columns
+        const sampledColumns = [0, 1];
+        const {blockInput, payloadInput} = buildGloasBlockWithEnvelope({
+          slot: batch.startSlot,
+          blobCount: 1,
+          sampledColumns,
+          addAllColumns: false,
+        });
+        const payloadEnvelopes = new Map([[blockInput.slot, payloadInput]]);
+        batch.startDownloading(peerSyncMeta);
+        batch.downloadingSuccess(peer, [blockInput], payloadEnvelopes);
+        expect(batch.requests.blocksRequest).toBeUndefined();
+        expect(batch.requests.columnsRequest?.columns).toEqual(sampledColumns);
+
+        // second round completes the columns
+        for (const index of sampledColumns) {
+          const columnSidecar = ssz.gloas.DataColumnSidecar.defaultValue();
+          columnSidecar.beaconBlockRoot = sszTypesFor(blockInput.forkName).BeaconBlock.hashTreeRoot(
+            blockInput.getBlock().message
+          );
+          columnSidecar.slot = blockInput.slot;
+          columnSidecar.index = index;
+          payloadInput.addColumn({
+            columnSidecar,
+            source: PayloadEnvelopeInputSource.byRange,
+            seenTimestampSec,
+            peerIdStr: peer,
+          });
+        }
+        batch.startDownloading(peerSyncMeta);
+        batch.downloadingSuccess(peer, [blockInput], payloadEnvelopes);
+        expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
+
+        batch.startProcessing();
+        batch.processingError(err);
+
+        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+        expect(batch.state.blocks).toEqual([]);
+        expect(batch.requests).toEqual(initialRequests);
+      });
     });
 
     describe("Fulu (pre-Gloas)", () => {
@@ -475,6 +600,38 @@ describe("sync / range / batch", async () => {
         expect(batch.requests.columnsRequest).toBeDefined();
         expect(batch.requests.columnsRequest?.startSlot).toBe(batch.startSlot);
         expect(batch.requests.columnsRequest?.columns.slice().sort((a, b) => a - b)).toEqual(sampledColumns);
+      });
+
+      it("drops the downloaded blocks and restarts the batch after an invalid cached block", () => {
+        const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+        const initialRequests = batch.requests;
+
+        const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+        block.message.slot = batch.startSlot;
+        block.message.body.blobKzgCommitments = [Buffer.alloc(48, 0x11)];
+        const blockInput = BlockInputColumns.createFromBlock({
+          block: block as SignedBeaconBlock<typeof ForkName.fulu>,
+          blockRootHex: toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message)),
+          forkName: ForkName.fulu,
+          daOutOfRange: false,
+          seenTimestampSec,
+          source: BlockInputSource.byRange,
+          peerIdStr: peer,
+          sampledColumns: custodyConfig.sampledColumns,
+          custodyColumns: custodyConfig.custodyColumns,
+        });
+        batch.startDownloading(peerSyncMeta);
+        batch.downloadingSuccess(peer, [blockInput], null);
+        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+
+        batch.startDownloading(peerSyncMeta);
+        batch.downloadingInvalidBlock("attacker");
+
+        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+        expect(batch.getBlocks()).toEqual([]);
+        expect(batch.requests).toEqual(initialRequests);
+        expect(batch.getFailedPeers()).toEqual(["attacker"]);
+        expect(batch.hasPeerSucceededCurrentRequest(peerSyncMeta)).toBe(false);
       });
     });
   });
@@ -592,5 +749,379 @@ describe("sync / range / batch", async () => {
         expectedStatus: BatchStatus.Processing,
       })
     );
+  });
+
+  describe("processing failure routing", () => {
+    const startEpoch = 0;
+
+    function downloadedBatch(): Batch {
+      const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+      batch.startDownloading(peerSyncMeta);
+      batch.downloadingSuccess(
+        peer,
+        [
+          BlockInputPreData.createFromBlock({
+            block: ssz.capella.SignedBeaconBlock.defaultValue(),
+            blockRootHex: "0x1234",
+            source: BlockInputSource.byRoot,
+            seenTimestampSec: Date.now() / 1000,
+            forkName: ForkName.capella,
+            daOutOfRange: false,
+          }),
+        ],
+        null
+      );
+      return batch;
+    }
+
+    function blockError(type: ConstructorParameters<typeof BlockError>[1]): BlockError {
+      return new BlockError(ssz.phase0.SignedBeaconBlock.defaultValue(), type);
+    }
+
+    const executionInvalidBlockError = (): BlockError =>
+      blockError({
+        code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
+        execStatus: ExecutionPayloadStatus.INVALID,
+        errorMessage: "bal is empty",
+      });
+
+    type ExecutionEngineErrorStatus =
+      | ExecutionPayloadStatus.ELERROR
+      | ExecutionPayloadStatus.UNAVAILABLE
+      | ExecutionPayloadStatus.INVALID_BLOCK_HASH;
+
+    const executionErrorBlockError = (execStatus: ExecutionEngineErrorStatus): BlockError =>
+      blockError({code: BlockErrorCode.EXECUTION_ENGINE_ERROR, execStatus, errorMessage: "el is down"});
+
+    describe("processingError", () => {
+      const executionEngineErrorStatuses: ExecutionEngineErrorStatus[] = [
+        ExecutionPayloadStatus.ELERROR,
+        ExecutionPayloadStatus.UNAVAILABLE,
+        ExecutionPayloadStatus.INVALID_BLOCK_HASH,
+      ];
+
+      it.each(executionEngineErrorStatuses)(
+        "EXECUTION_ENGINE_ERROR (%s) => executionErrorAttempts, not peer attributable",
+        (execStatus) => {
+          const batch = downloadedBatch();
+          batch.startProcessing();
+          batch.processingError(executionErrorBlockError(execStatus));
+
+          expect(batch.failedProcessingAttempts.length).toBe(0);
+          expect(batch.executionErrorAttempts.length).toBe(1);
+          expect(batch.executionErrorAttempts[0].peerAttributable).toBe(false);
+          expect(batch.getPeerAttributableAttempts()).toEqual([]);
+          expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+        }
+      );
+
+      it("EXECUTION_ENGINE_INVALID => executionErrorAttempts, peer attributable", () => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(executionInvalidBlockError());
+
+        // shares the EL budget rather than the processing budget
+        expect(batch.failedProcessingAttempts.length).toBe(0);
+        expect(batch.executionErrorAttempts.length).toBe(1);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(true);
+        expect(batch.getPeerAttributableAttempts().flatMap((a) => a.peers)).toEqual([peer]);
+      });
+
+      // Under this PR, processBlocks passes PayloadError through UNWRAPPED, so range sync sees it
+      // directly (no BEACON_CHAIN_ERROR wrapper). A local EL ERROR must not be peer-attributable.
+      it("PayloadError EXECUTION_ENGINE_ERROR => executionErrorAttempts, not peer attributable", () => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(
+          new PayloadError(payloadInput, {
+            code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+            execStatus: ExecutionPayloadStatus.ELERROR,
+            errorMessage: "el is down",
+          })
+        );
+
+        expect(batch.failedProcessingAttempts.length).toBe(0);
+        expect(batch.executionErrorAttempts.length).toBe(1);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(false);
+      });
+
+      it("PayloadError EXECUTION_ENGINE_INVALID => executionErrorAttempts, peer attributable", () => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(
+          new PayloadError(payloadInput, {
+            code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+            execStatus: ExecutionPayloadStatus.INVALID,
+            errorMessage: "bal is empty",
+          })
+        );
+
+        expect(batch.executionErrorAttempts.length).toBe(1);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(true);
+      });
+
+      it("non execution error => failedProcessingAttempts, peer attributable", () => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(blockError({code: BlockErrorCode.NON_LINEAR_SLOTS}));
+
+        expect(batch.executionErrorAttempts.length).toBe(0);
+        expect(batch.failedProcessingAttempts.length).toBe(1);
+        expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(true);
+        expect(batch.getFailedPeers()).toContain(peer);
+      });
+
+      it("PER_BLOCK_PROCESSING_ERROR (invalid block) => failedProcessingAttempts, peer attributable", () => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(
+          blockError({code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR, blockRoot: "0x1234", error: new Error("bad op")})
+        );
+
+        // a block that fails per_slot/per_block processing is the peer's bad data
+        expect(batch.failedProcessingAttempts.length).toBe(1);
+        expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(true);
+        expect(batch.getFailedPeers()).toContain(peer);
+      });
+
+      it("BEACON_CHAIN_ERROR (our internal fault) => failedProcessingAttempts, NOT peer attributable", () => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(blockError({code: BlockErrorCode.BEACON_CHAIN_ERROR, error: new Error("regen boom")}));
+
+        // still counts toward the processing retry budget, but blaming a peer for our own bug would
+        // risk self-isolation, so it must not be peer-attributable
+        expect(batch.failedProcessingAttempts.length).toBe(1);
+        expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(false);
+        expect(batch.getPeerAttributableAttempts()).toEqual([]);
+        expect(batch.getFailedPeers()).not.toContain(peer);
+      });
+
+      it("PARENT_BLOCK_UNKNOWN (segment-boundary gap) => failedProcessingAttempts, NOT peer attributable", () => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(blockError({code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot: "0x1234"}));
+
+        // a missing parent at a segment boundary implicates a previous batch / a gap / a reorg, not
+        // the peer that served this batch — so it must not be peer-attributable
+        expect(batch.failedProcessingAttempts.length).toBe(1);
+        expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(false);
+        expect(batch.getPeerAttributableAttempts()).toEqual([]);
+        expect(batch.getFailedPeers()).not.toContain(peer);
+      });
+
+      it("PayloadError BLOCK_NOT_IN_FORK_CHOICE (local precondition) => failedProcessingAttempts, NOT peer attributable", () => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(
+          new PayloadError(payloadInput, {code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE, blockRootHex: "0x1234"})
+        );
+
+        expect(batch.failedProcessingAttempts.length).toBe(1);
+        expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(false);
+        expect(batch.getPeerAttributableAttempts()).toEqual([]);
+        expect(batch.getFailedPeers()).not.toContain(peer);
+      });
+
+      it("PayloadError MISS_BLOCK_STATE (local precondition) => failedProcessingAttempts, NOT peer attributable", () => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(
+          new PayloadError(payloadInput, {code: PayloadErrorCode.MISS_BLOCK_STATE, blockRootHex: "0x1234"})
+        );
+
+        expect(batch.failedProcessingAttempts.length).toBe(1);
+        expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(false);
+        expect(batch.getPeerAttributableAttempts()).toEqual([]);
+        expect(batch.getFailedPeers()).not.toContain(peer);
+      });
+
+      it("mixed EL statuses share one budget and trip MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS", () => {
+        const errors = [
+          executionErrorBlockError(ExecutionPayloadStatus.ELERROR),
+          executionInvalidBlockError(),
+          executionErrorBlockError(ExecutionPayloadStatus.UNAVAILABLE),
+        ];
+
+        const batch = downloadedBatch();
+        for (const err of errors) {
+          batch.startProcessing();
+          batch.processingError(err);
+          // re-download so the batch can be processed again
+          batch.startDownloading(peerSyncMeta);
+          batch.downloadingSuccess(
+            peer,
+            [
+              BlockInputPreData.createFromBlock({
+                block: ssz.capella.SignedBeaconBlock.defaultValue(),
+                blockRootHex: "0x1234",
+                source: BlockInputSource.byRoot,
+                seenTimestampSec: Date.now() / 1000,
+                forkName: ForkName.capella,
+                daOutOfRange: false,
+              }),
+            ],
+            null
+          );
+        }
+        expect(batch.executionErrorAttempts.length).toBe(3);
+
+        // the 4th EL failure exceeds MAX_BATCH_PROCESSING_ATTEMPTS
+        batch.startProcessing();
+        expectThrowsLodestarError(
+          () => batch.processingError(executionErrorBlockError(ExecutionPayloadStatus.ELERROR)),
+          new BatchError({
+            code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS,
+            startEpoch,
+            status: BatchStatus.Processing,
+          })
+        );
+      });
+    });
+
+    describe("validationError", () => {
+      function batchAwaitingValidation(): Batch {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingSuccess();
+        return batch;
+      }
+
+      it("EXECUTION_ENGINE_ERROR => executionErrorAttempts, not peer attributable", () => {
+        const batch = batchAwaitingValidation();
+        batch.validationError(executionErrorBlockError(ExecutionPayloadStatus.ELERROR));
+
+        expect(batch.failedProcessingAttempts.length).toBe(0);
+        expect(batch.executionErrorAttempts.length).toBe(1);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(false);
+        expect(batch.getPeerAttributableAttempts()).toEqual([]);
+      });
+
+      it("EXECUTION_ENGINE_INVALID => executionErrorAttempts, peer attributable", () => {
+        const batch = batchAwaitingValidation();
+        batch.validationError(executionInvalidBlockError());
+
+        expect(batch.executionErrorAttempts.length).toBe(1);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(true);
+        expect(batch.getPeerAttributableAttempts().length).toBe(1);
+      });
+
+      it("PayloadError EXECUTION_ENGINE_ERROR => executionErrorAttempts, not peer attributable", () => {
+        const batch = batchAwaitingValidation();
+        batch.validationError(
+          new PayloadError(payloadInput, {
+            code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+            execStatus: ExecutionPayloadStatus.UNAVAILABLE,
+            errorMessage: "el is down",
+          })
+        );
+
+        expect(batch.failedProcessingAttempts.length).toBe(0);
+        expect(batch.executionErrorAttempts.length).toBe(1);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(false);
+      });
+
+      it("non execution error => failedProcessingAttempts, peer attributable", () => {
+        const batch = batchAwaitingValidation();
+        batch.validationError(blockError({code: BlockErrorCode.NON_LINEAR_SLOTS}));
+
+        expect(batch.executionErrorAttempts.length).toBe(0);
+        expect(batch.failedProcessingAttempts.length).toBe(1);
+        expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(true);
+      });
+    });
+
+    it("getFailedPeers excludes a peer whose only failure was a local execution engine error", () => {
+      const batch = downloadedBatch();
+      batch.startProcessing();
+      batch.processingError(executionErrorBlockError(ExecutionPayloadStatus.ELERROR));
+
+      // local EL error is blameless => peer stays retryable
+      expect(batch.getFailedPeers()).not.toContain(peer);
+    });
+
+    it("getFailedPeers includes a peer that served a definitively invalid payload (BlockError)", () => {
+      const batch = downloadedBatch();
+      batch.startProcessing();
+      batch.processingError(executionInvalidBlockError());
+
+      // stored in executionErrorAttempts but peer-attributable => must not be retried
+      expect(batch.getFailedPeers()).toContain(peer);
+    });
+
+    it("getFailedPeers includes a peer that served a definitively invalid payload (PayloadError)", () => {
+      const batch = downloadedBatch();
+      batch.startProcessing();
+      batch.processingError(
+        new PayloadError(payloadInput, {
+          code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+          execStatus: ExecutionPayloadStatus.INVALID,
+          errorMessage: "bal is empty",
+        })
+      );
+
+      expect(batch.getFailedPeers()).toContain(peer);
+    });
+  });
+
+  describe("retainForReprocessing", () => {
+    const startEpoch = 0;
+
+    it("Processing -> AwaitingProcessing, keeps blocks and records no failed attempt", () => {
+      const batch = batchInProcessing();
+      const blocksBefore = batch.getBlocks();
+
+      batch.retainForReprocessing();
+
+      expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
+      expect(batch.getBlocks()).toBe(blocksBefore);
+      expect(batch.failedProcessingAttempts.length).toBe(0);
+      expect(batch.getFailedPeers().length).toBe(0);
+    });
+
+    it("Should throw on inconsistent state - retainForReprocessing", () => {
+      const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+
+      expectThrowsLodestarError(
+        () => batch.retainForReprocessing(),
+        new BatchError({
+          code: BatchErrorCode.WRONG_STATUS,
+          startEpoch,
+          status: BatchStatus.AwaitingDownload,
+          expectedStatus: BatchStatus.Processing,
+        })
+      );
+    });
+
+    it("preserves the original peer across retain: a non-EL failure on reprocess is still attributed", () => {
+      const batch = batchInProcessing();
+      batch.retainForReprocessing();
+      batch.startProcessing();
+      batch.processingError(
+        new BlockError(ssz.phase0.SignedBeaconBlock.defaultValue(), {code: BlockErrorCode.NON_LINEAR_SLOTS})
+      );
+
+      expect(batch.failedProcessingAttempts).toHaveLength(1);
+      expect(batch.failedProcessingAttempts[0].peers).toEqual([peer]);
+    });
+
+    it("preserves the original peer across retain: an EL INVALID on reprocess is attributable", () => {
+      const batch = batchInProcessing();
+      batch.retainForReprocessing();
+      batch.startProcessing();
+      batch.processingError(
+        new BlockError(ssz.phase0.SignedBeaconBlock.defaultValue(), {
+          code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
+          execStatus: ExecutionPayloadStatus.INVALID,
+          errorMessage: "bal is empty",
+        })
+      );
+
+      expect(batch.executionErrorAttempts).toHaveLength(1);
+      expect(batch.executionErrorAttempts[0].peerAttributable).toBe(true);
+      expect(batch.executionErrorAttempts[0].peers).toEqual([peer]);
+      // and it must be excluded from the next retry
+      expect(batch.getFailedPeers()).toContain(peer);
+    });
   });
 });

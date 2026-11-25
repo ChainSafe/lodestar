@@ -1,12 +1,12 @@
 import {ApiClient} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {IClock, computeEpochAtSlot} from "@lodestar/state-transition";
 import {SignedAggregateAndProof, SingleAttestation, Slot, phase0, ssz} from "@lodestar/types";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
-import {IClock, LoggerVc} from "../util/index.js";
+import {LoggerVc} from "../util/index.js";
 import {AttDutyAndProof, AttestationDutiesService} from "./attestationDuties.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
@@ -173,8 +173,7 @@ export class AttestationService {
     const msToCutoffTime = attestationDueMs - this.clock.msFromSlot(slot);
     // submitting attestations asap to avoid busy time at around ATTESTATION_DUE_BPS of slot
     const afterBlockDelayMs =
-      1000 *
-      this.clock.secondsPerSlot *
+      this.clock.getSlotDurationMs(slot) *
       (this.opts?.afterBlockDelaySlotFraction ?? DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION);
     await sleep(Math.min(msToCutoffTime, afterBlockDelayMs));
 

@@ -3,25 +3,28 @@ import {
   BlockExecutionStatus,
   ExecutionStatus,
   IForkChoice,
+  LVHInvalidJudged,
   LVHInvalidResponse,
   LVHValidResponse,
   ProtoBlock,
 } from "@lodestar/fork-choice";
-import {ForkSeq} from "@lodestar/params";
+import {ForkPostDeneb, ForkSeq, isForkPostDeneb} from "@lodestar/params";
 import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "@lodestar/state-transition";
-import {bellatrix, electra} from "@lodestar/types";
+import {SignedBeaconBlock, bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {IClock} from "../../util/clock.js";
+import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
-import {isBlockInputBlobs, isBlockInputColumns, isBlockInputNoData} from "./blockInput/blockInput.js";
+import {isBlockInputNoData} from "./blockInput/blockInput.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {ImportBlockOpts} from "./types.js";
 
 export type VerifyBlockExecutionPayloadModules = {
-  executionEngine: IExecutionEngine;
+  executionEngine: Pick<IExecutionEngine, "notifyNewPayload">;
   clock: IClock;
   logger: Logger;
   metrics: Metrics | null;
@@ -166,8 +169,9 @@ export async function verifyBlockExecutionPayload(
 
   // TODO: Handle better notifyNewPayload() returning error is syncing
   const fork = blockInput.forkName;
-  const versionedHashes =
-    isBlockInputBlobs(blockInput) || isBlockInputColumns(blockInput) ? blockInput.getVersionedHashes() : undefined;
+  const versionedHashes = isForkPostDeneb(fork)
+    ? getBlobKzgCommitments(fork, block as SignedBeaconBlock<ForkPostDeneb>).map(kzgCommitmentToVersionedHash)
+    : undefined;
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
   const executionRequests =
     ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
@@ -197,11 +201,12 @@ export async function verifyBlockExecutionPayload(
       const lvhResponse = {
         executionStatus,
         latestValidExecHash: execResult.latestValidHash,
-        invalidateFromParentBlockRoot: blockInput.parentRootHex,
-        invalidateFromParentBlockHash: toRootHex(executionPayloadEnabled.parentHash),
+        invalidateFromBlockRoot: blockInput.parentRootHex,
+        invalidateFromBlockHash: toRootHex(executionPayloadEnabled.parentHash),
+        judged: LVHInvalidJudged.ChildPayload,
       };
       const execError = new BlockError(block, {
-        code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+        code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
         execStatus: execResult.status,
         errorMessage: execResult.validationError ?? "",
       });
@@ -281,8 +286,9 @@ function getSegmentErrorResponse(
       invalidSegmentLVH = {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: lvhResponse.latestValidExecHash,
-        invalidateFromParentBlockRoot: parentBlock.blockRoot,
-        invalidateFromParentBlockHash: parentBlock.executionPayloadBlockHash,
+        invalidateFromBlockRoot: parentBlock.blockRoot,
+        invalidateFromBlockHash: parentBlock.executionPayloadBlockHash,
+        judged: LVHInvalidJudged.ChildPayload,
       };
     }
   }
