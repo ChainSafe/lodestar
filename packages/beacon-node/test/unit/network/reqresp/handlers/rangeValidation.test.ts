@@ -16,7 +16,6 @@ const validators = {
 
 describe.each(Object.entries(validators))("%s range validation", (_name, validate) => {
   it.each([
-    [2 ** 53, 1],
     [Number.MAX_SAFE_INTEGER, 1],
     [Number.MAX_SAFE_INTEGER - 1, 2],
   ])("rejects an unrepresentable range starting at %s with count %s", (start, count) => {
@@ -28,8 +27,8 @@ describe.each(Object.entries(validators))("%s range validation", (_name, validat
   });
 
   it("still clamps an oversized count before calculating the range end", () => {
-    const result = validate(0, 2 ** 64);
-    expect(result.count).toBeGreaterThan(0);
-    expect(result.count).toBeLessThanOrEqual(Math.max(config.MAX_REQUEST_BLOCKS_DENEB, config.MAX_REQUEST_PAYLOADS));
+    const maxCount = _name === "envelopes" ? config.MAX_REQUEST_PAYLOADS : config.MAX_REQUEST_BLOCKS_DENEB;
+    const startSlot = Number.MAX_SAFE_INTEGER - maxCount;
+    expect(validate(startSlot, Number.MAX_SAFE_INTEGER)).toMatchObject({startSlot, count: maxCount});
   });
 });

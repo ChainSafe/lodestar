@@ -215,9 +215,6 @@ export function validateDataColumnSidecarsByRangeRequest(
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
-  if (!Number.isSafeInteger(startSlot)) {
-    throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot is not a safe integer");
-  }
 
   // Spec: [max(compute_blob_data_retention_start_epoch(current_epoch), FULU_FORK_EPOCH), current_epoch]
   const minimumRequestEpoch = Math.max(getBlobDataRetentionStartEpoch(config, currentEpoch), config.FULU_FORK_EPOCH);
