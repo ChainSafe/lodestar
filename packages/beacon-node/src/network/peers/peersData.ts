@@ -19,6 +19,8 @@ export enum RelevantPeerStatus {
   irrelevant = "irrelevant",
 }
 
+export type PeerEnr = {txt: string; seq: bigint};
+
 export type PeerData = {
   lastReceivedMsgUnixTsMs: number;
   lastStatusUnixTsMs: number;
@@ -26,7 +28,7 @@ export type PeerData = {
   relevantStatus: RelevantPeerStatus;
   direction: "inbound" | "outbound";
   peerId: PeerId;
-  enr: string | null;
+  enr: PeerEnr | null;
   nodeId: NodeId | null;
   metadata: Metadata | null;
   status: Status | null;

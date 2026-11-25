@@ -17,8 +17,9 @@ import {ENRKey, SubnetType} from "../metadata.js";
 import {NetworkConfig} from "../networkConfig.js";
 import {computeNodeId} from "../subnets/interface.js";
 import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
-import {PeersData} from "./peersData.js";
+import {PeerEnr, PeersData} from "./peersData.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
+import {encodeEnr} from "./utils/encodeEnr.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 import {type CustodyGroupQueries} from "./utils/prioritizePeers.js";
 
@@ -113,7 +114,7 @@ export class PeerDiscovery {
   private logger: LoggerNode;
   private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
-  private discoveredEnrs = new Map<PeerIdStr, string>();
+  private discoveredEnrs = new Map<PeerIdStr, PeerEnr>();
   private readonly maxDiscoveredEnrs: number;
   private readonly peersData: PeersData;
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
@@ -222,7 +223,7 @@ export class PeerDiscovery {
     return new PeerDiscovery(modules, opts, discv5);
   }
 
-  getDiscoveredEnr(peerIdStr: PeerIdStr): string | undefined {
+  getDiscoveredEnr(peerIdStr: PeerIdStr): PeerEnr | undefined {
     return this.discoveredEnrs.get(peerIdStr);
   }
 
@@ -425,19 +426,24 @@ export class PeerDiscovery {
     }
     const peerId = enr.peerId;
     const peerIdStr = peerId.toString();
-    const enrText = enr.encodeTxt();
-    this.discoveredEnrs.delete(peerIdStr);
-    this.discoveredEnrs.set(peerIdStr, enrText);
-    pruneSetToMax(this.discoveredEnrs, this.maxDiscoveredEnrs);
-    const peerData = this.peersData.connectedPeers.get(peerIdStr);
-    if (peerData) {
-      peerData.enr = enrText;
+    const encodedEnr = encodeEnr(enr, this.logger);
+    if (encodedEnr) {
+      const cachedEnr = this.discoveredEnrs.get(peerIdStr);
+      if (!cachedEnr || encodedEnr.seq >= cachedEnr.seq) {
+        this.discoveredEnrs.delete(peerIdStr);
+        this.discoveredEnrs.set(peerIdStr, encodedEnr);
+        pruneSetToMax(this.discoveredEnrs, this.maxDiscoveredEnrs);
+      }
+      const peerData = this.peersData.connectedPeers.get(peerIdStr);
+      if (peerData && (!peerData.enr || encodedEnr.seq >= peerData.enr.seq)) {
+        peerData.enr = encodedEnr;
+      }
     }
     // At least one transport is known to be present, checked inside the worker
     const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
     const multiaddrQUIC = enr.getLocationMultiaddr(ENRKey.quic);
     if (!multiaddrTCP && !multiaddrQUIC) {
-      this.logger.warn("Discv5 worker sent enr without any transport multiaddr", {enr: enr.encodeTxt()});
+      this.logger.warn("Discv5 worker sent enr without any transport multiaddr", {enr: encodedEnr?.txt});
       this.metrics?.discovery.discoveredStatus.inc({status: DiscoveredPeerStatus.no_multiaddrs});
       return;
     }

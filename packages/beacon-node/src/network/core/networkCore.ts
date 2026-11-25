@@ -496,7 +496,7 @@ export class NetworkCore implements INetworkCore {
         (peerData.status as fulu.Status).earliestAvailableSlot ?? 0;
     }
     return {
-      ...formatNodePeer(peerIdStr, connections, peerData?.enr),
+      ...formatNodePeer(peerIdStr, connections, peerData?.enr?.txt),
       agentVersion: peerData?.agentVersion ?? "NA",
       status: peerData?.status ? sszTypesFor(fork).Status.toJson(peerData.status) : null,
       metadata: peerData?.metadata ? sszTypesFor(fork).Metadata.toJson(peerData.metadata) : null,

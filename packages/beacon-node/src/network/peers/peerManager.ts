@@ -27,6 +27,7 @@ import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {PeerData, PeersData} from "./peersData.js";
 import {NO_COOL_DOWN_APPLIED} from "./score/constants.js";
 import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score/index.js";
+import {encodeEnr} from "./utils/encodeEnr.js";
 import {
   assertPeerRelevance,
   getConnectedPeerIds,
@@ -733,7 +734,7 @@ export class PeerManager {
         const peerData = this.connectedPeers.get(peerIdStr);
         const connections = getConnectionsMap(this.libp2p).get(peerIdStr)?.value;
         if (peerData?.enr === null && connections?.some((connection) => connection.status === "open")) {
-          peerData.enr = enr.encodeTxt();
+          peerData.enr = encodeEnr(enr, this.logger);
         }
       }
     } catch (e) {

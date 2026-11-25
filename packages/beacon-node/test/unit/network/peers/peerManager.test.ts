@@ -3,7 +3,7 @@ import {privateKeyFromRaw} from "@libp2p/crypto/keys";
 import type {Connection, PeerId} from "@libp2p/interface";
 import {multiaddr} from "@multiformats/multiaddr";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SignableENR} from "@chainsafe/enr";
+import {type ENR, SignableENR} from "@chainsafe/enr";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import type {LoggerNode} from "@lodestar/logger/node";
@@ -156,12 +156,13 @@ describe("network / peers / PeerManager ENRs", () => {
       connectionEvents.dispatchEvent(new CustomEvent(Libp2pEvent.connectionClose, {detail: connection}));
     }
 
-    function discover(enr: SignableENR): void {
-      discv5.emit("discovered", enr.toENR());
+    function discover(enr: SignableENR): Promise<void> {
+      const onDiscovered = discv5.listeners("discovered")[0] as (enr: ENR) => Promise<void>;
+      return onDiscovered(enr.toENR());
     }
 
     function churn(count = maxDiscoveredEnrs + 1): void {
-      for (let index = 2; index < count + 2; index++) discover(createEnr(index));
+      for (let index = 2; index < count + 2; index++) void discover(createEnr(index));
     }
 
     return {
@@ -198,11 +199,52 @@ describe("network / peers / PeerManager ENRs", () => {
     discover(enrs[0]);
     discover(enrs[maxDiscoveredEnrs]);
 
-    expect(discovery.getDiscoveredEnr(enrs[0].peerId.toString())).toBe(enrs[0].encodeTxt());
+    expect(discovery.getDiscoveredEnr(enrs[0].peerId.toString())).toEqual({
+      txt: enrs[0].encodeTxt(),
+      seq: enrs[0].seq,
+    });
     expect(discovery.getDiscoveredEnr(enrs[1].peerId.toString())).toBeUndefined();
-    expect(discovery.getDiscoveredEnr(enrs[maxDiscoveredEnrs].peerId.toString())).toBe(
-      enrs[maxDiscoveredEnrs].encodeTxt()
-    );
+    expect(discovery.getDiscoveredEnr(enrs[maxDiscoveredEnrs].peerId.toString())).toEqual({
+      txt: enrs[maxDiscoveredEnrs].encodeTxt(),
+      seq: enrs[maxDiscoveredEnrs].seq,
+    });
+  });
+
+  it.each([1n, 2n, 3n])("updates cached and connected ENRs only for an equal or higher seq (%s)", async (seq) => {
+    const {discovery, peersData, networkCore, connect, discover} = setup();
+    const stored = createEnr(1);
+    stored.seq = 2n;
+    const incoming = createEnr(1);
+    incoming.setLocationMultiaddr(multiaddr("/ip4/127.0.0.1/tcp/9001"));
+    incoming.seq = seq;
+    const peerIdStr = stored.peerId.toString();
+    await discover(stored);
+    connect(stored.peerId);
+    await discover(incoming);
+
+    const expected = seq >= stored.seq ? incoming : stored;
+    expect((await networkCore.dumpPeer(peerIdStr))?.enr).toBe(expected.encodeTxt());
+    expect(discovery.getDiscoveredEnr(peerIdStr)).toEqual({txt: expected.encodeTxt(), seq: expected.seq});
+    expect(peersData.connectedPeers.get(peerIdStr)?.enr).toEqual({txt: expected.encodeTxt(), seq: expected.seq});
+  });
+
+  it("preserves a connected higher-seq ENR when a lower-seq ENR arrives after cache eviction", async () => {
+    const {discovery, peersData, networkCore, connect, discover, churn} = setup();
+    const stored = createEnr(1);
+    stored.seq = 2n;
+    const incoming = createEnr(1);
+    incoming.setLocationMultiaddr(multiaddr("/ip4/127.0.0.1/tcp/9001"));
+    incoming.seq = 1n;
+    const peerIdStr = stored.peerId.toString();
+    await discover(stored);
+    connect(stored.peerId);
+    churn();
+    expect(discovery.getDiscoveredEnr(peerIdStr)).toBeUndefined();
+    await discover(incoming);
+
+    expect((await networkCore.dumpPeer(peerIdStr))?.enr).toBe(stored.encodeTxt());
+    expect(peersData.connectedPeers.get(peerIdStr)?.enr).toEqual({txt: stored.encodeTxt(), seq: stored.seq});
+    expect(discovery.getDiscoveredEnr(peerIdStr)).toEqual({txt: incoming.encodeTxt(), seq: incoming.seq});
   });
 
   it("fills an unknown inbound peer ENR when discovered after connection", async () => {
@@ -215,7 +257,7 @@ describe("network / peers / PeerManager ENRs", () => {
 
     discover(enr);
     churn();
-    expect(peersData.connectedPeers.get(peerIdStr)?.enr).toBe(enr.encodeTxt());
+    expect(peersData.connectedPeers.get(peerIdStr)?.enr).toEqual({txt: enr.encodeTxt(), seq: enr.seq});
     expect((await networkCore.dumpPeer(peerIdStr))?.enr).toBe(enr.encodeTxt());
   });
 
@@ -227,10 +269,10 @@ describe("network / peers / PeerManager ENRs", () => {
     const first = connect(enr.peerId);
     churn();
     const second = connect(enr.peerId);
-    expect(peersData.connectedPeers.get(peerIdStr)?.enr).toBe(enr.encodeTxt());
+    expect(peersData.connectedPeers.get(peerIdStr)?.enr).toEqual({txt: enr.encodeTxt(), seq: enr.seq});
 
     disconnect(first);
-    expect(peersData.connectedPeers.get(peerIdStr)?.enr).toBe(enr.encodeTxt());
+    expect(peersData.connectedPeers.get(peerIdStr)?.enr).toEqual({txt: enr.encodeTxt(), seq: enr.seq});
     disconnect(second);
     expect(peersData.connectedPeers.has(peerIdStr)).toBe(false);
 
@@ -244,7 +286,7 @@ describe("network / peers / PeerManager ENRs", () => {
     churn();
 
     expect(discovery.getDiscoveredEnr(enr.peerId.toString())).toBeUndefined();
-    expect(peersData.connectedPeers.get(enr.peerId.toString())?.enr).toBe(enr.encodeTxt());
+    expect(peersData.connectedPeers.get(enr.peerId.toString())?.enr).toEqual({txt: enr.encodeTxt(), seq: enr.seq});
   });
 
   it("hydrates a missing ENR on the heartbeat and retains it after it leaves the routing table", async () => {
@@ -260,6 +302,31 @@ describe("network / peers / PeerManager ENRs", () => {
     expect((await networkCore.dumpPeer(peerIdStr))?.enr).toBe(enr.encodeTxt());
     manager.onCommitteeSubscriptions();
     expect((await networkCore.dumpPeers()).map((peer) => peer.enr)).toEqual([enr.encodeTxt()]);
+    expect(discv5.kadValues).toHaveBeenCalledOnce();
+  });
+
+  it("skips a KAD ENR that fails to encode and fills the next valid peer on the heartbeat", async () => {
+    const {networkCore, peersData, discv5, logger, connect} = setup();
+    const invalid = createEnr(1).toENR();
+    const valid = createEnr(2).toENR();
+    const error = new Error("invalid ENR");
+    const encode = vi.spyOn(invalid, "encodeTxt").mockImplementation(() => {
+      throw error;
+    });
+    connect(invalid.peerId);
+    connect(valid.peerId);
+    discv5.kadValues.mockResolvedValueOnce([invalid, valid]);
+
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    expect((await networkCore.dumpPeer(valid.peerId.toString()))?.enr).toBe(valid.encodeTxt());
+    expect(peersData.connectedPeers.get(invalid.peerId.toString())?.enr).toBeNull();
+    expect(peersData.connectedPeers.get(valid.peerId.toString())?.enr).toEqual({
+      txt: valid.encodeTxt(),
+      seq: valid.seq,
+    });
+    expect(encode).toHaveBeenCalledOnce();
+    expect(logger.debug).toHaveBeenCalledWith("Could not encode peer ENR", {}, error);
     expect(discv5.kadValues).toHaveBeenCalledOnce();
   });
 
@@ -351,7 +418,7 @@ describe("network / peers / PeerManager ENRs", () => {
     lookup.resolve([oldEnr]);
     await Promise.resolve();
 
-    expect(peersData.connectedPeers.get(enr.peerId.toString())?.enr).toBe(enr.encodeTxt());
+    expect(peersData.connectedPeers.get(enr.peerId.toString())?.enr).toEqual({txt: enr.encodeTxt(), seq: enr.seq});
   });
 
   it("coalesces pending KAD lookups and retries missing peers on a later heartbeat", async () => {
@@ -370,7 +437,7 @@ describe("network / peers / PeerManager ENRs", () => {
     manager.onCommitteeSubscriptions();
     await Promise.resolve();
 
-    expect(peersData.connectedPeers.get(enr.peerId.toString())?.enr).toBe(enr.encodeTxt());
+    expect(peersData.connectedPeers.get(enr.peerId.toString())?.enr).toEqual({txt: enr.encodeTxt(), seq: enr.seq});
     expect(discv5.kadValues).toHaveBeenCalledTimes(2);
   });
 });
