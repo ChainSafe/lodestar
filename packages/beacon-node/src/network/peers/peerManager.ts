@@ -554,11 +554,6 @@ export class PeerManager {
     // ban and disconnect peers with bad score, collect rest of healthy peers
     const connectedHealthyPeers: PeerId[] = [];
     for (const peer of connectedPeers) {
-      // Direct peers are pinned by the operator, only removing them as direct peer makes them prunable
-      if (this.gossipsub.isDirectPeer(peer.toString())) {
-        connectedHealthyPeers.push(peer);
-        continue;
-      }
       switch (this.peerRpcScores.getScoreState(peer)) {
         case ScoreState.Banned:
           this.metrics?.peerManager.peersPruned.inc({reason: "banned"});

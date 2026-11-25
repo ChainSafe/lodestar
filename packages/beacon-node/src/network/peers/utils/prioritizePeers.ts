@@ -207,22 +207,18 @@ export function prioritizePeers(
     metrics.peerManager.outboundPeersRatio.set(connectedPeerCount > 0 ? outboundPeerCount / connectedPeerCount : 0);
   }
 
-  // Direct peers count towards subnet coverage and maxPeers, but not towards targetPeers and are never pruned
-  const prunablePeers = connectedPeers.filter((peer) => !peer.direct);
-  const prunablePeerCount = prunablePeers.length;
-
-  if (prunablePeerCount < targetPeers) {
+  if (connectedPeerCount < targetPeers) {
     // Need more peers.
     // Instead of attempting to connect the exact amount necessary this will overshoot a little since the success
-    // rate of outgoing connections is low, <33%. If we try to connect exactly `targetPeers - prunablePeerCount` the
+    // rate of outgoing connections is low, <33%. If we try to connect exactly `targetPeers - connectedPeerCount` the
     // peer count will almost always be just below targetPeers triggering constant discoveries that are not necessary
     peersToConnect = Math.min(
-      PEERS_TO_CONNECT_OVERSHOOT_FACTOR * (targetPeers - prunablePeerCount),
+      PEERS_TO_CONNECT_OVERSHOOT_FACTOR * (targetPeers - connectedPeerCount),
       // Never attempt to connect more peers than maxPeers even considering a low chance of dial success
-      Math.max(0, maxPeers - connectedPeerCount)
+      maxPeers - connectedPeerCount
     );
-  } else if (prunablePeerCount > targetPeers) {
-    pruneExcessPeers(prunablePeers, dutiesByPeer, activeAttnets, peersToDisconnect, opts);
+  } else if (connectedPeerCount > targetPeers) {
+    pruneExcessPeers(connectedPeers, dutiesByPeer, activeAttnets, peersToDisconnect, opts);
   }
 
   return {
@@ -372,6 +368,11 @@ function pruneExcessPeers(
   const peersEligibleForPruning = sortedPeers
     // Then, iterate from highest score to lowest doing a manual filter for duties and outbound ratio
     .filter((peer) => {
+      // Direct peers are pinned by the operator, they count towards all targets but are never pruned
+      if (peer.direct) {
+        return false;
+      }
+
       // Peers with duties are not eligible for pruning
       if ((dutiesByPeer.get(peer) ?? 0) > 0) {
         return false;
@@ -495,11 +496,12 @@ function pruneExcessPeers(
     // otherwise we'll not able to accept new peer connection to consider better peers
     // see https://github.com/ChainSafe/lodestar/issues/5198
     const remainingPeersToDisconnect: PeerId[] = [];
-    for (const {id} of sortedPeers) {
+    for (const {id, direct} of sortedPeers) {
       if (peersToDisconnectCount >= peersToDisconnectTarget) {
         break;
       }
       if (
+        direct ||
         noLongLivedSubnetPeersToDisconnect.includes(id) ||
         badScorePeersToDisconnect.includes(id) ||
         tooGroupedPeersToDisconnect.includes(id)
@@ -575,6 +577,10 @@ function findPeerToRemove(
   const peersOnSubnet = sortBy(peersOnMostGroupedSubnet, (peer) => peer.attnetsTrueBitIndices.length);
   let removedPeer: PeerInfo | null = null;
   for (const candidatePeer of peersOnSubnet) {
+    if (candidatePeer.direct) {
+      continue;
+    }
+
     // new logic of lodestar
     const attnetIndices = candidatePeer.attnetsTrueBitIndices;
     if (attnetIndices.length > 0) {

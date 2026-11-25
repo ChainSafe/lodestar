@@ -701,13 +701,16 @@ describe("network / peers / priorization", async () => {
     expect(result.peersToDisconnect.size).toBe(0);
   });
 
-  it("never prunes direct peers nor counts them towards target peers but counts their sampling groups", () => {
+  it.each([
+    {name: "without long lived subnets", attnets: none},
+    {name: "grouped on one subnet", attnets: getAttnets([3])},
+  ])("never prunes direct peers $name but counts them towards target peers and sampling groups", ({attnets}) => {
     const connectedPeers = peers.slice(0, 4).map((id, i) => ({
       id,
       direct: i < 2,
       direction: null,
       status,
-      attnets: none,
+      attnets,
       syncnets: none,
       samplingGroups: [0],
       score: 0,
@@ -723,34 +726,9 @@ describe("network / peers / priorization", async () => {
     );
 
     const disconnected = Array.from(result.peersToDisconnect.values()).flat();
-    expect(disconnected).toHaveLength(1);
-    expect([peers[2], peers[3]]).toContain(disconnected[0]);
-    expect(result.peersToConnect).toBe(0);
+    expect(disconnected).toHaveLength(2);
+    expect(disconnected).toEqual(expect.arrayContaining([peers[2], peers[3]]));
     expect(result.custodyGroupQueries.has(0)).toBe(false);
-  });
-
-  it("counts direct peers against max peers", () => {
-    const connectedPeers = peers.slice(0, 2).map((id) => ({
-      id,
-      direct: true,
-      direction: null,
-      status,
-      attnets: none,
-      syncnets: none,
-      samplingGroups: null,
-      score: 0,
-    }));
-    const result = prioritizePeers(
-      connectedPeers,
-      [],
-      [],
-      undefined,
-      {...defaultOpts, targetPeers: 2, maxPeers: 3},
-      config,
-      null
-    );
-
-    expect(result.peersToConnect).toBe(1);
   });
 
   it("uses supplied subscriber coverage without metadata", () => {
