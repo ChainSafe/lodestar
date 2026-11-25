@@ -21,11 +21,13 @@ import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 
+const logger = testLogger();
+afterEach(() => vi.restoreAllMocks());
+
 async function fixture(close: () => Promise<void>, config = createBeaconConfig(defaultConfig, new Uint8Array(32))) {
   const clock = new ClockStopped(0);
   const chain = {...getMockedBeaconChain(), clock, config, getStatus: vi.fn(() => ssz.fulu.Status.defaultValue())};
   const events = new NetworkEventBus();
-  const logger = testLogger();
   const aggregatorTracker = new AggregatorTracker();
   const publishGossip = vi.fn(async () => 0);
   const updateStatus = vi.fn<INetworkCore["updateStatus"]>().mockResolvedValue(undefined);
@@ -167,7 +169,6 @@ describe("network event command failures", () => {
     }
   });
 });
-
 describe("network publication completion", () => {
   it.each([
     {firstFails: false, lastFails: false},
@@ -193,23 +194,28 @@ describe("network publication completion", () => {
       );
       const {network, clock, publishGossip} = await fixture(async () => {}, config);
       clock.setSlot(3 * SLOTS_PER_EPOCH);
-      const last = defer<number>();
-      if (firstFails) publishGossip.mockRejectedValueOnce(new Error("first fork refused"));
-      else publishGossip.mockResolvedValueOnce(3);
-      publishGossip.mockReturnValue(last.promise);
+      const publications = Array.from({length: 6}, () => defer<number>());
+      for (const publication of publications) publishGossip.mockReturnValueOnce(publication.promise);
       const finished = vi.fn();
       const published = network.publishBlsToExecutionChange(ssz.capella.SignedBLSToExecutionChange.defaultValue());
       void published.then(finished, finished);
       try {
+        if (firstFails) publications[0].reject(new Error("first fork refused"));
+        else publications[0].resolve(3);
         await yieldToIO();
         expect(publishGossip).toHaveBeenCalledTimes(6);
         expect(finished).not.toHaveBeenCalled();
-        if (lastFails) last.reject(new Error("second fork refused"));
-        else last.resolve(4);
+        for (const index of [4, 2, 5, 3]) {
+          if (index === 5 && !lastFails) publications[index].resolve(4);
+          else publications[index].reject(new Error(`fork ${index} refused`));
+          await yieldToIO();
+          expect(finished, `publication 1 is still pending after settling ${index}`).not.toHaveBeenCalled();
+        }
+        publications[1].reject(new Error("final outstanding fork refused"));
         if (firstFails && lastFails) await expect(published).rejects.toBeInstanceOf(AggregateError);
         else await expect(published).resolves.toBe(firstFails ? 4 : 3);
       } finally {
-        last.resolve(0);
+        for (const publication of publications) publication.resolve(0);
         await Promise.allSettled([published]);
         await network.close();
       }

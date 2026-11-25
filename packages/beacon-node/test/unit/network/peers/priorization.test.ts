@@ -701,6 +701,36 @@ describe("network / peers / priorization", async () => {
     expect(result.peersToDisconnect.size).toBe(0);
   });
 
+  it.each([
+    {name: "without long lived subnets", attnets: none},
+    {name: "grouped on one subnet", attnets: getAttnets([3])},
+  ])("never prunes direct peers $name but counts them towards target peers and sampling groups", ({attnets}) => {
+    const connectedPeers = peers.slice(0, 4).map((id, i) => ({
+      id,
+      direct: i < 2,
+      direction: null,
+      status,
+      attnets,
+      syncnets: none,
+      samplingGroups: [0],
+      score: 0,
+    }));
+    const result = prioritizePeers(
+      connectedPeers,
+      [],
+      [],
+      [0],
+      {...defaultOpts, targetPeers: 1, maxPeers: 2, targetGroupPeers: 4},
+      config,
+      null
+    );
+
+    const disconnected = Array.from(result.peersToDisconnect.values()).flat();
+    expect(disconnected).toHaveLength(2);
+    expect(disconnected).toEqual(expect.arrayContaining([peers[2], peers[3]]));
+    expect(result.custodyGroupQueries.has(0)).toBe(false);
+  });
+
   it("uses supplied subscriber coverage without metadata", () => {
     const connectedPeers = peers.slice(0, 6).map((id) => ({
       id,
@@ -805,6 +835,7 @@ describe("sortPeersToPrune", async () => {
       },
     ].map((p) => ({
       ...p,
+      direct: false,
       attnetsTrueBitIndices: p.attnets?.getTrueBitIndexes() ?? [],
       syncnetsTrueBitIndices: p.syncnets?.getTrueBitIndexes() ?? [],
     }));
