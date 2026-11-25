@@ -5,8 +5,7 @@ Spec-driven rewrite of the beacon chain fork choice, written against
 `fork-choice.md` for phase0 through heze, plus the fast confirmation rule from
 `fast-confirmation.md`. This document records the design, how it
 differs from the TypeScript proto-array in `packages/fork-choice`, the benchmarks,
-and what is still missing. It stays here while the rewrite is under review;
-`data_flow.html` next to it animates how each input moves through the store's arrays.
+and what is still missing. It stays here while the rewrite is under review.
 
 ## Files
 
