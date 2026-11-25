@@ -11,7 +11,7 @@ import {
   ForkChoice as NativeStore,
   type VerdictResult as NativeVerdictResult,
 } from "@lodestar/native/fork-choice";
-import {PTC_SIZE, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {MAX_PENDING_DEPOSITS_PER_EPOCH, PTC_SIZE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -176,6 +176,8 @@ export class NativeForkChoice implements IForkChoice {
   /** Balances the provider last handed to the store, for the checkpoint they belong to */
   private providedBalances: {checkpoint: CheckpointWithHex; balances: EffectiveBalanceIncrements} | null = null;
   private scores: NativeScores | null = null;
+  /** The largest registry length among the states seen */
+  private validatorCount: number;
 
   private readonly fastConfirmation: boolean;
   private fastConfirmationPaused = false;
@@ -192,6 +194,7 @@ export class NativeForkChoice implements IForkChoice {
       throw Error("The native fork choice always applies proposer boost");
     }
 
+    this.validatorCount = fcStore.justified.balances.length;
     const {block} = anchor;
     const anchorHasPayload = anchor.payloadBlockHash !== null && !ssz.Root.equals(anchor.payloadBlockHash, ZERO_HASH);
     this.store = new NativeStore(
@@ -289,6 +292,10 @@ export class NativeForkChoice implements IForkChoice {
     isHeadTimely?: boolean;
     notReorgedReason?: NotReorgedReason;
   } {
+    if (opt.mode === UpdateHeadOpt.GetProposerHead) {
+      // The tick into the proposal slot applies queued votes, which can move the head
+      this.updateTime(opt.slot);
+    }
     const canonicalHeadBlock = opt.mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
     switch (opt.mode) {
       case UpdateHeadOpt.GetPredictedProposerHead:
@@ -321,7 +328,7 @@ export class NativeForkChoice implements IForkChoice {
 
   /**
    * Spec `get_proposer_head`. `msFromSlot` is how far into `slot` the proposer is, which the
-   * store reads from its own clock, so the clock is brought up to that moment first.
+   * store reads from its own clock, so fork choice is first brought up to that moment.
    */
   getProposerHead(
     headBlock: ProtoBlock,
@@ -341,6 +348,7 @@ export class NativeForkChoice implements IForkChoice {
       return {proposerHead: headBlock, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotAvailable};
     }
 
+    this.updateTime(slot);
     this.store.onTick(this.store.timeAtSlotMs(slot) + Math.max(0, Math.floor(msFromSlot)));
     const decision = this.store.getProposerHead(headNode, slot);
     if (typeof decision === "string") {
@@ -827,6 +835,7 @@ export class NativeForkChoice implements IForkChoice {
       this.syncCheckpoints();
       this.importingState = null;
     }
+    this.validatorCount = Math.max(this.validatorCount, state.validatorCount);
 
     const [timeliness, ptcTimeliness] = this.store.blockTimeliness(blockIndex);
     const targetSlot = computeStartSlotAtEpoch(blockEpoch);
@@ -883,7 +892,7 @@ export class NativeForkChoice implements IForkChoice {
 
     this.insertBlock(blockIndex, protoBlock);
     this.refreshExecutionStatuses();
-    return protoBlock;
+    return {...(this.nodes[blockIndex * 3 + SPEC_PENDING] as ProtoBlock)};
   }
 
   onAttestation(attestation: IndexedAttestation, _attDataRoot: string, forceImport?: boolean): void {
@@ -908,11 +917,18 @@ export class NativeForkChoice implements IForkChoice {
         data.target.epoch,
         data.target.root,
         Uint32Array.from(attestingIndices),
-        forceImport === true
+        forceImport === true,
+        this.validatorLimit()
       );
     } catch (e) {
       throw this.toInvalidAttestationError(e, data);
     }
+  }
+
+  /** Each epoch transition since finality, one ahead of the clock, adds at most MAX_PENDING_DEPOSITS_PER_EPOCH validators */
+  private validatorLimit(): number {
+    const epochs = computeEpochAtSlot(this.fcStore.currentSlot) + 1 - this.fcStore.finalizedCheckpoint.epoch;
+    return this.validatorCount + MAX_PENDING_DEPOSITS_PER_EPOCH * Math.max(1, epochs);
   }
 
   onAttesterSlashing(slashing: AttesterSlashing): void {
@@ -922,7 +938,8 @@ export class NativeForkChoice implements IForkChoice {
       toNativeAttestationData(attestation1.data),
       Uint32Array.from(attestation1.attestingIndices),
       toNativeAttestationData(attestation2.data),
-      Uint32Array.from(attestation2.attestingIndices)
+      Uint32Array.from(attestation2.attestingIndices),
+      this.validatorLimit()
     );
     for (const validatorIndex of getAttesterSlashableIndices(slashing)) {
       this.fcStore.equivocatingIndices.add(validatorIndex);
