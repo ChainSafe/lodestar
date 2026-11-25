@@ -13,6 +13,7 @@ import {
   type PeerDiscoveryModules,
   type PeerDiscoveryOpts,
 } from "../../../../src/network/peers/discover.js";
+import {PeersData} from "../../../../src/network/peers/peersData.js";
 import {type IPeerRpcScoreStore, ScoreState} from "../../../../src/network/peers/score/index.js";
 import type {IClock} from "../../../../src/util/clock.js";
 import {peerIdFromString} from "../../../../src/util/peerId.js";
@@ -61,10 +62,12 @@ describe("network / peers / discover", () => {
         getScoreState: () => ScoreState.Healthy,
         isCoolingDown: () => false,
       } as unknown as IPeerRpcScoreStore,
+      peersData: new PeersData(),
       metrics: null,
       logger: logger as unknown as LoggerNode,
     };
     const opts: PeerDiscoveryOpts = {
+      maxPeers: 50,
       discv5FirstQueryDelayMs: 0,
       discv5: {bootEnrs: [bootEnr]} as unknown as LodestarDiscv5Opts,
       connectToDiscv5Bootnodes: true,

@@ -26,6 +26,7 @@ export type PeerData = {
   relevantStatus: RelevantPeerStatus;
   direction: "inbound" | "outbound";
   peerId: PeerId;
+  enr: string | null;
   nodeId: NodeId | null;
   metadata: Metadata | null;
   status: Status | null;
