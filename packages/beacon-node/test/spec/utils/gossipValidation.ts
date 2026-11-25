@@ -6,18 +6,15 @@ import {expect} from "vitest";
 import snappyWasm from "@chainsafe/snappy-wasm";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, LVHInvalidJudged} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   ForkName,
-  ForkPostDeneb,
   ForkPostFulu,
   ForkPostGloas,
-  ForkPreDeneb,
   ForkPreFulu,
   ForkPreGloas,
-  isForkPostDeneb,
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
@@ -35,14 +32,13 @@ import {
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
 import {
-  BlockInputBlobs,
   BlockInputColumns,
   BlockInputNoData,
   BlockInputPreData,
   BlockInputSource,
   IBlockInput,
 } from "../../../src/chain/blocks/blockInput/index.js";
-import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
+import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
@@ -314,8 +310,9 @@ function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, pare
   chain.forkChoice.validateLatestHash({
     executionStatus: ExecutionStatus.Invalid,
     latestValidExecHash: parentBlock.executionPayloadBlockHash,
-    invalidateFromParentBlockRoot: blockRootHex,
-    invalidateFromParentBlockHash: block.executionPayloadBlockHash,
+    invalidateFromBlockRoot: blockRootHex,
+    invalidateFromBlockHash: block.executionPayloadBlockHash,
+    judged: LVHInvalidJudged.FromBlock,
   });
 }
 
@@ -521,21 +518,15 @@ export async function runGossipValidationTest(
             sampledColumns: [],
             custodyColumns: [],
           });
-        } else if (isForkPostDeneb(fork)) {
-          blockImport = BlockInputBlobs.createFromBlock({
-            ...blockProps,
-            block: signedBlock as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>,
-          });
         } else {
           blockImport = BlockInputPreData.createFromBlock({
             ...blockProps,
-            block: signedBlock as SignedBeaconBlock<ForkPreDeneb>,
+            block: signedBlock as SignedBeaconBlock<ForkPreFulu>,
           });
         }
 
         await chain.processBlock(blockImport, {
           seenTimestampSec: 0,
-          validBlobSidecars: BlobSidecarValidation.Full,
           importAttestations: AttestationImportOpt.Force,
           validSignatures: false,
         });

@@ -6,6 +6,7 @@ pub const JUSTIFICATION_BITS_LENGTH = 4;
 pub const ZERO_HASH = [_]u8{0} ** 32;
 pub const ZERO_HASH_HEX = "0x0000000000000000000000000000000000000000000000000000000000000000";
 pub const GENESIS_SLOT = 0;
+pub const ETH_TO_GWEI: u64 = 1_000_000_000;
 
 // Withdrawal prefixes
 // Since the prefixes are just 1 byte, we define and use them as number
@@ -92,6 +93,8 @@ pub const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 
 pub const MAX_REQUEST_BLOCKS = std.math.pow(usize, 2, 10);
 pub const MAX_REQUEST_BLOCKS_DENEB = std.math.pow(usize, 2, 7);
+pub const MAX_REQUEST_PAYLOADS = 128;
+pub const MAX_ERROR_MESSAGE_LENGTH = 256;
 
 // Lightclient pre-computed
 pub const FINALIZED_ROOT_GINDEX = 105;

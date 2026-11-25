@@ -2,7 +2,11 @@ import {beforeEach, describe, expect, it} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BlockInputNoData, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {
+  BlockInputColumns,
+  BlockInputNoData,
+  BlockInputPreData,
+} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {
@@ -534,5 +538,59 @@ describe("cacheByRangeResponses", () => {
     expect(entries.size).toBe(1);
     expect(existing.getPayloadEnvelope()).toBe(envelope);
     expect(payloadEnvelopes?.get(block.message.slot)).toBe(existing);
+  });
+
+  it("only adds fulu columns whose header signature matches the cached block", () => {
+    const cachedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    cachedBlock.message.slot = 5;
+    cachedBlock.signature = Buffer.alloc(96, 0xaa);
+    const fuluBlockRoot = ssz.fulu.BeaconBlock.hashTreeRoot(cachedBlock.message);
+    const blockInput = BlockInputColumns.createFromBlock({
+      block: cachedBlock,
+      blockRootHex: toRootHex(fuluBlockRoot),
+      forkName: ForkName.fulu,
+      daOutOfRange: false,
+      source: BlockInputSource.gossip,
+      seenTimestampSec: 0,
+      sampledColumns: [0],
+      custodyColumns: [0],
+    });
+    const downloadedBlock = {...cachedBlock, signature: Buffer.alloc(96, 0xbb)};
+    const columnSidecar = ssz.fulu.DataColumnSidecar.defaultValue();
+    columnSidecar.signedBlockHeader.message.slot = cachedBlock.message.slot;
+    columnSidecar.signedBlockHeader.signature = downloadedBlock.signature;
+
+    function cacheColumns(): ReturnType<typeof cacheByRangeResponses> {
+      return cacheByRangeResponses({
+        cache: {getByBlock: () => blockInput},
+        seenPayloadEnvelopeInputCache: {
+          add: () => {
+            throw new Error("Not expected to add a payload input");
+          },
+          addFromBid: () => {
+            throw new Error("Not expected to add a payload input");
+          },
+        },
+        peerIdStr: "peer",
+        responses: {
+          validatedBlocks: [{block: downloadedBlock, blockRoot: fuluBlockRoot}],
+          validatedColumnSidecars: [{blockRoot: fuluBlockRoot, columnSidecars: [columnSidecar]}],
+        },
+        batchBlocks: [],
+        downloadedPayloadEnvelopes: null,
+        existingPayloadEnvelopes: null,
+        custodyConfig: {sampledColumns: [0], custodyColumns: [0]},
+        seenTimestampSec: 0,
+      });
+    }
+
+    const {signatureMismatch} = cacheColumns();
+    expect(signatureMismatch?.blockInput).toBe(blockInput);
+    expect(signatureMismatch?.columnSidecar).toBe(columnSidecar);
+    expect(blockInput.hasColumn(0)).toBe(false);
+
+    columnSidecar.signedBlockHeader.signature = cachedBlock.signature;
+    expect(cacheColumns().signatureMismatch).toBeNull();
+    expect(blockInput.hasColumn(0)).toBe(true);
   });
 });

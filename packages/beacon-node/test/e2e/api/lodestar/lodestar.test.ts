@@ -63,7 +63,7 @@ describe("api / impl / validator", () => {
 
       // live indices at epoch of consideration, epoch 0
       bn.chain.seenBlockProposers.add(0, 1, toRootHex(Buffer.alloc(32)));
-      bn.chain.seenBlockAttesters.add(0, 2);
+      bn.chain.seenBlockAttesters.addIndices(0, [2]);
       bn.chain.seenAttesters.add(0, 3);
       bn.chain.seenAggregators.add(0, 4);
       // live indices at other epochs, epoch 10

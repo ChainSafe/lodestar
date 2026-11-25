@@ -164,9 +164,12 @@ export class InclusionListStore {
     return out;
   }
 
-  /** Lists are retained for MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS slots so InclusionListsByIndices can serve them */
+  /**
+   * Lists are kept one slot past the MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS serving window, the lists of slot N are
+   * read when the payload of slot N + 1 is processed, which may happen during slot N + 2
+   */
   prune(clockSlot: Slot): void {
-    const horizon = clockSlot - this.config.MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS;
+    const horizon = clockSlot - this.config.MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS - 1;
 
     for (const slot of this.inclusionLists.keys()) {
       if (slot < horizon) {

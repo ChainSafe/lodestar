@@ -74,6 +74,21 @@ describe("Gloas native state view", () => {
     }
   });
 
+  it("excludes pending withdrawals and payments from the builder bid limit", () => {
+    const value = createGloasState();
+    const withdrawal = {...ssz.gloas.BuilderPendingWithdrawal.defaultValue(), amount: 1_000_000_000, builderIndex: 0};
+    value.builders[0].balance = 4_000_000_000 - 1;
+    value.builderPendingWithdrawals = [withdrawal];
+    value.builderPendingPayments[0] = {...value.builderPendingPayments[0], withdrawal};
+    const state = createNative(value);
+    try {
+      expect(state.getBuilderBidLimit(0)).toBe(1);
+      expect(() => state.getBuilderBidLimit(-1)).toThrow("InvalidBuilderIndex");
+    } finally {
+      state.release();
+    }
+  });
+
   it("returns owned separate light-client committee branches on Gloas", () => {
     const value = createGloasState();
     value.nextSyncCommittee.pubkeys.fill(value.validators[1].pubkey);

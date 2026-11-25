@@ -32,6 +32,7 @@ docker-compose.yml
 # Tests
 packages/**/test
 bindings/test
+packages/*/spec-tests*
 packages/**/lib
 
 # Tests artifacts

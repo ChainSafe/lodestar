@@ -293,6 +293,21 @@ export declare class BeaconStateView {
   historicalSummaries: HistoricalSummary[];
   pendingDeposits: Uint8Array;
   pendingDepositsCount: number;
+  /** Fulu only. Limits: 0..10,000 new verifications and 0..60,000 milliseconds per call. */
+  preVerifyBuilderDepositsPreGloas(
+    maxBuilderDeposits: number,
+    maxDurationMs: number
+  ): {
+    validBuilderSignaturesCount: number;
+    invalidBuilderSignaturesCount: number;
+    validValidatorSignaturesCount: number;
+    invalidValidatorSignaturesCount: number;
+    scannedPendingDeposits: number;
+    totalCachedDeposits: number;
+    totalBuilderPubkeys: number;
+    pendingDepositsCount: number;
+  };
+  clearPreGloasBuilderDepositCache(): void;
   pendingPartialWithdrawals: Uint8Array;
   pendingPartialWithdrawalsCount: number;
   pendingConsolidations: Uint8Array;
@@ -307,6 +322,7 @@ export declare class BeaconStateView {
   builderPendingWithdrawals: BuilderPendingWithdrawal[];
   getBuilder(index: number): Builder;
   canBuilderCoverBid(builderIndex: number, bidAmount: number): boolean;
+  getBuilderBidLimit(builderIndex: number): number;
   getEpochPTCs(epoch: number): Uint32Array[];
   getPayloadTimelinessCommittee(slot: number): Uint32Array;
   getInclusionListCommittee(slot: number): Uint32Array;

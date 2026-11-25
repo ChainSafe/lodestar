@@ -28,9 +28,8 @@ test "getChildNode does not publish a cache entry when lookup fails" {
 
 test "editChunkedLeaf copies shared storage once and preserves snapshots" {
     const allocator = std.testing.allocator;
-    var counter = std.testing.FailingAllocator.init(allocator, .{});
     var view_counter = std.testing.FailingAllocator.init(allocator, .{});
-    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = counter.allocator(), .pool_size = 4 });
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 4 });
     defer pool.deinit();
 
     const root = try pool.createChunkedLeafEmpty(2);
@@ -43,18 +42,18 @@ test "editChunkedLeaf copies shared storage once and preserves snapshots" {
 
     const gindex: Gindex = @enumFromInt(1);
     const original_hash = root.getRoot(&pool).*;
-    const allocations_before = counter.alloc_index;
+    const storage_before = pool.chunkedLeafBytesInUse();
     try state.editChunkedLeaf(gindex, 0, 2, u64, 0, &42, Uint64.tree.fromValuePackedIntoChunk);
     const pending = try state.getChildNode(gindex);
     try std.testing.expect(pending != root);
-    try std.testing.expectEqual(allocations_before + 1, counter.alloc_index);
+    try std.testing.expectEqual(storage_before + @sizeOf(ChunkedLeaf), pool.chunkedLeafBytesInUse());
     try std.testing.expectEqual(@as(usize, 1), state.changed.count());
     const first_hash = pending.getRoot(&pool).*;
     const view_allocations = view_counter.alloc_index;
 
     try state.editChunkedLeaf(gindex, 1, 2, u64, 4, &99, Uint64.tree.fromValuePackedIntoChunk);
     try std.testing.expectEqual(pending, try state.getChildNode(gindex));
-    try std.testing.expectEqual(allocations_before + 1, counter.alloc_index);
+    try std.testing.expectEqual(storage_before + @sizeOf(ChunkedLeaf), pool.chunkedLeafBytesInUse());
     try std.testing.expectEqual(view_allocations, view_counter.alloc_index);
     try std.testing.expect(!std.mem.eql(u8, &first_hash, pending.getRoot(&pool)));
     try std.testing.expectEqualSlices(u8, &original_hash, snapshot.root.getRoot(&pool));
@@ -66,7 +65,7 @@ test "editChunkedLeaf copies shared storage once and preserves snapshots" {
     const committed_hash = state.root.getRoot(&pool).*;
     try state.editChunkedLeaf(gindex, 0, 2, u64, 1, &123, Uint64.tree.fromValuePackedIntoChunk);
     try std.testing.expect(pending != try state.getChildNode(gindex));
-    try std.testing.expectEqual(allocations_before + 2, counter.alloc_index);
+    try std.testing.expectEqual(storage_before + 2 * @sizeOf(ChunkedLeaf), pool.chunkedLeafBytesInUse());
     try std.testing.expectEqualSlices(u8, &committed_hash, state.root.getRoot(&pool));
 }
 

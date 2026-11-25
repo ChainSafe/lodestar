@@ -169,8 +169,9 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
       const state = testcase.pre.clone();
       const epoch = (state.fork as phase0.Fork).epoch;
       const config = createChainForkConfig({
-        ...getConfig(fork, epoch),
+        ...getConfig(fork),
         ...loadSpecTestConfig(path.join(specTestDir, directoryName, testCaseName)),
+        [`${fork.toUpperCase()}_FORK_EPOCH`]: epoch,
       });
       const cachedState = createCachedBeaconStateTest(state, config);
 

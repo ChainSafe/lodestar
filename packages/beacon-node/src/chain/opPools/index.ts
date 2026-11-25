@@ -6,5 +6,6 @@ export {InclusionListInsertOutcome, InclusionListStore} from "./inclusionListSto
 export {OpPool} from "./opPool.js";
 export {PayloadAttestationPool} from "./payloadAttestationPool.js";
 export {ProposerPreferencesPool} from "./proposerPreferencesPool.js";
+export {SingleAttestationPool} from "./singleAttestationPool.js";
 export {SyncCommitteeMessagePool} from "./syncCommitteeMessagePool.js";
 export {SyncContributionAndProofPool} from "./syncContributionAndProofPool.js";
