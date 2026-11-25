@@ -207,7 +207,7 @@ export function prioritizePeers(
     metrics.peerManager.outboundPeersRatio.set(connectedPeerCount > 0 ? outboundPeerCount / connectedPeerCount : 0);
   }
 
-  // Direct peers count towards subnet coverage but neither towards targetPeers nor are they ever pruned
+  // Direct peers count towards subnet coverage and maxPeers, but not towards targetPeers and are never pruned
   const prunablePeers = connectedPeers.filter((peer) => !peer.direct);
   const prunablePeerCount = prunablePeers.length;
 
@@ -219,7 +219,7 @@ export function prioritizePeers(
     peersToConnect = Math.min(
       PEERS_TO_CONNECT_OVERSHOOT_FACTOR * (targetPeers - prunablePeerCount),
       // Never attempt to connect more peers than maxPeers even considering a low chance of dial success
-      maxPeers - prunablePeerCount
+      Math.max(0, maxPeers - connectedPeerCount)
     );
   } else if (prunablePeerCount > targetPeers) {
     pruneExcessPeers(prunablePeers, dutiesByPeer, activeAttnets, peersToDisconnect, opts);

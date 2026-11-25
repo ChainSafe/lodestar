@@ -729,6 +729,30 @@ describe("network / peers / priorization", async () => {
     expect(result.custodyGroupQueries.has(0)).toBe(false);
   });
 
+  it("counts direct peers against max peers", () => {
+    const connectedPeers = peers.slice(0, 2).map((id) => ({
+      id,
+      direct: true,
+      direction: null,
+      status,
+      attnets: none,
+      syncnets: none,
+      samplingGroups: null,
+      score: 0,
+    }));
+    const result = prioritizePeers(
+      connectedPeers,
+      [],
+      [],
+      undefined,
+      {...defaultOpts, targetPeers: 2, maxPeers: 3},
+      config,
+      null
+    );
+
+    expect(result.peersToConnect).toBe(1);
+  });
+
   it("uses supplied subscriber coverage without metadata", () => {
     const connectedPeers = peers.slice(0, 6).map((id) => ({
       id,
