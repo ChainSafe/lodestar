@@ -1153,7 +1153,7 @@ export class DownloadByRangeError extends LodestarError<DownloadByRangeErrorType
  *   - In-batch slot whose block we have: verify envelope.beaconBlockRoot matches.
  *   - Dangling-parent envelope (only when `parentPayload` is set, i.e. the first
  *     batch of a `SyncChain`): keep if `envelope.beaconBlockRoot === parentPayload.blockRoot`, its slot,
- *     block hash, payload root and execution requests root must match the parent's bid.
+ *     parent block root, block hash, payload root and execution requests root must match the parent's bid.
  *   - Other "orphan" envelopes (e.g. unrelated slots): ignored.
  */
 export function validateEnvelopesByRangeResponse(
@@ -1191,6 +1191,14 @@ export function validateEnvelopesByRangeResponse(
             code: DownloadByRangeErrorCode.INVALID_ENVELOPE_SLOT,
             expected: parentPayload.slot,
             actual: slot,
+          });
+        }
+        if (!byteArrayEquals(payloadEnvelope.parentBeaconBlockRoot, parentPayload.bid.parentBlockRoot)) {
+          throw new DownloadByRangeError({
+            code: DownloadByRangeErrorCode.INVALID_ENVELOPE_PARENT_BEACON_BLOCK_ROOT,
+            slot,
+            expected: toRootHex(parentPayload.bid.parentBlockRoot),
+            actual: toRootHex(payloadEnvelope.parentBeaconBlockRoot),
           });
         }
         assertEnvelopeMatchesBid(payloadEnvelope, parentPayload.bid);
