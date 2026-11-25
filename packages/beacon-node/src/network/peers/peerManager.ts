@@ -554,7 +554,7 @@ export class PeerManager {
     // ban and disconnect peers with bad score, collect rest of healthy peers
     const connectedHealthyPeers: PeerId[] = [];
     for (const peer of connectedPeers) {
-      // Direct peers are pinned by the operator, only removing them as direct peer makes them prunable
+      // Direct peers are trusted by the operator, a bad score never disconnects them
       if (this.gossipsub.isDirectPeer(peer.toString())) {
         connectedHealthyPeers.push(peer);
         continue;
@@ -715,6 +715,10 @@ export class PeerManager {
   private updateGossipsubScores(): void {
     const gossipsubScores = new Map<string, number>();
     for (const peerIdStr of this.connectedPeers.keys()) {
+      // Direct peers are never disconnected, they must not take the negative score allowance of other peers
+      if (this.gossipsub.isDirectPeer(peerIdStr)) {
+        continue;
+      }
       gossipsubScores.set(peerIdStr, this.gossipsub.getScore(peerIdStr));
     }
 

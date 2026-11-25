@@ -187,28 +187,28 @@ describe("network / peers / PeerManager", () => {
     }
   );
 
-  it("keeps a banned direct peer connected and counts it for subnet coverage", async () => {
-    const discovery = {
-      discoverPeers: vi.fn<PeerDiscovery["discoverPeers"]>(),
-      stop: vi.fn<PeerDiscovery["stop"]>(),
-    };
-    const {reqResp, peerManager, gossip, mockSubnetsService} = await mockModules({
-      discovery: discovery as unknown as PeerDiscovery,
-    });
-    vi.spyOn(peerManager, "getConnectedPeerIds").mockReturnValue([peerId1]);
-    vi.spyOn(mockSubnetsService, "getActiveSubnets").mockReturnValue([{subnet: 3, toSlot: 10}]);
-    gossip.getSubscribersWithOutboundStream.mockReturnValue(new Set([peerId1.toString()]));
-    gossip.isDirectPeer.mockImplementation((peerIdStr) => peerIdStr === peerId1.toString());
-    peerManager.reportPeer(peerId1, PeerAction.Fatal, "test");
+  it("never disconnects direct peers due to peer count or score", async () => {
+    const {libp2p, reqResp, peerManager, gossip} = await mockModules();
+    const connectedPeers = await Promise.all(
+      Array.from({length: 32}, async () => peerIdFromPrivateKey(await generateKeyPair("secp256k1")))
+    );
+    const directPeers = new Set(connectedPeers.slice(0, 30).map((peer) => peer.toString()));
+    vi.spyOn(peerManager, "getConnectedPeerIds").mockReturnValue(connectedPeers);
+    gossip.getSubscribersWithOutboundStream.mockReturnValue(new Set());
+    gossip.isDirectPeer.mockImplementation((peerIdStr) => directPeers.has(peerIdStr));
+    reqResp.sendGoodbye.mockResolvedValue(undefined);
+    vi.spyOn(libp2p, "hangUp").mockResolvedValue(undefined);
+    peerManager.reportPeer(connectedPeers[0], PeerAction.Fatal, "test");
 
-    discovery.discoverPeers.mockClear();
     peerManager.onCommitteeSubscriptions();
 
-    expect(reqResp.sendGoodbye).not.toHaveBeenCalled();
-    expect(discovery.discoverPeers).toHaveBeenCalledExactlyOnceWith(expect.any(Number), expect.any(Map), [
-      expect.objectContaining({type: SubnetType.attnets, subnet: 3, maxPeersToDiscover: 5}),
-      expect.objectContaining({type: SubnetType.syncnets, subnet: 3, maxPeersToDiscover: 5}),
-    ]);
+    const goodbyePeers = reqResp.sendGoodbye.mock.calls.map(([peer]) => peer.toString());
+    expect(goodbyePeers.sort()).toEqual(
+      connectedPeers
+        .slice(30)
+        .map((peer) => peer.toString())
+        .sort()
+    );
   });
 
   it("Should request metadata on receivedPing of unknown peer", async () => {
