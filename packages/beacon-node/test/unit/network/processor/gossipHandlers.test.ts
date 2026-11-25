@@ -669,6 +669,7 @@ async function runBeaconBlockProcessingError(
     clock: new ClockStopped(1),
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
     emitter: new ChainEventEmitter(),
+    forkChoice: {getBlockHexDefaultStatus: vi.fn().mockReturnValue(null)},
     getBlobsTracker: {triggerGetBlobs: vi.fn()},
     logger,
     processBlock: vi.fn().mockRejectedValue(error),
@@ -805,7 +806,7 @@ async function runBeaconBlockRepeatProposal(
     custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
     emitter: new ChainEventEmitter(),
     forkChoice: {
-      getBlockHexDefaultStatus: vi.fn().mockReturnValue(parentKnown ? {} : null),
+      getBlockHexDefaultStatus: vi.fn().mockReturnValue(parentKnown ? {executionPayloadBlockHash: null} : null),
       getBlockHexAndBlockHash,
     },
     getBlobsTracker: {triggerGetBlobs: vi.fn()},

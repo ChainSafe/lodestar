@@ -76,6 +76,7 @@ export enum BlockErrorCode {
   DATA_UNAVAILABLE = "BLOCK_ERROR_DATA_UNAVAILABLE",
   /** Block contains too many kzg commitments */
   TOO_MANY_KZG_COMMITMENTS = "BLOCK_ERROR_TOO_MANY_KZG_COMMITMENTS",
+  TOO_MANY_TRANSACTIONS = "BLOCK_ERROR_TOO_MANY_TRANSACTIONS",
   /** Bid parent block root does not match block parent root */
   BID_PARENT_ROOT_MISMATCH = "BLOCK_ERROR_BID_PARENT_ROOT_MISMATCH",
   /** The parent block's execution payload has been verified as invalid */
@@ -156,6 +157,7 @@ export type BlockErrorType =
       blobKzgCommitmentsLen: number;
       commitmentLimit: number;
     }
+  | {code: BlockErrorCode.TOO_MANY_TRANSACTIONS; transactionCount: number; maxTransactionCount: number}
   | {
       code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH;
       slot: Slot;

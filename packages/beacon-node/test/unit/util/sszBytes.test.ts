@@ -38,6 +38,7 @@ import {
   getCommitteeIndexFromSingleAttestationSerialized,
   getDataIndexFromSignedAggregateAndProofSerialized,
   getDataIndexFromSingleAttestationSerialized,
+  getExecutionPayloadTransactionCountFromSignedBeaconBlockSerialized,
   getLastProcessedSlotFromBeaconStateSerialized,
   getParentBlockHashFromGloasSignedBeaconBlockSerialized,
   getParentBlockHashFromSignedExecutionPayloadBidSerialized,
@@ -447,6 +448,54 @@ describe("getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized", () => {
     const blobsCount = getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(config, blockBytes);
 
     expect(blobsCount).toBe(blobs.length);
+  });
+});
+
+describe("getExecutionPayloadTransactionCountFromSignedBeaconBlockSerialized", () => {
+  const config = createChainForkConfig({
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 5,
+    ELECTRA_FORK_EPOCH: 10,
+    FULU_FORK_EPOCH: 15,
+    GLOAS_FORK_EPOCH: 20,
+  });
+
+  it("should return 0 for an empty transactions list", () => {
+    const slot = computeStartSlotAtEpoch(5);
+    const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue() as deneb.SignedBeaconBlock;
+    block.message.slot = slot;
+    block.message.body.blobKzgCommitments = [];
+    block.message.body.executionPayload.transactions = SerializedList.fromArray([]);
+    const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(block);
+
+    expect(getExecutionPayloadTransactionCountFromSignedBeaconBlockSerialized(config, blockBytes)).toBe(0);
+  });
+
+  it("should return the transaction count from variable-size transactions", () => {
+    const slot = computeStartSlotAtEpoch(5);
+    const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue() as deneb.SignedBeaconBlock;
+    block.message.slot = slot;
+    block.message.body.blobKzgCommitments = [];
+    block.message.body.executionPayload.transactions = SerializedList.fromArray([
+      new Uint8Array([1, 2, 3]),
+      new Uint8Array([4]),
+      new Uint8Array(0),
+      new Uint8Array([5, 6, 7, 8]),
+    ]);
+    const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(block);
+
+    expect(getExecutionPayloadTransactionCountFromSignedBeaconBlockSerialized(config, blockBytes)).toBe(4);
+  });
+
+  it("should return 0 post-gloas (transactions are not in the block)", () => {
+    const slot = computeStartSlotAtEpoch(20);
+    const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue() as gloas.SignedBeaconBlock;
+    block.message.slot = slot;
+    const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(block);
+
+    expect(getExecutionPayloadTransactionCountFromSignedBeaconBlockSerialized(config, blockBytes)).toBe(0);
   });
 });
 

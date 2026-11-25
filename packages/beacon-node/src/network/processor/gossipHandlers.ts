@@ -9,6 +9,7 @@ import {
   ForkPreElectra,
   ForkSeq,
   NUMBER_OF_COLUMNS,
+  isForkPostBellatrix,
   isForkPostElectra,
   isForkPostGloas,
 } from "@lodestar/params";
@@ -90,6 +91,10 @@ import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {getBlobKzgCommitments, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
 import {callAfterIO, callInNextEventLoop} from "../../util/eventLoop.js";
+import {
+  getExecutionPayloadTransactionCountFromSignedBeaconBlockSerialized,
+  getParentRootFromSignedBeaconBlockSerialized,
+} from "../../util/sszBytes.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -139,6 +144,11 @@ const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
  *   the handler function scope is hard to achieve without very hacky strategies
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
+// Fallback execution gas-limit ceiling for bounding a gossip block's transaction count when its parent is
+// unknown (so the real gas limit cannot be read). Set well above any realistic gas limit: a valid block
+// never exceeds it, and a false drop is recovered by sync. Tune as gas limits rise.
+const MAX_GAS_LIMIT_UNKNOWN_PARENT = 2 ** 28;
+
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
   return {...getSequentialHandlers(modules, options), ...getBatchHandlers(modules, options)};
 }
@@ -681,6 +691,37 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.beacon_block>) => {
       const {serializedData} = gossipData;
+
+      // Reject a block that declares more execution transactions than the parent's gas limit can fit, before
+      // deserializing a transactions list that may hold up to MAX_TRANSACTIONS_PER_PAYLOAD (1,048,576) empty
+      // entries. A valid block can never exceed this bound; an unknown-parent block that does is dropped and
+      // re-fetched by sync if its branch matters. Reading the count from the serialized offsets is cheap.
+      const blockFork = topic.boundary.fork;
+      if (isForkPostBellatrix(blockFork) && !isForkPostGloas(blockFork)) {
+        const transactionCount = getExecutionPayloadTransactionCountFromSignedBeaconBlockSerialized(
+          config,
+          serializedData
+        );
+        const parentRootHex = getParentRootFromSignedBeaconBlockSerialized(serializedData);
+        const parentBlock = parentRootHex !== null ? chain.forkChoice.getBlockHexDefaultStatus(parentRootHex) : null;
+        const parentGasLimit =
+          parentBlock !== null && parentBlock.executionPayloadBlockHash !== null
+            ? BigInt(parentBlock.executionPayloadGasLimit)
+            : 0n;
+        // EIP-1559 lets a block's gas limit rise at most parentGasLimit/1024 above its parent's.
+        const maxGasLimit =
+          parentGasLimit === 0n
+            ? BigInt(MAX_GAS_LIMIT_UNKNOWN_PARENT)
+            : parentGasLimit + (parentGasLimit / 1024n > 1n ? parentGasLimit / 1024n : 1n) - 1n;
+        const maxTransactionCount = maxGasLimit / BigInt(config.MIN_TRANSACTION_GAS);
+        if (BigInt(transactionCount) > maxTransactionCount) {
+          throw new BlockGossipError(GossipAction.IGNORE, {
+            code: BlockErrorCode.TOO_MANY_TRANSACTIONS,
+            transactionCount,
+            maxTransactionCount: Number(maxTransactionCount),
+          });
+        }
+      }
 
       const signedBlock = sszDeserialize(topic, serializedData);
       try {

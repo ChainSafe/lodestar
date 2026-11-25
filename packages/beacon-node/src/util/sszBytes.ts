@@ -3,6 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   BYTES_PER_CELL,
   ForkName,
+  ForkPostBellatrix,
   ForkPostDeneb,
   ForkPostGloas,
   ForkSeq,
@@ -899,4 +900,52 @@ export function getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(
   const start = messageRange.start + bodyRange.start + kzgCommitmentsRange.start;
 
   return Math.round((Math.min(end, blockBytes.byteLength) - start) / commitmentSize);
+}
+
+/**
+ * Read the execution payload transaction count from a serialized SignedBeaconBlock without deserializing
+ * the (potentially very large) transactions list. Returns 0 pre-Bellatrix (no execution payload) and
+ * post-Gloas (transactions live in the execution payload, delivered separately from the block). The count
+ * is used to bound the per-message deserialization cost before it is paid.
+ */
+export function getExecutionPayloadTransactionCountFromSignedBeaconBlockSerialized(
+  config: ChainForkConfig,
+  blockBytes: Uint8Array
+): number {
+  const slot = getSlotFromSignedBeaconBlockSerialized(blockBytes);
+  if (slot === null) throw new Error("Can not parse the slot from block bytes");
+
+  const forkName = config.getForkName(slot);
+  if (config.getForkSeq(slot) < ForkSeq.bellatrix || isForkPostGloas(forkName)) return 0;
+
+  const {SignedBeaconBlock, BeaconBlock, BeaconBlockBody, ExecutionPayload} = ssz[forkName as ForkPostBellatrix];
+  const view = new DataView(blockBytes.buffer, blockBytes.byteOffset, blockBytes.byteLength);
+
+  // SignedBeaconBlock → message
+  const signedBlockRanges = SignedBeaconBlock.getFieldRanges(view, 0, blockBytes.length);
+  const messageRange = signedBlockRanges[Object.keys(SignedBeaconBlock.fields).indexOf("message")];
+
+  // BeaconBlock → body
+  const blockRanges = BeaconBlock.getFieldRanges(view, messageRange.start, messageRange.end);
+  const bodyRange = blockRanges[Object.keys(BeaconBlock.fields).indexOf("body")];
+  const bodyStart = messageRange.start + bodyRange.start;
+  const bodyEnd = messageRange.start + bodyRange.end;
+
+  // BeaconBlockBody → executionPayload
+  const bodyRanges = BeaconBlockBody.getFieldRanges(view, bodyStart, bodyEnd);
+  const payloadRange = bodyRanges[Object.keys(BeaconBlockBody.fields).indexOf("executionPayload")];
+  const payloadStart = bodyStart + payloadRange.start;
+  const payloadEnd = bodyStart + payloadRange.end;
+
+  // ExecutionPayload → transactions
+  const payloadRanges = ExecutionPayload.getFieldRanges(view, payloadStart, payloadEnd);
+  const txRange = payloadRanges[Object.keys(ExecutionPayload.fields).indexOf("transactions")];
+  const txStart = payloadStart + txRange.start;
+  const txEnd = payloadStart + txRange.end;
+
+  // transactions is a List of variable-size elements. Its serialized form starts with a table of 4-byte
+  // offsets, one per element, so the first offset divided by 4 is the element count. An empty list has no
+  // offset table. A malformed length is left for the full deserialization to reject.
+  if (txEnd - txStart < 4 || txStart + 4 > blockBytes.byteLength) return 0;
+  return Math.floor(view.getUint32(txStart, true) / 4);
 }
