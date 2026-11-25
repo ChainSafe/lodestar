@@ -257,11 +257,11 @@ pub fn receive(
     };
 }
 
-/// Sends a WHOAREYOU for the packet that carried `request_nonce`. While a challenge for `peer`
-/// is pending, every unauthenticated packet gets that same challenge back without admission,
-/// since the sender may already be answering it and a resend creates no state.
-/// AdmissionLimited leaves no new challenge. `known` sets the ENR sequence to ask for and the
-/// key to verify the handshake against.
+/// Sends a WHOAREYOU for the packet that carried `request_nonce`. `known` sets the ENR sequence
+/// to ask for and the key to verify the handshake against. AdmissionLimited leaves no new
+/// challenge. While a challenge for `peer` is live, it is resent unchanged without admission,
+/// ignoring `request_nonce`, `known`, and `entropy`, since the sender may already be answering
+/// it and a resend creates no state.
 pub fn challenge(
     self: *Channel,
     out: []u8,

@@ -377,8 +377,6 @@ test "engine construction releases all allocations on partial failure" {
     try std.testing.checkAllAllocationFailures(std.testing.allocator, Construction.run, .{ &key, &record });
 }
 
-// The scenarios below mirror the devp2p discv5 hive suite, which other clients are judged by.
-
 test "a cold packet during a pending challenge receives the same WHOAREYOU" {
     var pair: Pair = undefined;
     try pair.init();
