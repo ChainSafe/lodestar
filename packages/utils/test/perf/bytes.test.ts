@@ -77,16 +77,6 @@ describe("bytes utils", async () => {
       runsFactor,
     });
 
-    bench({
-      id: `${name} block root to RootHex using the deprecated toHexString`,
-      fn: () => {
-        for (let i = 0; i < runsFactor; i++) {
-          impl.toHexString(blockRoot);
-        }
-      },
-      runsFactor,
-    });
-
     /**
      * Node v24.13.0 benchmark results for byteArrayEquals:
      *

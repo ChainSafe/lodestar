@@ -1,6 +1,6 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {IBeaconStateView, IBeaconStateViewGloas} from "@lodestar/state-transition";
 import {
@@ -75,7 +75,8 @@ export async function getStateResponseWithRegen(
     const finalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
     return {
       state,
-      executionOptimistic: isOptimisticBlock(head),
+      // The head can be the FULL variant, a state reports the status of the payload its block builds on
+      executionOptimistic: isOptimisticBlock(chain.forkChoice.getBlockHexDefaultStatus(head.blockRoot) ?? head),
       finalized: state.epoch <= finalizedEpoch && finalizedEpoch !== GENESIS_EPOCH,
     };
   }

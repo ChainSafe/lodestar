@@ -13,7 +13,7 @@ import {getValidatorApi} from "./validator/index.js";
 
 export function getApi(opts: ApiOptions, modules: ApiModules): BeaconApiMethods {
   return {
-    beacon: getBeaconApi(modules),
+    beacon: getBeaconApi(opts, modules),
     config: getConfigApi(modules),
     debug: getDebugApi(modules),
     events: getEventsApi(modules),

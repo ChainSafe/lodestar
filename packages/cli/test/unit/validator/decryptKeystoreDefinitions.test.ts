@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import {rimraf} from "rimraf";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {getKeystoresStr} from "@lodestar/test-utils";
 import {
@@ -30,8 +29,8 @@ describe("decryptKeystoreDefinitions", () => {
     for (const {keystorePath} of definitions) {
       unlockFilepath(keystorePath);
     }
-    rimraf.sync(dataDir);
-    rimraf.sync(importFromDir);
+    fs.rmSync(dataDir, {recursive: true, force: true});
+    fs.rmSync(importFromDir, {recursive: true, force: true});
 
     fs.mkdirSync(importFromDir, {recursive: true});
 

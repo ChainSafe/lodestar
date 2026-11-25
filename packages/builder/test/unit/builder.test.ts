@@ -1,24 +1,26 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ForkName} from "@lodestar/params";
+import {SecretKey} from "@lodestar/native/blst";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ErrorAborted, defer, toRootHex} from "@lodestar/utils";
 import {Builder, BuilderModules} from "../../src/builder.js";
 import {BlockObserver, ObservedBlock} from "../../src/services/blockObserver.js";
 import {BuilderSigner} from "../../src/services/builderSigner.js";
 import {BuilderStatusTracker} from "../../src/services/builderStatusTracker.js";
+import {HeadTracker} from "../../src/services/headTracker.js";
 import {PayloadStore} from "../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
+import {biddingOptions, createBiddingModules, getPayloadSourceStub} from "./utils/bidding.js";
 import {ClockMock} from "./utils/clock.js";
 import {getMockedLogger} from "./utils/logger.js";
 import {mockBuiltPayload} from "./utils/payload.js";
 
 const {EventType} = routes.events;
-const topics = [EventType.block, EventType.proposerPreferences];
+const topics = [EventType.headV2, EventType.block, EventType.proposerPreferences, EventType.payloadAttributes];
 
 describe("Builder", () => {
   let api: ReturnType<typeof getApiClientStub>;
@@ -36,6 +38,11 @@ describe("Builder", () => {
     clock = new ClockMock();
     const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
     const keypair = {secretKey, publicKey: secretKey.toPublicKey()};
+    const builderSigner = new BuilderSigner(createBeaconConfig(config, Buffer.alloc(32)), keypair);
+    const proposerPreferencesTracker = new ProposerPreferencesTracker();
+    const headTracker = new HeadTracker();
+    const payloadStore = new PayloadStore();
+    const payloadSource = getPayloadSourceStub();
     modules = {
       opts: {
         logger,
@@ -45,14 +52,30 @@ describe("Builder", () => {
         api,
         executionFeeRecipient: Buffer.alloc(20),
         metrics: null,
+        payloadSource,
+        bidding: biddingOptions,
+        reveal: {},
       },
-      builderSigner: new BuilderSigner(createBeaconConfig(config, Buffer.alloc(32)), keypair),
+      builderSigner,
       builderStatusTracker: new BuilderStatusTracker(api, logger, 1, null),
       blockObserver: new BlockObserver(config, logger, api),
-      proposerPreferencesTracker: new ProposerPreferencesTracker(),
+      proposerPreferencesTracker,
+      headTracker,
       clock,
       index: 1,
-      payloadStore: new PayloadStore(),
+      payloadStore,
+      ...createBiddingModules({
+        api,
+        config,
+        logger,
+        clock,
+        builderSigner,
+        proposerPreferencesTracker,
+        headTracker,
+        payloadStore,
+        payloadSource,
+        signal: controller.signal,
+      }),
     };
   });
 
@@ -159,6 +182,68 @@ describe("Builder", () => {
     onEvent({type: EventType.proposerPreferences, message: {version: ForkName.gloas, data: preferences}});
     expect(modules.proposerPreferencesTracker.get(0, toRootHex(preferences.message.dependentRoot))).toBe(preferences);
     expect(controller.signal.aborted).toBe(false);
+  });
+
+  it("dispatches payload attributes to the bidder and observed blocks to the revealer", async () => {
+    const onPayloadAttributes = vi.spyOn(modules.bidder, "onPayloadAttributes").mockResolvedValue();
+    const onBlock = vi.spyOn(modules.revealer, "onBlock").mockResolvedValue();
+    const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+    api.beacon.getBlockV2.mockResolvedValue(
+      mockApiResponse({data: block, meta: {version: ForkName.gloas, executionOptimistic: false, finalized: false}})
+    );
+    new Builder(modules);
+    const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+    const payloadAttributes = {version: ForkName.gloas, data: ssz.gloas.SSEPayloadAttributes.defaultValue()};
+    onEvent({type: EventType.payloadAttributes, message: payloadAttributes});
+    expect(onPayloadAttributes).toHaveBeenCalledExactlyOnceWith(payloadAttributes);
+
+    const blockRoot = toRootHex(Buffer.alloc(32, 1));
+    onEvent({type: EventType.block, message: {slot: 0, block: blockRoot, executionOptimistic: false}});
+    await vi.waitFor(() => expect(onBlock).toHaveBeenCalledOnce());
+    expect(onBlock.mock.calls[0][0]).toMatchObject({
+      blockRoot,
+      slot: 0,
+      signedBid: block.message.body.signedExecutionPayloadBid,
+    });
+  });
+
+  it("tracks announced heads", () => {
+    new Builder(modules);
+    const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+    const head = {
+      slot: 1,
+      block: toRootHex(Buffer.alloc(32, 1)),
+      state: toRootHex(Buffer.alloc(32, 2)),
+      payloadStatus: "empty" as const,
+      epochTransition: false,
+      currentEpochDependentRoot: toRootHex(Buffer.alloc(32, 3)),
+      nextEpochDependentRoot: toRootHex(Buffer.alloc(32, 4)),
+      executionOptimistic: false,
+    };
+    onEvent({type: EventType.headV2, message: {version: ForkName.gloas, data: head}});
+    expect(modules.headTracker.getDependentRoot(head.block, 1)).toBe(head.currentEpochDependentRoot);
+    expect(modules.headTracker.getDependentRoot(head.block, SLOTS_PER_EPOCH)).toBe(head.nextEpochDependentRoot);
+  });
+
+  it("settles and prunes won bids on slot ticks", async () => {
+    const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    signedBid.message.slot = 1;
+    signedBid.message.parentBlockHash = Buffer.alloc(32, 2);
+    signedBid.message.parentBlockRoot = Buffer.alloc(32, 3);
+    signedBid.message.blockHash = Buffer.alloc(32, 4);
+    signedBid.message.value = 5;
+    const bid = modules.ledger.recordBid({signedBid, signedBidRoot: toRootHex(Buffer.alloc(32, 5))});
+    modules.ledger.recordWin(bid, toRootHex(Buffer.alloc(32, 6)));
+    new Builder(modules);
+
+    await clock.tickSlotFns(bid.slot + 3 * SLOTS_PER_EPOCH, controller.signal);
+    expect(modules.ledger.getUnsettledValueGwei(0)).toBe(signedBid.message.value);
+
+    await clock.tickSlotFns(bid.slot + 3 * SLOTS_PER_EPOCH + 1, controller.signal);
+    expect(modules.ledger.getUnsettledValueGwei(0)).toBe(0);
+    expect(modules.ledger.getBidsForSlot(bid.slot)).toEqual([]);
   });
 
   it("does not block preferences while a block consumer is pending", async () => {

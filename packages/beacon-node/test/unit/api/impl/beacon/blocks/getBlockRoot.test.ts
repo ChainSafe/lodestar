@@ -1,7 +1,9 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateProtoBlock, generateSignedBlockAtSlot} from "../../../../../utils/typeGenerator.js";
 
@@ -20,7 +22,7 @@ describe("getBlockRoot", () => {
 
   beforeEach(() => {
     modules = getApiTestModules();
-    api = getBeaconBlockApi(modules);
+    api = getBeaconBlockApi(defaultApiOptions, modules);
     modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: 10, blockRoot: headRoot}));
     modules.forkChoice.getFinalizedCheckpoint.mockReturnValue({
       epoch: 0,
@@ -36,6 +38,31 @@ describe("getBlockRoot", () => {
     expect(getRootHex(await api.getBlockRoot({blockId: "head"}))).toBe(headRoot);
     expect(getRootHex(await api.getBlockRoot({blockId: 10}))).toBe(headRoot);
     expect(modules.chain.getBlockByRoot).not.toHaveBeenCalled();
+  });
+
+  it("reports the status of the payload the head block builds on, not of a FULL head", async () => {
+    modules.forkChoice.getHead.mockReturnValue(
+      generateProtoBlock({
+        slot: 10,
+        blockRoot: headRoot,
+        payloadStatus: PayloadStatus.FULL,
+        executionStatus: ExecutionStatus.Syncing,
+      })
+    );
+    modules.forkChoice.getBlockHexDefaultStatus.mockReturnValue(
+      generateProtoBlock({
+        slot: 10,
+        blockRoot: headRoot,
+        payloadStatus: PayloadStatus.PENDING,
+        executionStatus: ExecutionStatus.Valid,
+      })
+    );
+
+    for (const blockId of ["head", 10, 3] as const) {
+      const res = await api.getBlockRoot({blockId});
+      expect(res.meta.executionOptimistic, `blockId ${blockId}`).toBe(false);
+    }
+    expect(modules.forkChoice.getBlockHexDefaultStatus).toHaveBeenCalledWith(headRoot);
   });
 
   it("reads a recent slot from the head state", async () => {

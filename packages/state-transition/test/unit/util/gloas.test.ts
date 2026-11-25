@@ -1,13 +1,19 @@
 import {describe, expect, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {FAR_FUTURE_EPOCH, ForkName, MIN_DEPOSIT_AMOUNT, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {IndexedBuilderState} from "../../../src/block/indexedBuilderState.js";
 import {createCachedBeaconState} from "../../../src/index.js";
 import {CachedBeaconStateGloas} from "../../../src/types.js";
-import {appendBuilderToRegistry, getExpectedGasLimit, isGasLimitTargetCompatible} from "../../../src/util/gloas.js";
+import {
+  appendBuilderToRegistry,
+  getBuilderBidLimit,
+  getExpectedGasLimit,
+  isGasLimitTargetCompatible,
+} from "../../../src/util/gloas.js";
+import {ETH_TO_GWEI} from "../../../src/util/weakSubjectivity.js";
 
 function buildGloasState(slot = 0): CachedBeaconStateGloas {
   const config = getConfig(ForkName.gloas);
@@ -99,6 +105,35 @@ describe("util / gloas", () => {
 
       expect(isGasLimitTargetCompatible(parentGasLimit, expectedGasLimit, expectedGasLimit)).toBe(true);
       expect(isGasLimitTargetCompatible(parentGasLimit, roundedGasLimit, expectedGasLimit)).toBe(false);
+    });
+  });
+
+  describe("getBuilderBidLimit", () => {
+    function buildStateWithPending(balance: number, pendingWithdrawal: number, pendingPayment: number) {
+      const state = buildGloasState();
+      state.builders.push(ssz.gloas.Builder.toViewDU({...ssz.gloas.Builder.defaultValue(), balance}));
+      const withdrawal = {...ssz.gloas.BuilderPendingWithdrawal.defaultValue(), builderIndex: 0};
+      state.builderPendingWithdrawals.push(
+        ssz.gloas.BuilderPendingWithdrawal.toViewDU({...withdrawal, amount: pendingWithdrawal})
+      );
+      state.builderPendingPayments.set(
+        0,
+        ssz.gloas.BuilderPendingPayment.toViewDU({
+          ...ssz.gloas.BuilderPendingPayment.defaultValue(),
+          withdrawal: {...withdrawal, amount: pendingPayment},
+        })
+      );
+      state.commit();
+      return state;
+    }
+
+    it("excludes pending withdrawals and payments from the balance", () => {
+      expect(getBuilderBidLimit(buildStateWithPending(4 * ETH_TO_GWEI - 1, ETH_TO_GWEI, ETH_TO_GWEI), 0)).toBe(1);
+      expect(getBuilderBidLimit(buildStateWithPending(4 * ETH_TO_GWEI, ETH_TO_GWEI, ETH_TO_GWEI), 0)).toBe(2);
+    });
+
+    it("returns zero when pending withdrawals exceed the balance", () => {
+      expect(getBuilderBidLimit(buildStateWithPending(ETH_TO_GWEI, ETH_TO_GWEI, ETH_TO_GWEI), 0)).toBe(0);
     });
   });
 

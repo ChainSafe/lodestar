@@ -5,6 +5,7 @@ import {
   CONSOLIDATION_REQUEST_TYPE,
   DEPOSIT_REQUEST_TYPE,
   ForkName,
+  MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
 import {ExecutionRequests, gloas, ssz} from "@lodestar/types";
@@ -189,6 +190,22 @@ describe("execution / engine / types", () => {
       expect(serializeExecutionRequests(ForkName.gloas, deserialized)).toEqual(serialized);
 
       // pre-gloas: builder request types must be rejected, not silently accepted
+      expect(() => deserializeExecutionRequests(ForkName.electra, serialized)).toThrow();
+    });
+
+    it("should only limit deposit requests pre-gloas", () => {
+      const executionRequests: ExecutionRequests = {
+        deposits: Array.from({length: MAX_DEPOSIT_REQUESTS_PER_PAYLOAD + 1}, () =>
+          ssz.electra.DepositRequest.defaultValue()
+        ),
+        withdrawals: [],
+        consolidations: [],
+      };
+      const serialized = serializeExecutionRequests(ForkName.electra, executionRequests);
+
+      expect(deserializeExecutionRequests(ForkName.gloas, serialized).deposits.length).toBe(
+        MAX_DEPOSIT_REQUESTS_PER_PAYLOAD + 1
+      );
       expect(() => deserializeExecutionRequests(ForkName.electra, serialized)).toThrow();
     });
 

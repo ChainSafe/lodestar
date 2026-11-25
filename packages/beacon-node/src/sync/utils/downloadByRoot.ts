@@ -1,22 +1,14 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  ForkPostDeneb,
-  ForkPostFulu,
-  ForkPostGloas,
-  ForkPreFulu,
-  isForkPostDeneb,
-  isForkPostFulu,
-  isForkPostGloas,
-} from "@lodestar/params";
-import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ForkPostFulu, ForkPostGloas, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
+import {getBlockProposerSignatureSet} from "@lodestar/state-transition";
+import {ColumnIndex, SignedBeaconBlock, Slot, ValidatorIndex, fulu} from "@lodestar/types";
 import {LodestarError, byteArrayEquals, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
-import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
+import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ChainEventEmitter} from "../../chain/emitter.js";
 import {IBeaconChain} from "../../chain/interface.js";
-import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateFuluBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/interface.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
@@ -39,18 +31,14 @@ export type FetchByRootCoreProps = {
   peerMeta: PeerSyncMeta;
 };
 export type FetchByRootProps = FetchByRootCoreProps & {
+  chain: IBeaconChain;
   cacheItem: BlockInputSyncCacheItem;
   blockRoot: Uint8Array;
 };
 export type FetchByRootAndValidateBlockProps = Omit<FetchByRootCoreProps, "peerMeta"> & {
+  chain: IBeaconChain;
   peerIdStr: PeerIdStr;
   blockRoot: Uint8Array;
-};
-export type FetchByRootAndValidateBlobsProps = FetchByRootAndValidateBlockProps & {
-  forkName: ForkPreFulu;
-  block: SignedBeaconBlock<ForkPostDeneb>;
-  blockRoot: Uint8Array;
-  missing: BlobIndex[];
 };
 export type FetchByRootAndValidateColumnsProps = FetchByRootCoreProps & {
   blockRoot: Uint8Array;
@@ -60,7 +48,6 @@ export type FetchByRootAndValidateColumnsProps = FetchByRootCoreProps & {
 };
 export type FetchByRootResponses = {
   block: SignedBeaconBlock;
-  blobSidecars?: deneb.BlobSidecars;
   columnSidecars?: fulu.DataColumnSidecar[];
 };
 
@@ -83,7 +70,7 @@ export async function downloadByRoot({
   const {peerId: peerIdStr} = peerMeta;
 
   const {
-    result: {block, blobSidecars, columnSidecars},
+    result: {block, columnSidecars},
     warnings,
   } = await fetchByRoot({
     config,
@@ -128,47 +115,8 @@ export async function downloadByRoot({
     });
   }
 
-  const hasAllDataPreDownload = blockInput.hasBlockAndAllData();
-
-  if (isBlockInputBlobs(blockInput) && !hasAllDataPreDownload) {
-    // blobSidecars could be undefined if gossip resulted in full block+blobs so we don't download any
-    if (!blobSidecars) {
-      throw new DownloadByRootError({
-        code: DownloadByRootErrorCode.MISSING_BLOB_RESPONSE,
-        blockRoot: rootHex,
-        peer: peerIdStr,
-      });
-    }
-    for (const blobSidecar of blobSidecars) {
-      if (blockInput.hasBlob(blobSidecar.index)) {
-        // the same BlobSidecar may be added by gossip while waiting for fetchByRoot
-        // TODO(fulu): add metric here to track this
-        continue;
-      }
-
-      blockInput.addBlob({
-        blobSidecar,
-        blockRootHex: rootHex,
-        seenTimestampSec: Date.now() / 1000,
-        source: BlockInputSource.byRoot,
-        peerIdStr,
-      });
-
-      if (emitter.listenerCount(routes.events.EventType.blobSidecar)) {
-        const versionedHashes = blockInput.getVersionedHashes();
-
-        emitter.emit(routes.events.EventType.blobSidecar, {
-          blockRoot: rootHex,
-          slot: blockInput.slot,
-          index: blobSidecar.index,
-          kzgCommitment: toHex(blobSidecar.kzgCommitment),
-          versionedHash: toHex(versionedHashes[blobSidecar.index]),
-        });
-      }
-    }
-  }
-
-  if (isBlockInputColumns(blockInput) && !hasAllDataPreDownload) {
+  // Like range sync, download every sampled column, half of them only counts as available for reconstruction
+  if (isBlockInputColumns(blockInput) && !blockInput.hasComputedAllData()) {
     // columnSidecars could be undefined if gossip resulted in full block+columns so we don't download any
     if (!columnSidecars) {
       throw new DownloadByRootError({
@@ -205,7 +153,10 @@ export async function downloadByRoot({
 
   let status: PendingBlockInputStatus;
   let timeSyncedSec: number | undefined;
-  if (blockInput.hasBlockAndAllData()) {
+  if (
+    blockInput.hasBlock() &&
+    (isBlockInputColumns(blockInput) ? blockInput.hasComputedAllData() : blockInput.hasAllData())
+  ) {
     status = PendingBlockInputStatus.downloaded;
     timeSyncedSec = Date.now() / 1000;
   } else {
@@ -219,6 +170,8 @@ export async function downloadByRoot({
       timeSyncedSec,
       timeAddedSec: cacheItem.timeAddedSec,
       peerIdStrings: cacheItem.peerIdStrings,
+      retainedBy: isPendingBlockInput(cacheItem) ? cacheItem.retainedBy : undefined,
+      retainedBytes: isPendingBlockInput(cacheItem) ? cacheItem.retainedBytes : undefined,
     },
     warnings,
   };
@@ -233,7 +186,6 @@ export async function fetchByRoot({
   cacheItem,
 }: FetchByRootProps): Promise<WarnResult<FetchByRootResponses, DownloadByRootError>> {
   let block: SignedBeaconBlock;
-  let blobSidecars: deneb.BlobSidecars | undefined;
   let columnSidecarResult: WarnResult<fulu.DataColumnSidecar[], DownloadByRootError> | undefined;
   const {peerId: peerIdStr} = peerMeta;
 
@@ -243,6 +195,7 @@ export async function fetchByRoot({
     } else {
       block = await fetchAndValidateBlock({
         config,
+        chain,
         network,
         peerIdStr,
         blockRoot,
@@ -250,35 +203,22 @@ export async function fetchByRoot({
     }
 
     const forkName = config.getForkName(block.message.slot);
-    if (!cacheItem.blockInput.hasAllData()) {
-      if (isBlockInputBlobs(cacheItem.blockInput)) {
-        blobSidecars = await fetchAndValidateBlobs({
-          config,
-          chain,
-          network,
-          peerIdStr,
-          forkName: forkName as ForkPreFulu,
-          block: block as SignedBeaconBlock<ForkPostDeneb>,
-          blockRoot,
-          missing: cacheItem.blockInput.getMissingBlobMeta().map(({index}) => index),
-        });
-      }
-      if (isBlockInputColumns(cacheItem.blockInput)) {
-        columnSidecarResult = await fetchAndValidateColumns({
-          config,
-          chain,
-          network,
-          peerMeta,
-          forkName: forkName as ForkPostFulu,
-          block: block as SignedBeaconBlock<ForkPostFulu>,
-          blockRoot,
-          missing: cacheItem.blockInput.getMissingSampledColumnMeta().missing,
-        });
-      }
+    if (isBlockInputColumns(cacheItem.blockInput) && !cacheItem.blockInput.hasComputedAllData()) {
+      columnSidecarResult = await fetchAndValidateColumns({
+        config,
+        chain,
+        network,
+        peerMeta,
+        forkName: forkName as ForkPostFulu,
+        block: block as SignedBeaconBlock<ForkPostFulu>,
+        blockRoot,
+        missing: cacheItem.blockInput.getMissingSampledColumnMeta().missing,
+      });
     }
   } else {
     block = await fetchAndValidateBlock({
       config,
+      chain,
       network,
       peerIdStr,
       blockRoot,
@@ -298,26 +238,12 @@ export async function fetchByRoot({
         block: block as SignedBeaconBlock<ForkPostFulu>,
         missing: network.custodyConfig.sampledColumns,
       });
-    } else if (isForkPostDeneb(forkName)) {
-      const commitments = (block as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>).message.body.blobKzgCommitments;
-      const blobCount = commitments.length;
-      blobSidecars = await fetchAndValidateBlobs({
-        config,
-        chain,
-        network,
-        peerIdStr,
-        forkName: forkName as ForkPreFulu,
-        blockRoot,
-        block: block as SignedBeaconBlock<ForkPostDeneb>,
-        missing: Array.from({length: blobCount}, (_, i) => i),
-      });
     }
   }
 
   return {
     result: {
       block,
-      blobSidecars,
       columnSidecars: columnSidecarResult?.result,
     },
     warnings: columnSidecarResult?.warnings ?? null,
@@ -326,10 +252,11 @@ export async function fetchByRoot({
 
 export async function fetchAndValidateBlock({
   config,
+  chain,
   network,
   peerIdStr,
   blockRoot,
-}: Omit<FetchByRootAndValidateBlockProps, "chain">): Promise<SignedBeaconBlock> {
+}: FetchByRootAndValidateBlockProps): Promise<SignedBeaconBlock> {
   const response = await network.sendBeaconBlocksByRoot(peerIdStr, [blockRoot]);
   const block = response.at(0);
   if (!block) {
@@ -351,45 +278,42 @@ export async function fetchAndValidateBlock({
       "block does not match requested root"
     );
   }
-  return block;
-}
 
-export async function fetchAndValidateBlobs({
-  chain,
-  network,
-  peerIdStr,
-  blockRoot,
-  block,
-  missing,
-}: FetchByRootAndValidateBlobsProps): Promise<deneb.BlobSidecars> {
-  const blobSidecars: deneb.BlobSidecars = await fetchBlobsByRoot({
-    network,
-    peerIdStr,
-    blockRoot,
-    missing,
-  });
-
-  await validateBlockBlobSidecars(chain, block.message.slot, blockRoot, missing.length, blobSidecars);
-
-  return blobSidecars;
-}
-
-export async function fetchBlobsByRoot({
-  network,
-  peerIdStr,
-  blockRoot,
-  missing,
-  indicesInPossession = [],
-}: Pick<FetchByRootAndValidateBlobsProps, "network" | "peerIdStr" | "blockRoot" | "missing"> & {
-  indicesInPossession?: number[];
-}): Promise<deneb.BlobSidecars> {
-  const blobsRequest = missing
-    .filter((index) => !indicesInPossession.includes(index))
-    .map((index) => ({blockRoot, index}));
-  if (!blobsRequest.length) {
-    return [];
+  const blockRootHex = toRootHex(blockRoot);
+  const {slot, proposerIndex} = block.message;
+  // Before the signature check, honest peers serve the genesis block unsigned
+  const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  if (slot < finalizedSlot) {
+    throw new DownloadByRootError({
+      code: DownloadByRootErrorCode.BELOW_FINALIZED_SLOT,
+      peer: prettyPrintPeerIdStr(peerIdStr),
+      slot,
+      finalizedSlot,
+      blockRoot: blockRootHex,
+    });
   }
-  return await network.sendBlobSidecarsByRoot(peerIdStr, blobsRequest);
+  if (proposerIndex >= chain.pubkeyCache.size) {
+    throw new DownloadByRootError({
+      code: DownloadByRootErrorCode.UNKNOWN_PROPOSER,
+      peer: prettyPrintPeerIdStr(peerIdStr),
+      slot,
+      blockRoot: blockRootHex,
+      proposerIndex,
+    });
+  }
+  // Not marked as verified, the block has not passed proposer or ancestry checks yet
+  if (!chain.seenBlockInputCache.isVerifiedProposerSignature(slot, blockRootHex, block.signature)) {
+    const signatureSet = getBlockProposerSignatureSet(chain.config, block);
+    if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: false}))) {
+      throw new DownloadByRootError({
+        code: DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID,
+        peer: prettyPrintPeerIdStr(peerIdStr),
+        slot,
+        blockRoot: blockRootHex,
+      });
+    }
+  }
+  return block;
 }
 
 export async function fetchAndValidateColumns({
@@ -494,8 +418,10 @@ export enum DownloadByRootErrorCode {
   INVALID_INCLUSION_PROOF = "DOWNLOAD_BY_ROOT_ERROR_INVALID_INCLUSION_PROOF",
   INVALID_KZG_PROOF = "DOWNLOAD_BY_ROOT_ERROR_INVALID_KZG_PROOF",
   MISSING_BLOCK_RESPONSE = "DOWNLOAD_BY_ROOT_ERROR_MISSING_BLOCK_RESPONSE",
-  MISSING_BLOB_RESPONSE = "DOWNLOAD_BY_ROOT_ERROR_MISSING_BLOB_RESPONSE",
   MISSING_COLUMN_RESPONSE = "DOWNLOAD_BY_ROOT_ERROR_MISSING_COLUMN_RESPONSE",
+  BELOW_FINALIZED_SLOT = "DOWNLOAD_BY_ROOT_ERROR_BELOW_FINALIZED_SLOT",
+  UNKNOWN_PROPOSER = "DOWNLOAD_BY_ROOT_ERROR_UNKNOWN_PROPOSER",
+  PROPOSAL_SIGNATURE_INVALID = "DOWNLOAD_BY_ROOT_ERROR_PROPOSAL_SIGNATURE_INVALID",
   Z = "DOWNLOAD_BY_ROOT_ERROR_Z",
 }
 export type DownloadByRootErrorType =
@@ -542,13 +468,28 @@ export type DownloadByRootErrorType =
       blockRoot: string;
     }
   | {
-      code: DownloadByRootErrorCode.MISSING_BLOB_RESPONSE;
+      code: DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE;
       peer: string;
       blockRoot: string;
     }
   | {
-      code: DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE;
+      code: DownloadByRootErrorCode.BELOW_FINALIZED_SLOT;
       peer: string;
+      slot: Slot;
+      finalizedSlot: Slot;
+      blockRoot: string;
+    }
+  | {
+      code: DownloadByRootErrorCode.UNKNOWN_PROPOSER;
+      peer: string;
+      slot: Slot;
+      blockRoot: string;
+      proposerIndex: ValidatorIndex;
+    }
+  | {
+      code: DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID;
+      peer: string;
+      slot: Slot;
       blockRoot: string;
     };
 

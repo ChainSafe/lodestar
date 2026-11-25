@@ -1,4 +1,4 @@
-import {BitArray} from "@chainsafe/ssz";
+import {BitArray, SerializedList} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import {RootHex, Slot, ValidatorIndex, bellatrix, heze, ssz} from "@lodestar/types";
@@ -108,7 +108,7 @@ export class InclusionListStore {
 
   /** Deduplicated transactions from valid, non-equivocating inclusion lists at `(slot, dependentRoot)`. */
   getInclusionListTransactions(slot: Slot, dependentRoot: RootHex, onlyTimely = true): bellatrix.Transactions {
-    const transactions: bellatrix.Transactions = [];
+    const transactions: Uint8Array[] = [];
     const seen = new Set<string>();
 
     for (const {signedInclusionList} of this.getEligible(slot, dependentRoot, onlyTimely)) {
@@ -121,7 +121,7 @@ export class InclusionListStore {
       }
     }
 
-    return transactions;
+    return SerializedList.fromArray(transactions);
   }
 
   /** Bit `i` is set when committee member `i` submitted a valid, non-equivocating inclusion list */
@@ -164,9 +164,12 @@ export class InclusionListStore {
     return out;
   }
 
-  /** Lists are retained for MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS slots so InclusionListsByIndices can serve them */
+  /**
+   * Lists are kept one slot past the MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS serving window, the lists of slot N are
+   * read when the payload of slot N + 1 is processed, which may happen during slot N + 2
+   */
   prune(clockSlot: Slot): void {
-    const horizon = clockSlot - this.config.MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS;
+    const horizon = clockSlot - this.config.MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS - 1;
 
     for (const slot of this.inclusionLists.keys()) {
       if (slot < horizon) {

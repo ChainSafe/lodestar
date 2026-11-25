@@ -1,4 +1,4 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {
@@ -13,6 +13,8 @@ import {
   computeEmptySlotSupportDiscount,
   computeSafetyThreshold,
   findLatestConfirmedDescendant,
+  getAttestationScore,
+  getCurrentTargetScore,
   getEquivocationScore,
   getNodeSupportBetweenSlots,
   isConfirmedChainSafe,
@@ -55,14 +57,14 @@ describe("fast confirmation", () => {
       block.blockRoot
     );
 
-    expect(maximumSupport).toBeGreaterThan(0);
-    expect(supportDiscount).toBeGreaterThan(maximumSupport + 2 * adversarialWeight);
-    expect(threshold).toBe(0);
+    expect(maximumSupport).toBeGreaterThan(0n);
+    expect(supportDiscount).toBeGreaterThan(maximumSupport + 2n * adversarialWeight);
+    expect(threshold).toBe(0n);
   });
 
-  it("adjustCommitteeWeightEstimateToEnsureSafety applies the spec safety bump in effective balance increments", () => {
-    expect(adjustCommitteeWeightEstimateToEnsureSafety(999)).toBe(1004);
-    expect(adjustCommitteeWeightEstimateToEnsureSafety(1001)).toBe(1007);
+  it("adjustCommitteeWeightEstimateToEnsureSafety applies the spec safety bump in Gwei", () => {
+    expect(adjustCommitteeWeightEstimateToEnsureSafety(999n)).toBe(1005n);
+    expect(adjustCommitteeWeightEstimateToEnsureSafety(1001n)).toBe(2010n);
   });
 
   // Perf regression guard: computing the total active balance scans (and in production allocates)
@@ -115,16 +117,7 @@ describe("fast confirmation", () => {
     const block = makeBlock(1, ZERO_ROOT);
     const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), block];
 
-    const baseState = makeState(256, 32, [1 as Slot]);
-    let zeroInactiveCalls = 0;
-    const state = {
-      ...baseState,
-      getEffectiveBalanceIncrementsZeroInactive: () => {
-        zeroInactiveCalls++;
-        return baseState.effectiveBalanceIncrements;
-      },
-    } as typeof baseState;
-
+    const state = makeState(256, 32, [1 as Slot]);
     const store = makeStore(block.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, ZERO_ROOT, block.blockRoot, state);
     const ctx = makeContext(
       2 as Slot,
@@ -135,11 +128,12 @@ describe("fast confirmation", () => {
       state
     );
     const cache = createFastConfirmationCache();
+    const totalActiveBalanceComputations = vi.spyOn(cache.totalActiveBalanceByKey, "set");
 
     expect(willCurrentTargetBeJustified(ctx, store, cache)).toBe(true);
     expect(willCurrentTargetBeJustified(ctx, store, cache)).toBe(true);
 
-    expect(zeroInactiveCalls).toBe(1);
+    expect(totalActiveBalanceComputations).toHaveBeenCalledTimes(1);
   });
 
   it("isOneConfirmed returns true only when support exceeds the computed threshold", () => {
@@ -186,6 +180,70 @@ describe("fast confirmation", () => {
         "current"
       )
     ).toBe(false);
+  });
+
+  it.each([
+    {parentSlot: 4, blockSlot: 5, currentSlot: 6, threshold: 128_546_875_000n, support: 128},
+    {parentSlot: 29, blockSlot: 30, currentSlot: 34, threshold: 422_280_713_245n, support: 422},
+  ])(
+    "isOneConfirmed compares support against the safety threshold in Gwei at slot $currentSlot",
+    ({parentSlot, blockSlot, currentSlot, threshold, support}) => {
+      const parent = makeBlock(parentSlot, ZERO_ROOT);
+      const block = makeBlock(blockSlot, parent.blockRoot);
+      const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, block];
+      const state = makeState(4330, 1, [blockSlot as Slot]);
+      const balanceSource = {state, balances: state.effectiveBalanceIncrements};
+      const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, block.blockRoot, state);
+      const ctxWithSupport = (count: number) =>
+        makeContext(
+          currentSlot as Slot,
+          block.blockRoot,
+          blocks,
+          latestMessagesFor(4330, block.blockRoot, 0, count),
+          {epoch: 0, rootHex: ZERO_ROOT},
+          state
+        );
+      const isConfirmed = (count: number): boolean =>
+        isOneConfirmed(
+          ctxWithSupport(count),
+          store,
+          createFastConfirmationCache(),
+          balanceSource,
+          block.blockRoot,
+          "current"
+        );
+
+      expect(isConfirmed(support)).toBe(false);
+      expect(isConfirmed(support + 1)).toBe(true);
+      expect(
+        computeSafetyThreshold(ctxWithSupport(0), store, createFastConfirmationCache(), balanceSource, block.blockRoot)
+          .threshold
+      ).toBe(threshold);
+    }
+  );
+
+  it("willCurrentTargetBeJustified computes honest FFG support in Gwei", () => {
+    const head = makeBlock(SLOTS_PER_EPOCH, ZERO_ROOT);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), head];
+    const state = makeState(4098, 1, [head.slot]);
+    const store = makeStore(head.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, head.blockRoot, head.blockRoot, state);
+    const isJustified = (targetVotes: number): boolean =>
+      willCurrentTargetBeJustified(
+        makeContext(
+          (SLOTS_PER_EPOCH + 9) as Slot,
+          head.blockRoot,
+          blocks,
+          latestMessagesFor(4098, head.blockRoot, 1, targetVotes),
+          {epoch: 0, rootHex: ZERO_ROOT},
+          state
+        ),
+        store,
+        createFastConfirmationCache()
+      );
+
+    // 3 * honest FFG support is 8195.8125 ETH, just short of 2 * 4098 ETH
+    expect(isJustified(811)).toBe(false);
+    expect(isJustified(812)).toBe(true);
   });
 
   it("isOneConfirmed returns false when execution validity is unknown", () => {
@@ -246,6 +304,53 @@ describe("fast confirmation", () => {
     expect(supportFor(PayloadStatus.PENDING)).toBe(32);
   });
 
+  it("getNodeSupportBetweenSlots excludes slashed and inactive validators without reading them", () => {
+    const parent = makeBlock(1, ZERO_ROOT);
+    const child = makeBlock(2, parent.blockRoot);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
+    // Validator 1 is slashed and validator 2 is inactive, both still sit in slot 2's committee
+    const state = makeState(4, 32, [2 as Slot], [1], [2]);
+    const getValidator = vi.spyOn(state, "getValidator");
+    const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
+    const latestMessages = latestMessagesFor(4, parent.blockRoot, 0);
+    const ctx = makeContext(3 as Slot, child.blockRoot, blocks, latestMessages, {epoch: 0, rootHex: ZERO_ROOT}, state);
+    const cache = createFastConfirmationCache();
+
+    const support = (): number =>
+      getNodeSupportBetweenSlots(
+        ctx,
+        store,
+        cache,
+        {state, balances: state.effectiveBalanceIncrements},
+        parent.blockRoot,
+        PayloadStatus.FULL,
+        2 as Slot,
+        2 as Slot
+      );
+
+    expect(support()).toBe(64);
+    expect(support()).toBe(64);
+    expect(getValidator).not.toHaveBeenCalled();
+  });
+
+  it("vote scans exclude slashed validators without reading them", () => {
+    const parent = makeBlock(1, ZERO_ROOT);
+    const child = makeBlock(2, parent.blockRoot);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
+    const state = makeState(4, 32, [2 as Slot], [1]);
+    const getValidator = vi.spyOn(state, "getValidator");
+    const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
+    const latestMessages = latestMessagesFor(4, child.blockRoot, 0);
+    const ctx = makeContext(3 as Slot, child.blockRoot, blocks, latestMessages, {epoch: 0, rootHex: ZERO_ROOT}, state);
+    const cache = createFastConfirmationCache();
+
+    expect(
+      getAttestationScore(ctx, cache, {state, balances: state.effectiveBalanceIncrements}, parent.blockRoot, "current")
+    ).toBe(96);
+    expect(getCurrentTargetScore(ctx, store, cache)).toBe(96);
+    expect(getValidator).not.toHaveBeenCalled();
+  });
+
   it("computeEmptySlotSupportDiscount discounts only the parent node the block extends", () => {
     // Block B at slot 3 extends EMPTY(P); slot 2 is empty
     const parent = makeBlock(1, ZERO_ROOT, {payloadStatus: PayloadStatus.EMPTY});
@@ -275,7 +380,7 @@ describe("fast confirmation", () => {
           [3, voteFor(PayloadStatus.PENDING)],
         ])
       )
-    ).toBeGreaterThan(0);
+    ).toBeGreaterThan(0n);
 
     // Same root, but no vote supports EMPTY(P), so there is nothing to discount
     expect(
@@ -287,7 +392,7 @@ describe("fast confirmation", () => {
           [3, voteFor(PayloadStatus.PENDING)],
         ])
       )
-    ).toBe(0);
+    ).toBe(0n);
   });
 
   it("getEquivocationScore returns 0 when there are no equivocators", () => {
@@ -326,6 +431,35 @@ describe("fast confirmation", () => {
       {epoch: 0, rootHex: ZERO_ROOT},
       state,
       [1, 3]
+    );
+
+    const score = getEquivocationScore(
+      ctx,
+      store,
+      createFastConfirmationCache(),
+      {state, balances: state.effectiveBalanceIncrements},
+      2 as Slot,
+      2 as Slot
+    );
+
+    expect(score).toBe(64);
+  });
+
+  it("getEquivocationScore counts slashed equivocators but not inactive ones", () => {
+    const parent = makeBlock(1, ZERO_ROOT);
+    const child = makeBlock(2, parent.blockRoot);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
+    // Validator 1 is slashed but still active, validator 2 is inactive
+    const state = makeState(4, 32, [2 as Slot], [1], [2]);
+    const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
+    const ctx = makeContext(
+      3 as Slot,
+      child.blockRoot,
+      blocks,
+      new Map(),
+      {epoch: 0, rootHex: ZERO_ROOT},
+      state,
+      [1, 2, 3]
     );
 
     const score = getEquivocationScore(

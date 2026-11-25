@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import inquirer from "inquirer";
-import {Signature} from "@chainsafe/lodestar-z/blst";
 import {ApiClient, getClient} from "@lodestar/api";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
+import {Signature} from "@lodestar/native/blst";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -59,9 +59,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
       string: true, // Ensures the pubkey string is not automatically converted to numbers
       coerce: (pubkeys: string[]): string[] =>
         // Parse ["0x11,0x22"] to ["0x11", "0x22"]
-        pubkeys
-          .flatMap((item) => item.split(","))
-          .map(ensure0xPrefix),
+        pubkeys.flatMap((item) => item.split(",")).map(ensure0xPrefix),
     },
 
     yes: {

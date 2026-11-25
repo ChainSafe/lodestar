@@ -63,7 +63,7 @@ import {
   isGloasStateType,
   isMergeTransitionComplete,
 } from "../util/execution.js";
-import {canBuilderCoverBid} from "../util/gloas.js";
+import {canBuilderCoverBid, getBuilderBidLimit} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
 import {PreVerifyBuilderDepositsResult, preVerifyBuilderDepositsPreGloas} from "../util/preVerifyBuilderDeposits.js";
 import {getRandaoMix} from "../util/seed.js";
@@ -84,6 +84,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   // phase0
   private cachedFork: Fork | null = null;
   private cachedLatestBlockHeader: phase0.BeaconBlockHeader | null = null;
+  private cachedEffectiveBalanceIncrementsZeroInactive: EffectiveBalanceIncrements | null = null;
   // altair
   private cachedCurrentSyncCommittee: SyncCommittee | null = null;
   private cachedNextSyncCommittee: SyncCommittee | null = null;
@@ -468,6 +469,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return canBuilderCoverBid(this.cachedState as CachedBeaconStateGloas, builderIndex, bidAmount);
   }
 
+  getBuilderBidLimit(builderIndex: BuilderIndex): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Builders are not supported before Gloas");
+    }
+
+    return getBuilderBidLimit(this.cachedState as CachedBeaconStateGloas, builderIndex);
+  }
+
   /**
    * Return the PTCs for an epoch
    */
@@ -638,7 +647,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   getEffectiveBalanceIncrementsZeroInactive(): EffectiveBalanceIncrements {
-    return getEffectiveBalanceIncrementsZeroInactive(this.cachedState);
+    if (this.cachedEffectiveBalanceIncrementsZeroInactive === null) {
+      this.cachedEffectiveBalanceIncrementsZeroInactive = getEffectiveBalanceIncrementsZeroInactive(this.cachedState);
+    }
+    return this.cachedEffectiveBalanceIncrementsZeroInactive;
   }
 
   getBalance(index: number): number {

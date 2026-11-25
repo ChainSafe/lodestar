@@ -3,6 +3,7 @@ import {chainConfig} from "@lodestar/config/default";
 import {ForkName, activePreset} from "@lodestar/params";
 import {fetch} from "@lodestar/utils";
 import {specConstants} from "../../../../src/api/impl/config/constants.js";
+// biome-ignore lint/correctness/useImportExtensions: false positive, the import resolves through a symlink to a .json file
 import specTestVersion from "../../../spec-tests-version.json" with {type: "json"};
 
 const CONSTANT_NAMES_SKIP_LIST = new Set([

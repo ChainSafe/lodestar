@@ -27,6 +27,9 @@ describe("Forkchoice / GetProposerHead", () => {
   const parentSlot = genesisSlot + 1;
   const headSlot = genesisSlot + 2;
   const validatorCount = 100;
+  // At 10 s slots PROPOSER_REORG_CUTOFF_BPS lands on a non-whole second (1667 ms), so the cutoff
+  // comparison must be exact at the millisecond
+  const tenSecondSlotConfig = createChainForkConfig({SLOT_DURATION_MS: 10_000});
   const fuluConfig = createChainForkConfig({
     ALTAIR_FORK_EPOCH: 0,
     BELLATRIX_FORK_EPOCH: 0,
@@ -216,7 +219,7 @@ describe("Forkchoice / GetProposerHead", () => {
     siblingBlock?: ProtoBlockWithWeight;
     expectReorg: boolean;
     currentSlot?: Slot;
-    secFromSlot?: number;
+    msFromSlot?: number;
     expectedNotReorgedReason?: NotReorgedReason;
     config?: ChainForkConfig;
   }[] = [
@@ -305,8 +308,25 @@ describe("Forkchoice / GetProposerHead", () => {
       parentBlock: {...baseParentHeadBlock, weight: 211},
       headBlock: {...baseHeadBlock},
       expectReorg: false,
-      secFromSlot: config.getProposerReorgCutoffMs(ForkName.phase0) / 1000 + 1,
+      msFromSlot: config.getProposerReorgCutoffMs(ForkName.phase0) + 1,
       expectedNotReorgedReason: NotReorgedReason.NotProposingOnTime,
+    },
+    {
+      id: "Reorg when proposing exactly at the reorg cutoff millisecond",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock},
+      expectReorg: true,
+      msFromSlot: tenSecondSlotConfig.getProposerReorgCutoffMs(ForkName.phase0),
+      config: tenSecondSlotConfig,
+    },
+    {
+      id: "No reorg when proposing one millisecond after the reorg cutoff",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock},
+      expectReorg: false,
+      msFromSlot: tenSecondSlotConfig.getProposerReorgCutoffMs(ForkName.phase0) + 1,
+      expectedNotReorgedReason: NotReorgedReason.NotProposingOnTime,
+      config: tenSecondSlotConfig,
     },
     {
       id: "Reorg weak equivocating head even if head is timely",
@@ -328,7 +348,7 @@ describe("Forkchoice / GetProposerHead", () => {
       headBlock: {...baseHeadBlock},
       siblingBlock: equivocatingHeadBlock,
       expectReorg: true,
-      secFromSlot: config.getProposerReorgCutoffMs(ForkName.phase0) / 1000 + 1,
+      msFromSlot: config.getProposerReorgCutoffMs(ForkName.phase0) + 1,
     },
     {
       id: "Reorg weak equivocating head regardless of the equivocating block's PTC timeliness",
@@ -375,7 +395,7 @@ describe("Forkchoice / GetProposerHead", () => {
     siblingBlock,
     expectReorg,
     currentSlot: proposalSlot,
-    secFromSlot,
+    msFromSlot,
     expectedNotReorgedReason,
     config: forkChoiceConfig,
   } of testCases) {
@@ -387,7 +407,7 @@ describe("Forkchoice / GetProposerHead", () => {
       }
 
       const currentSlot = proposalSlot ?? headBlock.slot + 1;
-      const currentSecFromSlot = secFromSlot ?? 0;
+      const currentMsFromSlot = msFromSlot ?? 0;
       protoArr.applyScoreChanges({
         attestationDeltas: [0, parentBlock.weight, headBlock.weight, ...(siblingBlock ? [siblingBlock.weight] : [])],
         proposerBoost: null,
@@ -405,7 +425,7 @@ describe("Forkchoice / GetProposerHead", () => {
 
       const {proposerHead, isHeadTimely, notReorgedReason} = forkChoice.getProposerHead(
         headBlock,
-        currentSecFromSlot,
+        currentMsFromSlot,
         currentSlot
       );
 

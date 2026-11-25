@@ -1,8 +1,8 @@
 import {describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
+import {SecretKey, aggregateSignatures} from "@lodestar/native/blst";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {
   BeaconStateView,
@@ -241,6 +241,34 @@ describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConf
     }
 
     expect(pool.getSlashingsAndExits(makeState(afterSlot, beaconConfig), BlockType.Full, null)[0]).toEqual([valid]);
+  });
+
+  it("includes an attester slashing that a selected proposer slashing only partially covers", async () => {
+    const state = makeState(afterSlot, beaconConfig);
+    const chain = makeChain(state, beaconConfig);
+    const proposerSlashing = makeProposerSlashing(afterSlot, afterSlot, beaconConfig);
+    const attesterSlashing = makeAttesterSlashing(1, afterSlot, beaconConfig);
+    attesterSlashing.attestation1.attestingIndices = [0, 1];
+    attesterSlashing.attestation2.attestingIndices = [0, 1];
+    const sets = getAttesterSlashingSignatureSets(beaconConfig, afterSlot, attesterSlashing);
+    const secretKeys = [0, 1].map((i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
+    attesterSlashing.attestation1.signature = aggregateSignatures(
+      secretKeys.map((sk) => sk.sign(sets[0].signingRoot))
+    ).toBytes();
+    attesterSlashing.attestation2.signature = aggregateSignatures(
+      secretKeys.map((sk) => sk.sign(sets[1].signingRoot))
+    ).toBytes();
+    const pool = new OpPool(beaconConfig);
+    pool.insertProposerSlashing(proposerSlashing, await validateGossipProposerSlashing(chain, proposerSlashing));
+    pool.insertAttesterSlashing(
+      beaconConfig.getForkName(afterSlot),
+      attesterSlashing,
+      await validateGossipAttesterSlashing(chain, attesterSlashing)
+    );
+
+    const [attesterSlashings, proposerSlashings] = pool.getSlashingsAndExits(state, BlockType.Full, null);
+    expect(proposerSlashings).toEqual([proposerSlashing]);
+    expect(attesterSlashings).toEqual([attesterSlashing]);
   });
 });
 
