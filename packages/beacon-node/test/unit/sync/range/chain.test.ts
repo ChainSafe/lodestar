@@ -40,13 +40,11 @@ describe("sync / range / chain", () => {
       targetEpoch: 16,
     },
     {
-      // due to BATCH_BUFFER_SIZE and MAX_LOOK_AHEAD_EPOCHS, lodestar cannot deal with unlimited skipped slots
-      // having a test with 2 epochs of skipped slots is enough to test the logic
-      // this hasn't happened in any networks as of Aug 2025
-      id: "Simulate sync with 2 epochs of skipped slots",
+      // more 0-block epochs in a row than MAX_LOOK_AHEAD_EPOCHS, as on pq-devnet-0 (epochs 128..164)
+      id: "Simulate sync with 5 epochs of skipped slots",
       startEpoch: 0,
       targetEpoch: 16,
-      skippedSlots: new Set(linspace(3 * SLOTS_PER_EPOCH, 4 * SLOTS_PER_EPOCH)),
+      skippedSlots: new Set(linspace(3 * SLOTS_PER_EPOCH, 8 * SLOTS_PER_EPOCH - 1)),
     },
     // As of https://github.com/ChainSafe/lodestar/pull/8150, we abort the batch after a single processing error
     // {
@@ -160,6 +158,93 @@ describe("sync / range / chain", () => {
       });
     });
   }
+
+  // 0-block epochs 3..7 sit between the parent batch (epoch 2) and the batch at epoch 8, whose first block fails once
+  // with PARENT_BLOCK_UNKNOWN. The parent batch and the 0-block batches after it must be downloaded again together
+  it.each([
+    {
+      fault: "ParentBatch, first block at batch.startSlot",
+      skipFrom: 3 * SLOTS_PER_EPOCH,
+      failSlot: 8 * SLOTS_PER_EPOCH,
+      expectParentRedownload: true,
+    },
+    {
+      fault: "Ambiguous, parent batch without tail block",
+      skipFrom: 3 * SLOTS_PER_EPOCH - 1,
+      failSlot: 8 * SLOTS_PER_EPOCH + 1,
+      expectParentRedownload: true,
+    },
+    {
+      fault: "CurrentBatch, parent batch with tail block",
+      skipFrom: 3 * SLOTS_PER_EPOCH,
+      failSlot: 8 * SLOTS_PER_EPOCH + 1,
+      expectParentRedownload: false,
+    },
+  ])(
+    "recovers from a processing fault after 0-block epochs: $fault",
+    async ({skipFrom, failSlot, expectParentRedownload}) => {
+      const parentBatchStartSlot = 2 * SLOTS_PER_EPOCH;
+      let failed = false;
+      let parentRedownloads = 0;
+
+      const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+        const firstBlock = blocks[0];
+        if (!failed && firstBlock?.slot === failSlot) {
+          failed = true;
+          throw new BlockError(firstBlock.getBlock(), {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot: "0x00"});
+        }
+      };
+
+      const downloadByRange: SyncChainFns["downloadByRange"] = async (_peer, request) => {
+        if (failed && request.startSlot === parentBatchStartSlot) parentRedownloads++;
+        const blocks: IBlockInput[] = [];
+        for (let i = request.startSlot; i < request.startSlot + request.count; i++) {
+          if (i >= skipFrom && i < failSlot) continue;
+          blocks.push(
+            BlockInputPreData.createFromBlock({
+              block: {message: generateEmptyBlock(i), signature: ACCEPT_BLOCK},
+              blockRootHex: "0x00",
+              forkName: config.getForkName(i),
+              daOutOfRange: false,
+              source: BlockInputSource.byRange,
+              seenTimestampSec: Math.floor(Date.now() / 1000),
+            })
+          );
+        }
+        return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+      };
+
+      const target: ChainTarget = {slot: computeStartSlotAtEpoch(12), root: ZERO_HASH};
+      await new Promise<void>((resolve, reject) => {
+        const syncChain = new SyncChain(
+          0,
+          target,
+          RangeSyncType.Finalized,
+          logSyncChainFns(logger, {
+            processChainSegment,
+            downloadByRange,
+            getConnectedPeerSyncMeta,
+            reportPeer,
+            pruneBlockInputs,
+            onEnd: (err) => (err ? reject(err) : resolve()),
+          }),
+          {
+            config,
+            logger,
+            clock: new Clock({config, genesisTime: 0, signal: new AbortController().signal}),
+            custodyConfig,
+            metrics: null,
+          },
+          undefined
+        );
+        syncChain.addPeer(peer, target);
+        syncChain.startSyncing(0);
+      });
+
+      expect(failed).toBe(true);
+      expect(parentRedownloads > 0).toBe(expectParentRedownload);
+    }
+  );
 
   it.each([
     {receivedSlots: [1, 3], expectedEnvelopeSlots: "[1, 3]"},

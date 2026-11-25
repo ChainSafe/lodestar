@@ -509,9 +509,12 @@ export class SyncChain {
     // if last processed epoch is n, we don't want to request batches with epoch > n + MAX_LOOK_AHEAD_EPOCHS
     // we should have enough batches to process in the buffer: n + 1, ..., n + MAX_LOOK_AHEAD_EPOCHS
     // let's focus on redownloading these batches first because it may have to reach different peers to get enough sampled columns
+    // Note: Don't count batches in the AwaitingValidation state, 0-block batches never advance
+    // lastEpochWithProcessBlocks so more than MAX_LOOK_AHEAD_EPOCHS of them in a row would stall sync
+    const pendingBatches = batches.filter((batch) => batch.state.status !== BatchStatus.AwaitingValidation);
     if (
-      batches.length > 0 &&
-      Math.max(...batches.map((b) => b.startEpoch)) >= this.lastEpochWithProcessBlocks + MAX_LOOK_AHEAD_EPOCHS
+      pendingBatches.length > 0 &&
+      Math.max(...pendingBatches.map((b) => b.startEpoch)) >= this.lastEpochWithProcessBlocks + MAX_LOOK_AHEAD_EPOCHS
     ) {
       return null;
     }
@@ -576,6 +579,7 @@ export class SyncChain {
           }
         }
         switch (errCode) {
+          case DownloadByRangeErrorCode.DATA_WITHOUT_BLOCKS:
           case DownloadByRangeErrorCode.EXTRA_BLOCKS:
           case DownloadByRangeErrorCode.OUT_OF_ORDER_BLOCKS:
           case DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS:
@@ -722,39 +726,44 @@ export class SyncChain {
     } else {
       this.logger.verbose("Batch process error", logCtx, res.err);
 
-      const invalidatePreviousBatches = (): number => {
-        let invalidatedCount = 0;
+      // advanceChain() drops every batch before the last batch with blocks, so the AwaitingValidation batches before
+      // `batch` are that batch followed by 0-block batches. 0-block batches are assumed correct,
+      // see classifyProcessingFault()
+      const parentBatch = toArr(this.batches).findLast(
+        (b) =>
+          b.startEpoch < batch.startEpoch &&
+          b.state.status === BatchStatus.AwaitingValidation &&
+          b.getBlocks().length > 0
+      );
+      // The 0-block batches after `parentBatch` are invalidated with it: an AwaitingValidation batch must not follow a
+      // batch that is downloaded again, see validateBatchesStatus()
+      const invalidateFromParentBatch = (faultyParentBatch: Batch): void => {
         for (const pendingBatch of this.batches.values()) {
           if (
+            pendingBatch.startEpoch >= faultyParentBatch.startEpoch &&
             pendingBatch.startEpoch < batch.startEpoch &&
             pendingBatch.state.status === BatchStatus.AwaitingValidation
           ) {
             this.logger.verbose("Batch validation error", {id: this.logId, ...pendingBatch.getMetadata()});
             pendingBatch.validationError(res.err);
-            invalidatedCount++;
           }
         }
-        return invalidatedCount;
       };
 
-      const prevBatch = this.batches.get(batch.startEpoch - EPOCHS_PER_BATCH);
-      switch (classifyProcessingFault(res.err, batch, prevBatch)) {
+      const fault = classifyProcessingFault(res.err, batch, parentBatch);
+      switch (fault.kind) {
         case ProcessingFaultKind.CurrentBatch:
           batch.processingError(res.err);
           break;
 
-        case ProcessingFaultKind.PreviousBatch:
-          // If no previous batch was invalidated, it means the error is on this batch
-          if (invalidatePreviousBatches() === 0) {
-            batch.processingError(res.err);
-          } else {
-            batch.retainForReprocessing();
-          }
+        case ProcessingFaultKind.ParentBatch:
+          invalidateFromParentBatch(fault.parentBatch);
+          batch.retainForReprocessing();
           break;
 
         case ProcessingFaultKind.Ambiguous:
           batch.processingError(res.err);
-          invalidatePreviousBatches();
+          invalidateFromParentBatch(fault.parentBatch);
           break;
       }
     }

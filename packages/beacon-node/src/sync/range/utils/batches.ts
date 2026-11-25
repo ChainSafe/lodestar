@@ -125,39 +125,59 @@ export function isSyncChainDone(batches: Batch[], lastEpochWithProcessBlocks: Ep
 export enum ProcessingFaultKind {
   /** This batch's own blocks are bad or incomplete, so redownload this batch. */
   CurrentBatch = "CurrentBatch",
-  /** This batch is valid, but a previous batch did not deliver the parent. */
-  PreviousBatch = "PreviousBatch",
-  /** The fault could be in this batch or a previous batch, so hedge both ways. */
+  /** This batch is valid, but the parent batch did not deliver the parent. */
+  ParentBatch = "ParentBatch",
+  /** The fault could be in this batch or the parent batch, so hedge both ways. */
   Ambiguous = "Ambiguous",
 }
+
+export type ProcessingFault =
+  | {kind: ProcessingFaultKind.CurrentBatch}
+  | {kind: ProcessingFaultKind.ParentBatch; parentBatch: Batch}
+  | {kind: ProcessingFaultKind.Ambiguous; parentBatch: Batch};
 
 /**
  * Classify a processChainSegment error for a batch so range sync only redownloads
  * the batch or batches that could actually be at fault.
  * Note that range sync is supposed to only handle linear chain, for forky condition we'll handle it via backward sync
  * in BlockInputSync or the upcoming/TODO beacon_blocks_by_head req/resp.
+ *
+ * `parentBatch` is the last batch with blocks before `batch`. 0-block batches in between are assumed correct.
+ * Epochs with 0 blocks usually happen on devnets, during periods of poor liveness when no proposer gets a block
+ * included for whole epochs. If a 0-block response was wrong instead, the SyncChain fails quickly and a new one
+ * is created later.
  */
-export function classifyProcessingFault(err: Error, batch: Batch, prevBatch: Batch | undefined): ProcessingFaultKind {
+export function classifyProcessingFault(err: Error, batch: Batch, parentBatch: Batch | undefined): ProcessingFault {
   if (!(err instanceof BlockError)) {
-    return ProcessingFaultKind.CurrentBatch;
+    return {kind: ProcessingFaultKind.CurrentBatch};
   }
 
   const {code} = err.type;
   if (code !== BlockErrorCode.PARENT_BLOCK_UNKNOWN && code !== BlockErrorCode.PARENT_PAYLOAD_UNKNOWN) {
-    return ProcessingFaultKind.CurrentBatch;
+    return {kind: ProcessingFaultKind.CurrentBatch};
+  }
+
+  if (parentBatch === undefined) {
+    return {kind: ProcessingFaultKind.CurrentBatch};
   }
 
   const firstErrorSlot = err.signedBlock.message.slot;
   if (firstErrorSlot === batch.startSlot) {
-    // note that range sync is for linear chain, so this is clearly an issue of the previous batch
-    return prevBatch === undefined ? ProcessingFaultKind.CurrentBatch : ProcessingFaultKind.PreviousBatch;
+    // note that range sync is for linear chain, so this is clearly an issue of the parent batch
+    return {kind: ProcessingFaultKind.ParentBatch, parentBatch};
   }
 
-  const prevTailSlot = batch.startSlot - 1;
-  const prevHasFullTail =
+  // `parentBatch` can be followed by 0-block batches (assumed correct), so its tail is the end of its own range
+  const parentTailSlot = parentBatch.startSlot + parentBatch.count - 1;
+  const parentHasFullTail =
     code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
-      ? (prevBatch?.getPayloadEnvelopes()?.get(prevTailSlot)?.hasPayloadEnvelope() ?? false)
-      : (prevBatch?.getBlocks().some((b) => b.slot === prevTailSlot) ?? false);
+      ? (parentBatch.getPayloadEnvelopes()?.get(parentTailSlot)?.hasPayloadEnvelope() ?? false)
+      : parentBatch.getBlocks().some((b) => b.slot === parentTailSlot);
 
-  return prevHasFullTail ? ProcessingFaultKind.CurrentBatch : ProcessingFaultKind.Ambiguous;
+  // Assumes the tail block / payload delivered by `parentBatch` is canonical. If it is orphaned, `parentBatch` is at
+  // fault: `batch` keeps failing until MAX_PROCESSING_ATTEMPTS and a new SyncChain is created.
+  if (parentHasFullTail) {
+    return {kind: ProcessingFaultKind.CurrentBatch};
+  }
+  return {kind: ProcessingFaultKind.Ambiguous, parentBatch};
 }

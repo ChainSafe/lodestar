@@ -507,14 +507,27 @@ export async function validateResponses({
     validatedResponses.validatedBlocks?.length ? validatedResponses.validatedBlocks : undefined
   );
 
+  // Epoch with 0 blocks: columns and envelopes only exist for a block, so data here means the peer withheld blocks or
+  // served junk. The parent payload is not requested either, Batch only does once it has blocks
   if (!blocksForDataValidation.length) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-        ...requestsLogMeta({columnsRequest}),
-      },
-      "No blocks in data request slot range to validate data response against"
-    );
+    const columnSidecarCount = columnSidecars?.length ?? 0;
+    const payloadEnvelopeCount = payloadEnvelopes?.length ?? 0;
+    if (columnSidecarCount > 0 || payloadEnvelopeCount > 0) {
+      throw new DownloadByRangeError(
+        {
+          code: DownloadByRangeErrorCode.DATA_WITHOUT_BLOCKS,
+          ...requestsLogMeta({blocksRequest}),
+          columnSidecarCount,
+          payloadEnvelopeCount,
+        },
+        "Columns or envelopes returned without blocks in BeaconBlocksByRange response"
+      );
+    }
+
+    return {
+      result: {responses: validatedResponses, payloadEnvelopes: needsEnvelopeValidation ? new Map() : null},
+      warnings,
+    };
   }
 
   if (!columnSidecars) {
@@ -606,26 +619,19 @@ export function validateBlockByRangeResponse(
 ): WarnResult<ValidatedBlock[], DownloadByRangeError> {
   const {startSlot, count} = blocksRequest;
 
-  // An error was thrown here by @twoeths in #8150 but it breaks for epochs with 0 blocks during chain
-  // liveness issues. See comment https://github.com/ChainSafe/lodestar/issues/8147#issuecomment-3246434697
-  // There are instances where clients return no blocks though.  Need to monitor this via the warns to see
-  // if what the correct behavior should be
+  // A 0-block response is accepted as correct, epochs with 0 blocks happen on devnets with poor liveness.
+  // If it was wrong, the next batch fails with an unknown parent and SyncChain handles it,
+  // see classifyProcessingFault()
   if (!blocks.length) {
-    throw new DownloadByRangeError({
-      code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-      ...requestsLogMeta({blocksRequest}),
-    });
-    // TODO: this was causing deadlock again. need to come back and fix this so that its possible to process through
-    //       an empty epoch for periods with poor liveness
-    // return {
-    //   result: [],
-    //   warnings: [
-    //     new DownloadByRangeError({
-    //       code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-    //       ...requestsLogMeta({blocksRequest}),
-    //     }),
-    //   ],
-    // };
+    return {
+      result: [],
+      warnings: [
+        new DownloadByRangeError({
+          code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
+          ...requestsLogMeta({blocksRequest}),
+        }),
+      ],
+    };
   }
 
   if (blocks.length > count) {
@@ -995,6 +1001,8 @@ function requestsLogMeta({blocksRequest, columnsRequest}: DownloadByRangeRequest
 export enum DownloadByRangeErrorCode {
   MISSING_BLOCKS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCK_RESPONSE",
   MISSING_COLUMNS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS_RESPONSE",
+  /** Columns or envelopes were returned for a range with no blocks */
+  DATA_WITHOUT_BLOCKS = "DOWNLOAD_BY_RANGE_ERROR_DATA_WITHOUT_BLOCKS",
 
   /** Error at the reqresp layer */
   REQ_RESP_ERROR = "DOWNLOAD_BY_RANGE_ERROR_REQ_RESP_ERROR",
@@ -1037,6 +1045,13 @@ export type DownloadByRangeErrorType =
       blockCount?: number;
       columnStartSlot?: number;
       columnCount?: number;
+    }
+  | {
+      code: DownloadByRangeErrorCode.DATA_WITHOUT_BLOCKS;
+      blockStartSlot?: number;
+      blockCount?: number;
+      columnSidecarCount: number;
+      payloadEnvelopeCount: number;
     }
   | {
       code: DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS;
