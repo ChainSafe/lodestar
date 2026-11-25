@@ -152,8 +152,7 @@ The boundary:
   verified the attestation against the target checkpoint state; every
   `validate_on_attestation` check runs in the store. A vote whose slot is not yet past
   is queued and applied by the tick that makes it past, as proto-array does for
-  same-slot gossip; `validateOnAttestation` keeps the spec's rejection for callers
-  that want it, and the spec runner uses it.
+  same-slot gossip; the spec runner adds the spec's rejection itself.
 - `onAttesterSlashing` expects both indexed attestations verified against the
   justified state; the slashable-data check and the intersection run in the store.
 - `onPayloadAttestationMessage` takes the PTC of the attested block's state;

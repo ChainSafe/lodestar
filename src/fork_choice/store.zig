@@ -66,7 +66,6 @@ pub const Error = error{
     SameSlotFullVote,
     AttestationPayloadNotVerified,
     AttestationTargetNotInChain,
-    AttestationNotYetPast,
     NotSlashableAttestationData,
     UnknownBlock,
     ValidatorNotInPtc,
@@ -1171,15 +1170,9 @@ pub const Store = struct {
 
     // --- on_attestation ---------------------------------------------------------------
 
-    /// Spec `validate_on_attestation`.
-    pub fn validateOnAttestation(self: *const Store, data: *const AttestationData, is_from_block: bool) Error!void {
-        try self.checkAttestationData(data, is_from_block);
-        if (self.currentSlot() < data.slot + 1) return error.AttestationNotYetPast;
-    }
-
-    /// `validate_on_attestation` without its last assertion, the one `onAttestation`
+    /// Spec `validate_on_attestation` without its last assertion, the one `onAttestation`
     /// answers by queueing.
-    fn checkAttestationData(self: *const Store, data: *const AttestationData, is_from_block: bool) Error!void {
+    pub fn validateOnAttestation(self: *const Store, data: *const AttestationData, is_from_block: bool) Error!void {
         const target = data.target;
         if (!is_from_block) {
             const current_epoch = self.currentEpoch();
@@ -1204,8 +1197,7 @@ pub const Store = struct {
 
     /// Spec `on_attestation` for an attestation the caller already indexed and verified
     /// against the target checkpoint state. A vote whose slot is not yet past is queued
-    /// and applied by the tick that makes it past; `validateOnAttestation` keeps the
-    /// spec's rejection for callers that want it.
+    /// and applied by the tick that makes it past.
     pub fn onAttestation(self: *Store, attestation: AnyIndexedAttestation, is_from_block: bool) !void {
         const data = attestation.attestationData();
         return self.onAttestationData(&data, attestation.attestingIndices(), is_from_block);
@@ -1213,7 +1205,7 @@ pub const Store = struct {
 
     /// `onAttestation` from the attestation's data and its attesting indices.
     pub fn onAttestationData(self: *Store, data: *const AttestationData, indices: []const ValidatorIndex, is_from_block: bool) !void {
-        try self.checkAttestationData(data, is_from_block);
+        try self.validateOnAttestation(data, is_from_block);
         const block = self.blockIndex(data.beacon_block_root).?;
         const message: LatestMessage = .{
             .slot = data.slot,
@@ -1249,7 +1241,7 @@ pub const Store = struct {
 
     /// The replacement rule of spec `update_latest_messages` for one validator: a later
     /// target epoch before Gloas, a later slot from Gloas on. `message.slot` is in the
-    /// target epoch, which `checkAttestationData` asserted.
+    /// target epoch, which `validateOnAttestation` asserted.
     fn applyVote(self: *Store, index: ValidatorIndex, id: TargetId, message: LatestMessage) void {
         if (self.isEquivocating(index)) return;
         const current_id = &self.latest_votes.items[index];

@@ -214,12 +214,10 @@ test "blocks, votes, equivocations and pruning on a two-branch chain" {
     try testing.expectEqual(store.proposerScore(), try store.getWeight(Store.pendingNode(a_index)));
     try testing.expectEqual(@as(u64, 0), try store.getWeight(Store.pendingNode(a2_index)));
 
-    // Attestations only count from the slot after their own.
     const vote_slot = anchor_slot + 1;
     const target: Checkpoint = .{ .epoch = store_mod.computeEpochAtSlot(vote_slot), .root = a2.root };
     var indices = [_]u64{0};
     var vote = indexedAttestation(&indices, vote_slot, a2.root, target);
-    try testing.expectError(error.AttestationNotYetPast, store.validateOnAttestation(&vote.data, false));
 
     try chain.tickToSlot(anchor_slot + 2);
     // Boost gone, no votes: ties break on the lexicographically higher root.

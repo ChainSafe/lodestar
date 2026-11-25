@@ -487,6 +487,8 @@ pub fn TestCase(comptime fork: ForkSeq) type {
         fn processAttestation(self: *Self, attestation: *const ForkTypes.Attestation.Type, is_from_block: bool) !void {
             const data = attestation.data;
             try self.store.validateOnAttestation(&data, is_from_block);
+            // The store queues an early vote, the spec step is invalid
+            if (self.store.currentSlot() <= data.slot) return error.AttestationNotYetPast;
             const target_state = try self.getCheckpointState(data.target);
             var indices = try target_state.epoch_cache.getAttestingIndices(fork, self.allocator, attestation);
             defer indices.deinit(self.allocator);
