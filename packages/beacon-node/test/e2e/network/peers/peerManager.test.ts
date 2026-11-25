@@ -103,6 +103,7 @@ describe("network / peers / PeerManager", () => {
       getScore: () => 0,
       scoreParams: {decayInterval: 1000},
       getSubscribersWithOutboundStream: vi.fn<Eth2Gossipsub["getSubscribersWithOutboundStream"]>(),
+      isDirectPeer: vi.fn<Eth2Gossipsub["isDirectPeer"]>().mockReturnValue(false),
     };
 
     const peerManager = new PeerManager(
@@ -185,6 +186,30 @@ describe("network / peers / PeerManager", () => {
       expect(hangUp).toHaveBeenCalledExactlyOnceWith(peerId1);
     }
   );
+
+  it("keeps a banned direct peer connected and counts it for subnet coverage", async () => {
+    const discovery = {
+      discoverPeers: vi.fn<PeerDiscovery["discoverPeers"]>(),
+      stop: vi.fn<PeerDiscovery["stop"]>(),
+    };
+    const {reqResp, peerManager, gossip, mockSubnetsService} = await mockModules({
+      discovery: discovery as unknown as PeerDiscovery,
+    });
+    vi.spyOn(peerManager, "getConnectedPeerIds").mockReturnValue([peerId1]);
+    vi.spyOn(mockSubnetsService, "getActiveSubnets").mockReturnValue([{subnet: 3, toSlot: 10}]);
+    gossip.getSubscribersWithOutboundStream.mockReturnValue(new Set([peerId1.toString()]));
+    gossip.isDirectPeer.mockImplementation((peerIdStr) => peerIdStr === peerId1.toString());
+    peerManager.reportPeer(peerId1, PeerAction.Fatal, "test");
+
+    discovery.discoverPeers.mockClear();
+    peerManager.onCommitteeSubscriptions();
+
+    expect(reqResp.sendGoodbye).not.toHaveBeenCalled();
+    expect(discovery.discoverPeers).toHaveBeenCalledExactlyOnceWith(expect.any(Number), expect.any(Map), [
+      expect.objectContaining({type: SubnetType.attnets, subnet: 3, maxPeersToDiscover: 5}),
+      expect.objectContaining({type: SubnetType.syncnets, subnet: 3, maxPeersToDiscover: 5}),
+    ]);
+  });
 
   it("Should request metadata on receivedPing of unknown peer", async () => {
     const {reqResp, networkEventBus, peerManager} = await mockModules();

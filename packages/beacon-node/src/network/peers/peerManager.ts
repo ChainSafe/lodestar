@@ -553,7 +553,14 @@ export class PeerManager {
 
     // ban and disconnect peers with bad score, collect rest of healthy peers
     const connectedHealthyPeers: PeerId[] = [];
+    const connectedDirectPeerIds: string[] = [];
     for (const peer of connectedPeers) {
+      const peerIdStr = peer.toString();
+      // Direct peers are pinned by the operator, only removing them as direct peer makes them prunable
+      if (this.gossipsub.isDirectPeer(peerIdStr)) {
+        connectedDirectPeerIds.push(peerIdStr);
+        continue;
+      }
       switch (this.peerRpcScores.getScoreState(peer)) {
         case ScoreState.Banned:
           this.metrics?.peerManager.peersPruned.inc({reason: "banned"});
@@ -579,7 +586,10 @@ export class PeerManager {
     this.metrics?.peerManager.starved.set(starved ? 1 : 0);
     const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
     const boundary = this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch);
-    const connectedHealthyPeerIds = new Set(connectedHealthyPeers.map((peer) => peer.toString()));
+    const connectedHealthyPeerIds = new Set([
+      ...connectedHealthyPeers.map((peer) => peer.toString()),
+      ...connectedDirectPeerIds,
+    ]);
 
     const prioritizeTimer = this.metrics?.peerManager.prioritizePeersDuration.startTimer();
     const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries, custodyGroupQueries} = prioritizePeers(
