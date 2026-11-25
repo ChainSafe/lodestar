@@ -560,7 +560,32 @@ export class SyncChain {
       batch.startDownloading(peer);
 
       // wrapError ensures to never call both batch success() and batch error()
-      const res = await wrapError(this.downloadByRange(peer, batch, this.syncType));
+      const res = await wrapError(
+        this.downloadByRange(peer, batch, this.syncType).then((downloaded) => {
+          // In head sync the peer target is its advertised head, so a batch range containing that head slot has a
+          // block. No block there means the peer withheld blocks, retry with another peer. Rarely an honest peer
+          // reorged away from its advertised head before it is re-statused, the low tolerance penalty decays
+          const peerTarget = this.peerset.get(peer.peerId);
+          if (
+            this.syncType === RangeSyncType.Head &&
+            downloaded.result.blocks.length === 0 &&
+            peerTarget !== undefined &&
+            peerTarget.slot >= batch.startSlot &&
+            peerTarget.slot < batch.startSlot + batch.count
+          ) {
+            throw new DownloadByRangeError(
+              {
+                code: DownloadByRangeErrorCode.MISSING_HEAD_BLOCK,
+                peerHeadSlot: peerTarget.slot,
+                blockStartSlot: batch.startSlot,
+                blockCount: batch.count,
+              },
+              "No blocks returned for a range containing the peer's advertised head"
+            );
+          }
+          return downloaded;
+        })
+      );
 
       if (res.err) {
         // There's several known error cases where we want to take action on the peer
@@ -580,6 +605,7 @@ export class SyncChain {
         }
         switch (errCode) {
           case DownloadByRangeErrorCode.DATA_WITHOUT_BLOCKS:
+          case DownloadByRangeErrorCode.MISSING_HEAD_BLOCK:
           case DownloadByRangeErrorCode.EXTRA_BLOCKS:
           case DownloadByRangeErrorCode.OUT_OF_ORDER_BLOCKS:
           case DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS:

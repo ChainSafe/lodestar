@@ -13,7 +13,7 @@ import {getAndInitDevValidators} from "../../utils/node/validator.js";
 describe("sync / range sync through 0-block epochs for gloas", () => {
   // Blocks until slot 13, then EMPTY_EPOCHS epochs with no blocks from FIRST_EMPTY_EPOCH, then blocks again,
   // and a late node range syncs through the gap. More than MAX_LOOK_AHEAD_EPOCHS (2) also covers the look-ahead window
-  const EMPTY_EPOCHS = 1;
+  const EMPTY_EPOCHS = 5;
   const FIRST_EMPTY_EPOCH = 2;
   const LAST_SLOT_BEFORE_GAP = (FIRST_EMPTY_EPOCH - 1) * SLOTS_PER_EPOCH + 5;
   const FIRST_SLOT_AFTER_GAP = (FIRST_EMPTY_EPOCH + EMPTY_EPOCHS) * SLOTS_PER_EPOCH;

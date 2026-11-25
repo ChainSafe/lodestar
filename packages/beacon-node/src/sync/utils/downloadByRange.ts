@@ -1003,6 +1003,8 @@ export enum DownloadByRangeErrorCode {
   MISSING_COLUMNS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_COLUMNS_RESPONSE",
   /** Columns or envelopes were returned for a range with no blocks */
   DATA_WITHOUT_BLOCKS = "DOWNLOAD_BY_RANGE_ERROR_DATA_WITHOUT_BLOCKS",
+  /** Head sync: no blocks returned for a range that contains the head slot the peer advertised */
+  MISSING_HEAD_BLOCK = "DOWNLOAD_BY_RANGE_ERROR_MISSING_HEAD_BLOCK",
 
   /** Error at the reqresp layer */
   REQ_RESP_ERROR = "DOWNLOAD_BY_RANGE_ERROR_REQ_RESP_ERROR",
@@ -1045,6 +1047,12 @@ export type DownloadByRangeErrorType =
       blockCount?: number;
       columnStartSlot?: number;
       columnCount?: number;
+    }
+  | {
+      code: DownloadByRangeErrorCode.MISSING_HEAD_BLOCK;
+      peerHeadSlot: number;
+      blockStartSlot: number;
+      blockCount: number;
     }
   | {
       code: DownloadByRangeErrorCode.DATA_WITHOUT_BLOCKS;

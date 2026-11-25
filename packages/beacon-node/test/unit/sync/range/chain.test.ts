@@ -246,6 +246,76 @@ describe("sync / range / chain", () => {
     }
   );
 
+  it("head sync penalizes and retries an empty batch that contains the peer's advertised head", async () => {
+    // the head is in the last batch, a peer returning no blocks for it must not end the chain without the head block
+    const target: ChainTarget = {slot: 3 * SLOTS_PER_EPOCH + 4, root: ZERO_HASH};
+    const lyingPeer = await getRandPeerIdStr();
+    const honestPeer = await getRandPeerIdStr();
+    const processedSlots = new Set<Slot>();
+    let lyingPeerHits = 0;
+    const reportPeerSpy = vi.fn();
+
+    const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+      for (const block of blocks) processedSlots.add(block.slot);
+    };
+
+    await new Promise<void>((resolve, reject) => {
+      let syncChain: SyncChain | null = null;
+      const downloadByRange: SyncChainFns["downloadByRange"] = async (syncPeer, request) => {
+        const isHeadBatch = target.slot >= request.startSlot && target.slot < request.startSlot + request.count;
+        if (syncPeer.peerId === lyingPeer && isHeadBatch) {
+          lyingPeerHits++;
+          // the lying peer is excluded from this batch, an honest peer serves it
+          syncChain?.addPeer(honestPeer, target);
+          return {result: {blocks: [], payloadEnvelopes: null}, warnings: null};
+        }
+        const blocks: IBlockInput[] = [];
+        for (let i = request.startSlot; i < request.startSlot + request.count; i++) {
+          blocks.push(
+            BlockInputPreData.createFromBlock({
+              block: {message: generateEmptyBlock(i), signature: ACCEPT_BLOCK},
+              blockRootHex: "0x00",
+              forkName: config.getForkName(i),
+              daOutOfRange: false,
+              source: BlockInputSource.byRange,
+              seenTimestampSec: Math.floor(Date.now() / 1000),
+            })
+          );
+        }
+        return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+      };
+
+      syncChain = new SyncChain(
+        0,
+        target,
+        RangeSyncType.Head,
+        logSyncChainFns(logger, {
+          processChainSegment,
+          downloadByRange,
+          getConnectedPeerSyncMeta,
+          reportPeer: reportPeerSpy,
+          pruneBlockInputs,
+          onEnd: (err) => (err ? reject(err) : resolve()),
+        }),
+        {
+          config,
+          logger,
+          clock: new Clock({config, genesisTime: 0, signal: new AbortController().signal}),
+          custodyConfig,
+          metrics: null,
+        },
+        undefined
+      );
+      syncChain.addPeer(lyingPeer, target);
+      syncChain.startSyncing(0);
+    });
+
+    expect(lyingPeerHits).toBe(1);
+    expect(reportPeerSpy).toHaveBeenCalledTimes(1);
+    expect(reportPeerSpy).toHaveBeenCalledWith(lyingPeer, PeerAction.LowToleranceError, expect.any(String));
+    expect(processedSlots.has(target.slot)).toBe(true);
+  });
+
   it.each([
     {receivedSlots: [1, 3], expectedEnvelopeSlots: "[1, 3]"},
     {receivedSlots: [], expectedEnvelopeSlots: "[]"},
