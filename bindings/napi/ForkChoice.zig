@@ -64,8 +64,7 @@ const Inner = struct {
     fast_confirmation: ?FastConfirmation = null,
     indices: std.ArrayList(ValidatorIndex) = .empty,
     indices_2: std.ArrayList(ValidatorIndex) = .empty,
-    /// Set while a provider runs or its result is read: the store is mid-call, so JS,
-    /// including getters on the result, must not re-enter it.
+    /// Set while a provider runs or its result is read, getters included: the store is mid-call.
     in_provider: bool = false,
 };
 
