@@ -187,7 +187,7 @@ describe("network / peers / PeerManager", () => {
     }
   );
 
-  it("never prunes direct peers", async () => {
+  it("never disconnects direct peers due to peer count or score", async () => {
     const {libp2p, reqResp, peerManager, gossip} = await mockModules();
     const connectedPeers = await Promise.all(
       Array.from({length: 32}, async () => peerIdFromPrivateKey(await generateKeyPair("secp256k1")))
@@ -198,6 +198,7 @@ describe("network / peers / PeerManager", () => {
     gossip.isDirectPeer.mockImplementation((peerIdStr) => directPeers.has(peerIdStr));
     reqResp.sendGoodbye.mockResolvedValue(undefined);
     vi.spyOn(libp2p, "hangUp").mockResolvedValue(undefined);
+    peerManager.reportPeer(connectedPeers[0], PeerAction.Fatal, "test");
 
     peerManager.onCommitteeSubscriptions();
 
