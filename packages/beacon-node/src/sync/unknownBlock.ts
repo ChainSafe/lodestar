@@ -1501,10 +1501,23 @@ export class BlockInputSync {
         return;
       }
       if (validationResult.err) {
+        const err = validationResult.err;
+        // Same penalties as for an envelope validated right after download in fetchPayloadInput
+        if (
+          pendingPayload.envelopePeerId !== undefined &&
+          err instanceof ExecutionPayloadEnvelopeError &&
+          (err.type.code === ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH ||
+            err.type.code === ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH ||
+            (err.type.code === ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK &&
+              pendingPayload.envelope.message.payload.slotNumber !== payloadInput.slot))
+        ) {
+          this.network.reportPeer(pendingPayload.envelopePeerId, PeerAction.LowToleranceError, err.type.code);
+        }
+
         this.logger.debug(
           "Pending payload envelope failed validation after block import, refetching by root",
           {slot: pendingPayload.envelope.message.payload.slotNumber, root: rootHex},
-          validationResult.err
+          err
         );
 
         const pendingPayloadByRoot: PendingPayloadRootHex = {
@@ -1795,6 +1808,7 @@ export class BlockInputSync {
           return {
             status: PendingPayloadInputStatus.waitingForBlock,
             envelope,
+            envelopePeerId,
             timeAddedSec: cacheItem.timeAddedSec,
             peerIdStrings: cacheItem.peerIdStrings,
           };

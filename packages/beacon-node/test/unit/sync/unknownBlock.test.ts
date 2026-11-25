@@ -2196,6 +2196,112 @@ describe("UnknownBlockSync", () => {
         expect(payloadInput.hasAllData()).toBe(true);
         expect(chainOverrides.processExecutionPayload).toHaveBeenCalledWith(payloadInput);
       });
+
+      it("reports the peer that served an envelope failing validation once its block is imported", async () => {
+        const peer = await getRandPeerIdStr();
+        const {block, blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+          blobCount: 0,
+          sampledColumns: [],
+          slot: 1,
+        });
+        const parentRootHex = toRootHex(block.message.parentRoot);
+        const invalidEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.clone(envelope);
+        vi.mocked(validateGossipExecutionPayloadEnvelope).mockImplementation(async (_chain, signedEnvelope) => {
+          if (signedEnvelope === invalidEnvelope) {
+            throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+              code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+              slot: 1,
+              root: blockRootHex,
+              envelopeBlockHash: toRootHex(Buffer.alloc(32, 0x01)),
+              bidBlockHash: toRootHex(Buffer.alloc(32, 0x02)),
+            });
+          }
+        });
+
+        let cachedPayloadInput: PayloadEnvelopeInput | undefined;
+        const knownRoots = new Set([parentRootHex]);
+
+        // the invalid envelope is downloaded before the block is known and can only be validated after its import
+        const sendExecutionPayloadEnvelopesByRoot = vi
+          .fn()
+          .mockResolvedValueOnce([invalidEnvelope])
+          .mockResolvedValue([envelope]);
+        const sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([block]);
+        const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
+        const reportPeer = vi.fn();
+        const processBlock = vi.fn().mockImplementation(async () => {
+          cachedPayloadInput = payloadInput;
+          knownRoots.add(blockRootHex);
+          emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
+        });
+        const {emitter} = setupPayloadSyncTest({
+          chainOverrides: {
+            processBlock,
+            processExecutionPayload,
+            seenPayloadEnvelopeInputCache: {
+              add: vi.fn(),
+              get: vi
+                .fn()
+                .mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
+              getOrReload: vi
+                .fn()
+                .mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
+              remove: vi.fn(),
+            } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+            seenBlockInputCache: {
+              getByBlock: ({
+                block,
+                blockRootHex,
+                seenTimestampSec,
+                source,
+              }: {
+                block: gloas.SignedBeaconBlock;
+                blockRootHex: string;
+                seenTimestampSec: number;
+                source: BlockInputSource;
+              }) => createGloasBlockInput({block, blockRootHex, seenTimestampSec, source}),
+              prune: vi.fn(),
+              isVerifiedProposerSignature: vi.fn().mockReturnValue(true),
+            } as unknown as SeenBlockInput,
+            forkChoice: {
+              hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+              hasBlockHex: vi.fn().mockImplementation((root: string) => knownRoots.has(root)),
+              getBlockHexDefaultStatus: vi
+                .fn()
+                .mockImplementation((root: string) => (knownRoots.has(root) ? ({slot: 0} as ProtoBlock) : null)),
+              getBlockHexAndBlockHash: vi
+                .fn()
+                .mockImplementation((root: string, hash: string) =>
+                  root === parentRootHex &&
+                  hash === toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+                    ? ({slot: 0} as ProtoBlock)
+                    : null
+                ),
+              getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+            } as unknown as IForkChoice,
+          },
+          networkOverrides: {sendExecutionPayloadEnvelopesByRoot, sendBeaconBlocksByRoot, reportPeer},
+          peers: [{peerId: peer}],
+        });
+
+        emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+          rootHex: blockRootHex,
+          peer,
+          source: BlockInputSource.gossip,
+        });
+        await sleep(50);
+
+        expect(processBlock).toHaveBeenCalledOnce();
+        expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(2);
+        expect(reportPeer).toHaveBeenCalledOnce();
+        expect(reportPeer).toHaveBeenCalledWith(
+          peer,
+          PeerAction.LowToleranceError,
+          ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH
+        );
+        expect(payloadInput.getPayloadEnvelope()).toBe(envelope);
+        expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
+      });
     });
 
     it("retries a rate-limited payload download when the backoff expires around the retry timer", async () => {
