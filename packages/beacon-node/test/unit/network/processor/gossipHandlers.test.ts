@@ -3,6 +3,7 @@ import {SerializedList} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, gloas, ssz, sszTypesFor} from "@lodestar/types";
@@ -23,7 +24,10 @@ import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../src/chain
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {validateGossipExecutionPayloadEnvelope} from "../../../../src/chain/validation/executionPayloadEnvelope.js";
-import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
+import {
+  validateGossipBlockCheapChecks,
+  validateGossipBlockExpensiveChecks,
+} from "../../../../src/chain/validation/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {INetworkCore} from "../../../../src/network/core/index.js";
 import {NetworkEventBus} from "../../../../src/network/events.js";
@@ -39,7 +43,8 @@ vi.mock("../../../../src/chain/validation/index.js", async (importActual) => {
   const mod = await importActual<typeof import("../../../../src/chain/validation/index.js")>();
   return {
     ...mod,
-    validateGossipBlock: vi.fn(),
+    validateGossipBlockCheapChecks: vi.fn(),
+    validateGossipBlockExpensiveChecks: vi.fn(),
   };
 });
 
@@ -392,7 +397,11 @@ describe("getGossipHandlers", () => {
   );
 
   beforeEach(() => {
-    vi.mocked(validateGossipBlock).mockResolvedValue({skippedSlots: 0});
+    vi.mocked(validateGossipBlockCheapChecks).mockResolvedValue({parentBlock: {} as ProtoBlock, skippedSlots: 0});
+    vi.mocked(validateGossipBlockExpensiveChecks).mockResolvedValue({
+      skippedSlots: 0,
+      blockRoot: toRootHex(Buffer.alloc(32, 0)),
+    });
   });
 
   it("does not report the gossip peer when block processing hits an execution engine error", async () => {
@@ -769,8 +778,10 @@ async function runBeaconBlockRepeatProposal(
   }
 
   // gossip validation rejects the 2nd distinct block for this (proposer, slot) with REPEAT_PROPOSAL,
-  // or the block outright when `reject` is set
-  vi.mocked(validateGossipBlock).mockRejectedValue(
+  // or the block outright when `reject` is set. These are root-dependent checks, so the cheap phase
+  // passes and the expensive phase throws.
+  vi.mocked(validateGossipBlockCheapChecks).mockResolvedValue({parentBlock: {} as ProtoBlock, skippedSlots: 0});
+  vi.mocked(validateGossipBlockExpensiveChecks).mockRejectedValue(
     reject
       ? new BlockGossipError(GossipAction.REJECT, {
           code: BlockErrorCode.INCORRECT_PROPOSER,

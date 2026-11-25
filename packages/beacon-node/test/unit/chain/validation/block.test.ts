@@ -52,7 +52,12 @@ describe("gossip block validation", () => {
     chain = getMockedBeaconChain({config: chainConfig, genesisTime});
     vi.spyOn(chain.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(clockSlot);
     forkChoice = chain.forkChoice;
-    forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
+    // Cheap checks look up the parent before the block root is computed. Default to a known parent one slot
+    // behind (so NOT_LATER_THAN_PARENT passes) and treat every other root (the block itself) as not known.
+    forkChoice.getBlockHexDefaultStatus.mockImplementation((root) =>
+      root === toRootHex(ZERO_HASH) ? ({slot: clockSlot - 1} as ProtoBlock) : null
+    );
+    forkChoice.getBlockHexAndBlockHash.mockReturnValue({slot: clockSlot - 1} as ProtoBlock);
     chain.forkChoice = forkChoice;
     regen = chain.regen;
 
@@ -242,8 +247,6 @@ describe("gossip block validation", () => {
         const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
         signedBlock.message.slot = clockSlot;
         signedBlock.message.proposerIndex = proposerIndex;
-        forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-        forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
         forkChoice.getBlockHexAndBlockHash.mockReturnValue({slot: clockSlot - 1} as ProtoBlock);
         const state = new BeaconStateView(generateCachedState());
         regen.getState.mockResolvedValue(state);
@@ -267,10 +270,8 @@ describe("gossip block validation", () => {
   });
 
   it("PARENT_BLOCK_UNKNOWN (fork-choice)", async () => {
-    // Return not known for proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-    // Return not known for parent block too
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
+    // Parent block is not known
+    forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -279,10 +280,10 @@ describe("gossip block validation", () => {
   });
 
   it("NOT_LATER_THAN_PARENT", async () => {
-    // Return not known for proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-    // Returned parent block is latter than proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot + 1} as ProtoBlock);
+    // Parent block is from a later slot than the proposed block
+    forkChoice.getBlockHexDefaultStatus.mockImplementation((root) =>
+      root === toRootHex(ZERO_HASH) ? ({slot: clockSlot + 1} as ProtoBlock) : null
+    );
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -291,10 +292,6 @@ describe("gossip block validation", () => {
   });
 
   it("PARENT_BLOCK_UNKNOWN (regen)", async () => {
-    // Return not known for proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-    // Returned parent block is latter than proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen not able to get the parent block state (fast path getState, then getPreState fallback)
     regen.getState.mockRejectedValue(undefined);
     regen.getPreState.mockRejectedValue(undefined);
@@ -306,10 +303,6 @@ describe("gossip block validation", () => {
   });
 
   it("PROPOSAL_SIGNATURE_INVALID", async () => {
-    // Return not known for proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-    // Returned parent block is latter than proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
     regen.getState.mockResolvedValue(new BeaconStateView(generateCachedState()));
     // BLS signature verifier returns invalid
@@ -322,10 +315,6 @@ describe("gossip block validation", () => {
   });
 
   it("INCORRECT_PROPOSER", async () => {
-    // Return not known for proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-    // Returned parent block is latter than proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
     const state = new BeaconStateView(generateCachedState());
     regen.getState.mockResolvedValue(state);
@@ -341,10 +330,6 @@ describe("gossip block validation", () => {
   });
 
   it("valid - uses parent state (fast path), no epoch transition", async () => {
-    // Return not known for proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-    // Returned parent block is one epoch behind the proposed block (within proposer-lookahead range)
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns the parent state directly, no dial-forward
     const state = new BeaconStateView(generateCachedState());
     regen.getState.mockResolvedValue(state);
@@ -360,8 +345,6 @@ describe("gossip block validation", () => {
   });
 
   it("valid - falls back to getPreState when parent state not in memory", async () => {
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     const state = new BeaconStateView(generateCachedState());
     // Fast path miss: parent state not in memory, then getPreState resolves (disk reload / dial-forward)
     regen.getState.mockRejectedValue(undefined);
@@ -384,8 +367,10 @@ describe("gossip block validation", () => {
     deepBlock.proposerIndex = proposerIndex;
     const deepJob: SignedBeaconBlock = {signature, message: deepBlock};
 
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
+    // Parent is more than one epoch behind -> beyond proposer-lookahead range
+    forkChoice.getBlockHexDefaultStatus.mockImplementation((root) =>
+      root === toRootHex(ZERO_HASH) ? ({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock) : null
+    );
     const state = new BeaconStateView(generateCachedState());
     regen.getPreState.mockResolvedValue(state);
     verifySignature.mockResolvedValue(true);
@@ -403,10 +388,6 @@ describe("gossip block validation", () => {
       {length: denebConfig.getMaxBlobsPerBlock(denebConfig.DENEB_FORK_EPOCH)},
       () => new Uint8Array([0])
     );
-    // Return not known for proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-    // Returned parent block is latter than proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
     const state = new BeaconStateView(generateCachedState());
     regen.getState.mockResolvedValue(state);
@@ -429,10 +410,6 @@ describe("gossip block validation", () => {
       {length: denebConfig.getMaxBlobsPerBlock(denebConfig.DENEB_FORK_EPOCH)},
       () => new Uint8Array([0])
     );
-    // Return not known for proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-    // Returned parent block is latter than proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
     const state = new BeaconStateView(generateCachedState());
     regen.getState.mockResolvedValue(state);

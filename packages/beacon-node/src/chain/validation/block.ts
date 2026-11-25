@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, MIN_SEED_LOOKAHEAD, isForkPostBellatrix, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -10,7 +10,15 @@ import {
   isStatePostBellatrix,
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock, ssz} from "@lodestar/types";
+import {
+  RootHex,
+  SignedBeaconBlock,
+  SignedBeaconBlockHeader,
+  deneb,
+  gloas,
+  isGloasBeaconBlock,
+  ssz,
+} from "@lodestar/types";
 import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
@@ -19,14 +27,28 @@ import {RegenCaller} from "../regen/index.js";
 export type GossipBlockValidationResult = {
   /** Number of skipped slots between the block and its parent (blockSlot - parentSlot - 1) */
   skippedSlots: number;
+  /** Block root (identical to the block header root), computed once after the cheap checks pass */
+  blockRoot: RootHex;
 };
 
-export async function validateGossipBlock(
+export type GossipBlockCheapChecksResult = {
+  parentBlock: ProtoBlock;
+  skippedSlots: number;
+};
+
+/**
+ * Cheap, root-independent gossip block checks, decided from block fields and fork-choice lookups
+ * without Merkleizing the block body. They run before the block root is computed, so a forged block
+ * (e.g. one carrying a max-size execution payload) is rejected before ~1s of main-thread hashing; a
+ * single gossip frame of such blocks therefore cannot stall the main thread. Returns the parent block
+ * and skipped-slot count for the expensive phase to reuse.
+ */
+export async function validateGossipBlockCheapChecks(
   config: ChainForkConfig,
   chain: IBeaconChain,
   signedBlock: SignedBeaconBlock,
   fork: ForkName
-): Promise<GossipBlockValidationResult> {
+): Promise<GossipBlockCheapChecksResult> {
   const block = signedBlock.message;
   const blockSlot = block.slot;
   const blockEpoch = computeEpochAtSlot(blockSlot);
@@ -53,41 +75,6 @@ export async function validateGossipBlock(
       blockSlot,
       finalizedSlot,
     });
-  }
-
-  // Check if the block is already known. We know it is post-finalization, so it is sufficient to check the fork choice.
-  //
-  // In normal operation this isn't necessary, however it is useful immediately after a
-  // reboot if the `observed_block_producers` cache is empty. In that case, without this
-  // check, we will load the parent and state from disk only to find out later that we
-  // already know this block.
-  // A block's hash tree root is identical to its header's, so the root is derived from the header
-  // which is also used as potential equivocation evidence
-  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
-  const blockRoot = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(signedBlockHeader.message));
-  if (chain.forkChoice.getBlockHexDefaultStatus(blockRoot) !== null) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
-  }
-
-  // No need to check for badBlock
-  // Gossip de-duplicates messages so we shouldn't be able to receive a bad block twice
-
-  // [IGNORE] The block is the first block with valid signature received for the proposer for the slot, signed_beacon_block.message.slot.
-  const proposerIndex = block.proposerIndex;
-  if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
-    if (chain.seenBlockProposers.isRepeatProposal(blockSlot, proposerIndex, blockRoot)) {
-      const hasBlockRoot = chain.seenBlockProposers.hasBlockRoot(blockSlot, proposerIndex, blockRoot);
-      if (!hasBlockRoot && !chain.seenBlockProposers.isEquivocating(blockSlot, proposerIndex)) {
-        await verifyBlockProposerSignature(chain, signedBlock, blockRoot, {verifyOnMainThread: false});
-        chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot, signedBlockHeader);
-      }
-      throw new BlockGossipError(GossipAction.IGNORE, {
-        code: BlockErrorCode.REPEAT_PROPOSAL,
-        proposerIndex,
-        root: blockRoot,
-      });
-    }
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
 
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
@@ -143,7 +130,6 @@ export async function validateGossipBlock(
     throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.NOT_LATER_THAN_PARENT,
       slot: blockSlot,
-      root: blockRoot,
       parentSlot: parentBlock.slot,
     });
   }
@@ -160,7 +146,6 @@ export async function validateGossipBlock(
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
         slot: blockSlot,
-        root: blockRoot,
         blobKzgCommitmentsLen,
         commitmentLimit: maxBlobsPerBlock,
       });
@@ -179,7 +164,6 @@ export async function validateGossipBlock(
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
         slot: blockSlot,
-        root: blockRoot,
         blobKzgCommitmentsLen,
         commitmentLimit: maxBlobsPerBlock,
       });
@@ -190,7 +174,6 @@ export async function validateGossipBlock(
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH,
         slot: blockSlot,
-        root: blockRoot,
         bidParentRoot: toRootHex(bid.parentBlockRoot),
         blockParentRoot: parentRoot,
       });
@@ -198,6 +181,60 @@ export async function validateGossipBlock(
 
     // TODO GLOAS: [REJECT] The block's execution payload parent (defined by bid.parent_block_hash) passes all validation
     // This requires execution engine integration to verify the parent block hash
+  }
+
+  return {parentBlock, skippedSlots};
+}
+
+/**
+ * Root-dependent gossip block checks. Call `validateGossipBlockCheapChecks` first, then compute the
+ * block root from its header and pass the root, the header and the parent block in here. Splitting the
+ * root-free checks out keeps the body Merkleization off the path of a block that can be rejected cheaply.
+ */
+export async function validateGossipBlockExpensiveChecks(
+  config: ChainForkConfig,
+  chain: IBeaconChain,
+  signedBlock: SignedBeaconBlock,
+  fork: ForkName,
+  blockRoot: RootHex,
+  signedBlockHeader: SignedBeaconBlockHeader,
+  parentBlock: ProtoBlock,
+  skippedSlots: number
+): Promise<GossipBlockValidationResult> {
+  const block = signedBlock.message;
+  const blockSlot = block.slot;
+  const blockEpoch = computeEpochAtSlot(blockSlot);
+  const proposerIndex = block.proposerIndex;
+  const parentRoot = toRootHex(block.parentRoot);
+
+  // Check if the block is already known. We know it is post-finalization, so it is sufficient to check the fork choice.
+  //
+  // In normal operation this isn't necessary, however it is useful immediately after a
+  // reboot if the `observed_block_producers` cache is empty. In that case, without this
+  // check, we will load the parent and state from disk only to find out later that we
+  // already know this block.
+  if (chain.forkChoice.getBlockHexDefaultStatus(blockRoot) !== null) {
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
+  }
+
+  // No need to check for badBlock
+  // Gossip de-duplicates messages so we shouldn't be able to receive a bad block twice
+
+  // [IGNORE] The block is the first block with valid signature received for the proposer for the slot, signed_beacon_block.message.slot.
+  if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
+    if (chain.seenBlockProposers.isRepeatProposal(blockSlot, proposerIndex, blockRoot)) {
+      const hasBlockRoot = chain.seenBlockProposers.hasBlockRoot(blockSlot, proposerIndex, blockRoot);
+      if (!hasBlockRoot && !chain.seenBlockProposers.isEquivocating(blockSlot, proposerIndex)) {
+        await verifyBlockProposerSignature(chain, signedBlock, blockRoot, {verifyOnMainThread: false});
+        chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot, signedBlockHeader);
+      }
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.REPEAT_PROPOSAL,
+        proposerIndex,
+        root: blockRoot,
+      });
+    }
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
 
   // For gossip forwarding we only need the state to check the block's proposer index.
@@ -315,7 +352,30 @@ export async function validateGossipBlock(
 
   chain.seenBlockProposers.add(blockSlot, proposerIndex, blockRoot);
 
-  return {skippedSlots};
+  return {skippedSlots, blockRoot};
+}
+
+export async function validateGossipBlock(
+  config: ChainForkConfig,
+  chain: IBeaconChain,
+  signedBlock: SignedBeaconBlock,
+  fork: ForkName
+): Promise<GossipBlockValidationResult> {
+  const {parentBlock, skippedSlots} = await validateGossipBlockCheapChecks(config, chain, signedBlock, fork);
+  // A block's hash tree root is identical to its header's, so the root is derived from the header
+  // which is also used as potential equivocation evidence
+  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
+  const blockRoot = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(signedBlockHeader.message));
+  return validateGossipBlockExpensiveChecks(
+    config,
+    chain,
+    signedBlock,
+    fork,
+    blockRoot,
+    signedBlockHeader,
+    parentBlock,
+    skippedSlots
+  );
 }
 
 export async function verifyBlockProposerSignature(

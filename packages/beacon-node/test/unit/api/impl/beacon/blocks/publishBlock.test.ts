@@ -51,7 +51,7 @@ describe("api - beacon - publishBlockV2", () => {
     Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
     modules.network.publishBeaconBlock = vi.fn();
     modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(validateGossipBlock).mockResolvedValue({skippedSlots: 0});
+    vi.mocked(validateGossipBlock).mockResolvedValue({skippedSlots: 0, blockRoot: toRootHex(Buffer.alloc(32, 0))});
   });
 
   describe("broadcast_validation=gossip", () => {

@@ -130,7 +130,7 @@ export type BlockErrorType =
       postState: IBeaconStateView;
     }
   | {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT; parentRoot: RootHex}
-  | {code: BlockErrorCode.NOT_LATER_THAN_PARENT; slot: Slot; root: RootHex; parentSlot: Slot}
+  | {code: BlockErrorCode.NOT_LATER_THAN_PARENT; slot: Slot; root?: RootHex; parentSlot: Slot}
   | {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS}
   | {code: BlockErrorCode.NON_LINEAR_SLOTS}
   | {code: BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH; envelopeBlockRoot: RootHex; blockRoot: RootHex}
@@ -152,14 +152,14 @@ export type BlockErrorType =
   | {
       code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS;
       slot: Slot;
-      root: RootHex;
+      root?: RootHex;
       blobKzgCommitmentsLen: number;
       commitmentLimit: number;
     }
   | {
       code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH;
       slot: Slot;
-      root: RootHex;
+      root?: RootHex;
       bidParentRoot: RootHex;
       blockParentRoot: RootHex;
     }
