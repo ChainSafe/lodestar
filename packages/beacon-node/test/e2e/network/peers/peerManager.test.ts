@@ -103,6 +103,7 @@ describe("network / peers / PeerManager", () => {
       getScore: () => 0,
       scoreParams: {decayInterval: 1000},
       getSubscribersWithOutboundStream: vi.fn<Eth2Gossipsub["getSubscribersWithOutboundStream"]>(),
+      isDirectPeer: vi.fn<Eth2Gossipsub["isDirectPeer"]>().mockReturnValue(false),
     };
 
     const peerManager = new PeerManager(
@@ -185,6 +186,30 @@ describe("network / peers / PeerManager", () => {
       expect(hangUp).toHaveBeenCalledExactlyOnceWith(peerId1);
     }
   );
+
+  it("never disconnects direct peers due to peer count or score", async () => {
+    const {libp2p, reqResp, peerManager, gossip} = await mockModules();
+    const connectedPeers = await Promise.all(
+      Array.from({length: 32}, async () => peerIdFromPrivateKey(await generateKeyPair("secp256k1")))
+    );
+    const directPeers = new Set(connectedPeers.slice(0, 30).map((peer) => peer.toString()));
+    vi.spyOn(peerManager, "getConnectedPeerIds").mockReturnValue(connectedPeers);
+    gossip.getSubscribersWithOutboundStream.mockReturnValue(new Set());
+    gossip.isDirectPeer.mockImplementation((peerIdStr) => directPeers.has(peerIdStr));
+    reqResp.sendGoodbye.mockResolvedValue(undefined);
+    vi.spyOn(libp2p, "hangUp").mockResolvedValue(undefined);
+    peerManager.reportPeer(connectedPeers[0], PeerAction.Fatal, "test");
+
+    peerManager.onCommitteeSubscriptions();
+
+    const goodbyePeers = reqResp.sendGoodbye.mock.calls.map(([peer]) => peer.toString());
+    expect(goodbyePeers.sort()).toEqual(
+      connectedPeers
+        .slice(30)
+        .map((peer) => peer.toString())
+        .sort()
+    );
+  });
 
   it("Should request metadata on receivedPing of unknown peer", async () => {
     const {reqResp, networkEventBus, peerManager} = await mockModules();
