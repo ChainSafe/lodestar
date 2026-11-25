@@ -554,6 +554,11 @@ export class PeerManager {
     // ban and disconnect peers with bad score, collect rest of healthy peers
     const connectedHealthyPeers: PeerId[] = [];
     for (const peer of connectedPeers) {
+      // Direct peers are trusted by the operator, a bad score never disconnects them
+      if (this.gossipsub.isDirectPeer(peer.toString())) {
+        connectedHealthyPeers.push(peer);
+        continue;
+      }
       switch (this.peerRpcScores.getScoreState(peer)) {
         case ScoreState.Banned:
           this.metrics?.peerManager.peersPruned.inc({reason: "banned"});
@@ -584,9 +589,11 @@ export class PeerManager {
     const prioritizeTimer = this.metrics?.peerManager.prioritizePeersDuration.startTimer();
     const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries, custodyGroupQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => {
-        const peerData = this.connectedPeers.get(peer.toString());
+        const peerIdStr = peer.toString();
+        const peerData = this.connectedPeers.get(peerIdStr);
         return {
           id: peer,
+          direct: this.gossipsub.isDirectPeer(peerIdStr),
           direction: peerData?.direction ?? null,
           status: peerData?.status ?? null,
           attnets: peerData?.metadata?.attnets ?? null,
@@ -708,6 +715,10 @@ export class PeerManager {
   private updateGossipsubScores(): void {
     const gossipsubScores = new Map<string, number>();
     for (const peerIdStr of this.connectedPeers.keys()) {
+      // Direct peers are never disconnected, they must not take the negative score allowance of other peers
+      if (this.gossipsub.isDirectPeer(peerIdStr)) {
+        continue;
+      }
       gossipsubScores.set(peerIdStr, this.gossipsub.getScore(peerIdStr));
     }
 
