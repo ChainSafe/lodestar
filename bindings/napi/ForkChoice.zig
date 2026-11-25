@@ -64,7 +64,8 @@ const Inner = struct {
     fast_confirmation: ?FastConfirmation = null,
     indices: std.ArrayList(ValidatorIndex) = .empty,
     indices_2: std.ArrayList(ValidatorIndex) = .empty,
-    /// Set while a provider runs: the store is mid-call, so JS must not re-enter it.
+    /// Set while a provider runs or its result is read: the store is mid-call, so JS,
+    /// including getters on the result, must not re-enter it.
     in_provider: bool = false,
 };
 
@@ -141,11 +142,9 @@ fn functionRef(env: napi.Env, object: napi.Value, comptime name: [:0]const u8) !
     return env.createReference(function, 0);
 }
 
-fn callProvider(inner: *Inner, env: napi.Env, ref: napi.Ref, args: anytype) !napi.Value {
+fn callProvider(env: napi.Env, ref: napi.Ref, args: anytype) !napi.Value {
     const value = try ref.getValue();
     if (value.value == null) return error.ProviderCollected;
-    inner.in_provider = true;
-    defer inner.in_provider = false;
     return env.callFunction(value, try env.getUndefined(), args);
 }
 
@@ -162,8 +161,10 @@ const provider_vtable: fork_choice.StateProvider.VTable = .{
 
 fn providerJustifiedBalances(ctx: *anyopaque, gpa: std.mem.Allocator, checkpoint: Checkpoint) anyerror!fork_choice.JustifiedBalances {
     const inner: *Inner = @ptrCast(@alignCast(ctx));
+    inner.in_provider = true;
+    defer inner.in_provider = false;
     const env = js.env();
-    const result = try callProvider(inner, env, inner.justified_balances, .{
+    const result = try callProvider(env, inner.justified_balances, .{
         try env.createDouble(@floatFromInt(checkpoint.epoch)),
         js.Uint8Array.from(&checkpoint.root).toValue(),
     });
@@ -180,8 +181,10 @@ fn providerJustifiedBalances(ctx: *anyopaque, gpa: std.mem.Allocator, checkpoint
 
 fn providerSlotCommitteeMembers(ctx: *anyopaque, gpa: std.mem.Allocator, root: Root, slot: Slot, out: *std.ArrayList(ValidatorIndex)) anyerror!void {
     const inner: *Inner = @ptrCast(@alignCast(ctx));
+    inner.in_provider = true;
+    defer inner.in_provider = false;
     const env = js.env();
-    const result = try callProvider(inner, env, inner.slot_committee_members, .{
+    const result = try callProvider(env, inner.slot_committee_members, .{
         js.Uint8Array.from(&root).toValue(),
         try env.createDouble(@floatFromInt(slot)),
     });
@@ -195,8 +198,10 @@ fn providerSlotCommitteeMembers(ctx: *anyopaque, gpa: std.mem.Allocator, root: R
 fn providerCheckpointBalanceSource(ctx: *anyopaque, gpa: std.mem.Allocator, checkpoint: Checkpoint) anyerror!fork_choice.BalanceSource {
     const inner: *Inner = @ptrCast(@alignCast(ctx));
     const ref = inner.checkpoint_balance_source orelse return error.FastConfirmationUnsupported;
+    inner.in_provider = true;
+    defer inner.in_provider = false;
     const env = js.env();
-    const result = try callProvider(inner, env, ref, .{
+    const result = try callProvider(env, ref, .{
         try env.createDouble(@floatFromInt(checkpoint.epoch)),
         js.Uint8Array.from(&checkpoint.root).toValue(),
     });
@@ -206,8 +211,10 @@ fn providerCheckpointBalanceSource(ctx: *anyopaque, gpa: std.mem.Allocator, chec
 fn providerPulledUpBalanceSource(ctx: *anyopaque, gpa: std.mem.Allocator, root: Root, epoch: fork_choice.store.Epoch) anyerror!fork_choice.BalanceSource {
     const inner: *Inner = @ptrCast(@alignCast(ctx));
     const ref = inner.pulled_up_balance_source orelse return error.FastConfirmationUnsupported;
+    inner.in_provider = true;
+    defer inner.in_provider = false;
     const env = js.env();
-    const result = try callProvider(inner, env, ref, .{
+    const result = try callProvider(env, ref, .{
         js.Uint8Array.from(&root).toValue(),
         try env.createDouble(@floatFromInt(epoch)),
     });
@@ -218,9 +225,13 @@ fn providerPulledUpBalanceSource(ctx: *anyopaque, gpa: std.mem.Allocator, root: 
 /// has one entry per validator with inactive and slashed validators zeroed, so an active
 /// validator it zeroes despite a nonzero balance is slashed.
 fn balanceSource(gpa: std.mem.Allocator, object: napi.Value) !fork_choice.BalanceSource {
-    const increments = try typedArraySlice(js.Uint16Array, u16, try object.getNamedProperty("effectiveBalanceIncrements"));
-    const zero_inactive = try typedArraySlice(js.Uint16Array, u16, try object.getNamedProperty("zeroInactiveIncrements"));
-    const active_indices = try typedArraySlice(js.Uint32Array, u32, try object.getNamedProperty("activeIndices"));
+    // Every getter runs before any slice is taken, so none can detach a buffer already read.
+    const increments_value = try object.getNamedProperty("effectiveBalanceIncrements");
+    const zero_inactive_value = try object.getNamedProperty("zeroInactiveIncrements");
+    const active_indices_value = try object.getNamedProperty("activeIndices");
+    const increments = try typedArraySlice(js.Uint16Array, u16, increments_value);
+    const zero_inactive = try typedArraySlice(js.Uint16Array, u16, zero_inactive_value);
+    const active_indices = try typedArraySlice(js.Uint32Array, u32, active_indices_value);
     const validator_count = zero_inactive.len;
     if (increments.len < validator_count or active_indices.len > validator_count) return error.InvalidBalanceSource;
     const owned = try gpa.dupe(u16, increments[0..validator_count]);

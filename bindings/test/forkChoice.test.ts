@@ -347,6 +347,29 @@ describe("ForkChoice", () => {
       expect(checkpoints).toEqual([anchorCheckpoint]);
     });
 
+    it("rejects a getter on a balance source re-entering the store", () => {
+      const reentries: unknown[] = [];
+      let forkChoice: ForkChoice | undefined;
+      const source = (): BalanceSource => ({
+        ...balanceSource(),
+        get activeIndices() {
+          try {
+            forkChoice?.checkpoints();
+          } catch (e) {
+            reentries.push(e);
+          }
+          return Uint32Array.from({length: VALIDATOR_COUNT}, (_, i) => i);
+        },
+      });
+      forkChoice = createForkChoice({checkpointBalanceSource: source, pulledUpBalanceSource: source});
+      forkChoice.onTick(forkChoice.timeAtSlotMs(1));
+      forkChoice.onBlock(summary(2, ANCHOR, 1));
+      forkChoice.onTick(forkChoice.timeAtSlotMs(2));
+      forkChoice.onFastConfirmation();
+      expect(reentries.length).toBeGreaterThan(0);
+      expect(reentries.map(String).every((e) => e.includes("ReentrantCall"))).toBe(true);
+    });
+
     it("rejects a balance source with an active index past the validators", () => {
       const forkChoice = createForkChoice({
         checkpointBalanceSource: () => ({...balanceSource(), activeIndices: Uint32Array.from([VALIDATOR_COUNT])}),
