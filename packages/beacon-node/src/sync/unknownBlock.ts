@@ -928,6 +928,17 @@ export class BlockInputSync {
     const connectedPeers = this.network.getConnectedPeers();
     const hasConnectedPeers = connectedPeers.length > 0;
 
+    // Gossip, getBlobs or column reconstruction can complete a pending block's data through the shared BlockInput
+    for (const block of this.pendingBlocks.values()) {
+      if (
+        isPendingBlockInput(block) &&
+        block.status === PendingBlockInputStatus.pending &&
+        block.blockInput.hasBlockAndAllData()
+      ) {
+        block.status = PendingBlockInputStatus.downloaded;
+      }
+    }
+
     const {unknowns, ancestors} = getUnknownAndAncestorBlocks(this.pendingBlocks);
     let processedBlocks = 0;
     let shouldRerunBlockSearch = false;

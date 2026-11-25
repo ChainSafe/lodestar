@@ -1629,7 +1629,7 @@ describe("UnknownBlockSync", () => {
         });
       };
 
-      return {svc, emitter, connect, processBlock, reportPeer, verifySignatureSets};
+      return {svc, emitter, connect, processBlock, reportPeer, verifySignatureSets, seenBlockInputCache};
     }
 
     beforeEach(() => {
@@ -1638,6 +1638,45 @@ describe("UnknownBlockSync", () => {
 
     afterEach(() => {
       vi.useRealTimers();
+    });
+
+    it("imports a pending block once gossip completes its data during a retry backoff", async () => {
+      const peer = await getRandPeerIdStr();
+      const {block, rootHex, columns} = generateFuluBlock();
+      // No peer has the columns yet, so the download fails and is retried after a backoff
+      const {svc, emitter, connect, processBlock, seenBlockInputCache} = setupColumnTest(block, new Map());
+
+      try {
+        connect(peer);
+        const blockInput = seenBlockInputCache.getByBlock({
+          blockRootHex: rootHex,
+          block,
+          source: BlockInputSource.gossip,
+          seenTimestampSec: Date.now() / 1000,
+          peerIdStr: peer,
+        });
+        emitter.emit(ChainEvent.incompleteBlockInput, {blockInput, peer, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+
+        for (const columnSidecar of columns.filter((column) => sampledColumns.includes(column.index))) {
+          seenBlockInputCache.getByColumn({
+            blockRootHex: rootHex,
+            columnSidecar,
+            source: BlockInputSource.gossip,
+            seenTimestampSec: Date.now() / 1000,
+            peerIdStr: peer,
+          });
+        }
+        expect(blockInput.hasBlockAndAllData()).toBe(true);
+        expect(processBlock).not.toHaveBeenCalled();
+
+        await vi.advanceTimersByTimeAsync(12_000);
+
+        expect(processBlock).toHaveBeenCalledOnce();
+        expect(processBlock.mock.calls[0][0]).toBe(blockInput);
+      } finally {
+        svc.close();
+      }
     });
 
     it("reports a peer serving columns with an invalid KZG proof and imports the root from another peer", async () => {

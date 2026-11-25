@@ -668,8 +668,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
         logger[logLevel]("Error processing block", {slot, root: blockInput.blockRootHex, peer: peerIdStr}, e as Error);
-        // BlockInputSync imports a block with missing data from this same BlockInput and prunes it when done,
-        // pruning it here would put later gossip columns into a new BlockInput that is never imported
+        // BlockInputSync imports a block with missing data from this same BlockInput, pruning it here would put later
+        // gossip columns into a new BlockInput that is never imported. The entry is released once the block is
+        // persisted, on finalization or by the cache size limit
         if (!(e instanceof BlockError && e.type.code === BlockErrorCode.DATA_UNAVAILABLE)) {
           // TODO(fulu): Revisit when we prune block inputs
           chain.seenBlockInputCache.prune(blockInput.blockRootHex);
