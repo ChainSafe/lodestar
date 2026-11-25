@@ -183,7 +183,7 @@ describe("network / peers / PeerManager ENRs", () => {
     const {networkCore, discover, connect, churn} = setup();
     const enr = createEnr(1);
     const peerIdStr = enr.peerId.toString();
-    discover(enr);
+    await discover(enr);
     connect(enr.peerId);
     expect((await networkCore.dumpPeer(peerIdStr))?.enr).toBe(enr.encodeTxt());
     churn(251);
@@ -192,12 +192,12 @@ describe("network / peers / PeerManager ENRs", () => {
     expect((await networkCore.dumpPeers()).map((peer) => peer.enr)).toEqual([enr.encodeTxt()]);
   });
 
-  it("refreshes discovery cache recency when a peer is rediscovered", () => {
+  it("refreshes discovery cache recency when a peer is rediscovered", async () => {
     const {discovery, discover} = setup();
     const enrs = Array.from({length: maxDiscoveredEnrs + 1}, (_, index) => createEnr(index + 1));
-    for (const enr of enrs.slice(0, maxDiscoveredEnrs)) discover(enr);
-    discover(enrs[0]);
-    discover(enrs[maxDiscoveredEnrs]);
+    for (const enr of enrs.slice(0, maxDiscoveredEnrs)) await discover(enr);
+    await discover(enrs[0]);
+    await discover(enrs[maxDiscoveredEnrs]);
 
     expect(discovery.getDiscoveredEnr(enrs[0].peerId.toString())).toEqual({
       txt: enrs[0].encodeTxt(),
@@ -255,17 +255,17 @@ describe("network / peers / PeerManager ENRs", () => {
     expect(peersData.connectedPeers.get(peerIdStr)?.enr).toBeNull();
     expect((await networkCore.dumpPeer(peerIdStr))?.enr).toBeNull();
 
-    discover(enr);
+    await discover(enr);
     churn();
     expect(peersData.connectedPeers.get(peerIdStr)?.enr).toEqual({txt: enr.encodeTxt(), seq: enr.seq});
     expect((await networkCore.dumpPeer(peerIdStr))?.enr).toBe(enr.encodeTxt());
   });
 
-  it("retains the ENR across duplicate connections until the last connection closes", () => {
+  it("retains the ENR across duplicate connections until the last connection closes", async () => {
     const {peersData, connect, disconnect, discover, churn} = setup();
     const enr = createEnr(1);
     const peerIdStr = enr.peerId.toString();
-    discover(enr);
+    await discover(enr);
     const first = connect(enr.peerId);
     churn();
     const second = connect(enr.peerId);
@@ -352,7 +352,7 @@ describe("network / peers / PeerManager ENRs", () => {
     const {manager, discv5, discover, connect, disconnect} = setup();
     manager.onCommitteeSubscriptions();
     const enr = createEnr(1);
-    discover(enr);
+    await discover(enr);
     const connection = connect(enr.peerId);
     manager.onCommitteeSubscriptions();
     disconnect(connection);
@@ -366,7 +366,7 @@ describe("network / peers / PeerManager ENRs", () => {
     const {manager, networkCore, discv5, logger, discover, connect, churn} = setup();
     const known = createEnr(1);
     const missing = createEnr(50);
-    discover(known);
+    await discover(known);
     connect(known.peerId);
     connect(missing.peerId);
     churn();
@@ -414,7 +414,7 @@ describe("network / peers / PeerManager ENRs", () => {
     manager.onCommitteeSubscriptions();
 
     enr.setLocationMultiaddr(multiaddr("/ip4/127.0.0.1/tcp/9001"));
-    discover(enr);
+    await discover(enr);
     lookup.resolve([oldEnr]);
     await Promise.resolve();
 
