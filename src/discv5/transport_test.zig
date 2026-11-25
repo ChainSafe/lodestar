@@ -67,6 +67,26 @@ test "maintenance bounds local replacement probe retries without blocking transp
     try std.testing.expectEqual(@as(usize, 0), pair.transport_a.engine.calls.count());
 }
 
+test "maintenance keeps the incumbent when one replacement probe failed locally and one expired" {
+    var setup_io: test_support.ManualIo = .{};
+    var pair: Pair = undefined;
+    try pair.init(setup_io.io(), 1_000, true);
+    defer pair.deinit();
+    try pair.fillBucket();
+    var controller: Maintenance = undefined;
+    try controller.init(0, .{}, .ip4);
+    defer controller.cancel(&pair.transport_a.engine);
+    var out: [1_280]u8 = undefined;
+    const started = (try controller.startNext(&pair.transport_a.engine, &out, try .init(&.{1}), 0, &test_support.sealEntropy(10))).?;
+    try std.testing.expect(controller.onFailure(&pair.transport_a.engine, started.call.handle, 0, .local));
+    const retry = (try controller.startNext(&pair.transport_a.engine, &out, try .init(&.{2}), 1_000, &test_support.sealEntropy(11))).?;
+    try std.testing.expect(controller.onFailure(&pair.transport_a.engine, retry.call.handle, 2_000, .expired));
+    try std.testing.expect(controller.pending == null);
+    try std.testing.expectEqual(@as(usize, 0), pair.transport_a.engine.routing.pendingCount());
+    try std.testing.expect(pair.transport_a.engine.routing.contains(&started.peer.node_id));
+    try std.testing.expect(!pair.transport_a.engine.routing.contains(&pair.candidate_id));
+}
+
 test "transport reports truncation alongside already produced expiries" {
     var setup_io: test_support.ManualIo = .{};
     var pair: Pair = undefined;
