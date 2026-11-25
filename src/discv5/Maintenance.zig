@@ -25,6 +25,7 @@ const Pending = struct {
     attempts: u8 = 0,
     ready_ms: u64,
     origin: enum { stale, replacement, observation } = .stale,
+    failed_locally: bool = false,
 };
 
 const Maintenance = @This();
@@ -182,16 +183,17 @@ pub fn onFailure(
                             return true;
                         }
                     }
-                    if (reason == .local or pending.attempts < probe_attempts_max) {
-                        if (pending.attempts >= probe_attempts_max) {
-                            core.routing.abandonRevalidation(&pending.entry.peer.node_id);
-                            self.pending = null;
-                            self.next_start_ms = now_ms;
-                            return true;
-                        }
+                    if (reason == .local) pending.failed_locally = true;
+                    if (pending.attempts < probe_attempts_max) {
                         pending.handle = null;
                         pending.ready_ms = now_ms +| self.config.retry_interval_ms;
                         self.next_start_ms = pending.ready_ms;
+                        return true;
+                    }
+                    if (pending.failed_locally) {
+                        core.routing.abandonRevalidation(&pending.entry.peer.node_id);
+                        self.pending = null;
+                        self.next_start_ms = now_ms;
                         return true;
                     }
                     if (core.peerRecord(&pending.entry.peer.node_id)) |entry| {
