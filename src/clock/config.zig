@@ -5,6 +5,9 @@
 const std = @import("std");
 const ct = @import("consensus_types");
 const bounded_array = @import("bounded_array");
+const ChainConfig = @import("config").ChainConfig;
+const preset = @import("preset").preset;
+const FAR_FUTURE_EPOCH = @import("constants").FAR_FUTURE_EPOCH;
 
 const Slot = ct.primitive.Slot.Type;
 
@@ -56,4 +59,28 @@ pub const ClockConfig = struct {
     pub fn transitions(self: *const ClockConfig) []const DurationTransition {
         return self.duration_transitions.constSlice();
     }
+
+    /// The chain's slot durations: `SLOT_DURATION_MS`, then `SLOT_DURATION_MS_HEZE`
+    /// from the Heze fork when it is scheduled and differs.
+    pub fn fromChainConfig(chain: *const ChainConfig, genesis_time_sec: u64) ClockConfig {
+        var config: ClockConfig = .{
+            .genesis_time_sec = genesis_time_sec,
+            .slot_duration_ms = chain.SLOT_DURATION_MS,
+            .slots_per_epoch = preset.SLOTS_PER_EPOCH,
+        };
+        if (chain.HEZE_FORK_EPOCH == FAR_FUTURE_EPOCH or chain.SLOT_DURATION_MS_HEZE == chain.SLOT_DURATION_MS) return config;
+        if (chain.HEZE_FORK_EPOCH == 0) {
+            config.slot_duration_ms = chain.SLOT_DURATION_MS_HEZE;
+        } else {
+            config.duration_transitions.push(.{
+                .from_slot = chain.HEZE_FORK_EPOCH * preset.SLOTS_PER_EPOCH,
+                .new_duration_ms = chain.SLOT_DURATION_MS_HEZE,
+            });
+        }
+        return config;
+    }
 };
+
+test {
+    _ = @import("config_test.zig");
+}

@@ -20,6 +20,9 @@ const constants = @import("constants");
 const state_transition = @import("state_transition");
 const CachedBeaconState = state_transition.CachedBeaconState;
 const fork_types = @import("fork_types");
+const clock = @import("clock");
+const ClockConfig = clock.ClockConfig;
+const slot_math = clock.slot_math;
 const AnyBeaconBlock = fork_types.AnyBeaconBlock;
 const AnyIndexedAttestation = fork_types.AnyIndexedAttestation;
 const AnyAttesterSlashing = fork_types.AnyAttesterSlashing;
@@ -436,9 +439,8 @@ pub const RootIndexMap = std.HashMapUnmanaged(Root, BlockIndex, RootContext, 80)
 pub const Store = struct {
     allocator: Allocator,
     config: *const BeaconConfig,
-    timing: SlotTiming,
+    clock_config: ClockConfig,
     time_ms: u64,
-    genesis_time_ms: u64,
     justified_checkpoint: Checkpoint,
     finalized_checkpoint: Checkpoint,
     unrealized_justified_checkpoint: Checkpoint,
@@ -562,14 +564,15 @@ pub const Store = struct {
         provider: StateProvider,
     ) !Store {
         if (ancestors.len > MAX_ANCHOR_ANCESTORS) return error.TooManyAnchorAncestors;
+        const clock_config = ClockConfig.fromChainConfig(&config.chain, genesis_time);
+        try clock_config.validate();
         // Owned by `self` from here on: `self.deinit` is the only cleanup.
         const distinct_votes = try DistinctVotes.init(allocator);
         var self: Store = .{
             .allocator = allocator,
             .config = config,
-            .timing = SlotTiming.init(config, secondsToMilliseconds(genesis_time)),
+            .clock_config = clock_config,
             .time_ms = 0,
-            .genesis_time_ms = secondsToMilliseconds(genesis_time),
             .justified_checkpoint = checkpoints.justified,
             .finalized_checkpoint = checkpoints.finalized,
             .unrealized_justified_checkpoint = checkpoints.unrealized_justified,
@@ -594,7 +597,7 @@ pub const Store = struct {
             .anchor_ancestor_count = @intCast(ancestors.len),
         };
         errdefer self.deinit();
-        self.time_ms = self.timing.timeAtSlotMs(anchor.slot);
+        self.time_ms = self.slotStartMs(anchor.slot);
         try checkExecutionStatus(&anchor);
 
         var parent: BlockIndex = NO_BLOCK;
@@ -685,7 +688,12 @@ pub const Store = struct {
 
     /// Spec `get_current_slot`.
     pub fn currentSlot(self: *const Store) Slot {
-        return self.timing.slotAtTimeMs(self.time_ms);
+        return slot_math.slotAtMs(self.clock_config, self.time_ms).?;
+    }
+
+    /// Spec `compute_time_at_slot_ms`, with the chain's slot duration change at Heze.
+    pub fn slotStartMs(self: *const Store, slot: Slot) u64 {
+        return slot_math.slotStartMs(self.clock_config, slot);
     }
 
     /// Spec `get_current_store_epoch`.
@@ -695,7 +703,7 @@ pub const Store = struct {
 
     /// Spec `get_time_into_slot_ms`.
     pub fn timeIntoSlotMs(self: *const Store) u64 {
-        return self.time_ms - self.timing.timeAtSlotMs(self.currentSlot());
+        return self.time_ms - self.slotStartMs(self.currentSlot());
     }
 
     /// Spec `get_slot_component_duration_ms` for the fork of the current slot.
@@ -943,11 +951,10 @@ pub const Store = struct {
     /// Spec `on_tick`. Fails only before genesis: the epoch start pulls up balances that
     /// block import loaded when it raised the unrealized justified checkpoint.
     pub fn onTick(self: *Store, time_ms: u64) error{PreGenesisTime}!void {
-        if (time_ms < self.genesis_time_ms) return error.PreGenesisTime;
-        const tick_slot = self.timing.slotAtTimeMs(time_ms);
+        const tick_slot = slot_math.slotAtMs(self.clock_config, time_ms) orelse return error.PreGenesisTime;
         while (self.currentSlot() < tick_slot) {
             const next_slot = self.currentSlot() + 1;
-            self.onTickPerSlot(self.timing.timeAtSlotMs(next_slot));
+            self.onTickPerSlot(self.slotStartMs(next_slot));
         }
         self.onTickPerSlot(time_ms);
     }
@@ -1819,48 +1826,6 @@ fn isSlashableAttestationData(data_1: *const AttestationData, data_2: *const Att
     const surround_vote = data_1.source.epoch < data_2.source.epoch and data_2.target.epoch < data_1.target.epoch;
     return double_vote or surround_vote;
 }
-
-/// Spec `compute_time_at_slot_ms` / `compute_slot_at_time_ms`, with the Lodestar
-/// config's optional slot duration change at the Heze fork.
-pub const SlotTiming = struct {
-    genesis_time_ms: u64,
-    duration_ms: u64,
-    transition_slot: ?Slot,
-    transition_duration_ms: u64,
-
-    pub fn init(config: *const BeaconConfig, genesis_time_ms: u64) SlotTiming {
-        const chain = config.chain;
-        const heze_active = chain.HEZE_FORK_EPOCH != constants.FAR_FUTURE_EPOCH;
-        const changes = heze_active and chain.SLOT_DURATION_MS_HEZE != chain.SLOT_DURATION_MS;
-        return .{
-            .genesis_time_ms = genesis_time_ms,
-            .duration_ms = if (changes and chain.HEZE_FORK_EPOCH == 0) chain.SLOT_DURATION_MS_HEZE else chain.SLOT_DURATION_MS,
-            .transition_slot = if (changes and chain.HEZE_FORK_EPOCH != 0) computeStartSlotAtEpoch(chain.HEZE_FORK_EPOCH) else null,
-            .transition_duration_ms = chain.SLOT_DURATION_MS_HEZE,
-        };
-    }
-
-    pub fn timeAtSlotMs(self: SlotTiming, slot: Slot) u64 {
-        if (self.transition_slot) |transition| {
-            if (slot >= transition) {
-                return self.genesis_time_ms + transition * self.duration_ms + (slot - transition) * self.transition_duration_ms;
-            }
-        }
-        return self.genesis_time_ms + slot * self.duration_ms;
-    }
-
-    /// Precondition: `time_ms >= genesis_time_ms`.
-    pub fn slotAtTimeMs(self: SlotTiming, time_ms: u64) Slot {
-        const since_genesis = time_ms - self.genesis_time_ms;
-        if (self.transition_slot) |transition| {
-            const transition_ms = transition * self.duration_ms;
-            if (since_genesis >= transition_ms) {
-                return transition + (since_genesis - transition_ms) / self.transition_duration_ms;
-            }
-        }
-        return since_genesis / self.duration_ms;
-    }
-};
 
 test {
     _ = @import("store_test.zig");

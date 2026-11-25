@@ -187,7 +187,7 @@
         },
         .clock = .{
             .root_source_file = "src/clock/root.zig",
-            .imports = .{ .zio, .consensus_types, .bounded_array, .time },
+            .imports = .{ .zio, .consensus_types, .bounded_array, .time, .config, .preset, .constants },
         },
         .cpu_count = .{
             .root_source_file = "src/cpu_count.zig",
@@ -258,7 +258,7 @@
         },
         .fork_choice = .{
             .root_source_file = "src/fork_choice/root.zig",
-            .imports = .{ .consensus_types, .config, .preset, .constants, .state_transition, .fork_types, .persistent_merkle_tree },
+            .imports = .{ .consensus_types, .config, .preset, .constants, .state_transition, .fork_types, .persistent_merkle_tree, .clock },
         },
         .beacon_node = .{
             .root_source_file = "src/beacon_node/root.zig",

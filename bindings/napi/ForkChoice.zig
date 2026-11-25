@@ -353,7 +353,7 @@ pub fn currentSlot(self: *ForkChoice) js.Number {
 
 /// Spec `compute_time_at_slot_ms`.
 pub fn timeAtSlotMs(self: *ForkChoice, slot: js.Number) !js.Number {
-    return js.Number.from(self.inner.store.timing.timeAtSlotMs(try slot.toSafeInteger()));
+    return js.Number.from(self.inner.store.slotStartMs(try slot.toSafeInteger()));
 }
 
 /// Spec `on_tick`. Time does not run backwards: an earlier `time_ms` is ignored.

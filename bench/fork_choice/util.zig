@@ -163,7 +163,7 @@ pub fn initStore(allocator: Allocator, opts: Opts) !Bench {
     }, state_provider);
     errdefer store.deinit();
 
-    try store.onTick(store.timing.timeAtSlotMs(opts.initial_block_count));
+    try store.onTick(store.slotStartMs(opts.initial_block_count));
     // Every Gloas block builds on its parent's payload, so each payload must be verified first.
     if (opts.gloas_boosted) try store.onExecutionPayloadEnvelope(anchor_root, .valid, null);
 
