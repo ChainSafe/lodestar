@@ -9,6 +9,9 @@ import {config} from "@lodestar/config/default";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ssz} from "@lodestar/types";
 import {defer} from "@lodestar/utils";
+import {getNodeApi} from "../../../../src/api/impl/node/index.js";
+import type {ApiModules} from "../../../../src/api/impl/types.js";
+import {defaultApiOptions} from "../../../../src/api/options.js";
 import {Libp2pEvent} from "../../../../src/constants/index.js";
 import {NetworkCore} from "../../../../src/network/core/networkCore.js";
 import type {Discv5Worker} from "../../../../src/network/discv5/index.js";
@@ -125,7 +128,7 @@ describe("network / peers / PeerManager ENRs", () => {
           sendMetadata: vi.fn<IReqRespBeaconNodePeerManager["sendMetadata"]>(),
           sendGoodbye: vi.fn<IReqRespBeaconNodePeerManager["sendGoodbye"]>(),
         },
-        gossip: {scoreParams: {}, isDirectPeer: () => false} as unknown as Eth2Gossipsub,
+        gossip: {scoreParams: {}, isDirectPeer: () => false, getScore: () => 0} as unknown as Eth2Gossipsub,
         attnetsService: subnetsService,
         syncnetsService: subnetsService,
         statusCache: new LocalStatusCache(ssz.phase0.Status.defaultValue()),
@@ -161,7 +164,18 @@ describe("network / peers / PeerManager ENRs", () => {
       for (let index = 2; index < count + 2; index++) discover(createEnr(index));
     }
 
-    return {discovery, peersData, networkCore, discv5, connect, disconnect, discover, churn};
+    return {
+      manager,
+      discovery,
+      peersData,
+      networkCore,
+      discv5,
+      logger: modules.logger,
+      connect,
+      disconnect,
+      discover,
+      churn,
+    };
   }
 
   it("keeps a connected peer ENR in API responses after discovery cache eviction", async () => {
@@ -233,45 +247,130 @@ describe("network / peers / PeerManager ENRs", () => {
     expect(peersData.connectedPeers.get(enr.peerId.toString())?.enr).toBe(enr.encodeTxt());
   });
 
-  it("retains a KAD-only ENR after it leaves the routing table", async () => {
-    const {networkCore, discv5, connect} = setup();
+  it("hydrates a missing ENR on the heartbeat and retains it after it leaves the routing table", async () => {
+    const {manager, networkCore, discv5, connect} = setup();
     const enr = createEnr(1);
     const peerIdStr = enr.peerId.toString();
     connect(enr.peerId);
     discv5.kadValues.mockResolvedValueOnce([enr.toENR()]);
-    expect((await networkCore.dumpPeer(peerIdStr))?.enr).toBe(enr.encodeTxt());
+    expect((await networkCore.dumpPeer(peerIdStr))?.enr).toBeNull();
+    expect(discv5.kadValues).not.toHaveBeenCalled();
 
+    await vi.advanceTimersByTimeAsync(30_000);
     expect((await networkCore.dumpPeer(peerIdStr))?.enr).toBe(enr.encodeTxt());
+    manager.onCommitteeSubscriptions();
     expect((await networkCore.dumpPeers()).map((peer) => peer.enr)).toEqual([enr.encodeTxt()]);
+    expect(discv5.kadValues).toHaveBeenCalledOnce();
   });
 
-  it("preserves connected ENRs when the KAD lookup rejects", async () => {
-    const {networkCore, discv5, discover, connect, churn} = setup();
+  it("returns peer snapshots and counts without querying KAD", async () => {
+    const {networkCore, discv5, connect} = setup();
     const enr = createEnr(1);
-    const peerIdStr = enr.peerId.toString();
-    discover(enr);
     connect(enr.peerId);
-    churn();
-    discv5.kadValues.mockRejectedValue(new Error("discv5 stopped"));
+    discv5.kadValues.mockResolvedValue([enr.toENR()]);
+    const api = getNodeApi(defaultApiOptions, {network: networkCore} as unknown as Pick<
+      ApiModules,
+      "network" | "sync" | "chain"
+    >);
 
-    expect((await networkCore.dumpPeer(peerIdStr))?.enr).toBe(enr.encodeTxt());
-    expect((await networkCore.dumpPeers()).map((peer) => peer.enr)).toEqual([enr.encodeTxt()]);
+    expect((await networkCore.dumpPeer(enr.peerId.toString()))?.enr).toBeNull();
+    expect((await networkCore.dumpPeers()).map((peer) => peer.enr)).toEqual([null]);
+    expect(await api.getPeerCount()).toEqual({
+      data: {disconnected: 0, connecting: 0, connected: 1, disconnecting: 0},
+    });
+    expect(discv5.kadValues).not.toHaveBeenCalled();
+  });
+
+  it("skips KAD when no connected peer is missing an ENR", async () => {
+    const {manager, discv5, discover, connect, disconnect} = setup();
+    manager.onCommitteeSubscriptions();
+    const enr = createEnr(1);
+    discover(enr);
+    const connection = connect(enr.peerId);
+    manager.onCommitteeSubscriptions();
+    disconnect(connection);
+    manager.onCommitteeSubscriptions();
+    await Promise.resolve();
+
+    expect(discv5.kadValues).not.toHaveBeenCalled();
+  });
+
+  it("preserves connected ENRs when KAD rejects and retries on the next heartbeat", async () => {
+    const {manager, networkCore, discv5, logger, discover, connect, churn} = setup();
+    const known = createEnr(1);
+    const missing = createEnr(50);
+    discover(known);
+    connect(known.peerId);
+    connect(missing.peerId);
+    churn();
+    const error = new Error("discv5 stopped");
+    discv5.kadValues.mockRejectedValueOnce(error);
+    manager.onCommitteeSubscriptions();
+    await Promise.resolve();
+
+    expect((await networkCore.dumpPeer(known.peerId.toString()))?.enr).toBe(known.encodeTxt());
+    expect((await networkCore.dumpPeer(missing.peerId.toString()))?.enr).toBeNull();
+    expect(logger.debug).toHaveBeenCalledWith("Could not update peer ENRs from discv5 kadValues", {}, error);
+
+    discv5.kadValues.mockResolvedValueOnce([missing.toENR()]);
+    manager.onCommitteeSubscriptions();
+    await Promise.resolve();
+    expect((await networkCore.dumpPeer(missing.peerId.toString()))?.enr).toBe(missing.encodeTxt());
+    expect(discv5.kadValues).toHaveBeenCalledTimes(2);
   });
 
   it("does not restore disconnected peer data when a pending KAD lookup resolves", async () => {
-    const {networkCore, peersData, discv5, connect, disconnect} = setup();
+    const {manager, networkCore, peersData, discv5, connect, disconnect} = setup();
     const enr = createEnr(1);
     const peerIdStr = enr.peerId.toString();
     const connection = connect(enr.peerId);
     const lookup = defer<Awaited<ReturnType<Discv5Worker["kadValues"]>>>();
     discv5.kadValues.mockReturnValueOnce(lookup.promise);
-    const result = networkCore.dumpPeer(peerIdStr);
+    manager.onCommitteeSubscriptions();
     expect(discv5.kadValues).toHaveBeenCalledOnce();
 
     disconnect(connection);
     lookup.resolve([enr.toENR()]);
+    await Promise.resolve();
 
-    expect(await result).toMatchObject({enr: null, state: "disconnected"});
+    expect(await networkCore.dumpPeer(peerIdStr)).toMatchObject({enr: null, state: "disconnected"});
     expect(peersData.connectedPeers.has(peerIdStr)).toBe(false);
+  });
+
+  it("does not overwrite an ENR discovered while a KAD lookup is pending", async () => {
+    const {manager, peersData, discv5, connect, discover} = setup();
+    const enr = createEnr(1);
+    connect(enr.peerId);
+    const oldEnr = enr.toENR();
+    const lookup = defer<Awaited<ReturnType<Discv5Worker["kadValues"]>>>();
+    discv5.kadValues.mockReturnValueOnce(lookup.promise);
+    manager.onCommitteeSubscriptions();
+
+    enr.setLocationMultiaddr(multiaddr("/ip4/127.0.0.1/tcp/9001"));
+    discover(enr);
+    lookup.resolve([oldEnr]);
+    await Promise.resolve();
+
+    expect(peersData.connectedPeers.get(enr.peerId.toString())?.enr).toBe(enr.encodeTxt());
+  });
+
+  it("coalesces pending KAD lookups and retries missing peers on a later heartbeat", async () => {
+    const {manager, peersData, discv5, connect} = setup();
+    const enr = createEnr(1);
+    connect(enr.peerId);
+    const lookup = defer<Awaited<ReturnType<Discv5Worker["kadValues"]>>>();
+    discv5.kadValues.mockReturnValueOnce(lookup.promise);
+    manager.onCommitteeSubscriptions();
+    manager.onCommitteeSubscriptions();
+    expect(discv5.kadValues).toHaveBeenCalledOnce();
+
+    lookup.resolve([]);
+    await Promise.resolve();
+    discv5.kadValues.mockResolvedValueOnce([enr.toENR()]);
+    manager.onCommitteeSubscriptions();
+    await Promise.resolve();
+
+    expect(peersData.connectedPeers.get(enr.peerId.toString())?.enr).toBe(enr.encodeTxt());
+    expect(discv5.kadValues).toHaveBeenCalledTimes(2);
   });
 });

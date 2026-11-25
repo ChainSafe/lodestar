@@ -510,30 +510,13 @@ export class NetworkCore implements INetworkCore {
   async dumpPeer(peerIdStr: string): Promise<routes.lodestar.LodestarNodePeer | undefined> {
     const connections = this.getConnectionsByPeer().get(peerIdStr);
     if (!connections) return undefined;
-    await this.updatePeerEnrs();
     return this._dumpPeer(peerIdStr, connections);
   }
 
   async dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]> {
-    await this.updatePeerEnrs();
     return Array.from(this.getConnectionsByPeer().entries()).map(([peerIdStr, connections]) =>
       this._dumpPeer(peerIdStr, connections)
     );
-  }
-
-  private async updatePeerEnrs(): Promise<void> {
-    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
-    const discovery = this.peerManager["discovery"];
-    try {
-      for (const enr of (await discovery?.discv5?.kadValues()) ?? []) {
-        const peerData = this.peersData.connectedPeers.get(enr.peerId.toString());
-        if (peerData) {
-          peerData.enr = enr.encodeTxt();
-        }
-      }
-    } catch (e) {
-      this.logger.debug("Could not update peer ENRs from discv5 kadValues", {}, e as Error);
-    }
   }
 
   async dumpPeerScoreStats(): Promise<PeerScoreStats> {

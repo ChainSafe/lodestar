@@ -165,6 +165,7 @@ export class PeerManager {
   private connectedPeers: Map<PeerIdStr, PeerData>;
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
+  private updatingPeerEnrs = false;
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts, discovery: PeerDiscovery | null) {
     const {networkConfig} = modules;
@@ -711,6 +712,35 @@ export class PeerManager {
       attnetQueries: attnetQueries.length,
       syncnetQueries: syncnetQueries.length,
     });
+
+    void this.updatePeerEnrs(connectedPeers);
+  }
+
+  private async updatePeerEnrs(connectedPeers: PeerId[]): Promise<void> {
+    if (!this.discovery || this.updatingPeerEnrs) return;
+
+    const missingPeerIds = new Set(
+      connectedPeers.map((peer) => peer.toString()).filter((peerId) => this.connectedPeers.get(peerId)?.enr === null)
+    );
+    if (missingPeerIds.size === 0) return;
+
+    this.updatingPeerEnrs = true;
+    try {
+      for (const enr of await this.discovery.discv5.kadValues()) {
+        const peerIdStr = enr.peerId.toString();
+        if (!missingPeerIds.has(peerIdStr)) continue;
+
+        const peerData = this.connectedPeers.get(peerIdStr);
+        const connections = getConnectionsMap(this.libp2p).get(peerIdStr)?.value;
+        if (peerData?.enr === null && connections?.some((connection) => connection.status === "open")) {
+          peerData.enr = enr.encodeTxt();
+        }
+      }
+    } catch (e) {
+      this.logger.debug("Could not update peer ENRs from discv5 kadValues", {}, e as Error);
+    } finally {
+      this.updatingPeerEnrs = false;
+    }
   }
 
   private updateGossipsubScores(): void {
