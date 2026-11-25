@@ -9,7 +9,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://chainsafe.github.io/lodestar/images/favicon-512x512.png">
 <script src="https://plausible.io/js/script.js" defer="defer" data-domain="chainsafe.github.io/lodestar"></script><link rel="stylesheet" href="/lodestar/assets/css/styles.a0c064e1.css">
-<script src="/lodestar/assets/js/runtime~main.4d72f184.js" defer="defer"></script>
+<script src="/lodestar/assets/js/runtime~main.9ac58894.js" defer="defer"></script>
 <script src="/lodestar/assets/js/main.a3bc4a40.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -18,6 +18,7 @@
 <p>For source installations, upgrade the Node.js runtime used by the service and restart Lodestar. Docker images and standalone binaries include their own runtime, so update those artifacts and restart to receive runtime updates. When building Docker images locally, use <code>docker build --pull</code> to refresh the base image.</p>
 <h2 class="anchor anchorWithStickyNavbar_d3C5" id="binaries">Binaries<a href="#binaries" class="hash-link" aria-label="Direct link to Binaries" title="Direct link to Binaries">​</a></h2>
 <p>Binaries can be downloaded from the Lodestar <a href="https://github.com/ChainSafe/lodestar/releases/latest" target="_blank" rel="noopener noreferrer">release page</a> under the <code>Assets</code> section.</p>
+<p>The binaries bundle Node.js 26, which needs <code>libatomic1</code> on the host. Install it with <code>sudo apt-get install libatomic1</code> on Debian/Ubuntu or <code>sudo dnf install libatomic</code> on Fedora/RHEL.</p>
 <p>Run the following command to install the latest version</p>
 <div class="language-bash codeBlockContainer_kkD2 theme-code-block" style="--prism-color:#000000;--prism-background-color:#ffffff"><div class="codeBlockContent_u9N1"><pre tabindex="0" class="prism-code language-bash codeBlock_SI3U thin-scrollbar" style="color:#000000;background-color:#ffffff"><code class="codeBlockLines_zoFh"><span class="token-line" style="color:#000000"><span class="token function" style="color:rgb(0, 0, 255)">curl</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(9, 134, 88)">-fsSL</span><span class="token plain"> https://chainsafe.github.io/lodestar/install </span><span class="token operator" style="color:rgb(0, 0, 0)">|</span><span class="token plain"> </span><span class="token function" style="color:rgb(0, 0, 255)">bash</span><br></span></code></pre><div class="buttonGroup_iEFQ"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_jVq5" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_Cbpo"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_dzuM"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
 <h2 class="anchor anchorWithStickyNavbar_d3C5" id="docker-installation">Docker Installation<a href="#docker-installation" class="hash-link" aria-label="Direct link to Docker Installation" title="Direct link to Docker Installation">​</a></h2>
