@@ -257,9 +257,11 @@ pub fn receive(
     };
 }
 
-/// Sends a WHOAREYOU for the packet that carried `request_nonce`. Returns null when a challenge
-/// for `peer` is already pending. AdmissionLimited leaves no new challenge. `known` sets the
-/// ENR sequence to ask for and the key to verify the handshake against.
+/// Sends a WHOAREYOU for the packet that carried `request_nonce`. While a challenge for `peer`
+/// is pending, every unauthenticated packet gets that same challenge back without admission,
+/// since the sender may already be answering it and a resend creates no state.
+/// AdmissionLimited leaves no new challenge. `known` sets the ENR sequence to ask for and the
+/// key to verify the handshake against.
 pub fn challenge(
     self: *Channel,
     out: []u8,
@@ -268,8 +270,11 @@ pub fn challenge(
     known: ?KnownIdentity,
     entropy: *const ChallengeEntropy,
     now_ms: u64,
-) Error!?u16 {
-    if (self.liveChallenge(peer, now_ms) != null) return null;
+) Error!u16 {
+    if (self.liveChallenge(peer, now_ms)) |pending| {
+        const resent = try packet.resendWhoareyou(out, &peer.node_id, &pending.data);
+        return @intCast(resent.len);
+    }
     if (out.len < constants.whoareyou_packet_size) return error.BufferTooSmall;
     if (!self.admission.allow(.challenge, &peer.address, now_ms)) return error.AdmissionLimited;
     var challenge_data: [constants.whoareyou_packet_size]u8 = undefined;

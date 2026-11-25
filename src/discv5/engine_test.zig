@@ -9,6 +9,7 @@ const packet = @import("wire/packet.zig");
 const engine_session = @import("SessionStore.zig");
 const test_support = @import("test_support.zig");
 const types = @import("types.zig");
+const constants = @import("wire/constants.zig");
 const Admission = @import("Admission.zig");
 
 const engineConfig = test_support.engineConfig;
@@ -374,6 +375,65 @@ test "engine construction releases all allocations on partial failure" {
         }
     };
     try std.testing.checkAllAllocationFailures(std.testing.allocator, Construction.run, .{ &key, &record });
+}
+
+// The scenarios below mirror the devp2p discv5 hive suite, which other clients are judged by.
+
+test "a cold packet during a pending challenge receives the same WHOAREYOU" {
+    var pair: Pair = undefined;
+    try pair.init();
+    defer pair.deinit();
+    const ping_message = pair.ping(1);
+    const started = try pair.node_a.startCall(&pair.a_to_b, pair.peerB(), &pair.record_b, &ping_message, 1, &sealEntropy(0x10));
+    const first = try pair.node_b.receive(&pair.b_to_a, pair.a_to_b[0..started.packet_length], pair.address_a, receiveArgs(2, 0x30), &pair.scratch_b);
+    try std.testing.expectEqual(@as(u16, constants.whoareyou_packet_size), first.accepted.packet_length);
+    var first_challenge: [constants.whoareyou_packet_size]u8 = undefined;
+    @memcpy(&first_challenge, pair.b_to_a[0..constants.whoareyou_packet_size]);
+
+    // A second request must be pointed at the first challenge, whose answer may be in flight.
+    var plaintext_buffer: [constants.ordinary_plaintext_size_max]u8 = undefined;
+    const second_ping = try pair.ping(2).encode(&plaintext_buffer);
+    const sealed = try pair.node_a.channel.seal(&pair.a_to_b, pair.peerB(), second_ping, &sealEntropy(0x50), 3);
+    const second = try pair.node_b.receive(&pair.b_to_a, pair.a_to_b[0..sealed.packet_length], pair.address_a, receiveArgs(4, 0x60), &pair.scratch_b);
+    try std.testing.expectEqualSlices(u8, &first_challenge, pair.b_to_a[0..second.accepted.packet_length]);
+}
+
+test "a session does not authenticate packets from another source address" {
+    var pair: Pair = undefined;
+    try pair.init();
+    defer pair.deinit();
+    const recovery = try pair.beginRecovery();
+    const request = try pair.authenticate(recovery.handshake_length);
+    try pair.completePong(recovery.started, &request);
+
+    const ping_message = pair.ping(2);
+    const started = try pair.node_a.startCall(&pair.a_to_b, pair.peerB(), &pair.record_b, &ping_message, 8, &sealEntropy(0xa0));
+    const moved = try pair.node_b.receive(&pair.b_to_a, pair.a_to_b[0..started.packet_length], loopback(3, 9_003), receiveArgs(9, 0xa1), &pair.scratch_b);
+    try std.testing.expectEqual(@as(u16, constants.whoareyou_packet_size), moved.accepted.packet_length);
+    try std.testing.expect(moved.accepted.event == .none);
+}
+
+test "TALKREQ and TALKRESP preserve an empty request ID" {
+    var pair: Pair = undefined;
+    try pair.init();
+    defer pair.deinit();
+    const recovery = try pair.beginRecovery();
+    const handshake_request = try pair.authenticate(recovery.handshake_length);
+    try pair.completePong(recovery.started, &handshake_request);
+
+    const empty_id = try message.RequestId.init(&.{});
+    const talk = message.Message{ .talk_request = .{ .request_id = empty_id, .protocol = "test-protocol", .request = "" } };
+    const started = try pair.node_a.startCall(&pair.a_to_b, pair.peerB(), &pair.record_b, &talk, 8, &sealEntropy(0xc0));
+    const received = try pair.node_b.receive(&pair.b_to_a, pair.a_to_b[0..started.packet_length], pair.address_a, receiveArgs(9, 0xc1), &pair.scratch_b);
+    const request = received.accepted.event.request;
+    try std.testing.expectEqual(@as(usize, 0), request.message.talk_request.request_id.slice().len);
+    var pending: PendingResponse = .{};
+    try std.testing.expectError(error.ApplicationResponseRequired, pair.node_b.prepareStandardResponse(&request, &pending));
+
+    const reply = message.Message{ .talk_response = .{ .request_id = empty_id, .response = "" } };
+    const reply_length = try pair.node_b.sendResponse(&pair.b_to_a, pair.peerA(), &reply, 10, &sealEntropy(0xc2));
+    const completed = try pair.node_a.receive(&pair.a_to_b, pair.b_to_a[0..reply_length], pair.address_b, receiveArgs(11, 0xc3), &pair.scratch_a);
+    try std.testing.expectEqual(started.handle, completed.accepted.event.response.matched.handle);
 }
 
 const Pair = struct {
