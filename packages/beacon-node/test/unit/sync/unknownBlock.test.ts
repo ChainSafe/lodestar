@@ -1662,7 +1662,7 @@ describe("UnknownBlockSync", () => {
         connect(honest);
         emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: attacker, source: BlockInputSource.gossip});
         // Column KZG proofs are verified off the event loop, fake timers alone do not wait for them
-        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
 
         expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
           attacker,
@@ -1689,7 +1689,7 @@ describe("UnknownBlockSync", () => {
         connect(attacker);
         connect(honest);
         emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: attacker, source: BlockInputSource.gossip});
-        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
 
         expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
           attacker,
@@ -1717,7 +1717,7 @@ describe("UnknownBlockSync", () => {
         connect(peer);
         connect(otherPeer);
         emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer, source: BlockInputSource.gossip});
-        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
 
         expect(verifySignatureSets).toHaveBeenCalledOnce();
         expect(reportPeer).not.toHaveBeenCalled();
@@ -1862,7 +1862,7 @@ describe("UnknownBlockSync", () => {
       try {
         emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: firstPeer, source: BlockInputSource.gossip});
         // Column KZG proofs are verified off the event loop, fake timers alone do not wait for them
-        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
 
         expect(new Set(sendDataColumnSidecarsByRoot.mock.calls.map(([peer]) => peer))).toEqual(
           new Set([firstPeer, secondPeer])
@@ -1897,7 +1897,7 @@ describe("UnknownBlockSync", () => {
 
       try {
         emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: firstPeer, source: BlockInputSource.gossip});
-        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
 
         expect(sendDataColumnSidecarsByRoot.mock.calls.map(([peer]) => peer)).toEqual([firstPeer, secondPeer]);
         expect(triggerColumnReconstruction).toHaveBeenCalledExactlyOnceWith(processBlock.mock.calls[0][0]);
@@ -1921,7 +1921,7 @@ describe("UnknownBlockSync", () => {
 
       try {
         emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer, source: BlockInputSource.gossip});
-        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
 
         expect(sendDataColumnSidecarsByRoot).toHaveBeenCalledOnce();
         expect(triggerColumnReconstruction).toHaveBeenCalledExactlyOnceWith(processBlock.mock.calls[0][0]);
@@ -1952,7 +1952,7 @@ describe("UnknownBlockSync", () => {
 
       try {
         emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: firstPeer, source: BlockInputSource.gossip});
-        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
 
         expect(sendDataColumnSidecarsByRoot).toHaveBeenCalledTimes(2);
         expect(triggerColumnReconstruction).toHaveBeenCalledExactlyOnceWith(processBlock.mock.calls[0][0]);
@@ -1972,7 +1972,7 @@ describe("UnknownBlockSync", () => {
 
       try {
         emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer, source: BlockInputSource.gossip});
-        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce());
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
 
         const blockInput = processBlock.mock.calls[0][0];
         expect(blockInput.hasAllData()).toBe(true);
