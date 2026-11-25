@@ -97,6 +97,7 @@ QUIC
 Quickstart
 README
 READMEs
+RHEL
 RPC
 Reth
 Ryzen
