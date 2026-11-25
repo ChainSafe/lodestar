@@ -1,5 +1,5 @@
 import {beforeEach, describe, expect, it} from "vitest";
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInputNoData, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
@@ -15,16 +15,17 @@ import {
   ValidatedBlock,
   cacheByRangeResponses,
   getBlocksForDataValidation,
+  validateBlockByRangeResponse,
   validateEnvelopesByRangeResponse,
+  validateResponses,
 } from "../../../../src/sync/utils/downloadByRange.js";
-import {generateChainOfBlockMaybeSidecars} from "../../../utils/blocksAndData.js";
+import {config, generateChainOfBlockMaybeSidecars, slots} from "../../../utils/blocksAndData.js";
 
 /**
  * Logic errors and gaps identified during test case creation:
  *
  * INSERT_LOGIC_ERROR_BULLET_POINTS_HERE
  *
- * - validateBlockByRangeResponse: Commented out zero blocks check breaks during chain liveness issues (line 445-453)
  * - validateBlobsByRangeResponse: Missing validation that blob sidecars are in consecutive (slot, index) order as per spec
  * - validateColumnsByRangeResponse: Missing validation that column sidecars are in consecutive (slot, index) order
  * - cacheByRangeResponses: Error handling for wrong chain only breaks loop but doesn't throw/propagate error properly
@@ -177,6 +178,35 @@ import {generateChainOfBlockMaybeSidecars} from "../../../utils/blocksAndData.js
 //   it("should validate column sidecars in parallel");
 //   it("should propagate validation errors from validateBlockDataColumnSidecars");
 // });
+
+describe("empty epoch", () => {
+  it("validateBlockByRangeResponse accepts zero blocks with a warning", () => {
+    const blocksRequest = {startSlot: slots.gloas, count: SLOTS_PER_EPOCH, step: 1};
+
+    const {result, warnings} = validateBlockByRangeResponse(config, blocksRequest, []);
+
+    expect(result).toEqual([]);
+    expect(warnings?.map((w) => w.type.code)).toEqual([DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE]);
+  });
+
+  it("validateResponses accepts zero blocks when columns and envelopes are also requested", async () => {
+    const startSlot = slots.gloas;
+
+    const {result} = await validateResponses({
+      config,
+      blocksRequest: {startSlot, count: SLOTS_PER_EPOCH, step: 1},
+      columnsRequest: {startSlot, count: SLOTS_PER_EPOCH, columns: [0, 1]},
+      envelopesRequest: {startSlot, count: SLOTS_PER_EPOCH},
+      blocks: [],
+      columnSidecars: [],
+      payloadEnvelopes: [],
+    });
+
+    expect(result.responses.validatedBlocks).toEqual([]);
+    expect(result.responses.validatedColumnSidecars).toBeUndefined();
+    expect(result.payloadEnvelopes?.size).toBe(0);
+  });
+});
 
 describe("getBlocksForDataValidation", () => {
   const forkName = ForkName.capella;

@@ -510,9 +510,12 @@ export class SyncChain {
     // if last processed epoch is n, we don't want to request batches with epoch > n + MAX_LOOK_AHEAD_EPOCHS
     // we should have enough batches to process in the buffer: n + 1, ..., n + MAX_LOOK_AHEAD_EPOCHS
     // let's focus on redownloading these batches first because it may have to reach different peers to get enough sampled columns
+    // Batches in AwaitingValidation are left out for the same reason as above: empty batches never advance
+    // lastEpochWithProcessBlocks, so counting them stalls sync on a run of empty epochs.
+    const pendingBatches = batches.filter((batch) => batch.state.status !== BatchStatus.AwaitingValidation);
     if (
-      batches.length > 0 &&
-      Math.max(...batches.map((b) => b.startEpoch)) >= this.lastEpochWithProcessBlocks + MAX_LOOK_AHEAD_EPOCHS
+      pendingBatches.length > 0 &&
+      Math.max(...pendingBatches.map((b) => b.startEpoch)) >= this.lastEpochWithProcessBlocks + MAX_LOOK_AHEAD_EPOCHS
     ) {
       return null;
     }
