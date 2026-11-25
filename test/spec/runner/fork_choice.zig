@@ -633,7 +633,7 @@ pub fn TestCase(comptime fork: ForkSeq) type {
             if (payload.slot_number != state_slot) return error.EnvelopeSlotMismatch;
             const latest_block_hash = try typed.inner.getFieldRoot("latest_block_hash");
             if (!std.mem.eql(u8, &payload.parent_hash, latest_block_hash)) return error.EnvelopeParentHashMismatch;
-            if (payload.timestamp != self.store.timing.timeAtSlotMs(state_slot) / 1000) return error.EnvelopeTimestampMismatch;
+            if (payload.timestamp != self.store.slotStartMs(state_slot) / 1000) return error.EnvelopeTimestampMismatch;
             var withdrawals_root: Root = undefined;
             try ForkTypes.Withdrawals.hashTreeRoot(self.allocator, &payload.withdrawals, &withdrawals_root);
             const expected_withdrawals_root = try typed.inner.getFieldRoot("payload_expected_withdrawals");
@@ -659,7 +659,7 @@ pub fn TestCase(comptime fork: ForkSeq) type {
                 try expectEqual(u64, try parseU64(value), self.store.time_ms / 1000, "time");
             }
             if (checks.get("genesis_time")) |value| {
-                try expectEqual(u64, try parseU64(value), self.store.genesis_time_ms / 1000, "genesis time");
+                try expectEqual(u64, try parseU64(value), self.store.clock_config.genesis_time_sec, "genesis time");
             }
             if (checks.get("justified_checkpoint")) |value| {
                 try expectCheckpoint(try parseCheckpoint(value), self.store.justified_checkpoint, "justified checkpoint");

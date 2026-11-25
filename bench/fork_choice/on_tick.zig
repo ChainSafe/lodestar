@@ -69,7 +69,7 @@ const State = struct {
 
     fn tick(self: *State) void {
         const store = self.bench.store;
-        store.onTick(store.timing.timeAtSlotMs(store.currentSlot() + 1)) catch unreachable;
+        store.onTick(store.slotStartMs(store.currentSlot() + 1)) catch unreachable;
     }
 };
 

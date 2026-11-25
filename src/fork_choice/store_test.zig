@@ -136,7 +136,7 @@ const Chain = struct {
     }
 
     fn tickToSlot(self: *Chain, slot: u64) !void {
-        try self.store.onTick(self.store.timing.timeAtSlotMs(slot));
+        try self.store.onTick(self.store.slotStartMs(slot));
     }
 };
 
@@ -294,7 +294,7 @@ test "summary-only chain: blocks are viable and the tip is the head" {
         .execution_status = .pre_merge,
     }, Provider.stateProvider());
     defer store.deinit();
-    try store.onTick(store.timing.timeAtSlotMs(64));
+    try store.onTick(store.slotStartMs(64));
     var parent_root = anchor_root;
     for (1..64) |slot| {
         var root: [32]u8 = anchor_root;
@@ -396,7 +396,7 @@ test "vote weights: incremental updates match a full recount" {
         .execution_status = .pre_merge,
     }, .{ .ctx = &Provider.instance, .vtable = &VaryingProvider.vtable });
     defer store.deinit();
-    try store.onTick(store.timing.timeAtSlotMs(7 * preset.SLOTS_PER_EPOCH));
+    try store.onTick(store.slotStartMs(7 * preset.SLOTS_PER_EPOCH));
 
     var prng = std.Random.DefaultPrng.init(0x5eed);
     const random = prng.random();
@@ -504,7 +504,7 @@ test "distinct votes: identical votes share an entry and the table stays bounded
     }, Provider.stateProvider());
     defer store.deinit();
     const last_slot = 5000;
-    try store.onTick(store.timing.timeAtSlotMs(last_slot + 1));
+    try store.onTick(store.slotStartMs(last_slot + 1));
     // Two sibling blocks, so a vote that lands on the wrong target lands on the wrong node.
     var roots: [2][32]u8 = undefined;
     for (&roots, 1..) |*root, slot| {
@@ -680,7 +680,7 @@ test "checkpoints: a provider failure during a block import leaves the block out
     const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge });
     var store = try Store.initFromSummary(testing.allocator, &@import("config").minimal.config, 0, anchor, .{ .ctx = &provider, .vtable = &FlakyProvider.vtable });
     defer store.deinit();
-    try store.onTick(store.timing.timeAtSlotMs(preset.SLOTS_PER_EPOCH + 1));
+    try store.onTick(store.slotStartMs(preset.SLOTS_PER_EPOCH + 1));
     const previous = store.justified_checkpoint;
     var block = optimisticSummary(.{ .tag = 2, .parent = 1, .slot = preset.SLOTS_PER_EPOCH + 1, .status = .pre_merge });
     block.justified_checkpoint = .{ .epoch = 1, .root = tagRoot(1) };
@@ -703,7 +703,7 @@ test "checkpoints: a block from a past epoch installs the newer of its two check
     const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge });
     var store = try Store.initFromSummary(testing.allocator, &@import("config").minimal.config, 0, anchor, .{ .ctx = &provider, .vtable = &FlakyProvider.vtable });
     defer store.deinit();
-    try store.onTick(store.timing.timeAtSlotMs(2 * preset.SLOTS_PER_EPOCH + 1));
+    try store.onTick(store.slotStartMs(2 * preset.SLOTS_PER_EPOCH + 1));
     var block = optimisticSummary(.{ .tag = 2, .parent = 1, .slot = 1, .status = .pre_merge });
     block.justified_checkpoint = .{ .epoch = 1, .root = tagRoot(1) };
     block.unrealized_justified_checkpoint = .{ .epoch = 2, .root = tagRoot(1) };
@@ -725,7 +725,7 @@ test "checkpoints: block import loads the unrealized balances, so the epoch star
     const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge });
     var store = try Store.initFromSummary(testing.allocator, &@import("config").minimal.config, 0, anchor, .{ .ctx = &provider, .vtable = &FlakyProvider.vtable });
     defer store.deinit();
-    try store.onTick(store.timing.timeAtSlotMs(1));
+    try store.onTick(store.slotStartMs(1));
     var block = optimisticSummary(.{ .tag = 2, .parent = 1, .slot = 1, .status = .pre_merge });
     block.unrealized_justified_checkpoint = .{ .epoch = 1, .root = tagRoot(1) };
     const previous = store.unrealized_justified_checkpoint;
@@ -741,7 +741,7 @@ test "checkpoints: block import loads the unrealized balances, so the epoch star
     const loads = provider.loads;
 
     provider.fail = true;
-    try store.onTick(store.timing.timeAtSlotMs(preset.SLOTS_PER_EPOCH));
+    try store.onTick(store.slotStartMs(preset.SLOTS_PER_EPOCH));
     try testing.expectEqual(block.unrealized_justified_checkpoint, store.justified_checkpoint);
     try testing.expectEqual(loads, provider.loads);
     try testing.expect(store.unrealized_justified_balances == null);
@@ -752,7 +752,7 @@ test "checkpoints: held unrealized balances are replaced by a newer checkpoint a
     const anchor = optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge });
     var store = try Store.initFromSummary(testing.allocator, &@import("config").minimal.config, 0, anchor, .{ .ctx = &provider, .vtable = &FlakyProvider.vtable });
     defer store.deinit();
-    try store.onTick(store.timing.timeAtSlotMs(2 * preset.SLOTS_PER_EPOCH + 2));
+    try store.onTick(store.slotStartMs(2 * preset.SLOTS_PER_EPOCH + 2));
     const loads = provider.loads;
 
     var first = optimisticSummary(.{ .tag = 2, .parent = 1, .slot = 2 * preset.SLOTS_PER_EPOCH + 1, .status = .pre_merge });
@@ -777,11 +777,11 @@ test "fast confirmation: a run without balances keeps the slot's variable update
     var store = try Store.initFromSummary(testing.allocator, &@import("config").minimal.config, 0, anchor, Provider.stateProvider());
     defer store.deinit();
     var fcr = FastConfirmation.init(&store);
-    try store.onTick(store.timing.timeAtSlotMs(1));
+    try store.onTick(store.slotStartMs(1));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 2, .parent = 1, .slot = 1, .status = .pre_merge }));
-    try store.onTick(store.timing.timeAtSlotMs(2));
+    try store.onTick(store.slotStartMs(2));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 3, .parent = 2, .slot = 2, .status = .pre_merge }));
-    try store.onTick(store.timing.timeAtSlotMs(3));
+    try store.onTick(store.slotStartMs(3));
     fcr.current_slot_head = tagRoot(2);
     fcr.confirmed_root = tagRoot(2);
 
@@ -798,7 +798,7 @@ test "optimistic sync: valid walks down to the merge boundary, invalid removes t
     // branch C (0x20, 0x21, 0x22) at the fork below 0x20.
     var store = try Store.initFromSummary(allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
     defer store.deinit();
-    try store.onTick(store.timing.timeAtSlotMs(8));
+    try store.onTick(store.slotStartMs(8));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 0x20, .slot = 2 }));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x31, .parent = 0x30, .slot = 3 }));
@@ -860,7 +860,7 @@ test "optimistic sync: a payload verdict applies to every block carrying it" {
 
     var store = try Store.initFromSummary(allocator, config, 0, anchor, Provider.stateProvider());
     defer store.deinit();
-    try store.onTick(store.timing.timeAtSlotMs(8));
+    try store.onTick(store.slotStartMs(8));
     for (blocks) |block| try store.onBlockSummary(optimisticSummary(block));
     try testing.expectEqual(pendingOf(&store, 0x40), try store.getHead());
 
@@ -872,7 +872,7 @@ test "optimistic sync: a payload verdict applies to every block carrying it" {
 
     var validated = try Store.initFromSummary(allocator, config, 0, anchor, Provider.stateProvider());
     defer validated.deinit();
-    try validated.onTick(validated.timing.timeAtSlotMs(8));
+    try validated.onTick(validated.slotStartMs(8));
     for (blocks) |block| try validated.onBlockSummary(optimisticSummary(block));
     try testing.expectEqual(VerdictResult.applied, validated.onPayloadValid(tagHash(0x30)));
     try testing.expectEqual(ExecutionStatus.valid, try validated.executionStatus(pendingOf(&validated, 0x30)));
@@ -887,7 +887,7 @@ test "optimistic sync: an INVALID verdict never crosses the justified block or a
     const config = &@import("config").mainnet.config;
     var store = try Store.initFromSummary(allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
     defer store.deinit();
-    try store.onTick(store.timing.timeAtSlotMs(8));
+    try store.onTick(store.slotStartMs(8));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 0x20, .slot = 2 }));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x31, .parent = 0x30, .slot = 3 }));
@@ -911,7 +911,7 @@ test "optimistic sync: an INVALID verdict never crosses the justified block or a
     // 0x50 carries the justified 0x40's payload: invalidating it would invalidate 0x40.
     var carried = try Store.initFromSummary(allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
     defer carried.deinit();
-    try carried.onTick(carried.timing.timeAtSlotMs(8));
+    try carried.onTick(carried.slotStartMs(8));
     try carried.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
     try carried.onBlockSummary(optimisticSummary(.{ .tag = 0x40, .parent = 0x20, .slot = 2 }));
     try carried.onBlockSummary(optimisticSummary(.{ .tag = 0x50, .parent = 0x20, .slot = 2, .payload = 0x40 }));
@@ -923,7 +923,7 @@ test "optimistic sync: an INVALID verdict never crosses the justified block or a
     // 0x30 carries 0x50's payload below the justified index, but 0x40 does not stand on it.
     var forked = try Store.initFromSummary(allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
     defer forked.deinit();
-    try forked.onTick(forked.timing.timeAtSlotMs(8));
+    try forked.onTick(forked.slotStartMs(8));
     try forked.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
     try forked.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 0x20, .slot = 2 }));
     try forked.onBlockSummary(optimisticSummary(.{ .tag = 0x40, .parent = 0x20, .slot = 3 }));
@@ -936,7 +936,7 @@ test "optimistic sync: an INVALID verdict never crosses the justified block or a
 
     var resolved = try Store.initFromSummary(allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
     defer resolved.deinit();
-    try resolved.onTick(resolved.timing.timeAtSlotMs(8));
+    try resolved.onTick(resolved.slotStartMs(8));
     try resolved.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
     try resolved.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 0x20, .slot = 2, .status = .valid }));
     try resolved.onBlockSummary(optimisticSummary(.{ .tag = 0x31, .parent = 0x30, .slot = 3 }));
@@ -971,7 +971,7 @@ test "payload decisions: a Heze payload failing its inclusion list loses its own
     var store = try Store.initFromSummary(allocator, &config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .heze }), Provider.stateProvider());
     defer store.deinit();
     try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, true);
-    try store.onTick(store.timing.timeAtSlotMs(1));
+    try store.onTick(store.slotStartMs(1));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .heze, .bid_parent = 1 }));
     const block = store.blockIndex(tagRoot(0x20)).?;
 
@@ -1001,7 +1001,7 @@ test "payload decisions: before Heze a delivered payload satisfies, and a pre-Gl
     const slot = preset.SLOTS_PER_EPOCH;
     try testing.expect(store.shouldBuildOnFull(pendingOf(&store, 1), slot));
 
-    try store.onTick(store.timing.timeAtSlotMs(slot));
+    try store.onTick(store.slotStartMs(slot));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = slot, .fork = .gloas, .bid_parent = 1 }));
     const block = store.blockIndex(tagRoot(0x20)).?;
     try testing.expect(!store.isPayloadInclusionListSatisfied(block));
@@ -1014,7 +1014,7 @@ test "optimistic sync: a zero latest valid hash invalidates through the merge bl
     const config = &@import("config").mainnet.config;
     var store = try Store.initFromSummary(allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
     defer store.deinit();
-    try store.onTick(store.timing.timeAtSlotMs(8));
+    try store.onTick(store.slotStartMs(8));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 0x20, .slot = 2 }));
     try testing.expectEqual(pendingOf(&store, 0x30), try store.getHead());
@@ -1050,7 +1050,7 @@ test "optimistic sync: Gloas empty links skip the parent's own payload" {
     var store = try Store.initFromSummary(allocator, &config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .gloas }), Provider.stateProvider());
     defer store.deinit();
     try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
-    try store.onTick(store.timing.timeAtSlotMs(8));
+    try store.onTick(store.slotStartMs(8));
     // 0x20 extends the anchor's payload (full link); 0x21 extends the anchor's payload
     // too, hanging off 0x20's empty node, so 0x20's own payload is not below it.
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
@@ -1092,7 +1092,7 @@ test "optimistic sync: a valid envelope over an invalidated payload returns Payl
     var store = try Store.initFromSummary(testing.allocator, &config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .gloas }), Provider.stateProvider());
     defer store.deinit();
     try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
-    try store.onTick(store.timing.timeAtSlotMs(8));
+    try store.onTick(store.slotStartMs(8));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
     try store.onExecutionPayloadEnvelope(tagRoot(0x20), .syncing, null);
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x21, .parent = 0x20, .slot = 2, .fork = .gloas, .bid_parent = 0x20 }));
@@ -1128,7 +1128,7 @@ test "optimistic sync: a Gloas from_block verdict starts at the node its hash na
     var store = try Store.initFromSummary(allocator, &config, 0, anchor, Provider.stateProvider());
     defer store.deinit();
     try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
-    try store.onTick(store.timing.timeAtSlotMs(8));
+    try store.onTick(store.slotStartMs(8));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
     try store.onExecutionPayloadEnvelope(tagRoot(0x20), .syncing, null);
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x21, .parent = 0x20, .slot = 2, .fork = .gloas, .bid_parent = 0x20 }));
@@ -1142,7 +1142,7 @@ test "optimistic sync: a Gloas from_block verdict starts at the node its hash na
     var justified = try Store.initFromSummary(allocator, &config, 0, anchor, Provider.stateProvider());
     defer justified.deinit();
     try justified.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
-    try justified.onTick(justified.timing.timeAtSlotMs(8));
+    try justified.onTick(justified.slotStartMs(8));
     try justified.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
     try justified.onExecutionPayloadEnvelope(tagRoot(0x20), .syncing, null);
     justified.justified_checkpoint.root = tagRoot(0x20);
@@ -1170,7 +1170,7 @@ test "get_ancestor: a Gloas walk takes each link's payload status from the child
     var store = try Store.initFromSummary(allocator, &config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .gloas }), Provider.stateProvider());
     defer store.deinit();
     try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
-    try store.onTick(store.timing.timeAtSlotMs(8));
+    try store.onTick(store.slotStartMs(8));
     // 0x20 builds on the anchor's payload, 0x21 on 0x20 without 0x20's payload.
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x21, .parent = 0x20, .slot = 2, .fork = .gloas, .bid_parent = 1 }));
@@ -1184,7 +1184,7 @@ test "optimistic sync: a valid import and a valid envelope validate the payloads
     const config = &@import("config").mainnet.config;
     var store = try Store.initFromSummary(allocator, config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .status = .pre_merge }), Provider.stateProvider());
     defer store.deinit();
-    try store.onTick(store.timing.timeAtSlotMs(8));
+    try store.onTick(store.slotStartMs(8));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1 }));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 0x20, .slot = 2 }));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x31, .parent = 0x30, .slot = 3, .status = .valid }));
@@ -1207,7 +1207,7 @@ test "optimistic sync: a valid import and a valid envelope validate the payloads
     var gloas = try Store.initFromSummary(allocator, &gloas_config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .gloas }), Provider.stateProvider());
     defer gloas.deinit();
     try gloas.onExecutionPayloadEnvelope(tagRoot(1), .syncing, null);
-    try gloas.onTick(gloas.timing.timeAtSlotMs(8));
+    try gloas.onTick(gloas.slotStartMs(8));
     try gloas.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
     try gloas.onExecutionPayloadEnvelope(tagRoot(0x20), .valid, null);
     try testing.expectEqual(ExecutionStatus.valid, try gloas.executionStatus(fullOf(&gloas, 1)));
@@ -1224,7 +1224,7 @@ test "queued votes: a vote for the current slot lands on the next tick" {
     defer store.deinit();
     const target: Checkpoint = .{ .epoch = 0, .root = tagRoot(1) };
     // Blocks from a past slot, so no proposer boost: ties break on the higher root.
-    try store.onTick(store.timing.timeAtSlotMs(2));
+    try store.onTick(store.slotStartMs(2));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .status = .pre_merge }));
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x30, .parent = 1, .slot = 1, .status = .pre_merge }));
     const low = store.blockIndex(tagRoot(0x20)).?;
@@ -1242,7 +1242,7 @@ test "queued votes: a vote for the current slot lands on the next tick" {
     var vote_high = indexedAttestation(&v0, 2, tagRoot(0x30), target);
     try store.onAttestation(.{ .electra = &vote_high }, false);
 
-    try store.onTick(store.timing.timeAtSlotMs(3));
+    try store.onTick(store.slotStartMs(3));
     try testing.expectEqual(@as(usize, 0), store.queuedVoteCount());
     try testing.expectEqual(low, store.latestMessage(0).?.block);
     try testing.expectEqual(low, (try store.getHead()).block);
@@ -1253,7 +1253,7 @@ test "queued votes: a vote for the current slot lands on the next tick" {
     try store.onAttestation(.{ .electra = &vote_1 }, false);
     try store.equivocating_indices.resize(allocator, 2, false);
     store.equivocating_indices.set(1);
-    try store.onTick(store.timing.timeAtSlotMs(4));
+    try store.onTick(store.slotStartMs(4));
     try testing.expectEqual(@as(?store_mod.LatestMessage, null), store.latestMessage(1));
 
     // A vote for the next slot waits one more tick.
@@ -1266,11 +1266,11 @@ test "queued votes: a vote for the current slot lands on the next tick" {
     var vote_200 = indexedAttestation(&v200, 4, tagRoot(0x20), target);
     try store.onAttestation(.{ .electra = &vote_200 }, false);
     try testing.expectEqual(@as(usize, 2), store.queuedVoteCount());
-    try store.onTick(store.timing.timeAtSlotMs(5));
+    try store.onTick(store.slotStartMs(5));
     try testing.expectEqual(@as(?store_mod.LatestMessage, null), store.latestMessage(2));
     try testing.expectEqual(low, store.latestMessage(200).?.block);
     try testing.expectEqual(@as(usize, 1), store.queuedVoteCount());
-    try store.onTick(store.timing.timeAtSlotMs(6));
+    try store.onTick(store.slotStartMs(6));
     try testing.expectEqual(high, store.latestMessage(2).?.block);
 
     // A queued vote for a block pruned before the drain lands as a slot-only message.
@@ -1280,7 +1280,7 @@ test "queued votes: a vote for the current slot lands on the next tick" {
     store.finalized_checkpoint = .{ .epoch = 0, .root = tagRoot(0x30) };
     store.justified_checkpoint = store.finalized_checkpoint;
     try testing.expectEqual(@as(usize, 2), try store.prune());
-    try store.onTick(store.timing.timeAtSlotMs(7));
+    try store.onTick(store.slotStartMs(7));
     try testing.expectEqual(NO_BLOCK, store.latestMessage(3).?.block);
     try testing.expectEqual(@as(u64, 6), store.latestMessage(3).?.slot);
 }
@@ -1301,7 +1301,7 @@ test "optimistic sync: pruning keeps the status a Gloas root inherited from drop
     var store = try Store.initFromSummary(allocator, &config, 0, optimisticSummary(.{ .tag = 1, .parent = 0, .slot = 0, .fork = .gloas }), Provider.stateProvider());
     defer store.deinit();
     try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
-    try store.onTick(store.timing.timeAtSlotMs(8));
+    try store.onTick(store.slotStartMs(8));
     // 0x20 and 0x30 extend the previous payload (full links); 0x30's payload is syncing.
     try store.onBlockSummary(optimisticSummary(.{ .tag = 0x20, .parent = 1, .slot = 1, .fork = .gloas, .bid_parent = 1 }));
     try store.onExecutionPayloadEnvelope(tagRoot(0x20), .syncing, null);
@@ -1360,7 +1360,7 @@ test "unfinalized anchor: the store keeps the state's checkpoints and the anchor
     try testing.expectEqual(@as(usize, 0), try store.prune());
 
     // A sibling of the anchor takes the head once it has the votes: the anchor is not final.
-    try store.onTick(store.timing.timeAtSlotMs(unfinalized_anchor_slot + 2));
+    try store.onTick(store.slotStartMs(unfinalized_anchor_slot + 2));
     try store.onBlockSummary(unfinalizedSummary(.{ .tag = 0x20, .parent = 1, .slot = unfinalized_anchor_slot + 1, .status = .pre_merge }));
     try store.onBlockSummary(unfinalizedSummary(.{ .tag = 0x21, .parent = 0x0b, .slot = unfinalized_anchor_slot + 1, .status = .pre_merge }));
     var voters = [_]u64{ 0, 1, 2 };
@@ -1401,7 +1401,7 @@ test "unfinalized anchor: the chain can justify the checkpoint block of the anch
     var store = try Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &ancestors, Provider.stateProvider());
     defer store.deinit();
 
-    try store.onTick(store.timing.timeAtSlotMs(unfinalized_anchor_slot + 2));
+    try store.onTick(store.slotStartMs(unfinalized_anchor_slot + 2));
     var justifying = unfinalizedSummary(.{ .tag = 0x20, .parent = 1, .slot = unfinalized_anchor_slot + 1, .status = .pre_merge });
     justifying.justified_checkpoint = epoch_checkpoint;
     justifying.unrealized_justified_checkpoint = epoch_checkpoint;
@@ -1466,7 +1466,7 @@ test "unfinalized anchor: a Gloas anchor hangs from its ancestors' empty nodes" 
     try testing.expectEqual(store.blockIndex(tagRoot(1)).?, (try store.getHead()).block);
     try testing.expectEqual(ExecutionStatus.pre_merge, try store.executionStatus(pendingOf(&store, 1)));
 
-    try store.onTick(store.timing.timeAtSlotMs(unfinalized_anchor_slot + 1));
+    try store.onTick(store.slotStartMs(unfinalized_anchor_slot + 1));
     try store.onExecutionPayloadEnvelope(tagRoot(1), .valid, null);
     try store.onBlockSummary(unfinalizedSummary(.{ .tag = 0x20, .parent = 1, .slot = unfinalized_anchor_slot + 1, .fork = .gloas, .bid_parent = 1 }));
     try testing.expectEqual(store.blockIndex(tagRoot(0x20)).?, (try store.getHead()).block);
@@ -1480,7 +1480,7 @@ test "unfinalized anchor: a zero latest valid hash does not reach the ancestors"
     var store = try Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &unfinalized_ancestors, Provider.stateProvider());
     defer store.deinit();
 
-    try store.onTick(store.timing.timeAtSlotMs(unfinalized_anchor_slot + 2));
+    try store.onTick(store.slotStartMs(unfinalized_anchor_slot + 2));
     try store.onBlockSummary(unfinalizedSummary(.{ .tag = 0x20, .parent = 1, .slot = unfinalized_anchor_slot + 1 }));
     try testing.expectEqual(VerdictResult.unusable_lvh, try store.onPayloadInvalid(tagRoot(0x20), tagHash(0x20), ZERO, .child_payload));
     try testing.expectEqual(ExecutionStatus.syncing, try store.executionStatus(pendingOf(&store, 1)));
@@ -1503,7 +1503,7 @@ test "unfinalized anchor: an invalid verdict does not reach the anchor's payload
     var store = try Store.initFromUnfinalizedSummary(allocator, config, 0, anchor, &unfinalized_ancestors, Provider.stateProvider());
     defer store.deinit();
 
-    try store.onTick(store.timing.timeAtSlotMs(unfinalized_anchor_slot + 2));
+    try store.onTick(store.slotStartMs(unfinalized_anchor_slot + 2));
     try testing.expectEqual(VerdictResult.nothing_to_invalidate, try store.onPayloadInvalid(tagRoot(1), tagHash(1), null, .from_block));
     try testing.expectEqual(pendingOf(&store, 1), try store.getHead());
 
