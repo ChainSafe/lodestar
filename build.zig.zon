@@ -187,7 +187,7 @@
         },
         .clock = .{
             .root_source_file = "src/clock/root.zig",
-            .imports = .{ .zio, .consensus_types, .bounded_array, .time },
+            .imports = .{ .zio, .consensus_types, .bounded_array, .time, .config, .preset, .constants },
         },
         .cpu_count = .{
             .root_source_file = "src/cpu_count.zig",
