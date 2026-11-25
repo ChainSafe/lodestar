@@ -407,11 +407,14 @@ describe("getGossipHandlers", () => {
     expect(core.reportPeer).not.toHaveBeenCalled();
   });
 
-  it("keeps the cached block input when block data is unavailable", async () => {
-    const {prune} = await runBeaconBlockProcessingError(denebConfig, BlockErrorCode.DATA_UNAVAILABLE);
+  it.each([BlockErrorCode.DATA_UNAVAILABLE, BlockErrorCode.EXECUTION_ENGINE_ERROR] as const)(
+    "keeps the cached block input of a block with missing data on %s",
+    async (code) => {
+      const {prune} = await runBeaconBlockProcessingError(denebConfig, code, {missingData: true});
 
-    expect(prune).not.toHaveBeenCalled();
-  });
+      expect(prune).not.toHaveBeenCalled();
+    }
+  );
 
   it("reports the gossip peer when block processing gets a definitive execution INVALID verdict", async () => {
     const {core, peerIdStr, prune} = await runBeaconBlockProcessingError(
@@ -654,7 +657,8 @@ async function runBeaconBlockProcessingError(
   code:
     | BlockErrorCode.EXECUTION_ENGINE_ERROR
     | BlockErrorCode.EXECUTION_ENGINE_INVALID
-    | BlockErrorCode.DATA_UNAVAILABLE
+    | BlockErrorCode.DATA_UNAVAILABLE,
+  {missingData = false}: {missingData?: boolean} = {}
 ): Promise<{
   core: Pick<INetworkCore, "reportPeer">;
   peerIdStr: PeerIdStr;
@@ -674,6 +678,9 @@ async function runBeaconBlockProcessingError(
     seenTimestampSec: 0,
     peerIdStr,
   });
+  if (missingData) {
+    vi.spyOn(blockInput, "hasBlockAndAllData").mockReturnValue(false);
+  }
   const error = getExecutionBlockError(signedBlock, code);
   const core = {reportPeer: vi.fn()} as Pick<INetworkCore, "reportPeer">;
   const prune = vi.fn();
