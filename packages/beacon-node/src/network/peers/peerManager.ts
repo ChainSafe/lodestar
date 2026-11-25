@@ -553,12 +553,10 @@ export class PeerManager {
 
     // ban and disconnect peers with bad score, collect rest of healthy peers
     const connectedHealthyPeers: PeerId[] = [];
-    const connectedDirectPeerIds: string[] = [];
     for (const peer of connectedPeers) {
-      const peerIdStr = peer.toString();
       // Direct peers are pinned by the operator, only removing them as direct peer makes them prunable
-      if (this.gossipsub.isDirectPeer(peerIdStr)) {
-        connectedDirectPeerIds.push(peerIdStr);
+      if (this.gossipsub.isDirectPeer(peer.toString())) {
+        connectedHealthyPeers.push(peer);
         continue;
       }
       switch (this.peerRpcScores.getScoreState(peer)) {
@@ -586,17 +584,16 @@ export class PeerManager {
     this.metrics?.peerManager.starved.set(starved ? 1 : 0);
     const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
     const boundary = this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch);
-    const connectedHealthyPeerIds = new Set([
-      ...connectedHealthyPeers.map((peer) => peer.toString()),
-      ...connectedDirectPeerIds,
-    ]);
+    const connectedHealthyPeerIds = new Set(connectedHealthyPeers.map((peer) => peer.toString()));
 
     const prioritizeTimer = this.metrics?.peerManager.prioritizePeersDuration.startTimer();
     const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries, custodyGroupQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => {
-        const peerData = this.connectedPeers.get(peer.toString());
+        const peerIdStr = peer.toString();
+        const peerData = this.connectedPeers.get(peerIdStr);
         return {
           id: peer,
+          direct: this.gossipsub.isDirectPeer(peerIdStr),
           direction: peerData?.direction ?? null,
           status: peerData?.status ?? null,
           attnets: peerData?.metadata?.attnets ?? null,

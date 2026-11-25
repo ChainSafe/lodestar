@@ -98,6 +98,7 @@ function computeStatusScore(ours: Status, theirs: Status | null, opts: Prioritiz
 
 type PeerInfo = {
   id: PeerId;
+  direct: boolean;
   direction: MessageStreamDirection | null;
   statusScore: StatusScore;
   attnets: phase0.AttestationSubnets;
@@ -140,6 +141,7 @@ export enum ExcessPeerDisconnectReason {
 export function prioritizePeers(
   connectedPeersInfo: {
     id: PeerId;
+    direct?: boolean;
     direction: MessageStreamDirection | null;
     status: Status | null;
     attnets: phase0.AttestationSubnets | null;
@@ -169,6 +171,7 @@ export function prioritizePeers(
   const connectedPeers = connectedPeersInfo.map(
     (peer): PeerInfo => ({
       id: peer.id,
+      direct: peer.direct ?? false,
       direction: peer.direction,
       statusScore: computeStatusScore(opts.status, peer.status, opts),
       attnets: peer.attnets ?? attnetsZero,
@@ -204,18 +207,22 @@ export function prioritizePeers(
     metrics.peerManager.outboundPeersRatio.set(connectedPeerCount > 0 ? outboundPeerCount / connectedPeerCount : 0);
   }
 
-  if (connectedPeerCount < targetPeers) {
+  // Direct peers count towards subnet coverage but neither towards targetPeers nor are they ever pruned
+  const prunablePeers = connectedPeers.filter((peer) => !peer.direct);
+  const prunablePeerCount = prunablePeers.length;
+
+  if (prunablePeerCount < targetPeers) {
     // Need more peers.
     // Instead of attempting to connect the exact amount necessary this will overshoot a little since the success
-    // rate of outgoing connections is low, <33%. If we try to connect exactly `targetPeers - connectedPeerCount` the
+    // rate of outgoing connections is low, <33%. If we try to connect exactly `targetPeers - prunablePeerCount` the
     // peer count will almost always be just below targetPeers triggering constant discoveries that are not necessary
     peersToConnect = Math.min(
-      PEERS_TO_CONNECT_OVERSHOOT_FACTOR * (targetPeers - connectedPeerCount),
+      PEERS_TO_CONNECT_OVERSHOOT_FACTOR * (targetPeers - prunablePeerCount),
       // Never attempt to connect more peers than maxPeers even considering a low chance of dial success
-      maxPeers - connectedPeerCount
+      maxPeers - prunablePeerCount
     );
-  } else if (connectedPeerCount > targetPeers) {
-    pruneExcessPeers(connectedPeers, dutiesByPeer, activeAttnets, peersToDisconnect, opts);
+  } else if (prunablePeerCount > targetPeers) {
+    pruneExcessPeers(prunablePeers, dutiesByPeer, activeAttnets, peersToDisconnect, opts);
   }
 
   return {
