@@ -267,11 +267,10 @@ pub const BlockSummary = struct {
     /// client that imports a block later than it received it passes the arrival.
     arrival_ms_into_slot: ?u64 = null,
 
-    /// `execution_status` is the engine's `newPayload` verdict; it is normalized to
-    /// `.pre_merge` for blocks without a payload and `.syncing` for Gloas blocks.
-    pub fn fromBlock(allocator: Allocator, io: std.Io, block: AnyBeaconBlock, post_state: *CachedBeaconState, execution_status: ExecutionStatus) !BlockSummary {
-        var root: Root = undefined;
-        try block.hashTreeRoot(allocator, &root);
+    /// `root` is the block's hash tree root. `execution_status` is the engine's `newPayload`
+    /// verdict; it is normalized to `.pre_merge` for blocks without a payload and `.syncing`
+    /// for Gloas blocks.
+    pub fn fromBlock(allocator: Allocator, io: std.Io, block: AnyBeaconBlock, root: Root, post_state: *CachedBeaconState, execution_status: ExecutionStatus) !BlockSummary {
         const state = post_state.state;
         var justified: Checkpoint = undefined;
         try state.currentJustifiedCheckpoint(&justified);
@@ -496,7 +495,9 @@ pub const Store = struct {
         const state = anchor_state.state;
         const state_root = try state.hashTreeRoot();
         if (!std.mem.eql(u8, state_root, anchor_block.stateRoot())) return error.AnchorStateRootMismatch;
-        var summary = try BlockSummary.fromBlock(allocator, io, anchor_block, anchor_state, execution_status);
+        var anchor_root: Root = undefined;
+        try anchor_block.hashTreeRoot(allocator, &anchor_root);
+        var summary = try BlockSummary.fromBlock(allocator, io, anchor_block, anchor_root, anchor_state, execution_status);
         summary.unrealized_justified_checkpoint = summary.justified_checkpoint;
         summary.unrealized_finalized_checkpoint = summary.finalized_checkpoint;
         return initFromSummary(allocator, config, try state.genesisTime(), summary, provider);
@@ -1025,8 +1026,7 @@ pub const Store = struct {
     pub fn onBlock(self: *Store, io: std.Io, block: AnyBeaconBlock, block_root: Root, post_state: *CachedBeaconState, execution_status: ExecutionStatus) !void {
         if (self.hasBlock(block_root)) return;
         try self.validateBlock(block, block_root);
-        var summary = try BlockSummary.fromBlock(self.allocator, io, block, post_state, execution_status);
-        summary.root = block_root;
+        const summary = try BlockSummary.fromBlock(self.allocator, io, block, block_root, post_state, execution_status);
         var ptc_messages: PtcMessages = .{};
         if (block.forkSeq().gte(.gloas)) try self.indexPtcMessages(block, post_state, &ptc_messages);
         try self.importBlock(&summary, ptc_messages.slice());
