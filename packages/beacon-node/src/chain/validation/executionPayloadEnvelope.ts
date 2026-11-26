@@ -7,6 +7,7 @@ import {
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
+import {computeExecutionBlockHash} from "../../execution/engine/blockHash.js";
 import {
   getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
   getSlotFromExecutionPayloadEnvelopeSerialized,
@@ -199,6 +200,8 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
+  // Execution request and withdrawal count limits are enforced by the SSZ list limits on decode
+
   // [IGNORE] The number of transactions is within the limit implied by the parent payload's gas limit
   // TODO GLOAS: [REJECT] once https://github.com/ethereum/consensus-specs/pull/5802 is released,
   // also in validateGossipExecutionPayloadEnvelopeSerialized
@@ -251,6 +254,8 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] The payload contains no empty transactions
+  // An empty transaction is a deletion in the transactions trie, so trailing empty transactions would not change
+  // the block hash. The EL rejects such a payload, as `verify_and_notify_new_payload` does before hashing.
   for (let i = 0; i < payload.transactions.length; i++) {
     if (payload.transactions.getSize(i) === 0) {
       throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
@@ -272,6 +277,25 @@ async function validateExecutionPayloadEnvelope(
       root: blockRootHex,
       envelopeWithdrawalsRoot: toRootHex(withdrawalsRoot),
       expectedWithdrawalsRoot: toRootHex(expectedWithdrawalsRoot),
+    });
+  }
+
+  // [REJECT] The payload's block hash is computed correctly
+  const timer = chain.metrics?.gossipExecutionPayloadEnvelope.blockHashTime.startTimer();
+  const computedBlockHash = computeExecutionBlockHash(
+    blockState.forkName,
+    payload,
+    envelope.parentBeaconBlockRoot,
+    envelope.executionRequests
+  );
+  timer?.();
+  if (!byteArrayEquals(computedBlockHash, payload.blockHash)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK_HASH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      blockHash: toRootHex(payload.blockHash),
+      computedBlockHash: toRootHex(computedBlockHash),
     });
   }
 
