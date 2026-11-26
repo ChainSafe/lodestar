@@ -1,4 +1,3 @@
-import path from "node:path";
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {ethereumConsensusSpecsTests} from "../../specTestVersioning.js";
 import {specTestIterator} from "../../utils/specTestIterator.js";
@@ -22,6 +21,6 @@ const lightclientTestFns: Record<string, TestRunnerFn<any, any>> = {
   update_ranking: updateRanking,
 };
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+specTestIterator(ethereumConsensusSpecsTests.testsDir(ACTIVE_PRESET), {
   light_client: {type: RunnerType.default, fn: lightClient},
 });

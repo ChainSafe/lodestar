@@ -1,4 +1,3 @@
-import path from "node:path";
 import {expect} from "vitest";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
@@ -145,6 +144,6 @@ type GenesisInitCase = {
   eth1_timestamp: bigint;
 };
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+specTestIterator(ethereumConsensusSpecsTests.testsDir(ACTIVE_PRESET), {
   genesis: {type: RunnerType.default, fn: genesis},
 });

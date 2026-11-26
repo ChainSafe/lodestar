@@ -15,15 +15,15 @@ const skippedTestNames = [
 /**
  * File path structure:
  * ```
- * spec-tests-bls/
+ * test/spec/spec_tests/bls/<version>/
  *   <testRunner>   [aggregate, deserialization_G1]
  *     <testCase>
  * ```
  *
  * Examples
  * ```
- * spec-tests-bls / aggregate          / aggregate_0x0000000000000000000000000000000000000000000000000000000000000000.yaml
- * spec-tests-bls / deserialization_G1 / deserialization_fails_infinity_with_false_b_flag.yaml
+ * bls/v0.1.1 / aggregate          / aggregate_0x0000000000000000000000000000000000000000000000000000000000000000.yaml
+ * bls/v0.1.1 / deserialization_G1 / deserialization_fails_infinity_with_false_b_flag.yaml
  * ```
  */
 for (const fnName of readdirSyncSpec(blsSpecTests.outputDir)) {

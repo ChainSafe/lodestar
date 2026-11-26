@@ -25,7 +25,7 @@ type SszFixture = {
   rejectionReason?: string;
 };
 
-const fixturesDir = path.join(sszSpecTests.outputDir, "fixtures", "ssz", "ssz");
+const fixturesDir = sszSpecTests.fixturesDir;
 
 for (const testSuite of fs.readdirSync(fixturesDir)) {
   const testSuiteDir = path.join(fixturesDir, testSuite);

@@ -67,6 +67,7 @@
     "blockchain"
   ],
   "devDependencies": {
+    "@lodestar/spec-test-util": "workspace:^",
     "@types/js-yaml": "^4.0.5",
     "axios": "^1.13.2",
     "js-yaml": "^4.1.0"

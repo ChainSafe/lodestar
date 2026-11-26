@@ -70,5 +70,8 @@
     "@lodestar/params": "workspace:^",
     "@lodestar/types": "workspace:^",
     "@lodestar/utils": "workspace:^"
+  },
+  "devDependencies": {
+    "@lodestar/spec-test-util": "workspace:^"
   }
 }

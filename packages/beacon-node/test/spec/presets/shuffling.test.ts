@@ -1,4 +1,3 @@
-import path from "node:path";
 import {unshuffleList} from "@lodestar/native/shuffle";
 import {ACTIVE_PRESET, SHUFFLE_ROUND_COUNT} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
@@ -36,6 +35,6 @@ type ShufflingTestCase = {
   };
 };
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+specTestIterator(ethereumConsensusSpecsTests.testsDir(ACTIVE_PRESET), {
   shuffling: {type: RunnerType.default, fn: shuffling},
 });

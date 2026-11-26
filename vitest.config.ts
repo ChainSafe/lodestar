@@ -58,8 +58,6 @@ export default defineConfig({
       },
     ],
     exclude: [
-      "**/spec-tests/**",
-      "**/spec-tests-bls/**",
       "**/*.browser.test.ts",
       "**/node_modules/**",
       "**/dist/**",
@@ -97,8 +95,6 @@ export default defineConfig({
         "**/types/**",
         "**/bin/**",
         "**/node_modules/**",
-        "**/spec-tests/**",
-        "**/spec-tests-bls/**",
       ],
     },
   },

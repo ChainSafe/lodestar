@@ -1,4 +1,3 @@
-import path from "node:path";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {SkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType} from "../utils/types.js";
@@ -22,7 +21,7 @@ const skipOpts: SkipOpts = {
 };
 
 specTestIterator(
-  path.join(ethereumConsensusSpecsTests.outputDir, "tests", "general"),
+  ethereumConsensusSpecsTests.testsDir("general"),
   {
     bls: {type: RunnerType.default, fn: blsTestRunner},
     kzg: {type: RunnerType.default, fn: kzgTestRunner},

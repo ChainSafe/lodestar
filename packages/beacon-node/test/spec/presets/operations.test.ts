@@ -156,7 +156,7 @@ export type OperationsTestCase = {
   execution: {execution_valid: boolean};
 };
 
-const specTestDir = path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET);
+const specTestDir = ethereumConsensusSpecsTests.testsDir(ACTIVE_PRESET);
 
 const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork, testName) => {
   const operationFn = operationFns[testName];
