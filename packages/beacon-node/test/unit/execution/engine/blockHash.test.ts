@@ -87,6 +87,16 @@ function buildPayload(fork: ForkPostBellatrix): {
   return {payload, executionRequests};
 }
 
+/**
+ * Two items give a branch of two 1-nibble leaves whose RLP is `itemLength + 3` bytes, so 29 is the
+ * first length where a leaf must be referenced by hash instead of embedded.
+ */
+function trieBoundaryItems(itemLength: number): Uint8Array[] {
+  return [0, 1].map((seed) =>
+    Uint8Array.from({length: itemLength}, (_, j) => (j === 0 ? 0x02 : (seed * 31 + j * 7) & 0xff))
+  );
+}
+
 describe("execution / engine / blockHash / reference trie", () => {
   it("computeOrderedTrieRoot of no items is the empty trie root", () => {
     expect(toHex(reference.computeOrderedTrieRoot([]))).toBe(
@@ -94,8 +104,7 @@ describe("execution / engine / blockHash / reference trie", () => {
     );
   });
 
-  // Two items give a branch of two 1-nibble leaves whose RLP is `itemLength + 3` bytes, so 29 is the
-  // first length where a leaf must be referenced by hash instead of embedded. Roots computed with py-trie.
+  // Roots computed with py-trie
   const trieBoundaryRoots: [number, string][] = [
     [28, "0x82e166a9e47bc8433e181fb2138bffdc162e41a762c2d660ef45c697bfb38db6"],
     [29, "0x0c42afb5b79fcf46c778821c0cb377f861d4294e525a32b6dc0fc47c0f6d2633"],
@@ -103,10 +112,7 @@ describe("execution / engine / blockHash / reference trie", () => {
   ];
   for (const [itemLength, expectedRoot] of trieBoundaryRoots) {
     it(`computeOrderedTrieRoot of two ${itemLength}-byte items`, () => {
-      const items = [0, 1].map((seed) =>
-        Uint8Array.from({length: itemLength}, (_, j) => (j === 0 ? 0x02 : (seed * 31 + j * 7) & 0xff))
-      );
-      expect(toHex(reference.computeOrderedTrieRoot(items))).toBe(expectedRoot);
+      expect(toHex(reference.computeOrderedTrieRoot(trieBoundaryItems(itemLength)))).toBe(expectedRoot);
     });
   }
 });
@@ -178,6 +184,15 @@ describe("execution / engine / blockHash / native vs reference", () => {
         Uint8Array.from({length: 1 + ((i * 37) % 300)}, (_, j) => (i * 131 + j * 17) & 0xff)
       )
     );
+
+    expect(toHex(computeExecutionBlockHash(ForkName.bellatrix, payload, null, null))).toBe(
+      toHex(reference.computeExecutionBlockHash(ForkName.bellatrix, payload, null, null))
+    );
+  });
+
+  it.each([28, 29, 30])("block hash of two %i-byte transactions", (itemLength) => {
+    const {payload} = buildPayload(ForkName.bellatrix);
+    payload.transactions = SerializedList.fromArray(trieBoundaryItems(itemLength));
 
     expect(toHex(computeExecutionBlockHash(ForkName.bellatrix, payload, null, null))).toBe(
       toHex(reference.computeExecutionBlockHash(ForkName.bellatrix, payload, null, null))

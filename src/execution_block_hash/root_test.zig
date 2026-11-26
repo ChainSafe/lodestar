@@ -1,9 +1,12 @@
 //! Vector provenance:
 //!  - bellatrix example: engine_getPayloadV1 response in the execution-apis spec
-//!  - per-fork block hashes and trie boundary roots: computed with py-rlp,
-//!    py-trie and eth-hash, using the header layout of the consensus-specs
-//!    pyspec helper compute_el_header_block_hash. The same vectors are checked
-//!    in packages/beacon-node/test/unit/execution/engine/blockHash.test.ts
+//!  - per-fork block hashes: computed with py-rlp, py-trie and eth-hash, using
+//!    the header layout of the consensus-specs pyspec helper
+//!    compute_el_header_block_hash. The same vectors are checked in
+//!    packages/beacon-node/test/unit/execution/engine/blockHash.test.ts
+//!  - trie boundary block hashes: computed with the JS reference in
+//!    packages/beacon-node/test/utils/blockHashReference.ts, whose transactions
+//!    roots for the same items are checked against py-trie in blockHash.test.ts
 
 const std = @import("std");
 const testing = std.testing;
@@ -197,6 +200,28 @@ test "computeBlockHash for each fork" {
         const requests = if (fork_seq >= @intFromEnum(ForkSeq.electra)) try buildExecutionRequests(arena, fork) else null;
 
         try expectHash(expected, try block_hash.computeBlockHash(fork, payload, root, requests));
+    }
+}
+
+// Two transactions give a branch of two 1-nibble leaves whose RLP is `len + 3` bytes, so 29 is the
+// first length where a leaf must be referenced by hash instead of embedded.
+test "computeBlockHash at the embedded trie node boundary" {
+    const vectors = [_]struct { usize, *const [64]u8 }{
+        .{ 28, "f1a656a11787a584f6e7ba9670b2d1379e6f13172a4c3ac9828bc36f9a6e5988" },
+        .{ 29, "123fb2513409bc5e00ccbee19fb886c1da9e800cc87e8ab5fff3a2c918bef07b" },
+        .{ 30, "f2c9ae6bd9e229b1e8c91fdaa2a039e00ec6fe1375593a5af0c2138dac9706bf" },
+    };
+    for (vectors) |vector| {
+        const len, const expected = vector;
+        var items: [2][30]u8 = undefined;
+        for (&items, 0..) |*item, seed| {
+            for (item, 0..) |*byte, j| byte.* = @truncate(seed * 31 + j * 7);
+            item[0] = 0x02;
+        }
+        const payload = try buildPayload(testing.allocator, .bellatrix, .{}, &.{ items[0][0..len], items[1][0..len] });
+        defer testing.allocator.free(payload);
+
+        try expectHash(expected, try block_hash.computeBlockHash(.bellatrix, payload, null, null));
     }
 }
 
