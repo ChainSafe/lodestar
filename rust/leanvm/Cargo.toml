@@ -11,8 +11,8 @@ crate-type = ["staticlib"]
 # leanVM's stable prover is its reference; the experimental one is the fast one. `cpu_tiers`
 # adds a copy of it per instruction set, which `tier-rustc` compiles and leanVM picks from at
 # run time.
-lean_vm = { git = "https://github.com/leanEthereum/leanVM", rev = "4887fe09636e35b0e9c84ecc0b50ee18a0d06ca9", features = ["cpu_tiers"] }
-lean_xmss = { git = "https://github.com/leanEthereum/leanVM", rev = "4887fe09636e35b0e9c84ecc0b50ee18a0d06ca9" }
+lean_vm = { git = "https://github.com/leanEthereum/leanVM", rev = "351f7ae421529ce164ed747eee1f78bdeaec3e80", features = ["cpu_tiers"] }
+lean_xmss = { git = "https://github.com/leanEthereum/leanVM", rev = "351f7ae421529ce164ed747eee1f78bdeaec3e80" }
 
 # leanVM's own release profile, which a git dependency does not bring with it.
 [profile.release]

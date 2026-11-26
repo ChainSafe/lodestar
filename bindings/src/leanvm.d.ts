@@ -48,7 +48,7 @@ export declare class XmssSecretKey {
   toPublicKey(): Uint8Array;
   /**
    * Builds the bottom tree `leafIndex` is in: the 2^16 leaf indices that share its top 16 bits.
-   * The first `sign` in a bottom tree otherwise pays for it. A key keeps the 4 bottom trees it
+   * The first `sign` in a bottom tree otherwise pays for it. A key keeps the 8 bottom trees it
    * used last.
    */
   prepare(leafIndex: number): Promise<void>;

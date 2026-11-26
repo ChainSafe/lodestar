@@ -192,7 +192,7 @@ pub const xmss = struct {
     pub const public_key_size = 32;
     pub const signature_size = 2404;
     /// Bottom trees a key keeps, the ones it used last.
-    pub const cached_bottom_trees = 4;
+    pub const cached_bottom_trees = 8;
 
     /// All of a key's secret material.
     pub const Seed = [seed_len]u8;

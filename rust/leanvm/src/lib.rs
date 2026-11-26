@@ -35,11 +35,15 @@ const _: () = {
     assert!(lean_xmss::MESSAGE_LEN == 32);
     assert!(lean_xmss::PUB_KEY_SIZE == 32);
     assert!(lean_xmss::SIG_SIZE == 2404);
-    assert!(lean_xmss::MAX_CACHED_BOTTOM_TREES == 4);
+    assert!(lean_xmss::DEFAULT_BOTTOM_TREE_CACHE_SIZE == 8);
     assert!(lean_vm::MAX_RECURSIONS == 16);
     assert!(lean_vm::MIN_LOG_INV_RATE == 1);
     assert!(lean_vm::MAX_LOG_INV_RATE == 4);
 };
+
+// A proof of another protocol version does not verify, and every client of a network runs one:
+// a leanVM that changes it must not build until the network it is for is known to change too.
+const _: () = assert!(lean_vm::PROTOCOL_VERSION == 1);
 
 const OK: i32 = 0;
 const ERR_INVALID_SIGNATURE: i32 = 1;
