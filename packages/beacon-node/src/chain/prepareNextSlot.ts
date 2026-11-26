@@ -558,15 +558,16 @@ export class PrepareNextSlotScheduler {
 
   /**
    * A payload of the current slot's block imported after the scheduled run moves the head to its full variant.
-   * Only react to a payload the PTC votes present: seen before the payload deadline with all its data, or already
-   * voted present. A late one without that verdict will likely be voted absent and the re-prepare undone.
+   * Only react to a payload the PTC votes present: seen before the payload deadline, or already voted present. The
+   * event is only emitted once the payload's data is available. A late one without that verdict will likely be voted
+   * absent and the re-prepare undone.
    */
   private onExecutionPayloadImported = ({slot, blockRoot}: {slot: Slot; blockRoot: RootHex}): void => {
     if (slot !== this.chain.clock.currentSlot) {
       return;
     }
     const payloadInput = this.chain.seenPayloadEnvelopeInputCache.get(blockRoot);
-    if (payloadInput === undefined || !payloadInput.hasPayloadEnvelope() || !payloadInput.hasAllData()) {
+    if (payloadInput === undefined || !payloadInput.hasPayloadEnvelope()) {
       return;
     }
     const seenSec = this.chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec);

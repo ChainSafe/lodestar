@@ -170,7 +170,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         result: "changed" | "unchanged" | "dropped" | "error";
       }>({
         name: "beacon_block_payload_reprepare_total",
-        help: "Re-runs of the next slot payload preparation after the scheduled run, by reason and result: prepared again as the head, parent payload or fee recipient changed, unchanged, dropped as the proposal slot started, or failed",
+        help: "Re-runs of the next slot payload preparation after the scheduled run, by reason and result: prepared again as the head or its parent payload changed, unchanged, dropped as the proposal slot started, or failed",
         labelNames: ["reason", "result"],
       }),
       executionPayloadEnvelopeProcessingTime: register.histogram({
