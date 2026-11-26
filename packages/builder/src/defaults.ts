@@ -5,6 +5,15 @@ export const defaultOptions = {
   beaconNodeUrl: "http://127.0.0.1:9596",
   requestTimeout: 10_000,
 
+  execution: {
+    /**
+     * Delay in milliseconds between retries of an engine API request. The default of the beacon node exceeds the
+     * time the builder has to prepare and retrieve a payload, a request would be aborted before it is retried
+     * and the reason it failed, e.g. an execution client that can not be reached, would not be reported
+     */
+    retryDelay: 100,
+  },
+
   bidding: {
     /** Share of the payload value offered to the proposer, the full value by default */
     shareBps: 10_000,
