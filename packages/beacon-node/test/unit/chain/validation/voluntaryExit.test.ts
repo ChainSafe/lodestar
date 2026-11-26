@@ -1,4 +1,4 @@
-import {afterEach, beforeAll, beforeEach, describe, it, vi} from "vitest";
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {BeaconConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {SecretKey} from "@lodestar/native/blst";
@@ -10,6 +10,7 @@ import {
   computeSigningRoot,
 } from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
+import {GossipAction} from "../../../../src/chain/errors/gossipValidation.js";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
@@ -68,7 +69,7 @@ describe("validate voluntary exit", () => {
     state = new TestBeaconStateView(createCachedBeaconStateTest(originalState.clone(), config));
     chainStub = getMockedBeaconChain({config});
     opPool = chainStub.opPool;
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
+    vi.spyOn(chainStub, "getHeadStateAtEpoch").mockResolvedValue(state);
     vi.spyOn(opPool, "hasSeenBlsToExecutionChange");
     vi.spyOn(opPool, "hasSeenVoluntaryExit");
     chainStub.bls.verifySignatureSets.mockResolvedValue(true);
@@ -117,12 +118,28 @@ describe("validate voluntary exit", () => {
 
     state.setValidator(0, inactiveValidator);
 
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
+    vi.spyOn(chainStub, "getHeadStateAtEpoch").mockResolvedValue(state);
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
       VoluntaryExitErrorCode.INACTIVE
     );
+  });
+
+  it("should ignore Voluntary Exit - validator past its exit epoch", async () => {
+    const exitedValidator: phase0.Validator = {
+      ...state.getValidator(0),
+      exitEpoch: computeEpochAtSlot(state.slot) - 1,
+    };
+
+    state.setValidator(0, exitedValidator);
+
+    vi.spyOn(chainStub, "getHeadStateAtEpoch").mockResolvedValue(state);
+
+    await expect(validateGossipVoluntaryExit(chainStub, signedVoluntaryExit)).rejects.toMatchObject({
+      action: GossipAction.IGNORE,
+      type: {code: VoluntaryExitErrorCode.INACTIVE},
+    });
   });
 
   it("should return invalid Voluntary Exit - already exited", async () => {
@@ -135,7 +152,7 @@ describe("validate voluntary exit", () => {
 
     state.setValidator(0, exitedValidator);
 
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
+    vi.spyOn(chainStub, "getHeadStateAtEpoch").mockResolvedValue(state);
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
@@ -151,7 +168,7 @@ describe("validate voluntary exit", () => {
 
     state.setValidator(0, recentlyActivated);
 
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
+    vi.spyOn(chainStub, "getHeadStateAtEpoch").mockResolvedValue(state);
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
