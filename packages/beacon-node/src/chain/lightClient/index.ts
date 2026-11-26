@@ -114,6 +114,16 @@ export type BlockLightClientCache = {
 };
 
 const MAX_CACHED_FINALIZED_HEADERS = 3;
+/**
+ * Memory bound for the per block cache while finality stalls, in sync committee periods.
+ *
+ * This is not a correctness bound: collected data is kept until it falls below finality, see
+ * `pruneBlockData`. The bound only applies when finality stalls for longer than this. On mainnet it
+ * is 32768 slots, about 4.5 days, around 20 MB when full, in line with fork choice keeping every
+ * non-finalized block during the same period.
+ */
+const MAX_CACHED_SYNC_PERIODS = 4;
+const MAX_CACHED_SLOTS = MAX_CACHED_SYNC_PERIODS * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
 
 /**
  * Compute and cache "init" proofs as the chain advances.
@@ -506,6 +516,10 @@ export class LightClientServer {
       finalityBranch: postState.getFinalizedRootProof(),
     });
 
+    // Bounds the cache in production, where `updateHead` has no caller yet. Pruning by the imported
+    // slot only keeps at least as much as pruning by the head would.
+    this.pruneBlockData(blockSlot - MAX_CACHED_SLOTS);
+
     // Keep the served data in sync on a linear chain. Reorgs are reconciled in `updateHead`.
     if (bestUpdateRoot === blockRootHex && built) {
       const prevBestUpdate = await this.db.bestLightClientUpdate.get(period);
@@ -726,7 +740,7 @@ export class LightClientServer {
    * removed, and the latest finality / optimistic updates are recomputed from the new head.
    */
   async updateHead(headBlockRoot: Root, finalizedCheckpoint: phase0.Checkpoint): Promise<void> {
-    this.pruneBlockData(finalizedCheckpoint);
+    this.pruneBlockData(computeStartSlotAtEpoch(finalizedCheckpoint.epoch));
 
     const headData = this.blockData.get(toRootHex(headBlockRoot));
     if (!headData) {
@@ -847,10 +861,12 @@ export class LightClientServer {
     return current ?? null;
   }
 
-  private pruneBlockData(finalizedCheckpoint: phase0.Checkpoint): void {
-    const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+  /**
+   * Drop collected data below `lowSlot`, see `MAX_CACHED_SYNC_PERIODS`.
+   */
+  private pruneBlockData(lowSlot: Slot): void {
     for (const [rootHex, data] of this.blockData) {
-      if (data.attestedHeader.beacon.slot < finalizedSlot) {
+      if (data.attestedHeader.beacon.slot < lowSlot) {
         this.blockData.delete(rootHex);
       }
     }

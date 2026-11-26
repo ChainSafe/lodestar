@@ -6,16 +6,23 @@ import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   CURRENT_SYNC_COMMITTEE_DEPTH_GLOAS,
   CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS,
+  EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   EXECUTION_BLOCK_HASH_GINDEX_GLOAS,
   FINALIZED_ROOT_DEPTH_GLOAS,
   FINALIZED_ROOT_GINDEX_GLOAS,
   ForkName,
+  ForkPostAltair,
   NEXT_SYNC_COMMITTEE_DEPTH_GLOAS,
   NEXT_SYNC_COMMITTEE_GINDEX_GLOAS,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {BeaconStateGloas, createBeaconStateView, isStatePostAltair} from "@lodestar/state-transition";
-import {LightClientUpdate, gloas, ssz} from "@lodestar/types";
+import {
+  BeaconStateGloas,
+  IBeaconStateViewAltair,
+  createBeaconStateView,
+  isStatePostAltair,
+} from "@lodestar/state-transition";
+import {BeaconBlock, LightClientUpdate, gloas, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {
   BlockLightClientCache,
@@ -283,6 +290,107 @@ describe("Gloas light client server", () => {
     expect(built?.update.finalityBranch).toEqual(zeroUpdate.finalityBranch);
   });
 });
+
+describe("LightClientServer.updateHead", () => {
+  const MAX_CACHED_SLOTS = 4 * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
+
+  function chainOf(slots: number[], tag = 0): Map<string, BlockLightClientCache> {
+    const map = new Map<string, BlockLightClientCache>();
+    let parent: Uint8Array = new Uint8Array(32);
+    for (const slot of slots) {
+      const data = createBlockData(slot);
+      data.attestedHeader.beacon.parentRoot = parent;
+      // Distinguishes branches that hold blocks at the same slots
+      data.attestedHeader.beacon.proposerIndex = tag;
+      data.blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(data.attestedHeader.beacon);
+      data.bestUpdateRoot = toRootHex(data.blockRoot);
+      data.latestSignatureSlot = slot;
+      map.set(toRootHex(data.blockRoot), data);
+      parent = data.blockRoot;
+    }
+    return map;
+  }
+
+  function createServer(stored: LightClientUpdate | null): {
+    server: LightClientServer;
+    putBestUpdate: ReturnType<typeof vi.fn>;
+    deleteBestUpdate: ReturnType<typeof vi.fn>;
+  } {
+    const putBestUpdate = vi.fn(async () => undefined);
+    const deleteBestUpdate = vi.fn(async () => undefined);
+    // Pre-Electra witness, the slots used here are in the Altair fork
+    const db = {
+      bestLightClientUpdate: {
+        get: vi.fn(async () => stored),
+        put: putBestUpdate,
+        delete: deleteBestUpdate,
+      },
+      syncCommitteeWitness: {
+        get: vi.fn(async () => ({
+          witness: zeroBranch(4),
+          currentSyncCommitteeRoot: new Uint8Array(32).fill(0xaa),
+          nextSyncCommitteeRoot: new Uint8Array(32).fill(0xbb),
+        })),
+        put: vi.fn(async () => undefined),
+      },
+      syncCommittee: {
+        get: vi.fn(async () => ssz.altair.SyncCommittee.defaultValue()),
+        has: vi.fn(async () => true),
+        putBinary: vi.fn(async () => undefined),
+      },
+      checkpointHeader: {get: vi.fn(async () => null), put: vi.fn(async () => undefined)},
+    } as unknown as IBeaconDb;
+    const server = new LightClientServer(
+      {},
+      {
+        config,
+        db,
+        clock: {} as never,
+        metrics: null,
+        emitter: {emit: vi.fn()} as never,
+        logger: {debug: vi.fn(), error: vi.fn()} as never,
+        signal: new AbortController().signal,
+      }
+    );
+    return {server, putBestUpdate, deleteBestUpdate};
+  }
+
+  function setBlockData(server: LightClientServer, data: Map<string, BlockLightClientCache>): void {
+    for (const [rootHex, blockData] of data) server["blockData"].set(rootHex, blockData);
+  }
+  it("bounds the cache on import, without updateHead", async () => {
+    const {server} = createServer(null);
+    const blockSlot = gloasSlot + MAX_CACHED_SLOTS + 16;
+    setBlockData(server, chainOf([blockSlot - MAX_CACHED_SLOTS - 1]));
+
+    await server["onImportBlock"](createStubBlock(blockSlot), createStubState(), blockSlot - 1);
+
+    const remaining = [...server["blockData"].values()].map((data) => data.attestedHeader.beacon.slot);
+    expect(remaining).toEqual([blockSlot]);
+  });
+});
+
+function createStubBlock(slot: number): BeaconBlock<ForkPostAltair> {
+  const block = ssz.gloas.BeaconBlock.defaultValue() as BeaconBlock<ForkPostAltair>;
+  block.slot = slot;
+  return block;
+}
+
+function createStubState(): IBeaconStateViewAltair {
+  return {
+    currentSyncCommittee: ssz.altair.SyncCommittee.defaultValue(),
+    nextSyncCommittee: ssz.altair.SyncCommittee.defaultValue(),
+    finalizedCheckpoint: {epoch: 0, root: new Uint8Array(32)},
+    getSyncCommitteesWitness: () => ({
+      witness: [],
+      currentSyncCommitteeRoot: new Uint8Array(32).fill(0xaa),
+      nextSyncCommitteeRoot: new Uint8Array(32).fill(0xbb),
+      currentSyncCommitteeBranch: zeroBranch(CURRENT_SYNC_COMMITTEE_DEPTH_GLOAS),
+      nextSyncCommitteeBranch: zeroBranch(NEXT_SYNC_COMMITTEE_DEPTH_GLOAS),
+    }),
+    getFinalizedRootProof: () => zeroBranch(FINALIZED_ROOT_DEPTH_GLOAS),
+  } as unknown as IBeaconStateViewAltair;
+}
 
 function createBlockData(slot: number): BlockLightClientCache {
   const attestedHeader = ssz.gloas.LightClientHeader.defaultValue();
