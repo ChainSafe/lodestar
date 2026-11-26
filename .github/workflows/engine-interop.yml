@@ -23,7 +23,7 @@ jobs:
   interop:
     name: ${{ matrix.el }}
     runs-on: warp-ubuntu-2204-x64-4x
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -71,6 +71,11 @@ jobs:
         id: gloas
         if: always() && steps.fulu.conclusion != 'skipped'
         run: ./scripts/kurtosis/engine-interop/run.sh ${{ matrix.el }} ${{ matrix.image }} gloas
+
+      - name: Gloas at epoch 2, Heze at epoch 4
+        id: heze
+        if: always() && steps.fulu.conclusion != 'skipped'
+        run: ./scripts/kurtosis/engine-interop/run.sh ${{ matrix.el }} ${{ matrix.image }} heze
 
       - name: Summary
         if: always()

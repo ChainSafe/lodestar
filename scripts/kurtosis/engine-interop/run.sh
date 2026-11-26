@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs one execution client against two Lodestar nodes on a kurtosis devnet and checks the engine API interop.
 #
-# usage: run.sh <el_type> <el_image> <fulu|gloas>
+# usage: run.sh <el_type> <el_image> <fulu|gloas|heze>
 #   LODESTAR_IMAGE   consensus client image (default chainsafe/lodestar:next)
 #   EL_EXTRA_PARAMS  json array of extra EL flags (default [])
 #   OUT_DIR          where logs, metrics and the verdict are written (default ./temp/engine-interop/<el>-<scenario>)
@@ -9,6 +9,7 @@
 #
 # fulu: electra and fulu at genesis, finality 3, then the second EL is restarted and finality has to advance again.
 # gloas: fulu at genesis and gloas at epoch 2, finality 5, archived payload envelopes rebuilt from EL bodies.
+# heze: fulu at genesis, gloas at epoch 2 and heze at epoch 4, finality 6, the gloas checks plus the heze fork.
 set -euo pipefail
 
 EL_TYPE=$1
@@ -32,6 +33,7 @@ command -v node >/dev/null 2>&1 || { echo "missing dependency node"; exit 1; }
 case "$SCENARIO" in
   fulu) FORKS=$'  electra_fork_epoch: 0\n  fulu_fork_epoch: 0'; FINALITY_TARGET=3 ;;
   gloas) FORKS=$'  electra_fork_epoch: 0\n  fulu_fork_epoch: 0\n  gloas_fork_epoch: 2'; FINALITY_TARGET=5 ;;
+  heze) FORKS=$'  electra_fork_epoch: 0\n  fulu_fork_epoch: 0\n  gloas_fork_epoch: 2\n  heze_fork_epoch: 4'; FINALITY_TARGET=6 ;;
   *) echo "unknown scenario $SCENARIO"; exit 1 ;;
 esac
 

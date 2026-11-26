@@ -26,6 +26,7 @@ const EL_DIGEST = shortDigest(process.env.EL_DIGEST).trim();
 
 const SLOTS_PER_EPOCH = 8;
 const GLOAS_FORK_EPOCH = 2;
+const HEZE_FORK_EPOCH = 4;
 const ENVELOPE_SLOTS = [16, 17, 18, 19, 20];
 
 const failures = [];
@@ -207,13 +208,14 @@ for (let slot = 1; slot <= head; slot++) {
 if (missed.length > 0) fail(`missed slots after the first epoch: ${missed.join(",")}`);
 if (blobs === 0) fail("no blob was included, the spammer did not run");
 
-// gloas: the fork happened and archived envelopes are rebuilt from EL bodies
+// gloas and heze: the last fork happened and archived envelopes are rebuilt from EL bodies
 let envelopes = "";
-if (SCENARIO === "gloas") {
+if (SCENARIO === "gloas" || SCENARIO === "heze") {
+  const [forkName, forkEpoch] = SCENARIO === "heze" ? ["HEZE", HEZE_FORK_EPOCH] : ["GLOAS", GLOAS_FORK_EPOCH];
   const spec = (await beacon(API2, "/eth/v1/config/spec")).body.data;
   const fork = (await beacon(API2, "/eth/v1/beacon/states/head/fork")).body.data;
-  if (fork.current_version !== spec.GLOAS_FORK_VERSION) fail(`head fork version ${fork.current_version} is not gloas`);
-  if (finalized <= GLOAS_FORK_EPOCH) fail(`finalized epoch ${finalized} does not cover gloas slots`);
+  if (fork.current_version !== spec[`${forkName}_FORK_VERSION`]) fail(`head fork version ${fork.current_version} is not ${SCENARIO}`);
+  if (finalized <= forkEpoch) fail(`finalized epoch ${finalized} does not cover ${SCENARIO} slots`);
   const bodiesBefore = sum(metric(await metricsNow(METRICS1), "lodestar_execution_engine_http_client_request_time_seconds_count").filter(([k]) => label(k, "routeId") === "getPayloadBodiesByHash"));
   const sizes = [];
   for (const slot of ENVELOPE_SLOTS) {

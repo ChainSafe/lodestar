@@ -2,10 +2,11 @@
 
 Nightly check of Lodestar against the default-branch image of every execution client, see
 `.github/workflows/engine-interop.yml`. Each client gets a two-node kurtosis devnet (minimal preset, blob spam,
-node 1 is a non-supernode that fetches blobs from its EL, node 2 a supernode) and two scenarios:
+node 1 is a non-supernode that fetches blobs from its EL, node 2 a supernode) and three scenarios:
 
 - `fulu`: electra and fulu at genesis, finality 3, then the second EL is restarted and finality has to advance again
 - `gloas`: fulu at genesis and gloas at epoch 2, finality 5, archived payload envelopes rebuilt from EL bodies
+- `heze`: fulu at genesis, gloas at epoch 2 and heze at epoch 4, finality 6, the `gloas` checks with the head on heze
 
 Everything before the first finalized epoch is startup noise and is not judged, and so is the window between the
 EL restart and node 2 reporting its EL back in sync and, with the REST transport, probing its capabilities again. From
@@ -18,7 +19,7 @@ then on a run fails when:
 - the EL advertises REST but a Lodestar build with the REST transport stayed on JSON-RPC, a node that negotiated REST
   sends a request over JSON-RPC, or the two nodes settled on different transports
 - no blob was included, no `getBlobs` request was made, or a `getBlobs` call fails
-- in `gloas`, the head is not on the gloas fork, or an archived envelope is not rebuilt through EL bodies
+- in `gloas` and `heze`, the head is not on that fork, or an archived envelope is not rebuilt through EL bodies
 
 The EL images float on purpose, the point is to find interop problems before a release. Logs, metrics snapshots,
 the capabilities document and the verdict of every run are uploaded as workflow artifacts.
