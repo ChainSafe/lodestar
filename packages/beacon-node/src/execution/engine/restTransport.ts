@@ -241,7 +241,8 @@ export class RestEngineTransport implements IEngineTransport {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
+    payloadAttributes?: PayloadAttributes,
+    signal?: AbortSignal
   ): Promise<ForkchoiceUpdatedResult> {
     const forkchoiceState = {
       headBlockHash: fromHex(headBlockHash),
@@ -279,7 +280,7 @@ export class RestEngineTransport implements IEngineTransport {
 
     const res = await this.client.request(
       {method: "POST", path: "/forkchoice", executionFork: toExecutionForkName(fork), body, responseType: "ssz"},
-      fcUReqOpts
+      {...fcUReqOpts, signal}
     );
     const {payloadStatus, payloadId} = deserializeResponse(
       ForkchoiceUpdateResponse,
@@ -293,14 +294,14 @@ export class RestEngineTransport implements IEngineTransport {
     };
   }
 
-  async getPayload(fork: ForkName, payloadId: PayloadId): Promise<GetPayloadResult> {
+  async getPayload(fork: ForkName, payloadId: PayloadId, signal?: AbortSignal): Promise<GetPayloadResult> {
     if (!PAYLOAD_ID_REGEX.test(payloadId)) {
       throw Error(`Invalid payloadId=${payloadId}, expected 0x prefixed 8 bytes hex`);
     }
 
     const res = await this.client.request(
       {method: "GET", path: `/payloads/${payloadId}`, executionFork: toExecutionForkName(fork), responseType: "ssz"},
-      getPayloadOpts
+      {...getPayloadOpts, signal}
     );
 
     if (ForkSeq[fork] >= ForkSeq.gloas) {

@@ -106,14 +106,23 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     {signal: abortController.signal, logger}
   );
   const payloadSource = new EnginePayloadSource(toPrintableUrl(executionUrl), {
-    notifyForkchoiceUpdate: async (fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes) => {
+    notifyForkchoiceUpdate: async (
+      fork,
+      headBlockHash,
+      safeBlockHash,
+      finalizedBlockHash,
+      payloadAttributes,
+      _custodyColumns,
+      signal
+    ) => {
       try {
         const {payloadStatus, payloadId} = await engine.notifyForkchoiceUpdate(
           fork,
           headBlockHash,
           safeBlockHash,
           finalizedBlockHash,
-          payloadAttributes
+          payloadAttributes,
+          signal
         );
         if (payloadStatus.status === ExecutionPayloadStatus.INVALID) {
           throw Error(`Invalid prepare payload, validationError=${payloadStatus.validationError ?? ""}`);
@@ -127,7 +136,8 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
         throw e;
       }
     },
-    getPayload: async (fork, payloadId) => (await engine.getPayload(fork, payloadId)) as EnginePayloadResult,
+    getPayload: async (fork, payloadId, signal) =>
+      (await engine.getPayload(fork, payloadId, signal)) as EnginePayloadResult,
   });
 
   const builder = await Builder.init({
