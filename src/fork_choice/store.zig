@@ -40,6 +40,13 @@ pub const PayloadAttestationData = ct.gloas.PayloadAttestationData.Type;
 
 pub const BlockIndex = u32;
 pub const NO_BLOCK: BlockIndex = std.math.maxInt(BlockIndex);
+/// Index of a delivered payload in `Store.payloads`.
+pub const PayloadIndex = u32;
+/// No payload: a Gloas block before its envelope, an anchor ancestor, or a payload chain
+/// that leaves the store.
+pub const NO_PAYLOAD: PayloadIndex = std.math.maxInt(PayloadIndex);
+/// A pre-Gloas block before the merge: the payload chain ends at the merge.
+pub const PRE_MERGE_PAYLOAD: PayloadIndex = NO_PAYLOAD - 1;
 pub const PAYLOAD_TIMELY_THRESHOLD: u64 = preset.PTC_SIZE / 2;
 pub const DATA_AVAILABILITY_TIMELY_THRESHOLD: u64 = preset.PTC_SIZE / 2;
 pub const ATTESTATION_TIMELINESS_INDEX = 0;
@@ -77,6 +84,8 @@ pub const Error = error{
     ParentPayloadInvalid,
     InvalidJustifiedPayload,
     PayloadInvalidToValid,
+    PayloadParentMismatch,
+    PreGloasBlock,
 } || Allocator.Error;
 
 /// Which payload the engine judged `INVALID`, relative to the node the walk starts from.
@@ -205,7 +214,7 @@ const PtcMessages = struct {
 };
 
 /// Columns of the block table. Hot columns for head computation are `parent`,
-/// `slot`, `fork`, `parent_payload_status` and `payload_verified`; the rest is
+/// `slot`, `fork`, `parent_payload_status` and `own_payload`; the rest is
 /// read per block when handling a single message.
 pub const Block = struct {
     root: Root,
@@ -224,17 +233,26 @@ pub const Block = struct {
     timely: [2]bool,
     /// Spec `get_parent_payload_status(store, block)`, `.pending` for pre-Gloas blocks.
     parent_payload_status: PayloadStatus,
-    /// The block's own payload: `body.execution_payload.block_hash` before Gloas, the bid's
-    /// `block_hash` from Gloas on, zero before the merge.
-    payload_block_hash: Root,
+    /// Gloas `signed_execution_payload_bid.message.block_hash`, zero before Gloas.
+    bid_block_hash: Root,
     bid_parent_block_hash: Root,
-    /// The engine's verdict on the block's own payload. Node status is derived from the
-    /// payloads on a node's chain (see `head.zig`), never stored.
-    execution_status: ExecutionStatus,
-    /// Spec `root in store.payloads`.
-    payload_verified: bool,
+    /// The block's own payload in `Store.payloads`, set at import before Gloas and by the
+    /// envelope from Gloas on (there, spec `root in store.payloads`). Node status is derived
+    /// from the payloads on a node's chain (see `head.zig`), never stored.
+    own_payload: PayloadIndex,
     /// Spec `store.payload_inclusion_list_satisfaction[root]`.
     inclusion_list_satisfaction: InclusionListSatisfaction,
+};
+
+/// One delivered payload, shared by every block that delivers it: the engine's verdict
+/// belongs to the payload (Gloas `optimistic_payloads` is a set of payload hashes).
+pub const Payload = struct {
+    hash: Root,
+    /// The payload `parent_hash` names: `NO_PAYLOAD` below the store's root,
+    /// `PRE_MERGE_PAYLOAD` at the merge.
+    parent: PayloadIndex,
+    /// Never `.pre_merge`.
+    status: ExecutionStatus,
 };
 
 /// What `on_block` reads from a block and its post-state. Lets a caller that already
@@ -253,7 +271,8 @@ pub const BlockSummary = struct {
     /// Spec `compute_pulled_up_tip`: the post-state after `process_justification_and_finalization`.
     unrealized_justified_checkpoint: Checkpoint,
     unrealized_finalized_checkpoint: Checkpoint,
-    /// See `Block.payload_block_hash`.
+    /// The block's own payload: `body.execution_payload.block_hash` before Gloas, the bid's
+    /// `block_hash` from Gloas on, zero before the merge.
     payload_block_hash: Root = constants.ZERO_HASH,
     /// Gloas `signed_execution_payload_bid.message.parent_block_hash`, zero before Gloas.
     bid_parent_block_hash: Root = constants.ZERO_HASH,
@@ -432,6 +451,7 @@ pub const RootContext = struct {
 };
 
 pub const RootIndexMap = std.HashMapUnmanaged(Root, BlockIndex, RootContext, 80);
+pub const PayloadIndexMap = std.HashMapUnmanaged(Root, PayloadIndex, RootContext, 80);
 
 pub const Store = struct {
     allocator: Allocator,
@@ -447,6 +467,11 @@ pub const Store = struct {
     equivocating_indices: std.DynamicBitSetUnmanaged,
     blocks: std.MultiArrayList(Block),
     index_by_root: RootIndexMap,
+    /// Delivered payloads in delivery order, so a payload's parent has a smaller index.
+    payloads: std.MultiArrayList(Payload),
+    /// Every payload with a non-zero hash. A zero hash names no payload, so one delivered
+    /// under it is its block's alone.
+    payload_by_hash: PayloadIndexMap,
     /// Parallel to `blocks`; only meaningful for Gloas blocks.
     ptc_votes: std.ArrayList(PtcVotes),
     /// Dense by validator index: each validator's latest message as an id into `distinct_votes`.
@@ -578,6 +603,8 @@ pub const Store = struct {
             .equivocating_indices = .{},
             .blocks = .empty,
             .index_by_root = .empty,
+            .payloads = .empty,
+            .payload_by_hash = .empty,
             .ptc_votes = .empty,
             .latest_votes = .empty,
             .queued_votes = .empty,
@@ -619,16 +646,21 @@ pub const Store = struct {
                 .unrealized_justified_checkpoint = checkpoints.unrealized_justified,
                 .timely = .{ false, false },
                 .parent_payload_status = anchorLinkStatus(fork, parent_fork, parent),
-                .payload_block_hash = constants.ZERO_HASH,
+                .bid_block_hash = constants.ZERO_HASH,
                 .bid_parent_block_hash = constants.ZERO_HASH,
-                .execution_status = .pre_merge,
-                .payload_verified = false,
+                .own_payload = NO_PAYLOAD,
                 .inclusion_list_satisfaction = .unknown,
             });
             parent = index;
             parent_fork = fork;
         }
 
+        const gloas_anchor = anchor.fork.gte(.gloas);
+        var anchor_payload: PayloadIndex = if (gloas_anchor) NO_PAYLOAD else PRE_MERGE_PAYLOAD;
+        if (!gloas_anchor and anchor.execution_status != .pre_merge) {
+            try self.reservePayload();
+            anchor_payload = self.appendPayloadAssumeCapacity(.{ .hash = anchor.payload_block_hash, .parent = NO_PAYLOAD, .status = anchor.execution_status });
+        }
         const anchor_index: BlockIndex = @intCast(self.blocks.len);
         try self.appendBlock(.{
             .root = anchor.root,
@@ -642,10 +674,9 @@ pub const Store = struct {
             .unrealized_justified_checkpoint = checkpoints.unrealized_justified,
             .timely = .{ true, true },
             .parent_payload_status = anchorLinkStatus(anchor.fork, parent_fork, parent),
-            .payload_block_hash = anchor.payload_block_hash,
+            .bid_block_hash = if (gloas_anchor) anchor.payload_block_hash else constants.ZERO_HASH,
             .bid_parent_block_hash = anchor.bid_parent_block_hash,
-            .execution_status = anchor.execution_status,
-            .payload_verified = false,
+            .own_payload = anchor_payload,
             .inclusion_list_satisfaction = .unknown,
         });
         // `get_head` starts at the justified block and `on_block` checks the finalized one.
@@ -675,6 +706,8 @@ pub const Store = struct {
         self.queued_validators.deinit(self.allocator);
         self.distinct_votes.deinit(self.allocator);
         self.ptc_votes.deinit(self.allocator);
+        self.payload_by_hash.deinit(self.allocator);
+        self.payloads.deinit(self.allocator);
         self.index_by_root.deinit(self.allocator);
         self.blocks.deinit(self.allocator);
         self.equivocating_indices.deinit(self.allocator);
@@ -759,6 +792,25 @@ pub const Store = struct {
         try self.blocks.ensureUnusedCapacity(self.allocator, 1);
         try self.ptc_votes.ensureUnusedCapacity(self.allocator, 1);
         try self.index_by_root.ensureUnusedCapacity(self.allocator, 1);
+    }
+
+    fn reservePayload(self: *Store) !void {
+        try self.payloads.ensureUnusedCapacity(self.allocator, 1);
+        try self.payload_by_hash.ensureUnusedCapacity(self.allocator, 1);
+    }
+
+    fn appendPayloadAssumeCapacity(self: *Store, payload: Payload) PayloadIndex {
+        const index: PayloadIndex = @intCast(self.payloads.len);
+        // Every payload is delivered by its own block, so payloads never outnumber blocks.
+        std.debug.assert(index <= self.blocks.len);
+        std.debug.assert(index < PRE_MERGE_PAYLOAD);
+        std.debug.assert(payload.parent >= PRE_MERGE_PAYLOAD or payload.parent < index);
+        std.debug.assert(payload.status != .pre_merge);
+        self.payloads.appendAssumeCapacity(payload);
+        if (!std.mem.eql(u8, &payload.hash, &constants.ZERO_HASH)) {
+            self.payload_by_hash.putAssumeCapacityNoClobber(payload.hash, index);
+        }
+        return index;
     }
 
     fn appendBlockAssumeCapacity(self: *Store, block: Block) void {
@@ -1004,7 +1056,7 @@ pub const Store = struct {
     fn validateSummary(self: *const Store, summary: *const BlockSummary) Error!void {
         if (self.hasBlock(summary.root)) return;
         const parent = self.blockIndex(summary.parent_root) orelse return error.UnknownParent;
-        if (self.parentPayloadStatus(summary, parent) == .full and !self.blocks.items(.payload_verified)[parent]) {
+        if (self.parentPayloadStatus(summary, parent) == .full and !self.isPayloadVerified(parent)) {
             return error.ParentPayloadNotVerified;
         }
         if (self.currentSlot() < summary.slot) return error.FutureBlock;
@@ -1053,6 +1105,11 @@ pub const Store = struct {
         const parent_node: ForkChoiceNode = .{ .block = parent, .payload_status = self.parentPayloadStatus(summary, parent) };
         if (head_mod.execution(self, parent_node) == .invalid) return error.ParentPayloadInvalid;
 
+        const parent_payload = self.standsOn(parent_node);
+        const delivers = summary.fork.lt(.gloas) and summary.execution_status != .pre_merge;
+        const delivered = if (delivers) self.findPayload(&summary.payload_block_hash) else null;
+        if (delivered) |payload| try self.checkPayload(payload, parent_payload);
+
         // Spec `update_checkpoints` for the block, then `compute_pulled_up_tip`:
         // `update_unrealized_checkpoints`, and `update_checkpoints` again for a block from a
         // past epoch. Only the net result needs balances.
@@ -1066,7 +1123,18 @@ pub const Store = struct {
         defer checkpoints.deinit(self.allocator);
 
         try self.reserveBlock();
-        if (summary.execution_status == .valid) try self.markChainValid(parent_node);
+        if (delivers and delivered == null) try self.reservePayload();
+        if (summary.execution_status == .valid) try self.markChainValid(parent_payload);
+
+        var own_payload: PayloadIndex = if (summary.fork.lt(.gloas)) PRE_MERGE_PAYLOAD else NO_PAYLOAD;
+        if (delivers) {
+            own_payload = delivered orelse self.appendPayloadAssumeCapacity(.{
+                .hash = summary.payload_block_hash,
+                .parent = parent_payload,
+                .status = summary.execution_status,
+            });
+            if (summary.execution_status == .valid) self.payloads.items(.status)[own_payload] = .valid;
+        }
 
         const index: BlockIndex = @intCast(self.blocks.len);
         self.appendBlockAssumeCapacity(.{
@@ -1081,10 +1149,9 @@ pub const Store = struct {
             .unrealized_justified_checkpoint = summary.unrealized_justified_checkpoint,
             .timely = .{ false, false },
             .parent_payload_status = parent_node.payload_status,
-            .payload_block_hash = summary.payload_block_hash,
+            .bid_block_hash = if (summary.fork.gte(.gloas)) summary.payload_block_hash else constants.ZERO_HASH,
             .bid_parent_block_hash = summary.bid_parent_block_hash,
-            .execution_status = summary.execution_status,
-            .payload_verified = false,
+            .own_payload = own_payload,
             .inclusion_list_satisfaction = .unknown,
         });
         for (ptc_messages) |*message| {
@@ -1102,8 +1169,8 @@ pub const Store = struct {
     /// Spec `get_parent_payload_status`; `.pending` when either side predates Gloas.
     fn parentPayloadStatus(self: *const Store, summary: *const BlockSummary, parent: BlockIndex) PayloadStatus {
         if (summary.fork.lt(.gloas) or self.blocks.items(.fork)[parent].lt(.gloas)) return .pending;
-        const parent_payload_block_hash = self.blocks.items(.payload_block_hash)[parent];
-        return if (std.mem.eql(u8, &summary.bid_parent_block_hash, &parent_payload_block_hash)) .full else .empty;
+        const parent_bid_block_hash = self.blocks.items(.bid_block_hash)[parent];
+        return if (std.mem.eql(u8, &summary.bid_parent_block_hash, &parent_bid_block_hash)) .full else .empty;
     }
 
     /// Spec `record_block_timeliness`.
@@ -1189,7 +1256,7 @@ pub const Store = struct {
         if (self.config.forkSeq(data.slot).gte(.gloas)) {
             if (data.index != 0 and data.index != 1) return error.InvalidAttestationIndex;
             if (block_slot == data.slot and data.index != 0) return error.SameSlotFullVote;
-            if (data.index == 1 and !self.blocks.items(.payload_verified)[block]) return error.AttestationPayloadNotVerified;
+            if (data.index == 1 and !self.isPayloadVerified(block)) return error.AttestationPayloadNotVerified;
         }
         const checkpoint_block = self.getCheckpointBlock(block, target.epoch);
         if (!std.mem.eql(u8, &self.blockRoot(checkpoint_block), &target.root)) return error.AttestationTargetNotInChain;
@@ -1432,22 +1499,28 @@ pub const Store = struct {
     /// Spec `on_execution_payload_envelope` after the caller verified the envelope and
     /// data availability. `execution_status` is the engine's verdict on the payload,
     /// `.valid` or `.syncing`; `inclusion_list_satisfied` carries the Heze engine verdict.
-    /// `error.PayloadInvalidToValid` means the engine contradicted an earlier verdict; the
-    /// store is unchanged.
+    /// `error.PayloadInvalidToValid` means the engine contradicted an earlier verdict; on
+    /// any error the store is unchanged.
     pub fn onExecutionPayloadEnvelope(self: *Store, beacon_block_root: Root, execution_status: ExecutionStatus, inclusion_list_satisfied: ?bool) Error!void {
         const block = self.blockIndex(beacon_block_root) orelse return error.UnknownBlock;
         if (execution_status != .valid and execution_status != .syncing) return error.ExecutionStatusMismatch;
-        const statuses = self.blocks.items(.execution_status);
-        if (statuses[block] == .invalid) return error.PayloadInvalidToValid;
-        const parent = self.blocks.items(.parent)[block];
-        if (execution_status == .valid and parent != NO_BLOCK) {
-            try self.markChainValid(.{ .block = parent, .payload_status = self.blocks.items(.parent_payload_status)[block] });
-        }
-        if (statuses[block] != .valid) statuses[block] = execution_status;
+        if (self.blocks.items(.fork)[block].lt(.gloas)) return error.PreGloasBlock;
+        const own_payload = self.blocks.items(.own_payload)[block];
+        const hash = self.blocks.items(.bid_block_hash)[block];
+        const hung_from = self.hungFrom(block);
+        const parent_payload = self.standsOn(hung_from);
+        const delivered = if (own_payload != NO_PAYLOAD) own_payload else self.findPayload(&hash);
+        if (delivered) |payload| try self.checkPayload(payload, parent_payload);
+        if (delivered == null) try self.reservePayload();
+        // The root's parent payload is the store's base, which a root's envelope leaves alone.
+        if (execution_status == .valid and hung_from != null) try self.markChainValid(parent_payload);
+
         if (inclusion_list_satisfied) |satisfied| {
             self.blocks.items(.inclusion_list_satisfaction)[block] = if (satisfied) .satisfied else .unsatisfied;
         }
-        self.blocks.items(.payload_verified)[block] = true;
+        const payload = delivered orelse self.appendPayloadAssumeCapacity(.{ .hash = hash, .parent = parent_payload, .status = execution_status });
+        if (execution_status == .valid) self.payloads.items(.status)[payload] = .valid;
+        self.blocks.items(.own_payload)[block] = payload;
         self.head_cache.dirty = true;
     }
 
@@ -1479,43 +1552,77 @@ pub const Store = struct {
         return .{ .store = self, .node = node };
     }
 
-    /// Optimistic sync `NOT_VALIDATED -> VALID` for the payload with `block_hash`, in every
-    /// block carrying it, and, as the spec requires, every not yet validated payload below it.
-    /// Every carrier's walk is checked before any write.
-    pub fn onPayloadValid(self: *Store, block_hash: Root) VerdictResult {
-        const hashes = self.blocks.items(.payload_block_hash);
-        var found = false;
-        var changes = false;
-        for (hashes, 0..) |*hash, i| {
-            if (!std.mem.eql(u8, hash, &block_hash)) continue;
-            found = true;
-            const walk = self.validWalk(self.ownPayloadNode(@intCast(i))) catch return .contradiction;
-            if (walk.count > 0 or walk.validates_root_base) changes = true;
-        }
-        if (!found) return .unknown_lvh;
-        if (!changes) return .already_applied;
-        for (hashes, 0..) |*hash, i| {
-            if (!std.mem.eql(u8, hash, &block_hash)) continue;
-            self.markChainValid(self.ownPayloadNode(@intCast(i))) catch unreachable;
-        }
-        return .applied;
+    /// The node `block` hangs from, null for the root.
+    fn hungFrom(self: *const Store, block: BlockIndex) ?ForkChoiceNode {
+        const parent = self.blocks.items(.parent)[block];
+        if (parent == NO_BLOCK) return null;
+        return .{ .block = parent, .payload_status = self.blocks.items(.parent_payload_status)[block] };
     }
 
-    /// The node whose payload chain starts with `block`'s own payload.
-    fn ownPayloadNode(self: *const Store, block: BlockIndex) ForkChoiceNode {
-        return if (self.blocks.items(.fork)[block].gte(.gloas)) .{ .block = block, .payload_status = .full } else pendingNode(block);
+    /// The payload `node` stands on: the own payload of the first block on its payload chain,
+    /// `NO_PAYLOAD` when the chain leaves the store.
+    fn standsOn(self: *const Store, node: ?ForkChoiceNode) PayloadIndex {
+        var chain: PayloadChain = .{ .store = self, .node = node };
+        const block = chain.next() orelse return NO_PAYLOAD;
+        return self.blocks.items(.own_payload)[block];
+    }
+
+    /// The payload delivered under `hash`, null for a zero hash, which names no payload.
+    fn findPayload(self: *const Store, hash: *const Root) ?PayloadIndex {
+        if (std.mem.eql(u8, hash, &constants.ZERO_HASH)) return null;
+        return self.payload_by_hash.get(hash.*);
+    }
+
+    /// The checks before one more block standing on `parent` delivers `payload`.
+    fn checkPayload(self: *const Store, payload: PayloadIndex, parent: PayloadIndex) error{ PayloadInvalidToValid, PayloadParentMismatch }!void {
+        if (self.payloads.items(.status)[payload] == .invalid) return error.PayloadInvalidToValid;
+        // A block hash commits to its parent hash and, from Deneb on, to the parent beacon
+        // block root, so every block delivering it stands on the same parent payload.
+        if (self.payloads.items(.parent)[payload] != parent) return error.PayloadParentMismatch;
+    }
+
+    /// The hash of `payload`, zero for `NO_PAYLOAD` and `PRE_MERGE_PAYLOAD`.
+    pub fn payloadHash(self: *const Store, payload: PayloadIndex) Root {
+        if (payload >= PRE_MERGE_PAYLOAD) return constants.ZERO_HASH;
+        return self.payloads.items(.hash)[payload];
+    }
+
+    fn payloadStatus(self: *const Store, payload: PayloadIndex) ExecutionStatus {
+        std.debug.assert(payload != NO_PAYLOAD);
+        if (payload == PRE_MERGE_PAYLOAD) return .pre_merge;
+        return self.payloads.items(.status)[payload];
+    }
+
+    /// The engine's verdict on `block`'s own payload. A Gloas block before its envelope reads
+    /// `.syncing`, or `.pre_merge` for an empty bid.
+    pub fn ownPayloadStatus(self: *const Store, block: BlockIndex) ExecutionStatus {
+        const payload = self.blocks.items(.own_payload)[block];
+        if (payload != NO_PAYLOAD) return self.payloadStatus(payload);
+        const empty_bid = std.mem.eql(u8, &self.blocks.items(.bid_block_hash)[block], &constants.ZERO_HASH);
+        return if (empty_bid) .pre_merge else .syncing;
+    }
+
+    /// Optimistic sync `NOT_VALIDATED -> VALID` for the payload with `block_hash`, shared by
+    /// every block delivering it, and, as the spec requires, every not yet validated payload
+    /// below it. The walk is checked before any write.
+    pub fn onPayloadValid(self: *Store, block_hash: Root) VerdictResult {
+        const payload = self.findPayload(&block_hash) orelse return .unknown_lvh;
+        const walk = self.validWalk(payload) catch return .contradiction;
+        if (walk.count == 0 and !walk.validates_root_base) return .already_applied;
+        self.markChainValid(payload) catch unreachable;
+        return .applied;
     }
 
     const ValidWalk = struct { count: usize, validates_root_base: bool };
 
-    /// The `.syncing` payloads from `node` down to the first `.valid` or `.pre_merge` one,
+    /// The `.syncing` payloads from `payload` down to the first `.valid` or `.pre_merge` one,
     /// and whether the walk reaches the root's still open base.
-    fn validWalk(self: *const Store, node: ForkChoiceNode) error{PayloadInvalidToValid}!ValidWalk {
-        const statuses = self.blocks.items(.execution_status);
+    fn validWalk(self: *const Store, payload: PayloadIndex) error{PayloadInvalidToValid}!ValidWalk {
+        const parents = self.payloads.items(.parent);
         var count: usize = 0;
-        var chain = self.payloadChain(node);
-        while (chain.next()) |block| {
-            switch (statuses[block]) {
+        var current = payload;
+        while (current != NO_PAYLOAD) : (current = parents[current]) {
+            switch (self.payloadStatus(current)) {
                 .invalid => return error.PayloadInvalidToValid,
                 .valid, .pre_merge => return .{ .count = count, .validates_root_base = false },
                 .syncing => count += 1,
@@ -1525,15 +1632,19 @@ pub const Store = struct {
         return .{ .count = count, .validates_root_base = self.root_base_status == .syncing };
     }
 
-    /// Marks the `.syncing` payloads from `node` down `.valid`, stopping at the first payload
-    /// already `.valid` or `.pre_merge`. Writes nothing when an `.invalid` payload comes first.
-    /// A payload just marked `.valid` passes the node it hangs from, not its own.
-    fn markChainValid(self: *Store, node: ForkChoiceNode) error{PayloadInvalidToValid}!void {
-        const walk = try self.validWalk(node);
+    /// Marks the `.syncing` payloads from `payload` down `.valid`, stopping at the first
+    /// payload already `.valid` or `.pre_merge`. Writes nothing when an `.invalid` payload
+    /// comes first.
+    fn markChainValid(self: *Store, payload: PayloadIndex) error{PayloadInvalidToValid}!void {
+        const walk = try self.validWalk(payload);
         if (walk.count == 0 and !walk.validates_root_base) return;
-        const statuses = self.blocks.items(.execution_status);
-        var chain = self.payloadChain(node);
-        for (0..walk.count) |_| statuses[chain.next().?] = .valid;
+        const statuses = self.payloads.items(.status);
+        const parents = self.payloads.items(.parent);
+        var current = payload;
+        for (0..walk.count) |_| {
+            statuses[current] = .valid;
+            current = parents[current];
+        }
         if (walk.validates_root_base) self.root_base_status = .valid;
         self.head_cache.dirty = true;
     }
@@ -1541,7 +1652,7 @@ pub const Store = struct {
     /// Optimistic sync `NOT_VALIDATED -> INVALIDATED` from an engine `INVALID` verdict, the
     /// `validateLatestHash` of proto-array. The walk starts at the node `from_root` and
     /// `from_block_hash` name and marks payloads `invalid` down to `latest_valid_hash`,
-    /// exclusive, in every block carrying them, as equivocating blocks can share a payload;
+    /// exclusive, in every block delivering them, as equivocating blocks can share a payload;
     /// a zero hash invalidates through the merge block. Descendants are derived invalid by
     /// `getHead`. A pair naming no node, such as a Gloas `.full` node before its payload
     /// arrived, is `error.UnknownBlock`.
@@ -1554,8 +1665,7 @@ pub const Store = struct {
     pub fn onPayloadInvalid(self: *Store, from_root: Root, from_block_hash: Root, latest_valid_hash: ?Root, judged: InvalidJudged) Error!VerdictResult {
         const from = self.blockIndex(from_root) orelse return error.UnknownBlock;
         const start = self.nodeByPayloadHash(from, &from_block_hash) orelse return error.UnknownBlock;
-        const hashes = self.blocks.items(.payload_block_hash);
-        const statuses = self.blocks.items(.execution_status);
+        const own_payloads = self.blocks.items(.own_payload);
         switch (self.payloadChainStatus(start)) {
             .syncing => {},
             .invalid => return .already_applied,
@@ -1565,7 +1675,7 @@ pub const Store = struct {
         var count: usize = 0;
         var chain = self.payloadChain(start);
         const lvh_found = if (latest_valid_hash) |lvh| while (chain.next()) |block| {
-            if (std.mem.eql(u8, &hashes[block], &lvh)) break true;
+            if (std.mem.eql(u8, &self.payloadHash(own_payloads[block]), &lvh)) break true;
             count += 1;
         } else false else false;
         if (!lvh_found) {
@@ -1574,12 +1684,17 @@ pub const Store = struct {
         }
 
         // Indices are topological; a Gloas justified block's own payload is not in the checkpoint.
+        // A payload under a zero hash is its block's alone, so `block < j` covers it.
         const justified = self.blockIndex(self.justified_checkpoint.root);
-        var justified_hashes: std.AutoHashMapUnmanaged(Root, void) = .empty;
-        defer justified_hashes.deinit(self.allocator);
+        var justified_payloads: std.DynamicBitSetUnmanaged = try .initEmpty(self.allocator, self.payloads.len);
+        defer justified_payloads.deinit(self.allocator);
         if (justified) |j| {
             var justified_chain = self.payloadChain(pendingNode(j));
-            while (justified_chain.next()) |block| try justified_hashes.put(self.allocator, hashes[block], {});
+            while (justified_chain.next()) |block| {
+                const payload = own_payloads[block];
+                if (std.mem.eql(u8, &self.payloadHash(payload), &constants.ZERO_HASH)) continue;
+                justified_payloads.set(payload);
+            }
         }
         chain = self.payloadChain(start);
         for (0..count) |i| {
@@ -1587,10 +1702,12 @@ pub const Store = struct {
                 count = i;
                 break;
             };
-            const conflict = statuses[block] != .syncing;
+            const payload = own_payloads[block];
+            const conflict = self.payloadStatus(payload) != .syncing;
+            const shares_justified_payload = payload < PRE_MERGE_PAYLOAD and justified_payloads.isSet(payload);
             // A stand-in justified block has no payloads, so its chain protects nothing above it
             const protected = (self.anchor_ancestor_count > 0 and block <= self.anchor_ancestor_count) or
-                if (justified) |j| block < j or justified_hashes.contains(hashes[block]) else false;
+                if (justified) |j| block < j or shares_justified_payload else false;
             if (!conflict and !protected) continue;
             if (judged == .child_payload and conflict) return .contradiction;
             count = if (judged == .from_block) @min(i, 1) else i;
@@ -1598,17 +1715,15 @@ pub const Store = struct {
         }
         if (count == 0) return .nothing_to_invalidate;
 
-        var invalid_hashes: std.AutoHashMapUnmanaged(Root, void) = .empty;
-        defer invalid_hashes.deinit(self.allocator);
-        try invalid_hashes.ensureTotalCapacity(self.allocator, @intCast(count));
+        const statuses = self.payloads.items(.status);
+        const parents = self.payloads.items(.parent);
+        var previous: PayloadIndex = NO_PAYLOAD;
         chain = self.payloadChain(start);
-        for (0..count) |_| invalid_hashes.putAssumeCapacity(hashes[chain.next().?], {});
-        for (hashes, statuses) |*hash, status| {
-            if (!invalid_hashes.contains(hash.*)) continue;
-            if (status == .valid or status == .pre_merge) return .contradiction;
-        }
-        for (hashes, statuses) |*hash, *status| {
-            if (invalid_hashes.contains(hash.*)) status.* = .invalid;
+        for (0..count) |_| {
+            const payload = own_payloads[chain.next().?];
+            std.debug.assert(previous == NO_PAYLOAD or parents[previous] == payload);
+            statuses[payload] = .invalid;
+            previous = payload;
         }
         self.head_cache.dirty = true;
         return .applied;
@@ -1617,9 +1732,12 @@ pub const Store = struct {
     /// The node of `block` whose payload is `hash`, as proto-array's
     /// `getNodeIndexByRootAndBlockHash`: a Gloas `.full` node exists once its payload arrived.
     fn nodeByPayloadHash(self: *const Store, block: BlockIndex, hash: *const Root) ?ForkChoiceNode {
-        const own = std.mem.eql(u8, &self.blocks.items(.payload_block_hash)[block], hash);
-        if (self.blocks.items(.fork)[block].lt(.gloas)) return if (own) pendingNode(block) else null;
-        if (own and self.blocks.items(.payload_verified)[block]) return .{ .block = block, .payload_status = .full };
+        if (self.blocks.items(.fork)[block].lt(.gloas)) {
+            const own = std.mem.eql(u8, &self.payloadHash(self.blocks.items(.own_payload)[block]), hash);
+            return if (own) pendingNode(block) else null;
+        }
+        const own = std.mem.eql(u8, &self.blocks.items(.bid_block_hash)[block], hash);
+        if (own and self.isPayloadVerified(block)) return .{ .block = block, .payload_status = .full };
         if (std.mem.eql(u8, &self.blocks.items(.bid_parent_block_hash)[block], hash)) return .{ .block = block, .payload_status = .empty };
         return null;
     }
@@ -1627,12 +1745,13 @@ pub const Store = struct {
     /// The worst engine verdict on the payloads `node` stands on, read from the payloads
     /// themselves, so it needs no head computation.
     fn payloadChainStatus(self: *const Store, node: ForkChoiceNode) ExecutionStatus {
-        const statuses = self.blocks.items(.execution_status);
+        const own_payloads = self.blocks.items(.own_payload);
         var status = self.root_base_status;
         var chain = self.payloadChain(node);
         while (chain.next()) |block| {
-            if (statuses[block] == .invalid) return .invalid;
-            status = status.worst(statuses[block]);
+            const own = self.payloadStatus(own_payloads[block]);
+            if (own == .invalid) return .invalid;
+            status = status.worst(own);
         }
         return status;
     }
@@ -1650,7 +1769,7 @@ pub const Store = struct {
 
     /// Spec `is_payload_verified`.
     pub fn isPayloadVerified(self: *const Store, block: BlockIndex) bool {
-        return self.blocks.items(.payload_verified)[block];
+        return self.blocks.items(.fork)[block].gte(.gloas) and self.blocks.items(.own_payload)[block] != NO_PAYLOAD;
     }
 
     /// Spec `payload_timeliness`.
@@ -1724,13 +1843,28 @@ pub const Store = struct {
         const n = self.blocks.len;
         const remap = try self.allocator.alloc(BlockIndex, n);
         defer self.allocator.free(remap);
+        // Per payload: its new index, and the first kept block delivering it.
+        const payload_remap = try self.allocator.alloc(PayloadIndex, self.payloads.len);
+        defer self.allocator.free(payload_remap);
+        const delivered_by = try self.allocator.alloc(BlockIndex, self.payloads.len);
+        defer self.allocator.free(delivered_by);
         const parents = self.blocks.items(.parent);
+        const own_payloads = self.blocks.items(.own_payload);
+        @memset(delivered_by, NO_BLOCK);
         var kept: BlockIndex = 0;
         for (0..n) |i| {
             const parent = parents[i];
             const keep = i == finalized or (parent != NO_BLOCK and i > finalized and remap[parent] != NO_BLOCK);
             remap[i] = if (keep) kept else NO_BLOCK;
-            if (keep) kept += 1;
+            if (!keep) continue;
+            const payload = own_payloads[i];
+            if (payload < PRE_MERGE_PAYLOAD and delivered_by[payload] == NO_BLOCK) delivered_by[payload] = kept;
+            kept += 1;
+        }
+        var kept_payloads: PayloadIndex = 0;
+        for (delivered_by, payload_remap) |block, *target| {
+            target.* = if (block == NO_BLOCK) NO_PAYLOAD else kept_payloads;
+            if (block != NO_BLOCK) kept_payloads += 1;
         }
         // Votes hold target ids, so renumbering the target table carries every vote over.
         self.distinct_votes.remap(remap);
@@ -1744,6 +1878,7 @@ pub const Store = struct {
             if (target == NO_BLOCK) continue;
             var block = self.blocks.get(i);
             block.parent = if (block.parent == NO_BLOCK or remap[block.parent] == NO_BLOCK) NO_BLOCK else remap[block.parent];
+            if (block.own_payload < PRE_MERGE_PAYLOAD) block.own_payload = payload_remap[block.own_payload];
             self.blocks.set(target, block);
             self.ptc_votes.items[target] = self.ptc_votes.items[i];
         }
@@ -1753,6 +1888,25 @@ pub const Store = struct {
         self.index_by_root.clearRetainingCapacity();
         for (self.blocks.items(.root), 0..) |root, i| {
             self.index_by_root.putAssumeCapacityNoClobber(root, @intCast(i));
+        }
+
+        for (0..self.payloads.len) |i| {
+            const target = payload_remap[i];
+            if (target == NO_PAYLOAD) continue;
+            self.payloads.set(target, self.payloads.get(i));
+            delivered_by[target] = delivered_by[i];
+        }
+        self.payloads.shrinkRetainingCapacity(kept_payloads);
+        // A payload whose parent was dropped now stands on the store's base, as the walks
+        // through the compacted blocks do.
+        for (self.payloads.items(.parent), delivered_by[0..kept_payloads], 0..) |*parent, block, i| {
+            parent.* = self.standsOn(self.hungFrom(block));
+            std.debug.assert(parent.* >= PRE_MERGE_PAYLOAD or parent.* < i);
+        }
+        self.payload_by_hash.clearRetainingCapacity();
+        for (self.payloads.items(.hash), 0..) |*hash, i| {
+            if (std.mem.eql(u8, hash, &constants.ZERO_HASH)) continue;
+            self.payload_by_hash.putAssumeCapacityNoClobber(hash.*, @intCast(i));
         }
         self.head_cache.dirty = true;
         return n - kept;

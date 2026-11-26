@@ -84,7 +84,7 @@ pub const FastConfirmation = struct {
     pub fn safeExecutionBlockHash(self: *const FastConfirmation, store: *const Store) ?Root {
         const block = store.blockIndex(self.confirmed_root) orelse return null;
         if (store.blocks.items(.fork)[block].gte(.gloas)) return store.blocks.items(.bid_parent_block_hash)[block];
-        return store.blocks.items(.payload_block_hash)[block];
+        return store.payloadHash(store.blocks.items(.own_payload)[block]);
     }
 };
 

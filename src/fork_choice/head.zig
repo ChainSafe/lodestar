@@ -14,7 +14,7 @@
 //! balances move only the weights that changed, and `prune` renumbers the counted
 //! nodes in place, so neither recounts every vote.
 //!
-//! Optimistic sync: each block stores the engine's verdict on its own payload; a node's
+//! Optimistic sync: each block points at its own payload's verdict; a node's
 //! status is the worst verdict on the payloads it stands on, derived here in one forward
 //! pass. A node derived invalid is treated as removed: no weight reaches its parent and
 //! it is never viable.
@@ -176,13 +176,12 @@ fn compute(store: *Store) !void {
     const parents = store.blocks.items(.parent);
     const forks = store.blocks.items(.fork);
     const parent_statuses = store.blocks.items(.parent_payload_status);
-    const payload_verified = store.blocks.items(.payload_verified);
+    const own_payloads = store.blocks.items(.own_payload);
     const weight_col = cache.weight.items;
     const flags = cache.flags.items;
     const exec = cache.execution.items;
     const current_epoch = store.currentEpoch();
 
-    const own_status = store.blocks.items(.execution_status);
     const finalized_slot = computeStartSlotAtEpoch(store.finalized_checkpoint.epoch);
     const finalized_index = store.blockIndex(store.finalized_checkpoint.root) orelse NO_BLOCK;
     const finalized_at_genesis = store.finalized_checkpoint.epoch == GENESIS_EPOCH;
@@ -198,7 +197,7 @@ fn compute(store: *Store) !void {
         // A node stands on the node it hangs from plus, before Gloas and for `.full` nodes,
         // the block's own payload.
         const base: ExecutionStatus = if (parent == NO_BLOCK) store.root_base_status else exec[nodeId(.{ .block = parent, .payload_status = parent_statuses[i] })];
-        const with_own = base.worst(own_status[i]);
+        const with_own = base.worst(store.ownPayloadStatus(index));
         exec[pending] = if (gloas) base else with_own;
         exec[empty] = if (gloas) base else with_own;
         exec[full] = with_own;
@@ -213,7 +212,7 @@ fn compute(store: *Store) !void {
         flags[pending].exists = true;
         if (gloas) {
             flags[empty].exists = true;
-            if (payload_verified[i] and exec[full] != .invalid) flags[full].exists = true;
+            if (own_payloads[i] != store_mod.NO_PAYLOAD and exec[full] != .invalid) flags[full].exists = true;
         }
     }
 
