@@ -115,4 +115,7 @@ test "Gloas upgrade migrates empty pending queues" {
         try std.testing.expectEqual(@as(usize, 0), try pending.length());
     }
     try std.testing.expectEqual(@as(usize, validator_count), try state.validatorsCount());
+    var availability = try upgraded.inner.get("execution_payload_availability");
+    const fork_slot_index = preset.SLOTS_PER_EPOCH % preset.SLOTS_PER_HISTORICAL_ROOT;
+    for (0..preset.SLOTS_PER_HISTORICAL_ROOT) |i| try std.testing.expectEqual(i != fork_slot_index, try availability.get(i));
 }

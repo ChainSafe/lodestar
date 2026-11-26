@@ -32,10 +32,7 @@ describe("Forkchoice / block timeliness", () => {
   });
   const store = makeStore();
   const attestationDueMs = config.getAttestationDueMs(config.getForkName(store.currentSlot));
-  const ptcDueMs = config.getSlotComponentDurationMs(
-    config.getForkName(store.currentSlot),
-    config.PAYLOAD_ATTESTATION_DUE_BPS
-  );
+  const ptcDueMs = config.getPayloadAttestationDueMs(config.getForkName(store.currentSlot));
 
   let forkChoice: ExposedForkChoice;
   let block: BeaconBlock;
