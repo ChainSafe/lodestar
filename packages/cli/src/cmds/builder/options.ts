@@ -149,7 +149,7 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
 
   "bidding.deadlineBps": {
     description:
-      "Point within the slot before the proposal slot at which the payload is retrieved and the bid is published, in basis points",
+      "Point within the slot before the proposal slot at which the payload is retrieved and the bid is published, in basis points, not below PAYLOAD_ATTESTATION_DUE_BPS",
     type: "number",
     default: defaultOptions.bidding.deadlineBps,
     group: "bidding",

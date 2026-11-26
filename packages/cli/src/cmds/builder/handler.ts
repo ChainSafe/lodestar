@@ -185,6 +185,14 @@ function validateBiddingArgs(args: IBuilderCliArgs, config: ChainForkConfig): vo
     }
   }
 
+  // Nodes ignore bids received before the payload attestation deadline of the slot before the proposal slot
+  const deadlineBps = args["bidding.deadlineBps"];
+  if (deadlineBps < config.PAYLOAD_ATTESTATION_DUE_BPS) {
+    throw new YargsError(
+      `Invalid bidding.deadlineBps=${deadlineBps}, must not be below PAYLOAD_ATTESTATION_DUE_BPS=${config.PAYLOAD_ATTESTATION_DUE_BPS}, earlier bids are ignored on gossip`
+    );
+  }
+
   const getPayloadTimeout = args["bidding.getPayloadTimeout"];
   const slotDurationMs = config.getSlotDurationMs(ForkName.gloas);
   if (!Number.isSafeInteger(getPayloadTimeout) || getPayloadTimeout <= 0 || getPayloadTimeout > slotDurationMs) {
