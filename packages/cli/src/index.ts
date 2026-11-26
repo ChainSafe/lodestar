@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-// MUST import first to apply preset from args and set ssz hasher
+// MUST import first to size libuv's thread pool before its first use
+import "./applyUvThreadPoolSize.js";
+// MUST import next to apply preset from args and set ssz hasher
 import "./applyPreset.js";
 
 import {getLodestarCli, yarg} from "./cli.js";
