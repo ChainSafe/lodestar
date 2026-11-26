@@ -8,6 +8,8 @@ For source installations, upgrade the Node.js runtime used by the service and re
 
 Binaries can be downloaded from the Lodestar [release page](https://github.com/ChainSafe/lodestar/releases/latest) under the `Assets` section.
 
+The binaries bundle Node.js 26, which needs `libatomic1` on the host. Install it with `sudo apt-get install libatomic1` on Debian/Ubuntu or `sudo dnf install libatomic` on Fedora/RHEL.
+
 Run the following command to install the latest version
 
 ```bash

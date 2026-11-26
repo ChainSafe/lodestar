@@ -59,13 +59,31 @@ function runNetworkingFnTests(testHandler: string, testSuite: string, testSuiteD
   }
 }
 
+/** Matched against `<handler>/<testCase>` */
+const skippedGossipTests: RegExp[] = [
+  // The pinned vector predates consensus-specs#5821, its payload carries withdrawals the block's post-state
+  // does not expect. Unskip with the next spec release.
+  /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__valid_max_withdrawals$/,
+  // The bid in this vector has a gas limit of 0, so the envelope is ignored by the transaction count bound
+  // before the empty transaction check rejects it. Fixed by consensus-specs#5802, unskip once it is released.
+  /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__reject_empty_transaction$/,
+  // The pinned vectors carry placeholder block hashes, so the block hash check from consensus-specs#5770 rejects
+  // envelopes they expect to be accepted. Unskip once a release ships vectors with real block hashes.
+  /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__(valid.*|ignore_duplicate)$/,
+];
+
 const networking: TestRunnerCustom = (fork, testHandler, testSuite, testSuiteDirpath) => {
   if (isGossipValidationHandler(testHandler)) {
     for (const testCaseName of readdirSyncSpec(testSuiteDirpath)) {
       const testCaseDir = path.join(testSuiteDirpath, testCaseName);
-      it(testCaseName, async () => {
-        await runGossipValidationTest(fork, testHandler, testCaseDir);
-      }, 30_000);
+      const skip = skippedGossipTests.some((skippedMatch) => `${testHandler}/${testCaseName}`.match(skippedMatch));
+      it.skipIf(skip)(
+        testCaseName,
+        async () => {
+          await runGossipValidationTest(fork, testHandler, testCaseDir);
+        },
+        30_000
+      );
     }
   } else if (networkingFns[testHandler] !== undefined) {
     runNetworkingFnTests(testHandler, testSuite, testSuiteDirpath);

@@ -456,6 +456,17 @@ jobs:
         run: |
           zig build test:ere_verifier
 
+      - name: Add loopback addresses for the UDP source tests
+        if: matrix.os == 'macos-latest'
+        run: |
+          sudo ifconfig lo0 alias 127.0.0.2
+          sudo ifconfig lo0 alias 127.0.0.3
+
+      - name: Run discovery and network tests
+        run: |
+          zig build test:fault_io
+          zig build test:udp
+
       - name: Build benchmarks
         run: |
           zig build build-exe:bench_hashing build-exe:bench_merkle_gindex build-exe:bench_merkle_node build-exe:bench_ssz_attestation build-exe:bench_ssz_block build-exe:bench_ssz_state build-exe:bench_process_block build-exe:bench_process_epoch
