@@ -67,6 +67,9 @@ const skippedGossipTests: RegExp[] = [
   // The bid in this vector has a gas limit of 0, so the envelope is ignored by the transaction count bound
   // before the empty transaction check rejects it. Fixed by consensus-specs#5802, unskip once it is released.
   /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__reject_empty_transaction$/,
+  // The pinned vectors carry placeholder block hashes, so the block hash check from consensus-specs#5770 rejects
+  // envelopes they expect to be accepted. Unskip once a release ships vectors with real block hashes.
+  /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__(valid.*|ignore_duplicate)$/,
 ];
 
 const networking: TestRunnerCustom = (fork, testHandler, testSuite, testSuiteDirpath) => {
