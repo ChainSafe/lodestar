@@ -16,12 +16,29 @@ export function computeExecutionBlockHash(
   parentBeaconBlockRoot: Root | null,
   executionRequests: ExecutionRequests | null
 ): Uint8Array {
-  return computeExecutionBlockHashNative(
-    ForkSeq[fork],
+  return computeExecutionBlockHashSerialized(
+    fork,
     sszTypesFor(fork).ExecutionPayload.serialize(payload),
-    parentBeaconBlockRoot ?? undefined,
+    parentBeaconBlockRoot,
     executionRequests !== null && isForkPostElectra(fork)
       ? sszTypesFor(fork).ExecutionRequests.serialize(executionRequests)
-      : undefined
+      : null
+  );
+}
+
+/**
+ * Same as `computeExecutionBlockHash`, from the SSZ serializations of the payload and execution requests of `fork`.
+ */
+export function computeExecutionBlockHashSerialized(
+  fork: ForkPostBellatrix,
+  payload: Uint8Array,
+  parentBeaconBlockRoot: Root | null,
+  executionRequests: Uint8Array | null
+): Uint8Array {
+  return computeExecutionBlockHashNative(
+    ForkSeq[fork],
+    payload,
+    parentBeaconBlockRoot ?? undefined,
+    executionRequests ?? undefined
   );
 }

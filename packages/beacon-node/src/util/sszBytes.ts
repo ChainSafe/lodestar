@@ -671,6 +671,37 @@ export function getTransactionCountFromExecutionPayloadEnvelopeSerialized(data: 
 }
 
 /**
+ * SSZ serializations of the envelope's payload and execution requests, as views into `data`.
+ * The execution requests are the last variable-size field of the envelope, which ends the signed envelope.
+ * Returns null on malformed offsets, deserialization reports the exact error.
+ */
+export function getPayloadAndExecutionRequestsFromExecutionPayloadEnvelopeSerialized(
+  data: Uint8Array
+): {payload: Uint8Array; executionRequests: Uint8Array} | null {
+  if (data.length < PAYLOAD_START_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE) {
+    return null;
+  }
+
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const messageOffset = view.getUint32(0, true);
+  const payloadOffset = view.getUint32(ENVELOPE_START_IN_SIGNED, true);
+  const requestsOffset = view.getUint32(ENVELOPE_START_IN_SIGNED + EXECUTION_PAYLOAD_ENVELOPE_PAYLOAD_OFFSET, true);
+  if (
+    messageOffset !== ENVELOPE_START_IN_SIGNED ||
+    payloadOffset !== EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE ||
+    requestsOffset < payloadOffset ||
+    ENVELOPE_START_IN_SIGNED + requestsOffset > data.length
+  ) {
+    return null;
+  }
+
+  return {
+    payload: data.subarray(ENVELOPE_START_IN_SIGNED + payloadOffset, ENVELOPE_START_IN_SIGNED + requestsOffset),
+    executionRequests: data.subarray(ENVELOPE_START_IN_SIGNED + requestsOffset),
+  };
+}
+
+/**
  * BeaconState of all forks (up until Electra, check with new forks)
  * class BeaconState(Container):
  *   genesis_time: uint64                    - 8 bytes

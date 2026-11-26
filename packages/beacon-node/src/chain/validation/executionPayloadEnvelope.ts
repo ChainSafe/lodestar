@@ -7,9 +7,10 @@ import {
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
-import {computeExecutionBlockHash} from "../../execution/engine/blockHash.js";
+import {computeExecutionBlockHash, computeExecutionBlockHashSerialized} from "../../execution/engine/blockHash.js";
 import {
   getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
+  getPayloadAndExecutionRequestsFromExecutionPayloadEnvelopeSerialized,
   getSlotFromExecutionPayloadEnvelopeSerialized,
   getTransactionCountFromExecutionPayloadEnvelopeSerialized,
 } from "../../util/sszBytes.js";
@@ -25,11 +26,16 @@ export async function validateApiExecutionPayloadEnvelope(
   return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
 }
 
+/**
+ * `serializedData`, the SSZ serialization of `executionPayloadEnvelope` if known, saves serializing its
+ * payload again to compute the block hash.
+ */
 export async function validateGossipExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  serializedData?: Uint8Array
 ): Promise<void> {
-  return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+  return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope, serializedData);
 }
 
 /**
@@ -68,7 +74,8 @@ export function validateGossipExecutionPayloadEnvelopeSerialized(
 
 async function validateExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  serializedData?: Uint8Array
 ): Promise<void> {
   const envelope = executionPayloadEnvelope.message;
   const {payload} = envelope;
@@ -282,12 +289,24 @@ async function validateExecutionPayloadEnvelope(
 
   // [REJECT] The payload's block hash is computed correctly
   const timer = chain.metrics?.gossipExecutionPayloadEnvelope.blockHashTime.startTimer();
-  const computedBlockHash = computeExecutionBlockHash(
-    blockState.forkName,
-    payload,
-    envelope.parentBeaconBlockRoot,
-    envelope.executionRequests
-  );
+  const serialized =
+    serializedData !== undefined
+      ? getPayloadAndExecutionRequestsFromExecutionPayloadEnvelopeSerialized(serializedData)
+      : null;
+  const computedBlockHash =
+    serialized !== null
+      ? computeExecutionBlockHashSerialized(
+          blockState.forkName,
+          serialized.payload,
+          envelope.parentBeaconBlockRoot,
+          serialized.executionRequests
+        )
+      : computeExecutionBlockHash(
+          blockState.forkName,
+          payload,
+          envelope.parentBeaconBlockRoot,
+          envelope.executionRequests
+        );
   timer?.();
   if (!byteArrayEquals(computedBlockHash, payload.blockHash)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {

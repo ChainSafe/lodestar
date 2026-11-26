@@ -1154,7 +1154,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       // unlike BlockInput, we send the envelope into UnknownBlockInput sync
       // inside the sync it'll reconcile into PayloadEnvelopeInput and share the same cache with gossip
       try {
-        await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
+        await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope, serializedData);
       } catch (e) {
         if (e instanceof ExecutionPayloadEnvelopeError) {
           const {beaconBlockRoot} = signedEnvelope.message;

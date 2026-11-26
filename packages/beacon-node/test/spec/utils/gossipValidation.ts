@@ -814,7 +814,7 @@ async function validateMessageForTopic(
         throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_BLOCK_FAILED_VALIDATION"});
       }
 
-      await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
+      await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope, bytes);
       // Mirror gossip handler: attach the envelope so duplicate detection works
       chain.seenPayloadEnvelopeInputCache.get(blockRootHex)?.addPayloadEnvelope({
         envelope: signedEnvelope,

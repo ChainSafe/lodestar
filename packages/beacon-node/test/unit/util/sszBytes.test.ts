@@ -43,6 +43,7 @@ import {
   getParentBlockHashFromSignedExecutionPayloadBidSerialized,
   getParentBlockRootFromSignedExecutionPayloadBidSerialized,
   getParentRootFromSignedBeaconBlockSerialized,
+  getPayloadAndExecutionRequestsFromExecutionPayloadEnvelopeSerialized,
   getPayloadPresentFromPayloadAttestationMessageSerialized,
   getSignatureFromAttestationSerialized,
   getSignatureFromSingleAttestationSerialized,
@@ -623,6 +624,54 @@ describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {
     const transactionsAfterWithdrawals = Uint8Array.from(bytes);
     new DataView(transactionsAfterWithdrawals.buffer).setUint32(684, transactionsOffset + 100, true);
     expect(getTransactionCountFromExecutionPayloadEnvelopeSerialized(transactionsAfterWithdrawals)).toBeNull();
+  });
+
+  it("getPayloadAndExecutionRequestsFromExecutionPayloadEnvelopeSerialized", () => {
+    const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+    const {payload, executionRequests} = envelope.message;
+    payload.extraData = new Uint8Array(5).fill(1);
+    payload.transactions = SerializedList.fromArray([new Uint8Array(3).fill(2), new Uint8Array(7).fill(3)]);
+    payload.withdrawals = [ssz.capella.Withdrawal.defaultValue()];
+    payload.blockAccessList = new Uint8Array(11).fill(4);
+    executionRequests.deposits = [ssz.electra.DepositRequest.defaultValue()];
+    executionRequests.consolidations = [ssz.electra.ConsolidationRequest.defaultValue()];
+    const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+
+    const serialized = getPayloadAndExecutionRequestsFromExecutionPayloadEnvelopeSerialized(bytes);
+    expect(serialized).not.toBeNull();
+    expect(toHex(serialized?.payload ?? new Uint8Array())).toBe(toHex(ssz.gloas.ExecutionPayload.serialize(payload)));
+    expect(toHex(serialized?.executionRequests ?? new Uint8Array())).toBe(
+      toHex(ssz.gloas.ExecutionRequests.serialize(executionRequests))
+    );
+  });
+
+  it("getPayloadAndExecutionRequestsFromExecutionPayloadEnvelopeSerialized - invalid data", () => {
+    // the payload starts at offset 180
+    for (const size of [0, 100, 179]) {
+      expect(getPayloadAndExecutionRequestsFromExecutionPayloadEnvelopeSerialized(Buffer.alloc(size))).toBeNull();
+    }
+
+    const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(
+      ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue()
+    );
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const requestsOffset = view.getUint32(104, true);
+
+    const messageOffsetWrong = Uint8Array.from(bytes);
+    new DataView(messageOffsetWrong.buffer).setUint32(0, 104, true);
+    expect(getPayloadAndExecutionRequestsFromExecutionPayloadEnvelopeSerialized(messageOffsetWrong)).toBeNull();
+
+    const payloadOffsetWrong = Uint8Array.from(bytes);
+    new DataView(payloadOffsetWrong.buffer).setUint32(100, 84, true);
+    expect(getPayloadAndExecutionRequestsFromExecutionPayloadEnvelopeSerialized(payloadOffsetWrong)).toBeNull();
+
+    const requestsBeforePayload = Uint8Array.from(bytes);
+    new DataView(requestsBeforePayload.buffer).setUint32(104, 40, true);
+    expect(getPayloadAndExecutionRequestsFromExecutionPayloadEnvelopeSerialized(requestsBeforePayload)).toBeNull();
+
+    const requestsPastEnd = Uint8Array.from(bytes);
+    new DataView(requestsPastEnd.buffer).setUint32(104, requestsOffset + bytes.length, true);
+    expect(getPayloadAndExecutionRequestsFromExecutionPayloadEnvelopeSerialized(requestsPastEnd)).toBeNull();
   });
 });
 
