@@ -1,3 +1,4 @@
+import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {VoluntaryExitValidity, getVoluntaryExitSignatureSet} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {
@@ -107,11 +108,22 @@ async function validateVoluntaryExit(
   // verifySignature = false, verified in batch below
   const validity = state.getVoluntaryExitValidity(voluntaryExit, false);
   if (validity !== VoluntaryExitValidity.valid) {
-    // [IGNORE] The validator has no pending partial withdrawals
+    // Conditions that depend on the clock or the head are ignored, a peer with a different view can honestly
+    // forward such an exit
     // https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.5/specs/electra/p2p-interface.md#modified-voluntary_exit
-    // The withdrawal queue depends on the head, so a peer on a different head can honestly forward this exit
-    const action = validity === VoluntaryExitValidity.pendingWithdrawals ? GossipAction.IGNORE : GossipAction.REJECT;
-    throw new VoluntaryExitError(action, {
+    const {validatorIndex} = voluntaryExit.message;
+    const ignore =
+      // [IGNORE] The voluntary exit epoch is not in the future
+      validity === VoluntaryExitValidity.earlyEpoch ||
+      // [IGNORE] The validator has not already initiated exit
+      validity === VoluntaryExitValidity.alreadyExited ||
+      // A validator past its exit epoch is reported as inactive
+      (validity === VoluntaryExitValidity.inactive &&
+        validatorIndex < state.validatorCount &&
+        state.getValidator(validatorIndex).exitEpoch !== FAR_FUTURE_EPOCH) ||
+      // [IGNORE] The validator has no pending partial withdrawals
+      validity === VoluntaryExitValidity.pendingWithdrawals;
+    throw new VoluntaryExitError(ignore ? GossipAction.IGNORE : GossipAction.REJECT, {
       code: voluntaryExitValidityToErrorCode(validity),
     });
   }

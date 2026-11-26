@@ -20,6 +20,19 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateState} from "../../../utils/state.js";
 import {TestBeaconStateView} from "../../../utils/stateView.js";
 
+async function expectGossipError(
+  promise: Promise<void>,
+  action: GossipAction,
+  code: VoluntaryExitErrorCode
+): Promise<void> {
+  const error = await promise.catch((e) => e);
+  expect(error).toBeInstanceOf(VoluntaryExitError);
+  expect({action: (error as VoluntaryExitError).action, code: (error as VoluntaryExitError).type.code}).toEqual({
+    action,
+    code,
+  });
+}
+
 describe("validate voluntary exit", () => {
   let chainStub: MockedBeaconChain;
   let state: TestBeaconStateView;
@@ -95,7 +108,7 @@ describe("validate voluntary exit", () => {
     );
   });
 
-  it("should return invalid Voluntary Exit - early epoch", async () => {
+  it("should ignore Voluntary Exit - early epoch", async () => {
     const signedVoluntaryExitInvalid: phase0.SignedVoluntaryExit = {
       message: {
         // Force an invalid epoch
@@ -105,13 +118,27 @@ describe("validate voluntary exit", () => {
       signature: Buffer.alloc(96, 1),
     };
 
-    await expectRejectedWithLodestarError(
+    await expectGossipError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExitInvalid),
+      GossipAction.IGNORE,
       VoluntaryExitErrorCode.EARLY_EPOCH
     );
   });
 
-  it("should return invalid Voluntary Exit - inactive validator", async () => {
+  it("should reject Voluntary Exit - validator index out of range", async () => {
+    const signedVoluntaryExitInvalid: phase0.SignedVoluntaryExit = {
+      message: {epoch: 0, validatorIndex: state.validatorCount},
+      signature: Buffer.alloc(96, 1),
+    };
+
+    await expectGossipError(
+      validateGossipVoluntaryExit(chainStub, signedVoluntaryExitInvalid),
+      GossipAction.REJECT,
+      VoluntaryExitErrorCode.INACTIVE
+    );
+  });
+
+  it("should reject Voluntary Exit - validator not yet activated", async () => {
     const inactiveValidator: phase0.Validator = {
       ...state.getValidator(0),
       activationEpoch: FAR_FUTURE_EPOCH, // Make validator inactive
@@ -121,13 +148,31 @@ describe("validate voluntary exit", () => {
 
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
 
-    await expectRejectedWithLodestarError(
+    await expectGossipError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
+      GossipAction.REJECT,
       VoluntaryExitErrorCode.INACTIVE
     );
   });
 
-  it("should return invalid Voluntary Exit - already exited", async () => {
+  it("should ignore Voluntary Exit - validator past its exit epoch", async () => {
+    const exitedValidator: phase0.Validator = {
+      ...state.getValidator(0),
+      exitEpoch: computeEpochAtSlot(state.slot) - 1,
+    };
+
+    state.setValidator(0, exitedValidator);
+
+    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
+
+    await expectGossipError(
+      validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
+      GossipAction.IGNORE,
+      VoluntaryExitErrorCode.INACTIVE
+    );
+  });
+
+  it("should ignore Voluntary Exit - exit already initiated", async () => {
     const currentEpoch = computeEpochAtSlot(state.slot);
     const exitedValidator: phase0.Validator = {
       ...state.getValidator(0),
@@ -139,13 +184,14 @@ describe("validate voluntary exit", () => {
 
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
 
-    await expectRejectedWithLodestarError(
+    await expectGossipError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
+      GossipAction.IGNORE,
       VoluntaryExitErrorCode.ALREADY_EXITED
     );
   });
 
-  it("should return invalid Voluntary Exit - short time active", async () => {
+  it("should reject Voluntary Exit - short time active", async () => {
     const recentlyActivated: phase0.Validator = {
       ...state.getValidator(0),
       activationEpoch: computeEpochAtSlot(state.slot) - 1, // Recently activated
@@ -155,8 +201,9 @@ describe("validate voluntary exit", () => {
 
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
 
-    await expectRejectedWithLodestarError(
+    await expectGossipError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
+      GossipAction.REJECT,
       VoluntaryExitErrorCode.SHORT_TIME_ACTIVE
     );
   });
@@ -164,11 +211,11 @@ describe("validate voluntary exit", () => {
   it("should ignore Voluntary Exit - pending partial withdrawals", async () => {
     vi.spyOn(state, "getVoluntaryExitValidity").mockReturnValue(VoluntaryExitValidity.pendingWithdrawals);
 
-    const error = await validateGossipVoluntaryExit(chainStub, signedVoluntaryExit).catch((e) => e);
-
-    expect(error).toBeInstanceOf(VoluntaryExitError);
-    expect((error as VoluntaryExitError).action).toBe(GossipAction.IGNORE);
-    expect((error as VoluntaryExitError).type.code).toBe(VoluntaryExitErrorCode.PENDING_WITHDRAWALS);
+    await expectGossipError(
+      validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
+      GossipAction.IGNORE,
+      VoluntaryExitErrorCode.PENDING_WITHDRAWALS
+    );
     expect(chainStub.bls.verifySignatureSets).not.toHaveBeenCalled();
   });
 
