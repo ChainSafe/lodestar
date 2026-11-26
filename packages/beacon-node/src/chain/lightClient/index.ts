@@ -242,6 +242,11 @@ export class LightClientServer {
    * `updateHead`.
    */
   private readonly blockData = new Map<BlockRooHex, BlockLightClientCache>();
+  /**
+   * Highest finalized block slot seen in an imported post state. Finalized checkpoints cannot
+   * conflict, so this is monotonic and safe to prune below even before fork choice catches up.
+   */
+  private maxFinalizedSlot: Slot = 0;
   private checkpointHeaders = new Map<BlockRooHex, LightClientHeader>();
   private latestHeadUpdate: LightClientOptimisticUpdate | null = null;
 
@@ -488,6 +493,10 @@ export class LightClientServer {
     // Store finalized checkpoint data
     // Finality is served whenever it can be proven, see `buildUpdate`
     const finalizedCheckpoint = postState.finalizedCheckpoint;
+    const finalizedBlockSlot =
+      this.blockData.get(toRootHex(finalizedCheckpoint.root))?.attestedHeader.beacon.slot ??
+      computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+    this.maxFinalizedSlot = Math.max(this.maxFinalizedSlot, finalizedBlockSlot);
 
     const parentData = this.blockData.get(toRootHex(block.parentRoot));
     const candidate = this.createCandidateUpdate(block, period, parentData);
@@ -516,9 +525,9 @@ export class LightClientServer {
       finalityBranch: postState.getFinalizedRootProof(),
     });
 
-    // Bounds the cache in production, where `updateHead` has no caller yet. Pruning by the imported
-    // slot only keeps at least as much as pruning by the head would.
-    this.pruneBlockData(blockSlot - MAX_CACHED_SLOTS);
+    // Bounds the cache in production, where `updateHead` has no caller yet. In steady state finality
+    // keeps this at a couple of epochs; the slot bound only applies while finality stalls.
+    this.pruneBlockData(Math.max(this.maxFinalizedSlot, blockSlot - MAX_CACHED_SLOTS));
 
     // Keep the served data in sync on a linear chain. Reorgs are reconciled in `updateHead`.
     if (bestUpdateRoot === blockRootHex && built) {

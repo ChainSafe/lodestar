@@ -439,6 +439,21 @@ describe("LightClientServer.updateHead", () => {
     const remaining = [...server["blockData"].values()].map((data) => data.attestedHeader.beacon.slot);
     expect(remaining).toEqual([blockSlot]);
   });
+
+  it("prunes below the finalized block seen on import", async () => {
+    const {server} = createServer(null);
+    const chain = chainOf([10, 20, 40]);
+    setBlockData(server, chain);
+
+    await server["onImportBlock"](
+      createStubBlock(50),
+      createStubState({epoch: 1, root: blockAt(chain, 40).blockRoot}),
+      40
+    );
+
+    const remaining = [...server["blockData"].values()].map((data) => data.attestedHeader.beacon.slot);
+    expect(remaining.sort((a, b) => a - b)).toEqual([40, 50]);
+  });
 });
 
 function createStubBlock(slot: number): BeaconBlock<ForkPostAltair> {
@@ -447,11 +462,13 @@ function createStubBlock(slot: number): BeaconBlock<ForkPostAltair> {
   return block;
 }
 
-function createStubState(): IBeaconStateViewAltair {
+function createStubState(
+  finalizedCheckpoint: {epoch: number; root: Uint8Array} = {epoch: 0, root: new Uint8Array(32)}
+): IBeaconStateViewAltair {
   return {
     currentSyncCommittee: ssz.altair.SyncCommittee.defaultValue(),
     nextSyncCommittee: ssz.altair.SyncCommittee.defaultValue(),
-    finalizedCheckpoint: {epoch: 0, root: new Uint8Array(32)},
+    finalizedCheckpoint,
     getSyncCommitteesWitness: () => ({
       witness: [],
       currentSyncCommitteeRoot: new Uint8Array(32).fill(0xaa),
