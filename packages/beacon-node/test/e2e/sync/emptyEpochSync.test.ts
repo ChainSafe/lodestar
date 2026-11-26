@@ -13,14 +13,14 @@ import {getAndInitDevValidators} from "../../utils/node/validator.js";
 describe("sync / range sync through 0-block epochs for gloas", () => {
   // Blocks until slot 13, then EMPTY_EPOCHS epochs with no blocks from FIRST_EMPTY_EPOCH, then blocks again,
   // and a late node range syncs through the gap. More than MAX_LOOK_AHEAD_EPOCHS (2) also covers the look-ahead window
-  const EMPTY_EPOCHS = 1;
+  const EMPTY_EPOCHS = 3;
   const FIRST_EMPTY_EPOCH = 2;
   const LAST_SLOT_BEFORE_GAP = (FIRST_EMPTY_EPOCH - 1) * SLOTS_PER_EPOCH + 5;
   const FIRST_SLOT_AFTER_GAP = (FIRST_EMPTY_EPOCH + EMPTY_EPOCHS) * SLOTS_PER_EPOCH;
 
   const validatorCount = 8;
   const SLOT_DURATION_MS = 2000;
-  // ~58s with 1 empty epoch, each extra empty epoch adds one epoch of wall time
+  // ~90s with 3 empty epochs, each extra empty epoch adds one epoch of wall time
   vi.setConfig({testTimeout: 90_000 + EMPTY_EPOCHS * SLOTS_PER_EPOCH * SLOT_DURATION_MS});
   const testParams: Partial<ChainConfig> = {
     SLOT_DURATION_MS,
