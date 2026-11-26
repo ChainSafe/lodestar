@@ -89,12 +89,11 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/fork_choice_compliance\/.*/,
-    // TODO GLOAS: unskip with the v1.7.0-beta.5 spec tests, the v1.7.0-beta.4 vectors predate
-    // upgrade_to_gloas unsetting the fork slot's payload availability (consensus-specs#5808)
-    /^gloas\/fork\/fork\/.*/,
-    /^gloas\/transition\/core\/.*/,
   ],
   skippedTests: [
+    // TODO GLOAS: unskip once upgrade_to_gloas separates builder and validator deposits
+    // https://github.com/ethereum/consensus-specs/pull/5736
+    /^gloas\/fork\/fork\/pyspec_tests\/fork_(builder_deposit_followed_by_invalid_validator_deposit|builder_deposit_followed_by_non_builder_credentials|builder_registration_and_topup_with_existing_validator_pubkey|builder_topup_overrides_earlier_pending_validator|existing_validator_invalid_builder_then_valid_builder|existing_validator_valid_non_builder_topup_after_builder|invalid_topup_before_validator_and_builder_is_discarded|mixed_validity_validator_deposits_surrounding_builder_deposits|pending_validator_invalid_non_builder_topup_after_builder|validator_deposit_followed_by_builder_credentials|validator_topup_before_builder_registration_stays_pending)$/,
     // deneb..electra fork_choice/on_block negative vectors whose only invalid property is the blob data.
     // Legacy blob sidecars are not tracked for these forks, so the runner does not load the blobs and the
     // block imports successfully. See https://github.com/ChainSafe/lodestar/issues/9956
