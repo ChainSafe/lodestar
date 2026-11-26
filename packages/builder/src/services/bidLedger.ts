@@ -1,4 +1,5 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import type {Epoch, RootHex, Slot, gloas} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 
@@ -158,7 +159,7 @@ export class BidLedger {
     return record !== null && record.identity.blockHash === identity.blockHash && record.wonBlockRoots.has(blockRoot);
   }
 
-  /** Release a winning bid liability only after its payment is known to be reflected in Builder balance. */
+  /** Release a winning bid liability only after its payment is known to be reflected in the polled Builder state. */
   recordPaymentSettled(identity: BidIdentity): BidLedgerRecord | null {
     const record = this.getBid(identity.slot, identity.parentBlockHash, identity.parentBlockRoot);
     if (record === null || record.identity.blockHash !== identity.blockHash || record.wonBlockRoots.size === 0) {
@@ -215,15 +216,27 @@ export class BidLedger {
     }
   }
 
-  /** Marks won bids before the given slot as settled, by then their payment is reflected in the builder balance. */
-  settlePaymentsBefore(slot: Slot): void {
+  /**
+   * Marks won bids as settled once their payment is accounted for by a builder state polled from the beacon node.
+   * `hasPendingPayment` tells whether the pending payments of the state at `stateSlot` hold the payment of a bid.
+   * The payment of a bid stays there until the end of the epoch after its slot, a state past that has it as
+   * pending withdrawal or debited from the balance. A bid won in a block that is not part of the state has no
+   * payment in it and stays reserved, the block can still become canonical.
+   */
+  settlePayments(stateSlot: Slot, hasPendingPayment: (bidSlot: Slot, valueGwei: number) => boolean): void {
+    const stateEpoch = computeEpochAtSlot(stateSlot);
     for (const [bidSlot, bidsForSlot] of this.bidsBySlot) {
-      if (bidSlot >= slot) {
+      if (bidSlot > stateSlot) {
         continue;
       }
 
+      const pastPendingPayments = stateEpoch - computeEpochAtSlot(bidSlot) > 1;
       for (const record of bidsForSlot.values()) {
-        if (record.wonBlockRoots.size > 0) {
+        if (record.wonBlockRoots.size === 0 || record.paymentSettled) {
+          continue;
+        }
+        // A bid without value does not create a payment
+        if (pastPendingPayments || record.valueGwei === 0 || hasPendingPayment(bidSlot, record.valueGwei)) {
           record.paymentSettled = true;
         }
       }

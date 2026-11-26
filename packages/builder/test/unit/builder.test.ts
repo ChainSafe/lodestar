@@ -17,6 +17,7 @@ import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
 import {biddingOptions, createBiddingModules, getPayloadSourceStub} from "./utils/bidding.js";
 import {ClockMock} from "./utils/clock.js";
 import {getMockedLogger} from "./utils/logger.js";
+import {mockGetStateBuildersResponse, mockPendingPayments} from "./utils/mocks.js";
 import {mockBuiltPayload} from "./utils/payload.js";
 
 const {EventType} = routes.events;
@@ -227,23 +228,161 @@ describe("Builder", () => {
     expect(modules.headTracker.getDependentRoot(head.block, SLOTS_PER_EPOCH)).toBe(head.nextEpochDependentRoot);
   });
 
-  it("settles and prunes won bids on slot ticks", async () => {
-    const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
-    signedBid.message.slot = 1;
-    signedBid.message.parentBlockHash = Buffer.alloc(32, 2);
-    signedBid.message.parentBlockRoot = Buffer.alloc(32, 3);
-    signedBid.message.blockHash = Buffer.alloc(32, 4);
-    signedBid.message.value = 5;
-    const bid = modules.ledger.recordBid({signedBid, signedBidRoot: toRootHex(Buffer.alloc(32, 5))});
-    modules.ledger.recordWin(bid, toRootHex(Buffer.alloc(32, 6)));
-    new Builder(modules);
+  describe("payment reconciliation", () => {
+    const stateRoot = (slot: number) => toRootHex(Buffer.alloc(32, 100 + slot));
 
-    await clock.tickSlotFns(bid.slot + 3 * SLOTS_PER_EPOCH, controller.signal);
-    expect(modules.ledger.getUnsettledValueGwei(0)).toBe(signedBid.message.value);
+    function recordWonBid(slot: number, value: number): void {
+      const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+      signedBid.message.slot = slot;
+      signedBid.message.parentBlockHash = Buffer.alloc(32, 2);
+      signedBid.message.parentBlockRoot = Buffer.alloc(32, 3);
+      signedBid.message.blockHash = Buffer.alloc(32, 4);
+      signedBid.message.value = value;
+      const bid = modules.ledger.recordBid({signedBid, signedBidRoot: toRootHex(Buffer.alloc(32, slot))});
+      modules.ledger.recordWin(bid, toRootHex(Buffer.alloc(32, slot)));
+    }
 
-    await clock.tickSlotFns(bid.slot + 3 * SLOTS_PER_EPOCH + 1, controller.signal);
-    expect(modules.ledger.getUnsettledValueGwei(0)).toBe(0);
-    expect(modules.ledger.getBidsForSlot(bid.slot)).toEqual([]);
+    function announceHead(onEvent: (event: routes.events.BeaconEvent) => void, slot: number): void {
+      onEvent({
+        type: EventType.headV2,
+        message: {
+          version: ForkName.gloas,
+          data: {
+            slot,
+            block: toRootHex(Buffer.alloc(32, slot)),
+            state: stateRoot(slot),
+            payloadStatus: "empty",
+            epochTransition: false,
+            currentEpochDependentRoot: toRootHex(Buffer.alloc(32, 3)),
+            nextEpochDependentRoot: toRootHex(Buffer.alloc(32, 4)),
+            executionOptimistic: false,
+          },
+        },
+      });
+    }
+
+    /** Pending payment of the builder for a bid won in `slot`, as held by a state in the same epoch */
+    const paymentOf = (slot: number, value: number): [number, number, number] => [
+      modules.index,
+      value,
+      SLOTS_PER_EPOCH + (slot % SLOTS_PER_EPOCH),
+    ];
+
+    beforeEach(() => {
+      api.beacon.getStateBuilders.mockResolvedValue(mockGetStateBuildersResponse(modules.index));
+      mockPendingPayments(api);
+    });
+
+    it("releases bids whose payment is pending in the state of the head", async () => {
+      recordWonBid(1, 5);
+      recordWonBid(2, 6);
+      recordWonBid(3, 7);
+      // The block of slot 1 is not part of the state, the block of slot 3 is not imported yet
+      mockPendingPayments(api, {payments: [paymentOf(2, 6), paymentOf(3, 7)]});
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+      announceHead(onEvent, 2);
+
+      await clock.tickEpochFns(1, controller.signal);
+
+      expect(modules.ledger.getUnsettledValueGwei(1)).toBe(5 + 7);
+      const stateId = stateRoot(2);
+      expect(api.beacon.getBuilderPendingPayments).toHaveBeenCalledExactlyOnceWith({stateId});
+      expect(api.beacon.getBuilderPendingWithdrawals).toHaveBeenCalledExactlyOnceWith({stateId});
+      expect(api.beacon.getStateBuilders).toHaveBeenCalledExactlyOnceWith({stateId, builderIds: [modules.index]});
+
+      await clock.tickSlotFns(2 + 3 * SLOTS_PER_EPOCH + 1, controller.signal);
+      expect(modules.ledger.getBidsForSlot(1)).toHaveLength(1);
+      expect(modules.ledger.getBidsForSlot(2)).toEqual([]);
+    });
+
+    it("does not release a bid for the pending payment of another builder or value", async () => {
+      recordWonBid(1, 5);
+      recordWonBid(2, 6);
+      mockPendingPayments(api, {
+        payments: [
+          [modules.index + 1, 5, SLOTS_PER_EPOCH + 1],
+          [modules.index, 7, SLOTS_PER_EPOCH + 2],
+        ],
+      });
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+      announceHead(onEvent, 2);
+
+      await clock.tickEpochFns(1, controller.signal);
+
+      expect(modules.ledger.getUnsettledValueGwei(1)).toBe(5 + 6);
+    });
+
+    it("releases a bid won in the epoch before the state", async () => {
+      recordWonBid(1, 5);
+      // Pending payments of the previous epoch are in the first half
+      mockPendingPayments(api, {payments: [[modules.index, 5, 1]]});
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+      announceHead(onEvent, SLOTS_PER_EPOCH + 1);
+
+      await clock.tickEpochFns(2, controller.signal);
+
+      expect(modules.ledger.getUnsettledValueGwei(2)).toBe(0);
+    });
+
+    it("does not release a bid won at a head announced while the builder is polled", async () => {
+      recordWonBid(2, 6);
+      recordWonBid(3, 7);
+      mockPendingPayments(api, {payments: [paymentOf(2, 6), paymentOf(3, 7)]});
+      const pendingPayments = await api.beacon.getBuilderPendingPayments({stateId: "head"});
+      const polling = defer<typeof pendingPayments>();
+      api.beacon.getBuilderPendingPayments.mockReset().mockReturnValue(polling.promise);
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+      announceHead(onEvent, 2);
+
+      const tick = clock.tickEpochFns(1, controller.signal);
+      announceHead(onEvent, 3);
+      polling.resolve(pendingPayments);
+      await tick;
+
+      expect(modules.ledger.getUnsettledValueGwei(1)).toBe(7);
+      expect(api.beacon.getBuilderPendingWithdrawals).toHaveBeenCalledExactlyOnceWith({stateId: stateRoot(2)});
+      expect(api.beacon.getStateBuilders).toHaveBeenCalledExactlyOnceWith({
+        stateId: stateRoot(2),
+        builderIds: [modules.index],
+      });
+    });
+
+    it("keeps won bids reserved without a known head", async () => {
+      recordWonBid(1, 5);
+      mockPendingPayments(api, {payments: [paymentOf(1, 5)]});
+      new Builder(modules);
+
+      await clock.tickEpochFns(1, controller.signal);
+
+      expect(modules.ledger.getUnsettledValueGwei(1)).toBe(5);
+      expect(api.beacon.getBuilderPendingPayments).toHaveBeenCalledExactlyOnceWith({stateId: "head"});
+    });
+
+    it("polls again in the next slot if the pending payments can not be polled", async () => {
+      recordWonBid(1, 5);
+      mockPendingPayments(api, {payments: [paymentOf(1, 5)]});
+      const pendingPayments = await api.beacon.getBuilderPendingPayments({stateId: "head"});
+      api.beacon.getBuilderPendingPayments.mockReset().mockRejectedValueOnce(Error("not available"));
+      api.beacon.getBuilderPendingPayments.mockResolvedValue(pendingPayments);
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+      announceHead(onEvent, 2);
+
+      await clock.tickEpochFns(1, controller.signal);
+      expect(modules.ledger.getUnsettledValueGwei(1)).toBe(5);
+
+      await clock.tickSlotFns(SLOTS_PER_EPOCH + 1, controller.signal);
+      expect(api.beacon.getBuilderPendingPayments).toHaveBeenCalledTimes(2);
+      expect(modules.ledger.getUnsettledValueGwei(1)).toBe(0);
+
+      // Polled once per epoch again after a successful poll
+      await clock.tickSlotFns(SLOTS_PER_EPOCH + 2, controller.signal);
+      expect(api.beacon.getBuilderPendingPayments).toHaveBeenCalledTimes(2);
+    });
   });
 
   it("does not block preferences while a block consumer is pending", async () => {

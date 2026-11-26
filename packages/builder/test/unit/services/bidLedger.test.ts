@@ -1,4 +1,4 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import type {RootHex} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
@@ -260,21 +260,58 @@ describe("BidLedger", () => {
     expect(ledger.recordBid(submittedBid({slot: bid.slot + 1})).slot).toBe(bid.slot + 1);
   });
 
-  it("settles payments of bids won before a slot", () => {
-    const ledger = new BidLedger();
-    const settled = submittedBid();
-    const unsettled = submittedBid({slot: settled.slot + 1});
-    const lost = submittedBid({slot: settled.slot - 1});
-    for (const bid of [settled, unsettled, lost]) ledger.recordBid(bid);
-    ledger.recordWin(settled, root(6));
-    ledger.recordWin(unsettled, root(7));
-    expect(ledger.getUnsettledValueGwei(0)).toBe(settled.signedBid.message.value + unsettled.signedBid.message.value);
+  describe("settlePayments", () => {
+    function wonBid(ledger: BidLedger, slot: number): number {
+      const bid = submittedBid({slot});
+      ledger.recordBid(bid);
+      ledger.recordWin(bid, root(slot));
+      return bid.signedBid.message.value;
+    }
 
-    ledger.settlePaymentsBefore(unsettled.slot);
+    it("settles won bids whose payment is pending in the state", () => {
+      const ledger = new BidLedger();
+      const stateSlot = SLOTS_PER_EPOCH + 2;
+      const lost = submittedBid({slot: stateSlot - 3});
+      ledger.recordBid(lost);
+      const pending = wonBid(ledger, stateSlot - 2);
+      const notInState = wonBid(ledger, stateSlot - 1);
+      const atStateSlot = wonBid(ledger, stateSlot);
+      const afterState = wonBid(ledger, stateSlot + 1);
+      const hasPendingPayment = vi.fn((bidSlot: number) => bidSlot !== stateSlot - 1);
 
-    expect(ledger.getUnsettledValueGwei(0)).toBe(unsettled.signedBid.message.value);
-    expect(ledger.prune(unsettled.slot + 3 * SLOTS_PER_EPOCH + 1)).toBe(2);
-    expect(ledger.getBidsForSlot(unsettled.slot)).toHaveLength(1);
+      ledger.settlePayments(stateSlot, hasPendingPayment);
+
+      expect(ledger.getUnsettledValueGwei(0)).toBe(notInState + afterState);
+      // Only asked for won bids up to the slot of the state
+      expect(hasPendingPayment.mock.calls).toEqual([
+        [stateSlot - 2, pending],
+        [stateSlot - 1, notInState],
+        [stateSlot, atStateSlot],
+      ]);
+    });
+
+    it("settles won bids whose payment is no longer pending in the state", () => {
+      const ledger = new BidLedger();
+      const epoch2Slot = 2 * SLOTS_PER_EPOCH;
+      wonBid(ledger, SLOTS_PER_EPOCH - 1);
+      const previousEpoch = wonBid(ledger, SLOTS_PER_EPOCH);
+
+      ledger.settlePayments(epoch2Slot, () => false);
+
+      // The payment of a bid stays pending until the end of the epoch after its slot
+      expect(ledger.getUnsettledValueGwei(0)).toBe(previousEpoch);
+    });
+
+    it("lets settled won bids be pruned", () => {
+      const ledger = new BidLedger();
+      wonBid(ledger, 1);
+      wonBid(ledger, 2);
+
+      ledger.settlePayments(1, () => true);
+
+      expect(ledger.prune(2 + 3 * SLOTS_PER_EPOCH + 1)).toBe(1);
+      expect(ledger.getBidsForSlot(2)).toHaveLength(1);
+    });
   });
 
   it("prunes reveal protection even when no winning bid record exists", () => {

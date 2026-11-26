@@ -35,7 +35,7 @@ export type BidderModules = {
   bidPublisher: BidPublisher;
   proposerPreferencesTracker: ProposerPreferencesTracker;
   headTracker: HeadTracker;
-  getBuilderStatus: () => {status: BuilderStatus | undefined; balance: number | undefined};
+  getBuilderStatus: () => {status: BuilderStatus | undefined; balance: number | undefined; pendingPaymentsGwei: number};
   builderIndex: BuilderIndex;
   executionFeeRecipient: ExecutionAddress;
   metrics: Metrics | null;
@@ -126,7 +126,8 @@ export class Bidder {
         return;
       }
 
-      const {status, balance} = this.modules.getBuilderStatus();
+      const {status, balance, pendingPaymentsGwei} = this.modules.getBuilderStatus();
+
       if (status !== "active" || balance === undefined) {
         logger.warn("Builder is not active, not bidding", {...logCtx, status});
         metrics?.bids.total.inc({result: BidResult.inactive});
@@ -142,12 +143,20 @@ export class Bidder {
         return;
       }
 
+      // Bids won before the builder was last polled are part of its pending payments or already debited from the
+      // balance, the ledger covers the bids won since
       const unsettledGwei = ledger.getUnsettledValueGwei(computeEpochAtSlot(slot));
-      const coverableGwei = Math.max(balance - MIN_DEPOSIT_AMOUNT - unsettledGwei, 0);
+      const coverableGwei = Math.max(balance - MIN_DEPOSIT_AMOUNT - pendingPaymentsGwei - unsettledGwei, 0);
       const payloadValueGwei = Number(payload.executionPayloadValue / GWEI_TO_WEI);
       const value = this.modules.policy.computeValue({payloadValueGwei, coverableGwei});
       if (value === null) {
-        logger.info("Bid policy declined to bid", {...logCtx, payloadValueGwei, coverableGwei, unsettledGwei});
+        logger.info("Bid policy declined to bid", {
+          ...logCtx,
+          payloadValueGwei,
+          coverableGwei,
+          pendingPaymentsGwei,
+          unsettledGwei,
+        });
         metrics?.bids.total.inc({result: BidResult.policyDeclined});
         return;
       }

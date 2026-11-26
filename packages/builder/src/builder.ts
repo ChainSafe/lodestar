@@ -1,8 +1,8 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
-import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
+import {Clock, ClockOptions, IClock, computeEpochAtSlot} from "@lodestar/state-transition";
+import {BuilderIndex, Epoch, ExecutionAddress} from "@lodestar/types";
 import {Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
@@ -23,12 +23,6 @@ import {PayloadSource} from "./services/payloadSource.js";
 import {PayloadStore} from "./services/payloadStore.js";
 import {ProposerPreferencesTracker} from "./services/proposerPreferencesTracker.js";
 import {Revealer} from "./services/revealer.js";
-
-// Payments of won bids are assumed to be reflected in the builder balance after this many slots.
-// The payment is queued as a builder withdrawal at the epoch transition after the bid epoch and only debited once that
-// withdrawal is processed, so with a backlog of withdrawals the ledger releases the reservation before the balance drops.
-// Reconciling against the pending payments and pending withdrawals of the state is a follow-up.
-const PAYMENT_SETTLEMENT_SLOTS = 3 * SLOTS_PER_EPOCH;
 
 export type BuilderModules = {
   opts: BuilderOptions;
@@ -77,6 +71,8 @@ export class Builder {
   readonly headTracker: HeadTracker;
   private readonly blockObserver: BlockObserver;
   private readonly builderStatusTracker: BuilderStatusTracker;
+  /** Whether the last poll of the builder failed, balance and pending payments are older than an epoch */
+  private builderStatusStale: boolean;
   private readonly controller: AbortController;
   private readonly clock: IClock;
   private readonly index: BuilderIndex;
@@ -119,7 +115,8 @@ export class Builder {
 
     this.blockObserver.runOnBlock((block) => this.revealer.onBlock(block));
     this.clock.runEverySlot(async (slot) => this.onSlot(slot));
-    this.clock.runEveryEpoch((epoch) => this.builderStatusTracker.poll(epoch));
+    this.builderStatusStale = this.builderStatusTracker.getStatus().balance === undefined;
+    this.clock.runEveryEpoch((epoch) => this.pollBuilderStatus(epoch));
     this.clock.start(this.controller.signal);
     this.subscribeToEvents(opts.api);
 
@@ -238,8 +235,35 @@ export class Builder {
     this.payloadStore.prune(slot);
     this.proposerPreferencesTracker.prune(slot);
     this.headTracker.prune(slot);
-    this.ledger.settlePaymentsBefore(slot - PAYMENT_SETTLEMENT_SLOTS);
     this.ledger.prune(slot);
+
+    // Do not wait an epoch for balance and pending payments after a failed poll, the epoch start has its own poll
+    if (this.builderStatusStale && slot % SLOTS_PER_EPOCH !== 0) {
+      await this.pollBuilderStatus(computeEpochAtSlot(slot));
+    }
+  }
+
+  /**
+   * Reconciles the bid ledger with the polled builder state. The payment of a won bid is part of the state from
+   * the block that selected it, first as pending payment, then as pending withdrawal and finally debited from the
+   * balance. Balance, pending payments and pending withdrawals are read from the state of the head announced
+   * before the poll, the ledger stops reserving the bids whose payment that state accounts for.
+   */
+  private async pollBuilderStatus(epoch: Epoch): Promise<void> {
+    const head = this.headTracker.getHead();
+    const pendingPayments = await this.builderStatusTracker.poll(epoch, head?.state);
+    this.builderStatusStale = pendingPayments === null;
+    if (pendingPayments === null || head === null) {
+      return;
+    }
+
+    const headEpoch = computeEpochAtSlot(head.slot);
+    this.ledger.settlePayments(head.slot, (bidSlot, valueGwei) => {
+      // Payments of the epoch of the state are in the second half, payments of the previous epoch in the first half
+      const epochOffset = computeEpochAtSlot(bidSlot) === headEpoch ? SLOTS_PER_EPOCH : 0;
+      const payment = pendingPayments.at(epochOffset + (bidSlot % SLOTS_PER_EPOCH));
+      return payment?.withdrawal.builderIndex === this.index && payment.withdrawal.amount === valueGwei;
+    });
   }
 
   private subscribeToEvents(api: ApiClient): void {

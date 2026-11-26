@@ -48,7 +48,7 @@ export function createBiddingModules({
   payloadSource,
   signal,
   index = 1,
-  getBuilderStatus = () => ({status: "active", balance: 10_000_000_000}),
+  getBuilderStatus = () => ({status: "active", balance: 10_000_000_000, pendingPaymentsGwei: 0}),
 }: {
   api: ApiClient;
   config: ChainForkConfig;
@@ -61,7 +61,11 @@ export function createBiddingModules({
   payloadSource: PayloadSource;
   signal: AbortSignal;
   index?: BuilderIndex;
-  getBuilderStatus?: () => {status: BuilderStatus | undefined; balance: number | undefined};
+  getBuilderStatus?: () => {
+    status: BuilderStatus | undefined;
+    balance: number | undefined;
+    pendingPaymentsGwei: number;
+  };
 }): {ledger: BidLedger; bidder: Bidder; revealer: Revealer} {
   const ledger = new BidLedger();
   const bidder = new Bidder(

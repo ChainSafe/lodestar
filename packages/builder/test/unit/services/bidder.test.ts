@@ -61,7 +61,13 @@ describe("Bidder", () => {
     vi.useRealTimers();
   });
 
-  function createBidder(getBuilderStatus?: () => {status: BuilderStatus | undefined; balance: number | undefined}): {
+  function createBidder(
+    getBuilderStatus?: () => {
+      status: BuilderStatus | undefined;
+      balance: number | undefined;
+      pendingPaymentsGwei: number;
+    }
+  ): {
     bidder: Bidder;
     ledger: BidLedger;
   } {
@@ -199,23 +205,28 @@ describe("Bidder", () => {
   });
 
   it.each([
-    {status: "pending", balance: 10_000_000_000},
-    {status: undefined, balance: undefined},
-    {status: "active", balance: biddingOptions.minOperatingBalanceGwei - 1},
+    {status: "pending", balance: 10_000_000_000, pendingPaymentsGwei: 0},
+    {status: undefined, balance: undefined, pendingPaymentsGwei: 0},
+    {status: "active", balance: biddingOptions.minOperatingBalanceGwei - 1, pendingPaymentsGwei: 0},
     // Coverable balance is below 90% of the 1 ETH payload value
-    {status: "active", balance: 1_800_000_000},
-  ] as const)("does not bid with builder status $status and balance $balance", async (builderStatus) => {
-    addProposerPreferences();
-    const {bidder, ledger} = createBidder(() => builderStatus);
+    {status: "active", balance: 1_800_000_000, pendingPaymentsGwei: 0},
+    // Pending payments of earlier won bids leave less than 90% of the 1 ETH payload value to cover the bid
+    {status: "active", balance: 10_000_000_000, pendingPaymentsGwei: 8_200_000_000},
+  ] as const)(
+    "does not bid with builder status $status, balance $balance and pending payments $pendingPaymentsGwei",
+    async (builderStatus) => {
+      addProposerPreferences();
+      const {bidder, ledger} = createBidder(() => builderStatus);
 
-    const bidding = bidder.onPayloadAttributes(payloadAttributesEvent());
-    await vi.advanceTimersByTimeAsync(msToDeadline);
-    await bidding;
+      const bidding = bidder.onPayloadAttributes(payloadAttributesEvent());
+      await vi.advanceTimersByTimeAsync(msToDeadline);
+      await bidding;
 
-    expect(payloadSource.getPayload).toHaveBeenCalledOnce();
-    expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
-    expect(ledger.hasSubmitted(slot, toRootHex(parentBlockHash), toRootHex(parentBlockRoot))).toBe(false);
-  });
+      expect(payloadSource.getPayload).toHaveBeenCalledOnce();
+      expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
+      expect(ledger.hasSubmitted(slot, toRootHex(parentBlockHash), toRootHex(parentBlockRoot))).toBe(false);
+    }
+  );
 
   it("does not bid while the beacon node head is optimistic", async () => {
     addProposerPreferences();
