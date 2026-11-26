@@ -1,0 +1,9 @@
+#!/bin/sh
+# Cargo's RUSTC_WRAPPER for this crate. leanVM compiles its prover once more per CPU tier, and
+# only its own `scripts/tier-rustc` gives each copy its instruction set: without it every tier
+# is compiled as the baseline. A tier crate's manifest is four directories below the leanVM
+# checkout that holds that script, so the script used is always the pinned revision's.
+case "${CARGO_MANIFEST_DIR:-}" in
+*/experimental_tiers/*/*) exec "$CARGO_MANIFEST_DIR/../../../../scripts/tier-rustc" "$@" ;;
+esac
+exec "$@"

@@ -104,6 +104,7 @@ fn configureLeanvm(b: *std.Build, result: zbuild.BuildResult) void {
     cargo.setCwd(b.path(crate));
     cargo.removeEnvironmentVariable("RUSTUP_TOOLCHAIN");
     cargo.setEnvironmentVariable("RUSTFLAGS", b.fmt("-C target-cpu={s}", .{cpu}));
+    cargo.setEnvironmentVariable("RUSTC_WRAPPER", b.pathFromRoot(b.pathJoin(&.{ crate, "tier-rustc" })));
     cargo.has_side_effects = true;
 
     // Cargo's own lock ends with cargo, before its archive is copied.
@@ -167,7 +168,7 @@ const PublishArchive = struct {
 /// the Rust toolchain, the target and its CPU. A file added to the crate is added here.
 fn leanvmArchiveKey(b: *std.Build, crate: []const u8, rust_triple: []const u8, cpu: []const u8) ![32]u8 {
     var hasher = std.crypto.hash.sha2.Sha256.init(.{});
-    for ([_][]const u8{ "Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "src/lib.rs" }) |name| {
+    for ([_][]const u8{ "Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "tier-rustc", "src/lib.rs" }) |name| {
         const path = b.pathJoin(&.{ crate, name });
         const contents = try b.build_root.handle.readFileAlloc(b.graph.io, path, b.allocator, .unlimited);
         hasher.update(std.mem.asBytes(&@as(u64, contents.len)));
@@ -211,10 +212,10 @@ fn leanvmIsNative(target: std.Build.ResolvedTarget) bool {
     return target.query.isNativeOs() and target.query.isNativeCpu();
 }
 
-/// The prover's kernels are chosen at compile time by ISA, so a build for this machine takes
-/// all of it. Any other build may run elsewhere, and takes the ISA leanVM's CI tests on x86-64
-/// and the NEON kernels' `aes` (PMULL) on arm64. `leanvm.cpuSupported` checks that baseline at
-/// run time, so a change here is a change there.
+/// The least CPU the archive runs on. A build for this machine takes all of its ISA. Any other
+/// build may run elsewhere, and takes the ISA leanVM's CI tests on x86-64 and the NEON kernels'
+/// `aes` (PMULL) on arm64. `leanvm.cpuSupported` checks that baseline at run time, so a change
+/// here is a change there. Above it, leanVM picks the fastest of its CPU tiers the machine runs.
 fn leanvmDefaultCpu(target: std.Build.ResolvedTarget) []const u8 {
     if (leanvmIsNative(target)) return "native";
     return switch (target.result.cpu.arch) {
