@@ -270,6 +270,7 @@ test "a pending challenge is resent unchanged without admission credit" {
     const charged_until_ms = pair.node_b.admission.global[challenge_stage].charged_until_ms;
 
     const other_nonce = [_]u8{0x99} ** constants.nonce_size;
+    @memset(&pair.b_to_a, 0);
     const resent_length = try pair.node_b.challenge(
         &pair.b_to_a,
         unauthenticated.peer,

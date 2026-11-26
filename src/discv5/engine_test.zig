@@ -392,6 +392,7 @@ test "a cold packet during a pending challenge receives the same WHOAREYOU" {
     var plaintext_buffer: [constants.ordinary_plaintext_size_max]u8 = undefined;
     const second_ping = try pair.ping(2).encode(&plaintext_buffer);
     const sealed = try pair.node_a.channel.seal(&pair.a_to_b, pair.peerB(), second_ping, &sealEntropy(0x50), 3);
+    @memset(&pair.b_to_a, 0);
     const second = try pair.node_b.receive(&pair.b_to_a, pair.a_to_b[0..sealed.packet_length], pair.address_a, receiveArgs(4, 0x60), &pair.scratch_b);
     try std.testing.expectEqualSlices(u8, &first_challenge, pair.b_to_a[0..second.accepted.packet_length]);
 }
