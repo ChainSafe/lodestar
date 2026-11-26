@@ -40,3 +40,35 @@ jobs:
         with:
           ethereum_package_args: ${{ matrix.config }}
           enclave_name: gh-${{ github.run_id }}-${{ matrix.id }}
+
+      - name: Check that both nodes finalize past the heze fork
+        if: matrix.id == 'forks'
+        env:
+          ENCLAVE: gh-${{ github.run_id }}-forks
+          HEZE_FORK_EPOCH: 2
+        run: |
+          for node in cl-1-lodestar-reth cl-2-lodestar-reth; do
+            api="$(kurtosis port print "$ENCLAVE" "$node" http)"
+            heze="$(curl -sf "$api/eth/v1/config/spec" | jq -r .data.HEZE_FORK_VERSION)"
+            [ -n "$heze" ] || { echo "$node: no HEZE_FORK_VERSION in the spec"; exit 1; }
+            for _ in $(seq 1 90); do
+              fork="$(curl -sf "$api/eth/v1/beacon/states/head/fork" | jq -r .data.current_version || true)"
+              finalized="$(curl -sf "$api/eth/v1/beacon/states/head/finality_checkpoints" | jq -r .data.finalized.epoch || echo 0)"
+              [ "$fork" = "$heze" ] && [ "${finalized:-0}" -ge $((HEZE_FORK_EPOCH + 2)) ] && break
+              sleep 10
+            done
+            echo "$node: head fork $fork (heze $heze), finalized epoch $finalized"
+            [ "$fork" = "$heze" ] && [ "${finalized:-0}" -ge $((HEZE_FORK_EPOCH + 2)) ] || exit 1
+          done
+
+      - name: Dump the enclave after the fork checks
+        if: failure() && matrix.id == 'forks'
+        run: kurtosis enclave dump "gh-${{ github.run_id }}-forks" "$RUNNER_TEMP/enclave-dump-forks" || true
+
+      - name: Upload the enclave dump after the fork checks
+        if: failure() && matrix.id == 'forks'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: enclave-dump-gh-${{ github.run_id }}-forks-checked
+          path: ${{ runner.temp }}/enclave-dump-forks
+          if-no-files-found: ignore

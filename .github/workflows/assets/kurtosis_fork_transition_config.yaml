@@ -1,5 +1,6 @@
 # Lodestar only, through the gloas and heze forks. The EL has to support the heze EL fork (bogota) incl. FOCIL,
 # reth and nethermind default branches do, geth, besu, erigon, nimbus-eth1 and ethrex do not yet.
+# No assertoor, its go-eth2-client cannot decode heze blocks yet, the workflow checks the forks through the beacon API.
 participants:
   - el_type: reth
     el_image: ethpandaops/reth:main
@@ -10,10 +11,3 @@ network_params:
   preset: minimal
   gloas_fork_epoch: 1
   heze_fork_epoch: 2
-additional_services:
-  - assertoor
-assertoor_params:
-  run_stability_check: true
-  run_block_proposal_check: true
-  run_transaction_test: true
-  run_blob_transaction_test: true
