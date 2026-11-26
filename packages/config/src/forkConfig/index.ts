@@ -269,6 +269,9 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getPayloadDueMs(fork: ForkName): number {
       return this.getSlotComponentDurationMs(fork, config.PAYLOAD_DUE_BPS);
     },
+    getPayloadAttestationDueMs(fork: ForkName): number {
+      return this.getSlotComponentDurationMs(fork, config.PAYLOAD_ATTESTATION_DUE_BPS);
+    },
 
     getInclusionListDueMs(fork: ForkName): number {
       return this.getSlotComponentDurationMs(fork, config.INCLUSION_LIST_DUE_BPS);
