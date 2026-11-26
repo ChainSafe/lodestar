@@ -4,6 +4,10 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * *" # Runs at midnight UTC everyday
+  pull_request:
+    paths:
+      - ".github/workflows/kurtosis.yml"
+      - ".github/workflows/assets/kurtosis_fork_transition_config.yaml"
 
 jobs:
   test:
