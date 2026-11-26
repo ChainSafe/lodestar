@@ -28,6 +28,14 @@ export class NodeIsSyncing extends ApiError {
   }
 }
 
+// From pq an aggregator has nothing to broadcast when an aggregate it has received includes all of its attesters
+// https://github.com/ethereum/consensus-specs/blob/4595f0fc9be7e3611f0187a2ff5fee00e120f751/specs/_features/pq/validator.md#broadcast-aggregate
+export class AggregateAlreadySeen extends ApiError {
+  constructor(message: string) {
+    super(404, message);
+  }
+}
+
 // Error thrown by beacon node APIs that are only supported by distributed validator middleware clients
 // For example https://github.com/ethereum/beacon-APIs/blob/f087fbf2764e657578a6c29bdf0261b36ee8db1e/apis/validator/beacon_committee_selections.yaml
 export class OnlySupportedByDVT extends ApiError {

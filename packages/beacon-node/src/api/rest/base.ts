@@ -7,7 +7,7 @@ import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
 import {GossipActionError} from "../../chain/errors/gossipValidation.js";
 import {isLocalhostIP} from "../../util/ip.js";
-import {ApiError, FailureList, IndexedError, NodeIsSyncing} from "../impl/errors.js";
+import {AggregateAlreadySeen, ApiError, FailureList, IndexedError, NodeIsSyncing} from "../impl/errors.js";
 import {HttpActiveSocketsTracker, SocketMetrics} from "./activeSockets.js";
 
 export type RestApiServerOpts = {
@@ -174,7 +174,8 @@ export class RestApiServer {
     server.addHook("onError", async (req, _res, err) => {
       // Don't log ErrorAborted errors, they happen on node shutdown and are not useful
       // Don't log NodeISSyncing errors, they happen very frequently while syncing and the validator polls duties
-      if (err instanceof ErrorAborted || err instanceof NodeIsSyncing) return;
+      // Don't log AggregateAlreadySeen errors, they are the answer to an aggregator that has nothing to broadcast
+      if (err instanceof ErrorAborted || err instanceof NodeIsSyncing || err instanceof AggregateAlreadySeen) return;
 
       const operationId = getOperationId(req);
 

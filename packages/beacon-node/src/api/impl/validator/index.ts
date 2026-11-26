@@ -113,7 +113,14 @@ import {getBlockGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {ApiOptions} from "../../options.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
-import {ApiError, FailureList, IndexedError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
+import {
+  AggregateAlreadySeen,
+  ApiError,
+  FailureList,
+  IndexedError,
+  NodeIsSyncing,
+  OnlySupportedByDVT,
+} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {notWhileSyncing} from "../utils.js";
 import {
@@ -1882,9 +1889,7 @@ export function getValidatorApi(
           );
         }
         const {aggregationBits, aggregate} = proven.aggregate;
-        // An aggregator broadcasts only an aggregate that no aggregate it has received includes,
-        // the check gossip ignores an aggregate by:
-        // https://github.com/ethereum/consensus-specs/blob/4595f0fc9be7e3611f0187a2ff5fee00e120f751/specs/_features/pq/validator.md#broadcast-aggregate
+        // The check gossip ignores an aggregate by
         if (
           chain.seenAggregatedAttestations.isKnown(
             proven.data.target.epoch,
@@ -1893,8 +1898,7 @@ export function getValidatorApi(
             aggregationBits
           )
         ) {
-          throw new ApiError(
-            404,
+          throw new AggregateAlreadySeen(
             `An aggregate seen includes every attester for slot=${slot}, dataRoot=${dataRootHex}, committeeIndex=${committeeIndex}`
           );
         }
