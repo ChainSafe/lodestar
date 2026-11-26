@@ -25,7 +25,7 @@ function createEventBus(): AsyncIterableEventBus<Args, number> {
 }
 
 describe("util / asyncIterableToEvents", () => {
-  function setup() {
+  function setup(window?: number) {
     const events = createEventBus();
     const produced: number[] = [];
     let finallyRuns = 0;
@@ -42,7 +42,7 @@ describe("util / asyncIterableToEvents", () => {
         finallyRuns++;
       }
     });
-    const caller = new AsyncIterableBridgeCaller(events);
+    const caller = new AsyncIterableBridgeCaller(events, window);
 
     return {events, caller, handler, produced, getFinallyRuns: () => finallyRuns};
   }
@@ -112,6 +112,22 @@ describe("util / asyncIterableToEvents", () => {
     expect(produced.length).toBe(RESP_BRIDGE_WINDOW + 1);
     expect(produced.length).toBeLessThan(64);
     expect(handler.iteratingCount).toBe(1);
+
+    await it.return?.();
+    await sleep(20);
+    expect(handler.iteratingCount).toBe(0);
+  });
+
+  it("unbounded window (requester bridge): handler runs eagerly without pacing", async () => {
+    const {caller, handler, produced} = setup(Infinity);
+
+    const it = caller.getAsyncIterable({count: 64})[Symbol.asyncIterator]();
+    await it.next();
+
+    // Stop pulling: with an unbounded window the handler must drain the whole response regardless
+    await sleep(20);
+
+    expect(produced.length).toBe(64);
 
     await it.return?.();
     await sleep(20);

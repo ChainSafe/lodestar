@@ -38,10 +38,11 @@ export type AsyncIterableEventBus<Args, Item> = {
 };
 
 /**
- * Credit window bounding how far the handler may run ahead of the consumer. The consumer grants this
- * much credit up front and refunds one credit per item it pulls, so at most `window` items (plus one
- * in-flight read) are ever buffered across the bridge per request, regardless of read speed. Must be >= 1,
- * otherwise the handler parks on credit forever.
+ * Credit window: the consumer grants this many items up front and refunds one per item it pulls, so the
+ * producer runs at most `window` (plus one in-flight) items ahead regardless of read speed. Bounds
+ * consumer-side buffering on the serving bridge. The requester bridge passes Infinity to stay eager: we
+ * buffer our own responses into an array anyway, and pacing the worker there only risks the libp2p read
+ * buffer overflowing. Must be >= 1.
  */
 export const RESP_BRIDGE_WINDOW = 2;
 
@@ -62,8 +63,12 @@ export class AsyncIterableBridgeCaller<Args, Item> {
     private readonly events: Pick<
       AsyncIterableEventBus<Args, Item>,
       "onResponse" | "emitRequest" | "emitRequestCancel" | "emitResponsePull"
-    >
+    >,
+    private readonly window = RESP_BRIDGE_WINDOW
   ) {
+    if (window < 1) {
+      throw new Error(`AsyncIterableBridgeCaller window must be >= 1, got ${window}`);
+    }
     events.onResponse(this.onResponse.bind(this));
   }
 
@@ -89,15 +94,18 @@ export class AsyncIterableBridgeCaller<Args, Item> {
           callArgs,
           id,
         });
-        // Grant the initial window; next() refunds one credit per consumed item
-        self.events.emitResponsePull({id, count: RESP_BRIDGE_WINDOW});
+        // Grant the initial window; next() refunds one credit per consumed item. An Infinity window
+        // grants unbounded credit up front so the producer never waits (requester bridge, see above).
+        self.events.emitResponsePull({id, count: self.window});
 
         return {
           async next() {
             while (true) {
               const item = req.items.shift();
               if (item !== null) {
-                self.events.emitResponsePull({id, count: 1});
+                if (self.window !== Infinity) {
+                  self.events.emitResponsePull({id, count: 1});
+                }
                 return {value: item, done: false};
               }
 

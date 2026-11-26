@@ -112,8 +112,8 @@ export class ReqResp {
 
     return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID), {
       force: true,
-      // Bound concurrent inbound response streams per protocol; Lodestar self-limits its own outbound
-      // requests to the same value, so a compliant peer never exceeds it
+      // Bound concurrent inbound response streams per protocol (libp2p default is 32); Lodestar self-limits
+      // its own outbound requests to this value
       maxInboundStreams: MAX_CONCURRENT_REQUESTS,
     });
   }
