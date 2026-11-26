@@ -126,11 +126,16 @@ async function validateVoluntaryExit(
       // the spec checks both conditions first and ignores the exit
       case VoluntaryExitValidity.inactive: {
         const {epoch, validatorIndex} = voluntaryExit.message;
-        action =
-          epoch > state.epoch ||
-          (validatorIndex < state.validatorCount && state.getValidator(validatorIndex).exitEpoch !== FAR_FUTURE_EPOCH)
-            ? GossipAction.IGNORE
-            : GossipAction.REJECT;
+        if (epoch > state.epoch) {
+          throw new VoluntaryExitError(GossipAction.IGNORE, {code: VoluntaryExitErrorCode.EARLY_EPOCH});
+        }
+        if (
+          validatorIndex < state.validatorCount &&
+          state.getValidator(validatorIndex).exitEpoch !== FAR_FUTURE_EPOCH
+        ) {
+          throw new VoluntaryExitError(GossipAction.IGNORE, {code: VoluntaryExitErrorCode.ALREADY_EXITED});
+        }
+        action = GossipAction.REJECT;
         break;
       }
       // [REJECT] The validator has been active long enough

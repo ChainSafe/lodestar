@@ -5,6 +5,7 @@ import {SecretKey} from "@lodestar/native/blst";
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  VoluntaryExitValidity,
   computeDomain,
   computeEpochAtSlot,
   computeSigningRoot,
@@ -138,7 +139,21 @@ describe("validate voluntary exit", () => {
 
     await expect(validateGossipVoluntaryExit(chainStub, signedVoluntaryExit)).rejects.toMatchObject({
       action: GossipAction.IGNORE,
-      type: {code: VoluntaryExitErrorCode.INACTIVE},
+      type: {code: VoluntaryExitErrorCode.ALREADY_EXITED},
+    });
+  });
+
+  it("should ignore Voluntary Exit - future epoch reported as inactive", async () => {
+    // The native state transition checks the validator before the exit epoch
+    vi.spyOn(state, "getVoluntaryExitValidity").mockReturnValue(VoluntaryExitValidity.inactive);
+    const signedVoluntaryExitFutureEpoch: phase0.SignedVoluntaryExit = {
+      message: {epoch: computeEpochAtSlot(state.slot) + 1, validatorIndex: state.validatorCount},
+      signature: signedVoluntaryExit.signature,
+    };
+
+    await expect(validateGossipVoluntaryExit(chainStub, signedVoluntaryExitFutureEpoch)).rejects.toMatchObject({
+      action: GossipAction.IGNORE,
+      type: {code: VoluntaryExitErrorCode.EARLY_EPOCH},
     });
   });
 
