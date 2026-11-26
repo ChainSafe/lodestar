@@ -89,6 +89,10 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/fork_choice_compliance\/.*/,
+    // TODO GLOAS: unskip with the v1.7.0-beta.5 spec tests, the v1.7.0-beta.4 vectors predate
+    // upgrade_to_gloas unsetting the fork slot's payload availability (consensus-specs#5808)
+    /^gloas\/fork\/fork\/.*/,
+    /^gloas\/transition\/core\/.*/,
   ],
   skippedTests: [
     // deneb..electra fork_choice/on_block negative vectors whose only invalid property is the blob data.
