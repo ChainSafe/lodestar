@@ -1,0 +1,17 @@
+[package]
+name = "lodestar-leanvm"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+# leanVM's stable prover is its reference; the experimental one is the fast one.
+lean_vm = { git = "https://github.com/leanEthereum/leanVM", rev = "1e674918a76c8bd86284ba9443556b646309b96e", features = ["experimental_prover"] }
+
+# leanVM's own release profile, which a git dependency does not bring with it.
+[profile.release]
+lto = "thin"
+codegen-units = 1
