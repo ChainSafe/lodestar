@@ -485,6 +485,25 @@ export async function validateResponses({
   }
 
   if (!columnsRequest) {
+    // Same as the 0-block check below, for a post-Gloas batch outside the DA window where no columns are requested
+    const payloadEnvelopeCount = payloadEnvelopes?.length ?? 0;
+    if (
+      payloadEnvelopeCount > 0 &&
+      parentPayload === undefined &&
+      !validatedResponses.validatedBlocks?.length &&
+      !batchBlocks?.length
+    ) {
+      throw new DownloadByRangeError(
+        {
+          code: DownloadByRangeErrorCode.DATA_WITHOUT_BLOCKS,
+          ...requestsLogMeta({blocksRequest}),
+          columnSidecarCount: 0,
+          payloadEnvelopeCount,
+        },
+        "Envelopes returned without blocks in BeaconBlocksByRange response"
+      );
+    }
+
     // Only envelope and/or parent-by-root validation needed
     if (parentPayload !== undefined) {
       const parentValidated = await validateParentPayloadColumns(parentPayload, columnSidecars ?? [], peerDasMetrics);

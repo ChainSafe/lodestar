@@ -418,19 +418,25 @@ describe("0-block epoch", () => {
     ).rejects.toMatchObject({type: {code: DownloadByRangeErrorCode.DATA_WITHOUT_BLOCKS, columnSidecarCount: 1}});
   });
 
-  it("validateResponses throws DATA_WITHOUT_BLOCKS for envelopes returned without blocks", async () => {
-    await expect(
-      validateResponses({
-        config,
-        blocksRequest,
-        columnsRequest,
-        envelopesRequest: {startSlot: blocksRequest.startSlot, count: blocksRequest.count},
-        blocks: [],
-        columnSidecars: [],
-        payloadEnvelopes: [ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue()],
-      })
-    ).rejects.toMatchObject({type: {code: DownloadByRangeErrorCode.DATA_WITHOUT_BLOCKS, payloadEnvelopeCount: 1}});
-  });
+  it.each([
+    {name: "with", withColumns: true},
+    {name: "without", withColumns: false},
+  ])(
+    "validateResponses throws DATA_WITHOUT_BLOCKS for envelopes returned without blocks, $name columns request",
+    async ({withColumns}) => {
+      await expect(
+        validateResponses({
+          config,
+          blocksRequest,
+          columnsRequest: withColumns ? columnsRequest : undefined,
+          envelopesRequest: {startSlot: blocksRequest.startSlot, count: blocksRequest.count},
+          blocks: [],
+          columnSidecars: [],
+          payloadEnvelopes: [ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue()],
+        })
+      ).rejects.toMatchObject({type: {code: DownloadByRangeErrorCode.DATA_WITHOUT_BLOCKS, payloadEnvelopeCount: 1}});
+    }
+  );
 });
 
 describe("validateEnvelopesByRangeResponse", () => {
