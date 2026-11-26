@@ -765,25 +765,24 @@ export class LightClientServer {
         break;
       }
 
-      const bestSummary = ancestor.bestUpdateSummary;
+      const bestRoot = ancestor.bestUpdateRoot;
+      const bestData = bestRoot === null ? null : (this.blockData.get(bestRoot) ?? null);
+      const attestedData = bestData
+        ? (this.blockData.get(toRootHex(bestData.attestedHeader.beacon.parentRoot)) ?? null)
+        : null;
       const stored = await this.db.bestLightClientUpdate.get(period);
 
-      if (bestSummary === null) {
+      if (bestRoot === null) {
         if (stored) {
           await this.db.bestLightClientUpdate.delete(period);
         }
         continue;
       }
-      if (stored && isSameUpdateSummary(toLightClientUpdateSummary(stored), bestSummary)) {
+      // Cut by the memory bound, what is cached may be older than what is served
+      if (!bestData || !attestedData) {
         continue;
       }
-
-      const bestRoot = ancestor.bestUpdateRoot;
-      const bestData = bestRoot ? this.blockData.get(bestRoot) : undefined;
-      const attestedData = bestData
-        ? this.blockData.get(toRootHex(bestData.attestedHeader.beacon.parentRoot))
-        : undefined;
-      if (!bestData || !attestedData) {
+      if (stored && isSameStoredUpdate(stored, bestData)) {
         continue;
       }
 
@@ -928,17 +927,15 @@ export class LightClientServer {
 }
 
 /**
- * Strict comparison, used to decide whether a served update has to be replaced after a head change.
- * `isBetterUpdate` cannot be used there since it prefers orphaned data with higher participation.
+ * Whether `stored` was derived from the same block and signature as `bestData`.
+ *
+ * Summaries cannot identify an update: two branches can produce identical ones while only one is
+ * canonical, and `is_better_update` cannot be used here since it prefers higher participation.
  */
-function isSameUpdateSummary(a: LightClientUpdateSummary, b: LightClientUpdateSummary): boolean {
+function isSameStoredUpdate(stored: LightClientUpdate, bestData: BlockLightClientCache): boolean {
   return (
-    a.activeParticipants === b.activeParticipants &&
-    a.attestedHeaderSlot === b.attestedHeaderSlot &&
-    a.signatureSlot === b.signatureSlot &&
-    a.finalizedHeaderSlot === b.finalizedHeaderSlot &&
-    a.isSyncCommitteeUpdate === b.isSyncCommitteeUpdate &&
-    a.isFinalityUpdate === b.isFinalityUpdate
+    stored.signatureSlot === bestData.signatureSlot &&
+    ssz.phase0.BeaconBlockHeader.equals(stored.attestedHeader.beacon, bestData.attestedHeader.beacon)
   );
 }
 

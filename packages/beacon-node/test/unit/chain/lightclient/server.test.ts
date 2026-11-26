@@ -365,6 +365,7 @@ describe("LightClientServer.updateHead", () => {
   function setBlockData(server: LightClientServer, data: Map<string, BlockLightClientCache>): void {
     for (const [rootHex, blockData] of data) server["blockData"].set(rootHex, blockData);
   }
+
   it("keeps the finalized block when its epoch starts with empty slots", async () => {
     const {server} = createServer(null);
     const epochStart = SLOTS_PER_EPOCH;
@@ -380,6 +381,7 @@ describe("LightClientServer.updateHead", () => {
     const remaining = [...server["blockData"].values()].map((data) => data.attestedHeader.beacon.slot);
     expect(remaining.sort((a, b) => a - b)).toEqual([finalizedBlockSlot, finalizedBlockSlot + 10]);
   });
+
   it("leaves served updates untouched when the branch is not cached down to a period", async () => {
     const {server, putBestUpdate, deleteBestUpdate} = createServer(ssz.gloas.LightClientUpdate.defaultValue());
     const headSlot = EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 100;
@@ -395,6 +397,38 @@ describe("LightClientServer.updateHead", () => {
     expect(deleteBestUpdate).not.toHaveBeenCalled();
     expect(putBestUpdate).not.toHaveBeenCalled();
   });
+
+  it("replaces the served update when the canonical branch changed at the same slots", async () => {
+    const attestedSlot = SLOTS_PER_EPOCH + 4;
+    const stale = chainOf([attestedSlot, attestedSlot + 1], 1);
+    const {server, putBestUpdate} = createServer(null);
+    const staleBuilt = await server["buildUpdate"](
+      blockAt(stale, attestedSlot + 1).syncAggregate,
+      attestedSlot + 1,
+      blockAt(stale, attestedSlot)
+    );
+    if (!staleBuilt) throw Error("Expected a built update");
+
+    // Serve the stale branch first
+    const stored = staleBuilt.update;
+    const canonical = chainOf([attestedSlot, attestedSlot + 1], 2);
+    const withStored = createServer(stored);
+    setBlockData(withStored.server, canonical);
+
+    await withStored.server.updateHead(blockAt(canonical, attestedSlot + 1).blockRoot, {
+      epoch: 0,
+      root: new Uint8Array(32),
+    });
+
+    expect(withStored.putBestUpdate).toHaveBeenCalledTimes(1);
+    const written = withStored.putBestUpdate.mock.calls[0][1] as LightClientUpdate;
+    expect(toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(written.attestedHeader.beacon))).toEqual(
+      toRootHex(blockAt(canonical, attestedSlot).blockRoot)
+    );
+    expect(written.attestedHeader.beacon.slot).toEqual(stored.attestedHeader.beacon.slot);
+    expect(putBestUpdate).not.toHaveBeenCalled();
+  });
+
   it("bounds the cache on import, without updateHead", async () => {
     const {server} = createServer(null);
     const blockSlot = gloasSlot + MAX_CACHED_SLOTS + 16;
