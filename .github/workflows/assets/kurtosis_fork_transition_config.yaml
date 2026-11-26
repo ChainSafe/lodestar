@@ -1,8 +1,8 @@
 # Lodestar only, through the gloas and heze forks. The EL has to support the heze EL fork (bogota) incl. FOCIL,
-# reth and nethermind default branches do, geth, besu, erigon, nimbus-eth1 and ethrex do not yet.
+# nethermind and reth default branches do, geth, besu, erigon, nimbus-eth1 and ethrex do not yet.
 participants:
-  - el_type: reth
-    el_image: ethpandaops/reth:main
+  - el_type: nethermind
+    el_image: ethpandaops/nethermind:master
     cl_type: lodestar
     cl_image: chainsafe/lodestar:kurtosis-ci
     count: 2
