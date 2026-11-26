@@ -165,9 +165,12 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Time for preparing payload in advance",
         buckets: [0.1, 1, 3, 5, 10],
       }),
-      payloadReprepare: register.counter<{reason: PreparePayloadReason; result: "changed" | "unchanged"}>({
+      payloadReprepare: register.counter<{
+        reason: PreparePayloadReason;
+        result: "changed" | "unchanged" | "dropped" | "error";
+      }>({
         name: "beacon_block_payload_reprepare_total",
-        help: "Re-runs of the next slot payload preparation after the scheduled run, by reason and whether the parent changed",
+        help: "Re-runs of the next slot payload preparation after the scheduled run, by reason and result: prepared again as the head, parent payload or fee recipient changed, unchanged, dropped as the proposal slot started, or failed",
         labelNames: ["reason", "result"],
       }),
       executionPayloadEnvelopeProcessingTime: register.histogram({

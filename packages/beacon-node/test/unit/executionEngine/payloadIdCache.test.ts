@@ -29,14 +29,14 @@ describe("PayloadIdCache", () => {
     expect(cache.get(attributes)).toBeUndefined();
   });
 
-  it("records when the payload was requested", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(1_000);
+  it("records when the payload was requested on the monotonic clock", () => {
+    vi.useFakeTimers({toFake: ["performance"]});
     const cache = new PayloadIdCache();
+    const requestedAtMs = performance.now();
     cache.add(attributes, "0x1234");
-    vi.setSystemTime(1_300);
+    vi.advanceTimersByTime(300);
 
-    expect(cache.get(attributes)).toEqual({payloadId: "0x1234", preparedAtMs: 1_000});
+    expect(cache.get(attributes)).toEqual({payloadId: "0x1234", preparedAtMs: requestedAtMs});
   });
 
   afterEach(() => {

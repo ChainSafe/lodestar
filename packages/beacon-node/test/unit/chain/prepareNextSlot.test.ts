@@ -413,6 +413,7 @@ describe("PrepareNextSlot scheduler", () => {
       executionPayloadBlockHash: fullParentHash,
       parentBlockHash: emptyParentHash,
     } as ProtoBlock;
+    let prepareState: BeaconStateView;
 
     beforeEach(() => {
       // Anchor the fake clock to the start of clockSlot so the events below land in that slot
@@ -446,7 +447,8 @@ describe("PrepareNextSlot scheduler", () => {
       const headState = makeState(clockSlot);
       vi.spyOn(headState, "getBeaconProposer").mockReturnValue(proposerIndex);
       chainStub.getHeadState.mockReturnValue(headState);
-      regenStub.getBlockSlotState.mockResolvedValue(makeState(prepareSlot));
+      prepareState = makeState(prepareSlot);
+      regenStub.getBlockSlotState.mockResolvedValue(prepareState);
       beaconProposerCacheStub.has.mockReturnValue(true);
       beaconProposerCacheStub.getOrDefault.mockReturnValue(feeRecipient);
       (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
@@ -611,6 +613,73 @@ describe("PrepareNextSlot scheduler", () => {
 
       expect(fcuParentHashes()).toEqual([fullParentHash, emptyParentHash]);
       expect(loggerStub.error).not.toHaveBeenCalled();
+    });
+
+    it("re-prepares after the forkchoiceUpdated of the scheduled run failed", async () => {
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      executionEngineStub.notifyForkchoiceUpdate.mockRejectedValueOnce(new Error("engine unavailable"));
+      await runScheduled();
+      expect(fcuParentHashes()).toEqual([fullParentHash]);
+
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      emitPtcQuorum(clockSlot, false);
+      await flush();
+
+      expect(fcuParentHashes()).toEqual([fullParentHash, emptyParentHash]);
+    });
+
+    it("retries a failed re-prepare on the next trigger even if its inputs are unchanged", async () => {
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      await runScheduled();
+      expect(fcuParentHashes()).toEqual([emptyParentHash]);
+
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      executionEngineStub.notifyForkchoiceUpdate.mockRejectedValueOnce(new Error("engine syncing"));
+      emitPayloadImported(config.getPayloadDueMs(ForkName.gloas) / 1000 - 1);
+      await flush();
+      expect(fcuParentHashes()).toEqual([emptyParentHash, fullParentHash]);
+
+      emitPtcQuorum(clockSlot, true);
+      await flush();
+      expect(fcuParentHashes()).toEqual([emptyParentHash, fullParentHash, fullParentHash]);
+    });
+
+    it("drops a re-prepare whose state is ready only after the proposal slot started", async () => {
+      const spy = vi.fn();
+      chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      await runScheduled();
+      expect(spy).toHaveBeenCalledOnce();
+
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      regenStub.getBlockSlotState.mockImplementationOnce(async () => {
+        vi.setSystemTime(prepareSlot * config.SLOT_DURATION_MS);
+        return prepareState;
+      });
+      emitPtcQuorum(clockSlot, false);
+      await flush();
+
+      expect(regenStub.getBlockSlotState).toHaveBeenCalledTimes(2);
+      expect(fcuParentHashes()).toEqual([fullParentHash]);
+      expect(spy).toHaveBeenCalledOnce();
+      expect(loggerStub.error).not.toHaveBeenCalled();
+    });
+
+    it("skips a re-prepare that would only re-emit payload attributes nobody listens to", async () => {
+      const spy = vi.fn();
+      chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
+      beaconProposerCacheStub.has.mockReturnValue(false);
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      await runScheduled();
+      expect(spy).toHaveBeenCalledOnce();
+
+      chainStub.emitter.off(routes.events.EventType.payloadAttributes, spy);
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      emitPtcQuorum(clockSlot, false);
+      await flush();
+
+      expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
+      expect(spy).toHaveBeenCalledOnce();
     });
 
     it("drops a request that arrives before the scheduled run starts", async () => {

@@ -89,6 +89,8 @@ type PreparedPayload = {
   buildOnFull: boolean | null;
   /** `undefined` if the proposer is not ours, only the payload attributes event was emitted */
   feeRecipient: string | undefined;
+  /** The forkchoiceUpdated failed, so a re-prepare retries it even with unchanged inputs */
+  failed: boolean;
 };
 
 /**
@@ -438,6 +440,13 @@ export class PrepareNextSlotScheduler {
       parentBlockHash = state.latestExecutionPayloadHeader.blockHash;
     }
 
+    // Block production owns the engine head once the proposal slot started, a late fcU could move it back
+    if (reason !== PreparePayloadReason.scheduled && this.chain.clock.currentSlot >= prepareSlot) {
+      this.metrics?.blockPayload.payloadReprepare.inc({reason, result: "dropped"});
+      this.logger.debug("Proposal slot started, not re-preparing", {prepareSlot, reason, headRoot: head.blockRoot});
+      return;
+    }
+
     // The payload_attributes event must carry the same hashes we send to the EL
     const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice, this.logger);
     const finalizedBlockHash = getFinalizedExecutionBlockHash(this.chain.forkChoice);
@@ -462,25 +471,48 @@ export class PrepareNextSlotScheduler {
       payloadAttributes = data.payloadAttributes;
     }
 
+    // Builders take the parent from the payload attributes event, so re-prepare whenever it was emitted. Recorded
+    // before the engine call, a failed forkchoiceUpdated must not drop the later re-prepares for this slot
+    const prepared = feeRecipient !== undefined || payloadAttributes !== undefined;
+    const record: PreparedPayload = {
+      prepareSlot,
+      proposerIndex,
+      headRoot: head.blockRoot,
+      buildOnFull,
+      feeRecipient,
+      failed: false,
+    };
+    if (prepared) {
+      this.lastPrepared = record;
+    }
+
     if (feeRecipient) {
-      const preparationTime = computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
-      this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
+      // Only for the scheduled run, a re-prepare later in the slot would add a second, shorter sample
+      if (reason === PreparePayloadReason.scheduled) {
+        const preparationTime = computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
+        this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
+      }
 
       // awaiting here instead of throwing an async call because there is no other task
       // left for scheduler and this gives nice semantics to catch and log errors in the
       // try/catch wrapper here.
-      await prepareExecutionPayload(
-        this.chain,
-        this.logger,
-        fork, // State is of execution type
-        fromHex(head.blockRoot),
-        parentBlockHash,
-        safeBlockHash,
-        finalizedBlockHash,
-        stateAfterParentPayload,
-        feeRecipient,
-        payloadAttributes
-      );
+      try {
+        await prepareExecutionPayload(
+          this.chain,
+          this.logger,
+          fork, // State is of execution type
+          fromHex(head.blockRoot),
+          parentBlockHash,
+          safeBlockHash,
+          finalizedBlockHash,
+          stateAfterParentPayload,
+          feeRecipient,
+          payloadAttributes
+        );
+      } catch (e) {
+        record.failed = true;
+        throw e;
+      }
       this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
         prepareSlot,
         proposerIndex,
@@ -491,12 +523,8 @@ export class PrepareNextSlotScheduler {
       });
     }
 
-    // Builders take the parent from the payload attributes event, so re-prepare whenever it was emitted
-    if (feeRecipient !== undefined || payloadAttributes !== undefined) {
-      this.lastPrepared = {prepareSlot, proposerIndex, headRoot: head.blockRoot, buildOnFull, feeRecipient};
-      if (reason !== PreparePayloadReason.scheduled) {
-        this.metrics?.blockPayload.payloadReprepare.inc({reason, result: "changed"});
-      }
+    if (prepared && reason !== PreparePayloadReason.scheduled) {
+      this.metrics?.blockPayload.payloadReprepare.inc({reason, result: "changed"});
     }
   }
 
@@ -572,6 +600,7 @@ export class PrepareNextSlotScheduler {
     this.reprepare(prepareSlot, reason)
       .catch((e) => {
         if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+          this.metrics?.blockPayload.payloadReprepare.inc({reason, result: "error"});
           this.logger.error("Failed to re-prepare payload for next slot", {prepareSlot, reason}, e as Error);
         }
       })
@@ -600,7 +629,12 @@ export class PrepareNextSlotScheduler {
     // Same head resolution as the scheduled run, the head may have changed since
     const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
     const feeRecipient = this.getFeeRecipient(fork, prepareSlot, headBlock.blockRoot, prepared.proposerIndex);
-    if (feeRecipient === undefined && this.chain.opts.emitPayloadAttributes !== true) {
+    // Without a local proposer a re-prepare only re-emits the payload attributes, skip it if nobody listens
+    if (
+      feeRecipient === undefined &&
+      (this.chain.opts.emitPayloadAttributes !== true ||
+        this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes) === 0)
+    ) {
       return;
     }
     const isEpochTransition = computeEpochAtSlot(prepareSlot) > computeEpochAtSlot(prepareSlot - 1);
@@ -610,6 +644,7 @@ export class PrepareNextSlotScheduler {
     const buildOnFull = isForkPostGloas(fork) ? this.chain.forkChoice.shouldBuildOnFull(head, prepareSlot) : null;
     const logCtx = {prepareSlot, reason, headRoot: head.blockRoot, buildOnFull};
     if (
+      !prepared.failed &&
       head.blockRoot === prepared.headRoot &&
       buildOnFull === prepared.buildOnFull &&
       feeRecipient === prepared.feeRecipient
@@ -630,11 +665,6 @@ export class PrepareNextSlotScheduler {
       {dontTransferCache: !isEpochTransition},
       head === headBlock ? RegenCaller.precomputeEpoch : RegenCaller.predictProposerHead
     );
-    // Block production owns the engine head once the proposal slot started, a late fcU could move it back
-    if (this.chain.clock.currentSlot >= prepareSlot) {
-      return;
-    }
-
     await this.preparePayload({
       reason,
       fork,

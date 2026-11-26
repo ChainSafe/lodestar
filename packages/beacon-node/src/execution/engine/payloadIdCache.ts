@@ -12,7 +12,7 @@ const MAX_PAYLOAD_IDS = SLOTS_PER_EPOCH;
 // Since we do no processing with this id, we have no need to deserialize it
 export type PayloadId = string;
 
-/** Payload id returned by the engine and the time the payload was requested from it */
+/** Payload id returned by the engine and when the payload was requested from it, monotonic `performance.now()` ms */
 export type PreparedPayloadId = {payloadId: PayloadId; preparedAtMs: number};
 
 export type WithdrawalV1 = {
@@ -48,7 +48,12 @@ export class PayloadIdCache {
     const key = this.getKey(fcuAttributes);
     const fullKey = this.getFullKey(fcuAttributes);
     const {inclusionListTransactions} = fcuAttributes;
-    this.payloadIdByFcuAttributes.set(key, {payloadId, preparedAtMs: Date.now(), fullKey, inclusionListTransactions});
+    this.payloadIdByFcuAttributes.set(key, {
+      payloadId,
+      preparedAtMs: performance.now(),
+      fullKey,
+      inclusionListTransactions,
+    });
   }
 
   prune(): void {

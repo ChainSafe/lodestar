@@ -813,7 +813,7 @@ export async function prepareExecutionPayload(
           feeRecipient: suggestedFeeRecipient,
         })
     );
-    preparedAtMs = Date.now();
+    preparedAtMs = performance.now();
     logger.verbose("Prepared payload id from execution engine", {payloadId});
   }
 
@@ -839,7 +839,7 @@ export async function prepareExecutionPayload(
  * See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
  */
 async function waitForPayloadGeneration(preparedAtMs: number): Promise<void> {
-  const remainingMs = PAYLOAD_GENERATION_TIME_MS - (Date.now() - preparedAtMs);
+  const remainingMs = PAYLOAD_GENERATION_TIME_MS - (performance.now() - preparedAtMs);
   if (remainingMs > 0) {
     await sleep(remainingMs);
   }
