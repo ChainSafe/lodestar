@@ -224,19 +224,19 @@ at the end of every vector and checks that the head stays put.
 
 ## Comparison with the TypeScript proto-array
 
-| Aspect                              | TypeScript                                                  | Zig                                                                        | Risk when switching             |
-| ----------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------- |
-| Vote storage                        | current + next node index, next slot                        | 4-byte id into a table of distinct (slot, block, payload flag) targets     | low: same replacement rule      |
-| Future-slot attestations            | queued in fork choice, applied on tick                      | queued per validator, applied on tick                                      | low: same rule, unit tests      |
-| Head weights                        | cached per node, deltas from a scan of every vote           | vote totals per node updated for changed votes only; tree passes per call  | low: 506 vectors agree          |
-| Equivocators                        | sorted array walked in `computeDeltas`                      | bitset check skips the vote                                                | low                             |
-| Proposer boost                      | previous and current boost deltas                           | path marked each pass                                                      | low                             |
-| Prune                               | threshold, slices node array                                | compacts rows, renumbers the distinct vote table                             | low                             |
-| Optimistic sync                     | execution status per node, `validateLatestHash`             | verdict per payload, node status derived                                   | low: 5 sync vectors, unit tests |
-| Fast confirmation                   | in the package                                              | `fast_confirmation.zig`, scores per distinct vote folded up the block array  | low: 1431 vectors               |
-| `should_override_forkchoice_update` | implemented                                                 | omitted, removed from the spec                                             | low, see Deviations             |
-| Beacon states                       | `stateGetter` inside the store                              | `StateProvider`, balances and committees only                              | low                             |
-| Test coverage                       | vectors, nightly compliance vectors, unit tests, production | 506 minimal + 256 mainnet vectors, 10311 compliance vectors, 11 unit tests | blocking: no production time    |
+| Aspect                              | TypeScript                                                  | Zig                                                                         | Risk when switching             |
+| ----------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------- |
+| Vote storage                        | current + next node index, next slot                        | 4-byte id into a table of distinct (slot, block, payload flag) targets      | low: same replacement rule      |
+| Future-slot attestations            | queued in fork choice, applied on tick                      | queued per validator, applied on tick                                       | low: same rule, unit tests      |
+| Head weights                        | cached per node, deltas from a scan of every vote           | vote totals per node updated for changed votes only; tree passes per call   | low: 506 vectors agree          |
+| Equivocators                        | sorted array walked in `computeDeltas`                      | bitset check skips the vote                                                 | low                             |
+| Proposer boost                      | previous and current boost deltas                           | path marked each pass                                                       | low                             |
+| Prune                               | threshold, slices node array                                | compacts rows, renumbers the distinct vote table                            | low                             |
+| Optimistic sync                     | execution status per node, `validateLatestHash`             | verdict per payload, node status derived                                    | low: 5 sync vectors, unit tests |
+| Fast confirmation                   | in the package                                              | `fast_confirmation.zig`, scores per distinct vote folded up the block array | low: 1431 vectors               |
+| `should_override_forkchoice_update` | implemented                                                 | omitted, removed from the spec                                              | low, see Deviations             |
+| Beacon states                       | `stateGetter` inside the store                              | `StateProvider`, balances and committees only                               | low                             |
+| Test coverage                       | vectors, nightly compliance vectors, unit tests, production | 506 minimal + 256 mainnet vectors, 10311 compliance vectors, 11 unit tests  | blocking: no production time    |
 
 ## Benchmarks
 
