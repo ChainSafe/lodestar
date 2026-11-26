@@ -23,6 +23,7 @@ export enum ExecutionPayloadBidErrorCode {
   PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH",
   INCLUSION_LIST_BITS_NOT_INCLUSIVE = "EXECUTION_PAYLOAD_BID_ERROR_INCLUSION_LIST_BITS_NOT_INCLUSIVE",
   BEFORE_INCLUSION_LIST_DEADLINE = "EXECUTION_PAYLOAD_BID_ERROR_BEFORE_INCLUSION_LIST_DEADLINE",
+  BEFORE_PAYLOAD_ATTESTATION_DEADLINE = "EXECUTION_PAYLOAD_BID_ERROR_BEFORE_PAYLOAD_ATTESTATION_DEADLINE",
 }
 
 export type ExecutionPayloadBidErrorType =
@@ -96,6 +97,11 @@ export type ExecutionPayloadBidErrorType =
     }
   | {
       code: ExecutionPayloadBidErrorCode.BEFORE_INCLUSION_LIST_DEADLINE;
+      builderIndex: BuilderIndex;
+      slot: Slot;
+    }
+  | {
+      code: ExecutionPayloadBidErrorCode.BEFORE_PAYLOAD_ATTESTATION_DEADLINE;
       builderIndex: BuilderIndex;
       slot: Slot;
     }
