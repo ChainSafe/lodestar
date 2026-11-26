@@ -740,9 +740,15 @@ export class LightClientServer {
    * removed, and the latest finality / optimistic updates are recomputed from the new head.
    */
   async updateHead(headBlockRoot: Root, finalizedCheckpoint: phase0.Checkpoint): Promise<void> {
-    this.pruneBlockData(computeStartSlotAtEpoch(finalizedCheckpoint.epoch));
-
     const headData = this.blockData.get(toRootHex(headBlockRoot));
+
+    // When the first slots of the finalized epoch are empty, the finalized block sits at a later slot
+    // than its epoch start and is still referable by checkpoints of that epoch.
+    const finalizedSlot =
+      this.blockData.get(toRootHex(finalizedCheckpoint.root))?.attestedHeader.beacon.slot ??
+      computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+    this.pruneBlockData(finalizedSlot);
+
     if (!headData) {
       this.logger.debug("updateHead without collected data", {headBlockRoot: toRootHex(headBlockRoot)});
       return;
@@ -754,7 +760,12 @@ export class LightClientServer {
     for (let period = lowPeriod; period <= headPeriod; period++) {
       const periodEndSlot = computeStartSlotAtEpoch((period + 1) * EPOCHS_PER_SYNC_COMMITTEE_PERIOD) - 1;
       const ancestor = this.getAncestorAtSlot(headData, periodEndSlot);
-      const bestSummary = ancestor?.bestUpdateSummary ?? null;
+      // The branch is not cached down to this period, leave the remaining periods untouched
+      if (!ancestor || ancestor.attestedHeader.beacon.slot < finalizedSlot) {
+        break;
+      }
+
+      const bestSummary = ancestor.bestUpdateSummary;
       const stored = await this.db.bestLightClientUpdate.get(period);
 
       if (bestSummary === null) {
@@ -767,7 +778,7 @@ export class LightClientServer {
         continue;
       }
 
-      const bestRoot = ancestor?.bestUpdateRoot ?? null;
+      const bestRoot = ancestor.bestUpdateRoot;
       const bestData = bestRoot ? this.blockData.get(bestRoot) : undefined;
       const attestedData = bestData
         ? this.blockData.get(toRootHex(bestData.attestedHeader.beacon.parentRoot))

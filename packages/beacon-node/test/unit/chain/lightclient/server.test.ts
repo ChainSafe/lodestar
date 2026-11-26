@@ -311,6 +311,13 @@ describe("LightClientServer.updateHead", () => {
     return map;
   }
 
+  function blockAt(chain: Map<string, BlockLightClientCache>, slot: number): BlockLightClientCache {
+    for (const data of chain.values()) {
+      if (data.attestedHeader.beacon.slot === slot) return data;
+    }
+    throw Error(`No block at slot ${slot}`);
+  }
+
   function createServer(stored: LightClientUpdate | null): {
     server: LightClientServer;
     putBestUpdate: ReturnType<typeof vi.fn>;
@@ -358,6 +365,36 @@ describe("LightClientServer.updateHead", () => {
   function setBlockData(server: LightClientServer, data: Map<string, BlockLightClientCache>): void {
     for (const [rootHex, blockData] of data) server["blockData"].set(rootHex, blockData);
   }
+  it("keeps the finalized block when its epoch starts with empty slots", async () => {
+    const {server} = createServer(null);
+    const epochStart = SLOTS_PER_EPOCH;
+    const finalizedBlockSlot = epochStart + 8;
+    const chain = chainOf([epochStart, finalizedBlockSlot, finalizedBlockSlot + 10]);
+    setBlockData(server, chain);
+
+    await server.updateHead(blockAt(chain, finalizedBlockSlot + 10).blockRoot, {
+      epoch: 1,
+      root: blockAt(chain, finalizedBlockSlot).blockRoot,
+    });
+
+    const remaining = [...server["blockData"].values()].map((data) => data.attestedHeader.beacon.slot);
+    expect(remaining.sort((a, b) => a - b)).toEqual([finalizedBlockSlot, finalizedBlockSlot + 10]);
+  });
+  it("leaves served updates untouched when the branch is not cached down to a period", async () => {
+    const {server, putBestUpdate, deleteBestUpdate} = createServer(ssz.gloas.LightClientUpdate.defaultValue());
+    const headSlot = EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 100;
+    // The head's parent is missing from the cache, so the walk back to the first period stops
+    const head = createBlockData(headSlot);
+    head.blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(head.attestedHeader.beacon);
+    head.bestUpdateRoot = toRootHex(head.blockRoot);
+    head.latestSignatureSlot = headSlot;
+    server["blockData"].set(toRootHex(head.blockRoot), head);
+
+    await server.updateHead(head.blockRoot, {epoch: 0, root: new Uint8Array(32)});
+
+    expect(deleteBestUpdate).not.toHaveBeenCalled();
+    expect(putBestUpdate).not.toHaveBeenCalled();
+  });
   it("bounds the cache on import, without updateHead", async () => {
     const {server} = createServer(null);
     const blockSlot = gloasSlot + MAX_CACHED_SLOTS + 16;
