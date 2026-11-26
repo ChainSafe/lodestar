@@ -865,6 +865,7 @@ pub fn getAllBalances(self: *BeaconStateView) !js.Array {
 }
 
 /// Get validators whose status is in the provided Set<string>.
+/// A validator matches by its status or by its general status (pending, active, exited, withdrawal).
 /// Arguments:
 /// - statuses: JS Set<string>
 /// - currentEpoch: Epoch (number)
@@ -878,16 +879,24 @@ pub fn getValidatorsByStatus(self: *BeaconStateView, statuses_set: js.Value, cur
     const set_value = statuses_set.toValue();
     const has_fn = try set_value.getNamedProperty("has");
 
+    var wanted = std.EnumSet(st.ValidatorStatus).initEmpty();
+    for (std.enums.values(st.ValidatorStatus)) |status| {
+        const status_str = try env.createStringUtf8(status.toString());
+        const category_str = try env.createStringUtf8(status.category());
+        if (try (try env.callFunction(has_fn, set_value, .{status_str})).getValueBool() or
+            try (try env.callFunction(has_fn, set_value, .{category_str})).getValueBool())
+        {
+            wanted.insert(status);
+        }
+    }
+
     const validators = try cached_state.state.validatorsSlice(allocator);
     defer allocator.free(validators);
 
     const result = try env.createArray();
     var out_idx: u32 = 0;
     for (validators) |*validator| {
-        const status = st.getValidatorStatus(validator, current_epoch);
-        const status_str = try env.createStringUtf8(status.toString());
-        const has_result = try env.callFunction(has_fn, set_value, .{status_str});
-        if (try has_result.getValueBool()) {
+        if (wanted.contains(st.getValidatorStatus(validator, current_epoch))) {
             const v_napi = try sszValueToNapiValue(env, ct.phase0.Validator, validator);
             try result.setElement(out_idx, v_napi);
             out_idx += 1;
@@ -1410,7 +1419,11 @@ pub fn serializeToBytes(self: *BeaconStateView, output: js.Value, offset: js.Num
     const cached_state = try self.acquireState();
     defer self.finishState();
     const bytes_written = switch (cached_state.state.*) {
-        inline else => |state| try state.serializeIntoBytes(output_slice[off..]),
+        inline else => |state| blk: {
+            const size = try state.serializedSize();
+            if (output_slice.len - off < size) return error.OutputBufferTooSmall;
+            break :blk try state.serializeIntoBytes(output_slice[off..][0..size]);
+        },
     };
 
     return js.Number.from(bytes_written);
@@ -1447,7 +1460,9 @@ pub fn serializeValidatorsToBytes(self: *BeaconStateView, output: js.Value, offs
     const cached_state = try self.acquireState();
     defer self.finishState();
     var validators_view = try cached_state.state.validators();
-    const bytes_written = try validators_view.serializeIntoBytes(output_slice[off..]);
+    const size = try validators_view.serializedSize();
+    if (output_slice.len - off < size) return error.OutputBufferTooSmall;
+    const bytes_written = try validators_view.serializeIntoBytes(output_slice[off..][0..size]);
     return js.Number.from(bytes_written);
 }
 

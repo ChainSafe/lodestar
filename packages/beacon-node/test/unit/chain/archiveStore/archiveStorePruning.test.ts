@@ -68,7 +68,7 @@ describe("chain / archiveStore / state pruning progress", () => {
     await db.stateArchive.putBinary(nextSlot, new Uint8Array([2]));
     chain.emitter.emit(ChainEvent.forkChoiceFinalized, {epoch: 102, root: ZERO_HASH, rootHex: ZERO_HASH_HEX});
     await vi.waitFor(() => expect(chain.forkChoice.prune).toHaveBeenCalledTimes(2));
-    expect(await db.stateArchive.keys()).toEqual([nextSlot]);
+    expect(await db.stateArchive.keys()).toEqual([0, nextSlot]);
 
     chain.emitter.emit(ChainEvent.forkChoiceFinalized, {epoch: 103, root: ZERO_HASH, rootHex: ZERO_HASH_HEX});
     await vi.waitFor(() => expect(chain.forkChoice.prune).toHaveBeenCalledTimes(3));
@@ -86,7 +86,7 @@ describe("chain / archiveStore / state pruning progress", () => {
     await vi.waitFor(() =>
       expect(logError).toHaveBeenCalledWith("Error processing finalized checkpoint", {epoch: 102}, error)
     );
-    expect(await db.stateArchive.keys()).toEqual([previousSlot, nextSlot]);
+    expect(await db.stateArchive.keys()).toEqual([0, previousSlot, nextSlot]);
 
     chain.emitter.emit(ChainEvent.forkChoiceFinalized, {epoch: 102, root: ZERO_HASH, rootHex: ZERO_HASH_HEX});
     await vi.waitFor(() => expect(chain.forkChoice.prune).toHaveBeenCalledTimes(1));
@@ -94,7 +94,7 @@ describe("chain / archiveStore / state pruning progress", () => {
       [{gte: previousSlot, lt: nextSlot}],
       [{gte: previousSlot, lt: nextSlot}],
     ]);
-    expect(await db.stateArchive.keys()).toEqual([nextSlot]);
+    expect(await db.stateArchive.keys()).toEqual([0, nextSlot]);
   });
 });
 
@@ -105,7 +105,7 @@ describe("chain / archiveStore / startup block pruning", () => {
     const chain = getMockedBeaconChain();
     const currentEpoch = config.MIN_EPOCHS_FOR_BLOCK_REQUESTS + 2 * computeEpochAtSlot(MAX_PRUNE_BLOCK_SLOTS_PER_RUN);
     vi.spyOn(chain.clock, "currentEpoch", "get").mockReturnValue(currentEpoch);
-    const slots = [0, MAX_PRUNE_BLOCK_SLOTS_PER_RUN - 1, MAX_PRUNE_BLOCK_SLOTS_PER_RUN];
+    const slots = [0, 1, MAX_PRUNE_BLOCK_SLOTS_PER_RUN, MAX_PRUNE_BLOCK_SLOTS_PER_RUN + 1];
     await db.blockArchive.batchPut(
       slots.map((slot) => {
         const block = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -129,7 +129,7 @@ describe("chain / archiveStore / startup block pruning", () => {
     try {
       await store.init();
 
-      expect(await db.blockArchive.keys()).toEqual([MAX_PRUNE_BLOCK_SLOTS_PER_RUN]);
+      expect(await db.blockArchive.keys()).toEqual([0, MAX_PRUNE_BLOCK_SLOTS_PER_RUN + 1]);
     } finally {
       controller.abort();
       await store.close();

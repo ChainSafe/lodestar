@@ -7,6 +7,7 @@ import {SecretKey, aggregateSignatures} from "@lodestar/native/blst";
 import {computeCommitteePubkeys, releaseCommitteePubkeys} from "@lodestar/native/committee-pubkeys";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
+  BUILDER_INDEX_SELF_BUILD,
   FAR_FUTURE_EPOCH,
   ForkSeq,
   MAX_COMMITTEES_PER_SLOT,
@@ -22,6 +23,7 @@ import {
   getAttestationDataSigningRoot,
   getAttestationsSignatureSets,
   getBlockSignatureSets,
+  getExecutionPayloadBidSigningRoot,
   getPayloadAttestationDataSigningRoot,
 } from "../../../src/signatureSets/index.js";
 import {createCachedBeaconStateTest, generateCachedState} from "../../../src/testUtils/state.js";
@@ -227,7 +229,7 @@ describe("signatureSets", () => {
     expect(releaseCommitteePubkeys(shuffling.committeePubkeysId)).toBe(true);
   });
 
-  it("should include payload attestation signatures from a gloas block", () => {
+  it("should include builder bid and payload attestation signatures from a gloas block", () => {
     const chainConfig = createChainForkConfig({
       ALTAIR_FORK_EPOCH: 0,
       BELLATRIX_FORK_EPOCH: 0,
@@ -262,6 +264,14 @@ describe("signatureSets", () => {
     };
     stateView.currentSyncCommittee = ssz.altair.SyncCommittee.toViewDU(syncCommittee);
     stateView.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(syncCommittee);
+    const builderSecretKey = SecretKey.fromKeygen(Buffer.alloc(32, 100));
+    stateView.builders.push(
+      ssz.gloas.Builder.toViewDU({
+        ...ssz.gloas.Builder.defaultValue(),
+        pubkey: builderSecretKey.toPublicKey().toBytes(),
+        withdrawableEpoch: FAR_FUTURE_EPOCH,
+      })
+    );
     stateView.commit();
     pubkeyCache.reset();
     const state = createCachedBeaconStateTest(stateView, chainConfig);
@@ -276,6 +286,16 @@ describe("signatureSets", () => {
       .sign(getPayloadAttestationDataSigningRoot(state.config, data))
       .toBytes();
 
+    const bid: gloas.ExecutionPayloadBid = {
+      ...ssz.gloas.ExecutionPayloadBid.defaultValue(),
+      slot: blockSlot,
+      builderIndex: 0,
+    };
+    const signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid = {
+      message: bid,
+      signature: builderSecretKey.sign(getExecutionPayloadBidSigningRoot(state.config, bid)).toBytes(),
+    };
+
     const signedBlock: gloas.SignedBeaconBlock = {
       message: {
         slot: blockSlot,
@@ -288,24 +308,48 @@ describe("signatureSets", () => {
             syncCommitteeBits: BitArray.fromBitLen(SYNC_COMMITTEE_SIZE),
             syncCommitteeSignature: G2_POINT_AT_INFINITY,
           },
+          signedExecutionPayloadBid,
           payloadAttestations: [{aggregationBits: BitArray.fromSingleBit(PTC_SIZE, 0), data, signature}],
         },
       },
       signature: EMPTY_SIGNATURE,
     };
+    const getSignatureSets = (block: gloas.SignedBeaconBlock) =>
+      getBlockSignatureSets(
+        state.config,
+        state.epochCtx.currentSyncCommitteeIndexed,
+        new BeaconStateView(state),
+        block,
+        []
+      );
+    const withBid = (signedBid: gloas.SignedExecutionPayloadBid): gloas.SignedBeaconBlock => ({
+      ...signedBlock,
+      message: {...signedBlock.message, body: {...signedBlock.message.body, signedExecutionPayloadBid: signedBid}},
+    });
 
-    const signatureSets = getBlockSignatureSets(
-      state.config,
-      state.epochCtx.currentSyncCommitteeIndexed,
-      new BeaconStateView(state),
-      signedBlock,
-      []
-    );
-    // Randao reveal, block signature and the payload attestation
-    expect(signatureSets.length).toBe(3);
-    // The default ptcWindow is all zeros, so validator 0 fills every PTC position
-    expect(signatureSets[2]).toMatchObject({type: SignatureSetType.aggregate, indices: [0]});
+    const signatureSets = getSignatureSets(signedBlock);
+    // Randao reveal, block signature, the builder bid and the payload attestation
+    expect(signatureSets.length).toBe(4);
+    expect(signatureSets[2]).toMatchObject({type: SignatureSetType.single});
     expect(verifySignatureSet(signatureSets[2])).toBe(true);
+    // The default ptcWindow is all zeros, so validator 0 fills every PTC position
+    expect(signatureSets[3]).toMatchObject({type: SignatureSetType.aggregate, indices: [0]});
+    expect(verifySignatureSet(signatureSets[3])).toBe(true);
+
+    const invalidBidSets = getSignatureSets(withBid({message: bid, signature: signature}));
+    expect(verifySignatureSet(invalidBidSets[2])).toBe(false);
+
+    const withoutBidSet = [SignatureSetType.indexed, SignatureSetType.indexed, SignatureSetType.aggregate];
+    const selfBuildSets = getSignatureSets(
+      withBid({message: {...bid, builderIndex: BUILDER_INDEX_SELF_BUILD}, signature: G2_POINT_AT_INFINITY})
+    );
+    expect(selfBuildSets.map((set) => set.type)).toEqual(withoutBidSet);
+
+    // Left to block processing, which rejects a builder that is not in the registry
+    const unknownBuilderSets = getSignatureSets(
+      withBid({message: {...bid, builderIndex: 1}, signature: EMPTY_SIGNATURE})
+    );
+    expect(unknownBuilderSets.map((set) => set.type)).toEqual(withoutBidSet);
   });
 });
 

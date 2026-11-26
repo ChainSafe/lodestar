@@ -89,7 +89,7 @@ import {validateGossipProposerPreferences} from "../../chain/validation/proposer
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {getBlobKzgCommitments, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
-import {callImmediate, callInNextEventLoop} from "../../util/eventLoop.js";
+import {callAfterIO, callInNextEventLoop} from "../../util/eventLoop.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -269,6 +269,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           // The block is retained for unknown parent sync without full validation. Authenticate it first, this
           // does not need the parent state
           const proposerIndex = signedBlock.message.proposerIndex;
+          // An active proposer missing from the cache comes from a branch that finalized validators this node never
+          // processed, range sync recovers that branch from peer status
+          if (proposerIndex >= chain.pubkeyCache.size) {
+            throw new BlockGossipError(GossipAction.REJECT, {
+              code: BlockErrorCode.UNKNOWN_PROPOSER,
+              slot,
+              root: blockRootHex,
+              proposerIndex,
+            });
+          }
           await verifyBlockProposerSignature(chain, signedBlock, blockRootHex);
           chain.seenBlockProposers.observeBlockRoot(
             slot,
@@ -676,7 +686,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       try {
         const blockInput = await validateBeaconBlock(signedBlock, topic.boundary.fork, peerIdStr, seenTimestampSec);
         // Runs after the validation result is reported, except with `network.useWorker: false`
-        callImmediate(() => {
+        callAfterIO(() => {
           try {
             chain.serializedCache.set(signedBlock, serializedData);
             handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
@@ -1301,13 +1311,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             }
           }
 
-          chain.forkChoice.notifyPtcMessages(
-            toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
-            payloadAttestationMessage.data.slot,
-            validationResult.validatorCommitteeIndices,
-            payloadAttestationMessage.data.payloadPresent,
-            payloadAttestationMessage.data.blobDataAvailable
-          );
+          // Gossip accepts adjacent slots within the clock disparity but fork choice only counts the current slot
+          if (payloadAttestationMessage.data.slot === chain.clock.currentSlot) {
+            chain.forkChoice.notifyPtcMessages(
+              toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+              payloadAttestationMessage.data.slot,
+              validationResult.validatorCommitteeIndices,
+              payloadAttestationMessage.data.payloadPresent,
+              payloadAttestationMessage.data.blobDataAvailable
+            );
+          }
 
           chain.emitter.emit(routes.events.EventType.payloadAttestationMessage, {
             version: config.getForkName(payloadAttestationMessage.data.slot),
@@ -1422,12 +1435,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         try {
           metrics?.inclusionListsValid.inc({source: InclusionListSource.gossip});
           metrics?.inclusionListsValidSize.inc(totalBytes);
-          // Timely only if received within its own slot before the deadline, so a list for the next slot that
-          // passed validation under clock disparity is untimely. Late lists are still stored, marked untimely
+          // A list received before its slot is timely, the spec delays it until the slot starts. Only gossip
+          // validation bounds how early a list can be. Late lists are still stored, marked untimely
           const secFromSlot = chain.clock.secFromSlot(slot, seenTimestampSec);
           metrics?.inclusionListArrivalTime.observe(secFromSlot);
-          const isTimely =
-            secFromSlot >= 0 && secFromSlot * 1000 < config.getInclusionListDueMs(config.getForkName(slot));
+          const isTimely = secFromSlot * 1000 < config.getInclusionListDueMs(config.getForkName(slot));
 
           const insertOutcome = chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
           metrics?.inclusionListStore.insertOutcome.inc({insertOutcome});

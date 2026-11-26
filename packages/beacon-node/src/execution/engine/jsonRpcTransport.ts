@@ -141,7 +141,8 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
+    payloadAttributes?: PayloadAttributes,
+    signal?: AbortSignal
   ): Promise<ForkchoiceUpdatedResult> {
     const method =
       ForkSeq[fork] >= ForkSeq.heze
@@ -161,12 +162,15 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     const {payloadStatus, payloadId} = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, payloadAttributesRpc]}, fcUReqOpts);
+    >(
+      {method, params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, payloadAttributesRpc]},
+      {...fcUReqOpts, signal}
+    );
 
     return {payloadStatus, payloadId: payloadId && payloadId !== "0x" ? payloadId : null};
   }
 
-  async getPayload(fork: ForkName, payloadId: PayloadId): Promise<GetPayloadResult> {
+  async getPayload(fork: ForkName, payloadId: PayloadId, signal?: AbortSignal): Promise<GetPayloadResult> {
     let method: keyof EngineApiRpcReturnTypes;
     switch (fork) {
       case ForkName.phase0:
@@ -193,7 +197,7 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [payloadId]}, getPayloadOpts);
+    >({method, params: [payloadId]}, {...getPayloadOpts, signal});
     return parseExecutionPayload(fork, payloadResponse);
   }
 
