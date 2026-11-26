@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {beforeEach, describe, it} from "vitest";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
 import {nativeStateTransition} from "./stateTransition.js";
 import {RunnerType, TestRunner} from "./types.js";
@@ -103,7 +103,6 @@ export const defaultSkipOpts: SkipOpts = {
     "gossip_data_column_sidecar",
     "gossip_partial_data_column_sidecar",
     "gossip_execution_payload_bid",
-    "gossip_execution_payload_envelope",
     "gossip_payload_attestation_message",
     "gossip_proposer_preferences",
   ],
@@ -143,8 +142,6 @@ export function specTestIterator(
     const fork = forkStr as ForkName;
     if (
       opts?.skippedForks?.includes(forkStr) ||
-      // lodestar-z supports state transition through Gloas.
-      (nativeStateTransition && ForkSeq[fork] > ForkSeq.gloas) ||
       (process.env.SPEC_FILTER_FORK && forkStr !== process.env.SPEC_FILTER_FORK)
     ) {
       continue;

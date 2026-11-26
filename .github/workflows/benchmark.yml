@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 24
+          node: 26
       # </common-build>
 
       # Restore performance downloaded states
@@ -45,6 +45,29 @@ jobs:
           # Key prefix to separate benchmark data from multiple repositories
           S3_KEY_PREFIX: ${{ github.repository }}/${{ runner.os }}
 
+      # A single sample against a single baseline sample trips on unchanged code, a second sample shows whether it holds
+      # The re-run compares against the same baseline commit, which applies each bench's own threshold, and does not
+      # persist, so the stored history keeps the nightly result
+      - name: Re-run regressed benchmarks
+        if: failure() && steps.benchmarks.outcome == 'failure'
+        shell: bash
+        run: |
+          baseline=$(sed -E 's/\x1b\[[0-9;]*m//g' "$RUNNER_TEMP/benchmark.log" \
+            | grep -oE 'Found previous benchmark .* at commit [0-9a-f]+' | grep -oE '[0-9a-f]+$' | head -n 1 || true)
+          [ -n "$baseline" ] || exit 0
+          node scripts/ci/benchmark_regressions.mjs files "$RUNNER_TEMP/benchmark.log" | while read -r file; do
+            pnpm benchmark:files "$file" --compareCommit "$baseline" --no-persist --noThrow --skipPostComment 2>&1 \
+              | tee -a "$RUNNER_TEMP/rerun.log" || true
+          done
+        env:
+          BENCHMARK_S3: true
+          S3_ACCESS_KEY: ${{ secrets.S3_BENCH_LODESTAR_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_BENCH_LODESTAR_SECRET_KEY }}
+          S3_REGION: ${{ secrets.S3_BENCH_LODESTAR_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BENCH_LODESTAR_BUCKET }}
+          S3_ENDPOINT: ${{ secrets.S3_BENCH_LODESTAR_ENDPOINT }}
+          S3_KEY_PREFIX: ${{ github.repository }}/${{ runner.os }}
+
       - name: Report failed benchmarks in the job summary
         if: failure() && steps.benchmarks.outcome == 'failure'
         # pipefail lets the gh fallbacks below take effect
@@ -59,9 +82,8 @@ jobs:
           {
             echo "### Failed benchmarks"
             echo
-            echo '```'
-            grep -E '^\s*(!|✖) ' <<< "$log" || echo "No failed benchmarks found, see the job log"
-            echo '```'
+            node scripts/ci/benchmark_regressions.mjs summary "$RUNNER_TEMP/benchmark.log" "$RUNNER_TEMP/rerun.log" \
+              || echo "No failed benchmarks found, see the job log"
             echo
             if [ -z "$baseline" ]; then
               echo "No previous benchmark found"
