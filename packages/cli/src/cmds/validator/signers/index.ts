@@ -208,6 +208,28 @@ export async function toXmssSigners(
   fs.mkdirSync(treesDir, {recursive: true});
   const getTreeStore = (signer: Signer & {type: SignerType.Local}): XmssTreeStore =>
     xmssTreeStore(path.join(treesDir, `${signer.secretKey.toPublicKey().toHex()}.bin`));
+  // A VRF tree is good without its store, so a store that fails costs the build at the next start only
+  const getVrfTreeStore = (signer: Signer & {type: SignerType.Local}): XmssTreeStore => {
+    const pubkey = signer.secretKey.toPublicKey().toHex();
+    const store = xmssTreeStore(path.join(treesDir, `${pubkey}.vrf.bin`));
+    return {
+      read: () => {
+        try {
+          return store.read();
+        } catch (e) {
+          logger.warn("Stored VRF tree not read: building it", {pubkey}, e as Error);
+          return null;
+        }
+      },
+      write: (bytes) => {
+        try {
+          store.write(bytes);
+        } catch (e) {
+          logger.warn("VRF tree not stored: the next start builds it again", {pubkey}, e as Error);
+        }
+      },
+    };
+  };
 
   // The trees of keys that have not stored their own, before the keys are derived
   let fetchedTrees = new Map<string, XmssTrees>();
@@ -237,7 +259,12 @@ export async function toXmssSigners(
       const trees = fetchedTrees.get(toHex(getXmssPublicParameter(secretKey)));
       return {
         type: SignerType.Xmss,
-        signer: await XmssSigner.fromBlsSecretKey(secretKey, {vrfStates, treeStore: getTreeStore(signer), trees}),
+        signer: await XmssSigner.fromBlsSecretKey(secretKey, {
+          vrfStates,
+          treeStore: getTreeStore(signer),
+          vrfTreeStore: getVrfTreeStore(signer),
+          trees,
+        }),
       };
     })
   );
@@ -249,15 +276,18 @@ export async function toXmssSigners(
   // A key that built its trees took seconds of a thread to derive: the others loaded theirs
   logger.info("Derived leanXMSS keys", {...treesSources, seconds: (Date.now() - deriveStart) / 1000});
 
-  // Only a proposal needs a VRF tree, and each takes about a second of one core: they are built
-  // behind the client's start, one at a time on one thread, so that duties have the others
+  // Only a proposal needs a VRF tree, and one that is not stored takes about a second of one core
+  // to build: they are built behind the client's start, one at a time on one thread, so that
+  // duties have the others
   void (async () => {
     const vrfStart = Date.now();
+    const vrfSources = {stored: 0, built: 0};
     let failed = 0;
     for (const signer of xmssSigners) {
       if (signer.type !== SignerType.Xmss) continue;
       try {
         await signer.signer.getVrfRoot(1);
+        if (signer.signer.vrfTreeSource) vrfSources[signer.signer.vrfTreeSource]++;
       } catch (e) {
         failed++;
         logger.error(
@@ -267,7 +297,12 @@ export async function toXmssSigners(
         );
       }
     }
-    logger.info("Built VRF trees", {count: localCount - failed, failed, seconds: (Date.now() - vrfStart) / 1000});
+    logger.info("Built VRF trees", {
+      count: localCount - failed,
+      ...vrfSources,
+      failed,
+      seconds: (Date.now() - vrfStart) / 1000,
+    });
   })();
 
   return xmssSigners;

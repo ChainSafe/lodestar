@@ -88,3 +88,50 @@ test "a tree with fewer leaves than a subtree" {
     try std.testing.expect(vrf_tree.isValidProof(&tree.root(), 15, &proof));
     try std.testing.expectError(error.SlotNotPopulated, tree.proof(16));
 }
+
+test "a tree comes back from its subtree roots without hashing a leaf" {
+    const seed: vrf_tree.Seed = @splat(6);
+    var full = try VrfTree.init(std.testing.allocator, &seed, 18, null, 4);
+    defer full.deinit();
+    var record: [vrf_tree.state_record_size]u8 = @splat(0);
+    record[0..32].* = full.root();
+    @memcpy(record[36..], std.mem.asBytes((try full.proof(0))[1..]));
+
+    var built = try VrfTree.init(std.testing.allocator, &seed, 17, &record, 4);
+    defer built.deinit();
+    const roots = built.subtreeRoots();
+    try std.testing.expectEqual(2, roots.len);
+
+    var loaded = try VrfTree.initFromSubtreeRoots(std.testing.allocator, &seed, 17, &record, roots);
+    defer loaded.deinit();
+    try std.testing.expectEqualSlices(u8, &built.root(), &loaded.root());
+    for ([_]u64{ 0, 65_535, 70_000 }) |slot| {
+        try std.testing.expectEqualSlices(u8, std.mem.asBytes(&(try built.proof(slot))), std.mem.asBytes(&(try loaded.proof(slot))));
+    }
+
+    var without_record = try VrfTree.initFromSubtreeRoots(std.testing.allocator, &seed, 17, null, roots);
+    defer without_record.deinit();
+    var built_without_record = try VrfTree.init(std.testing.allocator, &seed, 17, null, 4);
+    defer built_without_record.deinit();
+    try std.testing.expectEqualSlices(u8, &built_without_record.root(), &without_record.root());
+
+    var small = try VrfTree.init(std.testing.allocator, &seed, 4, null, 1);
+    defer small.deinit();
+    try std.testing.expectEqual(1, small.subtreeRoots().len);
+
+    // Roots of another tree, or too few, do not make this one
+    var other = try VrfTree.init(std.testing.allocator, &@as(vrf_tree.Seed, @splat(7)), 17, null, 4);
+    defer other.deinit();
+    try std.testing.expectError(
+        error.NoMatchingState,
+        VrfTree.initFromSubtreeRoots(std.testing.allocator, &seed, 17, &record, other.subtreeRoots()),
+    );
+    try std.testing.expectError(
+        error.InvalidSubtreeRoots,
+        VrfTree.initFromSubtreeRoots(std.testing.allocator, &seed, 17, &record, roots[0..1]),
+    );
+    try std.testing.expectError(
+        error.InvalidSubtreeRoots,
+        VrfTree.initFromSubtreeRoots(std.testing.allocator, &seed, 17, null, &.{}),
+    );
+}

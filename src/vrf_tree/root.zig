@@ -80,20 +80,12 @@ pub const VrfTree = struct {
     /// Without `records` the other leaves are zero, which is another tree than
     /// the seed's full one and only a test network should accept.
     pub fn init(allocator: Allocator, seed: *const Seed, populated_depth: u8, records: ?[]const u8, threads: usize) !VrfTree {
-        if (populated_depth > depth) return error.InvalidDepth;
-        if (records) |bytes| {
-            if (populated_depth < subtree_depth or populated_depth == depth) return error.InvalidDepth;
-            if (bytes.len % state_record_size != 0) return error.InvalidStateRecords;
-        }
-        const populated = @as(u64, 1) << @intCast(populated_depth);
-
-        const top = try allocator.alloc([32]u8, 2 * subtree_count);
+        const top = try allocTop(allocator, populated_depth, records);
         errdefer allocator.free(top);
-        @memset(top[subtree_count..], zeroSubtreeRoot());
 
-        const populated_subtrees: u32 = @intCast((populated - 1) / subtree_leaves + 1);
-        var build: Build = .{ .seed = seed, .populated = populated, .roots = top[subtree_count..][0..populated_subtrees] };
-        const workers = try allocator.alloc(std.Thread, @min(@max(threads, 1), populated_subtrees) - 1);
+        const roots = top[subtree_count..][0..populatedSubtrees(populated_depth)];
+        var build: Build = .{ .seed = seed, .populated = @as(u64, 1) << @intCast(populated_depth), .roots = roots };
+        const workers = try allocator.alloc(std.Thread, @min(@max(threads, 1), roots.len) - 1);
         defer allocator.free(workers);
         var spawned: usize = 0;
         for (workers) |*worker| {
@@ -104,6 +96,51 @@ pub const VrfTree = struct {
         for (workers[0..spawned]) |worker| worker.join();
         if (build.failed.load(.acquire)) return error.OutOfMemory;
 
+        return finish(allocator, seed, populated_depth, records, top);
+    }
+
+    /// The tree of `seed` from `roots`, what `subtreeRoots` gave for a tree built
+    /// with the same `seed`, `populated_depth` and leaf rule. It hashes the layers
+    /// over them and no leaf, so a tree is back in milliseconds.
+    ///
+    /// `roots` are not checked against `seed`: the caller vouches that this seed's
+    /// tree gave them. Roots of another tree give one whose proofs do not open,
+    /// unless `records` are given and hold no record of that tree, which fails
+    /// with `error.NoMatchingState`.
+    pub fn initFromSubtreeRoots(
+        allocator: Allocator,
+        seed: *const Seed,
+        populated_depth: u8,
+        records: ?[]const u8,
+        roots: []const [32]u8,
+    ) !VrfTree {
+        const top = try allocTop(allocator, populated_depth, records);
+        errdefer allocator.free(top);
+        if (roots.len != populatedSubtrees(populated_depth)) return error.InvalidSubtreeRoots;
+        @memcpy(top[subtree_count..][0..roots.len], roots);
+        return finish(allocator, seed, populated_depth, records, top);
+    }
+
+    /// The roots of the subtrees with a populated leaf, in order: all that building
+    /// the tree hashed its leaves for. They are inner nodes and hold no secret.
+    pub fn subtreeRoots(self: *const VrfTree) []const [32]u8 {
+        return self.top[subtree_count..][0..populatedSubtrees(self.populated_depth)];
+    }
+
+    /// The top layers with every subtree root that of a subtree of zero leaves.
+    fn allocTop(allocator: Allocator, populated_depth: u8, records: ?[]const u8) ![][32]u8 {
+        if (populated_depth > depth) return error.InvalidDepth;
+        if (records) |bytes| {
+            if (populated_depth < subtree_depth or populated_depth == depth) return error.InvalidDepth;
+            if (bytes.len % state_record_size != 0) return error.InvalidStateRecords;
+        }
+        const top = try allocator.alloc([32]u8, 2 * subtree_count);
+        @memset(top[subtree_count..], zeroSubtreeRoot());
+        return top;
+    }
+
+    /// The tree over `top`, whose subtree roots are set. Owns `top` if it returns one.
+    fn finish(allocator: Allocator, seed: *const Seed, populated_depth: u8, records: ?[]const u8, top: [][32]u8) !VrfTree {
         hashLayers(top);
         if (records) |bytes| try graft(top, populated_depth, bytes);
 
@@ -172,6 +209,14 @@ pub const VrfTree = struct {
         return out;
     }
 };
+
+/// How many subtrees hold one of the first `2^populated_depth` leaves.
+/// `populated_depth` is at most `depth`.
+pub fn populatedSubtrees(populated_depth: u8) u32 {
+    std.debug.assert(populated_depth <= depth);
+    const populated = @as(u64, 1) << @intCast(populated_depth);
+    return @intCast((populated - 1) / subtree_leaves + 1);
+}
 
 /// Fills the inner nodes of a binary heap from its leaves, the second half of `nodes`.
 fn hashLayers(nodes: [][32]u8) void {

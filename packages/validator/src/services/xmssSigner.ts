@@ -140,6 +140,74 @@ async function loadXmssKey(
   return {key: await XmssSecretKey.fromSeed(seed), treesSource: "built"};
 }
 
+/**
+ * A stored VRF tree: its populated depth, the roots of its populated subtrees, then a MAC of both
+ * under a key derived from the VRF seed. The roots are not checked against the seed when a tree is
+ * loaded from them, so the MAC is what vouches that this seed's tree gave them.
+ */
+class SealedVrfSubtreeRoots {
+  private readonly macKey: Uint8Array;
+
+  constructor(
+    private readonly store: XmssTreeStore,
+    vrfSeed: Uint8Array,
+    private readonly populatedDepth: number
+  ) {
+    // Change the label with the leaf rule: roots of a tree with other leaves must not load
+    this.macKey = createHmac("sha256", vrfSeed).update("lodestar vrf subtree roots").digest();
+  }
+
+  read(): Uint8Array | null {
+    const stored = this.store.read();
+    if (!stored || stored.length <= 1 + TREE_TAG_SIZE) return null;
+    const content = stored.subarray(0, stored.length - TREE_TAG_SIZE);
+    if (content[0] !== this.populatedDepth) return null;
+    if (!timingSafeEqual(this.tag(content), stored.subarray(content.length))) return null;
+    return content.subarray(1);
+  }
+
+  write(subtreeRoots: Uint8Array): void {
+    const content = Buffer.concat([Uint8Array.of(this.populatedDepth), subtreeRoots]);
+    this.store.write(Buffer.concat([content, this.tag(content)]));
+  }
+
+  private tag(content: Uint8Array): Uint8Array {
+    return createHmac("sha256", this.macKey).update(content).digest();
+  }
+}
+
+/** Where a VRF tree is from: the subtree roots it stored, or none, so it hashed its leaves */
+export type VrfTreeSource = "stored" | "built";
+
+/**
+ * The tree of `vrfSeed` from its stored subtree roots, else built on `threads` threads and stored.
+ * A store that fails costs the build and no more: the tree is good without it.
+ */
+async function loadVrfTree(
+  vrfSeed: Uint8Array,
+  populatedDepth: number,
+  vrfStates: Uint8Array | undefined,
+  threads: number | undefined,
+  stored?: SealedVrfSubtreeRoots
+): Promise<{tree: VrfTree; source: VrfTreeSource}> {
+  try {
+    const subtreeRoots = stored?.read();
+    if (subtreeRoots) {
+      const tree = await VrfTree.fromSubtreeRoots(vrfSeed, populatedDepth, subtreeRoots, vrfStates);
+      return {tree, source: "stored"};
+    }
+  } catch {
+    // Built below, which fails in turn if the cause is not the store
+  }
+  const tree = await VrfTree.build(vrfSeed, populatedDepth, vrfStates, threads);
+  try {
+    stored?.write(tree.subtreeRoots());
+  } catch {
+    // The next start builds the tree again
+  }
+  return {tree, source: "built"};
+}
+
 /** A pq validator's secrets: its leanXMSS key and its VRF tree */
 export class XmssSigner {
   /** Bottom trees of the key that `treeStore` holds */
@@ -148,11 +216,13 @@ export class XmssSigner {
   private readonly preparedTrees = new Set<number>();
   private vrfTree: Promise<VrfTree> | null = null;
   private registeredVrfRoot: Uint8Array | null = null;
+  /** Set once the VRF tree is there */
+  vrfTreeSource: VrfTreeSource | null = null;
 
   private constructor(
     readonly publicKey: Uint8Array,
     private readonly key: XmssSecretKey,
-    private readonly buildVrfTree: (threads?: number) => Promise<VrfTree>,
+    private readonly buildVrfTree: (threads?: number) => Promise<{tree: VrfTree; source: VrfTreeSource}>,
     readonly treesSource: XmssTreesSource,
     private readonly treeStore?: SealedTrees
   ) {}
@@ -166,7 +236,7 @@ export class XmssSigner {
     return new XmssSigner(
       key.toPublicKey(),
       key,
-      (threads) => VrfTree.build(vrfSeed, vrfPopulatedDepth, undefined, threads),
+      (threads) => loadVrfTree(vrfSeed, vrfPopulatedDepth, undefined, threads),
       "built"
     );
   }
@@ -181,20 +251,23 @@ export class XmssSigner {
    * before it moved to full trees.
    *
    * The key's trees are those in `treeStore`, where the signer keeps them, else `trees`, else
-   * built.
+   * built. The VRF tree is back from `vrfTreeStore` without hashing a leaf, if it was built with
+   * that store before.
    */
   static async fromBlsSecretKey(
     secretKey: Uint8Array,
-    opts: {vrfStates?: Uint8Array; treeStore?: XmssTreeStore; trees?: XmssTrees} = {}
+    opts: {vrfStates?: Uint8Array; treeStore?: XmssTreeStore; vrfTreeStore?: XmssTreeStore; trees?: XmssTrees} = {}
   ): Promise<XmssSigner> {
     const seed = xmssSeed(secretKey);
     const vrfSeed = createHash("sha256").update("vrf-seed").update(secretKey).digest();
     const stored = opts.treeStore && new SealedTrees(opts.treeStore, seed);
     const {key, treesSource} = await loadXmssKey(seed, stored, opts.trees);
+    const vrfStored =
+      opts.vrfTreeStore && new SealedVrfSubtreeRoots(opts.vrfTreeStore, vrfSeed, KEYSTORE_VRF_POPULATED_DEPTH);
     return new XmssSigner(
       key.toPublicKey(),
       key,
-      (threads) => VrfTree.build(vrfSeed, KEYSTORE_VRF_POPULATED_DEPTH, opts.vrfStates, threads),
+      (threads) => loadVrfTree(vrfSeed, KEYSTORE_VRF_POPULATED_DEPTH, opts.vrfStates, threads, vrfStored),
       treesSource,
       stored
     );
@@ -206,15 +279,19 @@ export class XmssSigner {
   }
 
   /**
-   * Builds the VRF tree at the first call. Only a proposal needs it, and it takes about a second
-   * of one core, so a signer is made without it. Rejects if the tree cannot be built, or is not
-   * the one the state holds the root of.
+   * Builds the VRF tree at the first call, or loads it if the signer stored it in an earlier run.
+   * Only a proposal needs it, and building it takes about a second of one core, so a signer is
+   * made without it. Rejects if the tree cannot be built, or is not the one the state holds the
+   * root of.
    *
    * It is built on `threads` threads, every CPU if not given: a proposal waits for it. Ahead of
    * any proposal one thread does, and leaves the others to the validators' duties.
    */
   async getVrfRoot(threads?: number): Promise<Uint8Array> {
-    this.vrfTree ??= this.buildVrfTree(threads);
+    this.vrfTree ??= this.buildVrfTree(threads).then(({tree, source}) => {
+      this.vrfTreeSource = source;
+      return tree;
+    });
     const root = (await this.vrfTree).root();
     if (this.registeredVrfRoot && Buffer.compare(root, this.registeredVrfRoot) !== 0) {
       throw Error(

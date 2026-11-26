@@ -40,6 +40,37 @@ describe("VrfTree", () => {
     );
   });
 
+  it("comes back from its subtree roots as the tree that was built", async () => {
+    const seed = new Uint8Array(VRF_SEED_SIZE).fill(6);
+    const full = await VrfTree.build(seed, 18);
+    const records = new Uint8Array(VRF_STATE_RECORD_SIZE);
+    records.set(full.root(), 0);
+    records.set(full.proof(0).subarray(32), 36);
+
+    const built = await VrfTree.build(seed, 17, records);
+    const subtreeRoots = built.subtreeRoots();
+    expect(subtreeRoots.length).toBe(2 * 32);
+
+    const loaded = await VrfTree.fromSubtreeRoots(seed, 17, subtreeRoots, records);
+    expect(loaded.root()).toEqual(built.root());
+    expect(loaded.proof(70_000)).toEqual(built.proof(70_000));
+    expect(loaded.subtreeRoots()).toEqual(subtreeRoots);
+
+    const withoutRecords = await VrfTree.fromSubtreeRoots(seed, 17, (await VrfTree.build(seed, 17)).subtreeRoots());
+    expect(withoutRecords.root()).toEqual((await VrfTree.build(seed, 17)).root());
+
+    const other = await VrfTree.build(new Uint8Array(VRF_SEED_SIZE).fill(7), 17);
+    await expect(VrfTree.fromSubtreeRoots(seed, 17, other.subtreeRoots(), records)).rejects.toThrow("NoMatchingState");
+    await expect(VrfTree.fromSubtreeRoots(seed, 17, subtreeRoots.subarray(0, 32), records)).rejects.toThrow(
+      "InvalidSubtreeRoots"
+    );
+    await expect(VrfTree.fromSubtreeRoots(seed, 17, subtreeRoots.subarray(0, 33))).rejects.toThrow(
+      "InvalidSubtreeRoots"
+    );
+    await expect(VrfTree.fromSubtreeRoots(seed, 17, new Uint8Array(0))).rejects.toThrow("InvalidSubtreeRoots");
+    expect(() => new VrfTree().subtreeRoots()).toThrow("TreeNotLoaded");
+  });
+
   it("rejects malformed arguments", async () => {
     await expect(VrfTree.build(new Uint8Array(31), 17)).rejects.toThrow("InvalidSeedLength");
     await expect(VrfTree.build(new Uint8Array(VRF_SEED_SIZE), VRF_TREE_DEPTH + 1)).rejects.toThrow("InvalidDepth");

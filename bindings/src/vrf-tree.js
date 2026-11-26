@@ -15,3 +15,8 @@ const nativeBuild = VrfTree.build;
 VrfTree.build = async function (seed, populatedDepth, records = new Uint8Array(0), threads = 0) {
   return nativeBuild.call(this, seed, populatedDepth, records, threads);
 };
+
+const nativeFromSubtreeRoots = VrfTree.fromSubtreeRoots;
+VrfTree.fromSubtreeRoots = async function (seed, populatedDepth, subtreeRoots, records = new Uint8Array(0)) {
+  return nativeFromSubtreeRoots.call(this, seed, populatedDepth, subtreeRoots, records);
+};

@@ -34,6 +34,22 @@ export declare class VrfTree {
    * the seed's full one: for test networks only.
    */
   static build(seed: Uint8Array, populatedDepth: number, records?: Uint8Array, threads?: number): Promise<VrfTree>;
+  /**
+   * The tree that `build` gives for the same `seed`, `populatedDepth` and `records`, from the
+   * `subtreeRoots()` of one built before. Builds no subtree, so it takes milliseconds.
+   *
+   * The roots are not checked against the seed: the caller vouches that this seed's tree gave them.
+   * With `records`, roots of another tree reject with `NoMatchingState`. Without, they give a tree
+   * whose proofs do not open.
+   */
+  static fromSubtreeRoots(
+    seed: Uint8Array,
+    populatedDepth: number,
+    subtreeRoots: Uint8Array,
+    records?: Uint8Array
+  ): Promise<VrfTree>;
+  /** The roots of the subtrees with a populated leaf, 32 bytes each: inner nodes, which hold no secret. */
+  subtreeRoots(): Uint8Array;
   root(): Uint8Array;
   /**
    * The `VRF_PROOF_SIZE`-byte proof for `slot`. Throws `SlotNotPopulated` past the populated slots.
