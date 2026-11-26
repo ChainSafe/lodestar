@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import {getClient} from "@lodestar/api";
 import {
+  ExecutionEngineError,
+  ExecutionEngineErrorCode,
   ExecutionPayloadStatus,
   RegistryMetricCreator,
   collectNodeJSMetrics,
@@ -106,28 +108,36 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     {signal: abortController.signal, logger}
   );
   const payloadSource = new EnginePayloadSource(toPrintableUrl(executionUrl), {
-    notifyForkchoiceUpdate: async (fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes) => {
+    notifyForkchoiceUpdate: async (
+      fork,
+      headBlockHash,
+      safeBlockHash,
+      finalizedBlockHash,
+      payloadAttributes,
+      _custodyColumns,
+      signal
+    ) => {
       try {
         const {payloadStatus, payloadId} = await engine.notifyForkchoiceUpdate(
           fork,
           headBlockHash,
           safeBlockHash,
           finalizedBlockHash,
-          payloadAttributes
+          payloadAttributes,
+          signal
         );
         if (payloadStatus.status === ExecutionPayloadStatus.INVALID) {
           throw Error(`Invalid prepare payload, validationError=${payloadStatus.validationError ?? ""}`);
         }
         return payloadId;
       } catch (e) {
-        // Only retry while the execution client is syncing, it has not imported the parent payload yet.
-        // The engine interface does not expose the fcU status, this matches the error thrown for the SYNCING status
-        // in ExecutionEngineHttp.notifyForkchoiceUpdate until a typed error is added to the beacon node
-        if (e instanceof Error && e.message === "Execution Layer Syncing") return null;
+        // Only retry while the execution client is syncing, it has not imported the parent payload yet
+        if (e instanceof ExecutionEngineError && e.type.code === ExecutionEngineErrorCode.SYNCING) return null;
         throw e;
       }
     },
-    getPayload: async (fork, payloadId) => (await engine.getPayload(fork, payloadId)) as EnginePayloadResult,
+    getPayload: async (fork, payloadId, signal) =>
+      (await engine.getPayload(fork, payloadId, signal)) as EnginePayloadResult,
   });
 
   const builder = await Builder.init({

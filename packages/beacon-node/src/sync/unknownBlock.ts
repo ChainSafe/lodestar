@@ -10,7 +10,14 @@ import {isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
-import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
+import {
+  BlockError,
+  BlockErrorCode,
+  DataColumnSidecarErrorCode,
+  DataColumnSidecarValidationError,
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
+} from "../chain/errors/index.js";
 import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {validateGloasBlockDataColumnSidecars} from "../chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadEnvelope} from "../chain/validation/executionPayloadEnvelope.js";
@@ -47,13 +54,22 @@ import {
   isPendingPayloadEnvelope,
   isPendingPayloadInput,
 } from "./types.js";
-import {DownloadByRootError, downloadByRoot} from "./utils/downloadByRoot.js";
+import {DownloadByRootError, DownloadByRootErrorCode, downloadByRoot} from "./utils/downloadByRoot.js";
 import {getAllDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
 import {getRateLimitedUntilMs} from "./utils/rateLimit.js";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
 const MAX_PENDING_BLOCKS = 100;
+/**
+ * A failed download is retried after this delay, doubling per failure up to one slot.
+ */
+const DOWNLOAD_RETRY_BASE_MS = 1_000;
+/**
+ * Requests per peer per window, half the BeaconBlocksByRoot quota peers enforce, they disconnect a peer that exceeds it.
+ */
+const MAX_REQUESTS_PER_PEER = 64;
+const REQUESTS_PER_PEER_WINDOW_MS = 10_000;
 /**
  * A pending payload without slot can only stay at most 2 epochs.
  */
@@ -127,6 +143,8 @@ export class BlockInputSync {
   private subscribedToNetworkEvents = false;
   private peerBalancer: UnknownBlockPeerBalancer;
   private rateLimitBackoffTimeout: NodeJS.Timeout | undefined;
+  private downloadRetryTimeout: NodeJS.Timeout | undefined;
+  private downloadRetryAtMs: number | undefined;
   /**
    * Search unknown payload starting at PAYLOAD_DUE_BPS.
    */
@@ -178,6 +196,7 @@ export class BlockInputSync {
       this.network.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
       this.network.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
       this.chain.clock.on(ClockEvent.slot, this.startPayloadPollAtSlot);
+      this.chain.clock.on(ClockEvent.slot, this.pruneUnresolvedBlocks);
 
       // Seed the balancer with peers that connected before we subscribed
       for (const peerId of this.network.getConnectedPeers()) {
@@ -198,7 +217,9 @@ export class BlockInputSync {
   unsubscribeFromNetwork(): void {
     this.logger.verbose("BlockInputSync disabled.");
     this.clearRateLimitBackoffTimer();
+    this.clearDownloadRetryTimer();
     this.chain.clock.off(ClockEvent.slot, this.startPayloadPollAtSlot);
+    this.chain.clock.off(ClockEvent.slot, this.pruneUnresolvedBlocks);
     this.payloadPollAbortController?.abort();
     this.payloadPollAbortController = undefined;
     this.deferredPayloadRoots.clear();
@@ -346,6 +367,9 @@ export class BlockInputSync {
         this.addByRootHex(missingDependency.rootHex, data.peer);
       }
       this.addByBlockInput(data.blockInput, data.peer);
+      if (data.source === BlockInputSource.gossip) {
+        this.limitRetainedBlocks(data.blockInput, data.peer);
+      }
       this.triggerUnknownBlockSearch();
       this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PARENT});
       this.metrics?.blockInputSync.source.inc({source: data.source});
@@ -485,13 +509,7 @@ export class BlockInputSync {
       pendingBlock.peerIdStrings.add(peerIdStr);
     }
 
-    // TODO: check this prune methodology
-    // Limit pending blocks to prevent DOS attacks that cause OOM
-    const prunedItemCount = pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);
-    if (prunedItemCount > 0) {
-      this.metrics?.blockInputSync.removedBlocks.inc({reason: DroppedItemReason.capacity}, prunedItemCount);
-      this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);
-    }
+    this.prunePendingBlocks();
     return added;
   };
 
@@ -527,14 +545,67 @@ export class BlockInputSync {
       pendingBlock.peerIdStrings.add(peerIdStr);
     }
 
-    // TODO: check this prune methodology
-    // Limit pending blocks to prevent DOS attacks that cause OOM
-    const prunedItemCount = pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);
-    if (prunedItemCount > 0) {
-      this.metrics?.blockInputSync.removedBlocks.inc({reason: DroppedItemReason.capacity}, prunedItemCount);
-      this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);
-    }
+    this.prunePendingBlocks();
   };
+
+  /**
+   * Limit pending blocks to prevent DOS attacks that cause OOM. Any gossip message with an unknown root adds a root-only
+   * entry before validation, so those nothing waits on are evicted before a block or a root a pending block waits on.
+   * A downloaded block is only checked against its root and proposer signature, not that the proposer is due at its
+   * slot, so this only applies while blocks and the roots they wait on fill at most half the cap, otherwise they could
+   * pin it and evict every new root on insertion.
+   */
+  private prunePendingBlocks(): void {
+    if (this.pendingBlocks.size <= this.maxPendingBlocks) {
+      return;
+    }
+
+    const awaitedRoots = new Set<RootHex>();
+    for (const pendingBlock of this.pendingBlocks.values()) {
+      if (isPendingBlockInput(pendingBlock)) {
+        awaitedRoots.add(pendingBlock.blockInput.parentRootHex);
+      }
+    }
+    const isKept = (rootHex: RootHex, pendingBlock: BlockInputSyncCacheItem): boolean =>
+      isPendingBlockInput(pendingBlock) || awaitedRoots.has(rootHex);
+    let keptCount = 0;
+    for (const [rootHex, pendingBlock] of this.pendingBlocks) {
+      if (isKept(rootHex, pendingBlock)) {
+        keptCount++;
+      }
+    }
+
+    let prunedItemCount = 0;
+    if (keptCount <= this.maxPendingBlocks / 2) {
+      for (const [rootHex, pendingBlock] of this.pendingBlocks) {
+        if (this.pendingBlocks.size <= this.maxPendingBlocks) {
+          break;
+        }
+        if (!isKept(rootHex, pendingBlock)) {
+          this.pendingBlocks.delete(rootHex);
+          prunedItemCount++;
+        }
+      }
+    }
+    for (const [rootHex, pendingBlock] of this.pendingBlocks) {
+      if (this.pendingBlocks.size <= this.maxPendingBlocks) {
+        break;
+      }
+      this.pendingBlocks.delete(rootHex);
+      prunedItemCount++;
+      // The block input cache is only trimmed on import, a block whose parent never resolves would stay there
+      if (
+        isPendingBlockInput(pendingBlock) &&
+        pendingBlock.status !== PendingBlockInputStatus.processing &&
+        this.getMissingBlockDependency(pendingBlock.blockInput).kind === "parentBlock"
+      ) {
+        this.chain.seenBlockInputCache.remove(rootHex);
+      }
+    }
+
+    this.metrics?.blockInputSync.removedBlocks.inc({reason: DroppedItemReason.capacity}, prunedItemCount);
+    this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingBlocks`);
+  }
 
   private addByPayloadRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr, slot?: Slot): boolean => {
     if (this.knownBadBlocks.has(rootHex)) {
@@ -665,6 +736,79 @@ export class BlockInputSync {
     this.peerBalancer.onPeerDisconnected(peerId);
     this.scheduleRateLimitBackoffRetry();
   };
+
+  /**
+   * A peer can make us retain a signed block per validator key and slot until its parent resolves. Bound the bytes
+   * retained per peer, its oldest blocks still waiting on their parent are removed first.
+   */
+  private limitRetainedBlocks(blockInput: IBlockInput, peerIdStr: PeerIdStr): void {
+    const pendingBlock = this.pendingBlocks.get(blockInput.blockRootHex);
+    if (pendingBlock === undefined || !isPendingBlockInput(pendingBlock) || pendingBlock.retainedBy !== undefined) {
+      return;
+    }
+    pendingBlock.retainedBy = peerIdStr;
+    pendingBlock.retainedBytes = this.config
+      .getForkTypes(blockInput.slot)
+      .SignedBeaconBlock.value_serializedSize(blockInput.getBlock());
+
+    const retainedBlocks: PendingBlockInput[] = [];
+    let retainedBytes = 0;
+    for (const item of this.pendingBlocks.values()) {
+      if (isPendingBlockInput(item) && item.retainedBy === peerIdStr && this.isWaitingOnParent(item)) {
+        retainedBlocks.push(item);
+        retainedBytes += item.retainedBytes ?? 0;
+      }
+    }
+    // One block of the max gossip size fits, honest blocks are far smaller
+    for (const item of retainedBlocks) {
+      if (retainedBytes <= this.config.MAX_PAYLOAD_SIZE) {
+        break;
+      }
+      retainedBytes -= item.retainedBytes ?? 0;
+      this.removeUnresolvedBlock(item, DroppedItemReason.peerBudget);
+    }
+  }
+
+  /**
+   * Blocks are otherwise only pruned once finalization passes them, which never happens for a parent that does not resolve
+   */
+  private pruneUnresolvedBlocks = (): void => {
+    const nowSec = Date.now() / 1000;
+    const slotDurationMs = this.config.getSlotDurationMs(this.config.getForkName(this.chain.clock.currentSlot));
+    const maxSecInCache = (PRUNE_UNRESOLVED_SLOT_EPOCHS * SLOTS_PER_EPOCH * slotDurationMs) / 1000;
+    for (const pendingBlock of this.pendingBlocks.values()) {
+      if (
+        isPendingBlockInput(pendingBlock) &&
+        nowSec - pendingBlock.timeAddedSec > maxSecInCache &&
+        this.isWaitingOnParent(pendingBlock)
+      ) {
+        this.removeUnresolvedBlock(pendingBlock, DroppedItemReason.agedOut);
+      }
+    }
+  };
+
+  private isWaitingOnParent(pendingBlock: PendingBlockInput): boolean {
+    if (pendingBlock.status === PendingBlockInputStatus.processing) {
+      return false;
+    }
+    const {kind} = this.getMissingBlockDependency(pendingBlock.blockInput);
+    return kind === "parentBlock" || kind === "parentPayload";
+  }
+
+  /**
+   * Removes only the block itself, its descendants request it again by root and its claimed ancestors stay cached
+   */
+  private removeUnresolvedBlock(pendingBlock: PendingBlockInput, reason: DroppedItemReason): void {
+    const rootHex = pendingBlock.blockInput.blockRootHex;
+    this.pendingBlocks.delete(rootHex);
+    this.chain.seenBlockInputCache.remove(rootHex);
+    this.metrics?.blockInputSync.removedBlocks.inc({reason});
+    this.logger.debug("Removed unresolved BlockInputSync block", {
+      slot: pendingBlock.blockInput.slot,
+      root: rootHex,
+      reason,
+    });
+  }
 
   /**
    * Post-gloas, a locally complete block can still be blocked on its parent's execution payload lineage.
@@ -814,8 +958,19 @@ export class BlockInputSync {
       if (!hasConnectedPeers) {
         this.logger.debug("No connected peers, skipping unknown block download.");
       } else {
+        // Blocks and roots a pending block waits on are downloaded first, any gossip message with an unknown root adds
+        // another root, and they all share the per-peer request budget
+        const awaitedRoots = new Set<RootHex>();
+        for (const pendingBlock of this.pendingBlocks.values()) {
+          if (isPendingBlockInput(pendingBlock)) {
+            awaitedRoots.add(pendingBlock.blockInput.parentRootHex);
+          }
+        }
+        const isAwaited = (block: BlockInputSyncCacheItem): boolean =>
+          isPendingBlockInput(block) || awaitedRoots.has(block.rootHex);
+
         // Most of the time there is exactly 1 unknown block
-        for (const block of unknowns) {
+        for (const block of [...unknowns.filter(isAwaited), ...unknowns.filter((block) => !isAwaited(block))]) {
           this.downloadBlock(block).catch((e) => {
             this.logger.debug("Unexpected error - downloadBlock", {root: getBlockInputSyncCacheItemRootHex(block)}, e);
           });
@@ -896,6 +1051,31 @@ export class BlockInputSync {
       clearTimeout(this.rateLimitBackoffTimeout);
       this.rateLimitBackoffTimeout = undefined;
     }
+  }
+
+  private scheduleDownloadRetry(retryAtMs: number): void {
+    if (this.downloadRetryAtMs !== undefined && this.downloadRetryAtMs <= retryAtMs) {
+      return;
+    }
+
+    this.clearDownloadRetryTimer();
+    this.downloadRetryAtMs = retryAtMs;
+    this.downloadRetryTimeout = setTimeout(
+      () => {
+        this.downloadRetryTimeout = undefined;
+        this.downloadRetryAtMs = undefined;
+        this.triggerUnknownBlockSearch();
+      },
+      Math.max(0, retryAtMs - Date.now())
+    );
+  }
+
+  private clearDownloadRetryTimer(): void {
+    if (this.downloadRetryTimeout !== undefined) {
+      clearTimeout(this.downloadRetryTimeout);
+      this.downloadRetryTimeout = undefined;
+    }
+    this.downloadRetryAtMs = undefined;
   }
 
   /**
@@ -1019,6 +1199,10 @@ export class BlockInputSync {
     if (block.status !== PendingBlockInputStatus.pending) {
       return;
     }
+    if (block.retryAtMs !== undefined && block.retryAtMs > Date.now()) {
+      this.scheduleDownloadRetry(block.retryAtMs);
+      return;
+    }
 
     const rootHex = getBlockInputSyncCacheItemRootHex(block);
     const blockSlot = getBlockInputSyncCacheItemSlot(block);
@@ -1099,6 +1283,7 @@ export class BlockInputSync {
         const pendingBlock = this.pendingBlocks.get(rootHex);
         if (pendingBlock) {
           pendingBlock.status = PendingBlockInputStatus.pending;
+          pendingBlock.retryAtMs = res.err.retryAt;
         }
         this.logger.debug("Deferring unknown block download due to peer rate limit", logCtx, res.err);
         if (!this.scheduleRateLimitBackoffRetry() || res.err.retryAt <= Date.now()) {
@@ -1109,11 +1294,31 @@ export class BlockInputSync {
         return;
       }
 
+      if (
+        res.err instanceof DownloadByRootError &&
+        res.err.type.code === DownloadByRootErrorCode.BELOW_FINALIZED_SLOT
+      ) {
+        this.logger.debug("Downloaded block is before finalized slot", logCtx, res.err);
+        this.removeAllDescendants(block, DroppedItemReason.belowFinalized);
+        return;
+      }
+
       this.metrics?.blockInputSync.downloadedBlocksError.inc();
       this.logger.debug("Failed to download unknown block root, retained for retry", logCtx, res.err);
       const pendingBlock = this.pendingBlocks.get(rootHex);
-      if (pendingBlock && pendingBlock.status === PendingBlockInputStatus.fetching) {
+      // A partial download replaces the entry with a pending one that does not carry the failure count
+      if (
+        pendingBlock &&
+        (pendingBlock.status === PendingBlockInputStatus.fetching ||
+          pendingBlock.status === PendingBlockInputStatus.pending)
+      ) {
         pendingBlock.status = PendingBlockInputStatus.pending;
+        // Not retried on every search, any gossip message with an unknown root triggers one
+        pendingBlock.failedDownloads = (block.failedDownloads ?? 0) + 1;
+        const slotDurationMs = this.config.getSlotDurationMs(this.config.getForkName(this.chain.clock.currentSlot));
+        pendingBlock.retryAtMs =
+          Date.now() + Math.min(DOWNLOAD_RETRY_BASE_MS * 2 ** (pendingBlock.failedDownloads - 1), slotDurationMs);
+        this.scheduleDownloadRetry(pendingBlock.retryAtMs);
       }
     }
   }
@@ -1305,7 +1510,7 @@ export class BlockInputSync {
         const pendingPayloadByRoot: PendingPayloadRootHex = {
           status: PendingPayloadInputStatus.pending,
           rootHex,
-          slot: pendingPayload.envelope.message.payload.slotNumber,
+          slot: payloadInput.slot,
           timeAddedSec: pendingPayload.timeAddedSec,
           peerIdStrings: new Set(pendingPayload.peerIdStrings),
         };
@@ -1671,6 +1876,27 @@ export class BlockInputSync {
         } else {
           excludedPeers.add(peerId);
         }
+
+        if (e instanceof ExecutionPayloadEnvelopeError) {
+          switch (e.type.code) {
+            // Caused by local state, the downloaded envelope may still be valid
+            case ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN:
+            case ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN:
+            case ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING:
+            case ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE:
+              break;
+            // Every copy fails once the block is finalized, only a wrong slot makes the served copy invalid
+            case ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK:
+              if (envelope?.message.payload.slotNumber !== payloadInput?.slot) {
+                envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
+              }
+              break;
+            // The served copy is invalid, take the envelope from payloadInput or another peer on the next attempt
+            default:
+              envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
+              break;
+          }
+        }
       } finally {
         this.peerBalancer.onRequestCompleted(peerId);
       }
@@ -1773,7 +1999,20 @@ export class BlockInputSync {
 
     let i = 0;
     let deferredByRateLimit = false;
+    let requestedWhenReconstructable = false;
     while (i++ < this.getMaxDownloadAttempts()) {
+      const reconstructable =
+        isPendingBlockInput(cacheItem) &&
+        isBlockInputColumns(cacheItem.blockInput) &&
+        cacheItem.blockInput.hasBlockAndAllData();
+      // Reconstruction recovers whole rows however many columns are missing, so only one more request is worth it,
+      // further peers could each hold the import until their response times out
+      if (reconstructable) {
+        if (requestedWhenReconstructable) {
+          break;
+        }
+        requestedWhenReconstructable = true;
+      }
       const pendingColumns =
         isPendingBlockInput(cacheItem) && isBlockInputColumns(cacheItem.blockInput)
           ? new Set(cacheItem.blockInput.getMissingSampledColumnMeta().missing)
@@ -1788,6 +2027,10 @@ export class BlockInputSync {
         now
       );
       if (peerMeta === null) {
+        if (reconstructable) {
+          break;
+        }
+
         const retryAt = this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers, now);
         if (retryAt !== null) {
           throw new UnknownBlockRateLimitedError(
@@ -1832,8 +2075,16 @@ export class BlockInputSync {
           for (const warning of warnings) {
             this.logger.debug("BlockInputSync.fetchBlockInput: downloaded with warning", logCtx, warning);
             this.metrics?.blockInputSync.downloadByRoot.warn.inc({code: warning.type.code, client: peerClient});
+            // A partial response is legal, columns that were not requested are not
+            if (warning.type.code === DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED) {
+              this.network.reportPeer(peerId, PeerAction.LowToleranceError, warning.type.code);
+              excludedPeers.add(peerId);
+            }
+            // Not picked again for this block, it would be preferred as a previous source of it
+            if (warning.type.code === DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED) {
+              excludedPeers.add(peerId);
+            }
           }
-          // TODO: penalize peer?
         }
       } catch (e) {
         this.logger.debug(
@@ -1842,10 +2093,36 @@ export class BlockInputSync {
           e as Error
         );
         const downloadByRootMetrics = this.metrics?.blockInputSync.downloadByRoot;
-        // TODO: penalize peer?
         if (e instanceof DownloadByRootError) {
           const errorCode = e.type.code;
           downloadByRootMetrics?.error.inc({code: errorCode, client: peerClient});
+          if (errorCode === DownloadByRootErrorCode.BELOW_FINALIZED_SLOT) {
+            throw e;
+          }
+          // Low as in range sync, not Fatal as peers may serve unverified copies of a root with a bad signature
+          if (
+            errorCode === DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT ||
+            errorCode === DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID ||
+            errorCode === DownloadByRootErrorCode.UNKNOWN_PROPOSER
+          ) {
+            this.network.reportPeer(peerId, PeerAction.LowToleranceError, errorCode);
+          }
+          excludedPeers.add(peerId);
+        } else if (e instanceof DataColumnSidecarValidationError) {
+          const errorCode = e.type.code;
+          downloadByRootMetrics?.error.inc({code: errorCode, client: peerClient});
+          // Not PROPOSAL_SIGNATURE_INVALID or INCORRECT_HEADER_ROOT, which compares signatures too: the spec does not
+          // require verifying the header signature of req/resp columns, so honest peers may serve a bad one
+          switch (errorCode) {
+            case DataColumnSidecarErrorCode.INCORRECT_BLOCK:
+            case DataColumnSidecarErrorCode.INVALID_INDEX:
+            case DataColumnSidecarErrorCode.INCORRECT_CELL_COUNT:
+            case DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT:
+            case DataColumnSidecarErrorCode.INCORRECT_KZG_PROOF_COUNT:
+            case DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID:
+            case DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
+              this.network.reportPeer(peerId, PeerAction.LowToleranceError, errorCode);
+          }
           excludedPeers.add(peerId);
         } else if (e instanceof RequestError) {
           // should look into req_resp metrics in this case
@@ -1897,6 +2174,30 @@ export class BlockInputSync {
     } // end while loop over peers
 
     const message = `Error fetching BlockInput with slot=${slot} root=${rootHex} after ${i - 1} attempts.`;
+
+    if (
+      isPendingBlockInput(cacheItem) &&
+      isBlockInputColumns(cacheItem.blockInput) &&
+      cacheItem.blockInput.hasBlockAndAllData()
+    ) {
+      // Peers cannot serve the remaining columns now, half of them is enough to reconstruct the rest
+      this.logger.verbose("BlockInputSync.fetchBlockInput: reconstructing columns peers could not serve", {
+        slot,
+        rootHex,
+        missing: cacheItem.blockInput.getMissingSampledColumnMeta().missing.length,
+      });
+      this.chain.columnReconstructionTracker.triggerColumnReconstruction(cacheItem.blockInput);
+      cacheItem = {...cacheItem, status: PendingBlockInputStatus.downloaded, timeSyncedSec: Date.now() / 1000};
+      if (this.pendingBlocks.has(rootHex)) {
+        this.pendingBlocks.set(rootHex, cacheItem);
+      }
+      const result = this.chain.forkChoice.hasBlockHex(cacheItem.blockInput.parentRootHex)
+        ? FetchResult.SuccessResolved
+        : FetchResult.SuccessMissingParent;
+      this.metrics?.blockInputSync.fetchTime.observe({result}, Date.now() / 1000 - fetchStartSec);
+      this.metrics?.blockInputSync.fetchPeers.set({result}, i - 1);
+      return cacheItem;
+    }
 
     const retryAt = deferredByRateLimit ? this.peerBalancer.getNextRateLimitRetryAt() : null;
     if (retryAt !== null) {
@@ -2051,11 +2352,13 @@ export class UnknownBlockPeerBalancer {
   readonly peersMeta: Map<PeerIdStr, PeerSyncMeta>;
   readonly activeRequests: Map<PeerIdStr, number>;
   readonly rateLimitedUntilByPeer: Map<PeerIdStr, number>;
+  readonly requestTimesByPeer: Map<PeerIdStr, number[]>;
 
   constructor() {
     this.peersMeta = new Map();
     this.activeRequests = new Map();
     this.rateLimitedUntilByPeer = new Map();
+    this.requestTimesByPeer = new Map();
   }
 
   /** Trigger on each peer re-status */
@@ -2071,6 +2374,7 @@ export class UnknownBlockPeerBalancer {
     this.peersMeta.delete(peerId);
     this.activeRequests.delete(peerId);
     this.rateLimitedUntilByPeer.delete(peerId);
+    this.requestTimesByPeer.delete(peerId);
   }
 
   /** Reset all tracked peer state, e.g. when BlockInputSync unsubscribes from the network. */
@@ -2078,6 +2382,7 @@ export class UnknownBlockPeerBalancer {
     this.peersMeta.clear();
     this.activeRequests.clear();
     this.rateLimitedUntilByPeer.clear();
+    this.requestTimesByPeer.clear();
   }
 
   onRateLimited(peerId: PeerIdStr, rateLimitedUntilMs: number): void {
@@ -2144,7 +2449,7 @@ export class UnknownBlockPeerBalancer {
     );
 
     const bestPeerId = sortedEligiblePeers[0];
-    this.onRequest(bestPeerId);
+    this.onRequest(bestPeerId, now);
     return this.peersMeta.get(bestPeerId) ?? null;
   }
 
@@ -2152,8 +2457,18 @@ export class UnknownBlockPeerBalancer {
    * Consumers don't need to call this method directly, it is called internally by bestPeer*() methods
    * make this public for testing
    */
-  onRequest(peerId: PeerIdStr): void {
+  onRequest(peerId: PeerIdStr, now = Date.now()): void {
     this.activeRequests.set(peerId, (this.activeRequests.get(peerId) ?? 0) + 1);
+
+    const requestTimes = (this.requestTimesByPeer.get(peerId) ?? []).filter(
+      (time) => now - time < REQUESTS_PER_PEER_WINDOW_MS
+    );
+    requestTimes.push(now);
+    this.requestTimesByPeer.set(peerId, requestTimes);
+    if (requestTimes.length >= MAX_REQUESTS_PER_PEER) {
+      const budgetUntilMs = requestTimes[0] + REQUESTS_PER_PEER_WINDOW_MS;
+      this.onRateLimited(peerId, Math.max(this.rateLimitedUntilByPeer.get(peerId) ?? 0, budgetUntilMs));
+    }
   }
 
   /**
