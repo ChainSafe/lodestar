@@ -40,7 +40,8 @@ export type AsyncIterableEventBus<Args, Item> = {
 /**
  * Credit window bounding how far the handler may run ahead of the consumer. The consumer grants this
  * much credit up front and refunds one credit per item it pulls, so at most `window` items (plus one
- * in-flight read) are ever buffered across the bridge per request, regardless of read speed.
+ * in-flight read) are ever buffered across the bridge per request, regardless of read speed. Must be >= 1,
+ * otherwise the handler parks on credit forever.
  */
 export const RESP_BRIDGE_WINDOW = 2;
 
@@ -61,13 +62,8 @@ export class AsyncIterableBridgeCaller<Args, Item> {
     private readonly events: Pick<
       AsyncIterableEventBus<Args, Item>,
       "onResponse" | "emitRequest" | "emitRequestCancel" | "emitResponsePull"
-    >,
-    private readonly window = RESP_BRIDGE_WINDOW
+    >
   ) {
-    // The handler only ever gets credit from the consumer, so a window of 0 would park it forever
-    if (window < 1) {
-      throw new Error(`AsyncIterableBridgeCaller window must be >= 1, got ${window}`);
-    }
     events.onResponse(this.onResponse.bind(this));
   }
 
@@ -94,7 +90,7 @@ export class AsyncIterableBridgeCaller<Args, Item> {
           id,
         });
         // Grant the initial window; next() refunds one credit per consumed item
-        self.events.emitResponsePull({id, count: self.window});
+        self.events.emitResponsePull({id, count: RESP_BRIDGE_WINDOW});
 
         return {
           async next() {

@@ -1,53 +1,9 @@
-import type {Logger, Stream} from "@libp2p/interface";
+import type {Stream} from "@libp2p/interface";
 import {StreamMessageEvent} from "@libp2p/interface";
-import {AbstractStream, SendResult, streamPair} from "@libp2p/utils";
+import {streamPair} from "@libp2p/utils";
 import {Uint8ArrayList} from "uint8arraylist";
 
 type SourceChunk = Uint8Array | Uint8ArrayList;
-
-const noopLogger: Logger = Object.assign(() => {}, {
-  enabled: false,
-  error: () => {},
-  trace: () => {},
-  newScope: () => noopLogger,
-});
-
-/**
- * Stream over a transport whose peer reads only when the test says so. Its send window starts closed, so
- * writes accumulate in the stream write buffer; drain(bytes) reopens the window for that many bytes to
- * simulate the peer reading. The stream's own continueSendingOnDrain defers the flush to a microtask, so
- * the window is a byte budget (not a transient flag) that survives until that flush runs.
- */
-export class SlowReaderStream extends AbstractStream {
-  writtenBytes = 0;
-  private windowBytes = 0;
-
-  constructor() {
-    super({id: "slow-reader", log: noopLogger, direction: "inbound"});
-  }
-
-  /** Simulate the peer reading: reopen the transport window for up to `bytes` more bytes */
-  drain(bytes = Number.MAX_SAFE_INTEGER): void {
-    this.windowBytes = bytes;
-    this.onMuxerDrain();
-  }
-
-  sendData(data: Uint8ArrayList): SendResult {
-    if (this.windowBytes <= 0) {
-      return {sentBytes: 0, canSendMore: false};
-    }
-    const sentBytes = Math.min(data.byteLength, this.windowBytes);
-    this.windowBytes -= sentBytes;
-    this.writtenBytes += sentBytes;
-    return {sentBytes, canSendMore: this.windowBytes > 0};
-  }
-
-  sendReset(): void {}
-  async sendCloseWrite(): Promise<void> {}
-  async sendCloseRead(): Promise<void> {}
-  sendPause(): void {}
-  sendResume(): void {}
-}
 
 /**
  * Minimal stream test double for reqresp tests backed by upstream streamPair.

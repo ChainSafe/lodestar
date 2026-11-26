@@ -25,7 +25,7 @@ function createEventBus(): AsyncIterableEventBus<Args, number> {
 }
 
 describe("util / asyncIterableToEvents", () => {
-  function setup(window?: number) {
+  function setup() {
     const events = createEventBus();
     const produced: number[] = [];
     let finallyRuns = 0;
@@ -42,7 +42,7 @@ describe("util / asyncIterableToEvents", () => {
         finallyRuns++;
       }
     });
-    const caller = new AsyncIterableBridgeCaller(events, window);
+    const caller = new AsyncIterableBridgeCaller(events);
 
     return {events, caller, handler, produced, getFinallyRuns: () => finallyRuns};
   }
@@ -99,9 +99,6 @@ describe("util / asyncIterableToEvents", () => {
     expect(handler.iteratingCount).toBe(0);
   });
 
-  // Each item stands for one large block chunk; the response is 64 of them (beacon_blocks_by_root
-  // flood). The credit window must stop the handler from draining the whole response when the
-  // consumer reads slowly, so only a bounded number of items ever buffer across the bridge.
   it("slow consumer: credit window bounds how far the handler runs ahead", async () => {
     const {caller, handler, produced} = setup();
 
@@ -115,23 +112,6 @@ describe("util / asyncIterableToEvents", () => {
     expect(produced.length).toBe(RESP_BRIDGE_WINDOW + 1);
     expect(produced.length).toBeLessThan(64);
     expect(handler.iteratingCount).toBe(1);
-
-    await it.return?.();
-    await sleep(20);
-    expect(handler.iteratingCount).toBe(0);
-  });
-
-  it("slow consumer without credit (HEAD) drains the whole response", async () => {
-    // A window larger than the response grants effectively unbounded credit up front, reproducing
-    // the pre-fix behavior where the handler drains all 64 items regardless of consumer speed
-    const {caller, handler, produced} = setup(1000);
-
-    const it = caller.getAsyncIterable({count: 64})[Symbol.asyncIterator]();
-    await it.next();
-
-    await sleep(20);
-
-    expect(produced.length).toBe(64);
 
     await it.return?.();
     await sleep(20);
