@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {BUILDER_INDEX_SELF_BUILD} from "@lodestar/params";
 import {IClock} from "@lodestar/state-transition";
 import {BuilderIndex} from "@lodestar/types";
-import {Logger, prettyGweiToEth} from "@lodestar/utils";
+import {Logger, prettyGweiToEth, toRootHex} from "@lodestar/utils";
 import {Metrics, RevealResult} from "../metrics.js";
 import {BidLedger} from "./bidLedger.js";
 import {BidSelector} from "./bidSelector.js";
@@ -44,14 +44,15 @@ export class Revealer {
     const {blockRoot, slot} = observed;
     const selection = bidSelector.match(observed);
     if (selection.status !== "selected") {
-      const bids = ledger.getBidsForSlot(slot);
-      if (bids.length > 0) {
-        const {builderIndex, value} = observed.signedBid.message;
+      const {builderIndex, value, parentBlockHash, parentBlockRoot} = observed.signedBid.message;
+      // Our bid for the parent the block is built on, bids for other parents of the slot could not be selected
+      const ownBid = ledger.getSignedBid(slot, toRootHex(parentBlockHash), toRootHex(parentBlockRoot));
+      if (ownBid !== null) {
         logger.info("Execution payload bid not selected", {
           slot,
           builderIndex: this.modules.builderIndex,
           blockRoot,
-          value: prettyGweiToEth(Math.max(...bids.map((bid) => bid.signedBid.message.value))),
+          value: prettyGweiToEth(ownBid.message.value),
           selectedBuilderIndex: builderIndex === BUILDER_INDEX_SELF_BUILD ? "self-build" : builderIndex,
           selectedValue: prettyGweiToEth(value),
         });

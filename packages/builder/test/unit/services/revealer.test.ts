@@ -146,6 +146,16 @@ describe("Revealer", () => {
     );
   });
 
+  it("does not log a block built on a parent we did not bid on", async () => {
+    const observed = selectedBlock();
+    observed.signedBid.message.builderIndex = builderIndex + 1;
+    observed.signedBid.message.parentBlockRoot = Buffer.alloc(32, 0xaa);
+
+    await revealer.onBlock(observed);
+
+    expect(logger.info).not.toHaveBeenCalledWith("Execution payload bid not selected", expect.anything());
+  });
+
   it("does not log a block of another builder in a slot without own bid", async () => {
     const observed = selectedBlock({recordBid: false});
     observed.signedBid.message.builderIndex = builderIndex + 1;

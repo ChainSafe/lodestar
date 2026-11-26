@@ -132,7 +132,16 @@ describe("Builder", () => {
     const {onEvent, signal} = api.events.eventstream.mock.calls[0][0];
     const blockRoot = toRootHex(Buffer.alloc(32, 1));
 
-    onEvent({type: EventType.block, message: {slot: 0, block: blockRoot, executionOptimistic: false}});
+    onEvent({
+      type: EventType.block,
+      message: {
+        slot: 0,
+        block: blockRoot,
+        blockHash: toRootHex(Buffer.alloc(32, 7)),
+        builderIndex: modules.index,
+        executionOptimistic: false,
+      },
+    });
     await vi.waitFor(() => expect(observed).toHaveBeenCalledOnce());
     expect(observed.mock.calls[0][0].signedBid).toBe(block.message.body.signedExecutionPayloadBid);
     expect(api.beacon.getBlockV2).toHaveBeenCalledWith({blockId: blockRoot}, {signal});
@@ -199,7 +208,16 @@ describe("Builder", () => {
     expect(onPayloadAttributes).toHaveBeenCalledExactlyOnceWith(payloadAttributes);
 
     const blockRoot = toRootHex(Buffer.alloc(32, 1));
-    onEvent({type: EventType.block, message: {slot: 0, block: blockRoot, executionOptimistic: false}});
+    onEvent({
+      type: EventType.block,
+      message: {
+        slot: 0,
+        block: blockRoot,
+        blockHash: toRootHex(Buffer.alloc(32, 7)),
+        builderIndex: modules.index,
+        executionOptimistic: false,
+      },
+    });
     await vi.waitFor(() => expect(onBlock).toHaveBeenCalledOnce());
     expect(onBlock.mock.calls[0][0]).toMatchObject({
       blockRoot,
