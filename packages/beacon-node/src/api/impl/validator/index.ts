@@ -2042,6 +2042,10 @@ export function getValidatorApi(
 
       notWhileSyncing(chain, sync.state);
 
+      for (const {slot, isAggregator, committeeIndex} of subscriptions) {
+        if (isAggregator) chain.pqAggregationScheduler.addAggregator(slot, committeeIndex);
+      }
+
       await network.prepareBeaconCommitteeSubnets(
         subscriptions.map(({validatorIndex, slot, isAggregator, committeesAtSlot, committeeIndex}) => ({
           validatorIndex: validatorIndex,

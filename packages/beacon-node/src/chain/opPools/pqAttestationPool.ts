@@ -41,6 +41,8 @@ type CommitteeAttestations = {
   signed: Map<number, Uint8Array>;
   /** Proven aggregates, from the network or from `signed` */
   aggregates: PqAggregate[];
+  /** The aggregate this node's aggregator of the committee publishes, once its proving has begun */
+  local: Promise<PqAggregate> | null;
 };
 
 type DataAttestations = {
@@ -169,8 +171,9 @@ export class PqAttestationPool {
   }
 
   /**
-   * For an aggregator: the aggregate of every single attestation seen for a committee, with a
-   * fresh proof of their signatures. Null if there are none.
+   * For an aggregator: the aggregate `proveAggregate` proved for a committee at the aggregator's
+   * cutoff. Without one, the aggregate of every single attestation seen for the committee, with
+   * a fresh proof of their signatures. Null if there are none.
    */
   async getAggregate(
     slot: Slot,
@@ -179,12 +182,45 @@ export class PqAttestationPool {
   ): Promise<{data: phase0.AttestationData; aggregate: PqAggregate} | null> {
     const dataAttestations = this.byRootBySlot.get(slot)?.get(dataRootHex);
     const committee = dataAttestations?.byCommittee.get(committeeIndex);
-    if (!dataAttestations || !committee || committee.signed.size === 0) return null;
+    if (!dataAttestations || !committee) return null;
+    if (committee.local === null && committee.signed.size === 0) return null;
+    return {data: dataAttestations.data, aggregate: await this.proveLocal(slot, committeeIndex, committee)};
+  }
 
-    // Another aggregator of the committee, or a retry, may have had the same signatures proven
+  /**
+   * For this node's aggregator of a committee, at its cutoff: proves the single attestations seen
+   * for the committee, those of the attestation data most of them are for, and keeps the proof
+   * for `getAggregate`. An attestation that comes later is not in it.
+   */
+  async proveAggregate(slot: Slot, committeeIndex: CommitteeIndex): Promise<void> {
+    const committee = this.getLargestCommittee(slot, committeeIndex);
+    if (committee) await this.proveLocal(slot, committeeIndex, committee);
+  }
+
+  private proveLocal(
+    slot: Slot,
+    committeeIndex: CommitteeIndex,
+    committee: CommitteeAttestations
+  ): Promise<PqAggregate> {
+    if (committee.local === null) {
+      const proving = this.proveSingles(slot, committeeIndex, committee);
+      committee.local = proving;
+      proving.catch(() => {
+        if (committee.local === proving) committee.local = null;
+      });
+    }
+    return committee.local;
+  }
+
+  private async proveSingles(
+    slot: Slot,
+    committeeIndex: CommitteeIndex,
+    committee: CommitteeAttestations
+  ): Promise<PqAggregate> {
+    // An aggregate from the network may already prove the same signatures
     const bits = signedBits(committee);
     const proven = committee.aggregates.find(({aggregationBits}) => isSameBits(aggregationBits, bits));
-    if (proven) return {data: dataAttestations.data, aggregate: proven};
+    if (proven) return proven;
 
     const job = this.timing?.job("committee", slot, 0);
     const aggregate = await this.observe("committee", 0, committee.signed.size, () =>
@@ -192,7 +228,7 @@ export class PqAttestationPool {
     );
     job?.emit("candidate_ready", "ready", {committee: committeeIndex, proof_id: proofId(aggregate.aggregate.proof)});
     committee.aggregates.push(aggregate);
-    return {data: dataAttestations.data, aggregate};
+    return aggregate;
   }
 
   /**
@@ -280,14 +316,20 @@ export class PqAttestationPool {
     committeeIndex: CommitteeIndex,
     experiment: PqExperiment
   ): Promise<XmssAggregate | null> {
+    const most = this.getLargestCommittee(slot, committeeIndex);
+    if (!most) return null;
+    const job = this.timing?.job("committee", slot, 0, experiment);
+    return (await proveSigned(most, job, {committee: committeeIndex})).aggregate;
+  }
+
+  /** Of the attestation data seen for a slot, the committee's with the most single attestations */
+  private getLargestCommittee(slot: Slot, committeeIndex: CommitteeIndex): CommitteeAttestations | null {
     let most: CommitteeAttestations | null = null;
     for (const {byCommittee} of this.byRootBySlot.get(slot)?.values() ?? []) {
       const committee = byCommittee.get(committeeIndex);
       if (committee && committee.signed.size > (most?.signed.size ?? 0)) most = committee;
     }
-    if (!most) return null;
-    const job = this.timing?.job("committee", slot, 0, experiment);
-    return (await proveSigned(most, job, {committee: committeeIndex})).aggregate;
+    return most;
   }
 
   /**
@@ -461,7 +503,7 @@ export class PqAttestationPool {
     }
     let committee = dataAttestations.byCommittee.get(committeeIndex);
     if (!committee) {
-      committee = {committeeSize, signed: new Map(), aggregates: []};
+      committee = {committeeSize, signed: new Map(), aggregates: [], local: null};
       dataAttestations.byCommittee.set(committeeIndex, committee);
     }
     return committee;

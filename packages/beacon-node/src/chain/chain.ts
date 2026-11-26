@@ -113,6 +113,7 @@ import {
 } from "./opPools/index.js";
 import {PROOF_LOG_INV_RATE, PqAttestationPool} from "./opPools/pqAttestationPool.js";
 import {IChainOptions} from "./options.js";
+import {PqAggregationScheduler} from "./pq/aggregationScheduler.js";
 import {PREPARE_START_BPS, PqBlockPreparer} from "./pq/blockPreparer.js";
 import {IPqVerifier, PqVerifier} from "./pq/index.js";
 import {PqObserver} from "./pq/observer.js";
@@ -211,6 +212,7 @@ export class BeaconChain implements IBeaconChain {
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly pqTiming: PqTiming | null = null;
   readonly pqAttestationPool: PqAttestationPool;
+  readonly pqAggregationScheduler: PqAggregationScheduler;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
@@ -332,9 +334,8 @@ export class BeaconChain implements IBeaconChain {
     this.metrics = metrics;
     this.validatorMonitor = validatorMonitor;
     this.genesisTime = anchorState.genesisTime;
-    // An aggregator's proof is made between the attestations' deadline and its own. The observer
-    // proves halfway, as Lighthouse does. A committee of this node's validators is proven when
-    // its aggregator asks.
+    // An aggregator's proof is made between the attestations' deadline and its own. This node's
+    // aggregators and the observer prove halfway, as Lighthouse does.
     const attestationDueMs = config.getAttestationDueMs(ForkName.pq);
     const pqSchedule = {
       committeeCollectionMs: attestationDueMs + (config.getAggregateDueMs(ForkName.pq) - attestationDueMs) / 2,
@@ -581,6 +582,14 @@ export class BeaconChain implements IBeaconChain {
         signal,
       },
       metrics?.unfinalizedPayloadEnvelopeWritesQueue
+    );
+
+    this.pqAggregationScheduler = new PqAggregationScheduler(
+      this,
+      this.config,
+      pqSchedule.committeeCollectionMs,
+      this.logger,
+      signal
     );
 
     // always run PrepareNextSlotScheduler except for fork_choice spec tests

@@ -129,6 +129,6 @@ Where this record differs from Lighthouse's:
 
 - A receipt is stamped when gossipsub delivers the message, to the millisecond, and written with its validation outcome, so a message that does not decode has no receipt.
 - leanVM runs in the process and queues proofs itself, so a proof's duration holds whatever it waited behind another, and there is no queue wait of its own.
-- A committee of this node's own aggregators is proven when the validator client asks for the aggregate, at the aggregate deadline, not ahead of it as in Lighthouse and Prysm: its proof is late by its own duration. The observer proves at the halfway point, as they do.
+- A committee of this node's own aggregators is proven at the halfway point between the attestation and the aggregate deadlines, as in Lighthouse and Prysm and as the observer does, and the validator client fetches the proof at the aggregate deadline. An attestation that arrives after the halfway point is not in the aggregate. Until 26 November it was proven when the validator client asked, so the aggregate was late by the proof's duration: on pq-devnet-0 Lodestar's aggregates reached the network a median of 8.7 s into the slot, against 6.3 to 6.8 s for the clients that prove ahead.
 - The observer does not verify the proofs it merges, only the committee proofs.
 - `lodestar dev` with validators stops through the validator client, which exits the process before the beacon node closes: the run's last chunk, up to five minutes, is then not listed in `run.json`. A beacon node on its own closes its run.
