@@ -272,6 +272,40 @@ describe("Bidder", () => {
       expect(builtOn).toEqual(parents.slice(1).map(({hash}) => toRootHex(hash)));
     });
 
+    it("does not resolve the dependent root of the parent again", async () => {
+      const {bidder} = createBidder();
+      // The parent is not a tracked head, its dependent root is taken from the proposer duties
+      await bidder.onPayloadAttributes(payloadAttributesEvent());
+      expect(api.validator.getProposerDutiesV2).toHaveBeenCalledOnce();
+
+      // The head of the beacon node is on another branch by the time the proposer preferences are received
+      api.validator.getProposerDutiesV2.mockResolvedValue(
+        mockApiResponse({data: [], meta: {executionOptimistic: false, dependentRoot: toRootHex(Buffer.alloc(32, 8))}})
+      );
+      addProposerPreferences();
+      const bidding = bidder.onProposerPreferences(slot);
+      await vi.advanceTimersByTimeAsync(msToDeadline);
+      await bidding;
+
+      expect(api.validator.getProposerDutiesV2).toHaveBeenCalledOnce();
+      expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+    });
+
+    it("does not bid once the bid deadline has passed", async () => {
+      const {bidder} = createBidder();
+      await bidder.onPayloadAttributes(payloadAttributesEvent());
+
+      // Before the slot, the deadline is reached with the remaining time to the slot
+      const msToSlot = clock.msToSlot(slot);
+      vi.spyOn(clock, "msToSlot").mockReturnValue(msToSlot - msToDeadline);
+      addProposerPreferences();
+      await bidder.onProposerPreferences(slot);
+
+      expect(payloadSource.prepare).not.toHaveBeenCalled();
+      // Not a failed bid
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
     it("does not bid once the slot started", async () => {
       const {bidder} = createBidder();
       await bidder.onPayloadAttributes(payloadAttributesEvent());

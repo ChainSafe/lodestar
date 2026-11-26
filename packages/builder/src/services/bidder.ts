@@ -51,8 +51,14 @@ export const MAX_PENDING_PAYLOAD_ATTRIBUTES = 16;
  */
 export class Bidder {
   private readonly activeBuilds = new Set<string>();
-  /** Payload attributes of upcoming slots that could not be bid on yet, by build id */
-  private readonly pendingPayloadAttributes = new Map<string, PayloadAttributesEvent>();
+  /**
+   * Payload attributes of upcoming slots that could not be bid on yet, by build id. The dependent root of their
+   * parent does not change, it is not resolved again as the head of the beacon node may be on another branch by then
+   */
+  private readonly pendingPayloadAttributes = new Map<
+    string,
+    {event: PayloadAttributesEvent; dependentRoot: RootHex}
+  >();
 
   constructor(
     private readonly modules: BidderModules,
@@ -60,7 +66,7 @@ export class Bidder {
   ) {}
 
   async onPayloadAttributes(event: PayloadAttributesEvent): Promise<void> {
-    const {clock, config, ledger, logger, metrics, orchestrator, proposerPreferencesTracker} = this.modules;
+    const {clock, ledger, logger, metrics, orchestrator, proposerPreferencesTracker} = this.modules;
     if (!isForkPostGloas(event.version)) {
       return;
     }
@@ -90,7 +96,9 @@ export class Bidder {
         return;
       }
 
-      const dependentRoot = await this.getDependentRoot(parentBlockRoot, slot, logCtx);
+      const dependentRoot =
+        this.pendingPayloadAttributes.get(buildId)?.dependentRoot ??
+        (await this.getDependentRoot(parentBlockRoot, slot, logCtx));
       const proposerPreferences = proposerPreferencesTracker.get(slot, dependentRoot);
       if (proposerPreferences === null) {
         // The payload attributes are only emitted once, the proposer preferences can still arrive before the slot
@@ -101,7 +109,7 @@ export class Bidder {
             const oldest = this.pendingPayloadAttributes.keys().next().value;
             if (oldest !== undefined) this.pendingPayloadAttributes.delete(oldest);
           }
-          this.pendingPayloadAttributes.set(buildId, event);
+          this.pendingPayloadAttributes.set(buildId, {event, dependentRoot});
           logger.debug("No proposer preferences known for slot, not bidding", {...logCtx, dependentRoot});
           metrics?.bids.total.inc({result: BidResult.noProposerPreferences});
         }
@@ -110,12 +118,7 @@ export class Bidder {
       this.pendingPayloadAttributes.delete(buildId);
       const {feeRecipient, targetGasLimit} = proposerPreferences.message;
 
-      // The payload is retrieved in the slot before the proposal slot, use the timing of that slot
-      const buildFork = config.getForkName(slot - 1);
-      const msToDeadline =
-        clock.msToSlot(slot) -
-        config.getSlotDurationMs(buildFork) +
-        config.getSlotComponentDurationMs(buildFork, this.opts.deadlineBps);
+      const msToDeadline = this.getMsToDeadline(slot);
       logger.verbose("Preparing payload build", {...logCtx, msToDeadline, targetGasLimit});
 
       const payload = await orchestrator.run({
@@ -212,7 +215,7 @@ export class Bidder {
   async onProposerPreferences(slot?: Slot): Promise<void> {
     this.prunePendingPayloadAttributes();
     const events: PayloadAttributesEvent[] = [];
-    for (const event of this.pendingPayloadAttributes.values()) {
+    for (const {event} of this.pendingPayloadAttributes.values()) {
       if (slot === undefined || event.data.proposalSlot === slot) {
         events.push(event);
       }
@@ -222,14 +225,25 @@ export class Bidder {
     await Promise.all(events.map((event) => this.onPayloadAttributes(event)));
   }
 
-  /** Drops the pending payload attributes of slots that can no longer be bid on */
+  /** Drops the pending payload attributes of slots that can no longer be bid on, their bid deadline has passed */
   private prunePendingPayloadAttributes(): void {
-    const currentSlot = this.modules.clock.getCurrentSlot();
-    for (const [buildId, event] of this.pendingPayloadAttributes) {
-      if (event.data.proposalSlot <= currentSlot) {
+    for (const [buildId, {event}] of this.pendingPayloadAttributes) {
+      if (this.getMsToDeadline(event.data.proposalSlot) <= 0) {
         this.pendingPayloadAttributes.delete(buildId);
       }
     }
+  }
+
+  /** Time in milliseconds until the bid deadline of a proposal slot, negative once it has passed */
+  private getMsToDeadline(slot: Slot): number {
+    const {clock, config} = this.modules;
+    // The payload is retrieved in the slot before the proposal slot, use the timing of that slot
+    const buildFork = config.getForkName(slot - 1);
+    return (
+      clock.msToSlot(slot) -
+      config.getSlotDurationMs(buildFork) +
+      config.getSlotComponentDurationMs(buildFork, this.opts.deadlineBps)
+    );
   }
 
   /**
