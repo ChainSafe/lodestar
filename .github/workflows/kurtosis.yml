@@ -43,8 +43,9 @@ jobs:
           ENCLAVE: gh-${{ github.run_id }}-forks
           HEZE_FORK_EPOCH: 2
         run: |
-          for node in cl-1-lodestar-reth cl-2-lodestar-reth; do
+          for node in cl-1-lodestar-nethermind cl-2-lodestar-nethermind; do
             api="$(kurtosis port print "$ENCLAVE" "$node" http)"
+            timeout 120 bash -c "until curl -sf $api/eth/v1/node/health >/dev/null; do sleep 3; done"
             heze="$(curl -sf "$api/eth/v1/config/spec" | jq -r .data.HEZE_FORK_VERSION)"
             [ -n "$heze" ] || { echo "$node: no HEZE_FORK_VERSION in the spec"; exit 1; }
             for _ in $(seq 1 90); do
