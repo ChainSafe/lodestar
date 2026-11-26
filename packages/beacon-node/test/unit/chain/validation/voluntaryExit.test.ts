@@ -9,10 +9,12 @@ import {
   computeDomain,
   computeEpochAtSlot,
   computeSigningRoot,
+  computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {GossipAction} from "../../../../src/chain/errors/gossipValidation.js";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
+import {RegenCaller} from "../../../../src/chain/regen/index.js";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
@@ -31,6 +33,7 @@ describe("validate voluntary exit", () => {
   let chainStub: MockedBeaconChain;
   let state: TestBeaconStateView;
   let originalState: CachedBeaconStateAllForks;
+  let nextEpochOriginalState: CachedBeaconStateAllForks;
   let signedVoluntaryExit: phase0.SignedVoluntaryExit;
   let opPool: MockedBeaconChain["opPool"];
   let config: BeaconConfig;
@@ -71,13 +74,21 @@ describe("validate voluntary exit", () => {
     config = createBeaconConfig(chainConfig, _state.genesisValidatorsRoot);
 
     originalState = createCachedBeaconStateTest(_state, config);
+    nextEpochOriginalState = createCachedBeaconStateTest(
+      generateState(
+        {...stateEmpty, slot: (chainConfig.SHARD_COMMITTEE_PERIOD + 1) * SLOTS_PER_EPOCH},
+        createChainForkConfig(chainConfig)
+      ),
+      config
+    );
   });
 
   beforeEach(() => {
     state = new TestBeaconStateView(createCachedBeaconStateTest(originalState.clone(), config));
     chainStub = getMockedBeaconChain({config});
     opPool = chainStub.opPool;
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
+    vi.spyOn(chainStub.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(state.slot);
+    vi.spyOn(chainStub, "getHeadStateAtEpoch").mockResolvedValue(state);
     vi.spyOn(opPool, "hasSeenBlsToExecutionChange");
     vi.spyOn(opPool, "hasSeenVoluntaryExit");
     chainStub.bls.verifySignatureSets.mockResolvedValue(true);
@@ -142,8 +153,6 @@ describe("validate voluntary exit", () => {
 
     state.setValidator(0, inactiveValidator);
 
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
-
     await expectGossipError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
       GossipAction.REJECT,
@@ -160,8 +169,6 @@ describe("validate voluntary exit", () => {
     };
 
     state.setValidator(0, exitedValidator);
-
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
 
     await expectGossipError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
@@ -218,8 +225,6 @@ describe("validate voluntary exit", () => {
 
     state.setValidator(0, recentlyActivated);
 
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
-
     await expectGossipError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
       GossipAction.REJECT,
@@ -246,5 +251,21 @@ describe("validate voluntary exit", () => {
 
   it("should return valid Voluntary Exit", async () => {
     await validateGossipVoluntaryExit(chainStub, signedVoluntaryExit);
+  });
+
+  it("should return valid Voluntary Exit - next epoch within clock disparity", async () => {
+    const nextEpoch = computeEpochAtSlot(state.slot) + 1;
+    vi.spyOn(chainStub.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(
+      computeStartSlotAtEpoch(nextEpoch)
+    );
+    const nextEpochState = new TestBeaconStateView(createCachedBeaconStateTest(nextEpochOriginalState.clone(), config));
+    vi.spyOn(chainStub, "getHeadStateAtEpoch").mockResolvedValue(nextEpochState);
+    const signedVoluntaryExitNextEpoch: phase0.SignedVoluntaryExit = {
+      message: {epoch: nextEpoch, validatorIndex: 0},
+      signature: signedVoluntaryExit.signature,
+    };
+
+    await validateGossipVoluntaryExit(chainStub, signedVoluntaryExitNextEpoch);
+    expect(chainStub.getHeadStateAtEpoch).toHaveBeenCalledWith(nextEpoch, RegenCaller.validateGossipVoluntaryExit);
   });
 });

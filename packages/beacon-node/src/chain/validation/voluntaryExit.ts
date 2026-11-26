@@ -1,5 +1,10 @@
 import {FAR_FUTURE_EPOCH} from "@lodestar/params";
-import {IBeaconStateView, VoluntaryExitValidity, getVoluntaryExitSignatureSet} from "@lodestar/state-transition";
+import {
+  IBeaconStateView,
+  VoluntaryExitValidity,
+  computeEpochAtSlot,
+  getVoluntaryExitSignatureSet,
+} from "@lodestar/state-transition";
 import {ValidatorIndex, phase0} from "@lodestar/types";
 import {
   GossipAction,
@@ -102,12 +107,14 @@ async function validateVoluntaryExit(
   // The voluntaryExit.epoch must be in the past but the validator's status may change in recent epochs.
   // We dial the head state to the current epoch to get the current status of the validator. This is
   // relevant on periods of many skipped slots.
-  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipVoluntaryExit);
+  const currentEpoch = computeEpochAtSlot(chain.clock.currentSlotWithGossipDisparity);
 
-  // [IGNORE] The voluntary exit epoch is not in the future
-  if (voluntaryExit.message.epoch > state.epoch) {
+  // [IGNORE] The voluntary exit epoch is not in the future, allowing for MAXIMUM_GOSSIP_CLOCK_DISPARITY
+  if (voluntaryExit.message.epoch > currentEpoch) {
     throw new VoluntaryExitError(GossipAction.IGNORE, {code: VoluntaryExitErrorCode.EARLY_EPOCH});
   }
+
+  const state = await chain.getHeadStateAtEpoch(currentEpoch, RegenCaller.validateGossipVoluntaryExit);
 
   // verifySignature = false, verified in batch below
   const validity = state.getVoluntaryExitValidity(voluntaryExit, false);
