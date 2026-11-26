@@ -64,7 +64,7 @@ test "Pool.createChunkedLeaf: round-trips chunks via getChunkedLeafChunks/getChu
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 16 });
     defer pool.deinit();
 
-    var src: [K][32]u8 align(64) = [_][32]u8{[_]u8{0} ** 32} ** K;
+    var src: [K][32]u8 align(64) = @as([K][32]u8, @splat(@as([32]u8, @splat(0))));
     src[0][0] = 0xAB;
     src[K - 1][31] = 0xCD;
 
@@ -82,7 +82,7 @@ test "Pool.unref: chunked_leaf payload heap is freed (no leak under test allocat
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 16 });
     defer pool.deinit();
 
-    const src: [K][32]u8 align(64) = [_][32]u8{[_]u8{0} ** 32} ** K;
+    const src: [K][32]u8 align(64) = @as([K][32]u8, @splat(@as([32]u8, @splat(0))));
     const chunked_leaf_id = try pool.createChunkedLeaf(&src, K);
     pool.unref(chunked_leaf_id);
 }
@@ -92,7 +92,7 @@ test "Id.getRoot: Pool-created chunked_leaf returns merkleized root and caches i
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 16 });
     defer pool.deinit();
 
-    var src: [K][32]u8 align(64) = [_][32]u8{[_]u8{0} ** 32} ** K;
+    var src: [K][32]u8 align(64) = @as([K][32]u8, @splat(@as([32]u8, @splat(0))));
     for (0..K) |i| {
         std.mem.writeInt(u256, &src[i], @as(u256, @intCast(i + 1)), .little);
     }
@@ -121,12 +121,12 @@ test "Id.setChunkedLeafChunk: CoW one chunk; original unchanged; root differs" {
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 32 });
     defer pool.deinit();
 
-    var src: [K][32]u8 align(64) = [_][32]u8{[_]u8{0} ** 32} ** K;
+    var src: [K][32]u8 align(64) = @as([K][32]u8, @splat(@as([32]u8, @splat(0))));
     src[42][0] = 0x11;
     const a = try pool.createChunkedLeaf(&src, K);
     defer pool.unref(a);
 
-    var new_chunk: [32]u8 = [_]u8{0} ** 32;
+    var new_chunk: [32]u8 = @as([32]u8, @splat(0));
     new_chunk[0] = 0x22;
     const b = try a.setChunkedLeafChunk(&pool, 42, &new_chunk);
     defer pool.unref(b);
@@ -149,12 +149,12 @@ test "Id.setChunkedLeafChunk: preserves len" {
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 16 });
     defer pool.deinit();
 
-    const src: [K][32]u8 align(64) = [_][32]u8{[_]u8{0} ** 32} ** K;
+    const src: [K][32]u8 align(64) = @as([K][32]u8, @splat(@as([32]u8, @splat(0))));
     const test_len: u16 = K - 1;
     const a = try pool.createChunkedLeaf(&src, test_len);
     defer pool.unref(a);
 
-    var new_chunk: [32]u8 = [_]u8{0xFF} ** 32;
+    var new_chunk: [32]u8 = @as([32]u8, @splat(0xFF));
     const b = try a.setChunkedLeafChunk(&pool, K / 4, &new_chunk);
     defer pool.unref(b);
 
@@ -166,15 +166,15 @@ test "Id.setChunkedLeafChunks: batch CoW with multiple updates" {
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 32 });
     defer pool.deinit();
 
-    const src: [K][32]u8 align(64) = [_][32]u8{[_]u8{0} ** 32} ** K;
+    const src: [K][32]u8 align(64) = @as([K][32]u8, @splat(@as([32]u8, @splat(0))));
     const a = try pool.createChunkedLeaf(&src, K);
     defer pool.unref(a);
 
     const idxs = [_]u16{ 0, 7, K / 2, K - 1 };
-    const c0 = [_]u8{0xAA} ** 32;
-    const c1 = [_]u8{0xBB} ** 32;
-    const c2 = [_]u8{0xCC} ** 32;
-    const c3 = [_]u8{0xDD} ** 32;
+    const c0 = @as([32]u8, @splat(0xAA));
+    const c1 = @as([32]u8, @splat(0xBB));
+    const c2 = @as([32]u8, @splat(0xCC));
+    const c3 = @as([32]u8, @splat(0xDD));
     const ptrs = [_]*const [32]u8{ &c0, &c1, &c2, &c3 };
 
     const b = try a.setChunkedLeafChunks(&pool, &idxs, &ptrs);
@@ -187,7 +187,7 @@ test "Id.setChunkedLeafChunks: batch CoW with multiple updates" {
     try std.testing.expectEqual(@as(u8, 0xDD), got[idxs[3]][0]);
 
     const a_chunks = try a.getChunkedLeafChunks(&pool);
-    try std.testing.expectEqualSlices(u8, &([_]u8{0} ** 32), &a_chunks[0]);
+    try std.testing.expectEqualSlices(u8, &(@as([32]u8, @splat(0))), &a_chunks[0]);
 }
 
 test "Id.setChunkedLeafChunks: empty batch produces a clone with empty dirty" {
@@ -195,7 +195,7 @@ test "Id.setChunkedLeafChunks: empty batch produces a clone with empty dirty" {
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 16 });
     defer pool.deinit();
 
-    const src: [K][32]u8 align(64) = [_][32]u8{[_]u8{0} ** 32} ** K;
+    const src: [K][32]u8 align(64) = @as([K][32]u8, @splat(@as([32]u8, @splat(0))));
     const a = try pool.createChunkedLeaf(&src, K);
     defer pool.unref(a);
 
@@ -213,10 +213,10 @@ test "Id.setChunkedLeafChunk: non-chunked_leaf Id returns error.InvalidNode" {
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 16 });
     defer pool.deinit();
 
-    const leaf_id = try pool.createLeaf(&([_]u8{0xEE} ** 32));
+    const leaf_id = try pool.createLeaf(&(@as([32]u8, @splat(0xEE))));
     defer pool.unref(leaf_id);
 
-    var new_chunk: [32]u8 = [_]u8{0xFF} ** 32;
+    var new_chunk: [32]u8 = @as([32]u8, @splat(0xFF));
     try std.testing.expectError(error.InvalidNode, leaf_id.setChunkedLeafChunk(&pool, 0, &new_chunk));
 }
 

@@ -306,7 +306,7 @@ test "memory_safety: BitVector tree.deserializeFromBytes should reclaim partial 
     defer pool.deinit();
 
     const baseline = pool.getNodesInUse();
-    const bytes = [_]u8{0} ** VectorType.fixed_size;
+    const bytes = @as([VectorType.fixed_size]u8, @splat(0));
 
     try std.testing.expectError(
         error.PoolExhausted,

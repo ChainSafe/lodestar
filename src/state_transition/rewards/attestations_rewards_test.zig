@@ -71,9 +71,9 @@ test "computeAttestationsRewards - participation, slashing, eligibility, filters
     try std.testing.expectEqual(@as(usize, 0), empty.total_rewards.len);
     try std.testing.expectEqualDeep(rewards.ideal_rewards, empty.ideal_rewards);
 
-    try state.state.setFinalizedCheckpoint(&.{ .epoch = 0, .root = [_]u8{0} ** 32 });
-    try state.state.setPreviousJustifiedCheckpoint(&.{ .epoch = 0, .root = [_]u8{0} ** 32 });
-    try state.state.setCurrentJustifiedCheckpoint(&.{ .epoch = 0, .root = [_]u8{0} ** 32 });
+    try state.state.setFinalizedCheckpoint(&.{ .epoch = 0, .root = @as([32]u8, @splat(0)) });
+    try state.state.setPreviousJustifiedCheckpoint(&.{ .epoch = 0, .root = @as([32]u8, @splat(0)) });
+    try state.state.setCurrentJustifiedCheckpoint(&.{ .epoch = 0, .root = @as([32]u8, @splat(0)) });
     const leak = try computeAttestationsRewards(allocator, std.testing.io, state, &.{ 0, 2 });
     defer leak.deinit(allocator);
     try std.testing.expectEqual(@as(u64, 0), leak.ideal_rewards[32].source);
@@ -135,7 +135,7 @@ test "computeAttestationsRewards - finalization ends leak before inactivity upda
     var test_state = try TestCachedBeaconState.init(allocator, &pool, 256);
     defer test_state.deinit();
     const state = test_state.cached_state;
-    try state.state.setFinalizedCheckpoint(&.{ .epoch = 0, .root = [_]u8{0} ** 32 });
+    try state.state.setFinalizedCheckpoint(&.{ .epoch = 0, .root = @as([32]u8, @splat(0)) });
     var participation = try state.state.previousEpochParticipation();
     try participation.set(0, 0);
     var inactivity = try state.state.inactivityScores();

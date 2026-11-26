@@ -134,7 +134,7 @@ test "aggregateParticipants rejects inconsistent input" {
     var fixture = try Fixture.init(validator_count);
     defer fixture.deinit();
 
-    const bits = [_]u8{0xff} ** 3;
+    const bits = @as([3]u8, @splat(0xff));
     const f = &fixture.committees;
     const cache = &fixture.cache;
     const io = testing.io;
@@ -147,7 +147,7 @@ test "aggregateParticipants rejects inconsistent input" {
     try testing.expectError(error.InvalidBitLength, f.aggregateParticipants(io, cache, 0, &.{0}, &bits, one + 1));
     try testing.expectError(error.InvalidBitLength, f.aggregateParticipants(io, cache, 0, &.{0}, bits[0..1], one));
 
-    const no_bits = [_]u8{0} ** 3;
+    const no_bits = @as([3]u8, @splat(0));
     try testing.expectError(error.EmptyIndices, f.aggregateParticipants(io, cache, 0, &.{0}, &no_bits, one));
 }
 

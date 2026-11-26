@@ -130,7 +130,7 @@ test "ProgressiveListBasicTreeView with chunked leaves should prove chunks at ca
         try view.set(1000, 1234);
         const root = (try view.hashTreeRoot()).*;
         // Chunk 250 is offset 165 inside the 256-chunk subtree at spine index 4.
-        const gindex: pmt.Gindex = @enumFromInt(((@as(u64, 3) << 4) - 1) * 2 * 256 + 165);
+        const gindex: pmt.Gindex = @fromBackingInt(@intCast(((@as(u64, 3) << 4) - 1) * 2 * 256 + 165));
         var proof = try pmt.proof.createSingleProof(allocator, &pool, view.getRoot(), gindex);
         defer proof.deinit(allocator);
         const rebuilt = try pmt.proof.createNodeFromSingleProof(&pool, gindex, proof.leaf, proof.witnesses);

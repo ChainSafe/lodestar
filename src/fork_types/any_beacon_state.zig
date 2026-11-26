@@ -194,7 +194,7 @@ pub const AnyBeaconState = union(ForkSeq) {
     /// Get a Merkle proof for a node at the given generalized index.
     pub fn getSingleProof(self: *AnyBeaconState, allocator: Allocator, gindex_value: u64) !SingleProof {
         try self.commit();
-        const gindex: Gindex = @enumFromInt(gindex_value);
+        const gindex: Gindex = @fromBackingInt(@intCast(gindex_value));
         return switch (self.*) {
             inline else => |state| try createSingleProof(
                 allocator,

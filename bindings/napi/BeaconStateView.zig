@@ -199,7 +199,7 @@ pub fn forkName(self: *BeaconStateView) !js.String {
 pub fn forkSeq(self: *BeaconStateView) !js.Number {
     const cached_state = try self.acquireState();
     defer self.finishState();
-    return js.Number.from(@intFromEnum(cached_state.state.forkSeq()));
+    return js.Number.from(@backingInt(cached_state.state.forkSeq()));
 }
 
 pub fn epoch(self: *BeaconStateView) !js.Number {
@@ -879,7 +879,7 @@ pub fn getValidatorsByStatus(self: *BeaconStateView, statuses_set: js.Value, cur
     const set_value = statuses_set.toValue();
     const has_fn = try set_value.getNamedProperty("has");
 
-    var wanted = std.EnumSet(st.ValidatorStatus).initEmpty();
+    var wanted: std.EnumSet(st.ValidatorStatus) = .empty;
     for (std.enums.values(st.ValidatorStatus)) |status| {
         const status_str = try env.createStringUtf8(status.toString());
         const category_str = try env.createStringUtf8(status.category());
@@ -1372,10 +1372,10 @@ pub fn preVerifyBuilderDepositsPreGloas(
     const thread_pool = @import("blst.zig").state.thread_pool orelse return error.ThreadPoolNotInitialized;
     const result = try st.preVerifyBuilderDepositsPreGloas(js.io(), thread_pool, cached_state, limit, duration);
     const object = try js.env().createObject();
-    inline for (@typeInfo(@TypeOf(result)).@"struct".fields) |field| {
+    inline for (@typeInfo(@TypeOf(result)).@"struct".field_names) |field| {
         try object.setNamedProperty(
-            comptime snakeToCamel(field.name),
-            try js.env().createDouble(@floatFromInt(@field(result, field.name))),
+            comptime snakeToCamel(field),
+            try js.env().createDouble(@floatFromInt(@field(result, field))),
         );
     }
     return js_types.wrap(js_types.PreVerifyBuilderDepositsResult, object);
@@ -1963,7 +1963,7 @@ fn parseAttestationRewardFilters(allocator: std.mem.Allocator, value: ?js.Value)
             const hex = if (std.mem.startsWith(u8, text, "0x")) text[2..] else text;
             if (hex.len % 2 != 0) {
                 var buffer: [96]u8 = undefined;
-                const message = try std.fmt.bufPrintZ(&buffer, "hex string length {d} must be multiple of 2", .{hex.len});
+                const message = try std.mem.printSentinel(&buffer, "hex string length {d} must be multiple of 2", .{hex.len}, 0);
                 try js.env().throwError("INVALID_ARGUMENT", message);
                 return error.InvalidPubkeyHex;
             }

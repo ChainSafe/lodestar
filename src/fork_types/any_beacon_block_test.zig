@@ -45,7 +45,7 @@ fn testBlockSanity(Block: type) !void {
 
     electra_block.slot = 12345;
     electra_block.proposer_index = 1;
-    electra_block.body.randao_reveal = [_]u8{1} ** 96;
+    electra_block.body.randao_reveal = @as([96]u8, @splat(1));
     var attestations = try std.ArrayList(ct.electra.Attestation.Type).initCapacity(std.testing.allocator, 10);
     defer attestations.deinit(allocator);
     var attestation0 = ct.electra.Attestation.default_value;
@@ -58,23 +58,23 @@ fn testBlockSanity(Block: type) !void {
 
     try expect(beacon_block.slot() == 12345);
     try expect(beacon_block.proposerIndex() == 1);
-    try std.testing.expectEqualSlices(u8, &[_]u8{0} ** 32, beacon_block.parentRoot());
-    try std.testing.expectEqualSlices(u8, &[_]u8{0} ** 32, beacon_block.stateRoot());
+    try std.testing.expectEqualSlices(u8, &@as([32]u8, @splat(0)), beacon_block.parentRoot());
+    try std.testing.expectEqualSlices(u8, &@as([32]u8, @splat(0)), beacon_block.stateRoot());
 
     var out: [32]u8 = undefined;
     // all phases
     try beacon_block.hashTreeRoot(allocator, &out);
-    try expect(!std.mem.eql(u8, &[_]u8{0} ** 32, &out));
+    try expect(!std.mem.eql(u8, &@as([32]u8, @splat(0)), &out));
     const block_body = beacon_block.beaconBlockBody();
     try expect(block_body.forkSeq() == .electra);
-    out = [_]u8{0} ** 32;
+    out = @as([32]u8, @splat(0));
     try block_body.hashTreeRoot(allocator, &out);
-    try expect(!std.mem.eql(u8, &[_]u8{0} ** 32, &out));
+    try expect(!std.mem.eql(u8, &@as([32]u8, @splat(0)), &out));
 
-    try std.testing.expectEqualSlices(u8, &[_]u8{1} ** 96, block_body.randaoReveal());
+    try std.testing.expectEqualSlices(u8, &@as([96]u8, @splat(1)), block_body.randaoReveal());
     const eth1_data = try block_body.eth1Data();
     try expect(eth1_data.deposit_count == 0);
-    try std.testing.expectEqualSlices(u8, &[_]u8{0} ** 32, block_body.graffiti());
+    try std.testing.expectEqualSlices(u8, &@as([32]u8, @splat(0)), block_body.graffiti());
     try expect(block_body.proposerSlashings().len == 0);
     try expect(block_body.attesterSlashings().length() == 0);
     try expect(block_body.attestations().length() == 1);
@@ -84,9 +84,9 @@ fn testBlockSanity(Block: type) !void {
 
     // altair
     const sync_aggregate = try block_body.syncAggregate();
-    try std.testing.expectEqualSlices(u8, &[_]u8{0} ** 96, &sync_aggregate.sync_committee_signature);
+    try std.testing.expectEqualSlices(u8, &@as([96]u8, @splat(0)), &sync_aggregate.sync_committee_signature);
 
-    try std.testing.expectEqualSlices(u8, &[_]u8{0} ** 32, (try block_body.executionPayload()).parentHash());
+    try std.testing.expectEqualSlices(u8, &@as([32]u8, @splat(0)), (try block_body.executionPayload()).parentHash());
 
     // capella
     try expect((try block_body.blsToExecutionChanges()).len == 0);

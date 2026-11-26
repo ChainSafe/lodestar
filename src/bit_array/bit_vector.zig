@@ -10,7 +10,7 @@ pub fn BitVector(comptime _length: comptime_int) type {
         pub const length = _length;
 
         pub const empty: @This() = .{
-            .data = [_]u8{0} ** byte_len,
+            .data = @as([byte_len]u8, @splat(0)),
         };
 
         pub fn equals(self: *const @This(), other: *const @This()) bool {

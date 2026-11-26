@@ -9,7 +9,7 @@ fn StateListUnion(comptime field: []const u8, comptime iterator: bool) type {
     var names: [ForkSeq.count][:0]const u8 = undefined;
     var tags: [ForkSeq.count]u8 = undefined;
     var payloads: [ForkSeq.count]type = undefined;
-    var attributes: [ForkSeq.count]std.builtin.Type.UnionField.Attributes = undefined;
+    var attributes: [ForkSeq.count]std.lang.Type.Union.FieldAttributes = undefined;
     var count: usize = 0;
     for (std.meta.tags(ForkSeq)) |fork| {
         const State = ForkTypes(fork).BeaconState;
@@ -20,7 +20,7 @@ fn StateListUnion(comptime field: []const u8, comptime iterator: bool) type {
         }
         const Payload = if (iterator) List.TreeView.ReadonlyIterator else *List.TreeView;
         names[count] = @tagName(fork);
-        tags[count] = @intFromEnum(fork);
+        tags[count] = @backingInt(fork);
         payloads[count] = Payload;
         attributes[count] = .{ .@"align" = @alignOf(Payload) };
         count += 1;
@@ -34,7 +34,7 @@ fn StateListUnion(comptime field: []const u8, comptime iterator: bool) type {
 /// transferred into a state or released with deinit(). Transfers require identical schemas.
 pub fn AnyStateList(comptime field: []const u8) type {
     const Payload = StateListUnion(field, false);
-    const FirstView = @typeInfo(Payload).@"union".fields[0].type;
+    const FirstView = @typeInfo(Payload).@"union".field_types[0];
     const List = @typeInfo(FirstView).pointer.child.SszType;
     return struct {
         inner: Payload,
@@ -44,8 +44,8 @@ pub fn AnyStateList(comptime field: []const u8) type {
         pub const Value = List.Type;
 
         comptime {
-            for (@typeInfo(Payload).@"union".fields) |variant| {
-                const Variant = @typeInfo(variant.type).pointer.child.SszType;
+            for (@typeInfo(Payload).@"union".field_types) |VariantType| {
+                const Variant = @typeInfo(VariantType).pointer.child.SszType;
                 if (Variant.Element != List.Element or Variant.Type != Value or Variant.TreeView.Element != Element) {
                     @compileError("state list views must have identical element and value types across forks");
                 }
@@ -57,7 +57,7 @@ pub fn AnyStateList(comptime field: []const u8) type {
         }
 
         pub fn forkSeq(self: Self) ForkSeq {
-            return @enumFromInt(@intFromEnum(std.meta.activeTag(self.inner)));
+            return @fromBackingInt(@intCast(@backingInt(std.meta.activeTag(self.inner))));
         }
 
         pub fn unwrap(self: Self, comptime Schema: type) error{IncompatibleListType}!*Schema.TreeView {

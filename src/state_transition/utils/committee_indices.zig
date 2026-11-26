@@ -87,16 +87,16 @@ fn getCommitteeIndices(
     var compute_shuffled_index = try ComputeShuffledIndex.init(seed, @intCast(active_indices.len), rounds);
 
     var i: u32 = 0;
-    var cached_hash_input = [_]u8{0} ** (32 + 8);
+    var cached_hash_input = @as([(32 + 8)]u8, @splat(0));
     @memcpy(cached_hash_input[0..32], seed);
-    var cached_hash = [_]u8{0} ** 32;
+    var cached_hash = @as([32]u8, @splat(0));
     var next_committee_index: usize = 0;
 
     while (next_committee_index < out.len) {
         const index: u32 = @intCast(i % active_indices.len);
         const candidate_index = active_indices[compute_shuffled_index.get(index)];
 
-        const hash_increment: u32 = 32 / @intFromEnum(rand_byte_count);
+        const hash_increment: u32 = 32 / @backingInt(rand_byte_count);
         if (i % hash_increment == 0) {
             // this is the same to below Rust implementation
             // cached_hash_input[32..36].copy_from_slice(&(i / hash_increment).to_le_bytes());
@@ -128,7 +128,7 @@ fn getCommitteeIndices(
 }
 
 test "ComputeShuffledIndex" {
-    const seed = [_]u8{1} ** 32;
+    const seed = @as([32]u8, @splat(1));
     const index_count = 1000;
     // SHUFFLE_ROUND_COUNT is 90 in ethereum mainnet
     const rounds = 90;
@@ -146,15 +146,15 @@ test "ComputeShuffledIndex" {
 }
 
 test "compute_proposer_index" {
-    const seed = [_]u8{1} ** 32;
+    const seed = @as([32]u8, @splat(1));
     const index_count = 1000;
     // SHUFFLE_ROUND_COUNT is 90 in ethereum mainnet
     const rounds = 90;
-    var active_indices = [_]u32{0} ** index_count;
+    var active_indices = @as([index_count]u32, @splat(0));
     for (0..index_count) |i| {
         active_indices[i] = @intCast(i);
     }
-    var effective_balance_increments = [_]u16{0} ** index_count;
+    var effective_balance_increments = @as([index_count]u16, @splat(0));
     for (0..index_count) |i| {
         effective_balance_increments[i] = @intCast(32 + 32 * (i % 64));
     }
@@ -191,17 +191,17 @@ test "compute_sync_committee_indices" {
     const vc = 1000;
     // SHUFFLE_ROUND_COUNT is 90 in ethereum mainnet
     const rounds = 90;
-    var active_indices = [_]u32{0} ** vc;
+    var active_indices = @as([vc]u32, @splat(0));
     for (0..vc) |i| {
         active_indices[i] = @intCast(i);
     }
-    var effective_balance_increments = [_]u16{0} ** vc;
+    var effective_balance_increments = @as([vc]u16, @splat(0));
     for (0..vc) |i| {
         effective_balance_increments[i] = @intCast(32 + 32 * (i % 64));
     }
 
     // only get first 32 indices to make it easier to test
-    var out = [_]u64{0} ** 32;
+    var out = @as([32]u64, @splat(0));
 
     // phase0
     const MAX_EFFECTIVE_BALANCE: u64 = 32000000000;

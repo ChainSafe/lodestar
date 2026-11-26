@@ -59,7 +59,7 @@ test run {
         }
     };
 
-    var visits = [_]u8{0} ** len;
+    var visits = @as([len]u8, @splat(0));
     const context: Context = .{ .visits = &visits };
     try run(std.testing.io, len, &context, Context.visit);
     for (visits) |visit_count| try std.testing.expectEqual(1, visit_count);

@@ -277,8 +277,8 @@ pub fn FixedListType(comptime ST: type, comptime _limit: comptime_int, comptime 
         pub const tree = struct {
             pub fn default(pool: *Node.Pool) !Node.Id {
                 return try pool.createBranch(
-                    @enumFromInt(chunk_depth),
-                    @enumFromInt(0),
+                    @fromBackingInt(@intCast(chunk_depth)),
+                    @fromBackingInt(@intCast(0)),
                 );
             }
 
@@ -291,7 +291,7 @@ pub fn FixedListType(comptime ST: type, comptime _limit: comptime_int, comptime 
                 errdefer pool.unref(len_mixin);
 
                 if (comptime isBasicType(Element)) {
-                    const content_root: Node.Id = @enumFromInt(chunk_depth);
+                    const content_root: Node.Id = @fromBackingInt(@intCast(chunk_depth));
                     return try pool.createBranch(content_root, len_mixin);
                 } else {
                     var it = Node.SubtreeBuilder.init(pool, chunk_depth);
@@ -327,8 +327,8 @@ pub fn FixedListType(comptime ST: type, comptime _limit: comptime_int, comptime 
 
                 if (chunk_count == 0) {
                     return try pool.createBranch(
-                        @enumFromInt(chunk_depth),
-                        @enumFromInt(0),
+                        @fromBackingInt(@intCast(chunk_depth)),
+                        @fromBackingInt(@intCast(0)),
                     );
                 }
 
@@ -379,7 +379,7 @@ pub fn FixedListType(comptime ST: type, comptime _limit: comptime_int, comptime 
                     }
                     {
                         // last chunk may be partial
-                        var chunk = [_]u8{0} ** 32;
+                        var chunk = @as([32]u8, @splat(0));
                         const i = chunk_count - 1;
                         const remaining_bytes = (len * Element.fixed_size) - i * 32;
                         @memcpy(chunk[0..remaining_bytes], data[i * 32 ..][0..remaining_bytes]);
@@ -444,7 +444,7 @@ pub fn FixedListType(comptime ST: type, comptime _limit: comptime_int, comptime 
                     // all-zero chunked_leaf — out.items already initialised to
                     // Element.default_value via the @memset above, so
                     // skip the chunked_leaf payload read entirely.
-                    if (state_col[@intFromEnum(sid)].kind() == .zero) {
+                    if (state_col[@backingInt(sid)].kind() == .zero) {
                         const items_in_chunked_leaf = @min(ChunkedLeaf.K * items_per_chunk, len - item_idx);
                         item_idx += items_in_chunked_leaf;
                         if (item_idx >= len) break :outer;
@@ -496,8 +496,8 @@ pub fn FixedListType(comptime ST: type, comptime _limit: comptime_int, comptime 
                 const chunk_count = chunkCount(value);
                 if (chunk_count == 0) {
                     return try pool.createBranch(
-                        @enumFromInt(chunk_depth),
-                        @enumFromInt(0),
+                        @fromBackingInt(@intCast(chunk_depth)),
+                        @fromBackingInt(@intCast(0)),
                     );
                 }
 
@@ -564,7 +564,7 @@ pub fn FixedListType(comptime ST: type, comptime _limit: comptime_int, comptime 
                     var next: usize = 0; // index in value.items
 
                     for (0..chunk_count) |_| {
-                        var leaf_buf = [_]u8{0} ** 32;
+                        var leaf_buf = @as([32]u8, @splat(0));
 
                         // how many items still remain to be packed into this chunk?
                         const remaining = len - next;
@@ -625,7 +625,7 @@ pub fn FixedListType(comptime ST: type, comptime _limit: comptime_int, comptime 
                 outer: for (0..chunked_leaf_count) |_| {
                     const sid = try it.next();
                     // Zero subtree at chunked_leaf boundary == all-zero output.
-                    if (state_col[@intFromEnum(sid)].kind() == .zero) {
+                    if (state_col[@backingInt(sid)].kind() == .zero) {
                         const remaining = serialized_size - byte_idx;
                         const zero_bytes = @min(ChunkedLeaf.K * 32, remaining);
                         @memset(out[byte_idx..][0..zero_bytes], 0);
@@ -845,8 +845,8 @@ pub fn VariableListType(comptime ST: type, comptime _limit: comptime_int) type {
         pub const tree = struct {
             pub fn default(pool: *Node.Pool) !Node.Id {
                 return try pool.createBranch(
-                    @enumFromInt(chunk_depth),
-                    @enumFromInt(0),
+                    @fromBackingInt(@intCast(chunk_depth)),
+                    @fromBackingInt(@intCast(0)),
                 );
             }
 
@@ -880,8 +880,8 @@ pub fn VariableListType(comptime ST: type, comptime _limit: comptime_int) type {
 
                 if (len == 0) {
                     return try pool.createBranch(
-                        @enumFromInt(chunk_depth),
-                        @enumFromInt(0),
+                        @fromBackingInt(@intCast(chunk_depth)),
+                        @fromBackingInt(@intCast(0)),
                     );
                 }
 
@@ -929,8 +929,8 @@ pub fn VariableListType(comptime ST: type, comptime _limit: comptime_int) type {
                 const chunk_count = len;
                 if (chunk_count == 0) {
                     return try pool.createBranch(
-                        @enumFromInt(chunk_depth),
-                        @enumFromInt(0),
+                        @fromBackingInt(@intCast(chunk_depth)),
+                        @fromBackingInt(@intCast(0)),
                     );
                 }
 

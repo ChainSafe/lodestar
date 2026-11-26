@@ -30,7 +30,7 @@ pub const Pool = struct {
             .allocator = allocator,
             .node_pool = node_pool,
             .views = std.ArrayList(View).empty,
-            .next_free = @enumFromInt(0),
+            .next_free = @fromBackingInt(@intCast(0)),
             .parent_views = std.AutoHashMap(Id, std.array_hash_map.Auto(Id, void)).init(allocator),
         };
         try pool.preheat(initial_capacity);
@@ -55,26 +55,26 @@ pub const Pool = struct {
 
         for (old_size..new_size) |i| {
             self.views.items[i] = View{
-                .root_node = @enumFromInt(0),
-                .next_free = @enumFromInt(i + 1),
+                .root_node = @fromBackingInt(@intCast(0)),
+                .next_free = @fromBackingInt(@intCast(i + 1)),
                 .parent = null,
             };
         }
     }
 
     pub fn create(self: *Pool, root_node: Node.Id, parent: ?View.Parent) Node.Error!Id {
-        std.debug.assert(@intFromEnum(self.next_free) <= self.views.items.len);
+        std.debug.assert(@backingInt(self.next_free) <= self.views.items.len);
 
         const n = self.next_free;
         // allocate more view space if needed (reuse from the pool if possible)
-        if (@intFromEnum(self.next_free) == self.views.items.len) {
+        if (@backingInt(self.next_free) == self.views.items.len) {
             try self.preheat(1);
         }
-        self.next_free = self.views.items[@intFromEnum(n)].next_free.?;
+        self.next_free = self.views.items[@backingInt(n)].next_free.?;
 
         // initialize the view
         try self.node_pool.ref(root_node);
-        self.views.items[@intFromEnum(n)] = View{
+        self.views.items[@backingInt(n)] = View{
             .root_node = root_node,
             .next_free = null,
             .parent = parent,
@@ -95,7 +95,7 @@ pub const Pool = struct {
     /// surviving child still points at this view's id, so once the slot is reused it would drive
     /// its writes into an unrelated view. The assert catches that early in safe builds.
     pub fn destroy(self: *Pool, view_id: View.Id) void {
-        const view = &self.views.items[@intFromEnum(view_id)];
+        const view = &self.views.items[@backingInt(view_id)];
         // delink the view from its children and deinit the children hashmap
         if (self.parent_views.fetchRemove(view_id)) |kv| {
             var children = kv.value;
@@ -112,7 +112,7 @@ pub const Pool = struct {
         self.node_pool.unref(view.root_node);
         // Poison the slot so a later reuse can't mistake these leftover fields for a live view.
         view.parent = null;
-        view.root_node = @enumFromInt(0);
+        view.root_node = @fromBackingInt(@intCast(0));
         // push to the free list
         view.next_free = self.next_free;
         self.next_free = view_id;
@@ -123,7 +123,7 @@ pub const Id = enum(u32) {
     _,
 
     pub fn clone(view_id: View.Id, pool: *Pool) Node.Error!View.Id {
-        const view = &pool.views.items[@intFromEnum(view_id)];
+        const view = &pool.views.items[@backingInt(view_id)];
         return try pool.create(view.root_node, view.parent);
     }
 
@@ -136,16 +136,16 @@ pub const Id = enum(u32) {
     }
 
     pub fn getRootNode(self: View.Id, pool: *Pool) Node.Id {
-        return pool.views.items[@intFromEnum(self)].root_node;
+        return pool.views.items[@backingInt(self)].root_node;
     }
 
     pub fn getParent(self: View.Id, pool: *Pool) ?View.Parent {
-        return pool.views.items[@intFromEnum(self)].parent;
+        return pool.views.items[@backingInt(self)].parent;
     }
 
     /// Set the root node of the view without updating the parent.
     fn setRootNodeUnsafe(self: View.Id, pool: *Pool, root_node: Node.Id) Node.Error!void {
-        const view = &pool.views.items[@intFromEnum(self)];
+        const view = &pool.views.items[@backingInt(self)];
         try pool.node_pool.ref(root_node);
         pool.node_pool.unref(view.root_node);
         view.root_node = root_node;
@@ -186,17 +186,17 @@ pub const Id = enum(u32) {
         } else {
             try self.setRootNodeUnsafe(pool, new_root);
             if (pool.parent_views.get(self)) |children| {
-                try updateChildrenUnsafe(pool, new_root, children, @enumFromInt(1));
+                try updateChildrenUnsafe(pool, new_root, children, @fromBackingInt(@intCast(1)));
             }
         }
     }
 
     pub fn getNode(self: View.Id, pool: *Pool, gindex: Gindex) !Node.Id {
-        return pool.views.items[@intFromEnum(self)].root_node.getNode(pool.node_pool, gindex);
+        return pool.views.items[@backingInt(self)].root_node.getNode(pool.node_pool, gindex);
     }
 
     pub fn setNode(self: View.Id, pool: *Pool, gindex: Gindex, node: Node.Id) Node.Error!void {
-        const view = &pool.views.items[@intFromEnum(self)];
+        const view = &pool.views.items[@backingInt(self)];
         const new_root = try view.root_node.setNode(pool.node_pool, gindex, node);
 
         if (self.getParent(pool)) |parent| {
@@ -213,11 +213,11 @@ pub const Id = enum(u32) {
     }
 
     pub fn getNodeAtDepth(self: View.Id, pool: *Pool, depth: Depth, index: usize) Node.Error!Node.Id {
-        return pool.views.items[@intFromEnum(self)].root_node.getNodeAtDepth(pool.node_pool, depth, index);
+        return pool.views.items[@backingInt(self)].root_node.getNodeAtDepth(pool.node_pool, depth, index);
     }
 
     pub fn setNodeAtDepth(self: View.Id, pool: *Pool, depth: Depth, index: usize, node: Node.Id) Node.Error!void {
-        const view = &pool.views.items[@intFromEnum(self)];
+        const view = &pool.views.items[@backingInt(self)];
         const new_root = try view.root_node.setNodeAtDepth(pool.node_pool, depth, index, node);
 
         if (self.getParent(pool)) |parent| {
@@ -234,11 +234,11 @@ pub const Id = enum(u32) {
     }
 
     pub fn getNodesAtDepth(self: View.Id, pool: *Pool, depth: Depth, start_index: usize, out: []Node.Id) Node.Error!void {
-        try pool.views.items[@intFromEnum(self)].root_node.getNodesAtDepth(pool.node_pool, depth, start_index, out);
+        try pool.views.items[@backingInt(self)].root_node.getNodesAtDepth(pool.node_pool, depth, start_index, out);
     }
 
     pub fn setNodesAtDepth(self: View.Id, pool: *Pool, depth: Depth, indices: []usize, nodes: []Node.Id) Node.Error!void {
-        const view = &pool.views.items[@intFromEnum(self)];
+        const view = &pool.views.items[@backingInt(self)];
         const new_root = try view.root_node.setNodesAtDepth(pool.node_pool, depth, indices, nodes);
 
         if (self.getParent(pool)) |parent| {

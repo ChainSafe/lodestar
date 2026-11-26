@@ -18,16 +18,16 @@ pub const EntryType = enum(u16) {
     SlotIndex = 0x69 | (0x32 << 8), // "i2" in ASCII
 
     pub fn fromU16(bytes: u16) error{UnknownEntryType}!EntryType {
-        inline for (std.meta.fields(EntryType)) |field| {
-            if (bytes == @intFromEnum(@field(EntryType, field.name))) {
-                return @field(EntryType, field.name);
+        inline for (@typeInfo(EntryType).@"enum".field_names) |field| {
+            if (bytes == @backingInt(@field(EntryType, field))) {
+                return @field(EntryType, field);
             }
         }
         return error.UnknownEntryType;
     }
 
     pub fn toU16(self: EntryType) u16 {
-        return @intFromEnum(self);
+        return @backingInt(self);
     }
 };
 
@@ -190,7 +190,7 @@ pub fn readSlotIndex(allocator: std.mem.Allocator, io: std.Io, file: std.Io.File
 pub const WriteError = error{} || std.Io.File.WritePositionalError;
 
 pub fn writeEntry(io: std.Io, file: std.Io.File, offset: u64, entry_type: EntryType, payload: []const u8) WriteError!void {
-    var header: [8]u8 = [_]u8{0} ** 8;
+    var header: [8]u8 = @as([8]u8, @splat(0));
     std.mem.writeInt(u16, header[0..2], entry_type.toU16(), .little);
     std.mem.writeInt(u32, header[2..6], @intCast(payload.len), .little);
     try file.writePositionalAll(io, &header, offset);

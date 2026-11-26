@@ -47,7 +47,7 @@ test "memory_safety: container overrides survive partial builds and view allocat
     const allocator = std.testing.allocator;
     const Items = ssz.FixedListType(ssz.UintType(64), 4, .{});
     const Fields = struct { a: ssz.UintType(64), items: Items, c: ssz.UintType(64) };
-    const active = [_]u1{1} ++ [_]u1{0} ** 4 ++ [_]u1{1} ++ [_]u1{0} ** 15 ++ [_]u1{1};
+    const active = [_]u1{1} ++ @as([4]u1, @splat(0)) ++ [_]u1{1} ++ @as([15]u1, @splat(0)) ++ [_]u1{1};
 
     inline for (.{
         ssz.VariableContainerType(Fields),

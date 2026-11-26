@@ -26,14 +26,14 @@ const ikm: [32]u8 = [_]u8{
 
 test sigValidate {
     const sk = try SecretKey.keyGen(&ikm, null);
-    const signing_root = [_]u8{0x42} ** 32;
+    const signing_root = @as([32]u8, @splat(0x42));
     const sig = sk.sign(&signing_root, DST, null);
     const sig_comp = sig.compress();
 
     const validated = try sigValidate(&sig_comp, true);
     try std.testing.expect(sig.isEqual(&validated));
 
-    var infinity = [_]u8{0} ** COMPRESS_SIZE;
+    var infinity = @as([COMPRESS_SIZE]u8, @splat(0));
     infinity[0] = 0xc0;
     try std.testing.expectError(error.PkIsInfinity, sigValidate(&infinity, true));
     try std.testing.expect((try sigValidate(&infinity, false)).isInfinity());
@@ -41,7 +41,7 @@ test sigValidate {
 
 test uncompress {
     const sk = try SecretKey.keyGen(&ikm, null);
-    const signing_root = [_]u8{0x42} ** 32;
+    const signing_root = @as([32]u8, @splat(0x42));
     const sig = sk.sign(&signing_root, DST, null);
     const sig_comp = sig.compress();
 
@@ -52,7 +52,7 @@ test uncompress {
     // Invalid lengths must be rejected, even with the compression bit set.
     try std.testing.expectError(error.BadEncoding, uncompress(&[_]u8{}));
     try std.testing.expectError(error.BadEncoding, uncompress(sig_comp[0 .. COMPRESS_SIZE - 1]));
-    var too_long = [_]u8{0} ** (COMPRESS_SIZE + 1);
+    var too_long = @as([(COMPRESS_SIZE + 1)]u8, @splat(0));
     @memcpy(too_long[0..COMPRESS_SIZE], &sig_comp);
     try std.testing.expectError(error.BadEncoding, uncompress(&too_long));
 
@@ -68,7 +68,7 @@ test "test_sign_n_verify" {
     const pk = sk.toPublicKey();
 
     const dst = DST;
-    const signing_root = [_]u8{0x42} ** 32;
+    const signing_root = @as([32]u8, @splat(0x42));
     const sig = sk.sign(&signing_root, dst, null);
 
     // aug is null

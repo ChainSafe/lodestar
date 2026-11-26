@@ -77,7 +77,7 @@ pub fn BitListTreeView(comptime ST: type) type {
         }
 
         fn readLength(self: *Self) !usize {
-            const length_node = try self.data.getChildNode(@enumFromInt(3));
+            const length_node = try self.data.getChildNode(@fromBackingInt(@intCast(3)));
             const length_chunk = length_node.getRoot(self.data.state.pool);
             return std.mem.readInt(usize, length_chunk[0..@sizeOf(usize)], .little);
         }

@@ -217,7 +217,7 @@ pub fn ProgressiveBitListType(comptime opts: TypeOpts) type {
 
         pub const tree = struct {
             pub fn default(pool: *Node.Pool) !Node.Id {
-                return try pool.createBranch(@enumFromInt(0), @enumFromInt(0));
+                return try pool.createBranch(@fromBackingInt(@intCast(0)), @fromBackingInt(@intCast(0)));
             }
 
             pub fn length(node: Node.Id, pool: *Node.Pool) !usize {

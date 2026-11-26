@@ -32,7 +32,7 @@ test "TreeView composite list iteratorReadonly nextValuePtr walks struct element
 
     var list: ListType.Type = .empty;
     defer list.deinit(allocator);
-    for (0..5) |i| try list.append(allocator, .{ .epoch = @intCast(i + 1), .root = [_]u8{@intCast(i)} ** 32 });
+    for (0..5) |i| try list.append(allocator, .{ .epoch = @intCast(i + 1), .root = @as([32]u8, @splat(@intCast(i))) });
 
     const root = try ListType.tree.fromValue(&pool, &list);
     var view = try ListType.TreeView.init(allocator, &pool, root);
@@ -121,10 +121,10 @@ test "TreeView composite list sliceTo truncates elements" {
     defer list.deinit(allocator);
 
     const checkpoints = [_]Checkpoint.Type{
-        .{ .epoch = 1, .root = [_]u8{1} ** 32 },
-        .{ .epoch = 2, .root = [_]u8{2} ** 32 },
-        .{ .epoch = 3, .root = [_]u8{3} ** 32 },
-        .{ .epoch = 4, .root = [_]u8{4} ** 32 },
+        .{ .epoch = 1, .root = @as([32]u8, @splat(1)) },
+        .{ .epoch = 2, .root = @as([32]u8, @splat(2)) },
+        .{ .epoch = 3, .root = @as([32]u8, @splat(3)) },
+        .{ .epoch = 4, .root = @as([32]u8, @splat(4)) },
     };
     try list.appendSlice(allocator, &checkpoints);
 
@@ -157,10 +157,10 @@ test "TreeView composite list sliceFrom returns suffix" {
     defer list.deinit(allocator);
 
     const checkpoints = [_]Checkpoint.Type{
-        .{ .epoch = 5, .root = [_]u8{5} ** 32 },
-        .{ .epoch = 6, .root = [_]u8{6} ** 32 },
-        .{ .epoch = 7, .root = [_]u8{7} ** 32 },
-        .{ .epoch = 8, .root = [_]u8{8} ** 32 },
+        .{ .epoch = 5, .root = @as([32]u8, @splat(5)) },
+        .{ .epoch = 6, .root = @as([32]u8, @splat(6)) },
+        .{ .epoch = 7, .root = @as([32]u8, @splat(7)) },
+        .{ .epoch = 8, .root = @as([32]u8, @splat(8)) },
     };
     try list.appendSlice(allocator, &checkpoints);
 
@@ -202,7 +202,7 @@ test "TreeView composite list sliceFrom handles boundary conditions" {
     for (&values, 0..) |*value, idx| {
         value.* = Checkpoint.Type{
             .epoch = @intCast(idx),
-            .root = [_]u8{@as(u8, @intCast(idx))} ** 32,
+            .root = @as([32]u8, @splat(@as(u8, @intCast(idx)))),
         };
     }
     try list.appendSlice(allocator, values[0..list_length]);
@@ -269,14 +269,14 @@ test "ListCompositeTreeView push and growTo should enforce length bounds" {
     var list: ListType.Type = .empty;
     defer list.deinit(allocator);
 
-    const first = Checkpoint.Type{ .epoch = 9, .root = [_]u8{9} ** 32 };
+    const first = Checkpoint.Type{ .epoch = 9, .root = @as([32]u8, @splat(9)) };
     try list.append(allocator, first);
 
     const root_node = try ListType.tree.fromValue(&pool, &list);
     var view = try ListType.TreeView.init(allocator, &pool, root_node);
     defer view.deinit();
 
-    const next_checkpoint = Checkpoint.Type{ .epoch = 10, .root = [_]u8{10} ** 32 };
+    const next_checkpoint = Checkpoint.Type{ .epoch = 10, .root = @as([32]u8, @splat(10)) };
     const next_node = try Checkpoint.tree.fromValue(&pool, &next_checkpoint);
     var element_view = try Checkpoint.TreeView.init(allocator, &pool, next_node);
     var transferred = false;
@@ -308,7 +308,7 @@ test "TreeView composite list clone isolates updates" {
 
     var list: ListType.Type = .empty;
     defer list.deinit(allocator);
-    try list.append(allocator, .{ .epoch = 1, .root = [_]u8{1} ** 32 });
+    try list.append(allocator, .{ .epoch = 1, .root = @as([32]u8, @splat(1)) });
 
     const root = try ListType.tree.fromValue(&pool, &list);
     var v1 = try ListType.TreeView.init(allocator, &pool, root);
@@ -317,7 +317,7 @@ test "TreeView composite list clone isolates updates" {
     var v2 = try v1.clone(.{});
     defer v2.deinit();
 
-    const replacement = Checkpoint.Type{ .epoch = 9, .root = [_]u8{9} ** 32 };
+    const replacement = Checkpoint.Type{ .epoch = 9, .root = @as([32]u8, @splat(9)) };
     const replacement_root = try Checkpoint.tree.fromValue(&pool, &replacement);
     var replacement_view: ?*Checkpoint.TreeView = try Checkpoint.TreeView.init(allocator, &pool, replacement_root);
     defer if (replacement_view) |v| v.deinit();
@@ -346,13 +346,13 @@ test "TreeView composite list clone reads committed state" {
 
     var list: ListType.Type = .empty;
     defer list.deinit(allocator);
-    try list.append(allocator, .{ .epoch = 1, .root = [_]u8{1} ** 32 });
+    try list.append(allocator, .{ .epoch = 1, .root = @as([32]u8, @splat(1)) });
 
     const root = try ListType.tree.fromValue(&pool, &list);
     var v1 = try ListType.TreeView.init(allocator, &pool, root);
     defer v1.deinit();
 
-    const replacement = Checkpoint.Type{ .epoch = 9, .root = [_]u8{9} ** 32 };
+    const replacement = Checkpoint.Type{ .epoch = 9, .root = @as([32]u8, @splat(9)) };
     const replacement_root = try Checkpoint.tree.fromValue(&pool, &replacement);
     var replacement_view: ?*Checkpoint.TreeView = try Checkpoint.TreeView.init(allocator, &pool, replacement_root);
     defer if (replacement_view) |v| v.deinit();
@@ -379,13 +379,13 @@ test "TreeView composite list clone drops uncommitted changes" {
 
     var list: ListType.Type = .empty;
     defer list.deinit(allocator);
-    try list.append(allocator, .{ .epoch = 1, .root = [_]u8{1} ** 32 });
+    try list.append(allocator, .{ .epoch = 1, .root = @as([32]u8, @splat(1)) });
 
     const root = try ListType.tree.fromValue(&pool, &list);
     var v = try ListType.TreeView.init(allocator, &pool, root);
     defer v.deinit();
 
-    const replacement = Checkpoint.Type{ .epoch = 9, .root = [_]u8{9} ** 32 };
+    const replacement = Checkpoint.Type{ .epoch = 9, .root = @as([32]u8, @splat(9)) };
     const replacement_root = try Checkpoint.tree.fromValue(&pool, &replacement);
     var replacement_view: ?*Checkpoint.TreeView = try Checkpoint.TreeView.init(allocator, &pool, replacement_root);
     defer if (replacement_view) |v0| v0.deinit();
@@ -421,7 +421,7 @@ test "TreeView composite list clone(false) does not transfer cache" {
 
     var list: ListType.Type = .empty;
     defer list.deinit(allocator);
-    try list.append(allocator, .{ .epoch = 1, .root = [_]u8{1} ** 32 });
+    try list.append(allocator, .{ .epoch = 1, .root = @as([32]u8, @splat(1)) });
 
     const root_node = try ListType.tree.fromValue(&pool, &list);
     var view = try ListType.TreeView.init(allocator, &pool, root_node);
@@ -448,7 +448,7 @@ test "TreeView composite list clone(true) transfers cache and clears source" {
 
     var list: ListType.Type = .empty;
     defer list.deinit(allocator);
-    try list.append(allocator, .{ .epoch = 1, .root = [_]u8{1} ** 32 });
+    try list.append(allocator, .{ .epoch = 1, .root = @as([32]u8, @splat(1)) });
 
     const root_node = try ListType.tree.fromValue(&pool, &list);
     var view = try ListType.TreeView.init(allocator, &pool, root_node);
@@ -655,7 +655,7 @@ test "TreeView composite list sliceTo matches incremental snapshots" {
     for (&values, 0..) |*value, idx| {
         value.* = Checkpoint.Type{
             .epoch = @intCast(idx + 1),
-            .root = [_]u8{@as(u8, @intCast(idx + 1))} ** 32,
+            .root = @as([32]u8, @splat(@as(u8, @intCast(idx + 1)))),
         };
     }
 
@@ -738,8 +738,8 @@ test "ListCompositeTreeView - serialize (ByteVector32 list)" {
         .{
             .id = "2 roots",
             .values = &[_][32]u8{
-                [_]u8{0xdd} ** 32,
-                [_]u8{0xee} ** 32,
+                @as([32]u8, @splat(0xdd)),
+                @as([32]u8, @splat(0xee)),
             },
             // 0x0cb947377e177f774719ead8d210af9c6461f41baf5b4082f86a3911454831b8
             .expected_root = [_]u8{ 0x0c, 0xb9, 0x47, 0x37, 0x7e, 0x17, 0x7f, 0x77, 0x47, 0x19, 0xea, 0xd8, 0xd2, 0x10, 0xaf, 0x9c, 0x64, 0x61, 0xf4, 0x1b, 0xaf, 0x5b, 0x40, 0x82, 0xf8, 0x6a, 0x39, 0x11, 0x45, 0x48, 0x31, 0xb8 },
@@ -868,12 +868,12 @@ test "ListCompositeTreeView - push and serialize" {
     var view = try ListRootsType.TreeView.init(allocator, &pool, tree_node);
     defer view.deinit();
 
-    const val1 = [_]u8{0xdd} ** 32;
+    const val1 = @as([32]u8, @splat(0xdd));
     const node1 = try Root32.tree.fromValue(&pool, &val1);
     const elem_view1 = try Root32.TreeView.init(allocator, &pool, node1);
     try view.push(elem_view1);
 
-    const val2 = [_]u8{0xee} ** 32;
+    const val2 = @as([32]u8, @splat(0xee));
     const node2 = try Root32.tree.fromValue(&pool, &val2);
     const elem_view2 = try Root32.TreeView.init(allocator, &pool, node2);
     try view.push(elem_view2);
@@ -993,7 +993,7 @@ test "memory_safety: TreeView composite list sliceTo does not leak pool nodes" {
 
     var list: ListType.Type = .empty;
     defer list.deinit(allocator);
-    for (0..8) |i| try list.append(allocator, .{ .epoch = @intCast(i), .root = [_]u8{@intCast(i)} ** 32 });
+    for (0..8) |i| try list.append(allocator, .{ .epoch = @intCast(i), .root = @as([32]u8, @splat(@intCast(i))) });
 
     const root_node = try ListType.tree.fromValue(&pool, &list);
     var view = try ListType.TreeView.init(allocator, &pool, root_node);
@@ -1013,8 +1013,8 @@ test "memory_safety: TreeView composite list setValue - OOM does not double-free
 
     var list: ListType.Type = .empty;
     defer list.deinit(std.testing.allocator);
-    for (0..3) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = [_]u8{@intCast(i)} ** 32 });
-    const newval: Checkpoint.Type = .{ .epoch = 99, .root = [_]u8{0xee} ** 32 };
+    for (0..3) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = @as([32]u8, @splat(@intCast(i))) });
+    const newval: Checkpoint.Type = .{ .epoch = 99, .root = @as([32]u8, @splat(0xee)) };
 
     var backing = DoubleFreeDetectAllocator.init(std.testing.allocator, std.math.maxInt(usize));
     defer backing.deinit();
@@ -1043,8 +1043,8 @@ test "memory_safety: TreeView composite list push - OOM does not double-free" {
 
     var list: ListType.Type = .empty;
     defer list.deinit(std.testing.allocator);
-    for (0..3) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = [_]u8{@intCast(i)} ** 32 });
-    const newval: Checkpoint.Type = .{ .epoch = 99, .root = [_]u8{0xee} ** 32 };
+    for (0..3) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = @as([32]u8, @splat(@intCast(i))) });
+    const newval: Checkpoint.Type = .{ .epoch = 99, .root = @as([32]u8, @splat(0xee)) };
 
     var backing = DoubleFreeDetectAllocator.init(std.testing.allocator, std.math.maxInt(usize));
     defer backing.deinit();
@@ -1073,8 +1073,8 @@ test "memory_safety: TreeView composite list set(index, ownedView) - failed set 
 
     var list: ListType.Type = .empty;
     defer list.deinit(std.testing.allocator);
-    for (0..3) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = [_]u8{@intCast(i)} ** 32 });
-    const newval: Checkpoint.Type = .{ .epoch = 99, .root = [_]u8{0xee} ** 32 };
+    for (0..3) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = @as([32]u8, @splat(@intCast(i))) });
+    const newval: Checkpoint.Type = .{ .epoch = 99, .root = @as([32]u8, @splat(0xee)) };
 
     var backing = DoubleFreeDetectAllocator.init(std.testing.allocator, std.math.maxInt(usize));
     defer backing.deinit();
@@ -1115,8 +1115,8 @@ test "memory_safety: TreeView composite list commit - OOM does not double-free" 
 
     var list: ListType.Type = .empty;
     defer list.deinit(std.testing.allocator);
-    for (0..3) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = [_]u8{@intCast(i)} ** 32 });
-    const newval: Checkpoint.Type = .{ .epoch = 99, .root = [_]u8{0xee} ** 32 };
+    for (0..3) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = @as([32]u8, @splat(@intCast(i))) });
+    const newval: Checkpoint.Type = .{ .epoch = 99, .root = @as([32]u8, @splat(0xee)) };
 
     var backing = DoubleFreeDetectAllocator.init(std.testing.allocator, std.math.maxInt(usize));
     defer backing.deinit();
@@ -1149,7 +1149,7 @@ test "memory_safety: TreeView composite list sliceTo doesn't leak pool nodes" {
     const ListType = FixedListType(Checkpoint, 1024, .{});
     var list: ListType.Type = .empty;
     defer list.deinit(allocator);
-    for (0..16) |i| try list.append(allocator, .{ .epoch = @intCast(i), .root = [_]u8{@intCast(i)} ** 32 });
+    for (0..16) |i| try list.append(allocator, .{ .epoch = @intCast(i), .root = @as([32]u8, @splat(@intCast(i))) });
 
     const root_node = try ListType.tree.fromValue(&pool, &list);
     var view = try ListType.TreeView.init(allocator, &pool, root_node);
@@ -1174,7 +1174,7 @@ test "memory_safety: TreeView composite list clone should not double-free cached
     const ListType = FixedListType(Checkpoint, 16, .{});
     var list: ListType.Type = .empty;
     defer list.deinit(std.testing.allocator);
-    try list.append(std.testing.allocator, .{ .epoch = 1, .root = [_]u8{1} ** 32 });
+    try list.append(std.testing.allocator, .{ .epoch = 1, .root = @as([32]u8, @splat(1)) });
 
     var backing = DoubleFreeDetectAllocator.init(std.testing.allocator, std.math.maxInt(usize));
     defer backing.deinit();
@@ -1222,7 +1222,7 @@ test "memory_safety: list_composite init only allocates the view and preserves c
 
     var value: ListType.Type = .empty;
     defer value.deinit(allocator);
-    try value.append(allocator, .{ .epoch = 7, .root = [_]u8{7} ** 32 });
+    try value.append(allocator, .{ .epoch = 7, .root = @as([32]u8, @splat(7)) });
 
     const root = try ListType.tree.fromValue(&pool, &value);
     try pool.ref(root);

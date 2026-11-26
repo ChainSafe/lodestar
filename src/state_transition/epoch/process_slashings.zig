@@ -42,7 +42,7 @@ pub fn processSlashings(
     // effective_balance_increment is bounded by max effective balance (32 pre-Electra, 2048 post-Electra).
     const max_effective = comptime if (fork.gte(.electra)) preset.MAX_EFFECTIVE_BALANCE_ELECTRA else preset.MAX_EFFECTIVE_BALANCE;
     const max_increment = comptime max_effective / EFFECTIVE_BALANCE_INCREMENT + 1;
-    var penalties_by_effective_balance_increment: [max_increment]?u64 = .{null} ** max_increment;
+    var penalties_by_effective_balance_increment: [max_increment]?u64 = @splat(null);
 
     for (cache.indices_to_slash.items, 0..) |index, penalty_index| {
         const effective_balance_increment = effective_balance_increments[index];

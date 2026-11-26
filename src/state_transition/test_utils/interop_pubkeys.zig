@@ -13,7 +13,7 @@ pub fn interopPubkeysCached(validator_count: usize, out: []BLSPubkey) !void {
 
     for (0..validator_count) |i| {
         // only need to set for the first 8 bytes which is u64
-        var ikm = [_]u8{0} ** 32;
+        var ikm = @as([32]u8, @splat(0));
         const u64_slice = std.mem.bytesAsSlice(u64, ikm[0..8]);
         u64_slice[0] = @intCast(i);
         const sk = try Secretkey.keyGen(&ikm, null);
@@ -23,7 +23,7 @@ pub fn interopPubkeysCached(validator_count: usize, out: []BLSPubkey) !void {
 }
 
 pub fn interopSign(validator_index: usize, message: *const bls.SigningRoot) !bls.Signature {
-    var ikm = [_]u8{0} ** 32;
+    var ikm = @as([32]u8, @splat(0));
     const u64_slice = std.mem.bytesAsSlice(u64, ikm[0..8]);
     u64_slice[0] = @intCast(validator_index);
     const sk = try Secretkey.keyGen(&ikm, null);

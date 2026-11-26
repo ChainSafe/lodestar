@@ -18,7 +18,7 @@ pub fn ZeroHash(max_depth: u8) type {
             var zh: @This() = undefined;
             for (0..max_depth) |i| {
                 if (i == 0) {
-                    zh.hashes[i] = [_]u8{0} ** 32;
+                    zh.hashes[i] = @as([32]u8, @splat(0));
                 } else {
                     hashOne(
                         &zh.hashes[i],

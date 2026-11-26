@@ -72,7 +72,7 @@ pub fn upgradeStateToCapella(
         &new_latest_execution_payload_header,
     );
     // new in capella
-    new_latest_execution_payload_header.withdrawals_root = [_]u8{0} ** 32;
+    new_latest_execution_payload_header.withdrawals_root = @as([32]u8, @splat(0));
 
     try state.setLatestExecutionPayloadHeader(&new_latest_execution_payload_header);
 

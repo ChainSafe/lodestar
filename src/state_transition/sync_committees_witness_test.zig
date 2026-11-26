@@ -29,8 +29,8 @@ const NUM_WITNESS_ELECTRA: u8 = 5;
 
 fn fillSyncCommittee(byte: u8) ct.altair.SyncCommittee.Type {
     return .{
-        .pubkeys = [_][48]u8{[_]u8{byte} ** 48} ** preset.SYNC_COMMITTEE_SIZE,
-        .aggregate_pubkey = [_]u8{byte} ** 48,
+        .pubkeys = @as([preset.SYNC_COMMITTEE_SIZE][48]u8, @splat(@as([48]u8, @splat(byte)))),
+        .aggregate_pubkey = @as([48]u8, @splat(byte)),
     };
 }
 
@@ -45,7 +45,7 @@ fn fromGindex(gindex: usize) struct { depth: usize, index: usize } {
 /// that verifyMerkleBranch expects. Only the first `depth` slots are read by
 /// verifyMerkleBranch.
 fn packProof(branch: []const [32]u8) [33][32]u8 {
-    var proof: [33][32]u8 = .{[_]u8{0} ** 32} ** 33;
+    var proof: [33][32]u8 = @splat(@as([32]u8, @splat(0)));
     for (branch, 0..) |w, i| proof[i] = w;
     return proof;
 }

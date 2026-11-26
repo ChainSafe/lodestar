@@ -36,7 +36,7 @@ pub fn main(init: std.process.Init) !void {
     var bench = zbench.Benchmark.init(allocator, .{});
     defer bench.deinit();
 
-    const gindex: Gindex = @enumFromInt(0x123456789abcdef0);
+    const gindex: Gindex = @fromBackingInt(@intCast(0x123456789abcdef0));
     const path_bits = PathBits{ .gindex = gindex };
     try bench.addParam("gindex - path_bits", &path_bits, .{});
     const path = Path{ .gindex = gindex };

@@ -85,20 +85,20 @@ fn chainConfigU64(value: napi.Value) !u64 {
 fn chainConfigFromObject(owned: *OwnedConfig, env: napi.Env, obj: napi.Value) !ChainConfig {
     var chain_config = defaultChainConfig();
 
-    inline for (std.meta.fields(ChainConfig)) |field| {
-        const field_value: napi.Value = obj.getNamedProperty(field.name) catch |err| {
-            try env.throwError(@errorName(err), "Missing field " ++ field.name);
+    inline for (@typeInfo(ChainConfig).@"struct".field_names, @typeInfo(ChainConfig).@"struct".field_types) |name, Field| {
+        const field_value: napi.Value = obj.getNamedProperty(name) catch |err| {
+            try env.throwError(@errorName(err), "Missing field " ++ name);
             return error.PendingException;
         };
 
         if (try field_value.typeof() == .undefined) {
-            std.log.debug("missing field value for: {s}, skipping\n", .{field.name});
+            std.log.debug("missing field value for: {s}, skipping\n", .{name});
         } else {
-            switch (field.type) {
+            switch (Field) {
                 Preset => {
                     var str_buf: [16]u8 = undefined;
                     const preset_str = try field_value.getValueStringUtf8(&str_buf);
-                    @field(chain_config, field.name) =
+                    @field(chain_config, name) =
                         if (std.mem.eql(u8, preset_str, "mainnet"))
                             .mainnet
                         else if (std.mem.eql(u8, preset_str, "minimal"))
@@ -108,11 +108,11 @@ fn chainConfigFromObject(owned: *OwnedConfig, env: napi.Env, obj: napi.Value) !C
                         else
                             return error.InvalidPreset;
                 },
-                u64 => @field(chain_config, field.name) = try chainConfigU64(field_value),
+                u64 => @field(chain_config, name) = try chainConfigU64(field_value),
                 u256 => {
                     var str_buf: [128]u8 = undefined;
                     const str = try (try field_value.coerceToString()).getValueStringUtf8(&str_buf);
-                    @field(chain_config, field.name) = std.fmt.parseInt(u256, str, 10) catch {
+                    @field(chain_config, name) = std.fmt.parseInt(u256, str, 10) catch {
                         return error.InvalidChainConfigFieldValue;
                     };
                 },
@@ -123,7 +123,7 @@ fn chainConfigFromObject(owned: *OwnedConfig, env: napi.Env, obj: napi.Value) !C
                     }
                     var version: [4]u8 = undefined;
                     @memcpy(&version, typedarray_info.data);
-                    @field(chain_config, field.name) = version;
+                    @field(chain_config, name) = version;
                 },
                 [20]u8 => {
                     const typedarray_info = try field_value.getTypedarrayInfo();
@@ -132,7 +132,7 @@ fn chainConfigFromObject(owned: *OwnedConfig, env: napi.Env, obj: napi.Value) !C
                     }
                     var address: [20]u8 = undefined;
                     @memcpy(&address, typedarray_info.data);
-                    @field(chain_config, field.name) = address;
+                    @field(chain_config, name) = address;
                 },
                 [32]u8 => {
                     const typedarray_info = try field_value.getTypedarrayInfo();
@@ -141,14 +141,14 @@ fn chainConfigFromObject(owned: *OwnedConfig, env: napi.Env, obj: napi.Value) !C
                     }
                     var root: [32]u8 = undefined;
                     @memcpy(&root, typedarray_info.data);
-                    @field(chain_config, field.name) = root;
+                    @field(chain_config, name) = root;
                 },
                 []const u8 => {
                     const config_name = try field_value.getValueStringUtf8(&owned.config_name);
-                    if (comptime std.mem.eql(u8, field.name, "CONFIG_NAME")) {
-                        @field(chain_config, field.name) = config_name;
+                    if (comptime std.mem.eql(u8, name, "CONFIG_NAME")) {
+                        @field(chain_config, name) = config_name;
                     } else {
-                        @compileError("unsupported field: " ++ field.name);
+                        @compileError("unsupported field: " ++ name);
                     }
                 },
                 []const ChainConfig.BlobScheduleEntry => {
@@ -168,7 +168,7 @@ fn chainConfigFromObject(owned: *OwnedConfig, env: napi.Env, obj: napi.Value) !C
                         };
                         owned.blob_schedule[i] = blob_schedule_entry;
                     }
-                    @field(chain_config, field.name) = owned.blob_schedule[0..array_length];
+                    @field(chain_config, name) = owned.blob_schedule[0..array_length];
                 },
                 else => return error.UnsupportedChainConfigFieldType,
             }

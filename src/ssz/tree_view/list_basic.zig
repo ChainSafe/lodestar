@@ -195,7 +195,7 @@ pub fn ListBasicTreeView(comptime ST: type) type {
                         std.debug.assert(self.last_chunked_leaf_idx == null or
                             chunked_leaf_idx == self.last_chunked_leaf_idx.? + 1);
                         const sid = try self.depth_iterator.next();
-                        if (pool.nodes.items(.state)[@intFromEnum(sid)].kind() == .zero) {
+                        if (pool.nodes.items(.state)[@backingInt(sid)].kind() == .zero) {
                             self.current_chunks = null;
                             self.current_is_zero = true;
                         } else {
@@ -323,7 +323,7 @@ pub fn ListBasicTreeView(comptime ST: type) type {
             std.debug.assert(chunked_leaf_offset < ChunkedLeaf.K);
 
             const boundary = try Node.Id.getNodeAtDepth(self.chunks.state.root, pool, chunked_leaf_depth, chunked_leaf_idx);
-            const boundary_kind = pool.nodes.items(.state)[@intFromEnum(boundary)].kind();
+            const boundary_kind = pool.nodes.items(.state)[@backingInt(boundary)].kind();
 
             const truncate_input: Node.Id = blk: {
                 if (boundary_kind == .zero) {
@@ -372,7 +372,7 @@ pub fn ListBasicTreeView(comptime ST: type) type {
             var length_node: ?Node.Id = try pool.createLeafFromUint(@intCast(new_length));
             defer if (length_node) |id| pool.unref(id);
 
-            const root_with_length = try Node.Id.setNode(new_root, pool, @enumFromInt(3), length_node.?);
+            const root_with_length = try Node.Id.setNode(new_root, pool, @fromBackingInt(@intCast(3)), length_node.?);
             errdefer pool.unref(root_with_length);
             length_node = null;
 
@@ -419,7 +419,7 @@ pub fn ListBasicTreeView(comptime ST: type) type {
 
             // setNode takes `length_node` into the tree, so null it below to keep the defer from
             // unref-ing what the tree now owns.
-            const root_with_length = try Node.Id.setNode(new_root, pool, @enumFromInt(3), length_node.?);
+            const root_with_length = try Node.Id.setNode(new_root, pool, @fromBackingInt(@intCast(3)), length_node.?);
             errdefer pool.unref(root_with_length);
             length_node = null;
 

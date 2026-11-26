@@ -3,7 +3,7 @@ const testing = std.testing;
 const Verifier = @import("Verifier.zig");
 
 /// Eight zero KoalaBear words pack to a canonical SP1 verifying key.
-const sp1_zero_vk = [_]u8{0} ** 32;
+const sp1_zero_vk = @as([32]u8, @splat(0));
 
 test "init fails on targets without the native verifier" {
     if (Verifier.available) return error.SkipZigTest;
@@ -12,7 +12,7 @@ test "init fails on targets without the native verifier" {
 
 test "init rejects an unknown zkvm kind" {
     if (!Verifier.available) return error.SkipZigTest;
-    try testing.expectError(error.BadKind, Verifier.init(@enumFromInt(7), &sp1_zero_vk));
+    try testing.expectError(error.BadKind, Verifier.init(@fromBackingInt(@intCast(7)), &sp1_zero_vk));
 }
 
 test "init bounds the program verifying key" {

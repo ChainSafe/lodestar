@@ -39,7 +39,7 @@ pub fn RefCount(comptime T: type) type {
                 .pointer => |p| p.child,
                 else => T,
             };
-            const deinit_params = @typeInfo(@TypeOf(BaseT.deinit)).@"fn".params;
+            const deinit_params = @typeInfo(@TypeOf(BaseT.deinit)).@"fn".param_types;
             if (comptime deinit_params.len > 1) {
                 self.instance.deinit(self.allocator);
             } else {

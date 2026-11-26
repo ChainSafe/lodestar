@@ -358,7 +358,7 @@ pub fn ProgressiveListCompositeTreeView(comptime ST: type) type {
             try pool.ref(truncated);
             defer pool.unref(truncated);
 
-            var contents = try pool.createBranch(truncated, @enumFromInt(0));
+            var contents = try pool.createBranch(truncated, @fromBackingInt(@intCast(0)));
             try pool.ref(contents);
             defer pool.unref(contents);
             var i = last_subtree;

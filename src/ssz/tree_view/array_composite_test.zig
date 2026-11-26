@@ -325,10 +325,10 @@ test "ArrayCompositeTreeView - serialize (ByteVector32 vector)" {
     defer pool.deinit();
 
     const value = [4][32]u8{
-        [_]u8{0xaa} ** 32,
-        [_]u8{0xbb} ** 32,
-        [_]u8{0xcc} ** 32,
-        [_]u8{0xdd} ** 32,
+        @as([32]u8, @splat(0xaa)),
+        @as([32]u8, @splat(0xbb)),
+        @as([32]u8, @splat(0xcc)),
+        @as([32]u8, @splat(0xdd)),
     };
 
     var value_serialized: [VecRootsType.fixed_size]u8 = undefined;
@@ -413,10 +413,10 @@ test "ArrayCompositeTreeView - get and set" {
     defer pool.deinit();
 
     const value = [4][32]u8{
-        [_]u8{0xaa} ** 32,
-        [_]u8{0xbb} ** 32,
-        [_]u8{0xcc} ** 32,
-        [_]u8{0xdd} ** 32,
+        @as([32]u8, @splat(0xaa)),
+        @as([32]u8, @splat(0xbb)),
+        @as([32]u8, @splat(0xcc)),
+        @as([32]u8, @splat(0xdd)),
     };
 
     const tree_node = try VecRootsType.tree.fromValue(&pool, &value);
@@ -430,7 +430,7 @@ test "ArrayCompositeTreeView - get and set" {
     try std.testing.expectEqual(bytes0.len, bytes0_written);
     try std.testing.expectEqualSlices(u8, &value[0], &bytes0);
 
-    const new_val = [_]u8{0xff} ** 32;
+    const new_val = @as([32]u8, @splat(0xff));
     const new_node = try Root32.tree.fromValue(&pool, &new_val);
     const new_elem = try Root32.TreeView.init(allocator, &pool, new_node);
     try view.set(1, new_elem);

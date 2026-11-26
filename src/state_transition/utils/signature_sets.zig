@@ -59,8 +59,8 @@ pub fn createAggregateSignatureSetFromComponents(pubkeys: []const PublicKey, sig
 }
 
 test "signature sets reject signatures outside G2 subgroup" {
-    const ikm = [_]u8{1} ** 32;
-    const signing_root = [_]u8{2} ** 32;
+    const ikm = @as([32]u8, @splat(1));
+    const signing_root = @as([32]u8, @splat(2));
     const secret_key = try bls.SecretKey.keyGen(&ikm, null);
     const public_key = secret_key.toPublicKey();
     const valid_signature = secret_key.sign(&signing_root, bls.DST, null);

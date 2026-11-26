@@ -171,13 +171,13 @@ test "FixedVectorType - serializeIntoBytes (VectorComposite ByteVector32 - 4 roo
     const VectorBV32 = FixedVectorType(ByteVector32, 4, .{});
 
     const value: VectorBV32.Type = [_][32]u8{
-        [_]u8{0xbb} ** 32,
-        [_]u8{0xcc} ** 32,
-        [_]u8{0xdd} ** 32,
-        [_]u8{0xee} ** 32,
+        @as([32]u8, @splat(0xbb)),
+        @as([32]u8, @splat(0xcc)),
+        @as([32]u8, @splat(0xdd)),
+        @as([32]u8, @splat(0xee)),
     };
 
-    const expected_serialized = [_]u8{0xbb} ** 32 ++ [_]u8{0xcc} ** 32 ++ [_]u8{0xdd} ** 32 ++ [_]u8{0xee} ** 32;
+    const expected_serialized = @as([32]u8, @splat(0xbb)) ++ @as([32]u8, @splat(0xcc)) ++ @as([32]u8, @splat(0xdd)) ++ @as([32]u8, @splat(0xee));
     const expected_root = [_]u8{ 0x56, 0x01, 0x9b, 0xaf, 0xbc, 0x63, 0x46, 0x1b, 0x73, 0xe2, 0x1c, 0x6e, 0xae, 0x0c, 0x62, 0xe8, 0xd5, 0xb8, 0xe0, 0x5c, 0xb0, 0xac, 0x06, 0x57, 0x77, 0xdc, 0x23, 0x8f, 0xcf, 0x96, 0x04, 0xe6 };
 
     var serialized: [VectorBV32.fixed_size]u8 = undefined;
@@ -326,12 +326,12 @@ test "FixedVectorType - tree.deserializeFromBytes (VectorComposite ByteVector32)
     const VectorBV32 = FixedVectorType(ByteVector32, 4, .{});
 
     // 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-    const serialized = [_]u8{0xbb} ** 32 ++ [_]u8{0xcc} ** 32 ++ [_]u8{0xdd} ** 32 ++ [_]u8{0xee} ** 32;
+    const serialized = @as([32]u8, @splat(0xbb)) ++ @as([32]u8, @splat(0xcc)) ++ @as([32]u8, @splat(0xdd)) ++ @as([32]u8, @splat(0xee));
     const expected_values = [_][32]u8{
-        [_]u8{0xbb} ** 32,
-        [_]u8{0xcc} ** 32,
-        [_]u8{0xdd} ** 32,
-        [_]u8{0xee} ** 32,
+        @as([32]u8, @splat(0xbb)),
+        @as([32]u8, @splat(0xcc)),
+        @as([32]u8, @splat(0xdd)),
+        @as([32]u8, @splat(0xee)),
     };
     // 0x56019bafbc63461b73e21c6eae0c62e8d5b8e05cb0ac065777dc238fcf9604e6
     const expected_root = [_]u8{ 0x56, 0x01, 0x9b, 0xaf, 0xbc, 0x63, 0x46, 0x1b, 0x73, 0xe2, 0x1c, 0x6e, 0xae, 0x0c, 0x62, 0xe8, 0xd5, 0xb8, 0xe0, 0x5c, 0xb0, 0xac, 0x06, 0x57, 0x77, 0xdc, 0x23, 0x8f, 0xcf, 0x96, 0x04, 0xe6 };

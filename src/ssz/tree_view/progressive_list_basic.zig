@@ -39,7 +39,7 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
         const Self = @This();
         const items_per_chunk = 32 / ST.Element.fixed_size;
         const use_chunked_leaf = ST.opts.chunked_leaf;
-        const length_gindex: Gindex = @enumFromInt(3);
+        const length_gindex: Gindex = @fromBackingInt(@intCast(3));
         pub const max_length: usize = ST.limit;
 
         pub fn init(allocator: Allocator, pool: *Node.Pool, root: Node.Id) !*Self {
@@ -184,7 +184,7 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
             // TODO: Share leaf copy-on-write logic with BasicPackedChunks.set via TreeViewState.editLeaf.
             if (state.isLeaf() and state.refCount() == 0) {
                 ST.Element.tree.fromValuePackedIntoChunk(
-                    &self.state.pool.nodes.items(.root)[@intFromEnum(node)],
+                    &self.state.pool.nodes.items(.root)[@backingInt(node)],
                     index % items_per_chunk,
                     &value,
                 );
@@ -451,7 +451,7 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
             view: *const Self,
             index: usize,
             subtree_end: usize = 0,
-            gindex: Gindex = @enumFromInt(0),
+            gindex: Gindex = @fromBackingInt(@intCast(0)),
             folded_depth: Depth = 0,
             iterator: Node.DepthIterator = undefined,
 
@@ -470,7 +470,7 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
                     const root = if (subtree_index < progressive.subtreeCount(chunkCount(self.view._orig_len)))
                         try self.view.state.root.getNode(pool, progressive.subtreeGindex(subtree_index))
                     else
-                        @as(Node.Id, @enumFromInt(depth));
+                        @as(Node.Id, @fromBackingInt(@intCast(depth)));
                     self.iterator = Node.DepthIterator.init(
                         pool,
                         root,
@@ -493,7 +493,7 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
                     .folded_depth = self.folded_depth,
                 };
                 self.index += block.chunk_count;
-                self.gindex = @enumFromInt(@intFromEnum(self.gindex) + 1);
+                self.gindex = @fromBackingInt(@intCast(@backingInt(self.gindex) + 1));
                 return block;
             }
         };
@@ -546,7 +546,7 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
             defer pool.unref(trimmed);
 
             const sliced = blk: {
-                var contents = try pool.createBranch(trimmed, @enumFromInt(0));
+                var contents = try pool.createBranch(trimmed, @fromBackingInt(@intCast(0)));
                 errdefer pool.unref(contents);
 
                 var i = subtree_index;
@@ -598,7 +598,7 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
             const gindex = position.gindex;
             const node = self.state.children_nodes.get(gindex) orelse
                 if (position.first_chunk >= chunkCount(self._orig_len))
-                    @as(Node.Id, @enumFromInt(position.folded_depth))
+                    @as(Node.Id, @fromBackingInt(@intCast(position.folded_depth)))
                 else
                     try self.state.getChildNode(gindex);
             self.cached_leaf = .{ .position = position, .node = node };
@@ -639,12 +639,12 @@ pub fn ProgressiveListBasicTreeView(comptime ST: type) type {
                 const start = progressive.subtreeStartChunk(subtree_index);
                 const folded_depth = foldedDepth(subtree_index);
                 const leaf_index = (chunk_index - start) >> folded_depth;
-                const prefix = @intFromEnum(progressive.subtreeGindex(subtree_index)) <<
+                const prefix = @backingInt(progressive.subtreeGindex(subtree_index)) <<
                     @intCast(2 * subtree_index - folded_depth);
                 return .{
                     .first_chunk = start + (leaf_index << folded_depth),
                     .folded_depth = folded_depth,
-                    .gindex = @enumFromInt(prefix + leaf_index),
+                    .gindex = @fromBackingInt(@intCast(prefix + leaf_index)),
                 };
             }
         };

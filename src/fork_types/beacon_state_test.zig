@@ -46,7 +46,7 @@ test "rotateEpochParticipation preserves transferred view after pool exhaustion"
                     error.PoolExhausted => break,
                 };
             }
-            try std.testing.expectEqual(pool.nodes.len, @as(usize, @intFromEnum(pool.next_free_node)));
+            try std.testing.expectEqual(pool.nodes.len, @as(usize, @backingInt(pool.next_free_node)));
             for (0..remaining_slots) |_| {
                 filler_count -= 1;
                 pool.unref(filler[filler_count]);

@@ -23,7 +23,7 @@ fn validateAndExtractSelector(data: []const u8, comptime options: anytype) !u8 {
 
 /// Creates a 32-byte padded array with the selector in the first byte
 fn selectorPadded(selector: u8) [32]u8 {
-    var result = [_]u8{0} ** 32;
+    var result = @as([32]u8, @splat(0));
     result[0] = selector;
     return result;
 }
@@ -52,7 +52,7 @@ fn UnionDataType(comptime options: anytype) type {
     // Build union fields from options
     comptime var union_names: [fields_count][:0]const u8 = undefined;
     comptime var union_types: [fields_count]type = undefined;
-    comptime var union_attrs: [fields_count]std.builtin.Type.UnionField.Attributes = undefined;
+    comptime var union_attrs: [fields_count]std.lang.Type.Union.FieldAttributes = undefined;
     inline for (options, 0..) |option, i| {
         const selector = option.@"0";
         const option_type = option.@"1";
@@ -200,7 +200,7 @@ pub fn CompatibleUnionType(comptime options: anytype) type {
 
         /// Get the selector value from a union value
         pub fn getSelector(value: *const Type) u8 {
-            return @intFromEnum(std.meta.activeTag(value.*));
+            return @backingInt(std.meta.activeTag(value.*));
         }
 
         /// Check if a selector is valid

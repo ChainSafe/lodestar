@@ -90,7 +90,7 @@ test "ProgressiveContainerType - variable" {
 
 test "progressive container field gindices should address the field nodes" {
     const allocator = std.testing.allocator;
-    const active_fields = [_]u1{ 1, 1, 0, 0, 1, 1 } ++ [_]u1{0} ** 15 ++ [_]u1{1};
+    const active_fields = [_]u1{ 1, 1, 0, 0, 1, 1 } ++ @as([15]u1, @splat(0)) ++ [_]u1{1};
     const Fixed = FixedProgressiveContainerType(struct {
         a: UintType(64),
         b: UintType(64),
@@ -112,11 +112,11 @@ test "progressive container field gindices should address the field nodes" {
     // 4 are the first and last of the 4 leaves under 10, so 40 and 43. Chunk 5 is the first of
     // the 16 leaves under 22, so 352. Chunk 21 is the first of the 64 leaves under 46, so 2944.
     inline for (.{ Fixed, Variable }) |ST| {
-        try std.testing.expectEqual(4, @intFromEnum(comptime ST.getFieldGindex("a")));
-        try std.testing.expectEqual(40, @intFromEnum(comptime ST.getFieldGindex("b")));
-        try std.testing.expectEqual(43, @intFromEnum(comptime ST.getFieldGindex("c")));
-        try std.testing.expectEqual(352, @intFromEnum(comptime ST.getFieldGindex("d")));
-        try std.testing.expectEqual(2944, @intFromEnum(comptime ST.getFieldGindex("e")));
+        try std.testing.expectEqual(4, @backingInt(comptime ST.getFieldGindex("a")));
+        try std.testing.expectEqual(40, @backingInt(comptime ST.getFieldGindex("b")));
+        try std.testing.expectEqual(43, @backingInt(comptime ST.getFieldGindex("c")));
+        try std.testing.expectEqual(352, @backingInt(comptime ST.getFieldGindex("d")));
+        try std.testing.expectEqual(2944, @backingInt(comptime ST.getFieldGindex("e")));
     }
 
     var pool = try Node.Pool.init(.{
@@ -139,7 +139,7 @@ test "progressive container field gindices should address the field nodes" {
     }
 
     const baseline = pool.getNodesInUse();
-    var nodes: [Fixed.chunk_count]Node.Id = @splat(@enumFromInt(0));
+    var nodes: [Fixed.chunk_count]Node.Id = @splat(@fromBackingInt(@intCast(0)));
     inline for (Fixed.fields, Fixed.field_indices) |field, index| {
         nodes[index] = try root.getNode(&pool, comptime Fixed.getFieldGindex(field.name));
     }
@@ -214,7 +214,7 @@ test "memory_safety: progressive container tree.fromValue reclaims unpublished n
         a: UintType(64),
         b: ByteVectorType(32),
     }, &.{ 1, 1 });
-    const value: Container.Type = .{ .a = 1, .b = [_]u8{2} ** 32 };
+    const value: Container.Type = .{ .a = 1, .b = @as([32]u8, @splat(2)) };
 
     try expectProgressiveFromValuePoolExhaustionReclaimsNodes(Container, &value, 32);
 }
@@ -356,7 +356,7 @@ test "variable progressive container cloneInto should fill a container with more
     try Source.cloneInto(Destination, allocator, &value, &upgraded);
     try std.testing.expectEqual(7, upgraded.slot);
     try std.testing.expectEqual(3, upgraded.checkpoint.epoch);
-    try std.testing.expectEqual([_]u8{0} ** 32, upgraded.checkpoint.root);
+    try std.testing.expectEqual(@as([32]u8, @splat(0)), upgraded.checkpoint.root);
     try std.testing.expect(Bits.equals(&value.bits, &upgraded.bits));
     try std.testing.expectEqualSlices(u64, &.{ 32, 64 }, upgraded.inner.balances.items);
     try std.testing.expectEqual(0, upgraded.inner.extra.items.len);
@@ -787,7 +787,7 @@ test "memory_safety: progressive container tree reads should reject a nonzero te
         const good = try ST.tree.fromValue(&pool, &source);
         defer pool.unref(good);
         const bad_leaf = try pool.createLeafFromUint(1);
-        const bad = try good.setNode(&pool, @enumFromInt(11), bad_leaf);
+        const bad = try good.setNode(&pool, @fromBackingInt(@intCast(11)), bad_leaf);
         defer pool.unref(bad);
 
         var out = ST.default_value;

@@ -191,7 +191,7 @@ test "memory_safety: progressive bitlist tree reads should reject malformed term
         const good = try Bits.tree.fromValue(&pool, &source);
         defer pool.unref(good);
         const bad_leaf = try pool.createLeafFromUint(1);
-        const terminator: @import("persistent_merkle_tree").Gindex = @enumFromInt(@as(u64, if (len == 0) 2 else if (len <= 256) 5 else 11));
+        const terminator: @import("persistent_merkle_tree").Gindex = @fromBackingInt(@intCast(@as(u64, if (len == 0) 2 else if (len <= 256) 5 else 11)));
         const bad = try good.setNode(&pool, terminator, bad_leaf);
         defer pool.unref(bad);
         var out = Bits.default_value;

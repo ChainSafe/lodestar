@@ -61,8 +61,8 @@ pub fn getSyncCommitteesWitness(
     var next: Node.Id = undefined;
     if (fork.gte(.gloas)) {
         out.gloas_branches = .{ .current = undefined, .next = undefined };
-        out.current_sync_committee_root = try createSingleProofInto(pool.allocator, pool, root_node, @enumFromInt(current_gindex_gloas), &out.gloas_branches.?.current);
-        out.next_sync_committee_root = try createSingleProofInto(pool.allocator, pool, root_node, @enumFromInt(next_gindex_gloas), &out.gloas_branches.?.next);
+        out.current_sync_committee_root = try createSingleProofInto(pool.allocator, pool, root_node, @fromBackingInt(@intCast(current_gindex_gloas)), &out.gloas_branches.?.current);
+        out.next_sync_committee_root = try createSingleProofInto(pool.allocator, pool, root_node, @fromBackingInt(@intCast(next_gindex_gloas)), &out.gloas_branches.?.next);
         out.witness_len = 0;
         return;
     } else if (fork.gte(.electra)) {

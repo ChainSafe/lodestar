@@ -209,8 +209,8 @@ pub fn BitListType(comptime _limit: comptime_int) type {
         pub const tree = struct {
             pub fn default(pool: *Node.Pool) !Node.Id {
                 return try pool.createBranch(
-                    @enumFromInt(chunk_depth),
-                    @enumFromInt(0),
+                    @fromBackingInt(@intCast(chunk_depth)),
+                    @fromBackingInt(@intCast(0)),
                 );
             }
 
@@ -222,7 +222,7 @@ pub fn BitListType(comptime _limit: comptime_int) type {
                 errdefer pool.unref(len_mixin);
 
                 return try pool.createBranch(
-                    @enumFromInt(chunk_depth),
+                    @fromBackingInt(@intCast(chunk_depth)),
                     len_mixin,
                 );
             }
@@ -233,8 +233,8 @@ pub fn BitListType(comptime _limit: comptime_int) type {
 
                 if (chunk_count == 0) {
                     return try pool.createBranch(
-                        @enumFromInt(chunk_depth),
-                        @enumFromInt(0),
+                        @fromBackingInt(@intCast(chunk_depth)),
+                        @fromBackingInt(@intCast(0)),
                     );
                 }
 
@@ -248,7 +248,7 @@ pub fn BitListType(comptime _limit: comptime_int) type {
                 }
                 {
                     // last chunk may be partial
-                    var chunk = [_]u8{0} ** 32;
+                    var chunk = @as([32]u8, @splat(0));
                     const raw_byte_length = (bit_len + 7) / 8;
                     const i = chunk_count - 1;
                     const remaining_bytes = raw_byte_length - i * 32;
@@ -293,8 +293,8 @@ pub fn BitListType(comptime _limit: comptime_int) type {
                 const chunk_count = chunkCount(value);
                 if (chunk_count == 0) {
                     return try pool.createBranch(
-                        @enumFromInt(chunk_depth),
-                        @enumFromInt(0),
+                        @fromBackingInt(@intCast(chunk_depth)),
+                        @fromBackingInt(@intCast(0)),
                     );
                 }
                 const byte_length = (value.bit_len + 7) / 8;
@@ -303,7 +303,7 @@ pub fn BitListType(comptime _limit: comptime_int) type {
                 errdefer it.deinit();
 
                 for (0..chunk_count) |i| {
-                    var leaf_buf = [_]u8{0} ** 32;
+                    var leaf_buf = @as([32]u8, @splat(0));
                     const start_idx = i * 32;
                     const remaining_bytes = byte_length - start_idx;
 

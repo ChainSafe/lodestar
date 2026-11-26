@@ -9,8 +9,8 @@ const SameMessageSignatureSetBatch = @import("verifier.zig").SameMessageSignatur
 const SignatureSetBatch = @import("verifier.zig").SignatureSetBatch;
 
 test "single signature set verification" {
-    const ikm = [_]u8{2} ** 32;
-    const message = [_]u8{3} ** 32;
+    const ikm = @as([32]u8, @splat(2));
+    const message = @as([32]u8, @splat(3));
     const secret_key = try bls.SecretKey.keyGen(&ikm, null);
     const public_key = secret_key.toPublicKey();
     const signature = secret_key.sign(&message, DST, null).compress();
@@ -23,12 +23,12 @@ test "single signature set verification" {
 }
 
 test "same-message verification falls back around malformed signatures" {
-    const ikm = [_]u8{4} ** 32;
-    const message = [_]u8{5} ** 32;
+    const ikm = @as([32]u8, @splat(4));
+    const message = @as([32]u8, @splat(5));
     const secret_key = try bls.SecretKey.keyGen(&ikm, null);
     const public_key = secret_key.toPublicKey();
     const signature = secret_key.sign(&message, DST, null).compress();
-    const malformed_signature = [_]u8{0} ** Signature.COMPRESS_SIZE;
+    const malformed_signature = @as([Signature.COMPRESS_SIZE]u8, @splat(0));
     const pool = try ThreadPool.init(std.testing.allocator, std.testing.io, .{ .n_workers = 1 });
     defer pool.deinit(std.testing.io);
 

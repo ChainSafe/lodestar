@@ -36,7 +36,7 @@ test "progressive Merkleization matches tree roots without scratch allocation" {
         try std.testing.expectEqualSlices(u8, tree.getRoot(&pool), &root);
         try progressive.merkleizeChunksComptime(count, &chunks, &root);
         try std.testing.expectEqualSlices(u8, tree.getRoot(&pool), &root);
-        for (chunks, 0..) |chunk, i| try std.testing.expectEqual([_]u8{@truncate(i)} ** 32, chunk);
+        for (chunks, 0..) |chunk, i| try std.testing.expectEqual(@as([32]u8, @splat(@truncate(i))), chunk);
     }
 }
 
@@ -171,7 +171,7 @@ test "memory_safety: progressive appendOwned consumes its input on pool exhausti
 test "progressive chunkGindex and subtreeIndex should follow subtree boundaries at runtime" {
     for (0..31) |index| {
         const expected: u64 = if (index == 0) 2 else if (index < 5) 24 + index - 1 else if (index < 21) 224 + index - 5 else 1920 + index - 21;
-        try std.testing.expectEqual(expected, @intFromEnum(progressive.chunkGindex(index)));
+        try std.testing.expectEqual(expected, @backingInt(progressive.chunkGindex(index)));
     }
     try std.testing.expectEqual(0, progressive.subtreeCount(0));
     try std.testing.expectEqual(1, progressive.subtreeCount(1));
@@ -181,7 +181,7 @@ test "progressive chunkGindex and subtreeIndex should follow subtree boundaries 
     try std.testing.expectEqual(3, progressive.subtreeCount(21));
     const Gindex = @import("persistent_merkle_tree").Gindex;
     // Gloas `finalized_checkpoint.root`: contents root, active field 20, then the `root` chunk.
-    try std.testing.expectEqual(735, @intFromEnum(Gindex.concat(&.{ @enumFromInt(2), progressive.chunkGindex(20), @enumFromInt(3) })));
+    try std.testing.expectEqual(735, @backingInt(Gindex.concat(&.{ @fromBackingInt(@intCast(2)), progressive.chunkGindex(20), @fromBackingInt(@intCast(3)) })));
 }
 
 test "progressive types should derive default roots and trees from their default values" {

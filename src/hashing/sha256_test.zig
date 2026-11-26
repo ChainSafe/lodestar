@@ -5,8 +5,8 @@ const hashOne = @import("sha256.zig").hashOne;
 const hash = @import("sha256.zig").hash;
 
 test "hashOne works correctly" {
-    const obj1: [32]u8 = [_]u8{1} ** 32;
-    const obj2: [32]u8 = [_]u8{2} ** 32;
+    const obj1: [32]u8 = @as([32]u8, @splat(1));
+    const obj2: [32]u8 = @as([32]u8, @splat(2));
     var hash_result: [32]u8 = undefined;
 
     // Call the function and ensure it works without error
@@ -19,7 +19,7 @@ test "hashOne works correctly" {
 }
 
 test hashOne {
-    const in = [_][32]u8{[_]u8{1} ** 32} ** 4;
+    const in = @as([4][32]u8, @splat(@as([32]u8, @splat(1))));
     var out: [2][32]u8 = undefined;
     try hash(&out, &in);
     // std.debug.print("@@@ out: {any}\n", .{out});

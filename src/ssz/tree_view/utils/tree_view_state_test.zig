@@ -15,7 +15,7 @@ test "getChildNode does not publish a cache entry when lookup fails" {
     });
     defer pool.deinit();
 
-    const root = try pool.createLeaf(&([_]u8{0} ** 32));
+    const root = try pool.createLeaf(&(@as([32]u8, @splat(0))));
     var state: TreeViewState = undefined;
     try state.init(allocator, &pool, root);
     defer state.deinit();
@@ -40,7 +40,7 @@ test "editChunkedLeaf copies shared storage once and preserves snapshots" {
     try snapshot.init(allocator, &pool, root);
     defer snapshot.deinit();
 
-    const gindex: Gindex = @enumFromInt(1);
+    const gindex: Gindex = @fromBackingInt(@intCast(1));
     const original_hash = root.getRoot(&pool).*;
     const storage_before = pool.chunkedLeafBytesInUse();
     try state.editChunkedLeaf(gindex, 0, 2, u64, 0, &42, Uint64.tree.fromValuePackedIntoChunk);
@@ -74,12 +74,12 @@ test "editChunkedLeaf materializes sparse storage and grows valid chunks" {
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 2 });
     defer pool.deinit();
 
-    const root: Node.Id = @enumFromInt(ChunkedLeaf.k_log2);
+    const root: Node.Id = @fromBackingInt(@intCast(ChunkedLeaf.k_log2));
     var state: TreeViewState = undefined;
     try state.init(allocator, &pool, root);
     defer state.deinit();
 
-    const gindex: Gindex = @enumFromInt(1);
+    const gindex: Gindex = @fromBackingInt(@intCast(1));
     try state.editChunkedLeaf(gindex, 0, 3, u64, 0, &42, Uint64.tree.fromValuePackedIntoChunk);
     const pending = try state.getChildNode(gindex);
     try std.testing.expectEqual(@as(u16, 3), try pending.getChunkedLeafLen(&pool));
@@ -97,7 +97,7 @@ fn editWithAllocationFailures(allocator: std.mem.Allocator, sparse: bool) !void 
     var pool = try Node.Pool.init(.{ .page_allocator = std.testing.allocator, .allocator = allocator, .pool_size = 2 });
     defer pool.deinit();
 
-    const root: Node.Id = if (sparse) @enumFromInt(ChunkedLeaf.k_log2) else try pool.createChunkedLeafEmpty(1);
+    const root: Node.Id = if (sparse) @fromBackingInt(@intCast(ChunkedLeaf.k_log2)) else try pool.createChunkedLeafEmpty(1);
     var state: TreeViewState = undefined;
     state.init(allocator, &pool, root) catch |err| {
         pool.unref(root);
@@ -107,7 +107,7 @@ fn editWithAllocationFailures(allocator: std.mem.Allocator, sparse: bool) !void 
 
     const original_hash = root.getRoot(&pool).*;
     const nodes_before = pool.getNodesInUse();
-    const gindex: Gindex = @enumFromInt(1);
+    const gindex: Gindex = @fromBackingInt(@intCast(1));
     state.editChunkedLeaf(gindex, 0, 1, u64, 0, &42, Uint64.tree.fromValuePackedIntoChunk) catch |err| {
         try std.testing.expectEqual(error.OutOfMemory, err);
         try std.testing.expectEqual(nodes_before, pool.getNodesInUse());
@@ -132,7 +132,7 @@ test "memory_safety: editChunkedLeaf pool exhaustion preserves values and owners
         var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 1 });
         defer pool.deinit();
 
-        const root: Node.Id = if (sparse) @enumFromInt(ChunkedLeaf.k_log2) else try pool.createChunkedLeafEmpty(1);
+        const root: Node.Id = if (sparse) @fromBackingInt(@intCast(ChunkedLeaf.k_log2)) else try pool.createChunkedLeafEmpty(1);
         const blocker: ?Node.Id = if (sparse) try pool.createLeafFromUint(0) else null;
         defer if (blocker) |node| pool.unref(node);
         var state: TreeViewState = undefined;
@@ -141,7 +141,7 @@ test "memory_safety: editChunkedLeaf pool exhaustion preserves values and owners
 
         const original_hash = root.getRoot(&pool).*;
         const nodes_before = pool.getNodesInUse();
-        const gindex: Gindex = @enumFromInt(1);
+        const gindex: Gindex = @fromBackingInt(@intCast(1));
         try std.testing.expectError(error.PoolExhausted, state.editChunkedLeaf(gindex, 0, 1, u64, 0, &42, Uint64.tree.fromValuePackedIntoChunk));
         try std.testing.expectEqual(nodes_before, pool.getNodesInUse());
         try std.testing.expectEqual(@as(usize, 0), state.changed.count());
@@ -158,18 +158,18 @@ test "memory_safety: commitNodes restores acquired references when a later retai
 
     {
         var state: TreeViewState = undefined;
-        try state.init(allocator, &pool, @enumFromInt(1));
+        try state.init(allocator, &pool, @fromBackingInt(@intCast(1)));
         defer state.deinit();
         const first = try pool.createLeafFromUint(1);
         const saturated = try pool.createLeafFromUint(2);
-        try state.setChildNode(@enumFromInt(2), first);
-        try state.setChildNode(@enumFromInt(3), saturated);
-        const saturated_state = &pool.nodes.items(.state)[@intFromEnum(saturated)];
+        try state.setChildNode(@fromBackingInt(@intCast(2)), first);
+        try state.setChildNode(@fromBackingInt(@intCast(3)), saturated);
+        const saturated_state = &pool.nodes.items(.state)[@backingInt(saturated)];
         saturated_state.* = Node.State.initInUse(.leaf, Node.max_ref_count);
         defer saturated_state.* = Node.State.initInUse(.leaf, 0);
 
         try std.testing.expectError(error.RefCountOverflow, state.commitNodes());
-        try std.testing.expectEqual(@as(Node.Id, @enumFromInt(1)), state.root);
+        try std.testing.expectEqual(@as(Node.Id, @fromBackingInt(@intCast(1))), state.root);
         try std.testing.expectEqual(@as(u32, 0), first.getState(&pool).refCount());
         try std.testing.expect(!first.getState(&pool).isFree());
         try std.testing.expectEqual(Node.max_ref_count, saturated_state.refCount());
@@ -186,15 +186,15 @@ test "memory_safety: commitNodes balances duplicate replacement references" {
 
     {
         var state: TreeViewState = undefined;
-        try state.init(allocator, &pool, @enumFromInt(1));
+        try state.init(allocator, &pool, @fromBackingInt(@intCast(1)));
         defer state.deinit();
         const replacement = try pool.createLeafFromUint(42);
-        try state.setChildNode(@enumFromInt(2), replacement);
-        try state.setChildNode(@enumFromInt(3), replacement);
+        try state.setChildNode(@fromBackingInt(@intCast(2)), replacement);
+        try state.setChildNode(@fromBackingInt(@intCast(3)), replacement);
         try state.commitNodes();
         try std.testing.expectEqual(@as(u32, 2), replacement.getState(&pool).refCount());
-        try std.testing.expectEqual(replacement, try state.root.getNode(&pool, @enumFromInt(2)));
-        try std.testing.expectEqual(replacement, try state.root.getNode(&pool, @enumFromInt(3)));
+        try std.testing.expectEqual(replacement, try state.root.getNode(&pool, @fromBackingInt(@intCast(2))));
+        try std.testing.expectEqual(replacement, try state.root.getNode(&pool, @fromBackingInt(@intCast(3))));
     }
     try std.testing.expectEqual(baseline, pool.getNodesInUse());
 }
@@ -207,11 +207,11 @@ test "memory_safety: commitNodes retains a borrowed replacement through root pub
 
     {
         const child = try pool.createLeafFromUint(42);
-        const root = try pool.createBranch(child, @enumFromInt(0));
+        const root = try pool.createBranch(child, @fromBackingInt(@intCast(0)));
         var state: TreeViewState = undefined;
         try state.init(allocator, &pool, root);
         defer state.deinit();
-        try state.setChildNode(@enumFromInt(1), child);
+        try state.setChildNode(@fromBackingInt(@intCast(1)), child);
         try state.commitNodes();
         try std.testing.expectEqual(child, state.root);
         try std.testing.expectEqual(@as(u32, 1), child.getState(&pool).refCount());
@@ -225,7 +225,7 @@ test "commitNodes preserves changed lookups after failed sorted commit" {
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 32 });
     defer pool.deinit();
     var state: TreeViewState = undefined;
-    try state.init(allocator, &pool, @enumFromInt(5));
+    try state.init(allocator, &pool, @fromBackingInt(@intCast(5)));
     defer state.deinit();
     for (0..32) |i| {
         const gindex = Gindex.fromDepth(5, 31 - i);

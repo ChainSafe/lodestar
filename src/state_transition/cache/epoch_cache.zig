@@ -303,7 +303,7 @@ pub const EpochCache = struct {
         errdefer next_shuffling_rc.unref();
 
         const fork_seq = config.forkSeqAtEpoch(current_epoch);
-        var proposers = [_]ValidatorIndex{0} ** preset.SLOTS_PER_EPOCH;
+        var proposers = @as([preset.SLOTS_PER_EPOCH]ValidatorIndex, @splat(0));
         var next_proposers: ?[preset.SLOTS_PER_EPOCH]ValidatorIndex = null;
 
         // Post-Fulu (EIP-7917): proposer_lookahead is the source of truth for proposers.

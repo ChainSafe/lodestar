@@ -39,6 +39,6 @@ pub fn main() void {
 const comptimePrint = std.fmt.comptimePrint;
 
 fn writeExportedUint(comptime name: []const u8, T: type) []const u8 {
-    return comptimePrint("export const {s}_kind = {d};\n", .{ name, @intFromEnum(T.kind) }) ++
+    return comptimePrint("export const {s}_kind = {d};\n", .{ name, @backingInt(T.kind) }) ++
         comptimePrint("export const {s}_fixed_size = {d};\n", .{ name, T.fixed_size });
 }

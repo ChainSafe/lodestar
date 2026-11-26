@@ -10,7 +10,7 @@ test "clone" {
     const length = 44;
     const Bytes = ByteVectorType(length);
 
-    var b = [_]u8{1} ** length;
+    var b = @as([length]u8, @splat(1));
     var cloned: [44]u8 = undefined;
     try Bytes.clone(&b, &cloned);
     try std.testing.expect(&b != &cloned);
@@ -34,7 +34,7 @@ test "ByteVectorType(4) - serializeIntoBytes (zero)" {
     var root: [32]u8 = undefined;
     try ByteVector4.hashTreeRoot(&value, &root);
     // 0x0000000000000000000000000000000000000000000000000000000000000000
-    const expected_root = [_]u8{0x00} ** 32;
+    const expected_root = @as([32]u8, @splat(0x00));
     try std.testing.expectEqualSlices(u8, &expected_root, &root);
 
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 32 });
@@ -60,7 +60,7 @@ test "ByteVectorType(4) - serializeIntoBytes (some value)" {
     var root: [32]u8 = undefined;
     try ByteVector4.hashTreeRoot(&value, &root);
     // 0x0cb9473700000000000000000000000000000000000000000000000000000000
-    const expected_root = [_]u8{ 0x0c, 0xb9, 0x47, 0x37 } ++ [_]u8{0x00} ** 28;
+    const expected_root = [_]u8{ 0x0c, 0xb9, 0x47, 0x37 } ++ @as([28]u8, @splat(0x00));
     try std.testing.expectEqualSlices(u8, &expected_root, &root);
 
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 32 });
@@ -75,7 +75,7 @@ test "ByteVectorType(32) - serializeIntoBytes (zero)" {
     const allocator = std.testing.allocator;
     const ByteVector32 = ByteVectorType(32);
 
-    const value = [_]u8{0x00} ** 32;
+    const value = @as([32]u8, @splat(0x00));
 
     var serialized: [32]u8 = undefined;
     const size = ByteVector32.serializeIntoBytes(&value, &serialized);
@@ -85,7 +85,7 @@ test "ByteVectorType(32) - serializeIntoBytes (zero)" {
     var root: [32]u8 = undefined;
     try ByteVector32.hashTreeRoot(&value, &root);
     // 0x0000000000000000000000000000000000000000000000000000000000000000
-    const expected_root = [_]u8{0x00} ** 32;
+    const expected_root = @as([32]u8, @splat(0x00));
     try std.testing.expectEqualSlices(u8, &expected_root, &root);
 
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 32 });
@@ -125,7 +125,7 @@ test "ByteVectorType(96) - serializeIntoBytes (zero)" {
     const allocator = std.testing.allocator;
     const ByteVector96 = ByteVectorType(96);
 
-    const value = [_]u8{0x00} ** 96;
+    const value = @as([96]u8, @splat(0x00));
 
     var serialized: [96]u8 = undefined;
     const size = ByteVector96.serializeIntoBytes(&value, &serialized);
@@ -186,8 +186,8 @@ test "ByteVectorType(32) - tree.deserializeFromBytes" {
     const test_cases = [_]TestCase{
         .{
             .id = "zero",
-            .serialized = [_]u8{0x00} ** 32,
-            .expected_root = [_]u8{0x00} ** 32,
+            .serialized = @as([32]u8, @splat(0x00)),
+            .expected_root = @as([32]u8, @splat(0x00)),
         },
         .{
             .id = "some value",
@@ -281,7 +281,7 @@ test "memory_safety: ByteVector tree.deserializeFromBytes should reclaim partial
     defer pool.deinit();
 
     const baseline = pool.getNodesInUse();
-    const bytes = [_]u8{0} ** VectorType.fixed_size;
+    const bytes = @as([VectorType.fixed_size]u8, @splat(0));
 
     try std.testing.expectError(
         error.PoolExhausted,

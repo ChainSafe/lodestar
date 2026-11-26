@@ -42,9 +42,9 @@ pub fn main(init: std.process.Init) !void {
     var bench = zbench.Benchmark.init(allocator, .{});
     defer bench.deinit();
 
-    const obj1: [32]u8 = [_]u8{1} ** 32;
-    const obj2: [32]u8 = [_]u8{2} ** 32;
-    var out: [32]u8 = [_]u8{0} ** 32;
+    const obj1: [32]u8 = @as([32]u8, @splat(1));
+    const obj2: [32]u8 = @as([32]u8, @splat(2));
+    var out: [32]u8 = @as([32]u8, @splat(0));
 
     const hashOne_1 = HashOne_1{ .obj1 = &obj1, .obj2 = &obj2, .out = &out };
     try bench.addParam("hashOne 1", &hashOne_1, .{});

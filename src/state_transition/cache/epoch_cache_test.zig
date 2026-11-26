@@ -88,14 +88,15 @@ test "memory_safety: createFromState releases shuffling inputs on every allocati
         .skip_sync_pubkeys = true,
     };
 
-    var counting = std.testing.FailingAllocator.init(allocator, .{});
+    // Keep allocation paths independent of the backing allocator's in-place growth.
+    var counting = std.testing.FailingAllocator.init(allocator, .{ .resize_fail_index = 0 });
     const cache = try EpochCache.createFromState(counting.allocator(), std.testing.io, state, immutable_data, options);
     cache.deinit();
     const allocation_count = counting.alloc_index;
     try std.testing.expectEqual(counting.allocated_bytes, counting.freed_bytes);
 
     for (0..allocation_count) |fail_index| {
-        var failing = std.testing.FailingAllocator.init(allocator, .{ .fail_index = fail_index });
+        var failing = std.testing.FailingAllocator.init(allocator, .{ .fail_index = fail_index, .resize_fail_index = 0 });
         try std.testing.expectError(
             error.OutOfMemory,
             EpochCache.createFromState(failing.allocator(), std.testing.io, state, immutable_data, options),

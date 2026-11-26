@@ -75,7 +75,7 @@ const State = struct {
 pub var state: State = .{};
 
 var gpa: std.heap.DebugAllocator(.{}) = .init;
-const allocator = if (builtin.mode == .Debug)
+const allocator = if (builtin.mode == .debug)
     gpa.allocator()
 else
     std.heap.c_allocator;

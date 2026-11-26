@@ -60,8 +60,8 @@ test "InMemoryCPStateDatastore write/read/remove and insertion-ordered keys" {
 
     const ds = store.datastore();
 
-    const key_a = Checkpoint{ .root = [_]u8{0xa1} ** 32, .epoch = 5 };
-    const key_b = Checkpoint{ .root = [_]u8{0xb2} ** 32, .epoch = 7 };
+    const key_a = Checkpoint{ .root = @as([32]u8, @splat(0xa1)), .epoch = 5 };
+    const key_b = Checkpoint{ .root = @as([32]u8, @splat(0xb2)), .epoch = 7 };
 
     const dk_a = try ds.write(io, key_a, "alpha");
     const dk_b = try ds.write(io, key_b, "beta");
@@ -100,7 +100,7 @@ test "InMemoryCPStateDatastore removeMany removes all keys sequentially and is n
     const ds = store.datastore();
 
     var keys: [8]DatastoreKey = undefined;
-    for (0..8) |i| keys[i] = try ds.write(io, .{ .root = [_]u8{@intCast(i + 1)} ** 32, .epoch = @intCast(i) }, "x");
+    for (0..8) |i| keys[i] = try ds.write(io, .{ .root = @as([32]u8, @splat(@intCast(i + 1))), .epoch = @intCast(i) }, "x");
     {
         const before = try ds.readKeys(io, allocator);
         defer allocator.free(before);
@@ -135,7 +135,7 @@ test "FileCPStateDatastore write/read/remove/readKeys round-trip" {
     const ds = fx.datastore();
     try ds.initStore(io);
 
-    const key_a = Checkpoint{ .root = [_]u8{0xc3} ** 32, .epoch = 9 };
+    const key_a = Checkpoint{ .root = @as([32]u8, @splat(0xc3)), .epoch = 9 };
     const dk_a = try ds.write(io, key_a, "gamma-bytes");
 
     // A second write of the same key is a no-op (the existing final file is kept).
@@ -171,7 +171,7 @@ test "FileCPStateDatastore readLatestSafe returns the winner's full bytes" {
     // A tail beyond the prefix length, so a prefix-only return fails the comparison.
     const bytes = try std.mem.concat(allocator, u8, &.{ head, "tail-beyond-the-prefix" });
     defer allocator.free(bytes);
-    _ = try ds.write(io, .{ .root = [_]u8{0x22} ** 32, .epoch = 10 }, bytes);
+    _ = try ds.write(io, .{ .root = @as([32]u8, @splat(0x22)), .epoch = 10 }, bytes);
 
     const got = (try ds.readLatestSafe(io, allocator)).?;
     defer allocator.free(got);
@@ -189,7 +189,7 @@ test "FileCPStateDatastore readLatestSafe skips a huge-epoch foreign key" {
 
     const bytes = try makeStateBytes(allocator, 320, 320);
     defer allocator.free(bytes);
-    _ = try ds.write(io, .{ .root = [_]u8{0xab} ** 32, .epoch = std.math.maxInt(u64) }, bytes);
+    _ = try ds.write(io, .{ .root = @as([32]u8, @splat(0xab)), .epoch = std.math.maxInt(u64) }, bytes);
 
     try testing.expect((try ds.readLatestSafe(io, allocator)) == null);
 }
@@ -218,7 +218,7 @@ test "FileCPStateDatastore initStore sweeps temp debris and write leaves none" {
     try testing.expectError(error.FileNotFound, dir.access(io, "0xdead.tmp", .{}));
 
     // A completed write renames its temp into place: the final file is the only entry left.
-    const dk = try ds2.write(io, .{ .root = [_]u8{0xcd} ** 32, .epoch = 3 }, "full-state-bytes");
+    const dk = try ds2.write(io, .{ .root = @as([32]u8, @splat(0xcd)), .epoch = 3 }, "full-state-bytes");
     const read_back = (try ds2.read(io, allocator, dk)).?;
     defer allocator.free(read_back);
     try testing.expectEqualStrings("full-state-bytes", read_back);
@@ -238,7 +238,7 @@ test "FileCPStateDatastore initStore is repeatable" {
     try ds.initStore(io);
     try ds.initStore(io);
 
-    const dk = try ds.write(io, .{ .root = [_]u8{0x11} ** 32, .epoch = 1 }, "bytes");
+    const dk = try ds.write(io, .{ .root = @as([32]u8, @splat(0x11)), .epoch = 1 }, "bytes");
     const back = (try ds.read(io, allocator, dk)).?;
     defer allocator.free(back);
     try testing.expectEqualStrings("bytes", back);
@@ -251,7 +251,7 @@ test "FileCPStateDatastore initStore opens an existing dir without clobbering" {
     var fx = try FileStoreFixture.init(allocator);
     defer fx.deinit(allocator, io);
 
-    const key = Checkpoint{ .root = [_]u8{0xe5} ** 32, .epoch = 11 };
+    const key = Checkpoint{ .root = @as([32]u8, @splat(0xe5)), .epoch = 11 };
     var dk: DatastoreKey = undefined;
 
     // First store persists a state; the fixture's own store owns the dir.
@@ -291,7 +291,7 @@ test "FileCPStateDatastore operations before initStore return DatastoreNotInitia
 
     const ds = fx.datastore();
 
-    const cp = Checkpoint{ .root = [_]u8{0x01} ** 32, .epoch = 1 };
+    const cp = Checkpoint{ .root = @as([32]u8, @splat(0x01)), .epoch = 1 };
     const dk = datastoreKey(cp);
 
     try testing.expectError(error.DatastoreNotInitialized, ds.write(io, cp, "x"));
@@ -317,7 +317,7 @@ test "FileCPStateDatastore removeMany fans out concurrently" {
     try ds.initStore(io);
 
     var keys: [16]DatastoreKey = undefined;
-    for (0..16) |i| keys[i] = try ds.write(io, .{ .root = [_]u8{@intCast(i + 1)} ** 32, .epoch = @intCast(i) }, "x");
+    for (0..16) |i| keys[i] = try ds.write(io, .{ .root = @as([32]u8, @splat(@intCast(i + 1))), .epoch = @intCast(i) }, "x");
     try ds.removeMany(io, testing.allocator, &keys);
 
     const after = try ds.readKeys(io, testing.allocator);
@@ -346,7 +346,7 @@ test "readLatestSafe skips a fork epoch (two roots at one epoch is ambiguous)" {
         const bytes = try makeStateBytes(allocator, slot3, slot3);
         defer allocator.free(bytes);
 
-        _ = try ds.write(io, .{ .epoch = 3, .root = [_]u8{tag} ** 32 }, bytes);
+        _ = try ds.write(io, .{ .epoch = 3, .root = @as([32]u8, @splat(tag)) }, bytes);
     }
 
     try testing.expect((try ds.readLatestSafe(io, allocator)) == null);
@@ -364,7 +364,7 @@ test "readLatestSafe accepts a PRCS (last processed slot is boundary - 1)" {
     const bytes = try makeStateBytes(allocator, slot4, slot4 - 1);
     defer allocator.free(bytes);
 
-    _ = try ds.write(io, .{ .epoch = 4, .root = [_]u8{0x40} ** 32 }, bytes);
+    _ = try ds.write(io, .{ .epoch = 4, .root = @as([32]u8, @splat(0x40)) }, bytes);
 
     const got = (try ds.readLatestSafe(io, allocator)).?;
     defer allocator.free(got);
@@ -387,16 +387,16 @@ test "readLatestSafe returns the highest safe boundary, skipping a fork and an o
     for ([_]u8{ 0x71, 0x72 }) |tag| {
         const bytes = try makeStateBytes(allocator, slot7, slot7);
         defer allocator.free(bytes);
-        _ = try ds.write(io, .{ .epoch = 7, .root = [_]u8{tag} ** 32 }, bytes);
+        _ = try ds.write(io, .{ .epoch = 7, .root = @as([32]u8, @splat(tag)) }, bytes);
     }
     // epoch 6: single, but its state slot is 3 past the boundary (off-boundary) → skipped.
     const bytes6 = try makeStateBytes(allocator, slot6 + 3, slot6 + 3);
     defer allocator.free(bytes6);
-    _ = try ds.write(io, .{ .epoch = 6, .root = [_]u8{0x60} ** 32 }, bytes6);
+    _ = try ds.write(io, .{ .epoch = 6, .root = @as([32]u8, @splat(0x60)) }, bytes6);
     // epoch 5: a clean boundary CRCS → the answer.
     const bytes5 = try makeStateBytes(allocator, slot5, slot5);
     defer allocator.free(bytes5);
-    _ = try ds.write(io, .{ .epoch = 5, .root = [_]u8{0x50} ** 32 }, bytes5);
+    _ = try ds.write(io, .{ .epoch = 5, .root = @as([32]u8, @splat(0x50)) }, bytes5);
 
     const got = (try ds.readLatestSafe(io, allocator)).?;
     defer allocator.free(got);

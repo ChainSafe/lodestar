@@ -64,7 +64,7 @@ test "bls - sanity" {
         0x48, 0x99,
     };
     const sk = try SecretKey.keyGen(ikm[0..], null);
-    const msg = [_]u8{1} ** 32;
+    const msg = @as([32]u8, @splat(1));
     const sig = sign(sk, &msg);
     const pk = sk.toPublicKey();
     try verify(&msg, &pk, &sig, .{});

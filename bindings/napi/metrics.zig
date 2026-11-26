@@ -5,7 +5,7 @@ const state_transition = @import("state_transition");
 const validator_monitor = @import("./validator_monitor.zig");
 
 var gpa: std.heap.DebugAllocator(.{}) = .init;
-const allocator = if (builtin.mode == .Debug)
+const allocator = if (builtin.mode == .debug)
     gpa.allocator()
 else
     std.heap.c_allocator;

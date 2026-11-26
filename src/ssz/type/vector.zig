@@ -55,7 +55,7 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
         const ChunkedLeaf = if (use_chunked_leaf) pmt.ChunkedLeaf else struct {};
         const chunked_leaf_depth: u8 = if (use_chunked_leaf) chunk_depth - ChunkedLeaf.k_log2 else 0;
 
-        pub const default_value: Type = [_]Element.Type{Element.default_value} ** length;
+        pub const default_value: Type = @as([length]Element.Type, @splat(Element.default_value));
         pub const init: Type = default_value;
 
         pub const default_root: [32]u8 = getZeroHash(chunk_depth).*;
@@ -71,7 +71,7 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
 
         pub fn hashTreeRoot(value: *const Type, out: *[32]u8) !void {
             if (comptime chunk_count <= 64) {
-                var chunks = [_][32]u8{[_]u8{0} ** 32} ** ((chunk_count + 1) / 2 * 2);
+                var chunks = @as([((chunk_count + 1) / 2 * 2)][32]u8, @splat(@as([32]u8, @splat(0))));
                 if (comptime isBasicType(Element)) {
                     _ = serializeIntoBytes(value, @ptrCast(&chunks));
                 } else {
@@ -170,7 +170,7 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
             pub fn hashTreeRoot(data: []const u8, out: *[32]u8) !void {
                 if (data.len != fixed_size) return error.InvalidSize;
                 if (comptime chunk_count <= 64) {
-                    var chunks = [_][32]u8{[_]u8{0} ** 32} ** ((chunk_count + 1) / 2 * 2);
+                    var chunks = @as([((chunk_count + 1) / 2 * 2)][32]u8, @splat(@as([32]u8, @splat(0))));
                     if (comptime isBasicType(Element)) {
                         @memcpy(@as([]u8, @ptrCast(&chunks))[0..fixed_size], data);
                     } else {
@@ -209,7 +209,7 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
         pub const tree = struct {
             pub fn default(pool: *Node.Pool) !Node.Id {
                 if (comptime isBasicType(Element)) {
-                    return @enumFromInt(chunk_depth);
+                    return @fromBackingInt(@intCast(chunk_depth));
                 } else {
                     var nodes: [chunk_count]Node.Id = undefined;
 
@@ -253,11 +253,11 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
                 }
 
                 // Zero-filled so a mid-build error's errdefer is a no-op over the unfilled slots.
-                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
+                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @fromBackingInt(@intCast(0))));
                 errdefer pool.free(&nodes);
 
                 if (comptime isBasicType(Element)) {
-                    var chunks: [chunk_count][32]u8 = [_][32]u8{[_]u8{0} ** 32} ** chunk_count;
+                    var chunks: [chunk_count][32]u8 = @as([chunk_count][32]u8, @splat(@as([32]u8, @splat(0))));
                     const chunk_bytes: []u8 = @ptrCast(&chunks);
                     @memcpy(chunk_bytes[0..fixed_size], data[0..fixed_size]);
 
@@ -285,7 +285,7 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
                     var item_idx: usize = 0;
                     outer: for (chunked_leaf_ids) |sid| {
                         // Zero subtree at chunked_leaf boundary == all-zero values.
-                        if (state_col[@intFromEnum(sid)].kind() == .zero) {
+                        if (state_col[@backingInt(sid)].kind() == .zero) {
                             const items_in_chunked_leaf = @min(ChunkedLeaf.K * items_per_chunk, length - item_idx);
                             for (0..items_in_chunked_leaf) |i| {
                                 out[item_idx + i] = std.mem.zeroes(Element.Type);
@@ -374,14 +374,14 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
                 }
 
                 // Zero-filled so a mid-build error's errdefer is a no-op over the unfilled slots.
-                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
+                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @fromBackingInt(@intCast(0))));
                 errdefer pool.free(&nodes);
 
                 if (comptime isBasicType(Element)) {
                     const items_per_chunk = 32 / Element.fixed_size;
                     var l: usize = 0;
                     for (0..chunk_count) |i| {
-                        var leaf_buf = [_]u8{0} ** 32;
+                        var leaf_buf = @as([32]u8, @splat(0));
                         for (0..items_per_chunk) |j| {
                             _ = Element.serializeIntoBytes(&value[l], leaf_buf[j * Element.fixed_size ..]);
                             l += 1;
@@ -407,7 +407,7 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
                     var byte_idx: usize = 0;
                     outer: for (chunked_leaf_ids) |sid| {
                         // Zero subtree at chunked_leaf boundary == all-zero output bytes.
-                        if (state_col[@intFromEnum(sid)].kind() == .zero) {
+                        if (state_col[@backingInt(sid)].kind() == .zero) {
                             const remaining = fixed_size - byte_idx;
                             const zero_bytes = @min(ChunkedLeaf.K * 32, remaining);
                             @memset(out[byte_idx..][0..zero_bytes], 0);
@@ -502,12 +502,12 @@ pub fn VariableVectorType(comptime ST: type, comptime _length: comptime_int) typ
         pub const chunk_count: usize = length;
         pub const chunk_depth: u8 = maxChunksToDepth(chunk_count);
 
-        pub const default_value: Type = [_]Element.Type{Element.default_value} ** length;
-        pub const init: Type = [_]Element.Type{Element.init} ** length;
+        pub const default_value: Type = @as([length]Element.Type, @splat(Element.default_value));
+        pub const init: Type = @as([length]Element.Type, @splat(Element.init));
 
         pub const default_root: [32]u8 = blk: {
             var buf: [32]u8 = undefined;
-            var chunks = [_][32]u8{[_]u8{0} ** 32} ** ((chunk_count + 1) / 2 * 2);
+            var chunks = @as([((chunk_count + 1) / 2 * 2)][32]u8, @splat(@as([32]u8, @splat(0))));
             @memset(chunks[0..length], Element.default_root);
             merkleize(@ptrCast(&chunks), chunk_depth, &buf) catch unreachable;
             break :blk buf;
@@ -530,7 +530,7 @@ pub fn VariableVectorType(comptime ST: type, comptime _length: comptime_int) typ
 
         pub fn hashTreeRoot(allocator: std.mem.Allocator, value: *const Type, out: *[32]u8) !void {
             if (comptime chunk_count <= 64) {
-                var chunks = [_][32]u8{[_]u8{0} ** 32} ** ((chunk_count + 1) / 2 * 2);
+                var chunks = @as([((chunk_count + 1) / 2 * 2)][32]u8, @splat(@as([32]u8, @splat(0))));
                 for (value, 0..) |*element, i| {
                     try Element.hashTreeRoot(allocator, element, &chunks[i]);
                 }
@@ -613,7 +613,7 @@ pub fn VariableVectorType(comptime ST: type, comptime _length: comptime_int) typ
 
             pub fn hashTreeRoot(allocator: std.mem.Allocator, data: []const u8, out: *[32]u8) !void {
                 if (comptime chunk_count <= 64) {
-                    var chunks = [_][32]u8{[_]u8{0} ** 32} ** ((chunk_count + 1) / 2 * 2);
+                    var chunks = @as([((chunk_count + 1) / 2 * 2)][32]u8, @splat(@as([32]u8, @splat(0))));
                     var elements = try VariableElementIterator(Self).init(data);
                     var i: usize = 0;
                     while (try elements.next()) |element_bytes| : (i += 1) {
@@ -657,7 +657,7 @@ pub fn VariableVectorType(comptime ST: type, comptime _length: comptime_int) typ
 
                 var elements = try VariableElementIterator(Self).init(data);
                 // Zero-filled so a mid-build error's errdefer is a no-op over the unfilled slots.
-                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
+                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @fromBackingInt(@intCast(0))));
                 errdefer pool.free(&nodes);
 
                 var i: usize = 0;
@@ -686,7 +686,7 @@ pub fn VariableVectorType(comptime ST: type, comptime _length: comptime_int) typ
 
             pub fn fromValue(pool: *Node.Pool, value: *const Type) !Node.Id {
                 // Zero-filled so a mid-build error's errdefer is a no-op over the unfilled slots.
-                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
+                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @fromBackingInt(@intCast(0))));
                 errdefer pool.free(&nodes);
 
                 for (0..chunk_count) |i| {

@@ -17,8 +17,8 @@ test "UDP seccomp distinguishes unavailable capability from a malformed filter" 
             };
             const deny = [_]Seccomp.Instruction{
                 .{ .code = bpf.LD | bpf.W | bpf.ABS, .jt = 0, .jf = 0, .k = @offsetOf(linux.SECCOMP.data, "nr") },
-                .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = 1, .k = @intFromEnum(linux.SYS.seccomp) },
-                .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ERRNO | @as(u32, @intFromEnum(linux.E.ACCES)) },
+                .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = 1, .k = @backingInt(linux.SYS.seccomp) },
+                .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ERRNO | @as(u32, @backingInt(linux.E.ACCES)) },
                 allow[0],
             };
             self.installation = Seccomp.install(if (self.denied) &deny else &allow);

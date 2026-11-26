@@ -49,7 +49,7 @@ test "genesis anchor root matches the block root cached by processSlot" {
 
     // Gloas genesis blocks commit to the latest execution payload bid, so the body root is not the default one
     var genesis_header = types.phase0.BeaconBlockHeader.default_value;
-    genesis_header.body_root = [_]u8{0xab} ** 32;
+    genesis_header.body_root = @as([32]u8, @splat(0xab));
     try state.setLatestBlockHeader(&genesis_header);
 
     const anchor = try fromState(&state);

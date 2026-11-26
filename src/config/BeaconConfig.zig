@@ -68,7 +68,7 @@ pub const DomainCache = struct {
     pub fn get(self: *const DomainCache, fork_seq: ForkSeq, domain_type: DomainType) !*const [32]u8 {
         inline for (ALL_DOMAINS, 0..) |d, i| {
             if (std.mem.eql(u8, &d, &domain_type)) {
-                return &self.inner[@intFromEnum(fork_seq)][i];
+                return &self.inner[@backingInt(fork_seq)][i];
             }
         }
         return error.DomainTypeNotFound;
@@ -200,7 +200,7 @@ pub fn forkInfoAtEpoch(self: *const BeaconConfig, epoch: Epoch) *const ForkInfo 
     }
 
     // phase0
-    return &self.forks_ascending_epoch_order[@intFromEnum(ForkSeq.phase0)];
+    return &self.forks_ascending_epoch_order[@backingInt(ForkSeq.phase0)];
 }
 
 /// Return the active fork sequence for `slot`.

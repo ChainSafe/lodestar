@@ -39,15 +39,15 @@ test "memory_safety: composite commit keeps cached roots when a later child fail
         try std.testing.expect(first_root != first.getRoot());
         try std.testing.expectEqual(second_root, second.getRoot());
         try std.testing.expectEqual(original_root, view.getRoot());
-        try std.testing.expectEqual(first_root, view.chunks.state.children_nodes.get(@enumFromInt(2)).?);
-        try std.testing.expectEqual(second_root, view.chunks.state.children_nodes.get(@enumFromInt(3)).?);
+        try std.testing.expectEqual(first_root, view.chunks.state.children_nodes.get(@fromBackingInt(@intCast(2))).?);
+        try std.testing.expectEqual(second_root, view.chunks.state.children_nodes.get(@fromBackingInt(@intCast(3))).?);
         try std.testing.expectEqual(@as(usize, 2), view.chunks.state.changed.count());
 
         for (blockers) |node| pool.unref(node);
         blockers_live = false;
         try view.commit();
-        try std.testing.expectEqual(first.getRoot(), view.chunks.state.children_nodes.get(@enumFromInt(2)).?);
-        try std.testing.expectEqual(second.getRoot(), view.chunks.state.children_nodes.get(@enumFromInt(3)).?);
+        try std.testing.expectEqual(first.getRoot(), view.chunks.state.children_nodes.get(@fromBackingInt(@intCast(2))).?);
+        try std.testing.expectEqual(second.getRoot(), view.chunks.state.children_nodes.get(@fromBackingInt(@intCast(3))).?);
         try std.testing.expectEqual(@as(usize, 0), view.chunks.state.changed.count());
         var value: Vector.Type = undefined;
         try view.toValue(allocator, &value);
@@ -82,7 +82,7 @@ test "memory_safety: composite list commit preserves its pending length for retr
 
         try std.testing.expectError(error.PoolExhausted, view.commit());
         try std.testing.expectEqual(original_root, view.getRoot());
-        const pending_length = view.chunks.state.children_nodes.get(@enumFromInt(3)).?;
+        const pending_length = view.chunks.state.children_nodes.get(@fromBackingInt(@intCast(3))).?;
         try std.testing.expect(!pending_length.getState(&pool).isFree());
         try std.testing.expectEqual(@as(u32, 0), pending_length.getState(&pool).refCount());
         try std.testing.expectEqual(@as(usize, 2), view.chunks.state.changed.count());

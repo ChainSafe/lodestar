@@ -106,7 +106,7 @@ pub const TreeViewState = struct {
         } else {
             const replacement = switch (state.kind()) {
                 .zero => blk: {
-                    std.debug.assert(node == @as(Node.Id, @enumFromInt(ChunkedLeaf.k_log2)));
+                    std.debug.assert(node == @as(Node.Id, @fromBackingInt(@intCast(ChunkedLeaf.k_log2))));
                     break :blk try self.pool.createChunkedLeafEmpty(valid_chunks);
                 },
                 .chunked_leaf => try self.pool.createChunkedLeaf(
@@ -143,7 +143,7 @@ pub const TreeViewState = struct {
             keys: []const Gindex,
 
             pub fn lessThan(context: @This(), a: usize, b: usize) bool {
-                return @intFromEnum(context.keys[a]) < @intFromEnum(context.keys[b]);
+                return @backingInt(context.keys[a]) < @backingInt(context.keys[b]);
             }
         };
         self.changed.sortUnstable(SortContext{ .keys = self.changed.keys() });

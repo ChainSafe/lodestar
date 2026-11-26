@@ -17,7 +17,7 @@ pub fn deserializeContainerOverrideFieldsWithRanges(
     ranges: *const [ContainerST.fields.len][2]usize,
     overrides: anytype,
 ) !*ContainerST.TreeView {
-    var nodes: [ContainerST.chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
+    var nodes: [ContainerST.chunk_count]Node.Id = @splat(@as(Node.Id, @fromBackingInt(@intCast(0))));
     var owned_nodes: [ContainerST.chunk_count]Node.Id = undefined;
     var owned_len: usize = 0;
 

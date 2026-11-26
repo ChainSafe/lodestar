@@ -13,7 +13,7 @@ const config = @import("config");
 // CPU: Intel(R) Xeon(R) E-2386G CPU @ 3.50GHz
 // CPUs: 12
 // Memory: 31Gi
-// zig build run:bench_ssz_state -Doptimize=ReleaseSafe -Dcpu=baseline
+// zig build run:bench_ssz_state -Doptimize=safe -Dcpu=baseline
 //
 // benchmark                           runs     total time     time/run (avg ± σ)    (min ... max)                p75        p99        p995
 // ------------------------------------------------------------------------------------------------------------------------------------------------

@@ -28,7 +28,7 @@ const ShufflingManager = struct {
         if (seed.len != SEED_SIZE) {
             return error.InvalidSeedLength;
         }
-        var buf = [_]u8{0} ** TOTAL_SIZE;
+        var buf = @as([TOTAL_SIZE]u8, @splat(0));
         @memcpy(buf[0..SEED_SIZE], seed);
         return .{ .buf = buf };
     }
@@ -388,7 +388,7 @@ pub fn getCommitteeIndices(
     var count: usize = 0;
     // seed + 8 bytes of little-endian counter; only the low 4 bytes are ever
     // written, matching the reference which hashes the full 40-byte buffer.
-    var cached_hash_input = [_]u8{0} ** (SEED_SIZE + 8);
+    var cached_hash_input = @as([(SEED_SIZE + 8)]u8, @splat(0));
     // seed length was validated by ComputeShuffledIndex.init
     @memcpy(cached_hash_input[0..SEED_SIZE], seed);
     var cached_hash: [sha256.digest_length]u8 = undefined;
@@ -491,7 +491,7 @@ fn getCommitteeIndicesFromListShuffle(
     const max_random_value: i64 = 0xffff;
     const max_increments = @divTrunc(max_effective_balance, effective_balance_increment);
 
-    var cached_hash_input = [_]u8{0} ** (SEED_SIZE + 8);
+    var cached_hash_input = @as([(SEED_SIZE + 8)]u8, @splat(0));
     @memcpy(cached_hash_input[0..SEED_SIZE], seed);
     var cached_hash: [sha256.digest_length]u8 = undefined;
 
@@ -575,7 +575,7 @@ fn computePtcIndicesInner(
     const max_random_value: i64 = 0xffff;
     const indices_len = indices.len;
 
-    var hash_input = [_]u8{0} ** (SEED_SIZE + 8);
+    var hash_input = @as([(SEED_SIZE + 8)]u8, @splat(0));
     @memcpy(hash_input[0..SEED_SIZE], seed);
 
     var digest: [sha256.digest_length]u8 = undefined;
@@ -675,7 +675,7 @@ pub fn computePtcIndicesForEpochInto(
 
     const max_ebi = @divTrunc(max_effective_balance_electra, effective_balance_increment);
 
-    var slot_seed_input = [_]u8{0} ** (SEED_SIZE + 8);
+    var slot_seed_input = @as([(SEED_SIZE + 8)]u8, @splat(0));
     @memcpy(slot_seed_input[0..SEED_SIZE], epoch_seed);
 
     for (0..slots) |i| {

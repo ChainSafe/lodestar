@@ -246,7 +246,7 @@ const File = struct {
 
 /// Parses one file and extracts everything the rules need.
 fn analyze(gpa: Allocator, path: []const u8, text: [:0]const u8, errors: *Errors) !File {
-    var tree = try Ast.parse(gpa, text, .zig);
+    var tree = try Ast.parse(gpa, text, .{ .mode = .zig });
     defer tree.deinit(gpa);
 
     if (tree.errors.len > 0) {

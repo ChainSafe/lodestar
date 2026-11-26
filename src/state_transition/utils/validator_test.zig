@@ -104,14 +104,14 @@ test "getBalanceChurnLimit" {
 
 test "getMaxEffectiveBalance" {
     // ETH1 withdrawal credentials → MIN_ACTIVATION_BALANCE
-    var eth1_creds: WithdrawalCredentials = [_]u8{0x01} ++ [_]u8{0} ** 31;
+    var eth1_creds: WithdrawalCredentials = [_]u8{0x01} ++ @as([31]u8, @splat(0));
     try std.testing.expectEqual(preset.MIN_ACTIVATION_BALANCE, getMaxEffectiveBalance(&eth1_creds));
 
     // Compounding withdrawal credentials → MAX_EFFECTIVE_BALANCE_ELECTRA
-    var compounding_creds: WithdrawalCredentials = [_]u8{0x02} ++ [_]u8{0} ** 31;
+    var compounding_creds: WithdrawalCredentials = [_]u8{0x02} ++ @as([31]u8, @splat(0));
     try std.testing.expectEqual(preset.MAX_EFFECTIVE_BALANCE_ELECTRA, getMaxEffectiveBalance(&compounding_creds));
 
     // BLS withdrawal credentials → MIN_ACTIVATION_BALANCE
-    var bls_creds: WithdrawalCredentials = [_]u8{0x00} ++ [_]u8{0} ** 31;
+    var bls_creds: WithdrawalCredentials = [_]u8{0x00} ++ @as([31]u8, @splat(0));
     try std.testing.expectEqual(preset.MIN_ACTIVATION_BALANCE, getMaxEffectiveBalance(&bls_creds));
 }

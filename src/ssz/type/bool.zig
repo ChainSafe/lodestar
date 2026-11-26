@@ -11,7 +11,7 @@ pub fn BoolType() type {
         pub const default_value: Type = false;
         pub const init: Type = default_value;
 
-        pub const default_root: [32]u8 = [_]u8{0} ** 32;
+        pub const default_root: [32]u8 = @as([32]u8, @splat(0));
 
         pub fn equals(a: *const Type, b: *const Type) bool {
             return a.* == b.*;
@@ -64,7 +64,7 @@ pub fn BoolType() type {
         pub const tree = struct {
             pub fn deserializeFromBytes(pool: *Node.Pool, data: []const u8) !Node.Id {
                 try serialized.validate(data);
-                var leaf: [32]u8 = [_]u8{0} ** 32;
+                var leaf: [32]u8 = @as([32]u8, @splat(0));
                 leaf[0] = data[0];
                 return try pool.createLeaf(&leaf);
             }

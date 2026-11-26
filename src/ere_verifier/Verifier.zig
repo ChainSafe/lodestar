@@ -66,7 +66,7 @@ pub fn init(kind: ZkvmKind, program_vk: []const u8) InitError!Verifier {
     if (program_vk.len > max_program_vk_bytes) return error.ProgramVkTooLarge;
 
     var handle: ?*c.EreVerifier = null;
-    try checkStatus(c.ere_verifier_new(@intFromEnum(kind), program_vk.ptr, program_vk.len, &handle));
+    try checkStatus(c.ere_verifier_new(@backingInt(kind), program_vk.ptr, program_vk.len, &handle));
     return .{ .handle = handle orelse return error.VerifierInternal, .kind = kind };
 }
 

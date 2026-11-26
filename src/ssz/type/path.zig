@@ -172,7 +172,7 @@ fn getFieldGindex(comptime item: PathItem) Gindex {
                     else
                         child.index;
                     // The contents root is the left child of the length mix-in.
-                    return Gindex.concat(&.{ @enumFromInt(2), @import("progressive.zig").chunkGindex(chunk_index) });
+                    return Gindex.concat(&.{ @fromBackingInt(@intCast(2)), @import("progressive.zig").chunkGindex(chunk_index) });
                 },
                 .vector, .list => {
                     // Lists have an extra depth level for the length mixin

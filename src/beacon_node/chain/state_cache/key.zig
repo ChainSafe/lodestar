@@ -43,7 +43,7 @@ pub fn datastoreKeyEpoch(dk: DatastoreKey) Epoch {
 }
 
 test "datastoreKey round-trips a checkpoint" {
-    const cp = Checkpoint{ .root = [_]u8{0xab} ** 32, .epoch = 0x1122334455667788 };
+    const cp = Checkpoint{ .root = @as([32]u8, @splat(0xab)), .epoch = 0x1122334455667788 };
     const dk = datastoreKey(cp);
     try std.testing.expectEqual(@as(u8, 0x88), dk[0]);
     try std.testing.expectEqual(@as(u8, 0xab), dk[8]);

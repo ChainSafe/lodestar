@@ -341,7 +341,7 @@ pub fn ListCompositeTreeView(comptime ST: type) type {
 
             // setNode takes `length_node` into the tree, so null it to keep the defer from
             // unref-ing what the tree now owns.
-            const root_with_length = try Node.Id.setNode(chunk_root, self.chunks.state.pool, @enumFromInt(3), length_node.?);
+            const root_with_length = try Node.Id.setNode(chunk_root, self.chunks.state.pool, @fromBackingInt(@intCast(3)), length_node.?);
             errdefer self.chunks.state.pool.unref(root_with_length);
             length_node = null;
 
@@ -364,7 +364,7 @@ pub fn ListCompositeTreeView(comptime ST: type) type {
             defer if (chunk_root) |id| self.chunks.state.pool.unref(id);
 
             if (target_length == 0) {
-                chunk_root = @enumFromInt(base_chunk_depth);
+                chunk_root = @fromBackingInt(@intCast(base_chunk_depth));
             } else {
                 const nodes = try self.allocator.alloc(Node.Id, target_length);
                 defer self.allocator.free(nodes);

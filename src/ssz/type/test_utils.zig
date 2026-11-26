@@ -63,7 +63,7 @@ pub const TypeTestCase = struct {
 pub fn typeTest(comptime ST: type) type {
     const TypeTest = struct {
         pub fn run(allocator: std.mem.Allocator, tc: *const TypeTestCase) !void {
-            var serializedMax = [_]u8{0} ** 1024;
+            var serializedMax = @as([1024]u8, @splat(0));
             const serialized = serializedMax[0..((tc.serializedHex.len - 2) / 2)];
             _ = try hexToBytes(serialized, tc.serializedHex);
 
@@ -73,14 +73,14 @@ pub fn typeTest(comptime ST: type) type {
                 try ST.deserializeFromBytes(serialized, &value);
 
                 // serialize
-                var out = [_]u8{0} ** ST.fixed_size;
+                var out = @as([ST.fixed_size]u8, @splat(0));
                 _ = ST.serializeIntoBytes(&value, &out);
                 try std.testing.expectEqualSlices(u8, serialized, &out);
 
                 // hash tree root
-                var root = [_]u8{0} ** 32;
+                var root = @as([32]u8, @splat(0));
                 try ST.hashTreeRoot(&value, root[0..]);
-                var root_hex = [_]u8{0} ** 66;
+                var root_hex = @as([66]u8, @splat(0));
                 _ = try bytesToHex(&root_hex, &root);
                 try std.testing.expectEqualSlices(u8, tc.rootHex, &root_hex);
 
@@ -115,9 +115,9 @@ pub fn typeTest(comptime ST: type) type {
                 try std.testing.expectEqualSlices(u8, serialized, out);
 
                 // hash tree root
-                var root = [_]u8{0} ** 32;
+                var root = @as([32]u8, @splat(0));
                 try ST.hashTreeRoot(allocator, &value, root[0..]);
-                var root_hex = [_]u8{0} ** 66;
+                var root_hex = @as([66]u8, @splat(0));
                 _ = try bytesToHex(&root_hex, &root);
                 try std.testing.expectEqualSlices(u8, tc.rootHex, &root_hex);
 

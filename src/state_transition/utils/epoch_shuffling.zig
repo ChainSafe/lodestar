@@ -104,7 +104,7 @@ test EpochShuffling {
     const validator_count_arr = comptime [_]usize{ 256, 2_000_000 };
     inline for (validator_count_arr) |validator_count| {
         const allocator = std.testing.allocator;
-        const seed: [32]u8 = [_]u8{0} ** 32;
+        const seed: [32]u8 = @as([32]u8, @splat(0));
         const active_indices = try allocator.alloc(u32, validator_count);
         // active_indices is transferred to EpochShuffling so no need to free it here
         for (0..validator_count) |i| {
@@ -132,7 +132,7 @@ pub fn computeEpochShufflingForFork(
     active_indices: []u32,
     epoch: Epoch,
 ) !*EpochShuffling {
-    var seed = [_]u8{0} ** 32;
+    var seed = @as([32]u8, @splat(0));
     try getSeed(fork, state, epoch, c.DOMAIN_BEACON_ATTESTER, &seed);
     return EpochShuffling.init(allocator, io, seed, epoch, active_indices);
 }

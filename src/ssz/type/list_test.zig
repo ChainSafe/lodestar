@@ -161,7 +161,9 @@ test "memory_safety: nested list hashing streams variable element roots" {
 test "list hashing rejects values beyond the declared limit before allocating" {
     inline for (.{ FixedListType(UintType(64), 2, .{}), VariableListType(ByteListType(8), 2) }) |List| {
         var items: [3]List.Element.Type = @splat(List.Element.default_value);
-        const value: List.Type = .{ .items = &items, .capacity = items.len };
+        var value: List.Type = .empty;
+        value.items = &items;
+        value.capacity = items.len;
         var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
         var out: [32]u8 = undefined;
         try std.testing.expectError(error.gtLimit, List.hashTreeRoot(failing.allocator(), &value, &out));
@@ -297,7 +299,7 @@ test "clone FixedListType" {
     defer CheckpointList.deinit(allocator, &list);
     const cp: Checkpoint.Type = .{
         .epoch = 41,
-        .root = [_]u8{1} ** 32,
+        .root = @as([32]u8, @splat(1)),
     };
     try list.append(allocator, cp);
     var cloned: CheckpointList.Type = CheckpointList.default_value;
@@ -526,11 +528,11 @@ test "FixedListType - serializeIntoBytes (ListComposite ByteVector32 - 2 roots)"
     var value: ListBV32.Type = ListBV32.default_value;
     defer value.deinit(allocator);
     // [0xdddd...dd, 0xeeee...ee]
-    try value.append(allocator, [_]u8{0xdd} ** 32);
-    try value.append(allocator, [_]u8{0xee} ** 32);
+    try value.append(allocator, @as([32]u8, @splat(0xdd)));
+    try value.append(allocator, @as([32]u8, @splat(0xee)));
 
     // 0xddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-    const expected_serialized = [_]u8{0xdd} ** 32 ++ [_]u8{0xee} ** 32;
+    const expected_serialized = @as([32]u8, @splat(0xdd)) ++ @as([32]u8, @splat(0xee));
     const expected_root = [_]u8{ 0x0c, 0xb9, 0x47, 0x37, 0x7e, 0x17, 0x7f, 0x77, 0x47, 0x19, 0xea, 0xd8, 0xd2, 0x10, 0xaf, 0x9c, 0x64, 0x61, 0xf4, 0x1b, 0xaf, 0x5b, 0x40, 0x82, 0xf8, 0x6a, 0x39, 0x11, 0x45, 0x48, 0x31, 0xb8 };
 
     const size = ListBV32.serializedSize(&value);
@@ -915,7 +917,7 @@ test "FixedListType - tree.deserializeFromBytes (ListComposite ByteVector32)" {
         .{
             .id = "2 roots",
             // 0xddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-            .serialized = &([_]u8{0xdd} ** 32 ++ [_]u8{0xee} ** 32),
+            .serialized = &(@as([32]u8, @splat(0xdd)) ++ @as([32]u8, @splat(0xee))),
             // 0x0cb947377e177f774719ead8d210af9c6461f41baf5b4082f86a3911454831b8
             .expected_root = [_]u8{ 0x0c, 0xb9, 0x47, 0x37, 0x7e, 0x17, 0x7f, 0x77, 0x47, 0x19, 0xea, 0xd8, 0xd2, 0x10, 0xaf, 0x9c, 0x64, 0x61, 0xf4, 0x1b, 0xaf, 0x5b, 0x40, 0x82, 0xf8, 0x6a, 0x39, 0x11, 0x45, 0x48, 0x31, 0xb8 },
         },
@@ -1435,7 +1437,7 @@ test "FixedListType chunked serialization preserves mixed zero subtrees without 
         &pool,
         List.chunk_depth + 1 - pmt.ChunkedLeaf.k_log2,
         1,
-        @enumFromInt(pmt.ChunkedLeaf.k_log2),
+        @fromBackingInt(@intCast(pmt.ChunkedLeaf.k_log2)),
     );
     defer pool.unref(mixed_root);
 
@@ -1515,7 +1517,7 @@ test "memory_safety: TreeView composite list fromValue - pool exhaustion leaves 
 
     var list: ListType.Type = .empty;
     defer list.deinit(std.testing.allocator);
-    for (0..6) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = [_]u8{@intCast(i)} ** 32 });
+    for (0..6) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = @as([32]u8, @splat(@intCast(i))) });
 
     var saw_exhaustion = false;
     // Adding one slot per attempt moves the failure through element construction and then the
@@ -1550,7 +1552,7 @@ test "memory_safety: TreeView composite list deserializeFromBytes - pool exhaust
 
     var list: ListType.Type = .empty;
     defer list.deinit(std.testing.allocator);
-    for (0..6) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = [_]u8{@intCast(i)} ** 32 });
+    for (0..6) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = @as([32]u8, @splat(@intCast(i))) });
 
     const bytes = try std.testing.allocator.alloc(u8, ListType.serializedSize(&list));
     defer std.testing.allocator.free(bytes);
@@ -1589,7 +1591,7 @@ test "memory_safety: TreeView composite list deserializeFromBytes - malformed in
 
     var list: ListType.Type = .empty;
     defer list.deinit(std.testing.allocator);
-    for (0..6) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = [_]u8{@intCast(i)} ** 32 });
+    for (0..6) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = @as([32]u8, @splat(@intCast(i))) });
 
     const bytes = try std.testing.allocator.alloc(u8, ListType.serializedSize(&list));
     defer std.testing.allocator.free(bytes);

@@ -10,7 +10,7 @@ const Depth = @import("persistent_merkle_tree").Depth;
 
 /// Pack active_fields bitvector into a 32-byte array (limited to 256 bits)
 fn packActiveFields(comptime active_fields: []const u1) [32]u8 {
-    var result = [_]u8{0} ** 32;
+    var result = @as([32]u8, @splat(0));
     for (active_fields, 0..) |bit, i| {
         if (bit == 1) {
             result[i / 8] |= @as(u8, 1) << @as(u3, @intCast(i % 8));
@@ -47,7 +47,7 @@ fn validateActiveFields(comptime active_fields: []const u1, comptime field_count
 }
 
 fn defaultRoot(
-    comptime fields: []const std.builtin.Type.StructField,
+    comptime fields: []const @import("fields.zig").Field,
     comptime field_indices: []const usize,
     comptime active_fields: []const u1,
 ) [32]u8 {
@@ -98,10 +98,7 @@ fn inactiveFieldCount(comptime indices: []const usize, comptime field_index: usi
 /// // field_a is at position 0, field_b is at position 2
 /// ```
 pub fn FixedProgressiveContainerType(comptime ST: type, comptime active_fields: []const u1) type {
-    const ssz_fields = switch (@typeInfo(ST)) {
-        .@"struct" => |s| s.fields,
-        else => @compileError("Expected a struct type."),
-    };
+    const ssz_fields = @import("fields.zig").fields(ST);
 
     // Validate active_fields configuration
     comptime validateActiveFields(active_fields, ssz_fields.len);
@@ -115,7 +112,7 @@ pub fn FixedProgressiveContainerType(comptime ST: type, comptime active_fields: 
 
     comptime var native_names: [ssz_fields.len][:0]const u8 = undefined;
     comptime var native_types: [ssz_fields.len]type = undefined;
-    comptime var native_attrs: [ssz_fields.len]std.builtin.Type.StructField.Attributes = undefined;
+    comptime var native_attrs: [ssz_fields.len]std.lang.Type.Struct.FieldAttributes = undefined;
     comptime var _offsets: [ssz_fields.len]usize = undefined;
     comptime var _fixed_size: usize = 0;
     inline for (ssz_fields, 0..) |field, i| {
@@ -137,7 +134,7 @@ pub fn FixedProgressiveContainerType(comptime ST: type, comptime active_fields: 
         pub const TreeView = @import("../tree_view/container.zig").ContainerTreeView(Self);
         pub const kind = TypeKind.progressive_container;
         pub const Fields: type = ST;
-        pub const fields: []const std.builtin.Type.StructField = ssz_fields;
+        pub const fields: []const @import("fields.zig").Field = ssz_fields;
         pub const field_indices: [fields.len]usize = blk: {
             var indices: [fields.len]usize = undefined;
             for (0..fields.len) |i| {
@@ -320,7 +317,7 @@ pub fn FixedProgressiveContainerType(comptime ST: type, comptime active_fields: 
                 defer builder.deinit();
                 inline for (fields, 0..) |field, i| {
                     for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
-                        try builder.appendOwned(@enumFromInt(0));
+                        try builder.appendOwned(@fromBackingInt(@intCast(0)));
                     }
                     try builder.appendOwned(try field.type.tree.deserializeFromBytes(pool, data[offset..][0..field.type.fixed_size]));
                     offset += field.type.fixed_size;
@@ -339,7 +336,7 @@ pub fn FixedProgressiveContainerType(comptime ST: type, comptime active_fields: 
                 defer builder.deinit();
                 inline for (fields, 0..) |field, i| {
                     for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
-                        try builder.appendOwned(@enumFromInt(0));
+                        try builder.appendOwned(@fromBackingInt(@intCast(0)));
                     }
                     try builder.appendOwned(try field.type.tree.fromValue(pool, &@field(value, field.name)));
                 }
@@ -427,7 +424,7 @@ pub fn FixedProgressiveContainerType(comptime ST: type, comptime active_fields: 
             const field_i = getFieldIndex(name);
             const field_idx = comptime getActiveFieldIndex(active_fields, field_i);
             const chunk_gindex = comptime progressive.chunkGindex(field_idx);
-            return comptime Gindex.concat(&.{ @enumFromInt(2), chunk_gindex });
+            return comptime Gindex.concat(&.{ @fromBackingInt(@intCast(2)), chunk_gindex });
         }
     };
 }
@@ -441,7 +438,7 @@ pub fn StructProgressiveContainerType(comptime ST: type, comptime active_fields:
     return struct {
         pub const kind = TypeKind.progressive_container;
         pub const Fields: type = ST;
-        pub const fields: []const std.builtin.Type.StructField = FixedCT.fields;
+        pub const fields: []const @import("fields.zig").Field = FixedCT.fields;
         pub const field_indices: [fields.len]usize = FixedCT.field_indices;
         pub const Type: type = FixedCT.Type;
         pub const fixed_size: usize = FixedCT.fixed_size;
@@ -524,10 +521,7 @@ pub fn StructProgressiveContainerType(comptime ST: type, comptime active_fields:
 }
 
 pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_fields: []const u1) type {
-    const ssz_fields = switch (@typeInfo(ST)) {
-        .@"struct" => |s| s.fields,
-        else => @compileError("Expected a struct type."),
-    };
+    const ssz_fields = @import("fields.zig").fields(ST);
 
     // Validate active_fields configuration
     comptime validateActiveFields(active_fields, ssz_fields.len);
@@ -541,7 +535,7 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
 
     comptime var native_names: [ssz_fields.len][:0]const u8 = undefined;
     comptime var native_types: [ssz_fields.len]type = undefined;
-    comptime var native_attrs: [ssz_fields.len]std.builtin.Type.StructField.Attributes = undefined;
+    comptime var native_attrs: [ssz_fields.len]std.lang.Type.Struct.FieldAttributes = undefined;
     comptime var _offsets: [ssz_fields.len]usize = undefined;
     comptime var _min_size: usize = 0;
     comptime var _max_size: usize = 0;
@@ -586,7 +580,7 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
         const Self = @This();
         pub const TreeView = @import("../tree_view/container.zig").ContainerTreeView(Self);
         pub const kind = TypeKind.progressive_container;
-        pub const fields: []const std.builtin.Type.StructField = ssz_fields;
+        pub const fields: []const @import("fields.zig").Field = ssz_fields;
         pub const field_indices: [fields.len]usize = blk: {
             var indices: [fields.len]usize = undefined;
             for (0..fields.len) |i| {
@@ -781,7 +775,7 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
             const field_i = getFieldIndex(name);
             const field_idx = comptime getActiveFieldIndex(active_fields, field_i);
             const chunk_gindex = comptime progressive.chunkGindex(field_idx);
-            return comptime Gindex.concat(&.{ @enumFromInt(2), chunk_gindex });
+            return comptime Gindex.concat(&.{ @fromBackingInt(@intCast(2)), chunk_gindex });
         }
 
         // Returns the bytes ranges of all fields, both variable and fixed size.
@@ -961,7 +955,7 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
                 defer builder.deinit();
                 inline for (fields, 0..) |field, i| {
                     for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
-                        try builder.appendOwned(@enumFromInt(0));
+                        try builder.appendOwned(@fromBackingInt(@intCast(0)));
                     }
                     try builder.appendOwned(try field.type.tree.deserializeFromBytes(pool, data[ranges[i][0]..ranges[i][1]]));
                 }
@@ -978,7 +972,7 @@ pub fn VariableProgressiveContainerType(comptime ST: type, comptime active_field
                 defer builder.deinit();
                 inline for (fields, 0..) |field, i| {
                     for (0..comptime inactiveFieldCount(&field_indices, i)) |_| {
-                        try builder.appendOwned(@enumFromInt(0));
+                        try builder.appendOwned(@fromBackingInt(@intCast(0)));
                     }
                     try builder.appendOwned(try field.type.tree.fromValue(pool, &@field(value, field.name)));
                 }

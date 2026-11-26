@@ -36,7 +36,7 @@ test "EpochShuffling matches u64 shuffling near the u32 index limit" {
             const input = try allocator.alloc(u32, count);
             defer allocator.free(input);
             for (input, 0..) |*index, i| index.* = std.math.maxInt(u32) - @as(u32, @intCast(i * 17));
-            const seed = [_]u8{seed_byte} ** 32;
+            const seed = @as([32]u8, @splat(seed_byte));
 
             const expected = try allocator.alloc(u64, input.len);
             defer allocator.free(expected);
@@ -72,7 +72,7 @@ test "memory_safety: EpochShuffling.init frees output when committee allocation 
     var failing = std.testing.FailingAllocator.init(allocator, .{ .fail_index = 1 });
     try std.testing.expectError(
         error.OutOfMemory,
-        EpochShuffling.init(failing.allocator(), std.testing.io, [_]u8{0} ** 32, 0, active_indices),
+        EpochShuffling.init(failing.allocator(), std.testing.io, @as([32]u8, @splat(0)), 0, active_indices),
     );
     try std.testing.expect(failing.has_induced_failure);
     try std.testing.expectEqual(failing.allocated_bytes, failing.freed_bytes);
@@ -86,7 +86,7 @@ test "memory_safety: EpochShuffling.init should free partial allocations on OOM"
             errdefer allocator.free(active_indices);
             for (active_indices, 0..) |*index, i| index.* = @intCast(i);
 
-            const shuffling = try EpochShuffling.init(allocator, std.testing.io, [_]u8{0} ** 32, 0, active_indices);
+            const shuffling = try EpochShuffling.init(allocator, std.testing.io, @as([32]u8, @splat(0)), 0, active_indices);
             defer shuffling.deinit();
         }
     }.run, .{});
@@ -97,7 +97,7 @@ test "memory_safety: EpochShuffling.init should free partial allocations on OOM"
 fn initAfterCancelRequest(allocator: std.mem.Allocator, io: std.Io, active_indices: []const u32) !*EpochShuffling {
     while (true) io.checkCancel() catch break;
     io.recancel();
-    return EpochShuffling.init(allocator, io, [_]u8{0} ** 32, 0, active_indices);
+    return EpochShuffling.init(allocator, io, @as([32]u8, @splat(0)), 0, active_indices);
 }
 
 test "memory_safety: EpochShuffling.init frees the shuffle output when canceled" {

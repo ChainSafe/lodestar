@@ -89,7 +89,7 @@ pub fn Hasher(comptime ST: type) type {
                         const chunk_count = ST.chunkCount(value);
                         const hasher_size = if (chunk_count % 2 == 1) chunk_count + 1 else chunk_count;
                         try scratch.chunks.resize(scratch.allocator, hasher_size);
-                        @memset(scratch.chunks.items, [_]u8{0} ** 32);
+                        @memset(scratch.chunks.items, @as([32]u8, @splat(0)));
                         if (comptime isBitListType(ST)) {
                             const scratch_bytes: []u8 = @ptrCast(scratch.chunks.items[0..chunk_count]);
                             @memcpy(scratch_bytes[0..value.data.items.len], value.data.items);
@@ -108,7 +108,7 @@ pub fn Hasher(comptime ST: type) type {
                         }
                     },
                     .vector => {
-                        @memset(scratch.chunks.items, [_]u8{0} ** 32);
+                        @memset(scratch.chunks.items, @as([32]u8, @splat(0)));
                         if (comptime isBasicType(ST.Element)) {
                             _ = ST.serializeIntoBytes(value, @ptrCast(scratch.chunks.items));
                         } else {
@@ -119,7 +119,7 @@ pub fn Hasher(comptime ST: type) type {
                         try h.merkleize(@ptrCast(scratch.chunks.items), ST.chunk_depth, out);
                     },
                     .container => {
-                        @memset(scratch.chunks.items, [_]u8{0} ** 32);
+                        @memset(scratch.chunks.items, @as([32]u8, @splat(0)));
                         inline for (ST.fields, 0..) |field, i| {
                             const field_value_ptr = &@field(value, field.name);
                             try Hasher(field.type).hash(&scratch.children.?[i], field_value_ptr, &scratch.chunks.items[i]);
@@ -150,7 +150,7 @@ pub const HasherData = struct {
 
     pub fn initCapacity(allocator: std.mem.Allocator, capacity: usize, children: ?[]HasherData) !HasherData {
         var chunks = try std.ArrayList([32]u8).initCapacity(allocator, capacity);
-        chunks.appendNTimesAssumeCapacity([_]u8{0} ** 32, capacity);
+        chunks.appendNTimesAssumeCapacity(@as([32]u8, @splat(0)), capacity);
         return HasherData{
             .allocator = allocator,
             .chunks = chunks,

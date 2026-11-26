@@ -75,7 +75,7 @@ pub fn BasicPackedChunks(
                 // chunked_leaf_idx beyond filled chunked leaves). A zero subtree at the chunked_leaf
                 // boundary is semantically an all-zero chunked_leaf; the decoded value
                 // is therefore the element's zero value.
-                if (self.state.pool.nodes.items(.state)[@intFromEnum(chunked_leaf_id)].kind() == .zero) {
+                if (self.state.pool.nodes.items(.state)[@backingInt(chunked_leaf_id)].kind() == .zero) {
                     return std.mem.zeroes(Element);
                 }
                 const chunks = try chunked_leaf_id.getChunkedLeafChunks(self.state.pool);
@@ -305,7 +305,7 @@ pub fn BasicPackedChunks(
                 // beyond the materialized range). A zero subtree is
                 // semantically all-zero chunks; emit zero values without
                 // touching the (non-existent) chunked_leaf payload.
-                if (self.state.pool.nodes.items(.state)[@intFromEnum(sid)].kind() == .zero) {
+                if (self.state.pool.nodes.items(.state)[@backingInt(sid)].kind() == .zero) {
                     @memset(values[item_idx..][0..items_in_chunked_leaf], std.mem.zeroes(Element));
                     item_idx += items_in_chunked_leaf;
                     if (item_idx >= len) break :outer;
@@ -366,7 +366,7 @@ pub fn BasicPackedChunks(
         pub fn setLength(self: *Self, length: usize) !void {
             const length_node = try self.state.pool.createLeafFromUint(@intCast(length));
             errdefer self.state.pool.unref(length_node);
-            try self.state.setChildNode(@enumFromInt(3), length_node);
+            try self.state.setChildNode(@fromBackingInt(@intCast(3)), length_node);
         }
     };
 }
@@ -389,7 +389,7 @@ pub fn CompositeChunks(
 
         pub fn elementGindex(index: usize) Gindex {
             return if (comptime ST.kind == .progressive_list)
-                Gindex.concat(&.{ @enumFromInt(2), progressive.chunkGindex(index) })
+                Gindex.concat(&.{ @fromBackingInt(@intCast(2)), progressive.chunkGindex(index) })
             else
                 Gindex.fromDepth(chunk_depth, index);
         }
@@ -610,7 +610,7 @@ pub fn CompositeChunks(
         pub fn setLength(self: *Self, length: usize) !void {
             const length_node = try self.state.pool.createLeafFromUint(@intCast(length));
             errdefer self.state.pool.unref(length_node);
-            try self.state.setChildNode(@enumFromInt(3), length_node);
+            try self.state.setChildNode(@fromBackingInt(@intCast(3)), length_node);
         }
 
         fn clearChildrenDataCache(self: *Self) void {

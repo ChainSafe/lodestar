@@ -63,8 +63,8 @@ pub fn generateElectraState(allocator: Allocator, pool: *Node.Pool, chain_config
         .state_root = try hex.hexToRoot("0x2761ae355e8a53c11e0e37d5e417f8984db0c53fa83f1bc65f89c6af35a196a7"),
         .body_root = try hex.hexToRoot("0x249a1962eef90e122fa2447040bfac102798b1dba9c73e5593bc5aa32eb92bfd"),
     };
-    electra_state.block_roots = [_][32]u8{[_]u8{1} ** 32} ** preset.SLOTS_PER_HISTORICAL_ROOT;
-    electra_state.state_roots = [_][32]u8{[_]u8{2} ** 32} ** preset.SLOTS_PER_HISTORICAL_ROOT;
+    electra_state.block_roots = @as([preset.SLOTS_PER_HISTORICAL_ROOT][32]u8, @splat(@as([32]u8, @splat(1))));
+    electra_state.state_roots = @as([preset.SLOTS_PER_HISTORICAL_ROOT][32]u8, @splat(@as([32]u8, @splat(2))));
 
     const pubkeys = try allocator.alloc(BLSPubkey, validator_count);
     defer allocator.free(pubkeys);
@@ -73,7 +73,7 @@ pub fn generateElectraState(allocator: Allocator, pool: *Node.Pool, chain_config
     for (0..validator_count) |i| {
         const validator = types.phase0.Validator.Type{
             .pubkey = pubkeys[i],
-            .withdrawal_credentials = [_]u8{0} ** 32,
+            .withdrawal_credentials = @as([32]u8, @splat(0)),
             .effective_balance = EFFECTIVE_BALANCE,
             .slashed = false,
             .activation_eligibility_epoch = 0,

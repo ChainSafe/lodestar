@@ -47,7 +47,7 @@ test "BoolType - serializeIntoBytes (false)" {
 
     var root: [32]u8 = undefined;
     try Bool.hashTreeRoot(&value, &root);
-    const expected_root = [_]u8{0x00} ++ [_]u8{0x00} ** 31;
+    const expected_root = [_]u8{0x00} ++ @as([31]u8, @splat(0x00));
     try std.testing.expectEqualSlices(u8, &expected_root, &root);
 
     const allocator = std.testing.allocator;
@@ -70,7 +70,7 @@ test "BoolType - serializeIntoBytes (true)" {
 
     var root: [32]u8 = undefined;
     try Bool.hashTreeRoot(&value, &root);
-    const expected_root = [_]u8{0x01} ++ [_]u8{0x00} ** 31;
+    const expected_root = [_]u8{0x01} ++ @as([31]u8, @splat(0x00));
     try std.testing.expectEqualSlices(u8, &expected_root, &root);
 
     const allocator = std.testing.allocator;
@@ -94,8 +94,8 @@ test "BoolType - tree.deserializeFromBytes" {
     };
 
     const test_cases = [_]TestCase{
-        .{ .id = "false", .serialized = [_]u8{0x00}, .expected_value = false, .expected_root = [_]u8{0x00} ++ [_]u8{0x00} ** 31 },
-        .{ .id = "true", .serialized = [_]u8{0x01}, .expected_value = true, .expected_root = [_]u8{0x01} ++ [_]u8{0x00} ** 31 },
+        .{ .id = "false", .serialized = [_]u8{0x00}, .expected_value = false, .expected_root = [_]u8{0x00} ++ @as([31]u8, @splat(0x00)) },
+        .{ .id = "true", .serialized = [_]u8{0x01}, .expected_value = true, .expected_root = [_]u8{0x01} ++ @as([31]u8, @splat(0x00)) },
     };
 
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 32 });

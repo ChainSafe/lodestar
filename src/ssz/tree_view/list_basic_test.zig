@@ -886,7 +886,7 @@ test "ListBasicTreeView chunked_leaf: push keeps ChunkedLeaf.len in sync" {
 
     const total_chunks = (item_count + items_per_chunk - 1) / items_per_chunk;
     const chunked_leaf_count = (total_chunks + K - 1) / K;
-    const zero_chunk = [_]u8{0} ** 32;
+    const zero_chunk = @as([32]u8, @splat(0));
 
     for (0..chunked_leaf_count) |cl_idx| {
         const cl = try view.chunks.state.root.getNodeAtDepth(&pool, cl_depth, cl_idx);
@@ -924,7 +924,7 @@ test "ListBasicTreeView chunked_leaf: u8 element width round-trips" {
 
     const total_chunks = (item_count + items_per_chunk - 1) / items_per_chunk;
     const chunked_leaf_count = (total_chunks + K - 1) / K;
-    const zero_chunk = [_]u8{0} ** 32;
+    const zero_chunk = @as([32]u8, @splat(0));
     for (0..chunked_leaf_count) |cl_idx| {
         const cl = try view.chunks.state.root.getNodeAtDepth(&pool, cl_depth, cl_idx);
         const expected_len: usize = @min(K, total_chunks - cl_idx * K);
@@ -1305,7 +1305,7 @@ test "ListBasicTreeView chunked_leaf: property test cross-commit set + push sequ
     var view = try ListT.TreeView.init(allocator, &pool, root_id);
     defer view.deinit();
 
-    const zero_chunk = [_]u8{0} ** 32;
+    const zero_chunk = @as([32]u8, @splat(0));
 
     for (0..20) |_| {
         const n_writes = rand.intRangeAtMost(usize, 5, 30);

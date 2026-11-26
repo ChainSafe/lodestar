@@ -111,8 +111,8 @@ pub fn destinationUnreachable(err: SendError) bool {
 /// `sent` datagrams went out; `failure` is the error of the next one, null when all did.
 pub const SendOutcome = struct { sent: usize, failure: ?SendError };
 pub const SendDrops = struct {
-    datagrams: [std.meta.fields(Reason).len]u64 = @splat(0),
-    bytes: [std.meta.fields(Reason).len]u64 = @splat(0),
+    datagrams: [@typeInfo(Reason).@"enum".field_names.len]u64 = @splat(0),
+    bytes: [@typeInfo(Reason).@"enum".field_names.len]u64 = @splat(0),
 
     /// EAGAIN is distinct from ENOBUFS/ENOMEM, which the Io send contract groups as SystemResources.
     pub const Reason = enum {
@@ -130,8 +130,8 @@ pub const SendDrops = struct {
     };
 
     pub fn add(self: *SendDrops, reason: Reason, len: usize) void {
-        self.datagrams[@intFromEnum(reason)] +|= 1;
-        self.bytes[@intFromEnum(reason)] +|= len;
+        self.datagrams[@backingInt(reason)] +|= 1;
+        self.bytes[@backingInt(reason)] +|= len;
     }
 };
 /// Payload-only datagrams. Payloads are borrowed for the duration of sendMany.
@@ -265,7 +265,7 @@ pub fn drops(self: *SocketPair) [2]?u64 {
 
 pub fn close(self: *SocketPair, io: std.Io) void {
     for (self.values) |socket| if (socket) |value| value.close(io);
-    for (self.probes) |probe| if (probe) |handle| io.vtable.netClose(io.userdata, &.{handle});
+    for (self.probes, self.values) |probe, socket| if (probe) |handle| (net.Socket{ .handle = handle, .address = socket.?.address }).close(io);
     self.* = .{};
 }
 
@@ -550,7 +550,11 @@ fn sendProvider(io: std.Io, handle: net.Socket.Handle, messages: []const Outgoin
                 provider.messages[i].control = provider.controls[i][0..native_io.pinSource(&provider.controls[i], from)];
         }
     }
-    const failure, const sent = io.vtable.netSend(io.userdata, handle, provider.messages[0..messages.len], .{});
+    const failure, const sent = (io.operate(.{ .net_send = .{
+        .socket_handle = handle,
+        .messages = provider.messages[0..messages.len],
+        .flags = .{},
+    } }) catch |err| return .{ .sent = 0, .failure = err }).net_send;
     assert(sent <= messages.len);
     for (messages[0..sent], provider.messages[0..sent]) |message, accepted| assert(message.bytes.len == accepted.data_len);
     return .{ .sent = sent, .failure = failure };

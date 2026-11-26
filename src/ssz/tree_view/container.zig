@@ -24,6 +24,11 @@ pub fn ContainerTreeView(comptime ST: type) type {
     }
 
     const TreeViewData = @Tuple(&opt_treeview_types);
+    const empty_child_data: TreeViewData = blk: {
+        var data: TreeViewData = undefined;
+        for (0..ST.fields.len) |i| data[i] = null;
+        break :blk data;
+    };
 
     const TreeView = struct {
         allocator: Allocator,
@@ -49,8 +54,8 @@ pub fn ContainerTreeView(comptime ST: type) type {
             ptr.* = .{
                 .allocator = allocator,
                 .pool = pool,
-                .child_data = .{null} ** ST.fields.len,
-                .original_nodes = .{null} ** ST.fields.len,
+                .child_data = empty_child_data,
+                .original_nodes = @splat(null),
                 .root = root,
                 .changed = std.StaticBitSet(ST.fields.len).empty,
                 .field_root_cache = undefined,
@@ -84,8 +89,8 @@ pub fn ContainerTreeView(comptime ST: type) type {
             }
 
             // clear self's caches
-            self.child_data = .{null} ** ST.fields.len;
-            self.original_nodes = .{null} ** ST.fields.len;
+            self.child_data = empty_child_data;
+            self.original_nodes = @splat(null);
             self.changed = std.StaticBitSet(ST.fields.len).empty;
 
             return ptr;

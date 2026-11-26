@@ -50,11 +50,20 @@ fn receiveHook(userdata: ?*anyopaque, batch: *std.Io.Batch, timeout: std.Io.Time
     return self.base.vtable.batchAwaitConcurrent(self.base.userdata, batch, timeout);
 }
 
-fn sendHook(userdata: ?*anyopaque, socket: std.Io.net.Socket.Handle, messages: []std.Io.net.OutgoingMessage, flags: std.Io.net.SendFlags) struct { ?std.Io.net.Socket.SendError, usize } {
+fn operateHook(userdata: ?*anyopaque, operation: std.Io.Operation) std.Io.Cancelable!std.Io.Operation.Result {
     const self = context(userdata);
-    self.send_calls += 1;
-    if (self.send) |trigger| if (trigger.matches(self.send_calls, socket)) return .{ self.send_failure, 0 };
-    return self.base.vtable.netSend(self.base.userdata, socket, messages, flags);
+    if (operation == .net_receive) {
+        self.receive_calls += 1;
+        if (self.receive) |trigger| if (trigger.matches(self.receive_calls, operation.net_receive.socket_handle)) return error.Canceled;
+    }
+    if (operation == .net_send) {
+        self.send_calls += 1;
+        if (self.send) |trigger| if (trigger.matches(self.send_calls, operation.net_send.socket_handle)) {
+            if (self.send_failure == error.Canceled) return error.Canceled;
+            return .{ .net_send = .{ @errorCast(self.send_failure), 0 } };
+        };
+    }
+    return self.base.vtable.operate(self.base.userdata, operation);
 }
 
 fn clockHook(userdata: ?*anyopaque, clock: std.Io.Clock) std.Io.Timestamp {
@@ -73,11 +82,11 @@ fn entropyHook(userdata: ?*anyopaque, bytes: []u8) std.Io.RandomSecureError!void
 
 const vtable: std.Io.VTable = blk: {
     var result: std.Io.VTable = undefined;
-    for (std.meta.fields(std.Io.VTable)) |field| {
-        @field(result, field.name) = forward(field.name);
+    for (@typeInfo(std.Io.VTable).@"struct".field_names) |name| {
+        @field(result, name) = forward(name);
     }
     result.batchAwaitConcurrent = receiveHook;
-    result.netSend = sendHook;
+    result.operate = operateHook;
     result.now = clockHook;
     result.randomSecure = entropyHook;
     break :blk result;
@@ -90,7 +99,7 @@ fn forward(comptime name: []const u8) @FieldType(std.Io.VTable, name) {
     const info = @typeInfo(Function).@"fn";
     const Args = std.meta.ArgsTuple(Function);
     const Return = info.return_type.?;
-    return switch (info.params.len) {
+    return switch (info.param_types.len) {
         1 => &struct {
             fn call(userdata: ?*anyopaque) Return {
                 const base = context(userdata).base;

@@ -121,7 +121,7 @@ test "a pinned source leaves from that address on single, batched, mixed and seg
     try std.testing.expectEqualDeep(loopback(3, port), (try readSent(&target, 0, &buffer)).from);
 
     var scratch: SocketPair.BatchScratch = undefined;
-    const segment = [_]u8{0x51} ** 64;
+    const segment = @as([64]u8, @splat(0x51));
     const sources = [_]?Address{ loopback(2, 0), loopback(2, 0), loopback(2, 0), loopback(3, 0), null, loopback(2, 0) };
     var batch: [sources.len]SocketPair.Outgoing = undefined;
     for (&batch, sources) |*message, from| message.* = .{ .to = to, .bytes = &segment, .from = from };
@@ -157,7 +157,7 @@ test "a source that is not local or not of the destination's family fails as unr
     defer target.close(io);
     const foreign = [2]Address{
         .{ .ip4 = .{ .octets = .{ 192, 0, 2, 1 }, .port = 0 } },
-        .{ .ip6 = .{ .octets = .{ 0x20, 0x01, 0x0d, 0xb8 } ++ .{0} ** 11 ++ .{1}, .port = 0 } },
+        .{ .ip6 = .{ .octets = .{ 0x20, 0x01, 0x0d, 0xb8 } ++ @as([11]u8, @splat(0)) ++ .{1}, .port = 0 } },
     };
     var scratch: SocketPair.BatchScratch = undefined;
     // Linux reports EINVAL for a foreign IPv6 source. macOS reports EADDRNOTAVAIL for both families.

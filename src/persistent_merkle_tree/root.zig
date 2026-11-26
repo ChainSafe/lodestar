@@ -21,7 +21,7 @@ pub const max_depth = @import("hashing").max_depth;
 /// the assertion is gated.
 ///
 /// This is turned on by default for `Debug` builds for testing, and set to true for fuzzing.
-pub const expensive_safety_checks = build_options.expensive_safety_checks orelse (builtin.mode == .Debug);
+pub const expensive_safety_checks = build_options.expensive_safety_checks orelse (builtin.mode == .debug);
 
 pub const Gindex = @import("gindex.zig").Gindex;
 pub const Node = @import("Node.zig");

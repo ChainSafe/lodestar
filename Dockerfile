@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools
 # Install zig toolchain
 # Required to build the @lodestar/native workspace package
 ARG TARGETARCH
-ARG ZIG_VERSION=0.16.0
+ARG ZIG_VERSION=0.17.1
 RUN case "${TARGETARCH}" in \
   amd64) ZIG_ARCH=x86_64; ZIG_SHA256=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00 ;; \
   arm64) ZIG_ARCH=aarch64; ZIG_SHA256=ea4b09bfb22ec6f6c6ceac57ab63efb6b46e17ab08d21f69f3a48b38e1534f17 ;; \

@@ -28,7 +28,7 @@ test "merkleize" {
         const chunk_depth = maxChunksToDepth(tc.chunk_count);
 
         const expected = tc.expected;
-        var chunks = [_][32]u8{[_]u8{0} ** 32} ** chunk_count;
+        var chunks = @as([chunk_count][32]u8, @splat(@as([32]u8, @splat(0))));
         for (&chunks, 0..) |*chunk, i| {
             if (i >= tc.chunk_count) break;
             for (chunk) |*b| {

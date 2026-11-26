@@ -225,20 +225,20 @@ pub fn FixedProgressiveListType(comptime ST: type, comptime _opts: TypeOpts) typ
 
         pub const tree = struct {
             pub fn default(pool: *Node.Pool) !Node.Id {
-                return try pool.createBranch(@enumFromInt(0), @enumFromInt(0));
+                return try pool.createBranch(@fromBackingInt(@intCast(0)), @fromBackingInt(@intCast(0)));
             }
 
             /// Returns `len` zero elements without materializing them.
             pub fn zeros(pool: *Node.Pool, len: usize) !Node.Id {
                 comptime std.debug.assert(isBasicType(Element));
                 if (len > limit) return error.LengthOverLimit;
-                var contents: Node.Id = @enumFromInt(0);
+                var contents: Node.Id = @fromBackingInt(@intCast(0));
                 errdefer pool.unref(contents);
 
                 var subtree_i = progressive.subtreeCount(chunkCountForLength(len));
                 while (subtree_i > 0) {
                     subtree_i -= 1;
-                    contents = try pool.createBranch(@enumFromInt(progressive.subtreeDepth(subtree_i)), contents);
+                    contents = try pool.createBranch(@fromBackingInt(@intCast(progressive.subtreeDepth(subtree_i))), contents);
                 }
 
                 const length_leaf = try pool.createLeafFromUint(len);
@@ -612,7 +612,7 @@ pub fn VariableProgressiveListType(comptime ST: type, comptime _opts: TypeOpts) 
 
         pub const tree = struct {
             pub fn default(pool: *Node.Pool) !Node.Id {
-                return try pool.createBranch(@enumFromInt(0), @enumFromInt(0));
+                return try pool.createBranch(@fromBackingInt(@intCast(0)), @fromBackingInt(@intCast(0)));
             }
 
             /// Builds a list from borrowed element roots; see `progressive.contentsFromNodes`.
