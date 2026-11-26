@@ -9,7 +9,8 @@ import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelope
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {verifyPayloadsDataAvailability} from "../../../../src/chain/blocks/verifyPayloadsDataAvailability.js";
 
-const config = createChainForkConfig({SLOT_DURATION_MS: 12_000, SLOT_DURATION_MS_HEZE: 10_000});
+const config = createChainForkConfig({SLOT_DURATION_MS: 12_000});
+config.getSlotDurationMs = (fork) => (fork === ForkName.heze ? 10_000 : 12_000);
 
 function buildPayloadEnvelopeInput({
   blobCount,

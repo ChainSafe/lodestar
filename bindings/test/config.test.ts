@@ -38,19 +38,19 @@ describe("BeaconConfig", () => {
     expect(() => new bindings.BeaconConfig(config, new Uint8Array(32))).toThrow("InvalidVersionLength");
   });
 
-  describe.each(["SLOT_DURATION_MS", "SLOT_DURATION_MS_HEZE"])("%s", (field) => {
+  describe("SLOT_DURATION_MS", () => {
     it.each([1000, 5000, 10000, 24000])("accepts %s ms", (value) => {
-      const config = {...mainnetChainConfig, [field]: value};
+      const config = {...mainnetChainConfig, SLOT_DURATION_MS: value};
       expect(() => new bindings.BeaconConfig(config, new Uint8Array(32))).not.toThrow();
     });
 
     it.each([0, 1, 1500, Infinity])("rejects %s ms", (value) => {
-      const config = {...mainnetChainConfig, [field]: value};
+      const config = {...mainnetChainConfig, SLOT_DURATION_MS: value};
       expect(() => new bindings.BeaconConfig(config, new Uint8Array(32))).toThrow("InvalidSlotDuration");
     });
 
     it.each([-1000, 1.5, Number.MAX_SAFE_INTEGER + 1, NaN])("rejects invalid integer %s", (value) => {
-      const config = {...mainnetChainConfig, [field]: value};
+      const config = {...mainnetChainConfig, SLOT_DURATION_MS: value};
       expect(() => new bindings.BeaconConfig(config, new Uint8Array(32))).toThrow("InvalidChainConfigFieldValue");
     });
   });
