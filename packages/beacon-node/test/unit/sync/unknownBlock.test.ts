@@ -1791,7 +1791,8 @@ describe("UnknownBlockSync", () => {
     function setupSupernodeSyncTest(
       block: SignedBeaconBlock<ForkName.fulu>,
       columns: fulu.DataColumnSidecar[],
-      peerCustody: Map<PeerIdStr, number[]>
+      peerCustody: Map<PeerIdStr, number[]>,
+      {parentKnown = true}: {parentKnown?: boolean} = {}
     ) {
       const emitter = new ChainEventEmitter();
       const networkEvents = new NetworkEventBus();
@@ -1842,8 +1843,9 @@ describe("UnknownBlockSync", () => {
         clock,
         genesisTime: 0,
         forkChoice: {
-          hasBlockHex: (root: string) => root === parentRootHex,
-          getBlockHexDefaultStatus: (root: string) => (root === parentRootHex ? ({slot: 0} as ProtoBlock) : null),
+          hasBlockHex: (root: string) => parentKnown && root === parentRootHex,
+          getBlockHexDefaultStatus: (root: string) =>
+            parentKnown && root === parentRootHex ? ({slot: 0} as ProtoBlock) : null,
           hasPayloadHexUnsafe: () => false,
           getFinalizedBlock: () => ({slot: 0}) as ProtoBlock,
         } as unknown as IForkChoice,
@@ -1940,6 +1942,45 @@ describe("UnknownBlockSync", () => {
 
         expect(sendDataColumnSidecarsByRoot.mock.calls.map(([peer]) => peer)).toEqual([firstPeer, secondPeer]);
         expect(triggerColumnReconstruction).toHaveBeenCalledExactlyOnceWith(processBlock.mock.calls[0][0]);
+      } finally {
+        svc.close();
+      }
+    });
+
+    it("reconstructs a block promoted with half its columns while the request for the rest fails", async () => {
+      const [firstPeer, secondPeer] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
+      const {block, rootHex, columns} = generateFuluBlock();
+      const {svc, emitter, triggerColumnReconstruction, sendDataColumnSidecarsByRoot} = setupSupernodeSyncTest(
+        block,
+        columns,
+        new Map([
+          [firstPeer, firstHalf],
+          [secondPeer, secondHalf],
+        ]),
+        // Keeps the promoted block downloaded instead of importing it
+        {parentKnown: false}
+      );
+      const serveColumns = sendDataColumnSidecarsByRoot.getMockImplementation();
+      let failRequest: ((e: Error) => void) | undefined;
+      sendDataColumnSidecarsByRoot.mockImplementation((peerId, request) => {
+        if (peerId === secondPeer) {
+          return new Promise((_resolve, reject) => {
+            failRequest = reject;
+          });
+        }
+        return serveColumns ? serveColumns(peerId, request) : Promise.resolve([]);
+      });
+
+      try {
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: firstPeer, source: BlockInputSource.gossip});
+        await vi.waitFor(() => expect(failRequest).toBeDefined(), {timeout: 10_000});
+        // A search pass while the request for the second half is in flight
+        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: firstPeer, source: BlockInputSource.gossip});
+        failRequest?.(new Error("request failed"));
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(triggerColumnReconstruction).toHaveBeenCalled();
+        expect(triggerColumnReconstruction.mock.calls[0][0].blockRootHex).toBe(rootHex);
       } finally {
         svc.close();
       }

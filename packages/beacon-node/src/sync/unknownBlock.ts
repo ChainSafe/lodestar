@@ -935,6 +935,10 @@ export class BlockInputSync {
         block.status === PendingBlockInputStatus.pending &&
         block.blockInput.hasBlockAndAllData()
       ) {
+        // Half the columns is enough to import, reconstruct the rest like a fetch that cannot download them
+        if (isBlockInputColumns(block.blockInput) && !block.blockInput.hasComputedAllData()) {
+          this.chain.columnReconstructionTracker.triggerColumnReconstruction(block.blockInput);
+        }
         block.status = PendingBlockInputStatus.downloaded;
       }
     }
