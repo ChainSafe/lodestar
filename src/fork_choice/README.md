@@ -32,7 +32,13 @@ Blocks live in one `std.MultiArrayList(Block)` ordered by insertion. Because
 child's, which lets `head.zig` run bottom-up passes over the array instead of
 recursing or keeping child lists. Columns hold what the spec reads from a block and
 its post-state: slot, parent, proposer, realized and unrealized checkpoints,
-timeliness bits, Gloas bid hashes, payload flags.
+timeliness bits, Gloas bid hashes, and an index into the payload table.
+
+Delivered execution payloads live in a second `std.MultiArrayList(Payload)`, one row
+per payload: its hash, the payload its `parent_hash` names, and the engine's verdict.
+From Gloas on a block and its payload are no longer one to one: a block may never get
+its envelope, and several blocks can deliver the same payload. Each block points at the
+row of the payload it delivered, so blocks delivering the same payload share one verdict.
 
 Latest messages are a dense array indexed by validator holding 4-byte ids into
 `distinct_votes.zig`, a table of the distinct `LatestMessage`s. Hundreds of thousands
@@ -86,13 +92,16 @@ compared, never during accumulation.
 
 ### Optimistic sync
 
-The `optimistic-sync.md` rules are facts plus one derivation. Each block row stores
-the engine's verdict on the block's own payload (`pre_merge`, `syncing`, `valid`,
-`invalid`) and that payload's block hash. A node's status is never stored: a forward
-pass in `head.zig` takes the status of the node a block hangs from and, before Gloas
-or for a `full` node, folds in the block's own payload; the worst verdict wins. A
-Gloas `pending` or `empty` node therefore inherits the status of the parent payload
-the bid names, and the fork transition needs no special case.
+The `optimistic-sync.md` rules are facts plus one derivation. Each payload row stores
+the engine's verdict on that payload (`syncing`, `valid`, `invalid`); a block before the
+merge points at no row and reads `pre_merge`. Before Gloas a block delivers its payload
+itself; from Gloas on, its envelope does. A Gloas block that only bids for a hash
+delivers nothing, and no verdict on that hash reaches it. A zero hash names no payload,
+so a payload delivered under it gets a row of its own. A node's status is never stored:
+a forward pass in `head.zig` takes the status of the node a block hangs from and, before
+Gloas or for a `full` node, folds in the block's own payload; the worst verdict wins. A
+Gloas `pending` or `empty` node therefore inherits the status of the parent payload the
+bid names, and the fork transition needs no special case.
 
 A node derived `invalid` is treated as removed: it is never viable, its weight never
 reaches its parent, a proposer boost on it is dropped, and a justified checkpoint on
@@ -111,16 +120,22 @@ to exit there and proto-array does the same. Two entry points change the facts:
   envelope). A zero hash stops at the merge boundary. A null or unknown hash
   invalidates only the from node's own payload for `.from_block` and drops a
   `.child_payload` verdict. Descendants need no walk, the derivation covers them.
-  Unlike proto-array, which reads only the nodes on the walk, a `valid` or `pre_merge`
-  copy of a walked payload in another block makes the verdict `.contradiction`: the
-  same hash is the same payload, so the engine contradicted itself.
 
 Both walks follow the payload chain: `full` nodes and pre-Gloas blocks contribute
-their own payload, `empty` links skip the parent's. Both check the whole walk, in
-every block carrying the payload, before writing. A verdict never flips a payload the
-engine already resolved, and an invalid walk never reaches the payloads the justified
-block stands on; both return a `VerdictResult` that says why nothing changed.
-`onBlock` and `onExecutionPayloadEnvelope` fail with `error.PayloadInvalidToValid` instead.
+their own payload, `empty` links skip the parent's; the valid walk follows the payload
+rows' parent links, which name the same payloads. Both check the whole walk before
+writing. A write to a row reaches every block delivering the payload, where proto-array
+keeps a status per node. A verdict never flips a payload the engine already resolved,
+and an invalid walk never reaches the payloads the justified block stands on; both
+return a `VerdictResult` that says why nothing changed. `onBlock` and
+`onExecutionPayloadEnvelope` fail with `error.PayloadInvalidToValid` instead. A block
+or envelope delivering a payload the store already holds shares its status, and fails
+the same way if it is `invalid`.
+
+Inputs the spec never produces are rejected before any write. A block hash commits to
+its parent hash, so a block delivering a payload that another block delivers on a
+different parent payload fails with `error.PayloadParentMismatch`. An envelope for a
+pre-Gloas block fails with `error.PreGloasBlock`.
 
 The root block hangs from nothing, so the store keeps the status of the node it hung
 from in `root_base_status`: `pre_merge` for an anchor, whose ancestors count as
@@ -202,7 +217,9 @@ The spec never drops blocks. `prune` drops everything that is not the finalized 
 or one of its descendants and compacts the block table. Votes hold vote ids, so it
 renumbers the blocks in the distinct vote table and the per-node vote totals, and never
 touches a validator's vote. A distinct vote on a dropped block keeps its slot, so the spec's
-replacement rule still holds, and stops counting. The spec runner calls `prune` once
+replacement rule still holds, and stops counting. Payload rows no kept block delivers
+are dropped, the rest are renumbered, and a row whose parent payload was dropped stands
+on `root_base_status`. The spec runner calls `prune` once
 at the end of every vector and checks that the head stays put.
 
 ## Comparison with the TypeScript proto-array
