@@ -439,7 +439,6 @@ describe("ExecutionEngine / rest", () => {
         payloadId: [],
       });
 
-      // The builder matches both the error class and its code
       const error = await engine
         .notifyForkchoiceUpdate(ForkName.deneb, hashHex, hashHex, hashHex, attributes)
         .catch((e) => e);
