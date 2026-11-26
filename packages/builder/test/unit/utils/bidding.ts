@@ -12,6 +12,7 @@ import {BidPublisher} from "../../../src/services/bidPublisher.js";
 import {BidSelector} from "../../../src/services/bidSelector.js";
 import {BuilderSigner} from "../../../src/services/builderSigner.js";
 import {EnvelopePublisher} from "../../../src/services/envelopePublisher.js";
+import {HeadTracker} from "../../../src/services/headTracker.js";
 import {PayloadOrchestrator} from "../../../src/services/payloadOrchestrator.js";
 import {PayloadSource} from "../../../src/services/payloadSource.js";
 import {PayloadStore} from "../../../src/services/payloadStore.js";
@@ -42,11 +43,13 @@ export function createBiddingModules({
   clock,
   builderSigner,
   proposerPreferencesTracker,
+  headTracker = new HeadTracker(),
   payloadStore,
   payloadSource,
   signal,
   index = 1,
   getBuilderStatus = () => ({status: "active", balance: 10_000_000_000}),
+  requestTimeout,
 }: {
   api: ApiClient;
   config: ChainForkConfig;
@@ -54,9 +57,12 @@ export function createBiddingModules({
   clock: IClock;
   builderSigner: BuilderSigner;
   proposerPreferencesTracker: ProposerPreferencesTracker;
+  headTracker?: HeadTracker;
   payloadStore: PayloadStore;
   payloadSource: PayloadSource;
   signal: AbortSignal;
+  /** Timeout in milliseconds of requests to the beacon node */
+  requestTimeout?: number;
   index?: BuilderIndex;
   getBuilderStatus?: () => {status: BuilderStatus | undefined; balance: number | undefined};
 }): {ledger: BidLedger; bidder: Bidder; revealer: Revealer} {
@@ -84,6 +90,7 @@ export function createBiddingModules({
         hasPayload: ({blockHash}) => payloadStore.has(blockHash),
       }),
       proposerPreferencesTracker,
+      headTracker,
       getBuilderStatus,
       builderIndex: index,
       executionFeeRecipient: Buffer.alloc(20, 9),
@@ -98,13 +105,14 @@ export function createBiddingModules({
       logger,
       clock,
       bidSelector: new BidSelector({config, ledger, builderIndex: index}),
+      ledger,
       payloadStore,
       envelopePublisher: new EnvelopePublisher({api, signer: builderSigner, ledger, builderIndex: index}),
       builderIndex: index,
       metrics: null,
       signal,
     },
-    {cutoffBps: config.PAYLOAD_ATTESTATION_DUE_BPS}
+    {cutoffBps: config.PAYLOAD_ATTESTATION_DUE_BPS, requestTimeout}
   );
   return {ledger, bidder, revealer};
 }

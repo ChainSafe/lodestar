@@ -78,8 +78,6 @@ export type ShouldOverrideForkChoiceUpdateResult =
   | {shouldOverrideFcu: false; reason: NotReorgedReason};
 
 export interface IForkChoice {
-  irrecoverableError?: Error;
-
   /**
    * Returns the ancestor node of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)
@@ -213,7 +211,7 @@ export interface IForkChoice {
   ): void;
   /**
    * Notify fork choice that an execution payload has arrived (Gloas fork)
-   * Creates the FULL variant of a Gloas block when the payload becomes available
+   * Creates the FULL variant of a Gloas block when the payload becomes available and refreshes the cached head
    *
    * ## Specification
    *

@@ -431,7 +431,7 @@ export class Network implements INetwork {
   }
 
   async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
-    const publishChanges = [];
+    const publishChanges: Promise<number>[] = [];
     for (const boundary of getActiveForkBoundaries(this.config, this.clock.currentEpoch)) {
       const fork = ForkSeq[boundary.fork];
 
@@ -447,7 +447,11 @@ export class Network implements INetwork {
     if (publishChanges.length === 0) {
       throw Error("No capella+ fork active yet to publish blsToExecutionChange");
     }
-    return Promise.any(publishChanges);
+    try {
+      return await Promise.any(publishChanges);
+    } finally {
+      await Promise.allSettled(publishChanges);
+    }
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number> {
@@ -596,7 +600,8 @@ export class Network implements INetwork {
         request
       ),
       request,
-      this.chain.serializedCache
+      this.chain.serializedCache,
+      () => this.reportInvalidResponse(peerId)
     );
   }
 
@@ -611,7 +616,8 @@ export class Network implements INetwork {
       ),
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRoot],
-      this.chain.serializedCache
+      this.chain.serializedCache,
+      () => this.reportInvalidResponse(peerId)
     );
   }
 
@@ -623,28 +629,32 @@ export class Network implements INetwork {
       this.sendReqRespRequest(peerId, ReqRespMethod.BeaconBlocksByHead, [Version.V1], request),
       Math.min(request.count, this.config.MAX_REQUEST_BLOCKS_DENEB),
       responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByHead],
-      this.chain.serializedCache
+      this.chain.serializedCache,
+      () => this.reportInvalidResponse(peerId)
     );
   }
 
   async sendLightClientBootstrap(peerId: PeerIdStr, request: Root): Promise<LightClientBootstrap> {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientBootstrap, [Version.V1], request),
-      responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap]
+      responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap],
+      () => this.reportInvalidResponse(peerId)
     );
   }
 
   async sendLightClientOptimisticUpdate(peerId: PeerIdStr): Promise<LightClientOptimisticUpdate> {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientOptimisticUpdate, [Version.V1], null),
-      responseSszTypeByMethod[ReqRespMethod.LightClientOptimisticUpdate]
+      responseSszTypeByMethod[ReqRespMethod.LightClientOptimisticUpdate],
+      () => this.reportInvalidResponse(peerId)
     );
   }
 
   async sendLightClientFinalityUpdate(peerId: PeerIdStr): Promise<LightClientFinalityUpdate> {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientFinalityUpdate, [Version.V1], null),
-      responseSszTypeByMethod[ReqRespMethod.LightClientFinalityUpdate]
+      responseSszTypeByMethod[ReqRespMethod.LightClientFinalityUpdate],
+      () => this.reportInvalidResponse(peerId)
     );
   }
 
@@ -655,7 +665,9 @@ export class Network implements INetwork {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientUpdatesByRange, [Version.V1], request),
       request.count,
-      responseSszTypeByMethod[ReqRespMethod.LightClientUpdatesByRange]
+      responseSszTypeByMethod[ReqRespMethod.LightClientUpdatesByRange],
+      undefined,
+      () => this.reportInvalidResponse(peerId)
     );
   }
 
@@ -666,7 +678,9 @@ export class Network implements INetwork {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRange, [Version.V1], request),
       request.count * request.columns.length,
-      responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRange]
+      responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRange],
+      undefined,
+      () => this.reportInvalidResponse(peerId)
     );
   }
 
@@ -678,7 +692,8 @@ export class Network implements INetwork {
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),
       request.reduce((total, {columns}) => total + columns.length, 0),
       responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRoot],
-      this.chain.serializedCache
+      this.chain.serializedCache,
+      () => this.reportInvalidResponse(peerId)
     );
   }
 
@@ -689,7 +704,9 @@ export class Network implements INetwork {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.ExecutionPayloadEnvelopesByRange, [Version.V1], request),
       request.count,
-      responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRange]
+      responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRange],
+      undefined,
+      () => this.reportInvalidResponse(peerId)
     );
   }
 
@@ -701,8 +718,17 @@ export class Network implements INetwork {
       this.sendReqRespRequest(peerId, ReqRespMethod.ExecutionPayloadEnvelopesByRoot, [Version.V1], request),
       request.length,
       responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRoot],
-      this.chain.serializedCache
+      this.chain.serializedCache,
+      () => this.reportInvalidResponse(peerId)
     );
+  }
+
+  private async reportInvalidResponse(peerId: PeerIdStr): Promise<void> {
+    try {
+      await this.core.reportPeer(peerId, PeerAction.LowToleranceError, "InvalidResponseSsz");
+    } catch (error) {
+      this.logger.debug("Failed to report invalid response", {peerId}, error as Error);
+    }
   }
 
   private sendReqRespRequest<Req>(

@@ -1,6 +1,6 @@
 import os from "node:os";
 import {describe, expect, it} from "vitest";
-import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {ArchiveMode, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {
@@ -11,6 +11,49 @@ import {
 } from "../../../src/options/beaconNodeOptions/network.js";
 
 describe("options / beaconNodeOptions", () => {
+  it.each([
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [9, 10],
+    [10, 11],
+    [25, 27],
+    [100, 110],
+  ])("defaults maxPeers above targetPeers=%s to %s", (targetPeers, maxPeers) => {
+    expect(parseNetworkArgs({targetPeers, listenAddress: "127.0.0.1"})).toMatchObject({targetPeers, maxPeers});
+  });
+
+  it("preserves the network defaults when targetPeers is omitted", () => {
+    expect(parseNetworkArgs({listenAddress: "127.0.0.1"})).toMatchObject({
+      targetPeers: defaultOptions.network.targetPeers,
+      maxPeers: defaultOptions.network.maxPeers,
+    });
+  });
+
+  it.each([1, 5])("preserves an explicit maxPeers=%s", (maxPeers) => {
+    expect(parseNetworkArgs({targetPeers: 1, "network.maxPeers": maxPeers, listenAddress: "127.0.0.1"})).toMatchObject({
+      targetPeers: 1,
+      maxPeers,
+    });
+  });
+
+  it.each([
+    [-1, undefined],
+    [-0.5, undefined],
+    [-100, undefined],
+    [-1, 2],
+  ])("rejects targetPeers=%s with maxPeers=%s", (targetPeers, maxPeers) => {
+    expect(() => parseNetworkArgs({targetPeers, "network.maxPeers": maxPeers, listenAddress: "127.0.0.1"})).toThrow(
+      "targetPeers must be greater than or equal to 0"
+    );
+  });
+
+  it("still rejects an explicit maxPeers below targetPeers", () => {
+    expect(() => parseNetworkArgs({targetPeers: 2, "network.maxPeers": 1, listenAddress: "127.0.0.1"})).toThrow(
+      "network.maxPeers must be greater than or equal to targetPeers"
+    );
+  });
+
   it("Should parse BeaconNodeArgs", () => {
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
@@ -93,10 +136,6 @@ describe("options / beaconNodeOptions", () => {
       "network.maxPeers": 30,
       "network.connectToDiscv5Bootnodes": true,
       "network.discv5FirstQueryDelayMs": 1000,
-      "network.requestCountPeerLimit": 5,
-      "network.blockCountTotalLimit": 1000,
-      "network.blockCountPeerLimit": 500,
-      "network.rateTrackerTimeoutMs": 60000,
       "network.dontSendGossipAttestationsToForkchoice": true,
       "network.allowPublishToZeroPeers": true,
       "network.gossipsubD": 4,
