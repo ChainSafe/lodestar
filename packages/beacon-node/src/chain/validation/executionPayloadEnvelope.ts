@@ -56,7 +56,7 @@ export function validateGossipExecutionPayloadEnvelopeSerialized(
 
   const maxTransactionCount = getMaxTransactionCount(chain, block, payloadInput);
   if (BigInt(transactionCount) > maxTransactionCount) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
       slot,
       root: blockRootHex,
@@ -202,12 +202,11 @@ async function validateExecutionPayloadEnvelope(
 
   // Execution request and withdrawal count limits are enforced by the SSZ list limits on decode
 
-  // [IGNORE] The number of transactions is within the limit implied by the parent payload's gas limit
-  // TODO GLOAS: [REJECT] once https://github.com/ethereum/consensus-specs/pull/5802 is released,
-  // also in validateGossipExecutionPayloadEnvelopeSerialized
+  // [REJECT] The number of transactions is within the limit implied by the parent payload's gas limit,
+  // also checked before deserialization in validateGossipExecutionPayloadEnvelopeSerialized
   const maxTransactionCount = getMaxTransactionCount(chain, block, payloadInput);
   if (BigInt(payload.transactions.length) > maxTransactionCount) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
       slot: payload.slotNumber,
       root: blockRootHex,
