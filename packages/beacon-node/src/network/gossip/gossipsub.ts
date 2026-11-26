@@ -505,6 +505,10 @@ export class Eth2Gossipsub {
   getDirectPeers(): string[] {
     return Array.from(this.gossipsub.direct);
   }
+
+  isDirectPeer(peerIdStr: string): boolean {
+    return this.gossipsub.direct.has(peerIdStr);
+  }
 }
 
 /**

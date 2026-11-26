@@ -170,3 +170,16 @@ pub const LightClientOptimisticUpdate = ssz.FixedContainerType(struct {
     sync_aggregate: SyncAggregate,
     signature_slot: p.Slot,
 });
+
+// Req/resp messages
+// =================
+
+pub const MetaDataV2 = ssz.FixedContainerType(struct {
+    seq_number: p.Uint64,
+    attnets: ssz.BitVectorType(c.ATTESTATION_SUBNET_COUNT),
+    syncnets: ssz.BitVectorType(c.SYNC_COMMITTEE_SUBNET_COUNT),
+});
+
+comptime {
+    std.debug.assert(MetaDataV2.fixed_size == 17);
+}
