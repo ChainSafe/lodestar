@@ -60,7 +60,17 @@ function runNetworkingFnTests(testHandler: string, testSuite: string, testSuiteD
 }
 
 /** Matched against `<handler>/<testCase>` */
-const skippedGossipTests: RegExp[] = [];
+const skippedGossipTests: RegExp[] = [
+  // Lodestar marks the proposer of every imported block as seen, so a block reusing the slot and proposer of
+  // its anchor parent is ignored as a repeat proposal before the parent slot check rejects it
+  /^gossip_beacon_block\/gossip_beacon_block__reject_slot_not_higher_than_parent$/,
+  // A bid parent block hash that matches neither payload variant of the parent is ignored as an unknown parent
+  // payload instead of rejected
+  /^gossip_beacon_block\/gossip_beacon_block__reject_bid_not_on_parent_execution_head$/,
+  // Lodestar ignores previous epoch attestations exactly MAXIMUM_GOSSIP_CLOCK_DISPARITY after the epoch window
+  // closes, the spec includes that end point
+  /^gossip_beacon_(attestation|aggregate_and_proof)\/.*__accepts_(first|last)_slot_when_epoch_window_closes$/,
+];
 
 const networking: TestRunnerCustom = (fork, testHandler, testSuite, testSuiteDirpath) => {
   if (isGossipValidationHandler(testHandler)) {

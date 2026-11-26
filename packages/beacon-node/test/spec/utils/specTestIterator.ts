@@ -78,11 +78,8 @@ export const defaultSkipOpts: SkipOpts = {
     // All networks have already completed the merge, so this code path is no longer needed.
     /^bellatrix\/fork_choice\/on_merge_block\/.*/,
     /^.+\/light_client\/data_collection\/.*/,
-    // The gossip harness still lacks coverage for parent validation and voluntary-exit anchors.
-    /^.+\/networking\/gossip_beacon_block\/.*$/,
+    // The gossip harness still lacks coverage for voluntary-exit anchors.
     /^.+\/networking\/gossip_voluntary_exit\/.*$/,
-    // Deneb+ epoch-boundary attestations and Electra+ single attestations need harness updates.
-    /^(deneb|electra|fulu|gloas|heze)\/networking\/gossip_beacon_(attestation|aggregate_and_proof)\/.*$/,
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
