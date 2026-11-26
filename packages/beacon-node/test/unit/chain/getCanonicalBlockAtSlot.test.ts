@@ -86,9 +86,9 @@ describe("BeaconChain getCanonicalBlockAtSlot", () => {
     });
   });
 
-  it("serves an archived block that is still in fork choice", async () => {
+  it("serves an archived block that is still in fork choice without walking fork choice", async () => {
     const {block, blockRoot} = generateBlock(finalizedSlot);
-    const {getCanonicalBlockAtSlot} = setup({
+    const {chain, getCanonicalBlockAtSlot} = setup({
       forkChoiceBlocks: [generateProtoBlock({slot: finalizedSlot, blockRoot})],
       archivedBlocks: [block],
     });
@@ -98,6 +98,7 @@ describe("BeaconChain getCanonicalBlockAtSlot", () => {
       executionOptimistic: false,
       finalized: true,
     });
+    expect(chain.forkChoice.getCanonicalBlockAtSlot).not.toHaveBeenCalled();
   });
 
   it("serves an archived block that fork choice has pruned without reading the hot db", async () => {
@@ -107,6 +108,7 @@ describe("BeaconChain getCanonicalBlockAtSlot", () => {
 
     await expect(getCanonicalBlockAtSlot(slot)).resolves.toEqual({block, executionOptimistic: false, finalized: true});
     expect(chain.db.block.get).not.toHaveBeenCalled();
+    expect(chain.forkChoice.getCanonicalBlockAtSlot).not.toHaveBeenCalled();
   });
 
   it("serves an unfinalized block from the hot db", async () => {

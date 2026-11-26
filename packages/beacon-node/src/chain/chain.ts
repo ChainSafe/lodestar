@@ -863,6 +863,13 @@ export class BeaconChain implements IBeaconChain {
   async getCanonicalBlockAtSlot(
     slot: Slot
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
+    const finalizedSlot = this.forkChoice.getFinalizedBlock().slot;
+    if (slot <= finalizedSlot) {
+      const archived = await this.db.blockArchive.get(slot);
+      if (archived) {
+        return {block: archived, executionOptimistic: false, finalized: true};
+      }
+    }
     // A finalized block stays in fork-choice and the hot db until the archiver has migrated it
     const canonicalBlock = this.forkChoice.getCanonicalBlockAtSlot(slot);
     // The canonical variant can be FULL, a block reports the status of the payload it builds on
@@ -872,7 +879,7 @@ export class BeaconChain implements IBeaconChain {
         // Ancestors of the finalized block are not returned by root, only in the summaries of their slot
         this.forkChoice.getBlockSummariesAtSlot(slot).find(({blockRoot}) => blockRoot === canonicalBlock.blockRoot));
     if (block) {
-      const finalized = slot <= this.forkChoice.getFinalizedBlock().slot;
+      const finalized = slot <= finalizedSlot;
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
       // Otherwise (most likely), check the hot db
