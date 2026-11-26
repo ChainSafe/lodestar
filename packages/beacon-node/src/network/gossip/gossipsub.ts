@@ -25,7 +25,7 @@ import {getSlotDurations} from "@lodestar/state-transition";
 import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
-import {callImmediate, callInNextEventLoop} from "../../util/eventLoop.js";
+import {callAfterIO, callInNextEventLoop} from "../../util/eventLoop.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
 import {Libp2p} from "../interface.js";
 import {NetworkConfig} from "../networkConfig.js";
@@ -433,7 +433,7 @@ export class Eth2Gossipsub {
     // See https://github.com/ChainSafe/lodestar/issues/5604
     // A block arrives once per slot and cannot cause that lag, so it skips the 1ms timer delay
     if (topic.type === GossipType.beacon_block) {
-      callImmediate(emitPendingMessage);
+      callAfterIO(emitPendingMessage);
     } else {
       callInNextEventLoop(emitPendingMessage);
     }
@@ -504,6 +504,10 @@ export class Eth2Gossipsub {
    */
   getDirectPeers(): string[] {
     return Array.from(this.gossipsub.direct);
+  }
+
+  isDirectPeer(peerIdStr: string): boolean {
+    return this.gossipsub.direct.has(peerIdStr);
   }
 }
 

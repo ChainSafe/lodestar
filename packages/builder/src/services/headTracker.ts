@@ -19,10 +19,20 @@ type TrackedHead = {
  */
 export class HeadTracker {
   private readonly heads = new Map<RootHex, TrackedHead>();
+  private headOptimistic = false;
 
   onHead(data: HeadEvent["data"]): void {
-    const {slot, block, currentEpochDependentRoot, nextEpochDependentRoot} = data;
+    const {slot, block, currentEpochDependentRoot, nextEpochDependentRoot, executionOptimistic} = data;
     this.heads.set(block, {slot, currentEpochDependentRoot, nextEpochDependentRoot});
+    this.headOptimistic = executionOptimistic;
+  }
+
+  /**
+   * Whether the latest head announced by the beacon node is optimistic. A head that becomes valid without a head
+   * change stays optimistic until the next head event.
+   */
+  isHeadOptimistic(): boolean {
+    return this.headOptimistic;
   }
 
   /**

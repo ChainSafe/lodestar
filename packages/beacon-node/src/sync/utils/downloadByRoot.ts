@@ -1,7 +1,8 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostFulu, ForkPostGloas, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
-import {ColumnIndex, SignedBeaconBlock, Slot, fulu} from "@lodestar/types";
+import {getBlockProposerSignatureSet} from "@lodestar/state-transition";
+import {ColumnIndex, SignedBeaconBlock, Slot, ValidatorIndex, fulu} from "@lodestar/types";
 import {LodestarError, byteArrayEquals, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
@@ -30,10 +31,12 @@ export type FetchByRootCoreProps = {
   peerMeta: PeerSyncMeta;
 };
 export type FetchByRootProps = FetchByRootCoreProps & {
+  chain: IBeaconChain;
   cacheItem: BlockInputSyncCacheItem;
   blockRoot: Uint8Array;
 };
 export type FetchByRootAndValidateBlockProps = Omit<FetchByRootCoreProps, "peerMeta"> & {
+  chain: IBeaconChain;
   peerIdStr: PeerIdStr;
   blockRoot: Uint8Array;
 };
@@ -112,9 +115,8 @@ export async function downloadByRoot({
     });
   }
 
-  const hasAllDataPreDownload = blockInput.hasBlockAndAllData();
-
-  if (isBlockInputColumns(blockInput) && !hasAllDataPreDownload) {
+  // Like range sync, download every sampled column, half of them only counts as available for reconstruction
+  if (isBlockInputColumns(blockInput) && !blockInput.hasComputedAllData()) {
     // columnSidecars could be undefined if gossip resulted in full block+columns so we don't download any
     if (!columnSidecars) {
       throw new DownloadByRootError({
@@ -151,7 +153,10 @@ export async function downloadByRoot({
 
   let status: PendingBlockInputStatus;
   let timeSyncedSec: number | undefined;
-  if (blockInput.hasBlockAndAllData()) {
+  if (
+    blockInput.hasBlock() &&
+    (isBlockInputColumns(blockInput) ? blockInput.hasComputedAllData() : blockInput.hasAllData())
+  ) {
     status = PendingBlockInputStatus.downloaded;
     timeSyncedSec = Date.now() / 1000;
   } else {
@@ -165,6 +170,8 @@ export async function downloadByRoot({
       timeSyncedSec,
       timeAddedSec: cacheItem.timeAddedSec,
       peerIdStrings: cacheItem.peerIdStrings,
+      retainedBy: isPendingBlockInput(cacheItem) ? cacheItem.retainedBy : undefined,
+      retainedBytes: isPendingBlockInput(cacheItem) ? cacheItem.retainedBytes : undefined,
     },
     warnings,
   };
@@ -188,6 +195,7 @@ export async function fetchByRoot({
     } else {
       block = await fetchAndValidateBlock({
         config,
+        chain,
         network,
         peerIdStr,
         blockRoot,
@@ -195,7 +203,7 @@ export async function fetchByRoot({
     }
 
     const forkName = config.getForkName(block.message.slot);
-    if (!cacheItem.blockInput.hasAllData() && isBlockInputColumns(cacheItem.blockInput)) {
+    if (isBlockInputColumns(cacheItem.blockInput) && !cacheItem.blockInput.hasComputedAllData()) {
       columnSidecarResult = await fetchAndValidateColumns({
         config,
         chain,
@@ -210,6 +218,7 @@ export async function fetchByRoot({
   } else {
     block = await fetchAndValidateBlock({
       config,
+      chain,
       network,
       peerIdStr,
       blockRoot,
@@ -243,10 +252,11 @@ export async function fetchByRoot({
 
 export async function fetchAndValidateBlock({
   config,
+  chain,
   network,
   peerIdStr,
   blockRoot,
-}: Omit<FetchByRootAndValidateBlockProps, "chain">): Promise<SignedBeaconBlock> {
+}: FetchByRootAndValidateBlockProps): Promise<SignedBeaconBlock> {
   const response = await network.sendBeaconBlocksByRoot(peerIdStr, [blockRoot]);
   const block = response.at(0);
   if (!block) {
@@ -267,6 +277,41 @@ export async function fetchAndValidateBlock({
       },
       "block does not match requested root"
     );
+  }
+
+  const blockRootHex = toRootHex(blockRoot);
+  const {slot, proposerIndex} = block.message;
+  // Before the signature check, honest peers serve the genesis block unsigned
+  const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  if (slot < finalizedSlot) {
+    throw new DownloadByRootError({
+      code: DownloadByRootErrorCode.BELOW_FINALIZED_SLOT,
+      peer: prettyPrintPeerIdStr(peerIdStr),
+      slot,
+      finalizedSlot,
+      blockRoot: blockRootHex,
+    });
+  }
+  if (proposerIndex >= chain.pubkeyCache.size) {
+    throw new DownloadByRootError({
+      code: DownloadByRootErrorCode.UNKNOWN_PROPOSER,
+      peer: prettyPrintPeerIdStr(peerIdStr),
+      slot,
+      blockRoot: blockRootHex,
+      proposerIndex,
+    });
+  }
+  // Not marked as verified, the block has not passed proposer or ancestry checks yet
+  if (!chain.seenBlockInputCache.isVerifiedProposerSignature(slot, blockRootHex, block.signature)) {
+    const signatureSet = getBlockProposerSignatureSet(chain.config, block);
+    if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: false}))) {
+      throw new DownloadByRootError({
+        code: DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID,
+        peer: prettyPrintPeerIdStr(peerIdStr),
+        slot,
+        blockRoot: blockRootHex,
+      });
+    }
   }
   return block;
 }
@@ -374,6 +419,9 @@ export enum DownloadByRootErrorCode {
   INVALID_KZG_PROOF = "DOWNLOAD_BY_ROOT_ERROR_INVALID_KZG_PROOF",
   MISSING_BLOCK_RESPONSE = "DOWNLOAD_BY_ROOT_ERROR_MISSING_BLOCK_RESPONSE",
   MISSING_COLUMN_RESPONSE = "DOWNLOAD_BY_ROOT_ERROR_MISSING_COLUMN_RESPONSE",
+  BELOW_FINALIZED_SLOT = "DOWNLOAD_BY_ROOT_ERROR_BELOW_FINALIZED_SLOT",
+  UNKNOWN_PROPOSER = "DOWNLOAD_BY_ROOT_ERROR_UNKNOWN_PROPOSER",
+  PROPOSAL_SIGNATURE_INVALID = "DOWNLOAD_BY_ROOT_ERROR_PROPOSAL_SIGNATURE_INVALID",
   Z = "DOWNLOAD_BY_ROOT_ERROR_Z",
 }
 export type DownloadByRootErrorType =
@@ -422,6 +470,26 @@ export type DownloadByRootErrorType =
   | {
       code: DownloadByRootErrorCode.MISSING_COLUMN_RESPONSE;
       peer: string;
+      blockRoot: string;
+    }
+  | {
+      code: DownloadByRootErrorCode.BELOW_FINALIZED_SLOT;
+      peer: string;
+      slot: Slot;
+      finalizedSlot: Slot;
+      blockRoot: string;
+    }
+  | {
+      code: DownloadByRootErrorCode.UNKNOWN_PROPOSER;
+      peer: string;
+      slot: Slot;
+      blockRoot: string;
+      proposerIndex: ValidatorIndex;
+    }
+  | {
+      code: DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID;
+      peer: string;
+      slot: Slot;
       blockRoot: string;
     };
 

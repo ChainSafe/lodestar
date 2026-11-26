@@ -82,7 +82,7 @@ export default defineConfig({
     onConsoleLog: () => !process.env.TEST_QUIET_CONSOLE,
     coverage: {
       enabled: false,
-      include: ["packages/**/src/**.{ts}"],
+      include: ["packages/**/src/**/*.ts"],
       clean: true,
       provider: "v8",
       reporter: [["lcovonly", {file: "lcov.info"}], ["text"]],
