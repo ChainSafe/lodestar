@@ -60,14 +60,7 @@ function runNetworkingFnTests(testHandler: string, testSuite: string, testSuiteD
 }
 
 /** Matched against `<handler>/<testCase>` */
-const skippedGossipTests: RegExp[] = [
-  // The pinned vector predates consensus-specs#5821, its payload carries withdrawals the block's post-state
-  // does not expect. Unskip with the next spec release.
-  /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__valid_max_withdrawals$/,
-  // The pinned vectors carry placeholder block hashes, so the block hash check from consensus-specs#5770 rejects
-  // envelopes they expect to be accepted. Unskip once a release ships vectors with real block hashes.
-  /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__(valid.*|ignore_duplicate)$/,
-];
+const skippedGossipTests: RegExp[] = [];
 
 const networking: TestRunnerCustom = (fork, testHandler, testSuite, testSuiteDirpath) => {
   if (isGossipValidationHandler(testHandler)) {
