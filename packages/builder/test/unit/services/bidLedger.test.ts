@@ -1,8 +1,15 @@
 import {describe, expect, it} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import type {RootHex} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
-import {BidLedger, BidLedgerError, BidLedgerErrorCode, type SubmittedBid} from "../../../src/services/bidLedger.js";
+import {ssz} from "@lodestar/types";
+import {fromHex, toRootHex} from "@lodestar/utils";
+import {
+  type BidIdentity,
+  BidLedger,
+  BidLedgerError,
+  BidLedgerErrorCode,
+  type SubmittedBid,
+} from "../../../src/services/bidLedger.js";
 
 describe("BidLedger", () => {
   it("records one bid per slot and parent tuple", () => {
@@ -15,12 +22,26 @@ describe("BidLedger", () => {
     expect(ledger.hasSubmitted(bid.slot + 1, bid.parentBlockHash, bid.parentBlockRoot)).toBe(false);
   });
 
+  it("returns the signed bid recorded for a slot and parent tuple until it is pruned", () => {
+    const ledger = new BidLedger();
+    const bid = submittedBid();
+    ledger.recordBid(bid);
+
+    expect(ledger.getSignedBid(bid.slot, bid.parentBlockHash, bid.parentBlockRoot)).toBe(bid.signedBid);
+    expect(ledger.getSignedBid(bid.slot + 1, bid.parentBlockHash, bid.parentBlockRoot)).toBeNull();
+    expect(ledger.getSignedBid(bid.slot, root(9), bid.parentBlockRoot)).toBeNull();
+    expect(ledger.getSignedBid(bid.slot, bid.parentBlockHash, root(9))).toBeNull();
+
+    ledger.prune(bid.slot + 3 * SLOTS_PER_EPOCH + 1);
+    expect(ledger.getSignedBid(bid.slot, bid.parentBlockHash, bid.parentBlockRoot)).toBeNull();
+  });
+
   it("rejects a second bid for the same tuple with a structured error", () => {
     const ledger = new BidLedger();
     const bid = submittedBid();
     ledger.recordBid(bid);
 
-    const error = getBidLedgerError(() => ledger.recordBid({...bid, blockHash: root(5)}));
+    const error = getBidLedgerError(() => ledger.recordBid(submittedBid({blockHash: root(5)})));
 
     expect(error.type).toEqual({
       code: BidLedgerErrorCode.DUPLICATE_BID,
@@ -154,7 +175,7 @@ describe("BidLedger", () => {
     expect(ledger.recordPaymentSettled(bid)).toBeNull();
     ledger.recordWin(bid, root(6));
     expect(ledger.recordPaymentSettled({...bid, blockHash: root(7)})).toBeNull();
-    expect(ledger.getUnsettledValueGwei(4)).toBe(bid.valueGwei);
+    expect(ledger.getUnsettledValueGwei(4)).toBe(bid.signedBid.message.value);
   });
 
   it("fails closed if unsettled liability exceeds the safe integer range", () => {
@@ -169,6 +190,19 @@ describe("BidLedger", () => {
     const error = getBidLedgerError(() => ledger.getUnsettledValueGwei(0));
 
     expect(error.type).toEqual({code: BidLedgerErrorCode.UNSETTLED_VALUE_OVERFLOW, currentEpoch: 0});
+  });
+
+  it("keeps the recorded value if the signed bid is changed afterwards", () => {
+    const ledger = new BidLedger();
+    const bid = submittedBid({valueGwei: 100});
+    ledger.recordBid(bid);
+    ledger.recordWin(bid, root(6));
+
+    bid.signedBid.message.value = 0;
+    expect(ledger.getUnsettledValueGwei(0)).toBe(100);
+
+    bid.signedBid.message.value = Number.MAX_SAFE_INTEGER + 1;
+    expect(ledger.getUnsettledValueGwei(0)).toBe(100);
   });
 
   it("returns snapshots that cannot mutate ledger state", () => {
@@ -223,22 +257,22 @@ describe("BidLedger", () => {
 
     const error = getBidLedgerError(() => ledger.recordBid(bid));
     expect(error.type).toEqual({code: BidLedgerErrorCode.BID_TOO_OLD, slot: bid.slot, pruneCutoffSlot: bid.slot + 1});
-    expect(ledger.recordBid({...bid, slot: bid.slot + 1}).slot).toBe(bid.slot + 1);
+    expect(ledger.recordBid(submittedBid({slot: bid.slot + 1})).slot).toBe(bid.slot + 1);
   });
 
   it("settles payments of bids won before a slot", () => {
     const ledger = new BidLedger();
     const settled = submittedBid();
-    const unsettled = {...submittedBid(), slot: settled.slot + 1};
-    const lost = {...submittedBid(), slot: settled.slot - 1};
+    const unsettled = submittedBid({slot: settled.slot + 1});
+    const lost = submittedBid({slot: settled.slot - 1});
     for (const bid of [settled, unsettled, lost]) ledger.recordBid(bid);
     ledger.recordWin(settled, root(6));
     ledger.recordWin(unsettled, root(7));
-    expect(ledger.getUnsettledValueGwei(0)).toBe(settled.valueGwei + unsettled.valueGwei);
+    expect(ledger.getUnsettledValueGwei(0)).toBe(settled.signedBid.message.value + unsettled.signedBid.message.value);
 
     ledger.settlePaymentsBefore(unsettled.slot);
 
-    expect(ledger.getUnsettledValueGwei(0)).toBe(unsettled.valueGwei);
+    expect(ledger.getUnsettledValueGwei(0)).toBe(unsettled.signedBid.message.value);
     expect(ledger.prune(unsettled.slot + 3 * SLOTS_PER_EPOCH + 1)).toBe(2);
     expect(ledger.getBidsForSlot(unsettled.slot)).toHaveLength(1);
   });
@@ -266,16 +300,26 @@ describe("BidLedger", () => {
   });
 });
 
-function submittedBid(overrides: Partial<SubmittedBid> = {}): SubmittedBid {
-  return {
+/** Submitted bid along with the identity the ledger derives from its signed bid */
+function submittedBid({
+  valueGwei = 100,
+  signedBidRoot = root(5),
+  ...identityOverrides
+}: Partial<BidIdentity> & {valueGwei?: number; signedBidRoot?: RootHex} = {}): SubmittedBid & BidIdentity {
+  const identity: BidIdentity = {
     slot: 1,
     parentBlockHash: root(2),
     parentBlockRoot: root(3),
     blockHash: root(4),
-    valueGwei: 100,
-    signedBidRoot: root(5),
-    ...overrides,
+    ...identityOverrides,
   };
+  const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+  signedBid.message.slot = identity.slot;
+  signedBid.message.parentBlockHash = fromHex(identity.parentBlockHash);
+  signedBid.message.parentBlockRoot = fromHex(identity.parentBlockRoot);
+  signedBid.message.blockHash = fromHex(identity.blockHash);
+  signedBid.message.value = valueGwei;
+  return {...identity, signedBid, signedBidRoot};
 }
 
 function root(byte: number): RootHex {

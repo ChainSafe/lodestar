@@ -175,6 +175,7 @@ pub fn TestCase(comptime fork: ForkSeq) type {
 
             var epoch_transition_cache = try EpochTransitionCache.init(
                 allocator,
+                std.testing.io,
                 cloned_state.config,
                 cloned_state.epoch_cache,
                 cloned_state.state,
@@ -183,15 +184,16 @@ pub fn TestCase(comptime fork: ForkSeq) type {
 
             try getRewardsAndPenaltiesFn(
                 fork,
+                std.testing.io,
                 cloned_state.config,
                 cloned_state.epoch_cache,
                 cloned_state.state.castToFork(fork),
                 &epoch_transition_cache,
-                epoch_transition_cache.rewards,
+                epoch_transition_cache.validator_scratch,
                 epoch_transition_cache.penalties,
             );
 
-            self.actual_rewards = epoch_transition_cache.rewards;
+            self.actual_rewards = epoch_transition_cache.validator_scratch;
             self.actual_penalties = epoch_transition_cache.penalties;
         }
 

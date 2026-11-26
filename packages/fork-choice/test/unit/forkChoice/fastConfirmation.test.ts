@@ -1,5 +1,6 @@
 import {describe, expect, it, vi} from "vitest";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {EFFECTIVE_BALANCE_INCREMENT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {
   buildFastConfirmationSnapshot,
@@ -35,6 +36,23 @@ import {
   rootFromNumber,
 } from "./fastConfirmationTestUtils.js";
 
+function gwei(increments: number): bigint {
+  return BigInt(increments) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
+}
+
+// Spreads validators over the slots of every epoch like mainnet committees, instead of the full set per slot
+function withSlotCommittees(state: IBeaconStateView): IBeaconStateView {
+  const committees = Array.from({length: SLOTS_PER_EPOCH}, (_, slotIndex) =>
+    Uint32Array.from({length: state.validatorCount}, (_, i) => i).filter((i) => i % SLOTS_PER_EPOCH === slotIndex)
+  );
+  const wrapped = {
+    ...state,
+    getBeaconCommittee: (slot: Slot) => committees[slot % SLOTS_PER_EPOCH],
+    processSlots: (slot: Slot) => ({...wrapped, slot, epoch: computeEpochAtSlot(slot)}),
+  } as IBeaconStateView;
+  return wrapped;
+}
+
 describe("fast confirmation", () => {
   it("computeSafetyThreshold subtracts the empty slot discount from the exact maximum support", () => {
     const parent = makeBlock(1, ZERO_ROOT);
@@ -60,10 +78,10 @@ describe("fast confirmation", () => {
     );
 
     // Slots 2 and 3 share the same 32 validators, so they are counted once
-    expect(maximumSupport).toBe(32);
-    expect(adversarialWeight).toBe(8);
-    expect(supportDiscount).toBe(24);
-    expect(threshold).toBe(Math.floor((maximumSupport + proposerScore + 2 * adversarialWeight - supportDiscount) / 2));
+    expect(maximumSupport).toBe(gwei(32));
+    expect(adversarialWeight).toBe(gwei(8));
+    expect(supportDiscount).toBe(gwei(24));
+    expect(threshold).toBe((maximumSupport + proposerScore + 2n * adversarialWeight - supportDiscount) / 2n);
   });
 
   describe("computeCommitteeWeightBetweenSlots", () => {
@@ -119,7 +137,7 @@ describe("fast confirmation", () => {
         expect(
           computeCommitteeWeightBetweenSlots(ctx, store, cache, balanceSource, startSlot, endSlot),
           `wrong weight for slots ${startSlot}..${endSlot}`
-        ).toBe(expectedWeight(startSlot, endSlot));
+        ).toBe(gwei(expectedWeight(startSlot, endSlot)));
       }
       let committeeSizes = 0;
       for (let slot = 3; slot <= endSlot; slot++) committeeSizes += committeeAt(slot).length;
@@ -127,7 +145,7 @@ describe("fast confirmation", () => {
 
       // A range within one epoch with a different end slot
       expect(computeCommitteeWeightBetweenSlots(ctx, store, cache, balanceSource, 1 as Slot, 2 as Slot)).toBe(
-        expectedWeight(1 as Slot, 2 as Slot)
+        gwei(expectedWeight(1 as Slot, 2 as Slot))
       );
     });
 
@@ -156,7 +174,7 @@ describe("fast confirmation", () => {
             expect(
               computeCommitteeWeightBetweenSlots(context, store, rangeCache, source, startSlot as Slot, endSlot),
               `wrong weight for ${startSlot}..${endSlot}`
-            ).toBe(expected);
+            ).toBe(gwei(expected));
           }
         }
       }
@@ -179,8 +197,8 @@ describe("fast confirmation", () => {
           1 as Slot,
           (2 * SLOTS_PER_EPOCH - 1) as Slot
         )
-      ).toBe((validatorCount - 1) * balancePerValidator);
-      expect(computeCommitteeWeightBetweenSlots(ctx, store, cache, balanceSource, 3 as Slot, 2 as Slot)).toBe(0);
+      ).toBe(gwei((validatorCount - 1) * balancePerValidator));
+      expect(computeCommitteeWeightBetweenSlots(ctx, store, cache, balanceSource, 3 as Slot, 2 as Slot)).toBe(0n);
     });
   });
 
@@ -305,6 +323,70 @@ describe("fast confirmation", () => {
     ).toBe(false);
   });
 
+  it.each([
+    {parentSlot: 4, blockSlot: 5, currentSlot: 6, threshold: 129_062_500_000n, support: 129},
+    {parentSlot: 29, blockSlot: 30, currentSlot: 34, threshold: 433_562_500_000n, support: 433},
+  ])(
+    "isOneConfirmed compares support against the safety threshold in Gwei at slot $currentSlot",
+    ({parentSlot, blockSlot, currentSlot, threshold, support}) => {
+      const parent = makeBlock(parentSlot, ZERO_ROOT);
+      const block = makeBlock(blockSlot, parent.blockRoot);
+      const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, block];
+      const state = withSlotCommittees(makeState(4330, 1, [blockSlot as Slot]));
+      const balanceSource = {state, balances: state.effectiveBalanceIncrements};
+      const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, block.blockRoot, state);
+      const ctxWithSupport = (count: number) =>
+        makeContext(
+          currentSlot as Slot,
+          block.blockRoot,
+          blocks,
+          latestMessagesFor(4330, block.blockRoot, 0, count),
+          {epoch: 0, rootHex: ZERO_ROOT},
+          state
+        );
+      const isConfirmed = (count: number): boolean =>
+        isOneConfirmed(
+          ctxWithSupport(count),
+          store,
+          createFastConfirmationCache(),
+          balanceSource,
+          block.blockRoot,
+          "current"
+        );
+
+      expect(isConfirmed(support)).toBe(false);
+      expect(isConfirmed(support + 1)).toBe(true);
+      expect(
+        computeSafetyThreshold(ctxWithSupport(0), store, createFastConfirmationCache(), balanceSource, block.blockRoot)
+          .threshold
+      ).toBe(threshold);
+    }
+  );
+
+  it("willCurrentTargetBeJustified computes honest FFG support in Gwei", () => {
+    const head = makeBlock(SLOTS_PER_EPOCH, ZERO_ROOT);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), head];
+    const state = withSlotCommittees(makeState(4098, 1, [head.slot]));
+    const store = makeStore(head.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, head.blockRoot, head.blockRoot, state);
+    const isJustified = (targetVotes: number): boolean =>
+      willCurrentTargetBeJustified(
+        makeContext(
+          (SLOTS_PER_EPOCH + 9) as Slot,
+          head.blockRoot,
+          blocks,
+          latestMessagesFor(4098, head.blockRoot, 1, targetVotes),
+          {epoch: 0, rootHex: ZERO_ROOT},
+          state
+        ),
+        store,
+        createFastConfirmationCache()
+      );
+
+    // Slots 32..40 hold 1154 ETH, so 3 * honest FFG support with 812 votes is 8194.5 ETH, short of 2 * 4098 ETH
+    expect(isJustified(812)).toBe(false);
+    expect(isJustified(813)).toBe(true);
+  });
+
   it("isOneConfirmed returns false when execution validity is unknown", () => {
     const block = makeBlock(1, ZERO_ROOT, {executionStatus: ExecutionStatus.Syncing});
     const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), block];
@@ -403,14 +485,12 @@ describe("fast confirmation", () => {
     const cache = createFastConfirmationCache();
     const balanceSource = {state, balances: state.effectiveBalanceIncrements};
 
-    expect(computeCommitteeWeightBetweenSlots(ctx, store, cache, balanceSource, 2 as Slot, 2 as Slot)).toBe(96);
+    expect(computeCommitteeWeightBetweenSlots(ctx, store, cache, balanceSource, 2 as Slot, 2 as Slot)).toBe(gwei(96));
     expect(getTotalActiveBalance(balanceSource, cache)).toBe(96);
     // Proposer score follows calculate_committee_fraction, so it leaves the slashed validator out: 64, not 96
-    expect(computeProposerScore(ctx, balanceSource, cache)).toBe(
-      Math.floor((Math.floor(64 / SLOTS_PER_EPOCH) * 40) / 100)
-    );
+    expect(computeProposerScore(ctx, balanceSource, cache)).toBe(((gwei(64) / BigInt(SLOTS_PER_EPOCH)) * 40n) / 100n);
     expect(computeProposerScore(ctx, balanceSource, cache)).not.toBe(
-      Math.floor((Math.floor(96 / SLOTS_PER_EPOCH) * 40) / 100)
+      ((gwei(96) / BigInt(SLOTS_PER_EPOCH)) * 40n) / 100n
     );
   });
 
@@ -461,7 +541,7 @@ describe("fast confirmation", () => {
           [3, voteFor(PayloadStatus.PENDING)],
         ])
       )
-    ).toBeGreaterThan(0);
+    ).toBeGreaterThan(0n);
 
     // Same root, but no vote supports EMPTY(P), so there is nothing to discount
     expect(
@@ -473,7 +553,7 @@ describe("fast confirmation", () => {
           [3, voteFor(PayloadStatus.PENDING)],
         ])
       )
-    ).toBe(0);
+    ).toBe(0n);
   });
 
   it("getEquivocationScore returns 0 when there are no equivocators", () => {

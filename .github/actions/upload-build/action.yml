@@ -4,16 +4,15 @@ inputs:
   node:
     description: Node version used to build
     required: true
-  preset:
-    description: Native preset used to build
-    default: mainnet
 runs:
   using: composite
   steps:
     - name: Archive build outputs
       shell: bash
       run: |
-        test -f bindings/zig-out/lib/bindings.node
+        for preset in mainnet minimal gnosis; do
+          test -f "bindings/zig-out/lib/bindings-$preset.node"
+        done
         shopt -s nullglob
         paths=()
         for path in lib packages/*/lib bindings/zig-out packages/*/.git-data.json; do
@@ -24,7 +23,7 @@ runs:
         tar -czf "$RUNNER_TEMP/workspace-build.tar.gz" -- "${paths[@]}"
     - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
-        name: workspace-build-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ inputs.preset }}
+        name: workspace-build-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}
         path: ${{ runner.temp }}/workspace-build.tar.gz
         compression-level: 0
         if-no-files-found: error

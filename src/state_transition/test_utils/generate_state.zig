@@ -135,6 +135,7 @@ pub fn generateElectraState(allocator: Allocator, pool: *Node.Pool, chain_config
     try getNextSyncCommitteeIndices(
         .electra,
         allocator,
+        std.testing.io,
         beacon_state.castToFork(.electra),
         active_validator_indices.items,
         effective_balance_increments,
@@ -179,7 +180,10 @@ pub const TestCachedBeaconState = struct {
     owned_blob_schedule: []const ChainConfig.BlobScheduleEntry,
 
     pub fn init(allocator: Allocator, pool: *Node.Pool, validator_count: usize) !TestCachedBeaconState {
-        var state = try generateElectraState(allocator, pool, active_chain_config, validator_count);
+        const configured_epoch = active_chain_config.ELECTRA_FORK_EPOCH;
+        const initial_epoch = if (configured_epoch == std.math.maxInt(Epoch)) 0 else configured_epoch;
+        const chain_config = getConfig(active_chain_config, .electra, initial_epoch);
+        var state = try generateElectraState(allocator, pool, chain_config, validator_count);
         errdefer {
             state.deinit();
             allocator.destroy(state);
@@ -250,6 +254,7 @@ pub const TestCachedBeaconState = struct {
         errdefer allocator.destroy(epoch_transition_cache);
         epoch_transition_cache.* = try state_transition.EpochTransitionCache.init(
             allocator,
+            std.testing.io,
             cached_state.config,
             cached_state.epoch_cache,
             cached_state.state,

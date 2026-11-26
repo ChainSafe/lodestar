@@ -118,8 +118,6 @@ test "Node.State predicates" {
     try std.testing.expect(!free_state.isLeaf());
     try std.testing.expect(!free_state.isZero());
     try std.testing.expect(!free_state.isBranch());
-    // Free slots expose the next-free link via `state.nextFree()`.
-    _ = free_state.nextFree();
 }
 
 test "chunked_leaf getRoot recomputes without touching the pool allocator" {
@@ -167,13 +165,11 @@ test "Pool" {
     try std.testing.expect(leaf2_id.getState(p).isFree());
     try std.testing.expect(branch3_id.getState(p).isFree());
 
-    // check if the free list is correct
-    const next_free: Node.Id = pool.next_free_node;
-    try std.testing.expectEqual(leaf2_id, next_free);
-    try std.testing.expectEqual(branch3_id, next_free.getState(p).nextFree());
-    try std.testing.expectEqual(leaf1_id, next_free.getState(p).nextFree().getState(p).nextFree());
-    try std.testing.expectEqual(branch1_id, next_free.getState(p).nextFree().getState(p).nextFree().getState(p).nextFree());
-    try std.testing.expectEqual(branch2_id, next_free.getState(p).nextFree().getState(p).nextFree().getState(p).nextFree().getState(p).nextFree());
+    // released slots are handed out lowest first, whatever order they were released in
+    for ([_]Node.Id{ leaf1_id, leaf2_id, branch1_id, branch2_id, branch3_id }) |expected| {
+        try std.testing.expectEqual(expected, pool.next_free_node);
+        try std.testing.expectEqual(expected, try pool.createLeafFromUint(0));
+    }
 }
 
 test "Pool - fixed capacity exhausts, reuses slots, and keeps columns stable" {
@@ -231,7 +227,7 @@ test "Pool - live occupancy counts shared nodes and chunked payloads once" {
 
 test "Pool - invalid capacity fails before allocation" {
     for ([_]u32{
-        Node.State.next_free_mask - max_depth + 1,
+        Node.Pool.max_capacity - max_depth + 1,
         std.math.maxInt(u32),
     }) |invalid_capacity| {
         var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
@@ -542,13 +538,6 @@ test "Node.State - refcount overflow saturates at rc_mask without corrupting kin
     var near_max = Node.State.initInUse(.branch, Node.State.rc_mask - 1);
     try std.testing.expectEqual(Node.State.rc_mask, try near_max.incRefCount());
     try std.testing.expectEqual(Node.NodeKind.branch, near_max.kind());
-}
-
-test "Node.State - free-list link round-trips at the 31-bit boundary" {
-    const max_link: Node.Id = @enumFromInt(Node.State.next_free_mask);
-    const fs = Node.State.initFree(max_link);
-    try std.testing.expect(fs.isFree());
-    try std.testing.expectEqual(max_link, fs.nextFree());
 }
 
 const TestCase = struct {
@@ -977,30 +966,77 @@ test "memory_safety: setNodesGrouped should release an intermediate root when a 
 }
 
 test "memory_safety: createChunkedLeafEmpty should not consume slots or leak payloads on allocation failure" {
-    var failing = std.testing.FailingAllocator.init(
-        std.testing.allocator,
-        .{ .fail_index = 0 },
-    );
+    // Chunked leaf storage comes from the page allocator.
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
     var pool = try Node.Pool.init(.{
-        .page_allocator = std.testing.allocator,
-        .allocator = failing.allocator(),
+        .page_allocator = failing.allocator(),
+        .allocator = std.testing.allocator,
         .pool_size = 1,
     });
     defer pool.deinit();
 
-    // The first call fails before it can take a Pool slot.
+    // The first call fails to get storage before it can take a Pool slot.
+    failing.fail_index = failing.alloc_index;
     const baseline = pool.getNodesInUse();
     try std.testing.expectError(error.OutOfMemory, pool.createChunkedLeafEmpty(1));
     try std.testing.expectEqual(baseline, pool.getNodesInUse());
 
-    // With the only slot occupied, the next call allocates its payload and then fails to attach
-    // it. The payload must be freed on the way out.
+    // With the only slot occupied, the next call takes storage and then fails to attach it. The
+    // storage must be returned on the way out.
     failing.fail_index = std.math.maxInt(usize);
     const leaf = try pool.createLeafFromUint(1);
     defer pool.unref(leaf);
 
     try std.testing.expectError(error.PoolExhausted, pool.createChunkedLeafEmpty(1));
-    try std.testing.expectEqual(failing.allocated_bytes, failing.freed_bytes);
+    try std.testing.expectEqual(0, pool.chunkedLeafBytesInUse());
+}
+
+test "createChunkedLeafFromBytes should zero the tail and set len" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 4 });
+    defer pool.deinit();
+
+    var bytes: [ChunkedLeaf.K * 32]u8 = undefined;
+    for (&bytes, 0..) |*byte, i| byte.* = @as(u8, @intCast(i % 255)) + 1;
+
+    for ([_]usize{ 0, 1, 33, bytes.len }) |len| {
+        const valid_chunks: u16 = @intCast((len + 31) / 32);
+        const node = try pool.createChunkedLeafFromBytes(bytes[0..len]);
+        defer pool.unref(node);
+
+        const chunk_bytes = std.mem.asBytes(try node.getChunkedLeafChunks(&pool));
+        try std.testing.expectEqualSlices(u8, bytes[0..len], chunk_bytes[0..len]);
+        try std.testing.expect(std.mem.allEqual(u8, chunk_bytes[len..], 0));
+        try std.testing.expectEqual(valid_chunks, try node.getChunkedLeafLen(&pool));
+    }
+}
+
+test "memory_safety: createChunkedLeafFromBytes should not consume slots or leak payloads on allocation failure" {
+    // Chunked leaf storage comes from the page allocator.
+    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{});
+    var pool = try Node.Pool.init(.{
+        .page_allocator = failing.allocator(),
+        .allocator = std.testing.allocator,
+        .pool_size = 1,
+    });
+    defer pool.deinit();
+
+    const bytes: [33]u8 = @splat(1);
+
+    // The first call fails to get storage before it can take a Pool slot.
+    failing.fail_index = failing.alloc_index;
+    const baseline = pool.getNodesInUse();
+    try std.testing.expectError(error.OutOfMemory, pool.createChunkedLeafFromBytes(&bytes));
+    try std.testing.expectEqual(baseline, pool.getNodesInUse());
+
+    // With the only slot occupied, the next call takes storage and then fails to attach it. The
+    // storage must be returned on the way out.
+    failing.fail_index = std.math.maxInt(usize);
+    const leaf = try pool.createLeafFromUint(1);
+    defer pool.unref(leaf);
+
+    try std.testing.expectError(error.PoolExhausted, pool.createChunkedLeafFromBytes(&bytes));
+    try std.testing.expectEqual(0, pool.chunkedLeafBytesInUse());
 }
 
 test "memory_safety: fillWithContents exhaustion should preserve inputs and restore pool slots" {
@@ -1230,6 +1266,53 @@ test "editChunkedLeaf invalidates computed roots without allocating" {
     const leaf_hash = leaf.getRoot(&pool).*;
     try std.testing.expectError(error.InvalidNode, leaf.editChunkedLeaf(&pool, 0, 1, u256, 0, &42, Writer.write));
     try std.testing.expectEqualSlices(u8, &leaf_hash, leaf.getRoot(&pool));
+}
+
+test "getRootParallel should match getRoot across batches and shared lazy leaves" {
+    const allocator = std.testing.allocator;
+    const depth: Depth = 13;
+    // More lazy leaves than one batch holds, so the walk hashes several batches.
+    const leaf_count = Node.Id.lazy_chunked_leaves_per_batch + 5;
+    var pool = try Node.Pool.init(.{
+        .page_allocator = allocator,
+        .allocator = allocator,
+        .pool_size = 8 * leaf_count,
+    });
+    defer pool.deinit();
+
+    const leaves = try allocator.alloc(Node.Id, leaf_count);
+    defer allocator.free(leaves);
+    var trees: [2]Node.Id = undefined;
+    for (&trees) |*tree| {
+        for (leaves, 0..) |*leaf, i| {
+            var chunks: [ChunkedLeaf.K][32]u8 align(64) = undefined;
+            for (&chunks, 0..) |*chunk, c| chunk.* = @splat(@as(u8, @truncate(i * 31 + c)));
+            leaf.* = try pool.createChunkedLeaf(&chunks, ChunkedLeaf.K);
+        }
+        tree.* = try Node.fillWithContents(&pool, leaves, depth);
+    }
+    defer for (trees) |tree| pool.unref(tree);
+
+    const expected = trees[0].getRoot(&pool).*;
+    try std.testing.expect(trees[1].isBranchLazy(&pool));
+    const actual = try trees[1].getRootParallel(&pool, std.testing.io);
+    try std.testing.expectEqualSlices(u8, &expected, actual);
+
+    // A lazy leaf under two parents is gathered twice and hashed once.
+    const chunks: [ChunkedLeaf.K][32]u8 align(64) = @splat(@splat(7));
+    const shared = try pool.createChunkedLeaf(&chunks, ChunkedLeaf.K);
+    const twin = try pool.createBranch(shared, shared);
+    defer pool.unref(twin);
+    const reference = try pool.createBranch(
+        try pool.createChunkedLeaf(&chunks, ChunkedLeaf.K),
+        try pool.createChunkedLeaf(&chunks, ChunkedLeaf.K),
+    );
+    defer pool.unref(reference);
+    try std.testing.expectEqualSlices(
+        u8,
+        reference.getRoot(&pool),
+        try twin.getRootParallel(&pool, std.testing.io),
+    );
 }
 
 test "memory_safety: batch node updates should restore the pool on exhaustion" {

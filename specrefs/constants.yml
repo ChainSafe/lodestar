@@ -522,9 +522,7 @@
     </spec>
 
 - name: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY#bellatrix
-  sources:
-    - file: packages/params/src/index.ts
-      search: export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY =
+  sources: []
   spec: |
     <spec constant_var="SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY" fork="bellatrix" hash="ea89f23b">
     SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY: Slot = 128

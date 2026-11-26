@@ -53,7 +53,7 @@ for (const validatorCount of [100_000, 600_000, 1_000_000]) {
     const source = {state, balances: state.effectiveBalanceIncrements};
     const run = () => {
       const cache = createFastConfirmationCache();
-      let checksum = 0;
+      let checksum = 0n;
       // Descending order matches the confirmed-chain safety walk. Exclude the anchor's genesis gap.
       for (let i = blocks.length - 1; i >= 2; i--) {
         checksum += computeSafetyThreshold(ctx, store, cache, source, blocks[i].blockRoot).threshold;

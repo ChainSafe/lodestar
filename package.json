@@ -2,7 +2,7 @@
   "name": "root",
   "private": true,
   "engines": {
-    "node": "^24.22.1"
+    "node": "^24.22.1 || ^26.13.0"
   },
   "packageManager": "pnpm@11.0.0+sha512.5bd187500e49cc6c3d891d973b432c02b844a5eb7209172c90a517a3ef4f579ed5c23d409b699e6a9dc418ff7b2b1890e63f6d74f1d3fc49848f37779c89c84c",
   "workspaces": [
@@ -27,7 +27,7 @@
     "test": "pnpm -r --workspace-concurrency=1 run test",
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:browsers": "vitest run --project browser",
-    "test:e2e": "vitest run --project e2e --project e2e-mainnet",
+    "test:e2e": "vitest run --project e2e --project e2e-sync --project e2e-mainnet",
     "download-spec-tests": "pnpm -r download-spec-tests",
     "download-comptests": "pnpm -r download-comptests",
     "test:comptest": "vitest run --project comptest",
@@ -67,8 +67,7 @@
     "axios": "^1.13.2",
     "dotenv": "^16.4.5",
     "inquirer": "^9.1.5",
-    "libp2p": "3.4.0",
-    "node-gyp": "^9.4.0",
+    "libp2p": "3.5.2",
     "playwright": "^1.60.0",
     "pretty-format": "^29.7.0",
     "semver": "^7.7.3",

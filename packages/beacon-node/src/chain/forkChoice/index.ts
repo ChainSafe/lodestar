@@ -34,6 +34,14 @@ export type ForkChoiceOpts = RawForkChoiceOpts & {
 export enum ForkchoiceCaller {
   prepareNextSlot = "prepare_next_slot",
   importBlock = "import_block",
+  executionInvalid = "execution_invalid",
+}
+
+/** Where an execution engine INVALID verdict comes from, a label for logs and metrics */
+export enum ExecutionInvalidSource {
+  forkchoiceUpdated = "forkchoice_updated",
+  newPayload = "new_payload",
+  blockSegment = "block_segment",
 }
 
 /**

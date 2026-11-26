@@ -20,3 +20,11 @@ export function callInNextEventLoop(callback: () => void): void {
   // Say https://nodejs.org/api/timers.html#settimeoutcallback-delay-args
   setTimeout(callback, 0);
 }
+
+/**
+ * Schedules a callback for the `check` phase, after the `poll` phase handles ready I/O.
+ * Pending promise continuations run first, and there is no 1ms timer delay.
+ */
+export function callAfterIO(callback: () => void): void {
+  setImmediate(callback);
+}

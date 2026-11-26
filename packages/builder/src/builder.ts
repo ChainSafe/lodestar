@@ -2,7 +2,7 @@ import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
-import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
+import {BuilderIndex, ExecutionAddress, Slot} from "@lodestar/types";
 import {Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
@@ -17,6 +17,7 @@ import {BlockObserver} from "./services/blockObserver.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 import {BuilderStatusTracker} from "./services/builderStatusTracker.js";
 import {EnvelopePublisher} from "./services/envelopePublisher.js";
+import {HeadTracker} from "./services/headTracker.js";
 import {PayloadOrchestrator} from "./services/payloadOrchestrator.js";
 import {PayloadSource} from "./services/payloadSource.js";
 import {PayloadStore} from "./services/payloadStore.js";
@@ -35,6 +36,7 @@ export type BuilderModules = {
   blockObserver: BlockObserver;
   builderStatusTracker: BuilderStatusTracker;
   proposerPreferencesTracker: ProposerPreferencesTracker;
+  headTracker: HeadTracker;
   clock: IClock;
   index: BuilderIndex;
   payloadStore: PayloadStore;
@@ -63,8 +65,14 @@ export type BuilderOptions = {
   reveal: {
     /** Defaults to PAYLOAD_ATTESTATION_DUE_BPS of the network */
     cutoffBps?: number;
+    /** Timeout in milliseconds of requests to the beacon node, limits a single attempt to publish the envelope */
+    requestTimeout?: number;
   };
 };
+
+// Warn once the beacon node announced heads of this many consecutive slots without emitting the payload attributes
+// to build on them. More than one slot as the attributes of the first head after connecting are emitted before it.
+const MISSING_PAYLOAD_ATTRIBUTES_WARN_SLOTS = 3;
 
 /**
  * Main class for the Builder client.
@@ -72,6 +80,7 @@ export type BuilderOptions = {
 export class Builder {
   readonly builderSigner: BuilderSigner;
   readonly proposerPreferencesTracker: ProposerPreferencesTracker;
+  readonly headTracker: HeadTracker;
   private readonly blockObserver: BlockObserver;
   private readonly builderStatusTracker: BuilderStatusTracker;
   private readonly controller: AbortController;
@@ -83,6 +92,9 @@ export class Builder {
   private readonly ledger: BidLedger;
   private readonly bidder: Bidder;
   private readonly revealer: Revealer;
+  private latestHeadSlot: Slot | null = null;
+  private headSlotsWithoutPayloadAttributes = 0;
+  private missingPayloadAttributesWarned = false;
 
   constructor({
     opts,
@@ -90,6 +102,7 @@ export class Builder {
     blockObserver,
     builderStatusTracker,
     proposerPreferencesTracker,
+    headTracker,
     clock,
     index,
     payloadStore,
@@ -101,6 +114,7 @@ export class Builder {
     this.blockObserver = blockObserver;
     this.builderStatusTracker = builderStatusTracker;
     this.proposerPreferencesTracker = proposerPreferencesTracker;
+    this.headTracker = headTracker;
     this.clock = clock;
     this.controller = opts.abortController;
     this.logger = opts.logger;
@@ -159,6 +173,7 @@ export class Builder {
     await builderStatusTracker.poll(clock.getCurrentEpoch());
     const blockObserver = new BlockObserver(config, logger, api);
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
+    const headTracker = new HeadTracker();
 
     const payloadStore = new PayloadStore();
     const ledger = new BidLedger();
@@ -187,6 +202,7 @@ export class Builder {
           hasPayload: ({blockHash}) => payloadStore.has(blockHash),
         }),
         proposerPreferencesTracker,
+        headTracker,
         getBuilderStatus: () => builderStatusTracker.getStatus(),
         builderIndex: index,
         executionFeeRecipient: opts.executionFeeRecipient,
@@ -202,13 +218,17 @@ export class Builder {
         logger,
         clock,
         bidSelector: new BidSelector({config, ledger, builderIndex: index}),
+        ledger,
         payloadStore,
         envelopePublisher: new EnvelopePublisher({api, signer: builderSigner, ledger, builderIndex: index}),
         builderIndex: index,
         metrics: opts.metrics,
         signal,
       },
-      {cutoffBps: opts.reveal.cutoffBps ?? config.PAYLOAD_ATTESTATION_DUE_BPS}
+      {
+        cutoffBps: opts.reveal.cutoffBps ?? config.PAYLOAD_ATTESTATION_DUE_BPS,
+        requestTimeout: opts.reveal.requestTimeout,
+      }
     );
 
     return new Builder({
@@ -217,6 +237,7 @@ export class Builder {
       blockObserver,
       builderStatusTracker,
       proposerPreferencesTracker,
+      headTracker,
       clock,
       index,
       payloadStore,
@@ -229,6 +250,7 @@ export class Builder {
   private async onSlot(slot: number): Promise<void> {
     this.payloadStore.prune(slot);
     this.proposerPreferencesTracker.prune(slot);
+    this.headTracker.prune(slot);
     this.ledger.settlePaymentsBefore(slot - PAYMENT_SETTLEMENT_SLOTS);
     this.ledger.prune(slot);
   }
@@ -238,6 +260,7 @@ export class Builder {
     if (signal.aborted) return;
 
     const topics = [
+      routes.events.EventType.headV2,
       routes.events.EventType.block,
       routes.events.EventType.proposerPreferences,
       routes.events.EventType.payloadAttributes,
@@ -251,6 +274,8 @@ export class Builder {
           void this.onEvent(event);
         },
         onOpen: () => {
+          // Heads announced before a reconnect say nothing about the payload attributes emitted while disconnected
+          this.headSlotsWithoutPayloadAttributes = 0;
           void this.fetchProposerPreferences(api);
         },
         onError: (error) => {
@@ -300,19 +325,50 @@ export class Builder {
     }
   }
 
+  /**
+   * Only blocks that selected one of our bids have to be fetched to reveal the payload. Blocks of slots we bid on
+   * are fetched as well, the revealer logs which bid was selected over ours. A block that selected our builder is always
+   * fetched, even if no bid is recorded for its slot, to surface the inconsistency.
+   */
+  private isRelevantBlock(event: routes.events.EventData[routes.events.EventType.block]): boolean {
+    // Pre-Gloas block events do not identify the builder, those are ignored by the block observer
+    if (!("builderIndex" in event)) {
+      return true;
+    }
+
+    if (event.builderIndex === this.index || this.ledger.getBidsForSlot(event.slot).length > 0) {
+      return true;
+    }
+
+    this.logger.debug("Ignoring block of another builder in slot without own bid", {
+      slot: event.slot,
+      blockRoot: event.block,
+      builderIndex: event.builderIndex,
+    });
+    return false;
+  }
+
   private async onEvent(event: routes.events.BeaconEvent): Promise<void> {
     const signal = this.controller.signal;
     if (signal.aborted) return;
 
     try {
       switch (event.type) {
+        case routes.events.EventType.headV2:
+          this.headTracker.onHead(event.message.data);
+          this.checkPayloadAttributesEmitted(event.message.data.slot);
+          break;
         case routes.events.EventType.block:
-          await this.blockObserver.processBlockEvent(event.message, signal);
+          if (this.isRelevantBlock(event.message)) {
+            await this.blockObserver.processBlockEvent(event.message, signal);
+          }
           break;
         case routes.events.EventType.proposerPreferences:
           this.proposerPreferencesTracker.onProposerPreferences(event.message.data);
           break;
         case routes.events.EventType.payloadAttributes:
+          this.headSlotsWithoutPayloadAttributes = 0;
+          this.missingPayloadAttributesWarned = false;
           await this.bidder.onPayloadAttributes(event.message);
           break;
       }
@@ -324,6 +380,32 @@ export class Builder {
           error instanceof Error ? error : Error(String(error))
         );
       }
+    }
+  }
+
+  /**
+   * Counts the slots with a timely head announced since the last payload attributes. A beacon node emitting them
+   * for every slot keeps the count at 0 or 1, the attributes for the next slot follow each head. Head events prove
+   * the event stream is delivering, the builder is not just starting up or disconnected.
+   */
+  private checkPayloadAttributesEmitted(headSlot: Slot): void {
+    // A beacon node that is catching up announces heads of past slots in a burst, payload attributes are only
+    // emitted once per slot and for the current slot
+    if (headSlot < this.clock.getCurrentSlot()) return;
+    // The head of a slot can be announced more than once, e.g. when its payload becomes available
+    if (this.latestHeadSlot !== null && headSlot <= this.latestHeadSlot) return;
+    this.latestHeadSlot = headSlot;
+
+    // The count starts again when the event stream reconnects, only warn once until payload attributes are received
+    if (
+      ++this.headSlotsWithoutPayloadAttributes >= MISSING_PAYLOAD_ATTRIBUTES_WARN_SLOTS &&
+      !this.missingPayloadAttributesWarned
+    ) {
+      this.missingPayloadAttributesWarned = true;
+      this.logger.warn("Not receiving payload attributes from the beacon node, ensure it runs with proper settings", {
+        headSlot,
+        slotsWithoutPayloadAttributes: this.headSlotsWithoutPayloadAttributes,
+      });
     }
   }
 

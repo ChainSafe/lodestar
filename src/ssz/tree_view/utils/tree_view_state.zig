@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 const Node = @import("persistent_merkle_tree").Node;
 const Gindex = @import("persistent_merkle_tree").Gindex;
 const ChunkedLeaf = @import("persistent_merkle_tree").ChunkedLeaf;
+const expensive_safety_checks = @import("persistent_merkle_tree").expensive_safety_checks;
 const CloneOpts = @import("clone_opts.zig").CloneOpts;
 
 /// Common state for tree views that use runtime gindex-based child caching.
@@ -59,14 +60,15 @@ pub const TreeViewState = struct {
 
         self.changed.putAssumeCapacity(gindex, {});
         const opt_old_node = self.children_nodes.fetchPutAssumeCapacity(gindex, node);
-        if (opt_old_node) |old_node| {
-            if (old_node.value.getState(self.pool).refCount() == 0) {
-                self.pool.unref(old_node.value);
+        if (opt_old_node) |old_node_entry| {
+            const old_node = old_node_entry.value;
+            if (old_node != node and old_node.getState(self.pool).refCount() == 0) {
+                self.pool.unref(old_node);
             }
         }
     }
 
-    /// Stages a packed write for the next commit, copying shared leaves and reusing pending ones.
+    /// Writes one packed value into the leaf at `gindex`, staging it with `beginChunkedLeafEdit`.
     /// `valid_chunks` must preserve or grow the length. `write` must not retain the chunk pointer
     /// or access the pool.
     pub fn editChunkedLeaf(
@@ -80,12 +82,28 @@ pub const TreeViewState = struct {
         comptime write: fn (*[32]u8, usize, *const T) void,
     ) !void {
         std.debug.assert(intra_chunk < valid_chunks);
+        const chunks = try self.beginChunkedLeafEdit(gindex, valid_chunks);
+        write(&chunks[intra_chunk], index, value);
+    }
+
+    /// Stages the chunked leaf at `gindex` for the next commit and returns its chunks, copying a
+    /// shared leaf and reusing a pending one. The chunks are writable only until the next commit,
+    /// `clearCache`, clone with `transfer_cache`, or `setChildNode` at `gindex`, which share or
+    /// drop the node. On error the view is unchanged. `valid_chunks` must preserve or grow the
+    /// length.
+    pub fn beginChunkedLeafEdit(
+        self: *TreeViewState,
+        gindex: Gindex,
+        valid_chunks: u16,
+    ) !*align(64) [ChunkedLeaf.K][32]u8 {
+        std.debug.assert(valid_chunks > 0);
         std.debug.assert(valid_chunks <= ChunkedLeaf.K);
         var node = try self.getChildNode(gindex);
         const state = node.getState(self.pool);
 
         if (state.kind() == .chunked_leaf and state.refCount() == 0) {
-            std.debug.assert(self.changed.contains(gindex));
+            // setChildNode stages owned leaves in both maps; checking costs a lookup per write.
+            if (expensive_safety_checks) std.debug.assert(self.changed.contains(gindex));
         } else {
             const replacement = switch (state.kind()) {
                 .zero => blk: {
@@ -104,7 +122,7 @@ pub const TreeViewState = struct {
             node = replacement;
         }
 
-        try node.editChunkedLeaf(self.pool, intra_chunk, valid_chunks, T, index, value, write);
+        return node.beginChunkedLeafWrite(self.pool, valid_chunks);
     }
 
     pub fn commitNodes(self: *TreeViewState) !void {

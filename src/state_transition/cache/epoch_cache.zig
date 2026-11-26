@@ -12,6 +12,7 @@ const ValidatorIndex = types.primitive.ValidatorIndex.Type;
 const CommitteeIndex = types.primitive.CommitteeIndex.Type;
 const BeaconConfig = @import("config").BeaconConfig;
 const PubkeyCache = @import("./pubkey_cache.zig").PubkeyCache;
+const BuilderDepositSignatureCacheRc = @import("builder_deposit_signature_cache.zig").BuilderDepositSignatureCacheRc;
 const EpochShuffling = @import("../utils//epoch_shuffling.zig").EpochShuffling;
 const EpochShufflingRc = @import("../utils/epoch_shuffling.zig").EpochShufflingRc;
 const EffectiveBalanceIncrementsRc = @import("./effective_balance_increments.zig").EffectiveBalanceIncrementsRc;
@@ -48,6 +49,7 @@ const ForkTypes = @import("fork_types").ForkTypes;
 pub const EpochCacheImmutableData = struct {
     config: *const BeaconConfig,
     pubkey_cache: *PubkeyCache,
+    builder_deposit_signature_cache: ?*BuilderDepositSignatureCacheRc = null,
 };
 
 pub const EpochCacheOpts = struct {
@@ -67,6 +69,8 @@ pub const EpochCache = struct {
 
     /// Application-wide pubkey cache; EpochCache does not own it.
     pubkey_cache: *PubkeyCache,
+
+    builder_deposit_signature_cache: *BuilderDepositSignatureCacheRc,
 
     proposers: [preset.SLOTS_PER_EPOCH]ValidatorIndex,
 
@@ -135,6 +139,7 @@ pub const EpochCache = struct {
     /// Takes ownership of `active_indices` on success; the caller retains ownership on failure.
     fn initEpochShufflingRc(
         allocator: Allocator,
+        io: std.Io,
         state: *AnyBeaconState,
         active_indices: []u32,
         epoch: Epoch,
@@ -142,7 +147,7 @@ pub const EpochCache = struct {
         const rc = try allocator.create(EpochShufflingRc);
         errdefer allocator.destroy(rc);
 
-        const epoch_shuffling = try computeEpochShuffling(allocator, state, active_indices, epoch);
+        const epoch_shuffling = try computeEpochShuffling(allocator, io, state, active_indices, epoch);
         rc.init(allocator, epoch_shuffling);
         return rc;
     }
@@ -215,7 +220,7 @@ pub const EpochCache = struct {
         // needs a fully populated pubkey cache.
         const skip_sync_pubkeys = if (option) |opt| opt.skip_sync_pubkeys else false;
         if (!skip_sync_pubkeys) {
-            try pubkey_cache.syncPubkeys(io, validators);
+            try pubkey_cache.syncPubkeys(allocator, io, validators);
         }
 
         const effective_balance_increments_rc = try initEffectiveBalanceIncrementsRc(allocator, validator_count);
@@ -277,7 +282,7 @@ pub const EpochCache = struct {
             const active_indices = try previous_active_indices_array_list.toOwnedSlice(allocator);
             errdefer allocator.free(active_indices);
 
-            break :blk try initEpochShufflingRc(allocator, state, active_indices, previous_epoch);
+            break :blk try initEpochShufflingRc(allocator, io, state, active_indices, previous_epoch);
         };
         errdefer previous_shuffling_rc.unref();
 
@@ -285,7 +290,7 @@ pub const EpochCache = struct {
             const active_indices = try current_active_indices_array_list.toOwnedSlice(allocator);
             errdefer allocator.free(active_indices);
 
-            break :blk try initEpochShufflingRc(allocator, state, active_indices, current_epoch);
+            break :blk try initEpochShufflingRc(allocator, io, state, active_indices, current_epoch);
         };
         errdefer current_shuffling_rc.unref();
 
@@ -293,7 +298,7 @@ pub const EpochCache = struct {
             const active_indices = try next_active_indices_array_list.toOwnedSlice(allocator);
             errdefer allocator.free(active_indices);
 
-            break :blk try initEpochShufflingRc(allocator, state, active_indices, next_epoch);
+            break :blk try initEpochShufflingRc(allocator, io, state, active_indices, next_epoch);
         };
         errdefer next_shuffling_rc.unref();
 
@@ -325,7 +330,7 @@ pub const EpochCache = struct {
                 switch (fork_seq) {
                     inline else => |f| try computeProposers(
                         f,
-                        allocator,
+                        io,
                         current_proposer_seed,
                         current_epoch,
                         current_shuffling_rc.get().active_indices,
@@ -350,7 +355,7 @@ pub const EpochCache = struct {
                 switch (next_fork_seq) {
                     inline else => |f| try computeProposers(
                         f,
-                        allocator,
+                        io,
                         next_proposer_seed,
                         next_epoch,
                         next_shuffling_rc.get().active_indices,
@@ -437,10 +442,19 @@ pub const EpochCache = struct {
         const epoch_cache_ptr = try allocator.create(EpochCache);
         errdefer allocator.destroy(epoch_cache_ptr);
 
+        const builder_deposit_signature_cache = if (immutable_data.builder_deposit_signature_cache) |cache|
+            cache.ref()
+        else
+            try BuilderDepositSignatureCacheRc.create(allocator, .{
+                .hash_context = pubkey_cache.hashContext(),
+                .validity_context = .{ .pubkey_context = pubkey_cache.hashContext() },
+            });
+
         epoch_cache_ptr.* = .{
             .allocator = allocator,
             .config = config,
             .pubkey_cache = pubkey_cache,
+            .builder_deposit_signature_cache = builder_deposit_signature_cache,
             .proposers = proposers,
             // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
             .proposers_prev_epoch = null,
@@ -473,6 +487,7 @@ pub const EpochCache = struct {
     }
 
     pub fn deinit(self: *EpochCache) void {
+        self.builder_deposit_signature_cache.unref();
         // EpochCache does not own the application-wide pubkey cache.
 
         // unref the epoch shufflings
@@ -497,6 +512,7 @@ pub const EpochCache = struct {
             .config = self.config,
             // Common append-only structures shared with all states, no need to clone
             .pubkey_cache = self.pubkey_cache,
+            .builder_deposit_signature_cache = self.builder_deposit_signature_cache.ref(),
             // Immutable data
             .proposers = self.proposers,
             .proposers_prev_epoch = self.proposers_prev_epoch,
@@ -556,7 +572,7 @@ pub const EpochCache = struct {
         return self.effective_balance_increments.get();
     }
 
-    pub fn afterProcessEpoch(self: *EpochCache, state: *AnyBeaconState, epoch_transition_cache: *const EpochTransitionCache) !void {
+    pub fn afterProcessEpoch(self: *EpochCache, io: std.Io, state: *AnyBeaconState, epoch_transition_cache: *const EpochTransitionCache) !void {
         const upcoming_epoch = self.epoch + 1;
         const epoch_after_upcoming = upcoming_epoch + 1;
         const slot = try state.slot();
@@ -571,6 +587,7 @@ pub const EpochCache = struct {
 
             break :blk try initEpochShufflingRc(
                 self.allocator,
+                io,
                 state,
                 next_shuffling_active_indices,
                 epoch_after_upcoming,
@@ -614,7 +631,7 @@ pub const EpochCache = struct {
     }
 
     /// At fork boundary, this runs post-fork logic and after `upgradeState*`.
-    pub fn finalProcessEpoch(self: *EpochCache, state: *AnyBeaconState) !void {
+    pub fn finalProcessEpoch(self: *EpochCache, io: std.Io, state: *AnyBeaconState) !void {
         self.proposers_prev_epoch = self.proposers;
         switch (state.forkSeq()) {
             inline else => |fork| {
@@ -640,7 +657,7 @@ pub const EpochCache = struct {
                     );
                     try computeProposers(
                         fork,
-                        self.allocator,
+                        io,
                         upcoming_proposer_seed,
                         self.epoch,
                         self.current_shuffling.get().active_indices,
@@ -656,7 +673,7 @@ pub const EpochCache = struct {
                         switch (next_fork_seq) {
                             inline else => |f| try computeProposers(
                                 f,
-                                self.allocator,
+                                io,
                                 next_proposer_seed,
                                 self.epoch + 1,
                                 next_epoch_indices,
@@ -727,7 +744,7 @@ pub const EpochCache = struct {
     /// Consumer takes ownership of the returned indexed attestation and must deinit
     /// its `attesting_indices` with `allocator`.
     pub fn computeIndexedAttestationPhase0(self: *const EpochCache, allocator: Allocator, attestation: *const types.phase0.Attestation.Type, out: *types.phase0.IndexedAttestation.Type) !void {
-        const attesting_indices = try self.getAttestingIndicesPhase0(allocator, attestation);
+        const attesting_indices = try self.getAttestingIndices(.phase0, allocator, attestation);
         const sort_fn = struct {
             pub fn sort(_: void, a: ValidatorIndex, b: ValidatorIndex) bool {
                 return a < b;
@@ -748,7 +765,7 @@ pub const EpochCache = struct {
     /// Consumer takes ownership of the returned indexed attestation and must deinit
     /// its `attesting_indices` with `allocator`.
     pub fn computeIndexedAttestationElectra(self: *const EpochCache, allocator: Allocator, attestation: *const types.electra.Attestation.Type, out: *types.electra.IndexedAttestation.Type) !void {
-        const attesting_indices = try self.getAttestingIndicesElectra(allocator, attestation);
+        const attesting_indices = try self.getAttestingIndices(.electra, allocator, attestation);
         const sort_fn = struct {
             pub fn sort(_: void, a: ValidatorIndex, b: ValidatorIndex) bool {
                 return a < b;
@@ -766,62 +783,80 @@ pub const EpochCache = struct {
         };
     }
 
+    /// Consumer takes ownership of the returned array and must free it with `allocator`.
+    /// Allocates `bit_len` indices up front, so callers must bound unvalidated bits first.
     pub fn getAttestingIndices(
         self: *const EpochCache,
         comptime fork: ForkSeq,
         allocator: Allocator,
         attestation: *const ForkTypes(fork).Attestation.Type,
     ) !std.ArrayList(ValidatorIndex) {
-        return if (comptime fork.lt(.electra))
-            self.getAttestingIndicesPhase0(allocator, attestation)
-        else
-            self.getAttestingIndicesPostElectra(fork, allocator, attestation);
+        const bit_len = attestation.aggregation_bits.bit_len;
+
+        var indices = try std.ArrayList(ValidatorIndex).initCapacity(allocator, bit_len);
+        errdefer indices.deinit(allocator);
+
+        indices.items =
+            try self.getAttestingIndicesInto(fork, attestation, indices.allocatedSlice());
+        return indices;
     }
 
-    /// Consumer takes ownership of the returned array and must free it with `allocator`.
-    pub fn getAttestingIndicesPhase0(self: *const EpochCache, allocator: Allocator, attestation: *const types.phase0.Attestation.Type) !std.ArrayList(ValidatorIndex) {
-        const aggregation_bits = attestation.aggregation_bits;
-        const data = attestation.data;
-        const validator_indices = try self.getBeaconCommittee(data.slot, data.index);
-        return try aggregation_bits.intersectValues(ValidatorIndex, u32, allocator, validator_indices);
-    }
+    /// Writes the attesting validator indices to `out` in aggregation-bit order and returns the
+    /// written prefix. `out` must hold at least `aggregation_bits.bit_len` indices. Returns
+    /// `error.InvalidSize` when the selected committees' total size differs from `bit_len`.
+    pub fn getAttestingIndicesInto(
+        self: *const EpochCache,
+        comptime fork: ForkSeq,
+        attestation: *const ForkTypes(fork).Attestation.Type,
+        out: []ValidatorIndex,
+    ) ![]ValidatorIndex {
+        const aggregation_bits = &attestation.aggregation_bits;
+        std.debug.assert(out.len >= aggregation_bits.bit_len);
+        const data = &attestation.data;
 
-    /// Consumer takes ownership of the returned array and must free it with `allocator`.
-    pub fn getAttestingIndicesElectra(self: *const EpochCache, allocator: Allocator, attestation: *const types.electra.Attestation.Type) !std.ArrayList(ValidatorIndex) {
-        return self.getAttestingIndicesPostElectra(.electra, allocator, attestation);
-    }
+        var committees_buffer: [preset.MAX_COMMITTEES_PER_SLOT][]const u32 = undefined;
+        const committees = if (comptime fork.lt(.electra)) blk: {
+            committees_buffer[0] = try self.getBeaconCommittee(data.slot, data.index);
+            break :blk committees_buffer[0..1];
+        } else blk: {
+            // There is a naming conflict on the term `committeeIndices`
+            // In Lodestar it usually means a list of validator indices of
+            // participants in a committee
+            // In the spec it means a list of committee indices according to committeeBits
+            // This `committeeIndices` refers to the latter
+            // TODO Electra: resolve the naming conflicts
+            var committee_indices_buffer: [preset.MAX_COMMITTEES_PER_SLOT]usize = undefined;
+            const len =
+                try attestation.committee_bits.getTrueBitIndexes(&committee_indices_buffer);
+            const committee_indices = committee_indices_buffer[0..len];
+            for (committee_indices, 0..) |committee_index, i| {
+                committees_buffer[i] = try self.getBeaconCommittee(data.slot, committee_index);
+            }
+            break :blk committees_buffer[0..len];
+        };
 
-    pub fn getAttestingIndicesPostElectra(self: *const EpochCache, comptime fork: ForkSeq, allocator: Allocator, attestation: *const ForkTypes(fork).Attestation.Type) !std.ArrayList(ValidatorIndex) {
-        const aggregation_bits = attestation.aggregation_bits;
-        const committee_bits = attestation.committee_bits;
-        const data = attestation.data;
+        var committees_total_len: usize = 0;
+        for (committees) |committee| committees_total_len += committee.len;
+        if (committees_total_len != aggregation_bits.bit_len) return error.InvalidSize;
 
-        // There is a naming conflict on the term `committeeIndices`
-        // In Lodestar it usually means a list of validator indices of participants in a committee
-        // In the spec it means a list of committee indices according to committeeBits
-        // This `committeeIndices` refers to the latter
-        // TODO Electra: resolve the naming conflicts
-        var committee_indices_buffer: [preset.MAX_COMMITTEES_PER_SLOT]usize = undefined;
-        const committee_indices_len = try committee_bits.getTrueBitIndexes(committee_indices_buffer[0..]);
-        const committee_indices = committee_indices_buffer[0..committee_indices_len];
-
-        var total_len: usize = 0;
-        for (committee_indices) |committee_index| {
-            const committee = try self.getBeaconCommittee(data.slot, committee_index);
-            total_len += committee.len;
+        var written: usize = 0;
+        var committee_i: usize = 0;
+        var committee_start: usize = 0;
+        const byte_len = (aggregation_bits.bit_len + 7) / 8;
+        for (aggregation_bits.data.items[0..byte_len], 0..) |byte, byte_index| {
+            var bits = byte;
+            while (bits != 0) : (bits &= bits - 1) {
+                const bit_index = byte_index * 8 + @ctz(bits);
+                if (bit_index >= aggregation_bits.bit_len) break;
+                while (bit_index - committee_start >= committees[committee_i].len) {
+                    committee_start += committees[committee_i].len;
+                    committee_i += 1;
+                }
+                out[written] = committees[committee_i][bit_index - committee_start];
+                written += 1;
+            }
         }
-
-        var committee_validators = try allocator.alloc(ValidatorIndex, total_len);
-        defer allocator.free(committee_validators);
-
-        var offset: usize = 0;
-        for (committee_indices) |committee_index| {
-            const committee = try self.getBeaconCommittee(data.slot, committee_index);
-            for (committee, committee_validators[offset..][0..committee.len]) |index, *dest| dest.* = index;
-            offset += committee.len;
-        }
-
-        return try aggregation_bits.intersectValues(ValidatorIndex, ValidatorIndex, allocator, committee_validators);
+        return out[0..written];
     }
 
     // TODO: getCommitteeAssignments
