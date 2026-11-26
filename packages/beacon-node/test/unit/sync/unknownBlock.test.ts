@@ -1876,7 +1876,14 @@ describe("UnknownBlockSync", () => {
         });
       }
 
-      return {svc, emitter, processBlock, triggerColumnReconstruction, sendDataColumnSidecarsByRoot};
+      return {
+        svc,
+        emitter,
+        processBlock,
+        triggerColumnReconstruction,
+        sendDataColumnSidecarsByRoot,
+        seenBlockInputCache,
+      };
     }
 
     beforeEach(() => {
@@ -1947,7 +1954,7 @@ describe("UnknownBlockSync", () => {
       }
     });
 
-    it("reconstructs a block promoted with half its columns while the request for the rest fails", async () => {
+    it("reconstructs a block with half its columns when the request for the rest fails during a search pass", async () => {
       const [firstPeer, secondPeer] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
       const {block, rootHex, columns} = generateFuluBlock();
       const {svc, emitter, triggerColumnReconstruction, sendDataColumnSidecarsByRoot} = setupSupernodeSyncTest(
@@ -1957,31 +1964,85 @@ describe("UnknownBlockSync", () => {
           [firstPeer, firstHalf],
           [secondPeer, secondHalf],
         ]),
-        // Keeps the promoted block downloaded instead of importing it
+        // A block marked downloaded stays in BlockInputSync instead of being imported
         {parentKnown: false}
       );
       const serveColumns = sendDataColumnSidecarsByRoot.getMockImplementation();
-      let failRequest: ((e: Error) => void) | undefined;
-      sendDataColumnSidecarsByRoot.mockImplementation((peerId, request) => {
+      let failRequests: (() => void) | undefined;
+      const requestsFail = new Promise<void>((resolve) => {
+        failRequests = resolve;
+      });
+      sendDataColumnSidecarsByRoot.mockImplementation(async (peerId, request) => {
         if (peerId === secondPeer) {
-          return new Promise((_resolve, reject) => {
-            failRequest = reject;
-          });
+          await requestsFail;
+          throw new Error("request failed");
         }
-        return serveColumns ? serveColumns(peerId, request) : Promise.resolve([]);
+        return serveColumns ? serveColumns(peerId, request) : [];
       });
 
       try {
         emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: firstPeer, source: BlockInputSource.gossip});
-        await vi.waitFor(() => expect(failRequest).toBeDefined(), {timeout: 10_000});
+        await vi.waitFor(
+          () => expect(sendDataColumnSidecarsByRoot.mock.calls.some(([peer]) => peer === secondPeer)).toBe(true),
+          {timeout: 10_000}
+        );
         // A search pass while the request for the second half is in flight
         emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: firstPeer, source: BlockInputSource.gossip});
-        failRequest?.(new Error("request failed"));
-        await vi.advanceTimersByTimeAsync(0);
+        failRequests?.();
+        await vi.waitFor(() => expect(triggerColumnReconstruction).toHaveBeenCalled());
 
-        expect(triggerColumnReconstruction).toHaveBeenCalled();
         expect(triggerColumnReconstruction.mock.calls[0][0].blockRootHex).toBe(rootHex);
       } finally {
+        svc.close();
+      }
+    });
+
+    it("downloads the rest of a pending block that gossip brought to half its columns", async () => {
+      const peer = await getRandPeerIdStr();
+      const {block, rootHex, columns} = generateFuluBlock();
+      const {
+        svc,
+        emitter,
+        processBlock,
+        triggerColumnReconstruction,
+        sendDataColumnSidecarsByRoot,
+        seenBlockInputCache,
+      } = setupSupernodeSyncTest(block, columns, new Map([[peer, allColumns]]));
+      const serveColumns = sendDataColumnSidecarsByRoot.getMockImplementation();
+      // The first request fails, so the block waits out a retry backoff
+      sendDataColumnSidecarsByRoot.mockResolvedValueOnce([]);
+
+      try {
+        const blockInput = seenBlockInputCache.getByBlock({
+          blockRootHex: rootHex,
+          block,
+          source: BlockInputSource.gossip,
+          seenTimestampSec: Date.now() / 1000,
+          peerIdStr: peer,
+        });
+        emitter.emit(ChainEvent.incompleteBlockInput, {blockInput, peer, source: BlockInputSource.gossip});
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sendDataColumnSidecarsByRoot).toHaveBeenCalledOnce();
+
+        for (const columnSidecar of columns.filter((column) => firstHalf.includes(column.index))) {
+          seenBlockInputCache.getByColumn({
+            blockRootHex: rootHex,
+            columnSidecar,
+            source: BlockInputSource.gossip,
+            seenTimestampSec: Date.now() / 1000,
+            peerIdStr: peer,
+          });
+        }
+        expect(blockInput.hasBlockAndAllData()).toBe(true);
+
+        await vi.advanceTimersByTimeAsync(12_000);
+        await vi.waitFor(() => expect(processBlock).toHaveBeenCalledOnce(), {timeout: 10_000});
+
+        expect(sendDataColumnSidecarsByRoot.mock.calls[1][1][0].columns).toEqual(secondHalf);
+        expect(isBlockInputColumns(blockInput) && blockInput.hasComputedAllData()).toBe(true);
+        expect(triggerColumnReconstruction).not.toHaveBeenCalled();
+      } finally {
+        if (serveColumns) sendDataColumnSidecarsByRoot.mockImplementation(serveColumns);
         svc.close();
       }
     });

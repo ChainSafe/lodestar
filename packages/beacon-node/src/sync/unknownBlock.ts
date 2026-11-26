@@ -928,17 +928,15 @@ export class BlockInputSync {
     const connectedPeers = this.network.getConnectedPeers();
     const hasConnectedPeers = connectedPeers.length > 0;
 
-    // Gossip, getBlobs or column reconstruction can complete a pending block's data through the shared BlockInput
+    // Gossip, getBlobs or column reconstruction can complete a pending block's data through the shared BlockInput.
+    // With only half the columns the block stays pending, its fetch asks a peer for the rest before reconstructing
     for (const block of this.pendingBlocks.values()) {
       if (
         isPendingBlockInput(block) &&
         block.status === PendingBlockInputStatus.pending &&
-        block.blockInput.hasBlockAndAllData()
+        block.blockInput.hasBlockAndAllData() &&
+        (!isBlockInputColumns(block.blockInput) || block.blockInput.hasComputedAllData())
       ) {
-        // Half the columns is enough to import, reconstruct the rest like a fetch that cannot download them
-        if (isBlockInputColumns(block.blockInput) && !block.blockInput.hasComputedAllData()) {
-          this.chain.columnReconstructionTracker.triggerColumnReconstruction(block.blockInput);
-        }
         block.status = PendingBlockInputStatus.downloaded;
       }
     }

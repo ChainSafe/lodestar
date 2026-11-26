@@ -1,5 +1,6 @@
 import {RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
+import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {
   BlockInputSyncCacheItem,
   PendingBlockInput,
@@ -61,9 +62,13 @@ export function getUnknownAndAncestorBlocks(blocks: Map<RootHex, BlockInputSyncC
   const ancestors = new Map<RootHex, PendingBlockInput>();
 
   for (const block of blocks.values()) {
+    // Half the columns counts as all data, but a pending block is only complete with all sampled columns
     if (
       block.status === PendingBlockInputStatus.pending &&
-      (isPendingBlockInput(block) ? !block.blockInput.hasBlockAndAllData() : true)
+      (isPendingBlockInput(block)
+        ? !block.blockInput.hasBlockAndAllData() ||
+          (isBlockInputColumns(block.blockInput) && !block.blockInput.hasComputedAllData())
+        : true)
     ) {
       unknowns.set(getBlockInputSyncCacheItemRootHex(block), block);
     } else if (
