@@ -107,7 +107,11 @@ async function validateVoluntaryExit(
   // verifySignature = false, verified in batch below
   const validity = state.getVoluntaryExitValidity(voluntaryExit, false);
   if (validity !== VoluntaryExitValidity.valid) {
-    throw new VoluntaryExitError(GossipAction.REJECT, {
+    // [IGNORE] The validator has no pending partial withdrawals
+    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.5/specs/electra/p2p-interface.md#modified-voluntary_exit
+    // The withdrawal queue depends on the head, so a peer on a different head can honestly forward this exit
+    const action = validity === VoluntaryExitValidity.pendingWithdrawals ? GossipAction.IGNORE : GossipAction.REJECT;
+    throw new VoluntaryExitError(action, {
       code: voluntaryExitValidityToErrorCode(validity),
     });
   }

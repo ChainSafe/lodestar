@@ -1,16 +1,18 @@
-import {afterEach, beforeAll, beforeEach, describe, it, vi} from "vitest";
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {BeaconConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {SecretKey} from "@lodestar/native/blst";
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  VoluntaryExitValidity,
   computeDomain,
   computeEpochAtSlot,
   computeSigningRoot,
 } from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
+import {GossipAction} from "../../../../src/chain/errors/gossipValidation.js";
+import {VoluntaryExitError, VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
@@ -157,6 +159,17 @@ describe("validate voluntary exit", () => {
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
       VoluntaryExitErrorCode.SHORT_TIME_ACTIVE
     );
+  });
+
+  it("should ignore Voluntary Exit - pending partial withdrawals", async () => {
+    vi.spyOn(state, "getVoluntaryExitValidity").mockReturnValue(VoluntaryExitValidity.pendingWithdrawals);
+
+    const error = await validateGossipVoluntaryExit(chainStub, signedVoluntaryExit).catch((e) => e);
+
+    expect(error).toBeInstanceOf(VoluntaryExitError);
+    expect((error as VoluntaryExitError).action).toBe(GossipAction.IGNORE);
+    expect((error as VoluntaryExitError).type.code).toBe(VoluntaryExitErrorCode.PENDING_WITHDRAWALS);
+    expect(chainStub.bls.verifySignatureSets).not.toHaveBeenCalled();
   });
 
   it("should return invalid Voluntary Exit - invalid signature", async () => {
