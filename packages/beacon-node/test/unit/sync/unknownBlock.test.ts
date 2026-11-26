@@ -1954,7 +1954,7 @@ describe("UnknownBlockSync", () => {
       }
     });
 
-    it("reconstructs a block with half its columns when the request for the rest fails during a search pass", async () => {
+    it("does not fetch a block with half its columns again while the request for the rest is in flight", async () => {
       const [firstPeer, secondPeer] = await Promise.all([getRandPeerIdStr(), getRandPeerIdStr()]);
       const {block, rootHex, columns} = generateFuluBlock();
       const {svc, emitter, triggerColumnReconstruction, sendDataColumnSidecarsByRoot} = setupSupernodeSyncTest(
@@ -1987,7 +1987,14 @@ describe("UnknownBlockSync", () => {
           {timeout: 10_000}
         );
         // A search pass while the request for the second half is in flight
-        emitter.emit(ChainEvent.unknownBlockRoot, {rootHex, peer: firstPeer, source: BlockInputSource.gossip});
+        emitter.emit(ChainEvent.unknownBlockRoot, {
+          rootHex: toRootHex(Buffer.alloc(32, 0xdd)),
+          peer: firstPeer,
+          source: BlockInputSource.gossip,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sendDataColumnSidecarsByRoot.mock.calls.filter(([peer]) => peer === secondPeer)).toHaveLength(1);
+
         failRequests?.();
         await vi.waitFor(() => expect(triggerColumnReconstruction).toHaveBeenCalled());
 

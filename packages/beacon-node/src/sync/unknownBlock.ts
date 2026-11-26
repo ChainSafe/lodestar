@@ -2170,7 +2170,13 @@ export class BlockInputSync {
       const cacheItemRootHex = getBlockInputSyncCacheItemRootHex(cacheItem);
       // pruning may have dropped it mid-fetch
       if (this.pendingBlocks.has(cacheItemRootHex)) {
-        this.pendingBlocks.set(cacheItemRootHex, cacheItem);
+        // A partial download stays fetching while the next peer is asked, a pending entry would be fetched again
+        this.pendingBlocks.set(
+          cacheItemRootHex,
+          cacheItem.status === PendingBlockInputStatus.pending
+            ? {...cacheItem, status: PendingBlockInputStatus.fetching}
+            : cacheItem
+        );
       }
 
       if (cacheItem.status === PendingBlockInputStatus.downloaded) {
