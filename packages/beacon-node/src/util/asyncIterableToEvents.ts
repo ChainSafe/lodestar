@@ -10,6 +10,11 @@ export type RequestCancelEvent = {
   id: number;
 };
 
+export type ResponsePullEvent = {
+  id: number;
+  count: number;
+};
+
 export enum IteratorEventType {
   next = "iterator.next",
   done = "iterator.done",
@@ -25,10 +30,19 @@ export type AsyncIterableEventBus<Args, Item> = {
   emitRequest(data: RequestEvent<Args>): void;
   emitRequestCancel(data: RequestCancelEvent): void;
   emitResponse(data: IteratorEvent<Item>): void;
+  emitResponsePull(data: ResponsePullEvent): void;
   onRequest(handler: (data: RequestEvent<Args>) => void): void;
   onRequestCancel(handler: (data: RequestCancelEvent) => void): void;
   onResponse(handler: (data: IteratorEvent<Item>) => void): void;
+  onResponsePull(handler: (data: ResponsePullEvent) => void): void;
 };
+
+/**
+ * Credit window bounding how far the handler may run ahead of the consumer. The consumer grants this
+ * much credit up front and refunds one credit per item it pulls, so at most `window` items (plus one
+ * in-flight read) are ever buffered across the bridge per request, regardless of read speed.
+ */
+export const RESP_BRIDGE_WINDOW = 2;
 
 type PendingItem<T> = {
   items: LinkedList<T>;
@@ -44,8 +58,16 @@ export class AsyncIterableBridgeCaller<Args, Item> {
   private readonly pending = new Map<number, PendingItem<Item>>();
 
   constructor(
-    private readonly events: Pick<AsyncIterableEventBus<Args, Item>, "onResponse" | "emitRequest" | "emitRequestCancel">
+    private readonly events: Pick<
+      AsyncIterableEventBus<Args, Item>,
+      "onResponse" | "emitRequest" | "emitRequestCancel" | "emitResponsePull"
+    >,
+    private readonly window = RESP_BRIDGE_WINDOW
   ) {
+    // The handler only ever gets credit from the consumer, so a window of 0 would park it forever
+    if (window < 1) {
+      throw new Error(`AsyncIterableBridgeCaller window must be >= 1, got ${window}`);
+    }
     events.onResponse(this.onResponse.bind(this));
   }
 
@@ -71,12 +93,15 @@ export class AsyncIterableBridgeCaller<Args, Item> {
           callArgs,
           id,
         });
+        // Grant the initial window; next() refunds one credit per consumed item
+        self.events.emitResponsePull({id, count: self.window});
 
         return {
           async next() {
             while (true) {
               const item = req.items.shift();
               if (item !== null) {
+                self.events.emitResponsePull({id, count: 1});
                 return {value: item, done: false};
               }
 
@@ -142,29 +167,52 @@ export class AsyncIterableBridgeCaller<Args, Item> {
   }
 }
 
+type HandlerState<Item> = {
+  iterator: AsyncIterator<Item>;
+  credit: number;
+  cancelled: boolean;
+  onCredit: null | (() => void);
+};
+
 export class AsyncIterableBridgeHandler<Args, Item> {
-  private readonly iterators = new Map<number, AsyncIterator<Item>>();
+  private readonly states = new Map<number, HandlerState<Item>>();
 
   constructor(
-    private readonly events: Pick<AsyncIterableEventBus<Args, Item>, "onRequest" | "onRequestCancel" | "emitResponse">,
+    private readonly events: Pick<
+      AsyncIterableEventBus<Args, Item>,
+      "onRequest" | "onRequestCancel" | "emitResponse" | "onResponsePull"
+    >,
     private readonly handler: (args: Args) => AsyncIterable<Item>
   ) {
     events.onRequest(this.onRequest.bind(this));
     events.onRequestCancel(this.onRequestCancel.bind(this));
+    events.onResponsePull(this.onResponsePull.bind(this));
   }
 
   get iteratingCount(): number {
-    return this.iterators.size;
+    return this.states.size;
   }
 
   private async onRequest(data: RequestEvent<Args>): Promise<void> {
+    let state: HandlerState<Item> | undefined;
     try {
-      const iterator = this.handler(data.callArgs)[Symbol.asyncIterator]();
-      this.iterators.set(data.id, iterator);
+      state = {
+        iterator: this.handler(data.callArgs)[Symbol.asyncIterator](),
+        credit: 0,
+        cancelled: false,
+        onCredit: null,
+      };
+      this.states.set(data.id, state);
 
       while (true) {
-        const result = await iterator.next();
-        if (result.done) {
+        await this.waitForCredit(state);
+        if (state.cancelled) {
+          break;
+        }
+        state.credit--;
+
+        const result = await state.iterator.next();
+        if (result.done || state.cancelled) {
           break;
         }
 
@@ -175,29 +223,56 @@ export class AsyncIterableBridgeHandler<Args, Item> {
         });
       }
 
-      this.events.emitResponse({
-        type: IteratorEventType.done,
-        id: data.id,
-      });
+      if (!state.cancelled) {
+        this.events.emitResponse({
+          type: IteratorEventType.done,
+          id: data.id,
+        });
+      }
     } catch (e) {
-      this.events.emitResponse({
-        type: IteratorEventType.error,
-        id: data.id,
-        error: toThreadBoundaryError(e as Error),
-      });
+      if (!state?.cancelled) {
+        this.events.emitResponse({
+          type: IteratorEventType.error,
+          id: data.id,
+          error: toThreadBoundaryError(e as Error),
+        });
+      }
     } finally {
-      this.iterators.delete(data.id);
+      this.states.delete(data.id);
     }
   }
 
-  private onRequestCancel(data: RequestCancelEvent): void {
-    const iterator = this.iterators.get(data.id);
-    if (!iterator?.return) {
+  private waitForCredit(state: HandlerState<Item>): Promise<void> {
+    if (state.credit > 0 || state.cancelled) {
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      state.onCredit = resolve;
+    });
+  }
+
+  private onResponsePull(data: ResponsePullEvent): void {
+    const state = this.states.get(data.id);
+    if (!state) {
       return;
     }
+    state.credit += data.count;
+    state.onCredit?.();
+    state.onCredit = null;
+  }
+
+  private onRequestCancel(data: RequestCancelEvent): void {
+    const state = this.states.get(data.id);
+    if (!state) {
+      return;
+    }
+    // Unblock the loop if it is parked on credit so it can observe the cancel and stop
+    state.cancelled = true;
+    state.onCredit?.();
+    state.onCredit = null;
 
     // An async generator queues return() behind the next() that is in flight, so at most one more
     // item is produced before its finally blocks run. Any error surfaces through that next() call.
-    void iterator.return().catch(() => {});
+    void state.iterator.return?.().catch(() => {});
   }
 }

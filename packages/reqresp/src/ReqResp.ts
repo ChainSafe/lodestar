@@ -1,6 +1,7 @@
 import {setMaxListeners} from "node:events";
 import {Connection, PeerId, Stream} from "@libp2p/interface";
 import type {Libp2p} from "libp2p";
+import {MAX_CONCURRENT_REQUESTS} from "@lodestar/params";
 import {Logger, MetricsRegisterExtra} from "@lodestar/utils";
 import {Metrics, getMetrics} from "./metrics.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
@@ -109,7 +110,11 @@ export class ReqResp {
       this.rateLimiter.setRateLimits(protocolID, inboundRateLimits);
     }
 
-    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID), {force: true});
+    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID), {
+      force: true,
+      // Spec limit on concurrent requests per protocol ID, bounds how many responses a peer can keep in flight
+      maxInboundStreams: MAX_CONCURRENT_REQUESTS,
+    });
   }
 
   /**
