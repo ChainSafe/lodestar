@@ -7634,6 +7634,8 @@
   sources:
     - file: packages/beacon-node/src/chain/blocks/verifyBlocksDataAvailability.ts
       search: export async function verifyBlocksDataAvailability(
+    - file: packages/beacon-node/src/chain/validation/dataColumnSidecar.ts
+      search: export async function validateFuluBlockDataColumnSidecars(
   spec: |
     <spec fn="is_data_available" fork="fulu" hash="05bfad9d">
     def is_data_available(beacon_block_root: Root) -> bool:
