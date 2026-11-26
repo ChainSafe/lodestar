@@ -45,7 +45,12 @@ export class EnvelopePublisher {
 
   constructor(private readonly modules: EnvelopePublisherModules) {}
 
-  async publish(contents: ExecutionPayloadEnvelopeContents, signal: AbortSignal): Promise<EnvelopePublicationResult> {
+  /** `timeoutMs` limits the request of this publication, the timeout of the api client applies if not set */
+  async publish(
+    contents: ExecutionPayloadEnvelopeContents,
+    signal: AbortSignal,
+    timeoutMs?: number
+  ): Promise<EnvelopePublicationResult> {
     signal.throwIfAborted();
 
     const {api, builderIndex, ledger, signer} = this.modules;
@@ -87,13 +92,20 @@ export class EnvelopePublisher {
       publication = {
         controller,
         waiters: 0,
-        promise: this.publishEnvelope(contents, identity, envelopeRoot, api, ledger, signer, controller.signal).finally(
-          () => {
-            if (this.activePublications.get(identity.blockRoot)?.controller === controller) {
-              this.activePublications.delete(identity.blockRoot);
-            }
+        promise: this.publishEnvelope(
+          contents,
+          identity,
+          envelopeRoot,
+          api,
+          ledger,
+          signer,
+          controller.signal,
+          timeoutMs
+        ).finally(() => {
+          if (this.activePublications.get(identity.blockRoot)?.controller === controller) {
+            this.activePublications.delete(identity.blockRoot);
           }
-        ),
+        }),
       };
       this.activePublications.set(identity.blockRoot, publication);
     }
@@ -132,7 +144,8 @@ export class EnvelopePublisher {
     api: ApiClient,
     ledger: BidLedger,
     signer: BuilderSigner,
-    signal: AbortSignal
+    signal: AbortSignal,
+    timeoutMs?: number
   ): Promise<EnvelopePublicationResult> {
     const signedEnvelope = signer.signExecutionPayloadEnvelope(contents.envelope);
 
@@ -145,7 +158,7 @@ export class EnvelopePublisher {
         },
         broadcastValidation: routes.beacon.BroadcastValidation.gossip,
       },
-      {signal}
+      {signal, timeoutMs}
     );
     response.assertOk();
     ledger.recordRevealPublished(identity.slot, identity.blockRoot, identity.blockHash, envelopeRoot);

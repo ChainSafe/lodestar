@@ -1,25 +1,27 @@
 import {randomBytes} from "node:crypto";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ColumnIndex, ssz} from "@lodestar/types";
+import {createBeaconConfig} from "@lodestar/config";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {ForkName, ForkPostCapella, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {getBlockProposerSignatureSet, interopSecretKey} from "@lodestar/state-transition";
+import {ColumnIndex, SignedBeaconBlock, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
+import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
 import {DataColumnSidecarValidationError} from "../../../../src/chain/errors/dataColumnSidecarError.js";
+import {IBeaconChain} from "../../../../src/chain/interface.js";
 import {INetwork} from "../../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../../src/network/peers/peersData.js";
 import {PendingBlockInputStatus} from "../../../../src/sync/types.js";
 import {
   DownloadByRootError,
+  DownloadByRootErrorCode,
   fetchAndValidateBlock,
   fetchAndValidateColumns,
   fetchByRoot,
   fetchColumnsByRoot,
 } from "../../../../src/sync/utils/downloadByRoot.js";
 import {ROOT_SIZE} from "../../../../src/util/sszBytes.js";
-import {
-  BlockWithColumnsTestSet,
-  config,
-  generateBlock,
-  generateBlockWithColumnSidecars,
-} from "../../../utils/blocksAndData.js";
+import {BlockWithColumnsTestSet, config, generateBlockWithColumnSidecars, slots} from "../../../utils/blocksAndData.js";
 
 describe("downloadByRoot.ts", () => {
   const peerIdStr = "1234567890abcdef1234567890abcdef";
@@ -31,31 +33,103 @@ describe("downloadByRoot.ts", () => {
   };
   let network: INetwork;
 
+  const beaconConfig = createBeaconConfig(config, Buffer.alloc(32, 0x01));
+  const proposerIndex = 0;
+  pubkeyCache.append(proposerIndex, interopSecretKey(proposerIndex).toPublicKey().toBytes());
+
+  function getChain(): IBeaconChain {
+    return {
+      config: beaconConfig,
+      forkChoice: {getFinalizedBlock: () => ({slot: 0})},
+      pubkeyCache,
+      bls: new BlsSingleThreadVerifier({metrics: null}),
+      seenBlockInputCache: {
+        isVerifiedProposerSignature: vi.fn().mockReturnValue(false),
+        markVerifiedProposerSignature: vi.fn(),
+      },
+    } as unknown as IBeaconChain;
+  }
+
+  function signBlock(block: SignedBeaconBlock, signerIndex = block.message.proposerIndex): Uint8Array {
+    const {signingRoot} = getBlockProposerSignatureSet(beaconConfig, block);
+    block.signature = interopSecretKey(signerIndex).sign(signingRoot).toBytes();
+    return config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+  }
+
+  function generateSignedBlock(
+    forkName: ForkPostCapella,
+    {
+      blockProposerIndex = proposerIndex,
+      signerIndex = blockProposerIndex,
+    }: {
+      blockProposerIndex?: number;
+      signerIndex?: number;
+    } = {}
+  ): {block: SignedBeaconBlock; blockRoot: Uint8Array} {
+    const block = config.getForkTypes(slots[forkName]).SignedBeaconBlock.defaultValue();
+    block.message.slot = slots[forkName];
+    block.message.proposerIndex = blockProposerIndex;
+    block.message.parentRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
+    const blockRoot = signBlock(block, signerIndex);
+    return {block, blockRoot};
+  }
+
   describe("fetchAndValidateBlock", () => {
-    let capellaBlock: ReturnType<typeof generateBlock>;
-    beforeAll(() => {
-      capellaBlock = generateBlock({forkName: ForkName.capella});
-    });
-    afterAll(() => {
+    afterEach(() => {
       vi.resetAllMocks();
     });
 
-    it("should successfully fetch and validate block with matching root", async () => {
-      network = {
-        sendBeaconBlocksByRoot: vi.fn(() => [capellaBlock.block]),
-      } as unknown as INetwork;
+    for (const forkName of [ForkName.capella, ForkName.fulu, ForkName.gloas] as const) {
+      it(`should return a ${forkName} block with matching root after verifying its proposer signature`, async () => {
+        const {block, blockRoot} = generateSignedBlock(forkName);
+        const chain = getChain();
+        const verifySignatureSets = vi.spyOn(chain.bls, "verifySignatureSets");
+        network = {
+          sendBeaconBlocksByRoot: vi.fn(() => [block]),
+        } as unknown as INetwork;
 
-      const response = await fetchAndValidateBlock({
-        config,
-        network,
-        peerIdStr,
-        blockRoot: capellaBlock.blockRoot,
+        const response = await fetchAndValidateBlock({config, chain, network, peerIdStr, blockRoot});
+
+        expect(response).toBe(block);
+        expect(verifySignatureSets).toHaveBeenCalledExactlyOnceWith([expect.objectContaining({index: proposerIndex})], {
+          verifyOnMainThread: false,
+        });
+        expect(chain.seenBlockInputCache.markVerifiedProposerSignature).not.toHaveBeenCalled();
       });
 
-      expect(response).toBe(capellaBlock.block);
+      it(`should throw error when a ${forkName} block with matching root has an invalid proposer signature`, async () => {
+        const {block, blockRoot} = generateSignedBlock(forkName, {signerIndex: proposerIndex + 1});
+        const chain = getChain();
+        network = {
+          sendBeaconBlocksByRoot: vi.fn(() => [block]),
+        } as unknown as INetwork;
+
+        await expect(fetchAndValidateBlock({config, chain, network, peerIdStr, blockRoot})).rejects.toMatchObject({
+          type: {code: DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID},
+        });
+        expect(chain.seenBlockInputCache.markVerifiedProposerSignature).not.toHaveBeenCalled();
+      });
+    }
+
+    it("should throw error when the proposer index is outside the pubkey cache", async () => {
+      const {block, blockRoot} = generateSignedBlock(ForkName.capella, {
+        blockProposerIndex: pubkeyCache.size,
+        signerIndex: proposerIndex,
+      });
+      const chain = getChain();
+      const verifySignatureSets = vi.spyOn(chain.bls, "verifySignatureSets");
+      network = {
+        sendBeaconBlocksByRoot: vi.fn(() => [block]),
+      } as unknown as INetwork;
+
+      await expect(fetchAndValidateBlock({config, chain, network, peerIdStr, blockRoot})).rejects.toMatchObject({
+        type: {code: DownloadByRootErrorCode.UNKNOWN_PROPOSER},
+      });
+      expect(verifySignatureSets).not.toHaveBeenCalled();
     });
 
     it("should throw error when no block is returned from network", async () => {
+      const {blockRoot} = generateSignedBlock(ForkName.capella);
       network = {
         sendBeaconBlocksByRoot: vi.fn(() => []),
       } as unknown as INetwork;
@@ -63,16 +137,18 @@ describe("downloadByRoot.ts", () => {
       await expect(
         fetchAndValidateBlock({
           config,
+          chain: getChain(),
           network,
           peerIdStr,
-          blockRoot: capellaBlock.blockRoot,
+          blockRoot,
         })
       ).rejects.toThrow(DownloadByRootError);
     });
 
     it("should throw error when block root doesn't match requested root", async () => {
+      const {block} = generateSignedBlock(ForkName.capella);
       network = {
-        sendBeaconBlocksByRoot: vi.fn(() => [capellaBlock.block]),
+        sendBeaconBlocksByRoot: vi.fn(() => [block]),
       } as unknown as INetwork;
 
       const invalidRoot = randomBytes(ROOT_SIZE);
@@ -80,6 +156,7 @@ describe("downloadByRoot.ts", () => {
       await expect(
         fetchAndValidateBlock({
           config,
+          chain: getChain(),
           network,
           peerIdStr,
           blockRoot: invalidRoot,
@@ -178,8 +255,12 @@ describe("downloadByRoot.ts", () => {
     });
 
     it("does not fetch columns for bare-root gloas block sync", async () => {
-      const gloasBlockWithColumns = generateBlockWithColumnSidecars({forkName: ForkName.gloas});
-      const sendBeaconBlocksByRoot = vi.fn(() => Promise.resolve([gloasBlockWithColumns.block]));
+      const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+      block.message.slot = slots.gloas;
+      block.message.proposerIndex = proposerIndex;
+      block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = [Buffer.alloc(48, 0x11)];
+      const blockRoot = signBlock(block);
+      const sendBeaconBlocksByRoot = vi.fn(() => Promise.resolve([block]));
       const sendDataColumnSidecarsByRoot = vi.fn();
       network = {
         sendBeaconBlocksByRoot,
@@ -188,13 +269,13 @@ describe("downloadByRoot.ts", () => {
 
       const response = await fetchByRoot({
         config,
-        chain: null,
+        chain: getChain(),
         network,
         peerMeta,
-        blockRoot: gloasBlockWithColumns.blockRoot,
+        blockRoot,
         cacheItem: {
           status: PendingBlockInputStatus.pending,
-          rootHex: gloasBlockWithColumns.rootHex,
+          rootHex: toRootHex(blockRoot),
           timeAddedSec: 0,
           peerIdStrings: new Set(),
         },
@@ -202,7 +283,7 @@ describe("downloadByRoot.ts", () => {
 
       expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
       expect(sendDataColumnSidecarsByRoot).not.toHaveBeenCalled();
-      expect(response.result.block).toEqual(gloasBlockWithColumns.block);
+      expect(response.result.block).toEqual(block);
       expect(response.result.columnSidecars).toBeUndefined();
     });
   });
