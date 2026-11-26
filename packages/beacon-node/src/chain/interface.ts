@@ -60,6 +60,7 @@ import {
 } from "./opPools/index.js";
 import {PqAttestationPool} from "./opPools/pqAttestationPool.js";
 import {IChainOptions} from "./options.js";
+import {PqAggregationScheduler} from "./pq/aggregationScheduler.js";
 import {IPqVerifier} from "./pq/index.js";
 import {PqTiming} from "./pq/timing.js";
 import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
@@ -134,6 +135,7 @@ export interface IBeaconChain {
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly pqTiming: PqTiming | null;
   readonly pqAttestationPool: PqAttestationPool;
+  readonly pqAggregationScheduler: PqAggregationScheduler;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool: SyncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;

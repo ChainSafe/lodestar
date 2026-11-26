@@ -5,7 +5,7 @@ import path from "node:path";
 import {Writable} from "node:stream";
 import {createZstdCompress, constants as zlibConstants} from "node:zlib";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {AGGREGATORS_PER_COMMITTEE, ForkName} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {Logger, toHex} from "@lodestar/utils";
@@ -85,6 +85,8 @@ export class PqTiming {
   private readonly originMonoNs: bigint;
   private readonly slotMs: number;
   private readonly aggregateDueMs: number;
+  /** When the aggregate of the last of a committee's aggregators is due */
+  private readonly lastAggregateDueMs: number;
 
   private queue: string[] = [];
   /** The sequence numbers of the first and the last event queued */
@@ -116,6 +118,7 @@ export class PqTiming {
     this.originWallNs = BigInt(Date.now()) * 1_000_000n;
     this.slotMs = config.getSlotComponentDurationMs(ForkName.pq, 10_000);
     this.aggregateDueMs = config.getAggregateDueMs(ForkName.pq);
+    this.lastAggregateDueMs = config.getAggregateDueMs(ForkName.pq, AGGREGATORS_PER_COMMITTEE - 1);
 
     const runId = `${this.originWallNs}-${this.seed.toString(16).padStart(16, "0")}`;
     this.dir = path.join(opts.output, runId);
@@ -233,7 +236,7 @@ export class PqTiming {
   isLate(work: PqProofWork, slot: Slot): boolean {
     switch (work) {
       case "committee":
-        return this.isPast(slot, this.aggregateDueMs);
+        return this.isPast(slot, this.lastAggregateDueMs);
       case "fallback":
         return this.isPast(slot, this.opts.schedule.fallbackDeadlineMs);
       default:

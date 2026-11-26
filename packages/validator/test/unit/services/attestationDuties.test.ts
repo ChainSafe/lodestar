@@ -74,6 +74,7 @@ describe("AttestationDutiesService", () => {
       committeesAtSlot: 120,
       validatorCommitteeIndex: 1,
       isAggregator: false,
+      aggregatorPosition: 0,
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
@@ -133,6 +134,7 @@ describe("AttestationDutiesService", () => {
         committeesAtSlot: 1,
         validatorCommitteeIndex: validatorIndex,
         isAggregator: false,
+        aggregatorPosition: 0,
         validatorIndex,
         pubkey: SecretKey.fromBytes(toBufferBE(BigInt(validatorIndex + 1), 32))
           .toPublicKey()
@@ -187,6 +189,7 @@ describe("AttestationDutiesService", () => {
       committeesAtSlot: 1,
       validatorCommitteeIndex: validatorIndex,
       isAggregator: false,
+      aggregatorPosition: 0,
       validatorIndex,
       pubkey: SecretKey.fromBytes(toBufferBE(BigInt(validatorIndex + 1), 32))
         .toPublicKey()
@@ -240,6 +243,7 @@ describe("AttestationDutiesService", () => {
       committeesAtSlot: 120,
       validatorCommitteeIndex: 1,
       isAggregator: false,
+      aggregatorPosition: 0,
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
@@ -322,6 +326,7 @@ describe("AttestationDutiesService", () => {
       committeesAtSlot: 120,
       validatorCommitteeIndex: 1,
       isAggregator: false,
+      aggregatorPosition: 0,
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
@@ -367,6 +372,7 @@ describe("AttestationDutiesService", () => {
       committeesAtSlot: 120,
       validatorCommitteeIndex: 1,
       isAggregator: false,
+      aggregatorPosition: 0,
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
@@ -480,6 +486,7 @@ describe("AttestationDutiesService", () => {
         committeesAtSlot: 120,
         validatorCommitteeIndex: 1,
         isAggregator: false,
+        aggregatorPosition: 0,
         validatorIndex: index,
         pubkey: pubkeys[0],
       };
@@ -540,6 +547,7 @@ describe("AttestationDutiesService", () => {
         committeesAtSlot: 120,
         validatorCommitteeIndex: 1,
         isAggregator: false,
+        aggregatorPosition: 0,
         validatorIndex: index,
         pubkey: pubkeys[0],
       };
@@ -551,6 +559,7 @@ describe("AttestationDutiesService", () => {
         committeesAtSlot: 120,
         validatorCommitteeIndex: 1,
         isAggregator: false,
+        aggregatorPosition: 0,
         validatorIndex: index,
         pubkey: pubkeys[0],
       };
@@ -624,6 +633,7 @@ describe("AttestationDutiesService", () => {
         committeesAtSlot: 120,
         validatorCommitteeIndex: 1,
         isAggregator: false,
+        aggregatorPosition: 0,
         validatorIndex: index,
         pubkey: pubkeys[0],
       };

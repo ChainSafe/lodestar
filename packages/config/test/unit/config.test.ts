@@ -33,6 +33,29 @@ describe("getSlotComponentDurationMs", () => {
   });
 });
 
+describe("pq aggregator schedule", () => {
+  const config = createForkConfig({...chainConfig, SLOT_DURATION_MS: 12_000});
+
+  // https://github.com/ethereum/consensus-specs/blob/4595f0fc9be7e3611f0187a2ff5fee00e120f751/specs/_features/pq/validator.md#construct-aggregate
+  it.each([
+    {position: 0, cutoffMs: 4800, dueMs: 7200},
+    {position: 1, cutoffMs: 5400, dueMs: 7800},
+    {position: 2, cutoffMs: 6000, dueMs: 8400},
+    {position: 3, cutoffMs: 6600, dueMs: 9000},
+  ])(
+    "the aggregator at position $position stops collecting at $cutoffMs ms and is due at $dueMs ms",
+    ({position, cutoffMs, dueMs}) => {
+      expect(config.getAggregationCutoffMs(ForkName.pq, position)).toBe(cutoffMs);
+      expect(config.getAggregateDueMs(ForkName.pq, position)).toBe(dueMs);
+    }
+  );
+
+  it("leaves the aggregate deadline of earlier forks as it was", () => {
+    expect(config.getAggregateDueMs(ForkName.gloas)).toBe(6000);
+    expect(config.getAggregateDueMs(ForkName.electra)).toBe(8000);
+  });
+});
+
 describe("getMaxBlobsPerBlock", () => {
   let defaultConfig: ChainConfig;
 

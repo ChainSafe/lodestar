@@ -1,5 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
+import {HttpStatusCode} from "@lodestar/api";
 import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {SecretKey} from "@lodestar/native/blst";
@@ -12,7 +13,7 @@ import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
 import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
-import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
+import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "../../utils/apiStub.js";
 import {ClockMock} from "../../utils/clock.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../utils/types.js";
@@ -108,6 +109,7 @@ describe("AttestationService", () => {
               committeesAtSlot: 120,
               validatorCommitteeIndex: 1,
               isAggregator: false,
+              aggregatorPosition: 0,
               validatorIndex: 0,
               pubkey: pubkeys[0],
             },
@@ -196,6 +198,7 @@ describe("AttestationService", () => {
         committeesAtSlot: 1,
         validatorCommitteeIndex: attesterIndex,
         isAggregator: false,
+        aggregatorPosition: 0,
         validatorIndex: attesterIndex,
         pubkey: pubkeys[0],
       },
@@ -238,5 +241,98 @@ describe("AttestationService", () => {
     // Stops the wait for the aggregation deadline
     controller.abort();
     await ticked;
+  });
+
+  describe("pq aggregation", () => {
+    const slot = 0;
+    const config = createChainForkConfig({...defaultConfig, GLOAS_FORK_EPOCH: 0, PQ_FORK_EPOCH: 0});
+    const attestation = ssz.electra.SingleAttestation.defaultValue();
+    const aggregate = ssz.pq.AggregatedAttestation.defaultValue();
+    const signedAggregateAndProof = ssz.pq.SignedAggregateAndProof.defaultValue();
+    // Two aggregators of one committee, the second of them first in the aggregation committee
+    const aggregatorPositions = [2, 1];
+
+    let duties: AttDutyAndProof[];
+    let clock: ClockMock;
+
+    beforeEach(() => {
+      clock = new ClockMock();
+      // Past every deadline of the slot, so that nothing waits
+      vi.spyOn(clock, "msFromSlot").mockReturnValue(config.SLOT_DURATION_MS);
+      const attestationService = new AttestationService(
+        loggerVc,
+        api,
+        clock,
+        validatorStore,
+        emitter,
+        chainHeadTracker,
+        syncingStatusTracker,
+        null,
+        config,
+        {}
+      );
+      duties = aggregatorPositions.map((aggregatorPosition, validatorIndex) => ({
+        duty: {
+          slot,
+          committeeIndex: 0,
+          committeeLength: aggregatorPositions.length,
+          committeesAtSlot: 1,
+          validatorCommitteeIndex: validatorIndex,
+          isAggregator: true,
+          aggregatorPosition,
+          validatorIndex,
+          pubkey: pubkeys[0],
+        },
+        selectionProof: new Uint8Array(0),
+      }));
+
+      api.beacon.postStateValidators.mockResolvedValue(
+        mockApiResponse({data: [], meta: {executionOptimistic: false, finalized: false}})
+      );
+      api.validator.getAttesterDuties.mockResolvedValue(
+        mockApiResponse({data: [], meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})
+      );
+      vi.spyOn(attestationService["dutiesService"], "getDutiesAtSlot").mockImplementation(() => duties);
+      api.validator.produceAttestationData.mockResolvedValue(mockApiResponse({data: attestation.data}));
+      api.beacon.submitPoolAttestationsV2.mockResolvedValue(mockApiResponse({}));
+      api.validator.publishAggregateAndProofsV2.mockResolvedValue(mockApiResponse({}));
+      validatorStore.signAttestation.mockResolvedValue(attestation);
+      validatorStore.signAggregateAndProof.mockResolvedValue(signedAggregateAndProof);
+    });
+
+    it("Should aggregate as the first of its aggregators of a committee, when that position is due", async () => {
+      const getAggregateDueMs = vi.spyOn(config, "getAggregateDueMs");
+      api.validator.getAggregatedAttestationV2.mockResolvedValue(
+        mockApiResponse({data: aggregate, meta: {version: ForkName.pq}})
+      );
+
+      await clock.tickSlotFns(slot, controller.signal);
+
+      expect(getAggregateDueMs).toHaveBeenCalledExactlyOnceWith(ForkName.pq, 1);
+      expect(api.validator.getAggregatedAttestationV2).toHaveBeenCalledOnce();
+      expect(validatorStore.signAggregateAndProof).toHaveBeenCalledExactlyOnceWith(
+        duties[1].duty,
+        duties[1].selectionProof,
+        aggregate
+      );
+      expect(api.validator.publishAggregateAndProofsV2).toHaveBeenCalledExactlyOnceWith({
+        signedAggregateAndProofs: [signedAggregateAndProof],
+      });
+    });
+
+    it("Should publish no aggregate when the beacon node has none to publish", async () => {
+      api.validator.getAggregatedAttestationV2.mockResolvedValue(
+        await mockApiErrorResponse(HttpStatusCode.NOT_FOUND, {
+          code: 404,
+          message: "An aggregate seen includes every attester",
+        })
+      );
+
+      await clock.tickSlotFns(slot, controller.signal);
+
+      expect(api.validator.getAggregatedAttestationV2).toHaveBeenCalledOnce();
+      expect(validatorStore.signAggregateAndProof).not.toHaveBeenCalled();
+      expect(api.validator.publishAggregateAndProofsV2).not.toHaveBeenCalled();
+    });
   });
 });

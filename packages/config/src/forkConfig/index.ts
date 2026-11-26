@@ -239,11 +239,23 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
       return this.getSlotComponentDurationMs(fork, config.ATTESTATION_DUE_BPS);
     },
-    getAggregateDueMs(fork: ForkName): number {
+    getAggregateDueMs(fork: ForkName, position = 0): number {
+      if (fork === ForkName.pq) {
+        return (
+          this.getSlotComponentDurationMs(fork, config.AGGREGATE_DUE_BPS_PQ) +
+          position * this.getSlotComponentDurationMs(fork, config.AGGREGATOR_DELAY_BPS)
+        );
+      }
       if (isForkPostGloas(fork)) {
         return this.getSlotComponentDurationMs(fork, config.AGGREGATE_DUE_BPS_GLOAS);
       }
       return this.getSlotComponentDurationMs(fork, config.AGGREGATE_DUE_BPS);
+    },
+    getAggregationCutoffMs(fork: ForkName, position: number): number {
+      return (
+        this.getSlotComponentDurationMs(fork, config.AGGREGATION_CUTOFF_BPS) +
+        position * this.getSlotComponentDurationMs(fork, config.AGGREGATOR_DELAY_BPS)
+      );
     },
     getSyncMessageDueMs(fork: ForkName): number {
       if (isForkPostGloas(fork)) {

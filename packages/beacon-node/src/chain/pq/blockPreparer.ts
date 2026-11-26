@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, MIN_ATTESTATION_INCLUSION_DELAY_PQ} from "@lodestar/params";
+import {AGGREGATORS_PER_COMMITTEE, ForkName, MIN_ATTESTATION_INCLUSION_DELAY_PQ} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {Logger, isErrorAborted, sleep} from "@lodestar/utils";
@@ -9,10 +9,13 @@ import {PqAttestationFilters, getPqAttestationFilters} from "../opPools/pqAttest
 import {RegenCaller} from "../regen/index.js";
 
 /**
- * How far into a slot the block the inclusion delay after it is prepared from: by then the
- * slot's aggregates, the last that block may include, are out.
+ * How far into a slot the block the inclusion delay after it is prepared from: one aggregator's
+ * delay after the last aggregator's aggregate is due, by when the slot's aggregates, the last
+ * that block may include, have arrived.
  */
-export const PREPARE_START_BPS = 6667;
+export function getPrepareStartMs(config: ChainForkConfig): number {
+  return config.getAggregateDueMs(ForkName.pq, AGGREGATORS_PER_COMMITTEE);
+}
 
 /** How often the pool is asked whether it has more to merge */
 export const PREPARE_INTERVAL_MS = 500;
@@ -65,7 +68,7 @@ export class PqBlockPreparer {
     if (clockSlot < 0 || this.config.getForkName(blockSlot) !== ForkName.pq) return;
 
     try {
-      await sleep(this.config.getSlotComponentDurationMs(ForkName.pq, PREPARE_START_BPS), this.signal);
+      await sleep(getPrepareStartMs(this.config), this.signal);
 
       const slotStartMs = computeTimeAtSlot(this.config, blockSlot, this.chain.genesisTime) * 1000;
       let onHead: PqBlockHead | null = null;

@@ -327,6 +327,7 @@ function createAttesterDuty(
     committeesAtSlot: 1,
     validatorCommitteeIndex: 0,
     isAggregator: false,
+    aggregatorPosition: 0,
     slot: currentSlot,
   };
 }

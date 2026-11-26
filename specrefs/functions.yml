@@ -2567,7 +2567,7 @@
 - name: get_aggregate_due_ms#phase0
   sources:
     - file: packages/config/src/forkConfig/index.ts
-      search: "getAggregateDueMs(fork: ForkName): number {"
+      search: "getAggregateDueMs(fork: ForkName, position = 0): number {"
   spec: |
     <spec fn="get_aggregate_due_ms" fork="phase0" hash="f04ecc41">
     def get_aggregate_due_ms() -> Uint64:
@@ -2577,7 +2577,7 @@
 - name: get_aggregate_due_ms#gloas
   sources:
     - file: packages/config/src/forkConfig/index.ts
-      search: "getAggregateDueMs(fork: ForkName): number {"
+      search: "getAggregateDueMs(fork: ForkName, position = 0): number {"
   spec: |
     <spec fn="get_aggregate_due_ms" fork="gloas" hash="055e3209">
     def get_aggregate_due_ms() -> Uint64:

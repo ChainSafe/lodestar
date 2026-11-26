@@ -145,6 +145,8 @@ export const AttesterDutyType = new ContainerType(
     slot: ssz.Slot,
     /** From pq, whether the state names the validator an aggregator of its committee. False before */
     isAggregator: ssz.Boolean,
+    /** The validator's index in its committee's aggregation committee, zero if it is no aggregator */
+    aggregatorPosition: ssz.UintNum64,
   },
   {jsonCase: "eth2"}
 );
@@ -663,7 +665,7 @@ export type Endpoints = {
     },
     {query: {attestation_data_root: string; slot: number; committee_index: number}},
     // From pq the aggregate comes with the proof of its attesters' signatures
-    Attestation<ForkBls> | pq.AttestationWithProof,
+    Attestation<ForkBls> | pq.AggregatedAttestation,
     VersionMeta
   >;
 
@@ -1315,10 +1317,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         data: WithVersion(
           (fork) =>
             (fork === ForkName.pq
-              ? ssz.pq.AttestationWithProof
+              ? ssz.pq.AggregatedAttestation
               : isForkPostElectra(fork)
                 ? ssz.electra.Attestation
-                : ssz.phase0.Attestation) as Type<Attestation<ForkBls> | pq.AttestationWithProof>
+                : ssz.phase0.Attestation) as Type<Attestation<ForkBls> | pq.AggregatedAttestation>
         ),
         meta: VersionCodec,
       },

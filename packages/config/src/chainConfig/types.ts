@@ -56,6 +56,9 @@ export type ChainConfig = {
   PQ_FORK_EPOCH: number;
   ATTESTATION_SUBNET_COUNT_PQ: number;
   UNREGISTERED_VALIDATOR_WITHDRAWABILITY_DELAY: number;
+  AGGREGATION_CUTOFF_BPS: number;
+  AGGREGATE_DUE_BPS_PQ: number;
+  AGGREGATOR_DELAY_BPS: number;
   // HEZE
   HEZE_FORK_VERSION: Uint8Array;
   HEZE_FORK_EPOCH: number;
@@ -200,6 +203,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   PQ_FORK_EPOCH: "number",
   ATTESTATION_SUBNET_COUNT_PQ: "number",
   UNREGISTERED_VALIDATOR_WITHDRAWABILITY_DELAY: "number",
+  AGGREGATION_CUTOFF_BPS: "number",
+  AGGREGATE_DUE_BPS_PQ: "number",
+  AGGREGATOR_DELAY_BPS: "number",
   // HEZE
   HEZE_FORK_VERSION: "bytes",
   HEZE_FORK_EPOCH: "number",

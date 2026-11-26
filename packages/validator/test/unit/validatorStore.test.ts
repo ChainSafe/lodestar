@@ -277,6 +277,7 @@ describe("ValidatorStore", () => {
       committeesAtSlot: 1,
       validatorCommitteeIndex: 0,
       isAggregator: false,
+      aggregatorPosition: 0,
       slot,
     };
     const data = {...ssz.phase0.AttestationData.defaultValue(), slot};
@@ -299,6 +300,7 @@ describe("ValidatorStore", () => {
       committeesAtSlot: 1,
       validatorCommitteeIndex: 0,
       isAggregator: false,
+      aggregatorPosition: 0,
       slot,
     };
     const aggregate = ssz.phase0.Attestation.defaultValue();

@@ -152,6 +152,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     PQ_FORK_EPOCH: pqForkRelevant,
     ATTESTATION_SUBNET_COUNT_PQ: pqForkRelevant,
     UNREGISTERED_VALIDATOR_WITHDRAWABILITY_DELAY: pqForkRelevant,
+    AGGREGATION_CUTOFF_BPS: pqForkRelevant,
+    AGGREGATE_DUE_BPS_PQ: pqForkRelevant,
+    AGGREGATOR_DELAY_BPS: pqForkRelevant,
     // heze
     HEZE_FORK_VERSION: hezeForkRelevant,
     HEZE_FORK_EPOCH: hezeForkRelevant,

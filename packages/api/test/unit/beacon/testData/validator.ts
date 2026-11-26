@@ -30,6 +30,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
           committeesAtSlot: 5,
           validatorCommitteeIndex: 6,
           isAggregator: false,
+          aggregatorPosition: 0,
           slot: 7,
         },
       ],

@@ -1,4 +1,4 @@
-import {ApiClient, routes} from "@lodestar/api";
+import {ApiClient, HttpStatusCode, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
 import {IClock, computeEpochAtSlot} from "@lodestar/state-transition";
@@ -93,6 +93,11 @@ export class AttestationService {
 
       // Step 1. Mutate, and sign `Attestation` for each validator. Then publish all `Attestations` in one go
       await this.signAndPublishAttestations(fork, slot, attestationNoCommittee, duties);
+
+      if (fork === ForkName.pq) {
+        await this.produceAndPublishStaggeredAggregates(fork, slot, attestationNoCommittee, duties, signal);
+        return;
+      }
 
       // Step 2. after all attestations are submitted, make an aggregate.
       // First, wait until the `aggregation_production_instant` (AGGREGATE_DUE_BPS of the way through the slot)
@@ -220,6 +225,39 @@ export class AttestationService {
   }
 
   /**
+   * From pq the aggregators of a committee take turns, each publishing when the aggregate of its
+   * position in the aggregation committee is due. Of this client's aggregators of a committee
+   * only the first aggregates: its aggregate is the first a proposer can include.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/4595f0fc9be7e3611f0187a2ff5fee00e120f751/specs/_features/pq/validator.md#broadcast-aggregate
+   */
+  private async produceAndPublishStaggeredAggregates(
+    fork: ForkName,
+    slot: Slot,
+    attestation: phase0.AttestationData,
+    duties: AttDutyAndProof[],
+    signal: AbortSignal
+  ): Promise<void> {
+    await Promise.all(
+      Array.from(groupAttDutiesByCommitteeIndex(duties).entries()).map(async ([index, dutiesSameCommittee]) => {
+        let first: AttDutyAndProof | null = null;
+        for (const dutyAndProof of dutiesSameCommittee) {
+          if (dutyAndProof.selectionProof === null) continue;
+          if (first === null || dutyAndProof.duty.aggregatorPosition < first.duty.aggregatorPosition) {
+            first = dutyAndProof;
+          }
+        }
+        if (first === null) return;
+
+        const aggregateDueMs = this.config.getAggregateDueMs(fork, first.duty.aggregatorPosition);
+        await sleep(aggregateDueMs - this.clock.msFromSlot(slot), signal);
+        this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot) - aggregateDueMs / 1000);
+        await this.produceAndPublishAggregates(fork, attestation, index, [first], aggregateDueMs);
+      })
+    );
+  }
+
+  /**
    * Performs the second step of the attesting process: downloading an aggregated `Attestation`,
    * converting it into a `SignedAggregateAndProof` and returning it to the BN.
    *
@@ -233,7 +271,8 @@ export class AttestationService {
     fork: ForkName,
     attestation: phase0.AttestationData,
     committeeIndex: number,
-    duties: AttDutyAndProof[]
+    duties: AttDutyAndProof[],
+    aggregateDueMs = this.config.getAggregateDueMs(fork)
   ): Promise<void> {
     const logCtx = {slot: attestation.slot, index: committeeIndex};
 
@@ -243,14 +282,20 @@ export class AttestationService {
     }
 
     this.logger.verbose("Aggregating attestations", logCtx);
-    const aggregate = (
-      await this.api.validator.getAggregatedAttestationV2({
-        attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
-        slot: attestation.slot,
-        committeeIndex,
-      })
-    ).value();
-    const participants = aggregate.aggregationBits.getTrueBitIndexes().length;
+    const res = await this.api.validator.getAggregatedAttestationV2({
+      attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
+      slot: attestation.slot,
+      committeeIndex,
+    });
+    // From pq the beacon node has none for an aggregator whose attesters are all in an aggregate
+    // it has seen
+    if (fork === ForkName.pq && res.status === HttpStatusCode.NOT_FOUND) {
+      this.logger.debug("No aggregate to publish", {...logCtx, reason: res.error()?.message});
+      return;
+    }
+    const aggregate = res.value();
+    const participants = ("proof" in aggregate ? aggregate.aggregate : aggregate).aggregationBits.getTrueBitIndexes()
+      .length;
     this.metrics?.numParticipantsInAggregate.observe(participants);
 
     const signedAggregateAndProofs: SignedAggregateAndProof[] = [];
@@ -273,7 +318,7 @@ export class AttestationService {
     );
 
     this.metrics?.attesterStepCallPublishAggregate.observe(
-      this.clock.secFromSlot(attestation.slot) - this.config.getAggregateDueMs(fork) / 1000
+      this.clock.secFromSlot(attestation.slot) - aggregateDueMs / 1000
     );
 
     if (signedAggregateAndProofs.length > 0) {

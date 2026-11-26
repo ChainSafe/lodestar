@@ -1731,11 +1731,13 @@ export function getValidatorApi(
           // Mutate existing object instead of re-creating another new object with spread operator
           // Should be faster and require less memory
           duty.pubkey = pubkeys[i];
-          duty.isAggregator =
-            isPq &&
-            (state as IBeaconStateViewGloas)
-              .getAggregationCommittee(duty.slot, duty.committeeIndex)
-              .includes(validatorIndex);
+          const aggregatorPosition = isPq
+            ? (state as IBeaconStateViewGloas)
+                .getAggregationCommittee(duty.slot, duty.committeeIndex)
+                .indexOf(validatorIndex)
+            : -1;
+          duty.isAggregator = aggregatorPosition !== -1;
+          duty.aggregatorPosition = Math.max(aggregatorPosition, 0);
           duties.push(duty);
         }
       }
@@ -1880,12 +1882,26 @@ export function getValidatorApi(
           );
         }
         const {aggregationBits, aggregate} = proven.aggregate;
+        // An aggregator broadcasts only an aggregate that no aggregate it has received includes,
+        // the check gossip ignores an aggregate by:
+        // https://github.com/ethereum/consensus-specs/blob/4595f0fc9be7e3611f0187a2ff5fee00e120f751/specs/_features/pq/validator.md#broadcast-aggregate
+        if (
+          chain.seenAggregatedAttestations.isKnown(
+            proven.data.target.epoch,
+            committeeIndex,
+            dataRootHex,
+            aggregationBits
+          )
+        ) {
+          throw new ApiError(
+            404,
+            `An aggregate seen includes every attester for slot=${slot}, dataRoot=${dataRootHex}, committeeIndex=${committeeIndex}`
+          );
+        }
         metrics?.production.producedAggregateParticipants.observe(aggregationBits.getTrueBitIndexes().length);
         const committeeBits = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT_PQ, committeeIndex);
-        const data: pq.AttestationWithProof = {
-          aggregationBits,
-          data: proven.data,
-          committeeBits,
+        const data: pq.AggregatedAttestation = {
+          aggregate: {aggregationBits, data: proven.data, committeeBits},
           proof: aggregate.proof,
         };
         return {data, meta: {version: ForkName.pq}};
@@ -2041,6 +2057,10 @@ export function getValidatorApi(
       }
 
       notWhileSyncing(chain, sync.state);
+
+      for (const {validatorIndex, slot, isAggregator, committeeIndex} of subscriptions) {
+        if (isAggregator) chain.pqAggregationScheduler.addAggregator(slot, committeeIndex, validatorIndex);
+      }
 
       await network.prepareBeaconCommitteeSubnets(
         subscriptions.map(({validatorIndex, slot, isAggregator, committeesAtSlot, committeeIndex}) => ({

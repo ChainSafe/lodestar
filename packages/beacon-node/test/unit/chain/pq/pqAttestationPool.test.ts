@@ -63,6 +63,25 @@ describe("PqAttestationPool", () => {
     expect(await verifier.verifyProofSets([{claims: Buffer.concat([claims[0], claims[2]]), proof}])).toBe(false);
   }, 120_000);
 
+  it("keeps for an aggregator the aggregate proven at its cutoff", async () => {
+    const pool = new PqAttestationPool();
+    await pool.proveAggregate(data.slot, 0);
+    expect(await pool.getAggregate(data.slot, dataRootHex, 0)).toBeNull();
+
+    pool.addSingle(0, data, dataRootHex, 0, committeeSize, signed[0]);
+    pool.addSingle(0, data, dataRootHex, 2, committeeSize, signed[2]);
+    await pool.proveAggregate(data.slot, 0);
+    // After the cutoff
+    pool.addSingle(0, data, dataRootHex, 3, committeeSize, signed[3]);
+
+    const proven = await pool.getAggregate(data.slot, dataRootHex, 0);
+    if (proven === null) throw Error("no aggregate");
+    expect(proven.aggregate.aggregationBits.toBoolArray()).toEqual([true, false, true, false]);
+    const {proof} = proven.aggregate.aggregate;
+    expect(await verifier.verifyProofSets([{claims: Buffer.concat([claims[0], claims[2]]), proof}])).toBe(true);
+    expect((await pool.getAggregate(data.slot, dataRootHex, 0))?.aggregate).toBe(proven.aggregate);
+  }, 120_000);
+
   it("merges two committees into one block proof", async () => {
     const pool = new PqAttestationPool();
     // Committee 0 arrives as single attestations, committee 1 as a network aggregate

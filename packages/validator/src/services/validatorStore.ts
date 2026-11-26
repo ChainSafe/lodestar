@@ -883,9 +883,10 @@ export class ValidatorStore {
   async signAggregateAndProof(
     duty: routes.validator.AttesterDuty,
     selectionProof: BLSSignature,
-    aggregate: Attestation<ForkBls> | pq.AttestationWithProof
+    aggregate: Attestation<ForkBls> | pq.AggregatedAttestation
   ): Promise<SignedAggregateAndProof> {
-    this.validateAttestationDuty(duty, aggregate.data);
+    const {data} = "proof" in aggregate ? aggregate.aggregate : aggregate;
+    this.validateAttestationDuty(duty, data);
 
     this.assertDoppelgangerSafe(duty.pubkey);
 
@@ -893,22 +894,14 @@ export class ValidatorStore {
     // selection proof
     const aggregateAndProof: AggregateAndProof =
       "proof" in aggregate
-        ? {
-            aggregatorIndex: duty.validatorIndex,
-            aggregate: {
-              aggregationBits: aggregate.aggregationBits,
-              data: aggregate.data,
-              committeeBits: aggregate.committeeBits,
-            },
-            proof: aggregate.proof,
-          }
+        ? {aggregatorIndex: duty.validatorIndex, aggregate: aggregate.aggregate, proof: aggregate.proof}
         : ({
             aggregate,
             aggregatorIndex: duty.validatorIndex,
             selectionProof,
           } as AggregateAndProof<ForkBls>);
 
-    const signingSlot = aggregate.data.slot;
+    const signingSlot = data.slot;
     const domain = this.config.getDomain(signingSlot, DOMAIN_AGGREGATE_AND_PROOF);
     const isPostElectra = this.config.getForkSeq(signingSlot) >= ForkSeq.electra;
     const signingRoot = computeSigningRoot(

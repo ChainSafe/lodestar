@@ -113,7 +113,8 @@ import {
 } from "./opPools/index.js";
 import {PROOF_LOG_INV_RATE, PqAttestationPool} from "./opPools/pqAttestationPool.js";
 import {IChainOptions} from "./options.js";
-import {PREPARE_START_BPS, PqBlockPreparer} from "./pq/blockPreparer.js";
+import {PqAggregationScheduler} from "./pq/aggregationScheduler.js";
+import {PqBlockPreparer, getPrepareStartMs} from "./pq/blockPreparer.js";
 import {IPqVerifier, PqVerifier} from "./pq/index.js";
 import {PqObserver} from "./pq/observer.js";
 import {PqTiming} from "./pq/timing.js";
@@ -211,6 +212,7 @@ export class BeaconChain implements IBeaconChain {
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly pqTiming: PqTiming | null = null;
   readonly pqAttestationPool: PqAttestationPool;
+  readonly pqAggregationScheduler: PqAggregationScheduler;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
@@ -332,13 +334,11 @@ export class BeaconChain implements IBeaconChain {
     this.metrics = metrics;
     this.validatorMonitor = validatorMonitor;
     this.genesisTime = anchorState.genesisTime;
-    // An aggregator's proof is made between the attestations' deadline and its own. The observer
-    // proves halfway, as Lighthouse does. A committee of this node's validators is proven when
-    // its aggregator asks.
+    // The observer proves a committee when its first aggregator stops collecting attestations
     const attestationDueMs = config.getAttestationDueMs(ForkName.pq);
     const pqSchedule = {
-      committeeCollectionMs: attestationDueMs + (config.getAggregateDueMs(ForkName.pq) - attestationDueMs) / 2,
-      initialMergeMs: config.getSlotComponentDurationMs(ForkName.pq, PREPARE_START_BPS),
+      committeeCollectionMs: config.getAggregationCutoffMs(ForkName.pq, 0),
+      initialMergeMs: getPrepareStartMs(config),
       fallbackDeadlineMs: PQ_MERGE_DEADLINE_FACTOR * attestationDueMs,
     };
     if (opts.pqTiming && config.PQ_FORK_EPOCH !== Infinity) {
@@ -582,6 +582,8 @@ export class BeaconChain implements IBeaconChain {
       },
       metrics?.unfinalizedPayloadEnvelopeWritesQueue
     );
+
+    this.pqAggregationScheduler = new PqAggregationScheduler(this, this.config, this.logger, signal);
 
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {

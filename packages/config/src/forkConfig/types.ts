@@ -60,7 +60,10 @@ export type ForkConfig = {
   getScheduledGasLimit(epoch: Epoch): number | undefined;
 
   getAttestationDueMs(fork: ForkName): number;
-  getAggregateDueMs(fork: ForkName): number;
+  /** From pq the aggregators of a committee take turns: `position` is the aggregator's in its aggregation committee */
+  getAggregateDueMs(fork: ForkName, position?: number): number;
+  /** How far into a pq slot the aggregator at `position` stops collecting attestations */
+  getAggregationCutoffMs(fork: ForkName, position: number): number;
   getSyncMessageDueMs(fork: ForkName): number;
   getSyncContributionDueMs(fork: ForkName): number;
   getProposerReorgCutoffMs(fork: ForkName): number;
