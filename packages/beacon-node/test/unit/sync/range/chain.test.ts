@@ -246,6 +246,91 @@ describe("sync / range / chain", () => {
     }
   );
 
+  // A lying peer returns 0 blocks for epoch 3, which has blocks. Epoch 2 has its tail block and epoch 4 starts with a
+  // skipped slot, so only the 0-block gap stops the unknown parent from being blamed on epoch 4 alone. Epoch 3 must be
+  // downloaded again from the honest peer
+  it("recovers from a peer returning 0 blocks for an epoch with blocks", async () => {
+    const liedEpoch = 3;
+    const peers = [peer, await getRandPeerIdStr()];
+    // Whichever peer is asked for the epoch first lies, the other one is honest
+    let liar: string | null = null;
+    const skipped = new Set([4 * SLOTS_PER_EPOCH]);
+    const imported = new Set<Slot>();
+    const liedEpochServedBy = new Map<string, number>();
+
+    const parentSlotOf = (slot: Slot): Slot | null => {
+      for (let s = slot - 1; s >= 0; s--) {
+        if (!skipped.has(s)) return s;
+      }
+      return null;
+    };
+
+    const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+      for (const blockInput of blocks) {
+        const parentSlot = parentSlotOf(blockInput.slot);
+        if (parentSlot !== null && !imported.has(parentSlot)) {
+          throw new BlockError(blockInput.getBlock(), {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot: "0x00"});
+        }
+        imported.add(blockInput.slot);
+      }
+    };
+
+    const downloadByRange: SyncChainFns["downloadByRange"] = async (peerSyncMeta, request) => {
+      const blocks: IBlockInput[] = [];
+      if (request.startSlot === computeStartSlotAtEpoch(liedEpoch)) {
+        liedEpochServedBy.set(peerSyncMeta.peerId, (liedEpochServedBy.get(peerSyncMeta.peerId) ?? 0) + 1);
+        liar ??= peerSyncMeta.peerId;
+        if (peerSyncMeta.peerId === liar) return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+      }
+      for (let i = request.startSlot; i < request.startSlot + request.count; i++) {
+        if (skipped.has(i)) continue;
+        blocks.push(
+          BlockInputPreData.createFromBlock({
+            block: {message: generateEmptyBlock(i), signature: ACCEPT_BLOCK},
+            blockRootHex: "0x00",
+            forkName: config.getForkName(i),
+            daOutOfRange: false,
+            source: BlockInputSource.byRange,
+            seenTimestampSec: Math.floor(Date.now() / 1000),
+          })
+        );
+      }
+      return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+    };
+
+    const target: ChainTarget = {slot: computeStartSlotAtEpoch(8), root: ZERO_HASH};
+    await new Promise<void>((resolve, reject) => {
+      const syncChain = new SyncChain(
+        0,
+        target,
+        RangeSyncType.Finalized,
+        logSyncChainFns(logger, {
+          processChainSegment,
+          downloadByRange,
+          getConnectedPeerSyncMeta,
+          reportPeer,
+          pruneBlockInputs,
+          onEnd: (err) => (err ? reject(err) : resolve()),
+        }),
+        {
+          config,
+          logger,
+          clock: new Clock({config, genesisTime: 0, signal: new AbortController().signal}),
+          custodyConfig,
+          metrics: null,
+        },
+        undefined
+      );
+      for (const p of peers) syncChain.addPeer(p, target);
+      syncChain.startSyncing(0);
+    });
+
+    // The retry prefers the peer not tried for the batch, so each peer is asked for the lied epoch exactly once
+    for (const p of peers) {
+      expect(liedEpochServedBy.get(p), `lied epoch requests to ${p === liar ? "liar" : "honest"} peer`).toBe(1);
+    }
+  });
+
   it.each([
     {receivedSlots: [1, 3], expectedEnvelopeSlots: "[1, 3]"},
     {receivedSlots: [], expectedEnvelopeSlots: "[]"},
