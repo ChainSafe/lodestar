@@ -187,7 +187,7 @@ describe("Revealer", () => {
 
   it.each([
     {requestTimeout: 500, attemptTimeout: 500},
-    {requestTimeout: 10_000, attemptTimeout: 2000},
+    {requestTimeout: 10_000, attemptTimeout: 1000},
   ])(
     "limits a publish request to $attemptTimeout ms with a request timeout of $requestTimeout ms",
     async ({requestTimeout, attemptTimeout}) => {
@@ -202,6 +202,21 @@ describe("Revealer", () => {
       );
     }
   );
+
+  it.each([
+    {msToCutoff: 1200, limited: true},
+    {msToCutoff: 1199, limited: false},
+  ])("limits a publish request sent $msToCutoff ms before the cutoff: $limited", async ({msToCutoff, limited}) => {
+    const cutoffMs = config.getSlotComponentDurationMs(ForkName.gloas, config.PAYLOAD_ATTESTATION_DUE_BPS);
+    vi.spyOn(clock, "msFromSlot").mockReturnValue(cutoffMs - msToCutoff);
+    api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(mockApiResponse({}));
+
+    await revealer.onBlock(selectedBlock());
+
+    // The last request that can be sent before the cutoff uses the request timeout of the api client
+    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
+    expect(api.beacon.publishExecutionPayloadEnvelope.mock.calls[0][1]?.timeoutMs).toBe(limited ? 1000 : undefined);
+  });
 
   it("only retries failures that can resolve while the reveal window is open", () => {
     const fetchFailure = new FetchError(
