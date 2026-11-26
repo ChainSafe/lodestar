@@ -1,8 +1,10 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {BUILDER_INDEX_SELF_BUILD} from "@lodestar/params";
 import {IClock} from "@lodestar/state-transition";
 import {BuilderIndex} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, prettyGweiToEth, toRootHex} from "@lodestar/utils";
 import {Metrics, RevealResult} from "../metrics.js";
+import {BidLedger} from "./bidLedger.js";
 import {BidSelector} from "./bidSelector.js";
 import {ObservedBlock} from "./blockObserver.js";
 import {EnvelopePublisher} from "./envelopePublisher.js";
@@ -22,6 +24,7 @@ export type RevealerModules = {
   logger: Logger;
   clock: IClock;
   bidSelector: BidSelector;
+  ledger: BidLedger;
   payloadStore: PayloadStore;
   envelopePublisher: EnvelopePublisher;
   builderIndex: BuilderIndex;
@@ -37,14 +40,27 @@ export class Revealer {
   ) {}
 
   async onBlock(observed: ObservedBlock): Promise<void> {
-    const {bidSelector, clock, config, envelopePublisher, logger, metrics, payloadStore} = this.modules;
+    const {bidSelector, clock, config, envelopePublisher, ledger, logger, metrics, payloadStore} = this.modules;
+    const {blockRoot, slot} = observed;
     const selection = bidSelector.match(observed);
     if (selection.status !== "selected") {
+      const {builderIndex, value, parentBlockHash, parentBlockRoot} = observed.signedBid.message;
+      // Our bid for the parent the block is built on, bids for other parents of the slot could not be selected
+      const ownBid = ledger.getSignedBid(slot, toRootHex(parentBlockHash), toRootHex(parentBlockRoot));
+      if (ownBid !== null) {
+        logger.info("Execution payload bid not selected", {
+          slot,
+          builderIndex: this.modules.builderIndex,
+          blockRoot,
+          value: prettyGweiToEth(ownBid.message.value),
+          selectedBuilderIndex: builderIndex === BUILDER_INDEX_SELF_BUILD ? "self-build" : builderIndex,
+          selectedValue: prettyGweiToEth(value),
+        });
+      }
       return;
     }
     metrics?.bids.won.inc();
 
-    const {blockRoot, slot} = observed;
     const {blockHash} = selection.bid;
     const logCtx = {slot, blockRoot, blockHash};
 

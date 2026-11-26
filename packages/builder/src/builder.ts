@@ -209,6 +209,7 @@ export class Builder {
         logger,
         clock,
         bidSelector: new BidSelector({config, ledger, builderIndex: index}),
+        ledger,
         payloadStore,
         envelopePublisher: new EnvelopePublisher({api, signer: builderSigner, ledger, builderIndex: index}),
         builderIndex: index,
@@ -310,6 +311,29 @@ export class Builder {
     }
   }
 
+  /**
+   * Only blocks that selected one of our bids have to be fetched to reveal the payload. Blocks of slots we bid on
+   * are fetched as well, the revealer logs which bid was selected over ours. A block that selected our builder is always
+   * fetched, even if no bid is recorded for its slot, to surface the inconsistency.
+   */
+  private isRelevantBlock(event: routes.events.EventData[routes.events.EventType.block]): boolean {
+    // Pre-Gloas block events do not identify the builder, those are ignored by the block observer
+    if (!("builderIndex" in event)) {
+      return true;
+    }
+
+    if (event.builderIndex === this.index || this.ledger.getBidsForSlot(event.slot).length > 0) {
+      return true;
+    }
+
+    this.logger.debug("Ignoring block of another builder in slot without own bid", {
+      slot: event.slot,
+      blockRoot: event.block,
+      builderIndex: event.builderIndex,
+    });
+    return false;
+  }
+
   private async onEvent(event: routes.events.BeaconEvent): Promise<void> {
     const signal = this.controller.signal;
     if (signal.aborted) return;
@@ -320,7 +344,9 @@ export class Builder {
           this.headTracker.onHead(event.message.data);
           break;
         case routes.events.EventType.block:
-          await this.blockObserver.processBlockEvent(event.message, signal);
+          if (this.isRelevantBlock(event.message)) {
+            await this.blockObserver.processBlockEvent(event.message, signal);
+          }
           break;
         case routes.events.EventType.proposerPreferences:
           this.proposerPreferencesTracker.onProposerPreferences(event.message.data);

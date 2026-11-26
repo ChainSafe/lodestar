@@ -3,7 +3,7 @@ import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {SecretKey} from "@lodestar/native/blst";
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ErrorAborted, defer, toRootHex} from "@lodestar/utils";
 import {Builder, BuilderModules} from "../../src/builder.js";
@@ -132,7 +132,16 @@ describe("Builder", () => {
     const {onEvent, signal} = api.events.eventstream.mock.calls[0][0];
     const blockRoot = toRootHex(Buffer.alloc(32, 1));
 
-    onEvent({type: EventType.block, message: {slot: 0, block: blockRoot, executionOptimistic: false}});
+    onEvent({
+      type: EventType.block,
+      message: {
+        slot: 0,
+        block: blockRoot,
+        blockHash: toRootHex(Buffer.alloc(32, 7)),
+        builderIndex: modules.index,
+        executionOptimistic: false,
+      },
+    });
     await vi.waitFor(() => expect(observed).toHaveBeenCalledOnce());
     expect(observed.mock.calls[0][0].signedBid).toBe(block.message.body.signedExecutionPayloadBid);
     expect(api.beacon.getBlockV2).toHaveBeenCalledWith({blockId: blockRoot}, {signal});
@@ -199,12 +208,94 @@ describe("Builder", () => {
     expect(onPayloadAttributes).toHaveBeenCalledExactlyOnceWith(payloadAttributes);
 
     const blockRoot = toRootHex(Buffer.alloc(32, 1));
-    onEvent({type: EventType.block, message: {slot: 0, block: blockRoot, executionOptimistic: false}});
+    onEvent({
+      type: EventType.block,
+      message: {
+        slot: 0,
+        block: blockRoot,
+        blockHash: toRootHex(Buffer.alloc(32, 7)),
+        builderIndex: modules.index,
+        executionOptimistic: false,
+      },
+    });
     await vi.waitFor(() => expect(onBlock).toHaveBeenCalledOnce());
     expect(onBlock.mock.calls[0][0]).toMatchObject({
       blockRoot,
       slot: 0,
       signedBid: block.message.body.signedExecutionPayloadBid,
+    });
+  });
+
+  describe("block event filtering", () => {
+    const blockEvent = (slot: number, builderIndex: number) =>
+      ({
+        type: EventType.block,
+        message: {
+          slot,
+          block: toRootHex(Buffer.alloc(32, slot)),
+          blockHash: toRootHex(Buffer.alloc(32, 7)),
+          builderIndex,
+          executionOptimistic: false,
+        },
+      }) as const;
+
+    it("does not fetch a block of another builder in a slot without own bid", () => {
+      const processBlock = vi.spyOn(modules.blockObserver, "processBlockEvent").mockResolvedValue();
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+      onEvent(blockEvent(1, modules.index + 1));
+
+      expect(processBlock).not.toHaveBeenCalled();
+    });
+
+    it("does not fetch a self-built block in a slot without own bid", () => {
+      const processBlock = vi.spyOn(modules.blockObserver, "processBlockEvent").mockResolvedValue();
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+      onEvent(blockEvent(1, BUILDER_INDEX_SELF_BUILD));
+
+      expect(processBlock).not.toHaveBeenCalled();
+    });
+
+    it("fetches a self-built block in a slot with own bid", () => {
+      const processBlock = vi.spyOn(modules.blockObserver, "processBlockEvent").mockResolvedValue();
+      const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+      signedBid.message.slot = 1;
+      modules.ledger.recordBid({signedBid, signedBidRoot: toRootHex(Buffer.alloc(32, 5))});
+      new Builder(modules);
+      const {onEvent, signal} = api.events.eventstream.mock.calls[0][0];
+
+      const event = blockEvent(1, BUILDER_INDEX_SELF_BUILD);
+      onEvent(event);
+
+      expect(processBlock).toHaveBeenCalledExactlyOnceWith(event.message, signal);
+    });
+
+    it("fetches a block of another builder in a slot with own bid", () => {
+      const processBlock = vi.spyOn(modules.blockObserver, "processBlockEvent").mockResolvedValue();
+      const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+      signedBid.message.slot = 1;
+      modules.ledger.recordBid({signedBid, signedBidRoot: toRootHex(Buffer.alloc(32, 5))});
+      new Builder(modules);
+      const {onEvent, signal} = api.events.eventstream.mock.calls[0][0];
+
+      const event = blockEvent(1, modules.index + 1);
+      onEvent(event);
+
+      expect(processBlock).toHaveBeenCalledExactlyOnceWith(event.message, signal);
+    });
+
+    it("fetches a block that selected our builder even without a recorded bid", () => {
+      const processBlock = vi.spyOn(modules.blockObserver, "processBlockEvent").mockResolvedValue();
+      new Builder(modules);
+      const {onEvent, signal} = api.events.eventstream.mock.calls[0][0];
+
+      const event = blockEvent(1, modules.index);
+      onEvent(event);
+
+      expect(processBlock).toHaveBeenCalledExactlyOnceWith(event.message, signal);
     });
   });
 
