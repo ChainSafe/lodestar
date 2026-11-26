@@ -79,6 +79,16 @@ fn skipReason(test_case_name: []const u8) ?[]const u8 {
     for (stub_deposit_cases) |name| {
         if (std.mem.eql(u8, test_case_name, name)) return "deposit signed with the BLS stub signature";
     }
+    // Unskip with the first release after v1.7.0-beta.4.
+    const estimated_committee_weight_cases = [_][]const u8{
+        "fcr_handles_multiple_consecutive_empty_slots",
+        "is_one_confirmed_passes_large_validator_voting_in_empty_slot",
+        "is_one_confirmed_passes_with_empty_slot_and_attester_in_two_consecutive_slots_1",
+        "is_one_confirmed_passes_with_empty_slot_and_attester_in_two_consecutive_slots_2",
+    };
+    for (estimated_committee_weight_cases) |name| {
+        if (std.mem.eql(u8, test_case_name, name)) return "v1.7.0-beta.4 vectors predate https://github.com/ethereum/consensus-specs/pull/5670";
+    }
     return null;
 }
 
