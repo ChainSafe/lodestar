@@ -67,6 +67,8 @@ const skippedGossipTests: RegExp[] = [
   // The pinned vectors carry placeholder block hashes, so the block hash check from consensus-specs#5770 rejects
   // envelopes they expect to be accepted. Unskip once a release ships vectors with real block hashes.
   /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__(valid.*|ignore_duplicate)$/,
+  // An epoch above Number.MAX_SAFE_INTEGER fails deserialization, so the exit is rejected instead of ignored.
+  /^gossip_voluntary_exit\/gossip_voluntary_exit__ignore_far_future_epoch$/,
 ];
 
 const networking: TestRunnerCustom = (fork, testHandler, testSuite, testSuiteDirpath) => {
