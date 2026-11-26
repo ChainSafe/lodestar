@@ -246,7 +246,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime operation: Operation) type {
                         },
                     );
                 },
-                .execution_payload_bid => try state_transition.processExecutionPayloadBid(fork, allocator, cached_state.config, cached_state.epoch_cache, state, &self.op),
+                .execution_payload_bid => try state_transition.processExecutionPayloadBid(fork, allocator, cached_state.config, cached_state.epoch_cache, state, &self.op, true),
                 .parent_execution_payload => {
                     const block = BeaconBlock(.full, fork){ .inner = self.op };
                     try state_transition.processParentExecutionPayload(fork, allocator, io, cached_state.config, cached_state.epoch_cache, state, &block);

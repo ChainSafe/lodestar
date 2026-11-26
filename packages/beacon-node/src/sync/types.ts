@@ -172,6 +172,8 @@ export type PendingPayloadRootHex = {
 export type PendingPayloadEnvelope = {
   status: PendingPayloadInputStatus.waitingForBlock;
   envelope: SignedExecutionPayloadEnvelope;
+  /** Peer that served the envelope, undefined if it was already cached */
+  envelopePeerId?: string;
   timeAddedSec: number;
   peerIdStrings: Set<string>;
 };
