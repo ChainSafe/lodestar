@@ -70,6 +70,8 @@ const skippedGossipTests: RegExp[] = [
   // Lodestar ignores previous epoch attestations exactly MAXIMUM_GOSSIP_CLOCK_DISPARITY after the epoch window
   // closes, the spec includes that end point
   /^gossip_beacon_(attestation|aggregate_and_proof)\/.*__accepts_(first|last)_slot_when_epoch_window_closes$/,
+  // An epoch above Number.MAX_SAFE_INTEGER fails deserialization, so the exit is rejected instead of ignored.
+  /^gossip_voluntary_exit\/gossip_voluntary_exit__ignore_far_future_epoch$/,
 ];
 
 const networking: TestRunnerCustom = (fork, testHandler, testSuite, testSuiteDirpath) => {

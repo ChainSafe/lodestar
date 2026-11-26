@@ -479,10 +479,8 @@ export async function runGossipValidationTest(
           if (blockEntry.failed) {
             throw new Error(`First block ${blockEntry.block} must not be marked as failed`);
           }
-          if (slot !== anchorState.latestBlockHeader.slot) {
-            throw new Error(
-              `First block slot ${slot} does not match anchor state slot ${anchorState.latestBlockHeader.slot}`
-            );
+          if (slot !== anchorState.slot) {
+            throw new Error(`First block slot ${slot} does not match anchor state slot ${anchorState.slot}`);
           }
           blockStatesByRoot.set(blockRootHex, anchorStateView);
           if (blockEntry.payload) {
