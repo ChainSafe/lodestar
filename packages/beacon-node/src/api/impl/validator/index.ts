@@ -132,8 +132,6 @@ const BLOCK_PRODUCTION_RACE_CUTOFF_BPS = 1667;
  * TODO GLOAS: revisit, the block propagates faster as it only commits to a bid and the attestation deadline changed
  */
 export const BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS = 1667;
-/** Rejection message of the bid block branch when there is no viable bid to commit to */
-const NO_BID_AVAILABLE = "No builder bid available";
 
 type BidCandidate = {
   signedBid: gloas.SignedExecutionPayloadBid;
@@ -1156,7 +1154,7 @@ export function getValidatorApi(
       });
       const bidBlockPromise: ReturnType<typeof chain.produceBlock> = bestBidPromise.then((candidate) => {
         if (candidate === null) {
-          throw new Error(NO_BID_AVAILABLE);
+          throw new NoBidReceived();
         }
         metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
         return timed(ProducedBlockSource.builder, () =>
@@ -1270,7 +1268,7 @@ export function getValidatorApi(
         source = ProducedBlockSource.engine;
         bestResult = engineResult;
         const reason =
-          bidBlockResult.status === "rejected" && (bidBlockResult.reason as Error).message === NO_BID_AVAILABLE
+          bidBlockResult.status === "rejected" && bidBlockResult.reason instanceof NoBidReceived
             ? EngineBlockSelectionReason.BuilderNoBid
             : bidBlockResult.status === "pending"
               ? EngineBlockSelectionReason.BuilderPending
