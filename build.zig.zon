@@ -231,10 +231,15 @@
             .root_source_file = "src/swap_or_not_shuffle/root.zig",
             .imports = .{.blst},
         },
+        .execution_block_hash = .{
+            .root_source_file = "src/execution_block_hash/root.zig",
+            .imports = .{ .config, .consensus_types, .fork_types },
+        },
         .state_transition = .{
             .root_source_file = "src/state_transition/root.zig",
             .imports = .{
                 .build_options,
+                .bit_array,
                 .bounded_array,
                 .swap_or_not_shuffle,
                 .ssz,
@@ -258,6 +263,16 @@
         .beacon_node = .{
             .root_source_file = "src/beacon_node/root.zig",
             .imports = .{ .consensus_types, .state_transition, .persistent_merkle_tree, .testing_allocators, .metrics, .hex, .time },
+        },
+        .fault_io = .{
+            .root_source_file = "test/fault_io.zig",
+        },
+        .socket_test_support = .{
+            .root_source_file = "test/socket_test_support.zig",
+        },
+        .udp = .{
+            .root_source_file = "src/udp/root.zig",
+            .imports = .{ .fault_io, .socket_test_support },
         },
         .ere_verifier = .{
             .root_source_file = "src/ere_verifier/root.zig",
@@ -391,6 +406,7 @@
                     .bls_options,
                     .cpu_count,
                     .swap_or_not_shuffle,
+                    .execution_block_hash,
                     .hex,
                     .persistent_merkle_tree,
                     .ssz,
@@ -426,10 +442,13 @@
         .fork_types = .{ .root_module = .fork_types },
         .bls = .{ .root_module = .bls },
         .swap_or_not_shuffle = .{ .root_module = .swap_or_not_shuffle },
+        .execution_block_hash = .{ .root_module = .execution_block_hash },
         .state_transition = .{ .root_module = .state_transition },
         .era = .{ .root_module = .era },
         .clock = .{ .root_module = .clock },
         .beacon_node = .{ .root_module = .beacon_node },
+        .fault_io = .{ .root_module = .fault_io },
+        .udp = .{ .root_module = .udp },
         .ere_verifier = .{ .root_module = .ere_verifier },
         .bindings_allocator = .{
             .root_module = .{

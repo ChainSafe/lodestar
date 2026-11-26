@@ -55,7 +55,7 @@ pub fn upgradeStateToGloas(allocator: Allocator, io: std.Io, config: *const Beac
     try state.inner.setValue("latest_block_hash", &header.block_hash);
     var availability = try state.inner.get("execution_payload_availability");
     for (0..preset.SLOTS_PER_HISTORICAL_ROOT) |slot| try availability.set(slot, true);
-    const ptc_window = try gloas.initializePtcWindow(.fulu, allocator, epoch_cache, fulu_state);
+    const ptc_window = try gloas.initializePtcWindow(.fulu, allocator, io, epoch_cache, fulu_state);
     try state.inner.setValue("ptc_window", &ptc_window);
     try onboardBuilders(allocator, io, config, epoch_cache, &state);
     try state.commit();

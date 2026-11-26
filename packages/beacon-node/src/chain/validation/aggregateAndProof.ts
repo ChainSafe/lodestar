@@ -1,5 +1,8 @@
+import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
+  ISignatureSet,
+  SignatureSetType,
   computeEpochAtSlot,
   createAggregateSignatureSetFromComponents,
   isAggregatorFromCommitteeLength,
@@ -98,15 +101,29 @@ async function validateAggregateAndProof(
     //   (a client MAY queue attestations for processing until the payload is imported and SHOULD
     //   request the payload envelope via `ExecutionPayloadEnvelopesByRoot` using
     //   `aggregate.data.beacon_block_root`).
-    if (
-      block !== null &&
-      attData.index === 1 &&
-      !chain.forkChoice.hasPayloadHexUnsafe(toRootHex(attData.beaconBlockRoot))
-    ) {
-      throw new AttestationError(GossipAction.IGNORE, {
-        code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
-        beaconBlockRoot: toRootHex(attData.beaconBlockRoot),
-      });
+    if (block !== null && attData.index === 1) {
+      const beaconBlockRoot = toRootHex(attData.beaconBlockRoot);
+      const fullBlock = chain.forkChoice.getBlockHex(beaconBlockRoot, PayloadStatus.FULL);
+      if (fullBlock === null) {
+        throw new AttestationError(GossipAction.IGNORE, {
+          code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
+          beaconBlockRoot,
+        });
+      }
+      // [IGNORE] The attested execution payload is optimistic
+      if (fullBlock.executionStatus === ExecutionStatus.Syncing) {
+        throw new AttestationError(GossipAction.IGNORE, {
+          code: AttestationErrorCode.EXECUTION_PAYLOAD_OPTIMISTIC,
+          beaconBlockRoot,
+        });
+      }
+      // [REJECT] The attested execution payload is processed and invalid
+      if (fullBlock.executionStatus === ExecutionStatus.Invalid) {
+        throw new AttestationError(GossipAction.REJECT, {
+          code: AttestationErrorCode.EXECUTION_PAYLOAD_INVALID,
+          beaconBlockRoot,
+        });
+      }
     }
 
     // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)
@@ -259,11 +276,23 @@ async function validateAggregateAndProof(
   // [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
   // [REJECT] The signature of aggregate is valid.
   const signingRoot = cachedAttData ? cachedAttData.signingRoot : getAttestationDataSigningRoot(chain.config, attData);
-  const indexedAttestationSignatureSet = createAggregateSignatureSetFromComponents(
-    indexedAttestation.attestingIndices,
-    signingRoot,
-    indexedAttestation.signature
-  );
+  const indexedAttestationSignatureSet: ISignatureSet =
+    shuffling.committeePubkeysId === undefined
+      ? createAggregateSignatureSetFromComponents(
+          indexedAttestation.attestingIndices,
+          signingRoot,
+          indexedAttestation.signature
+        )
+      : {
+          type: SignatureSetType.committee,
+          indices: indexedAttestation.attestingIndices,
+          committeePubkeysId: shuffling.committeePubkeysId,
+          slot: attSlot,
+          committeeIndices: [committeeIndex],
+          aggregationBits: aggregate.aggregationBits,
+          signingRoot,
+          signature: indexedAttestation.signature,
+        };
   const signatureSets = [
     getSelectionProofSignatureSet(chain.config, attSlot, aggregatorIndex, signedAggregateAndProof),
     getAggregateAndProofSignatureSet(chain.config, attEpoch, aggregatorIndex, signedAggregateAndProof),

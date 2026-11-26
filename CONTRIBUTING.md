@@ -121,7 +121,7 @@ Run the tests relevant to your changes, for example:
 
 ```sh
 zig build test:ssz
-zig build test:ssz -Dtest:ssz.filters="my full test name"
+zig build test:ssz -Dssz.filters="my full test name"
 zig fmt --check .
 zig build test:tidy
 ```
@@ -159,8 +159,9 @@ pnpm --filter @lodestar/native test
 pnpm --filter @lodestar/native lint
 ```
 
-Use `prepare-minimal` or `prepare-gnosis` for other presets. These scripts share an
-output directory, so do not run builds for different presets concurrently. Keep
+`pnpm build:native` builds the addon for every preset. `prepare-mainnet`, `prepare-minimal`
+and `prepare-gnosis` rebuild one, and `LODESTAR_PRESET` selects which one is loaded. These
+scripts share an intermediate output file, so do not run them concurrently. Keep
 JavaScript wrappers and type declarations synchronized with native exports.
 
 ## Devcontainer

@@ -139,6 +139,7 @@ pub const EpochCache = struct {
     /// Takes ownership of `active_indices` on success; the caller retains ownership on failure.
     fn initEpochShufflingRc(
         allocator: Allocator,
+        io: std.Io,
         state: *AnyBeaconState,
         active_indices: []u32,
         epoch: Epoch,
@@ -146,7 +147,7 @@ pub const EpochCache = struct {
         const rc = try allocator.create(EpochShufflingRc);
         errdefer allocator.destroy(rc);
 
-        const epoch_shuffling = try computeEpochShuffling(allocator, state, active_indices, epoch);
+        const epoch_shuffling = try computeEpochShuffling(allocator, io, state, active_indices, epoch);
         rc.init(allocator, epoch_shuffling);
         return rc;
     }
@@ -281,7 +282,7 @@ pub const EpochCache = struct {
             const active_indices = try previous_active_indices_array_list.toOwnedSlice(allocator);
             errdefer allocator.free(active_indices);
 
-            break :blk try initEpochShufflingRc(allocator, state, active_indices, previous_epoch);
+            break :blk try initEpochShufflingRc(allocator, io, state, active_indices, previous_epoch);
         };
         errdefer previous_shuffling_rc.unref();
 
@@ -289,7 +290,7 @@ pub const EpochCache = struct {
             const active_indices = try current_active_indices_array_list.toOwnedSlice(allocator);
             errdefer allocator.free(active_indices);
 
-            break :blk try initEpochShufflingRc(allocator, state, active_indices, current_epoch);
+            break :blk try initEpochShufflingRc(allocator, io, state, active_indices, current_epoch);
         };
         errdefer current_shuffling_rc.unref();
 
@@ -297,7 +298,7 @@ pub const EpochCache = struct {
             const active_indices = try next_active_indices_array_list.toOwnedSlice(allocator);
             errdefer allocator.free(active_indices);
 
-            break :blk try initEpochShufflingRc(allocator, state, active_indices, next_epoch);
+            break :blk try initEpochShufflingRc(allocator, io, state, active_indices, next_epoch);
         };
         errdefer next_shuffling_rc.unref();
 
@@ -329,7 +330,7 @@ pub const EpochCache = struct {
                 switch (fork_seq) {
                     inline else => |f| try computeProposers(
                         f,
-                        allocator,
+                        io,
                         current_proposer_seed,
                         current_epoch,
                         current_shuffling_rc.get().active_indices,
@@ -354,7 +355,7 @@ pub const EpochCache = struct {
                 switch (next_fork_seq) {
                     inline else => |f| try computeProposers(
                         f,
-                        allocator,
+                        io,
                         next_proposer_seed,
                         next_epoch,
                         next_shuffling_rc.get().active_indices,
@@ -571,7 +572,7 @@ pub const EpochCache = struct {
         return self.effective_balance_increments.get();
     }
 
-    pub fn afterProcessEpoch(self: *EpochCache, state: *AnyBeaconState, epoch_transition_cache: *const EpochTransitionCache) !void {
+    pub fn afterProcessEpoch(self: *EpochCache, io: std.Io, state: *AnyBeaconState, epoch_transition_cache: *const EpochTransitionCache) !void {
         const upcoming_epoch = self.epoch + 1;
         const epoch_after_upcoming = upcoming_epoch + 1;
         const slot = try state.slot();
@@ -586,6 +587,7 @@ pub const EpochCache = struct {
 
             break :blk try initEpochShufflingRc(
                 self.allocator,
+                io,
                 state,
                 next_shuffling_active_indices,
                 epoch_after_upcoming,
@@ -629,7 +631,7 @@ pub const EpochCache = struct {
     }
 
     /// At fork boundary, this runs post-fork logic and after `upgradeState*`.
-    pub fn finalProcessEpoch(self: *EpochCache, state: *AnyBeaconState) !void {
+    pub fn finalProcessEpoch(self: *EpochCache, io: std.Io, state: *AnyBeaconState) !void {
         self.proposers_prev_epoch = self.proposers;
         switch (state.forkSeq()) {
             inline else => |fork| {
@@ -655,7 +657,7 @@ pub const EpochCache = struct {
                     );
                     try computeProposers(
                         fork,
-                        self.allocator,
+                        io,
                         upcoming_proposer_seed,
                         self.epoch,
                         self.current_shuffling.get().active_indices,
@@ -671,7 +673,7 @@ pub const EpochCache = struct {
                         switch (next_fork_seq) {
                             inline else => |f| try computeProposers(
                                 f,
-                                self.allocator,
+                                io,
                                 next_proposer_seed,
                                 self.epoch + 1,
                                 next_epoch_indices,

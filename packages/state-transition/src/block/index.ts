@@ -106,7 +106,8 @@ export function processBlock(
     const timer = metrics?.processBlockStepTime.startTimer({step: BlockProcessStep.processExecutionPayloadBid});
     processExecutionPayloadBid(
       state as CachedBeaconStateGloas,
-      (block as BeaconBlock<ForkPostGloas>).body.signedExecutionPayloadBid
+      (block as BeaconBlock<ForkPostGloas>).body.signedExecutionPayloadBid,
+      verifySignatures
     );
     timer?.();
   }

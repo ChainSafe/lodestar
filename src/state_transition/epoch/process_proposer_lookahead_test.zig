@@ -20,7 +20,7 @@ test "memory_safety: proposer lookahead shuffling belongs to the epoch cache all
         defer test_state.deinit();
 
         const fulu_state = try upgradeStateToFulu(
-            allocator,
+            std.testing.io,
             test_state.cached_state.config,
             test_state.cached_state.epoch_cache,
             try test_state.cached_state.state.tryCastToFork(.electra),
@@ -33,7 +33,7 @@ test "memory_safety: proposer lookahead shuffling belongs to the epoch cache all
         const expected_shuffling = blk: {
             const expected_indices = try allocator.dupe(u32, test_state.epoch_transition_cache.next_shuffling_active_indices);
             errdefer allocator.free(expected_indices);
-            break :blk try computeEpochShufflingForFork(.fulu, allocator, fulu, expected_indices, new_epoch);
+            break :blk try computeEpochShufflingForFork(.fulu, allocator, std.testing.io, fulu, expected_indices, new_epoch);
         };
         defer expected_shuffling.deinit();
 
@@ -52,6 +52,7 @@ test "memory_safety: proposer lookahead shuffling belongs to the epoch cache all
         try processProposerLookahead(
             .fulu,
             caller_allocator_state.allocator(),
+            std.testing.io,
             test_state.cached_state.epoch_cache,
             test_state.cached_state.state.castToFork(.fulu),
             test_state.epoch_transition_cache,
@@ -68,7 +69,7 @@ test "memory_safety: proposer lookahead shuffling belongs to the epoch cache all
     }
 }
 
-test "memory_safety: proposer lookahead should leave the shuffle job for deinit on selection OOM" {
+test "memory_safety: proposer lookahead should leave the shuffle job for deinit on selection error" {
     const allocator = std.testing.allocator;
     const pool_size = 375_000;
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = pool_size });
@@ -78,7 +79,7 @@ test "memory_safety: proposer lookahead should leave the shuffle job for deinit 
     defer test_state.deinit();
 
     const fulu_state = try upgradeStateToFulu(
-        allocator,
+        std.testing.io,
         test_state.cached_state.config,
         test_state.cached_state.epoch_cache,
         try test_state.cached_state.state.tryCastToFork(.electra),
@@ -96,11 +97,14 @@ test "memory_safety: proposer lookahead should leave the shuffle job for deinit 
         test_state.epoch_transition_cache,
     );
 
-    var caller_allocator_state = std.testing.FailingAllocator.init(allocator, .{ .fail_index = 0 });
+    // Proposer selection allocates nothing, so fail it on its inputs. The shuffle job
+    // already copied the active indices.
+    test_state.epoch_transition_cache.next_shuffling_active_indices = &.{};
 
-    try std.testing.expectError(error.OutOfMemory, processProposerLookahead(
+    try std.testing.expectError(error.InvalidIndexCount, processProposerLookahead(
         .fulu,
-        caller_allocator_state.allocator(),
+        allocator,
+        std.testing.io,
         epoch_cache,
         fulu,
         test_state.epoch_transition_cache,
