@@ -262,7 +262,7 @@
         },
         .beacon_node = .{
             .root_source_file = "src/beacon_node/root.zig",
-            .imports = .{ .consensus_types, .state_transition, .persistent_merkle_tree, .testing_allocators, .metrics, .hex, .time },
+            .imports = .{ .consensus_types, .state_transition, .persistent_merkle_tree, .testing_allocators, .metrics, .hex, .time, .config, .fork_choice, .fork_types, .constants },
         },
         .ere_verifier = .{
             .root_source_file = "src/ere_verifier/root.zig",

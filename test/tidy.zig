@@ -43,8 +43,6 @@ const max_test_blocks = 1;
 /// `stale allowlist entry` fails when an entry stops needing the exemption, so
 /// this list cannot quietly rot into a blanket exclusion.
 const inline_test_allowlist = [_][]const u8{
-    // Private methods on a public struct: destroyState.
-    "src/beacon_node/chain/state_cache/block_state_cache.zig",
     // Private cgroup v1/v2 parsers: parseCpuV1, parseCpuMaxV2, translate.
     "src/cpu_count.zig",
     // Private helper: compatibleUnionOptionsAreCompatible.

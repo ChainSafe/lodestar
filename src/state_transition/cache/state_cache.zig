@@ -129,9 +129,50 @@ pub const CachedBeaconState = struct {
         self.slashings_cache.updateLatestBlockSlot(latest_block_slot);
     }
 
-    // TODO: implement loadCachedBeaconState
-    // this is used when we load a state from disc, given a seed state
-    // need to do this once we switch to TreeView
+    pub const LoadError = Allocator.Error || error{
+        PoolExhausted,
+        InvalidStateBytes,
+        StateCacheInitializationFailed,
+    };
+
+    /// Restores a separately owned state using this seed's pool and shared caches.
+    /// Bytes must have trusted provenance; SSZ decoding does not authenticate them.
+    /// The seed and its backing resources must remain alive throughout the call.
+    pub fn loadCachedBeaconState(
+        self: *CachedBeaconState,
+        allocator: Allocator,
+        io: std.Io,
+        state_bytes: []const u8,
+        seed_validators_bytes: ?[]const u8,
+    ) LoadError!*CachedBeaconState {
+        var loaded = @import("../load_state.zig").loadState(
+            allocator,
+            self.config,
+            self.state,
+            state_bytes,
+            seed_validators_bytes,
+        ) catch |err| return switch (err) {
+            error.OutOfMemory => error.OutOfMemory,
+            error.PoolExhausted => error.PoolExhausted,
+            else => error.InvalidStateBytes,
+        };
+        defer allocator.free(loaded.modified_validators);
+        errdefer loaded.state.deinit();
+
+        const state = try allocator.create(AnyBeaconState);
+        errdefer allocator.destroy(state);
+        state.* = loaded.state;
+        const cached = createCachedBeaconState(allocator, io, state, .{
+            .config = self.config,
+            .pubkey_cache = self.epoch_cache.pubkey_cache,
+            .builder_deposit_signature_cache = self.epoch_cache.builder_deposit_signature_cache,
+        }, null) catch |err| return switch (err) {
+            error.OutOfMemory => error.OutOfMemory,
+            error.PoolExhausted => error.PoolExhausted,
+            else => error.StateCacheInitializationFailed,
+        };
+        return cached;
+    }
 
     // TODO: implement getCachedBeaconState
     // this is used to create a CachedBeaconState based on a tree and an exising CachedBeaconState at fork transition
