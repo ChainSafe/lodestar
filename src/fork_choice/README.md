@@ -191,8 +191,12 @@ derived data in an arena:
 - `get_current_target_score` sums the pulled-up head state's balances per distinct
   vote too and computes each target's checkpoint once, not once per validator.
 - Committee membership is one byte per validator per epoch (the slot it attests
-  in), built from the head state's shuffling only when a range query needs it:
-  empty slots before a block or equivocators in the range.
+  in), built from the head state's shuffling for the epochs a range query reaches.
+- `compute_committee_weight_between_slots` is one pass over a balance source's active
+  validators per range end slot. It buckets each balance by the validator's latest
+  committee slot at or before the end and prefix-sums the buckets, so every start slot
+  is one lookup and a validator assigned in both epochs of a range counts once. Queries
+  share few end slots, mostly `current_slot - 1`.
 - Loads are lazy: the previous balance source is only read at an epoch start, for
   reconfirmation, and the pulled-up head state only when an FFG check runs.
 
