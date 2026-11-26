@@ -11,6 +11,8 @@ import {JobItemQueue} from "../../util/queue/index.js";
 import {
   ClientVersion,
   ExecutePayloadResponse,
+  ExecutionEngineError,
+  ExecutionEngineErrorCode,
   ExecutionEngineState,
   ExecutionPayloadStatus,
   ForkchoiceUpdatedResult,
@@ -378,7 +380,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       case ExecutionPayloadStatus.SYNCING:
         // Throw error on syncing if requested to produce a block, else silently ignore
         if (payloadAttributes) {
-          throw Error("Execution Layer Syncing");
+          throw new ExecutionEngineError({code: ExecutionEngineErrorCode.SYNCING}, "Execution Layer Syncing");
         }
         return result;
 
