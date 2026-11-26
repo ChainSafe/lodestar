@@ -347,11 +347,13 @@ describe("sync / range / batches", () => {
         });
       });
 
-      it("PARENT_BLOCK_UNKNOWN after startSlot, parentBatch delivered its tail block => CurrentBatch", () => {
+      it("PARENT_BLOCK_UNKNOWN after startSlot, parentBatch delivered its tail block => Ambiguous", () => {
         const err = parentError(BlockErrorCode.PARENT_BLOCK_UNKNOWN, startSlot + 1);
-        expect(classifyProcessingFault(err, batch, fakeBatch(parentStartSlot, [parentTailSlot])).kind).toBe(
-          ProcessingFaultKind.CurrentBatch
-        );
+        const parentBatch = fakeBatch(parentStartSlot, [parentTailSlot]);
+        expect(classifyProcessingFault(err, batch, parentBatch)).toEqual({
+          kind: ProcessingFaultKind.Ambiguous,
+          parentBatch,
+        });
       });
 
       it("PARENT_BLOCK_UNKNOWN after startSlot, parentBatch missing its tail block => Ambiguous", () => {
@@ -363,10 +365,10 @@ describe("sync / range / batches", () => {
         });
       });
 
-      it("PARENT_PAYLOAD_UNKNOWN after startSlot keys off parentBatch tail payload", () => {
+      it("PARENT_PAYLOAD_UNKNOWN after startSlot => Ambiguous regardless of parentBatch tail payload", () => {
         const err = parentError(BlockErrorCode.PARENT_PAYLOAD_UNKNOWN, startSlot + 1);
         expect(classifyProcessingFault(err, batch, fakeBatch(parentStartSlot, [], [parentTailSlot])).kind).toBe(
-          ProcessingFaultKind.CurrentBatch
+          ProcessingFaultKind.Ambiguous
         );
         expect(classifyProcessingFault(err, batch, fakeBatch(parentStartSlot, [], [])).kind).toBe(
           ProcessingFaultKind.Ambiguous

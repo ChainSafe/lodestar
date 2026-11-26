@@ -727,8 +727,7 @@ export class SyncChain {
       this.logger.verbose("Batch process error", logCtx, res.err);
 
       // advanceChain() drops every batch before the last batch with blocks, so the AwaitingValidation batches before
-      // `batch` are that batch followed by 0-block batches. 0-block batches are assumed correct,
-      // see classifyProcessingFault()
+      // `batch` are that batch followed by 0-block batches, see classifyProcessingFault()
       const parentBatch = toArr(this.batches).findLast(
         (b) =>
           b.startEpoch < batch.startEpoch &&

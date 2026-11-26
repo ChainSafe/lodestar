@@ -175,10 +175,10 @@ describe("sync / range / chain", () => {
       expectParentRedownload: true,
     },
     {
-      fault: "CurrentBatch, parent batch with tail block",
+      fault: "Ambiguous, parent batch with tail block",
       skipFrom: 3 * SLOTS_PER_EPOCH,
       failSlot: 8 * SLOTS_PER_EPOCH + 1,
-      expectParentRedownload: false,
+      expectParentRedownload: true,
     },
   ])(
     "recovers from a processing fault after 0-block epochs: $fault",

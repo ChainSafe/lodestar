@@ -142,10 +142,11 @@ export type ProcessingFault =
  * Note that range sync is supposed to only handle linear chain, for forky condition we'll handle it via backward sync
  * in BlockInputSync or the upcoming/TODO beacon_blocks_by_head req/resp.
  *
- * `parentBatch` is the last batch with blocks before `batch`. 0-block batches in between are assumed correct.
+ * `parentBatch` is the last batch with blocks before `batch`, it may be followed by 0-block batches.
  * Epochs with 0 blocks usually happen on devnets, during periods of poor liveness when no proposer gets a block
- * included for whole epochs. If a 0-block response was wrong instead, the SyncChain fails quickly and a new one
- * is created later.
+ * included for whole epochs. A wrong 0-block response only shows up as an unknown parent in `batch`, so with 0-block
+ * batches in between the fault is never pinned on `batch` alone: `parentBatch` and the 0-block batches after it are
+ * downloaded again.
  */
 export function classifyProcessingFault(err: Error, batch: Batch, parentBatch: Batch | undefined): ProcessingFault {
   if (!(err instanceof BlockError)) {
@@ -167,16 +168,19 @@ export function classifyProcessingFault(err: Error, batch: Batch, parentBatch: B
     return {kind: ProcessingFaultKind.ParentBatch, parentBatch};
   }
 
-  // `parentBatch` can be followed by 0-block batches (assumed correct), so its tail is the end of its own range
+  // `parentBatch` can be followed by 0-block batches, so its tail is the end of its own range
   const parentTailSlot = parentBatch.startSlot + parentBatch.count - 1;
   const parentHasFullTail =
     code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
       ? (parentBatch.getPayloadEnvelopes()?.get(parentTailSlot)?.hasPayloadEnvelope() ?? false)
       : parentBatch.getBlocks().some((b) => b.slot === parentTailSlot);
 
+  // With 0-block batches in between, it could be a wrong 0-block batch
+  const hasZeroBlockGap = parentTailSlot + 1 < batch.startSlot;
+
   // Assumes the tail block / payload delivered by `parentBatch` is canonical. If it is orphaned, `parentBatch` is at
   // fault: `batch` keeps failing until MAX_PROCESSING_ATTEMPTS and a new SyncChain is created.
-  if (parentHasFullTail) {
+  if (parentHasFullTail && !hasZeroBlockGap) {
     return {kind: ProcessingFaultKind.CurrentBatch};
   }
   return {kind: ProcessingFaultKind.Ambiguous, parentBatch};
