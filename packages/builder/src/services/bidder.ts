@@ -43,7 +43,7 @@ export type BidderModules = {
 };
 
 /** Maximum payload attributes kept while the proposer preferences of their slot are not known */
-const MAX_PENDING_PAYLOAD_ATTRIBUTES = 16;
+export const MAX_PENDING_PAYLOAD_ATTRIBUTES = 16;
 
 /**
  * Bids once per proposal slot and parent: starts a payload build when the beacon node emits payload attributes,
@@ -96,9 +96,12 @@ export class Bidder {
         // The payload attributes are only emitted once, the proposer preferences can still arrive before the slot
         if (!this.pendingPayloadAttributes.has(buildId)) {
           this.prunePendingPayloadAttributes();
-          if (this.pendingPayloadAttributes.size < MAX_PENDING_PAYLOAD_ATTRIBUTES) {
-            this.pendingPayloadAttributes.set(buildId, event);
+          if (this.pendingPayloadAttributes.size >= MAX_PENDING_PAYLOAD_ATTRIBUTES) {
+            // Oldest first, the latest payload attributes are the ones built on the current head
+            const oldest = this.pendingPayloadAttributes.keys().next().value;
+            if (oldest !== undefined) this.pendingPayloadAttributes.delete(oldest);
           }
+          this.pendingPayloadAttributes.set(buildId, event);
           logger.debug("No proposer preferences known for slot, not bidding", {...logCtx, dependentRoot});
           metrics?.bids.total.inc({result: BidResult.noProposerPreferences});
         }

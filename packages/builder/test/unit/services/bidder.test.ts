@@ -5,7 +5,7 @@ import {SecretKey} from "@lodestar/native/blst";
 import {ForkName} from "@lodestar/params";
 import {BuilderStatus, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
-import {Bidder, PayloadAttributesEvent} from "../../../src/services/bidder.js";
+import {Bidder, MAX_PENDING_PAYLOAD_ATTRIBUTES, PayloadAttributesEvent} from "../../../src/services/bidder.js";
 import {BidLedger} from "../../../src/services/bidLedger.js";
 import {BuilderSigner} from "../../../src/services/builderSigner.js";
 import {HeadTracker} from "../../../src/services/headTracker.js";
@@ -97,11 +97,11 @@ describe("Bidder", () => {
     proposerPreferencesTracker.onProposerPreferences(preferences);
   }
 
-  function payloadAttributesEvent(): PayloadAttributesEvent {
+  function payloadAttributesEvent(parent = {root: parentBlockRoot, hash: parentBlockHash}): PayloadAttributesEvent {
     const data = ssz.gloas.SSEPayloadAttributes.defaultValue();
     data.proposalSlot = slot;
-    data.parentBlockRoot = parentBlockRoot;
-    data.parentBlockHash = parentBlockHash;
+    data.parentBlockRoot = parent.root;
+    data.parentBlockHash = parent.hash;
     data.safeBlockHash = Buffer.alloc(32, 2);
     data.finalizedBlockHash = Buffer.alloc(32, 3);
     data.payloadAttributes.prevRandao = prevRandao;
@@ -250,6 +250,26 @@ describe("Bidder", () => {
       await vi.advanceTimersByTimeAsync(msToDeadline);
       await bidding;
       expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+    });
+
+    it("keeps the latest payload attributes if too many are waiting", async () => {
+      const {bidder} = createBidder();
+      // One more parent than can be kept, the first one is dropped
+      const parents = Array.from({length: MAX_PENDING_PAYLOAD_ATTRIBUTES + 1}, (_, i) => ({
+        root: Buffer.alloc(32, 100 + i),
+        hash: Buffer.alloc(32, 150 + i),
+      }));
+      for (const parent of parents) {
+        await bidder.onPayloadAttributes(payloadAttributesEvent(parent));
+      }
+
+      addProposerPreferences();
+      const bidding = bidder.onProposerPreferences(slot);
+      await vi.advanceTimersByTimeAsync(msToDeadline);
+      await bidding;
+
+      const builtOn = payloadSource.prepare.mock.calls.map(([request]) => request.forkchoiceState.headBlockHash);
+      expect(builtOn).toEqual(parents.slice(1).map(({hash}) => toRootHex(hash)));
     });
 
     it("does not bid once the slot started", async () => {
