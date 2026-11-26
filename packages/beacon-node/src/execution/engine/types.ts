@@ -2,6 +2,7 @@ import {SerializedList, Type} from "@chainsafe/ssz";
 import {
   BUILDER_DEPOSIT_REQUEST_TYPE,
   BUILDER_EXIT_REQUEST_TYPE,
+  BYTES_PER_CELL,
   BYTES_PER_FIELD_ELEMENT,
   BYTES_PER_LOGS_BLOOM,
   CELLS_PER_EXT_BLOB,
@@ -28,6 +29,7 @@ import {
 } from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {
+  BlobCellsAndProofs,
   ExecutionPayloadStatus,
   ExecutionRequestType,
   PayloadAttributes,
@@ -76,10 +78,12 @@ export type EngineApiRpcParamTypes = {
   engine_forkchoiceUpdatedV4: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
     payloadAttributes?: PayloadAttributesRpc,
+    custodyColumns?: DATA | null,
   ];
   engine_forkchoiceUpdatedV5: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
     payloadAttributes?: PayloadAttributesRpc,
+    custodyColumns?: DATA | null,
   ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
@@ -103,7 +107,15 @@ export type EngineApiRpcParamTypes = {
 
   engine_getBlobsV2: [DATA[]];
 
+  /**
+   * 1. Array of DATA - blob versioned hashes
+   * 2. DATA, 16 Bytes - bitarray of the cell indices to return
+   */
+  engine_getBlobsV4: [DATA[], DATA];
+
   engine_getInclusionListV1: [];
+
+  engine_exchangeCapabilities: [string[]];
 };
 
 export type PayloadStatus = {
@@ -161,7 +173,11 @@ export type EngineApiRpcReturnTypes = {
 
   engine_getBlobsV2: BlobAndProofV2Rpc[] | null;
 
+  engine_getBlobsV4: (BlobCellsAndProofsV1Rpc | null)[] | null;
+
   engine_getInclusionListV1: InclusionListRpc;
+
+  engine_exchangeCapabilities: string[];
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -248,6 +264,12 @@ export type BuilderExitRequestsRpc = DATA;
 export type BlobAndProofV2Rpc = {
   blob: DATA;
   proofs: DATA[];
+};
+
+/** Only the requested cells in ascending index order, `null` for a requested cell the EL does not have */
+export type BlobCellsAndProofsV1Rpc = {
+  blob_cells: (DATA | null)[];
+  proofs: (DATA | null)[];
 };
 
 const BLOB_BYTES = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB;
@@ -698,6 +720,25 @@ export function deserializeBlobAndProofsV2(data: BlobAndProofV2Rpc): BlobAndProo
     blob: dataToBytes(data.blob, BLOB_BYTES),
     proofs: data.proofs.map((proof) => dataToBytes(proof, PROOF_BYTES)),
   };
+}
+
+export function deserializeBlobCellsAndProofsV1(
+  data: BlobCellsAndProofsV1Rpc,
+  requestedCount: number
+): BlobCellsAndProofs {
+  if (data.blob_cells.length !== requestedCount || data.proofs.length !== requestedCount) {
+    throw Error(
+      `Invalid blob cells response cells=${data.blob_cells.length} proofs=${data.proofs.length} requested=${requestedCount}`
+    );
+  }
+  const cells = data.blob_cells.map((cell) => (cell === null ? null : dataToBytes(cell, BYTES_PER_CELL)));
+  const proofs = data.proofs.map((proof) => (proof === null ? null : dataToBytes(proof, PROOF_BYTES)));
+  for (let i = 0; i < requestedCount; i++) {
+    if ((cells[i] === null) !== (proofs[i] === null)) {
+      throw Error(`Blob cells response has a cell without its proof at position ${i}`);
+    }
+  }
+  return {cells, proofs};
 }
 
 /**

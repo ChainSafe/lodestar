@@ -7,12 +7,13 @@ import {
   LVHVerdictResult,
 } from "@lodestar/fork-choice";
 import {ForkName, ForkPostFulu} from "@lodestar/params";
-import {RootHex, bellatrix} from "@lodestar/types";
+import {ColumnIndex, RootHex, bellatrix} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {LogDataBasic, Logger} from "@lodestar/utils";
 import {ExecutionPayloadBodyV2} from "../execution/engine/types.js";
 import {DATA} from "../execution/engine/utils.js";
 import {
+  BlobCellsAndProofs,
   ClientVersion,
   ExecutionEngineState,
   ExecutionPayloadStatus,
@@ -123,6 +124,18 @@ export class ForkChoiceExecutionEngine {
     buffers?: Uint8Array[]
   ): Promise<BlobAndProofV2[] | null> {
     return this.engine.getBlobs(fork, versionedHashes, buffers);
+  }
+
+  supportsGetBlobsV4(): boolean {
+    return this.engine.supportsGetBlobsV4();
+  }
+
+  getBlobsV4(versionedHashes: VersionedHashes, columns: ColumnIndex[]): Promise<(BlobCellsAndProofs | null)[] | null> {
+    return this.engine.getBlobsV4(versionedHashes, columns);
+  }
+
+  setCustodyColumns(columns: ColumnIndex[]): void {
+    this.engine.setCustodyColumns(columns);
   }
 
   /**

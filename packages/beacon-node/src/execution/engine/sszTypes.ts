@@ -268,6 +268,22 @@ function BlobsResponseType<T extends CompositeType<ValueOf<T>, CompositeView<T>,
 
 export const BlobsV2Response = BlobsResponseType(BlobAndProofV2);
 
+export const BlobsV4Request = new ContainerType(
+  {versionedHashes: new ListCompositeType(Bytes32, MAX_BLOBS_REQUEST), indicesBitarray: CustodyColumns},
+  {typeName: "BlobsV4Request"}
+);
+
+/** Indexed by cell index, only requested cells the EL has carry a value */
+const BlobCellsAndProofs = new ContainerType(
+  {
+    blobCells: new ListCompositeType(Optional(ssz.fulu.Cell), CELLS_PER_EXT_BLOB),
+    proofs: new ListCompositeType(Optional(Bytes48), CELLS_PER_EXT_BLOB),
+  },
+  {typeName: "BlobCellsAndProofs"}
+);
+
+export const BlobsV4Response = BlobsResponseType(BlobCellsAndProofs);
+
 const bellatrix = {
   PayloadAttributes: PayloadAttributesBellatrix,
   ForkchoiceUpdate: ForkchoiceUpdateBellatrix,

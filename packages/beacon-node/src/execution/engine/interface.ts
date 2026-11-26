@@ -10,6 +10,7 @@ import {
 } from "@lodestar/params";
 import {
   BlobsBundle,
+  ColumnIndex,
   ExecutionPayload,
   ExecutionRequests,
   Root,
@@ -26,6 +27,9 @@ import {DATA} from "./utils.js";
 export {type PayloadId, PayloadIdCache, type WithdrawalV1};
 export type ClientVersion = routes.node.ClientVersion;
 export const ClientCode = routes.node.ClientCode;
+
+/** Cells and proofs of one blob at the requested columns in ascending column order, `null` where the EL lacks a cell */
+export type BlobCellsAndProofs = {cells: (Uint8Array | null)[]; proofs: (Uint8Array | null)[]};
 
 export enum ExecutionPayloadStatus {
   /** given payload is valid */
@@ -216,4 +220,16 @@ export interface IExecutionEngine {
     versionedHashes: VersionedHashes,
     buffers?: Uint8Array[]
   ): Promise<BlobAndProofV2[] | null>;
+
+  /** Whether the execution client advertises `engine_getBlobsV4` on the transport `getBlobsV4` would use */
+  supportsGetBlobsV4(): boolean;
+
+  /** `columns` must be sorted ascending, a missing blob is `null` */
+  getBlobsV4(versionedHashes: VersionedHashes, columns: ColumnIndex[]): Promise<(BlobCellsAndProofs | null)[] | null>;
+
+  /**
+   * Columns sent as `custodyColumns` on forkchoice updates from Amsterdam on, only while the execution client
+   * serves `engine_getBlobsV4`. An execution client told a partial custody set may not hold full blobs anymore.
+   */
+  setCustodyColumns(columns: ColumnIndex[]): void;
 }
