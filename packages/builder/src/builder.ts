@@ -92,7 +92,6 @@ export class Builder {
   private readonly revealer: Revealer;
   private latestHeadSlot: Slot | null = null;
   private headSlotsWithoutPayloadAttributes = 0;
-  /** Set once warned about missing payload attributes, until payload attributes are received again */
   private missingPayloadAttributesWarned = false;
 
   constructor({
@@ -372,7 +371,7 @@ export class Builder {
       !this.missingPayloadAttributesWarned
     ) {
       this.missingPayloadAttributesWarned = true;
-      this.logger.warn("Beacon node is not emitting payload attributes, ensure it runs with --emitPayloadAttributes", {
+      this.logger.warn("Not receiving payload attributes from the beacon node, ensure it runs with proper settings", {
         headSlot,
         slotsWithoutPayloadAttributes: this.headSlotsWithoutPayloadAttributes,
       });

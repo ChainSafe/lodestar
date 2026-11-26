@@ -326,7 +326,9 @@ describe("Builder", () => {
       data.proposalSlot = proposalSlot;
       return {type: EventType.payloadAttributes, message: {version: ForkName.gloas, data}} as const;
     };
-    const warning = expect.stringContaining("Beacon node is not emitting payload attributes");
+    const warning = "Not receiving payload attributes from the beacon node";
+    /** Other warnings are logged as well, e.g. if the proposer preferences can not be fetched on connection */
+    const warnings = () => logger.warn.mock.calls.filter(([message]) => message.startsWith(warning));
 
     it("warns once when heads are announced without payload attributes", () => {
       new Builder(modules);
@@ -336,15 +338,17 @@ describe("Builder", () => {
       onEvent(headEvent(2));
       // The same slot announced again does not count
       onEvent(headEvent(2));
-      expect(logger.warn).not.toHaveBeenCalled();
+      expect(warnings()).toHaveLength(0);
 
       onEvent(headEvent(3));
-      expect(logger.warn).toHaveBeenCalledExactlyOnceWith(warning, {headSlot: 3, slotsWithoutPayloadAttributes: 3});
+      expect(warnings()).toEqual([
+        [expect.stringContaining("proper settings"), {headSlot: 3, slotsWithoutPayloadAttributes: 3}],
+      ]);
 
       onEvent(headEvent(4));
       onEvent(headEvent(5));
       onEvent(headEvent(6));
-      expect(logger.warn).toHaveBeenCalledOnce();
+      expect(warnings()).toHaveLength(1);
     });
 
     it("does not warn while payload attributes are emitted for every slot", () => {
@@ -358,7 +362,7 @@ describe("Builder", () => {
         onEvent(payloadAttributesEvent(slot));
         onEvent(headEvent(slot));
       }
-      expect(logger.warn).not.toHaveBeenCalled();
+      expect(warnings()).toHaveLength(0);
     });
 
     it("does not count heads of past slots announced while the beacon node catches up", () => {
@@ -367,13 +371,13 @@ describe("Builder", () => {
       clock.currentSlot = 10;
 
       for (let slot = 1; slot <= 9; slot++) onEvent(headEvent(slot));
-      expect(logger.warn).not.toHaveBeenCalled();
+      expect(warnings()).toHaveLength(0);
 
       for (let slot = 10; slot <= 12; slot++) {
         clock.currentSlot = slot;
         onEvent(headEvent(slot));
       }
-      expect(logger.warn).toHaveBeenCalledOnce();
+      expect(warnings()).toHaveLength(1);
     });
 
     it("starts counting again when the event stream reconnects", () => {
@@ -385,10 +389,10 @@ describe("Builder", () => {
       onOpen?.();
       onEvent(headEvent(3));
       onEvent(headEvent(4));
-      expect(logger.warn).not.toHaveBeenCalled();
+      expect(warnings()).toHaveLength(0);
 
       onEvent(headEvent(5));
-      expect(logger.warn).toHaveBeenCalledOnce();
+      expect(warnings()).toHaveLength(1);
     });
 
     it("does not warn again after a reconnect while payload attributes are still missing", () => {
@@ -396,11 +400,11 @@ describe("Builder", () => {
       const {onEvent, onOpen} = api.events.eventstream.mock.calls[0][0];
 
       for (let slot = 1; slot <= 3; slot++) onEvent(headEvent(slot));
-      expect(logger.warn).toHaveBeenCalledOnce();
+      expect(warnings()).toHaveLength(1);
 
       onOpen?.();
       for (let slot = 4; slot <= 9; slot++) onEvent(headEvent(slot));
-      expect(logger.warn).toHaveBeenCalledOnce();
+      expect(warnings()).toHaveLength(1);
     });
 
     it("warns again if payload attributes stop after they were received", () => {
@@ -409,12 +413,12 @@ describe("Builder", () => {
       const {onEvent} = api.events.eventstream.mock.calls[0][0];
 
       for (let slot = 1; slot <= 3; slot++) onEvent(headEvent(slot));
-      expect(logger.warn).toHaveBeenCalledOnce();
+      expect(warnings()).toHaveLength(1);
 
       onEvent(payloadAttributesEvent(4));
       onEvent(headEvent(4));
       for (let slot = 5; slot <= 7; slot++) onEvent(headEvent(slot));
-      expect(logger.warn).toHaveBeenCalledTimes(2);
+      expect(warnings()).toHaveLength(2);
     });
   });
 
