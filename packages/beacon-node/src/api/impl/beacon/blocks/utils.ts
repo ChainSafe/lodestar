@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoice, PayloadStatus} from "@lodestar/fork-choice";
 import {blockToHeader} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {IBeaconChain} from "../../../../chain/interface.js";
@@ -72,4 +72,17 @@ export async function getBlockResponse(
   }
 
   return res;
+}
+
+/**
+ * Whether the payload of a finalized post-gloas block is orphaned. The archive keeps canonical payloads only, but
+ * until the archiver migrates the block it is still in fork choice and the hot db may hold the payload of a variant
+ * the canonical chain does not build on.
+ */
+export function isFinalizedPayloadOrphaned(chain: IBeaconChain, slot: Slot, blockRootHex: RootHex): boolean {
+  if (!chain.forkChoice.hasBlockHexUnsafe(blockRootHex)) {
+    return false;
+  }
+  const canonicalBlock = chain.forkChoice.getCanonicalBlockAtSlot(slot);
+  return canonicalBlock?.blockRoot === blockRootHex && canonicalBlock.payloadStatus === PayloadStatus.EMPTY;
 }

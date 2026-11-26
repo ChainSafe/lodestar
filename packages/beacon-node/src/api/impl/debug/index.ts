@@ -8,8 +8,9 @@ import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
-import {getBlockResponse} from "../beacon/blocks/utils.js";
+import {getBlockResponse, isFinalizedPayloadOrphaned} from "../beacon/blocks/utils.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {assertUniqueItems} from "../utils.js";
 
@@ -171,6 +172,17 @@ export function getDebugApi({
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+
+      if (
+        finalized &&
+        isForkPostGloas(fork) &&
+        isFinalizedPayloadOrphaned(chain, block.message.slot, toRootHex(blockRoot))
+      ) {
+        throw new ApiError(
+          404,
+          `Data column sidecars of an orphaned payload for slot=${block.message.slot}, blockRoot=${toRootHex(blockRoot)}`
+        );
+      }
 
       let dataColumnSidecars: DataColumnSidecar[];
 

@@ -82,7 +82,7 @@ import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiOptions} from "../../../options.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
-import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
+import {getBlockResponse, isFinalizedPayloadOrphaned, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;
 
@@ -1085,6 +1085,10 @@ export function getBeaconBlockApi(
       const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
       const blockRootHex = toRootHex(blockRoot);
 
+      if (finalized && isFinalizedPayloadOrphaned(chain, slot, blockRootHex)) {
+        throw new ApiError(404, `Execution payload envelope is orphaned for slot=${slot}, blockRoot=${blockRootHex}`);
+      }
+
       // The block's own flag is the status of the payload it builds on, the envelope's is that of its
       // FULL variant. An unfinalized block without one has not imported its envelope yet.
       const payload = finalized ? null : chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
@@ -1127,6 +1131,13 @@ export function getBeaconBlockApi(
       const fork = config.getForkName(block.message.slot);
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
       const blockRootHex = toRootHex(blockRoot);
+
+      if (finalized && isForkPostGloas(fork) && isFinalizedPayloadOrphaned(chain, block.message.slot, blockRootHex)) {
+        throw new ApiError(
+          404,
+          `Blob sidecars of an orphaned payload for slot=${block.message.slot}, blockRoot=${blockRootHex}`
+        );
+      }
 
       let data: deneb.BlobSidecars;
 
@@ -1223,6 +1234,13 @@ export function getBeaconBlockApi(
       const fork = config.getForkName(block.message.slot);
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
       const blockRootHex = toRootHex(blockRoot);
+
+      if (finalized && isForkPostGloas(fork) && isFinalizedPayloadOrphaned(chain, block.message.slot, blockRootHex)) {
+        throw new ApiError(
+          404,
+          `Blobs of an orphaned payload for slot=${block.message.slot}, blockRoot=${blockRootHex}`
+        );
+      }
 
       let blobs: deneb.Blobs;
 
