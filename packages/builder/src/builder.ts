@@ -2,7 +2,7 @@ import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
-import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
+import {BuilderIndex, ExecutionAddress, Slot} from "@lodestar/types";
 import {Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
@@ -68,6 +68,10 @@ export type BuilderOptions = {
   };
 };
 
+// Warn once the beacon node announced heads of this many consecutive slots without emitting the payload attributes
+// to build on them. More than one slot as the attributes of the first head after connecting are emitted before it.
+const MISSING_PAYLOAD_ATTRIBUTES_WARN_SLOTS = 3;
+
 /**
  * Main class for the Builder client.
  */
@@ -86,6 +90,9 @@ export class Builder {
   private readonly ledger: BidLedger;
   private readonly bidder: Bidder;
   private readonly revealer: Revealer;
+  private latestHeadSlot: Slot | null = null;
+  private headSlotsWithoutPayloadAttributes = 0;
+  private missingPayloadAttributesWarned = false;
 
   constructor({
     opts,
@@ -262,6 +269,8 @@ export class Builder {
           void this.onEvent(event);
         },
         onOpen: () => {
+          // Heads announced before a reconnect say nothing about the payload attributes emitted while disconnected
+          this.headSlotsWithoutPayloadAttributes = 0;
           void this.fetchProposerPreferences(api);
         },
         onError: (error) => {
@@ -342,6 +351,7 @@ export class Builder {
       switch (event.type) {
         case routes.events.EventType.headV2:
           this.headTracker.onHead(event.message.data);
+          this.checkPayloadAttributesEmitted(event.message.data.slot);
           break;
         case routes.events.EventType.block:
           if (this.isRelevantBlock(event.message)) {
@@ -352,6 +362,8 @@ export class Builder {
           this.proposerPreferencesTracker.onProposerPreferences(event.message.data);
           break;
         case routes.events.EventType.payloadAttributes:
+          this.headSlotsWithoutPayloadAttributes = 0;
+          this.missingPayloadAttributesWarned = false;
           await this.bidder.onPayloadAttributes(event.message);
           break;
       }
@@ -363,6 +375,32 @@ export class Builder {
           error instanceof Error ? error : Error(String(error))
         );
       }
+    }
+  }
+
+  /**
+   * Counts the slots with a timely head announced since the last payload attributes. A beacon node emitting them
+   * for every slot keeps the count at 0 or 1, the attributes for the next slot follow each head. Head events prove
+   * the event stream is delivering, the builder is not just starting up or disconnected.
+   */
+  private checkPayloadAttributesEmitted(headSlot: Slot): void {
+    // A beacon node that is catching up announces heads of past slots in a burst, payload attributes are only
+    // emitted once per slot and for the current slot
+    if (headSlot < this.clock.getCurrentSlot()) return;
+    // The head of a slot can be announced more than once, e.g. when its payload becomes available
+    if (this.latestHeadSlot !== null && headSlot <= this.latestHeadSlot) return;
+    this.latestHeadSlot = headSlot;
+
+    // The count starts again when the event stream reconnects, only warn once until payload attributes are received
+    if (
+      ++this.headSlotsWithoutPayloadAttributes >= MISSING_PAYLOAD_ATTRIBUTES_WARN_SLOTS &&
+      !this.missingPayloadAttributesWarned
+    ) {
+      this.missingPayloadAttributesWarned = true;
+      this.logger.warn("Not receiving payload attributes from the beacon node, ensure it runs with proper settings", {
+        headSlot,
+        slotsWithoutPayloadAttributes: this.headSlotsWithoutPayloadAttributes,
+      });
     }
   }
 

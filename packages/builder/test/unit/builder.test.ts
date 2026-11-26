@@ -394,6 +394,125 @@ describe("Builder", () => {
     expect(modules.proposerPreferencesTracker.get(0, toRootHex(preferences.message.dependentRoot))).toBe(preferences);
   });
 
+  describe("missing payload attributes", () => {
+    const headEvent = (slot: number) =>
+      ({
+        type: EventType.headV2,
+        message: {
+          version: ForkName.gloas,
+          data: {
+            slot,
+            block: toRootHex(Buffer.alloc(32, slot)),
+            state: toRootHex(Buffer.alloc(32, 2)),
+            payloadStatus: "empty",
+            epochTransition: false,
+            currentEpochDependentRoot: toRootHex(Buffer.alloc(32, 3)),
+            nextEpochDependentRoot: toRootHex(Buffer.alloc(32, 4)),
+            executionOptimistic: false,
+          },
+        },
+      }) as const;
+    const payloadAttributesEvent = (proposalSlot: number) => {
+      const data = ssz.gloas.SSEPayloadAttributes.defaultValue();
+      data.proposalSlot = proposalSlot;
+      return {type: EventType.payloadAttributes, message: {version: ForkName.gloas, data}} as const;
+    };
+    const warning = "Not receiving payload attributes from the beacon node";
+    /** Other warnings are logged as well, e.g. if the proposer preferences can not be fetched on connection */
+    const warnings = () => logger.warn.mock.calls.filter(([message]) => message.startsWith(warning));
+
+    it("warns once when heads are announced without payload attributes", () => {
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+      onEvent(headEvent(1));
+      onEvent(headEvent(2));
+      // The same slot announced again does not count
+      onEvent(headEvent(2));
+      expect(warnings()).toHaveLength(0);
+
+      onEvent(headEvent(3));
+      expect(warnings()).toEqual([
+        [expect.stringContaining("proper settings"), {headSlot: 3, slotsWithoutPayloadAttributes: 3}],
+      ]);
+
+      onEvent(headEvent(4));
+      onEvent(headEvent(5));
+      onEvent(headEvent(6));
+      expect(warnings()).toHaveLength(1);
+    });
+
+    it("does not warn while payload attributes are emitted for every slot", () => {
+      vi.spyOn(modules.bidder, "onPayloadAttributes").mockResolvedValue();
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+      // Payload attributes of the first head were emitted before connecting
+      onEvent(headEvent(1));
+      for (let slot = 2; slot <= 8; slot++) {
+        onEvent(payloadAttributesEvent(slot));
+        onEvent(headEvent(slot));
+      }
+      expect(warnings()).toHaveLength(0);
+    });
+
+    it("does not count heads of past slots announced while the beacon node catches up", () => {
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+      clock.currentSlot = 10;
+
+      for (let slot = 1; slot <= 9; slot++) onEvent(headEvent(slot));
+      expect(warnings()).toHaveLength(0);
+
+      for (let slot = 10; slot <= 12; slot++) {
+        clock.currentSlot = slot;
+        onEvent(headEvent(slot));
+      }
+      expect(warnings()).toHaveLength(1);
+    });
+
+    it("starts counting again when the event stream reconnects", () => {
+      new Builder(modules);
+      const {onEvent, onOpen} = api.events.eventstream.mock.calls[0][0];
+
+      onEvent(headEvent(1));
+      onEvent(headEvent(2));
+      onOpen?.();
+      onEvent(headEvent(3));
+      onEvent(headEvent(4));
+      expect(warnings()).toHaveLength(0);
+
+      onEvent(headEvent(5));
+      expect(warnings()).toHaveLength(1);
+    });
+
+    it("does not warn again after a reconnect while payload attributes are still missing", () => {
+      new Builder(modules);
+      const {onEvent, onOpen} = api.events.eventstream.mock.calls[0][0];
+
+      for (let slot = 1; slot <= 3; slot++) onEvent(headEvent(slot));
+      expect(warnings()).toHaveLength(1);
+
+      onOpen?.();
+      for (let slot = 4; slot <= 9; slot++) onEvent(headEvent(slot));
+      expect(warnings()).toHaveLength(1);
+    });
+
+    it("warns again if payload attributes stop after they were received", () => {
+      vi.spyOn(modules.bidder, "onPayloadAttributes").mockResolvedValue();
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+      for (let slot = 1; slot <= 3; slot++) onEvent(headEvent(slot));
+      expect(warnings()).toHaveLength(1);
+
+      onEvent(payloadAttributesEvent(4));
+      onEvent(headEvent(4));
+      for (let slot = 5; slot <= 7; slot++) onEvent(headEvent(slot));
+      expect(warnings()).toHaveLength(2);
+    });
+  });
+
   it("ignores unrelated topics", () => {
     const processBlock = vi.spyOn(modules.blockObserver, "processBlockEvent");
     const trackPreferences = vi.spyOn(modules.proposerPreferencesTracker, "onProposerPreferences");
