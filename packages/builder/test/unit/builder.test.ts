@@ -179,6 +179,26 @@ describe("Builder", () => {
     expect(api.beacon.getProposerPreferences).toHaveBeenCalledTimes(2);
   });
 
+  it("lets the bidder know about new proposer preferences", async () => {
+    const onProposerPreferences = vi.spyOn(modules.bidder, "onProposerPreferences").mockResolvedValue();
+    const preferences = ssz.gloas.SignedProposerPreferences.defaultValue();
+    preferences.message.proposalSlot = 3;
+    api.beacon.getProposerPreferences.mockResolvedValue(
+      mockApiResponse({data: [preferences], meta: {version: ForkName.gloas}})
+    );
+    new Builder(modules);
+    const {onOpen, onEvent} = api.events.eventstream.mock.calls[0][0];
+
+    // Received from the event stream, for a single slot
+    onEvent({type: EventType.proposerPreferences, message: {version: ForkName.gloas, data: preferences}});
+    expect(onProposerPreferences).toHaveBeenCalledExactlyOnceWith(3);
+
+    // Fetched on connection, for any number of slots
+    onOpen?.();
+    await vi.waitFor(() => expect(onProposerPreferences).toHaveBeenCalledTimes(2));
+    expect(onProposerPreferences).toHaveBeenLastCalledWith();
+  });
+
   it("keeps live delivery working when fetching preferences fails", async () => {
     const error = Error("not supported");
     api.beacon.getProposerPreferences.mockRejectedValue(error);

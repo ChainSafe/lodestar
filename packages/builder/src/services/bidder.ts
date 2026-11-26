@@ -42,12 +42,17 @@ export type BidderModules = {
   signal: AbortSignal;
 };
 
+/** Maximum payload attributes kept while the proposer preferences of their slot are not known */
+const MAX_PENDING_PAYLOAD_ATTRIBUTES = 16;
+
 /**
  * Bids once per proposal slot and parent: starts a payload build when the beacon node emits payload attributes,
  * retrieves the payload at the deadline, prices it and publishes the signed bid.
  */
 export class Bidder {
   private readonly activeBuilds = new Set<string>();
+  /** Payload attributes of upcoming slots that could not be bid on yet, by build id */
+  private readonly pendingPayloadAttributes = new Map<string, PayloadAttributesEvent>();
 
   constructor(
     private readonly modules: BidderModules,
@@ -88,10 +93,18 @@ export class Bidder {
       const dependentRoot = await this.getDependentRoot(parentBlockRoot, slot, logCtx);
       const proposerPreferences = proposerPreferencesTracker.get(slot, dependentRoot);
       if (proposerPreferences === null) {
-        logger.debug("No proposer preferences known for slot, not bidding", {...logCtx, dependentRoot});
-        metrics?.bids.total.inc({result: BidResult.noProposerPreferences});
+        // The payload attributes are only emitted once, the proposer preferences can still arrive before the slot
+        if (!this.pendingPayloadAttributes.has(buildId)) {
+          this.prunePendingPayloadAttributes();
+          if (this.pendingPayloadAttributes.size < MAX_PENDING_PAYLOAD_ATTRIBUTES) {
+            this.pendingPayloadAttributes.set(buildId, event);
+          }
+          logger.debug("No proposer preferences known for slot, not bidding", {...logCtx, dependentRoot});
+          metrics?.bids.total.inc({result: BidResult.noProposerPreferences});
+        }
         return;
       }
+      this.pendingPayloadAttributes.delete(buildId);
       const {feeRecipient, targetGasLimit} = proposerPreferences.message;
 
       // The payload is retrieved in the slot before the proposal slot, use the timing of that slot
@@ -186,6 +199,33 @@ export class Bidder {
       }
     } finally {
       this.activeBuilds.delete(buildId);
+    }
+  }
+
+  /**
+   * Bids on the payload attributes that were emitted before the proposer preferences of their slot were known.
+   * Called with the slot of new proposer preferences, or without a slot if preferences of several slots were added.
+   */
+  async onProposerPreferences(slot?: Slot): Promise<void> {
+    this.prunePendingPayloadAttributes();
+    const events: PayloadAttributesEvent[] = [];
+    for (const event of this.pendingPayloadAttributes.values()) {
+      if (slot === undefined || event.data.proposalSlot === slot) {
+        events.push(event);
+      }
+    }
+
+    // Stays pending if the preferences are for another dependent root
+    await Promise.all(events.map((event) => this.onPayloadAttributes(event)));
+  }
+
+  /** Drops the pending payload attributes of slots that can no longer be bid on */
+  private prunePendingPayloadAttributes(): void {
+    const currentSlot = this.modules.clock.getCurrentSlot();
+    for (const [buildId, event] of this.pendingPayloadAttributes) {
+      if (event.data.proposalSlot <= currentSlot) {
+        this.pendingPayloadAttributes.delete(buildId);
+      }
     }
   }
 

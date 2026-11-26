@@ -34,6 +34,7 @@ describe("Bidder", () => {
   let payloadStore: PayloadStore;
   let proposerPreferencesTracker: ProposerPreferencesTracker;
   let headTracker: HeadTracker;
+  let clock: ClockMock;
   let controller: AbortController;
 
   beforeEach(() => {
@@ -53,6 +54,7 @@ describe("Bidder", () => {
     payloadStore = new PayloadStore();
     proposerPreferencesTracker = new ProposerPreferencesTracker();
     headTracker = new HeadTracker();
+    clock = new ClockMock();
     controller = new AbortController();
   });
 
@@ -71,7 +73,7 @@ describe("Bidder", () => {
       api,
       config,
       logger,
-      clock: new ClockMock(),
+      clock,
       builderSigner: new BuilderSigner(createBeaconConfig(config, Buffer.alloc(32)), {
         secretKey,
         publicKey: secretKey.toPublicKey(),
@@ -196,6 +198,70 @@ describe("Bidder", () => {
 
     expect(payloadSource.prepare).not.toHaveBeenCalled();
     expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
+  });
+
+  describe("proposer preferences received after the payload attributes", () => {
+    const missingPreferences = "No proposer preferences known for slot, not bidding";
+
+    it("bids once the proposer preferences of the slot are known", async () => {
+      const {bidder} = createBidder();
+      await bidder.onPayloadAttributes(payloadAttributesEvent());
+
+      addProposerPreferences();
+      const bidding = bidder.onProposerPreferences(slot);
+      await vi.advanceTimersByTimeAsync(msToDeadline);
+      await bidding;
+
+      expect(payloadSource.prepare).toHaveBeenCalledOnce();
+      expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+
+      // Not bid on again
+      await bidder.onProposerPreferences(slot);
+      expect(payloadSource.prepare).toHaveBeenCalledOnce();
+    });
+
+    it("bids if preferences of several slots were added", async () => {
+      const {bidder} = createBidder();
+      await bidder.onPayloadAttributes(payloadAttributesEvent());
+
+      addProposerPreferences();
+      const bidding = bidder.onProposerPreferences();
+      await vi.advanceTimersByTimeAsync(msToDeadline);
+      await bidding;
+
+      expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+    });
+
+    it("keeps waiting for the proposer preferences of the slot", async () => {
+      const {bidder} = createBidder();
+      await bidder.onPayloadAttributes(payloadAttributesEvent());
+
+      // Preferences of another slot, and of the slot but for another dependent root
+      await bidder.onProposerPreferences(slot + 1);
+      await bidder.onProposerPreferences(slot);
+      await bidder.onProposerPreferences();
+
+      expect(payloadSource.prepare).not.toHaveBeenCalled();
+      // Reported once, not every time other proposer preferences are received
+      expect(logger.debug.mock.calls.filter(([message]) => message === missingPreferences)).toHaveLength(1);
+
+      addProposerPreferences();
+      const bidding = bidder.onProposerPreferences(slot);
+      await vi.advanceTimersByTimeAsync(msToDeadline);
+      await bidding;
+      expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+    });
+
+    it("does not bid once the slot started", async () => {
+      const {bidder} = createBidder();
+      await bidder.onPayloadAttributes(payloadAttributesEvent());
+
+      clock.currentSlot = slot;
+      addProposerPreferences();
+      await bidder.onProposerPreferences(slot);
+
+      expect(payloadSource.prepare).not.toHaveBeenCalled();
+    });
   });
 
   it.each([
