@@ -151,9 +151,6 @@ exceptions:
     - is_current_or_next_slot#gloas
     - validate_partial_data_column_sidecar_gossip#gloas
 
-    # gloas (consensus-specs#5789, the pending parent node in the empty slot discount, is not implemented)
-    - compute_empty_slot_support_discount#gloas
-
     # gloas (attestation upgrade helpers; lodestar ssz types are structurally cross-fork compatible)
     - upgrade_attestation_to_gloas#gloas
     - upgrade_attester_slashing_to_gloas#gloas

@@ -821,12 +821,5 @@ specTestIterator(
   {
     fast_confirmation: {type: RunnerType.default, fn: fastConfirmationTest({onlyPredefinedResponses: false})},
   },
-  {
-    ...defaultSkipOpts,
-    skippedTests: [
-      ...(defaultSkipOpts.skippedTests ?? []),
-      // https://github.com/ethereum/consensus-specs/pull/5789 is not implemented, see https://github.com/ChainSafe/lodestar/pull/10539
-      /^(gloas|heze)\/fast_confirmation\/is_one_confirmed\/pyspec_tests\/(empty_slot_discount_pending_and_(empty|full)_parent|is_one_confirmed_with_empty_slot_and_attester_in_two_consecutive_slots_1)$/,
-    ],
-  }
+  defaultSkipOpts
 );
