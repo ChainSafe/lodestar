@@ -25,8 +25,6 @@ run([
   "exec",
   "zapi",
   "build-artifacts",
-  "--optimize",
-  "ReleaseSafe",
   "--zig-cwd",
   "..",
   "--artifacts-dir",

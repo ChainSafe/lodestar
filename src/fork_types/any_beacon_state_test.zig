@@ -44,13 +44,13 @@ test "electra - sanity" {
     try beacon_state.setSlot(12345);
 
     try std.testing.expect((try beacon_state.genesisTime()) == 0);
-    try std.testing.expectEqualSlices(u8, &[_]u8{0} ** 32, (try beacon_state.genesisValidatorsRoot())[0..]);
+    try std.testing.expectEqualSlices(u8, &@as([32]u8, @splat(0)), (try beacon_state.genesisValidatorsRoot())[0..]);
     try std.testing.expect((try beacon_state.slot()) == 12345);
     try beacon_state.setSlot(2025);
     try std.testing.expect((try beacon_state.slot()) == 2025);
 
     const out: *const [32]u8 = try beacon_state.hashTreeRoot();
-    try expect(!std.mem.eql(u8, (&[_]u8{0} ** 32)[0..], out.*[0..]));
+    try expect(!std.mem.eql(u8, (&@as([32]u8, @splat(0)))[0..], out.*[0..]));
 
     // TODO: more tests
 }
@@ -193,8 +193,8 @@ test "single proof: validators[0].withdrawal_credentials" {
     // Bootstrap one validator so `validators[0]` exists.
     var validators_view = try beacon_state.validators();
     const validator_value = ct.electra.Validator.Type{
-        .pubkey = [_]u8{1} ** 48,
-        .withdrawal_credentials = [_]u8{0xab} ** 32,
+        .pubkey = @as([48]u8, @splat(1)),
+        .withdrawal_credentials = @as([32]u8, @splat(0xab)),
         .effective_balance = 32_000_000_000,
         .slashed = false,
         .activation_eligibility_epoch = 0,
@@ -206,14 +206,14 @@ test "single proof: validators[0].withdrawal_credentials" {
     try beacon_state.commit();
 
     const gindex = ssz.getPathGindex(ct.electra.BeaconState, "validators.0.withdrawal_credentials");
-    var proof = try beacon_state.getSingleProof(allocator, @intFromEnum(gindex));
+    var proof = try beacon_state.getSingleProof(allocator, @backingInt(gindex));
     defer proof.deinit(allocator);
 
     // The proof should be non-empty and the leaf should match the value
     // we set above. (We do not yet verify witness chain correctness — just
     // that proof generation does not error out with InvalidNode.)
     try std.testing.expect(proof.witnesses.len > 0);
-    try std.testing.expectEqualSlices(u8, &[_]u8{0xab} ** 32, &proof.leaf);
+    try std.testing.expectEqualSlices(u8, &@as([32]u8, @splat(0xab)), &proof.leaf);
 }
 
 test "single proof: balances[0]" {
@@ -235,13 +235,13 @@ test "single proof: balances[0]" {
     try beacon_state.commit();
 
     const gindex = ssz.getPathGindex(ct.electra.BeaconState, "balances.0");
-    var proof = try beacon_state.getSingleProof(allocator, @intFromEnum(gindex));
+    var proof = try beacon_state.getSingleProof(allocator, @backingInt(gindex));
     defer proof.deinit(allocator);
 
     try std.testing.expect(proof.witnesses.len > 0);
     // balances[0] is a packed u64; only the low 8 bytes of the leaf carry
     // the value (LE-encoded), the rest of the chunk is zero-padded.
-    var expected_leaf: [32]u8 = [_]u8{0} ** 32;
+    var expected_leaf: [32]u8 = @as([32]u8, @splat(0));
     std.mem.writeInt(u64, expected_leaf[0..8], 31_000_000_000, .little);
     try std.testing.expectEqualSlices(u8, &expected_leaf, &proof.leaf);
 }

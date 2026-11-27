@@ -74,8 +74,8 @@ const State = struct {
 
 pub var state: State = .{};
 
-var gpa: std.heap.DebugAllocator(.{}) = .init;
-const allocator = if (builtin.mode == .Debug)
+var gpa: std.heap.SafeAllocator = .init(std.heap.page_allocator, .{});
+const allocator = if (builtin.optimize == .debug)
     gpa.allocator()
 else
     std.heap.c_allocator;
@@ -90,7 +90,7 @@ fn hexFromString(hex_string: js.String, buf: []u8) ![]const u8 {
 }
 
 fn formatHex(bytes: []const u8) !js.String {
-    const hex = try std.fmt.allocPrint(allocator, "0x{x}", .{bytes});
+    const hex = try allocator.print("0x{x}", .{bytes});
     defer allocator.free(hex);
     return js.String.from(hex);
 }

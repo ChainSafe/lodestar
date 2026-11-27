@@ -303,7 +303,7 @@ pub const EpochCache = struct {
         errdefer next_shuffling_rc.unref();
 
         const fork_seq = config.forkSeqAtEpoch(current_epoch);
-        var proposers = [_]ValidatorIndex{0} ** preset.SLOTS_PER_EPOCH;
+        var proposers = @as([preset.SLOTS_PER_EPOCH]ValidatorIndex, @splat(0));
         var next_proposers: ?[preset.SLOTS_PER_EPOCH]ValidatorIndex = null;
 
         // Post-Fulu (EIP-7917): proposer_lookahead is the source of truth for proposers.
@@ -312,11 +312,12 @@ pub const EpochCache = struct {
             switch (fork_seq) {
                 inline else => |f| {
                     var proposer_lookahead = try state.castToFork(f).proposerLookahead();
-                    next_proposers = undefined;
+                    var next: [preset.SLOTS_PER_EPOCH]ValidatorIndex = undefined;
                     for (0..preset.SLOTS_PER_EPOCH) |i| {
                         proposers[i] = @intCast(try proposer_lookahead.get(i));
-                        next_proposers.?[i] = @intCast(try proposer_lookahead.get(preset.SLOTS_PER_EPOCH + i));
+                        next[i] = @intCast(try proposer_lookahead.get(preset.SLOTS_PER_EPOCH + i));
                     }
+                    next_proposers = next;
                 },
             }
         }
@@ -350,7 +351,7 @@ pub const EpochCache = struct {
                         &next_proposer_seed,
                     ),
                 }
-                next_proposers = undefined;
+                var next: [preset.SLOTS_PER_EPOCH]ValidatorIndex = undefined;
                 const next_fork_seq = config.forkSeqAtEpoch(next_epoch);
                 switch (next_fork_seq) {
                     inline else => |f| try computeProposers(
@@ -360,9 +361,10 @@ pub const EpochCache = struct {
                         next_epoch,
                         next_shuffling_rc.get().active_indices,
                         effective_balance_increments,
-                        &next_proposers.?,
+                        &next,
                     ),
                 }
+                next_proposers = next;
             }
         }
 
@@ -641,11 +643,12 @@ pub const EpochCache = struct {
                     // field which we already processed in `processProposerLookahead`.
                     // Proposers are to be computed pre-fulu to be cached within `self`.
                     var proposer_lookahead = try fork_state.proposerLookahead();
-                    self.proposers_next_epoch = undefined;
+                    var next: [preset.SLOTS_PER_EPOCH]ValidatorIndex = undefined;
                     for (0..preset.SLOTS_PER_EPOCH) |i| {
                         self.proposers[i] = @intCast(try proposer_lookahead.get(i));
-                        self.proposers_next_epoch.?[i] = @intCast(try proposer_lookahead.get(preset.SLOTS_PER_EPOCH + i));
+                        next[i] = @intCast(try proposer_lookahead.get(preset.SLOTS_PER_EPOCH + i));
                     }
+                    self.proposers_next_epoch = next;
                 } else {
                     var upcoming_proposer_seed: [32]u8 = undefined;
                     try getSeed(
@@ -668,7 +671,7 @@ pub const EpochCache = struct {
                     if (next_epoch_indices.len > 0) {
                         var next_proposer_seed: [32]u8 = undefined;
                         try getSeed(fork, fork_state, self.epoch + 1, c.DOMAIN_BEACON_PROPOSER, &next_proposer_seed);
-                        self.proposers_next_epoch = undefined;
+                        var next: [preset.SLOTS_PER_EPOCH]ValidatorIndex = undefined;
                         const next_fork_seq = self.config.forkSeqAtEpoch(self.epoch + 1);
                         switch (next_fork_seq) {
                             inline else => |f| try computeProposers(
@@ -678,9 +681,10 @@ pub const EpochCache = struct {
                                 self.epoch + 1,
                                 next_epoch_indices,
                                 self.effective_balance_increments.get(),
-                                &self.proposers_next_epoch.?,
+                                &next,
                             ),
                         }
+                        self.proposers_next_epoch = next;
                     } else {
                         self.proposers_next_epoch = null;
                     }

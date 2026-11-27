@@ -147,9 +147,9 @@ pub const OptionalChainConfig = Optional(ChainConfig);
 /// Otherwise the original value is kept. Precedence is always given to `overrides`.
 pub fn merge(config: *const ChainConfig, overrides: OptionalChainConfig) ChainConfig {
     var merged = config.*;
-    inline for (std.meta.fields(@TypeOf(overrides))) |field| {
-        if (@field(overrides, field.name)) |value| {
-            @field(merged, field.name) = value;
+    inline for (@typeInfo(@TypeOf(overrides)).@"struct".field_names) |field| {
+        if (@field(overrides, field)) |value| {
+            @field(merged, field) = value;
         }
     }
     return merged;
@@ -161,13 +161,13 @@ fn Optional(comptime T: type) type {
     if (type_info != .@"struct") {
         @compileError("Optional can only be used with struct types");
     }
-    const t_fields = type_info.@"struct".fields;
+    const t_fields = type_info.@"struct".field_names;
     var names: [t_fields.len][:0]const u8 = undefined;
     var types: [t_fields.len]type = undefined;
-    var attrs: [t_fields.len]std.builtin.Type.StructField.Attributes = undefined;
+    var attrs: [t_fields.len]std.lang.Type.Struct.FieldAttributes = undefined;
     inline for (t_fields, 0..) |field, i| {
-        const optional_type = ?field.type;
-        names[i] = field.name;
+        const optional_type = ?type_info.@"struct".field_types[i];
+        names[i] = field;
         types[i] = optional_type;
         attrs[i] = .{
             .default_value_ptr = &@as(optional_type, null),

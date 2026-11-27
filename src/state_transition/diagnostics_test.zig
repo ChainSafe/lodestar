@@ -4,8 +4,8 @@ const withdrawalsRootMismatch = @import("diagnostics.zig").withdrawalsRootMismat
 const withdrawalsLengthMismatch = @import("diagnostics.zig").withdrawalsLengthMismatch;
 
 test "diagnostics should preserve the error and own its details" {
-    var expected = [_]u8{0xab} ** 32;
-    var actual = [_]u8{0xcd} ** 32;
+    var expected = @as([32]u8, @splat(0xab));
+    var actual = @as([32]u8, @splat(0xcd));
     var diagnostics: Diagnostics = .{};
     try std.testing.expectEqual(
         error.WithdrawalsRootMismatch,
@@ -21,9 +21,9 @@ test "diagnostics should preserve the error and own its details" {
     var output: [192]u8 = undefined;
     try std.testing.expectEqualStrings(
         "WithdrawalsRootMismatch expected=0x" ++
-            ("ab" ** 32) ++
+            ("abababababababababababababababababababababababababababababababab") ++
             " actual=0x" ++
-            ("cd" ** 32),
+            ("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"),
         try std.fmt.bufPrint(&output, "{f}", .{&diagnostics.detail.?}),
     );
 }

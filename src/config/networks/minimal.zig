@@ -6,7 +6,7 @@ const b = @import("hex").hexToBytesComptime;
 
 pub const config = BeaconConfig.init(chain_config, genesis_validators_root);
 
-pub const genesis_validators_root = [_]u8{0} ** 32;
+pub const genesis_validators_root = @as([32]u8, @splat(0));
 
 pub const chain_config = ChainConfig{
     .PRESET_BASE = Preset.minimal,

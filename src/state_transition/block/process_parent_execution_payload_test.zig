@@ -66,7 +66,9 @@ test "Gloas request operation limits apply independently of SSZ decoding" {
         const Element = ct.gloas.ExecutionRequests.getFieldType(field).Element;
         var values: [limit + 1]Element.Type = @splat(Element.default_value);
         var requests = ct.gloas.ExecutionRequests.default_value;
-        @field(requests, field) = .{ .items = values[0..limit], .capacity = limit + 1 };
+        @field(requests, field) = .empty;
+        @field(requests, field).items = values[0..limit];
+        @field(requests, field).capacity = limit + 1;
         try validateExecutionRequests(.gloas, &requests);
         @field(requests, field).items = values[0..];
         try std.testing.expectError(error.TooManyExecutionRequests, validateExecutionRequests(.gloas, &requests));

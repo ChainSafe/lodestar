@@ -618,7 +618,7 @@ jobs:
           path: test/spec
       - name: Run ssz_static spec tests
         run: |
-          zig build test:ssz_static_spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=ReleaseSafe -Dbuild_options.expensive_safety_checks=true
+          zig build test:ssz_static_spec_tests -Dpreset=${{ matrix.preset }} -Doptimize=safe -Dbuild_options.expensive_safety_checks=true
 
   zig-spec-tests:
     name: Zig spec tests (${{ matrix.preset }}, ${{ matrix.runner }})
@@ -640,9 +640,9 @@ jobs:
           - merkle_proof
         include:
           - preset: minimal
-            optimize: Debug
+            optimize: debug
           - preset: mainnet
-            optimize: ReleaseSafe
+            optimize: safe
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -693,11 +693,11 @@ jobs:
       - name: Build fuzz harnesses
         # ReleaseSafe, as Dockerfile.fuzz: the harnesses' asserts and Zig's
         # bounds/overflow checks must stay compiled in, or fuzzing cannot see
-        # those bugs. Not Debug: Zig 0.16's `sanitize_c = .full` emits
+        # those bugs. Not debug: `sanitize_c = .full` emits
         # `__ubsan_handle_*` calls into blst's C objects that `afl-cc` can't
         # resolve without `libubsan`.
         run: |
-          cd test/fuzz && zig build -Doptimize=ReleaseSafe
+          cd test/fuzz && zig build -Doptimize=safe
 
   bindings-artifacts:
     name: Native platform builds
@@ -711,7 +711,7 @@ jobs:
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
       - name: Build release artifacts
         run: |
-          pnpm --filter @lodestar/native exec zapi build-artifacts --optimize ReleaseSafe --zig-cwd .. --artifacts-dir "$PWD/bindings/artifacts"
+          pnpm --filter @lodestar/native exec zapi build-artifacts --zig-cwd .. --artifacts-dir "$PWD/bindings/artifacts"
       - name: Upload platform bindings
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

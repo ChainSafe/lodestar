@@ -164,14 +164,14 @@ pub fn fromAggregate(agg_sig: *const AggregateSignature) Self {
 
 /// Compress the `Signature` to bytes.
 pub fn compress(self: *const Self) [COMPRESS_SIZE]u8 {
-    var sig_comp = [_]u8{0} ** COMPRESS_SIZE;
+    var sig_comp = @as([COMPRESS_SIZE]u8, @splat(0));
     c.blst_p2_affine_compress(&sig_comp, &self.point);
     return sig_comp;
 }
 
 /// Serialize the `Signature` to bytes.
 pub fn serialize(self: *const Self) [SERIALIZE_SIZE]u8 {
-    var sig_out = [_]u8{0} ** SERIALIZE_SIZE;
+    var sig_out = @as([SERIALIZE_SIZE]u8, @splat(0));
     c.blst_p2_affine_serialize(&sig_out, &self.point);
     return sig_out;
 }

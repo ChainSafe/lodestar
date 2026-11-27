@@ -16,7 +16,7 @@ const SEED_SIZE = shuffle.SEED_SIZE;
 
 test "innerShuffleList roundtrip matches reference vector" {
     var input = [_]u32{ 0, 1, 2, 3, 4, 5, 6, 7, 8 };
-    const seed = [_]u8{0} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(0));
     const rounds = 32;
 
     try shuffle.unshuffleList(u32, input[0..], seed[0..], rounds);
@@ -48,7 +48,7 @@ test "innerShuffleList generic over u64" {
 
 test "list shuffle matches ComputeShuffledIndex across pair and source hash boundaries" {
     const allocator = std.testing.allocator;
-    const seed = [_]u8{0x5a} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(0x5a));
     const rounds = shuffle.SHUFFLE_ROUNDS_MAINNET;
     const list_sizes =
         // Sizes below 16 only swap one pair at a time; longer lists also take eight-pair steps.
@@ -104,8 +104,8 @@ test "unshuffleList matches spec test vector" {
 }
 
 test "innerShuffleList no-op conditions match reference validation order" {
-    const good_seed = [_]u8{0} ** SEED_SIZE;
-    const bad_seed = [_]u8{0xac} ** 31;
+    const good_seed = @as([SEED_SIZE]u8, @splat(0));
+    const bad_seed = @as([31]u8, @splat(0xac));
 
     // rounds == 0 returns before any validation
     var list = [_]u32{ 0, 1, 2, 3, 4 };
@@ -123,7 +123,7 @@ test "innerShuffleList no-op conditions match reference validation order" {
     var multi = [_]u32{ 0, 1, 2 };
     try std.testing.expectError(error.InvalidSeedLength, shuffle.innerShuffleList(u32, multi[0..], bad_seed[0..], -1, false));
 
-    const long_seed = [_]u8{0xac} ** 33;
+    const long_seed = @as([33]u8, @splat(0xac));
     try std.testing.expectError(error.InvalidSeedLength, shuffle.innerShuffleList(u32, multi[0..], long_seed[0..], 10, false));
 
     try std.testing.expectError(error.InvalidNumberOfRounds, shuffle.innerShuffleList(u32, multi[0..], good_seed[0..], -1, false));
@@ -131,7 +131,7 @@ test "innerShuffleList no-op conditions match reference validation order" {
 }
 
 test "ComputeShuffledIndex matches reference vector" {
-    const seed = [_]u8{1} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(1));
     const index_count = 1000;
     const rounds = 90;
 
@@ -147,7 +147,7 @@ test "ComputeShuffledIndex matches reference vector" {
 }
 
 test "ComputeShuffledIndex rejects invalid seed" {
-    const bad_seed = [_]u8{1} ** 31;
+    const bad_seed = @as([31]u8, @splat(1));
     try std.testing.expectError(
         error.InvalidSeedLength,
         shuffle.ComputeShuffledIndex.init(bad_seed[0..], 1000, 90),
@@ -155,7 +155,7 @@ test "ComputeShuffledIndex rejects invalid seed" {
 }
 
 test "ComputeShuffledIndex.get wraps like the reference for out-of-range indices" {
-    const seed = [_]u8{1} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(1));
     const index_count = 10;
     const rounds = 90;
 
@@ -170,7 +170,7 @@ test "ComputeShuffledIndex.get wraps like the reference for out-of-range indices
 }
 
 test "ComputeShuffledIndex repeats its rounds every 256 rounds" {
-    const seed = [_]u8{0x3c} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(0x3c));
     const index_count = 1000;
 
     // A round hashes only its low byte, so rounds 256..511 apply rounds 0..255 again.
@@ -197,7 +197,7 @@ fn testBalances(comptime vc: usize) struct { indices: [vc]u32, increments: [vc]u
 }
 
 test "computeProposerIndex matches reference vectors" {
-    const seed = [_]u8{1} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(1));
     const data = testBalances(1000);
     const rounds = 90;
 
@@ -314,13 +314,13 @@ fn expectSyncCommitteeMatchesGetCommitteeIndices(
 /// The random value the samplers draw for their first candidate.
 fn firstRandomValue(seed: *const [SEED_SIZE]u8) u16 {
     var hash: [32]u8 = undefined;
-    std.crypto.hash.sha2.Sha256.hash(&(seed.* ++ [_]u8{0} ** 8), &hash, .{});
+    std.crypto.hash.sha2.Sha256.hash(&(seed.* ++ @as([8]u8, @splat(0))), &hash, .{});
     return std.mem.readInt(u16, hash[0..2], .little);
 }
 
 test "computeSyncCommitteeIndicesInto matches getCommitteeIndices on low-balance sets" {
     const allocator = std.testing.allocator;
-    const seed = [_]u8{0xc3} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(0xc3));
 
     // Cover candidate wraparound and 256-position shuffle-hash boundaries.
     for ([_]usize{ 1, 2, 17, 255, 256, 257, 1000, 4097 }) |active_count| {
@@ -349,13 +349,13 @@ test "computeSyncCommitteeIndicesInto matches getCommitteeIndices on low-balance
 }
 
 test "computeSyncCommitteeIndicesInto accepts a full balance on the largest random value" {
-    var seed = [_]u8{0} ** SEED_SIZE;
+    var seed = @as([SEED_SIZE]u8, @splat(0));
     std.mem.writeInt(u64, seed[0..8], 14867, .little);
     try std.testing.expectEqual(65535, firstRandomValue(&seed));
 
     // 2048 * 65535 >= 2048 * 65535 holds with equality, so the first candidate is accepted.
     const active_indices = [_]u32{ 0, 1, 2, 3 };
-    const effective_balance_increments = [_]u16{2048} ** 4;
+    const effective_balance_increments = @as([4]u16, @splat(2048));
     try expectSyncCommitteeMatchesGetCommitteeIndices(
         &seed,
         &active_indices,
@@ -365,13 +365,13 @@ test "computeSyncCommitteeIndicesInto accepts a full balance on the largest rand
 }
 
 test "computeSyncCommitteeIndicesInto rejects a 32 ETH validator on random value 1024" {
-    var seed = [_]u8{0} ** SEED_SIZE;
+    var seed = @as([SEED_SIZE]u8, @splat(0));
     std.mem.writeInt(u64, seed[0..8], 46894, .little);
     try std.testing.expectEqual(1024, firstRandomValue(&seed));
 
     // 32 * 65535 is 32 short of 2048 * 1024, so the first candidate is rejected.
     const active_indices = [_]u32{ 0, 1, 2, 3 };
-    const effective_balance_increments = [_]u16{32} ** 4;
+    const effective_balance_increments = @as([4]u16, @splat(32));
     try expectSyncCommitteeMatchesGetCommitteeIndices(
         &seed,
         &active_indices,
@@ -382,8 +382,8 @@ test "computeSyncCommitteeIndicesInto rejects a 32 ETH validator on random value
 
 test "computeSyncCommitteeIndicesInto reports the same input errors as getCommitteeIndices" {
     const allocator = std.testing.allocator;
-    const seed = [_]u8{1} ** SEED_SIZE;
-    const short_seed = [_]u8{1} ** 31;
+    const seed = @as([SEED_SIZE]u8, @splat(1));
+    const short_seed = @as([31]u8, @splat(1));
     const one_index = [_]u32{0};
     const one_increment = [_]u16{32};
     var out: [32]u32 = undefined;
@@ -454,7 +454,7 @@ test "computeSyncCommitteeIndicesInto reports the same input errors as getCommit
 
 test "computeSyncCommitteeIndices with one random byte matches getCommitteeIndices" {
     const allocator = std.testing.allocator;
-    const seed = [_]u8{0x5a} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(0x5a));
     const active_indices = [_]u32{ 0, 1, 2, 3, 4, 5, 6, 7 };
     // Below the 32 increment maximum, so one and two random bytes select different committees.
     const effective_balance_increments = [_]u16{ 16, 18, 20, 22, 24, 26, 28, 30 };
@@ -490,7 +490,7 @@ test "computeSyncCommitteeIndices with one random byte matches getCommitteeIndic
 
 test "computeSyncCommitteeIndicesInto wraps like getCommitteeIndices on an oversized balance" {
     const allocator = std.testing.allocator;
-    const seed = [_]u8{0x5a} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(0x5a));
     const active_indices = [_]u32{ 0, 1, 2, 3, 4, 5, 6, 7 };
     const effective_balance_increments = [_]u16{ 16, 18, 20, 22, 24, 26, 28, 30 };
     // The maximum increment count times a random value overflows an i64.
@@ -528,7 +528,7 @@ test "computeSyncCommitteeIndicesInto wraps like getCommitteeIndices on an overs
 
 test "computeSyncCommitteeIndicesInto matches getCommitteeIndices on a negative maximum balance" {
     const allocator = std.testing.allocator;
-    const seed = [_]u8{0x5a} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(0x5a));
     const active_indices = [_]u32{ 0, 1, 2, 3, 4, 5, 6, 7 };
     const effective_balance_increments = [_]u16{ 16, 18, 20, 22, 24, 26, 28, 30 };
     const max_effective_balance = -EFFECTIVE_BALANCE_INCREMENT;
@@ -563,9 +563,9 @@ test "computeSyncCommitteeIndicesInto matches getCommitteeIndices on a negative 
 }
 
 fn sampleLowBalanceSyncCommittee(allocator: std.mem.Allocator) !void {
-    const seed = [_]u8{0x5a} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(0x5a));
     const active_indices = [_]u32{ 0, 1, 2, 3, 4, 5, 6, 7 };
-    const effective_balance_increments = [_]u16{32} ** 8;
+    const effective_balance_increments = @as([8]u16, @splat(32));
 
     var committee: [32]u32 = undefined;
     try shuffle.computeSyncCommitteeIndicesInto(
@@ -591,12 +591,12 @@ test "memory_safety: computeSyncCommitteeIndicesInto frees everything when an al
 }
 
 test "computeSyncCommitteeIndicesInto allocates only shuffle scratch from its allocator for low and high balances" {
-    const seed = [_]u8{0x5a} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(0x5a));
     var active_indices: [4097]u32 = undefined;
     for (&active_indices, 0..) |*index, i| index.* = @intCast(i);
 
     for ([_]u16{ 32, 2048 }) |balance| {
-        const effective_balance_increments = [_]u16{balance} ** active_indices.len;
+        const effective_balance_increments = @as([active_indices.len]u16, @splat(balance));
         var out: [32]u32 = undefined;
         var expected: [out.len]u32 = undefined;
         try shuffle.getCommitteeIndices(
@@ -630,7 +630,7 @@ test "computeSyncCommitteeIndicesInto allocates only shuffle scratch from its al
 
 test "getCommitteeIndices rejects empty active indices" {
     var out: [1]u32 = undefined;
-    const seed = [_]u8{1} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(1));
     const active_indices = [_]u32{};
     const increments = [_]u16{};
 
@@ -648,7 +648,7 @@ test "getCommitteeIndices rejects empty active indices" {
 
 test "getCommitteeIndices rejects zero effective balance increment" {
     var out: [1]u32 = undefined;
-    const seed = [_]u8{1} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(1));
     const active_indices = [_]u32{0};
     const increments = [_]u16{32};
 
@@ -666,7 +666,7 @@ test "getCommitteeIndices rejects zero effective balance increment" {
 
 test "getCommitteeIndices rejects out-of-bounds candidate index" {
     var out: [1]u32 = undefined;
-    const seed = [_]u8{1} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(1));
     // a single active index >= effective_balance_increments.len (1) triggers
     // the out-of-bounds lookup on the very first candidate.
     const active_indices = [_]u32{5};
@@ -686,7 +686,7 @@ test "getCommitteeIndices rejects out-of-bounds candidate index" {
 
 test "computePtcIndices matches naive reference vector" {
     const allocator = std.testing.allocator;
-    const seed = [_]u8{1} ** SEED_SIZE;
+    const seed = @as([SEED_SIZE]u8, @splat(1));
     const data = testBalances(100);
 
     const result = try allocator.alloc(u32, 32);
@@ -711,7 +711,7 @@ test "computePtcIndices matches naive reference vector" {
 
 test "computePtcIndicesForEpoch matches naive reference vector" {
     const allocator = std.testing.allocator;
-    const epoch_seed = [_]u8{2} ** SEED_SIZE;
+    const epoch_seed = @as([SEED_SIZE]u8, @splat(2));
     const data = testBalances(80);
     const slot_offsets = [_]u32{ 0, 20, 40, 60, 80 };
 
@@ -739,7 +739,7 @@ test "computePtcIndicesForEpoch matches naive reference vector" {
 
 test "computePtcIndicesForEpoch slots agree with computePtcIndices" {
     const allocator = std.testing.allocator;
-    const epoch_seed = [_]u8{2} ** SEED_SIZE;
+    const epoch_seed = @as([SEED_SIZE]u8, @splat(2));
     const data = testBalances(80);
     const slot_offsets = [_]u32{ 0, 20, 40, 60, 80 };
     const start_slot = 5;
@@ -762,7 +762,7 @@ test "computePtcIndicesForEpoch slots agree with computePtcIndices" {
 
     const Sha256 = std.crypto.hash.sha2.Sha256;
     for (0..4) |slot| {
-        var input = [_]u8{0} ** (SEED_SIZE + 8);
+        var input = @as([(SEED_SIZE + 8)]u8, @splat(0));
         @memcpy(input[0..SEED_SIZE], epoch_seed[0..]);
         std.mem.writeInt(u64, input[SEED_SIZE..][0..8], start_slot + slot, .little);
         var slot_seed: [SEED_SIZE]u8 = undefined;
@@ -783,8 +783,8 @@ test "computePtcIndicesForEpoch slots agree with computePtcIndices" {
 }
 
 test "computePtcIndicesInto rejects invalid inputs gracefully" {
-    const good_seed = [_]u8{1} ** SEED_SIZE;
-    const bad_seed = [_]u8{1} ** 31;
+    const good_seed = @as([SEED_SIZE]u8, @splat(1));
+    const bad_seed = @as([31]u8, @splat(1));
     const data = testBalances(10);
     var out: [8]u32 = undefined;
 
@@ -839,7 +839,7 @@ test "computePtcIndicesInto rejects invalid inputs gracefully" {
 }
 
 test "computePtcIndicesForEpochInto rejects invalid inputs gracefully" {
-    const epoch_seed = [_]u8{2} ** SEED_SIZE;
+    const epoch_seed = @as([SEED_SIZE]u8, @splat(2));
     const data = testBalances(80);
     var out: [4 * 8]u32 = undefined;
 
@@ -897,7 +897,7 @@ test "unshuffleListParallel matches unshuffleList" {
     const sizes = [_]usize{ 2, 3, 2 * shuffle.pairs_per_task, 2 * shuffle.pairs_per_task + 3, 8 * shuffle.pairs_per_task + 3, 20_011 };
     for (sizes) |size| {
         for (0..8) |seed_byte| {
-            const seed = [_]u8{@intCast(seed_byte)} ** SEED_SIZE;
+            const seed = @as([SEED_SIZE]u8, @splat(@intCast(seed_byte)));
             const expected = try allocator.alloc(u32, size);
             defer allocator.free(expected);
             const actual = try allocator.alloc(u32, size);

@@ -79,8 +79,8 @@ test "StructContainerTreeView - basic get/set/commit/root" {
     defer pool.deinit();
 
     const v: StructValidator.Type = .{
-        .pubkey = [_]u8{0} ** 48,
-        .withdrawal_credentials = [_]u8{1} ** 32,
+        .pubkey = @as([48]u8, @splat(0)),
+        .withdrawal_credentials = @as([32]u8, @splat(1)),
         .effective_balance = 32_000_000_000,
         .slashed = false,
         .activation_eligibility_epoch = 0,
@@ -199,7 +199,7 @@ test "TreeView container field roundtrip" {
     defer pool.deinit();
     const checkpoint: Checkpoint.Type = .{
         .epoch = 42,
-        .root = [_]u8{1} ** 32,
+        .root = @as([32]u8, @splat(1)),
     };
 
     const root_node = try Checkpoint.tree.fromValue(&pool, &checkpoint);
@@ -211,17 +211,17 @@ test "TreeView container field roundtrip" {
 
     // get field "root"
     var root_view = try cp_view.get("root");
-    var root = [_]u8{0} ** 32;
+    var root = @as([32]u8, @splat(0));
     const RootView = @typeInfo(Checkpoint.TreeView.Field("root")).pointer.child;
     try RootView.SszType.tree.toValue(root_view.getRoot(), &pool, root[0..]);
-    try std.testing.expectEqualSlices(u8, ([_]u8{1} ** 32)[0..], root[0..]);
+    try std.testing.expectEqualSlices(u8, (@as([32]u8, @splat(1)))[0..], root[0..]);
 
     // modify field "epoch"
     try cp_view.set("epoch", 100);
     try std.testing.expectEqual(100, try cp_view.get("epoch"));
 
     // modify field "root"
-    var new_root = [_]u8{2} ** 32;
+    var new_root = @as([32]u8, @splat(2));
     const new_root_node = try RootView.SszType.tree.fromValue(&pool, &new_root);
     const new_root_view = try RootView.init(std.testing.allocator, &pool, new_root_node);
     try cp_view.set("root", new_root_view);
@@ -229,14 +229,14 @@ test "TreeView container field roundtrip" {
     // confirm "root" has been modified
     root_view = try cp_view.get("root");
     try RootView.SszType.tree.toValue(root_view.getRoot(), &pool, root[0..]);
-    try std.testing.expectEqualSlices(u8, ([_]u8{2} ** 32)[0..], root[0..]);
+    try std.testing.expectEqualSlices(u8, (@as([32]u8, @splat(2)))[0..], root[0..]);
 
     // commit and check hash_tree_root
     try cp_view.commit();
     var htr_from_value: [32]u8 = undefined;
     const expected_checkpoint: Checkpoint.Type = .{
         .epoch = 100,
-        .root = [_]u8{2} ** 32,
+        .root = @as([32]u8, @splat(2)),
     };
     try Checkpoint.hashTreeRoot(&expected_checkpoint, &htr_from_value);
 
@@ -258,7 +258,7 @@ test "StructContainerTreeView clone drops uncommitted changes" {
         epoch: UintType(64),
         root: ByteVectorType(32),
     });
-    const value: StructCheckpoint.Type = .{ .epoch = 1, .root = [_]u8{1} ** 32 };
+    const value: StructCheckpoint.Type = .{ .epoch = 1, .root = @as([32]u8, @splat(1)) };
     var view = try StructCheckpoint.TreeView.fromValue(std.testing.allocator, &pool, &value);
     defer view.deinit();
     const committed_root = view.getRoot();
@@ -684,7 +684,7 @@ test "ContainerTreeView - serialize (with nested list)" {
 }
 
 test "memory_safety: TreeView container setValue/commit - OOM does not double-free" {
-    const new_root_bytes: [32]u8 = [_]u8{0xee} ** 32;
+    const new_root_bytes: [32]u8 = @as([32]u8, @splat(0xee));
 
     var backing = DoubleFreeDetectAllocator.init(std.testing.allocator, std.math.maxInt(usize));
     defer backing.deinit();
@@ -698,7 +698,7 @@ test "memory_safety: TreeView container setValue/commit - OOM does not double-fr
             });
             defer pool.deinit();
 
-            const checkpoint: Checkpoint.Type = .{ .epoch = 1, .root = [_]u8{1} ** 32 };
+            const checkpoint: Checkpoint.Type = .{ .epoch = 1, .root = @as([32]u8, @splat(1)) };
             var view = try Checkpoint.TreeView.fromValue(allocator, &pool, &checkpoint);
             defer view.deinit();
             try view.setValue("root", &new_root_bytes);
@@ -743,7 +743,7 @@ test "memory_safety: ContainerTreeView commit should reclaim basic nodes after p
     }
     try std.testing.expectEqual(
         pool.nodes.len,
-        @as(usize, @intFromEnum(pool.next_free_node)),
+        @as(usize, @backingInt(pool.next_free_node)),
     );
     try std.testing.expect(filler.items.len >= 2);
     // Reserve two slots for the basic leaves; their parent exhausts the pool.
@@ -811,7 +811,7 @@ test "memory_safety: ContainerTreeView retry should adopt a child committed befo
         }
         try std.testing.expectEqual(
             pool.nodes.len,
-            @as(usize, @intFromEnum(pool.next_free_node)),
+            @as(usize, @backingInt(pool.next_free_node)),
         );
         try std.testing.expect(filler.items.len >= 2);
         // Reserve two slots for the child leaf and inner branch; the outer parent exhausts
@@ -847,7 +847,7 @@ test "memory_safety: ContainerTreeView retry should adopt a child committed befo
 
 test "memory_safety: TreeView container fromValue - view allocation OOM leaves no orphan pool nodes" {
     inline for (.{ Checkpoint, StructContainerType(struct { epoch: UintType(64), root: ByteVectorType(32) }) }) |ST| {
-        const checkpoint: ST.Type = .{ .epoch = 7, .root = [_]u8{7} ** 32 };
+        const checkpoint: ST.Type = .{ .epoch = 7, .root = @as([32]u8, @splat(7)) };
         var pool = try Node.Pool.init(.{ .page_allocator = std.testing.allocator, .allocator = std.testing.allocator, .pool_size = 64 });
         defer pool.deinit();
 
@@ -873,7 +873,7 @@ test "memory_safety: TreeView container getFieldRoot on a dirty basic field leav
     var pool = try Node.Pool.init(.{ .page_allocator = std.testing.allocator, .allocator = std.testing.allocator, .pool_size = 256 });
     defer pool.deinit();
 
-    const checkpoint: Checkpoint.Type = .{ .epoch = 1, .root = [_]u8{1} ** 32 };
+    const checkpoint: Checkpoint.Type = .{ .epoch = 1, .root = @as([32]u8, @splat(1)) };
     const root_node = try Checkpoint.tree.fromValue(&pool, &checkpoint);
     var view = try Checkpoint.TreeView.init(std.testing.allocator, &pool, root_node);
     defer view.deinit();
@@ -881,7 +881,7 @@ test "memory_safety: TreeView container getFieldRoot on a dirty basic field leav
     try view.set("epoch", 99);
     const baseline = pool.getNodesInUse();
 
-    var expected = [_]u8{0} ** 32;
+    var expected = @as([32]u8, @splat(0));
     std.mem.writeInt(u64, expected[0..8], 99, .little);
     for (0..10) |_| {
         const field_root = try view.getFieldRoot("epoch");
@@ -891,7 +891,7 @@ test "memory_safety: TreeView container getFieldRoot on a dirty basic field leav
 }
 
 test "memory_safety: TreeView container deserialize - view allocation OOM leaves no orphan pool nodes" {
-    const value: Checkpoint.Type = .{ .epoch = 7, .root = [_]u8{0x5a} ** 32 };
+    const value: Checkpoint.Type = .{ .epoch = 7, .root = @as([32]u8, @splat(0x5a)) };
     var bytes: [Checkpoint.fixed_size]u8 = undefined;
     _ = Checkpoint.serializeIntoBytes(&value, &bytes);
 
@@ -922,7 +922,7 @@ test "memory_safety: TreeView container init preserves caller roots on allocatio
         defer pool.deinit();
 
         for ([_]u32{ 0, 1 }) |caller_refs| {
-            const value: ST.Type = .{ .epoch = 7, .root = [_]u8{7} ** 32 };
+            const value: ST.Type = .{ .epoch = 7, .root = @as([32]u8, @splat(7)) };
             const root = try ST.tree.fromValue(&pool, &value);
             defer pool.unref(root);
             if (caller_refs == 1) try pool.ref(root);
@@ -943,10 +943,10 @@ test "memory_safety: TreeView container init releases the view on reference over
         var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 32 });
         defer pool.deinit();
 
-        const value: ST.Type = .{ .epoch = 7, .root = [_]u8{7} ** 32 };
+        const value: ST.Type = .{ .epoch = 7, .root = @as([32]u8, @splat(7)) };
         const root = try ST.tree.fromValue(&pool, &value);
         defer pool.unref(root);
-        const state = &pool.nodes.items(.state)[@intFromEnum(root)];
+        const state = &pool.nodes.items(.state)[@backingInt(root)];
         const original_state = state.*;
         defer state.* = original_state;
         state.* = Node.State.initInUse(original_state.kind(), Node.max_ref_count);

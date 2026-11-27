@@ -12,8 +12,8 @@ const verifySameMessage = @import("verifier.zig").verifySameMessage;
 const verifySignatureSets = @import("verifier.zig").verifySignatureSets;
 
 test "single signature set verification" {
-    const ikm = [_]u8{1} ** 32;
-    var message = [_]u8{2} ** 32;
+    const ikm = @as([32]u8, @splat(1));
+    var message = @as([32]u8, @splat(2));
     const secret_key = try bls.SecretKey.keyGen(&ikm, null);
     const public_key = secret_key.toPublicKey();
     const signature = secret_key.sign(&message, DST, null);
@@ -34,7 +34,7 @@ test "single signature set verification" {
         .{ .pks_validate = true, .sigs_groupcheck = true },
     ));
 
-    message = [_]u8{3} ** 32;
+    message = @as([32]u8, @splat(3));
     try std.testing.expect(!try verifySignatureSets(
         std.testing.io,
         pool,
@@ -46,7 +46,7 @@ test "single signature set verification" {
 test "same-message verification rejects invalid set counts" {
     var empty_public_keys = [_]*const PublicKey{};
     var empty_signatures = [_]*const Signature{};
-    const message = [_]u8{0} ** 32;
+    const message = @as([32]u8, @splat(0));
     const pool: *ThreadPool = undefined;
 
     try std.testing.expectError(

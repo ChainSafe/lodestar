@@ -19,7 +19,7 @@ pub fn processBlsToExecutionChange(
 
     try isValidBlsToExecutionChange(fork, config, state, signed_bls_to_execution_change, true);
 
-    var new_withdrawal_credentials: Root = [_]u8{0} ** 32;
+    var new_withdrawal_credentials: Root = @as([32]u8, @splat(0));
     const validator_index = address_change.validator_index;
     var validators = try state.validators();
     var validator = try validators.get(@intCast(validator_index));

@@ -24,11 +24,11 @@ pub fn BitVectorType(comptime _length: comptime_int) type {
         pub const kind = TypeKind.vector;
         pub const Element: type = BoolType();
         pub const length: usize = _length;
-        pub const byte_length = std.math.divCeil(usize, length, 8) catch unreachable;
+        pub const byte_length = @divCeil(@as(usize, length), 8);
         pub const Type: type = BitVector(length);
         pub const TreeView: type = BitVectorTreeView(@This());
         pub const fixed_size: usize = byte_length;
-        pub const chunk_count: usize = std.math.divCeil(usize, fixed_size, 32) catch unreachable;
+        pub const chunk_count: usize = @divCeil(@as(usize, fixed_size), 32);
         pub const chunk_depth: u8 = maxChunksToDepth(chunk_count);
 
         pub const default_value: Type = Type.empty;
@@ -41,7 +41,7 @@ pub fn BitVectorType(comptime _length: comptime_int) type {
         }
 
         pub fn hashTreeRoot(value: *const Type, out: *[32]u8) !void {
-            var chunks = [_][32]u8{[_]u8{0} ** 32} ** ((chunk_count + 1) / 2 * 2);
+            var chunks = @as([((chunk_count + 1) / 2 * 2)][32]u8, @splat(@as([32]u8, @splat(0))));
             _ = serializeIntoBytes(value, @ptrCast(&chunks));
             try merkleize(@ptrCast(&chunks), chunk_depth, out);
         }
@@ -74,7 +74,7 @@ pub fn BitVectorType(comptime _length: comptime_int) type {
             }
 
             pub fn hashTreeRoot(data: []const u8, out: *[32]u8) !void {
-                var chunks = [_][32]u8{[_]u8{0} ** 32} ** ((chunk_count + 1) / 2 * 2);
+                var chunks = @as([((chunk_count + 1) / 2 * 2)][32]u8, @splat(@as([32]u8, @splat(0))));
                 @memcpy(@as([]u8, @ptrCast(&chunks))[0..fixed_size], data);
                 try merkleize(@ptrCast(&chunks), chunk_depth, out);
             }
@@ -82,17 +82,17 @@ pub fn BitVectorType(comptime _length: comptime_int) type {
 
         pub const tree = struct {
             pub fn default(_: *Node.Pool) !Node.Id {
-                return @enumFromInt(chunk_depth);
+                return @fromBackingInt(@intCast(chunk_depth));
             }
 
             pub fn deserializeFromBytes(pool: *Node.Pool, data: []const u8) !Node.Id {
                 try serialized.validate(data);
 
-                var chunks: [chunk_count][32]u8 = [_][32]u8{[_]u8{0} ** 32} ** chunk_count;
+                var chunks: [chunk_count][32]u8 = @as([chunk_count][32]u8, @splat(@as([32]u8, @splat(0))));
                 const chunk_bytes: []u8 = @ptrCast(&chunks);
                 @memcpy(chunk_bytes[0..byte_length], data[0..byte_length]);
 
-                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
+                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @fromBackingInt(@intCast(0))));
                 errdefer pool.free(&nodes);
 
                 for (&chunks, 0..) |*chunk, i| {
@@ -122,11 +122,11 @@ pub fn BitVectorType(comptime _length: comptime_int) type {
             }
 
             pub fn fromValue(pool: *Node.Pool, value: *const Type) !Node.Id {
-                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
+                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @fromBackingInt(@intCast(0))));
                 errdefer pool.free(&nodes);
 
                 for (0..chunk_count) |i| {
-                    var leaf_buf = [_]u8{0} ** 32;
+                    var leaf_buf = @as([32]u8, @splat(0));
                     const start_idx = i * 32;
                     const remaining_bytes = byte_length - start_idx;
 

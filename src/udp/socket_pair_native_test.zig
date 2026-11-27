@@ -17,7 +17,7 @@ fn socketOption(handle: net.Socket.Handle, level: i32, option: u32) !c_int {
 }
 
 test "UDP native listeners disable fragmentation and Linux cached PMTU enforcement" {
-    const os = @import("builtin").os.tag;
+    const os = @import("builtin").target.os.tag;
     const linux = std.os.linux;
     const addresses = [_]SocketPair.Bindings{
         .{ .ip4 = .loopback(0) },
@@ -58,7 +58,7 @@ fn sendMany(sockets: *const SocketPair, io: std.Io, messages: []const SocketPair
 }
 
 test "UDP distinguishes destination refusal from access denial for native single and batch sends" {
-    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
+    if (@import("builtin").target.os.tag != .linux) return error.SkipZigTest;
     var sockets: [2]SocketPair = undefined;
     for (&sockets, 0..) |*socket, index| {
         errdefer for (sockets[0..index]) |*bound| bound.close(std.testing.io);
@@ -100,7 +100,7 @@ const Refusal = struct {
 };
 
 test "UDP native pressure returns without polling writable for EAGAIN ENOBUFS and ENOMEM" {
-    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
+    if (@import("builtin").target.os.tag != .linux) return error.SkipZigTest;
     var sockets = try SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer sockets.close(std.testing.io);
     for ([_]std.os.linux.E{ .AGAIN, .NOBUFS, .NOMEM }) |errno| {
@@ -144,7 +144,7 @@ const Pressure = struct {
 };
 
 test "UDP native ready reads cost one receive each, never poll and never read an unmarked family" {
-    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
+    if (@import("builtin").target.os.tag != .linux) return error.SkipZigTest;
     var sockets = try SocketPair.bind(std.testing.io, loopbacks);
     defer sockets.close(std.testing.io);
     var single = try SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
@@ -190,18 +190,18 @@ const NoPoll = struct {
     fn run(self: *NoPoll, sockets: *SocketPair, single: *SocketPair) void {
         const linux = std.os.linux;
         const bpf = linux.BPF;
-        const little = comptime @import("builtin").cpu.arch.endian() == .little;
+        const little = comptime @import("builtin").target.cpu.arch.endian() == .little;
         const descriptor: u32 = @offsetOf(linux.SECCOMP.data, "arg0") + if (little) 0 else 4;
-        const poll: u32 = if (@hasField(linux.SYS, "poll")) @intFromEnum(linux.SYS.poll) else @intFromEnum(linux.SYS.ppoll);
+        const poll: u32 = if (@hasField(linux.SYS, "poll")) @backingInt(linux.SYS.poll) else @backingInt(linux.SYS.ppoll);
         const filter = [_]native.Seccomp.Instruction{
             .{ .code = bpf.LD | bpf.W | bpf.ABS, .jt = 0, .jf = 0, .k = @offsetOf(linux.SECCOMP.data, "nr") },
-            .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = 3, .k = @intFromEnum(linux.SYS.recvmsg) },
+            .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = 3, .k = @backingInt(linux.SYS.recvmsg) },
             .{ .code = bpf.LD | bpf.W | bpf.ABS, .jt = 0, .jf = 0, .k = descriptor },
             .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = 4, .k = @intCast(sockets.values[1].?.handle) },
-            .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ERRNO | @as(u32, @intFromEnum(linux.E.NETDOWN)) },
+            .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ERRNO | @as(u32, @backingInt(linux.E.NETDOWN)) },
             .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 1, .jf = 0, .k = poll },
-            .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = 1, .k = @intFromEnum(linux.SYS.ppoll) },
-            .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ERRNO | @as(u32, @intFromEnum(linux.E.PERM)) },
+            .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = 1, .k = @backingInt(linux.SYS.ppoll) },
+            .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ERRNO | @as(u32, @backingInt(linux.E.PERM)) },
             .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ALLOW },
         };
         self.installation = native.Seccomp.install(&filter);
@@ -229,7 +229,7 @@ const NoPoll = struct {
 };
 
 test "UDP native batch preserves its successful prefix when the next call reports pressure" {
-    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
+    if (@import("builtin").target.os.tag != .linux) return error.SkipZigTest;
     var sockets = try SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer sockets.close(std.testing.io);
     const Partial = struct {
@@ -238,15 +238,15 @@ test "UDP native batch preserves its successful prefix when the next call report
         fn run(self: *@This(), sender: *const SocketPair) void {
             const linux = std.os.linux;
             const bpf = linux.BPF;
-            const word: u32 = if (comptime @import("builtin").cpu.arch.endian() == .little) 0 else 4;
+            const word: u32 = if (comptime @import("builtin").target.cpu.arch.endian() == .little) 0 else 4;
             const filter = [_]native.Seccomp.Instruction{
                 .{ .code = bpf.LD | bpf.W | bpf.ABS, .jt = 0, .jf = 0, .k = @offsetOf(linux.SECCOMP.data, "nr") },
-                .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = 5, .k = @intFromEnum(linux.SYS.sendmmsg) },
+                .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = 5, .k = @backingInt(linux.SYS.sendmmsg) },
                 .{ .code = bpf.LD | bpf.W | bpf.ABS, .jt = 0, .jf = 0, .k = @offsetOf(linux.SECCOMP.data, "arg0") + word },
                 .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = 3, .k = @intCast(sender.primary().handle) },
                 .{ .code = bpf.LD | bpf.W | bpf.ABS, .jt = 0, .jf = 0, .k = @offsetOf(linux.SECCOMP.data, "arg2") + word },
                 .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = 1, .k = 1 },
-                .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ERRNO | @as(u32, @intFromEnum(linux.E.AGAIN)) },
+                .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ERRNO | @as(u32, @backingInt(linux.E.AGAIN)) },
                 .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ALLOW },
             };
             self.installation = native.Seccomp.install(&filter);
@@ -276,7 +276,7 @@ test "UDP native batch preserves its successful prefix when the next call report
 }
 
 test "dual-stack UDP stops at pressure without sending or retaining later families" {
-    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
+    if (@import("builtin").target.os.tag != .linux) return error.SkipZigTest;
     var buffer: [payload_max]u8 = undefined;
     var target = try SocketPair.bind(std.testing.io, .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } });
     defer target.close(std.testing.io);
@@ -333,7 +333,7 @@ test "dual-stack UDP stops at pressure without sending or retaining later famili
 }
 
 test "UDP GSO segments separate buffers and preserves short and empty datagrams" {
-    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
+    if (@import("builtin").target.os.tag != .linux) return error.SkipZigTest;
     var target = try SocketPair.bind(std.testing.io, loopbacks);
     defer target.close(std.testing.io);
     var scratch: SocketPair.BatchScratch = undefined;
@@ -365,7 +365,7 @@ test "UDP GSO segments separate buffers and preserves short and empty datagrams"
 }
 
 test "UDP GSO fallback preserves an accepted prefix and the original destination failure" {
-    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
+    if (@import("builtin").target.os.tag != .linux) return error.SkipZigTest;
     var target = try SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer target.close(std.testing.io);
     for ([_]std.os.linux.E{ .INVAL, .IO, .MSGSIZE, .NOPROTOOPT, .OPNOTSUPP }) |errno| {
@@ -394,14 +394,14 @@ const GsoFallback = struct {
     fn run(self: *GsoFallback, socket: *const SocketPair) void {
         const linux = std.os.linux;
         const bpf = linux.BPF;
-        const word: u32 = if (comptime @import("builtin").cpu.arch.endian() == .little) 0 else 4;
+        const word: u32 = if (comptime @import("builtin").target.cpu.arch.endian() == .little) 0 else 4;
         // Refuse a single GSO group; the fallback's multiple individual messages remain allowed.
         const filter = [_]native.Seccomp.Instruction{
             .{ .code = bpf.LD | bpf.W | bpf.ABS, .jt = 0, .jf = 0, .k = @offsetOf(linux.SECCOMP.data, "nr") },
-            .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = 3, .k = @intFromEnum(linux.SYS.sendmmsg) },
+            .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = 3, .k = @backingInt(linux.SYS.sendmmsg) },
             .{ .code = bpf.LD | bpf.W | bpf.ABS, .jt = 0, .jf = 0, .k = @offsetOf(linux.SECCOMP.data, "arg2") + word },
             .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = 1, .k = 1 },
-            .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ERRNO | @as(u32, @intFromEnum(self.errno)) },
+            .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ERRNO | @as(u32, @backingInt(self.errno)) },
             .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ALLOW },
         };
         self.installation = native.Seccomp.install(&filter);
@@ -420,7 +420,7 @@ const GsoFallback = struct {
 };
 
 test "UDP native receive batches use one syscall and cancellation leaves the next batch queued" {
-    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
+    if (@import("builtin").target.os.tag != .linux) return error.SkipZigTest;
     const Checks = struct {
         calls: usize = 0,
         cancel: bool = false,

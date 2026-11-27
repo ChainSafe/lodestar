@@ -3,7 +3,7 @@ pub const FAR_FUTURE_EPOCH = std.math.maxInt(u64);
 pub const BASE_REWARDS_PER_EPOCH = 4;
 pub const DEPOSIT_CONTRACT_TREE_DEPTH = std.math.pow(usize, 2, 5); // 32
 pub const JUSTIFICATION_BITS_LENGTH = 4;
-pub const ZERO_HASH = [_]u8{0} ** 32;
+pub const ZERO_HASH = @as([32]u8, @splat(0));
 pub const ZERO_HASH_HEX = "0x0000000000000000000000000000000000000000000000000000000000000000";
 pub const GENESIS_SLOT = 0;
 pub const ETH_TO_GWEI: u64 = 1_000_000_000;
@@ -136,4 +136,4 @@ pub const CURRENT_SYNC_COMMITTEE_GINDEX = 54;
 pub const EXECUTION_PAYLOAD_GINDEX = 25;
 pub const CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA = 86;
 
-pub const G2_POINT_AT_INFINITY: [96]u8 = [_]u8{0xc0} ++ [_]u8{0} ** 95;
+pub const G2_POINT_AT_INFINITY: [96]u8 = [_]u8{0xc0} ++ @as([95]u8, @splat(0));

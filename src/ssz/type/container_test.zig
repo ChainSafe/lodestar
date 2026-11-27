@@ -43,7 +43,7 @@ test "memory_safety: variable container serialized hashing should reject invalid
         try std.testing.expectError(error.InvalidSize, ST.readFieldRanges(encoded[0..length]));
         try std.testing.expectError(error.InvalidSize, ST.serialized.hashTreeRoot(std.testing.allocator, encoded[0..length], &root));
     }
-    const oversized = encoded ++ [_]u8{0} ** 33;
+    const oversized = encoded ++ @as([33]u8, @splat(0));
     try std.testing.expectError(error.InvalidSize, ST.readFieldRanges(&oversized));
     try std.testing.expectError(error.InvalidSize, ST.serialized.hashTreeRoot(std.testing.allocator, &oversized, &root));
     try ST.serialized.hashTreeRoot(std.testing.allocator, &encoded, &root);
@@ -121,7 +121,7 @@ test "FixedContainerType - serializeIntoBytes (zero)" {
     });
 
     const value: Container.Type = .{ .a = 0, .b = 0 };
-    const expected_serialized = [_]u8{0} ** 16;
+    const expected_serialized = @as([16]u8, @splat(0));
     const expected_root = [_]u8{ 0xf5, 0xa5, 0xfd, 0x42, 0xd1, 0x6a, 0x20, 0x30, 0x27, 0x98, 0xef, 0x6e, 0xd3, 0x09, 0x97, 0x9b, 0x43, 0x00, 0x3d, 0x23, 0x20, 0xd9, 0xf0, 0xe8, 0xea, 0x98, 0x31, 0xa9, 0x27, 0x59, 0xfb, 0x4b };
 
     var serialized: [Container.fixed_size]u8 = undefined;
@@ -209,9 +209,9 @@ test "FixedContainerType - serializeIntoBytes (uint64 + ByteVector32)" {
         b: ByteVectorType(32),
     });
 
-    const value: Container.Type = .{ .a = 123456, .b = [_]u8{0x0a} ** 32 };
+    const value: Container.Type = .{ .a = 123456, .b = @as([32]u8, @splat(0x0a)) };
     // 0x40e20100000000000a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a
-    const expected_serialized = [_]u8{ 0x40, 0xe2, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00 } ++ [_]u8{0x0a} ** 32;
+    const expected_serialized = [_]u8{ 0x40, 0xe2, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00 } ++ @as([32]u8, @splat(0x0a));
     const expected_root = [_]u8{ 0x97, 0xb6, 0x2a, 0xdf, 0x79, 0xc8, 0x23, 0xff, 0x07, 0xc5, 0xe7, 0xba, 0x80, 0xb9, 0x12, 0x05, 0x9f, 0x6f, 0x0f, 0x40, 0xba, 0xd5, 0xf2, 0x67, 0xd4, 0x74, 0x7b, 0x21, 0xea, 0xfb, 0x77, 0x58 };
 
     var serialized: [Container.fixed_size]u8 = undefined;
@@ -436,15 +436,15 @@ test "FixedContainerType equals" {
     var c: Container.Type = undefined;
 
     a.slot = 42;
-    a.root = [_]u8{1} ** 32;
+    a.root = @as([32]u8, @splat(1));
     a.active = true;
 
     b.slot = 42;
-    b.root = [_]u8{1} ** 32;
+    b.root = @as([32]u8, @splat(1));
     b.active = true;
 
     c.slot = 43; // Different slot
-    c.root = [_]u8{1} ** 32;
+    c.root = @as([32]u8, @splat(1));
     c.active = true;
 
     try std.testing.expect(Container.equals(&a, &b));

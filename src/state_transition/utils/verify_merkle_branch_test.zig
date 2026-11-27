@@ -11,7 +11,7 @@ fn computeMerkleRoot(leaves: []const Root) Root {
     const depth = std.math.log2_int_ceil(usize, if (leaves.len <= 1) 2 else leaves.len);
     const width = @as(usize, 1) << @intCast(depth);
     var layer: [64]Root = undefined; // supports up to 64 leaves
-    const zero: Root = .{0} ** 32;
+    const zero: Root = @splat(0);
 
     // Fill leaves + padding
     for (0..width) |i| {
@@ -36,7 +36,7 @@ fn computeMerkleRoot(leaves: []const Root) Root {
 fn computeMerkleProof(leaves: []const Root, index: usize, depth: usize) [33]Root {
     const width = @as(usize, 1) << @intCast(depth);
     var layers: [7][64]Root = undefined; // supports depth up to 6
-    const zero: Root = .{0} ** 32;
+    const zero: Root = @splat(0);
 
     // Layer 0: leaves
     for (0..width) |i| {
@@ -56,7 +56,7 @@ fn computeMerkleProof(leaves: []const Root, index: usize, depth: usize) [33]Root
     }
 
     // Extract proof: sibling at each level
-    var proof: [33]Root = .{zero} ** 33;
+    var proof: [33]Root = @splat(zero);
     var idx = index;
     for (0..depth) |d| {
         const sibling = if (idx % 2 == 0) idx + 1 else idx - 1;
@@ -67,7 +67,7 @@ fn computeMerkleProof(leaves: []const Root, index: usize, depth: usize) [33]Root
 }
 
 test "verify valid merkle branch - depth 1" {
-    const zero: Root = .{0} ** 32;
+    const zero: Root = @splat(0);
     var leaf0: Root = undefined;
     @memset(&leaf0, 0xAA);
     var leaf1: Root = undefined;
@@ -143,8 +143,8 @@ test "verify fails with wrong index" {
 }
 
 test "verify with all-zero leaves at depth 0" {
-    const zero: Root = .{0} ** 32;
-    var proof: [33]Root = .{zero} ** 33;
+    const zero: Root = @splat(0);
+    var proof: [33]Root = @splat(zero);
     // At depth 0, the leaf IS the root (no hashing).
     try std.testing.expect(verifyMerkleBranch(zero, &proof, 0, 0, zero));
 

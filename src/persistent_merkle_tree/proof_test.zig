@@ -70,7 +70,7 @@ fn fullTreeDescriptor(comptime depth: usize, witness_first: bool, out: []u8) []c
 }
 
 fn makeLeaf(value: u8) [32]u8 {
-    var out: [32]u8 = [_]u8{0} ** 32;
+    var out: [32]u8 = @as([32]u8, @splat(0));
     out[0] = value;
     return out;
 }
@@ -90,7 +90,7 @@ fn buildFullTree(pool: *Node.Pool, depth: usize, next_value: *u8) Node.Error!Nod
 // Fill `chunks[0..valid]` with distinct non-zero leaves; the rest stay zero,
 // satisfying the chunked_leaf trailing-zero invariant for partial payloads.
 fn fillChunks(chunks: *align(64) [ChunkedLeaf.K][32]u8, valid: usize) void {
-    chunks.* = [_][32]u8{[_]u8{0} ** 32} ** ChunkedLeaf.K;
+    chunks.* = @as([ChunkedLeaf.K][32]u8, @splat(@as([32]u8, @splat(0))));
     for (0..valid) |i| chunks[i] = makeLeaf(@truncate(i +% 1));
 }
 
@@ -141,7 +141,7 @@ test "single proof into caller storage roundtrip without allocations" {
         try testing.expectError(error.InvalidWitnessLength, proof.createSingleProofInto(failing.allocator(), &pool, root, gindex, invalid_witnesses[0..len]));
         try testing.expectEqualDeep(unchanged, invalid_witnesses);
     }
-    const root_proof = try proof.createSingleProofInto(failing.allocator(), &pool, root, @enumFromInt(1), witnesses[0..0]);
+    const root_proof = try proof.createSingleProofInto(failing.allocator(), &pool, root, @fromBackingInt(@intCast(1)), witnesses[0..0]);
     try testing.expectEqualSlices(u8, &root_hash, &root_proof);
 }
 
@@ -199,7 +199,7 @@ test "single proof invalid gindex" {
     const root = try pool.createLeaf(&leaf_hash);
     defer pool.unref(root);
 
-    const zero_gindex: Gindex = @enumFromInt(0);
+    const zero_gindex: Gindex = @fromBackingInt(@intCast(0));
     try testing.expectError(error.InvalidGindex, proof.createSingleProof(testing.allocator, &pool, root, zero_gindex));
     try testing.expectError(error.InvalidGindex, proof.createSingleProofInto(testing.allocator, &pool, root, zero_gindex, &.{}));
 
@@ -528,8 +528,8 @@ test "single proof through partial chunked_leaf" {
 
 test "memory_safety: compact multiproof reconstruction should reclaim partial nodes on pool exhaustion" {
     var leaves = [_][32]u8{
-        [_]u8{1} ** 32,
-        [_]u8{2} ** 32,
+        @as([32]u8, @splat(1)),
+        @as([32]u8, @splat(2)),
     };
     // The descriptor is a branch with two leaf children.
     const descriptor = [_]u8{0b0110_0000};

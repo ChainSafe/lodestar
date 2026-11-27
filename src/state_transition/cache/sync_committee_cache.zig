@@ -121,8 +121,8 @@ test "initSyncCommittee - sanity" {
     var pubkeys: [1]BLSPubkey = undefined;
     try @import("../test_utils/interop_pubkeys.zig").interopPubkeysCached(1, &pubkeys);
     var sync_committee = SyncCommittee{
-        .pubkeys = [_]BLSPubkey{pubkeys[0]} ** preset.SYNC_COMMITTEE_SIZE,
-        .aggregate_pubkey = [_]u8{2} ** 48,
+        .pubkeys = @as([preset.SYNC_COMMITTEE_SIZE]BLSPubkey, @splat(pubkeys[0])),
+        .aggregate_pubkey = @as([48]u8, @splat(2)),
     };
 
     var pubkey_cache = try PubkeyCache.initCapacity(allocator, std.testing.io, 1);
@@ -134,7 +134,7 @@ test "initSyncCommittee - sanity" {
 
     try std.testing.expectEqualSlices(
         ValidatorIndex,
-        &[_]ValidatorIndex{0} ** preset.SYNC_COMMITTEE_SIZE,
+        &@as([preset.SYNC_COMMITTEE_SIZE]ValidatorIndex, @splat(0)),
         try cache.getValidatorIndices(),
     );
 }
@@ -183,8 +183,8 @@ test computeSyncCommitteeIndices {
     var pubkeys: [1]BLSPubkey = undefined;
     try @import("../test_utils/interop_pubkeys.zig").interopPubkeysCached(1, &pubkeys);
     var sync_committee = SyncCommittee{
-        .pubkeys = [_]BLSPubkey{pubkeys[0]} ** preset.SYNC_COMMITTEE_SIZE,
-        .aggregate_pubkey = [_]u8{2} ** 48,
+        .pubkeys = @as([preset.SYNC_COMMITTEE_SIZE]BLSPubkey, @splat(pubkeys[0])),
+        .aggregate_pubkey = @as([48]u8, @splat(2)),
     };
 
     const allocator = std.testing.allocator;
@@ -196,7 +196,7 @@ test computeSyncCommitteeIndices {
     try computeSyncCommitteeIndices(&sync_committee, &pubkey_cache, std.testing.io, &out);
     try std.testing.expectEqualSlices(
         ValidatorIndex,
-        &[_]ValidatorIndex{0} ** preset.SYNC_COMMITTEE_SIZE,
+        &@as([preset.SYNC_COMMITTEE_SIZE]ValidatorIndex, @splat(0)),
         &out,
     );
 }

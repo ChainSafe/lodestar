@@ -13,10 +13,10 @@ test "rootToHex" {
     };
 
     const test_cases = [_]TestCase{
-        TestCase{ .root = &[_]u8{0} ** 32, .expected = "0x0000000000000000000000000000000000000000000000000000000000000000" },
-        TestCase{ .root = &[_]u8{10} ** 32, .expected = "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a" },
-        TestCase{ .root = &[_]u8{17} ** 32, .expected = "0x1111111111111111111111111111111111111111111111111111111111111111" },
-        TestCase{ .root = &[_]u8{255} ** 32, .expected = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" },
+        TestCase{ .root = &@as([32]u8, @splat(0)), .expected = "0x0000000000000000000000000000000000000000000000000000000000000000" },
+        TestCase{ .root = &@as([32]u8, @splat(10)), .expected = "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a" },
+        TestCase{ .root = &@as([32]u8, @splat(17)), .expected = "0x1111111111111111111111111111111111111111111111111111111111111111" },
+        TestCase{ .root = &@as([32]u8, @splat(255)), .expected = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" },
     };
 
     for (test_cases) |tc| {
@@ -41,7 +41,7 @@ test "hexToBytes" {
     };
 
     inline for (test_cases) |tc| {
-        var out = [_]u8{0} ** tc.expected.len;
+        var out = @as([tc.expected.len]u8, @splat(0));
         _ = try hexToBytes(&out, tc.hex);
         try std.testing.expectEqualSlices(u8, tc.expected, &out);
     }

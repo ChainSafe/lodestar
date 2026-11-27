@@ -69,8 +69,7 @@ pub fn finish(self: *Writer, allocator: std.mem.Allocator, io: std.Io) ![]const 
     }
     self.file.close(io);
 
-    const new_base = try std.fmt.allocPrint(
-        allocator,
+    const new_base = try allocator.print(
         "{s}-{d:0>5}-{s}.era",
         .{ self.config.chain.CONFIG_NAME, self.era_number, self.state.finished_group.short_era_root },
     );

@@ -14,22 +14,22 @@ test "View" {
     const p = &pool;
 
     // Create a root node (z(3))
-    const root_node: Node.Id = @enumFromInt(3);
+    const root_node: Node.Id = @fromBackingInt(@intCast(3));
 
     const view_1 = try pool.create(root_node, null);
     const view_2 = try view_1.createSubview(p, Gindex.fromDepth(3, 0));
 
-    try std.testing.expectEqual(@as(Node.Id, @enumFromInt(3)), view_1.getRootNode(p));
-    try std.testing.expectEqual(@as(Node.Id, @enumFromInt(0)), view_2.getRootNode(p));
-    try std.testing.expectEqual(@as(Node.Id, @enumFromInt(3)), view_2.getParent(p).?.root_view.getRootNode(p));
+    try std.testing.expectEqual(@as(Node.Id, @fromBackingInt(@intCast(3))), view_1.getRootNode(p));
+    try std.testing.expectEqual(@as(Node.Id, @fromBackingInt(@intCast(0))), view_2.getRootNode(p));
+    try std.testing.expectEqual(@as(Node.Id, @fromBackingInt(@intCast(3))), view_2.getParent(p).?.root_view.getRootNode(p));
 
     // setting the child updates the parent
-    try view_2.setRootNode(p, @enumFromInt(5));
-    try std.testing.expect(@as(Node.Id, @enumFromInt(3)) != view_1.getRootNode(p));
+    try view_2.setRootNode(p, @fromBackingInt(@intCast(5)));
+    try std.testing.expect(@as(Node.Id, @fromBackingInt(@intCast(3))) != view_1.getRootNode(p));
 
     // setting the parent updates the child
-    try view_1.setNode(p, Gindex.fromDepth(3, 0), @enumFromInt(0));
-    try std.testing.expectEqual(@as(Node.Id, @enumFromInt(0)), view_2.getRootNode(p));
+    try view_1.setNode(p, Gindex.fromDepth(3, 0), @fromBackingInt(@intCast(0)));
+    try std.testing.expectEqual(@as(Node.Id, @fromBackingInt(@intCast(0))), view_2.getRootNode(p));
 
     pool.destroy(view_2);
     pool.destroy(view_1);

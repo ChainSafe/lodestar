@@ -76,11 +76,11 @@ pub fn generateElectraBlock(allocator: Allocator, cached_state: *CachedBeaconSta
             .proposer_index = try cached_state.epoch_cache.getBeaconProposer(block_slot),
             .parent_root = parent_root.*,
             // this could be computed later
-            .state_root = [_]u8{0} ** 32,
+            .state_root = @as([32]u8, @splat(0)),
             .body = .{
-                .randao_reveal = [_]u8{0} ** 96,
+                .randao_reveal = @as([96]u8, @splat(0)),
                 .eth1_data = types.phase0.Eth1Data.default_value,
-                .graffiti = [_]u8{0} ** 32,
+                .graffiti = @as([32]u8, @splat(0)),
                 // TODO: populate data to test other operations
                 .proposer_slashings = types.phase0.ProposerSlashings.default_value,
                 .attester_slashings = types.phase0.AttesterSlashings.default_value,

@@ -67,7 +67,7 @@ pub fn getAttestationDeltas(epoch_cache: *const EpochCache, cache: *const EpochT
     // MAX_EFFECTIVE_BALANCE (32 ETH), so effective_balance_increment is in range 0..32.
     // Use a fixed array for O(1) lookup instead of a HashMap.
     const max_increment = comptime preset.MAX_EFFECTIVE_BALANCE / preset.EFFECTIVE_BALANCE_INCREMENT + 1;
-    var reward_penalty_item_cache: [max_increment]?RewardPenaltyItem = .{null} ** max_increment;
+    var reward_penalty_item_cache: [max_increment]?RewardPenaltyItem = @splat(null);
 
     const effective_balance_increments = epoch_cache.getEffectiveBalanceIncrements();
     std.debug.assert(flags.len <= effective_balance_increments.items.len);

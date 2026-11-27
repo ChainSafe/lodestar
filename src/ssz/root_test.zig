@@ -46,7 +46,7 @@ test "memory_safety: progressive tree deserialization uses the standard pool API
     inline for (.{ List, Bits, Container, Union }) |ST| {
         try std.testing.expect(@hasDecl(ST.tree, "deserializeFromBytes"));
         if (comptime @hasDecl(ST.tree, "deserializeFromBytes")) {
-            try std.testing.expectEqual(2, @typeInfo(@TypeOf(ST.tree.deserializeFromBytes)).@"fn".params.len);
+            try std.testing.expectEqual(2, @typeInfo(@TypeOf(ST.tree.deserializeFromBytes)).@"fn".param_types.len);
         }
     }
 }

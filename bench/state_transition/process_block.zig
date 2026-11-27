@@ -1,7 +1,7 @@
 //! Benchmark for fork-specific block processing.
 //!
 //! Uses a mainnet state at slot 13180928 and block at slot 13180929.
-//! Run with: zig build run:bench_process_block -Doptimize=ReleaseSafe -Dcpu=baseline [-- /path/to/state.ssz /path/to/block.ssz]
+//! Run with: zig build run:bench_process_block -Doptimize=safe -Dcpu=baseline [-- /path/to/state.ssz /path/to/block.ssz]
 
 const std = @import("std");
 const builtin = @import("builtin");
@@ -256,8 +256,8 @@ const Step = enum {
 };
 
 const step_count = std.enums.values(Step).len;
-var step_durations_ns: [step_count]u128 = [_]u128{0} ** step_count;
-var step_run_counts: [step_count]u64 = [_]u64{0} ** step_count;
+var step_durations_ns: [step_count]u128 = @as([step_count]u128, @splat(0));
+var step_run_counts: [step_count]u64 = @as([step_count]u64, @splat(0));
 
 fn resetSegmentStats() void {
     for (&step_durations_ns) |*v| v.* = 0;
@@ -265,7 +265,7 @@ fn resetSegmentStats() void {
 }
 
 fn recordSegment(step: Step, duration_ns: u64) void {
-    const idx = @intFromEnum(step);
+    const idx = @backingInt(step);
     step_durations_ns[idx] += duration_ns;
     step_run_counts[idx] += 1;
 }
@@ -275,7 +275,7 @@ fn printSegmentStats(stdout: *std.Io.Writer) !void {
     try stdout.print("{s:<22} {s:<8} {s:<14} {s:<23}\n", .{ "step", "runs", "total time", "time/run (avg)" });
     try stdout.print("{s:-<69}\n", .{""});
     for (std.enums.values(Step)) |step| {
-        const idx = @intFromEnum(step);
+        const idx = @backingInt(step);
         const count = step_run_counts[idx];
         if (count == 0) continue;
         const total_ns = step_durations_ns[idx];
@@ -429,12 +429,12 @@ fn ProcessBlockSegmentedBench(comptime fork: ForkSeq) type {
     };
 }
 
-var gpa: std.heap.DebugAllocator(.{}) = .init;
+var gpa: std.heap.SafeAllocator = .init(std.heap.page_allocator, .{});
 
 pub fn main(init: std.process.Init) !void {
-    defer if (builtin.mode == .Debug) std.debug.assert(gpa.deinit() == .ok);
+    defer if (builtin.optimize == .debug) std.debug.assert(gpa.deinit() == 0);
 
-    const allocator = if (builtin.mode == .Debug)
+    const allocator = if (builtin.optimize == .debug)
         gpa.allocator()
     else
         std.heap.c_allocator;

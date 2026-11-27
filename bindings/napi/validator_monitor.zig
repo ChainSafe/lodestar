@@ -9,8 +9,8 @@ const std = @import("std");
 const builtin = @import("builtin");
 const state_transition = @import("state_transition");
 
-var gpa: std.heap.DebugAllocator(.{}) = .init;
-const allocator = if (builtin.mode == .Debug)
+var gpa: std.heap.SafeAllocator = .init(std.heap.page_allocator, .{});
+const allocator = if (builtin.optimize == .debug)
     gpa.allocator()
 else
     std.heap.c_allocator;

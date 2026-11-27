@@ -1,0 +1,44 @@
+diff --git a/lib/build.js b/lib/build.js
+index 6854cffb133020de4837614303d5662e61636b54..d6a040aa7cdc60cc843e8f608fc4bd4958546754 100644
+--- a/lib/build.js
++++ b/lib/build.js
+@@ -18,9 +18,6 @@ export async function build(opts) {
+     if (opts.cacheDir) {
+         args.push("--cache-dir", opts.cacheDir);
+     }
+-    if (opts.globalCacheDir) {
+-        args.push("--global-cache-dir", opts.globalCacheDir);
+-    }
+     if (opts.zigArgs) {
+         args.push(...opts.zigArgs);
+     }
+@@ -31,6 +28,7 @@ export async function build(opts) {
+         const child = spawn("zig", args, {
+             cwd: opts.zigCwd,
+             stdio: "inherit",
++            env: opts.globalCacheDir ? {...process.env, ZIG_GLOBAL_CACHE_DIR: opts.globalCacheDir} : process.env,
+         });
+         child.on("error", (err) => {
+             reject(new Error(`Failed to spawn zig: ${err.message}`));
+diff --git a/ts/build.ts b/ts/build.ts
+index 2c520e008310ffe4b7957cec1c0476fe5cffc65a..cac81f396de04e2491af1cbdcd5ec80f09cf2925 100644
+--- a/ts/build.ts
++++ b/ts/build.ts
+@@ -38,9 +38,6 @@ export async function build(opts: BuildOptions): Promise<void> {
+     args.push("--cache-dir", opts.cacheDir);
+   }
+ 
+-  if (opts.globalCacheDir) {
+-    args.push("--global-cache-dir", opts.globalCacheDir);
+-  }
+ 
+   if (opts.zigArgs) {
+     args.push(...opts.zigArgs);
+@@ -54,6 +51,7 @@ export async function build(opts: BuildOptions): Promise<void> {
+     const child = spawn("zig", args, {
+       cwd: opts.zigCwd,
+       stdio: "inherit",
++      env: opts.globalCacheDir ? {...process.env, ZIG_GLOBAL_CACHE_DIR: opts.globalCacheDir} : process.env,
+     });
+ 
+     child.on("error", (err) => {

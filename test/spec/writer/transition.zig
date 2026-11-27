@@ -57,7 +57,7 @@ pub fn writeTest(
     handler: Handler,
     test_case_name: []const u8,
 ) !void {
-    const execute_call = std.fmt.allocPrint(std.heap.page_allocator, "try Transition(.{s}).execute(allocator, test_dir);", .{@tagName(fork)}) catch unreachable;
+    const execute_call = std.heap.page_allocator.print("try Transition(.{s}).execute(allocator, test_dir);", .{@tagName(fork)}) catch unreachable;
     defer std.heap.page_allocator.free(execute_call);
     try writer.print(test_template, .{
         @tagName(fork),

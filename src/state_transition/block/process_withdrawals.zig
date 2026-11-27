@@ -241,7 +241,7 @@ test "getExpectedWithdrawals counts swept validators without rebuilding validato
         defer test_state.deinit();
         const state = test_state.cached_state.state.castToFork(.electra);
         var validators = try state.validators();
-        const withdrawal_credentials = [_]u8{1} ++ [_]u8{0} ** 31;
+        const withdrawal_credentials = [_]u8{1} ++ @as([31]u8, @splat(0));
         for (1..withdrawal_count + 1) |i| {
             var validator = try validators.get(i);
             try validator.setValue("withdrawal_credentials", &withdrawal_credentials);

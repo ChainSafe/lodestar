@@ -36,7 +36,7 @@ test "execution payload bid signing domain follows bid slot across Gloas and Hez
         .GLOAS_FORK_EPOCH = 2,
         .HEZE_FORK_EPOCH = 3,
     });
-    const genesis_root = [_]u8{42} ** 32;
+    const genesis_root = @as([32]u8, @splat(42));
     const config = BeaconConfig.init(chain_config, genesis_root);
     inline for (.{ ForkSeq.gloas, ForkSeq.heze }) |fork| {
         const ST = ForkTypes(fork).ExecutionPayloadBid;

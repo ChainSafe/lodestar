@@ -84,7 +84,7 @@ test "UintType(8) - 0x00" {
         UintType(8),
         0,
         &[_]u8{0x00},
-        &[_]u8{0x00} ++ [_]u8{0x00} ** 31,
+        &[_]u8{0x00} ++ @as([31]u8, @splat(0x00)),
     );
 }
 
@@ -94,7 +94,7 @@ test "UintType(8) - 0xff" {
         UintType(8),
         255,
         &[_]u8{0xff},
-        &[_]u8{0xff} ++ [_]u8{0x00} ** 31,
+        &[_]u8{0xff} ++ @as([31]u8, @splat(0x00)),
     );
 }
 
@@ -104,7 +104,7 @@ test "UintType(16) - 2^8" {
         UintType(16),
         256,
         &[_]u8{ 0x00, 0x01 },
-        &[_]u8{ 0x00, 0x01 } ++ [_]u8{0x00} ** 30,
+        &[_]u8{ 0x00, 0x01 } ++ @as([30]u8, @splat(0x00)),
     );
 }
 
@@ -114,7 +114,7 @@ test "UintType(16) - 0xffff" {
         UintType(16),
         65535,
         &[_]u8{ 0xff, 0xff },
-        &[_]u8{ 0xff, 0xff } ++ [_]u8{0x00} ** 30,
+        &[_]u8{ 0xff, 0xff } ++ @as([30]u8, @splat(0x00)),
     );
 }
 
@@ -124,7 +124,7 @@ test "UintType(32) - 0x00000000" {
         UintType(32),
         0,
         &[_]u8{ 0x00, 0x00, 0x00, 0x00 },
-        &[_]u8{ 0x00, 0x00, 0x00, 0x00 } ++ [_]u8{0x00} ** 28,
+        &[_]u8{ 0x00, 0x00, 0x00, 0x00 } ++ @as([28]u8, @splat(0x00)),
     );
 }
 
@@ -134,7 +134,7 @@ test "UintType(32) - 0xffffffff" {
         UintType(32),
         4294967295,
         &[_]u8{ 0xff, 0xff, 0xff, 0xff },
-        &[_]u8{ 0xff, 0xff, 0xff, 0xff } ++ [_]u8{0x00} ** 28,
+        &[_]u8{ 0xff, 0xff, 0xff, 0xff } ++ @as([28]u8, @splat(0x00)),
     );
 }
 
@@ -144,7 +144,7 @@ test "UintType(64) - 100000" {
         UintType(64),
         100000,
         &[_]u8{ 0xa0, 0x86, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00 },
-        &[_]u8{ 0xa0, 0x86, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00 } ++ [_]u8{0x00} ** 24,
+        &[_]u8{ 0xa0, 0x86, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00 } ++ @as([24]u8, @splat(0x00)),
     );
 }
 
@@ -154,7 +154,7 @@ test "UintType(64) - max" {
         UintType(64),
         18446744073709551615,
         &[_]u8{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff },
-        &[_]u8{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff } ++ [_]u8{0x00} ** 24,
+        &[_]u8{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff } ++ @as([24]u8, @splat(0x00)),
     );
 }
 
@@ -163,8 +163,8 @@ test "UintType(128) - 0x01" {
         std.testing.allocator,
         UintType(128),
         0x01,
-        &[_]u8{0x01} ++ [_]u8{0x00} ** 15,
-        &[_]u8{0x01} ++ [_]u8{0x00} ** 31,
+        &[_]u8{0x01} ++ @as([15]u8, @splat(0x00)),
+        &[_]u8{0x01} ++ @as([31]u8, @splat(0x00)),
     );
 }
 
@@ -173,8 +173,8 @@ test "UintType(128) - max" {
         std.testing.allocator,
         UintType(128),
         0xffffffffffffffffffffffffffffffff,
-        &[_]u8{0xff} ** 16,
-        &[_]u8{0xff} ** 16 ++ [_]u8{0x00} ** 16,
+        &@as([16]u8, @splat(0xff)),
+        &@as([16]u8, @splat(0xff)) ++ @as([16]u8, @splat(0x00)),
     );
 }
 
@@ -183,8 +183,8 @@ test "UintType(256) - 0xaabb" {
         std.testing.allocator,
         UintType(256),
         0xaabb,
-        &[_]u8{ 0xbb, 0xaa } ++ [_]u8{0x00} ** 30,
-        &[_]u8{ 0xbb, 0xaa } ++ [_]u8{0x00} ** 30,
+        &[_]u8{ 0xbb, 0xaa } ++ @as([30]u8, @splat(0x00)),
+        &[_]u8{ 0xbb, 0xaa } ++ @as([30]u8, @splat(0x00)),
     );
 }
 
@@ -193,8 +193,8 @@ test "UintType(256) - max" {
         std.testing.allocator,
         UintType(256),
         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,
-        &[_]u8{0xff} ** 32,
-        &[_]u8{0xff} ** 32,
+        &@as([32]u8, @splat(0xff)),
+        &@as([32]u8, @splat(0xff)),
     );
 }
 

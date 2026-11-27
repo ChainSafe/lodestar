@@ -156,7 +156,7 @@ test "memory_safety: translateParticipation should release participation on allo
     var pubkeys = try PubkeyCache.initCapacity(allocator, std.testing.io, 0);
     defer pubkeys.deinit();
     const chain_config = if (@import("preset").active_preset == .mainnet) @import("config").mainnet.chain_config else @import("config").minimal.chain_config;
-    var config = BeaconConfig.init(chain_config, .{0} ** 32);
+    var config = BeaconConfig.init(chain_config, @splat(0));
     const epoch_cache = try EpochCache.createFromState(allocator, std.testing.io, &state, .{ .config = &config, .pubkey_cache = &pubkeys }, .{ .skip_sync_committee_cache = true, .skip_sync_pubkeys = true });
     defer epoch_cache.deinit();
 

@@ -13,7 +13,7 @@ fn makeSignedVoluntaryExit(epoch: u64, validator_index: u64) SignedVoluntaryExit
             .epoch = epoch,
             .validator_index = validator_index,
         },
-        .signature = [_]u8{0} ** 96,
+        .signature = @as([96]u8, @splat(0)),
     };
 }
 

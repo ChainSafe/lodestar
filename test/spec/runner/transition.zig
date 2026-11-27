@@ -85,7 +85,7 @@ pub fn Transition(comptime fork: ForkSeq) type {
                 // The fork_block is the index in the test data of the last block of the initial fork.
                 const fork_block = if (fork_block_idx == null or i > fork_block_idx.?) fork else tc_utils.getForkPre();
 
-                const block_filename = try std.fmt.allocPrint(allocator, "blocks_{d}.ssz_snappy", .{i});
+                const block_filename = try allocator.print("blocks_{d}.ssz_snappy", .{i});
                 defer allocator.free(block_filename);
                 tc.blocks[i] = try loadSignedBeaconBlock(allocator, fork_block, dir, block_filename);
             }

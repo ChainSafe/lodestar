@@ -17,8 +17,8 @@ fn makeValidator(
     effective_balance: u64,
 ) Validator.Type {
     return .{
-        .pubkey = [_]u8{0} ** 48,
-        .withdrawal_credentials = [_]u8{0} ** 32,
+        .pubkey = @as([48]u8, @splat(0)),
+        .withdrawal_credentials = @as([32]u8, @splat(0)),
         .effective_balance = effective_balance,
         .slashed = slashed,
         .activation_eligibility_epoch = activation_eligibility_epoch,

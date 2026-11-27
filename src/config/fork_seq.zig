@@ -17,7 +17,7 @@ pub const ForkSeq = enum(u8) {
     heze = 8,
 
     /// Total number of fork variants.
-    pub const count: u8 = @intCast(@typeInfo(ForkSeq).@"enum".fields.len);
+    pub const count: u8 = @intCast(@typeInfo(ForkSeq).@"enum".field_names.len);
 
     /// Returns the canonical tag name for this fork (e.g. `"capella"`).
     pub fn name(self: ForkSeq) [:0]const u8 {
@@ -41,22 +41,22 @@ pub const ForkSeq = enum(u8) {
 
     /// Returns `true` if `self` is strictly earlier than `other` in fork order.
     pub inline fn lt(self: ForkSeq, other: ForkSeq) bool {
-        return @intFromEnum(self) < @intFromEnum(other);
+        return @backingInt(self) < @backingInt(other);
     }
 
     /// Returns `true` if `self` is earlier than or equal to `other` in fork order.
     pub inline fn lte(self: ForkSeq, other: ForkSeq) bool {
-        return @intFromEnum(self) <= @intFromEnum(other);
+        return @backingInt(self) <= @backingInt(other);
     }
 
     /// Returns `true` if `self` is strictly later than `other` in fork order.
     pub inline fn gt(self: ForkSeq, other: ForkSeq) bool {
-        return @intFromEnum(self) > @intFromEnum(other);
+        return @backingInt(self) > @backingInt(other);
     }
 
     /// Returns `true` if `self` is later than or equal to `other` in fork order.
     pub inline fn gte(self: ForkSeq, other: ForkSeq) bool {
-        return @intFromEnum(self) >= @intFromEnum(other);
+        return @backingInt(self) >= @backingInt(other);
     }
 };
 

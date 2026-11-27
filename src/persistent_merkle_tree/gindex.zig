@@ -10,19 +10,19 @@ pub const Gindex = enum(GindexUint) {
     pub const Uint = GindexUint;
 
     pub inline fn fromUint(gindex: GindexUint) Gindex {
-        return @enumFromInt(gindex);
+        return @fromBackingInt(@intCast(gindex));
     }
 
     pub fn fromDepth(depth: Depth, index: usize) Gindex {
         std.debug.assert(depth <= max_depth);
         const gindex_at_depth = @as(GindexUint, 1) << depth;
         std.debug.assert(index < gindex_at_depth);
-        return @enumFromInt(gindex_at_depth | index);
+        return @fromBackingInt(@intCast(gindex_at_depth | index));
     }
 
     pub fn pathLen(gindex: Gindex) Depth {
         // sub 1 for the leading 1 bit, which isn't part of the path
-        return if (@intFromEnum(gindex) == 0) 0 else @intCast(@bitSizeOf(Gindex) - @clz(@intFromEnum(gindex)) - 1);
+        return if (@backingInt(gindex) == 0) 0 else @intCast(@bitSizeOf(Gindex) - @clz(@backingInt(gindex)) - 1);
     }
 
     pub fn toPathBits(gindex: Gindex, out: []u1) []u1 {
@@ -30,7 +30,7 @@ pub const Gindex = enum(GindexUint) {
         std.debug.assert(len_u8 <= out.len);
 
         var len: usize = len_u8;
-        var path = @as(GindexUint, @intFromEnum(gindex)) & ((@as(GindexUint, 1) << @intCast(len_u8)) - 1);
+        var path = @as(GindexUint, @backingInt(gindex)) & ((@as(GindexUint, 1) << @intCast(len_u8)) - 1);
 
         while (len > 0) {
             len -= 1;
@@ -68,37 +68,37 @@ pub const Gindex = enum(GindexUint) {
         // The self path is a prefix of the child path, so we can just shift
         // the child path to the right by the difference in lengths.
         const shift = child_path_len - self_path_len;
-        return @enumFromInt(@intFromEnum(child) >> shift);
+        return @fromBackingInt(@intCast(@backingInt(child) >> shift));
     }
 
     pub fn toPath(gindex: Gindex) Path {
-        return @enumFromInt(if (@intFromEnum(gindex) == 0) 0 else @as(GindexUint, @intCast(@bitReverse(@intFromEnum(gindex)) >> @intCast(@clz(@intFromEnum(gindex)) + 1))));
+        return @fromBackingInt(@intCast(if (@backingInt(gindex) == 0) 0 else @as(GindexUint, @intCast(@bitReverse(@backingInt(gindex)) >> @intCast(@clz(@backingInt(gindex)) + 1)))));
     }
 
     pub const Path = enum(GindexUint) {
         _,
 
         pub inline fn left(path: Path) bool {
-            return @intFromEnum(path) & 1 == 0;
+            return @backingInt(path) & 1 == 0;
         }
 
         pub inline fn right(path: Path) bool {
-            return @intFromEnum(path) & 1 == 1;
+            return @backingInt(path) & 1 == 1;
         }
 
         pub inline fn next(path: *Path) void {
-            path.* = @enumFromInt(@intFromEnum(path.*) >> 1);
+            path.* = @fromBackingInt(@intCast(@backingInt(path.*) >> 1));
         }
 
         pub inline fn nextN(path: *Path, n: Depth) void {
-            path.* = @enumFromInt(@intFromEnum(path.*) >> n);
+            path.* = @fromBackingInt(@intCast(@backingInt(path.*) >> n));
         }
     };
 
     pub fn sortAsc(items: []Gindex) void {
         std.sort.pdq(Gindex, items, {}, struct {
             pub fn lessThan(_: void, a: Gindex, b: Gindex) bool {
-                return @intFromEnum(a) < @intFromEnum(b);
+                return @backingInt(a) < @backingInt(b);
             }
         }.lessThan);
     }
@@ -115,8 +115,8 @@ pub const Gindex = enum(GindexUint) {
         var result = gindices[0];
         for (gindices[1..]) |gindex| {
             const path_len = gindex.pathLen();
-            const gindex_path = @intFromEnum(gindex) & ((@as(GindexUint, 1) << @intCast(path_len)) - 1);
-            result = @enumFromInt((@intFromEnum(result) << @intCast(path_len)) | gindex_path);
+            const gindex_path = @backingInt(gindex) & ((@as(GindexUint, 1) << @intCast(path_len)) - 1);
+            result = @fromBackingInt(@intCast((@backingInt(result) << @intCast(path_len)) | gindex_path));
         }
         return result;
     }

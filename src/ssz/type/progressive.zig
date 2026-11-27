@@ -28,7 +28,7 @@ pub fn chunkGindex(chunk_i: usize) Gindex {
     const subtree_i = subtreeIndex(chunk_i);
     const subtree_root = ((@as(Gindex.Uint, 1) << @intCast(subtree_i + 1)) - 1) * 2;
     const offset = chunk_i - subtreeStartChunk(subtree_i);
-    return @enumFromInt((subtree_root << subtreeDepth(subtree_i)) + offset);
+    return @fromBackingInt(@intCast((subtree_root << subtreeDepth(subtree_i)) + offset));
 }
 
 /// Returns the subtree holding a zero-based chunk index. Subtree `i` starts at chunk
@@ -49,18 +49,18 @@ pub fn subtreeStartChunk(subtree_i: usize) usize {
 /// Gindex of the spine node whose left child is subtree `i`, relative to the root of a
 /// length-mixed progressive list or bitlist.
 pub fn spineGindex(subtree_i: usize) Gindex {
-    return @enumFromInt((@as(Gindex.Uint, 3) << @intCast(subtree_i)) - 1);
+    return @fromBackingInt(@intCast((@as(Gindex.Uint, 3) << @intCast(subtree_i)) - 1));
 }
 
 pub fn subtreeGindex(subtree_i: usize) Gindex {
-    return @enumFromInt(@intFromEnum(spineGindex(subtree_i)) * 2);
+    return @fromBackingInt(@intCast(@backingInt(spineGindex(subtree_i)) * 2));
 }
 
 /// Builds progressive contents from borrowed element roots; the caller keeps its references.
 /// `nodes` is scratch and holds unspecified ids afterwards. The result is fresh.
 pub fn contentsFromNodes(pool: *Node.Pool, nodes: []Node.Id) !Node.Id {
     if (nodes.len > max_node_chunks) return error.InputTooLong;
-    var contents: Node.Id = @enumFromInt(0);
+    var contents: Node.Id = @fromBackingInt(@intCast(0));
     errdefer pool.unref(contents);
 
     var subtree_i = subtreeCount(nodes.len);
@@ -87,13 +87,13 @@ pub fn contentsFromNodes(pool: *Node.Pool, nodes: []Node.Id) !Node.Id {
 /// subtrees appended. The caller owns one reference to the result; `root` is unchanged.
 pub fn growSpine(pool: *Node.Pool, root: Node.Id, old_count: usize, new_count: usize) !Node.Id {
     std.debug.assert(new_count > old_count);
-    var tail: Node.Id = @enumFromInt(0);
+    var tail: Node.Id = @fromBackingInt(@intCast(0));
     defer pool.unref(tail);
 
     var i = new_count;
     while (i > old_count) {
         i -= 1;
-        tail = try pool.createBranch(@enumFromInt(subtreeDepth(i)), tail);
+        tail = try pool.createBranch(@fromBackingInt(@intCast(subtreeDepth(i))), tail);
     }
     // Retain the scaffold while setNode may partially build and reclaim ancestors.
     try pool.ref(tail);
@@ -250,8 +250,8 @@ pub const NodeIterator = struct {
         const subtree_depth: Depth = @intCast(2 * self.subtree_index);
         const subtree_length = @as(usize, 1) << @intCast(subtree_depth);
         self.leaf_offset = if (self.chunked_leaf) chunkedLeafOffset(self.subtree_index) else 0;
-        const subtree_root = if (@intFromEnum(self.spine) == 0)
-            @as(Node.Id, @enumFromInt(subtree_depth))
+        const subtree_root = if (@backingInt(self.spine) == 0)
+            @as(Node.Id, @fromBackingInt(@intCast(subtree_depth)))
         else blk: {
             const left = try self.spine.getLeft(self.pool);
             self.spine = try self.spine.getRight(self.pool);
@@ -366,7 +366,7 @@ pub const TreeBuilder = struct {
         if (self.finished) return error.InvalidState;
         if (self.remaining != 0) return error.InvalidLength;
         if (self.subtree_len != 0) try self.finishSubtree();
-        var root: Node.Id = @enumFromInt(0);
+        var root: Node.Id = @fromBackingInt(@intCast(0));
         errdefer self.pool.unref(root);
         for (0..self.subtree_count) |_| {
             const i = self.subtree_count - 1;

@@ -17,7 +17,7 @@ test "computeSyncCommitteeRewards - signed deltas, duplicate positions, ordering
     defer test_state.deinit();
     const state = test_state.cached_state;
 
-    var indices = [_]u64{2} ** preset.SYNC_COMMITTEE_SIZE;
+    var indices = @as([preset.SYNC_COMMITTEE_SIZE]u64, @splat(2));
     @memcpy(indices[0..4], &[_]u64{ 9, 3, 9, 1 });
     var committee = try SyncCommitteeCache.initValidatorIndices(allocator, &indices);
     const committee_rc = SyncCommitteeCacheRc.create(allocator, committee) catch |err| {

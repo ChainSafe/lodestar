@@ -47,7 +47,7 @@ pub fn getNumCpus(gpa: Allocator, io: Io) !usize {
 /// unopenable cgroup dir) or malformed content — so a *readable* quota is never
 /// silently masked.
 fn cgroupsNumCpus(gpa: Allocator, io: Io) !?usize {
-    if (builtin.os.tag != .linux) return null;
+    if (builtin.target.os.tag != .linux) return null;
 
     const cwd = Io.Dir.cwd();
 
@@ -695,7 +695,7 @@ test "readProcFile: errors past limit" {
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
 
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "f", .data = "a" ** (100 * 1024) });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "f", .data = &@as([(100 * 1024)]u8, @splat('a')) });
     try std.testing.expectError(
         error.StreamTooLong,
         readProcFile(std.testing.allocator, std.testing.io, tmp.dir, "f", .limited(64 * 1024)),

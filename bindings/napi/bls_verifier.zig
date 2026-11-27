@@ -70,10 +70,10 @@ pub fn verifySignatureSets(sets: js.Array) !js.Boolean {
         const value = try sets.get(@intCast(i));
         const set = try (try value.asObject(CommonSet)).get();
         const set_type: SetType = switch (try set.type.toU32Exact()) {
-            @intFromEnum(SetType.indexed) => .indexed,
-            @intFromEnum(SetType.aggregate) => .aggregate,
-            @intFromEnum(SetType.single) => .single,
-            @intFromEnum(SetType.committee) => .committee,
+            @backingInt(SetType.indexed) => .indexed,
+            @backingInt(SetType.aggregate) => .aggregate,
+            @backingInt(SetType.single) => .single,
+            @backingInt(SetType.committee) => .committee,
             else => return error.InvalidSetType,
         };
 

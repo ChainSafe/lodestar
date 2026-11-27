@@ -18,8 +18,8 @@ pub const executionBlockHash = @import("./execution_block_hash.zig");
 
 const options = @import("bls_options");
 
-var gpa: std.heap.DebugAllocator(.{}) = .init;
-const allocator = if (builtin.mode == .Debug) gpa.allocator() else std.heap.c_allocator;
+var gpa: std.heap.SafeAllocator = .init(std.heap.page_allocator, .{});
+const allocator = if (builtin.optimize == .debug) gpa.allocator() else std.heap.c_allocator;
 
 fn init(old_ref_count: u32) !void {
     if (old_ref_count == 0) {

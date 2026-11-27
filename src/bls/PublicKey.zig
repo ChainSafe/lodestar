@@ -45,14 +45,14 @@ pub fn toAggregate(self: *const Self) AggregatePublicKey {
 
 /// Compress the `PublicKey` to bytes.
 pub fn compress(self: *const Self) [COMPRESS_SIZE]u8 {
-    var pk_comp = [_]u8{0} ** COMPRESS_SIZE;
+    var pk_comp = @as([COMPRESS_SIZE]u8, @splat(0));
     c.blst_p1_affine_compress(&pk_comp, &self.point);
     return pk_comp;
 }
 
 /// Serialize the `PublicKey` to bytes.
 pub fn serialize(self: *const Self) [SERIALIZE_SIZE]u8 {
-    var pk_out = [_]u8{0} ** SERIALIZE_SIZE;
+    var pk_out = @as([SERIALIZE_SIZE]u8, @splat(0));
     c.blst_p1_affine_serialize(&pk_out, &self.point);
     return pk_out;
 }
@@ -115,7 +115,7 @@ test uncompress {
     // Invalid lengths must be rejected, even with the compression bit set.
     try std.testing.expectError(error.BadEncoding, uncompress(&[_]u8{}));
     try std.testing.expectError(error.BadEncoding, uncompress(pk_comp[0 .. COMPRESS_SIZE - 1]));
-    var too_long = [_]u8{0} ** (COMPRESS_SIZE + 1);
+    var too_long = @as([(COMPRESS_SIZE + 1)]u8, @splat(0));
     @memcpy(too_long[0..COMPRESS_SIZE], &pk_comp);
     try std.testing.expectError(error.BadEncoding, uncompress(&too_long));
 

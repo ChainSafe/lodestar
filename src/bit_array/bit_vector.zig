@@ -3,14 +3,14 @@ const std = @import("std");
 /// Stores a fixed number of bits inline, with least-significant-bit-first indexing.
 /// Keep unused trailing bits zero when writing data directly.
 pub fn BitVector(comptime _length: comptime_int) type {
-    const byte_len = std.math.divCeil(usize, _length, 8) catch unreachable;
+    const byte_len = @divCeil(@as(usize, _length), 8);
     return struct {
         data: [byte_len]u8,
 
         pub const length = _length;
 
         pub const empty: @This() = .{
-            .data = [_]u8{0} ** byte_len,
+            .data = @as([byte_len]u8, @splat(0)),
         };
 
         pub fn equals(self: *const @This(), other: *const @This()) bool {

@@ -34,7 +34,7 @@ fn ProposerSlots(comptime fork_seq: ForkSeq) type {
         // Runs on several threads at once and writes only slot `i` of `out` and `errors`.
         fn computeSlot(self: *const @This(), i: usize) void {
             // epoch_seed is 32 bytes, slot is 8 bytes
-            var buffer: [40]u8 = [_]u8{0} ** (32 + 8);
+            var buffer: [40]u8 = @as([(32 + 8)]u8, @splat(0));
             @memcpy(buffer[0..32], self.epoch_seed[0..]);
             std.mem.writeInt(u64, buffer[32..][0..8], self.start_slot + i, .little);
 
@@ -70,7 +70,7 @@ pub fn computeProposers(
     out: []ValidatorIndex,
 ) !void {
     std.debug.assert(out.len == preset.SLOTS_PER_EPOCH);
-    var errors: [preset.SLOTS_PER_EPOCH]?ComputeIndexUtils.ComputeCommitteeIndicesError = .{null} ** preset.SLOTS_PER_EPOCH;
+    var errors: [preset.SLOTS_PER_EPOCH]?ComputeIndexUtils.ComputeCommitteeIndicesError = @splat(null);
     const slots: ProposerSlots(fork_seq) = .{
         .epoch_seed = epoch_seed,
         .start_slot = computeStartSlotAtEpoch(epoch),
@@ -127,7 +127,7 @@ pub fn getSeed(comptime fork: ForkSeq, state: *BeaconState(fork), epoch: Epoch, 
     const mix = try getRandaoMix(fork, state, epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD - 1);
     var epoch_buf: [8]u8 = undefined;
     std.mem.writeInt(u64, &epoch_buf, epoch, .little);
-    var buffer = [_]u8{0} ** (types.primitive.DomainType.length + 8 + types.primitive.Bytes32.length);
+    var buffer = @as([(types.primitive.DomainType.length + 8 + types.primitive.Bytes32.length)]u8, @splat(0));
     std.mem.copyForwards(u8, buffer[0..domain_type.len], domain_type[0..]);
     std.mem.copyForwards(u8, buffer[domain_type.len..(domain_type.len + 8)], epoch_buf[0..]);
     std.mem.copyForwards(u8, buffer[(domain_type.len + 8)..], mix[0..]);

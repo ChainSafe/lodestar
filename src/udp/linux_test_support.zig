@@ -35,7 +35,7 @@ pub const Seccomp = struct {
     pub fn install(filter: []const Instruction) Installation {
         const linux = std.os.linux;
         std.debug.assert(filter.len > 0 and filter.len <= instructions_max);
-        const privileges = linux.errno(linux.prctl(@intFromEnum(linux.PR.SET_NO_NEW_PRIVS), 1, 0, 0, 0));
+        const privileges = linux.errno(linux.prctl(@backingInt(linux.PR.SET_NO_NEW_PRIVS), 1, 0, 0, 0));
         if (privileges != .SUCCESS) return capabilityFailure(.no_new_privs, privileges);
         const probe: [1]Instruction = .{.{ .code = linux.BPF.RET | linux.BPF.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ALLOW }};
         const capability = installProgram(&probe);
@@ -77,7 +77,7 @@ pub const SendFilter = struct {
         const linux = std.os.linux;
         const bpf = linux.BPF;
         std.debug.assert(rules.len > 0 and rules.len <= rules_max);
-        const little = comptime @import("builtin").cpu.arch.endian() == .little;
+        const little = comptime @import("builtin").target.cpu.arch.endian() == .little;
         const descriptor: u32 = @offsetOf(linux.SECCOMP.data, "arg0") + if (little) 0 else 4;
         const flags: u32 = @offsetOf(linux.SECCOMP.data, "arg3") + if (little) 0 else 4;
         var length: usize = 5;
@@ -85,8 +85,8 @@ pub const SendFilter = struct {
         const allow = length - 1;
         var filter: [5 + 4 * rules_max]Seccomp.Instruction = undefined;
         filter[0] = .{ .code = bpf.LD | bpf.W | bpf.ABS, .jt = 0, .jf = 0, .k = @offsetOf(linux.SECCOMP.data, "nr") };
-        filter[1] = .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 1, .jf = 0, .k = @intFromEnum(linux.SYS.sendto) };
-        filter[2] = .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = @intCast(allow - 3), .k = @intFromEnum(linux.SYS.sendmmsg) };
+        filter[1] = .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 1, .jf = 0, .k = @backingInt(linux.SYS.sendto) };
+        filter[2] = .{ .code = bpf.JMP | bpf.JEQ | bpf.K, .jt = 0, .jf = @intCast(allow - 3), .k = @backingInt(linux.SYS.sendmmsg) };
         filter[3] = .{ .code = bpf.LD | bpf.W | bpf.ABS, .jt = 0, .jf = 0, .k = descriptor };
         var at: usize = 4;
         for (rules) |rule| {
@@ -96,7 +96,7 @@ pub const SendFilter = struct {
                 filter[at + 1] = .{ .code = bpf.LD | bpf.W | bpf.ABS, .jt = 0, .jf = 0, .k = flags };
                 filter[at + 2] = .{ .code = bpf.JMP | bpf.JSET | bpf.K, .jt = 0, .jf = @intCast(allow - at - 3), .k = linux.MSG.DONTWAIT };
             }
-            filter[at + block - 1] = .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ERRNO | @as(u32, @intFromEnum(rule.errno)) };
+            filter[at + block - 1] = .{ .code = bpf.RET | bpf.K, .jt = 0, .jf = 0, .k = linux.SECCOMP.RET.ERRNO | @as(u32, @backingInt(rule.errno)) };
             at += block;
         }
         std.debug.assert(at == allow);
@@ -106,6 +106,6 @@ pub const SendFilter = struct {
 };
 
 test {
-    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
+    if (@import("builtin").target.os.tag != .linux) return error.SkipZigTest;
     _ = @import("linux_test_support_test.zig");
 }

@@ -22,7 +22,7 @@ test "shuffling job records completed builds" {
         defer test_state.deinit();
 
         const cache = test_state.epoch_transition_cache;
-        const seed = [_]u8{0} ** 32;
+        const seed = @as([32]u8, @splat(0));
         const epoch = cache.current_epoch + 2;
         try cache.startShuffling(allocator, std.testing.io, seed, epoch);
         const shuffling = try cache.joinShuffling();

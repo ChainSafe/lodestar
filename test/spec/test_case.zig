@@ -175,9 +175,10 @@ fn parseSpecTestConfig(allocator: Allocator, contents: []const u8) !SpecTestConf
     if (document.docs.items.len != 1) return error.InvalidSpecConfig;
     const map = try document.docs.items[0].asMap();
     var overrides: ChainConfig.OptionalChainConfig = .{};
-    inline for (std.meta.fields(ChainConfig)) |field| {
-        if (map.get(field.name)) |value| {
-            if (comptime std.mem.eql(u8, field.name, "BLOB_SCHEDULE")) {
+    const info = @typeInfo(ChainConfig).@"struct";
+    inline for (info.field_names, info.field_types) |field_name, Field| {
+        if (map.get(field_name)) |value| {
+            if (comptime std.mem.eql(u8, field_name, "BLOB_SCHEDULE")) {
                 const entries = try value.asList();
                 if (entries.len > 1024) return error.InvalidBlobSchedule;
                 const schedule = try a.alloc(ChainConfig.BlobScheduleEntry, entries.len);
@@ -191,25 +192,25 @@ fn parseSpecTestConfig(allocator: Allocator, contents: []const u8) !SpecTestConf
                         .MAX_BLOBS_PER_BLOCK = try std.fmt.parseInt(u64, try max_blobs.asScalar(), 0),
                     };
                 }
-                @field(overrides, field.name) = schedule;
+                @field(overrides, field_name) = schedule;
             } else {
                 const scalar = try value.asScalar();
-                @field(overrides, field.name) = switch (@typeInfo(field.type)) {
-                    .int => try std.fmt.parseInt(field.type, scalar, 0),
+                @field(overrides, field_name) = switch (@typeInfo(Field)) {
+                    .int => try std.fmt.parseInt(Field, scalar, 0),
                     .array => |array| blk: {
                         comptime std.debug.assert(array.child == u8);
                         if (scalar.len != 2 + 2 * array.len or !std.mem.startsWith(u8, scalar, "0x")) return error.InvalidConfigBytes;
-                        var bytes: field.type = undefined;
+                        var bytes: Field = undefined;
                         _ = try std.fmt.hexToBytes(&bytes, scalar[2..]);
                         break :blk bytes;
                     },
                     .@"enum" => blk: {
-                        const preset = std.meta.stringToEnum(field.type, scalar) orelse return error.InvalidPreset;
+                        const preset = std.meta.stringToEnum(Field, scalar) orelse return error.InvalidPreset;
                         if (preset != active_preset) return error.SpecPresetMismatch;
                         break :blk preset;
                     },
                     .pointer => scalar,
-                    else => @compileError("Unsupported spec config field type: " ++ field.name),
+                    else => @compileError("Unsupported spec config field type: " ++ field_name),
                 };
             }
         }

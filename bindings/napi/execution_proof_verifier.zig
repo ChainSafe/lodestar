@@ -50,10 +50,10 @@ fn proofTypeIndex(proof_type: js.Number) !ProofType {
 
 fn zkvmKindFromNumber(zkvm_kind: js.Number) !Verifier.ZkvmKind {
     return switch (try zkvm_kind.toU32Exact()) {
-        @intFromEnum(ZkvmKind.openvm) => .openvm,
-        @intFromEnum(ZkvmKind.sp1) => .sp1,
-        @intFromEnum(ZkvmKind.zisk) => .zisk,
-        @intFromEnum(ZkvmKind.lambdavm) => .lambdavm,
+        @backingInt(ZkvmKind.openvm) => .openvm,
+        @backingInt(ZkvmKind.sp1) => .sp1,
+        @backingInt(ZkvmKind.zisk) => .zisk,
+        @backingInt(ZkvmKind.lambdavm) => .lambdavm,
         else => error.InvalidZkvmKind,
     };
 }

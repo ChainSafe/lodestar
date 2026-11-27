@@ -21,7 +21,7 @@ pub fn UintType(comptime bits: comptime_int) type {
         pub const default_value: Type = 0;
         pub const init: Type = default_value;
 
-        pub const default_root: [32]u8 = [_]u8{0} ** 32;
+        pub const default_root: [32]u8 = @as([32]u8, @splat(0));
 
         pub fn equals(a: *const Type, b: *const Type) bool {
             return a.* == b.*;
@@ -67,7 +67,7 @@ pub fn UintType(comptime bits: comptime_int) type {
                 if (data.len != fixed_size) {
                     return error.InvalidSize;
                 }
-                var leaf: [32]u8 = [_]u8{0} ** 32;
+                var leaf: [32]u8 = @as([32]u8, @splat(0));
                 @memcpy(leaf[0..fixed_size], data);
                 return try pool.createLeaf(&leaf);
             }
@@ -78,7 +78,7 @@ pub fn UintType(comptime bits: comptime_int) type {
             }
 
             pub fn fromValue(pool: *Node.Pool, value: *const Type) !Node.Id {
-                var new_leaf: [32]u8 = [_]u8{0} ** 32;
+                var new_leaf: [32]u8 = @as([32]u8, @splat(0));
                 std.mem.writeInt(Type, new_leaf[0..bytes], value.*, .little);
                 return try pool.createLeaf(&new_leaf);
             }

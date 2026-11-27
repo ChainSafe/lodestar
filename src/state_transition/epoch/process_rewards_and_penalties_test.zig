@@ -80,7 +80,7 @@ fn signedPendingDeposit(
 ) !types.electra.PendingDeposit.Type {
     const message = types.phase0.DepositMessage.Type{
         .pubkey = pubkey.*,
-        .withdrawal_credentials = [_]u8{0} ** 32,
+        .withdrawal_credentials = @as([32]u8, @splat(0)),
         .amount = 2_000_000_000,
     };
     var domain: types.primitive.Domain.Type = undefined;

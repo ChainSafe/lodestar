@@ -23,7 +23,7 @@ test "BitList shrink and regrow clears discarded bits across byte boundaries" {
     const allocator = std.testing.allocator;
     inline for (.{ BitList(.{ .limit = 258 }), BitList(.{ .limit = unlimited }) }) |Bits| {
         for ([_]usize{ 0, 1, 7, 8, 9, 255, 256, 257 }) |retained| {
-            var bits = try Bits.fromBoolSlice(allocator, &([_]bool{true} ** 257));
+            var bits = try Bits.fromBoolSlice(allocator, &(@as([257]bool, @splat(true))));
             defer bits.deinit(allocator);
 
             try bits.resize(allocator, retained);

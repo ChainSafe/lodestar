@@ -20,7 +20,7 @@ test "UDP receives into caller storage and recovers after truncation" {
     defer sender.close(std.testing.io);
     try std.testing.expect(receiver.localAddress().port() != 0);
 
-    const payload = [_]u8{0x44} ** 1200;
+    const payload = @as([1200]u8, @splat(0x44));
     const receiver_address = receiver.localAddress();
     try sender.sendTo(std.testing.io, receiver_address, null, &payload, payload_max);
     const first = try receiver.receiveDatagram(std.testing.io, &buffer, oneSecond());
@@ -31,7 +31,7 @@ test "UDP receives into caller storage and recovers after truncation" {
 
     var raw_sender = try loopback.bind(std.testing.io, .{ .mode = .dgram, .protocol = .udp });
     defer raw_sender.close(std.testing.io);
-    const oversized = [_]u8{0x55} ** (payload_max + 1);
+    const oversized = @as([(payload_max + 1)]u8, @splat(0x55));
     const destination = Address.toNetwork(receiver.localAddress());
     try raw_sender.send(std.testing.io, &destination, &oversized);
     try std.testing.expectError(error.DatagramTooLarge, receiver.receiveDatagram(std.testing.io, &buffer, oneSecond()));
@@ -53,7 +53,7 @@ test "UDP receive times out without traffic" {
 test "UDP rejects oversized sends before I/O" {
     var transport = try SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer transport.close(std.testing.io);
-    const oversized = [_]u8{0x44} ** (payload_max + 1);
+    const oversized = @as([(payload_max + 1)]u8, @splat(0x44));
     const destination = Address{ .ip4 = .{ .octets = .{ 127, 0, 0, 1 }, .port = 9_001 } };
     try std.testing.expectError(
         error.DatagramTooLarge,
@@ -69,7 +69,8 @@ test "UDP reuses the same scratch for a smaller batch with new payloads and dest
         payloads: [SocketPair.BatchScratch.capacity][]const u8 = undefined,
         len: usize = 0,
 
-        fn send(userdata: ?*anyopaque, _: net.Socket.Handle, messages: []net.OutgoingMessage, _: net.SendFlags) struct { ?net.Socket.SendError, usize } {
+        fn send(userdata: ?*anyopaque, operation: std.Io.Operation) std.Io.Cancelable!std.Io.Operation.Result {
+            const messages = operation.net_send.messages;
             const self: *@This() = @ptrCast(@alignCast(userdata.?));
             self.calls += 1;
             self.len = messages.len;
@@ -77,15 +78,15 @@ test "UDP reuses the same scratch for a smaller batch with new payloads and dest
                 self.ports[i] = Address.fromNetwork(message.address.*).port();
                 self.payloads[i] = message.data_ptr[0..message.data_len];
             }
-            if (self.fail_after) |sent| return .{ error.NetworkUnreachable, sent };
-            return .{ null, messages.len };
+            if (self.fail_after) |sent| return .{ .net_send = .{ error.NetworkUnreachable, sent } };
+            return .{ .net_send = .{ null, messages.len } };
         }
     };
     var socket = try SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
     defer socket.close(std.testing.io);
     var recorder: Recorder = .{};
     var vtable = std.testing.io.vtable.*;
-    vtable.netSend = Recorder.send;
+    vtable.operate = Recorder.send;
     const io: std.Io = .{ .userdata = &recorder, .vtable = &vtable };
     const first: Address = .{ .ip4 = .{ .octets = .{ 127, 0, 0, 1 }, .port = 9_001 } };
     const second: Address = .{ .ip4 = .{ .octets = .{ 127, 0, 0, 1 }, .port = 9_002 } };
@@ -107,6 +108,45 @@ test "UDP reuses the same scratch for a smaller batch with new payloads and dest
     try std.testing.expectEqual(@as(usize, 1), recorder.len);
     try std.testing.expectEqual(@as(u16, 9_002), recorder.ports[0]);
     try std.testing.expectEqualSlices(u8, &.{ 4, 5 }, recorder.payloads[0]);
+}
+
+test "UDP provider short successful sends preserve the prefix before cancellation" {
+    const Provider = struct {
+        accepted: usize = 0,
+        cancel_after: usize = 0,
+
+        fn send(context: ?*anyopaque, operation: std.Io.Operation) std.Io.Cancelable!std.Io.Operation.Result {
+            const self: *@This() = @ptrCast(@alignCast(context.?));
+            if (self.accepted == self.cancel_after) return error.Canceled;
+            const messages = operation.net_send.messages;
+            std.debug.assert(messages.len > 0);
+            std.debug.assert(messages[0].data_len == 1);
+            std.debug.assert(messages[0].data_ptr[0] == self.accepted);
+            self.accepted += 1;
+            return .{ .net_send = .{ null, 1 } };
+        }
+    };
+    var socket = try SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
+    defer socket.close(std.testing.io);
+    var provider: Provider = .{};
+    var vtable = std.testing.io.vtable.*;
+    vtable.operate = Provider.send;
+    const io: std.Io = .{ .userdata = &provider, .vtable = &vtable };
+    const destination = socket.localAddress();
+    var payloads = [_]u8{ 0, 1, 2 };
+    const outgoing = [_]SocketPair.Outgoing{
+        .{ .to = destination, .bytes = payloads[0..1] },
+        .{ .to = destination, .bytes = payloads[1..2] },
+        .{ .to = destination, .bytes = payloads[2..3] },
+    };
+    var scratch: SocketPair.BatchScratch = undefined;
+    for (0..outgoing.len + 1) |prefix| {
+        provider = .{ .cancel_after = prefix };
+        const result = socket.sendMany(io, &outgoing, payload_max, &scratch);
+        try std.testing.expectEqual(prefix, result.sent);
+        try std.testing.expectEqual(prefix, provider.accepted);
+        try std.testing.expectEqual(if (prefix < outgoing.len) @as(?SocketPair.SendError, error.Canceled) else null, result.failure);
+    }
 }
 
 test "dual-stack UDP sends an ordered mixed batch and receives both datagram families" {
@@ -165,9 +205,8 @@ test "dual-stack UDP cancels both pending peek waits and leaves sockets usable" 
         canceled: std.atomic.Value(u8) = .init(0),
         var active: *@This() = undefined;
 
-        fn wait(userdata: ?*anyopaque, batch: *std.Io.Batch, deadline: std.Io.Timeout) std.Io.Batch.AwaitConcurrentError!void {
-            const operation = batch.storage[batch.submitted.head.toIndex()].submission.operation.net_receive;
-            if (!operation.flags.peek) return std.testing.io.vtable.batchAwaitConcurrent(userdata, batch, deadline);
+        fn wait(userdata: ?*anyopaque, operation: std.Io.Operation) std.Io.Cancelable!std.Io.Operation.Result {
+            if (operation != .net_receive or !operation.net_receive.flags.peek) return std.testing.io.vtable.operate(userdata, operation);
             const self = active;
             const previous = self.starts.fetchAdd(1, .acq_rel);
             std.debug.assert(previous < 2);
@@ -179,7 +218,7 @@ test "dual-stack UDP cancels both pending peek waits and leaves sockets usable" 
                 self.parked.waitTimeout(std.testing.io, limit) catch |err| switch (err) {
                     error.Canceled => {
                         _ = self.canceled.fetchAdd(1, .release);
-                        return err;
+                        return error.Canceled;
                     },
                     error.Timeout => {
                         // Event waits can report a spurious wake for the cancellation signal.
@@ -187,13 +226,13 @@ test "dual-stack UDP cancels both pending peek waits and leaves sockets usable" 
                             _ = self.canceled.fetchAdd(1, .release);
                             return canceled;
                         };
-                        if (limit.toDurationFromNow(std.testing.io).?.raw.nanoseconds <= 0) return error.Timeout;
+                        if (limit.toDurationFromNow(std.testing.io).?.raw.nanoseconds <= 0) return .{ .net_receive = .{ error.SystemResources, 0 } };
                         continue;
                     },
                 };
                 unreachable;
             }
-            return error.Timeout;
+            return .{ .net_receive = .{ error.SystemResources, 0 } };
         }
 
         fn receive(receiver: *SocketPair, io: std.Io) SocketPair.DatagramError!void {
@@ -204,7 +243,7 @@ test "dual-stack UDP cancels both pending peek waits and leaves sockets usable" 
     var worker: Worker = .{};
     Worker.active = &worker;
     var vtable = std.testing.io.vtable.*;
-    vtable.batchAwaitConcurrent = Worker.wait;
+    vtable.operate = Worker.wait;
     const io: std.Io = .{ .userdata = std.testing.io.userdata, .vtable = &vtable };
     var receiver = try std.testing.io.concurrent(Worker.receive, .{ &target, io });
     defer _ = receiver.cancel(std.testing.io) catch {};
@@ -245,7 +284,7 @@ test "dual-stack UDP ready reads reject a truncated datagram and keep reading it
     const local = target.localAddresses();
     var raw_sender = try (net.IpAddress{ .ip4 = .loopback(0) }).bind(std.testing.io, .{ .mode = .dgram, .protocol = .udp });
     defer raw_sender.close(std.testing.io);
-    const oversized = [_]u8{0x55} ** (payload_max + 1);
+    const oversized = @as([(payload_max + 1)]u8, @splat(0x55));
     try raw_sender.send(std.testing.io, &Address.toNetwork(local[0].?), &oversized);
     try target.sendTo(std.testing.io, local[0].?, null, "ip4", payload_max);
     try target.sendTo(std.testing.io, local[1].?, null, "ip6", payload_max);
@@ -265,16 +304,17 @@ test "ordered UDP batches preserve every prefix across chunks families and inval
     const Recorder = struct {
         seen: usize = 0,
         stop: ?usize = null,
-        fn send(context: ?*anyopaque, _: net.Socket.Handle, messages: []net.OutgoingMessage, _: net.SendFlags) struct { ?net.Socket.SendError, usize } {
+        fn send(context: ?*anyopaque, operation: std.Io.Operation) std.Io.Cancelable!std.Io.Operation.Result {
+            const messages = operation.net_send.messages;
             const self: *@This() = @ptrCast(@alignCast(context.?));
             for (messages, 0..) |message, i| {
-                if (self.stop == self.seen) return .{ error.NetworkUnreachable, i };
+                if (self.stop == self.seen) return .{ .net_send = .{ error.NetworkUnreachable, i } };
                 std.debug.assert(message.data_len == 1);
                 std.debug.assert(message.data_ptr[0] == self.seen);
                 std.debug.assert(message.address.getPort() == 9000 + self.seen);
                 self.seen += 1;
             }
-            return .{ null, messages.len };
+            return .{ .net_send = .{ null, messages.len } };
         }
     };
     var sockets = try SocketPair.bind(std.testing.io, .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } });
@@ -290,7 +330,7 @@ test "ordered UDP batches preserve every prefix across chunks families and inval
     }
     var recorder: Recorder = .{};
     var vtable = std.testing.io.vtable.*;
-    vtable.netSend = Recorder.send;
+    vtable.operate = Recorder.send;
     const io: std.Io = .{ .userdata = &recorder, .vtable = &vtable };
     for (0..outgoing.len + 1) |prefix| {
         recorder = .{ .stop = prefix };
@@ -343,7 +383,7 @@ test "UDP missing family and native cancellation retain the exact mixed prefix" 
     try std.testing.expectEqual(SocketPair.SendOutcome{ .sent = 1, .failure = error.AddressFamilyUnsupported }, sockets.sendMany(std.testing.io, &batch, 8, &scratch));
     var buffer: [8]u8 = undefined;
     try std.testing.expectEqualStrings("first", (try sockets.receiveDatagram(std.testing.io, &buffer, oneSecond())).bytes);
-    if (@import("builtin").os.tag != .linux and @import("builtin").os.tag != .macos) return;
+    if (@import("builtin").target.os.tag != .linux and @import("builtin").target.os.tag != .macos) return;
     var dual = try SocketPair.bind(std.testing.io, .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } });
     defer dual.close(std.testing.io);
     const Cancel = struct {
@@ -369,9 +409,9 @@ test "UDP provider lifetime clears descriptors and telemetry without probing fab
         fn bind(_: ?*anyopaque, address: *const net.IpAddress, _: net.IpAddress.BindOptions) net.IpAddress.BindError!net.Socket {
             return .{ .handle = 73, .address = address.* };
         }
-        fn close(context: ?*anyopaque, handles: []const net.Socket.Handle) void {
+        fn close(context: ?*anyopaque, handles: []const net.Socket) void {
             const self: *@This() = @ptrCast(@alignCast(context.?));
-            std.debug.assert(handles.len == 1 and handles[0] == 73);
+            std.debug.assert(handles.len == 1 and handles[0].handle == 73);
             self.closes += 1;
         }
     };

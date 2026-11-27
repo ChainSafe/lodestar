@@ -502,6 +502,7 @@ test "state transition should preserve withdrawal diagnostics after failure" {
     defer types.electra.SignedBeaconBlock.deinit(allocator, &full_block);
     full_block.message.slot = slot;
     full_block.message.proposer_index = test_state.cached_state.epoch_cache.proposers[slot % preset.SLOTS_PER_EPOCH];
+    latest_header = try state.latestBlockHeader();
     full_block.message.parent_root = (try latest_header.hashTreeRoot()).*;
     try full_block.message.body.execution_payload.withdrawals.append(
         allocator,

@@ -7,8 +7,8 @@ const builtin = @import("builtin");
 const js = @import("zapi:zapi").js;
 const sons = @import("swap_or_not_shuffle");
 
-var gpa: std.heap.DebugAllocator(.{}) = .init;
-const allocator = if (builtin.mode == .Debug) gpa.allocator() else std.heap.c_allocator;
+var gpa: std.heap.SafeAllocator = .init(std.heap.page_allocator, .{});
+const allocator = if (builtin.optimize == .debug) gpa.allocator() else std.heap.c_allocator;
 
 fn byteCountFromJs(rand_byte_count: js.Number) !sons.ByteCount {
     return switch (rand_byte_count.assertI32()) {

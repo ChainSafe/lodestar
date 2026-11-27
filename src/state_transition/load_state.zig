@@ -618,7 +618,7 @@ test "loadState scenarios" {
                     var validators = try state_ptr.validators();
                     var v: types.phase0.Validator.Type = undefined;
                     try validators.getValue(allocator, 0, &v);
-                    v.pubkey = @as(@TypeOf(v.pubkey), [_]u8{m.pub_fill} ** 48);
+                    v.pubkey = @as(@TypeOf(v.pubkey), @as([48]u8, @splat(m.pub_fill)));
                     try validators.pushValue(&v);
 
                     var balances = try state_ptr.balances();
@@ -834,8 +834,8 @@ test "diff helpers: unchanged inputs do not allocate" {
 
 test "memory_safety: diff helpers preserve appended indices on allocation failure" {
     inline for (.{ types.phase0.Validator.fixed_size, INACTIVITY_SCORE_SIZE }) |element_size| {
-        const old_bytes = [_]u8{0} ** (257 * element_size);
-        const new_bytes = [_]u8{1} ** (257 * element_size);
+        const old_bytes = @as([(257 * element_size)]u8, @splat(0));
+        const new_bytes = @as([(257 * element_size)]u8, @splat(1));
 
         try std.testing.checkAllAllocationFailures(std.testing.allocator, struct {
             fn run(allocator: Allocator, before: []const u8, after: []const u8) !void {
@@ -880,7 +880,7 @@ test "loadValidators/loadInactivityScores: rejection scenarios" {
     {
         // new validators bytes length is not a multiple of the validator fixed size
         const seed_validators_node = try validatorsNodeId(state_ptr);
-        const bad_bytes = [_]u8{0} ** (types.phase0.Validator.fixed_size + 1);
+        const bad_bytes = @as([(types.phase0.Validator.fixed_size + 1)]u8, @splat(0));
         try std.testing.expectError(
             error.InvalidSize,
             loadValidators(allocator, StateST, migrated_view, &pool, seed_validators_node, bad_bytes[0..], null),
@@ -890,8 +890,8 @@ test "loadValidators/loadInactivityScores: rejection scenarios" {
     {
         // seed_state_validators_bytes length is not a multiple of the validator fixed size
         const seed_validators_node = try validatorsNodeId(state_ptr);
-        const good_new_bytes = [_]u8{0} ** (types.phase0.Validator.fixed_size * 2);
-        const bad_seed_bytes = [_]u8{0} ** (types.phase0.Validator.fixed_size + 1);
+        const good_new_bytes = @as([(types.phase0.Validator.fixed_size * 2)]u8, @splat(0));
+        const bad_seed_bytes = @as([(types.phase0.Validator.fixed_size + 1)]u8, @splat(0));
         try std.testing.expectError(
             error.InvalidSize,
             loadValidators(allocator, StateST, migrated_view, &pool, seed_validators_node, good_new_bytes[0..], bad_seed_bytes[0..]),
@@ -901,7 +901,7 @@ test "loadValidators/loadInactivityScores: rejection scenarios" {
     {
         // inactivity scores bytes length is not a multiple of INACTIVITY_SCORE_SIZE
         const seed_scores_node = try inactivityScoresNodeId(state_ptr);
-        const bad_bytes = [_]u8{0} ** (INACTIVITY_SCORE_SIZE + 1);
+        const bad_bytes = @as([(INACTIVITY_SCORE_SIZE + 1)]u8, @splat(0));
         try std.testing.expectError(
             error.InvalidSize,
             loadInactivityScores(allocator, StateST, migrated_view, &pool, seed_scores_node, bad_bytes[0..]),
@@ -916,7 +916,7 @@ test "memory_safety: loadState releases new inactivity scores on failure" {
 
     var chain_config = @import("config").minimal.chain_config;
     chain_config.ALTAIR_FORK_EPOCH = 1;
-    const beacon_config = BeaconConfig.init(chain_config, .{0} ** 32);
+    const beacon_config = BeaconConfig.init(chain_config, @splat(0));
 
     var seed_value = types.phase0.BeaconState.default_value;
     defer types.phase0.BeaconState.deinit(allocator, &seed_value);

@@ -140,7 +140,7 @@ pub fn sign(self: *const Self, msg: *const SigningRoot, dst: []const u8, aug: ?[
 
 /// Serialize the `SecretKey` to bytes.
 pub fn serialize(self: *const Self) [32]u8 {
-    var sk_out = [_]u8{0} ** 32;
+    var sk_out = @as([32]u8, @splat(0));
     c.blst_bendian_from_scalar(&sk_out[0], &self.value);
     return sk_out;
 }
@@ -168,7 +168,7 @@ const SigningRoot = blst.SigningRoot;
 const c = @import("root.zig").c;
 
 test "key generation rejects an empty salt" {
-    const ikm = [_]u8{0x42} ** 32;
+    const ikm = @as([32]u8, @splat(0x42));
     const salt: []const u8 = &.{};
 
     try std.testing.expectError(error.BadEncoding, keyGenV45(&ikm, salt, null));

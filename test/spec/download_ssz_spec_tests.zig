@@ -26,7 +26,7 @@ pub fn download(gpa: std.mem.Allocator, io: std.Io) !void {
     var base = try std.Io.Dir.cwd().createDirPathOpen(io, base_path, .{});
     defer base.close(io);
 
-    const marker = try std.fmt.allocPrint(allocator, "{s}/archive.sha256", .{version});
+    const marker = try allocator.print("{s}/archive.sha256", .{version});
     const existing = base.readFileAlloc(io, marker, allocator, .limited(65)) catch |err| switch (err) {
         error.FileNotFound => null,
         else => return err,
@@ -37,8 +37,7 @@ pub fn download(gpa: std.mem.Allocator, io: std.Io) !void {
         return;
     }
 
-    const url = try std.fmt.allocPrint(
-        allocator,
+    const url = try allocator.print(
         "{s}/releases/download/{s}/ssz-test-vectors-{s}.tar.gz",
         .{ options.ssz_spec_test_url, version, version },
     );
@@ -58,7 +57,7 @@ pub fn download(gpa: std.mem.Allocator, io: std.Io) !void {
     std.crypto.hash.sha2.Sha256.hash(body, &actual, .{});
     if (!std.mem.eql(u8, &expected, &actual)) return error.ArchiveDigestMismatch;
 
-    const staging_name = try std.fmt.allocPrint(allocator, "{s}.extracting", .{version});
+    const staging_name = try allocator.print("{s}.extracting", .{version});
     try base.deleteTree(io, staging_name);
     var staging = try base.createDirPathOpen(io, staging_name, .{});
     defer staging.close(io);

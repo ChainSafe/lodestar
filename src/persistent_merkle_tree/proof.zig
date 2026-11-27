@@ -61,7 +61,7 @@ pub const SingleProof = struct {
 /// container struct; chunked_leaf = K packed chunks). Proof traversal must
 /// materialize a temporary explicit subtree before walking inside.
 inline fn isOpaqueNode(pool: *Node.Pool, node_id: Node.Id) bool {
-    const kind = pool.nodes.items(.state)[@intFromEnum(node_id)].kind();
+    const kind = pool.nodes.items(.state)[@backingInt(node_id)].kind();
     return kind == .container_struct or kind == .chunked_leaf;
 }
 
@@ -70,7 +70,7 @@ inline fn isOpaqueNode(pool: *Node.Pool, node_id: Node.Id) bool {
 /// longer needed (single-proof and compact-multi-proof both park the Id in
 /// a deferred-unref ArrayList).
 inline fn materializeOpaque(pool: *Node.Pool, node_id: Node.Id) Node.Error!Node.Id {
-    const kind = pool.nodes.items(.state)[@intFromEnum(node_id)].kind();
+    const kind = pool.nodes.items(.state)[@backingInt(node_id)].kind();
     return switch (kind) {
         .container_struct => try pool.materializeContainerStruct(node_id),
         .chunked_leaf => try pool.materializeChunkedLeaf(node_id),
@@ -111,7 +111,7 @@ pub fn createSingleProof(
     root: Node.Id,
     gindex: Gindex,
 ) (Node.Error || Error)!SingleProof {
-    if (@intFromEnum(gindex) < root_gindex_value) {
+    if (@backingInt(gindex) < root_gindex_value) {
         return error.InvalidGindex;
     }
 
@@ -134,7 +134,7 @@ pub fn createSingleProofInto(
     gindex: Gindex,
     witnesses: [][32]u8,
 ) (Node.Error || Error)![32]u8 {
-    if (@intFromEnum(gindex) < root_gindex_value) {
+    if (@backingInt(gindex) < root_gindex_value) {
         return error.InvalidGindex;
     }
     const path_len = gindex.pathLen();
@@ -189,7 +189,7 @@ pub fn createNodeFromSingleProof(
     leaf: [32]u8,
     witnesses: []const [32]u8,
 ) (Node.Error || Error)!Node.Id {
-    if (@intFromEnum(gindex) < root_gindex_value) {
+    if (@backingInt(gindex) < root_gindex_value) {
         return error.InvalidGindex;
     }
 
@@ -200,7 +200,7 @@ pub fn createNodeFromSingleProof(
 
     var node_id = try pool.createLeaf(&leaf);
     errdefer pool.unref(node_id);
-    var index_value: GindexUint = @intFromEnum(gindex);
+    var index_value: GindexUint = @backingInt(gindex);
 
     for (witnesses) |witness| {
         const sibling_id = try pool.createLeaf(&witness);
@@ -288,7 +288,7 @@ pub fn computeDescriptor(allocator: Allocator, gindices: []const Gindex) ![]u8 {
     // Leave capacity headroom for the hash maps' u32 bucket counts.
     if (max_entries > std.math.maxInt(u32) / 4) return error.InvalidLength;
     for (gindices) |gindex| {
-        if (@intFromEnum(gindex) == 0) return error.InvalidGindex;
+        if (@backingInt(gindex) == 0) return error.InvalidGindex;
     }
 
     var proof_indices = std.AutoHashMap(GindexUint, void).init(allocator);
@@ -297,7 +297,7 @@ pub fn computeDescriptor(allocator: Allocator, gindices: []const Gindex) ![]u8 {
     defer path_indices.deinit();
 
     for (gindices) |gindex| {
-        var current = @intFromEnum(gindex);
+        var current = @backingInt(gindex);
         try proof_indices.put(current, {});
         // A gindex encodes left/right edges after its leading 1. Flip the last edge
         // to select the sibling, then discard that edge to ascend to the parent.

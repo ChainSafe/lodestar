@@ -63,8 +63,8 @@ fn TestWriter(comptime kind: RunnerKind) type {
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
-    var gpa: std.heap.DebugAllocator(.{}) = .init;
-    defer std.debug.assert(gpa.deinit() == .ok);
+    var gpa: std.heap.SafeAllocator = .init(std.heap.page_allocator, .{});
+    defer std.debug.assert(gpa.deinit() == 0);
     const allocator = gpa.allocator();
 
     const test_case_dir = "test/spec/test_case/";

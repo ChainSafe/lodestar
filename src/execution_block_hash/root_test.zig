@@ -61,7 +61,7 @@ fn appendByteLists(allocator: Allocator, out: *std.ArrayList(u8), items: []const
 
 /// SSZ `ExecutionPayload` of `fork` with deterministic withdrawals, blob gas, block access list and slot number.
 fn buildPayload(allocator: Allocator, fork: ForkSeq, header: Header, transactions: []const []const u8) ![]u8 {
-    const fork_seq = @intFromEnum(fork);
+    const fork_seq = @backingInt(fork);
     var out: std.ArrayList(u8) = .empty;
     errdefer out.deinit(allocator);
 
@@ -80,13 +80,13 @@ fn buildPayload(allocator: Allocator, fork: ForkSeq, header: Header, transaction
     // block_hash
     try out.appendNTimes(allocator, 0, 32);
     const transactions_offset = try reserveOffset(allocator, &out);
-    const withdrawals_offset = if (fork_seq >= @intFromEnum(ForkSeq.capella)) try reserveOffset(allocator, &out) else null;
-    if (fork_seq >= @intFromEnum(ForkSeq.deneb)) {
+    const withdrawals_offset = if (fork_seq >= @backingInt(ForkSeq.capella)) try reserveOffset(allocator, &out) else null;
+    if (fork_seq >= @backingInt(ForkSeq.deneb)) {
         try appendInt(allocator, &out, u64, 393_216);
         try appendInt(allocator, &out, u64, 1_234);
     }
-    const block_access_list_offset = if (fork_seq >= @intFromEnum(ForkSeq.gloas)) try reserveOffset(allocator, &out) else null;
-    if (fork_seq >= @intFromEnum(ForkSeq.gloas)) try appendInt(allocator, &out, u64, 13_000_000);
+    const block_access_list_offset = if (fork_seq >= @backingInt(ForkSeq.gloas)) try reserveOffset(allocator, &out) else null;
+    if (fork_seq >= @backingInt(ForkSeq.gloas)) try appendInt(allocator, &out, u64, 13_000_000);
 
     setOffset(&out, extra_data_offset, 0);
     try out.appendSlice(allocator, header.extra_data);
@@ -124,7 +124,7 @@ fn buildTransactions(arena: Allocator) ![]const []const u8 {
 /// and index, then one default request of every other type.
 fn buildExecutionRequests(allocator: Allocator, fork: ForkSeq) ![]u8 {
     const request_bytes = [_]usize{ 2 * 192, 76, 116, 184, 68 };
-    const lists = request_bytes[0..if (@intFromEnum(fork) >= @intFromEnum(ForkSeq.gloas)) 5 else 3];
+    const lists = request_bytes[0..if (@backingInt(fork) >= @backingInt(ForkSeq.gloas)) 5 else 3];
 
     var out: std.ArrayList(u8) = .empty;
     errdefer out.deinit(allocator);
@@ -194,10 +194,10 @@ test "computeBlockHash for each fork" {
     };
     for (vectors) |vector| {
         const fork, const expected = vector;
-        const fork_seq = @intFromEnum(fork);
+        const fork_seq = @backingInt(fork);
         const payload = try buildPayload(arena, fork, .{}, transactions);
-        const root = if (fork_seq >= @intFromEnum(ForkSeq.deneb)) &parent_beacon_block_root else null;
-        const requests = if (fork_seq >= @intFromEnum(ForkSeq.electra)) try buildExecutionRequests(arena, fork) else null;
+        const root = if (fork_seq >= @backingInt(ForkSeq.deneb)) &parent_beacon_block_root else null;
+        const requests = if (fork_seq >= @backingInt(ForkSeq.electra)) try buildExecutionRequests(arena, fork) else null;
 
         try expectHash(expected, try block_hash.computeBlockHash(fork, payload, root, requests));
     }

@@ -128,16 +128,16 @@ test "chunked progressive tree reads should expand implicit zeros and reject pla
     defer pool.deinit();
 
     // 50 chunks reach subtree 3, which a zero contents root leaves implicit.
-    const zeros = try pool.createBranch(@enumFromInt(0), try pool.createLeafFromUint(200));
+    const zeros = try pool.createBranch(@fromBackingInt(@intCast(0)), try pool.createLeafFromUint(200));
     defer pool.unref(zeros);
     var out: Chunked.Type = .empty;
     defer out.deinit(allocator);
     try Chunked.tree.toValue(allocator, zeros, &pool, &out);
-    try std.testing.expectEqualSlices(u64, &([_]u64{0} ** 200), out.items);
+    try std.testing.expectEqualSlices(u64, &(@as([200]u64, @splat(0))), out.items);
     var bytes: [1600]u8 = @splat(0xff);
     const size = try Chunked.tree.serializeIntoBytes(zeros, &pool, &bytes);
     try std.testing.expectEqual(bytes.len, size);
-    try std.testing.expectEqualSlices(u8, &([_]u8{0} ** 1600), &bytes);
+    try std.testing.expectEqualSlices(u8, &(@as([1600]u8, @splat(0))), &bytes);
 
     var value: Plain.Type = .empty;
     defer value.deinit(allocator);
@@ -189,12 +189,12 @@ test "memory_safety: chunked progressive tree.toValue should reject malformed tr
     defer pool.deinit();
 
     const bad_terminator = try pool.createLeafFromUint(1);
-    const contents = try pool.createBranch(@enumFromInt(0), bad_terminator);
+    const contents = try pool.createBranch(@fromBackingInt(@intCast(0)), bad_terminator);
     const bad_root = try pool.createBranch(contents, try pool.createLeafFromUint(1));
     defer pool.unref(bad_root);
 
     const huge_root = try pool.createBranch(
-        @enumFromInt(0),
+        @fromBackingInt(@intCast(0)),
         try pool.createLeafFromUint(std.math.maxInt(usize)),
     );
     defer pool.unref(huge_root);
@@ -389,7 +389,7 @@ test "fixed progressive list tree size should reject a length over the limit" {
     defer pool.deinit();
 
     const length_leaf = try pool.createLeafFromUint(std.math.maxInt(usize) / 8 + 1);
-    const root = try pool.createBranch(@enumFromInt(0), length_leaf);
+    const root = try pool.createBranch(@fromBackingInt(@intCast(0)), length_leaf);
     defer pool.unref(root);
 
     try std.testing.expectError(error.LengthOverLimit, List.tree.serializedSize(root, &pool));
@@ -456,7 +456,7 @@ test "memory_safety: progressive list tree.toValue should reject a leaf contents
     });
     defer pool.deinit();
 
-    const invalid_contents = try pool.createLeaf(&([_]u8{0} ** 32));
+    const invalid_contents = try pool.createLeaf(&(@as([32]u8, @splat(0))));
     errdefer pool.unref(invalid_contents);
     const length = try pool.createLeafFromUint(2);
     errdefer pool.unref(length);
@@ -581,14 +581,14 @@ test "fixed progressive tree serialization checks terminators and expands implic
     var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 64 });
     defer pool.deinit();
     const length = try pool.createLeafFromUint(65);
-    const root = try pool.createBranch(@enumFromInt(0), length);
+    const root = try pool.createBranch(@fromBackingInt(@intCast(0)), length);
     defer pool.unref(root);
     var out: [65]u8 = @splat(0xff);
     try std.testing.expectEqual(out.len, try List.tree.serializeIntoBytes(root, &pool, &out));
-    try std.testing.expectEqual([_]u8{0} ** 65, out);
+    try std.testing.expectEqual(@as([65]u8, @splat(0)), out);
 
     const bad_terminator = try pool.createLeafFromUint(1);
-    const contents = try pool.createBranch(@enumFromInt(0), bad_terminator);
+    const contents = try pool.createBranch(@fromBackingInt(@intCast(0)), bad_terminator);
     const bad_root = try pool.createBranch(contents, try pool.createLeafFromUint(1));
     defer pool.unref(bad_root);
     try std.testing.expectError(error.InvalidTerminatorNode, List.tree.serializeIntoBytes(bad_root, &pool, &out));
@@ -803,7 +803,7 @@ test "progressive tree reads should reject a nonzero terminator" {
         const good = try List.tree.fromValue(&pool, &value);
         defer pool.unref(good);
         const bad_leaf = try pool.createLeafFromUint(1);
-        const bad = try good.setNode(&pool, @enumFromInt(5), bad_leaf);
+        const bad = try good.setNode(&pool, @fromBackingInt(@intCast(5)), bad_leaf);
         defer pool.unref(bad);
         var out = List.default_value;
         defer List.deinit(allocator, &out);
@@ -961,7 +961,7 @@ test "memory_safety: FixedProgressiveListType fromNodes should borrow element ro
             pool.free(held.items);
             const migrated = try After.TreeView.init(allocator, &pool, root);
             try std.testing.expectEqualSlices(u8, &expected_root, try migrated.hashTreeRoot());
-            try std.testing.expectEqual(first, try root.getNode(&pool, @enumFromInt(4)));
+            try std.testing.expectEqual(first, try root.getNode(&pool, @fromBackingInt(@intCast(4))));
             migrated.deinit();
             try std.testing.expectEqual(source_count, pool.getNodesInUse());
             try std.testing.expect(saw_failure);
@@ -999,7 +999,7 @@ test "progressive limits should reject longer inputs before allocating" {
     var pool = try Node.Pool.init(.{ .allocator = std.testing.allocator, .page_allocator = std.testing.allocator, .pool_size = 16 });
     defer pool.deinit();
     const leaf = try pool.createLeafFromUint(2);
-    const root = try pool.createBranch(@enumFromInt(0), leaf);
+    const root = try pool.createBranch(@fromBackingInt(@intCast(0)), leaf);
     defer pool.unref(root);
     inline for (.{ Fixed, Variable }) |ST| try std.testing.expectError(error.LengthOverLimit, ST.tree.length(root, &pool));
 

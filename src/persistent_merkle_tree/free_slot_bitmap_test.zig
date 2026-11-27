@@ -47,8 +47,8 @@ test "FreeSlotBitmap - matches a plain bit set under random inserts and removes"
     const capacity = 70_000;
     var slots = try FreeSlotBitmap.init(allocator, capacity, 0);
     defer slots.deinit(allocator);
-    var model = try std.DynamicBitSet.initFull(allocator, capacity);
-    defer model.deinit();
+    var model = try std.bit_set.Dynamic.initFull(allocator, capacity);
+    defer model.deinit(allocator);
 
     var prng = std.Random.DefaultPrng.init(0x5107);
     const random = prng.random();

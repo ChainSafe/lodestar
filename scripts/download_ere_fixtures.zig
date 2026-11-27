@@ -29,8 +29,7 @@ fn downloadFixture(allocator: std.mem.Allocator, io: std.Io, zkvm: []const u8, f
         return;
     } else |_| {}
 
-    const url = try std.fmt.allocPrint(
-        allocator,
+    const url = try allocator.print(
         "{s}/crates/verifier/{s}/tests/fixtures/{s}",
         .{ options.ere_fixture_base_url, zkvm, file },
     );

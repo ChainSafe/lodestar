@@ -111,12 +111,12 @@ test "ByteListType - serializeIntoBytes (32 bytes zero)" {
 
     var value = ByteList256.default_value;
     defer value.deinit(allocator);
-    try value.appendSlice(allocator, &([_]u8{0x00} ** 32));
+    try value.appendSlice(allocator, &(@as([32]u8, @splat(0x00))));
 
     var serialized: [32]u8 = undefined;
     const size = ByteList256.serializeIntoBytes(&value, &serialized);
     try std.testing.expectEqual(@as(usize, 32), size);
-    try std.testing.expectEqualSlices(u8, &([_]u8{0x00} ** 32), &serialized);
+    try std.testing.expectEqualSlices(u8, &(@as([32]u8, @splat(0x00))), &serialized);
 
     var root: [32]u8 = undefined;
     try ByteList256.hashTreeRoot(allocator, &value, &root);

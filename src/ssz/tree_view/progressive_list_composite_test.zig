@@ -67,7 +67,7 @@ test "ProgressiveListCompositeTreeView iteratorReadonly should walk struct eleme
 
     var list: ListType.Type = .empty;
     defer list.deinit(allocator);
-    for (0..5) |i| try list.append(allocator, .{ .epoch = @intCast(i + 1), .root = [_]u8{@intCast(i)} ** 32 });
+    for (0..5) |i| try list.append(allocator, .{ .epoch = @intCast(i + 1), .root = @as([32]u8, @splat(@intCast(i))) });
 
     const root = try ListType.tree.fromValue(&pool, &list);
     var view = try ListType.TreeView.init(allocator, &pool, root);
@@ -167,7 +167,7 @@ test "ProgressiveListCompositeTreeView sliceFrom should match the value suffix a
     for (&values, 0..) |*value, idx| {
         value.* = Checkpoint.Type{
             .epoch = @intCast(idx),
-            .root = [_]u8{@as(u8, @intCast(idx))} ** 32,
+            .root = @as([32]u8, @splat(@as(u8, @intCast(idx)))),
         };
     }
     try list.appendSlice(allocator, values[0..list_length]);
@@ -234,14 +234,14 @@ test "ProgressiveListCompositeTreeView push and growTo should enforce length bou
     var list: ListType.Type = .empty;
     defer list.deinit(allocator);
 
-    const first = Checkpoint.Type{ .epoch = 9, .root = [_]u8{9} ** 32 };
+    const first = Checkpoint.Type{ .epoch = 9, .root = @as([32]u8, @splat(9)) };
     try list.append(allocator, first);
 
     const root_node = try ListType.tree.fromValue(&pool, &list);
     var view = try ListType.TreeView.init(allocator, &pool, root_node);
     defer view.deinit();
 
-    const next_checkpoint = Checkpoint.Type{ .epoch = 10, .root = [_]u8{10} ** 32 };
+    const next_checkpoint = Checkpoint.Type{ .epoch = 10, .root = @as([32]u8, @splat(10)) };
     const next_node = try Checkpoint.tree.fromValue(&pool, &next_checkpoint);
     var element_view = try Checkpoint.TreeView.init(allocator, &pool, next_node);
     var transferred = false;
@@ -254,7 +254,7 @@ test "ProgressiveListCompositeTreeView push and growTo should enforce length bou
     try std.testing.expectError(error.LengthOverLimit, view.growTo(ListType.limit + 1));
 
     const length_node = try pool.createLeafFromUint(ListType.limit + 1);
-    const oversized = try pool.createBranch(@enumFromInt(0), length_node);
+    const oversized = try pool.createBranch(@fromBackingInt(@intCast(0)), length_node);
     defer pool.unref(oversized);
     try std.testing.expectError(error.LengthOverLimit, ListType.TreeView.init(allocator, &pool, oversized));
     try std.testing.expectEqual(@as(usize, 2), try view.length());
@@ -329,7 +329,7 @@ test "ProgressiveListCompositeTreeView sliceTo should match incremental snapshot
     for (&values, 0..) |*value, idx| {
         value.* = Checkpoint.Type{
             .epoch = @intCast(idx + 1),
-            .root = [_]u8{@as(u8, @intCast(idx + 1))} ** 32,
+            .root = @as([32]u8, @splat(@as(u8, @intCast(idx + 1)))),
         };
     }
 
@@ -482,7 +482,7 @@ test "memory_safety: ProgressiveListCompositeTreeView sliceTo should not leak po
 
     var list: ListType.Type = .empty;
     defer list.deinit(allocator);
-    for (0..8) |i| try list.append(allocator, .{ .epoch = @intCast(i), .root = [_]u8{@intCast(i)} ** 32 });
+    for (0..8) |i| try list.append(allocator, .{ .epoch = @intCast(i), .root = @as([32]u8, @splat(@intCast(i))) });
 
     const root_node = try ListType.tree.fromValue(&pool, &list);
     var view = try ListType.TreeView.init(allocator, &pool, root_node);
@@ -502,8 +502,8 @@ test "memory_safety: ProgressiveListCompositeTreeView pushValue should not doubl
 
     var list: ListType.Type = .empty;
     defer list.deinit(std.testing.allocator);
-    for (0..3) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = [_]u8{@intCast(i)} ** 32 });
-    const newval: Checkpoint.Type = .{ .epoch = 99, .root = [_]u8{0xee} ** 32 };
+    for (0..3) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = @as([32]u8, @splat(@intCast(i))) });
+    const newval: Checkpoint.Type = .{ .epoch = 99, .root = @as([32]u8, @splat(0xee)) };
 
     var backing = DoubleFreeDetectAllocator.init(std.testing.allocator, std.math.maxInt(usize));
     defer backing.deinit();
@@ -533,8 +533,8 @@ test "memory_safety: ProgressiveListCompositeTreeView growing commit should not 
     var list: ListType.Type = .empty;
     defer list.deinit(std.testing.allocator);
     // Five elements fill subtrees 0 and 1, so the push makes commit extend the spine.
-    for (0..5) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = [_]u8{@intCast(i)} ** 32 });
-    const newval: Checkpoint.Type = .{ .epoch = 99, .root = [_]u8{0xee} ** 32 };
+    for (0..5) |i| try list.append(std.testing.allocator, .{ .epoch = @intCast(i), .root = @as([32]u8, @splat(@intCast(i))) });
+    const newval: Checkpoint.Type = .{ .epoch = 99, .root = @as([32]u8, @splat(0xee)) };
 
     var backing = DoubleFreeDetectAllocator.init(std.testing.allocator, std.math.maxInt(usize));
     defer backing.deinit();

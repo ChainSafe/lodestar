@@ -78,7 +78,7 @@ fn download_spec_test_archive(
     test_name: []const u8,
     out_dir: []const u8,
 ) !void {
-    const filename = try std.fmt.allocPrint(allocator, "{s}.tar.gz", .{test_name});
+    const filename = try allocator.print("{s}.tar.gz", .{test_name});
     defer allocator.free(filename);
 
     const archive_dirname = try std.fs.path.join(allocator, &[_][]const u8{ out_dir, spec_test_version });
@@ -105,8 +105,7 @@ fn download_spec_test_archive(
     var client: std.http.Client = .{ .allocator = allocator, .io = io };
     defer client.deinit();
 
-    const url = try std.fmt.allocPrint(
-        allocator,
+    const url = try allocator.print(
         "{s}/releases/download/{s}/{s}.tar.gz",
         .{
             spec_test_url,
@@ -153,7 +152,7 @@ fn extract_spec_test_archive(
     const archive_dirname = try std.fs.path.join(allocator, &[_][]const u8{ out_dir, spec_test_version });
     defer allocator.free(archive_dirname);
 
-    const filename = try std.fmt.allocPrint(allocator, "{s}.tar.gz", .{test_name});
+    const filename = try allocator.print("{s}.tar.gz", .{test_name});
     defer allocator.free(filename);
 
     var archive_dir = try std.Io.Dir.openDir(.cwd(), io, archive_dirname, .{});

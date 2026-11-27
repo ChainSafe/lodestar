@@ -17,7 +17,7 @@ const forkVersion = domain_mod.forkVersion;
 
 test "computeDomain - domain type is first 4 bytes" {
     const fork_version = [4]u8{ 0x01, 0x00, 0x00, 0x00 };
-    const genesis_root = [_]u8{0} ** 32;
+    const genesis_root = @as([32]u8, @splat(0));
     var domain: Domain = undefined;
 
     try computeDomain(DOMAIN_VOLUNTARY_EXIT, fork_version, genesis_root, &domain);
@@ -27,7 +27,7 @@ test "computeDomain - domain type is first 4 bytes" {
 
 test "computeDomain - different domain types produce different domains" {
     const fork_version = [4]u8{ 0x01, 0x00, 0x00, 0x00 };
-    const genesis_root = [_]u8{0xAA} ** 32;
+    const genesis_root = @as([32]u8, @splat(0xAA));
 
     var domain_a: Domain = undefined;
     var domain_b: Domain = undefined;
@@ -39,7 +39,7 @@ test "computeDomain - different domain types produce different domains" {
 }
 
 test "computeDomain - different fork versions produce different domains" {
-    const genesis_root = [_]u8{0xBB} ** 32;
+    const genesis_root = @as([32]u8, @splat(0xBB));
 
     var domain_a: Domain = undefined;
     var domain_b: Domain = undefined;
@@ -67,7 +67,7 @@ test "forkVersion - given epoch returns correct version" {
 }
 
 test "computeForkDataRoot - different inputs produce different roots" {
-    const genesis_root = [_]u8{0xDD} ** 32;
+    const genesis_root = @as([32]u8, @splat(0xDD));
     var root_a: Root = undefined;
     var root_b: Root = undefined;
 

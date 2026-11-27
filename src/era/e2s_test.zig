@@ -21,8 +21,8 @@ test "EntryType.fromU16 - unknown type returns error" {
 }
 
 test "EntryType.toU16 - roundtrip" {
-    inline for (std.meta.fields(EntryType)) |field| {
-        const entry = @field(EntryType, field.name);
+    inline for (@typeInfo(EntryType).@"enum".field_names) |field| {
+        const entry = @field(EntryType, field);
         try std.testing.expectEqual(entry, try EntryType.fromU16(entry.toU16()));
     }
 }

@@ -15,14 +15,11 @@ const ContainerTreeView = @import("../tree_view/root.zig").ContainerTreeView;
 const StructContainerTreeView = @import("../tree_view/root.zig").StructContainerTreeView;
 
 pub fn FixedContainerType(comptime ST: type) type {
-    const ssz_fields = switch (@typeInfo(ST)) {
-        .@"struct" => |s| s.fields,
-        else => @compileError("Expected a struct type."),
-    };
+    const ssz_fields = @import("fields.zig").fields(ST);
 
     comptime var native_names: [ssz_fields.len][:0]const u8 = undefined;
     comptime var native_types: [ssz_fields.len]type = undefined;
-    comptime var native_attrs: [ssz_fields.len]std.builtin.Type.StructField.Attributes = undefined;
+    comptime var native_attrs: [ssz_fields.len]std.lang.Type.Struct.FieldAttributes = undefined;
     comptime var _offsets: [ssz_fields.len]usize = undefined;
     comptime var _fixed_size: usize = 0;
     inline for (ssz_fields, 0..) |field, i| {
@@ -42,7 +39,7 @@ pub fn FixedContainerType(comptime ST: type) type {
     return struct {
         pub const kind = TypeKind.container;
         pub const Fields: type = ST;
-        pub const fields: []const std.builtin.Type.StructField = ssz_fields;
+        pub const fields: []const @import("fields.zig").Field = ssz_fields;
         pub const Type: type = T;
         pub const TreeView: type = ContainerTreeView(@This());
         pub const fixed_size: usize = _fixed_size;
@@ -61,7 +58,7 @@ pub fn FixedContainerType(comptime ST: type) type {
 
         pub const default_root: [32]u8 = blk: {
             var buf: [32]u8 = undefined;
-            var chunks = [_][32]u8{[_]u8{0} ** 32} ** ((chunk_count + 1) / 2 * 2);
+            var chunks = @as([((chunk_count + 1) / 2 * 2)][32]u8, @splat(@as([32]u8, @splat(0))));
             for (fields, 0..) |field, i| {
                 @memcpy(&chunks[i], &field.type.default_root);
             }
@@ -97,7 +94,7 @@ pub fn FixedContainerType(comptime ST: type) type {
         }
 
         pub fn hashTreeRoot(value: *const Type, out: *[32]u8) !void {
-            var chunks = [_][32]u8{[_]u8{0} ** 32} ** ((chunk_count + 1) / 2 * 2);
+            var chunks = @as([((chunk_count + 1) / 2 * 2)][32]u8, @splat(@as([32]u8, @splat(0))));
             inline for (fields, 0..) |field, i| {
                 try field.type.hashTreeRoot(&@field(value, field.name), &chunks[i]);
             }
@@ -138,7 +135,7 @@ pub fn FixedContainerType(comptime ST: type) type {
 
             pub fn hashTreeRoot(data: []const u8, out: *[32]u8) !void {
                 if (data.len != fixed_size) return error.InvalidSize;
-                var chunks = [_][32]u8{[_]u8{0} ** 32} ** ((chunk_count + 1) / 2 * 2);
+                var chunks = @as([((chunk_count + 1) / 2 * 2)][32]u8, @splat(@as([32]u8, @splat(0))));
                 var i: usize = 0;
                 inline for (fields, 0..) |field, field_i| {
                     try field.type.serialized.hashTreeRoot(data[i .. i + field.type.fixed_size], &chunks[field_i]);
@@ -151,11 +148,11 @@ pub fn FixedContainerType(comptime ST: type) type {
         pub const tree = struct {
             pub fn default(pool: *Node.Pool) !Node.Id {
                 // Zero-filled so a mid-build error's errdefer is a no-op over the unfilled slots.
-                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
+                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @fromBackingInt(@intCast(0))));
                 errdefer pool.free(&nodes);
                 inline for (fields, 0..) |field, i| {
                     if (comptime isBasicType(field.type)) {
-                        nodes[i] = @enumFromInt(0);
+                        nodes[i] = @fromBackingInt(@intCast(0));
                     } else {
                         nodes[i] = try field.type.tree.default(pool);
                     }
@@ -169,7 +166,7 @@ pub fn FixedContainerType(comptime ST: type) type {
                 }
 
                 // Zero-filled so a mid-build error's errdefer is a no-op over the unfilled slots.
-                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
+                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @fromBackingInt(@intCast(0))));
                 errdefer pool.free(&nodes);
                 var offset: usize = 0;
 
@@ -194,7 +191,7 @@ pub fn FixedContainerType(comptime ST: type) type {
 
             pub fn fromValue(pool: *Node.Pool, value: *const Type) !Node.Id {
                 // Zero-filled so a mid-build error's errdefer is a no-op over the unfilled slots.
-                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
+                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @fromBackingInt(@intCast(0))));
                 errdefer pool.free(&nodes);
 
                 inline for (fields, 0..) |field, i| {
@@ -315,7 +312,7 @@ pub fn StructContainerType(comptime ST: type) type {
     return struct {
         pub const kind = TypeKind.container;
         pub const Fields: type = ST;
-        pub const fields: []const std.builtin.Type.StructField = FixedCT.fields;
+        pub const fields: []const @import("fields.zig").Field = FixedCT.fields;
         pub const Type: type = FixedCT.Type;
         pub const TreeView: type = StructContainerTreeView(@This());
         pub const fixed_size: usize = FixedCT.fixed_size;
@@ -448,14 +445,11 @@ pub fn StructContainerType(comptime ST: type) type {
 }
 
 pub fn VariableContainerType(comptime ST: type) type {
-    const ssz_fields = switch (@typeInfo(ST)) {
-        .@"struct" => |s| s.fields,
-        else => @compileError("Expected a struct type."),
-    };
+    const ssz_fields = @import("fields.zig").fields(ST);
 
     comptime var native_names: [ssz_fields.len][:0]const u8 = undefined;
     comptime var native_types: [ssz_fields.len]type = undefined;
-    comptime var native_attrs: [ssz_fields.len]std.builtin.Type.StructField.Attributes = undefined;
+    comptime var native_attrs: [ssz_fields.len]std.lang.Type.Struct.FieldAttributes = undefined;
     comptime var _offsets: [ssz_fields.len]usize = undefined;
     comptime var _min_size: usize = 0;
     comptime var _max_size: usize = 0;
@@ -498,7 +492,7 @@ pub fn VariableContainerType(comptime ST: type) type {
 
     return struct {
         pub const kind = TypeKind.container;
-        pub const fields: []const std.builtin.Type.StructField = ssz_fields;
+        pub const fields: []const @import("fields.zig").Field = ssz_fields;
         pub const Fields: type = ST;
         pub const Type: type = T;
         pub const TreeView: type = ContainerTreeView(@This());
@@ -528,7 +522,7 @@ pub fn VariableContainerType(comptime ST: type) type {
 
         pub const default_root: [32]u8 = blk: {
             var buf: [32]u8 = undefined;
-            var chunks = [_][32]u8{[_]u8{0} ** 32} ** ((chunk_count + 1) / 2 * 2);
+            var chunks = @as([((chunk_count + 1) / 2 * 2)][32]u8, @splat(@as([32]u8, @splat(0))));
             for (fields, 0..) |field, i| {
                 @memcpy(&chunks[i], &field.type.default_root);
             }
@@ -554,7 +548,7 @@ pub fn VariableContainerType(comptime ST: type) type {
         }
 
         pub fn hashTreeRoot(allocator: std.mem.Allocator, value: *const Type, out: *[32]u8) !void {
-            var chunks = [_][32]u8{[_]u8{0} ** 32} ** ((chunk_count + 1) / 2 * 2);
+            var chunks = @as([((chunk_count + 1) / 2 * 2)][32]u8, @splat(@as([32]u8, @splat(0))));
             inline for (fields, 0..) |field, i| {
                 if (comptime isFixedType(field.type)) {
                     try field.type.hashTreeRoot(&@field(value, field.name), &chunks[i]);
@@ -754,7 +748,7 @@ pub fn VariableContainerType(comptime ST: type) type {
             }
 
             pub fn hashTreeRoot(allocator: std.mem.Allocator, data: []const u8, out: *[32]u8) !void {
-                var chunks = [_][32]u8{[_]u8{0} ** 32} ** ((chunk_count + 1) / 2 * 2);
+                var chunks = @as([((chunk_count + 1) / 2 * 2)][32]u8, @splat(@as([32]u8, @splat(0))));
                 const ranges = try readFieldRanges(data);
 
                 inline for (fields, 0..) |field, i| {
@@ -779,11 +773,11 @@ pub fn VariableContainerType(comptime ST: type) type {
         pub const tree = struct {
             pub fn default(pool: *Node.Pool) !Node.Id {
                 // Zero-filled so a mid-build error's errdefer is a no-op over the unfilled slots.
-                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
+                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @fromBackingInt(@intCast(0))));
                 errdefer pool.free(&nodes);
                 inline for (fields, 0..) |field, i| {
                     if (comptime isBasicType(field.type)) {
-                        nodes[i] = @enumFromInt(0);
+                        nodes[i] = @fromBackingInt(@intCast(0));
                     } else {
                         nodes[i] = try field.type.tree.default(pool);
                     }
@@ -798,7 +792,7 @@ pub fn VariableContainerType(comptime ST: type) type {
 
                 const ranges = try readFieldRanges(data);
                 // Zero-filled so a mid-build error's errdefer is a no-op over the unfilled slots.
-                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
+                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @fromBackingInt(@intCast(0))));
                 errdefer pool.free(&nodes);
 
                 inline for (fields, 0..) |field, i| {
@@ -828,7 +822,7 @@ pub fn VariableContainerType(comptime ST: type) type {
 
             pub fn fromValue(pool: *Node.Pool, value: *const Type) !Node.Id {
                 // Zero-filled so a mid-build error's errdefer is a no-op over the unfilled slots.
-                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @enumFromInt(0)));
+                var nodes: [chunk_count]Node.Id = @splat(@as(Node.Id, @fromBackingInt(@intCast(0))));
                 errdefer pool.free(&nodes);
 
                 inline for (fields, 0..) |field, i| {

@@ -97,7 +97,7 @@ const Errors = struct {
         comptime assert(fmt[fmt.len - 1] == '\n');
         errors.count += 1;
         if (errors.captured) |captured| {
-            const line = std.fmt.allocPrint(errors.gpa, fmt, args) catch @panic("OOM");
+            const line = errors.gpa.print(fmt, args) catch @panic("OOM");
             defer errors.gpa.free(line);
             captured.appendSlice(errors.gpa, line) catch @panic("OOM");
         } else {
@@ -246,7 +246,7 @@ const File = struct {
 
 /// Parses one file and extracts everything the rules need.
 fn analyze(gpa: Allocator, path: []const u8, text: [:0]const u8, errors: *Errors) !File {
-    var tree = try Ast.parse(gpa, text, .zig);
+    var tree = try Ast.parse(gpa, text, .{ .mode = .zig });
     defer tree.deinit(gpa);
 
     if (tree.errors.len > 0) {
@@ -690,7 +690,7 @@ fn tidyAllowlists(files: []const File, errors: *Errors) void {
 fn tidyCiCoverage(gpa: Allocator, zon: []const u8, ci: []const u8, errors: *Errors) !void {
     const modules = try declaredTestModules(gpa, zon);
     for (modules) |module| {
-        const needle = try std.fmt.allocPrint(gpa, "zig build test:{s}", .{module});
+        const needle = try gpa.print("zig build test:{s}", .{module});
         if (!containsStep(ci, needle)) errors.addModuleNotInCi(module);
     }
 }

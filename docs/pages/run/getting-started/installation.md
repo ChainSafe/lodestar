@@ -50,7 +50,7 @@ Docker is the recommended setup for Lodestar. Use our [Lodestar Quickstart scrip
 
 Make sure to have [pnpm installed](https://pnpm.io/). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the latest 24.x (at least 24.22.1) or 26.x (at least 26.13.0) release of [Node.js](https://nodejs.org/en/).
 
-Building from source also requires [Zig 0.16.0](https://ziglang.org/download/) to compile the native bindings.
+Building from source also requires [Zig 0.17.1](https://ziglang.org/download/) to compile the native bindings.
 
 :::info
 Lodestar supports Node.js 24.22.1 and newer releases within the 24.x LTS line, and Node.js 26.13.0 and newer releases within the 26.x LTS line.
