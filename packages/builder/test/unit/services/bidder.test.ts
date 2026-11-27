@@ -5,7 +5,7 @@ import {SecretKey} from "@lodestar/native/blst";
 import {ForkName} from "@lodestar/params";
 import {BuilderStatus, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
-import {Bidder, PayloadAttributesEvent} from "../../../src/services/bidder.js";
+import {Bidder, MAX_PENDING_PAYLOAD_ATTRIBUTES, PayloadAttributesEvent} from "../../../src/services/bidder.js";
 import {BidLedger} from "../../../src/services/bidLedger.js";
 import {BuilderSigner} from "../../../src/services/builderSigner.js";
 import {HeadTracker} from "../../../src/services/headTracker.js";
@@ -34,6 +34,7 @@ describe("Bidder", () => {
   let payloadStore: PayloadStore;
   let proposerPreferencesTracker: ProposerPreferencesTracker;
   let headTracker: HeadTracker;
+  let clock: ClockMock;
   let controller: AbortController;
 
   beforeEach(() => {
@@ -53,6 +54,7 @@ describe("Bidder", () => {
     payloadStore = new PayloadStore();
     proposerPreferencesTracker = new ProposerPreferencesTracker();
     headTracker = new HeadTracker();
+    clock = new ClockMock();
     controller = new AbortController();
   });
 
@@ -71,7 +73,7 @@ describe("Bidder", () => {
       api,
       config,
       logger,
-      clock: new ClockMock(),
+      clock,
       builderSigner: new BuilderSigner(createBeaconConfig(config, Buffer.alloc(32)), {
         secretKey,
         publicKey: secretKey.toPublicKey(),
@@ -95,11 +97,11 @@ describe("Bidder", () => {
     proposerPreferencesTracker.onProposerPreferences(preferences);
   }
 
-  function payloadAttributesEvent(): PayloadAttributesEvent {
+  function payloadAttributesEvent(parent = {root: parentBlockRoot, hash: parentBlockHash}): PayloadAttributesEvent {
     const data = ssz.gloas.SSEPayloadAttributes.defaultValue();
     data.proposalSlot = slot;
-    data.parentBlockRoot = parentBlockRoot;
-    data.parentBlockHash = parentBlockHash;
+    data.parentBlockRoot = parent.root;
+    data.parentBlockHash = parent.hash;
     data.safeBlockHash = Buffer.alloc(32, 2);
     data.finalizedBlockHash = Buffer.alloc(32, 3);
     data.payloadAttributes.prevRandao = prevRandao;
@@ -196,6 +198,124 @@ describe("Bidder", () => {
 
     expect(payloadSource.prepare).not.toHaveBeenCalled();
     expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
+  });
+
+  describe("proposer preferences received after the payload attributes", () => {
+    const missingPreferences = "No proposer preferences known for slot, not bidding";
+
+    it("bids once the proposer preferences of the slot are known", async () => {
+      const {bidder} = createBidder();
+      await bidder.onPayloadAttributes(payloadAttributesEvent());
+
+      addProposerPreferences();
+      const bidding = bidder.onProposerPreferences(slot);
+      await vi.advanceTimersByTimeAsync(msToDeadline);
+      await bidding;
+
+      expect(payloadSource.prepare).toHaveBeenCalledOnce();
+      expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+
+      // Not bid on again
+      await bidder.onProposerPreferences(slot);
+      expect(payloadSource.prepare).toHaveBeenCalledOnce();
+    });
+
+    it("bids if preferences of several slots were added", async () => {
+      const {bidder} = createBidder();
+      await bidder.onPayloadAttributes(payloadAttributesEvent());
+
+      addProposerPreferences();
+      const bidding = bidder.onProposerPreferences();
+      await vi.advanceTimersByTimeAsync(msToDeadline);
+      await bidding;
+
+      expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+    });
+
+    it("keeps waiting for the proposer preferences of the slot", async () => {
+      const {bidder} = createBidder();
+      await bidder.onPayloadAttributes(payloadAttributesEvent());
+
+      // Preferences of another slot, and of the slot but for another dependent root
+      await bidder.onProposerPreferences(slot + 1);
+      await bidder.onProposerPreferences(slot);
+      await bidder.onProposerPreferences();
+
+      expect(payloadSource.prepare).not.toHaveBeenCalled();
+      // Reported once, not every time other proposer preferences are received
+      expect(logger.debug.mock.calls.filter(([message]) => message === missingPreferences)).toHaveLength(1);
+
+      addProposerPreferences();
+      const bidding = bidder.onProposerPreferences(slot);
+      await vi.advanceTimersByTimeAsync(msToDeadline);
+      await bidding;
+      expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+    });
+
+    it("keeps the latest payload attributes if too many are waiting", async () => {
+      const {bidder} = createBidder();
+      // One more parent than can be kept, the first one is dropped
+      const parents = Array.from({length: MAX_PENDING_PAYLOAD_ATTRIBUTES + 1}, (_, i) => ({
+        root: Buffer.alloc(32, 100 + i),
+        hash: Buffer.alloc(32, 150 + i),
+      }));
+      for (const parent of parents) {
+        await bidder.onPayloadAttributes(payloadAttributesEvent(parent));
+      }
+
+      addProposerPreferences();
+      const bidding = bidder.onProposerPreferences(slot);
+      await vi.advanceTimersByTimeAsync(msToDeadline);
+      await bidding;
+
+      const builtOn = payloadSource.prepare.mock.calls.map(([request]) => request.forkchoiceState.headBlockHash);
+      expect(builtOn).toEqual(parents.slice(1).map(({hash}) => toRootHex(hash)));
+    });
+
+    it("does not resolve the dependent root of the parent again", async () => {
+      const {bidder} = createBidder();
+      // The parent is not a tracked head, its dependent root is taken from the proposer duties
+      await bidder.onPayloadAttributes(payloadAttributesEvent());
+      expect(api.validator.getProposerDutiesV2).toHaveBeenCalledOnce();
+
+      // The head of the beacon node is on another branch by the time the proposer preferences are received
+      api.validator.getProposerDutiesV2.mockResolvedValue(
+        mockApiResponse({data: [], meta: {executionOptimistic: false, dependentRoot: toRootHex(Buffer.alloc(32, 8))}})
+      );
+      addProposerPreferences();
+      const bidding = bidder.onProposerPreferences(slot);
+      await vi.advanceTimersByTimeAsync(msToDeadline);
+      await bidding;
+
+      expect(api.validator.getProposerDutiesV2).toHaveBeenCalledOnce();
+      expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+    });
+
+    it("does not bid once the bid deadline has passed", async () => {
+      const {bidder} = createBidder();
+      await bidder.onPayloadAttributes(payloadAttributesEvent());
+
+      // Before the slot, the deadline is reached with the remaining time to the slot
+      const msToSlot = clock.msToSlot(slot);
+      vi.spyOn(clock, "msToSlot").mockReturnValue(msToSlot - msToDeadline);
+      addProposerPreferences();
+      await bidder.onProposerPreferences(slot);
+
+      expect(payloadSource.prepare).not.toHaveBeenCalled();
+      // Not a failed bid
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it("does not bid once the slot started", async () => {
+      const {bidder} = createBidder();
+      await bidder.onPayloadAttributes(payloadAttributesEvent());
+
+      clock.currentSlot = slot;
+      addProposerPreferences();
+      await bidder.onProposerPreferences(slot);
+
+      expect(payloadSource.prepare).not.toHaveBeenCalled();
+    });
   });
 
   it.each([

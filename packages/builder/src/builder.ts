@@ -314,6 +314,7 @@ export class Builder {
         this.proposerPreferencesTracker.onProposerPreferences(signedProposerPreferences);
       }
       this.logger.verbose("Fetched proposer preferences", {count: preferences.length});
+      await this.bidder.onProposerPreferences();
     } catch (error) {
       if (!signal.aborted && !isErrorAborted(error)) {
         this.logger.warn(
@@ -365,6 +366,7 @@ export class Builder {
           break;
         case routes.events.EventType.proposerPreferences:
           this.proposerPreferencesTracker.onProposerPreferences(event.message.data);
+          await this.bidder.onProposerPreferences(event.message.data.message.proposalSlot);
           break;
         case routes.events.EventType.payloadAttributes:
           this.headSlotsWithoutPayloadAttributes = 0;
