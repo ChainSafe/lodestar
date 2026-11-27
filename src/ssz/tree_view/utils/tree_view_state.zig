@@ -60,9 +60,10 @@ pub const TreeViewState = struct {
 
         self.changed.putAssumeCapacity(gindex, {});
         const opt_old_node = self.children_nodes.fetchPutAssumeCapacity(gindex, node);
-        if (opt_old_node) |old_node| {
-            if (old_node.value.getState(self.pool).refCount() == 0) {
-                self.pool.unref(old_node.value);
+        if (opt_old_node) |old_node_entry| {
+            const old_node = old_node_entry.value;
+            if (old_node != node and old_node.getState(self.pool).refCount() == 0) {
+                self.pool.unref(old_node);
             }
         }
     }

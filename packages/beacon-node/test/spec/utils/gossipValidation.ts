@@ -15,6 +15,7 @@ import {
   ForkPostGloas,
   ForkPreFulu,
   ForkPreGloas,
+  isForkPostElectra,
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
@@ -38,6 +39,7 @@ import {
   BlockInputSource,
   IBlockInput,
 } from "../../../src/chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/index.js";
 import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
@@ -47,6 +49,7 @@ import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../..
 import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
 import {validateGossipBlock} from "../../../src/chain/validation/block.js";
 import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
+import {validateGossipExecutionPayloadEnvelope} from "../../../src/chain/validation/executionPayloadEnvelope.js";
 import {validateGossipInclusionList} from "../../../src/chain/validation/inclusionList.js";
 import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
 import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCommittee.js";
@@ -151,7 +154,7 @@ type MetaPayloadStatus = "VALID" | "NOT_VALIDATED" | "INVALIDATED";
 
 interface MetaYaml {
   topic: GossipType;
-  blocks?: {block: string; failed?: boolean; payload_status?: MetaPayloadStatus}[];
+  blocks?: {block: string; failed?: boolean; payload_status?: MetaPayloadStatus; payload?: string}[];
   finalized_checkpoint?: {epoch: bigint; root?: string; block?: string};
   messages: {
     current_time_ms?: bigint;
@@ -173,6 +176,7 @@ const gossipTopicByHandler = {
   gossip_sync_committee_contribution_and_proof: GossipType.sync_committee_contribution_and_proof,
   gossip_bls_to_execution_change: GossipType.bls_to_execution_change,
   gossip_inclusion_list: GossipType.inclusion_list,
+  gossip_execution_payload_envelope: GossipType.execution_payload,
 } as const satisfies Record<string, GossipType>;
 
 export function isGossipValidationHandler(topicHandler: string): topicHandler is keyof typeof gossipTopicByHandler {
@@ -295,6 +299,49 @@ function computePostState(
     },
     {}
   );
+}
+
+/** Record the block's payload as received, as `on_execution_payload_envelope` would, with its EL verdict */
+function importBlockPayload(
+  chain: BeaconChain,
+  testCaseDir: string,
+  fork: ForkName,
+  signedBlock: SignedBeaconBlock<ForkPostGloas>,
+  blockRootHex: RootHex,
+  payloadName: string,
+  payloadStatus: MetaPayloadStatus | undefined
+): void {
+  const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(loadSszSnappy(testCaseDir, payloadName));
+  const {payload} = envelope.message;
+  chain.seenPayloadEnvelopeInputCache
+    .add({
+      blockRootHex,
+      block: signedBlock,
+      forkName: fork,
+      sampledColumns: chain.custodyConfig.sampledColumns,
+      custodyColumns: chain.custodyConfig.custodyColumns,
+      seenTimestampSec: 0,
+      source: PayloadEnvelopeInputSource.gossip,
+    })
+    .addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0});
+  chain.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, true);
+  chain.forkChoice.onExecutionPayload(
+    blockRootHex,
+    toRootHex(payload.blockHash),
+    payload.blockNumber,
+    payload.gasLimit,
+    payloadStatus === undefined || payloadStatus === "VALID" ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
+    DataAvailabilityStatus.Available
+  );
+  if (payloadStatus === "INVALIDATED") {
+    chain.forkChoice.validateLatestHash({
+      executionStatus: ExecutionStatus.Invalid,
+      latestValidExecHash: toRootHex(payload.parentHash),
+      invalidateFromBlockRoot: blockRootHex,
+      invalidateFromBlockHash: toRootHex(payload.blockHash),
+      judged: LVHInvalidJudged.FromBlock,
+    });
+  }
 }
 
 function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, parentRootHex: RootHex): void {
@@ -432,12 +479,21 @@ export async function runGossipValidationTest(
           if (blockEntry.failed) {
             throw new Error(`First block ${blockEntry.block} must not be marked as failed`);
           }
-          if (slot !== anchorState.latestBlockHeader.slot) {
-            throw new Error(
-              `First block slot ${slot} does not match anchor state slot ${anchorState.latestBlockHeader.slot}`
-            );
+          if (slot !== anchorState.slot) {
+            throw new Error(`First block slot ${slot} does not match anchor state slot ${anchorState.slot}`);
           }
           blockStatesByRoot.set(blockRootHex, anchorStateView);
+          if (blockEntry.payload) {
+            importBlockPayload(
+              chain,
+              testCaseDir,
+              fork,
+              signedBlock as SignedBeaconBlock<ForkPostGloas>,
+              blockRootHex,
+              blockEntry.payload,
+              blockEntry.payload_status
+            );
+          }
           continue;
         }
 
@@ -478,7 +534,8 @@ export async function runGossipValidationTest(
           continue;
         }
 
-        if (blockEntry.payload_status === "INVALIDATED") {
+        // Post-gloas the status belongs to the block's payload, applied when the payload is imported below
+        if (blockEntry.payload_status === "INVALIDATED" && !isForkPostGloas(fork)) {
           clock.setSlot(slot);
           chain.forkChoice.updateTime(slot);
           chain.forkChoice.onBlock(
@@ -511,6 +568,16 @@ export async function runGossipValidationTest(
             ...blockProps,
             block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
           });
+          // Mirror gossip block handler: seed the envelope input so envelope vectors find their block
+          chain.seenPayloadEnvelopeInputCache.add({
+            blockRootHex,
+            block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+            forkName: fork,
+            sampledColumns: chain.custodyConfig.sampledColumns,
+            custodyColumns: chain.custodyConfig.custodyColumns,
+            seenTimestampSec: 0,
+            source: PayloadEnvelopeInputSource.gossip,
+          });
         } else if (isForkPostFulu(fork)) {
           blockImport = BlockInputColumns.createFromBlock({
             ...blockProps,
@@ -532,6 +599,17 @@ export async function runGossipValidationTest(
         });
 
         blockStatesByRoot.set(blockRootHex, postState);
+        if (blockEntry.payload) {
+          importBlockPayload(
+            chain,
+            testCaseDir,
+            fork,
+            signedBlock as SignedBeaconBlock<ForkPostGloas>,
+            blockRootHex,
+            blockEntry.payload,
+            blockEntry.payload_status
+          );
+        }
       }
     }
 
@@ -642,7 +720,11 @@ async function validateMessageForTopic(
     }
 
     case GossipType.beacon_attestation: {
-      const attestation = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).Attestation.deserialize(bytes));
+      const attestation = rejectOnInvalidSerializedBytes(() =>
+        isForkPostElectra(fork)
+          ? ssz.electra.SingleAttestation.deserialize(bytes)
+          : sszTypesFor(fork).Attestation.deserialize(bytes)
+      );
       const beaconBlockRootHex = toRootHex(attestation.data.beaconBlockRoot);
 
       if (failedBlockRoots.has(beaconBlockRootHex)) {
@@ -735,6 +817,26 @@ async function validateMessageForTopic(
       const {committeeIndices} = await validateGossipInclusionList(chain, signedInclusionList);
       // Mirror gossip handler: store the list so later vectors see it
       chain.inclusionListStore.process(signedInclusionList, committeeIndices, true);
+      break;
+    }
+
+    case GossipType.execution_payload: {
+      const signedEnvelope = rejectOnInvalidSerializedBytes(() =>
+        ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(bytes)
+      );
+      const blockRootHex = toRootHex(signedEnvelope.message.beaconBlockRoot);
+
+      if (failedBlockRoots.has(blockRootHex)) {
+        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_BLOCK_FAILED_VALIDATION"});
+      }
+
+      await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
+      // Mirror gossip handler: attach the envelope so duplicate detection works
+      chain.seenPayloadEnvelopeInputCache.get(blockRootHex)?.addPayloadEnvelope({
+        envelope: signedEnvelope,
+        source: PayloadEnvelopeInputSource.gossip,
+        seenTimestampSec: 0,
+      });
       break;
     }
 
