@@ -572,25 +572,19 @@ export function getBeaconBlockApi(
           }
         }
 
-        // `chain.getCanonicalBlockAtSlot` misses a finalized block until it is archived
-        const forkChoiceCanonicalRoot = canonicalRoot ?? chain.forkChoice.getCanonicalBlockAtSlot(slot)?.blockRoot;
-
-        // Other blocks at the slot, also if the canonical chain skipped it
+        // Non-canonical blocks at the slot, also if the canonical chain skipped it
         await Promise.all(
           chain.forkChoice.getBlockSummariesAtSlot(slot).map(async (summary) => {
             if (isOptimisticBlock(summary)) {
               executionOptimistic = true;
             }
-            if (summary.blockRoot === canonicalRoot) {
-              return;
-            }
-            finalized = false;
 
-            const blockResult = await chain.getBlockByRoot(summary.blockRoot);
-            if (blockResult) {
-              result.push(
-                toBeaconHeaderResponse(config, blockResult.block, summary.blockRoot === forkChoiceCanonicalRoot)
-              );
+            if (summary.blockRoot !== canonicalRoot) {
+              const blockResult = await chain.getBlockByRoot(summary.blockRoot);
+              if (blockResult) {
+                result.push(toBeaconHeaderResponse(config, blockResult.block));
+                finalized = false;
+              }
             }
           })
         );
