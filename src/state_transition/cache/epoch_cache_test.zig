@@ -11,6 +11,65 @@ const EffectiveBalanceIncrementsRc = @import("effective_balance_increments.zig")
 const effectiveBalanceIncrementsInit = @import("effective_balance_increments.zig").effectiveBalanceIncrementsInit;
 const SLOTS_PER_EPOCH = @import("preset").preset.SLOTS_PER_EPOCH;
 const TARGET_COMMITTEE_SIZE = @import("preset").preset.TARGET_COMMITTEE_SIZE;
+const BeaconConfig = @import("config").BeaconConfig;
+const upgradeStateToFulu = @import("../slot/upgrade_state_to_fulu.zig").upgradeStateToFulu;
+
+// Writing through an undefined optional reads back as null only under ReleaseFast, so run these
+// with -Doptimize=ReleaseFast to cover the regression.
+test "proposers_next_epoch is set by createFromState and finalProcessEpoch pre-Fulu" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
+    defer pool.deinit();
+
+    var test_state = try TestCachedBeaconState.init(allocator, &pool, 256);
+    defer test_state.deinit();
+    const epoch_cache = test_state.cached_state.epoch_cache;
+
+    try std.testing.expect(epoch_cache.proposers_next_epoch != null);
+    try std.testing.expect(epoch_cache.getBeaconProposer((epoch_cache.epoch + 1) * SLOTS_PER_EPOCH) != error.NullNextProposersPreFulu);
+
+    try epoch_cache.finalProcessEpoch(std.testing.io, test_state.cached_state.state);
+    try std.testing.expect(epoch_cache.proposers_next_epoch != null);
+}
+
+test "proposers_next_epoch matches proposer_lookahead after finalProcessEpoch and createFromState post-Fulu" {
+    const allocator = std.testing.allocator;
+    var pool = try Node.Pool.init(.{ .page_allocator = allocator, .allocator = allocator, .pool_size = 500_000 });
+    defer pool.deinit();
+
+    var test_state = try TestCachedBeaconState.init(allocator, &pool, 256);
+    defer test_state.deinit();
+
+    const fulu_state = try upgradeStateToFulu(
+        std.testing.io,
+        test_state.cached_state.config,
+        test_state.cached_state.epoch_cache,
+        try test_state.cached_state.state.tryCastToFork(.electra),
+    );
+    test_state.cached_state.state.* = .{ .fulu = fulu_state.inner };
+    const state = test_state.cached_state.state;
+
+    var expected: [SLOTS_PER_EPOCH]ct.primitive.ValidatorIndex.Type = undefined;
+    var lookahead = try state.proposerLookahead();
+    for (0..SLOTS_PER_EPOCH) |i| expected[i] = try lookahead.get(SLOTS_PER_EPOCH + i);
+
+    const epoch_cache = test_state.cached_state.epoch_cache;
+    try epoch_cache.finalProcessEpoch(std.testing.io, state);
+    try std.testing.expect(epoch_cache.proposers_next_epoch != null);
+    try std.testing.expectEqualSlices(ct.primitive.ValidatorIndex.Type, &expected, &epoch_cache.proposers_next_epoch.?);
+
+    const fulu_config = BeaconConfig.init(
+        test_state.config.chain.merge(.{ .FULU_FORK_EPOCH = epoch_cache.epoch }),
+        (try state.genesisValidatorsRoot()).*,
+    );
+    const cache = try EpochCache.createFromState(allocator, std.testing.io, state, .{
+        .config = &fulu_config,
+        .pubkey_cache = test_state.pubkey_cache,
+    }, .{ .skip_sync_committee_cache = true, .skip_sync_pubkeys = true });
+    defer cache.deinit();
+    try std.testing.expect(cache.proposers_next_epoch != null);
+    try std.testing.expectEqualSlices(ct.primitive.ValidatorIndex.Type, &expected, &cache.proposers_next_epoch.?);
+}
 
 test "memory_safety: createFromState releases shuffling inputs on every allocation failure" {
     const allocator = std.testing.allocator;
