@@ -9,6 +9,7 @@
         "build.zig.zon",
         "bench",
         "bindings",
+        "rust-toolchain.toml",
         "scripts",
         "src",
         "test",
@@ -54,6 +55,10 @@
         .zio = .{
             .url = "git+https://github.com/lalinsky/zio?ref=v0.14.0#aa860381beb42bc077e24ef304827cbdc23fcef9",
             .hash = "zio-0.14.0-xHbVVPxFHgBCop4CvfF4u360kzWlHD4FS8Ud-RIkPcZ7",
+        },
+        .quiche_zig = .{
+            .url = "git+https://github.com/chainsafe/quiche-zig#926b7730d00acfe439dddfaa390ce142631814cf",
+            .hash = "quiche-0.1.0-rnTCo9olAABgaqFerTCP8KAd_g4ACUD9N748axNHLNgp",
         },
         .ere = .{
             .url = "git+https://github.com/ChainSafe/ere.zig#66d27cc300e467cae55335f673fad13569bf56cf",
@@ -278,6 +283,10 @@
             .root_source_file = "src/discv5/root.zig",
             .imports = .{ .udp, .fault_io, .socket_test_support },
         },
+        .network = .{
+            .root_source_file = "src/network/root.zig",
+            .imports = .{ "quiche_zig:quiche", .consensus_types, .config, .constants, .preset, .snappy, .discv5, .udp, .fault_io, .clock, .swap_or_not_shuffle },
+        },
         .ere_verifier = .{
             .root_source_file = "src/ere_verifier/root.zig",
             .imports = .{.ere},
@@ -454,6 +463,7 @@
         .fault_io = .{ .root_module = .fault_io },
         .udp = .{ .root_module = .udp },
         .discv5 = .{ .root_module = .discv5 },
+        .network = .{ .root_module = .network },
         .ere_verifier = .{ .root_module = .ere_verifier },
         .bindings_allocator = .{
             .root_module = .{

@@ -46,6 +46,7 @@ jobs:
           check-latest: true
           cache: pnpm
 
+      - uses: ./.github/actions/setup-llvm
       - name: Setup Zig
         uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
 
