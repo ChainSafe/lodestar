@@ -17,10 +17,12 @@ describe("BeaconChain getCanonicalBlockAtSlot", () => {
 
   function setup({
     forkChoiceBlocks = [],
+    cachedBlocks = [],
     hotBlocks = [],
     archivedBlocks = [],
   }: {
     forkChoiceBlocks?: ProtoBlock[];
+    cachedBlocks?: {block: SignedBeaconBlock; blockRoot: string}[];
     hotBlocks?: {block: SignedBeaconBlock; blockRoot: string}[];
     archivedBlocks?: SignedBeaconBlock[];
   }) {
@@ -43,7 +45,10 @@ describe("BeaconChain getCanonicalBlockAtSlot", () => {
         getBlockSummariesAtSlot: vi.fn((slot: number) => forkChoiceBlocks.filter((b) => b.slot === slot)),
       },
       seenBlockInputCache: {
-        get: vi.fn().mockReturnValue(undefined),
+        get: vi.fn((root: string) => {
+          const cached = cachedBlocks.find((b) => b.blockRoot === root);
+          return cached && {hasBlock: () => true, getBlock: () => cached.block};
+        }),
       },
     };
 
@@ -129,12 +134,27 @@ describe("BeaconChain getCanonicalBlockAtSlot", () => {
     await expect(getCanonicalBlockAtSlot(finalizedSlot + 1)).resolves.toBeNull();
   });
 
-  it("returns null for a skipped slot that fork choice assigns to an earlier block", async () => {
+  it("serves a block from the block input cache", async () => {
+    const slot = finalizedSlot + 1;
+    const {block, blockRoot} = generateBlock(slot);
+    const {chain, getCanonicalBlockAtSlot} = setup({
+      forkChoiceBlocks: [generateProtoBlock({slot, blockRoot})],
+      cachedBlocks: [{block, blockRoot}],
+    });
+
+    await expect(getCanonicalBlockAtSlot(slot)).resolves.toEqual({block, executionOptimistic: false, finalized: false});
+    expect(chain.db.block.get).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["hot db", "hotBlocks"],
+    ["block input cache", "cachedBlocks"],
+  ] as const)("returns null for a skipped slot that fork choice assigns to an earlier block in the %s", async (_, source) => {
     // Fork choice initialized from an unfinalized state puts the finalized block at its epoch start slot
     const {block, blockRoot} = generateBlock(finalizedSlot - 1);
     const {getCanonicalBlockAtSlot} = setup({
       forkChoiceBlocks: [generateProtoBlock({slot: finalizedSlot, blockRoot})],
-      hotBlocks: [{block, blockRoot}],
+      [source]: [{block, blockRoot}],
     });
 
     await expect(getCanonicalBlockAtSlot(finalizedSlot)).resolves.toBeNull();

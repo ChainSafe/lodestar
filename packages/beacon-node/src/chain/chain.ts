@@ -884,10 +884,7 @@ export class BeaconChain implements IBeaconChain {
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
       // Otherwise (most likely), check the hot db
       const blockInput = this.seenBlockInputCache.get(block.blockRoot);
-      if (blockInput?.hasBlock()) {
-        return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(block), finalized};
-      }
-      const data = await this.db.block.get(fromHex(block.blockRoot));
+      const data = blockInput?.hasBlock() ? blockInput.getBlock() : await this.db.block.get(fromHex(block.blockRoot));
       // Fork choice initialized from an unfinalized state can place a dummy node at a slot its block skipped
       if (data && data.message.slot === slot) {
         return {block: data, executionOptimistic: isOptimisticBlock(block), finalized};
