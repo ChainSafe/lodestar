@@ -6,6 +6,7 @@ import {
   ReqOpts,
 } from "./jsonRpcHttpClient.js";
 import {JwtClaim, encodeJwtToken} from "./jwt.js";
+import {withRequestSignal} from "./signal.js";
 import {ExecutionForkName} from "./sszTypes.js";
 
 export const ENGINE_REST_BASE_PATH = "/engine/v1";
@@ -115,15 +116,18 @@ export class EngineRestHttpClient {
   /** Perform request with retries without emitting events, used to probe support for the REST API */
   async requestWithRetries(req: EngineRestRequest, opts?: ReqOpts): Promise<EngineRestResponse> {
     const routeId = opts?.routeId ?? "unknown";
-    return retry(() => this.requestAnyUrl(req, opts), {
-      retries: opts?.retries ?? this.opts.retries ?? 0,
-      retryDelay: opts?.retryDelay ?? this.opts.retryDelay,
-      shouldRetry: opts?.shouldRetry ?? isRetryableEngineRestError,
-      signal: this.opts.signal,
-      onRetry: () => {
-        this.metrics?.retryCount.inc({routeId});
-      },
-    });
+    // The delay between retries has to end with the request signal as well
+    return withRequestSignal(this.opts.signal, opts?.signal, (signal) =>
+      retry(() => this.requestAnyUrl(req, opts), {
+        retries: opts?.retries ?? this.opts.retries ?? 0,
+        retryDelay: opts?.retryDelay ?? this.opts.retryDelay,
+        shouldRetry: opts?.shouldRetry ?? isRetryableEngineRestError,
+        signal,
+        onRetry: () => {
+          this.metrics?.retryCount.inc({routeId});
+        },
+      })
+    );
   }
 
   private async requestAnyUrl(req: EngineRestRequest, opts?: ReqOpts): Promise<EngineRestResponse> {
@@ -154,7 +158,8 @@ export class EngineRestHttpClient {
     // Not AbortSignal.any(), Node retains every composite until the long-lived parent signal aborts
     const onParentSignalAbort = (): void => controller.abort();
     this.opts.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
-    if (this.opts.signal?.aborted) {
+    opts?.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
+    if (this.opts.signal?.aborted || opts?.signal?.aborted) {
       controller.abort();
     }
 
@@ -223,7 +228,7 @@ export class EngineRestHttpClient {
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
       if (controller.signal.aborted) {
-        if (this.opts.signal?.aborted) {
+        if (this.opts.signal?.aborted || opts?.signal?.aborted) {
           throw new ErrorAborted("request");
         }
         throw new TimeoutError("request");
@@ -235,6 +240,7 @@ export class EngineRestHttpClient {
 
       clearTimeout(timeout);
       this.opts.signal?.removeEventListener("abort", onParentSignalAbort);
+      opts?.signal?.removeEventListener("abort", onParentSignalAbort);
     }
   }
 }

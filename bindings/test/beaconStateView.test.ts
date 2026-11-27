@@ -620,6 +620,26 @@ describe("BeaconStateView", () => {
       const expectedValidators = state.serializeValidators();
       expect(Buffer.compare(output, expectedValidators)).toBe(0);
     });
+
+    it("serializeToBytes should throw on a too small buffer", () => {
+      const size = state.serializedSize();
+      const short = new Uint8Array(size - 1);
+      expect(() => state.serializeToBytes({dataView: new DataView(short.buffer), uint8Array: short}, 0)).toThrow();
+      const exact = new Uint8Array(size);
+      expect(() => state.serializeToBytes({dataView: new DataView(exact.buffer), uint8Array: exact}, 1)).toThrow();
+    });
+
+    it("serializeValidatorsToBytes should throw on a too small buffer", () => {
+      const size = state.serializedValidatorsSize();
+      const short = new Uint8Array(size - 1);
+      expect(() =>
+        state.serializeValidatorsToBytes({dataView: new DataView(short.buffer), uint8Array: short}, 0)
+      ).toThrow();
+      const exact = new Uint8Array(size);
+      expect(() =>
+        state.serializeValidatorsToBytes({dataView: new DataView(exact.buffer), uint8Array: exact}, 1)
+      ).toThrow();
+    });
   }, 10_000); // slow
 
   /*TODO: This tests passes locally on a long timeout but the worker crashes on GitHub CI.

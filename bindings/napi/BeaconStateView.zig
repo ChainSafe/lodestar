@@ -1419,7 +1419,11 @@ pub fn serializeToBytes(self: *BeaconStateView, output: js.Value, offset: js.Num
     const cached_state = try self.acquireState();
     defer self.finishState();
     const bytes_written = switch (cached_state.state.*) {
-        inline else => |state| try state.serializeIntoBytes(output_slice[off..]),
+        inline else => |state| blk: {
+            const size = try state.serializedSize();
+            if (output_slice.len - off < size) return error.OutputBufferTooSmall;
+            break :blk try state.serializeIntoBytes(output_slice[off..][0..size]);
+        },
     };
 
     return js.Number.from(bytes_written);
@@ -1456,7 +1460,9 @@ pub fn serializeValidatorsToBytes(self: *BeaconStateView, output: js.Value, offs
     const cached_state = try self.acquireState();
     defer self.finishState();
     var validators_view = try cached_state.state.validators();
-    const bytes_written = try validators_view.serializeIntoBytes(output_slice[off..]);
+    const size = try validators_view.serializedSize();
+    if (output_slice.len - off < size) return error.OutputBufferTooSmall;
+    const bytes_written = try validators_view.serializeIntoBytes(output_slice[off..][0..size]);
     return js.Number.from(bytes_written);
 }
 

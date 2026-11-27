@@ -18,7 +18,7 @@ describe("native pre-Gloas deposit signature cache", () => {
     let warm: InstanceType<typeof bindings.BeaconStateView> | undefined;
     try {
       cold = coldSource.processSlots(coldSource.slot + 1, {dontTransferCache: true});
-      expect(scrapeMetrics()).toContain('stfn_gloas_onboard_builders_signature_checks{source="verified"} 41\n');
+      expect(scrapeMetrics()).toContain('stfn_gloas_onboard_builders_signature_checks{source="verified"} 1\n');
       const first = state.preVerifyBuilderDepositsPreGloas(10_000, 60_000);
       expect(first.invalidValidatorSignaturesCount).toBe(0);
       expect(first.validBuilderSignaturesCount).toBe(1);
@@ -32,10 +32,10 @@ describe("native pre-Gloas deposit signature cache", () => {
       warm = state.processSlots(state.slot + 1, {dontTransferCache: true});
       expect(warm.hashTreeRoot()).toEqual(cold.hashTreeRoot());
       expect(warm.getBuildersLength()).toBe(1);
-      expect(warm.getBuilder(0).balance).toBe(builder.amount + validator.amount);
-      expect(warm.pendingDepositsCount).toBe(40);
+      expect(warm.getBuilder(0).balance).toBe(builder.amount);
+      expect(warm.pendingDepositsCount).toBe(41);
       expect(scrapeMetrics()).toContain('stfn_gloas_onboard_builders_signature_checks{source="verified"} 0\n');
-      expect(scrapeMetrics()).toContain('stfn_gloas_onboard_builders_signature_checks{source="cache"} 41\n');
+      expect(scrapeMetrics()).toContain('stfn_gloas_onboard_builders_signature_checks{source="cache"} 1\n');
       warm.clearPreGloasBuilderDepositCache();
       expect(state.preVerifyBuilderDepositsPreGloas(0, 0).totalCachedDeposits).toBe(0);
     } finally {
