@@ -928,6 +928,19 @@ export class BlockInputSync {
     const connectedPeers = this.network.getConnectedPeers();
     const hasConnectedPeers = connectedPeers.length > 0;
 
+    // Gossip, getBlobs or column reconstruction can complete a pending block's data through the shared BlockInput.
+    // With only half the columns the block stays pending, its fetch asks a peer for the rest before reconstructing
+    for (const block of this.pendingBlocks.values()) {
+      if (
+        isPendingBlockInput(block) &&
+        block.status === PendingBlockInputStatus.pending &&
+        block.blockInput.hasBlockAndAllData() &&
+        (!isBlockInputColumns(block.blockInput) || block.blockInput.hasComputedAllData())
+      ) {
+        block.status = PendingBlockInputStatus.downloaded;
+      }
+    }
+
     const {unknowns, ancestors} = getUnknownAndAncestorBlocks(this.pendingBlocks);
     let processedBlocks = 0;
     let shouldRerunBlockSearch = false;
@@ -2201,7 +2214,13 @@ export class BlockInputSync {
       const cacheItemRootHex = getBlockInputSyncCacheItemRootHex(cacheItem);
       // pruning may have dropped it mid-fetch
       if (this.pendingBlocks.has(cacheItemRootHex)) {
-        this.pendingBlocks.set(cacheItemRootHex, cacheItem);
+        // A partial download stays fetching while the next peer is asked, a pending entry would be fetched again
+        this.pendingBlocks.set(
+          cacheItemRootHex,
+          cacheItem.status === PendingBlockInputStatus.pending
+            ? {...cacheItem, status: PendingBlockInputStatus.fetching}
+            : cacheItem
+        );
       }
 
       if (cacheItem.status === PendingBlockInputStatus.downloaded) {

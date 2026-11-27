@@ -575,7 +575,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
     metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
     chain.validatorMonitor?.registerBeaconBlock(OpSource.gossip, delaySec, signedBlock.message);
-    if (!blockInput.hasBlockAndAllData()) {
+    const missingData = !blockInput.hasBlockAndAllData();
+    if (missingData) {
       chain.logger.debug("Received gossip block, attempting fetch of unavailable data", blockInput.getLogMeta());
       // The data is not yet fully available, immediately trigger an aggressive pull via unknown block sync
       chain.emitter.emit(ChainEvent.incompleteBlockInput, {
@@ -668,8 +669,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
         logger[logLevel]("Error processing block", {slot, root: blockInput.blockRootHex, peer: peerIdStr}, e as Error);
-        // TODO(fulu): Revisit when we prune block inputs
-        chain.seenBlockInputCache.prune(blockInput.blockRootHex);
+        // BlockInputSync retries the import of a block with missing data from this same BlockInput, pruning it here
+        // would put later gossip columns into a new BlockInput that is never imported. The entry is released once the
+        // block is persisted, BlockInputSync removes it, on finalization or by the cache size limit
+        if (!missingData) {
+          // TODO(fulu): Revisit when we prune block inputs
+          chain.seenBlockInputCache.prune(blockInput.blockRootHex);
+        }
       });
   }
 
