@@ -29,6 +29,9 @@ export interface NetworkOptions
   advertiseVersion?: boolean;
   private?: boolean;
   useWorker?: boolean;
+  xrayAddress?: string;
+  xrayWaitForAttach?: boolean;
+  xrayMaxBufferBytes?: number;
   maxYoungGenerationSizeMb?: number;
   disableLightClientServer?: boolean;
   /**
