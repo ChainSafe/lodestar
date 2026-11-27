@@ -190,6 +190,28 @@ describe("api - beacon - getBlockHeaders", () => {
     expect(meta.finalized).toBe(true);
   });
 
+  it("parent root - finalized block is not archived yet", async () => {
+    const finalizedBlock = generateSignedBlockAtSlot(8);
+    const finalizedRoot = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(finalizedBlock.message));
+    const finalizedSummary = generateProtoBlock({slot: 8, blockRoot: finalizedRoot, parentRoot});
+
+    modules.db.blockArchive.getByParentRoot.mockResolvedValue(null);
+    modules.forkChoice.getBlockSummariesByParentRoot.mockReturnValue([finalizedSummary]);
+    when(modules.forkChoice.getCanonicalBlockAtSlot).calledWith(8).thenReturn(finalizedSummary);
+    when(modules.chain.getBlockByRoot)
+      .calledWith(finalizedRoot)
+      .thenResolve({block: finalizedBlock, executionOptimistic: false, finalized: true});
+
+    const {data: blockHeaders, meta} = (await api.getBlockHeaders({parentRoot})) as {
+      data: routes.beacon.BlockHeaderResponse[];
+      meta: {finalized: boolean};
+    };
+
+    expect(blockHeaders).toHaveLength(1);
+    expect(blockHeaders[0].canonical).toBe(true);
+    expect(meta.finalized).toBe(true);
+  });
+
   it("slot skipped by the canonical chain with a non-canonical block", async () => {
     const orphaned = generateSignedBlockAtSlot(1);
     const orphanedRoot = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(orphaned.message));
@@ -208,6 +230,34 @@ describe("api - beacon - getBlockHeaders", () => {
     expect(blockHeaders).toHaveLength(1);
     expect(blockHeaders[0].canonical).toBe(false);
     expect(blockHeaders[0].header.message.slot).toBe(1);
+  });
+
+  it("finalized slot - fork choice still has the finalized block and a deleted orphan", async () => {
+    // The finalized block stays in fork choice as its anchor, the archiver deletes orphans before pruning
+    const finalizedBlock = generateSignedBlockAtSlot(8);
+    const finalizedRoot = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(finalizedBlock.message));
+    const orphanedRoot = toHexString(Buffer.alloc(32, 2));
+
+    modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: 10}));
+    when(modules.chain.getCanonicalBlockAtSlot)
+      .calledWith(8)
+      .thenResolve({block: finalizedBlock, executionOptimistic: false, finalized: true});
+    when(modules.forkChoice.getBlockSummariesAtSlot)
+      .calledWith(8)
+      .thenReturn([
+        generateProtoBlock({slot: 8, blockRoot: finalizedRoot}),
+        generateProtoBlock({slot: 8, blockRoot: orphanedRoot}),
+      ]);
+    when(modules.chain.getBlockByRoot).calledWith(orphanedRoot).thenResolve(null);
+
+    const {data: blockHeaders, meta} = (await api.getBlockHeaders({slot: 8})) as {
+      data: routes.beacon.BlockHeaderResponse[];
+      meta: {finalized: boolean};
+    };
+
+    expect(blockHeaders).toHaveLength(1);
+    expect(blockHeaders[0].canonical).toBe(true);
+    expect(meta.finalized).toBe(true);
   });
 
   it("parent root + slot filter", async () => {
