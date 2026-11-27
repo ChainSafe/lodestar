@@ -1,23 +1,30 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkSeq} from "@lodestar/params";
 import {IndexedAttestation, SignedBeaconBlock, altair, capella, gloas} from "@lodestar/types";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {IBeaconStateView, IBeaconStateViewGloas} from "../stateView/interface.js";
-import {ISignatureSet, createAggregateSignatureSetFromComponents} from "../util/index.js";
+import {
+  EpochShuffling,
+  ISignatureSet,
+  createAggregateSignatureSetFromComponents,
+  createSingleSignatureSetFromComponents,
+} from "../util/index.js";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
 import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
+import {getExecutionPayloadBidSigningRoot} from "./executionPayloadBid.js";
 import {getAttestationsSignatureSets} from "./indexedAttestation.js";
 import {getPayloadAttestationDataSigningRoot} from "./indexedPayloadAttestation.js";
 import {getBlockProposerSignatureSet} from "./proposer.js";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
 import {getRandaoRevealSignatureSet} from "./randao.js";
-import {getVoluntaryExitsSignatureSets} from "./voluntaryExits.js";
+import {getVoluntaryExitSignatureSet} from "./voluntaryExits.js";
 
 export * from "./attesterSlashings.js";
 export * from "./blsToExecutionChange.js";
 export * from "./executionPayloadBid.js";
 export * from "./executionPayloadEnvelope.js";
+export * from "./inclusionList.js";
 export * from "./indexedAttestation.js";
 export * from "./indexedPayloadAttestation.js";
 export * from "./proposer.js";
@@ -39,6 +46,8 @@ export function getBlockSignatureSets(
   opts?: {
     /** Useful since block proposer signature is verified beforehand on gossip validation */
     skipProposerSignature?: boolean;
+    /** Shuffling of each attestation, see `getAttestationsSignatureSets()` */
+    attestationShufflings?: EpochShuffling[];
   }
 ): ISignatureSet[] {
   // fork based validations
@@ -48,8 +57,10 @@ export function getBlockSignatureSets(
     getRandaoRevealSignatureSet(config, signedBlock.message),
     ...getProposerSlashingsSignatureSets(config, signedBlock),
     ...getAttesterSlashingsSignatureSets(config, signedBlock),
-    ...getAttestationsSignatureSets(config, signedBlock, indexedAttestations),
-    ...getVoluntaryExitsSignatureSets(config, state, signedBlock),
+    ...getAttestationsSignatureSets(config, signedBlock, indexedAttestations, opts?.attestationShufflings),
+    ...signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
+      getVoluntaryExitSignatureSet(config, state, voluntaryExit)
+    ),
   ];
 
   if (!opts?.skipProposerSignature) {
@@ -81,8 +92,24 @@ export function getBlockSignatureSets(
   }
 
   if (fork >= ForkSeq.gloas) {
-    for (const payloadAttestation of (signedBlock as gloas.SignedBeaconBlock).message.body.payloadAttestations) {
-      const ptc = (state as IBeaconStateViewGloas).getPayloadTimelinessCommittee(payloadAttestation.data.slot);
+    const gloasState = state as IBeaconStateViewGloas;
+    const {payloadAttestations, signedExecutionPayloadBid} = (signedBlock as gloas.SignedBeaconBlock).message.body;
+
+    const {builderIndex} = signedExecutionPayloadBid.message;
+    // `state` may be the pre-state of an earlier block in the epoch. An active builder was deposited before the
+    // finalized epoch, so `state` already has its pubkey. Block processing rejects a bid from any other builder.
+    if (builderIndex !== BUILDER_INDEX_SELF_BUILD && builderIndex < gloasState.getBuildersLength()) {
+      signatureSets.push(
+        createSingleSignatureSetFromComponents(
+          gloasState.getBuilder(builderIndex).pubkey,
+          getExecutionPayloadBidSigningRoot(config, signedExecutionPayloadBid.message),
+          signedExecutionPayloadBid.signature
+        )
+      );
+    }
+
+    for (const payloadAttestation of payloadAttestations) {
+      const ptc = gloasState.getPayloadTimelinessCommittee(payloadAttestation.data.slot);
       signatureSets.push(
         createAggregateSignatureSetFromComponents(
           payloadAttestation.aggregationBits.intersectValues(ptc),

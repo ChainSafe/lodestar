@@ -1,6 +1,8 @@
 import {describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {createBeaconConfig} from "@lodestar/config";
+import {config as defaultConfig} from "@lodestar/config/default";
+import {ForkName, SLOTS_PER_EPOCH, ZERO_HASH} from "@lodestar/params";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
@@ -292,6 +294,19 @@ describe("validateAttestation", () => {
         subnet,
       },
       AttestationErrorCode.INVALID_SIGNATURE
+    );
+  });
+
+  it("NON_ZERO_ATTESTATION_DATA_INDEX - pre-gloas slot on gloas topic", async () => {
+    const config = createBeaconConfig({...defaultConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 4}, ZERO_HASH);
+    const chain = {config} as unknown as IBeaconChain;
+    const attestation = ssz.electra.SingleAttestation.defaultValue();
+    attestation.data.slot = 3 * SLOTS_PER_EPOCH;
+    attestation.data.index = 1;
+
+    await expectRejectedWithLodestarError(
+      validateApiAttestation(ForkName.gloas, chain, {attestation, serializedData: null}),
+      AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX
     );
   });
 

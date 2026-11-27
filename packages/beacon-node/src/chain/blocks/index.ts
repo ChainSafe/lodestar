@@ -1,13 +1,13 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
-import {isErrorAborted, toRootHex} from "@lodestar/utils";
+import {isErrorAborted} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
-import {ForkchoiceCaller} from "../forkChoice/index.js";
+import {ExecutionInvalidSource, ForkchoiceCaller} from "../forkChoice/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {importBlock, importsBlockAttestations} from "./importBlock.js";
@@ -123,7 +123,10 @@ export async function processBlocks(
     // and we need to further propagate
     if (segmentExecStatus.execAborted !== null) {
       if (segmentExecStatus.invalidSegmentLVH !== undefined) {
-        this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLVH);
+        this.executionEngine.invalidateExecutionPayloads(
+          segmentExecStatus.invalidSegmentLVH,
+          ExecutionInvalidSource.blockSegment
+        );
       }
       throw segmentExecStatus.execAborted.execError;
     }
@@ -147,7 +150,7 @@ export async function processBlocks(
         proposerBalanceDelta: proposerBalanceDeltas[i],
         indexedAttestations: indexedAttestationsByBlock[i],
         // TODO: Make this param mandatory and capture in gossip
-        seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
+        seenTimestampSec: opts.seenTimestampSec ?? Date.now() / 1000,
       });
     }
 
@@ -205,36 +208,9 @@ export async function processBlocks(
       this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
 
       if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
-        const {signedBlock} = err;
-        const blockSlot = signedBlock.message.slot;
-        const {state} = err.type;
-        const forkTypes = this.config.getForkTypes(blockSlot);
-        const blockRootHex = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
-        this.persistInvalidSszValue(
-          forkTypes.SignedBeaconBlock,
-          signedBlock,
-          `${blockSlot}_invalid_signature`,
-          blockRootHex
-        );
-        this.persistInvalidSszBytes(
-          "BeaconState",
-          state.serialize(),
-          toRootHex(state.hashTreeRoot()),
-          `${state.slot}_invalid_signature`
-        );
+        void this.persistInvalidSignature(err.type.state, err.signedBlock);
       } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
-        const {signedBlock} = err;
-        const blockSlot = signedBlock.message.slot;
-        const {preState, postState} = err.type;
-        const preRoot = preState.hashTreeRoot();
-        const postRoot = postState.hashTreeRoot();
-        this.persistInvalidStateRoot(preState, postState, signedBlock).catch((e) => {
-          this.logger.error(
-            "Error persisting invalid state root objects",
-            {slot: blockSlot, preStateRoot: toRootHex(preRoot), postStateRoot: toRootHex(postRoot)},
-            e
-          );
-        });
+        void this.persistInvalidStateRoot(err.type.preState, err.type.postState, err.signedBlock);
       }
     }
 
@@ -292,7 +268,11 @@ async function importPayloadEnvelopesOfKnownBlocks(
     return result;
   }
 
-  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(payloadInputs, new AbortController().signal);
+  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(
+    this.config,
+    payloadInputs,
+    new AbortController().signal
+  );
   for (let i = 0; i < payloadInputs.length; i++) {
     this.logger.debug("Importing payload envelope of known block", {
       slot: payloadInputs[i].slot,
@@ -300,7 +280,6 @@ async function importPayloadEnvelopesOfKnownBlocks(
     });
     await importExecutionPayload.call(this, payloadInputs[i], dataAvailabilityStatuses[i], {validSignature: false});
   }
-  // the new FULL variants are not seen by the head cached from the last block import
   this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
 
   return result;

@@ -17,6 +17,7 @@ import {
   capella,
   electra,
   gloas,
+  heze,
   phase0,
   ssz,
   sszTypesFor,
@@ -69,10 +70,31 @@ const headV2 = new ContainerType(
   },
   {typeName: "HeadV2", jsonCase: "eth2"}
 );
+const phase0Block = new ContainerType(
+  {
+    slot: ssz.Slot,
+    block: stringType,
+    executionOptimistic: ssz.Boolean,
+  },
+  {typeName: "Block", jsonCase: "eth2"}
+);
+const gloasBlock = new ContainerType(
+  {
+    slot: ssz.Slot,
+    block: stringType,
+    blockHash: stringType,
+    builderIndex: ssz.BuilderIndex,
+    executionOptimistic: ssz.Boolean,
+  },
+  {typeName: "BlockGloas", jsonCase: "eth2"}
+);
 type FuluDataColumnSidecarSSE = ValueOf<typeof fuluDataColumnSidecarSSE>;
 type GloasDataColumnSidecarSSE = ValueOf<typeof gloasDataColumnSidecarSSE>;
 type DataColumnSidecarSSE = FuluDataColumnSidecarSSE | GloasDataColumnSidecarSSE;
 type HeadV2 = ValueOf<typeof headV2>;
+type Phase0BlockSSE = ValueOf<typeof phase0Block>;
+type GloasBlockSSE = ValueOf<typeof gloasBlock>;
+type BlockSSE = Phase0BlockSSE | GloasBlockSSE;
 
 export enum EventType {
   /**
@@ -136,6 +158,8 @@ export enum EventType {
   proposerPreferences = "proposer_preferences",
   /** The node has received a `PayloadAttestationMessage` (from P2P or API) that passes validation rules of the `payload_attestation_message` topic */
   payloadAttestationMessage = "payload_attestation_message",
+  /** The node has received a `SignedInclusionList` (from P2P or API) that passes gossip validation on the `inclusion_list` topic */
+  inclusionList = "inclusion_list",
   /** The node has executed the Fast Confirmation Rule and produced a confirmed beacon block */
   fastConfirmation = "fast_confirmation",
 }
@@ -165,6 +189,7 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.executionPayloadBid]: EventType.executionPayloadBid,
   [EventType.proposerPreferences]: EventType.proposerPreferences,
   [EventType.payloadAttestationMessage]: EventType.payloadAttestationMessage,
+  [EventType.inclusionList]: EventType.inclusionList,
   [EventType.fastConfirmation]: EventType.fastConfirmation,
 };
 
@@ -182,11 +207,7 @@ export type EventData = {
     version: ForkName;
     data: HeadV2;
   };
-  [EventType.block]: {
-    slot: Slot;
-    block: RootHex;
-    executionOptimistic: boolean;
-  };
+  [EventType.block]: BlockSSE;
   [EventType.blockGossip]: {
     slot: Slot;
     block: RootHex;
@@ -239,6 +260,7 @@ export type EventData = {
   [EventType.executionPayloadBid]: {version: ForkName; data: gloas.SignedExecutionPayloadBid};
   [EventType.proposerPreferences]: {version: ForkName; data: gloas.SignedProposerPreferences};
   [EventType.payloadAttestationMessage]: {version: ForkName; data: gloas.PayloadAttestationMessage};
+  [EventType.inclusionList]: {version: ForkName; data: heze.SignedInclusionList};
   [EventType.fastConfirmation]: {
     block: RootHex;
     slot: Slot;
@@ -253,6 +275,8 @@ type EventstreamArgs = {
   topics: EventType[];
   signal: AbortSignal;
   onEvent: (event: BeaconEvent) => void;
+  /** Called every time the connection is established, including reconnects */
+  onOpen?: () => void;
   onError?: (err: Error) => void;
   onClose?: () => void;
 };
@@ -330,14 +354,22 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     ),
     [EventType.headV2]: WithVersion(() => headV2),
 
-    [EventType.block]: new ContainerType(
-      {
-        slot: ssz.Slot,
-        block: stringType,
-        executionOptimistic: ssz.Boolean,
+    [EventType.block]: {
+      toJson: (data) => {
+        const fork = config.getForkName(data.slot);
+        if (isForkPostGloas(fork)) {
+          return gloasBlock.toJson(data as GloasBlockSSE);
+        }
+        return phase0Block.toJson(data);
       },
-      {jsonCase: "eth2"}
-    ),
+      fromJson: (data) => {
+        const fork = config.getForkName(Number((data as BlockSSE).slot));
+        if (isForkPostGloas(fork)) {
+          return gloasBlock.fromJson(data);
+        }
+        return phase0Block.fromJson(data);
+      },
+    },
     [EventType.blockGossip]: new ContainerType(
       {
         slot: ssz.Slot,
@@ -443,6 +475,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.executionPayloadBid]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedExecutionPayloadBid),
     [EventType.proposerPreferences]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedProposerPreferences),
     [EventType.payloadAttestationMessage]: WithVersion((fork) => getPostGloasForkTypes(fork).PayloadAttestationMessage),
+    [EventType.inclusionList]: WithVersion(() => ssz.heze.SignedInclusionList),
     [EventType.fastConfirmation]: new ContainerType(
       {
         block: stringType,

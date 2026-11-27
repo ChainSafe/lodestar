@@ -9,6 +9,7 @@ import {IClock} from "../../src/util/clock.js";
  */
 export class ClockStopped extends EventEmitter implements IClock {
   genesisTime = 0;
+  private msIntoSlot = 0;
 
   constructor(private slot: Slot) {
     super();
@@ -61,13 +62,18 @@ export class ClockStopped extends EventEmitter implements IClock {
    * Return milliseconds from a slot to either toMs or now.
    */
   msFromSlot(): number {
-    return 0;
+    return this.msIntoSlot;
   }
 
   // MOCK Methods
 
   setSlot(slot: Slot): void {
     this.slot = slot;
+  }
+
+  /** Position the stopped clock within the current slot (default 0 = slot start) */
+  setMsIntoSlot(ms: number): void {
+    this.msIntoSlot = ms;
   }
 }
 
@@ -84,5 +90,8 @@ export function getMockedClock(): Mocked<IClock> {
     slotWithPastTolerance: vi.fn(),
     secFromSlot: vi.fn(),
     msFromSlot: vi.fn(),
+    // consumers may subscribe to ClockEvent.slot / ClockEvent.epoch
+    on: vi.fn(),
+    off: vi.fn(),
   } as unknown as Mocked<IClock>;
 }

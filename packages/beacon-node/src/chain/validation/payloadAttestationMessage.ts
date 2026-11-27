@@ -1,4 +1,5 @@
 import {
+  computeEpochAtSlot,
   createIndexedSignatureSetFromComponents,
   getPayloadAttestationDataSigningRoot,
   isStatePostGloas,
@@ -34,6 +35,14 @@ async function validatePayloadAttestationMessage(
   prioritizeBls = false
 ): Promise<PayloadAttestationValidationResult> {
   const {data, validatorIndex} = payloadAttestationMessage;
+
+  // [REJECT] The payload attestation slot is at or after the Gloas fork.
+  if (computeEpochAtSlot(data.slot) < chain.config.GLOAS_FORK_EPOCH) {
+    throw new PayloadAttestationError(GossipAction.REJECT, {
+      code: PayloadAttestationErrorCode.PRE_GLOAS_SLOT,
+      slot: data.slot,
+    });
+  }
 
   // [IGNORE] The message's slot is for the current slot (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance), i.e. `data.slot == current_slot`.
   if (!chain.clock.isCurrentSlotGivenGossipDisparity(data.slot)) {
@@ -119,6 +128,16 @@ async function validatePayloadAttestationMessage(
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     throw new PayloadAttestationError(GossipAction.REJECT, {
       code: PayloadAttestationErrorCode.INVALID_SIGNATURE,
+    });
+  }
+
+  // Re-check after the await: concurrent messages from the same validator all pass the check above
+  if (chain.seenPayloadAttesters.isKnown(data.slot, validatorIndex)) {
+    throw new PayloadAttestationError(GossipAction.IGNORE, {
+      code: PayloadAttestationErrorCode.PAYLOAD_ATTESTATION_ALREADY_KNOWN,
+      validatorIndex,
+      slot: data.slot,
+      blockRoot: toRootHex(data.beaconBlockRoot),
     });
   }
 

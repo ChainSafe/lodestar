@@ -4,8 +4,8 @@ import {config} from "@lodestar/config/default";
 import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {
-  CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
+  CachedBeaconStatePreHeze,
   ZERO_HASH,
   computeDomain,
   computeEpochAtSlot,
@@ -29,7 +29,7 @@ export type BlockAltairOpts = BlockOpts & {syncCommitteeBitsLen: number};
  * Generate a block that would pass stateTransition with a customizable count of operations
  */
 export function getBlockPhase0(
-  preState: CachedBeaconStateAllForks,
+  preState: CachedBeaconStatePreHeze,
   {proposerSlashingLen, attesterSlashingLen, attestationLen, depositsLen, voluntaryExitLen, bitsLen}: BlockOpts
 ): phase0.SignedBeaconBlock {
   const emptySig = Buffer.alloc(96);
@@ -165,19 +165,21 @@ export function getBlockAltair(preState: CachedBeaconStateAltair, opts: BlockAlt
   const emptySig = Buffer.alloc(96);
   const phase0Block = getBlockPhase0(preState, opts);
   const stateEpoch = computeEpochAtSlot(preState.slot);
+  // ParticipationFlags.set() ORs the value in, so flags must be cleared by replacing the whole list
+  const previousEpochParticipation = preState.previousEpochParticipation.getAll();
+  const currentEpochParticipation = preState.currentEpochParticipation.getAll();
   for (const attestation of phase0Block.message.body.attestations) {
     const attEpoch = computeEpochAtSlot(attestation.data.slot);
-    const epochParticipation =
-      attEpoch === stateEpoch ? preState.currentEpochParticipation : preState.previousEpochParticipation;
+    const epochParticipation = attEpoch === stateEpoch ? currentEpochParticipation : previousEpochParticipation;
 
     const committeeindices = preState.epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index);
-    const attestingIndices = attestation.aggregationBits.intersectValues(committeeindices);
-
-    // TODO: Is this necessary?
-    for (const index of attestingIndices) {
-      epochParticipation.set(index, 0);
+    for (const index of attestation.aggregationBits.intersectValues(committeeindices)) {
+      epochParticipation[index] = 0;
     }
   }
+  preState.previousEpochParticipation = ssz.altair.EpochParticipation.toViewDU(previousEpochParticipation);
+  preState.currentEpochParticipation = ssz.altair.EpochParticipation.toViewDU(currentEpochParticipation);
+  preState.commit();
   return {
     message: {
       ...phase0Block.message,
@@ -197,7 +199,7 @@ export function getBlockAltair(preState: CachedBeaconStateAltair, opts: BlockAlt
  * Generate valid deposits with valid signatures and valid merkle proofs.
  * NOTE: Mutates `preState` to add the new `eth1Data.depositRoot`
  */
-function getDeposits(preState: CachedBeaconStateAllForks, count: number): phase0.Deposit[] {
+function getDeposits(preState: CachedBeaconStatePreHeze, count: number): phase0.Deposit[] {
   const depositRootViewDU = ssz.phase0.DepositDataRootList.toViewDU([]);
   const depositCount = Number(preState.eth1Data.depositCount);
   const withdrawalCredentials = Buffer.alloc(32, 0xee);

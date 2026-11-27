@@ -6,6 +6,7 @@ import {
   ForkPostBellatrix,
   ForkPostFulu,
   ForkPostGloas,
+  ForkPreBellatrix,
   ForkPreGloas,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -24,6 +25,7 @@ import {
 } from "@lodestar/state-transition";
 import {
   ProducedBlockSource,
+  RootHex,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
   SignedBlockContents,
@@ -36,7 +38,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, prettyGweiToEth, sleep, toHex, toRootHex} from "@lodestar/utils";
-import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
+import {BlockInputSource, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
@@ -47,6 +49,8 @@ import {
   BlockError,
   BlockErrorCode,
   BlockGossipError,
+  EnvelopeReconstructionError,
+  EnvelopeReconstructionErrorCode,
   ExecutionPayloadEnvelopeError,
   ExecutionPayloadEnvelopeErrorCode,
 } from "../../../../chain/errors/index.js";
@@ -59,12 +63,11 @@ import {
 } from "../../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../../chain/regen/index.js";
 import {validateGossipBlock, verifyBlockProposerSignature} from "../../../../chain/validation/block.js";
-import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
+import {validateGossipExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
   computePreFuluKzgCommitmentsInclusionProof,
-  getBlobSidecars,
   kzgCommitmentToVersionedHash,
   reconstructBlobs,
 } from "../../../../util/blobs.js";
@@ -76,6 +79,7 @@ import {
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
+import {ApiOptions} from "../../../options.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
 import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
@@ -93,16 +97,10 @@ const MAX_API_CLOCK_DISPARITY_MS = 1000;
  */
 const IDENTITY_PEER_ID = ""; // TODO: Compute identity keypair
 
-export function getBeaconBlockApi({
-  chain,
-  config,
-  metrics,
-  network,
-  db,
-}: Pick<
-  ApiModules,
-  "chain" | "config" | "metrics" | "network" | "db"
->): ApplicationMethods<routes.beacon.block.Endpoints> {
+export function getBeaconBlockApi(
+  opts: ApiOptions,
+  {chain, config, metrics, network, db}: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">
+): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockContents, broadcastValidation, builderUrl},
     context,
@@ -112,6 +110,9 @@ export function getBeaconBlockApi({
     const signedBlock = signedBlockContents.signedBlock;
     const slot = signedBlock.message.slot;
     const fork = config.getForkName(slot);
+    if (!isForkPostFulu(fork)) {
+      throw new ApiError(400, `Publishing blocks is not supported for pre-fulu fork=${fork}`);
+    }
     const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
 
     const blockForImport = chain.seenBlockInputCache.getByBlock({
@@ -133,40 +134,26 @@ export function getBeaconBlockApi({
       });
     }
 
-    let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecar[];
+    // After gloas, data columns are not published with the block but when publishing the execution payload envelope.
+    let dataColumnSidecars: fulu.DataColumnSidecar[] = [];
 
-    if (isDenebBlockContents(signedBlockContents)) {
-      if (isForkPostGloas(fork)) {
-        // After gloas, data columns are not published with the block but when publishing the execution payload envelope
-        blobSidecars = [];
-        dataColumnSidecars = [];
-      } else if (isForkPostFulu(fork)) {
-        const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
-        // If the block was produced by this node, we will already have computed cells
-        // Otherwise, we will compute them from the blobs in this function
-        const cells =
-          (chain.blockProductionCache.get(blockRoot) as ProduceFullFulu)?.cells ??
-          signedBlockContents.blobs.map((blob) => kzg.computeCells(blob));
-        const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
-          cells: rowCells,
-          proofs: signedBlockContents.kzgProofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
-        }));
-        dataColumnSidecars = getDataColumnSidecarsFromBlock(
-          config,
-          signedBlock as SignedBeaconBlock<ForkPostFulu>,
-          cellsAndProofs
-        ) as fulu.DataColumnSidecar[];
-        timer?.();
-        blobSidecars = [];
-      } else if (isForkPostDeneb(fork)) {
-        blobSidecars = getBlobSidecars(config, signedBlock, signedBlockContents.blobs, signedBlockContents.kzgProofs);
-        dataColumnSidecars = [];
-      } else {
-        throw Error(`Invalid data fork=${fork} for publish`);
-      }
-    } else {
-      blobSidecars = [];
-      dataColumnSidecars = [];
+    if (isDenebBlockContents(signedBlockContents) && isForkPostFulu(fork) && !isForkPostGloas(fork)) {
+      const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
+      // If the block was produced by this node, we will already have computed cells
+      // Otherwise, we will compute them from the blobs in this function
+      const cells =
+        (chain.blockProductionCache.get(blockRoot) as ProduceFullFulu)?.cells ??
+        signedBlockContents.blobs.map((blob) => kzg.computeCells(blob));
+      const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
+        cells: rowCells,
+        proofs: signedBlockContents.kzgProofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
+      }));
+      dataColumnSidecars = getDataColumnSidecarsFromBlock(
+        config,
+        signedBlock as SignedBeaconBlock<ForkPostFulu>,
+        cellsAndProofs
+      ) as fulu.DataColumnSidecar[];
+      timer?.();
     }
 
     if (isBlockInputColumns(blockForImport)) {
@@ -181,19 +168,6 @@ export function getBeaconBlockApi({
           // In multi-BN setups (DVT, fallback), the same block may be published to multiple nodes.
           // Data columns may arrive via gossip from another node before the API publish completes,
           // so we allow duplicates here instead of throwing an error.
-          {throwOnDuplicateAdd: false}
-        );
-      }
-    } else if (isBlockInputBlobs(blockForImport)) {
-      for (const blobSidecar of blobSidecars) {
-        blockForImport.addBlob(
-          {
-            blockRootHex: blockRoot,
-            blobSidecar,
-            source: BlockInputSource.api,
-            seenTimestampSec,
-          },
-          // Same as above for columns
           {throwOnDuplicateAdd: false}
         );
       }
@@ -217,28 +191,31 @@ export function getBeaconBlockApi({
 
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.gossip: {
-        if (!blockLocallyProduced) {
-          try {
+        try {
+          if (blockLocallyProduced) {
+            // Block production does not cover the proposer signature, the validator client signs the block
+            await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
+          } else {
             await validateGossipBlock(config, chain, signedBlock, fork);
-          } catch (error) {
-            if (error instanceof BlockGossipError) {
-              switch (error.type.code) {
-                case BlockErrorCode.ALREADY_KNOWN:
-                  // Block has already been seen, e.g. via gossip racing the publish API. Benign.
-                  chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
-                  return;
-              }
-            }
-
-            chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
-            chain.persistInvalidSszValue(
-              chain.config.getForkTypes(slot).SignedBeaconBlock,
-              signedBlock,
-              "api_reject_gossip_failure",
-              blockRoot
-            );
-            throw error;
           }
+        } catch (error) {
+          if (error instanceof BlockGossipError) {
+            switch (error.type.code) {
+              case BlockErrorCode.ALREADY_KNOWN:
+                // Block has already been seen, e.g. via gossip racing the publish API. Benign.
+                chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+                return;
+            }
+          }
+
+          chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
+          chain.persistInvalidSszValue(
+            chain.config.getForkTypes(slot).SignedBeaconBlock,
+            signedBlock,
+            "api_reject_gossip_failure",
+            blockRoot
+          );
+          throw error;
         }
         chain.logger.debug("Gossip checks validated while publishing the block", valLogMeta);
         break;
@@ -318,18 +295,8 @@ export function getBeaconBlockApi({
         break;
       }
 
-      case routes.beacon.BroadcastValidation.none: {
-        chain.logger.debug("Skipping broadcast validation", valLogMeta);
-        break;
-      }
-
       default: {
-        // error or log warning we do not support this validation
-        const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
-        if (chain.opts.broadcastValidationStrictness === "error") {
-          throw Error(message);
-        }
-        chain.logger.warn(message, valLogMeta);
+        throw new ApiError(400, `Invalid broadcast validation level ${broadcastValidation}`);
       }
     }
 
@@ -396,29 +363,26 @@ export function getBeaconBlockApi({
       //
       () => network.publishBeaconBlock(signedBlock),
       ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
-      ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>
         // there is no rush to persist block since we published it to gossip anyway
-        chain
-          .processBlock(blockForImport, opts)
-          .catch((e) => {
-            if (e instanceof BlockError) {
-              switch (e.type.code) {
-                case BlockErrorCode.ALREADY_KNOWN:
-                  // Block was imported while publishing, e.g. received via gossip
-                  chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
-                  return;
-                case BlockErrorCode.PARENT_BLOCK_UNKNOWN:
-                case BlockErrorCode.PARENT_PAYLOAD_UNKNOWN:
-                  chain.emitter.emit(ChainEvent.blockUnknownParent, {
-                    blockInput: blockForImport,
-                    peer: IDENTITY_PEER_ID,
-                    source: BlockInputSource.api,
-                  });
-              }
+        chain.processBlock(blockForImport, opts).catch((e) => {
+          if (e instanceof BlockError) {
+            switch (e.type.code) {
+              case BlockErrorCode.ALREADY_KNOWN:
+                // Block was imported while publishing, e.g. received via gossip
+                chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+                return;
+              case BlockErrorCode.PARENT_BLOCK_UNKNOWN:
+              case BlockErrorCode.PARENT_PAYLOAD_UNKNOWN:
+                chain.emitter.emit(ChainEvent.blockUnknownParent, {
+                  blockInput: blockForImport,
+                  peer: IDENTITY_PEER_ID,
+                  source: BlockInputSource.api,
+                });
             }
-            throw e;
-          }),
+          }
+          throw e;
+        }),
     ];
     const sentPeersArr = await promiseAllMaybeAsync<{sentPeers: number; alreadyPublished: boolean} | number | void>(
       publishPromises
@@ -467,20 +431,6 @@ export function getBeaconBlockApi({
             kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
           });
         }
-      }
-    } else if (isBlockInputBlobs(blockForImport) && chain.emitter.listenerCount(routes.events.EventType.blobSidecar)) {
-      const blobSidecars = blockForImport.getBlobs();
-      const versionedHashes = blockForImport.getVersionedHashes();
-
-      for (const blobSidecar of blobSidecars) {
-        const {index, kzgCommitment} = blobSidecar;
-        chain.emitter.emit(routes.events.EventType.blobSidecar, {
-          blockRoot,
-          slot,
-          index,
-          kzgCommitment: toHex(kzgCommitment),
-          versionedHash: toHex(versionedHashes[index]),
-        });
       }
     }
   };
@@ -561,26 +511,32 @@ export function getBeaconBlockApi({
 
       const result: routes.beacon.BlockHeaderResponse[] = [];
       if (parentRoot) {
+        let finalizedRoot: RootHex | null = null;
         const finalizedBlock = await db.blockArchive.getByParentRoot(fromHex(parentRoot));
         if (finalizedBlock) {
-          result.push(toBeaconHeaderResponse(config, finalizedBlock, true));
+          const header = toBeaconHeaderResponse(config, finalizedBlock, true);
+          finalizedRoot = toRootHex(header.root);
+          result.push(header);
         }
         const nonFinalizedBlocks = chain.forkChoice.getBlockSummariesByParentRoot(parentRoot);
         await Promise.all(
           nonFinalizedBlocks.map(async (summary) => {
+            // The finalized block stays in fork choice as its anchor after it is archived
+            if (summary.blockRoot === finalizedRoot) {
+              return;
+            }
             const blockResult = await chain.getBlockByRoot(summary.blockRoot);
             if (blockResult) {
+              // There is no canonical block at the slot of a child that was reorged out by a later sibling
               const canonical = chain.forkChoice.getCanonicalBlockAtSlot(blockResult.block.message.slot);
-              if (canonical) {
-                result.push(
-                  toBeaconHeaderResponse(config, blockResult.block, canonical.blockRoot === summary.blockRoot)
-                );
-                if (isOptimisticBlock(canonical)) {
-                  executionOptimistic = true;
-                }
-                // Block from hot db which only contains unfinalized blocks
-                finalized = false;
+              result.push(
+                toBeaconHeaderResponse(config, blockResult.block, canonical?.blockRoot === summary.blockRoot)
+              );
+              if (isOptimisticBlock(summary)) {
+                executionOptimistic = true;
               }
+              // Block from hot db which only contains unfinalized blocks
+              finalized = false;
             }
           })
         );
@@ -605,21 +561,18 @@ export function getBeaconBlockApi({
           return {data: [], meta: {executionOptimistic: false, finalized: false}};
         }
 
+        let canonicalRoot: RootHex | null = null;
         const canonicalBlock = await chain.getCanonicalBlockAtSlot(slot);
-        // skip slot
-        if (!canonicalBlock) {
-          return {data: [], meta: {executionOptimistic: false, finalized: false}};
-        }
-        const canonicalRoot = config
-          .getForkTypes(canonicalBlock.block.message.slot)
-          .BeaconBlock.hashTreeRoot(canonicalBlock.block.message);
-        result.push(toBeaconHeaderResponse(config, canonicalBlock.block, true));
-        if (!canonicalBlock.finalized) {
-          finalized = false;
+        if (canonicalBlock) {
+          const header = toBeaconHeaderResponse(config, canonicalBlock.block, true);
+          canonicalRoot = toRootHex(header.root);
+          result.push(header);
+          if (!canonicalBlock.finalized) {
+            finalized = false;
+          }
         }
 
-        // fork blocks
-        // TODO: What is this logic?
+        // Non-canonical blocks at the slot, also if the canonical chain skipped it
         await Promise.all(
           chain.forkChoice.getBlockSummariesAtSlot(slot).map(async (summary) => {
             if (isOptimisticBlock(summary)) {
@@ -627,7 +580,7 @@ export function getBeaconBlockApi({
             }
             finalized = false;
 
-            if (summary.blockRoot !== toRootHex(canonicalRoot)) {
+            if (summary.blockRoot !== canonicalRoot) {
               const blockResult = await chain.getBlockByRoot(summary.blockRoot);
               if (blockResult) {
                 result.push(toBeaconHeaderResponse(config, blockResult.block));
@@ -635,6 +588,11 @@ export function getBeaconBlockApi({
             }
           })
         );
+
+        // skip slot
+        if (result.length === 0) {
+          return {data: [], meta: {executionOptimistic: false, finalized: false}};
+        }
       }
 
       return {
@@ -672,7 +630,7 @@ export function getBeaconBlockApi({
       return {
         data: isForkPostBellatrix(fork)
           ? signedBeaconBlockToBlinded(config, block as SignedBeaconBlock<ForkPostBellatrix & ForkPreGloas>)
-          : block,
+          : (block as SignedBeaconBlock<ForkPreBellatrix>),
         meta: {
           executionOptimistic,
           finalized,
@@ -690,15 +648,25 @@ export function getBeaconBlockApi({
     },
 
     async getBlockRoot({blockId}) {
-      // Fast path: From head state already available in memory get historical blockRoot
-      const slot = typeof blockId === "string" ? parseInt(blockId) : blockId;
+      // Fast path: From head state already available in memory get historical blockRoot.
+      // A 0x id is a root. parseInt() accepts that prefix as hex and can return a slot.
+      const slot =
+        typeof blockId === "number"
+          ? blockId
+          : blockId.toLowerCase().startsWith("0x")
+            ? Number.NaN
+            : parseInt(blockId, 10);
       if (!Number.isNaN(slot)) {
         const head = chain.forkChoice.getHead();
+        // The head can be the FULL variant, a block reports the status of the payload it builds on
+        const executionOptimistic = isOptimisticBlock(
+          chain.forkChoice.getBlockHexDefaultStatus(head.blockRoot) ?? head
+        );
 
         if (slot === head.slot) {
           return {
             data: {root: fromHex(head.blockRoot)},
-            meta: {executionOptimistic: isOptimisticBlock(head), finalized: false},
+            meta: {executionOptimistic, finalized: false},
           };
         }
 
@@ -707,7 +675,7 @@ export function getBeaconBlockApi({
           return {
             data: {root: state.getBlockRootAtSlot(slot)},
             meta: {
-              executionOptimistic: isOptimisticBlock(head),
+              executionOptimistic,
               finalized: computeEpochAtSlot(slot) <= chain.forkChoice.getFinalizedCheckpoint().epoch,
             },
           };
@@ -716,7 +684,10 @@ export function getBeaconBlockApi({
         const head = chain.forkChoice.getHead();
         return {
           data: {root: fromHex(head.blockRoot)},
-          meta: {executionOptimistic: isOptimisticBlock(head), finalized: false},
+          meta: {
+            executionOptimistic: isOptimisticBlock(chain.forkChoice.getBlockHexDefaultStatus(head.blockRoot) ?? head),
+            finalized: false,
+          },
         };
       }
 
@@ -800,11 +771,6 @@ export function getBeaconBlockApi({
       };
       try {
         switch (broadcastValidation) {
-          case routes.beacon.BroadcastValidation.none: {
-            chain.logger.debug("Skipping broadcast validation of execution payload envelope", valLogMeta);
-            break;
-          }
-
           case routes.beacon.BroadcastValidation.gossip: {
             await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
             break;
@@ -843,11 +809,7 @@ export function getBeaconBlockApi({
           }
 
           default: {
-            const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
-            if (chain.opts.broadcastValidationStrictness === "error") {
-              throw Error(message);
-            }
-            chain.logger.warn(message, valLogMeta);
+            throw new ApiError(400, `Invalid broadcast validation level ${broadcastValidation}`);
           }
         }
       } catch (error) {
@@ -999,9 +961,13 @@ export function getBeaconBlockApi({
         () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
         // Publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
-        // Import execution payload. Signature is verified during broadcast validation, an already
-        // known envelope was verified by its original source and `none` deliberately skips validation
-        () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
+        // Import execution payload
+        () =>
+          chain.processExecutionPayload(payloadInput, {
+            // Signature is verified during broadcast validation only for the submitted envelope,
+            // an envelope cached by another source is verified at import
+            validSignature: payloadInput.getPayloadEnvelope() === signedExecutionPayloadEnvelope,
+          }),
       ];
 
       const publishPromise = promiseAllMaybeAsync<{sentPeers: number; alreadyPublished: boolean} | number | void>(
@@ -1068,14 +1034,24 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
       }
 
-      const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
-      // TODO: once the builder is tested and can be trusted, skip this local validation
-      // to publish faster, accepting peer-score risk if it ever emits an invalid bid.
-      await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
-      validationTimer?.();
-
       const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
       metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);
+
+      if (!opts.disableBidValidation) {
+        const validationTimer = metrics?.opPool.executionPayloadBidPool.apiValidationTime.startTimer();
+        const {proposerIndex} = await validateGossipExecutionPayloadBid(chain, signedExecutionPayloadBid);
+        validationTimer?.();
+
+        // Gossip does not deliver our own messages back to us, so a validated bid is added to the
+        // pool here to allow a proposer on this node to select it
+        const insertOutcome = chain.executionPayloadBidPool.add(
+          signedExecutionPayloadBid,
+          Math.floor(elapsedSec * 1000)
+        );
+        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
+
+        chain.validatorMonitor?.registerExecutionPayloadBid(OpSource.api, proposerIndex, bid);
+      }
 
       const sentPeers = await network.publishSignedExecutionPayloadBid(signedExecutionPayloadBid);
 
@@ -1095,7 +1071,7 @@ export function getBeaconBlockApi({
     },
 
     async getSignedExecutionPayloadEnvelope({blockId}, context) {
-      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      const {block, finalized} = await getBlockResponse(chain, blockId);
       const slot = block.message.slot;
       const fork = config.getForkName(slot);
 
@@ -1109,9 +1085,30 @@ export function getBeaconBlockApi({
       const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
       const blockRootHex = toRootHex(blockRoot);
 
-      const data = context?.returnBytes
-        ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
-        : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
+      // The block's own flag is the status of the payload it builds on, the envelope's is that of its
+      // FULL variant. An unfinalized block without one has not imported its envelope yet.
+      const payload = finalized ? null : chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
+      if (!finalized && payload === null) {
+        throw new ApiError(404, `Execution payload envelope not found for slot=${slot}, blockRoot=${blockRootHex}`);
+      }
+
+      let data: Uint8Array | gloas.SignedExecutionPayloadEnvelope | null;
+      try {
+        data = context?.returnBytes
+          ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
+          : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
+      } catch (e) {
+        if (e instanceof EnvelopeReconstructionError) {
+          // The envelope is archived but our EL cannot serve it right now (EL down, or it does not
+          // have the body / block access list): 503 so clients retry or ask another node, rather than
+          // 500 for what is not a beacon node fault. A body root mismatch is a local inconsistency.
+          const unavailable =
+            e.type.code === EnvelopeReconstructionErrorCode.ENGINE_UNAVAILABLE ||
+            e.type.code === EnvelopeReconstructionErrorCode.BODY_UNAVAILABLE;
+          throw new ApiError(unavailable ? 503 : 500, `Failed to reconstruct execution payload envelope: ${e.message}`);
+        }
+        throw e;
+      }
 
       if (!data) {
         throw new ApiError(404, `Execution payload envelope not found for slot=${slot}, blockRoot=${blockRootHex}`);
@@ -1119,7 +1116,7 @@ export function getBeaconBlockApi({
 
       return {
         data,
-        meta: {executionOptimistic, finalized, version: fork},
+        meta: {executionOptimistic: payload !== null && isOptimisticBlock(payload), finalized, version: fork},
       };
     },
 
@@ -1205,10 +1202,14 @@ export function getBeaconBlockApi({
         data = [];
       }
 
+      // Post-gloas sidecars belong to the block's own payload, its FULL variant only exists once imported
+      const payload = finalized ? null : chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
       return {
         data,
         meta: {
-          executionOptimistic,
+          executionOptimistic: isForkPostGloas(fork)
+            ? !finalized && (payload === null || isOptimisticBlock(payload))
+            : executionOptimistic,
           finalized,
           version: config.getForkName(block.message.slot),
         },
@@ -1306,10 +1307,14 @@ export function getBeaconBlockApi({
         blobs = [];
       }
 
+      // Post-gloas blobs belong to the block's own payload, its FULL variant only exists once imported
+      const payload = finalized ? null : chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
       return {
         data: blobs,
         meta: {
-          executionOptimistic,
+          executionOptimistic: isForkPostGloas(fork)
+            ? !finalized && (payload === null || isOptimisticBlock(payload))
+            : executionOptimistic,
           finalized,
         },
       };

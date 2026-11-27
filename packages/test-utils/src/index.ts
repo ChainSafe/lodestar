@@ -4,4 +4,5 @@ export * from "./externalSigner.js";
 export * from "./http.js";
 export * from "./keystores.js";
 export * from "./path.js";
+export * from "./testFileCache.js";
 export * from "./timeout.js";

@@ -50,4 +50,62 @@ describe("chain / archive / ArchiveStore", () => {
       expect.any(Error)
     );
   });
+
+  it("init preserves earliestAvailableSlot despite older retained blocks", async () => {
+    const controller = new AbortController();
+    const emitter = new ChainEventEmitter();
+    const chain = {bufferPool: {}, emitter, regen: {}, earliestAvailableSlot: 313312};
+    const firstKey = vi.fn().mockResolvedValue(246560);
+    const archiveStore = new ArchiveStore(
+      {
+        chain,
+        db: {blockArchive: {firstKey}},
+        logger: {info: vi.fn(), debug: vi.fn(), verbose: vi.fn()},
+        metrics: null,
+      } as never,
+      {
+        archiveMode: ArchiveMode.Frequency,
+        archiveStateEpochFrequency: 1,
+        anchorState: {finalizedCheckpoint: {epoch: 0, root: new Uint8Array(32)}},
+        dbName: "test",
+        dataColumnDir: "data_columns",
+        pruneHistory: false,
+        serveHistoricalState: false,
+      } as never,
+      controller.signal
+    );
+
+    await archiveStore.init();
+
+    expect(firstKey).not.toHaveBeenCalled();
+    expect(chain.earliestAvailableSlot).toBe(313312);
+  });
+
+  it("init keeps earliestAvailableSlot at the anchor when the archive is empty", async () => {
+    const controller = new AbortController();
+    const emitter = new ChainEventEmitter();
+    const chain = {bufferPool: {}, emitter, regen: {}, earliestAvailableSlot: 313312};
+    const archiveStore = new ArchiveStore(
+      {
+        chain,
+        db: {blockArchive: {firstKey: vi.fn().mockResolvedValue(null)}},
+        logger: {info: vi.fn(), debug: vi.fn(), verbose: vi.fn()},
+        metrics: null,
+      } as never,
+      {
+        archiveMode: ArchiveMode.Frequency,
+        archiveStateEpochFrequency: 1,
+        anchorState: {finalizedCheckpoint: {epoch: 0, root: new Uint8Array(32)}},
+        dbName: "test",
+        dataColumnDir: "data_columns",
+        pruneHistory: false,
+        serveHistoricalState: false,
+      } as never,
+      controller.signal
+    );
+
+    await archiveStore.init();
+
+    expect(chain.earliestAvailableSlot).toBe(313312);
+  });
 });

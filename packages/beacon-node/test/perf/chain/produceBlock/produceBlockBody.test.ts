@@ -69,6 +69,7 @@ describe("produceBlockBody", () => {
         validatorMonitor: null,
         anchorState: new BeaconStateView(state),
         isAnchorStateFinalized: true,
+        earliestAvailableSlot: state.slot,
         executionEngine,
       }
     );
@@ -83,6 +84,7 @@ describe("produceBlockBody", () => {
 
   bench({
     id: "proposeBlockBody type=full, size=empty",
+    threshold: 5,
     minRuns: 5,
     maxMs: Infinity,
     timeoutBench: 60 * 1000,

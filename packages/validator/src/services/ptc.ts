@@ -1,7 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkPostGloas} from "@lodestar/params";
-import {IClock} from "@lodestar/state-transition";
+import {IClock, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Slot, gloas} from "@lodestar/types";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
@@ -54,12 +54,14 @@ export class PtcService {
       return;
     }
 
-    const duties = this.dutiesService.getDutiesAtSlot(slot);
-    if (duties.length === 0) {
+    let duties = this.dutiesService.getDutiesAtSlot(slot);
+    // Duties of the first Gloas epoch can't be polled ahead of the fork, at its first slot they are still being polled
+    const isFirstGloasSlot = slot === computeStartSlotAtEpoch(this.config.GLOAS_FORK_EPOCH);
+    if (duties.length === 0 && !isFirstGloasSlot) {
       return;
     }
 
-    const payloadAttestationDueMs = this.config.getSlotComponentDurationMs(this.config.PAYLOAD_ATTESTATION_DUE_BPS);
+    const payloadAttestationDueMs = this.config.getPayloadAttestationDueMs(fork);
     // Submit as soon as the canonical head block's payload is available, or at the deadline
     const payloadAvailable = new AbortController();
     try {
@@ -69,6 +71,13 @@ export class PtcService {
       ]);
     } finally {
       payloadAvailable.abort();
+    }
+
+    if (isFirstGloasSlot) {
+      duties = this.dutiesService.getDutiesAtSlot(slot);
+      if (duties.length === 0) {
+        return;
+      }
     }
 
     this.metrics?.ptcStepCallProducePayloadAttestation.observe(
@@ -139,8 +148,7 @@ export class PtcService {
     );
 
     this.metrics?.ptcStepCallPublishPayloadAttestation.observe(
-      this.clock.secFromSlot(slot) -
-        this.config.getSlotComponentDurationMs(this.config.PAYLOAD_ATTESTATION_DUE_BPS) / 1000
+      this.clock.secFromSlot(slot) - this.config.getPayloadAttestationDueMs(this.config.getForkName(slot)) / 1000
     );
 
     if (payloadAttestationMessages.length > 0) {

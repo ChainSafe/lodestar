@@ -15,6 +15,8 @@ const SLOT_BYTE_SIZE = 8;
  * Indexed data by `slot` + `columnIndex`
  */
 export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot, ColumnIndex, DataColumnSidecar> {
+  private prunedBeforeSlot: Slot | null = null;
+
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_dataColumnSidecarsArchive;
     // Type won't be used since we select it dynamically based on fork
@@ -69,5 +71,33 @@ export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot,
       encodeNumberForDbKey(prefix, SLOT_BYTE_SIZE),
       encodeNumberForDbKey(0, COLUMN_INDEX_BYTE_SIZE),
     ]);
+  }
+
+  /**
+   * Deletes all entries before `slot`. Prunes only delete from the start of the bucket, so the first prune
+   * compacts the range to drop tombstones of earlier runs and later prunes resume where the previous one ended.
+   * Prunes at most `maxSlots` slots, the oldest first.
+   */
+  async pruneBefore(slot: Slot, maxSlots = Infinity): Promise<Slot[]> {
+    if (this.prunedBeforeSlot === null) {
+      await this.db.compactRange(this.wrapKey(this.getMinKeyRaw(0)), this.wrapKey(this.getMinKeyRaw(slot)));
+    } else if (slot <= this.prunedBeforeSlot) {
+      return [];
+    }
+
+    // A slot holds at most NUMBER_OF_COLUMNS keys, so this many keys cover at least `maxSlots` slots
+    const maxKeys = maxSlots * NUMBER_OF_COLUMNS;
+    const keys = await this.keys({
+      gte: {prefix: this.prunedBeforeSlot ?? 0, id: 0},
+      lt: {prefix: slot, id: 0},
+      ...(Number.isFinite(maxKeys) && {limit: maxKeys}),
+    });
+    const expiredSlots = [...new Set(keys.map(({prefix}) => prefix))];
+    const slots = expiredSlots.slice(0, maxSlots);
+    if (slots.length > 0) await this.deleteMany(slots);
+    const isCapped = expiredSlots.length > maxSlots || keys.length === maxKeys;
+    const lastPrunedSlot = slots.at(-1);
+    this.prunedBeforeSlot = isCapped && lastPrunedSlot !== undefined ? lastPrunedSlot + 1 : slot;
+    return slots;
   }
 }

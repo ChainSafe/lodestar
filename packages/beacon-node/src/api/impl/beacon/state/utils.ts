@@ -1,6 +1,6 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
+import {type PubkeyCache} from "@lodestar/native/pubkeys";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {IBeaconStateView, IBeaconStateViewGloas} from "@lodestar/state-transition";
 import {
@@ -13,7 +13,7 @@ import {
   getValidatorStatus,
   phase0,
 } from "@lodestar/types";
-import {byteArrayEquals, fromHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../chain/index.js";
 import {GENESIS_EPOCH} from "../../../../constants/index.js";
 import {IBeaconSync} from "../../../../sync/index.js";
@@ -75,7 +75,8 @@ export async function getStateResponseWithRegen(
     const finalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
     return {
       state,
-      executionOptimistic: isOptimisticBlock(head),
+      // The head can be the FULL variant, a state reports the status of the payload its block builds on
+      executionOptimistic: isOptimisticBlock(chain.forkChoice.getBlockHexDefaultStatus(head.blockRoot) ?? head),
       finalized: state.epoch <= finalizedEpoch && finalizedEpoch !== GENESIS_EPOCH,
     };
   }
@@ -118,9 +119,22 @@ type StateBuilderIndexResponse =
   | {valid: true; builderIndex: BuilderIndex}
   | {valid: false; code: number; reason: string};
 
+export function getBuilderIndexByPubkey(state: IBeaconStateViewGloas): Map<string, BuilderIndex> {
+  const builderIndexByPubkey = new Map<string, BuilderIndex>();
+  const buildersLength = state.getBuildersLength();
+  for (let builderIndex = 0; builderIndex < buildersLength; builderIndex++) {
+    const pubkeyHex = toHex(state.getBuilder(builderIndex).pubkey);
+    if (!builderIndexByPubkey.has(pubkeyHex)) {
+      builderIndexByPubkey.set(pubkeyHex, builderIndex);
+    }
+  }
+  return builderIndexByPubkey;
+}
+
 export function getStateBuilderIndex(
   id: routes.beacon.BuilderId | BLSPubkey,
-  state: IBeaconStateViewGloas
+  state: IBeaconStateViewGloas,
+  getBuilderIndexByPubkeyMap: () => Map<string, BuilderIndex>
 ): StateBuilderIndexResponse {
   if (typeof id === "string") {
     // mutate `id` and fallthrough to below
@@ -148,14 +162,11 @@ export function getStateBuilderIndex(
   }
 
   // typeof id === Uint8Array
-  // There is no builder pubkey cache, linear scan over the registry
-  const buildersLength = state.getBuildersLength();
-  for (let builderIndex = 0; builderIndex < buildersLength; builderIndex++) {
-    if (byteArrayEquals(state.getBuilder(builderIndex).pubkey, id)) {
-      return {valid: true, builderIndex};
-    }
+  const builderIndex = getBuilderIndexByPubkeyMap().get(toHex(id));
+  if (builderIndex === undefined) {
+    return {valid: false, code: 404, reason: "Builder pubkey not found in state"};
   }
-  return {valid: false, code: 404, reason: "Builder pubkey not found in state"};
+  return {valid: true, builderIndex};
 }
 
 export function filterStateValidatorsByStatus(

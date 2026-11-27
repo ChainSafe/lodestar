@@ -1,13 +1,8 @@
 import {FAR_FUTURE_EPOCH, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {gloas} from "@lodestar/types";
-import {CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
-import {
-  addBuilderToRegistry,
-  findBuilderIndexByPubkey,
-  isBuilderWithdrawalCredential,
-  isValidBuilderDepositSignature,
-} from "../util/gloas.js";
+import {isBuilderWithdrawalCredential, isValidBuilderDepositSignature} from "../util/gloas.js";
+import {IndexedBuilderState} from "./indexedBuilderState.js";
 
 /**
  * Process a builder deposit request from the execution layer: register a new builder
@@ -16,9 +11,10 @@ import {
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/beacon-chain.md#new-process_builder_deposit_request
  */
 export function processBuilderDepositRequest(
-  state: CachedBeaconStateGloas,
+  indexedState: IndexedBuilderState,
   request: gloas.BuilderDepositRequest
 ): void {
+  const {state} = indexedState;
   const {pubkey, withdrawalCredentials, amount, signature} = request;
 
   // Ignore deposits with unexpected withdrawal credential prefixes.
@@ -26,18 +22,11 @@ export function processBuilderDepositRequest(
     return;
   }
 
-  const builderIndex = findBuilderIndexByPubkey(state, pubkey);
+  const builderIndex = indexedState.findBuilderIndexByPubkey(pubkey);
 
   if (builderIndex === null) {
     if (isValidBuilderDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
-      addBuilderToRegistry(
-        state,
-        pubkey,
-        PAYLOAD_BUILDER_VERSION,
-        withdrawalCredentials.subarray(12),
-        amount,
-        state.slot
-      );
+      indexedState.addBuilderToRegistry(pubkey, PAYLOAD_BUILDER_VERSION, withdrawalCredentials.subarray(12), amount);
     }
     return;
   }

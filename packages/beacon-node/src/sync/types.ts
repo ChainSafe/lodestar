@@ -24,9 +24,13 @@ export enum PendingBlockType {
    */
   UNKNOWN_PAYLOAD_BLOCK_ROOT = "unknown_payload_block_root",
   /**
-   * Same as UNKNOWN_PAYLOAD_BLOCK_ROOT, but the trigger also carries the payload's slot.
+   * Same as UNKNOWN_PAYLOAD_BLOCK_ROOT, but the trigger also carries the payload's slot
    */
   UNKNOWN_PAYLOAD_BLOCK_ROOT_SLOT = "unknown_payload_block_root_slot",
+  /**
+   * Same as UNKNOWN_PAYLOAD_BLOCK_ROOT_SLOT for the current slot
+   */
+  DEFERRED_PAYLOAD_BLOCK_ROOT = "deferred_payload_block_root",
   /**
    * Payload analog of INCOMPLETE_BLOCK_INPUT: we have a partial payload input that did not complete in time.
    */
@@ -51,6 +55,20 @@ export enum FetchResult {
   SuccessWaitingForBlock = "success_waiting_for_block",
   FailureTriedAllPeers = "failure_tried_all_peers",
   FailureMaxAttempts = "failure_max_attempts",
+}
+
+/**
+ * Outcome of a slot's deferred optimistic payload searches, recorded once when its poll loop ends.
+ */
+export enum DeferredPayloadResult {
+  /** gossip delivered every watched payload before PAYLOAD_DUE, no search was needed */
+  ImportedBeforeSearch = "imported_before_search",
+  /** at least one was missing at PAYLOAD_DUE, we searched, and all were imported afterwards */
+  ImportedAfterSearch = "imported_after_search",
+  /** something was still not in fork choice when the slot ended */
+  Unresolved = "unresolved",
+  /** the slot had no optimistic search and no payload import at all, eg a skipped slot */
+  ResolvedNoRoot = "resolved_no_root",
 }
 
 export enum PendingBlockInputStatus {
@@ -87,10 +105,10 @@ export enum DroppedItemReason {
   invalidEnvelope = "invalid_envelope",
   /** a payload had an invalid signature (INVALID_SIGNATURE) */
   invalidSignature = "invalid_signature",
-  /** a block root was given up on after exhausting download attempts (data could not be fetched) */
-  unavailable = "unavailable",
   /** an unexpected / unhandled error code led to removal */
   unknown = "unknown",
+  /** a block waiting on its parent was evicted because the peer that gossiped it exceeded its byte budget */
+  peerBudget = "peer_budget",
 }
 
 export enum PendingPayloadInputStatus {
@@ -107,6 +125,12 @@ export type PendingBlockInput = {
   timeAddedSec: number;
   timeSyncedSec?: number;
   peerIdStrings: Set<string>;
+  /** Peer that gossiped a block retained for unknown parent sync */
+  retainedBy?: string;
+  retainedBytes?: number;
+  failedDownloads?: number;
+  /** A failed download is not retried before this time */
+  retryAtMs?: number;
 };
 
 export type PendingRootHex = {
@@ -115,6 +139,9 @@ export type PendingRootHex = {
   timeAddedSec: number;
   timeSyncedSec?: number;
   peerIdStrings: Set<string>;
+  failedDownloads?: number;
+  /** A failed download is not retried before this time */
+  retryAtMs?: number;
 };
 
 export type BlockInputSyncCacheItem = PendingBlockInput | PendingRootHex;
@@ -145,6 +172,8 @@ export type PendingPayloadRootHex = {
 export type PendingPayloadEnvelope = {
   status: PendingPayloadInputStatus.waitingForBlock;
   envelope: SignedExecutionPayloadEnvelope;
+  /** Peer that served the envelope, undefined if it was already cached */
+  envelopePeerId?: string;
   timeAddedSec: number;
   peerIdStrings: Set<string>;
 };

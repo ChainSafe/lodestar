@@ -17,6 +17,9 @@ on:
 
 permissions:
   contents: read
+  id-token: write # Required by docker.yml reusable workflow
+  attestations: write # Required by docker.yml reusable workflow
+  artifact-metadata: write # Required by docker.yml reusable workflow
 
 jobs:
   validate:

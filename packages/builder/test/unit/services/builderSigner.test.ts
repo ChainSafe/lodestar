@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
-import {SecretKey, Signature, verify} from "@chainsafe/lodestar-z/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {SecretKey, Signature, verify} from "@lodestar/native/blst";
 import {ForkName} from "@lodestar/params";
 import {getExecutionPayloadBidSigningRoot, getExecutionPayloadEnvelopeSigningRoot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
@@ -44,6 +44,22 @@ describe("BuilderSigner", () => {
         Signature.fromBytes(signedBid.signature, true)
       )
     ).toEqual(true);
+  });
+
+  it("signs Heze inclusion list bits", () => {
+    const hezeConfig = createBeaconConfig(getConfig(ForkName.heze), genesisValidatorsRoot);
+    const hezeSigner = new BuilderSigner(hezeConfig, {publicKey, secretKey});
+    const bid = ssz.heze.ExecutionPayloadBid.defaultValue();
+    bid.slot = 1;
+    bid.inclusionListBits.set(1, true);
+
+    const signedBid = hezeSigner.signExecutionPayloadBid(bid);
+
+    expect(signedBid.message.inclusionListBits.get(1)).toBe(true);
+    const signature = Signature.fromBytes(signedBid.signature, true);
+    expect(verify(getExecutionPayloadBidSigningRoot(hezeConfig, bid), publicKey, signature)).toBe(true);
+    bid.inclusionListBits.set(1, false);
+    expect(verify(getExecutionPayloadBidSigningRoot(hezeConfig, bid), publicKey, signature)).toBe(false);
   });
 
   describe("negative tests - different network", () => {

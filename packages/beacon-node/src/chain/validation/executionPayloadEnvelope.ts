@@ -1,14 +1,22 @@
-import {PayloadStatus} from "@lodestar/fork-choice";
+import {PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {
   computeStartSlotAtEpoch,
+  computeTimeAtSlot,
   getExecutionPayloadEnvelopeSignatureSet,
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
+import {computeExecutionBlockHash} from "../../execution/engine/blockHash.js";
+import {
+  getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
+  getSlotFromExecutionPayloadEnvelopeSerialized,
+  getTransactionCountFromExecutionPayloadEnvelopeSerialized,
+} from "../../util/sszBytes.js";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
+import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 
 export async function validateApiExecutionPayloadEnvelope(
   chain: IBeaconChain,
@@ -22,6 +30,40 @@ export async function validateGossipExecutionPayloadEnvelope(
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
   return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+}
+
+/**
+ * Applies the transaction count check to the serialized envelope so that an oversized envelope is dropped
+ * before it is deserialized. Defers to validateGossipExecutionPayloadEnvelope if the data is malformed
+ * or the block is not known.
+ */
+export function validateGossipExecutionPayloadEnvelopeSerialized(
+  chain: IBeaconChain,
+  serializedData: Uint8Array
+): void {
+  const blockRootHex = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(serializedData);
+  const slot = getSlotFromExecutionPayloadEnvelopeSerialized(serializedData);
+  const transactionCount = getTransactionCountFromExecutionPayloadEnvelopeSerialized(serializedData);
+  if (blockRootHex === null || slot === null || transactionCount === null) {
+    return;
+  }
+
+  const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+  const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+  if (!block || !payloadInput) {
+    return;
+  }
+
+  const maxTransactionCount = getMaxTransactionCount(chain, block, payloadInput);
+  if (BigInt(transactionCount) > maxTransactionCount) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
+      slot,
+      root: blockRootHex,
+      transactionCount,
+      maxTransactionCount: Number(maxTransactionCount),
+    });
+  }
 }
 
 async function validateExecutionPayloadEnvelope(
@@ -89,6 +131,17 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
+  // [REJECT] `envelope.parent_beacon_block_root == block.parent_root`
+  if (toRootHex(envelope.parentBeaconBlockRoot) !== block.parentRoot) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.PARENT_BEACON_BLOCK_ROOT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      envelopeParentBeaconBlockRoot: toRootHex(envelope.parentBeaconBlockRoot),
+      blockParentRoot: block.parentRoot,
+    });
+  }
+
   // [REJECT] `envelope.builder_index == bid.builder_index`
   if (envelope.builderIndex !== payloadInput.getBuilderIndex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
@@ -97,6 +150,30 @@ async function validateExecutionPayloadEnvelope(
       root: blockRootHex,
       envelopeBuilderIndex: envelope.builderIndex,
       bidBuilderIndex: payloadInput.getBuilderIndex(),
+    });
+  }
+
+  const bid = payloadInput.getBid();
+
+  // [REJECT] `payload.prev_randao == bid.prev_randao`
+  if (!byteArrayEquals(payload.prevRandao, bid.prevRandao)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.PREV_RANDAO_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      envelopePrevRandao: toRootHex(payload.prevRandao),
+      bidPrevRandao: toRootHex(bid.prevRandao),
+    });
+  }
+
+  // [REJECT] `payload.gas_limit == bid.gas_limit`
+  if (BigInt(payload.gasLimit) !== bid.gasLimit) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.GAS_LIMIT_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      envelopeGasLimit: payload.gasLimit,
+      bidGasLimit: bid.gasLimit,
     });
   }
 
@@ -113,17 +190,32 @@ async function validateExecutionPayloadEnvelope(
 
   // [REJECT] `hash_tree_root(envelope.execution_requests) == bid.execution_requests_root`
   const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
-  if (!byteArrayEquals(requestsRoot, payloadInput.getBid().executionRequestsRoot)) {
+  if (!byteArrayEquals(requestsRoot, bid.executionRequestsRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
       slot: payload.slotNumber,
       root: blockRootHex,
       envelopeRequestsRoot: toRootHex(requestsRoot),
-      bidRequestsRoot: toRootHex(payloadInput.getBid().executionRequestsRoot),
+      bidRequestsRoot: toRootHex(bid.executionRequestsRoot),
     });
   }
 
-  // Get the block state to verify the builder's signature.
+  // Execution request and withdrawal count limits are enforced by the SSZ list limits on decode
+
+  // [REJECT] The number of transactions is within the limit implied by the parent payload's gas limit,
+  // also checked before deserialization in validateGossipExecutionPayloadEnvelopeSerialized
+  const maxTransactionCount = getMaxTransactionCount(chain, block, payloadInput);
+  if (BigInt(payload.transactions.length) > maxTransactionCount) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.TOO_MANY_TRANSACTIONS,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      transactionCount: payload.transactions.length,
+      maxTransactionCount: Number(maxTransactionCount),
+    });
+  }
+
+  // Get the block state to verify the payload against it and the builder's signature.
   const blockState = await chain.regen
     .getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope)
     .catch(() => {
@@ -135,6 +227,75 @@ async function validateExecutionPayloadEnvelope(
     });
   if (!isStatePostGloas(blockState)) {
     throw new Error(`Expected gloas+ state for execution payload envelope validation, got fork=${blockState.forkName}`);
+  }
+
+  // [REJECT] `payload.parent_hash == state.latest_block_hash`
+  if (!byteArrayEquals(payload.parentHash, blockState.latestBlockHash)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.PARENT_HASH_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      envelopeParentHash: toRootHex(payload.parentHash),
+      latestBlockHash: toRootHex(blockState.latestBlockHash),
+    });
+  }
+
+  // [REJECT] `payload.timestamp == compute_time_at_slot(state.genesis_time, block.slot)`
+  const expectedTimestamp = computeTimeAtSlot(chain.config, block.slot, blockState.genesisTime);
+  if (payload.timestamp !== expectedTimestamp) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.INCORRECT_TIMESTAMP,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      envelopeTimestamp: payload.timestamp,
+      expectedTimestamp,
+    });
+  }
+
+  // [REJECT] The payload contains no empty transactions
+  // An empty transaction is a deletion in the transactions trie, so trailing empty transactions would not change
+  // the block hash. The EL rejects such a payload, as `verify_and_notify_new_payload` does before hashing.
+  for (let i = 0; i < payload.transactions.length; i++) {
+    if (payload.transactions.getSize(i) === 0) {
+      throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+        code: ExecutionPayloadEnvelopeErrorCode.EMPTY_TRANSACTION,
+        slot: payload.slotNumber,
+        root: blockRootHex,
+        transactionIndex: i,
+      });
+    }
+  }
+
+  // [REJECT] `hash_tree_root(payload.withdrawals) == hash_tree_root(state.payload_expected_withdrawals)`
+  const withdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(payload.withdrawals);
+  const expectedWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(blockState.payloadExpectedWithdrawals);
+  if (!byteArrayEquals(withdrawalsRoot, expectedWithdrawalsRoot)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.WITHDRAWALS_MISMATCH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      envelopeWithdrawalsRoot: toRootHex(withdrawalsRoot),
+      expectedWithdrawalsRoot: toRootHex(expectedWithdrawalsRoot),
+    });
+  }
+
+  // [REJECT] The payload's block hash is computed correctly
+  const timer = chain.metrics?.gossipExecutionPayloadEnvelope.blockHashTime.startTimer();
+  const computedBlockHash = computeExecutionBlockHash(
+    blockState.forkName,
+    payload,
+    envelope.parentBeaconBlockRoot,
+    envelope.executionRequests
+  );
+  timer?.();
+  if (!byteArrayEquals(computedBlockHash, payload.blockHash)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK_HASH,
+      slot: payload.slotNumber,
+      root: blockRootHex,
+      blockHash: toRootHex(payload.blockHash),
+      computedBlockHash: toRootHex(computedBlockHash),
+    });
   }
 
   // [REJECT] `signed_execution_payload_envelope.signature` is valid as verified
@@ -153,4 +314,17 @@ async function validateExecutionPayloadEnvelope(
       root: blockRootHex,
     });
   }
+}
+
+/**
+ * The bid's gas limit is only tied to the parent payload by bid gossip, so the bound is the gas limit the
+ * EIP-1559 rule allows on top of the parent payload's. The bid is the only bound if that gas limit is unknown.
+ */
+function getMaxTransactionCount(chain: IBeaconChain, block: ProtoBlock, payloadInput: PayloadEnvelopeInput): bigint {
+  const parentGasLimit = block.executionPayloadBlockHash === null ? 0n : BigInt(block.executionPayloadGasLimit);
+  const maxGasLimit =
+    parentGasLimit === 0n
+      ? payloadInput.getBid().gasLimit
+      : parentGasLimit + (parentGasLimit / 1024n > 1n ? parentGasLimit / 1024n : 1n) - 1n;
+  return maxGasLimit / BigInt(chain.config.MIN_TRANSACTION_GAS);
 }
