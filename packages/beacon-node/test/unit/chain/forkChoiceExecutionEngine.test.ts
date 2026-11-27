@@ -5,6 +5,7 @@ import {
   LVHInvalidJudged,
   LVHInvalidResponse,
   LVHNotAppliedReason,
+  PayloadStatus,
   ProtoBlock,
 } from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
@@ -35,10 +36,15 @@ describe("ForkChoiceExecutionEngine", () => {
       .fn()
       .mockReturnValue(headExecutionStatus === null ? null : ({executionStatus: headExecutionStatus} as ProtoBlock));
     const validateLatestHash = vi.fn().mockReturnValue({applied: true});
+    const recordPayloadInclusionListSatisfaction = vi.fn();
     const recomputeHeadAfterELInvalidResponse = vi.fn();
 
     const engine = new ForkChoiceExecutionEngine({notifyForkchoiceUpdate} as unknown as IExecutionEngine, {
-      forkChoice: {getBlockHexAndBlockHash, validateLatestHash} as unknown as IForkChoice,
+      forkChoice: {
+        getBlockHexAndBlockHash,
+        validateLatestHash,
+        recordPayloadInclusionListSatisfaction,
+      } as unknown as IForkChoice,
       recomputeHeadAfterELInvalidResponse,
       logger,
       metrics: null,
@@ -48,13 +54,18 @@ describe("ForkChoiceExecutionEngine", () => {
       notifyForkchoiceUpdate,
       getBlockHexAndBlockHash,
       validateLatestHash,
+      recordPayloadInclusionListSatisfaction,
       recomputeHeadAfterELInvalidResponse,
     };
   }
 
-  function fcuResult(status: ExecutionPayloadStatus, lvh: string | null = null): ForkchoiceUpdatedResult {
+  function fcuResult(
+    status: ExecutionPayloadStatus,
+    lvh: string | null = null,
+    inclusionListSatisfied?: boolean
+  ): ForkchoiceUpdatedResult {
     return {
-      payloadStatus: {status, latestValidHash: lvh, validationError: null},
+      payloadStatus: {status, latestValidHash: lvh, validationError: null, inclusionListSatisfied},
       payloadId: status === ExecutionPayloadStatus.INVALID ? null : payloadId,
     } as ForkchoiceUpdatedResult;
   }
@@ -103,6 +114,50 @@ describe("ForkChoiceExecutionEngine", () => {
         blockRoot: headBlockRoot,
       });
       expect(recomputeHeadAfterELInvalidResponse).not.toHaveBeenCalled();
+    });
+
+    it("VALID on a syncing FULL head records the inclusion list verdict on the head", async () => {
+      const {engine, getBlockHexAndBlockHash, recordPayloadInclusionListSatisfaction} = setup(
+        ExecutionStatus.Syncing,
+        fcuResult(ExecutionPayloadStatus.VALID, null, false)
+      );
+      getBlockHexAndBlockHash.mockReturnValue({
+        blockRoot: headBlockRoot,
+        payloadStatus: PayloadStatus.FULL,
+        executionStatus: ExecutionStatus.Syncing,
+      } as ProtoBlock);
+
+      await notifyFcu(engine);
+      expect(recordPayloadInclusionListSatisfaction).toHaveBeenCalledWith(headBlockRoot, false);
+    });
+
+    it("VALID on a syncing EMPTY head records the inclusion list verdict on the FULL variant owning the hash", async () => {
+      const parentRoot = "0x" + "ff".repeat(32);
+      const {engine, getBlockHexAndBlockHash, recordPayloadInclusionListSatisfaction, validateLatestHash} = setup(
+        ExecutionStatus.Syncing,
+        fcuResult(ExecutionPayloadStatus.VALID, null, false)
+      );
+      getBlockHexAndBlockHash.mockImplementation(
+        (root: string) =>
+          ({
+            [headBlockRoot]: {
+              blockRoot: headBlockRoot,
+              parentRoot,
+              payloadStatus: PayloadStatus.EMPTY,
+              executionStatus: ExecutionStatus.Syncing,
+            },
+            [parentRoot]: {
+              blockRoot: parentRoot,
+              payloadStatus: PayloadStatus.FULL,
+              executionStatus: ExecutionStatus.Syncing,
+            },
+          })[root] ?? null
+      );
+
+      await notifyFcu(engine);
+      expect(getBlockHexAndBlockHash).toHaveBeenCalledWith(parentRoot, headBlockHash);
+      expect(recordPayloadInclusionListSatisfaction).toHaveBeenCalledWith(parentRoot, false);
+      expect(validateLatestHash).toHaveBeenCalledOnce();
     });
 
     const noopCases: [string, ExecutionStatus | null, ExecutionPayloadStatus][] = [
