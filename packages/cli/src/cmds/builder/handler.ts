@@ -14,7 +14,7 @@ import {
 import {Builder, EnginePayloadResult, EnginePayloadSource, ProportionalBidPolicy, getMetrics} from "@lodestar/builder";
 import {ChainForkConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {ForkName} from "@lodestar/params";
+import {MAX_BUILDER_AUTH_DATA_SIZE, ForkName} from "@lodestar/params";
 import {fromHex, toPrintableUrl} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
@@ -28,6 +28,7 @@ import {
   parseLoggerArgs,
 } from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
+import {BuilderRestApiServer} from "./apiServer.js";
 import {loadBuilderKeypair} from "./loadKeypair.js";
 import {IBuilderCliArgs, builderMetricsDefaultOptions} from "./options.js";
 
@@ -165,9 +166,52 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
       minOperatingBalanceGwei: args["bidding.minOperatingBalanceGwei"],
     },
     reveal: {cutoffBps: args["reveal.cutoffBps"], requestTimeout: args.requestTimeout},
+    builderApi: args.builderApi ? {authData: getBuilderApiAuthData(args)} : undefined,
   });
 
   onGracefulShutdownCbs.push(() => builder.close());
+
+  if (builder.builderApi !== null) {
+    const builderApiServer = new BuilderRestApiServer(
+      {address: args["builderApi.address"], port: args["builderApi.port"]},
+      {config, logger, api: builder.builderApi, metrics: null}
+    );
+    onGracefulShutdownCbs.push(() => builderApiServer.close());
+    await builderApiServer.listen();
+  }
+}
+
+export function getBuilderApiAuthData(
+  args: Pick<IBuilderCliArgs, "builderApi.authData" | "builderApi.publicUrl">
+): Uint8Array {
+  if (args["builderApi.authData"] !== undefined) {
+    const authData = fromHex(args["builderApi.authData"]);
+    if (authData.length === 0) {
+      throw new YargsError("--builderApi.authData must not be empty");
+    }
+    // Proposers cannot sign request auth with more data, it does not fit into BuilderRequestAuth
+    if (authData.length > MAX_BUILDER_AUTH_DATA_SIZE) {
+      throw new YargsError(`--builderApi.authData must not be longer than ${MAX_BUILDER_AUTH_DATA_SIZE} bytes`);
+    }
+    return authData;
+  }
+  if (args["builderApi.publicUrl"] !== undefined) {
+    let hostname: string;
+    try {
+      hostname = new URL(args["builderApi.publicUrl"]).hostname;
+    } catch {
+      hostname = "";
+    }
+    // A URL without a scheme has no hostname, e.g. builder.example.com:18550 parses as scheme and path
+    if (hostname === "") {
+      throw new YargsError(
+        "--builderApi.publicUrl must be a URL with a scheme and a hostname, e.g. https://builder.example.com"
+      );
+    }
+    // Same derivation as the default auth data of the validator client
+    return new TextEncoder().encode(hostname);
+  }
+  throw new YargsError("--builderApi requires either --builderApi.publicUrl or --builderApi.authData");
 }
 
 /**

@@ -4,6 +4,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
 import {BuilderIndex, ExecutionAddress, Slot} from "@lodestar/types";
 import {Logger, isErrorAborted, toHex, toRootHex} from "@lodestar/utils";
+import {BuilderApi, BuilderApiOptions, getBuilderApi} from "./api/impl.js";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
 import {Metrics} from "./metrics.js";
@@ -21,6 +22,7 @@ import {HeadTracker} from "./services/headTracker.js";
 import {PayloadOrchestrator} from "./services/payloadOrchestrator.js";
 import {PayloadSource} from "./services/payloadSource.js";
 import {PayloadStore} from "./services/payloadStore.js";
+import {ProposerDutiesTracker} from "./services/proposerDutiesTracker.js";
 import {ProposerPreferencesTracker} from "./services/proposerPreferencesTracker.js";
 import {Revealer} from "./services/revealer.js";
 
@@ -37,12 +39,14 @@ export type BuilderModules = {
   builderStatusTracker: BuilderStatusTracker;
   proposerPreferencesTracker: ProposerPreferencesTracker;
   headTracker: HeadTracker;
+  proposerDutiesTracker: ProposerDutiesTracker;
   clock: IClock;
   index: BuilderIndex;
   payloadStore: PayloadStore;
   ledger: BidLedger;
   bidder: Bidder;
   revealer: Revealer;
+  builderApi: BuilderApi | null;
 };
 
 export type BuilderOptions = {
@@ -68,6 +72,8 @@ export type BuilderOptions = {
     /** Timeout in milliseconds of requests to the beacon node, limits a single attempt to publish the envelope */
     requestTimeout?: number;
   };
+  /** The builder API is only served if set */
+  builderApi?: BuilderApiOptions;
 };
 
 // Warn once the beacon node announced heads of this many consecutive slots without emitting the payload attributes
@@ -81,6 +87,8 @@ export class Builder {
   readonly builderSigner: BuilderSigner;
   readonly proposerPreferencesTracker: ProposerPreferencesTracker;
   readonly headTracker: HeadTracker;
+  readonly builderApi: BuilderApi | null;
+  private readonly proposerDutiesTracker: ProposerDutiesTracker;
   private readonly blockObserver: BlockObserver;
   private readonly builderStatusTracker: BuilderStatusTracker;
   private readonly controller: AbortController;
@@ -103,18 +111,21 @@ export class Builder {
     builderStatusTracker,
     proposerPreferencesTracker,
     headTracker,
+    proposerDutiesTracker,
     clock,
     index,
     payloadStore,
     ledger,
     bidder,
     revealer,
+    builderApi,
   }: BuilderModules) {
     this.builderSigner = builderSigner;
     this.blockObserver = blockObserver;
     this.builderStatusTracker = builderStatusTracker;
     this.proposerPreferencesTracker = proposerPreferencesTracker;
     this.headTracker = headTracker;
+    this.proposerDutiesTracker = proposerDutiesTracker;
     this.clock = clock;
     this.controller = opts.abortController;
     this.logger = opts.logger;
@@ -123,12 +134,17 @@ export class Builder {
     this.ledger = ledger;
     this.bidder = bidder;
     this.revealer = revealer;
+    this.builderApi = builderApi;
 
     this.executionFeeRecipient = opts.executionFeeRecipient;
 
     this.blockObserver.runOnBlock((block) => this.revealer.onBlock(block));
     this.clock.runEverySlot(async (slot) => this.onSlot(slot));
     this.clock.runEveryEpoch((epoch) => this.builderStatusTracker.poll(epoch));
+    if (builderApi !== null) {
+      // Requests of proposers must not have to wait for their duties to be fetched
+      this.clock.runEveryEpoch((epoch) => this.proposerDutiesTracker.prefetch(epoch));
+    }
     this.clock.start(this.controller.signal);
     this.subscribeToEvents(opts.api);
 
@@ -174,6 +190,7 @@ export class Builder {
     const blockObserver = new BlockObserver(config, logger, api);
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
     const headTracker = new HeadTracker();
+    const proposerDutiesTracker = new ProposerDutiesTracker(api, clock, logger);
 
     const payloadStore = new PayloadStore();
     const ledger = new BidLedger();
@@ -231,6 +248,14 @@ export class Builder {
       }
     );
 
+    const builderApi =
+      opts.builderApi !== undefined
+        ? getBuilderApi(
+            {config, logger, clock, api, ledger, proposerDutiesTracker, builderIndex: index, metrics: opts.metrics},
+            opts.builderApi
+          )
+        : null;
+
     return new Builder({
       opts,
       builderSigner,
@@ -238,12 +263,14 @@ export class Builder {
       builderStatusTracker,
       proposerPreferencesTracker,
       headTracker,
+      proposerDutiesTracker,
       clock,
       index,
       payloadStore,
       ledger,
       bidder,
       revealer,
+      builderApi,
     });
   }
 
@@ -356,6 +383,7 @@ export class Builder {
       switch (event.type) {
         case routes.events.EventType.headV2:
           this.headTracker.onHead(event.message.data);
+          this.proposerDutiesTracker.onHead(event.message.data);
           this.checkPayloadAttributesEmitted(event.message.data.slot);
           break;
         case routes.events.EventType.block:

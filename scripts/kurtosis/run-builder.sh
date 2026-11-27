@@ -8,7 +8,8 @@ MNEMONIC="baby envelope toddler valid pottery buddy cash spare such hedgehog rin
 command -v docker   >/dev/null 2>&1 || { echo "missing dependency docker"; exit 1; }
 command -v kurtosis >/dev/null 2>&1 || { echo "missing dependency kurtosis"; exit 1; }
 
-# remove enclave if there is one
+# remove builder and enclave if there are any
+docker rm -f lodestar-builder >/dev/null 2>&1 || true
 kurtosis enclave rm -f builder-dev 2>/dev/null || true
 
 # settled image name
@@ -42,26 +43,35 @@ if [ ! -d "$TEMP"/derived ]; then
 fi
 
 # download network config and jwt secret
+rm -rf "$TEMP"/netcfg "$TEMP"/jwt
 kurtosis files download builder-dev el_cl_genesis_data "$TEMP"/netcfg
 kurtosis files download builder-dev jwt_file "$TEMP"/jwt
 
-# the builder uses the beacon node and execution client of the first participant
-BN_URL="$(kurtosis port print builder-dev cl-1-lodestar-geth http)"
-EL_URL="http://$(kurtosis port print builder-dev el-1-geth-lodestar engine-rpc)"
+# the builder runs in the devnet network so the beacon node of the validators can reach its builder API,
+# it uses the beacon node and execution client of the first participant
+docker run -d --name lodestar-builder --network kt-builder-dev \
+  -e LODESTAR_PRESET=minimal \
+  -v "$(pwd)/$TEMP:/config:ro" \
+  -p "127.0.0.1:${BUILDER_METRICS_PORT:-5077}:5065" \
+  "$LODESTAR_IMAGE" builder \
+  --keystore /config/keystore.json \
+  --keystorePassword /config/password.txt \
+  --builderPubkey 0x8ec9cc826ea7735329831dbe89c28ae700e39b51c817f1086483621a2104145343f912b3bf167027256780a62a1995bd \
+  --beaconNodeUrl http://cl-1-lodestar-geth:4000 \
+  --execution.urls http://el-1-geth-lodestar:8551 \
+  --execution.jwtSecret /config/jwt/jwtsecret \
+  --executionFeeRecipient 0x8943545177806ed17b9f23f0a21ee5948ecaa776 \
+  --paramsFile /config/netcfg/config.yaml \
+  --builderApi \
+  --builderApi.address 0.0.0.0 \
+  --builderApi.publicUrl http://lodestar-builder:18550 \
+  --metrics \
+  --metrics.address 0.0.0.0
 
-# builder running note
 echo
-echo "devnet up. run the sidecar in another terminal:"
+echo "devnet and builder up, follow the builder with"
 echo
-echo 'LODESTAR_PRESET=minimal ./lodestar builder \'
-echo '  --keystore ./temp/builder-dev/keystore.json \'
-echo '  --keystorePassword ./temp/builder-dev/password.txt \'
-echo '  --builderPubkey 0x8ec9cc826ea7735329831dbe89c28ae700e39b51c817f1086483621a2104145343f912b3bf167027256780a62a1995bd \'
-echo "  --beaconNodeUrl $BN_URL \\"
-echo "  --execution.urls $EL_URL \\"
-echo '  --execution.jwtSecret ./temp/builder-dev/jwt/jwtsecret \'
-echo '  --executionFeeRecipient 0x8943545177806ed17b9f23f0a21ee5948ecaa776 \'
-echo '  --paramsFile ./temp/builder-dev/netcfg/config.yaml'
+echo "docker logs -f lodestar-builder"
 echo
 echo "don't forget to clean up later"
-echo 'kurtosis enclave rm -f builder-dev && kurtosis engine stop'
+echo 'docker rm -f lodestar-builder && kurtosis enclave rm -f builder-dev && kurtosis engine stop'

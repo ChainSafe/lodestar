@@ -31,6 +31,12 @@ export enum RevealResult {
   error = "error",
 }
 
+export enum BidRequestResult {
+  served = "served",
+  noBid = "no_bid",
+  rejected = "rejected",
+}
+
 export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitData) {
   register
     .gauge<LodestarGitData>({
@@ -68,6 +74,18 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
         name: "bc_builder_reveals_total",
         help: "Total count of payload reveal attempts by result",
         labelNames: ["result"],
+      }),
+    },
+
+    api: {
+      bidRequests: register.gauge<{result: BidRequestResult}>({
+        name: "bc_builder_api_bid_requests_total",
+        help: "Total count of bid requests received over the builder API by result",
+        labelNames: ["result"],
+      }),
+      blockSubmissions: register.gauge({
+        name: "bc_builder_api_block_submissions_total",
+        help: "Total count of signed beacon blocks received over the builder API and published to the beacon node",
       }),
     },
 
