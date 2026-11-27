@@ -1037,6 +1037,36 @@ export function getValidatorApi(
         (!circuitBreakerActive &&
           chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
 
+      let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
+      const getParentExecutionRequests = (): Promise<gloas.ExecutionRequests> => {
+        parentExecutionRequestsPromise ??= chain.getParentExecutionRequests(parentSlot, parentBlockRootHex);
+        return parentExecutionRequestsPromise;
+      };
+
+      // Fetch the production state once and apply the parent execution payload once here, so all
+      // downstream consumers share a single state: the un-applied `parentState` (for `computeNewStateRoot`)
+      // and the applied `parentStateWithPayload` (for attestation scoring and execution-payload prep).
+      // Prepared before the cutoff is calculated, the race below starts without further awaits
+      const parentState = await chain.regen.getBlockSlotState(
+        parentBlock,
+        slot,
+        {dontTransferCache: true},
+        RegenCaller.produceBlock
+      );
+      // Fetch the parent's execution requests once here and thread them via blockAttributes: they are
+      // used both to apply the parent payload below and as the block's `parentExecutionRequests` field
+      // (so both are guaranteed consistent). Only needed when building on FULL; empty parent has none.
+      const parentExecutionRequests =
+        isBuildingOnFull && isStatePostGloas(parentState)
+          ? await getParentExecutionRequests()
+          : ssz.gloas.ExecutionRequests.defaultValue();
+      // When building on EMPTY there is nothing to apply, so it stays the same view as parentState
+      // (the availability bit for parentSlot stays false, which is correct).
+      const parentStateWithPayload =
+        isBuildingOnFull && isStatePostGloas(parentState)
+          ? parentState.withParentPayloadApplied(parentExecutionRequests)
+          : parentState;
+
       // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
       // not delay the proposal when a builder bid block is available (and vice versa)
       const cutoffMs = Math.max(
@@ -1050,12 +1080,6 @@ export function getValidatorApi(
       const bidDeadlinePromise = circuitBreakerActive
         ? Promise.resolve()
         : sleep(Math.min(chain.builderApiClient.bidDeadline, cutoffMs));
-
-      let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
-      const getParentExecutionRequests = (): Promise<gloas.ExecutionRequests> => {
-        parentExecutionRequestsPromise ??= chain.getParentExecutionRequests(parentSlot, parentBlockRootHex);
-        return parentExecutionRequestsPromise;
-      };
 
       // Candidates are ranked by their boosted counted total payment, the p2p bid is governed
       // by the top-level factors and each builder API bid by its own entry. Ties prefer the
@@ -1145,29 +1169,6 @@ export function getValidatorApi(
         return rankedCandidates[0];
       })();
 
-      // Fetch the production state once and apply the parent execution payload once here, so all
-      // downstream consumers share a single state: the un-applied `parentState` (for `computeNewStateRoot`)
-      // and the applied `parentStateWithPayload` (for attestation scoring and execution-payload prep).
-      const parentState = await chain.regen.getBlockSlotState(
-        parentBlock,
-        slot,
-        {dontTransferCache: true},
-        RegenCaller.produceBlock
-      );
-      // Fetch the parent's execution requests once here and thread them via blockAttributes: they are
-      // used both to apply the parent payload below and as the block's `parentExecutionRequests` field
-      // (so both are guaranteed consistent). Only needed when building on FULL; empty parent has none.
-      const parentExecutionRequests =
-        isBuildingOnFull && isStatePostGloas(parentState)
-          ? await getParentExecutionRequests()
-          : ssz.gloas.ExecutionRequests.defaultValue();
-      // When building on EMPTY there is nothing to apply, so it stays the same view as parentState
-      // (the availability bit for parentSlot stays false, which is correct).
-      const parentStateWithPayload =
-        isBuildingOnFull && isStatePostGloas(parentState)
-          ? parentState.withParentPayloadApplied(parentExecutionRequests)
-          : parentState;
-
       const commonBlockBodyPromise = chain.produceCommonBlockBody({
         slot,
         parentBlock,
@@ -1222,11 +1223,7 @@ export function getValidatorApi(
       });
 
       const [engineResult, bidBlockResult] = await resolveOrRacePromises([enginePromise, bidBlockPromise], {
-        // Preparing the parent state above took time, keep the cutoff relative to the slot start
-        resolveTimeoutMs: Math.max(
-          0,
-          config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS) - chain.clock.msFromSlot(slot)
-        ),
+        resolveTimeoutMs: cutoffMs,
         raceTimeoutMs: config.getSlotDurationMs(fork),
         signal: controller.signal,
       });
