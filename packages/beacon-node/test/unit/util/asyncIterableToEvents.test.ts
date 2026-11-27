@@ -5,6 +5,7 @@ import {
   AsyncIterableBridgeCaller,
   AsyncIterableBridgeHandler,
   AsyncIterableEventBus,
+  RESP_BRIDGE_WINDOW,
 } from "../../../src/util/asyncIterableToEvents.js";
 
 type Args = {count: number; delayMs?: number; failAt?: number};
@@ -15,14 +16,16 @@ function createEventBus(): AsyncIterableEventBus<Args, number> {
     emitRequest: (data) => emitter.emit("request", data),
     emitRequestCancel: (data) => emitter.emit("cancel", data),
     emitResponse: (data) => emitter.emit("response", data),
+    emitResponsePull: (data) => emitter.emit("pull", data),
     onRequest: (cb) => emitter.on("request", cb),
     onRequestCancel: (cb) => emitter.on("cancel", cb),
     onResponse: (cb) => emitter.on("response", cb),
+    onResponsePull: (cb) => emitter.on("pull", cb),
   };
 }
 
 describe("util / asyncIterableToEvents", () => {
-  function setup() {
+  function setup(window?: number) {
     const events = createEventBus();
     const produced: number[] = [];
     let finallyRuns = 0;
@@ -39,7 +42,7 @@ describe("util / asyncIterableToEvents", () => {
         finallyRuns++;
       }
     });
-    const caller = new AsyncIterableBridgeCaller(events);
+    const caller = new AsyncIterableBridgeCaller(events, window);
 
     return {events, caller, handler, produced, getFinallyRuns: () => finallyRuns};
   }
@@ -94,5 +97,75 @@ describe("util / asyncIterableToEvents", () => {
 
     expect(() => events.emitRequestCancel({id: 123})).not.toThrow();
     expect(handler.iteratingCount).toBe(0);
+  });
+
+  it("slow consumer: credit window bounds how far the handler runs ahead", async () => {
+    const {caller, handler, produced} = setup();
+
+    const it = caller.getAsyncIterable({count: 64})[Symbol.asyncIterator]();
+    const first = await it.next();
+    expect(first).toEqual({value: 0, done: false});
+
+    // Let the handler run to its blocking point, then stop pulling
+    await sleep(20);
+
+    expect(produced.length).toBe(RESP_BRIDGE_WINDOW + 1);
+    expect(produced.length).toBeLessThan(64);
+    expect(handler.iteratingCount).toBe(1);
+
+    await it.return?.();
+    await sleep(20);
+    expect(handler.iteratingCount).toBe(0);
+  });
+
+  it("unbounded window (requester bridge): handler runs eagerly without pacing", async () => {
+    const {caller, handler, produced} = setup(Infinity);
+
+    const it = caller.getAsyncIterable({count: 64})[Symbol.asyncIterator]();
+    await it.next();
+
+    // Stop pulling: with an unbounded window the handler must drain the whole response regardless
+    await sleep(20);
+
+    expect(produced.length).toBe(64);
+
+    await it.return?.();
+    await sleep(20);
+    expect(handler.iteratingCount).toBe(0);
+  });
+
+  it("fast consumer: all items stream through in order", async () => {
+    const {caller, handler, produced, getFinallyRuns} = setup();
+
+    const items: number[] = [];
+    for await (const item of caller.getAsyncIterable({count: 64})) {
+      items.push(item);
+    }
+
+    const expected = Array.from({length: 64}, (_, i) => i);
+    expect(items).toEqual(expected);
+    expect(produced).toEqual(expected);
+    expect(getFinallyRuns()).toBe(1);
+    expect(caller.pendingCount).toBe(0);
+    expect(handler.iteratingCount).toBe(0);
+  });
+
+  it("cancel while the handler is blocked on credit stops it without deadlock", async () => {
+    const {caller, handler, produced, getFinallyRuns} = setup();
+
+    const it = caller.getAsyncIterable({count: 1000})[Symbol.asyncIterator]();
+    await it.next();
+
+    // Handler fills the window then parks waiting for credit
+    await sleep(20);
+    expect(produced.length).toBe(RESP_BRIDGE_WINDOW + 1);
+    expect(handler.iteratingCount).toBe(1);
+
+    await it.return?.();
+    await sleep(20);
+
+    expect(handler.iteratingCount).toBe(0);
+    expect(getFinallyRuns()).toBe(1);
+    expect(caller.pendingCount).toBe(0);
   });
 });

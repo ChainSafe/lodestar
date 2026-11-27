@@ -1,5 +1,5 @@
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
-import {GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
+import {GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
 
@@ -8,11 +8,7 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
  * A fork that changes the slot duration must add an entry here and in `ForkConfig.getSlotDurationMs`.
  */
 export function getSlotDurations(config: ChainConfig): [Epoch, number][] {
-  const durations: [Epoch, number][] = [[GENESIS_EPOCH, config.SLOT_DURATION_MS]];
-  if (config.HEZE_FORK_EPOCH !== Infinity) {
-    durations.push([config.HEZE_FORK_EPOCH, config.SLOT_DURATION_MS_HEZE]);
-  }
-  return durations;
+  return [[GENESIS_EPOCH, config.SLOT_DURATION_MS]];
 }
 
 /** Slot duration in ms in effect at a given epoch */
@@ -78,7 +74,7 @@ export function getCurrentSlot(config: ChainConfig, genesisTime: TimeSeconds): S
  * across slot duration changes
  */
 export function getBlobDataRetentionStartEpoch(config: ChainConfig, epoch: Epoch): Epoch {
-  const windowMs = config.MIN_BLOB_DATA_RETENTION_MS;
+  const windowMs = config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS * SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
   const currentStartMs = computeTimeAtSlotMs(config, computeStartSlotAtEpoch(epoch), 0);
   if (currentStartMs < windowMs) {
     return GENESIS_EPOCH;

@@ -18,13 +18,7 @@ pub const Execution = struct {
 
 pub fn gossip(chain: *const ChainConfig) !gossip_options.Options {
     const slot_ms = chain.SLOT_DURATION_MS;
-    for ([_]u64{ slot_ms, chain.SLOT_DURATION_MS_HEZE }) |duration| {
-        if (duration == 0 or duration > 86_400_000) return error.InvalidNetworkConfig;
-    }
-    var max_slot_ms = slot_ms;
-    if (chain.HEZE_FORK_EPOCH != std.math.maxInt(u64)) {
-        max_slot_ms = @max(max_slot_ms, chain.SLOT_DURATION_MS_HEZE);
-    }
+    if (slot_ms == 0 or slot_ms > 86_400_000) return error.InvalidNetworkConfig;
     const epoch_ms = slot_ms * p.SLOTS_PER_EPOCH;
     return .{
         .heartbeat_interval_ms = 700,
@@ -38,7 +32,7 @@ pub fn gossip(chain: *const ChainConfig) !gossip_options.Options {
         .active_send_items = activeSendItems(),
         .large_frame_timeout_ms = 6000,
         .receive_arena_bytes = 128 * mib,
-        .seen_ttl_ms = max_slot_ms * p.SLOTS_PER_EPOCH * 2,
+        .seen_ttl_ms = slot_ms * p.SLOTS_PER_EPOCH * 2,
         .retained_score_ms = epoch_ms * 100,
         .opportunistic_graft_interval_ms = 42_000,
         .gossip_factor = 0.25,
