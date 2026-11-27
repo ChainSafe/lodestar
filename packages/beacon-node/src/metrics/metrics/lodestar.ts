@@ -28,6 +28,7 @@ import type {FlatFileStoreOperation} from "../../db/flatFileStore/metrics.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
+import {BackfillBatchStep} from "../../sync/backfill/index.js";
 import {
   DeferredPayloadResult,
   DownloadResult,
@@ -655,6 +656,61 @@ export function createLodestarMetrics(
       help: "Sync switched gossip subscriptions on/off",
       labelNames: ["action"],
     }),
+
+    backfillSync: {
+      status: register.gauge({
+        name: "lodestar_backfill_sync_status",
+        help: "Backfill sync status: [Waiting, Syncing, Completed]",
+      }),
+      earliestAvailableSlot: register.gauge({
+        name: "lodestar_backfill_sync_earliest_available_slot",
+        help: "Earliest slot the node holds and serves blocks, custody columns and payload envelopes from",
+      }),
+      targetSlot: register.gauge({
+        name: "lodestar_backfill_sync_target_slot",
+        help: "Slot backfill sync has to reach, the start of the range blocks must be served for",
+      }),
+      peers: register.gauge({
+        name: "lodestar_backfill_sync_peers",
+        help: "Count of connected peers able to serve the next backfill batch",
+      }),
+      batches: register.counter({
+        name: "lodestar_backfill_sync_batches_total",
+        help: "Total number of backfill batches persisted",
+      }),
+      blocks: register.counter({
+        name: "lodestar_backfill_sync_blocks_total",
+        help: "Total number of blocks backfilled",
+      }),
+      dataColumnSidecars: register.counter({
+        name: "lodestar_backfill_sync_data_column_sidecars_total",
+        help: "Total number of data column sidecars backfilled",
+      }),
+      executionPayloadEnvelopes: register.counter({
+        name: "lodestar_backfill_sync_execution_payload_envelopes_total",
+        help: "Total number of execution payload envelopes backfilled",
+      }),
+      envelopeSignatures: register.counter<{verified: string}>({
+        name: "lodestar_backfill_sync_envelope_signatures_total",
+        help: "Total number of backfilled envelopes by whether their signature could be verified",
+        labelNames: ["verified"],
+      }),
+      blocksByRootRequests: register.counter({
+        name: "lodestar_backfill_sync_blocks_by_root_requests_total",
+        help: "Total number of blocks requested by root after a range came back empty",
+      }),
+      batchStepDuration: register.histogram<{step: BackfillBatchStep}>({
+        name: "lodestar_backfill_sync_batch_step_duration_seconds",
+        help: "Time to download and verify, or persist, each part of a backfill batch",
+        labelNames: ["step"],
+        buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
+      }),
+      batchErrors: register.counter<{code: string}>({
+        name: "lodestar_backfill_sync_batch_errors_total",
+        help: "Total number of failed backfill batch attempts by error code",
+        labelNames: ["code"],
+      }),
+    },
 
     syncRange: {
       syncChainsEvents: register.gauge<{syncType: RangeSyncType; event: string}>({
