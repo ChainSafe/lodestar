@@ -40,7 +40,7 @@ export async function validateGossipSyncCommittee(
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
   // [REJECT] The signature is valid for the message beacon_block_root for the validator referenced by validator_index.
-  await validateSyncCommitteeSigOnly(chain, headState, syncCommittee);
+  await validateSyncCommitteeSigOnly(chain, syncCommittee);
 
   // Re-check after the await: concurrent messages from the same validator all pass the check above.
   // Metrics were already counted by the first check.
@@ -89,11 +89,10 @@ function assertSyncCommitteeMessageNotKnown(
 
 export async function validateApiSyncCommittee(
   chain: IBeaconChain,
-  headState: IBeaconStateView,
   syncCommittee: altair.SyncCommitteeMessage
 ): Promise<void> {
   const prioritizeBls = true;
-  return validateSyncCommitteeSigOnly(chain, headState, syncCommittee, prioritizeBls);
+  return validateSyncCommitteeSigOnly(chain, syncCommittee, prioritizeBls);
 }
 
 /**
@@ -101,11 +100,10 @@ export async function validateApiSyncCommittee(
  */
 async function validateSyncCommitteeSigOnly(
   chain: IBeaconChain,
-  headState: IBeaconStateView,
   syncCommittee: altair.SyncCommitteeMessage,
   prioritizeBls = false
 ): Promise<void> {
-  const signatureSet = getSyncCommitteeSignatureSet(chain.config, headState, syncCommittee);
+  const signatureSet = getSyncCommitteeSignatureSet(chain.config, syncCommittee);
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
