@@ -1,7 +1,7 @@
 name: Publish
 
-# only one can run at a time
-concurrency: cd-publish
+# only one per ref can run at a time, so a tag publish does not wait for an unstable publish
+concurrency: cd-publish-${{ github.ref }}
 
 on:
   push:
