@@ -42,6 +42,10 @@
     "./execution-proof-verifier": {
       "types": "./src/execution-proof-verifier.d.ts",
       "import": "./src/execution-proof-verifier.js"
+    },
+    "./execution-block-hash": {
+      "types": "./src/execution-block-hash.d.ts",
+      "import": "./src/execution-block-hash.js"
     }
   },
   "scripts": {
@@ -94,7 +98,7 @@
   },
   "devDependencies": {
     "@chainsafe/benchmark": "2.1.0",
-    "@chainsafe/ssz": "^1.9.0"
+    "@chainsafe/ssz": "^1.9.1"
   },
   "publishConfig": {
     "access": "public"

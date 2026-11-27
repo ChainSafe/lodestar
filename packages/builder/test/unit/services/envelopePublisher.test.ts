@@ -5,7 +5,7 @@ import {getConfig} from "@lodestar/config/test-utils";
 import {SecretKey} from "@lodestar/native/blst";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {defer, toRootHex} from "@lodestar/utils";
+import {defer, fromHex, toRootHex} from "@lodestar/utils";
 import {BidLedger, BidLedgerErrorCode} from "../../../src/services/bidLedger.js";
 import {BuilderSigner} from "../../../src/services/builderSigner.js";
 import {
@@ -258,7 +258,13 @@ function createPublisher({win = true}: {win?: boolean} = {}) {
   const ledger = new BidLedger();
   const {blockRoot, ...bidIdentity} = selectionIdentity(createContents());
   const signedBidRoot = toRootHex(Buffer.alloc(32, 11));
-  ledger.recordBid({...bidIdentity, valueGwei: 1, signedBidRoot});
+  const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+  signedBid.message.slot = bidIdentity.slot;
+  signedBid.message.parentBlockHash = fromHex(bidIdentity.parentBlockHash);
+  signedBid.message.parentBlockRoot = fromHex(bidIdentity.parentBlockRoot);
+  signedBid.message.blockHash = fromHex(bidIdentity.blockHash);
+  signedBid.message.value = 1;
+  ledger.recordBid({signedBid, signedBidRoot});
   if (win) {
     ledger.recordWin({...bidIdentity, signedBidRoot}, blockRoot);
   }

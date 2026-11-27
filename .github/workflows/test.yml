@@ -440,6 +440,9 @@ jobs:
       - name: Run swap-or-not-shuffle tests for the release CPU baseline
         run: |
           zig build test:swap_or_not_shuffle -Dcpu=baseline
+      - name: Run execution-block-hash tests
+        run: |
+          zig build test:execution_block_hash
       - name: Run state-transition tests
         run: |
           zig build test:state_transition
@@ -452,6 +455,17 @@ jobs:
       - name: Run ere_verifier tests
         run: |
           zig build test:ere_verifier
+
+      - name: Add loopback addresses for the UDP source tests
+        if: matrix.os == 'macos-latest'
+        run: |
+          sudo ifconfig lo0 alias 127.0.0.2
+          sudo ifconfig lo0 alias 127.0.0.3
+
+      - name: Run discovery and network tests
+        run: |
+          zig build test:fault_io
+          zig build test:udp
 
       - name: Build benchmarks
         run: |

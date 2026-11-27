@@ -1,4 +1,4 @@
-version: v1.7.0-beta.4
+version: v1.7.0-beta.5
 style: full
 
 specrefs:
@@ -20,6 +20,9 @@ exceptions:
     # phase0
     - UINT64_MAX#phase0
     - UINT64_MAX_SQRT#phase0
+
+    # bellatrix
+    - SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY#bellatrix
 
     # fulu
     - UINT256_MAX#fulu
@@ -73,6 +76,7 @@ exceptions:
 
     # gloas
     - LatestMessage#gloas
+    - OptimisticStore#gloas
     - Seen#gloas
 
     # heze
@@ -143,6 +147,7 @@ exceptions:
     - compute_max_partial_data_column_sidecar_size#gloas
     - get_node_children#gloas
     - get_upcoming_proposal_slots#gloas
+    - latest_verified_ancestor#gloas
     - is_current_or_next_slot#gloas
     - validate_partial_data_column_sidecar_gossip#gloas
 

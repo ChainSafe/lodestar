@@ -223,6 +223,25 @@ pub fn forkVersion(self: *const BeaconConfig, slot: Slot) *const [4]u8 {
 // TODO: getPostAltairForkTypes
 // TODO: getPostDenebForkTypes
 
+pub const BlobParameters = struct {
+    epoch: Epoch,
+    max_blobs_per_block: u64,
+};
+
+pub fn getBlobParameters(self: *const BeaconConfig, epoch: Epoch) BlobParameters {
+    var best: ?BlobParameters = null;
+    for (self.chain.BLOB_SCHEDULE) |entry| {
+        if (epoch < entry.EPOCH) continue;
+        if (best == null or entry.EPOCH > best.?.epoch) {
+            best = .{ .epoch = entry.EPOCH, .max_blobs_per_block = entry.MAX_BLOBS_PER_BLOCK };
+        }
+    }
+    return best orelse .{
+        .epoch = self.chain.ELECTRA_FORK_EPOCH,
+        .max_blobs_per_block = self.chain.MAX_BLOBS_PER_BLOCK_ELECTRA,
+    };
+}
+
 /// Return the maximum number of blobs allowed per block at `epoch`.
 ///
 /// Fulu introduced Blob Parameter Only (BPO) hard forks [EIP-7892] to adjust the max blobs per block,
@@ -234,13 +253,7 @@ pub fn getMaxBlobsPerBlock(self: *const BeaconConfig, epoch: Epoch) u64 {
     return switch (fork) {
         .deneb => self.chain.MAX_BLOBS_PER_BLOCK,
         .electra => self.chain.MAX_BLOBS_PER_BLOCK_ELECTRA,
-        .fulu, .gloas, .heze => {
-            for (0..self.chain.BLOB_SCHEDULE.len) |i| {
-                const schedule = self.chain.BLOB_SCHEDULE[self.chain.BLOB_SCHEDULE.len - i - 1];
-                if (epoch >= schedule.EPOCH) return schedule.MAX_BLOBS_PER_BLOCK;
-            }
-            return self.chain.MAX_BLOBS_PER_BLOCK_ELECTRA;
-        },
+        .fulu, .gloas, .heze => self.getBlobParameters(epoch).max_blobs_per_block,
         else =>
         // For forks before Deneb, we assume no blobs
         0,
@@ -306,9 +319,6 @@ pub fn getDomainForVoluntaryExit(self: *const BeaconConfig, state_epoch: Epoch, 
     }
 }
 
-// TODO: forkDigest2ForkName, forkDigest2ForkNameOption, forkName2ForkDigest, forkName2ForkDigestHex
-// may not need it for state-transition
-
 fn computeDomain(domain_type: DomainType, fork_version: Version, genesis_validators_root: Root, out: *[32]u8) void {
     var fork_data_root: [32]u8 = undefined;
     computeForkDataRoot(fork_version, genesis_validators_root, &fork_data_root);
@@ -318,7 +328,7 @@ fn computeDomain(domain_type: DomainType, fork_version: Version, genesis_validat
     @memcpy(out[4..32], fork_data_root[0..28]);
 }
 
-fn computeForkDataRoot(current_version: Version, genesis_validators_root: Root, out: *[32]u8) void {
+pub fn computeForkDataRoot(current_version: Version, genesis_validators_root: Root, out: *[32]u8) void {
     const fork_data: ForkData = .{
         .current_version = current_version,
         .genesis_validators_root = genesis_validators_root,

@@ -21,7 +21,8 @@ import {
 
 export function processExecutionPayloadBid(
   state: CachedBeaconStateGloas | CachedBeaconStateHeze,
-  signedBid: gloas.SignedExecutionPayloadBid
+  signedBid: gloas.SignedExecutionPayloadBid,
+  verifySignature = true
 ): void {
   const bid = signedBid.message;
   const {builderIndex, value: amount} = bid;
@@ -57,7 +58,7 @@ export function processExecutionPayloadBid(
     }
 
     // Verify that the bid signature is valid
-    if (!verifyExecutionPayloadBidSignature(state, builder.pubkey, signedBid)) {
+    if (verifySignature && !verifyExecutionPayloadBidSignature(state, builder.pubkey, signedBid)) {
       throw Error(`Invalid execution payload bid: invalid signature for builder ${builderIndex}`);
     }
   }

@@ -93,7 +93,7 @@ import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
-import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
+import {ColumnReconstructionTracker, RECONSTRUCTED_COLUMNS_WAIT_BPS} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter, ReorgEventData} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
 import {ForkChoiceExecutionEngine} from "./forkChoiceExecutionEngine.js";
@@ -701,7 +701,8 @@ export class BeaconChain implements IBeaconChain {
       const state = await this.regen.getBlockSlotState(block, slot, {dontTransferCache: true}, RegenCaller.restApi);
       return {
         state,
-        executionOptimistic: isOptimisticBlock(block),
+        // The canonical variant can be FULL, a state reports the status of the payload its block builds on
+        executionOptimistic: isOptimisticBlock(this.forkChoice.getBlockHexDefaultStatus(block.blockRoot) ?? block),
         finalized: slot === finalizedBlock.slot && finalizedBlock.slot !== GENESIS_SLOT,
       };
     }
@@ -717,7 +718,7 @@ export class BeaconChain implements IBeaconChain {
     return (
       state && {
         state,
-        executionOptimistic: isOptimisticBlock(block),
+        executionOptimistic: isOptimisticBlock(this.forkChoice.getBlockHexDefaultStatus(block.blockRoot) ?? block),
         finalized: slot === finalizedBlock.slot && finalizedBlock.slot !== GENESIS_SLOT,
       }
     );
@@ -865,7 +866,9 @@ export class BeaconChain implements IBeaconChain {
     const finalizedBlock = this.forkChoice.getFinalizedBlock();
     if (slot > finalizedBlock.slot) {
       // Unfinalized slot, attempt to find in fork-choice
-      const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
+      const canonicalBlock = this.forkChoice.getCanonicalBlockAtSlot(slot);
+      // The canonical variant can be FULL, a block reports the status of the payload it builds on
+      const block = canonicalBlock && this.forkChoice.getBlockHexDefaultStatus(canonicalBlock.blockRoot);
       if (block) {
         // Block found in fork-choice.
         // It may be in the block input cache, awaiting full DA reconstruction, check there first
@@ -893,16 +896,18 @@ export class BeaconChain implements IBeaconChain {
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
     const block = this.forkChoice.getBlockHexDefaultStatus(root);
     if (block) {
+      // The finalized block stays in fork-choice and the hot db until the archiver has migrated it
+      const finalized = block.slot <= this.forkChoice.getFinalizedBlock().slot;
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
       // Otherwise (most likely), check the hot db
       const blockInput = this.seenBlockInputCache.get(block.blockRoot);
       if (blockInput?.hasBlock()) {
-        return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(block), finalized: false};
+        return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(block), finalized};
       }
       const data = await this.db.block.get(fromHex(root));
       if (data) {
-        return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false};
+        return {block: data, executionOptimistic: isOptimisticBlock(block), finalized};
       }
       // If block is not found in hot db, try cold db since there could be an archive cycle happening
       // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
@@ -917,6 +922,8 @@ export class BeaconChain implements IBeaconChain {
   ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null> {
     const block = this.forkChoice.getBlockHexDefaultStatus(root);
     if (block) {
+      // The finalized block stays in fork-choice and the hot db until the archiver has migrated it
+      const finalized = block.slot <= this.forkChoice.getFinalizedBlock().slot;
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
       // Otherwise (most likely), check the hot db
@@ -928,14 +935,14 @@ export class BeaconChain implements IBeaconChain {
           return {
             block: serialized,
             executionOptimistic: isOptimisticBlock(block),
-            finalized: false,
+            finalized,
             slot: blockInput.slot,
           };
         }
         return {
           block: sszTypesFor(blockInput.forkName).SignedBeaconBlock.serialize(signedBlock),
           executionOptimistic: isOptimisticBlock(block),
-          finalized: false,
+          finalized,
           slot: blockInput.slot,
         };
       }
@@ -943,7 +950,7 @@ export class BeaconChain implements IBeaconChain {
       if (data) {
         const slot = getSlotFromSignedBeaconBlockSerialized(data);
         if (slot === null) throw new Error(`Invalid block data stored in DB for root: ${root}`);
-        return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false, slot};
+        return {block: data, executionOptimistic: isOptimisticBlock(block), finalized, slot};
       }
       // If block is not found in hot db, try cold db since there could be an archive cycle happening
       // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
@@ -1126,6 +1133,17 @@ export class BeaconChain implements IBeaconChain {
       // After gloas, columns are tracked in PayloadEnvelopeInput
       const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
       if (payloadInput) {
+        // Available with half the columns, peers that saw it attested expect the reconstructed rest
+        if (
+          !payloadInput.hasComputedAllData() &&
+          payloadInput.hasAllData() &&
+          indices.some((index) => !payloadInput.hasColumn(index))
+        ) {
+          this.columnReconstructionTracker.triggerColumnReconstruction(payloadInput);
+          await payloadInput
+            .waitForComputedAllData(this.config.getSlotComponentDurationMs(fork, RECONSTRUCTED_COLUMNS_WAIT_BPS))
+            .catch(() => this.logger.debug("Columns not reconstructed in time", {slot: blockSlot, root: blockRootHex}));
+        }
         for (let i = 0; i < indices.length; i++) {
           const index = indices[i];
           const sidecar = payloadInput.getColumn(index);
@@ -1146,6 +1164,17 @@ export class BeaconChain implements IBeaconChain {
       if (blockInput) {
         if (!isBlockInputColumns(blockInput)) {
           throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
+        }
+        // Available with half the columns, peers that saw it attested expect the reconstructed rest
+        if (
+          !blockInput.hasComputedAllData() &&
+          blockInput.hasAllData() &&
+          indices.some((index) => !blockInput.hasColumn(index))
+        ) {
+          this.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
+          await blockInput
+            .waitForComputedAllData(this.config.getSlotComponentDurationMs(fork, RECONSTRUCTED_COLUMNS_WAIT_BPS))
+            .catch(() => this.logger.debug("Columns not reconstructed in time", {slot: blockSlot, root: blockRootHex}));
         }
         for (let i = 0; i < indices.length; i++) {
           const index = indices[i];
@@ -1473,9 +1502,10 @@ export class BeaconChain implements IBeaconChain {
 
   /**
    * Emit `head` and `head_v2` when the fork choice head differs between two observations. Every caller that
-   * can move the head, `updateAndGetHead()` and `updateTime()`, must capture the head before and pass both.
+   * can move the head, `updateAndGetHead()`, `updateTime()` and `onExecutionPayload()`, must capture the head before
+   * and pass both.
    */
-  private emitHeadEvents(prevHead: ProtoBlock, head: ProtoBlock): void {
+  emitHeadEvents(prevHead: ProtoBlock, head: ProtoBlock): void {
     const headRootChanged = head.blockRoot !== prevHead.blockRoot;
 
     if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) {
@@ -1606,38 +1636,76 @@ export class BeaconChain implements IBeaconChain {
   }
 
   /**
-   * Invalid state root error is critical and it causes the node to stale most of the time so we want to always
-   * persist preState, postState and block for further investigation.
+   * Invalid state root error is critical and it causes the node to stale most of the time so we want to persist
+   * preState, postState and block for further investigation.
    */
   async persistInvalidStateRoot(
     preState: IBeaconStateView,
     postState: IBeaconStateView,
     block: SignedBeaconBlock
   ): Promise<void> {
+    if (!this.opts.persistInvalidSszObjects) {
+      return;
+    }
     const blockSlot = block.message.slot;
-    const blockType = this.config.getForkTypes(blockSlot).SignedBeaconBlock;
-    const postStateRoot = postState.hashTreeRoot();
-    const logStr = `slot_${blockSlot}_invalid_state_root_${toRootHex(postStateRoot)}`;
-    await Promise.all([
-      this.persistSszObject(
-        `SignedBeaconBlock_slot_${blockSlot}`,
-        blockType.serialize(block),
-        toRootHex(this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message)),
-        `${logStr}_block`
-      ),
-      this.persistSszObject(
-        `preState_slot_${preState.slot}_BeaconState`,
-        preState.serialize(),
-        toRootHex(preState.hashTreeRoot()),
-        `${logStr}_pre_state`
-      ),
-      this.persistSszObject(
-        `postState_slot_${postState.slot}_BeaconState`,
-        postState.serialize(),
-        toRootHex(postStateRoot),
-        `${logStr}_post_state`
-      ),
-    ]);
+    const forkTypes = this.config.getForkTypes(blockSlot);
+    const preStateRoot = toRootHex(preState.hashTreeRoot());
+    const postStateRoot = toRootHex(postState.hashTreeRoot());
+    const logStr = `slot_${blockSlot}_invalid_state_root_${postStateRoot}`;
+    try {
+      await Promise.all([
+        this.persistSszObject(
+          `SignedBeaconBlock_slot_${blockSlot}`,
+          forkTypes.SignedBeaconBlock.serialize(block),
+          toRootHex(forkTypes.BeaconBlock.hashTreeRoot(block.message)),
+          `${logStr}_block`
+        ),
+        this.persistSszObject(
+          `preState_slot_${preState.slot}_BeaconState`,
+          preState.serialize(),
+          preStateRoot,
+          `${logStr}_pre_state`
+        ),
+        this.persistSszObject(
+          `postState_slot_${postState.slot}_BeaconState`,
+          postState.serialize(),
+          postStateRoot,
+          `${logStr}_post_state`
+        ),
+      ]);
+    } catch (e) {
+      this.logger.error(
+        "Error persisting invalid state root objects",
+        {slot: blockSlot, preStateRoot, postStateRoot},
+        e as Error
+      );
+    }
+  }
+
+  async persistInvalidSignature(state: IBeaconStateView, block: SignedBeaconBlock): Promise<void> {
+    if (!this.opts.persistInvalidSszObjects) {
+      return;
+    }
+    const blockSlot = block.message.slot;
+    const forkTypes = this.config.getForkTypes(blockSlot);
+    try {
+      await Promise.all([
+        this.persistSszObject(
+          forkTypes.SignedBeaconBlock.typeName,
+          forkTypes.SignedBeaconBlock.serialize(block),
+          toRootHex(forkTypes.BeaconBlock.hashTreeRoot(block.message)),
+          `${blockSlot}_invalid_signature`
+        ),
+        this.persistSszObject(
+          "BeaconState",
+          state.serialize(),
+          toRootHex(state.hashTreeRoot()),
+          `${state.slot}_invalid_signature`
+        ),
+      ]);
+    } catch (e) {
+      this.logger.error("Error persisting invalid signature objects", {slot: blockSlot}, e as Error);
+    }
   }
 
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void {
@@ -1649,12 +1717,6 @@ export class BeaconChain implements IBeaconChain {
         rootHex ?? toRootHex(type.hashTreeRoot(sszObject)),
         suffix
       );
-    }
-  }
-
-  persistInvalidSszBytes(typeName: string, sszBytes: Uint8Array, rootHex: RootHex, suffix?: string): void {
-    if (this.opts.persistInvalidSszObjects) {
-      void this.persistSszObject(typeName, sszBytes, rootHex, suffix);
     }
   }
 
