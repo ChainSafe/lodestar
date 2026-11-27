@@ -323,7 +323,12 @@ jobs:
       - name: Download ere verifier fixtures
         run: |
           zig build run:download_ere_fixtures
+      - name: Build network test peer
+        run: zig build build-exe:network_interop_peer -Doptimize=ReleaseSafe
       - name: Test bindings
+        env:
+          LODESTAR_Z_NETWORK_STOCK_HOST: installed
+          LODESTAR_Z_NETWORK_NATIVE_PEER: ${{ github.workspace }}/zig-out/bin/network_interop_peer
         run: |
           pnpm --filter @lodestar/native test
 
@@ -471,6 +476,7 @@ jobs:
           zig build test:fault_io
           zig build test:udp
           zig build test:network
+          zig build test:network_runtime
           zig build check:network-tools
 
       - name: Build benchmarks
@@ -721,6 +727,8 @@ jobs:
           node: 26
       - uses: ./.github/actions/setup-llvm
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      - name: Install Rust release targets
+        run: rustup target add $(node -p 'require("./bindings/package.json").zapi.targets.join(" ")')
       - name: Build release artifacts
         run: |
           pnpm --filter @lodestar/native exec zapi build-artifacts --optimize ReleaseSafe --zig-cwd .. --artifacts-dir "$PWD/bindings/artifacts"

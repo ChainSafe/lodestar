@@ -421,6 +421,8 @@
             .root_module = .{
                 .root_source_file = "bindings/napi/root.zig",
                 .imports = .{
+                    .network,
+                    .discv5,
                     .bls,
                     .bls_options,
                     .cpu_count,
@@ -446,6 +448,12 @@
         },
     },
     .tests = .{
+        .network_runtime = .{
+            .root_module = .{
+                .root_source_file = "bindings/napi/network_test_root.zig",
+                .imports = .{ .network, .discv5, .config, .preset, "zapi:zapi" },
+            },
+        },
         // Per-module unit tests (mirror the old auto-generated `test:<module>` steps).
         .constants = .{ .root_module = .constants },
         .hex = .{ .root_module = .hex },

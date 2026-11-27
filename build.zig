@@ -7,6 +7,9 @@ pub fn build(b: *std.Build) !void {
     const manifest = @import("build.zig.zon");
     const result = try zbuild.configureBuild(b, manifest, .{});
     addGossipSha256(b, result.module("network").?);
+    // snappy.zig leaves its static library to the target's default, which is not position independent for musl, and
+    // the addon links it into a shared library.
+    result.dependency("snappy").?.artifact("snappy").root_module.pic = true;
     // binding.zig checks its quiche_send_info against the C compiler's layout for the target.
     const network = result.module("network").?;
     const send_info_layout = b.addTranslateC(.{
@@ -37,12 +40,10 @@ pub fn build(b: *std.Build) !void {
     });
     b.step("spec-test-version", "Print the pinned spec test cache key").dependOn(&print_spec_test_version.step);
 
-    configureEreVerifier(b, result);
+    try configureEreVerifier(b, result);
 }
 
-/// HACK:
-/// Manually make ere.zig link `libere_verifier_c` into the `ere_verifier` module. A Zig
-/// linker bug makes us have to workaround this way:
+/// Adapts the prebuilt verifier's platform-specific linkage.
 ///
 /// - Mach-O: Zig's stab parser assumes every function stab group is exactly
 ///   BNSYM, FUN, FUN, ENSYM and aborts on the `N_SOL` entries in ere's merged
@@ -56,8 +57,23 @@ pub fn build(b: *std.Build) !void {
 ///   Sources:
 ///   https://codeberg.org/ziglang/zig/src/commit/7647adab80dd088f4de3610fd245915a912eb6ad/src/link/MachO/Object.zig#L1001-L1019
 ///   https://codeberg.org/ziglang/zig/src/commit/7647adab80dd088f4de3610fd245915a912eb6ad/src/link/MachO/Symbol.zig#L46
-fn configureEreVerifier(b: *std.Build, result: zbuild.BuildResult) void {
+fn configureEreVerifier(b: *std.Build, result: zbuild.BuildResult) !void {
     const package = result.dependency("ere").?;
+    const bindings = result.library("bindings").?;
+    const target = bindings.root_module.resolved_target.?.result;
+    if (target.os.tag == .linux and target.abi == .gnu) {
+        // ere 0.19.2 retains unused strong imports for newer glibc, including quiche's weak libc references.
+        // Remove only those symbols, preserving the local symbols used for profiling.
+        for (package.module("ere").link_objects.items) |*object| switch (object.*) {
+            .static_path => |archive| {
+                const objcopy = try b.findProgram(&.{"llvm-objcopy"}, &.{});
+                const clean = b.addSystemCommand(&.{ objcopy, "--strip-symbol=posix_spawn_file_actions_addchdir", "--strip-symbol=pidfd_spawnp", "--strip-symbol=pidfd_getpid" });
+                clean.addFileArg(archive);
+                object.* = .{ .static_path = clean.addOutputFileArg("libere_verifier_c.a") };
+            },
+            else => {},
+        };
+    }
     if (package.builder.named_lazy_paths.get("libere_verifier_c.dylib")) |dylib| {
         const install = b.addInstallLibFile(dylib, "libere_verifier_c.dylib");
         b.top_level_steps.get("build-lib:bindings").?.step.dependOn(&install.step);
