@@ -61,8 +61,7 @@ const Layout = struct {
     fn init(comptime Payload: type) Layout {
         @setEvalBranchQuota(10_000);
         var layout: Layout = undefined;
-        for (std.meta.fields(Layout)) |layout_field| {
-            const name = layout_field.name;
+        for (@typeInfo(Layout).@"struct".field_names) |name| {
             @field(layout, name) = if (std.mem.eql(u8, name, "fixed_end"))
                 Payload.fixed_end
             else if (@hasField(Payload.Fields, name))
@@ -149,7 +148,7 @@ pub fn computeBlockHash(
     // mix_hash
     header.string(payload[layout.prev_randao..][0..32]);
     // nonce
-    header.string(&([_]u8{0} ** 8));
+    header.string(&@as([8]u8, @splat(0)));
     header.uint(std.mem.readInt(u256, payload[layout.base_fee_per_gas..][0..32], .little));
 
     // EIP-4895 withdrawals_root
@@ -579,7 +578,7 @@ const Writer = struct {
         var encoded: [hex_prefix_bytes_max]u8 = undefined;
         const encoded_len = nibbles.len / 2 + 1;
         const is_odd = nibbles.len % 2 == 1;
-        encoded[0] = if (is_odd) (@intFromEnum(kind) + 1) << 4 | nibbles[0] else @intFromEnum(kind) << 4;
+        encoded[0] = if (is_odd) (@backingInt(kind) + 1) << 4 | nibbles[0] else @backingInt(kind) << 4;
         const paired = nibbles[@intFromBool(is_odd)..];
         for (encoded[1..encoded_len], 0..) |*byte, i| byte.* = paired[2 * i] << 4 | paired[2 * i + 1];
         self.string(encoded[0..encoded_len]);
