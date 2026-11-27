@@ -1,14 +1,15 @@
 import {randomBytes} from "node:crypto";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {createBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {pubkeyCache} from "@lodestar/native/pubkeys";
-import {ForkName, ForkPostCapella, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {getBlockProposerSignatureSet, interopSecretKey} from "@lodestar/state-transition";
+import {ForkName, ForkPostCapella, LEAF_OFFSET_BEACON_PROPOSER, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {computeXmssLeafIndex, getBlockProposerSignatureSet, interopSecretKey} from "@lodestar/state-transition";
 import {ColumnIndex, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
 import {DataColumnSidecarValidationError} from "../../../../src/chain/errors/dataColumnSidecarError.js";
 import {IBeaconChain} from "../../../../src/chain/interface.js";
+import {getXmssPubkey} from "../../../../src/chain/pq/index.js";
 import {INetwork} from "../../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../../src/network/peers/peersData.js";
 import {PendingBlockInputStatus} from "../../../../src/sync/types.js";
@@ -126,6 +127,77 @@ describe("downloadByRoot.ts", () => {
         type: {code: DownloadByRootErrorCode.UNKNOWN_PROPOSER},
       });
       expect(verifySignatureSets).not.toHaveBeenCalled();
+    });
+
+    describe("pq", () => {
+      const pqChainConfig = createChainForkConfig({
+        ...defaultChainConfig,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+        PQ_FORK_EPOCH: 0,
+      });
+      const pqConfig = createBeaconConfig(pqChainConfig, Buffer.alloc(32, 0x01));
+      const slot = 9;
+
+      function getPqChain(isValid: boolean): IBeaconChain {
+        return {
+          ...getChain(),
+          config: pqConfig,
+          pq: {verifySignatureSets: vi.fn().mockResolvedValue(isValid), verifyProofSets: vi.fn()},
+        } as unknown as IBeaconChain;
+      }
+
+      function generatePqBlock(): {block: SignedBeaconBlock<ForkName.pq>; blockRoot: Uint8Array} {
+        const block = ssz.pq.SignedBeaconBlock.defaultValue();
+        block.message.slot = slot;
+        block.message.proposerIndex = proposerIndex;
+        block.message.parentRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
+        block.signature = Uint8Array.from(randomBytes(block.signature.length));
+        return {block, blockRoot: ssz.pq.BeaconBlock.hashTreeRoot(block.message)};
+      }
+
+      it("should verify a pq block's proposer signature as leanXMSS at the proposer leaf", async () => {
+        const {block, blockRoot} = generatePqBlock();
+        const chain = getPqChain(true);
+        const verifyBlsSignatureSets = vi.spyOn(chain.bls, "verifySignatureSets");
+        network = {
+          sendBeaconBlocksByRoot: vi.fn(() => [block]),
+        } as unknown as INetwork;
+
+        const response = await fetchAndValidateBlock({config: pqChainConfig, chain, network, peerIdStr, blockRoot});
+
+        expect(response).toBe(block);
+        expect(chain.pq.verifySignatureSets).toHaveBeenCalledExactlyOnceWith([
+          {
+            pubkey: getXmssPubkey(proposerIndex),
+            leafIndex: computeXmssLeafIndex(slot, LEAF_OFFSET_BEACON_PROPOSER),
+            signingRoot: getBlockProposerSignatureSet(pqConfig, block).signingRoot,
+            signature: block.signature,
+          },
+        ]);
+        expect(verifyBlsSignatureSets).not.toHaveBeenCalled();
+        expect(chain.seenBlockInputCache.markVerifiedProposerSignature).not.toHaveBeenCalled();
+      });
+
+      it("should throw error when a pq block has an invalid leanXMSS proposer signature", async () => {
+        const {block, blockRoot} = generatePqBlock();
+        const chain = getPqChain(false);
+        network = {
+          sendBeaconBlocksByRoot: vi.fn(() => [block]),
+        } as unknown as INetwork;
+
+        await expect(
+          fetchAndValidateBlock({config: pqChainConfig, chain, network, peerIdStr, blockRoot})
+        ).rejects.toMatchObject({
+          type: {code: DownloadByRootErrorCode.PROPOSAL_SIGNATURE_INVALID},
+        });
+        expect(chain.seenBlockInputCache.markVerifiedProposerSignature).not.toHaveBeenCalled();
+      });
     });
 
     it("should throw error when no block is returned from network", async () => {
