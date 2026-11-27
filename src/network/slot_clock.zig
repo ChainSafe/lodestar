@@ -11,23 +11,13 @@ pub const SlotClock = struct {
     pub fn init(chain: *const ChainConfig, genesis_time: u64) !SlotClock {
         const maximum = std.math.maxInt(i64);
         if (genesis_time > maximum / 1000) return error.InvalidSlotClock;
-        for ([_]u64{ chain.SLOT_DURATION_MS, chain.SLOT_DURATION_MS_HEZE }) |duration| {
-            if (duration == 0 or duration > 86_400_000) return error.InvalidSlotClock;
-        }
-        var config: clock.ClockConfig = .{
+        if (chain.SLOT_DURATION_MS == 0 or chain.SLOT_DURATION_MS > 86_400_000) return error.InvalidSlotClock;
+        const config: clock.ClockConfig = .{
             .genesis_time_sec = genesis_time,
             .slot_duration_ms = chain.SLOT_DURATION_MS,
             .slots_per_epoch = p.SLOTS_PER_EPOCH,
             .maximum_gossip_clock_disparity_ms = chain.MAXIMUM_GOSSIP_CLOCK_DISPARITY,
         };
-        if (chain.HEZE_FORK_EPOCH == 0) {
-            config.slot_duration_ms = chain.SLOT_DURATION_MS_HEZE;
-        } else if (chain.HEZE_FORK_EPOCH != std.math.maxInt(u64)) {
-            const slot = std.math.mul(u64, chain.HEZE_FORK_EPOCH, p.SLOTS_PER_EPOCH) catch return error.InvalidSlotClock;
-            const offset = std.math.mul(u64, slot, chain.SLOT_DURATION_MS) catch return error.InvalidSlotClock;
-            if (offset > maximum - genesis_time * 1000) return error.InvalidSlotClock;
-            config.duration_transitions.push(.{ .from_slot = slot, .new_duration_ms = chain.SLOT_DURATION_MS_HEZE });
-        }
         try config.validate();
         return .{ .config = config };
     }
