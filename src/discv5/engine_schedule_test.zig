@@ -92,8 +92,11 @@ test "bounded dropped duplicated and delayed packets deliver one terminal outcom
                 var next: Datagram = .{ .sender = 0 };
                 const emitted = try network.deliver(&current, &next, stage + 2);
                 if (duplicate) {
-                    var ignored: Datagram = .{ .sender = 0 };
-                    try std.testing.expect(!try network.deliver(&current, &ignored, stage + 2));
+                    // Only the cold request is answered again, with the challenge already sent.
+                    var repeated: Datagram = .{ .sender = 0 };
+                    const repeated_emitted = try network.deliver(&current, &repeated, stage + 2);
+                    try std.testing.expectEqual(stage == 0, repeated_emitted);
+                    if (repeated_emitted) try std.testing.expectEqualSlices(u8, next.bytes[0..next.length], repeated.bytes[0..repeated.length]);
                 }
                 if (!emitted) break;
                 current = next;
