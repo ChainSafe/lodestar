@@ -90,6 +90,10 @@ export const defaultSkipOpts: SkipOpts = {
     // Legacy blob sidecars are not tracked for these forks, so the runner does not load the blobs and the
     // block imports successfully. See https://github.com/ChainSafe/lodestar/issues/9956
     /^(deneb|electra)\/fork_choice\/on_block\/pyspec_tests\/invalid_(incorrect_proof|data_unavailable|wrong_blobs_length|wrong_proofs_length)$/,
+    // v1.7.0-beta.5 compliance vector expects no proposer boost at step 119, but pyspec boosts the block there too:
+    // the consensus-specs reference runner (tests/generators/compliance_runners/fork_choice/runner/test_run.py)
+    // fails this case at the same proposer_boost_root check
+    /^gloas\/fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_5_196133628_1$/,
   ],
   skippedRunners: [],
   // Gossip handlers not implemented in the spec runner.
