@@ -39,7 +39,7 @@ const Pair = struct {
             const received = self.nodes[recipient].receive(cold.bytes[0..sealed.packet_length], self.peer(sender).address, 1, &self.scratch);
             try std.testing.expect(received == .unauthenticated);
             var challenge: Datagram = .{};
-            challenge.length = (try self.nodes[recipient].challenge(&challenge.bytes, self.peer(sender), &received.unauthenticated.request_nonce, null, &support.challengeEntropy(@intCast(0x20 + sender)), 1)).?;
+            challenge.length = try self.nodes[recipient].challenge(&challenge.bytes, self.peer(sender), &received.unauthenticated.request_nonce, null, &support.challengeEntropy(@intCast(0x20 + sender)), 1);
             const who = self.nodes[sender].receive(challenge.slice(), self.peer(recipient).address, 1, &self.scratch);
             try std.testing.expect(who == .whoareyou);
             self.challenges[sender] = who.whoareyou;

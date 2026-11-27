@@ -173,12 +173,12 @@ test "challenge admission shares source credit across ports and node identities"
     for (0..admission.source_quota.burst) |i| {
         peer.node_id[0] = @intCast(i);
         peer.address.ip4.port = @intCast(9_000 + i);
-        try std.testing.expect((try pair.node_b.challenge(&pair.b_to_a, peer, &nonce, null, &entropy, 0)) != null);
+        _ = try pair.node_b.challenge(&pair.b_to_a, peer, &nonce, null, &entropy, 0);
     }
     peer.node_id[0] += 1;
     peer.address.ip4.port += 1;
     try std.testing.expectError(error.AdmissionLimited, pair.node_b.challenge(&pair.b_to_a, peer, &nonce, null, &entropy, 249));
-    try std.testing.expect((try pair.node_b.challenge(&pair.b_to_a, peer, &nonce, null, &entropy, 250)) != null);
+    _ = try pair.node_b.challenge(&pair.b_to_a, peer, &nonce, null, &entropy, 250);
     try std.testing.expectEqual(@as(usize, channelConfig().challenge_capacity), pair.node_b.sessions.challengeCount());
 }
 
@@ -242,7 +242,7 @@ test "established packets work while both discovery admission stages are exhaust
     try std.testing.expectEqualSlices(u8, "still connected", received.authenticated.plaintext);
 }
 
-test "a pending challenge is not reissued for the same peer" {
+test "a pending challenge is resent unchanged without admission credit" {
     var pair: Pair = undefined;
     try pair.init();
     defer pair.deinit();
@@ -256,23 +256,31 @@ test "a pending challenge is not reissued for the same peer" {
         &pair.scratch,
     );
     const unauthenticated = inbound.unauthenticated;
-    const challenge_entropy = challengeEntropy(0x20);
-    try std.testing.expect((try pair.node_b.challenge(
+    const first_length = try pair.node_b.challenge(
         &pair.b_to_a,
         unauthenticated.peer,
         &unauthenticated.request_nonce,
         null,
-        &challenge_entropy,
+        &challengeEntropy(0x20),
         1,
-    )) != null);
-    try std.testing.expect((try pair.node_b.challenge(
+    );
+    var first: [constants.whoareyou_packet_size]u8 = undefined;
+    @memcpy(&first, pair.b_to_a[0..first_length]);
+    const challenge_stage = @intFromEnum(admission.Stage.challenge);
+    const charged_until_ms = pair.node_b.admission.global[challenge_stage].charged_until_ms;
+
+    const other_nonce = [_]u8{0x99} ** constants.nonce_size;
+    @memset(&pair.b_to_a, 0);
+    const resent_length = try pair.node_b.challenge(
         &pair.b_to_a,
         unauthenticated.peer,
-        &unauthenticated.request_nonce,
+        &other_nonce,
         null,
-        &challenge_entropy,
+        &challengeEntropy(0x30),
         2,
-    )) == null);
+    );
+    try std.testing.expectEqualSlices(u8, &first, pair.b_to_a[0..resent_length]);
+    try std.testing.expectEqual(charged_until_ms, pair.node_b.admission.global[challenge_stage].charged_until_ms);
     try std.testing.expectEqual(@as(usize, 1), pair.node_b.sessions.challengeCount());
 }
 
@@ -431,14 +439,14 @@ const Pair = struct {
         try std.testing.expect(inbound == .unauthenticated);
         try std.testing.expectEqual(sealed.nonce, inbound.unauthenticated.request_nonce);
         const challenge_entropy = challengeEntropy(0x20);
-        const length = (try self.node_b.challenge(
+        const length = try self.node_b.challenge(
             &self.b_to_a,
             inbound.unauthenticated.peer,
             &inbound.unauthenticated.request_nonce,
             known,
             &challenge_entropy,
             now_ms,
-        )).?;
+        );
         try std.testing.expectEqual(@as(u16, constants.whoareyou_packet_size), length);
         const who = self.node_a.receive(
             self.b_to_a[0..length],
