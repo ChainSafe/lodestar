@@ -5,6 +5,7 @@ import {
   IteratorEvent,
   RequestCancelEvent,
   RequestEvent,
+  ResponsePullEvent,
 } from "../../util/asyncIterableToEvents.js";
 import {StrictEventEmitterSingleArg} from "../../util/strictEvents.js";
 import {EventDirection} from "../events.js";
@@ -14,18 +15,22 @@ export enum ReqRespBridgeEvent {
   outgoingRequest = "reqresp.outgoingRequest",
   outgoingRequestCancel = "reqresp.outgoingRequestCancel",
   outgoingResponse = "reqresp.outgoingResponse",
+  outgoingResponsePull = "reqresp.outgoingResponsePull",
   incomingRequest = "reqresp.incomingRequest",
   incomingRequestCancel = "reqresp.incomingRequestCancel",
   incomingResponse = "reqresp.incomingResponse",
+  incomingResponsePull = "reqresp.incomingResponsePull",
 }
 
 export type ReqRespBridgeEventData = {
   [ReqRespBridgeEvent.outgoingRequest]: RequestEvent<OutgoingRequestArgs>;
   [ReqRespBridgeEvent.outgoingRequestCancel]: RequestCancelEvent;
   [ReqRespBridgeEvent.outgoingResponse]: IteratorEvent<ResponseOutgoing>;
+  [ReqRespBridgeEvent.outgoingResponsePull]: ResponsePullEvent;
   [ReqRespBridgeEvent.incomingRequest]: RequestEvent<IncomingRequestArgs>;
   [ReqRespBridgeEvent.incomingRequestCancel]: RequestCancelEvent;
   [ReqRespBridgeEvent.incomingResponse]: IteratorEvent<ResponseIncoming>;
+  [ReqRespBridgeEvent.incomingResponsePull]: ResponsePullEvent;
 };
 
 type IReqRespBridgeEventBus = StrictEventEmitterSingleArg<ReqRespBridgeEventData>;
@@ -37,9 +42,12 @@ export const reqRespBridgeEventDirection: Record<ReqRespBridgeEvent, EventDirect
   [ReqRespBridgeEvent.outgoingRequest]: EventDirection.mainToWorker,
   [ReqRespBridgeEvent.outgoingRequestCancel]: EventDirection.mainToWorker,
   [ReqRespBridgeEvent.outgoingResponse]: EventDirection.mainToWorker,
+  // Credit flows from the consumer back to the producer, opposite the response it paces
+  [ReqRespBridgeEvent.outgoingResponsePull]: EventDirection.workerToMain,
   [ReqRespBridgeEvent.incomingRequest]: EventDirection.workerToMain,
   [ReqRespBridgeEvent.incomingRequestCancel]: EventDirection.workerToMain,
   [ReqRespBridgeEvent.incomingResponse]: EventDirection.workerToMain,
+  [ReqRespBridgeEvent.incomingResponsePull]: EventDirection.mainToWorker,
 };
 
 export function getReqRespBridgeReqEvents(
@@ -49,9 +57,11 @@ export function getReqRespBridgeReqEvents(
     emitRequest: (data) => events.emit(ReqRespBridgeEvent.outgoingRequest, data),
     emitRequestCancel: (data) => events.emit(ReqRespBridgeEvent.outgoingRequestCancel, data),
     emitResponse: (data) => events.emit(ReqRespBridgeEvent.incomingResponse, data),
+    emitResponsePull: (data) => events.emit(ReqRespBridgeEvent.incomingResponsePull, data),
     onRequest: (cb) => events.on(ReqRespBridgeEvent.outgoingRequest, cb),
     onRequestCancel: (cb) => events.on(ReqRespBridgeEvent.outgoingRequestCancel, cb),
     onResponse: (cb) => events.on(ReqRespBridgeEvent.incomingResponse, cb),
+    onResponsePull: (cb) => events.on(ReqRespBridgeEvent.incomingResponsePull, cb),
   };
 }
 
@@ -62,9 +72,11 @@ export function getReqRespBridgeRespEvents(
     emitRequest: (data) => events.emit(ReqRespBridgeEvent.incomingRequest, data),
     emitRequestCancel: (data) => events.emit(ReqRespBridgeEvent.incomingRequestCancel, data),
     emitResponse: (data) => events.emit(ReqRespBridgeEvent.outgoingResponse, data),
+    emitResponsePull: (data) => events.emit(ReqRespBridgeEvent.outgoingResponsePull, data),
     onRequest: (cb) => events.on(ReqRespBridgeEvent.incomingRequest, cb),
     onRequestCancel: (cb) => events.on(ReqRespBridgeEvent.incomingRequestCancel, cb),
     onResponse: (cb) => events.on(ReqRespBridgeEvent.outgoingResponse, cb),
+    onResponsePull: (cb) => events.on(ReqRespBridgeEvent.outgoingResponsePull, cb),
   };
 }
 

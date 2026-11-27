@@ -6,6 +6,7 @@ import {
   BUILDER_INDEX_SELF_BUILD,
   FAR_FUTURE_EPOCH,
   ForkName,
+  SLOTS_PER_HISTORICAL_ROOT,
   UNSET_DEPOSIT_REQUESTS_START_INDEX,
 } from "@lodestar/params";
 import {ssz} from "@lodestar/types";
@@ -163,6 +164,11 @@ describe("upgradeState", () => {
     expect(latestBid.executionRequestsRoot).toEqual(
       ssz.gloas.ExecutionRequests.hashTreeRoot(ssz.gloas.ExecutionRequests.defaultValue())
     );
+    const forkSlotIndex = fuluStateView.slot % SLOTS_PER_HISTORICAL_ROOT;
+    const availability = gloasState.executionPayloadAvailability.toBoolArray();
+    for (let i = 0; i < SLOTS_PER_HISTORICAL_ROOT; i++) {
+      expect(availability[i]).toBe(i !== forkSlotIndex);
+    }
     // Full state still merkleizes and round-trips
     expect(() => gloasState.hashTreeRoot()).not.toThrow();
     expect(() => gloasState.toValue()).not.toThrow();
