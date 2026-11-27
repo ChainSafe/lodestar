@@ -34,9 +34,7 @@ const devOwnOptions: CliCommandOptions<IDevOwnArgs> = {
     type: "array",
     coerce: (indexes: string[]): number[] =>
       // Parse ["11..13,15..17"] to ["11..13", "15..17"]
-      indexes
-        .flatMap((item) => item.split(","))
-        .flatMap(parseRange),
+      indexes.flatMap((item) => item.split(",")).flatMap(parseRange),
     group: "dev",
   },
 

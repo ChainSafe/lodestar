@@ -58,7 +58,7 @@ export class MockBlockInput implements IBlockInput {
     this.blockPeerIdStr = peerIdStr;
   }
   hasBlock(): boolean {
-    return !this.block;
+    return !!this.block;
   }
   getBlock(): SignedBeaconBlock {
     // biome-ignore lint/style/noNonNullAssertion: test fixture

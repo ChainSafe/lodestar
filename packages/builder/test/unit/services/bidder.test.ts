@@ -1,13 +1,14 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
+import {SecretKey} from "@lodestar/native/blst";
 import {ForkName} from "@lodestar/params";
 import {BuilderStatus, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {Bidder, PayloadAttributesEvent} from "../../../src/services/bidder.js";
 import {BidLedger} from "../../../src/services/bidLedger.js";
 import {BuilderSigner} from "../../../src/services/builderSigner.js";
+import {HeadTracker} from "../../../src/services/headTracker.js";
 import {PayloadStore} from "../../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "../utils/apiStub.js";
@@ -32,6 +33,7 @@ describe("Bidder", () => {
   let payloadSource: ReturnType<typeof getPayloadSourceStub>;
   let payloadStore: PayloadStore;
   let proposerPreferencesTracker: ProposerPreferencesTracker;
+  let headTracker: HeadTracker;
   let controller: AbortController;
 
   beforeEach(() => {
@@ -50,6 +52,7 @@ describe("Bidder", () => {
     });
     payloadStore = new PayloadStore();
     proposerPreferencesTracker = new ProposerPreferencesTracker();
+    headTracker = new HeadTracker();
     controller = new AbortController();
   });
 
@@ -74,6 +77,7 @@ describe("Bidder", () => {
         publicKey: secretKey.toPublicKey(),
       }),
       proposerPreferencesTracker,
+      headTracker,
       payloadStore,
       payloadSource,
       signal: controller.signal,
@@ -148,6 +152,28 @@ describe("Bidder", () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 
+  it("takes the dependent root from the tracked parent head instead of fetching proposer duties", async () => {
+    addProposerPreferences();
+    headTracker.onHead({
+      slot: 0,
+      block: toRootHex(parentBlockRoot),
+      state: toRootHex(Buffer.alloc(32, 1)),
+      payloadStatus: "full",
+      epochTransition: false,
+      currentEpochDependentRoot: dependentRoot,
+      nextEpochDependentRoot: toRootHex(Buffer.alloc(32, 8)),
+      executionOptimistic: false,
+    });
+    const {bidder} = createBidder();
+
+    const bidding = bidder.onPayloadAttributes(payloadAttributesEvent());
+    await vi.advanceTimersByTimeAsync(msToDeadline);
+    await bidding;
+
+    expect(api.validator.getProposerDutiesV2).not.toHaveBeenCalled();
+    expect(api.beacon.publishExecutionPayloadBid).toHaveBeenCalledOnce();
+  });
+
   it("bids once for repeated payload attributes of the same parent", async () => {
     addProposerPreferences();
     const {bidder} = createBidder();
@@ -187,6 +213,28 @@ describe("Bidder", () => {
     await bidding;
 
     expect(payloadSource.getPayload).toHaveBeenCalledOnce();
+    expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
+    expect(ledger.hasSubmitted(slot, toRootHex(parentBlockHash), toRootHex(parentBlockRoot))).toBe(false);
+  });
+
+  it("does not bid while the beacon node head is optimistic", async () => {
+    addProposerPreferences();
+    headTracker.onHead({
+      slot: 0,
+      block: toRootHex(parentBlockRoot),
+      state: toRootHex(Buffer.alloc(32, 1)),
+      payloadStatus: "full",
+      epochTransition: false,
+      currentEpochDependentRoot: dependentRoot,
+      nextEpochDependentRoot: toRootHex(Buffer.alloc(32, 8)),
+      executionOptimistic: true,
+    });
+    const {bidder, ledger} = createBidder();
+
+    const bidding = bidder.onPayloadAttributes(payloadAttributesEvent());
+    await vi.advanceTimersByTimeAsync(msToDeadline);
+    await bidding;
+
     expect(api.beacon.publishExecutionPayloadBid).not.toHaveBeenCalled();
     expect(ledger.hasSubmitted(slot, toRootHex(parentBlockHash), toRootHex(parentBlockRoot))).toBe(false);
   });

@@ -49,6 +49,7 @@ describe("data serialization through worker boundary", () => {
       id: 0,
       item: {data: bytes, boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH}},
     },
+    [ReqRespBridgeEvent.outgoingResponsePull]: {id: 0, count: 1},
     [ReqRespBridgeEvent.incomingRequest]: {
       id: 0,
       callArgs: {method, req: {data: bytes, version: 1}, peerId, peerClient: "Unknown"},
@@ -59,6 +60,7 @@ describe("data serialization through worker boundary", () => {
       id: 0,
       item: {data: bytes, fork: ForkName.altair, protocolVersion: 1},
     },
+    [ReqRespBridgeEvent.incomingResponsePull]: {id: 0, count: 1},
   };
 
   // Filter out events that are not meant to cross the worker boundary
@@ -134,6 +136,7 @@ describe("data serialization through worker boundary", () => {
     getConnectedPeers: [],
     getConnectedPeerCount: [],
     updateStatus: [statusZero],
+    addLocalProposalSlots: [[0]],
     publishGossip: ["test-topic", bytes, {allowPublishToZeroTopicPeers: true, ignoreDuplicatePublishError: true}],
     close: [],
     scrapeMetrics: [],
@@ -205,6 +208,7 @@ describe("data serialization through worker boundary", () => {
     getConnectedPeers: [peerId],
     getConnectedPeerCount: 100,
     updateStatus: null,
+    addLocalProposalSlots: null,
     publishGossip: 1,
     close: null,
     scrapeMetrics: "test-metrics",

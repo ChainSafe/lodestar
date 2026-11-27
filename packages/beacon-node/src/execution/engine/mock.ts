@@ -10,14 +10,16 @@ import {
   ForkPostCapella,
   ForkSeq,
   SLOTS_PER_EPOCH,
+  isForkPostElectra,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {ExecutionPayload, RootHex, bellatrix, deneb, gloas, ssz} from "@lodestar/types";
+import {ExecutionPayload, RootHex, bellatrix, deneb, gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {INTEROP_BLOCK_HASH} from "../../node/utils/interop/state.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {kzg} from "../../util/kzg.js";
+import {computeExecutionBlockHash} from "./blockHash.js";
 import {ClientCode, ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
 import {
   BlobsBundleRpc,
@@ -152,7 +154,6 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadV6: this.getPayloadV5.bind(this),
       engine_getPayloadBodiesByHashV2: this.getPayloadBodiesByHashV2.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
-      engine_getBlobsV1: this.getBlobs.bind(this),
       engine_getBlobsV2: this.getBlobsV2.bind(this),
       engine_getInclusionListV1: this.getInclusionList.bind(this),
     };
@@ -352,7 +353,6 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       executionPayload.gasLimit = INTEROP_GAS_LIMIT;
       executionPayload.gasUsed = Math.floor(0.5 * INTEROP_GAS_LIMIT);
       executionPayload.timestamp = payloadAttributes.timestamp;
-      executionPayload.blockHash = crypto.randomBytes(32);
       const transactions: Uint8Array[] = [];
 
       // Between 0 and 4 transactions for all forks
@@ -402,6 +402,15 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
         (executionPayload as gloas.ExecutionPayload).slotNumber = payloadAttributes.slotNumber;
       }
 
+      const executionRequests = isForkPostElectra(fork) ? sszTypesFor(fork).ExecutionRequests.defaultValue() : null;
+
+      executionPayload.blockHash = computeExecutionBlockHash(
+        fork,
+        executionPayload,
+        payloadAttributes.parentBeaconBlockRoot ?? null,
+        executionRequests
+      );
+
       this.preparingPayloads.set(payloadId, {
         executionPayload: serializeExecutionPayload(fork, executionPayload),
         blobsBundle: serializeBlobsBundle({
@@ -409,12 +418,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
           blobs,
           proofs,
         }),
-        executionRequests: serializeExecutionRequests(
-          fork,
-          ForkSeq[fork] >= ForkSeq.gloas
-            ? ssz.gloas.ExecutionRequests.defaultValue()
-            : ssz.electra.ExecutionRequests.defaultValue()
-        ),
+        executionRequests: executionRequests !== null ? serializeExecutionRequests(fork, executionRequests) : [],
       });
 
       // IF the payload is deemed VALID and the build process has begun
@@ -494,12 +498,6 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     _clientVersion: EngineApiRpcParamTypes["engine_getClientVersionV1"][0]
   ): EngineApiRpcReturnTypes["engine_getClientVersionV1"] {
     return [{code: ClientCode.XX, name: "mock", version: "", commit: ""}];
-  }
-
-  private getBlobs(
-    versionedHashes: EngineApiRpcParamTypes["engine_getBlobsV1"][0]
-  ): EngineApiRpcReturnTypes["engine_getBlobsV1"] {
-    return versionedHashes.map((_vh) => null);
   }
 
   private getBlobsV2(

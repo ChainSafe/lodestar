@@ -24,6 +24,7 @@ import {
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
   type IBeaconStateViewBellatrix,
+  type IBeaconStateViewGloas,
   computeEpochAtSlot,
   computeTimeAtSlot,
   getExpectedGasLimit,
@@ -72,12 +73,13 @@ import {
 } from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
-import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
+import {IExecutionBuilder, PayloadAttributes, PayloadId} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import type {BeaconChain} from "../chain.js";
+import {ForkChoiceExecutionEngine} from "../forkChoiceExecutionEngine.js";
 import {CommonBlockBody} from "../interface.js";
 import {InclusionListStore, ProposerPreferencesPool} from "../opPools/index.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
@@ -110,6 +112,12 @@ export type BlockAttributes = {
   graffiti: Bytes32;
   slot: Slot;
   parentBlock: ProtoBlock;
+  // the state of parentBlock processed to slot
+  parentState: IBeaconStateView;
+  // parentStateWithPayload is the same as parentState for pre-gloas or if building on EMPTY
+  parentStateWithPayload: IBeaconStateView;
+  // Parent's execution requests, undefined pre-gloas.
+  parentExecutionRequests?: gloas.ExecutionRequests;
   feeRecipient?: string;
   /** Verify that a locally produced execution payload uses `feeRecipient`. */
   strictFeeRecipientCheck?: boolean;
@@ -174,32 +182,9 @@ export type ProduceResult =
   | ProduceFullPhase0
   | ProduceBlinded;
 
-/**
- * Drop voluntary exits that `parent_execution_requests` have invalidated (e.g. a withdrawal
- * request initiating an exit on the same validator). Op pool selected against the unapplied
- * state, so re-validate against the post-apply state to avoid producing an invalid block.
- *
- * `getStateAfterParentPayload` is a thunk so the post-apply state is only materialized when
- * actually needed (i.e. when extending the parent payload and there are exits to filter).
- */
-function maybeFilterInvalidatedVoluntaryExits(
-  commonBlockBody: CommonBlockBody,
-  isExtendingPayload: boolean,
-  getStateAfterParentPayload: () => IBeaconStateViewBellatrix
-): CommonBlockBody["voluntaryExits"] {
-  if (!isExtendingPayload || commonBlockBody.voluntaryExits.length === 0) {
-    return commonBlockBody.voluntaryExits;
-  }
-  const state = getStateAfterParentPayload();
-  return commonBlockBody.voluntaryExits.filter((signedVoluntaryExit) =>
-    state.isValidVoluntaryExit(signedVoluntaryExit, false)
-  );
-}
-
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
-  currentState: IBeaconStateView,
   blockAttr: BlockAttributes & {
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
@@ -220,6 +205,9 @@ export async function produceBlockBody<T extends BlockType>(
     proposerPubKey,
     commonBlockBodyPromise,
     builderBid,
+    parentState,
+    parentStateWithPayload,
+    parentExecutionRequests,
   } = blockAttr;
   let executionPayloadValue: Wei;
   let blockBody: AssembledBodyType<T>;
@@ -241,17 +229,17 @@ export async function produceBlockBody<T extends BlockType>(
   this.logger.verbose("Producing beacon block body", logMeta);
 
   if (builderBid !== undefined) {
-    if (!isStatePostGloas(currentState)) {
-      throw new Error("Expected Gloas state for builder bid block production");
+    if (!isStatePostGloas(parentState)) {
+      throw new Error(`Expected Gloas state for builder bid block production slot=${blockSlot}`);
+    }
+    if (parentExecutionRequests === undefined) {
+      throw new Error(`Expected parentExecutionRequests for gloas block production slot=${blockSlot}`);
     }
 
     const isExtendingPayload = byteArrayEquals(
       builderBid.message.parentBlockHash,
-      currentState.latestExecutionPayloadBid.blockHash
+      parentState.latestExecutionPayloadBid.blockHash
     );
-    const parentExecutionRequests = isExtendingPayload
-      ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
-      : ssz.gloas.ExecutionRequests.defaultValue();
     executionPayloadValue = (BigInt(builderBid.message.value) + builderBid.message.executionPayment) * GWEI_TO_WEI;
 
     const commonBlockBody = await commonBlockBodyPromise;
@@ -261,10 +249,9 @@ export async function produceBlockBody<T extends BlockType>(
       parentBlock.blockRoot,
       blockSlot - 1
     );
+    // parentExecutionRequests fetched once by the entrypoint (isExtendingPayload aligns with the
+    // build-on-full decision used to select this bid; default value when building on an empty parent)
     gloasBody.parentExecutionRequests = parentExecutionRequests;
-    gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(commonBlockBody, isExtendingPayload, () =>
-      currentState.withParentPayloadApplied(parentExecutionRequests)
-    );
     blockBody = gloasBody as AssembledBodyType<T>;
 
     this.logger.verbose("Produced block with builder bid", {
@@ -277,8 +264,11 @@ export async function produceBlockBody<T extends BlockType>(
       isExtendingPayload,
     });
   } else if (isForkPostGloas(fork)) {
-    if (!isStatePostGloas(currentState)) {
-      throw new Error("Expected Gloas state for Gloas block production");
+    if (!isStatePostGloas(parentState)) {
+      throw new Error(`Expected Gloas state for Gloas block production slot=${blockSlot}`);
+    }
+    if (parentExecutionRequests === undefined) {
+      throw new Error(`Expected parentExecutionRequests for gloas block production slot=${blockSlot}`);
     }
 
     // TODO GLOAS: support non self-building here, the block type differentiation between
@@ -298,20 +288,16 @@ export async function produceBlockBody<T extends BlockType>(
 
     // Get execution payload from EL
     let parentBlockHash: Bytes32;
-    let parentExecutionRequests: gloas.ExecutionRequests;
-    // Apply parent payload once here as it's reused by EL prep and voluntary exit filtering below
-    let stateAfterParentPayload: IBeaconStateViewBellatrix = currentState;
-    // Spec: should_build_on_full(store, head, slot). `parentBlock` is the proposer's head
-    // (set by chain.getProposerHead(slot)). Returns false when the PTC majority signalled
-    // the blob data is not available or the payload was not timely, forcing a build on EMPTY (reorg).
-    const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock, blockSlot);
+    const stateAfterParentPayload = parentStateWithPayload as IBeaconStateViewGloas;
+    // Spec: should_build_on_full(store, head, slot), decided by the caller when applying the parent payload
+    const isBuildingOnFull = byteArrayEquals(
+      stateAfterParentPayload.latestBlockHash,
+      parentState.latestExecutionPayloadBid.blockHash
+    );
     if (isBuildingOnFull) {
-      parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
-      parentExecutionRequests = await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot);
-      stateAfterParentPayload = currentState.withParentPayloadApplied(parentExecutionRequests);
+      parentBlockHash = parentState.latestExecutionPayloadBid.blockHash;
     } else {
-      parentBlockHash = currentState.latestExecutionPayloadBid.parentBlockHash;
-      parentExecutionRequests = ssz.gloas.ExecutionRequests.defaultValue();
+      parentBlockHash = parentState.latestExecutionPayloadBid.parentBlockHash;
     }
     const prepareRes = await prepareExecutionPayload(
       this,
@@ -325,7 +311,7 @@ export async function produceBlockBody<T extends BlockType>(
       feeRecipient
     );
 
-    const {prepType, payloadId} = prepareRes;
+    const {prepType, payloadId, preparedAtMs} = prepareRes;
     Object.assign(logMeta, {executionPayloadPrepType: prepType});
 
     this.logger.verbose("Prepared execution payload from engine", {
@@ -338,9 +324,7 @@ export async function produceBlockBody<T extends BlockType>(
       isBuildingOnFull,
     });
 
-    if (prepType !== PayloadPreparationType.Cached) {
-      await sleep(PAYLOAD_GENERATION_TIME_MS);
-    }
+    await waitForPayloadGeneration(preparedAtMs);
 
     this.logger.verbose("Fetching execution payload from engine", {slot: blockSlot, payloadId});
     const payloadRes = await this.executionEngine.getPayload(fork, payloadId);
@@ -378,7 +362,7 @@ export async function produceBlockBody<T extends BlockType>(
       parentBlockHash,
       parentBlockRoot,
       blockHash: executionPayload.blockHash,
-      prevRandao: currentState.getRandaoMix(currentState.epoch),
+      prevRandao: parentState.getRandaoMix(parentState.epoch),
       feeRecipient: executionPayload.feeRecipient,
       gasLimit: BigInt(executionPayload.gasLimit),
       builderIndex: BUILDER_INDEX_SELF_BUILD,
@@ -415,12 +399,8 @@ export async function produceBlockBody<T extends BlockType>(
       parentBlock.blockRoot,
       blockSlot - 1
     );
+    // parentExecutionRequests fetched once by the entrypoint (default value when building on an empty parent)
     gloasBody.parentExecutionRequests = parentExecutionRequests;
-    gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(
-      commonBlockBody,
-      isBuildingOnFull,
-      () => stateAfterParentPayload
-    );
     blockBody = gloasBody as AssembledBodyType<T>;
 
     // Store execution payload data required to construct execution payload envelope later
@@ -450,7 +430,7 @@ export async function produceBlockBody<T extends BlockType>(
       shouldOverrideBuilder,
     });
   } else if (isForkPostBellatrix(fork)) {
-    if (!isStatePostBellatrix(currentState)) {
+    if (!isStatePostBellatrix(parentState)) {
       throw new Error("Expected Bellatrix state for execution block production");
     }
 
@@ -479,10 +459,10 @@ export async function produceBlockBody<T extends BlockType>(
             this.logger,
             fork,
             parentBlockRoot,
-            currentState.latestExecutionPayloadHeader.blockHash,
+            parentState.latestExecutionPayloadHeader.blockHash,
             safeBlockHash,
             finalizedBlockHash ?? ZERO_HASH_HEX,
-            currentState,
+            parentState,
             executionBuilder.issueLocalFcUWithFeeRecipient
           );
         }
@@ -494,7 +474,7 @@ export async function produceBlockBody<T extends BlockType>(
           slot: blockSlot,
           proposerPubKey: toHex(proposerPubKey),
         });
-        const headerRes = await prepareExecutionPayloadHeader(this, fork, currentState, proposerPubKey);
+        const headerRes = await prepareExecutionPayloadHeader(this, fork, parentState, proposerPubKey);
 
         endExecutionPayloadHeader?.({
           step: BlockProductionStep.executionPayload,
@@ -529,7 +509,7 @@ export async function produceBlockBody<T extends BlockType>(
         });
       } else {
         const headerGasLimit = builderRes.header.gasLimit;
-        const parentGasLimit = currentState.latestExecutionPayloadHeader.gasLimit;
+        const parentGasLimit = parentState.latestExecutionPayloadHeader.gasLimit;
         const expectedGasLimit = getExpectedGasLimit(parentGasLimit, targetGasLimit);
 
         const lowerBound = Math.min(parentGasLimit, expectedGasLimit);
@@ -583,24 +563,17 @@ export async function produceBlockBody<T extends BlockType>(
           this.logger,
           fork,
           parentBlockRoot,
-          currentState.latestExecutionPayloadHeader.blockHash,
+          parentState.latestExecutionPayloadHeader.blockHash,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
-          currentState,
+          parentState,
           feeRecipient
         );
 
-        const {prepType, payloadId} = prepareRes;
+        const {prepType, payloadId, preparedAtMs} = prepareRes;
         Object.assign(logMeta, {executionPayloadPrepType: prepType});
 
-        if (prepType !== PayloadPreparationType.Cached) {
-          // Wait for 500ms to allow EL to add some txs to the payload
-          // the pitfalls of this have been put forward here, but 500ms delay for block proposal
-          // seems marginal even with unhealthy network
-          //
-          // See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
-          await sleep(PAYLOAD_GENERATION_TIME_MS);
-        }
+        await waitForPayloadGeneration(preparedAtMs);
 
         this.logger.verbose("Fetching execution payload from engine", {slot: blockSlot, payloadId});
         const payloadRes = await this.executionEngine.getPayload(fork, payloadId);
@@ -742,7 +715,7 @@ export async function produceBlockBody<T extends BlockType>(
  */
 export async function prepareExecutionPayload(
   chain: {
-    executionEngine: IExecutionEngine;
+    executionEngine: ForkChoiceExecutionEngine;
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
@@ -762,7 +735,7 @@ export async function prepareExecutionPayload(
   suggestedFeeRecipient: string,
   /** Attributes already computed for the same state and fee recipient, e.g. for the SSE event */
   payloadAttributes?: PayloadAttributes
-): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
+): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId; preparedAtMs: number}> {
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = state.getRandaoMix(state.epoch);
 
@@ -791,10 +764,11 @@ export async function prepareExecutionPayload(
   // the EL returns Syncing on this request to prepare a payload
   // TODO: Handle only this case, DO NOT put a generic try / catch that discards all errors
   let payloadId: PayloadId | null;
+  let preparedAtMs: number;
   let prepType: PayloadPreparationType;
 
   if (payloadIdCached) {
-    payloadId = payloadIdCached;
+    ({payloadId, preparedAtMs} = payloadIdCached);
     prepType = PayloadPreparationType.Cached;
   } else {
     // If there was a payload assigned to this timestamp, it would imply that there some sort
@@ -807,6 +781,7 @@ export async function prepareExecutionPayload(
 
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
+      toRootHex(parentBlockRoot),
       toRootHex(parentBlockHash),
       safeBlockHash,
       finalizedBlockHash,
@@ -819,6 +794,7 @@ export async function prepareExecutionPayload(
           feeRecipient: suggestedFeeRecipient,
         })
     );
+    preparedAtMs = performance.now();
     logger.verbose("Prepared payload id from execution engine", {payloadId});
   }
 
@@ -831,7 +807,23 @@ export async function prepareExecutionPayload(
   // We are only returning payloadId here because prepareExecutionPayload is also called from
   // prepareNextSlot, which is an advance call to execution engine to start building payload
   // Actual payload isn't produced till getPayload is called.
-  return {payloadId, prepType};
+  return {payloadId, prepType, preparedAtMs};
+}
+
+/**
+ * Give the engine PAYLOAD_GENERATION_TIME_MS since the payload was requested before fetching it. A payload prepared
+ * in advance usually had seconds, one prepared or re-prepared right before the slot gets the same time as a fresh one.
+ *
+ * The pitfalls of this delay have been put forward here, but 500ms delay for block proposal
+ * seems marginal even with unhealthy network
+ *
+ * See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
+ */
+async function waitForPayloadGeneration(preparedAtMs: number): Promise<void> {
+  const remainingMs = PAYLOAD_GENERATION_TIME_MS - (performance.now() - preparedAtMs);
+  if (remainingMs > 0) {
+    await sleep(remainingMs);
+  }
 }
 
 async function prepareExecutionPayloadHeader(
@@ -1100,8 +1092,7 @@ export function getPooledProposerPreferences(
 export async function produceCommonBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
-  currentState: IBeaconStateView,
-  {randaoReveal, graffiti, slot, parentBlock}: BlockAttributes
+  {randaoReveal, graffiti, slot, parentBlock, parentStateWithPayload}: BlockAttributes
 ): Promise<CommonBlockBody> {
   const stepsMetrics =
     blockType === BlockType.Full
@@ -1122,14 +1113,16 @@ export async function produceCommonBlockBody<T extends BlockType>(
   //   }
   // }
   const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] =
-    this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
+    this.opPool.getSlashingsAndExits(parentStateWithPayload, blockType, this.metrics);
 
   const endAttestations = stepsMetrics?.startTimer();
+  // TODO: extract to a separate BeaconChain method to coordinate the 2 op-pools
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
     fork,
     this.forkChoice,
     this.shufflingCache,
-    currentState
+    parentStateWithPayload,
+    this.singleAttestationPool
   );
   endAttestations?.({
     step: BlockProductionStep.attestations,
@@ -1159,7 +1152,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
   };
 
   if (!isForkPostHeze(fork)) {
-    commonBlockBody.eth1Data = currentState.eth1Data;
+    commonBlockBody.eth1Data = parentStateWithPayload.eth1Data;
     commonBlockBody.deposits = [];
   }
 

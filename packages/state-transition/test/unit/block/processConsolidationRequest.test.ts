@@ -1,10 +1,11 @@
 import {describe, expect, it} from "vitest";
 import {digest} from "@chainsafe/as-sha256";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
+import {SecretKey} from "@lodestar/native/blst";
 import {
   BLS_WITHDRAWAL_PREFIX,
   COMPOUNDING_WITHDRAWAL_PREFIX,
   FAR_FUTURE_EPOCH,
+  MIN_ACTIVATION_BALANCE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {ssz} from "@lodestar/types";
@@ -19,10 +20,12 @@ describe("processConsolidationRequest", () => {
     const currentEpoch = electraForkEpoch + 10;
     const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
 
+    // Proposer selection samples by effective balance, with zero balances it loops ~2^16 times per slot
     const validators = generateValidators(vc, {
       activation: electraForkEpoch - 10000,
       withdrawableEpoch: FAR_FUTURE_EPOCH,
       exit: FAR_FUTURE_EPOCH,
+      balance: MIN_ACTIVATION_BALANCE,
     });
 
     for (let i = 0; i < vc; i++) {

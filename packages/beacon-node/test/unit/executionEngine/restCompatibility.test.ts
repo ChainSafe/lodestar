@@ -217,18 +217,18 @@ describe("REST engine compatibility", () => {
     const engine = createEngine();
     await engine.notifyForkchoiceUpdate(ForkName.capella, hash, hash, hash);
     await engine.notifyForkchoiceUpdate(ForkName.capella, hash, hash, hash);
-    await engine.getBlobs(ForkName.deneb, []);
-    await engine.getBlobs(ForkName.deneb, []);
+    await engine.getBlobs(ForkName.fulu, []);
+    await engine.getBlobs(ForkName.fulu, []);
     expect(requests).toEqual([
       "capabilities",
       "engine_forkchoiceUpdatedV2",
       "engine_forkchoiceUpdatedV2",
-      "engine_getBlobsV1",
-      "engine_getBlobsV1",
+      "engine_getBlobsV2",
+      "engine_getBlobsV2",
     ]);
     expect(logger.debug.mock.calls.filter(([message]) => message.startsWith("Using JSON-RPC for"))).toEqual([
       ["Using JSON-RPC for a fork not advertised by the REST engine API", {fork: "capella", executionFork: "shanghai"}],
-      ["Using JSON-RPC for a blob revision not advertised by the REST engine API", {blobsRevision: "v1"}],
+      ["Using JSON-RPC for a blob revision not advertised by the REST engine API", {blobsRevision: "v2"}],
     ]);
     expectCompatibilityLogsAtDebugOnly();
   });

@@ -76,19 +76,32 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   const signatureSets = [
     // [REJECT] The contribution_and_proof.selection_proof is a valid signature of the SyncAggregatorSelectionData
     // derived from the contribution by the validator with index contribution_and_proof.aggregator_index.
-    getSyncCommitteeSelectionProofSignatureSet(chain.config, headState, contributionAndProof),
+    getSyncCommitteeSelectionProofSignatureSet(chain.config, contributionAndProof),
 
     // [REJECT] The aggregator signature, signed_contribution_and_proof.signature, is valid.
-    getContributionAndProofSignatureSet(chain.config, headState, signedContributionAndProof),
+    getContributionAndProofSignatureSet(chain.config, signedContributionAndProof),
 
     // [REJECT] The aggregate signature is valid for the message beacon_block_root and aggregate pubkey derived from
     // the participation info in aggregation_bits for the subcommittee specified by the contribution.subcommittee_index.
-    getSyncCommitteeContributionSignatureSet(chain.config, headState, contribution, syncCommitteeParticipantIndices),
+    getSyncCommitteeContributionSignatureSet(chain.config, contribution, syncCommitteeParticipantIndices),
   ];
 
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
+    });
+  }
+
+  // Re-check after the await: concurrent contributions from the same aggregator all pass the checks above
+  if (chain.seenContributionAndProof.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)) {
+    throw new SyncCommitteeError(GossipAction.IGNORE, {
+      code: SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN,
+    });
+  }
+
+  if (!skipValidationKnownParticipants && chain.seenContributionAndProof.participantsKnown(contribution)) {
+    throw new SyncCommitteeError(GossipAction.IGNORE, {
+      code: SyncCommitteeErrorCode.SYNC_COMMITTEE_PARTICIPANTS_ALREADY_KNOWN,
     });
   }
 

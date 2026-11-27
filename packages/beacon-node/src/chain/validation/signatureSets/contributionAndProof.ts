@@ -1,17 +1,15 @@
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_CONTRIBUTION_AND_PROOF} from "@lodestar/params";
-import {IBeaconStateView, ISignatureSet, SignatureSetType, computeSigningRoot} from "@lodestar/state-transition";
+import {ISignatureSet, SignatureSetType, computeSigningRoot} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
 
 export function getContributionAndProofSignatureSet(
   config: BeaconConfig,
-  state: IBeaconStateView,
   signedContributionAndProof: altair.SignedContributionAndProof
 ): ISignatureSet {
-  const domain = config.getDomain(
-    state.slot,
-    DOMAIN_CONTRIBUTION_AND_PROOF,
-    signedContributionAndProof.message.contribution.slot
+  const domain = config.getDomainAtFork(
+    config.getForkName(signedContributionAndProof.message.contribution.slot),
+    DOMAIN_CONTRIBUTION_AND_PROOF
   );
   const signingData = signedContributionAndProof.message;
   return {

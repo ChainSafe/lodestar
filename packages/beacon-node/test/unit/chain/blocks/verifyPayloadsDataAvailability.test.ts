@@ -3,12 +3,13 @@ import {createChainForkConfig} from "@lodestar/config";
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {ColumnIndex, SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
-import {TimeoutError, toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
+import {PayloadError, PayloadErrorCode} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {verifyPayloadsDataAvailability} from "../../../../src/chain/blocks/verifyPayloadsDataAvailability.js";
 
-const config = createChainForkConfig({SLOT_DURATION_MS: 12_000, SLOT_DURATION_MS_HEZE: 10_000});
+const config = createChainForkConfig({SLOT_DURATION_MS: 12_000});
 
 function buildPayloadEnvelopeInput({
   blobCount,
@@ -66,31 +67,37 @@ describe("verifyPayloadsDataAvailability", () => {
     const {payloadInput} = buildPayloadEnvelopeInput({blobCount: 0, sampledColumns: [0, 1, 2, 3]});
 
     const controller = new AbortController();
-    const {dataAvailabilityStatuses, availableTime} = await verifyPayloadsDataAvailability(
+    const {dataAvailabilityStatuses, availableTimeMs} = await verifyPayloadsDataAvailability(
       config,
       [payloadInput],
       controller.signal
     );
 
     expect(dataAvailabilityStatuses).toEqual([DataAvailabilityStatus.NotRequired]);
-    expect(availableTime).toBeGreaterThan(0);
+    expect(availableTimeMs).toBeGreaterThan(0);
   });
 
   it("resolves immediately when all sampled columns are already present", async () => {
     const sampled = [0, 1, 2, 3];
     const {payloadInput} = buildPayloadEnvelopeInput({blobCount: 1, sampledColumns: sampled});
+    const completeSec = 1_700_000_002;
     for (const idx of sampled) {
       payloadInput.addColumn({
         columnSidecar: buildColumnSidecar(idx),
         source: PayloadEnvelopeInputSource.gossip,
-        seenTimestampSec: Date.now() / 1000,
+        seenTimestampSec: completeSec,
       });
     }
     expect(payloadInput.hasAllData()).toBe(true);
 
     const controller = new AbortController();
-    const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability(config, [payloadInput], controller.signal);
+    const {dataAvailabilityStatuses, availableTimeMs} = await verifyPayloadsDataAvailability(
+      config,
+      [payloadInput],
+      controller.signal
+    );
     expect(dataAvailabilityStatuses).toEqual([DataAvailabilityStatus.Available]);
+    expect(availableTimeMs).toBe(completeSec * 1000);
   });
 
   it("waits for columns to arrive after envelope, then resolves", async () => {
@@ -136,7 +143,7 @@ describe("verifyPayloadsDataAvailability", () => {
     expect(dataAvailabilityStatuses).toEqual([DataAvailabilityStatus.Available]);
   });
 
-  describe("rejects after one slot of the payload's fork when columns never arrive", () => {
+  describe("rejects after one slot when columns never arrive", () => {
     beforeEach(() => {
       vi.useFakeTimers();
     });
@@ -145,32 +152,28 @@ describe("verifyPayloadsDataAvailability", () => {
       vi.useRealTimers();
     });
 
-    for (const [forkName, slotDurationMs] of [
-      [ForkName.gloas, 12_000],
-      [ForkName.heze, 10_000],
-    ] as const) {
-      it(`${forkName} ${slotDurationMs}ms`, async () => {
-        const {payloadInput} = buildPayloadEnvelopeInput({blobCount: 1, sampledColumns: [0, 1], forkName});
-        expect(payloadInput.hasAllData()).toBe(false);
+    it("gloas 12000ms", async () => {
+      const {payloadInput} = buildPayloadEnvelopeInput({blobCount: 1, sampledColumns: [0, 1]});
+      expect(payloadInput.hasAllData()).toBe(false);
 
-        let outcome: unknown;
-        const verifyPromise = verifyPayloadsDataAvailability(config, [payloadInput], new AbortController().signal).then(
-          () => {
-            outcome = "resolved";
-          },
-          (e) => {
-            outcome = e;
-          }
-        );
+      let outcome: unknown;
+      const verifyPromise = verifyPayloadsDataAvailability(config, [payloadInput], new AbortController().signal).then(
+        () => {
+          outcome = "resolved";
+        },
+        (e) => {
+          outcome = e;
+        }
+      );
 
-        await vi.advanceTimersByTimeAsync(slotDurationMs - 1);
-        expect(outcome).toBeUndefined();
+      await vi.advanceTimersByTimeAsync(12_000 - 1);
+      expect(outcome).toBeUndefined();
 
-        await vi.advanceTimersByTimeAsync(1);
-        await verifyPromise;
-        expect(outcome).toBeInstanceOf(TimeoutError);
-      });
-    }
+      await vi.advanceTimersByTimeAsync(1);
+      await verifyPromise;
+      expect(outcome).toBeInstanceOf(PayloadError);
+      expect((outcome as PayloadError).type.code).toBe(PayloadErrorCode.DATA_UNAVAILABLE);
+    });
   });
 
   it("rejects promptly when signal is aborted", async () => {

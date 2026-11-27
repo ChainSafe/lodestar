@@ -1,15 +1,16 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {SecretKey} from "@lodestar/native/blst";
+import {BUILDER_INDEX_SELF_BUILD, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {ErrorAborted, defer, toRootHex} from "@lodestar/utils";
 import {Builder, BuilderModules} from "../../src/builder.js";
 import {BlockObserver, ObservedBlock} from "../../src/services/blockObserver.js";
 import {BuilderSigner} from "../../src/services/builderSigner.js";
 import {BuilderStatusTracker} from "../../src/services/builderStatusTracker.js";
+import {HeadTracker} from "../../src/services/headTracker.js";
 import {PayloadStore} from "../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../src/services/proposerPreferencesTracker.js";
 import {getApiClientStub, mockApiResponse} from "./utils/apiStub.js";
@@ -19,7 +20,7 @@ import {getMockedLogger} from "./utils/logger.js";
 import {mockBuiltPayload} from "./utils/payload.js";
 
 const {EventType} = routes.events;
-const topics = [EventType.block, EventType.proposerPreferences, EventType.payloadAttributes];
+const topics = [EventType.headV2, EventType.block, EventType.proposerPreferences, EventType.payloadAttributes];
 
 describe("Builder", () => {
   let api: ReturnType<typeof getApiClientStub>;
@@ -39,6 +40,7 @@ describe("Builder", () => {
     const keypair = {secretKey, publicKey: secretKey.toPublicKey()};
     const builderSigner = new BuilderSigner(createBeaconConfig(config, Buffer.alloc(32)), keypair);
     const proposerPreferencesTracker = new ProposerPreferencesTracker();
+    const headTracker = new HeadTracker();
     const payloadStore = new PayloadStore();
     const payloadSource = getPayloadSourceStub();
     modules = {
@@ -58,6 +60,7 @@ describe("Builder", () => {
       builderStatusTracker: new BuilderStatusTracker(api, logger, 1, null),
       blockObserver: new BlockObserver(config, logger, api),
       proposerPreferencesTracker,
+      headTracker,
       clock,
       index: 1,
       payloadStore,
@@ -68,6 +71,7 @@ describe("Builder", () => {
         clock,
         builderSigner,
         proposerPreferencesTracker,
+        headTracker,
         payloadStore,
         payloadSource,
         signal: controller.signal,
@@ -128,7 +132,16 @@ describe("Builder", () => {
     const {onEvent, signal} = api.events.eventstream.mock.calls[0][0];
     const blockRoot = toRootHex(Buffer.alloc(32, 1));
 
-    onEvent({type: EventType.block, message: {slot: 0, block: blockRoot, executionOptimistic: false}});
+    onEvent({
+      type: EventType.block,
+      message: {
+        slot: 0,
+        block: blockRoot,
+        blockHash: toRootHex(Buffer.alloc(32, 7)),
+        builderIndex: modules.index,
+        executionOptimistic: false,
+      },
+    });
     await vi.waitFor(() => expect(observed).toHaveBeenCalledOnce());
     expect(observed.mock.calls[0][0].signedBid).toBe(block.message.body.signedExecutionPayloadBid);
     expect(api.beacon.getBlockV2).toHaveBeenCalledWith({blockId: blockRoot}, {signal});
@@ -195,7 +208,16 @@ describe("Builder", () => {
     expect(onPayloadAttributes).toHaveBeenCalledExactlyOnceWith(payloadAttributes);
 
     const blockRoot = toRootHex(Buffer.alloc(32, 1));
-    onEvent({type: EventType.block, message: {slot: 0, block: blockRoot, executionOptimistic: false}});
+    onEvent({
+      type: EventType.block,
+      message: {
+        slot: 0,
+        block: blockRoot,
+        blockHash: toRootHex(Buffer.alloc(32, 7)),
+        builderIndex: modules.index,
+        executionOptimistic: false,
+      },
+    });
     await vi.waitFor(() => expect(onBlock).toHaveBeenCalledOnce());
     expect(onBlock.mock.calls[0][0]).toMatchObject({
       blockRoot,
@@ -204,21 +226,111 @@ describe("Builder", () => {
     });
   });
 
-  it("settles and prunes won bids on slot ticks", async () => {
-    const bid = {
+  describe("block event filtering", () => {
+    const blockEvent = (slot: number, builderIndex: number) =>
+      ({
+        type: EventType.block,
+        message: {
+          slot,
+          block: toRootHex(Buffer.alloc(32, slot)),
+          blockHash: toRootHex(Buffer.alloc(32, 7)),
+          builderIndex,
+          executionOptimistic: false,
+        },
+      }) as const;
+
+    it("does not fetch a block of another builder in a slot without own bid", () => {
+      const processBlock = vi.spyOn(modules.blockObserver, "processBlockEvent").mockResolvedValue();
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+      onEvent(blockEvent(1, modules.index + 1));
+
+      expect(processBlock).not.toHaveBeenCalled();
+    });
+
+    it("does not fetch a self-built block in a slot without own bid", () => {
+      const processBlock = vi.spyOn(modules.blockObserver, "processBlockEvent").mockResolvedValue();
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+      onEvent(blockEvent(1, BUILDER_INDEX_SELF_BUILD));
+
+      expect(processBlock).not.toHaveBeenCalled();
+    });
+
+    it("fetches a self-built block in a slot with own bid", () => {
+      const processBlock = vi.spyOn(modules.blockObserver, "processBlockEvent").mockResolvedValue();
+      const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+      signedBid.message.slot = 1;
+      modules.ledger.recordBid({signedBid, signedBidRoot: toRootHex(Buffer.alloc(32, 5))});
+      new Builder(modules);
+      const {onEvent, signal} = api.events.eventstream.mock.calls[0][0];
+
+      const event = blockEvent(1, BUILDER_INDEX_SELF_BUILD);
+      onEvent(event);
+
+      expect(processBlock).toHaveBeenCalledExactlyOnceWith(event.message, signal);
+    });
+
+    it("fetches a block of another builder in a slot with own bid", () => {
+      const processBlock = vi.spyOn(modules.blockObserver, "processBlockEvent").mockResolvedValue();
+      const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+      signedBid.message.slot = 1;
+      modules.ledger.recordBid({signedBid, signedBidRoot: toRootHex(Buffer.alloc(32, 5))});
+      new Builder(modules);
+      const {onEvent, signal} = api.events.eventstream.mock.calls[0][0];
+
+      const event = blockEvent(1, modules.index + 1);
+      onEvent(event);
+
+      expect(processBlock).toHaveBeenCalledExactlyOnceWith(event.message, signal);
+    });
+
+    it("fetches a block that selected our builder even without a recorded bid", () => {
+      const processBlock = vi.spyOn(modules.blockObserver, "processBlockEvent").mockResolvedValue();
+      new Builder(modules);
+      const {onEvent, signal} = api.events.eventstream.mock.calls[0][0];
+
+      const event = blockEvent(1, modules.index);
+      onEvent(event);
+
+      expect(processBlock).toHaveBeenCalledExactlyOnceWith(event.message, signal);
+    });
+  });
+
+  it("tracks announced heads", () => {
+    new Builder(modules);
+    const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+    const head = {
       slot: 1,
-      parentBlockHash: toRootHex(Buffer.alloc(32, 2)),
-      parentBlockRoot: toRootHex(Buffer.alloc(32, 3)),
-      blockHash: toRootHex(Buffer.alloc(32, 4)),
-      valueGwei: 5,
-      signedBidRoot: toRootHex(Buffer.alloc(32, 5)),
+      block: toRootHex(Buffer.alloc(32, 1)),
+      state: toRootHex(Buffer.alloc(32, 2)),
+      payloadStatus: "empty" as const,
+      epochTransition: false,
+      currentEpochDependentRoot: toRootHex(Buffer.alloc(32, 3)),
+      nextEpochDependentRoot: toRootHex(Buffer.alloc(32, 4)),
+      executionOptimistic: false,
     };
-    modules.ledger.recordBid(bid);
+    onEvent({type: EventType.headV2, message: {version: ForkName.gloas, data: head}});
+    expect(modules.headTracker.getDependentRoot(head.block, 1)).toBe(head.currentEpochDependentRoot);
+    expect(modules.headTracker.getDependentRoot(head.block, SLOTS_PER_EPOCH)).toBe(head.nextEpochDependentRoot);
+  });
+
+  it("settles and prunes won bids on slot ticks", async () => {
+    const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    signedBid.message.slot = 1;
+    signedBid.message.parentBlockHash = Buffer.alloc(32, 2);
+    signedBid.message.parentBlockRoot = Buffer.alloc(32, 3);
+    signedBid.message.blockHash = Buffer.alloc(32, 4);
+    signedBid.message.value = 5;
+    const bid = modules.ledger.recordBid({signedBid, signedBidRoot: toRootHex(Buffer.alloc(32, 5))});
     modules.ledger.recordWin(bid, toRootHex(Buffer.alloc(32, 6)));
     new Builder(modules);
 
     await clock.tickSlotFns(bid.slot + 3 * SLOTS_PER_EPOCH, controller.signal);
-    expect(modules.ledger.getUnsettledValueGwei(0)).toBe(bid.valueGwei);
+    expect(modules.ledger.getUnsettledValueGwei(0)).toBe(signedBid.message.value);
 
     await clock.tickSlotFns(bid.slot + 3 * SLOTS_PER_EPOCH + 1, controller.signal);
     expect(modules.ledger.getUnsettledValueGwei(0)).toBe(0);
@@ -280,6 +392,125 @@ describe("Builder", () => {
       error
     );
     expect(modules.proposerPreferencesTracker.get(0, toRootHex(preferences.message.dependentRoot))).toBe(preferences);
+  });
+
+  describe("missing payload attributes", () => {
+    const headEvent = (slot: number) =>
+      ({
+        type: EventType.headV2,
+        message: {
+          version: ForkName.gloas,
+          data: {
+            slot,
+            block: toRootHex(Buffer.alloc(32, slot)),
+            state: toRootHex(Buffer.alloc(32, 2)),
+            payloadStatus: "empty",
+            epochTransition: false,
+            currentEpochDependentRoot: toRootHex(Buffer.alloc(32, 3)),
+            nextEpochDependentRoot: toRootHex(Buffer.alloc(32, 4)),
+            executionOptimistic: false,
+          },
+        },
+      }) as const;
+    const payloadAttributesEvent = (proposalSlot: number) => {
+      const data = ssz.gloas.SSEPayloadAttributes.defaultValue();
+      data.proposalSlot = proposalSlot;
+      return {type: EventType.payloadAttributes, message: {version: ForkName.gloas, data}} as const;
+    };
+    const warning = "Not receiving payload attributes from the beacon node";
+    /** Other warnings are logged as well, e.g. if the proposer preferences can not be fetched on connection */
+    const warnings = () => logger.warn.mock.calls.filter(([message]) => message.startsWith(warning));
+
+    it("warns once when heads are announced without payload attributes", () => {
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+      onEvent(headEvent(1));
+      onEvent(headEvent(2));
+      // The same slot announced again does not count
+      onEvent(headEvent(2));
+      expect(warnings()).toHaveLength(0);
+
+      onEvent(headEvent(3));
+      expect(warnings()).toEqual([
+        [expect.stringContaining("proper settings"), {headSlot: 3, slotsWithoutPayloadAttributes: 3}],
+      ]);
+
+      onEvent(headEvent(4));
+      onEvent(headEvent(5));
+      onEvent(headEvent(6));
+      expect(warnings()).toHaveLength(1);
+    });
+
+    it("does not warn while payload attributes are emitted for every slot", () => {
+      vi.spyOn(modules.bidder, "onPayloadAttributes").mockResolvedValue();
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+      // Payload attributes of the first head were emitted before connecting
+      onEvent(headEvent(1));
+      for (let slot = 2; slot <= 8; slot++) {
+        onEvent(payloadAttributesEvent(slot));
+        onEvent(headEvent(slot));
+      }
+      expect(warnings()).toHaveLength(0);
+    });
+
+    it("does not count heads of past slots announced while the beacon node catches up", () => {
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+      clock.currentSlot = 10;
+
+      for (let slot = 1; slot <= 9; slot++) onEvent(headEvent(slot));
+      expect(warnings()).toHaveLength(0);
+
+      for (let slot = 10; slot <= 12; slot++) {
+        clock.currentSlot = slot;
+        onEvent(headEvent(slot));
+      }
+      expect(warnings()).toHaveLength(1);
+    });
+
+    it("starts counting again when the event stream reconnects", () => {
+      new Builder(modules);
+      const {onEvent, onOpen} = api.events.eventstream.mock.calls[0][0];
+
+      onEvent(headEvent(1));
+      onEvent(headEvent(2));
+      onOpen?.();
+      onEvent(headEvent(3));
+      onEvent(headEvent(4));
+      expect(warnings()).toHaveLength(0);
+
+      onEvent(headEvent(5));
+      expect(warnings()).toHaveLength(1);
+    });
+
+    it("does not warn again after a reconnect while payload attributes are still missing", () => {
+      new Builder(modules);
+      const {onEvent, onOpen} = api.events.eventstream.mock.calls[0][0];
+
+      for (let slot = 1; slot <= 3; slot++) onEvent(headEvent(slot));
+      expect(warnings()).toHaveLength(1);
+
+      onOpen?.();
+      for (let slot = 4; slot <= 9; slot++) onEvent(headEvent(slot));
+      expect(warnings()).toHaveLength(1);
+    });
+
+    it("warns again if payload attributes stop after they were received", () => {
+      vi.spyOn(modules.bidder, "onPayloadAttributes").mockResolvedValue();
+      new Builder(modules);
+      const {onEvent} = api.events.eventstream.mock.calls[0][0];
+
+      for (let slot = 1; slot <= 3; slot++) onEvent(headEvent(slot));
+      expect(warnings()).toHaveLength(1);
+
+      onEvent(payloadAttributesEvent(4));
+      onEvent(headEvent(4));
+      for (let slot = 5; slot <= 7; slot++) onEvent(headEvent(slot));
+      expect(warnings()).toHaveLength(2);
+    });
   });
 
   it("ignores unrelated topics", () => {

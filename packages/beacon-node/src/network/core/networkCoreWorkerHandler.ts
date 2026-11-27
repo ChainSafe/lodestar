@@ -9,8 +9,9 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
-import {Status} from "@lodestar/types";
+import {Slot, Status} from "@lodestar/types";
 import {withTimeout} from "@lodestar/utils";
+import {GoodByeReasonCode} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {PeerIdStr, peerIdFromString} from "../../util/peerId.js";
@@ -73,8 +74,12 @@ export class WorkerNetworkCore implements INetworkCore {
   private readonly reqRespBridgeEventBus = new ReqRespBridgeEventBus();
 
   constructor(private readonly modules: WorkerNetworkCoreModules) {
-    // Get called from main thread to issue a ReqResp request, and emits event to worker
-    this.reqRespBridgeReqCaller = new AsyncIterableBridgeCaller(getReqRespBridgeReqEvents(this.reqRespBridgeEventBus));
+    // Get called from main thread to issue a ReqResp request, and emits event to worker. Unbounded: we
+    // buffer the whole response into an array anyway, so pacing the worker only risks a read buffer overflow
+    this.reqRespBridgeReqCaller = new AsyncIterableBridgeCaller(
+      getReqRespBridgeReqEvents(this.reqRespBridgeEventBus),
+      Infinity
+    );
     // Handles ReqResp response from worker and calls async generator in main thread
     this.reqRespBridgeRespHandler = new AsyncIterableBridgeHandler(
       getReqRespBridgeRespEvents(this.reqRespBridgeEventBus),
@@ -205,6 +210,9 @@ export class WorkerNetworkCore implements INetworkCore {
   reStatusPeers(peers: PeerIdStr[]): Promise<void> {
     return this.getApi().reStatusPeers(peers);
   }
+  goodbyeAndDisconnect(peer: PeerIdStr, reason: GoodByeReasonCode): Promise<void> {
+    return this.getApi().goodbyeAndDisconnect(peer, reason);
+  }
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
     return this.getApi().reportPeer(peer, action, actionName);
   }
@@ -215,6 +223,9 @@ export class WorkerNetworkCore implements INetworkCore {
   }
   prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     return this.getApi().prepareSyncCommitteeSubnets(subscriptions);
+  }
+  addLocalProposalSlots(slots: Slot[]): Promise<void> {
+    return this.getApi().addLocalProposalSlots(slots);
   }
   subscribeGossipCoreTopics(): Promise<void> {
     return this.getApi().subscribeGossipCoreTopics();

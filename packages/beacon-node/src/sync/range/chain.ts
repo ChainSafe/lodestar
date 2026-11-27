@@ -1,11 +1,10 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, Root, Slot} from "@lodestar/types";
+import {Epoch, Root, RootHex, Slot} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
-import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
+import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
-import {BlobSidecarErrorCode} from "../../chain/errors/blobSidecarError.js";
 import {DataColumnSidecarErrorCode} from "../../chain/errors/dataColumnSidecarError.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
@@ -69,6 +68,8 @@ export type SyncChainFns = {
   onEnd: (err: Error | null, target: ChainTarget | null) => void;
   /** Deletes an array of BlockInputs from the BlockInputCache */
   pruneBlockInputs: (blockInputs: IBlockInput[]) => void;
+  /** Returns true if the block is known to fork choice */
+  hasBlock: (blockRoot: Root) => boolean;
 };
 
 /**
@@ -81,6 +82,15 @@ export type ChainTarget = {
 };
 
 export class SyncChainStartError extends Error {}
+
+export enum SyncChainErrorCode {
+  /** The terminal batch has 0 blocks but the target block is not known */
+  MISSING_TARGET_BLOCK = "SYNC_CHAIN_ERROR_MISSING_TARGET_BLOCK",
+}
+
+type SyncChainErrorType = {code: SyncChainErrorCode.MISSING_TARGET_BLOCK; targetSlot: Slot; targetRoot: RootHex};
+
+export class SyncChainError extends LodestarError<SyncChainErrorType> {}
 
 export type SyncChainDebugState = {
   targetRoot: string | null;
@@ -137,6 +147,7 @@ export class SyncChain {
   private readonly reportPeer: SyncChainFns["reportPeer"];
   private readonly getConnectedPeerSyncMeta: SyncChainFns["getConnectedPeerSyncMeta"];
   private readonly pruneBlockInputs: SyncChainFns["pruneBlockInputs"];
+  private readonly hasBlock: SyncChainFns["hasBlock"];
 
   /** AsyncIterable that guarantees processChainSegment is run only at once at anytime */
   private readonly batchProcessor = new ItTrigger();
@@ -179,6 +190,7 @@ export class SyncChain {
     this.downloadByRange = fns.downloadByRange;
     this.reportPeer = fns.reportPeer;
     this.pruneBlockInputs = fns.pruneBlockInputs;
+    this.hasBlock = fns.hasBlock;
     this.getConnectedPeerSyncMeta = fns.getConnectedPeerSyncMeta;
     this.config = config;
     this.clock = clock;
@@ -336,6 +348,32 @@ export class SyncChain {
 
         // Returns true if SyncChain has processed all possible blocks with slot <= target.slot
         if (isSyncChainDone(toArr(this.batches), this.lastEpochWithProcessBlocks, this.target.slot)) {
+          // A 0-block terminal batch is only trusted once the target block is known, otherwise a peer returning no
+          // blocks for the last range ends the chain short of its target
+          const lastAwaitingValidation = toArr(this.batches).findLast(
+            (b) => b.state.status === BatchStatus.AwaitingValidation
+          );
+          if (
+            lastAwaitingValidation !== undefined &&
+            lastAwaitingValidation.getBlocks().length === 0 &&
+            !this.hasBlock(this.target.root)
+          ) {
+            this.logger.verbose("Terminal 0-block batch without target block", {
+              id: this.logId,
+              ...lastAwaitingValidation.getMetadata(),
+            });
+            // Not peer attributable: throws MAX_PROCESSING_ATTEMPTS after MAX_BATCH_PROCESSING_ATTEMPTS without
+            // reporting any peer
+            lastAwaitingValidation.validationError(
+              new SyncChainError({
+                code: SyncChainErrorCode.MISSING_TARGET_BLOCK,
+                targetSlot: this.target.slot,
+                targetRoot: toRootHex(this.target.root),
+              })
+            );
+            this.triggerBatchDownloader();
+            continue;
+          }
           break;
         }
 
@@ -510,9 +548,12 @@ export class SyncChain {
     // if last processed epoch is n, we don't want to request batches with epoch > n + MAX_LOOK_AHEAD_EPOCHS
     // we should have enough batches to process in the buffer: n + 1, ..., n + MAX_LOOK_AHEAD_EPOCHS
     // let's focus on redownloading these batches first because it may have to reach different peers to get enough sampled columns
+    // Note: Don't count batches in the AwaitingValidation state, 0-block batches never advance
+    // lastEpochWithProcessBlocks so more than MAX_LOOK_AHEAD_EPOCHS of them in a row would stall sync
+    const pendingBatches = batches.filter((batch) => batch.state.status !== BatchStatus.AwaitingValidation);
     if (
-      batches.length > 0 &&
-      Math.max(...batches.map((b) => b.startEpoch)) >= this.lastEpochWithProcessBlocks + MAX_LOOK_AHEAD_EPOCHS
+      pendingBatches.length > 0 &&
+      Math.max(...pendingBatches.map((b) => b.startEpoch)) >= this.lastEpochWithProcessBlocks + MAX_LOOK_AHEAD_EPOCHS
     ) {
       return null;
     }
@@ -569,18 +610,15 @@ export class SyncChain {
           // The below cases indicate the peer may be on a different chain, so are not penalized during head sync.
           switch (errCode) {
             case BlockInputErrorCode.MISMATCHED_ROOT_HEX:
-            case DownloadByRangeErrorCode.MISSING_BLOBS:
-            case DownloadByRangeErrorCode.EXTRA_BLOBS:
             case DownloadByRangeErrorCode.MISSING_COLUMNS:
             case DownloadByRangeErrorCode.EXTRA_COLUMNS:
-            case BlobSidecarErrorCode.INCORRECT_SIDECAR_COUNT:
-            case BlobSidecarErrorCode.INCORRECT_BLOCK:
             case DataColumnSidecarErrorCode.INCORRECT_SIDECAR_COUNT:
             case DataColumnSidecarErrorCode.INCORRECT_BLOCK:
               this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
           }
         }
         switch (errCode) {
+          case DownloadByRangeErrorCode.DATA_WITHOUT_BLOCKS:
           case DownloadByRangeErrorCode.EXTRA_BLOCKS:
           case DownloadByRangeErrorCode.OUT_OF_ORDER_BLOCKS:
           case DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS:
@@ -589,8 +627,6 @@ export class SyncChain {
           case DownloadByRangeErrorCode.INVALID_ENVELOPE_BLOCK_HASH:
           case DownloadByRangeErrorCode.INVALID_ENVELOPE_SLOT:
           case DownloadByRangeErrorCode.INVALID_CHAIN_SEGMENT:
-          case BlobSidecarErrorCode.INCLUSION_PROOF_INVALID:
-          case BlobSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
           case DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT:
           case DataColumnSidecarErrorCode.INCORRECT_KZG_PROOF_COUNT:
           case DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
@@ -609,6 +645,14 @@ export class SyncChain {
           this.scheduleRateLimitBackoffRetry();
           batch.downloadingRateLimited();
           this.triggerBatchDownloader();
+        } else if (
+          res.err instanceof DownloadByRangeError &&
+          res.err.type.code === DownloadByRangeErrorCode.INVALID_CACHED_BLOCK
+        ) {
+          if (res.err.type.blockPeer !== undefined) {
+            this.reportPeer(res.err.type.blockPeer, PeerAction.LowToleranceError, res.err.message);
+          }
+          batch.downloadingInvalidBlock(res.err.type.blockPeer ?? peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
         } else {
           batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
         }
@@ -638,12 +682,7 @@ export class SyncChain {
         }
 
         for (const block of downloadSuccessOutput.blocks) {
-          if (isBlockInputBlobs(block)) {
-            const blockLogMeta = block.getLogMeta();
-            const expectedBlobs = typeof blockLogMeta.expectedBlobs === "number" ? blockLogMeta.expectedBlobs : 0;
-            logMeta.expectedBlobCount = (logMeta.expectedBlobCount ?? 0) + expectedBlobs;
-            logMeta.receivedBlobCount = (logMeta.receivedBlobCount ?? 0) + blockLogMeta.receivedBlobs;
-          } else if (isBlockInputColumns(block)) {
+          if (isBlockInputColumns(block)) {
             logMeta.columnCount = (logMeta.columnCount ?? 0) + block.getLogMeta().receivedColumns;
           }
         }
@@ -726,39 +765,43 @@ export class SyncChain {
     } else {
       this.logger.verbose("Batch process error", logCtx, res.err);
 
-      const invalidatePreviousBatches = (): number => {
-        let invalidatedCount = 0;
+      // advanceChain() drops every batch before the last batch with blocks, so the AwaitingValidation batches before
+      // `batch` are that batch followed by 0-block batches, see classifyProcessingFault(). With no batch with blocks
+      // yet, fall back to the first 0-block batch so a wrong 0-block answer at the start of the chain is retried
+      const awaitingValidationBefore = toArr(this.batches).filter(
+        (b) => b.startEpoch < batch.startEpoch && b.state.status === BatchStatus.AwaitingValidation
+      );
+      const parentBatch =
+        awaitingValidationBefore.findLast((b) => b.getBlocks().length > 0) ?? awaitingValidationBefore[0];
+      // The 0-block batches after `parentBatch` are invalidated with it: an AwaitingValidation batch must not follow a
+      // batch that is downloaded again, see validateBatchesStatus()
+      const invalidateFromParentBatch = (faultyParentBatch: Batch): void => {
         for (const pendingBatch of this.batches.values()) {
           if (
+            pendingBatch.startEpoch >= faultyParentBatch.startEpoch &&
             pendingBatch.startEpoch < batch.startEpoch &&
             pendingBatch.state.status === BatchStatus.AwaitingValidation
           ) {
             this.logger.verbose("Batch validation error", {id: this.logId, ...pendingBatch.getMetadata()});
             pendingBatch.validationError(res.err);
-            invalidatedCount++;
           }
         }
-        return invalidatedCount;
       };
 
-      const prevBatch = this.batches.get(batch.startEpoch - EPOCHS_PER_BATCH);
-      switch (classifyProcessingFault(res.err, batch, prevBatch)) {
+      const fault = classifyProcessingFault(res.err, batch, parentBatch);
+      switch (fault.kind) {
         case ProcessingFaultKind.CurrentBatch:
           batch.processingError(res.err);
           break;
 
-        case ProcessingFaultKind.PreviousBatch:
-          // If no previous batch was invalidated, it means the error is on this batch
-          if (invalidatePreviousBatches() === 0) {
-            batch.processingError(res.err);
-          } else {
-            batch.retainForReprocessing();
-          }
+        case ProcessingFaultKind.ParentBatch:
+          invalidateFromParentBatch(fault.parentBatch);
+          batch.retainForReprocessing();
           break;
 
         case ProcessingFaultKind.Ambiguous:
           batch.processingError(res.err);
-          invalidatePreviousBatches();
+          invalidateFromParentBatch(fault.parentBatch);
           break;
       }
     }

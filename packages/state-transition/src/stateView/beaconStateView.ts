@@ -63,7 +63,7 @@ import {
   isGloasStateType,
   isMergeTransitionComplete,
 } from "../util/execution.js";
-import {canBuilderCoverBid} from "../util/gloas.js";
+import {canBuilderCoverBid, getBuilderBidLimit} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
 import {PreVerifyBuilderDepositsResult, preVerifyBuilderDepositsPreGloas} from "../util/preVerifyBuilderDeposits.js";
 import {getRandaoMix} from "../util/seed.js";
@@ -467,6 +467,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     }
 
     return canBuilderCoverBid(this.cachedState as CachedBeaconStateGloas, builderIndex, bidAmount);
+  }
+
+  getBuilderBidLimit(builderIndex: BuilderIndex): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Builders are not supported before Gloas");
+    }
+
+    return getBuilderBidLimit(this.cachedState as CachedBeaconStateGloas, builderIndex);
   }
 
   /**
@@ -914,6 +922,8 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     const stateCopy = this.cachedState.clone(true) as CachedBeaconStateGloas;
 
     applyParentExecutionPayload(stateCopy, executionRequests);
+    // Getters such as executionPayloadAvailability read committed nodes
+    stateCopy.commit();
 
     const stateView = new BeaconStateView(stateCopy);
     if (!isStatePostGloas(stateView)) {

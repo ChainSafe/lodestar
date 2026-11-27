@@ -4,11 +4,14 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {LogLevel} from "@lodestar/utils";
-import {LateCanonicalBlockReason, archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
+import {
+  LateCanonicalBlockReason,
+  MAX_PRUNE_DATA_COLUMN_SLOTS_PER_RUN,
+  archiveBlocks,
+} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import type {Metrics} from "../../../../src/metrics/metrics.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
@@ -110,7 +113,6 @@ describe("block archiver task", () => {
       FULU_FORK_EPOCH: 0,
       GLOAS_FORK_EPOCH: fork === "gloas" ? 0 : Infinity,
       MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
-      MIN_BLOB_DATA_RETENTION_MS: 2 * SLOTS_PER_EPOCH * defaultConfig.SLOT_DURATION_MS,
     });
     const blockType = config.getForkTypes(0).SignedBeaconBlock;
     const block = blockType.defaultValue();
@@ -164,7 +166,6 @@ describe("block archiver task", () => {
       FULU_FORK_EPOCH: 0,
       GLOAS_FORK_EPOCH: fork === "gloas" ? 0 : Infinity,
       MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4,
-      MIN_BLOB_DATA_RETENTION_MS: 4 * SLOTS_PER_EPOCH * defaultConfig.SLOT_DURATION_MS,
     });
     const blockType = config.getForkTypes(0).SignedBeaconBlock;
     const block = blockType.defaultValue();
@@ -416,7 +417,6 @@ describe("block archiver task", () => {
       ...defaultConfig,
       FULU_FORK_EPOCH: 0,
       MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4,
-      MIN_BLOB_DATA_RETENTION_MS: 4 * SLOTS_PER_EPOCH * defaultConfig.SLOT_DURATION_MS,
     });
 
     vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
@@ -478,7 +478,6 @@ describe("block archiver task", () => {
         DENEB_FORK_EPOCH: 0,
         FULU_FORK_EPOCH: 0,
         MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
-        MIN_BLOB_DATA_RETENTION_MS: 2 * SLOTS_PER_EPOCH * defaultConfig.SLOT_DURATION_MS,
       });
 
       const block = ssz.fulu.SignedBeaconBlock.defaultValue();
@@ -521,7 +520,10 @@ describe("block archiver task", () => {
       const columnsPruneSlot = computeStartSlotAtEpoch(
         currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
       );
-      expect(dbStub.dataColumns.pruneBefore).toHaveBeenCalledWith(columnsPruneSlot);
+      expect(dbStub.dataColumns.pruneBefore).toHaveBeenCalledWith(
+        columnsPruneSlot,
+        MAX_PRUNE_DATA_COLUMN_SLOTS_PER_RUN
+      );
       if (prunedSlots.length > 0) {
         expect(verbose).toHaveBeenCalledWith(
           "dataColumnSidecars prune",

@@ -1,16 +1,18 @@
 import {PeerId} from "@libp2p/interface";
-import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {Uint8ArrayList} from "uint8arraylist";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {getEmptyLogger} from "@lodestar/logger/empty";
-import {LodestarError, fromHex} from "@lodestar/utils";
+import {LodestarError, TimeoutError, fromHex} from "@lodestar/utils";
 import {Protocol, RespStatus} from "../../../src/index.js";
 import {ReqRespRateLimiter} from "../../../src/rate_limiter/ReqRespRateLimiter.js";
 import {handleRequest} from "../../../src/response/index.js";
+import {STREAM_DRAIN_TIMEOUT_MS} from "../../../src/utils/stream.js";
 import {sszSnappyPing} from "../../fixtures/messages.js";
 import {pingProtocol} from "../../fixtures/protocols.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {expectEqualByteChunks} from "../../utils/index.js";
-import {createMockStream} from "../../utils/mockStream.js";
+import {SlowReaderStream, createMockStream} from "../../utils/mockStream.js";
 import {getValidPeerId} from "../../utils/peer.js";
 
 const testCases: {
@@ -91,5 +93,80 @@ describe("response / handleRequest", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expectEqualByteChunks(sentChunks, expectedResponseChunks, "Wrong response chunks");
+  });
+
+  describe("peer stops reading", () => {
+    const payload = sszSnappyPing.binaryPayload;
+    const boundary = config.getForkBoundaryAtEpoch(config.forks[payload.fork].epoch);
+    let outcome: unknown;
+
+    function startHandleRequest(stream: SlowReaderStream, protocol: Protocol): void {
+      stream.onData(new Uint8ArrayList(...sszSnappyPing.chunks));
+      stream.onRemoteCloseWrite();
+      outcome = "pending";
+      handleRequest({
+        logger,
+        metrics: null,
+        protocol,
+        protocolID: protocol.method,
+        stream,
+        peerId,
+        signal: controller.signal,
+        rateLimiter: new ReqRespRateLimiter({rateLimitMultiplier: 0}),
+      }).then(
+        () => {
+          outcome = "resolved";
+        },
+        (e: unknown) => {
+          outcome = e;
+        }
+      );
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("times out and aborts when a large response cannot be written", async () => {
+      const stream = new SlowReaderStream();
+      startHandleRequest(
+        stream,
+        pingProtocol(async function* () {
+          // yield far more than the write-buffer high-water mark so sendChunks parks on the stalled peer
+          for (let i = 0; i < 40_000; i++) {
+            yield {...payload, boundary};
+          }
+        })
+      );
+
+      await vi.advanceTimersByTimeAsync(STREAM_DRAIN_TIMEOUT_MS - 1);
+      expect(outcome).toBe("pending");
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(outcome).toBeInstanceOf(TimeoutError);
+      expect(stream.status).toBe("aborted");
+    });
+
+    it("aborts the response stream when the peer never reads a small response", async () => {
+      const stream = new SlowReaderStream();
+      startHandleRequest(
+        stream,
+        pingProtocol(async function* () {
+          yield {...payload, boundary};
+        })
+      );
+
+      await vi.advanceTimersByTimeAsync(STREAM_DRAIN_TIMEOUT_MS - 1);
+      expect(outcome).toBe("pending");
+
+      await vi.advanceTimersByTimeAsync(1);
+      // the small response is written but close() cannot drain, so handleRequest aborts and resolves
+      expect(outcome).toBe("resolved");
+      expect(stream.status).toBe("aborted");
+    });
   });
 });

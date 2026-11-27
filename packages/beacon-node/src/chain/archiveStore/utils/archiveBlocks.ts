@@ -27,6 +27,19 @@ import {LightClientServer} from "../../lightClient/index.js";
 const BLOCK_BATCH_SIZE = 256;
 const BLOB_SIDECAR_BATCH_SIZE = 32;
 
+/**
+ * Bound the expired slots pruned per finalized checkpoint, so a large backlog is drained over many runs instead
+ * of stalling one. The cutoff can be far ahead when finality resumes after a long period of non-finality or when
+ * `archiveDataEpochs` is lowered.
+ */
+export const MAX_PRUNE_BLOB_SLOTS_PER_RUN = 4096;
+/**
+ * Applied separately to the flat files and the legacy LevelDB archive. Lower than the blob limit since each
+ * flat file slot is a directory removal (~0.5 to 0.8 ms on ext4) rather than a key delete, which keeps a run
+ * around 130 to 200 ms, in line with `MAX_PRUNE_BLOCK_SLOTS_PER_RUN`.
+ */
+export const MAX_PRUNE_DATA_COLUMN_SLOTS_PER_RUN = 256;
+
 type BlockRootSlot = {slot: Slot; root: Uint8Array};
 
 /**
@@ -254,7 +267,10 @@ export async function archiveBlocks(
       const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveDataEpochs ?? 0);
       const blobSidecarsMinEpoch = currentEpoch - blobsArchiveWindow;
       if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
-        const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
+        const slotsToDelete = await db.blobSidecarsArchive.keys({
+          lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch),
+          limit: MAX_PRUNE_BLOB_SLOTS_PER_RUN,
+        });
         if (slotsToDelete.length > 0) {
           await db.blobSidecarsArchive.batchDelete(slotsToDelete);
           logger.verbose(`blobSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`, logCtx);
@@ -268,13 +284,16 @@ export async function archiveBlocks(
   }
 
   // Delete expired data column sidecars
-  // Keep only `[min(compute_blob_data_retention_start_epoch(current_epoch), current_epoch - archiveDataEpochs)]`
+  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, archiveDataEpochs)]`
   if (finalizedPostFulu) {
     if (archiveDataEpochs !== Infinity) {
       const dataColumnSidecarsMinEpoch = getDataColumnSidecarsMinEpoch(config, currentEpoch, archiveDataEpochs);
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
         const columnsPruneSlot = computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch);
-        const prunedColumnSlots = await db.dataColumns.pruneBefore(columnsPruneSlot);
+        const prunedColumnSlots = await db.dataColumns.pruneBefore(
+          columnsPruneSlot,
+          MAX_PRUNE_DATA_COLUMN_SLOTS_PER_RUN
+        );
         if (prunedColumnSlots.length > 0) {
           logger.verbose("dataColumnSidecars prune", {
             ...logCtx,
