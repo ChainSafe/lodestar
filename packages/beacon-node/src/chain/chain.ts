@@ -905,16 +905,18 @@ export class BeaconChain implements IBeaconChain {
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
     const block = this.forkChoice.getBlockHexDefaultStatus(root);
     if (block) {
+      // The finalized block stays in fork-choice and the hot db until the archiver has migrated it
+      const finalized = block.slot <= this.forkChoice.getFinalizedBlock().slot;
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
       // Otherwise (most likely), check the hot db
       const blockInput = this.seenBlockInputCache.get(block.blockRoot);
       if (blockInput?.hasBlock()) {
-        return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(block), finalized: false};
+        return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(block), finalized};
       }
       const data = await this.db.block.get(fromHex(root));
       if (data) {
-        return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false};
+        return {block: data, executionOptimistic: isOptimisticBlock(block), finalized};
       }
       // If block is not found in hot db, try cold db since there could be an archive cycle happening
       // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
@@ -929,6 +931,8 @@ export class BeaconChain implements IBeaconChain {
   ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null> {
     const block = this.forkChoice.getBlockHexDefaultStatus(root);
     if (block) {
+      // The finalized block stays in fork-choice and the hot db until the archiver has migrated it
+      const finalized = block.slot <= this.forkChoice.getFinalizedBlock().slot;
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
       // Otherwise (most likely), check the hot db
@@ -940,14 +944,14 @@ export class BeaconChain implements IBeaconChain {
           return {
             block: serialized,
             executionOptimistic: isOptimisticBlock(block),
-            finalized: false,
+            finalized,
             slot: blockInput.slot,
           };
         }
         return {
           block: sszTypesFor(blockInput.forkName).SignedBeaconBlock.serialize(signedBlock),
           executionOptimistic: isOptimisticBlock(block),
-          finalized: false,
+          finalized,
           slot: blockInput.slot,
         };
       }
@@ -955,7 +959,7 @@ export class BeaconChain implements IBeaconChain {
       if (data) {
         const slot = getSlotFromSignedBeaconBlockSerialized(data);
         if (slot === null) throw new Error(`Invalid block data stored in DB for root: ${root}`);
-        return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false, slot};
+        return {block: data, executionOptimistic: isOptimisticBlock(block), finalized, slot};
       }
       // If block is not found in hot db, try cold db since there could be an archive cycle happening
       // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
