@@ -253,3 +253,7 @@ pub const Router = struct {
         std.debug.assert(capability.protocol_count <= Negotiator.supported_max);
     }
 };
+
+test {
+    _ = @import("router_test.zig");
+}

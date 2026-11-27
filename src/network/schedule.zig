@@ -34,3 +34,7 @@ pub const Schedule = struct {
         return .{ .deadline = if (due_at.compare(.lt, bound)) due_at else bound };
     }
 };
+
+test {
+    _ = @import("schedule_test.zig");
+}
