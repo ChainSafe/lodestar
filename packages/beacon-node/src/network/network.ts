@@ -6,7 +6,6 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq} from "@lodestar/params";
-import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
@@ -31,6 +30,7 @@ import {
   phase0,
 } from "@lodestar/types";
 import {defer, prettyPrintIndices, sleep} from "@lodestar/utils";
+import type {ProcessShutdownCallback} from "@lodestar/validator";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
@@ -47,6 +47,8 @@ import {
   ExecutionPayloadEnvelopesByRootRequest,
 } from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
+import {NativeGossipExecutor} from "./core/native/executor.js";
+import {NativeNetworkCore} from "./core/native/nativeNetworkCore.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
 import {getActiveForkBoundaries} from "./forks.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
@@ -57,13 +59,19 @@ import {
   stringifyGossipTopic,
 } from "./gossip/topic.js";
 import {INetwork} from "./interface.js";
-import {NetworkOptions} from "./options.js";
+import {NetworkOptions, validateNetworkOptions} from "./options.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
 import {PeerSyncMeta} from "./peers/peersData.js";
 import {AggregatorTracker} from "./processor/aggregatorTracker.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
 import {ReqRespMethod} from "./reqresp/index.js";
-import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
+import {
+  GetReqRespHandlerFn,
+  ResponseIncoming,
+  Version,
+  requestSszTypeByMethod,
+  responseSszTypeByMethod,
+} from "./reqresp/types.js";
 import {
   collectExactOneTyped,
   collectMaxResponseTyped,
@@ -81,11 +89,12 @@ type NetworkModules = {
   chain: IBeaconChain;
   networkEventBus: NetworkEventBus;
   aggregatorTracker: AggregatorTracker;
-  networkProcessor: NetworkProcessor;
+  networkProcessor: NetworkProcessor | NativeGossipExecutor;
   core: INetworkCore;
 };
 
 export type NetworkInitModules = {
+  processShutdownCallback: ProcessShutdownCallback;
   opts: NetworkOptions;
   config: BeaconConfig;
   privateKey: PrivateKey;
@@ -121,7 +130,7 @@ export class Network implements INetwork {
   private readonly controller: AbortController;
 
   // TODO: Review
-  private readonly networkProcessor: NetworkProcessor;
+  private readonly networkProcessor: NetworkProcessor | NativeGossipExecutor;
   private readonly core: INetworkCore;
   private readonly aggregatorTracker: AggregatorTracker;
 
@@ -165,7 +174,9 @@ export class Network implements INetwork {
     privateKey,
     peerStoreDir,
     getReqRespHandler,
+    processShutdownCallback,
   }: NetworkInitModules): Promise<Network> {
+    validateNetworkOptions(opts);
     const events = new NetworkEventBus();
     const aggregatorTracker = new AggregatorTracker();
 
@@ -173,63 +184,101 @@ export class Network implements INetwork {
     const initialStatus = chain.getStatus();
     const initialCustodyGroupCount = chain.custodyConfig.targetCustodyGroupCount;
 
-    if (opts.useWorker) {
+    if (opts.useWorker && opts.backend !== "native") {
       logger.info("running libp2p instance in worker thread");
     }
 
-    const core = opts.useWorker
-      ? await WorkerNetworkCore.init({
-          opts: {
-            ...opts,
+    let core: INetworkCore;
+    if (opts.backend === "native") {
+      core = await NativeNetworkCore.init({
+        opts,
+        config,
+        privateKey,
+        peerStoreDir,
+        logger,
+        clock: chain.clock,
+        events,
+        getReqRespHandler,
+        initialStatus,
+        initialCustodyGroupCount,
+        activeValidatorCount,
+      });
+    } else {
+      core = opts.useWorker
+        ? await WorkerNetworkCore.init({
+            opts: {
+              ...opts,
+              peerStoreDir,
+              metricsEnabled: Boolean(metrics),
+              activeValidatorCount,
+              genesisTime: chain.genesisTime,
+              initialStatus,
+              initialCustodyGroupCount,
+            },
+            config,
+            privateKey,
+            logger,
+            events,
+            metrics,
+            getReqRespHandler,
+          })
+        : await NetworkCore.init({
+            opts,
+            config,
+            privateKey,
             peerStoreDir,
-            metricsEnabled: Boolean(metrics),
-            activeValidatorCount,
-            genesisTime: chain.genesisTime,
+            logger,
+            clock: chain.clock,
+            events,
+            getReqRespHandler,
+            metricsRegistry: metrics ? new RegistryMetricCreator() : null,
             initialStatus,
             initialCustodyGroupCount,
-          },
-          config,
-          privateKey,
-          logger,
-          events,
-          metrics,
-          getReqRespHandler,
-        })
-      : await NetworkCore.init({
-          opts,
-          config,
-          privateKey,
-          peerStoreDir,
-          logger,
-          clock: chain.clock,
-          events,
-          getReqRespHandler,
-          metricsRegistry: metrics ? new RegistryMetricCreator() : null,
-          initialStatus,
-          initialCustodyGroupCount,
-          activeValidatorCount,
-        });
+            activeValidatorCount,
+          });
+    }
 
-    const networkProcessor = new NetworkProcessor(
-      {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker},
-      opts
-    );
+    let networkProcessor: NetworkProcessor | NativeGossipExecutor | undefined;
+    let network: Network | undefined;
+    try {
+      const processorModules = {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker};
+      networkProcessor =
+        core instanceof NativeNetworkCore
+          ? core.createGossipExecutor(processorModules, opts)
+          : new NetworkProcessor(processorModules, opts);
 
-    const multiaddresses = opts.localMultiaddrs?.join(",");
-    const peerId = peerIdFromPrivateKey(privateKey);
-    logger.info(`PeerId ${peerIdToString(peerId)}, Multiaddrs ${multiaddresses}`);
+      const multiaddresses = opts.localMultiaddrs?.join(",");
+      const peerId = peerIdFromPrivateKey(privateKey);
+      logger.info(`PeerId ${peerIdToString(peerId)}, Multiaddrs ${multiaddresses}`);
 
-    return new Network({
-      opts,
-      privateKey,
-      config,
-      logger,
-      chain,
-      networkEventBus: events,
-      aggregatorTracker,
-      networkProcessor,
-      core,
-    });
+      network = new Network({
+        opts,
+        privateKey,
+        config,
+        logger,
+        chain,
+        networkEventBus: events,
+        aggregatorTracker,
+        networkProcessor,
+        core,
+      });
+      if (core instanceof NativeNetworkCore) {
+        void core.terminated
+          .then(async (failure) => {
+            try {
+              if (failure) processShutdownCallback(failure);
+            } finally {
+              await network?.close();
+            }
+          })
+          .catch((error: unknown) => logger.error("Native network shutdown failed", {}, error as Error));
+      }
+      return network;
+    } catch (error) {
+      if (network) await network.close();
+      else await Promise.allSettled([networkProcessor?.stop(), core.close()]);
+      throw error;
+    }
   }
 
   get closed(): boolean {
@@ -343,11 +392,10 @@ export class Network implements INetwork {
    * Subscribe to all gossip events. Safe to call multiple times
    */
   async subscribeGossipCoreTopics(): Promise<void> {
-    if (!this.subscribedToCoreTopics) {
+    if (!this.subscribedToCoreTopics || this.core instanceof NativeNetworkCore) {
       await this.core.subscribeGossipCoreTopics();
-      if (this.closed) return;
-      // Only mark subscribedToCoreTopics if worker resolved this call
-      this.subscribedToCoreTopics = true;
+      this.subscribedToCoreTopics =
+        !this.closed && (this.core instanceof NativeNetworkCore ? this.core.isSubscribedToGossipCoreTopics() : true);
     }
   }
 
@@ -359,7 +407,8 @@ export class Network implements INetwork {
     this.networkProcessor.dropAllJobs();
 
     await this.core.unsubscribeGossipCoreTopics();
-    this.subscribedToCoreTopics = false;
+    this.subscribedToCoreTopics =
+      !this.closed && this.core instanceof NativeNetworkCore && this.core.isSubscribedToGossipCoreTopics();
   }
 
   isSubscribedToGossipCoreTopics(): boolean {
@@ -601,7 +650,7 @@ export class Network implements INetwork {
       ),
       request,
       this.chain.serializedCache,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -617,7 +666,7 @@ export class Network implements INetwork {
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRoot],
       this.chain.serializedCache,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -630,7 +679,7 @@ export class Network implements INetwork {
       Math.min(request.count, this.config.MAX_REQUEST_BLOCKS_DENEB),
       responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByHead],
       this.chain.serializedCache,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -638,7 +687,7 @@ export class Network implements INetwork {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientBootstrap, [Version.V1], request),
       responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap],
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -646,7 +695,7 @@ export class Network implements INetwork {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientOptimisticUpdate, [Version.V1], null),
       responseSszTypeByMethod[ReqRespMethod.LightClientOptimisticUpdate],
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -654,7 +703,7 @@ export class Network implements INetwork {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientFinalityUpdate, [Version.V1], null),
       responseSszTypeByMethod[ReqRespMethod.LightClientFinalityUpdate],
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -667,7 +716,7 @@ export class Network implements INetwork {
       request.count,
       responseSszTypeByMethod[ReqRespMethod.LightClientUpdatesByRange],
       undefined,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -680,7 +729,7 @@ export class Network implements INetwork {
       request.count * request.columns.length,
       responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRange],
       undefined,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -693,7 +742,7 @@ export class Network implements INetwork {
       request.reduce((total, {columns}) => total + columns.length, 0),
       responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRoot],
       this.chain.serializedCache,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -706,7 +755,7 @@ export class Network implements INetwork {
       request.count,
       responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRange],
       undefined,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
@@ -719,13 +768,13 @@ export class Network implements INetwork {
       request.length,
       responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRoot],
       this.chain.serializedCache,
-      () => this.reportInvalidResponse(peerId)
+      (chunk) => this.reportInvalidResponse(peerId, chunk)
     );
   }
 
-  private async reportInvalidResponse(peerId: PeerIdStr): Promise<void> {
+  private async reportInvalidResponse(peerId: PeerIdStr, chunk: ResponseIncoming): Promise<void> {
     try {
-      await this.core.reportPeer(peerId, PeerAction.LowToleranceError, "InvalidResponseSsz");
+      await this.core.reportPeer(peerId, PeerAction.LowToleranceError, "InvalidResponseSsz", chunk.peerReportContext);
     } catch (error) {
       this.logger.debug("Failed to report invalid response", {peerId}, error as Error);
     }

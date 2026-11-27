@@ -35,6 +35,7 @@ jobs:
           check-latest: true
           cache: pnpm
       # Required to build the @lodestar/native workspace package
+      - uses: ./.github/actions/setup-llvm
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
       - name: Node.js version
         id: node
@@ -80,6 +81,9 @@ jobs:
           git config user.name 'temp'
           git config user.email 'temp@github.com'
           git commit -am "${{ steps.version.outputs.version }}"
+
+      - name: Install Rust release targets
+        run: rustup target add $(node -p 'require("./bindings/package.json").zapi.targets.join(" ")')
 
       - name: Publish to npm registry
         # Note: before https://github.com/ChainSafe/lodestar/commit/28e2c74cf0f1bede8b09c8c9fec26f54b367e3fd

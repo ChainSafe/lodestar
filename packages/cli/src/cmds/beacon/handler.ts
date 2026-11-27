@@ -133,7 +133,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
         try {
           const networkIdentity = await node.network.getNetworkIdentity();
           const enrPath = path.join(beaconPaths.beaconDir, "enr");
-          writeFile600Perm(enrPath, networkIdentity.enr);
+          if (networkIdentity.enr) writeFile600Perm(enrPath, networkIdentity.enr);
         } catch (e) {
           logger.warn("Unable to persist enr", {}, e as Error);
         }
@@ -200,11 +200,37 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   beaconNodeOptions.set({api: {commit, version}});
 
   const logger = initLogger(args, beaconPaths.dataDir, config);
-  const {privateKey, enr} = await initPrivateKeyAndEnr(args, beaconPaths.beaconDir, logger);
+  const {privateKey, enr, initialEnr} = await initPrivateKeyAndEnr(args, beaconPaths.beaconDir, logger);
 
+  if (args["network.backend"] === "native") {
+    beaconNodeOptions.set({
+      network: {
+        native: {
+          discovery: {
+            initialEnr,
+            fixed: {
+              ip4: args["enr.ip"] !== undefined ? enr.ip : undefined,
+              ip6: args["enr.ip6"] !== undefined ? enr.ip6 : undefined,
+              udp: args["enr.udp"],
+              udp6: args["enr.udp6"],
+              quic: args["enr.quic"],
+              quic6: args["enr.quic6"],
+            },
+          },
+        },
+      },
+    });
+  }
   if (args.discv5 !== false) {
     // Inject ENR to beacon options
-    beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
+    beaconNodeOptions.set({
+      network: {
+        discv5: {
+          enr: enr.encodeTxt(),
+          config: args["network.backend"] === "native" ? {} : {enrUpdate: !enr.ip && !enr.ip6},
+        },
+      },
+    });
 
     // Combine bootnodes from different sources
     const bootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(

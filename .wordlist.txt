@@ -9,6 +9,7 @@ BeaconNode
 Besu
 Buterin
 CLI
+CMake
 CTRL
 Casper
 Chai
@@ -194,6 +195,7 @@ keypair
 keyrings
 keystore
 keystores
+libclang
 libp
 lifecycle
 lightclient
@@ -256,6 +258,7 @@ tcp
 testnet
 testnets
 todo
+toolchain
 trustless
 typesafe
 udp

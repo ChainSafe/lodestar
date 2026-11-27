@@ -30,7 +30,7 @@ import {IBeaconDb} from "../db/index.js";
 import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
 import {HttpMetricsServer, Metrics, createMetrics, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
-import {Network, getReqRespHandlers} from "../network/index.js";
+import {Network, getReqRespHandlers, validateNetworkOptions} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {Clock} from "../util/clock.js";
 import {startDeferredVoluntaryExitPublisher} from "./deferredVoluntaryExitPublisher.js";
@@ -171,6 +171,7 @@ export class BeaconNode {
     earliestAvailableSlot,
     metricsRegistries = [],
   }: BeaconNodeInitModules): Promise<T> {
+    validateNetworkOptions(opts.network);
     if (hasher.name !== "hashtree") {
       logger.warn(`hashtree is not supported, using hasher ${hasher.name}`);
     }
@@ -310,6 +311,7 @@ export class BeaconNode {
     // Network needs to be initialized before the sync
     // See https://github.com/ChainSafe/lodestar/issues/4543
     const network = await Network.init({
+      processShutdownCallback,
       opts: opts.network,
       config,
       logger: logger.child({module: LoggerModule.network}),

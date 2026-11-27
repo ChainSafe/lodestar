@@ -1,0 +1,260 @@
+[
+  {
+    "secret": 1,
+    "node_id": [
+      192,
+      166,
+      196,
+      36,
+      172,
+      113,
+      87,
+      174,
+      64,
+      131,
+      152,
+      223,
+      126,
+      95,
+      69,
+      82,
+      9,
+      26,
+      105,
+      18,
+      93,
+      93,
+      252,
+      183,
+      184,
+      194,
+      101,
+      144,
+      41,
+      57,
+      91,
+      223
+    ],
+    "epochs": [
+      {
+        "epoch": 0,
+        "subnets": [
+          55,
+          56
+        ]
+      },
+      {
+        "epoch": 32,
+        "subnets": [
+          55,
+          56
+        ]
+      },
+      {
+        "epoch": 33,
+        "subnets": [
+          50,
+          51
+        ]
+      },
+      {
+        "epoch": 256,
+        "subnets": [
+          50,
+          51
+        ]
+      },
+      {
+        "epoch": 1024,
+        "subnets": [
+          41,
+          42
+        ]
+      }
+    ],
+    "custody": [
+      {
+        "count": 1,
+        "groups": "30000020008000000000000000132",
+        "subnets": "30000020008000000000000000132"
+      },
+      {
+        "count": 128,
+        "groups": "ffffffffffffffffffffffffffffffff",
+        "subnets": "ffffffffffffffffffffffffffffffff"
+      }
+    ]
+  },
+  {
+    "secret": 2,
+    "node_id": [
+      238,
+      223,
+      26,
+      156,
+      104,
+      179,
+      244,
+      168,
+      177,
+      161,
+      3,
+      43,
+      43,
+      90,
+      213,
+      196,
+      121,
+      92,
+      2,
+      101,
+      20,
+      248,
+      49,
+      124,
+      122,
+      33,
+      94,
+      33,
+      141,
+      204,
+      214,
+      207
+    ],
+    "epochs": [
+      {
+        "epoch": 0,
+        "subnets": [
+          2,
+          3
+        ]
+      },
+      {
+        "epoch": 48,
+        "subnets": [
+          2,
+          3
+        ]
+      },
+      {
+        "epoch": 49,
+        "subnets": [
+          42,
+          43
+        ]
+      },
+      {
+        "epoch": 256,
+        "subnets": [
+          42,
+          43
+        ]
+      },
+      {
+        "epoch": 1024,
+        "subnets": [
+          59,
+          60
+        ]
+      }
+    ],
+    "custody": [
+      {
+        "count": 1,
+        "groups": "40000406001000020000400004000000",
+        "subnets": "40000406001000020000400004000000"
+      },
+      {
+        "count": 128,
+        "groups": "ffffffffffffffffffffffffffffffff",
+        "subnets": "ffffffffffffffffffffffffffffffff"
+      }
+    ]
+  },
+  {
+    "secret": 255,
+    "node_id": [
+      6,
+      88,
+      78,
+      61,
+      49,
+      111,
+      223,
+      128,
+      166,
+      129,
+      87,
+      208,
+      80,
+      68,
+      168,
+      11,
+      211,
+      239,
+      245,
+      131,
+      2,
+      230,
+      56,
+      1,
+      133,
+      52,
+      187,
+      218,
+      136,
+      150,
+      196,
+      138
+    ],
+    "epochs": [
+      {
+        "epoch": 0,
+        "subnets": [
+          53,
+          54
+        ]
+      },
+      {
+        "epoch": 117,
+        "subnets": [
+          53,
+          54
+        ]
+      },
+      {
+        "epoch": 118,
+        "subnets": [
+          9,
+          10
+        ]
+      },
+      {
+        "epoch": 256,
+        "subnets": [
+          9,
+          10
+        ]
+      },
+      {
+        "epoch": 1024,
+        "subnets": [
+          40,
+          41
+        ]
+      }
+    ],
+    "custody": [
+      {
+        "count": 1,
+        "groups": "88000000000100004040054000",
+        "subnets": "88000000000100004040054000"
+      },
+      {
+        "count": 128,
+        "groups": "ffffffffffffffffffffffffffffffff",
+        "subnets": "ffffffffffffffffffffffffffffffff"
+      }
+    ]
+  }
+]
