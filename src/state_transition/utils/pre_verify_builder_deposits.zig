@@ -60,7 +60,7 @@ pub fn preVerifyBuilderDepositsPreGloas(
     var iterator = pending.iteratorReadonly(start_cursor);
     var verified: usize = 0;
     var batch_verify = true;
-    var resolved: std.array_hash_map.Custom([48]u8, void, PubkeyHashContext, true) = .empty;
+    var resolved: ResolvedPubkeys = .empty;
     defer resolved.deinit(allocator);
 
     while (result.scanned_pending_deposits < scan_limit and
@@ -82,28 +82,22 @@ pub fn preVerifyBuilderDepositsPreGloas(
             if (is_builder) {
                 try cache.addBuilderPubkey(allocator, deposit.pubkey);
             }
-            if (
-            // is a builder,
-            (is_builder or cache.isBuilderPubkey(deposit.pubkey)) and
-                // is not locally known as valid (or resolved),
-                !resolved.containsContext(deposit.pubkey, cache.hash_context) and
-                // is not a known pubkey,
-                !try isValidatorKnown(
-                    .fulu,
-                    state.state.castToFork(.fulu),
-                    state.epoch_cache.pubkey_cache.get(io, deposit.pubkey),
-                ))
-            {
-                // then find from cache,
+            const resolved_by = resolved.getContext(deposit.pubkey, cache.hash_context);
+            // The fork checks every builder deposit until one registers a builder for its pubkey,
+            // whether or not a validator holds the key. It walks same-pubkey validator deposits only
+            // for an unknown validator, and stops at the first valid one.
+            const needs_check = if (is_builder)
+                resolved_by != .builder
+            else
+                cache.isBuilderPubkey(deposit.pubkey) and resolved_by == null and
+                    !try isValidatorKnown(
+                        .fulu,
+                        state.state.castToFork(.fulu),
+                        state.epoch_cache.pubkey_cache.get(io, deposit.pubkey),
+                    );
+            if (needs_check) {
                 if (cache.get(item.root)) |valid| {
-                    // if valid, mark it as resolved,
-                    if (valid and resolved.count() < cache_module.max_deposits_per_call)
-                        try resolved.putContext(
-                            allocator,
-                            deposit.pubkey,
-                            {},
-                            cache.hash_context,
-                        );
+                    if (valid) try markResolved(allocator, &resolved, cache, deposit.pubkey, is_builder);
                 }
                 // otherwise, put it in queue for verification
                 else {
@@ -123,8 +117,7 @@ pub fn preVerifyBuilderDepositsPreGloas(
                 try cache.put(allocator, deposit_root, valid);
                 const is_builder = isBuilderWithdrawalCredential(&deposit.withdrawal_credentials);
                 if (valid) {
-                    if (resolved.count() < cache_module.max_deposits_per_call)
-                        try resolved.putContext(allocator, deposit.pubkey, {}, cache.hash_context);
+                    try markResolved(allocator, &resolved, cache, deposit.pubkey, is_builder);
                     if (is_builder)
                         result.valid_builder_signatures_count += 1
                     else
@@ -148,6 +141,29 @@ pub fn preVerifyBuilderDepositsPreGloas(
     result.total_cached_deposits = cache.validity.count();
     result.total_builder_pubkeys = cache.builder_pubkeys.count();
     return result;
+}
+
+/// Valid deposits seen for a pubkey in the current scan, builder taking precedence. A valid validator
+/// deposit settles the fork's validator walk but not later builder deposits, which the fork
+/// still checks. A valid builder deposit registers the builder, so the fork checks nothing
+/// after it for that pubkey.
+const ResolvedBy = enum { validator, builder };
+const ResolvedPubkeys = std.array_hash_map.Custom([48]u8, ResolvedBy, PubkeyHashContext, true);
+
+fn markResolved(
+    allocator: std.mem.Allocator,
+    resolved: *ResolvedPubkeys,
+    cache: *const cache_module.BuilderDepositSignatureCache,
+    pubkey: [48]u8,
+    is_builder: bool,
+) !void {
+    const kind: ResolvedBy = if (is_builder) .builder else .validator;
+    if (resolved.getPtrContext(pubkey, cache.hash_context)) |existing| {
+        if (kind == .builder) existing.* = .builder;
+        return;
+    }
+    if (resolved.count() < cache_module.max_deposits_per_call)
+        try resolved.putContext(allocator, pubkey, kind, cache.hash_context);
 }
 
 test {

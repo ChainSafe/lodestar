@@ -303,6 +303,20 @@
         block_states: dict[Root, BeaconState]
     </spec>
 
+- name: OptimisticStore#gloas
+  sources: []
+  spec: |
+    <spec dataclass="OptimisticStore" fork="gloas" hash="acaec911">
+    class OptimisticStore:
+        # [Modified in Gloas:EIP7732]
+        # Removed `optimistic_roots`
+        # [New in Gloas:EIP7732]
+        optimistic_payloads: set[Hash32]
+        head_block_root: Root
+        blocks: dict[Root, BeaconBlock]
+        block_states: dict[Root, BeaconState]
+    </spec>
+
 - name: PayloadAttributes#bellatrix
   sources:
     - file: packages/types/src/bellatrix/sszTypes.ts
@@ -486,7 +500,7 @@
 - name: Seen#gloas
   sources: []
   spec: |
-    <spec dataclass="Seen" fork="gloas" hash="4f13b859">
+    <spec dataclass="Seen" fork="gloas" hash="7d535c0d">
     class Seen:
         proposer_slots: set[tuple[Slot, ValidatorIndex]]
         aggregator_epochs: set[tuple[Epoch, ValidatorIndex]]
@@ -510,7 +524,7 @@
         # [New in Gloas:EIP7732]
         payload_attestation_validators: set[tuple[Slot, ValidatorIndex]]
         # [New in Gloas:EIP7732]
-        execution_payload_bids: set[tuple[Slot, Hash32, Root, BuilderIndex]]
+        execution_payload_bid_counts: Counter[tuple[Slot, Hash32, Root, BuilderIndex]]
         # [New in Gloas:EIP7732]
         best_execution_payload_bid: dict[tuple[Slot, Hash32, Root], Gwei]
         # [New in Gloas:EIP7732]
@@ -520,7 +534,7 @@
 - name: Seen#heze
   sources: []
   spec: |
-    <spec dataclass="Seen" fork="heze" hash="176f9751">
+    <spec dataclass="Seen" fork="heze" hash="95de7860">
     class Seen:
         proposer_slots: set[tuple[Slot, ValidatorIndex]]
         aggregator_epochs: set[tuple[Epoch, ValidatorIndex]]
@@ -537,7 +551,7 @@
         execution_payloads: dict[Hash32, ExecutionPayload]
         execution_payload_envelopes: set[tuple[Root, BuilderIndex]]
         payload_attestation_validators: set[tuple[Slot, ValidatorIndex]]
-        execution_payload_bids: set[tuple[Slot, Hash32, Root, BuilderIndex]]
+        execution_payload_bid_counts: Counter[tuple[Slot, Hash32, Root, BuilderIndex]]
         best_execution_payload_bid: dict[tuple[Slot, Hash32, Root], Gwei]
         proposer_preferences: dict[tuple[Slot, Root], ProposerPreferences]
         # [New in Heze:EIP7805]

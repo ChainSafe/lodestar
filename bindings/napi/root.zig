@@ -16,6 +16,7 @@ pub const NativeNetworkRuntime = @import("./network.zig");
 pub const pubkeys = @import("./pubkeys.zig");
 pub const committeePubkeys = @import("./committee_pubkeys.zig");
 pub const executionProofVerifier = @import("./execution_proof_verifier.zig");
+pub const executionBlockHash = @import("./execution_block_hash.zig");
 
 const options = @import("bls_options");
 pub const std_options: std.Options = .{

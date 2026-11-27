@@ -284,7 +284,7 @@ export async function archiveBlocks(
   }
 
   // Delete expired data column sidecars
-  // Keep only `[min(compute_blob_data_retention_start_epoch(current_epoch), current_epoch - archiveDataEpochs)]`
+  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, archiveDataEpochs)]`
   if (finalizedPostFulu) {
     if (archiveDataEpochs !== Infinity) {
       const dataColumnSidecarsMinEpoch = getDataColumnSidecarsMinEpoch(config, currentEpoch, archiveDataEpochs);

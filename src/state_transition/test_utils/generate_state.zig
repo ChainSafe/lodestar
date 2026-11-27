@@ -198,9 +198,12 @@ pub const TestCachedBeaconState = struct {
         return initFromStateWithConfig(allocator, pool, state, fork, fork_epoch, .{});
     }
 
-    /// Apply explicit fixture overrides after scheduling the test fork. Copies all borrowed
-    /// config slices, so the fixture parser may be released immediately after this call.
-    /// Takes ownership of `state` only on success; callers retain it on every error path.
+    /// Schedule the test fork from the state after applying explicit fixture overrides. Since
+    /// consensus-specs#5757 every state test's config.yaml pins the tested fork epoch to 0, while
+    /// some vectors move `state.fork.epoch` after setup and the spec reads `state.fork`, so the
+    /// state wins for fork epochs. Copies all borrowed config slices, so the fixture parser may be
+    /// released immediately after this call. Takes ownership of `state` only on success; callers
+    /// retain it on every error path.
     pub fn initFromStateWithConfig(
         allocator: Allocator,
         pool: *Node.Pool,
@@ -209,7 +212,7 @@ pub const TestCachedBeaconState = struct {
         fork_epoch: Epoch,
         overrides: ChainConfig.OptionalChainConfig,
     ) !TestCachedBeaconState {
-        var chain_config = getConfig(active_chain_config, fork, fork_epoch).merge(overrides);
+        var chain_config = getConfig(active_chain_config.merge(overrides), fork, fork_epoch);
         const owned_config_name = try allocator.dupe(u8, chain_config.CONFIG_NAME);
         errdefer allocator.free(owned_config_name);
         const owned_blob_schedule = try allocator.dupe(ChainConfig.BlobScheduleEntry, chain_config.BLOB_SCHEDULE);
