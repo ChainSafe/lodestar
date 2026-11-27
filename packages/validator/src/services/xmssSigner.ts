@@ -154,7 +154,7 @@ class SealedVrfSubtreeRoots {
     private readonly populatedDepth: number
   ) {
     // Change the label with the leaf rule: roots of a tree with other leaves must not load
-    this.macKey = createHmac("sha256", vrfSeed).update("lodestar vrf subtree roots").digest();
+    this.macKey = createHmac("sha256", vrfSeed).update("lodestar vrf subtree roots, leaves commit to secrets").digest();
   }
 
   read(): Uint8Array | null {

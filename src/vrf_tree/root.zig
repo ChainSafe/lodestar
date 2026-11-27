@@ -1,10 +1,11 @@
 //! A validator's VRF tree: a Merkle tree of depth `depth`, hashed with
-//! Keccak-256, whose leaves are secret values, one per slot. The validator
-//! registers the root, and reveals the leaf of a slot with its Merkle branch as
-//! its RANDAO reveal.
+//! Keccak-256, with one leaf per slot that commits to the slot's secret. The
+//! validator registers the root, and reveals the secret of a slot with the
+//! Merkle branch of its leaf as its RANDAO reveal. The branch holds only
+//! commitments, so it reveals no other slot's secret.
 //!
-//! The leaf of a slot is the hash of a seed and the slot, so the seed is the
-//! tree's whole secret (the spec's `compute_vrf_leaf`). The tree
+//! The secret of a slot is the hash of a seed and the slot, so the seed is the
+//! tree's whole secret (the spec's `compute_vrf_secret`). The tree
 //! itself is too large to keep, so `VrfTree` holds only its layers above
 //! subtrees of `2^subtree_depth` leaves and rebuilds the subtree a proof needs.
 
@@ -21,7 +22,7 @@ const subtree_count = 1 << top_depth;
 
 pub const Seed = [32]u8;
 pub const Root = [32]u8;
-/// The leaf of a slot, then its Merkle branch from the bottom up.
+/// The secret of a slot, then the Merkle branch of its leaf from the bottom up.
 pub const Proof = [depth + 1][32]u8;
 
 /// What a file of precomputed trees holds for one: its root, a slot, which is
@@ -59,12 +60,10 @@ pub const VrfTree = struct {
             const first: u64 = @as(u64, index) << subtree_depth;
             const count: usize = @intCast(@min(populated -| first, subtree_leaves));
             const leaves = self.nodes[subtree_leaves..];
-            var preimage: [@sizeOf(Seed) + 8]u8 = undefined;
-            defer std.crypto.secureZero(u8, &preimage);
-            @memcpy(preimage[0..@sizeOf(Seed)], seed);
             for (leaves[0..count], first..) |*leaf, slot| {
-                std.mem.writeInt(u64, preimage[@sizeOf(Seed)..], slot, .little);
-                Keccak256.hash(&preimage, leaf, .{});
+                var secret = computeSecret(seed, slot);
+                defer std.crypto.secureZero(u8, &secret);
+                leaf.* = computeLeaf(&secret, slot);
             }
             @memset(leaves[count..], @splat(0));
             hashLayers(self.nodes);
@@ -196,7 +195,7 @@ pub const VrfTree = struct {
 
         var out: Proof = undefined;
         var node: usize = subtree_leaves + @as(usize, @intCast(slot % subtree_leaves));
-        out[0] = self.subtree.nodes[node];
+        out[0] = computeSecret(&self.seed, slot);
         for (out[1..][0..subtree_depth]) |*sibling| {
             sibling.* = self.subtree.nodes[node ^ 1];
             node /= 2;
@@ -230,12 +229,9 @@ fn hashLayers(nodes: [][32]u8) void {
 /// The record among `records` whose tree has the second leaf of `seed`'s, which a
 /// record holds as its first sibling. `VrfTree.init` checks the rest of it.
 pub fn findState(seed: *const Seed, records: []const u8) ?*const [state_record_size]u8 {
-    var preimage: [@sizeOf(Seed) + 8]u8 = undefined;
-    defer std.crypto.secureZero(u8, &preimage);
-    preimage[0..@sizeOf(Seed)].* = seed.*;
-    std.mem.writeInt(u64, preimage[@sizeOf(Seed)..], 1, .little);
-    var second_leaf: [32]u8 = undefined;
-    Keccak256.hash(&preimage, &second_leaf, .{});
+    var secret = computeSecret(seed, 1);
+    defer std.crypto.secureZero(u8, &secret);
+    const second_leaf = computeLeaf(&secret, 1);
 
     var offset: usize = 0;
     while (offset + state_record_size <= records.len) : (offset += state_record_size) {
@@ -276,9 +272,35 @@ fn zeroSubtreeRoot() [32]u8 {
     return value;
 }
 
-/// Checks that `proof` opens the leaf of `slot` under `root`.
+/// The secret of the slot at `index`, the spec's `compute_vrf_secret`.
+pub fn computeSecret(seed: *const Seed, index: u64) [32]u8 {
+    const domain = c.VRF_SECRET_DOMAIN;
+    var preimage: [domain.len + @sizeOf(Seed) + 8]u8 = undefined;
+    defer std.crypto.secureZero(u8, &preimage);
+    @memcpy(preimage[0..domain.len], domain);
+    preimage[domain.len..][0..@sizeOf(Seed)].* = seed.*;
+    std.mem.writeInt(u64, preimage[domain.len + @sizeOf(Seed) ..][0..8], index, .little);
+    var secret: [32]u8 = undefined;
+    Keccak256.hash(&preimage, &secret, .{});
+    return secret;
+}
+
+/// The leaf at `index`, which commits to `secret`: the spec's `compute_vrf_leaf`.
+pub fn computeLeaf(secret: *const [32]u8, index: u64) [32]u8 {
+    const domain = c.VRF_LEAF_DOMAIN;
+    var preimage: [domain.len + 32 + 8]u8 = undefined;
+    defer std.crypto.secureZero(u8, &preimage);
+    @memcpy(preimage[0..domain.len], domain);
+    preimage[domain.len..][0..32].* = secret.*;
+    std.mem.writeInt(u64, preimage[domain.len + 32 ..][0..8], index, .little);
+    var leaf: [32]u8 = undefined;
+    Keccak256.hash(&preimage, &leaf, .{});
+    return leaf;
+}
+
+/// Checks that `proof` reveals the secret that the leaf of `slot` under `root` commits to.
 pub fn isValidProof(root: *const Root, slot: u64, proof: *const Proof) bool {
-    var value = proof[0];
+    var value = computeLeaf(&proof[0], slot);
     for (proof[1..], 0..) |*sibling, height| {
         const pair = if ((slot >> @intCast(height)) & 1 == 1) sibling.* ++ value else value ++ sibling.*;
         Keccak256.hash(&pair, &value, .{});

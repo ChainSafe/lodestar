@@ -25,8 +25,8 @@ pub fn processRandao(
     const epoch = epoch_cache.epoch;
     const randao_reveal = body.randaoReveal();
 
-    // From PQ the reveal is a leaf of the tree under the proposer's VRF root, which
-    // the proposer committed to before it knew the slot's randomness.
+    // From PQ the reveal is a secret that a leaf of the tree under the proposer's VRF
+    // root commits to, which the proposer committed to before it knew the slot's randomness.
     if (comptime fork == .pq) {
         var validators = try state.validators();
         var proposer = try validators.getReadonly(proposer_idx);

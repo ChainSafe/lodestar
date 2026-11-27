@@ -74,9 +74,15 @@ fn legacyDigest(pubkey: *const [48]u8, domain: u8) [32]u8 {
     return out;
 }
 
-/// Checks that `proof` opens the leaf for `slot` under `vrf_root`.
+/// Checks that `proof` reveals the secret that the leaf for `slot` under `vrf_root` commits to.
 pub fn isValidVrfProof(vrf_root: *const [32]u8, slot: u64, proof: *const VrfProof) bool {
-    var value = proof[0];
+    const domain = c.VRF_LEAF_DOMAIN;
+    var preimage: [domain.len + 32 + 8]u8 = undefined;
+    @memcpy(preimage[0..domain.len], domain);
+    preimage[domain.len..][0..32].* = proof[0];
+    std.mem.writeInt(u64, preimage[domain.len + 32 ..][0..8], slot, .little);
+    var value: [32]u8 = undefined;
+    std.crypto.hash.sha3.Keccak256.hash(&preimage, &value, .{});
     for (proof[1..], 0..) |*sibling, depth| {
         const pair = if ((slot >> @intCast(depth)) & 1 == 1) sibling.* ++ value else value ++ sibling.*;
         std.crypto.hash.sha3.Keccak256.hash(&pair, &value, .{});

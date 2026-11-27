@@ -124,7 +124,10 @@ export function computeDepositVrfRoot(pubkey: Uint8Array, signature: Uint8Array)
   return isLegacyPubkey(pubkey) ? legacyDigest(pubkey, LEGACY_VRF_ROOT_DOMAIN) : signature.subarray(0, 32);
 }
 
-/** Checks that `proof` opens the leaf for `slot` under `vrfRoot`, in a tree hashed with Keccak-256 */
+/**
+ * Checks that `proof` reveals the secret that the leaf for `slot` under `vrfRoot` commits to, in a
+ * tree hashed with Keccak-256
+ */
 export function isValidVrfProof(vrfRoot: Uint8Array, slot: Slot, proof: pq.VRFProof): boolean {
   if (proof.length !== VRF_TREE_DEPTH + 1) return false;
   return isValidNativeVrfProof(vrfRoot, slot, Buffer.concat(proof));

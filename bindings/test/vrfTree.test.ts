@@ -9,7 +9,7 @@ import {
 } from "../src/vrf-tree.js";
 
 describe("VrfTree", () => {
-  it("proves the leaf of a slot under its root", async () => {
+  it("proves the secret of a slot under its root", async () => {
     const tree = await VrfTree.build(new Uint8Array(VRF_SEED_SIZE).fill(5), 17);
     const root = tree.root();
     for (const slot of [0, 1, 65535, 65536, 2 ** 17 - 1]) {

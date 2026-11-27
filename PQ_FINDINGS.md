@@ -83,7 +83,7 @@ With Teku at `dcbe4f7`, the same spec commit with leanVM bindings 0.17.0, under 
 - EIP-8483 and `upgrade_to_pq`: the chain starts at PQ. That leaves out the rules for validators and builders that did not register, `UNREGISTERED_VALIDATOR_WITHDRAWABILITY_DELAY` among them.
 - What the branch took from its merges of `master` into Gloas and Heze: the per-builder bid limit on gossip, the added envelope gossip checks, the fast confirmation changes.
 - Signing at reserved and builder bid leaves: no preregistration, exit or external bid is produced.
-- The `pq` commits after `4595f0fc`: VRF leaves that commit to a secret (`b5d422b2`), `X_MAX_COMMITTEE_COUNT_PER_SLOT` (`af898d07`), and Keccak-256 for the keys and VRF roots of legacy requests (`4c296784`). pq-devnet-1's notes ask for a spec at or after `4595f0fc`, and Teku's branch is at `4c296784`, whose VRF roots are not this branch's.
+- The `pq` commits after `4595f0fc` other than VRF leaves that commit to a secret (`b5d422b2`): `X_MAX_COMMITTEE_COUNT_PER_SLOT` (`af898d07`), and Keccak-256 for the keys and VRF roots of legacy requests (`4c296784`). The VRF roots match the pq-devnet-1 genesis.
 
 ## Differences from unstable
 

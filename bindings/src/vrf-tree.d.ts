@@ -1,12 +1,12 @@
 /**
- * A PQ validator's VRF tree: a Merkle tree hashed with Keccak-256 whose leaves are secret values,
- * one per slot. The validator registers its root, and reveals a slot's leaf with its Merkle branch
- * as its RANDAO reveal.
+ * A PQ validator's VRF tree: a Merkle tree hashed with Keccak-256 with one leaf per slot, which
+ * commits to the slot's secret. The validator registers its root, and reveals a slot's secret with
+ * the Merkle branch of its leaf as its RANDAO reveal.
  */
 
 export declare const VRF_SEED_SIZE: 32;
 export declare const VRF_TREE_DEPTH: 31;
-/** The leaf then one sibling per level, 32 bytes each. */
+/** The secret then one sibling of its leaf per level, 32 bytes each. */
 export declare const VRF_PROOF_SIZE: 1024;
 
 /**
@@ -15,7 +15,7 @@ export declare const VRF_PROOF_SIZE: 1024;
  */
 export declare const VRF_STATE_RECORD_SIZE: 1028;
 
-/** Whether the `VRF_PROOF_SIZE`-byte `proof` opens the leaf of `slot` under `root` */
+/** Whether the `VRF_PROOF_SIZE`-byte `proof` reveals the secret that the leaf of `slot` under `root` commits to */
 export declare function isValidVrfProof(root: Uint8Array, slot: number, proof: Uint8Array): boolean;
 
 /**
