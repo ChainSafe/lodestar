@@ -293,3 +293,7 @@ comptime {
         assert(candidate.len <= id_length_max);
     }
 }
+
+test {
+    _ = @import("protocol_test.zig");
+}
