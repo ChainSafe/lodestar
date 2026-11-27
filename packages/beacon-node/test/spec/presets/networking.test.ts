@@ -61,12 +61,15 @@ function runNetworkingFnTests(testHandler: string, testSuite: string, testSuiteD
 
 /** Matched against `<handler>/<testCase>` */
 const skippedGossipTests: RegExp[] = [
-  // The pinned vector predates consensus-specs#5821, its payload carries withdrawals the block's post-state
-  // does not expect. Unskip with the next spec release.
-  /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__valid_max_withdrawals$/,
-  // The pinned vectors carry placeholder block hashes, so the block hash check from consensus-specs#5770 rejects
-  // envelopes they expect to be accepted. Unskip once a release ships vectors with real block hashes.
-  /^gossip_execution_payload_envelope\/gossip_execution_payload_envelope__(valid.*|ignore_duplicate)$/,
+  // Lodestar marks the proposer of every imported block as seen, so a block reusing the slot and proposer of
+  // its anchor parent is ignored as a repeat proposal before the parent slot check rejects it
+  /^gossip_beacon_block\/gossip_beacon_block__reject_slot_not_higher_than_parent$/,
+  // A bid parent block hash that matches neither payload variant of the parent is ignored as an unknown parent
+  // payload instead of rejected
+  /^gossip_beacon_block\/gossip_beacon_block__reject_bid_not_on_parent_execution_head$/,
+  // Lodestar ignores previous epoch attestations exactly MAXIMUM_GOSSIP_CLOCK_DISPARITY after the epoch window
+  // closes, the spec includes that end point
+  /^gossip_beacon_(attestation|aggregate_and_proof)\/.*__accepts_(first|last)_slot_when_epoch_window_closes$/,
   // An epoch above Number.MAX_SAFE_INTEGER fails deserialization, so the exit is rejected instead of ignored.
   /^gossip_voluntary_exit\/gossip_voluntary_exit__ignore_far_future_epoch$/,
 ];

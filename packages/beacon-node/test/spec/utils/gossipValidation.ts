@@ -15,6 +15,7 @@ import {
   ForkPostGloas,
   ForkPreFulu,
   ForkPreGloas,
+  isForkPostElectra,
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
@@ -300,14 +301,15 @@ function computePostState(
   );
 }
 
-/** Record the block's payload as received and verified, as `on_execution_payload_envelope` would */
+/** Record the block's payload as received, as `on_execution_payload_envelope` would, with its EL verdict */
 function importBlockPayload(
   chain: BeaconChain,
   testCaseDir: string,
   fork: ForkName,
   signedBlock: SignedBeaconBlock<ForkPostGloas>,
   blockRootHex: RootHex,
-  payloadName: string
+  payloadName: string,
+  payloadStatus: MetaPayloadStatus | undefined
 ): void {
   const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(loadSszSnappy(testCaseDir, payloadName));
   const {payload} = envelope.message;
@@ -328,9 +330,18 @@ function importBlockPayload(
     toRootHex(payload.blockHash),
     payload.blockNumber,
     payload.gasLimit,
-    ExecutionStatus.Valid,
+    payloadStatus === undefined || payloadStatus === "VALID" ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
     DataAvailabilityStatus.Available
   );
+  if (payloadStatus === "INVALIDATED") {
+    chain.forkChoice.validateLatestHash({
+      executionStatus: ExecutionStatus.Invalid,
+      latestValidExecHash: toRootHex(payload.parentHash),
+      invalidateFromBlockRoot: blockRootHex,
+      invalidateFromBlockHash: toRootHex(payload.blockHash),
+      judged: LVHInvalidJudged.FromBlock,
+    });
+  }
 }
 
 function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, parentRootHex: RootHex): void {
@@ -479,7 +490,8 @@ export async function runGossipValidationTest(
               fork,
               signedBlock as SignedBeaconBlock<ForkPostGloas>,
               blockRootHex,
-              blockEntry.payload
+              blockEntry.payload,
+              blockEntry.payload_status
             );
           }
           continue;
@@ -522,7 +534,8 @@ export async function runGossipValidationTest(
           continue;
         }
 
-        if (blockEntry.payload_status === "INVALIDATED") {
+        // Post-gloas the status belongs to the block's payload, applied when the payload is imported below
+        if (blockEntry.payload_status === "INVALIDATED" && !isForkPostGloas(fork)) {
           clock.setSlot(slot);
           chain.forkChoice.updateTime(slot);
           chain.forkChoice.onBlock(
@@ -593,7 +606,8 @@ export async function runGossipValidationTest(
             fork,
             signedBlock as SignedBeaconBlock<ForkPostGloas>,
             blockRootHex,
-            blockEntry.payload
+            blockEntry.payload,
+            blockEntry.payload_status
           );
         }
       }
@@ -706,7 +720,11 @@ async function validateMessageForTopic(
     }
 
     case GossipType.beacon_attestation: {
-      const attestation = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).Attestation.deserialize(bytes));
+      const attestation = rejectOnInvalidSerializedBytes(() =>
+        isForkPostElectra(fork)
+          ? ssz.electra.SingleAttestation.deserialize(bytes)
+          : sszTypesFor(fork).Attestation.deserialize(bytes)
+      );
       const beaconBlockRootHex = toRootHex(attestation.data.beaconBlockRoot);
 
       if (failedBlockRoots.has(beaconBlockRootHex)) {
