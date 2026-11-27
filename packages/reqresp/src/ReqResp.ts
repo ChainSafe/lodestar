@@ -1,7 +1,6 @@
 import {setMaxListeners} from "node:events";
 import {Connection, PeerId, Stream} from "@libp2p/interface";
 import type {Libp2p} from "libp2p";
-import {MAX_CONCURRENT_REQUESTS} from "@lodestar/params";
 import {Logger, MetricsRegisterExtra} from "@lodestar/utils";
 import {Metrics, getMetrics} from "./metrics.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
@@ -110,12 +109,7 @@ export class ReqResp {
       this.rateLimiter.setRateLimits(protocolID, inboundRateLimits);
     }
 
-    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID), {
-      force: true,
-      // Bound concurrent inbound response streams per protocol (libp2p default is 32); Lodestar self-limits
-      // its own outbound requests to this value
-      maxInboundStreams: MAX_CONCURRENT_REQUESTS,
-    });
+    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID), {force: true});
   }
 
   /**
