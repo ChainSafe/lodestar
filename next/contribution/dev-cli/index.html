@@ -9,7 +9,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://chainsafe.github.io/lodestar/images/favicon-512x512.png">
 <script src="https://plausible.io/js/script.js" defer="defer" data-domain="chainsafe.github.io/lodestar"></script><link rel="stylesheet" href="/lodestar/assets/css/styles.a0c064e1.css">
-<script src="/lodestar/assets/js/runtime~main.9ac58894.js" defer="defer"></script>
+<script src="/lodestar/assets/js/runtime~main.1b8fb743.js" defer="defer"></script>
 <script src="/lodestar/assets/js/main.a3bc4a40.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -147,7 +147,7 @@
 <p>type: <code>number</code></p>
 <p>default: <code>1024</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--chainarchivedataepochs"><code>--chain.archiveDataEpochs</code><a href="#--chainarchivedataepochs" class="hash-link" aria-label="Direct link to --chainarchivedataepochs" title="Direct link to --chainarchivedataepochs">​</a></h4>
-<p>Number of epochs to retain finalized data columns (minimum of the MIN_BLOB_DATA_RETENTION_MS window)</p>
+<p>Number of epochs to retain finalized data columns (minimum of MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS)</p>
 <p>type: <code>number</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--chainprunehistory"><code>--chain.pruneHistory</code><a href="#--chainprunehistory" class="hash-link" aria-label="Direct link to --chainprunehistory" title="Direct link to --chainprunehistory">​</a></h4>
 <p>Continually prune finalized blocks and execution payload envelopes older than <code>MIN_EPOCHS_FOR_BLOCK_REQUESTS</code> (33024 epochs / ~5 months on mainnet, 14299 epochs / ~2 months from gloas) and all archived states before the finalized epoch. Enabled by default unless <code>--serveHistoricalState</code> is set. Set to <code>false</code> to retain historical data. An existing large database is pruned gradually, up to 4096 slots of blocks on startup and on every finalized checkpoint.</p>
