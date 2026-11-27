@@ -296,7 +296,8 @@ export interface IForkChoice {
    * Returns true if the `descendantRoot` has an ancestor with `ancestorRoot`.
    *
    * Always returns `false` if either input roots are unknown.
-   * Still returns `true` if `ancestorRoot===descendantRoot` (and the roots are known)
+   * Still returns `true` if `ancestorRoot===descendantRoot` and the ancestor payload status is `PENDING` or equal
+   * to the descendant payload status (and both nodes are known)
    */
   isDescendant(
     ancestorRoot: RootHex,
