@@ -11,13 +11,16 @@ import {
   getHttpMetricsServer,
   initializeExecutionEngine,
 } from "@lodestar/beacon-node";
-import {Builder, EnginePayloadResult, EnginePayloadSource, getMetrics} from "@lodestar/builder";
+import {Builder, EnginePayloadResult, EnginePayloadSource, ProportionalBidPolicy, getMetrics} from "@lodestar/builder";
+import {ChainForkConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
+import {ForkName} from "@lodestar/params";
 import {fromHex, toPrintableUrl} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getGlobalPaths} from "../../paths/global.js";
 import {
+  YargsError,
   cleanOldLogFiles,
   extractJwtHexSecret,
   onGracefulShutdown,
@@ -55,6 +58,9 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
   if (executionFeeRecipient === ZERO_ADDRESS) {
     throw Error("Cannot put zero address as an executionFeeRecipient");
   }
+
+  // Before the keystore is loaded and the builder waits for genesis, the fork and its activation
+  validateBiddingArgs(args, config);
 
   const keypair = await loadBuilderKeypair(logger, args.keystore, args.keystorePassword, args.builderPubkey);
 
@@ -158,8 +164,50 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
       getPayloadTimeout: args["bidding.getPayloadTimeout"],
       minOperatingBalanceGwei: args["bidding.minOperatingBalanceGwei"],
     },
-    reveal: {cutoffBps: args["reveal.cutoffBps"]},
+    reveal: {cutoffBps: args["reveal.cutoffBps"], requestTimeout: args.requestTimeout},
   });
 
   onGracefulShutdownCbs.push(() => builder.close());
+}
+
+/**
+ * The bidding and reveal options are only used once the builder is active and builds for a slot, an invalid value
+ * would otherwise show as a builder that never bids or reveals.
+ */
+function validateBiddingArgs(args: IBuilderCliArgs, config: ChainForkConfig): void {
+  for (const [option, value] of [
+    ["bidding.deadlineBps", args["bidding.deadlineBps"]],
+    ["reveal.cutoffBps", args["reveal.cutoffBps"] ?? config.PAYLOAD_ATTESTATION_DUE_BPS],
+  ] as const) {
+    // A point within a slot, the bid deadline at the slot boundaries leaves no time to build or to select the bid
+    if (!Number.isSafeInteger(value) || value <= 0 || value >= 10_000) {
+      throw new YargsError(`Invalid ${option}=${value}, must be an integer within (0, 10000)`);
+    }
+  }
+
+  const getPayloadTimeout = args["bidding.getPayloadTimeout"];
+  const slotDurationMs = config.getSlotDurationMs(ForkName.gloas);
+  if (!Number.isSafeInteger(getPayloadTimeout) || getPayloadTimeout <= 0 || getPayloadTimeout > slotDurationMs) {
+    throw new YargsError(
+      `Invalid bidding.getPayloadTimeout=${getPayloadTimeout}, must be a positive integer not above the slot duration of ${slotDurationMs} ms`
+    );
+  }
+
+  const minOperatingBalanceGwei = args["bidding.minOperatingBalanceGwei"];
+  if (!Number.isSafeInteger(minOperatingBalanceGwei) || minOperatingBalanceGwei < 0) {
+    throw new YargsError(
+      `Invalid bidding.minOperatingBalanceGwei=${minOperatingBalanceGwei}, must be a non-negative safe integer`
+    );
+  }
+
+  try {
+    new ProportionalBidPolicy({
+      shareBps: args["bidding.shareBps"],
+      fixedCostGwei: args["bidding.fixedCostGwei"],
+      minValueGwei: args["bidding.minValueGwei"],
+      maxValueGwei: args["bidding.maxValueGwei"],
+    });
+  } catch (e) {
+    throw new YargsError(`Invalid bidding options: ${(e as Error).message}`);
+  }
 }
