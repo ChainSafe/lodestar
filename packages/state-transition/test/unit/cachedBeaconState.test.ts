@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   EPOCHS_PER_SLASHINGS_VECTOR,
   FAR_FUTURE_EPOCH,
@@ -10,7 +10,7 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {Epoch, RootHex, ssz} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
 import {interopPubkeysCached} from "../../src/testUtils/interop.js";
 import {createCachedBeaconStateTest} from "../../src/testUtils/state.js";
@@ -33,7 +33,7 @@ describe("CachedBeaconState", () => {
     const prevRoot = state2.currentJustifiedCheckpoint.root;
     const newRoot = Buffer.alloc(32, 1);
     state1.currentJustifiedCheckpoint.root = newRoot;
-    expect(toHexString(state2.currentJustifiedCheckpoint.root)).toBe(toHexString(prevRoot));
+    expect(toHex(state2.currentJustifiedCheckpoint.root)).toBe(toHex(prevRoot));
 
     state1.epochCtx.epoch = 1;
     expect(state2.epochCtx.epoch).toBe(0);
@@ -68,7 +68,7 @@ describe("CachedBeaconState", () => {
 
     // Only commit state1 beforehand
     cp1.commit();
-    expect(toHexString(cp1.hashTreeRoot())).toBe(toHexString(cp2.hashTreeRoot()));
+    expect(toHex(cp1.hashTreeRoot())).toBe(toHex(cp2.hashTreeRoot()));
   });
 
   it("Auto-commit on serialize", () => {
@@ -80,7 +80,7 @@ describe("CachedBeaconState", () => {
 
     // Only commit state1 beforehand
     cp1.commit();
-    expect(toHexString(cp1.serialize())).toBe(toHexString(cp2.serialize()));
+    expect(toHex(cp1.serialize())).toBe(toHex(cp2.serialize()));
   });
 
   it("reconstructs Gloas next proposers from the state lookahead", () => {

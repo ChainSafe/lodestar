@@ -1,14 +1,15 @@
 import {Mock, MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ProtoBlock} from "@lodestar/fork-choice";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
+import {BeaconStateGloas, BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
+import {ChainEvent} from "../../../src/chain/emitter.js";
 import {IChainOptions} from "../../../src/chain/options.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
 import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
@@ -42,6 +43,7 @@ describe("PrepareNextSlot scheduler", () => {
 
     getForkStub = vi.spyOn(config, "getForkName");
     executionEngineStub = chainStub.executionEngine;
+    executionEngineStub.notifyForkchoiceUpdate.mockResolvedValue("0x1234");
     vi.spyOn(chainStub, "opts", "get").mockReturnValue({emitPayloadAttributes} as IChainOptions);
 
     scheduler = new PrepareNextSlotScheduler(chainStub, config, null, loggerStub, abortController.signal);
@@ -50,9 +52,32 @@ describe("PrepareNextSlot scheduler", () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
     vi.clearAllTimers();
+    vi.useRealTimers();
   });
+
+  it.each([6000, 24000])(
+    "prepares at the current slot offset when the next duration is %i ms",
+    async (nextDuration) => {
+      const clockSlot = 2 * SLOTS_PER_EPOCH - 1;
+      // Anchor the fake clock to the start of clockSlot, else a wall time slot event from the real clock
+      // can trigger an extra prepareForNextSlot within the test window
+      vi.setSystemTime(clockSlot * config.SLOT_DURATION_MS);
+      getForkStub.mockImplementation((slot) => (slot <= clockSlot ? ForkName.phase0 : ForkName.altair));
+      vi.spyOn(config, "getSlotDurationMs").mockImplementation((fork) =>
+        fork === ForkName.phase0 ? 12000 : nextDuration
+      );
+      chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: 0});
+
+      const preparing = scheduler.prepareForNextSlot(clockSlot);
+      await vi.advanceTimersByTimeAsync(7999);
+      expect(chainStub.recomputeForkChoiceHead).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+      await preparing;
+    }
+  );
 
   it("pre bellatrix - should not run due to not last slot of epoch", async () => {
     getForkStub.mockReturnValue(ForkName.phase0);
@@ -164,6 +189,7 @@ describe("PrepareNextSlot scheduler", () => {
       expect.any(String),
       expect.any(String),
       expect.any(String),
+      expect.any(String),
       expect.objectContaining({withdrawals: [], parentBeaconBlockRoot: expect.any(Uint8Array)})
     );
     expect(spy).toHaveBeenCalledTimes(1);
@@ -173,7 +199,7 @@ describe("PrepareNextSlot scheduler", () => {
     );
     expect(spy.mock.invocationCallOrder[0]).toBeLessThan(computeStateHashTreeRoot.mock.invocationCallOrder[0]);
     // attributes computed for the event are reused for the EL payload preparation
-    expect(executionEngineStub.notifyForkchoiceUpdate.mock.calls[0][4]).toBe(
+    expect(executionEngineStub.notifyForkchoiceUpdate.mock.calls[0][5]).toBe(
       spy.mock.calls[0][0].data.payloadAttributes
     );
     expect(loggerStub.error).not.toHaveBeenCalled();
@@ -234,6 +260,7 @@ describe("PrepareNextSlot scheduler", () => {
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledWith(
       ForkName.gloas,
       expect.any(String),
+      expect.any(String),
       safeBlockHash,
       finalizedBlockHash,
       spy.mock.calls[0][0].data.payloadAttributes
@@ -292,6 +319,7 @@ describe("PrepareNextSlot scheduler", () => {
     });
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledWith(
       ForkName.gloas,
+      expect.any(String),
       expect.any(String),
       expect.any(String),
       expect.any(String),
@@ -370,5 +398,302 @@ describe("PrepareNextSlot scheduler", () => {
     // Past BUILDER_STATUS_CHECK_BEFORE_SLOT_BPS, connections are warmed before bids are requested
     await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS / 4);
     expect(chainStub.builderApiClient.checkStatus).toHaveBeenCalled();
+  });
+
+  describe("gloas - re-prepare after the scheduled run", () => {
+    const clockSlot = SLOTS_PER_EPOCH - 2;
+    const prepareSlot = clockSlot + 1;
+    const fullParentHash = toRootHex(new Uint8Array(32).fill(0xaa));
+    const emptyParentHash = toRootHex(new Uint8Array(32).fill(0xbb));
+    const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
+    const head = {
+      ...zeroProtoBlock,
+      slot: clockSlot,
+      blockRoot: toRootHex(new Uint8Array(32).fill(0x11)),
+      executionPayloadBlockHash: fullParentHash,
+      parentBlockHash: emptyParentHash,
+    } as ProtoBlock;
+    let prepareState: BeaconStateView;
+
+    beforeEach(() => {
+      // Anchor the fake clock to the start of clockSlot so the events below land in that slot
+      vi.setSystemTime(clockSlot * config.SLOT_DURATION_MS);
+      getForkStub.mockReturnValue(ForkName.gloas);
+      chainStub.recomputeForkChoiceHead.mockReturnValue(head);
+      chainStub.predictProposerHead.mockReturnValue(head);
+      forkChoiceStub.getConfirmedBlock.mockReturnValue(head);
+      forkChoiceStub.getFinalizedBlock.mockReturnValue(head);
+      forkChoiceStub.getFinalizedCheckpoint.mockReturnValue({
+        epoch: 0,
+        root: new Uint8Array(32),
+        rootHex: zeroProtoBlock.blockRoot,
+      });
+      forkChoiceStub.getBlockHexDefaultStatus.mockReturnValue(head);
+      forkChoiceStub.getBlockHexAndBlockHash.mockReturnValue({
+        ...head,
+        executionPayloadGasLimit: 30_000_000,
+      } as ProtoBlock);
+      forkChoiceStub.getDependentRoot.mockReturnValue(zeroProtoBlock.blockRoot);
+      forkChoiceStub.getPtcQuorum.mockReturnValue(null);
+      chainStub.getParentExecutionRequests.mockResolvedValue(ssz.gloas.ExecutionRequests.defaultValue());
+      const gloasConfig = createBeaconConfig(getConfig(ForkName.gloas), new Uint8Array(32));
+      const makeState = (slot: number) => {
+        const state = generateState({slot}, gloasConfig, true) as BeaconStateGloas;
+        state.latestExecutionPayloadBid.blockHash = fromHex(fullParentHash);
+        state.latestExecutionPayloadBid.parentBlockHash = fromHex(emptyParentHash);
+        state.commit();
+        return new BeaconStateView(createCachedBeaconState(state, {config: gloasConfig, pubkeyCache}));
+      };
+      const headState = makeState(clockSlot);
+      vi.spyOn(headState, "getBeaconProposer").mockReturnValue(proposerIndex);
+      chainStub.getHeadState.mockReturnValue(headState);
+      prepareState = makeState(prepareSlot);
+      regenStub.getBlockSlotState.mockResolvedValue(prepareState);
+      beaconProposerCacheStub.has.mockReturnValue(true);
+      beaconProposerCacheStub.getOrDefault.mockReturnValue(feeRecipient);
+      (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
+    });
+
+    async function runScheduled(): Promise<void> {
+      await Promise.all([
+        scheduler.prepareForNextSlot(clockSlot),
+        vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
+      ]);
+    }
+
+    /** Let the event-driven re-prepare run through its awaited mocks */
+    async function flush(): Promise<void> {
+      for (let i = 0; i < 10; i++) {
+        await Promise.resolve();
+      }
+    }
+
+    function fcuParentHashes(): string[] {
+      return executionEngineStub.notifyForkchoiceUpdate.mock.calls.map((call) => call[2]);
+    }
+
+    function emitPtcQuorum(slot: number, verdict: boolean): void {
+      chainStub.emitter.emit(ChainEvent.forkChoicePtcQuorum, {
+        blockRoot: head.blockRoot,
+        slot,
+        verdict,
+        payloadPresent: verdict,
+        blobDataAvailable: verdict,
+      });
+    }
+
+    function emitPayloadImported(seenSecIntoSlot: number): void {
+      vi.mocked(chainStub.seenPayloadEnvelopeInputCache.get).mockReturnValue({
+        hasPayloadEnvelope: () => true,
+        hasAllData: () => true,
+        getPayloadEnvelopeSource: () => ({
+          seenTimestampSec: (clockSlot * config.SLOT_DURATION_MS) / 1000 + seenSecIntoSlot,
+        }),
+      } as unknown as ReturnType<MockedBeaconChain["seenPayloadEnvelopeInputCache"]["get"]>);
+      chainStub.emitter.emit(routes.events.EventType.executionPayload, {
+        slot: clockSlot,
+        builderIndex: 0,
+        blockHash: fullParentHash,
+        blockRoot: head.blockRoot,
+        executionOptimistic: false,
+      });
+    }
+
+    it("re-prepares on the empty parent when the PTC votes the head payload absent", async () => {
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      await runScheduled();
+      expect(fcuParentHashes()).toEqual([fullParentHash]);
+
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      emitPtcQuorum(clockSlot, false);
+      await flush();
+
+      expect(fcuParentHashes()).toEqual([fullParentHash, emptyParentHash]);
+      expect(loggerStub.error).not.toHaveBeenCalled();
+    });
+
+    it("does not re-prepare when the PTC verdict confirms the prepared parent", async () => {
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      await runScheduled();
+
+      emitPtcQuorum(clockSlot, true);
+      await flush();
+
+      expect(fcuParentHashes()).toEqual([fullParentHash]);
+      expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
+    });
+
+    it("re-prepares on the full parent when a timely payload is imported after the scheduled run", async () => {
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      await runScheduled();
+      expect(fcuParentHashes()).toEqual([emptyParentHash]);
+
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      emitPayloadImported(config.getPayloadDueMs(ForkName.gloas) / 1000 - 1);
+      await flush();
+
+      expect(fcuParentHashes()).toEqual([emptyParentHash, fullParentHash]);
+      expect(loggerStub.error).not.toHaveBeenCalled();
+    });
+
+    it("does not re-prepare on a payload imported after the payload deadline", async () => {
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      await runScheduled();
+
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      emitPayloadImported(config.getPayloadDueMs(ForkName.gloas) / 1000 + 1);
+      await flush();
+
+      expect(fcuParentHashes()).toEqual([emptyParentHash]);
+    });
+
+    it("re-prepares on a late payload the PTC already voted present", async () => {
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      await runScheduled();
+
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      forkChoiceStub.getPtcQuorum.mockReturnValue({payloadPresent: true, blobDataAvailable: true});
+      emitPayloadImported(config.getPayloadDueMs(ForkName.gloas) / 1000 + 1);
+      await flush();
+
+      expect(fcuParentHashes()).toEqual([emptyParentHash, fullParentHash]);
+    });
+
+    it("ignores a PTC verdict for another slot", async () => {
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      await runScheduled();
+
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      emitPtcQuorum(clockSlot - 1, false);
+      await flush();
+
+      expect(fcuParentHashes()).toEqual([fullParentHash]);
+    });
+
+    it("re-emits the payload attributes on the new parent when not proposing", async () => {
+      const spy = vi.fn();
+      chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
+      beaconProposerCacheStub.has.mockReturnValue(false);
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      await runScheduled();
+
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      emitPtcQuorum(clockSlot, false);
+      await flush();
+
+      expect(spy.mock.calls.map((call) => toRootHex(call[0].data.parentBlockHash))).toEqual([
+        fullParentHash,
+        emptyParentHash,
+      ]);
+      expect(fcuParentHashes()).toEqual([]);
+      expect(chainStub.predictProposerHead).not.toHaveBeenCalled();
+      expect(loggerStub.error).not.toHaveBeenCalled();
+    });
+
+    it("does not re-prepare without a payload or payload attributes prepared for the next slot", async () => {
+      beaconProposerCacheStub.has.mockReturnValue(false);
+      await runScheduled();
+      expect(fcuParentHashes()).toEqual([]);
+
+      emitPtcQuorum(clockSlot, false);
+      await flush();
+
+      expect(fcuParentHashes()).toEqual([]);
+    });
+
+    it("runs a re-prepare requested during the scheduled run after it", async () => {
+      forkChoiceStub.shouldBuildOnFull.mockReturnValueOnce(true).mockReturnValue(false);
+      // The verdict lands while the scheduled run awaits its forkchoiceUpdated call
+      executionEngineStub.notifyForkchoiceUpdate.mockImplementationOnce(async () => {
+        emitPtcQuorum(clockSlot, false);
+        return "0x0000000000000001";
+      });
+      await runScheduled();
+      await flush();
+
+      expect(fcuParentHashes()).toEqual([fullParentHash, emptyParentHash]);
+      expect(loggerStub.error).not.toHaveBeenCalled();
+    });
+
+    it("re-prepares after the forkchoiceUpdated of the scheduled run failed", async () => {
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      executionEngineStub.notifyForkchoiceUpdate.mockRejectedValueOnce(new Error("engine unavailable"));
+      await runScheduled();
+      expect(fcuParentHashes()).toEqual([fullParentHash]);
+
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      emitPtcQuorum(clockSlot, false);
+      await flush();
+
+      expect(fcuParentHashes()).toEqual([fullParentHash, emptyParentHash]);
+    });
+
+    it("retries a failed re-prepare on the next trigger even if its inputs are unchanged", async () => {
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      await runScheduled();
+      expect(fcuParentHashes()).toEqual([emptyParentHash]);
+
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      executionEngineStub.notifyForkchoiceUpdate.mockRejectedValueOnce(new Error("engine syncing"));
+      emitPayloadImported(config.getPayloadDueMs(ForkName.gloas) / 1000 - 1);
+      await flush();
+      expect(fcuParentHashes()).toEqual([emptyParentHash, fullParentHash]);
+
+      emitPtcQuorum(clockSlot, true);
+      await flush();
+      expect(fcuParentHashes()).toEqual([emptyParentHash, fullParentHash, fullParentHash]);
+    });
+
+    it("drops a re-prepare whose state is ready only after the proposal slot started", async () => {
+      const spy = vi.fn();
+      chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      await runScheduled();
+      expect(spy).toHaveBeenCalledOnce();
+
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      regenStub.getBlockSlotState.mockImplementationOnce(async () => {
+        vi.setSystemTime(prepareSlot * config.SLOT_DURATION_MS);
+        return prepareState;
+      });
+      emitPtcQuorum(clockSlot, false);
+      await flush();
+
+      expect(regenStub.getBlockSlotState).toHaveBeenCalledTimes(2);
+      expect(fcuParentHashes()).toEqual([fullParentHash]);
+      expect(spy).toHaveBeenCalledOnce();
+      expect(loggerStub.error).not.toHaveBeenCalled();
+    });
+
+    it("skips a re-prepare that would only re-emit payload attributes nobody listens to", async () => {
+      const spy = vi.fn();
+      chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
+      beaconProposerCacheStub.has.mockReturnValue(false);
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(true);
+      await runScheduled();
+      expect(spy).toHaveBeenCalledOnce();
+
+      chainStub.emitter.off(routes.events.EventType.payloadAttributes, spy);
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      emitPtcQuorum(clockSlot, false);
+      await flush();
+
+      expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
+      expect(spy).toHaveBeenCalledOnce();
+    });
+
+    it("drops a request that arrives before the scheduled run starts", async () => {
+      forkChoiceStub.shouldBuildOnFull.mockReturnValue(false);
+      const scheduled = scheduler.prepareForNextSlot(clockSlot);
+      await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS / 3);
+      emitPtcQuorum(clockSlot, false);
+      await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS / 3);
+      await scheduled;
+      await flush();
+
+      // The scheduled run already sees the verdict, there is nothing to re-evaluate after it
+      expect(fcuParentHashes()).toEqual([emptyParentHash]);
+      expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    });
   });
 });

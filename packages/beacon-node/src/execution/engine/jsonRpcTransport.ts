@@ -1,25 +1,33 @@
 import {ForkName, ForkSeq} from "@lodestar/params";
-import {ExecutionPayload, ExecutionRequests, Root, RootHex} from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
+import {ExecutionPayload, ExecutionRequests, Root, RootHex, bellatrix} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {strip0xPrefix} from "@lodestar/utils";
-import {ClientCode, ClientVersion, PayloadAttributes, PayloadId, VersionedHashes} from "./interface.js";
+import {
+  ClientCode,
+  ClientVersion,
+  ForkchoiceUpdatedResult,
+  PayloadAttributes,
+  PayloadId,
+  PayloadStatusResult,
+  VersionedHashes,
+} from "./interface.js";
 import {IJsonRpcHttpClient, JsonRpcHttpClientEventEmitter, ReqOpts} from "./jsonRpcHttpClient.js";
-import {ForkchoiceUpdatedResult, GetPayloadResult, IEngineTransport, PayloadStatusResult} from "./transport.js";
+import {GetPayloadResult, IEngineTransport} from "./transport.js";
 import {
   BLOB_AND_PROOF_V2_RPC_BYTES,
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
   ExecutionPayloadBodyV2,
   assertReqSizeLimit,
-  deserializeBlobAndProofs,
   deserializeBlobAndProofsV2,
   deserializeBlobAndProofsV2IntoBytes,
   deserializeExecutionPayloadBodyV2,
+  deserializeInclusionList,
   parseExecutionPayload,
   serializeBeaconBlockRoot,
   serializeExecutionPayload,
   serializeExecutionRequests,
+  serializeInclusionList,
   serializePayloadAttributes,
   serializeVersionedHashes,
 } from "./types.js";
@@ -37,9 +45,9 @@ const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedOpts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
 const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
-const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
+const getInclusionListOpts: ReqOpts = {routeId: "getInclusionList"};
 
 /**
  * Legacy `engine_*` JSON-RPC methods
@@ -57,7 +65,8 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBeaconBlockRoot?: Root,
-    executionRequests?: ExecutionRequests
+    executionRequests?: ExecutionRequests,
+    inclusionListTransactions?: bellatrix.Transactions
   ): Promise<PayloadStatusResult> {
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
@@ -75,6 +84,28 @@ export class JsonRpcEngineTransport implements IEngineTransport {
       if (ForkSeq[fork] >= ForkSeq.electra) {
         if (executionRequests === undefined) {
           throw Error(`executionRequests required in notifyNewPayload for fork=${fork}`);
+        }
+        if (ForkSeq[fork] >= ForkSeq.heze) {
+          if (inclusionListTransactions === undefined) {
+            throw Error(`inclusionListTransactions required in notifyNewPayload for fork=${fork}`);
+          }
+          const method = "engine_newPayloadV6";
+          return this.rpc.fetchWithRetries<
+            EngineApiRpcReturnTypes[typeof method],
+            EngineApiRpcParamTypes[typeof method]
+          >(
+            {
+              method,
+              params: [
+                serializedExecutionPayload,
+                serializedVersionedHashes,
+                serializedParentBeaconBlockRoot,
+                serializeExecutionRequests(fork, executionRequests),
+                serializeInclusionList(inclusionListTransactions),
+              ],
+            },
+            notifyNewPayloadOpts
+          );
         }
         const method = ForkSeq[fork] >= ForkSeq.gloas ? "engine_newPayloadV5" : "engine_newPayloadV4";
         return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
@@ -110,16 +141,19 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
+    payloadAttributes?: PayloadAttributes,
+    signal?: AbortSignal
   ): Promise<ForkchoiceUpdatedResult> {
     const method =
-      ForkSeq[fork] >= ForkSeq.gloas
-        ? "engine_forkchoiceUpdatedV4"
-        : ForkSeq[fork] >= ForkSeq.deneb
-          ? "engine_forkchoiceUpdatedV3"
-          : ForkSeq[fork] >= ForkSeq.capella
-            ? "engine_forkchoiceUpdatedV2"
-            : "engine_forkchoiceUpdatedV1";
+      ForkSeq[fork] >= ForkSeq.heze
+        ? "engine_forkchoiceUpdatedV5"
+        : ForkSeq[fork] >= ForkSeq.gloas
+          ? "engine_forkchoiceUpdatedV4"
+          : ForkSeq[fork] >= ForkSeq.deneb
+            ? "engine_forkchoiceUpdatedV3"
+            : ForkSeq[fork] >= ForkSeq.capella
+              ? "engine_forkchoiceUpdatedV2"
+              : "engine_forkchoiceUpdatedV1";
     const payloadAttributesRpc = payloadAttributes ? serializePayloadAttributes(payloadAttributes) : undefined;
     // If we are just fcUing and not asking execution for payload, retry is not required
     // and we can move on, as the next fcU will be issued soon on the new slot
@@ -128,12 +162,15 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     const {payloadStatus, payloadId} = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, payloadAttributesRpc]}, fcUReqOpts);
+    >(
+      {method, params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, payloadAttributesRpc]},
+      {...fcUReqOpts, signal}
+    );
 
     return {payloadStatus, payloadId: payloadId && payloadId !== "0x" ? payloadId : null};
   }
 
-  async getPayload(fork: ForkName, payloadId: PayloadId): Promise<GetPayloadResult> {
+  async getPayload(fork: ForkName, payloadId: PayloadId, signal?: AbortSignal): Promise<GetPayloadResult> {
     let method: keyof EngineApiRpcReturnTypes;
     switch (fork) {
       case ForkName.phase0:
@@ -160,7 +197,7 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [payloadId]}, getPayloadOpts);
+    >({method, params: [payloadId]}, {...getPayloadOpts, signal});
     return parseExecutionPayload(fork, payloadResponse);
   }
 
@@ -172,23 +209,6 @@ export class JsonRpcEngineTransport implements IEngineTransport {
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [blockHashes]}, getPayloadBodiesByHashOpts);
     return response.map(deserializeExecutionPayloadBodyV2);
-  }
-
-  async getBlobsV1(versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]> {
-    assertReqSizeLimit(versionedHashes.length, MAX_VERSIONED_HASHES);
-    const versionedHashesHex = versionedHashes.map(bytesToData);
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes["engine_getBlobsV1"],
-      EngineApiRpcParamTypes["engine_getBlobsV1"]
-    >({method: "engine_getBlobsV1", params: [versionedHashesHex]}, getBlobsV1Opts);
-
-    if (response.length !== versionedHashesHex.length) {
-      throw Error(
-        `Invalid engine_getBlobsV1 response length=${response.length} versionedHashes=${versionedHashesHex.length}`
-      );
-    }
-
-    return response.map(deserializeBlobAndProofs);
   }
 
   async getBlobsV2(versionedHashes: VersionedHashes, buffers?: Uint8Array[]): Promise<BlobAndProofV2[] | null> {
@@ -243,5 +263,14 @@ export class JsonRpcEngineTransport implements IEngineTransport {
       const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
       return {code, name: cv.name, version: cv.version, commit: strip0xPrefix(cv.commit)};
     });
+  }
+
+  async getInclusionList(): Promise<bellatrix.Transactions> {
+    const method = "engine_getInclusionListV1";
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({method, params: []}, getInclusionListOpts);
+    return deserializeInclusionList(response);
   }
 }

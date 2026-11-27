@@ -1,9 +1,9 @@
 import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {Mocked, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {HttpStatusCode, routes} from "@lodestar/api";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/native/blst";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {LogLevel, defer, fromHex, toRootHex} from "@lodestar/utils";

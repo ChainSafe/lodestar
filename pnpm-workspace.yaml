@@ -1,5 +1,6 @@
 packages:
   - packages/*
+  - bindings
 
 linkWorkspacePackages: true
 
@@ -14,14 +15,12 @@ minimumReleaseAgeExclude:
 nodeLinker: isolated
 
 catalog:
-  "@chainsafe/lodestar-z": "2.0.0"
   "@vitest/browser": "^4.0.7"
   "@vitest/browser-playwright": "^4.0.7"
   "@vitest/coverage-v8": "^4.0.7"
   vitest: "^4.0.7"
 
 allowBuilds:
-  "@chainsafe/lodestar-z": true
   "@parcel/watcher": true
   "@swc/core": true
   aws-sdk: true
@@ -35,6 +34,8 @@ allowBuilds:
   ssh2: true
 
 overrides:
+  # web3-eth-accounts still depends on v4, use the same version as the rest of the workspace
+  "@ethereumjs/rlp": "^10.1.3"
   dns-over-http-resolver: "^2.1.1"
   elliptic: ">=6.6.1"
   loupe: "^2.3.6"

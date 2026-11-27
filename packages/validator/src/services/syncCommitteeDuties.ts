@@ -129,11 +129,19 @@ export class SyncCommitteeDutiesService {
     const dutiesByIndex = this.dutiesByIndexByPeriod.get(period);
     if (dutiesByIndex) {
       for (const dutyAtPeriod of dutiesByIndex.values()) {
-        // Validator always has a duty during the entire period
-        duties.push({
-          duty: dutyAtPeriod.duty,
-          selectionProofs: await this.getSelectionProofs(slot, dutyAtPeriod.duty),
-        });
+        try {
+          // Validator always has a duty during the entire period
+          duties.push({
+            duty: dutyAtPeriod.duty,
+            selectionProofs: await this.getSelectionProofs(slot, dutyAtPeriod.duty),
+          });
+        } catch (e) {
+          this.logger.error(
+            "Error signing sync committee selection proofs",
+            {slot, validatorIndex: dutyAtPeriod.duty.validatorIndex},
+            e as Error
+          );
+        }
       }
 
       if (this.opts?.distributedAggregationSelection) {

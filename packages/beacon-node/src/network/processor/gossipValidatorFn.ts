@@ -5,7 +5,6 @@ import {
   AttestationError,
   AttestationErrorCode,
   AttesterSlashingErrorCode,
-  BlobSidecarErrorCode,
   BlockErrorCode,
   BlsToExecutionChangeErrorCode,
   DataColumnSidecarErrorCode,
@@ -13,6 +12,8 @@ import {
   ExecutionPayloadEnvelopeErrorCode,
   GossipAction,
   GossipActionError,
+  GossipErrorCode,
+  InclusionListErrorCode,
   PayloadAttestationErrorCode,
   ProposerPreferencesErrorCode,
   ProposerSlashingErrorCode,
@@ -54,10 +55,6 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
     default: PeerAction.LowToleranceError,
     byCode: {[BlockErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal},
   },
-  [GossipType.blob_sidecar]: {
-    default: PeerAction.LowToleranceError,
-    byCode: {[BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal},
-  },
   [GossipType.data_column_sidecar]: {
     default: PeerAction.LowToleranceError,
     byCode: {[DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID]: PeerAction.Fatal},
@@ -85,6 +82,10 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
   [GossipType.payload_attestation_message]: {
     default: PeerAction.MidToleranceError,
     byCode: {[PayloadAttestationErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
+  },
+  [GossipType.inclusion_list]: {
+    default: PeerAction.MidToleranceError,
+    byCode: {[InclusionListErrorCode.INVALID_SIGNATURE]: PeerAction.Fatal},
   },
   [GossipType.execution_payload_bid]: {
     default: PeerAction.HighToleranceError,
@@ -116,6 +117,9 @@ const gossipRejectPeerAction: Record<GossipType, RejectPeerActionRule> = {
 };
 
 export function rejectPeerAction(type: GossipType, code: string): PeerAction {
+  if (code === GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE) {
+    return PeerAction.LowToleranceError;
+  }
   const rule = gossipRejectPeerAction[type];
   return rule.byCode?.[code] ?? rule.default;
 }

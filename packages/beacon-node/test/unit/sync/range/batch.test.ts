@@ -1,7 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ForkName} from "@lodestar/params";
-import {SignedBeaconBlock, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
   BlockInputColumns,
@@ -176,7 +176,6 @@ describe("sync / range / batch", async () => {
       it("should make default pre-deneb requests if no existing blocks are passed", () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
       });
 
@@ -187,33 +186,10 @@ describe("sync / range / batch", async () => {
       let batch: Batch;
       const startEpoch = config.DENEB_FORK_EPOCH + 1;
 
-      it("should make default ForkDABlobs requests if no existing blocks are passed", () => {
+      it("should make blocks-only requests for deneb-era epochs (blob download removed)", () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toEqual({startSlot: batch.startSlot, count: batch.count});
-        expect(batch.requests.columnsRequest).toBeUndefined();
-      });
-
-      it("should make default ForkDABlobs requests if current epoch is the last in request range", () => {
-        vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
-          startEpoch + config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-        );
-        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
-
-        expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toEqual({startSlot: batch.startSlot, count: batch.count});
-        expect(batch.requests.columnsRequest).toBeUndefined();
-      });
-
-      it("should not make ForkDABlobs requests if current epoch is ahead of request range", () => {
-        vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
-          startEpoch + config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS + 1
-        );
-        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
-
-        expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
       });
     });
@@ -228,7 +204,6 @@ describe("sync / range / batch", async () => {
 
       it("should make ForkDAColumns requests if no existing blocks are passed", () => {
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toEqual({
           startSlot: batch.startSlot,
           count: batch.count,
@@ -243,7 +218,6 @@ describe("sync / range / batch", async () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toEqual({
           startSlot: batch.startSlot,
           count: batch.count,
@@ -258,7 +232,6 @@ describe("sync / range / batch", async () => {
         batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-        expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
       });
     });
@@ -267,7 +240,6 @@ describe("sync / range / batch", async () => {
       const startEpoch = config.CAPELLA_FORK_EPOCH - 1;
       const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
       expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-      expect(batch.requests.blobsRequest).toBeUndefined();
       expect(batch.requests.columnsRequest).toBeUndefined();
     });
 
@@ -283,7 +255,6 @@ describe("sync / range / batch", async () => {
       const startEpoch = config.FULU_FORK_EPOCH + 1;
       const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
       expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
-      expect(batch.requests.blobsRequest).toBeUndefined();
       expect(batch.requests.columnsRequest).toEqual({
         startSlot: batch.startSlot,
         count: batch.count,
@@ -552,7 +523,9 @@ describe("sync / range / batch", async () => {
         // second round completes the columns
         for (const index of sampledColumns) {
           const columnSidecar = ssz.gloas.DataColumnSidecar.defaultValue();
-          columnSidecar.beaconBlockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(blockInput.getBlock().message);
+          columnSidecar.beaconBlockRoot = sszTypesFor(blockInput.forkName).BeaconBlock.hashTreeRoot(
+            blockInput.getBlock().message
+          );
           columnSidecar.slot = blockInput.slot;
           columnSidecar.index = index;
           payloadInput.addColumn({
@@ -627,6 +600,38 @@ describe("sync / range / batch", async () => {
         expect(batch.requests.columnsRequest).toBeDefined();
         expect(batch.requests.columnsRequest?.startSlot).toBe(batch.startSlot);
         expect(batch.requests.columnsRequest?.columns.slice().sort((a, b) => a - b)).toEqual(sampledColumns);
+      });
+
+      it("drops the downloaded blocks and restarts the batch after an invalid cached block", () => {
+        const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+        const initialRequests = batch.requests;
+
+        const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+        block.message.slot = batch.startSlot;
+        block.message.body.blobKzgCommitments = [Buffer.alloc(48, 0x11)];
+        const blockInput = BlockInputColumns.createFromBlock({
+          block: block as SignedBeaconBlock<typeof ForkName.fulu>,
+          blockRootHex: toRootHex(ssz.fulu.BeaconBlock.hashTreeRoot(block.message)),
+          forkName: ForkName.fulu,
+          daOutOfRange: false,
+          seenTimestampSec,
+          source: BlockInputSource.byRange,
+          peerIdStr: peer,
+          sampledColumns: custodyConfig.sampledColumns,
+          custodyColumns: custodyConfig.custodyColumns,
+        });
+        batch.startDownloading(peerSyncMeta);
+        batch.downloadingSuccess(peer, [blockInput], null);
+        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+
+        batch.startDownloading(peerSyncMeta);
+        batch.downloadingInvalidBlock("attacker");
+
+        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+        expect(batch.getBlocks()).toEqual([]);
+        expect(batch.requests).toEqual(initialRequests);
+        expect(batch.getFailedPeers()).toEqual(["attacker"]);
+        expect(batch.hasPeerSucceededCurrentRequest(peerSyncMeta)).toBe(false);
       });
     });
   });

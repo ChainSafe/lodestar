@@ -1,5 +1,5 @@
 import {Keystore} from "@chainsafe/bls-keystore";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
+import {SecretKey} from "@lodestar/native/blst";
 import {fromHex} from "@lodestar/utils";
 
 /**

@@ -17,8 +17,8 @@ import {EngineRestHttpClient} from "./restHttpClient.js";
 import {RestEngineTransport, formatClientVersionHeader} from "./restTransport.js";
 import {ExecutionEngineMockJsonRpcClient, JsonRpcBackend} from "./utils.js";
 
-export {ExecutionEngineHttp, ExecutionEngineDisabled, defaultExecutionEngineHttpOpts, engineApiModes};
 export type {EngineApiMode};
+export {ExecutionEngineDisabled, ExecutionEngineHttp, defaultExecutionEngineHttpOpts, engineApiModes};
 
 export type ExecutionEngineOpts =
   | ({mode?: "http"} & ExecutionEngineHttpOpts)
@@ -70,7 +70,8 @@ export function getExecutionEngineHttp(
             jwtId: opts.jwtId,
             clientVersion: formatClientVersionHeader(getLodestarClientVersion(opts)),
             metrics,
-          })
+          }),
+          metrics
         );
 
   modules.logger.info("Execution client", {urls: opts.urls.map(toPrintableUrl).toString(), engineApi});

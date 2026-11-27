@@ -290,7 +290,7 @@ export class OpPool {
     const endAttesterSlashings = stepsMetrics?.startTimer();
     const attesterSlashings: AttesterSlashing[] = [];
     const maxAttesterSlashings = stateFork >= ForkSeq.electra ? MAX_ATTESTER_SLASHINGS_ELECTRA : MAX_ATTESTER_SLASHINGS;
-    attesterSlashing: for (const [key, attesterSlashing] of this.attesterSlashings) {
+    for (const [key, attesterSlashing] of this.attesterSlashings) {
       const domains = getAttesterSlashingSignatureDomains(this.config, state.slot, attesterSlashing.attesterSlashing);
       if (!attesterSlashing.verifiedDomains.every((domain, i) => byteArrayEquals(domain, domains[i]))) {
         this.attesterSlashings.delete(key);
@@ -300,17 +300,14 @@ export class OpPool {
       const slashableIndices = new Set<ValidatorIndex>();
       for (let i = 0; i < attesterSlashing.intersectingIndices.length; i++) {
         const index = attesterSlashing.intersectingIndices[i];
-        // If we already have a slashing for this index, we can continue on to the next slashing
+        // Covered by an earlier slashing in this block, the remaining indices may still be slashable
         if (toBeSlashedIndices.has(index)) {
-          continue attesterSlashing;
+          continue;
         }
 
         const validator = state.getValidator(index);
         if (isSlashableAtEpoch(validator, stateEpoch)) {
           slashableIndices.add(index);
-        }
-        if (attesterSlashings.length >= maxAttesterSlashings) {
-          break attesterSlashing;
         }
       }
 
@@ -320,6 +317,9 @@ export class OpPool {
         attesterSlashings.push(attesterSlashing.attesterSlashing);
         for (const index of slashableIndices) {
           toBeSlashedIndices.add(index);
+        }
+        if (attesterSlashings.length >= maxAttesterSlashings) {
+          break;
         }
       }
     }

@@ -9,7 +9,7 @@ export function toHex(bytes: Uint8Array): string {
   charCodes[1] = CHAR_CODE_X;
 
   bytesIntoCharCodes(bytes, charCodes);
-  return String.fromCharCode(...charCodes);
+  return charCodesToString(charCodes);
 }
 
 const rootCharCodes = new Array<number>(32 * 2 + 2);
@@ -83,6 +83,20 @@ export function fromHexInto(hex: string, buffer: Uint8Array): void {
   }
 }
 
+// Spreading too many arguments into String.fromCharCode throws a RangeError
+const MAX_CHAR_CODES_PER_CALL = 8192;
+
+function charCodesToString(charCodes: number[]): string {
+  if (charCodes.length <= MAX_CHAR_CODES_PER_CALL) {
+    return String.fromCharCode(...charCodes);
+  }
+  let str = "";
+  for (let i = 0; i < charCodes.length; i += MAX_CHAR_CODES_PER_CALL) {
+    str += String.fromCharCode(...charCodes.slice(i, i + MAX_CHAR_CODES_PER_CALL));
+  }
+  return str;
+}
+
 /**
  * Populate charCodes from bytes. Note that charCodes index 0 and 1 ("0x") are not populated.
  */
@@ -125,21 +139,6 @@ function charCodeToByte(charCode: number): number {
 import {toBigIntBE, toBigIntLE, toBufferBE, toBufferLE} from "@vekexasia/bigint-buffer2";
 
 type Endianness = "le" | "be";
-
-const hexByByte: string[] = [];
-/**
- * @deprecated Use toHex() instead.
- */
-export function toHexString(bytes: Uint8Array): string {
-  let hex = "0x";
-  for (const byte of bytes) {
-    if (!hexByByte[byte]) {
-      hexByByte[byte] = byte < 16 ? "0" + byte.toString(16) : byte.toString(16);
-    }
-    hex += hexByByte[byte];
-  }
-  return hex;
-}
 
 /**
  * Return a byte array from a number or BigInt

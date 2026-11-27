@@ -1,16 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import {beforeEach, describe, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {ForkName, isForkPostGloas} from "@lodestar/params";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
 import {nativeStateTransition} from "./stateTransition.js";
 import {RunnerType, TestRunner} from "./types.js";
 
-let nativeStateTransitionPromise: Promise<typeof import("@chainsafe/lodestar-z/state-transition")> | null = null;
+let nativeStateTransitionPromise: Promise<typeof import("@lodestar/native/state-transition")> | null = null;
 
 async function resetNativeStateTransition(): Promise<void> {
-  nativeStateTransitionPromise ??= import("@chainsafe/lodestar-z/state-transition");
+  nativeStateTransitionPromise ??= import("@lodestar/native/state-transition");
   const nativeStateTransition = await nativeStateTransitionPromise;
   nativeStateTransition.deinitReusedEpochTransitionCache();
 }
@@ -78,24 +78,19 @@ export const defaultSkipOpts: SkipOpts = {
     // All networks have already completed the merge, so this code path is no longer needed.
     /^bellatrix\/fork_choice\/on_merge_block\/.*/,
     /^.+\/light_client\/data_collection\/.*/,
-    // The gossip harness still lacks coverage for parent validation and voluntary-exit anchors.
-    /^.+\/networking\/gossip_beacon_block\/.*$/,
-    /^.+\/networking\/gossip_voluntary_exit\/.*$/,
-    // Deneb+ epoch-boundary attestations and Electra+ single attestations need harness updates.
-    /^(deneb|electra|fulu|gloas|heze)\/networking\/gossip_beacon_(attestation|aggregate_and_proof)\/.*$/,
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/fork_choice_compliance\/.*/,
-    // TODO-HEZE: temporary. v1.7.0-beta.4 adds EIP-8015 (removes the eth1 fields from the Heze BeaconState and
-    // BeaconBlockBody), so every Heze vector carrying a state or a block no longer deserializes. Unskip in the
-    // EIP-8015 PR. Containers EIP-8015 does not touch keep running through ssz_static.
-    /^heze\/(?!ssz_static\/).*/,
-    /^heze\/ssz_static\/(BeaconState|BeaconBlockBody|BeaconBlock|SignedBeaconBlock)\/.*$/,
   ],
-  skippedTests: [],
+  skippedTests: [
+    // deneb..electra fork_choice/on_block negative vectors whose only invalid property is the blob data.
+    // Legacy blob sidecars are not tracked for these forks, so the runner does not load the blobs and the
+    // block imports successfully. See https://github.com/ChainSafe/lodestar/issues/9956
+    /^(deneb|electra)\/fork_choice\/on_block\/pyspec_tests\/invalid_(incorrect_proof|data_unavailable|wrong_blobs_length|wrong_proofs_length)$/,
+  ],
   skippedRunners: [],
   // Gossip handlers not implemented in the spec runner.
   skippedHandlers: [
@@ -103,10 +98,8 @@ export const defaultSkipOpts: SkipOpts = {
     "gossip_data_column_sidecar",
     "gossip_partial_data_column_sidecar",
     "gossip_execution_payload_bid",
-    "gossip_execution_payload_envelope",
     "gossip_payload_attestation_message",
     "gossip_proposer_preferences",
-    "gossip_inclusion_list",
   ],
 };
 
@@ -144,8 +137,6 @@ export function specTestIterator(
     const fork = forkStr as ForkName;
     if (
       opts?.skippedForks?.includes(forkStr) ||
-      // lodestar-z does not support Gloas state transition yet
-      (nativeStateTransition && isForkPostGloas(fork)) ||
       (process.env.SPEC_FILTER_FORK && forkStr !== process.env.SPEC_FILTER_FORK)
     ) {
       continue;

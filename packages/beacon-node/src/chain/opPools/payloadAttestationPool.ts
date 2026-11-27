@@ -1,9 +1,10 @@
-import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
+import {Signature, aggregateSignatures} from "@lodestar/native/blst";
 import {MAX_COMMITTEES_PER_SLOT, MAX_PAYLOAD_ATTESTATIONS, PTC_SIZE} from "@lodestar/params";
+import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
 import {RootHex, Slot, gloas} from "@lodestar/types";
-import {MapDef, toRootHex} from "@lodestar/utils";
+import {MapDef, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
@@ -112,11 +113,19 @@ export class PayloadAttestationPool {
       return [];
     }
 
-    return Array.from(aggregateByDataRoot.values())
-      .slice()
+    const payloadAttestations: gloas.PayloadAttestation[] = [];
+    for (const aggregate of aggregateByDataRoot.values()) {
+      const payloadAttestation = fastToPayloadAttestation(aggregate);
+      // The point at infinity is not a valid aggregate signature, exclude it from the block
+      if (byteArrayEquals(payloadAttestation.signature, G2_POINT_AT_INFINITY)) {
+        continue;
+      }
+      payloadAttestations.push(payloadAttestation);
+    }
+
+    return payloadAttestations
       .sort((a, b) => b.aggregationBits.getTrueBitIndexes().length - a.aggregationBits.getTrueBitIndexes().length)
-      .slice(0, MAX_PAYLOAD_ATTESTATIONS)
-      .map(fastToPayloadAttestation);
+      .slice(0, MAX_PAYLOAD_ATTESTATIONS);
   }
 
   getAll(slot?: Slot): gloas.PayloadAttestation[] {
@@ -139,9 +148,11 @@ export class PayloadAttestationPool {
       }
     }
 
+    // The point at infinity is not a valid aggregate signature, do not serve such an aggregate
     return aggregates
       .sort((a, b) => b.aggregationBits.getTrueBitIndexes().length - a.aggregationBits.getTrueBitIndexes().length)
-      .map(fastToPayloadAttestation);
+      .map(fastToPayloadAttestation)
+      .filter((attestation) => !byteArrayEquals(attestation.signature, G2_POINT_AT_INFINITY));
   }
 
   prune(clockSlot: Slot): void {

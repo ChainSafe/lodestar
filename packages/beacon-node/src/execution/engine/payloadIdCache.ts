@@ -1,4 +1,6 @@
+import {byteArrayEquals} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {bellatrix} from "@lodestar/types";
 import {pruneSetToMax} from "@lodestar/utils";
 import {PayloadAttributesRpc} from "./types.js";
 import {DATA, QUANTITY} from "./utils.js";
@@ -10,6 +12,9 @@ const MAX_PAYLOAD_IDS = SLOTS_PER_EPOCH;
 // Since we do no processing with this id, we have no need to deserialize it
 export type PayloadId = string;
 
+/** Payload id returned by the engine and when the payload was requested from it, monotonic `performance.now()` ms */
+export type PreparedPayloadId = {payloadId: PayloadId; preparedAtMs: number};
+
 export type WithdrawalV1 = {
   index: QUANTITY;
   validatorIndex: QUANTITY;
@@ -17,13 +22,18 @@ export type WithdrawalV1 = {
   amount: QUANTITY;
 };
 
-type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & Omit<PayloadAttributesRpc, "withdrawals">;
+type FcuAttributes = {headBlockHash: DATA} & Omit<PayloadAttributesRpc, "withdrawals" | "inclusionListTransactions"> & {
+    inclusionListTransactions?: bellatrix.Transactions;
+  };
 
 export class PayloadIdCache {
-  private readonly payloadIdByFcuAttributes = new Map<string, {payloadId: PayloadId; fullKey: string}>();
+  private readonly payloadIdByFcuAttributes = new Map<
+    string,
+    PreparedPayloadId & {fullKey: string; inclusionListTransactions?: bellatrix.Transactions}
+  >();
 
-  getFullKey({headBlockHash, finalizedBlockHash, timestamp, prevRandao, suggestedFeeRecipient}: FcuAttributes): string {
-    return `${headBlockHash}-${finalizedBlockHash}-${timestamp}-${prevRandao}-${suggestedFeeRecipient}`;
+  getFullKey({headBlockHash, timestamp, prevRandao, suggestedFeeRecipient}: FcuAttributes): string {
+    return `${headBlockHash}-${timestamp}-${prevRandao}-${suggestedFeeRecipient}`;
   }
   getKey({timestamp}: Pick<FcuAttributes, "timestamp">): string {
     return timestamp;
@@ -37,7 +47,13 @@ export class PayloadIdCache {
   add(fcuAttributes: FcuAttributes, payloadId: PayloadId): void {
     const key = this.getKey(fcuAttributes);
     const fullKey = this.getFullKey(fcuAttributes);
-    this.payloadIdByFcuAttributes.set(key, {payloadId, fullKey});
+    const {inclusionListTransactions} = fcuAttributes;
+    this.payloadIdByFcuAttributes.set(key, {
+      payloadId,
+      preparedAtMs: performance.now(),
+      fullKey,
+      inclusionListTransactions,
+    });
   }
 
   prune(): void {
@@ -45,10 +61,20 @@ export class PayloadIdCache {
     pruneSetToMax(this.payloadIdByFcuAttributes, MAX_PAYLOAD_IDS);
   }
 
-  get(fcuAttributes: FcuAttributes): PayloadId | undefined {
+  get(fcuAttributes: FcuAttributes): PreparedPayloadId | undefined {
     const key = this.getKey(fcuAttributes);
     const fullKey = this.getFullKey(fcuAttributes);
     const payloadInfo = this.payloadIdByFcuAttributes.get(key);
-    return payloadInfo?.fullKey === fullKey ? payloadInfo.payloadId : undefined;
+    return payloadInfo?.fullKey === fullKey &&
+      isSameInclusionList(payloadInfo.inclusionListTransactions, fcuAttributes.inclusionListTransactions)
+      ? {payloadId: payloadInfo.payloadId, preparedAtMs: payloadInfo.preparedAtMs}
+      : undefined;
   }
+}
+
+function isSameInclusionList(a?: bellatrix.Transactions, b?: bellatrix.Transactions): boolean {
+  if (a === undefined || b === undefined) {
+    return a === b;
+  }
+  return byteArrayEquals(a.bytes, b.bytes);
 }

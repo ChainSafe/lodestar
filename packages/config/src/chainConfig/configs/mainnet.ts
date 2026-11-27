@@ -70,6 +70,8 @@ export const chainConfig: ChainConfig = {
   SECONDS_PER_SLOT: 12,
   // 12000 milliseconds, 12 seconds
   SLOT_DURATION_MS: 12000,
+  // 12000 milliseconds, 12 seconds
+  SLOT_DURATION_MS_HEZE: 12000,
   // 14 (estimate from Eth1 mainnet)
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs ~27 hours
@@ -81,8 +83,8 @@ export const chainConfig: ChainConfig = {
   // 2**11 (= 2,048) Eth1 blocks ~8 hours
   ETH1_FOLLOW_DISTANCE: 2048,
 
-  // 67% of `SLOT_DURATION_MS`
-  INCLUSION_LIST_DUE_BPS: 6667,
+  // 75% of `SLOT_DURATION_MS`
+  INCLUSION_LIST_DUE_BPS: 7500,
   // 1667 basis points, ~17% of SLOT_DURATION_MS
   PROPOSER_REORG_CUTOFF_BPS: 1667,
   // 3333 basis points, ~33% of SLOT_DURATION_MS
@@ -196,6 +198,8 @@ export const chainConfig: ChainConfig = {
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000,
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096,
+  // 2**12 * 32 * 12,000 (= 1,572,864,000) milliseconds, ~18 days
+  MIN_BLOB_DATA_RETENTION_MS: 1572864000,
 
   // HEZE
   // 2**4 (= 16)
@@ -208,6 +212,8 @@ export const chainConfig: ChainConfig = {
   // Gloas
   // 2**7 (= 128) payloads
   MAX_REQUEST_PAYLOADS: 128,
+  // `2**12` (= 4096 gas)
+  MIN_TRANSACTION_GAS: 4096,
 
   // Blob Scheduling
   // ---------------------------------------------------------------

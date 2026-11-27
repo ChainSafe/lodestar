@@ -41,10 +41,18 @@ export type {
   BlockExtraMeta,
   LVHInvalidResponse,
   LVHValidResponse,
+  LVHVerdictResult,
   PayloadExecutionStatus,
   ProtoBlock,
   ProtoNode,
   PtcQuorum,
 } from "./protoArray/interface.js";
-export {ExecutionStatus, PayloadStatus, getPtcVerdict, isGloasBlock} from "./protoArray/interface.js";
+export {
+  ExecutionStatus,
+  LVHInvalidJudged,
+  LVHNotAppliedReason,
+  PayloadStatus,
+  getPtcVerdict,
+  isGloasBlock,
+} from "./protoArray/interface.js";
 export {ProtoArray} from "./protoArray/protoArray.js";

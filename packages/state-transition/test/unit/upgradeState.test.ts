@@ -1,13 +1,20 @@
 import {describe, expect, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
-import {BUILDER_INDEX_SELF_BUILD, FAR_FUTURE_EPOCH, ForkName} from "@lodestar/params";
+import {pubkeyCache} from "@lodestar/native/pubkeys";
+import {
+  BUILDER_INDEX_SELF_BUILD,
+  FAR_FUTURE_EPOCH,
+  ForkName,
+  SLOTS_PER_HISTORICAL_ROOT,
+  UNSET_DEPOSIT_REQUESTS_START_INDEX,
+} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateFulu, createCachedBeaconState} from "../../src/cache/stateCache.js";
+import {CachedBeaconStateFulu, CachedBeaconStateGloas, createCachedBeaconState} from "../../src/cache/stateCache.js";
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";
 import {upgradeStateToGloas} from "../../src/slot/upgradeStateToGloas.js";
+import {upgradeStateToHeze} from "../../src/slot/upgradeStateToHeze.js";
 import {generateBuilderPendingDeposits} from "../../src/testUtils/util.js";
 
 describe("upgradeState", () => {
@@ -157,6 +164,11 @@ describe("upgradeState", () => {
     expect(latestBid.executionRequestsRoot).toEqual(
       ssz.gloas.ExecutionRequests.hashTreeRoot(ssz.gloas.ExecutionRequests.defaultValue())
     );
+    const forkSlotIndex = fuluStateView.slot % SLOTS_PER_HISTORICAL_ROOT;
+    const availability = gloasState.executionPayloadAvailability.toBoolArray();
+    for (let i = 0; i < SLOTS_PER_HISTORICAL_ROOT; i++) {
+      expect(availability[i]).toBe(i !== forkSlotIndex);
+    }
     // Full state still merkleizes and round-trips
     expect(() => gloasState.hashTreeRoot()).not.toThrow();
     expect(() => gloasState.toValue()).not.toThrow();
@@ -215,6 +227,22 @@ describe("upgradeState", () => {
     expect(gloasState.pendingDeposits.length).toBe(0);
     // (d) the fork transition does NOT clear the cache — prepareNextSlot drops it on finalization
     expect(cache.cachedDepositCount).toBe(2);
+  });
+
+  it("upgradeStateToHeze with an unset deposit requests start index", () => {
+    const gloasState = ssz.gloas.BeaconState.defaultViewDU();
+    gloasState.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
+    const config = getConfig(ForkName.gloas);
+    const stateView = createCachedBeaconState(
+      gloasState,
+      {
+        config: createBeaconConfig(config, gloasState.genesisValidatorsRoot),
+        pubkeyCache,
+      },
+      {skipSyncCommitteeCache: true}
+    ) as CachedBeaconStateGloas;
+    const newState = upgradeStateToHeze(stateView);
+    expect(() => newState.toValue()).not.toThrow();
   });
 });
 

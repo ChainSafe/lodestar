@@ -5,8 +5,11 @@ import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
   ForkPostBellatrix,
+  ForkPostDeneb,
+  ForkPreDeneb,
   ForkPreGloas,
   ForkSeq,
+  GENESIS_EPOCH,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -16,6 +19,7 @@ import {
   isForkPostElectra,
   isForkPostFulu,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
   DataAvailabilityStatus,
@@ -26,6 +30,7 @@ import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   getCurrentSlot,
+  getInclusionListCommittee,
   isStatePostAltair,
   isStatePostGloas,
   proposerShufflingDecisionRoot,
@@ -66,6 +71,7 @@ import {
 } from "@lodestar/utils";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
+import {InclusionListSource} from "../../../chain/blocks/types.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -81,11 +87,15 @@ import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
-import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
+import {
+  InclusionListValidationResult,
+  validateApiAggregateAndProof,
+  validateGossipInclusionList,
+} from "../../../chain/validation/index.js";
 import {validateGossipProposerPreferences} from "../../../chain/validation/proposerPreferences.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
-import {BUILDER_BID_DEADLINE_MS, BuilderApiBid, decodeBuilderUrl} from "../../../execution/builder/apiClient.js";
+import {BuilderApiBid, decodeBuilderUrl} from "../../../execution/builder/apiClient.js";
 import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {getBuilderBidTotalGwei, validateBuilderApiExecutionPayloadBid} from "../../../execution/builder/validateBid.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
@@ -111,16 +121,17 @@ import {
  * Post this time, race execution and builder to pick whatever resolves first.
  *
  * Empirically the builder block resolves in ~1 second, and execution block resolves in <500 ms.
- * A cutoff of 2 seconds gives enough time and if there are unexpected delays it ensures we publish
- * in time as proposals post 4 seconds into the slot will likely be orphaned due to proposer boost reorg.
- *
- * TODO GLOAS: re-evaluate cutoff timing due to attestation deadline changes in gloas
+ * A cutoff of 1667 BPS (2 seconds for 12s slots) gives enough time and if there are unexpected delays
+ * it ensures we publish in time as proposals after the attestation deadline will likely be orphaned
+ * due to proposer boost reorg.
  */
-const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
-/** Overall timeout for execution and block production apis */
-const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
-/** Rejection message of the bid block branch when there is no viable bid to commit to */
-const NO_BID_AVAILABLE = "No builder bid available";
+const BLOCK_PRODUCTION_RACE_CUTOFF_BPS = 1667;
+/**
+ * Post-gloas cutoff, kept at 1667 BPS (2 seconds for 12s slots) for now.
+ *
+ * TODO GLOAS: revisit, the block propagates faster as it only commits to a bid and the attestation deadline changed
+ */
+export const BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS = 1667;
 
 type BidCandidate = {
   signedBid: gloas.SignedExecutionPayloadBid;
@@ -167,8 +178,8 @@ function compareBidCandidates(a: BidCandidate, b: BidCandidate): number {
 }
 
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
-  data: BlockContents;
-  version: ForkName;
+  data: BlockContents<ForkPreGloas>;
+  version: ForkPreGloas;
 };
 type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: BlindedBeaconBlock;
@@ -246,13 +257,13 @@ export function getValidatorApi(
         genesisBlockRoot = state.computeAnchorCheckpoint().checkpoint.root;
       } else if (state.slot < SLOTS_PER_HISTORICAL_ROOT) {
         genesisBlockRoot = state.getBlockRootAtSlot(GENESIS_SLOT);
-      }
-
-      const blockRes = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
-      if (blockRes) {
-        genesisBlockRoot = config
-          .getForkTypes(blockRes.block.message.slot)
-          .SignedBeaconBlock.hashTreeRoot(blockRes.block);
+      } else {
+        const blockRes = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
+        if (blockRes) {
+          genesisBlockRoot = config
+            .getForkTypes(blockRes.block.message.slot)
+            .BeaconBlock.hashTreeRoot(blockRes.block.message);
+        }
       }
     }
 
@@ -301,8 +312,8 @@ export function getValidatorApi(
    */
   function msToNextEpoch(): number {
     const nextEpoch = chain.clock.currentEpoch + 1;
-    const secPerEpoch = (SLOTS_PER_EPOCH * config.SLOT_DURATION_MS) / 1000;
-    const nextEpochStartSec = chain.genesisTime + nextEpoch * secPerEpoch;
+    const nextEpochSlot = computeStartSlotAtEpoch(nextEpoch);
+    const nextEpochStartSec = computeTimeAtSlot(config, nextEpochSlot, chain.genesisTime);
     return nextEpochStartSec * 1000 - Date.now();
   }
 
@@ -396,7 +407,7 @@ export function getValidatorApi(
    * Both the above scenarios could be problematic and hence validator shouldn't participate
    * or weigh its vote on a head till it resolves to a Valid execution status.
    * Following activities should be skipped on an Optimistic head (with Syncing status):
-   * 1. Attestation if targetRoot is optimistic
+   * 1. Attestation if the head block voted for (post-gloas the variant voted for) or the targetRoot is optimistic
    * 2. SyncCommitteeContribution if if the root for which to produce contribution is Optimistic.
    * 3. ProduceBlock if the parentRoot (chain's current head) is optimistic. Must be checked
    *    explicitly as only local payload production consults the EL, blinded blocks from an
@@ -511,6 +522,10 @@ export function getValidatorApi(
       parentBlock: ProtoBlock;
     }
   ): Promise<ProduceBlockContentsRes & {shouldOverrideBuilder?: boolean}> {
+    const version = config.getForkName(slot);
+    if (isForkPostGloas(version)) {
+      throw Error(`produceEngineBlockContents called for post-gloas fork=${version}`);
+    }
     const source = ProducedBlockSource.engine;
     metrics?.blockProductionRequests.inc({source});
 
@@ -525,7 +540,6 @@ export function getValidatorApi(
         feeRecipient,
         commonBlockBodyPromise,
       });
-      const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
         const blockFeeRecipient = toHex((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);
         if (blockFeeRecipient !== feeRecipient) {
@@ -563,7 +577,7 @@ export function getValidatorApi(
 
         return {
           data: {
-            block,
+            block: block as BeaconBlock<ForkPostDeneb & ForkPreGloas>,
             blobs: blobsBundle.blobs,
             kzgProofs: blobsBundle.proofs,
           },
@@ -574,7 +588,13 @@ export function getValidatorApi(
         };
       }
 
-      return {data: {block}, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
+      return {
+        data: {block: block as BeaconBlock<ForkPreDeneb>},
+        version,
+        executionPayloadValue,
+        consensusBlockValue,
+        shouldOverrideBuilder,
+      };
     } finally {
       if (timer) timer({source});
     }
@@ -680,17 +700,21 @@ export function getValidatorApi(
     });
 
     // Calculate cutoff time based on start of the slot
-    const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - chain.clock.msFromSlot(slot));
+    const cutoffMs = Math.max(
+      0,
+      config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_BPS) - chain.clock.msFromSlot(slot)
+    );
+    const blockProductionTimeoutMs = config.getSlotDurationMs(fork);
 
     logger.verbose("Block production race (builder vs execution) starting", {
       ...loggerContext,
       cutoffMs,
-      timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+      timeoutMs: blockProductionTimeoutMs,
     });
 
     const blockProductionRacePromise = resolveOrRacePromises([builderPromise, enginePromise], {
       resolveTimeoutMs: cutoffMs,
-      raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+      raceTimeoutMs: blockProductionTimeoutMs,
       signal: controller.signal,
     });
 
@@ -878,6 +902,10 @@ export function getValidatorApi(
 
   return {
     async produceBlockV3({slot, randaoReveal, graffiti, skipRandaoVerification, builderBoostFactor, ...opts}) {
+      const forkName = config.getForkName(slot);
+      if (isForkPostGloas(forkName)) {
+        throw new ApiError(400, `produceBlockV3 not supported for post-gloas fork=${forkName}, use produceBlockV4`);
+      }
       const {data, ...meta} = await produceEngineOrBuilderBlock(
         slot,
         randaoReveal,
@@ -980,32 +1008,49 @@ export function getValidatorApi(
         (!circuitBreakerActive &&
           chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
 
-      // Select the p2p bid once builders had time to bid up, matching the deadline advertised
-      // on builder API bid requests, unless the circuit breaker is active
-      const p2pBidPromise: Promise<PooledExecutionPayloadBid | null> = circuitBreakerActive
-        ? Promise.resolve(null)
-        : sleep(Math.max(0, BUILDER_BID_DEADLINE_MS - chain.clock.msFromSlot(slot))).then(() => {
-            const p2pBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
-            // Discard p2p bids below the proposer's configured floor on the total payment.
-            // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
-            if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
-              logger.info("Best p2p bid below configured minimum", {
-                slot,
-                bidValue: prettyGweiToEth(p2pBid.signedBid.message.value),
-                minBid: prettyGweiToEth(builderConfig.minBid),
-              });
-              return null;
-            }
-            return p2pBid;
-          });
+      // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
+      // not delay the proposal when a builder bid block is available (and vice versa)
+      const cutoffMs = Math.max(
+        0,
+        config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS) - chain.clock.msFromSlot(slot)
+      );
+
+      // Give p2p bids the same time to bid up as granted to builder API bid requests via the advertised
+      // deadline, the pool is read once the deadline passed and the bid requests settled. A late request
+      // does not wait past the race cutoff, a pooled bid is still the fastest fallback if the local block fails
+      const bidDeadlinePromise = circuitBreakerActive
+        ? Promise.resolve()
+        : sleep(Math.min(chain.builderApiClient.bidDeadline, cutoffMs));
 
       // Candidates are ranked by their boosted counted total payment, the p2p bid is governed
       // by the top-level factors and each builder API bid by its own entry. Ties prefer the
       // earliest received builder API bid, so the signed block can be routed back to its
       // builder directly.
       const bestBidPromise: Promise<BidCandidate | null> = (async () => {
-        const [builderApiBids, p2pBid] = await Promise.all([builderApiBidsPromise, p2pBidPromise]);
+        // Past the race cutoff a pooled p2p bid is used right away rather than waiting for pending
+        // builder API requests, the local block is selected at the cutoff anyway if it is ready
+        let [builderApiBids] = await Promise.all([
+          Promise.race([builderApiBidsPromise, sleep(cutoffMs).then(() => null)]),
+          bidDeadlinePromise,
+        ]);
         let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
+
+        let p2pBid: PooledExecutionPayloadBid | null = circuitBreakerActive
+          ? null
+          : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+        // Discard p2p bids below the proposer's configured floor on the total payment.
+        // A p2p bid's total is just its value since gossip validation enforces executionPayment=0.
+        if (p2pBid !== null && BigInt(p2pBid.signedBid.message.value) < builderConfig.minBid) {
+          logger.info("Best p2p bid below configured minimum", {
+            slot,
+            bidValue: prettyGweiToEth(p2pBid.signedBid.message.value),
+            minBid: prettyGweiToEth(builderConfig.minBid),
+          });
+          p2pBid = null;
+        }
+        if (builderApiBids === null) {
+          builderApiBids = p2pBid !== null ? [] : await builderApiBidsPromise;
+        }
 
         const candidates = (
           await Promise.all(
@@ -1093,10 +1138,6 @@ export function getValidatorApi(
         return fn().finally(() => t?.({source}));
       };
 
-      // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
-      // not delay the proposal when a builder bid block is available (and vice versa)
-      const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - chain.clock.msFromSlot(slot));
-
       // use abort controller to stop waiting for the bid block if the engine block will be selected
       const controller = new AbortController();
 
@@ -1113,7 +1154,7 @@ export function getValidatorApi(
       });
       const bidBlockPromise: ReturnType<typeof chain.produceBlock> = bestBidPromise.then((candidate) => {
         if (candidate === null) {
-          throw new Error(NO_BID_AVAILABLE);
+          throw new NoBidReceived();
         }
         metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
         return timed(ProducedBlockSource.builder, () =>
@@ -1123,7 +1164,7 @@ export function getValidatorApi(
 
       const [engineResult, bidBlockResult] = await resolveOrRacePromises([enginePromise, bidBlockPromise], {
         resolveTimeoutMs: cutoffMs,
-        raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+        raceTimeoutMs: config.getSlotDurationMs(fork),
         signal: controller.signal,
       });
 
@@ -1227,7 +1268,7 @@ export function getValidatorApi(
         source = ProducedBlockSource.engine;
         bestResult = engineResult;
         const reason =
-          bidBlockResult.status === "rejected" && (bidBlockResult.reason as Error).message === NO_BID_AVAILABLE
+          bidBlockResult.status === "rejected" && bidBlockResult.reason instanceof NoBidReceived
             ? EngineBlockSelectionReason.BuilderNoBid
             : bidBlockResult.status === "pending"
               ? EngineBlockSelectionReason.BuilderPending
@@ -1354,10 +1395,18 @@ export function getValidatorApi(
         // After Gloas, attestation.data.index signals payload status in fork-choice:
         // - 0 = EMPTY / not present, 1 = FULL / present
         // - same-slot attestations must always use index = 0
+        // Validator shouldn't vote on an optimistic head, post-gloas that is the variant voted for
         if (canonicalBlock.slot !== slot) {
           index = canonicalBlock.payloadStatus === PayloadStatus.FULL ? 1 : 0;
+          if (isOptimisticBlock(canonicalBlock)) {
+            throw new NodeIsSyncing(
+              `Head block's execution payload not yet validated, executionPayloadBlockHash=${canonicalBlock.executionPayloadBlockHash}`
+            );
+          }
         } else {
           index = 0;
+          // Same-slot votes support the PENDING variant, which does not depend on the block's own payload
+          notOnOptimisticBlockRoot(beaconBlockRoot);
         }
       } else if (isForkPostElectra(fork)) {
         index = 0;
@@ -1375,8 +1424,11 @@ export function getValidatorApi(
             headBlockRoot
           : headState.getBlockRootAtSlot(targetSlot);
 
-      // Check the execution status as validator shouldn't vote on an optimistic head
-      // Check on target is sufficient as a valid target would imply a valid source
+      // Check the execution status as validator shouldn't vote on an optimistic head, post-gloas the
+      // variant voted for is checked above. Check on target is sufficient for a valid source
+      if (!isForkPostGloas(fork)) {
+        notOnOptimisticBlockRoot(beaconBlockRoot);
+      }
       notOnOptimisticBlockRoot(targetRoot);
       notOnOutOfRangeData(targetRoot);
 
@@ -1417,7 +1469,7 @@ export function getValidatorApi(
       // Spec: set payload_present only if the envelope was seen before get_payload_due_ms()
       // into the slot. Use the envelope's own arrival time (getPayloadEnvelopeSource), not
       // the input's creation time.
-      const payloadDueSec = config.getPayloadDueMs() / 1000;
+      const payloadDueSec = config.getPayloadDueMs(fork) / 1000;
       const payloadSeenSec =
         payloadInput?.hasPayloadEnvelope() === true
           ? chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec)
@@ -1494,8 +1546,9 @@ export function getValidatorApi(
       const currentEpoch = currentEpochWithDisparity();
       const nextEpoch = currentEpoch + 1;
       const startSlot = computeStartSlotAtEpoch(epoch);
+      const prepareFork = config.getForkName(computeStartSlotAtEpoch(nextEpoch) - 1);
       const prepareNextSlotLookAheadMs =
-        config.SLOT_DURATION_MS - config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS);
+        config.getSlotDurationMs(prepareFork) - config.getSlotComponentDurationMs(prepareFork, PREPARE_NEXT_SLOT_BPS);
       const toNextEpochMs = msToNextEpoch();
       const nearNextEpoch = toNextEpochMs < prepareNextSlotLookAheadMs;
       // Post-Fulu the proposer lookahead is deterministic and known a full epoch ahead, so
@@ -1641,7 +1694,8 @@ export function getValidatorApi(
 
       // should not compare to headEpoch in order to handle skipped slots
       // Check if the epoch is in the future after waiting for requested slot
-      if (epoch > chain.clock.currentEpoch + 1) {
+      // Before genesis the clock epoch is negative, treat it as GENESIS_EPOCH so the next epoch can be requested
+      if (epoch > Math.max(chain.clock.currentEpoch, GENESIS_EPOCH) + 1) {
         throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
       }
 
@@ -1678,7 +1732,7 @@ export function getValidatorApi(
         }
       }
 
-      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || (await getGenesisBlockRoot(state));
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch));
 
       return {
         data: duties,
@@ -1704,7 +1758,7 @@ export function getValidatorApi(
 
       await waitForNextClosestEpoch();
 
-      if (epoch > chain.clock.currentEpoch + 1) {
+      if (epoch > Math.max(chain.clock.currentEpoch, GENESIS_EPOCH) + 1) {
         throw new ApiError(400, "Cannot get PTC duties for epoch more than one ahead");
       }
 
@@ -1727,7 +1781,10 @@ export function getValidatorApi(
         }
       }
 
-      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || (await getGenesisBlockRoot(state));
+      // The fork epoch PTC is computed at the fork from effective balances updated at the end of the
+      // last pre-fork epoch, so its dependent root is one epoch later than for other epochs
+      const dependentRootEpoch = epoch === config.GLOAS_FORK_EPOCH ? epoch + 1 : epoch;
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(dependentRootEpoch));
 
       return {
         data: duties,
@@ -2174,6 +2231,120 @@ export function getValidatorApi(
       if (failures.length > 0) {
         throw new IndexedError("Error submitting builder preferences", failures);
       }
+    },
+
+    async produceInclusionList({slot}) {
+      notWhileSyncing(chain, sync.state);
+
+      if (!isForkPostHeze(chain.config.getForkName(slot))) {
+        throw new ApiError(400, `Producing inclusion list for pre-heze slot: ${slot}`);
+      }
+
+      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+
+      const timer = metrics?.getInclusionListV1RequestsDuration.startTimer();
+      const transactions = await chain.executionEngine.getInclusionList();
+      timer?.();
+      metrics?.getInclusionListV1Requests.inc();
+
+      return {data: transactions, meta: {version: chain.config.getForkName(slot)}};
+    },
+
+    async getInclusionListCommitteeDuties({epoch, indices}) {
+      notWhileSyncing(chain, sync.state);
+
+      if (indices.length === 0) {
+        throw new ApiError(400, "No validator to get inclusion list committee duties");
+      }
+
+      if (!isForkPostHeze(chain.config.getForkName(computeStartSlotAtEpoch(epoch)))) {
+        throw new ApiError(400, `Requesting pre-heze inclusion list committee duties epoch: ${epoch}`);
+      }
+
+      // May request for an epoch that's in the future
+      await waitForNextClosestEpoch();
+
+      if (epoch > chain.clock.currentEpoch + 1) {
+        throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
+      }
+
+      const head = chain.forkChoice.getHead();
+      const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+
+      const pubkeys = getPubkeysForIndices(state, indices);
+      const requestedIndices = new Set(indices);
+      const epochStartSlot = computeStartSlotAtEpoch(epoch);
+      const shuffling = state.getShufflingAtEpoch(epoch);
+
+      // Validators set this as `dependent_root` on their inclusion lists
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch));
+
+      // A validator can be on several slots' committees in an epoch; report the earliest, as for attester duties
+      const dutySlotByValidator = new Map<ValidatorIndex, Slot>();
+      for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+        const slot = epochStartSlot + i;
+        for (const validatorIndex of getInclusionListCommittee(shuffling, slot).validatorIndices) {
+          if (requestedIndices.has(validatorIndex) && !dutySlotByValidator.has(validatorIndex)) {
+            dutySlotByValidator.set(validatorIndex, slot);
+          }
+        }
+      }
+
+      const duties: routes.validator.InclusionListDuty[] = [];
+      for (let i = 0; i < indices.length; i++) {
+        const validatorIndex = indices[i];
+        const slot = dutySlotByValidator.get(validatorIndex);
+        if (slot !== undefined) {
+          duties.push({pubkey: pubkeys[i], validatorIndex, slot, dependentRoot});
+        }
+      }
+
+      return {
+        data: duties,
+        meta: {
+          dependentRoot: toRootHex(dependentRoot),
+          executionOptimistic: isOptimisticBlock(head),
+        },
+      };
+    },
+
+    async publishInclusionList({signedInclusionList}) {
+      notWhileSyncing(chain, sync.state);
+
+      const {slot} = signedInclusionList.message;
+      if (!isForkPostHeze(chain.config.getForkName(slot))) {
+        throw new ApiError(400, `Publishing pre-heze inclusion list slot: ${slot}`);
+      }
+
+      // Timeliness is judged on receipt, as for gossip, so a list submitted in time stays timely if validation is slow
+      const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
+      metrics?.inclusionListsReceived.inc({source: InclusionListSource.api});
+      metrics?.inclusionListTransactionsReceived.inc(
+        {source: InclusionListSource.api},
+        signedInclusionList.message.transactions.length
+      );
+
+      const timer = metrics?.inclusionListsValidationTime.startTimer();
+      let validationResult: InclusionListValidationResult;
+      try {
+        validationResult = await validateGossipInclusionList(chain, signedInclusionList);
+      } finally {
+        timer?.({source: InclusionListSource.api});
+      }
+      const {committeeIndices, totalBytes} = validationResult;
+      metrics?.inclusionListsValid.inc({source: InclusionListSource.api});
+      metrics?.inclusionListsValidSize.inc(totalBytes);
+
+      const isTimely = secFromSlot * 1000 < chain.config.getInclusionListDueMs(chain.config.getForkName(slot));
+      chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
+
+      chain.emitter.emit(routes.events.EventType.inclusionList, {
+        version: chain.config.getForkName(slot),
+        data: signedInclusionList,
+      });
+
+      await network.publishInclusionList(signedInclusionList);
+      metrics?.inclusionListsPublished.inc();
     },
 
     async getExecutionPayloadEnvelope({slot, beaconBlockRoot}) {

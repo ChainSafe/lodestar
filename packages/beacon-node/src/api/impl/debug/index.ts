@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
-import {ForkPostDeneb, ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {ForkPostDeneb, ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {BeaconState, DataColumnSidecar, DataColumnSidecars, type SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
@@ -114,6 +114,10 @@ export function getDebugApi({
                 unrealizedJustifiedRoot: node.unrealizedJustifiedRoot,
                 unrealizedFinalizedEpoch: node.unrealizedFinalizedEpoch,
                 unrealizedFinalizedRoot: node.unrealizedFinalizedRoot,
+                inclusionListSatisfied:
+                  node.payloadStatus === PayloadStatus.FULL
+                    ? forkChoice.getPayloadInclusionListSatisfaction(node.blockRoot)
+                    : null,
               },
             };
           }),
@@ -186,12 +190,16 @@ export function getDebugApi({
         dataColumnSidecars = [];
       }
 
+      // Post-gloas sidecars belong to the block's own payload, its FULL variant only exists once imported
+      const payload = finalized ? null : chain.forkChoice.getBlockHex(toRootHex(blockRoot), PayloadStatus.FULL);
       return {
         data: (indices
           ? dataColumnSidecars.filter(({index}) => indices.includes(index))
           : dataColumnSidecars) as DataColumnSidecars,
         meta: {
-          executionOptimistic,
+          executionOptimistic: isForkPostGloas(fork)
+            ? !finalized && (payload === null || isOptimisticBlock(payload))
+            : executionOptimistic,
           finalized,
           version: fork,
         },

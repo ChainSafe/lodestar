@@ -164,6 +164,8 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainCo
         FULU_FORK_EPOCH: 0,
         GLOAS_FORK_EPOCH: 0,
         HEZE_FORK_EPOCH: forkEpoch,
+        // pyspec vectors are generated with the slot duration schedule inert
+        SLOT_DURATION_MS_HEZE: config.SLOT_DURATION_MS,
       };
   }
 }

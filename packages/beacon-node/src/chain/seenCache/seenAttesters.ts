@@ -22,7 +22,7 @@ import {MapDef} from "@lodestar/utils";
 //
 // Assuming we're at epoch 99 while all other nodes at epoch 100, they all accept attestations at epoch 99, 100.
 // If MAX_RETAINED_EPOCH = 2 then lowestPermissibleEpoch is 97 which is more than enough
-const EPOCH_LOOKBACK_LIMIT = 2;
+export const EPOCH_LOOKBACK_LIMIT = 2;
 
 /**
  * Keeps a cache to filter unaggregated attestations from the same validator in the same epoch.

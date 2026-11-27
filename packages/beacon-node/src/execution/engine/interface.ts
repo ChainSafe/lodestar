@@ -6,17 +6,25 @@ import {
   DEPOSIT_REQUEST_TYPE,
   ForkName,
   ForkPostFulu,
-  ForkPreFulu,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
-import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
+import {
+  BlobsBundle,
+  ExecutionPayload,
+  ExecutionRequests,
+  Root,
+  RootHex,
+  Wei,
+  bellatrix,
+  capella,
+} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
+import {LodestarError} from "@lodestar/utils";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBodyV2} from "./types.js";
 import {DATA} from "./utils.js";
 
-export {PayloadIdCache, type PayloadId, type WithdrawalV1};
+export {type PayloadId, PayloadIdCache, type WithdrawalV1};
 export type ClientVersion = routes.node.ClientVersion;
 export const ClientCode = routes.node.ClientCode;
 
@@ -73,7 +81,13 @@ export type ExecutePayloadResponse =
       latestValidHash: null;
       validationError: null;
     }
-  | {status: ExecutionPayloadStatus.VALID; latestValidHash: RootHex; validationError: null}
+  | {
+      status: ExecutionPayloadStatus.VALID;
+      latestValidHash: RootHex;
+      validationError: null;
+      /** PayloadStatusV2: whether the payload satisfied the inclusion list constraints */
+      inclusionListSatisfied?: boolean | null;
+    }
   | {status: ExecutionPayloadStatus.INVALID; latestValidHash: RootHex | null; validationError: string | null}
   | {
       status:
@@ -83,6 +97,19 @@ export type ExecutePayloadResponse =
       latestValidHash: null;
       validationError: string;
     };
+
+export type PayloadStatusResult = {
+  status: ExecutionPayloadStatus;
+  latestValidHash: RootHex | null;
+  validationError: string | null;
+  /** PayloadStatusV2: whether a VALID payload satisfied the inclusion list constraints, null otherwise */
+  inclusionListSatisfied?: boolean | null;
+};
+
+export type ForkchoiceUpdatedResult = {
+  payloadStatus: PayloadStatusResult;
+  payloadId: PayloadId | null;
+};
 
 export type ForkChoiceUpdateStatus =
   | ExecutionPayloadStatus.VALID
@@ -99,9 +126,23 @@ export type PayloadAttributes = {
   parentBeaconBlockRoot?: Uint8Array;
   slotNumber?: number; // EIP-7843
   targetGasLimit?: bigint; // GLOAS (PayloadAttributesV4, execution-apis#796)
+  /** Transactions the built payload must include (PayloadAttributesV5, HEZE:EIP-7805) */
+  inclusionListTransactions?: bellatrix.Transactions;
 };
 
 export type VersionedHashes = Uint8Array[];
+
+export enum ExecutionEngineErrorCode {
+  /**
+   * `notifyForkchoiceUpdate` requested a payload while the execution client is syncing, the head block is not
+   * available to build on yet
+   */
+  SYNCING = "EXECUTION_ENGINE_ERROR_SYNCING",
+}
+
+export type ExecutionEngineErrorType = {code: ExecutionEngineErrorCode.SYNCING};
+
+export class ExecutionEngineError extends LodestarError<ExecutionEngineErrorType> {}
 
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
@@ -129,8 +170,15 @@ export interface IExecutionEngine {
     executionPayload: ExecutionPayload,
     versionedHashes?: VersionedHashes,
     parentBeaconBlockRoot?: Root,
-    executionRequests?: ExecutionRequests
+    executionRequests?: ExecutionRequests,
+    inclusionListTransactions?: bellatrix.Transactions
   ): Promise<ExecutePayloadResponse>;
+
+  /**
+   * Transactions the execution layer wants included in the next payload. Parameterless since
+   * execution-apis#609: the execution layer builds against its own view of the head.
+   */
+  getInclusionList(): Promise<bellatrix.Transactions>;
 
   /**
    * Signal fork choice updates
@@ -142,15 +190,19 @@ export interface IExecutionEngine {
    * The call of the notify_forkchoice_updated function maps on the POS_FORKCHOICE_UPDATED event defined in the EIP-3675.
    * https://github.com/ethereum/consensus-specs/blob/v1.1.7/specs/merge/fork-choice.md#notify_forkchoice_updated
    *
-   * Should be called in response to fork-choice head and finalized events
+   * Should be called in response to fork-choice head and finalized events.
+   *
+   * An INVALID verdict is returned, not thrown: the caller feeds it back into fork choice together with the
+   * `latestValidHash`. Only SYNCING while building a payload is an error, thrown as `ExecutionEngineError` with code `SYNCING`.
    */
   notifyForkchoiceUpdate(
     fork: ForkName,
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
-  ): Promise<PayloadId | null>;
+    payloadAttributes?: PayloadAttributes,
+    signal?: AbortSignal
+  ): Promise<ForkchoiceUpdatedResult>;
 
   /**
    * Given the payload_id, get_payload returns the most recent version of the execution payload that has been built
@@ -161,7 +213,8 @@ export interface IExecutionEngine {
    */
   getPayload(
     fork: ForkName,
-    payloadId: PayloadId
+    payloadId: PayloadId,
+    signal?: AbortSignal
   ): Promise<{
     executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
@@ -178,9 +231,4 @@ export interface IExecutionEngine {
     versionedHashes: VersionedHashes,
     buffers?: Uint8Array[]
   ): Promise<BlobAndProofV2[] | null>;
-  getBlobs(
-    fork: ForkPreFulu,
-    versionedHashes: VersionedHashes,
-    buffers?: Uint8Array[]
-  ): Promise<(BlobAndProof | null)[]>;
 }

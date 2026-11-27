@@ -1,13 +1,11 @@
 import {Epoch, RootHex} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 
-export enum LVHExecErrorCode {
+export enum ExecutionStatusTransition {
   PreMergeToInvalid = "PreMergeToInvalid",
   ValidToInvalid = "ValidToInvalid",
   InvalidToValid = "InvalidToValid",
 }
-
-export type LVHExecError = {lvhCode: LVHExecErrorCode; blockRoot: RootHex; execHash: RootHex};
 
 export enum ProtoArrayErrorCode {
   FINALIZED_NODE_UNKNOWN = "PROTO_ARRAY_ERROR_FINALIZED_NODE_UNKNOWN",
@@ -28,7 +26,7 @@ export enum ProtoArrayErrorCode {
   INVALID_BEST_NODE = "PROTO_ARRAY_ERROR_INVALID_BEST_NODE",
   INVALID_BLOCK_EXECUTION_STATUS = "PROTO_ARRAY_INVALID_BLOCK_EXECUTION_STATUS",
   INVALID_JUSTIFIED_EXECUTION_STATUS = "PROTO_ARRAY_INVALID_JUSTIFIED_EXECUTION_STATUS",
-  INVALID_LVH_EXECUTION_RESPONSE = "PROTO_ARRAY_INVALID_LVH_EXECUTION_RESPONSE",
+  INVALID_EXECUTION_STATUS_TRANSITION = "PROTO_ARRAY_ERROR_INVALID_EXECUTION_STATUS_TRANSITION",
   PRE_GLOAS_BLOCK = "PROTO_ARRAY_ERROR_PRE_GLOAS_BLOCK",
 }
 
@@ -59,7 +57,12 @@ export type ProtoArrayErrorType =
     }
   | {code: ProtoArrayErrorCode.INVALID_BLOCK_EXECUTION_STATUS; root: RootHex}
   | {code: ProtoArrayErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS; root: RootHex}
-  | ({code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE} & LVHExecError)
+  | {
+      code: ProtoArrayErrorCode.INVALID_EXECUTION_STATUS_TRANSITION;
+      transition: ExecutionStatusTransition;
+      blockRoot: RootHex;
+      execHash: RootHex;
+    }
   | {code: ProtoArrayErrorCode.PRE_GLOAS_BLOCK; root: RootHex};
 
 export class ProtoArrayError extends LodestarError<ProtoArrayErrorType> {}
