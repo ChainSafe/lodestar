@@ -1,9 +1,9 @@
 import {Mock, afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateView} from "@lodestar/state-transition";
-import {Epoch, Slot, altair} from "@lodestar/types";
+import {DOMAIN_SYNC_COMMITTEE, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BeaconStateView, computeSigningRoot} from "@lodestar/state-transition";
+import {Epoch, Slot, altair, ssz} from "@lodestar/types";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError.js";
 import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache/index.js";
 import {validateGossipSyncCommittee} from "../../../../src/chain/validation/syncCommittee.js";
@@ -22,7 +22,10 @@ describe("Sync Committee Signature validation", () => {
   const altairForkEpoch = 2020;
   const currentSlot = SLOTS_PER_EPOCH * (altairForkEpoch + 1);
   const chainConfig = createChainForkConfig(
-    Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch})
+    Object.assign({}, defaultChainConfig, {
+      ALTAIR_FORK_EPOCH: altairForkEpoch,
+      BELLATRIX_FORK_EPOCH: altairForkEpoch + 1,
+    })
   );
   const config = createBeaconConfig(chainConfig, Buffer.alloc(32, 0xaa));
   // all validators have same pubkey
@@ -122,6 +125,21 @@ describe("Sync Committee Signature validation", () => {
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(chain, syncCommittee, 0),
       SyncCommitteeErrorCode.INVALID_SIGNATURE
+    );
+  });
+
+  it("should verify the signature with the fork of the message slot", async () => {
+    const syncCommittee = getSyncCommitteeSignature(currentSlot, validatorIndexInSyncCommittee);
+    const headState = new BeaconStateView(generateCachedAltairState({slot: currentSlot - 1}, altairForkEpoch));
+    chain.getHeadState.mockReturnValue(headState);
+
+    await validateGossipSyncCommittee(chain, syncCommittee, 3);
+
+    const domain = config.getDomainAtFork(ForkName.bellatrix, DOMAIN_SYNC_COMMITTEE);
+    const signingRoot = computeSigningRoot(ssz.Root, syncCommittee.beaconBlockRoot, domain);
+    expect(chain.bls.verifySignatureSets).toHaveBeenCalledWith(
+      [expect.objectContaining({signingRoot})],
+      expect.anything()
     );
   });
 
