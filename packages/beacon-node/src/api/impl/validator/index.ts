@@ -646,14 +646,15 @@ export function getValidatorApi(
     notOnOutOfRangeData(parentBlockRoot);
     metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
-    // Fetch the production state once and thread it to all downstream production calls. Pre-gloas has no
-    // parent execution payload, so the applied state is the same view as parentState.
+    // Fetch the production state once and thread it to all downstream production calls
     const parentState = await chain.regen.getBlockSlotState(
       parentBlock,
       slot,
       {dontTransferCache: true},
       RegenCaller.produceBlock
     );
+    // Only reached for pre-gloas slots (produceBlockV3 rejects post-gloas forks), the execution payload is part
+    // of the parent block so its state already includes it
     const parentStateWithPayload = parentState;
 
     const fork = config.getForkName(slot);
