@@ -814,7 +814,9 @@
     </spec>
 
 - name: compute_empty_slot_support_discount#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/fastConfirmation/utils.ts
+      search: export function computeEmptySlotSupportDiscount(
   spec: |
     <spec fn="compute_empty_slot_support_discount" fork="gloas" hash="14a45ee7">
     def compute_empty_slot_support_discount(
