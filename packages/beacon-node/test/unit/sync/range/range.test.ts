@@ -13,7 +13,7 @@ import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEn
 import {DataColumnSidecarErrorCode} from "../../../../src/chain/errors/index.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
-import {Batch} from "../../../../src/sync/range/batch.js";
+import {Batch, BatchError, BatchErrorCode, BatchStatus} from "../../../../src/sync/range/batch.js";
 import {SyncChain} from "../../../../src/sync/range/chain.js";
 import {RangeSync} from "../../../../src/sync/range/range.js";
 import {
@@ -44,6 +44,58 @@ vi.mock("../../../../src/sync/utils/downloadByRange.js", async (importActual) =>
   downloadByRange: vi.fn(),
   cacheByRangeResponses: vi.fn(),
 }));
+
+describe("sync / range / terminal failure warning", () => {
+  it("warns for exhausted processing retries at most once a minute", () => {
+    vi.clearAllMocks();
+    const chain = getMockedBeaconChain();
+    const warn = chain.logger.warn;
+    const checkpoint = ssz.phase0.Checkpoint.defaultValue();
+    chain.forkChoice.getFinalizedCheckpoint.mockReturnValue({...checkpoint, rootHex: toRootHex(checkpoint.root)});
+    chain.getHeadState.mockReturnValue({forkName: ForkName.fulu} as IBeaconStateView);
+    const rangeSync = new RangeSync({
+      chain,
+      network: getMockedNetwork(),
+      config: chain.config,
+      logger: chain.logger,
+      metrics: null,
+    });
+    const localStatus = ssz.fulu.Status.defaultValue();
+    rangeSync.addPeer(validPeerIdStr, localStatus, {...localStatus, finalizedEpoch: 1});
+    const {onEnd} = vi.mocked(SyncChain).mock.calls[0][3];
+    const executionError = new BatchError({
+      code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS,
+      startEpoch: 0,
+      status: BatchStatus.Processing,
+    });
+    const downloadError = new BatchError({
+      code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS,
+      startEpoch: 0,
+      status: BatchStatus.Downloading,
+    });
+
+    vi.useFakeTimers();
+    try {
+      onEnd(downloadError, null);
+      expect(warn).not.toHaveBeenCalled();
+
+      onEnd(executionError, null);
+      onEnd(executionError, null);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(
+        "Range sync stopped after repeated batch processing failures",
+        {epoch: 0},
+        executionError
+      );
+
+      vi.advanceTimersByTime(60_000);
+      onEnd(executionError, null);
+      expect(warn).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
 
 describe("sync / range / per-block processing", () => {
   beforeEach(() => {

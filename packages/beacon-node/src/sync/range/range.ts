@@ -28,8 +28,11 @@ import {
   downloadByRange,
 } from "../utils/downloadByRange.js";
 import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
+import {BatchError, BatchErrorCode} from "./batch.js";
 import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";
 import {updateChains} from "./utils/index.js";
+
+const RANGE_SYNC_FAILURE_WARNING_INTERVAL_MS = 60_000;
 
 export enum RangeSyncEvent {
   completedChain = "RangeSync-completedChain",
@@ -101,6 +104,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private readonly chains = new Map<RangeSyncType, SyncChain>();
 
   private opts?: RangeSyncOpts;
+  private nextFailureWarningAt = 0;
 
   constructor(modules: RangeSyncModules, opts?: RangeSyncOpts) {
     super();
@@ -419,6 +423,23 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   /** Convenience method for `SyncChain` */
   private onSyncChainEnd: SyncChainFns["onEnd"] = (err, target) => {
+    if (
+      err instanceof BatchError &&
+      (err.type.code === BatchErrorCode.MAX_PROCESSING_ATTEMPTS ||
+        err.type.code === BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS)
+    ) {
+      // Peers can recreate a failed sync chain after updating their status.
+      const now = Date.now();
+      if (now >= this.nextFailureWarningAt) {
+        this.nextFailureWarningAt = now + RANGE_SYNC_FAILURE_WARNING_INTERVAL_MS;
+        this.logger.warn(
+          "Range sync stopped after repeated batch processing failures",
+          {epoch: err.type.startEpoch},
+          err
+        );
+      }
+    }
+
     this.update(this.chain.forkChoice.getFinalizedCheckpoint().epoch);
     this.emit(RangeSyncEvent.completedChain);
 
