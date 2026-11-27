@@ -461,6 +461,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           reportPeer: this.reportPeer,
           getConnectedPeerSyncMeta: this.getConnectedPeerSyncMeta,
           pruneBlockInputs: this.pruneBlockInputs,
+          hasBlock: (blockRoot) => this.chain.forkChoice.hasBlock(blockRoot),
           onEnd: this.onSyncChainEnd,
         },
         {

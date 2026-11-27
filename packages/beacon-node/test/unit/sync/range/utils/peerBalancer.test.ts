@@ -247,6 +247,30 @@ describe("sync / range / peerBalancer", () => {
       expect(peerBalancer.bestPeerToRetryBatch(batch0)?.peerId).toBe(peer2.peerId);
     });
 
+    it("should prefer a peer not tried for the batch over a peer with fewer active requests", () => {
+      const config = createChainForkConfig(chainConfig);
+      const batch0 = new Batch(1, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+      batch0.startDownloading(peer1);
+      batch0.downloadingSuccess(peer1.peerId, [], null);
+      batch0.startProcessing();
+      // not peer-attributable, peer1 stays eligible
+      batch0.processingError(new Error("PARENT_BLOCK_UNKNOWN in a later batch"));
+      expect(batch0.state.status).toBe(BatchStatus.AwaitingDownload);
+      expect(batch0.getFailedPeers()).not.toContain(peer1.peerId);
+
+      const batch1 = new Batch(2, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+      batch1.startDownloading(peer2);
+
+      const peerInfos: PeerSyncInfo[] = [peer1, peer2].map((p) => ({
+        ...p,
+        target: {slot: computeStartSlotAtEpoch(3), root: ZERO_HASH},
+        earliestAvailableSlot: 0,
+      }));
+      const peerBalancer = new ChainPeersBalancer(peerInfos, [batch0, batch1], custodyConfig, RangeSyncType.Finalized);
+
+      expect(peerBalancer.bestPeerToRetryBatch(batch0)?.peerId).toBe(peer2.peerId);
+    });
+
     it("should not retry a peer when by_range narrows to an envelope-only request (#9357)", async () => {
       const config = createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
       const batch0 = new Batch(1, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);

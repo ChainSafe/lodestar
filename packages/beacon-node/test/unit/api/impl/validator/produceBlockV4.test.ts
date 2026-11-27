@@ -659,6 +659,10 @@ describe("api/validator - produceBlockV4", () => {
 
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
     expect(block).toEqual(engineBlock);
+    expect(modules.chain.logger.info).toHaveBeenCalledWith(
+      "Selected local block: no builder bid block produced",
+      expect.objectContaining({reason: EngineBlockSelectionReason.BuilderNoBid})
+    );
   });
 
   it("ignores builder bids when the builder circuit breaker is active", async () => {

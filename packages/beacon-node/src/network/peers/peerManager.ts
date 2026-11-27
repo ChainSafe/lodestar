@@ -449,7 +449,8 @@ export class PeerManager {
         .catch((e) => this.logger.verbose("cannot tag peer", {peerId: peer.toString()}, e as Error));
       peerData.relevantStatus = RelevantPeerStatus.relevant;
     }
-    if (getConnection(this.libp2p, peer.toString())) {
+    // A peer rejected on connect is not tracked and may still send a status before its goodbye completes
+    if (peerData && getConnection(this.libp2p, peer.toString())) {
       const nodeId = peerData?.nodeId ?? computeNodeId(peer);
       // TODO(fulu): Are we sure we've run Metadata before this?
       const custodyGroupCount = peerData?.metadata?.custodyGroupCount ?? this.config.CUSTODY_REQUIREMENT;
@@ -794,6 +795,18 @@ export class PeerManager {
         type: remotePeer.type,
       });
       void this.goodbyeAndDisconnect(remotePeer, GoodByeReasonCode.IRRELEVANT_NETWORK);
+      return false;
+    }
+
+    // The heartbeat only disconnects peers that are already connected, a peer with a bad score
+    // could otherwise reconnect right after and stay connected until the next heartbeat
+    const scoreState = this.peerRpcScores.getScoreState(remotePeer);
+    if (scoreState !== ScoreState.Healthy && !this.gossipsub.isDirectPeer(remotePeerStr)) {
+      this.logger.debug("Peer with bad score connected, disconnecting", {peer: remotePeerPrettyStr, scoreState});
+      void this.goodbyeAndDisconnect(
+        remotePeer,
+        scoreState === ScoreState.Banned ? GoodByeReasonCode.BANNED : GoodByeReasonCode.SCORE_TOO_LOW
+      );
       return false;
     }
 

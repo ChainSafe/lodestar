@@ -76,6 +76,24 @@ describe("EngineRestHttpClient", () => {
     await pending;
   });
 
+  it("aborts an in-flight request when its own signal is aborted", async () => {
+    const started = defer<void>();
+    const url = await startServer((server) => {
+      server.get("/engine/v1/identity", (_, reply) => {
+        reply.hijack();
+        started.resolve();
+      });
+    });
+    const controller = new AbortController();
+    const client = new EngineRestHttpClient([url], {timeout: 60_000, retries: 2});
+    const pending = expect(client.requestWithRetries(request, {signal: controller.signal})).rejects.toBeInstanceOf(
+      ErrorAborted
+    );
+    await started.promise;
+    controller.abort();
+    await pending;
+  });
+
   it("times out while reading a stalled response body", async () => {
     const url = await startServer((server) => {
       server.get("/engine/v1/identity", (_, reply) => {

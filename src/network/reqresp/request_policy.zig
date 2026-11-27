@@ -10,7 +10,7 @@ const protocol = @import("protocol.zig");
 
 pub const Config = struct {
     slot_duration_ms: u64 = @import("config").mainnet.chain_config.SLOT_DURATION_MS,
-    slot_duration_ms_heze: u64 = @import("config").mainnet.chain_config.SLOT_DURATION_MS_HEZE,
+    slot_duration_ms_heze: u64 = @import("config").mainnet.chain_config.SLOT_DURATION_MS,
     deneb_start_slot: ?u64,
     blocks_pre_deneb: u32,
     blocks_deneb: u32,
