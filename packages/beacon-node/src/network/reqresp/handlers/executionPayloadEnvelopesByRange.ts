@@ -131,5 +131,9 @@ export function validateExecutionPayloadEnvelopesByRangeRequest(
     count = config.MAX_REQUEST_PAYLOADS;
   }
 
+  if (!Number.isSafeInteger(startSlot + count)) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "range end is not a safe integer");
+  }
+
   return {startSlot, count};
 }
