@@ -1,4 +1,4 @@
-version: v1.7.0-beta.4
+version: v1.7.0-beta.5
 style: full
 
 specrefs:
@@ -20,8 +20,6 @@ exceptions:
     # phase0
     - UINT64_MAX#phase0
     - UINT64_MAX_SQRT#phase0
-    # removed by consensus-specs#5670 (exact fast confirmation committee weight)
-    - COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR#phase0
 
     # bellatrix
     - SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY#bellatrix
@@ -77,6 +75,7 @@ exceptions:
     - Seen#fulu
 
     # gloas
+    - OptimisticStore#gloas
     - LatestMessage#gloas
     - Seen#gloas
 
@@ -109,9 +108,6 @@ exceptions:
     # optional fast confirmation restart recovery (not implemented)
     - block_should_be_finalized#phase0
     - get_restart_resilient_confirmed_root#phase0
-
-    # removed by consensus-specs#5670 (exact fast confirmation committee weight)
-    - adjust_committee_weight_estimate_to_ensure_safety#phase0
 
     # altair
     - apply_light_client_update#altair
@@ -153,6 +149,11 @@ exceptions:
     - get_upcoming_proposal_slots#gloas
     - is_current_or_next_slot#gloas
     - validate_partial_data_column_sidecar_gossip#gloas
+    - latest_verified_ancestor#gloas
+    # library primitive, the native execution block hash uses std.crypto Keccak256
+    - keccak256#gloas
+    # pending parent support discount, https://github.com/ethereum/consensus-specs/pull/5789
+    - compute_empty_slot_support_discount#gloas
 
     # gloas (attestation upgrade helpers; lodestar ssz types are structurally cross-fork compatible)
     - upgrade_attestation_to_gloas#gloas
