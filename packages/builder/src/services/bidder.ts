@@ -101,7 +101,7 @@ export class Bidder {
         (await this.getDependentRoot(parentBlockRoot, slot, logCtx));
       const proposerPreferences = proposerPreferencesTracker.get(slot, dependentRoot);
       if (proposerPreferences === null) {
-        // The payload attributes are only emitted once, the proposer preferences can still arrive before the slot
+        // Emitted once per parent, the proposer preferences can still arrive before the bid deadline
         if (!this.pendingPayloadAttributes.has(buildId)) {
           this.prunePendingPayloadAttributes();
           if (this.pendingPayloadAttributes.size >= MAX_PENDING_PAYLOAD_ATTRIBUTES) {
