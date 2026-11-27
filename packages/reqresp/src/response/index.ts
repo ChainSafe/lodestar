@@ -7,7 +7,7 @@ import {Metrics} from "../metrics.js";
 import {ReqRespRateLimiter} from "../rate_limiter/ReqRespRateLimiter.js";
 import {RequestError, RequestErrorCode} from "../request/errors.js";
 import {Protocol, ReqRespRequest} from "../types.js";
-import {prettyPrintPeerId, sendChunks} from "../utils/index.js";
+import {STREAM_DRAIN_TIMEOUT_MS, prettyPrintPeerId, sendChunks} from "../utils/index.js";
 import {ResponseError} from "./errors.js";
 
 export {ResponseError};
@@ -118,9 +118,12 @@ export async function handleRequest({
     if (streamSendError) {
       stream.abort(streamSendError);
     } else {
-      await stream.close().catch((e) => {
-        stream.abort(e as Error);
-      });
+      // close() waits for the stream to drain, bound it the same way as sendChunks
+      await withTimeout((timeoutSignal) => stream.close({signal: timeoutSignal}), STREAM_DRAIN_TIMEOUT_MS).catch(
+        (e) => {
+          stream.abort(e as Error);
+        }
+      );
     }
     metrics?.incomingClosedStreams.inc({method: protocol.method});
   }
