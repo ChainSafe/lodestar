@@ -214,12 +214,21 @@ async function validateExecutionPayloadBid(
   if (isForkPostHeze(chain.config.getForkName(bid.slot))) {
     const {inclusionListBits} = bid as heze.ExecutionPayloadBid;
     const inclusionListSlot = bid.slot - 1;
-    const inclusionListDependentRoot = getShufflingDependentRoot(
-      chain.forkChoice,
-      computeEpochAtSlot(inclusionListSlot),
-      computeEpochAtSlot(parentBlock.slot),
-      parentBlock
-    );
+    let inclusionListDependentRoot: RootHex;
+    try {
+      inclusionListDependentRoot = getShufflingDependentRoot(
+        chain.forkChoice,
+        computeEpochAtSlot(inclusionListSlot),
+        computeEpochAtSlot(parentBlock.slot),
+        parentBlock
+      );
+    } catch {
+      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+        code: ExecutionPayloadBidErrorCode.INCLUSION_LIST_BITS_NOT_INCLUSIVE,
+        builderIndex: bid.builderIndex,
+        slot: bid.slot,
+      });
+    }
     if (
       !chain.inclusionListStore.isInclusionListBitsInclusive(
         inclusionListSlot,
