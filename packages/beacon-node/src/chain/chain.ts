@@ -863,29 +863,36 @@ export class BeaconChain implements IBeaconChain {
   async getCanonicalBlockAtSlot(
     slot: Slot
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
-    const finalizedBlock = this.forkChoice.getFinalizedBlock();
-    if (slot > finalizedBlock.slot) {
-      // Unfinalized slot, attempt to find in fork-choice
-      const canonicalBlock = this.forkChoice.getCanonicalBlockAtSlot(slot);
-      // The canonical variant can be FULL, a block reports the status of the payload it builds on
-      const block = canonicalBlock && this.forkChoice.getBlockHexDefaultStatus(canonicalBlock.blockRoot);
-      if (block) {
-        // Block found in fork-choice.
-        // It may be in the block input cache, awaiting full DA reconstruction, check there first
-        // Otherwise (most likely), check the hot db
-        const blockInput = this.seenBlockInputCache.get(block.blockRoot);
-        if (blockInput?.hasBlock()) {
-          return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(block), finalized: false};
-        }
-        const data = await this.db.block.get(fromHex(block.blockRoot));
-        if (data) {
-          return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false};
-        }
+    const finalizedSlot = this.forkChoice.getFinalizedBlock().slot;
+    if (slot <= finalizedSlot) {
+      const archived = await this.db.blockArchive.get(slot);
+      if (archived) {
+        return {block: archived, executionOptimistic: false, finalized: true};
       }
-      // A non-finalized slot expected to be found in the hot db, could be archived during
-      // this function runtime, so if not found in the hot db, fallback to the cold db
-      // TODO: Add a lock to the archiver to have determinstic behaviour on where are blocks
     }
+    // A finalized block stays in fork-choice and the hot db until the archiver has migrated it
+    const canonicalBlock = this.forkChoice.getCanonicalBlockAtSlot(slot);
+    // The canonical variant can be FULL, a block reports the status of the payload it builds on
+    const block =
+      canonicalBlock &&
+      (this.forkChoice.getBlockHexDefaultStatus(canonicalBlock.blockRoot) ??
+        // Ancestors of the finalized block are not returned by root, only in the summaries of their slot
+        this.forkChoice.getBlockSummariesAtSlot(slot).find(({blockRoot}) => blockRoot === canonicalBlock.blockRoot));
+    if (block) {
+      const finalized = slot <= finalizedSlot;
+      // Block found in fork-choice.
+      // It may be in the block input cache, awaiting full DA reconstruction, check there first
+      // Otherwise (most likely), check the hot db
+      const blockInput = this.seenBlockInputCache.get(block.blockRoot);
+      const data = blockInput?.hasBlock() ? blockInput.getBlock() : await this.db.block.get(fromHex(block.blockRoot));
+      // Fork choice initialized from an unfinalized state can place a dummy node at a slot its block skipped
+      if (data && data.message.slot === slot) {
+        return {block: data, executionOptimistic: isOptimisticBlock(block), finalized};
+      }
+    }
+    // A slot expected to be found in the hot db, could be archived during
+    // this function runtime, so if not found in the hot db, fallback to the cold db
+    // TODO: Add a lock to the archiver to have determinstic behaviour on where are blocks
 
     const data = await this.db.blockArchive.get(slot);
     return data && {block: data, executionOptimistic: false, finalized: true};

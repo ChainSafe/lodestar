@@ -8,8 +8,9 @@ import {fromHex, toRootHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
-import {getBlockResponse} from "../beacon/blocks/utils.js";
+import {getBlockResponse, isFinalizedPayloadOrphaned} from "../beacon/blocks/utils.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {assertUniqueItems} from "../utils.js";
 
@@ -170,7 +171,14 @@ export function getDebugApi({
 
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
-      const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message));
+
+      if (finalized && isForkPostGloas(fork) && isFinalizedPayloadOrphaned(chain, block.message.slot, blockRootHex)) {
+        throw new ApiError(
+          404,
+          `Data column sidecars of an orphaned payload for slot=${block.message.slot}, blockRoot=${blockRootHex}`
+        );
+      }
 
       let dataColumnSidecars: DataColumnSidecar[];
 
@@ -179,11 +187,11 @@ export function getDebugApi({
         : 0;
 
       if (isForkPostFulu(fork) && blobCount > 0) {
-        dataColumnSidecars = await chain.getDataColumnSidecars(block.message.slot, toRootHex(blockRoot));
+        dataColumnSidecars = await chain.getDataColumnSidecars(block.message.slot, blockRootHex);
 
         if (dataColumnSidecars.length === 0) {
           throw Error(
-            `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)} blobs=${blobCount}`
+            `dataColumnSidecars not found in db for slot=${block.message.slot} root=${blockRootHex} blobs=${blobCount}`
           );
         }
       } else {
@@ -191,7 +199,7 @@ export function getDebugApi({
       }
 
       // Post-gloas sidecars belong to the block's own payload, its FULL variant only exists once imported
-      const payload = finalized ? null : chain.forkChoice.getBlockHex(toRootHex(blockRoot), PayloadStatus.FULL);
+      const payload = finalized ? null : chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
       return {
         data: (indices
           ? dataColumnSidecars.filter(({index}) => indices.includes(index))
