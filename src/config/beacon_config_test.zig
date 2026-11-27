@@ -21,6 +21,16 @@ test "Heze fork activation and inclusion list domains" {
     try std.testing.expect(!std.mem.eql(u8, domain, try config.domain_cache.get(.gloas, domain_type)));
 }
 
+test "Heze timing derives from the slot duration" {
+    const config = BeaconConfig.init(@import("networks/mainnet.zig").chain_config, @splat(0));
+    try std.testing.expectEqual(12000, config.getSlotDurationMs(.gloas));
+    try std.testing.expectEqual(12000, config.getSlotDurationMs(.heze));
+    try std.testing.expectEqual(3000, config.getAttestationDueMs(.gloas));
+    try std.testing.expectEqual(3000, config.getAttestationDueMs(.heze));
+    try std.testing.expectEqual(9000, config.getInclusionListDueMs(.heze));
+    try std.testing.expectEqual(2000, config.getProposerReorgCutoffMs(.heze));
+}
+
 test "getDomain matches independently computed domain bytes" {
     const mainnet = @import("networks/mainnet.zig");
     const b = @import("hex").hexToBytesComptime;
