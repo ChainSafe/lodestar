@@ -9,7 +9,7 @@ import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelope
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {verifyPayloadsDataAvailability} from "../../../../src/chain/blocks/verifyPayloadsDataAvailability.js";
 
-const config = createChainForkConfig({SLOT_DURATION_MS: 12_000, SLOT_DURATION_MS_HEZE: 10_000});
+const config = createChainForkConfig({SLOT_DURATION_MS: 12_000});
 
 function buildPayloadEnvelopeInput({
   blobCount,
@@ -143,7 +143,7 @@ describe("verifyPayloadsDataAvailability", () => {
     expect(dataAvailabilityStatuses).toEqual([DataAvailabilityStatus.Available]);
   });
 
-  describe("rejects after one slot of the payload's fork when columns never arrive", () => {
+  describe("rejects after one slot when columns never arrive", () => {
     beforeEach(() => {
       vi.useFakeTimers();
     });
@@ -152,33 +152,28 @@ describe("verifyPayloadsDataAvailability", () => {
       vi.useRealTimers();
     });
 
-    for (const [forkName, slotDurationMs] of [
-      [ForkName.gloas, 12_000],
-      [ForkName.heze, 10_000],
-    ] as const) {
-      it(`${forkName} ${slotDurationMs}ms`, async () => {
-        const {payloadInput} = buildPayloadEnvelopeInput({blobCount: 1, sampledColumns: [0, 1], forkName});
-        expect(payloadInput.hasAllData()).toBe(false);
+    it("gloas 12000ms", async () => {
+      const {payloadInput} = buildPayloadEnvelopeInput({blobCount: 1, sampledColumns: [0, 1]});
+      expect(payloadInput.hasAllData()).toBe(false);
 
-        let outcome: unknown;
-        const verifyPromise = verifyPayloadsDataAvailability(config, [payloadInput], new AbortController().signal).then(
-          () => {
-            outcome = "resolved";
-          },
-          (e) => {
-            outcome = e;
-          }
-        );
+      let outcome: unknown;
+      const verifyPromise = verifyPayloadsDataAvailability(config, [payloadInput], new AbortController().signal).then(
+        () => {
+          outcome = "resolved";
+        },
+        (e) => {
+          outcome = e;
+        }
+      );
 
-        await vi.advanceTimersByTimeAsync(slotDurationMs - 1);
-        expect(outcome).toBeUndefined();
+      await vi.advanceTimersByTimeAsync(12_000 - 1);
+      expect(outcome).toBeUndefined();
 
-        await vi.advanceTimersByTimeAsync(1);
-        await verifyPromise;
-        expect(outcome).toBeInstanceOf(PayloadError);
-        expect((outcome as PayloadError).type.code).toBe(PayloadErrorCode.DATA_UNAVAILABLE);
-      });
-    }
+      await vi.advanceTimersByTimeAsync(1);
+      await verifyPromise;
+      expect(outcome).toBeInstanceOf(PayloadError);
+      expect((outcome as PayloadError).type.code).toBe(PayloadErrorCode.DATA_UNAVAILABLE);
+    });
   });
 
   it("rejects promptly when signal is aborted", async () => {

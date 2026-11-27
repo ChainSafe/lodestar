@@ -12,7 +12,6 @@ import {
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostGloas,
-  isForkPostHeze,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
@@ -277,8 +276,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       return this.getSlotComponentDurationMs(fork, config.INCLUSION_LIST_DUE_BPS);
     },
 
-    getSlotDurationMs(fork: ForkName): number {
-      return isForkPostHeze(fork) ? config.SLOT_DURATION_MS_HEZE : config.SLOT_DURATION_MS;
+    getSlotDurationMs(_fork: ForkName): number {
+      return config.SLOT_DURATION_MS;
     },
 
     getSlotComponentDurationMs(fork: ForkName, basisPoints: number): number {
