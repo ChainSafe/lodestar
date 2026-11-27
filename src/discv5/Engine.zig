@@ -458,7 +458,7 @@ fn issueChallenge(
         &args.entropy.challenge,
         args.now_ms,
     );
-    return .{ .accepted = .{ .packet_length = packet_length orelse 0 } };
+    return .{ .accepted = .{ .packet_length = packet_length } };
 }
 
 fn knownIdentity(self: *const Engine, node_id: *const types.NodeId) ?Channel.KnownIdentity {
