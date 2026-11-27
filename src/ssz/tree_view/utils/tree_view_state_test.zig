@@ -243,9 +243,9 @@ test "memory_safety: setChildNode keeps a pending node set twice at one gindex" 
 
     {
         var state: TreeViewState = undefined;
-        try state.init(allocator, &pool, @enumFromInt(1));
+        try state.init(allocator, &pool, @fromBackingInt(@intCast(1)));
         defer state.deinit();
-        const gindex: Gindex = @enumFromInt(2);
+        const gindex: Gindex = @fromBackingInt(@intCast(2));
         const leaf = try pool.createLeafFromUint(42);
         try state.setChildNode(gindex, leaf);
         try state.setChildNode(gindex, leaf);
