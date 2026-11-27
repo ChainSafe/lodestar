@@ -95,6 +95,7 @@ function makeState(
 function makeChain(state: BeaconStateView, beaconConfig: BeaconConfig = config) {
   const chain = getMockedBeaconChain({config: beaconConfig});
   chain.getHeadState.mockReturnValue(state);
+  vi.spyOn(chain.clock, "currentSlot", "get").mockReturnValue(state.slot);
   const bls = new BlsSingleThreadVerifier({metrics: null});
   return {
     ...chain,
@@ -204,6 +205,28 @@ describe.each(forkTransitions)("slashing signature domains: $name", ({beaconConf
     expect(() =>
       assertValidAttesterSlashing(beaconConfig, after.slot, after.validatorCount, attesterSlashings[0])
     ).not.toThrow();
+  });
+
+  it("verifies slashings with the fork of the clock slot while the head state is pre-fork", async () => {
+    const chain = makeChain(makeState(beforeSlot, beaconConfig), beaconConfig);
+    vi.spyOn(chain.clock, "currentSlot", "get").mockReturnValue(afterSlot);
+    const proposerSlashing = makeProposerSlashing(afterSlot, afterSlot, beaconConfig);
+    const attesterSlashing = makeAttesterSlashing(1, afterSlot, beaconConfig, 1);
+    const pool = new OpPool(beaconConfig);
+    pool.insertProposerSlashing(proposerSlashing, await validateGossipProposerSlashing(chain, proposerSlashing));
+    pool.insertAttesterSlashing(
+      beaconConfig.getForkName(afterSlot),
+      attesterSlashing,
+      await validateGossipAttesterSlashing(chain, attesterSlashing)
+    );
+
+    const [attesterSlashings, proposerSlashings] = pool.getSlashingsAndExits(
+      makeState(afterSlot, beaconConfig),
+      BlockType.Full,
+      null
+    );
+    expect(proposerSlashings).toEqual([proposerSlashing]);
+    expect(attesterSlashings).toEqual([attesterSlashing]);
   });
 
   it("does not let an invalid proposer slashing exclude a valid attester slashing", async () => {
@@ -326,6 +349,7 @@ describe("slashing verification context", () => {
       chain.bls.verifySignatureSets.mockImplementation(async (sets) => {
         const valid = await bls.verifySignatureSets(sets);
         chain.getHeadState.mockReturnValue(after);
+        vi.spyOn(chain.clock, "currentSlot", "get").mockReturnValue(after.slot);
         return valid;
       });
       const pool = new OpPool(config);
@@ -443,6 +467,7 @@ describe("persisted slashings", () => {
       await pool.toPersisted(db);
       pool.getSlashingsAndExits(after, BlockType.Full, null);
       chain.getHeadState.mockReturnValue(after);
+      vi.spyOn(chain.clock, "currentSlot", "get").mockReturnValue(after.slot);
       pool.insertProposerSlashing(replacement, await validateGossipProposerSlashing(chain, replacement));
       await pool.toPersisted(db);
 

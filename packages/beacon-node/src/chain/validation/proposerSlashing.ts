@@ -46,8 +46,10 @@ async function validateProposerSlashing(
     });
   }
 
-  const signatureSets = getProposerSlashingSignatureSets(chain.config, state.slot, proposerSlashing);
-  const verifiedDomain = getProposerSlashingSignatureDomain(chain.config, state.slot, proposerSlashing);
+  // Head state may lag behind a fork transition, verify against the fork of the clock slot
+  const currentSlot = chain.clock.currentSlot;
+  const signatureSets = getProposerSlashingSignatureSets(chain.config, currentSlot, proposerSlashing);
+  const verifiedDomain = getProposerSlashingSignatureDomain(chain.config, currentSlot, proposerSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID_SIGNATURE,
