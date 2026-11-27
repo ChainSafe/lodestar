@@ -5,7 +5,7 @@ import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {defer, sleep, toRootHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {BuilderStatus} from "../../../../../src/execution/builder/http.js";
@@ -230,6 +230,50 @@ describe("api/validator - produceBlockV3", () => {
 
     expect(modules.chain.produceBlock).not.toHaveBeenCalled();
     expect(modules.chain.produceBlindedBlock).not.toHaveBeenCalled();
+  });
+
+  it("fails without an unhandled rejection when the parent state is unavailable", async () => {
+    const slot = 100000;
+    vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
+    vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
+    const parentBlock = generateProtoBlock({slot: slot - 1});
+    modules.chain.getProposerHead.mockReturnValue(parentBlock);
+    modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(parentBlock);
+    modules.chain.regen.getBlockSlotState.mockRejectedValue(Error("state unavailable"));
+
+    await expect(
+      api.produceBlockV3({slot, randaoReveal: ssz.BLSSignature.defaultValue(), graffiti: "a".repeat(32)})
+    ).rejects.toThrow();
+    // A rejected common block body would surface as an unhandled rejection after the next event loop
+    await sleep(10);
+    expect(modules.chain.produceCommonBlockBody).not.toHaveBeenCalled();
+  });
+
+  it("requests the builder and engine blocks before producing the common block body", async () => {
+    const slot = 100000;
+    vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
+    vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
+    const parentBlock = generateProtoBlock({slot: slot - 1});
+    modules.chain.getProposerHead.mockReturnValue(parentBlock);
+    modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(parentBlock);
+    const deferredParentState = defer<IBeaconStateView>();
+    modules.chain.regen.getBlockSlotState.mockReturnValue(deferredParentState.promise);
+    modules.chain.produceBlock.mockRejectedValue(Error("not produced"));
+    modules.chain.produceBlindedBlock.mockRejectedValue(Error("not produced"));
+
+    const blockResult = api
+      .produceBlockV3({slot, randaoReveal: ssz.BLSSignature.defaultValue(), graffiti: "a".repeat(32)})
+      .catch((e: Error) => e);
+    // The state resolves after the next event loop, as it does when regen has to process slots
+    await sleep(10);
+    deferredParentState.resolve(parentState);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    // Their HTTP requests must not wait for the synchronous common block body production
+    expect(modules.chain.produceBlindedBlock).toHaveBeenCalledOnce();
+    expect(modules.chain.produceBlock).toHaveBeenCalledOnce();
+    expect(modules.chain.produceCommonBlockBody).not.toHaveBeenCalled();
+    expect(await blockResult).toBeInstanceOf(Error);
   });
 
   it("correctly pass feeRecipient to produceBlock", async () => {

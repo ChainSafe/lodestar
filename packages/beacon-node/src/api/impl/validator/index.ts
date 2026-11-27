@@ -736,25 +736,28 @@ export function getValidatorApi(
     });
 
     // Ensure builder and engine HTTP requests are sent before starting common block body production
-    // by deferring the call to next event loop iteration, allowing pending I/O operations like
-    // HTTP requests to be processed first and sent out early in slot.
-    callInNextEventLoop(() => {
-      logger.verbose("Producing common block body", loggerContext);
-      const commonBlockBodyStartedAt = Date.now();
+    // by deferring the call to next event loop iteration once the state is available, allowing pending
+    // I/O operations like HTTP requests to be processed first and sent out early in slot.
+    parentStatesPromise.then(
+      (parentStates) =>
+        callInNextEventLoop(() => {
+          logger.verbose("Producing common block body", loggerContext);
+          const commonBlockBodyStartedAt = Date.now();
 
-      parentStatesPromise
-        .then((parentStates) =>
-          chain.produceCommonBlockBody({slot, parentBlock, randaoReveal, graffiti: graffitiBytes, ...parentStates})
-        )
-        .then((commonBlockBody) => {
-          deferredCommonBlockBody.resolve(commonBlockBody);
-          logger.verbose("Produced common block body", {
-            ...loggerContext,
-            durationMs: Date.now() - commonBlockBodyStartedAt,
-          });
-        })
-        .catch(deferredCommonBlockBody.reject);
-    });
+          chain
+            .produceCommonBlockBody({slot, parentBlock, randaoReveal, graffiti: graffitiBytes, ...parentStates})
+            .then((commonBlockBody) => {
+              deferredCommonBlockBody.resolve(commonBlockBody);
+              logger.verbose("Produced common block body", {
+                ...loggerContext,
+                durationMs: Date.now() - commonBlockBodyStartedAt,
+              });
+            })
+            .catch(deferredCommonBlockBody.reject);
+        }),
+      // Both block sources fail on the state themselves and do not await the common block body
+      () => {}
+    );
 
     const [builder, engine] = await blockProductionRacePromise;
 
