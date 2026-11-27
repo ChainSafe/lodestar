@@ -1,5 +1,5 @@
 import {expect} from "vitest";
-import {BlobScheduleEntry, ChainConfig, GasLimitScheduleEntry, createBeaconConfig} from "@lodestar/config";
+import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, ForkPostAltair, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
@@ -22,8 +22,9 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {fromHex, intToBytes, toHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils";
 import {TestRunnerFn} from "../../utils/types.js";
+import {pickConfigForkValues} from "./config.js";
 
 // https://github.com/ethereum/consensus-specs/blob/ca22f9c268d460afaf17ab51d01514fc545adaa5/tests/formats/light_client/sync.md#test-case-format
 type SyncTestCase = {
@@ -238,34 +239,6 @@ function getForkFromVersion(config: ReturnType<typeof createBeaconConfig>, versi
     }
   }
   throw Error(`Unknown fork version ${versionHex}`);
-}
-
-function pickConfigForkValues(config: Partial<ChainConfig>): Partial<ChainConfig> {
-  const forkConfig: Partial<ChainConfig> = {};
-  for (const key of Object.keys(config) as (keyof ChainConfig)[]) {
-    const value = config[key];
-    if (key.endsWith("_FORK_EPOCH")) {
-      // Overwrite 2^64 to Infinity for an unscheduled fork.
-      if (typeof value === "bigint" && value > BigInt(Number.MAX_SAFE_INTEGER)) {
-        forkConfig[key] = Infinity as never;
-      } else {
-        forkConfig[key] = Number(value) as never;
-      }
-    } else if (key.endsWith("_FORK_VERSION") && typeof value === "bigint") {
-      forkConfig[key] = intToBytes(value, 4, "be") as never;
-    } else if (key === "BLOB_SCHEDULE" && Array.isArray(value)) {
-      forkConfig[key] = (value as BlobScheduleEntry[]).map((entry) => ({
-        EPOCH: Number(entry.EPOCH),
-        MAX_BLOBS_PER_BLOCK: Number(entry.MAX_BLOBS_PER_BLOCK),
-      }));
-    } else if (key === "GAS_LIMIT_SCHEDULE" && Array.isArray(value)) {
-      forkConfig[key] = (value as GasLimitScheduleEntry[]).map((entry) => ({
-        EPOCH: Number(entry.EPOCH),
-        GAS_LIMIT: Number(entry.GAS_LIMIT),
-      }));
-    }
-  }
-  return forkConfig;
 }
 
 function isProcessUpdateStep(step: LightclientSyncSteps): step is ProcessUpdateStep {

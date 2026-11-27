@@ -6,20 +6,27 @@ import {pubkeyCache} from "@lodestar/native/pubkeys";
 import {
   CURRENT_SYNC_COMMITTEE_DEPTH_GLOAS,
   CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS,
+  EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   EXECUTION_BLOCK_HASH_GINDEX_GLOAS,
   FINALIZED_ROOT_DEPTH_GLOAS,
   FINALIZED_ROOT_GINDEX_GLOAS,
   ForkName,
+  ForkPostAltair,
   NEXT_SYNC_COMMITTEE_DEPTH_GLOAS,
   NEXT_SYNC_COMMITTEE_GINDEX_GLOAS,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {BeaconStateGloas, createBeaconStateView, isStatePostAltair} from "@lodestar/state-transition";
-import {LightClientUpdate, altair, gloas, ssz} from "@lodestar/types";
+import {
+  BeaconStateGloas,
+  IBeaconStateViewAltair,
+  createBeaconStateView,
+  isStatePostAltair,
+} from "@lodestar/state-transition";
+import {BeaconBlock, LightClientUpdate, gloas, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {
+  BlockLightClientCache,
   LightClientServer,
-  SyncAttestedData,
   blockToLightClientHeader,
 } from "../../../../src/chain/lightClient/index.js";
 import {getSyncCommitteesWitness} from "../../../../src/chain/lightClient/proofs.js";
@@ -87,7 +94,7 @@ describe("Gloas light client server", () => {
 
       // Exercise the real import path and repository codec that rejected the old
       // native shared multiproof, then read the persisted witness back from disk.
-      await server["persistPostBlockImportData"](block, native, block.slot - 1);
+      await server["onImportBlock"](block, native, block.slot - 1);
       native.release();
       const witness = await db.syncCommitteeWitness.get(blockRoot);
       if (!witness) throw Error("Expected a persisted sync committee witness");
@@ -122,9 +129,11 @@ describe("Gloas light client server", () => {
         )
       ).toBe(false);
 
-      const attestedData = server["prevHeadData"].get(toRootHex(blockRoot));
-      if (!attestedData) throw Error("Expected the native finalized checkpoint proof");
-      await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), block.slot + 1, attestedData);
+      const attestedData = server["blockData"].get(toRootHex(blockRoot));
+      if (!attestedData?.finalizedCheckpoint) throw Error("Expected the native finalized checkpoint proof");
+      const built = await server["buildUpdate"](ssz.altair.SyncAggregate.defaultValue(), block.slot + 1, attestedData);
+      if (!built) throw Error("Expected a built light-client update");
+      await db.bestLightClientUpdate.put(0, built.update);
       const update = await db.bestLightClientUpdate.get(0);
       if (!update) throw Error("Expected a persisted light-client update");
       expect(() => ssz.gloas.LightClientUpdate.serialize(update as gloas.LightClientUpdate)).not.toThrow();
@@ -221,15 +230,23 @@ describe("Gloas light client server", () => {
     );
     const attestedHeader = ssz.gloas.LightClientHeader.defaultValue();
     attestedHeader.beacon.slot = gloasSlot;
-    const attestedData: SyncAttestedData = {
+    const attestedData: BlockLightClientCache = {
       attestedHeader,
       blockRoot: new Uint8Array(32),
-      finalizedCheckpoint: {epoch: 0, root: new Uint8Array(32)},
-      finalityBranch: zeroBranch(FINALIZED_ROOT_DEPTH_GLOAS),
+      syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
+      signatureSlot: gloasSlot,
+      bestUpdateRoot: null,
+      bestUpdateSummary: null,
+      latestSignatureSlot: gloasSlot,
+      finalizedCheckpoint: null,
+      finalityBranch: null,
     };
 
-    await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
-    await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
+    const built = await server["buildUpdate"](ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
+    const nextBuilt = await server["buildUpdate"](ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, attestedData);
+    if (!built || !nextBuilt) throw Error("Expected built light-client updates");
+    await db.bestLightClientUpdate.put(0, built.update);
+    await db.bestLightClientUpdate.put(0, nextBuilt.update);
 
     expect(putBestUpdate).toHaveBeenCalledTimes(2);
     const update = putBestUpdate.mock.calls[0][1] as gloas.LightClientUpdate;
@@ -244,49 +261,265 @@ describe("Gloas light client server", () => {
 
   it("serves the finality branch with an empty finalized header at genesis", async () => {
     const finalityBranch = Array.from({length: FINALIZED_ROOT_DEPTH_GLOAS}, (_, i) => new Uint8Array(32).fill(i + 1));
-    const {server, putBestUpdate} = createServerForFinalityTest();
+    const {server} = createServerForFinalityTest();
 
-    const attestedHeader = ssz.gloas.LightClientHeader.defaultValue();
-    attestedHeader.beacon.slot = gloasSlot;
-    await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, {
-      attestedHeader,
-      blockRoot: new Uint8Array(32),
+    const built = await server["buildUpdate"](ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, {
+      ...createBlockData(gloasSlot),
       finalizedCheckpoint: {epoch: 0, root: new Uint8Array(32)},
       finalityBranch,
     });
 
-    const update = putBestUpdate.mock.calls[0][1] as gloas.LightClientUpdate;
     const zeroUpdate = ssz.gloas.LightClientUpdate.defaultValue();
-    expect(update.finalizedHeader).toEqual(zeroUpdate.finalizedHeader);
-    expect(update.finalityBranch).toEqual(finalityBranch);
+    expect(built?.hasFinality).toBe(true);
+    expect(built?.update.finalizedHeader).toEqual(zeroUpdate.finalizedHeader);
+    expect(built?.update.finalityBranch).toEqual(finalityBranch);
   });
 
   it("serves no finality when the finalized header is not available", async () => {
-    const {server, putBestUpdate} = createServerForFinalityTest();
+    const {server} = createServerForFinalityTest();
 
-    const attestedHeader = ssz.gloas.LightClientHeader.defaultValue();
-    attestedHeader.beacon.slot = gloasSlot;
-    await storeBestUpdate(server, ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, {
-      attestedHeader,
-      blockRoot: new Uint8Array(32),
+    const built = await server["buildUpdate"](ssz.altair.SyncAggregate.defaultValue(), gloasSlot + 1, {
+      ...createBlockData(gloasSlot),
       finalizedCheckpoint: {epoch: 1, root: new Uint8Array(32).fill(0xcc)},
       finalityBranch: Array.from({length: FINALIZED_ROOT_DEPTH_GLOAS}, () => new Uint8Array(32).fill(0xdd)),
     });
 
-    const update = putBestUpdate.mock.calls[0][1] as gloas.LightClientUpdate;
     const zeroUpdate = ssz.gloas.LightClientUpdate.defaultValue();
-    expect(update.finalizedHeader).toEqual(zeroUpdate.finalizedHeader);
-    expect(update.finalityBranch).toEqual(zeroUpdate.finalityBranch);
+    expect(built?.hasFinality).toBe(false);
+    expect(built?.update.finalizedHeader).toEqual(zeroUpdate.finalizedHeader);
+    expect(built?.update.finalityBranch).toEqual(zeroUpdate.finalityBranch);
   });
 });
 
-function createServerForFinalityTest(): {
-  server: LightClientServer;
-  putBestUpdate: ReturnType<typeof vi.fn>;
-} {
-  const putBestUpdate = vi.fn(async (_period: number, _update: LightClientUpdate) => undefined);
+describe("LightClientServer.updateHead", () => {
+  const MAX_CACHED_SLOTS = 4 * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
+
+  function chainOf(slots: number[], tag = 0): Map<string, BlockLightClientCache> {
+    const map = new Map<string, BlockLightClientCache>();
+    let parent: Uint8Array = new Uint8Array(32);
+    for (const slot of slots) {
+      const data = createBlockData(slot);
+      data.attestedHeader.beacon.parentRoot = parent;
+      // Distinguishes branches that hold blocks at the same slots
+      data.attestedHeader.beacon.proposerIndex = tag;
+      data.blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(data.attestedHeader.beacon);
+      data.bestUpdateRoot = toRootHex(data.blockRoot);
+      data.latestSignatureSlot = slot;
+      map.set(toRootHex(data.blockRoot), data);
+      parent = data.blockRoot;
+    }
+    return map;
+  }
+
+  function blockAt(chain: Map<string, BlockLightClientCache>, slot: number): BlockLightClientCache {
+    for (const data of chain.values()) {
+      if (data.attestedHeader.beacon.slot === slot) return data;
+    }
+    throw Error(`No block at slot ${slot}`);
+  }
+
+  function createServer(stored: LightClientUpdate | null): {
+    server: LightClientServer;
+    putBestUpdate: ReturnType<typeof vi.fn>;
+    deleteBestUpdate: ReturnType<typeof vi.fn>;
+  } {
+    const putBestUpdate = vi.fn(async () => undefined);
+    const deleteBestUpdate = vi.fn(async () => undefined);
+    // Pre-Electra witness, the slots used here are in the Altair fork
+    const db = {
+      bestLightClientUpdate: {
+        get: vi.fn(async () => stored),
+        put: putBestUpdate,
+        delete: deleteBestUpdate,
+      },
+      syncCommitteeWitness: {
+        get: vi.fn(async () => ({
+          witness: zeroBranch(4),
+          currentSyncCommitteeRoot: new Uint8Array(32).fill(0xaa),
+          nextSyncCommitteeRoot: new Uint8Array(32).fill(0xbb),
+        })),
+        put: vi.fn(async () => undefined),
+      },
+      syncCommittee: {
+        get: vi.fn(async () => ssz.altair.SyncCommittee.defaultValue()),
+        has: vi.fn(async () => true),
+        putBinary: vi.fn(async () => undefined),
+      },
+      checkpointHeader: {get: vi.fn(async () => null), put: vi.fn(async () => undefined)},
+    } as unknown as IBeaconDb;
+    const server = new LightClientServer(
+      {},
+      {
+        config,
+        db,
+        clock: {} as never,
+        metrics: null,
+        emitter: {emit: vi.fn()} as never,
+        logger: {debug: vi.fn(), error: vi.fn()} as never,
+        signal: new AbortController().signal,
+      }
+    );
+    return {server, putBestUpdate, deleteBestUpdate};
+  }
+
+  function setBlockData(server: LightClientServer, data: Map<string, BlockLightClientCache>): void {
+    for (const [rootHex, blockData] of data) server["blockData"].set(rootHex, blockData);
+  }
+
+  it("keeps the finalized block when its epoch starts with empty slots", async () => {
+    const {server} = createServer(null);
+    const epochStart = SLOTS_PER_EPOCH;
+    const finalizedBlockSlot = epochStart + 8;
+    const chain = chainOf([epochStart, finalizedBlockSlot, finalizedBlockSlot + 10]);
+    setBlockData(server, chain);
+
+    await server.updateHead(blockAt(chain, finalizedBlockSlot + 10).blockRoot, {
+      epoch: 1,
+      root: blockAt(chain, finalizedBlockSlot).blockRoot,
+    });
+
+    const remaining = [...server["blockData"].values()].map((data) => data.attestedHeader.beacon.slot);
+    expect(remaining.sort((a, b) => a - b)).toEqual([finalizedBlockSlot, finalizedBlockSlot + 10]);
+  });
+
+  it("leaves served updates untouched when the branch is not cached down to a period", async () => {
+    const {server, putBestUpdate, deleteBestUpdate} = createServer(ssz.gloas.LightClientUpdate.defaultValue());
+    const headSlot = EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 100;
+    // The head's parent is missing from the cache, so the walk back to the first period stops
+    const head = createBlockData(headSlot);
+    head.blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(head.attestedHeader.beacon);
+    head.bestUpdateRoot = toRootHex(head.blockRoot);
+    head.latestSignatureSlot = headSlot;
+    server["blockData"].set(toRootHex(head.blockRoot), head);
+
+    await server.updateHead(head.blockRoot, {epoch: 0, root: new Uint8Array(32)});
+
+    expect(deleteBestUpdate).not.toHaveBeenCalled();
+    expect(putBestUpdate).not.toHaveBeenCalled();
+  });
+
+  it("replaces the served update when the canonical branch changed at the same slots", async () => {
+    const attestedSlot = SLOTS_PER_EPOCH + 4;
+    const stale = chainOf([attestedSlot, attestedSlot + 1], 1);
+    const {server, putBestUpdate} = createServer(null);
+    const staleBuilt = await server["buildUpdate"](
+      blockAt(stale, attestedSlot + 1).syncAggregate,
+      attestedSlot + 1,
+      blockAt(stale, attestedSlot)
+    );
+    if (!staleBuilt) throw Error("Expected a built update");
+
+    // Serve the stale branch first
+    const stored = staleBuilt.update;
+    const canonical = chainOf([attestedSlot, attestedSlot + 1], 2);
+    const withStored = createServer(stored);
+    setBlockData(withStored.server, canonical);
+
+    await withStored.server.updateHead(blockAt(canonical, attestedSlot + 1).blockRoot, {
+      epoch: 0,
+      root: new Uint8Array(32),
+    });
+
+    expect(withStored.putBestUpdate).toHaveBeenCalledTimes(1);
+    const written = withStored.putBestUpdate.mock.calls[0][1] as LightClientUpdate;
+    expect(toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(written.attestedHeader.beacon))).toEqual(
+      toRootHex(blockAt(canonical, attestedSlot).blockRoot)
+    );
+    expect(written.attestedHeader.beacon.slot).toEqual(stored.attestedHeader.beacon.slot);
+    expect(putBestUpdate).not.toHaveBeenCalled();
+  });
+
+  it("does not rewrite the served update when the head is reported again", async () => {
+    const attestedSlot = SLOTS_PER_EPOCH + 4;
+    const chain = chainOf([attestedSlot, attestedSlot + 1]);
+    const {server, putBestUpdate} = createServer(null);
+    let served: LightClientUpdate | null = null;
+    const db = server["db"].bestLightClientUpdate as unknown as {get: unknown};
+    db.get = vi.fn(async () => served);
+    putBestUpdate.mockImplementation(async (_period: number, update: LightClientUpdate) => {
+      served = update;
+    });
+    setBlockData(server, chain);
+    const head = blockAt(chain, attestedSlot + 1).blockRoot;
+    const finalizedCheckpoint = {epoch: 0, root: new Uint8Array(32)};
+
+    await server.updateHead(head, finalizedCheckpoint);
+    expect(putBestUpdate).toHaveBeenCalledTimes(1);
+
+    await server.updateHead(head, finalizedCheckpoint);
+    expect(putBestUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("bounds the cache on import, without updateHead", async () => {
+    const {server} = createServer(null);
+    const blockSlot = gloasSlot + MAX_CACHED_SLOTS + 16;
+    setBlockData(server, chainOf([blockSlot - MAX_CACHED_SLOTS - 1]));
+
+    await server["onImportBlock"](createStubBlock(blockSlot), createStubState(), blockSlot - 1);
+
+    const remaining = [...server["blockData"].values()].map((data) => data.attestedHeader.beacon.slot);
+    expect(remaining).toEqual([blockSlot]);
+  });
+
+  it("prunes below the finalized block seen on import", async () => {
+    const {server} = createServer(null);
+    const chain = chainOf([10, 20, 40]);
+    setBlockData(server, chain);
+
+    await server["onImportBlock"](
+      createStubBlock(50),
+      createStubState({epoch: 1, root: blockAt(chain, 40).blockRoot}),
+      40
+    );
+
+    const remaining = [...server["blockData"].values()].map((data) => data.attestedHeader.beacon.slot);
+    expect(remaining.sort((a, b) => a - b)).toEqual([40, 50]);
+  });
+});
+
+function createStubBlock(slot: number): BeaconBlock<ForkPostAltair> {
+  const block = ssz.gloas.BeaconBlock.defaultValue() as BeaconBlock<ForkPostAltair>;
+  block.slot = slot;
+  return block;
+}
+
+function createStubState(
+  finalizedCheckpoint: {epoch: number; root: Uint8Array} = {epoch: 0, root: new Uint8Array(32)}
+): IBeaconStateViewAltair {
+  return {
+    currentSyncCommittee: ssz.altair.SyncCommittee.defaultValue(),
+    nextSyncCommittee: ssz.altair.SyncCommittee.defaultValue(),
+    finalizedCheckpoint,
+    getSyncCommitteesWitness: () => ({
+      witness: [],
+      currentSyncCommitteeRoot: new Uint8Array(32).fill(0xaa),
+      nextSyncCommitteeRoot: new Uint8Array(32).fill(0xbb),
+      currentSyncCommitteeBranch: zeroBranch(CURRENT_SYNC_COMMITTEE_DEPTH_GLOAS),
+      nextSyncCommitteeBranch: zeroBranch(NEXT_SYNC_COMMITTEE_DEPTH_GLOAS),
+    }),
+    getFinalizedRootProof: () => zeroBranch(FINALIZED_ROOT_DEPTH_GLOAS),
+  } as unknown as IBeaconStateViewAltair;
+}
+
+function createBlockData(slot: number): BlockLightClientCache {
+  const attestedHeader = ssz.gloas.LightClientHeader.defaultValue();
+  attestedHeader.beacon.slot = slot;
+  return {
+    attestedHeader,
+    blockRoot: new Uint8Array(32),
+    syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
+    signatureSlot: slot,
+    bestUpdateRoot: null,
+    bestUpdateSummary: null,
+    latestSignatureSlot: slot,
+    finalizedCheckpoint: null,
+    finalityBranch: null,
+  };
+}
+
+function createServerForFinalityTest(): {server: LightClientServer} {
   const db = {
-    bestLightClientUpdate: {get: vi.fn(async () => null), put: putBestUpdate},
+    bestLightClientUpdate: {get: vi.fn(async () => null), put: vi.fn(async () => undefined)},
     syncCommitteeWitness: {
       get: vi.fn(async () => ({
         witness: [],
@@ -312,16 +545,5 @@ function createServerForFinalityTest(): {
       signal: new AbortController().signal,
     }
   );
-  return {server, putBestUpdate};
-}
-
-async function storeBestUpdate(
-  server: LightClientServer,
-  syncAggregate: altair.SyncAggregate,
-  signatureSlot: number,
-  attestedData: SyncAttestedData
-): Promise<void> {
-  const built = await server["buildUpdate"](attestedData, syncAggregate, signatureSlot);
-  if (!built) throw Error("Expected a built light-client update");
-  await server["maybeStoreNewBestUpdate"](0, built);
+  return {server};
 }

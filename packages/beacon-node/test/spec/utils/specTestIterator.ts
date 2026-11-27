@@ -77,7 +77,6 @@ export const defaultSkipOpts: SkipOpts = {
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
     /^bellatrix\/fork_choice\/on_merge_block\/.*/,
-    /^.+\/light_client\/data_collection\/.*/,
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
