@@ -1,8 +1,7 @@
-import {ResponseIncoming} from "@lodestar/reqresp";
 import {SignedBeaconBlock, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {SerializedCache} from "../../../util/serializedCache.js";
-import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
+import {ReqRespMethod, ResponseIncoming, responseSszTypeByMethod} from "../types.js";
 import {sszDeserializeResponse} from "./collect.js";
 
 /**

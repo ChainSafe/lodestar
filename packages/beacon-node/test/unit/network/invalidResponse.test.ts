@@ -70,7 +70,12 @@ describe.each(Object.entries(senders))("%s peer reporting", (_name, send) => {
     const {network, reportPeer} = await fixture();
     try {
       await expect(send(network)).rejects.toMatchObject({type: {code: RequestErrorCode.INVALID_RESPONSE_SSZ}});
-      expect(reportPeer).toHaveBeenCalledExactlyOnceWith(peerId, PeerAction.LowToleranceError, "InvalidResponseSsz");
+      expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
+        peerId,
+        PeerAction.LowToleranceError,
+        "InvalidResponseSsz",
+        undefined
+      );
     } finally {
       await network.close();
     }
@@ -108,7 +113,12 @@ it("reports malformed SSZ offsets within the permitted response size", async () 
     await expect(senders.blocksByRoot(network)).rejects.toMatchObject({
       type: {code: RequestErrorCode.INVALID_RESPONSE_SSZ},
     });
-    expect(reportPeer).toHaveBeenCalledExactlyOnceWith(peerId, PeerAction.LowToleranceError, "InvalidResponseSsz");
+    expect(reportPeer).toHaveBeenCalledExactlyOnceWith(
+      peerId,
+      PeerAction.LowToleranceError,
+      "InvalidResponseSsz",
+      undefined
+    );
   } finally {
     await network.close();
   }

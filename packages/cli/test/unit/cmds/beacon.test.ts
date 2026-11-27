@@ -19,6 +19,14 @@ describe("cmds / beacon / args handler", () => {
   // Make tests faster skipping a network call
   process.env.SKIP_FETCH_NETWORK_BOOTNODES = "true";
 
+  it("rejects native settings before creating node files", async () => {
+    const dataDir = path.join(testFilesDir, "invalid-native-settings");
+    await expect(
+      runBeaconHandlerInit({dataDir, "network.backend": "native", tcp: false, "network.gossipsubDLow": 7})
+    ).rejects.toThrow("gossipsubDLow=6");
+    expect(fs.existsSync(dataDir)).toBe(false);
+  });
+
   it.each([
     ["mainnet", false],
     ["gnosis", true],

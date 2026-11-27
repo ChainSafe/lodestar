@@ -22,6 +22,16 @@ afterEach(() => {
 });
 
 describe("overwriteEnrWithCliArgs", () => {
+  it("rejects native ENR sequence exhaustion before mutating a persisted identity", async () => {
+    const enr = SignableENR.createFromPrivateKey(await generateKeyPair("secp256k1"));
+    enr.ip = "127.0.0.1";
+    enr.seq = (1n << 64n) - 1n;
+    const before = enr.encodeTxt();
+    expect(() =>
+      overwriteEnrWithCliArgs(enr, {"network.backend": "native", "enr.ip": "127.0.0.2"} as BeaconArgs, testLogger())
+    ).toThrow("Native network ENR sequence exhausted");
+    expect(enr.encodeTxt()).toBe(before);
+  });
   it("should set tcp and quic fields by default", async () => {
     const privateKey = await generateKeyPair("secp256k1");
     const enr = SignableENR.createFromPrivateKey(privateKey);
@@ -300,6 +310,26 @@ describe("initPeerIdAndEnr", () => {
     expect(enr.seq).toBe(BigInt(1));
     expect(enr.tcp).toBeUndefined();
     expect(enr.tcp6).toBeUndefined();
+  });
+
+  it("captures native cached discovery hints before locality cleanup and default port overwrite", async () => {
+    const args = {persistNetworkIdentity: true, "network.backend": "native", tcp: false, quic: true} as BeaconArgs;
+    const first = await initPrivateKeyAndEnr(args, tmpDir.name, testLogger());
+    first.enr.ip = "198.51.100.1";
+    first.enr.udp = 41000;
+    fs.writeFileSync(path.join(tmpDir.name, "enr"), first.enr.encodeTxt());
+    const next = await initPrivateKeyAndEnr(args, tmpDir.name, testLogger());
+    expect(next.enr.ip).toBeUndefined();
+    expect(next.initialEnr).toBeDefined();
+    if (!next.initialEnr) throw Error("Missing initial ENR");
+    const initial = SignableENR.decodeTxt(next.initialEnr, next.privateKey.raw);
+    expect(initial.ip).toBe("198.51.100.1");
+    expect(initial.udp).toBe(41000);
+    fs.writeFileSync(path.join(tmpDir.name, "enr"), first.enr.encodeTxt());
+    const explicit = await initPrivateKeyAndEnr({...args, "enr.ip": "192.0.2.1"}, tmpDir.name, testLogger());
+    expect(explicit.enr.ip).toBeUndefined();
+    if (!explicit.initialEnr) throw Error("Missing initial ENR");
+    expect(SignableENR.decodeTxt(explicit.initialEnr, explicit.privateKey.raw).ip).toBeUndefined();
   });
 
   it("second time should use ths existing enr and peer id", async () => {
