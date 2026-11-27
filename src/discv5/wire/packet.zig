@@ -217,6 +217,23 @@ pub fn encodeWhoareyou(
     return encoded;
 }
 
+/// Rebuilds the exact WHOAREYOU datagram that `encodeWhoareyou` produced with `challenge_data`.
+pub fn resendWhoareyou(
+    out: []u8,
+    recipient_id: *const types.NodeId,
+    challenge_data: *const [constants.whoareyou_packet_size]u8,
+) Error![]u8 {
+    if (out.len < constants.whoareyou_packet_size) return error.BufferTooSmall;
+    const encoded = out[0..constants.whoareyou_packet_size];
+    @memcpy(encoded, challenge_data);
+    aesCtr(
+        recipient_id[0..constants.masking_iv_size],
+        challenge_data[0..constants.masking_iv_size],
+        encoded[constants.masking_iv_size..],
+    );
+    return encoded;
+}
+
 pub fn buildHandshakeAuthdata(
     out: []u8,
     args: HandshakeAuthdataArgs,
