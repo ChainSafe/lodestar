@@ -888,7 +888,8 @@ export class BeaconChain implements IBeaconChain {
         return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(block), finalized};
       }
       const data = await this.db.block.get(fromHex(block.blockRoot));
-      if (data) {
+      // Fork choice initialized from an unfinalized state can place a dummy node at a slot its block skipped
+      if (data && data.message.slot === slot) {
         return {block: data, executionOptimistic: isOptimisticBlock(block), finalized};
       }
     }

@@ -128,4 +128,15 @@ describe("BeaconChain getCanonicalBlockAtSlot", () => {
     await expect(getCanonicalBlockAtSlot(finalizedSlot - 1)).resolves.toBeNull();
     await expect(getCanonicalBlockAtSlot(finalizedSlot + 1)).resolves.toBeNull();
   });
+
+  it("returns null for a skipped slot that fork choice assigns to an earlier block", async () => {
+    // Fork choice initialized from an unfinalized state puts the finalized block at its epoch start slot
+    const {block, blockRoot} = generateBlock(finalizedSlot - 1);
+    const {getCanonicalBlockAtSlot} = setup({
+      forkChoiceBlocks: [generateProtoBlock({slot: finalizedSlot, blockRoot})],
+      hotBlocks: [{block, blockRoot}],
+    });
+
+    await expect(getCanonicalBlockAtSlot(finalizedSlot)).resolves.toBeNull();
+  });
 });
