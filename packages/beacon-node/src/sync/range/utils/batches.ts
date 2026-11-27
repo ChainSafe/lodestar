@@ -142,7 +142,8 @@ export type ProcessingFault =
  * Note that range sync is supposed to only handle linear chain, for forky condition we'll handle it via backward sync
  * in BlockInputSync or the upcoming/TODO beacon_blocks_by_head req/resp.
  *
- * `parentBatch` is the last batch with blocks before `batch`, it may be followed by 0-block batches.
+ * `parentBatch` is the last batch with blocks before `batch`, it may be followed by 0-block batches. If no batch with
+ * blocks awaits validation, it is the first 0-block batch before `batch`.
  * Epochs with 0 blocks usually happen on devnets, during periods of poor liveness when no proposer gets a block
  * included for whole epochs. A wrong 0-block response only shows up as an unknown parent in `batch`, so with 0-block
  * batches in between the fault is never pinned on `batch` alone: `parentBatch` and the 0-block batches after it are

@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, Root, Slot} from "@lodestar/types";
+import {Epoch, Root, RootHex, Slot} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
@@ -68,6 +68,8 @@ export type SyncChainFns = {
   onEnd: (err: Error | null, target: ChainTarget | null) => void;
   /** Deletes an array of BlockInputs from the BlockInputCache */
   pruneBlockInputs: (blockInputs: IBlockInput[]) => void;
+  /** Returns true if the block is known to fork choice */
+  hasBlock: (blockRoot: Root) => boolean;
 };
 
 /**
@@ -80,6 +82,15 @@ export type ChainTarget = {
 };
 
 export class SyncChainStartError extends Error {}
+
+export enum SyncChainErrorCode {
+  /** The terminal batch has 0 blocks but the target block is not known */
+  MISSING_TARGET_BLOCK = "SYNC_CHAIN_ERROR_MISSING_TARGET_BLOCK",
+}
+
+type SyncChainErrorType = {code: SyncChainErrorCode.MISSING_TARGET_BLOCK; targetSlot: Slot; targetRoot: RootHex};
+
+export class SyncChainError extends LodestarError<SyncChainErrorType> {}
 
 export type SyncChainDebugState = {
   targetRoot: string | null;
@@ -136,6 +147,7 @@ export class SyncChain {
   private readonly reportPeer: SyncChainFns["reportPeer"];
   private readonly getConnectedPeerSyncMeta: SyncChainFns["getConnectedPeerSyncMeta"];
   private readonly pruneBlockInputs: SyncChainFns["pruneBlockInputs"];
+  private readonly hasBlock: SyncChainFns["hasBlock"];
 
   /** AsyncIterable that guarantees processChainSegment is run only at once at anytime */
   private readonly batchProcessor = new ItTrigger();
@@ -178,6 +190,7 @@ export class SyncChain {
     this.downloadByRange = fns.downloadByRange;
     this.reportPeer = fns.reportPeer;
     this.pruneBlockInputs = fns.pruneBlockInputs;
+    this.hasBlock = fns.hasBlock;
     this.getConnectedPeerSyncMeta = fns.getConnectedPeerSyncMeta;
     this.config = config;
     this.clock = clock;
@@ -335,6 +348,32 @@ export class SyncChain {
 
         // Returns true if SyncChain has processed all possible blocks with slot <= target.slot
         if (isSyncChainDone(toArr(this.batches), this.lastEpochWithProcessBlocks, this.target.slot)) {
+          // A 0-block terminal batch is only trusted once the target block is known, otherwise a peer returning no
+          // blocks for the last range ends the chain short of its target
+          const lastAwaitingValidation = toArr(this.batches).findLast(
+            (b) => b.state.status === BatchStatus.AwaitingValidation
+          );
+          if (
+            lastAwaitingValidation !== undefined &&
+            lastAwaitingValidation.getBlocks().length === 0 &&
+            !this.hasBlock(this.target.root)
+          ) {
+            this.logger.verbose("Terminal 0-block batch without target block", {
+              id: this.logId,
+              ...lastAwaitingValidation.getMetadata(),
+            });
+            // Not peer attributable: throws MAX_PROCESSING_ATTEMPTS after MAX_BATCH_PROCESSING_ATTEMPTS without
+            // reporting any peer
+            lastAwaitingValidation.validationError(
+              new SyncChainError({
+                code: SyncChainErrorCode.MISSING_TARGET_BLOCK,
+                targetSlot: this.target.slot,
+                targetRoot: toRootHex(this.target.root),
+              })
+            );
+            this.triggerBatchDownloader();
+            continue;
+          }
           break;
         }
 
@@ -727,13 +766,13 @@ export class SyncChain {
       this.logger.verbose("Batch process error", logCtx, res.err);
 
       // advanceChain() drops every batch before the last batch with blocks, so the AwaitingValidation batches before
-      // `batch` are that batch followed by 0-block batches, see classifyProcessingFault()
-      const parentBatch = toArr(this.batches).findLast(
-        (b) =>
-          b.startEpoch < batch.startEpoch &&
-          b.state.status === BatchStatus.AwaitingValidation &&
-          b.getBlocks().length > 0
+      // `batch` are that batch followed by 0-block batches, see classifyProcessingFault(). With no batch with blocks
+      // yet, fall back to the first 0-block batch so a wrong 0-block answer at the start of the chain is retried
+      const awaitingValidationBefore = toArr(this.batches).filter(
+        (b) => b.startEpoch < batch.startEpoch && b.state.status === BatchStatus.AwaitingValidation
       );
+      const parentBatch =
+        awaitingValidationBefore.findLast((b) => b.getBlocks().length > 0) ?? awaitingValidationBefore[0];
       // The 0-block batches after `parentBatch` are invalidated with it: an AwaitingValidation batch must not follow a
       // batch that is downloaded again, see validateBatchesStatus()
       const invalidateFromParentBatch = (faultyParentBatch: Batch): void => {

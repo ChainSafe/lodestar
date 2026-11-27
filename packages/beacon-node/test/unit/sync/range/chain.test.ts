@@ -16,6 +16,7 @@ import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import type {Metrics} from "../../../../src/metrics/metrics.js";
 import {PeerAction} from "../../../../src/network/index.js";
+import {MAX_BATCH_PROCESSING_ATTEMPTS} from "../../../../src/sync/constants.js";
 import {BatchError, BatchErrorCode} from "../../../../src/sync/range/batch.js";
 import {ChainTarget, SyncChain, SyncChainFns} from "../../../../src/sync/range/chain.js";
 import {DownloadByRangeError, DownloadByRangeErrorCode} from "../../../../src/sync/utils/downloadByRange.js";
@@ -87,6 +88,7 @@ describe("sync / range / chain", () => {
     };
   };
   const pruneBlockInputs: SyncChainFns["pruneBlockInputs"] = (_) => {};
+  const hasBlock: SyncChainFns["hasBlock"] = () => true;
 
   afterEach(() => {
     if (interval !== null) clearInterval(interval);
@@ -145,6 +147,7 @@ describe("sync / range / chain", () => {
             getConnectedPeerSyncMeta,
             reportPeer,
             pruneBlockInputs,
+            hasBlock,
             onEnd,
           }),
           {config, logger, clock, custodyConfig, metrics: null},
@@ -226,6 +229,7 @@ describe("sync / range / chain", () => {
             getConnectedPeerSyncMeta,
             reportPeer,
             pruneBlockInputs,
+            hasBlock,
             onEnd: (err) => (err ? reject(err) : resolve()),
           }),
           {
@@ -246,11 +250,16 @@ describe("sync / range / chain", () => {
     }
   );
 
-  // A lying peer returns 0 blocks for epoch 3, which has blocks. Epoch 2 has its tail block and epoch 4 starts with a
-  // skipped slot, so only the 0-block gap stops the unknown parent from being blamed on epoch 4 alone. Epoch 3 must be
-  // downloaded again from the honest peer
-  it("recovers from a peer returning 0 blocks for an epoch with blocks", async () => {
-    const liedEpoch = 3;
+  // A lying peer returns 0 blocks for an epoch with blocks, the epoch must be downloaded again from the honest peer.
+  // Target is the first slot of epoch 8, epoch 4 starts with a skipped slot
+  it.each([
+    // epoch 2 has its tail block, so only the 0-block gap stops the unknown parent from being blamed on epoch 4 alone
+    {case: "middle epoch", liedEpoch: 3},
+    // no batch with blocks awaits validation, the first 0-block batch is the parent batch of epoch 1
+    {case: "first epoch", liedEpoch: 0},
+    // the terminal batch has 0 blocks but the target block is not known
+    {case: "terminal epoch", liedEpoch: 8},
+  ])("recovers from a peer returning 0 blocks for an epoch with blocks: $case", async ({liedEpoch}) => {
     const peers = [peer, await getRandPeerIdStr()];
     // Whichever peer is asked for the epoch first lies, the other one is honest
     let liar: string | null = null;
@@ -299,6 +308,7 @@ describe("sync / range / chain", () => {
     };
 
     const target: ChainTarget = {slot: computeStartSlotAtEpoch(8), root: ZERO_HASH};
+    const reportPeerSpy = vi.fn();
     await new Promise<void>((resolve, reject) => {
       const syncChain = new SyncChain(
         0,
@@ -308,8 +318,9 @@ describe("sync / range / chain", () => {
           processChainSegment,
           downloadByRange,
           getConnectedPeerSyncMeta,
-          reportPeer,
+          reportPeer: reportPeerSpy,
           pruneBlockInputs,
+          hasBlock: () => imported.has(target.slot),
           onEnd: (err) => (err ? reject(err) : resolve()),
         }),
         {
@@ -329,6 +340,72 @@ describe("sync / range / chain", () => {
     for (const p of peers) {
       expect(liedEpochServedBy.get(p), `lied epoch requests to ${p === liar ? "liar" : "honest"} peer`).toBe(1);
     }
+    expect(imported.has(target.slot)).toBe(true);
+    expect(reportPeerSpy).not.toHaveBeenCalled();
+  });
+
+  it("fails without reporting peers when the terminal batch keeps returning 0 blocks without the target block", async () => {
+    const target: ChainTarget = {slot: computeStartSlotAtEpoch(4), root: ZERO_HASH};
+    const imported = new Set<Slot>();
+    const reportPeerSpy = vi.fn();
+    let terminalRequests = 0;
+
+    const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+      for (const blockInput of blocks) imported.add(blockInput.slot);
+    };
+
+    const downloadByRange: SyncChainFns["downloadByRange"] = async (_peer, request) => {
+      const blocks: IBlockInput[] = [];
+      if (request.startSlot === target.slot) {
+        terminalRequests++;
+        return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+      }
+      for (let i = request.startSlot; i < request.startSlot + request.count; i++) {
+        blocks.push(
+          BlockInputPreData.createFromBlock({
+            block: {message: generateEmptyBlock(i), signature: ACCEPT_BLOCK},
+            blockRootHex: "0x00",
+            forkName: config.getForkName(i),
+            daOutOfRange: false,
+            source: BlockInputSource.byRange,
+            seenTimestampSec: Math.floor(Date.now() / 1000),
+          })
+        );
+      }
+      return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+    };
+
+    const err = await new Promise<Error | null>((resolve) => {
+      const syncChain = new SyncChain(
+        0,
+        target,
+        RangeSyncType.Finalized,
+        logSyncChainFns(logger, {
+          processChainSegment,
+          downloadByRange,
+          getConnectedPeerSyncMeta,
+          reportPeer: reportPeerSpy,
+          pruneBlockInputs,
+          hasBlock: () => imported.has(target.slot),
+          onEnd: (err) => resolve(err),
+        }),
+        {
+          config,
+          logger,
+          clock: new Clock({config, genesisTime: 0, signal: new AbortController().signal}),
+          custodyConfig,
+          metrics: null,
+        },
+        undefined
+      );
+      syncChain.addPeer(peer, target);
+      syncChain.startSyncing(0);
+    });
+
+    expect(err).toBeInstanceOf(BatchError);
+    expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_PROCESSING_ATTEMPTS);
+    expect(terminalRequests).toBe(MAX_BATCH_PROCESSING_ATTEMPTS + 1);
+    expect(reportPeerSpy).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -392,6 +469,7 @@ describe("sync / range / chain", () => {
           }),
           reportPeer,
           pruneBlockInputs,
+          hasBlock,
           onEnd: (err) => (err ? reject(err) : resolve()),
         },
         {
@@ -428,6 +506,7 @@ describe("sync / range / chain", () => {
       getConnectedPeerSyncMeta,
       reportPeer,
       pruneBlockInputs,
+      hasBlock,
       onEnd: () => {},
     });
 
@@ -497,6 +576,7 @@ describe("sync / range / chain", () => {
           downloadByRange,
           reportPeer,
           pruneBlockInputs,
+          hasBlock,
           getConnectedPeerSyncMeta,
           onEnd,
         }),
@@ -552,6 +632,7 @@ describe("sync / range / chain", () => {
         getConnectedPeerSyncMeta,
         reportPeer,
         pruneBlockInputs,
+        hasBlock,
         onEnd: () => {},
       }),
       {config, logger, clock, custodyConfig, metrics: null},
@@ -632,6 +713,7 @@ describe("sync / range / chain", () => {
           getConnectedPeerSyncMeta,
           reportPeer,
           pruneBlockInputs,
+          hasBlock,
           onEnd,
         }),
         {config, logger, clock, custodyConfig, metrics: null},
@@ -706,6 +788,7 @@ describe("sync / range / chain", () => {
           getConnectedPeerSyncMeta,
           reportPeer,
           pruneBlockInputs,
+          hasBlock,
           onEnd,
         }),
         {config, logger, clock, custodyConfig, metrics: null},
@@ -764,6 +847,7 @@ describe("sync / range / chain", () => {
           getConnectedPeerSyncMeta,
           reportPeer: reportPeerSpy,
           pruneBlockInputs,
+          hasBlock,
           onEnd,
         }),
         {config, logger, clock, custodyConfig, metrics: null},
@@ -829,6 +913,7 @@ describe("sync / range / chain", () => {
           getConnectedPeerSyncMeta,
           reportPeer,
           pruneBlockInputs,
+          hasBlock,
           onEnd: () => {},
         }),
         {config, logger, clock, custodyConfig, metrics: null},
@@ -898,6 +983,7 @@ describe("sync / range / chain", () => {
             getConnectedPeerSyncMeta,
             reportPeer: reportPeerSpy,
             pruneBlockInputs,
+            hasBlock,
             onEnd,
           }),
           {config, logger, clock, custodyConfig, metrics: null},
@@ -1039,6 +1125,9 @@ function logSyncChainFns(logger: Logger, fns: SyncChainFns): SyncChainFns {
     pruneBlockInputs(blockInputs) {
       logger.debug("mock pruneBlockInputs", {blockInputsLength: blockInputs.length});
       return fns.pruneBlockInputs(blockInputs);
+    },
+    hasBlock(blockRoot) {
+      return fns.hasBlock(blockRoot);
     },
     onEnd(err, target) {
       logger.debug("mock onEnd", {target: target?.slot}, err ?? undefined);
