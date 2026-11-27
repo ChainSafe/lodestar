@@ -33,7 +33,16 @@ describe("api - finalized block whose payload is orphaned", () => {
   let api: ReturnType<typeof getBeaconBlockApi>;
   let debugApi: ReturnType<typeof getDebugApi>;
 
-  function setup({inForkChoice, payloadStatus}: {inForkChoice: boolean; payloadStatus: PayloadStatus}): void {
+  function setup({
+    inForkChoice,
+    payloadStatus,
+    finalizedSlot = slot + 1,
+  }: {
+    inForkChoice: boolean;
+    payloadStatus: PayloadStatus;
+    finalizedSlot?: number;
+  }): void {
+    modules.forkChoice.getFinalizedBlock.mockReturnValue(generateProtoBlock({slot: finalizedSlot}));
     // Finalized, as `getCanonicalBlockAtSlot` reports it before and after the archiver migrated the block
     modules.chain.getCanonicalBlockAtSlot.mockResolvedValue({block, executionOptimistic: false, finalized: true});
     modules.forkChoice.hasBlockHexUnsafe = vi.fn().mockReturnValue(inForkChoice);
@@ -64,6 +73,13 @@ describe("api - finalized block whose payload is orphaned", () => {
     expect(res.meta.finalized).toBe(true);
   });
 
+  it("serves the envelope of the finalized block while its canonical variant is EMPTY", async () => {
+    // The finalized block's own payload is not final, a later block can still build on its FULL variant
+    setup({inForkChoice: true, payloadStatus: PayloadStatus.EMPTY, finalizedSlot: slot});
+    const res = await api.getSignedExecutionPayloadEnvelope({blockId: String(slot)});
+    expect(res.data).toBe(envelope);
+  });
+
   it("serves an archived envelope without walking fork choice", async () => {
     setup({inForkChoice: false, payloadStatus: PayloadStatus.EMPTY});
     const res = await api.getSignedExecutionPayloadEnvelope({blockId: String(slot)});
@@ -79,9 +95,15 @@ describe("api - finalized block whose payload is orphaned", () => {
   });
 
   describe("isFinalizedPayloadOrphaned", () => {
-    function chainWith(inForkChoice: boolean, canonicalRoot: string, payloadStatus: PayloadStatus): IBeaconChain {
+    function chainWith(
+      inForkChoice: boolean,
+      canonicalRoot: string,
+      payloadStatus: PayloadStatus,
+      finalizedSlot: number
+    ): IBeaconChain {
       return {
         forkChoice: {
+          getFinalizedBlock: () => generateProtoBlock({slot: finalizedSlot}),
           hasBlockHexUnsafe: () => inForkChoice,
           getCanonicalBlockAtSlot: () => generateProtoBlock({slot, blockRoot: canonicalRoot, payloadStatus}),
         },
@@ -89,13 +111,18 @@ describe("api - finalized block whose payload is orphaned", () => {
     }
 
     it.each([
-      ["EMPTY canonical variant", true, blockRootHex, PayloadStatus.EMPTY, true],
-      ["FULL canonical variant", true, blockRootHex, PayloadStatus.FULL, false],
-      ["block no longer in fork choice", false, blockRootHex, PayloadStatus.EMPTY, false],
-      ["another block canonical at the slot", true, `0x${"ab".repeat(32)}`, PayloadStatus.EMPTY, false],
-    ])("%s", (_, inForkChoice, canonicalRoot, payloadStatus, expected) => {
+      ["EMPTY canonical variant", true, blockRootHex, PayloadStatus.EMPTY, slot + 1, true],
+      ["FULL canonical variant", true, blockRootHex, PayloadStatus.FULL, slot + 1, false],
+      ["EMPTY canonical variant of the finalized block", true, blockRootHex, PayloadStatus.EMPTY, slot, false],
+      ["block no longer in fork choice", false, blockRootHex, PayloadStatus.EMPTY, slot + 1, false],
+      ["another block canonical at the slot", true, `0x${"ab".repeat(32)}`, PayloadStatus.EMPTY, slot + 1, false],
+    ])("%s", (_, inForkChoice, canonicalRoot, payloadStatus, finalizedSlot, expected) => {
       expect(
-        isFinalizedPayloadOrphaned(chainWith(inForkChoice, canonicalRoot, payloadStatus), slot, blockRootHex)
+        isFinalizedPayloadOrphaned(
+          chainWith(inForkChoice, canonicalRoot, payloadStatus, finalizedSlot),
+          slot,
+          blockRootHex
+        )
       ).toBe(expected);
     });
   });

@@ -80,7 +80,8 @@ export async function getBlockResponse(
  * build on. The finalized block stays in fork choice after it is archived.
  */
 export function isFinalizedPayloadOrphaned(chain: IBeaconChain, slot: Slot, blockRootHex: RootHex): boolean {
-  if (!chain.forkChoice.hasBlockHexUnsafe(blockRootHex)) {
+  // The payload of the finalized block itself is not final yet, a later block can still build on either variant
+  if (slot >= chain.forkChoice.getFinalizedBlock().slot || !chain.forkChoice.hasBlockHexUnsafe(blockRootHex)) {
     return false;
   }
   const canonicalBlock = chain.forkChoice.getCanonicalBlockAtSlot(slot);
