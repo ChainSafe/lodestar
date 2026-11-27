@@ -224,18 +224,13 @@ fn checkNewValidatorSignatures(
 ) !void {
     std.debug.assert(deposits.len == valid.len);
     std.debug.assert(deposits.len <= preset.MAX_PENDING_DEPOSITS_PER_EPOCH);
-    const validators_count = try state.validatorsCount();
     const checks: SignatureChecks = .{ .config = config, .deposits = deposits, .valid = valid };
 
     var to_check: [preset.MAX_PENDING_DEPOSITS_PER_EPOCH]usize = undefined;
     var to_check_count: usize = 0;
     for (deposits, 0..) |deposit, index| {
         const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
-        if (validator_index != null and validator_index.? < validators_count) continue;
-        // applyPendingDeposit drops these before looking at the signature.
-        if (comptime fork.gte(.heze)) {
-            if (deposit.withdrawal_credentials[0] == c.BLS_WITHDRAWAL_PREFIX) continue;
-        }
+        if (try isValidatorKnown(fork, state, validator_index)) continue;
         to_check[to_check_count] = index;
         to_check_count += 1;
     }
