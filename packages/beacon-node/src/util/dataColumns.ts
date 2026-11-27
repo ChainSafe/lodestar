@@ -288,7 +288,7 @@ export function getBlobKzgCommitments(
  * each blob in the block, assemble the sidecars which can be distributed to peers.
  *
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-beta.5/specs/fulu/validator.md#get_data_column_sidecars
  */
 export function getFuluDataColumnSidecars(
   signedBlockHeader: SignedBeaconBlockHeader,
@@ -298,6 +298,9 @@ export function getFuluDataColumnSidecars(
 ): fulu.DataColumnSidecar[] {
   if (cellsAndKzgProofs.length !== kzgCommitments.length) {
     throw Error("Invalid cellsAndKzgProofs length for getDataColumnSidecars");
+  }
+  if (kzgCommitments.length === 0) {
+    return [];
   }
 
   const sidecars: fulu.DataColumnSidecar[] = [];

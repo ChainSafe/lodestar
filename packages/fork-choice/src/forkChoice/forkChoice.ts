@@ -1843,10 +1843,7 @@ export class ForkChoice implements IForkChoice {
    * Child class can overwrite this for testing purpose.
    */
   protected isBlockPtcTimely(block: BeaconBlock, blockDelayMs: number): boolean {
-    const ptcThresholdMs = this.config.getSlotComponentDurationMs(
-      this.config.getForkName(block.slot),
-      this.config.PAYLOAD_ATTESTATION_DUE_BPS
-    );
+    const ptcThresholdMs = this.config.getPayloadAttestationDueMs(this.config.getForkName(block.slot));
     return this.fcStore.currentSlot === block.slot && blockDelayMs < ptcThresholdMs;
   }
 
@@ -1913,7 +1910,7 @@ export class ForkChoice implements IForkChoice {
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/phase0/fork-choice.md#is_proposer_equivocation
    */
-  private isProposerEquivocation(block: ProtoBlock): boolean {
+  isProposerEquivocation(block: ProtoBlock): boolean {
     // Any known sibling counts, timely or not. Timeliness only matters for withholding the boost from
     // the next proposer, the reorg itself is safe to attempt whenever the equivocation is visible.
     return this.protoArray.hasEquivocatingBlock(block.proposerIndex, block.slot, block.blockRoot, false);

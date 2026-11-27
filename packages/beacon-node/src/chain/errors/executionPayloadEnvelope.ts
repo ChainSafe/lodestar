@@ -20,6 +20,7 @@ export enum ExecutionPayloadEnvelopeErrorCode {
   INCORRECT_TIMESTAMP = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_INCORRECT_TIMESTAMP",
   EMPTY_TRANSACTION = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_EMPTY_TRANSACTION",
   WITHDRAWALS_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_WITHDRAWALS_MISMATCH",
+  INVALID_BLOCK_HASH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_INVALID_BLOCK_HASH",
   INVALID_SIGNATURE = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_INVALID_SIGNATURE",
   PAYLOAD_ENVELOPE_INPUT_MISSING = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PAYLOAD_ENVELOPE_INPUT_MISSING",
 }
@@ -111,6 +112,13 @@ export type ExecutionPayloadEnvelopeErrorType =
       root: RootHex;
       envelopeWithdrawalsRoot: RootHex;
       expectedWithdrawalsRoot: RootHex;
+    }
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK_HASH;
+      slot: Slot;
+      root: RootHex;
+      blockHash: RootHex;
+      computedBlockHash: RootHex;
     }
   | {code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE; slot: Slot; root: RootHex}
   | {code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING; blockRoot: RootHex};
