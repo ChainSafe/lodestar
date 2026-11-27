@@ -107,7 +107,7 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
   "execution.retryDelay": {
     description: "Delay time in milliseconds between retries when retrying calls to the execution engine API",
     type: "number",
-    default: defaultExecutionEngineHttpOpts.retryDelay,
+    default: defaultOptions.execution.retryDelay,
     group: "execution",
   },
 
