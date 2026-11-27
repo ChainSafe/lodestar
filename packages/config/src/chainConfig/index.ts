@@ -30,13 +30,8 @@ export function createChainConfig(input: Partial<ChainConfig>): ChainConfig {
     config.SLOT_DURATION_MS = config.SECONDS_PER_SLOT * 1000;
   }
 
-  for (const [name, slotDurationMs] of [
-    ["SLOT_DURATION_MS", config.SLOT_DURATION_MS],
-    ["SLOT_DURATION_MS_HEZE", config.SLOT_DURATION_MS_HEZE],
-  ] as const) {
-    if (slotDurationMs <= 0 || slotDurationMs % 1000 !== 0) {
-      throw Error(`Invalid ${name} ${slotDurationMs} must be a positive multiple of 1000`);
-    }
+  if (config.SLOT_DURATION_MS <= 0 || config.SLOT_DURATION_MS % 1000 !== 0) {
+    throw Error(`Invalid SLOT_DURATION_MS ${config.SLOT_DURATION_MS} must be a positive multiple of 1000`);
   }
 
   // Assert that the preset matches the active preset

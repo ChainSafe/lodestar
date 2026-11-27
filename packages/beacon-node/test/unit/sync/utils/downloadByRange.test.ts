@@ -1,4 +1,5 @@
 import {beforeEach, describe, expect, it} from "vitest";
+import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -19,7 +20,9 @@ import {
   ValidatedBlock,
   cacheByRangeResponses,
   getBlocksForDataValidation,
+  validateBlockByRangeResponse,
   validateEnvelopesByRangeResponse,
+  validateResponses,
 } from "../../../../src/sync/utils/downloadByRange.js";
 import {generateChainOfBlockMaybeSidecars} from "../../../utils/blocksAndData.js";
 
@@ -379,6 +382,62 @@ describe("getBlocksForDataValidation", () => {
 //   it("should handle far future slot requests");
 // });
 // });
+
+describe("0-block epoch", () => {
+  const blocksRequest = {startSlot: 64, count: 32, step: 1};
+  const columnsRequest = {startSlot: 64, count: 32, columns: [0, 1, 2, 3]};
+
+  it("validateBlockByRangeResponse returns no blocks with a MISSING_BLOCKS_RESPONSE warning", () => {
+    const {result, warnings} = validateBlockByRangeResponse(config, blocksRequest, []);
+    expect(result).toEqual([]);
+    expect(warnings?.map((w) => w.type.code)).toEqual([DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE]);
+  });
+
+  it("validateResponses skips by-range column validation when the range has no blocks", async () => {
+    const {result, warnings} = await validateResponses({
+      config,
+      blocksRequest,
+      columnsRequest,
+      blocks: [],
+      columnSidecars: [],
+    });
+    expect(result.responses.validatedBlocks).toEqual([]);
+    expect(result.responses.validatedColumnSidecars).toBeUndefined();
+    expect(warnings?.map((w) => w.type.code)).toEqual([DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE]);
+  });
+
+  it("validateResponses throws DATA_WITHOUT_BLOCKS for columns returned without blocks", async () => {
+    await expect(
+      validateResponses({
+        config,
+        blocksRequest,
+        columnsRequest,
+        blocks: [],
+        columnSidecars: [ssz.fulu.DataColumnSidecar.defaultValue()],
+      })
+    ).rejects.toMatchObject({type: {code: DownloadByRangeErrorCode.DATA_WITHOUT_BLOCKS, columnSidecarCount: 1}});
+  });
+
+  it.each([
+    {name: "with", withColumns: true},
+    {name: "without", withColumns: false},
+  ])(
+    "validateResponses throws DATA_WITHOUT_BLOCKS for envelopes returned without blocks, $name columns request",
+    async ({withColumns}) => {
+      await expect(
+        validateResponses({
+          config,
+          blocksRequest,
+          columnsRequest: withColumns ? columnsRequest : undefined,
+          envelopesRequest: {startSlot: blocksRequest.startSlot, count: blocksRequest.count},
+          blocks: [],
+          columnSidecars: [],
+          payloadEnvelopes: [ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue()],
+        })
+      ).rejects.toMatchObject({type: {code: DownloadByRangeErrorCode.DATA_WITHOUT_BLOCKS, payloadEnvelopeCount: 1}});
+    }
+  );
+});
 
 describe("validateEnvelopesByRangeResponse", () => {
   const blockHash = Buffer.alloc(32, 0x11);

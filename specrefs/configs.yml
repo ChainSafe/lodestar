@@ -430,8 +430,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "INCLUSION_LIST_DUE_BPS:"
   spec: |
-    <spec config_var="INCLUSION_LIST_DUE_BPS" fork="heze" hash="2b6a4401">
-    INCLUSION_LIST_DUE_BPS: Uint64 = 6667
+    <spec config_var="INCLUSION_LIST_DUE_BPS" fork="heze" hash="6418ed66">
+    INCLUSION_LIST_DUE_BPS: Uint64 = 7500
     </spec>
 
 - name: MAXIMUM_GOSSIP_CLOCK_DISPARITY#phase0
@@ -630,6 +630,15 @@
   spec: |
     <spec config_var="MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS" fork="heze" hash="4bab088f">
     MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: Slot = 1
+    </spec>
+
+- name: MIN_TRANSACTION_GAS#gloas
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "MIN_TRANSACTION_GAS:"
+  spec: |
+    <spec config_var="MIN_TRANSACTION_GAS" fork="gloas" hash="7aee0cb2">
+    MIN_TRANSACTION_GAS: Uint64 = 4096
     </spec>
 
 - name: MIN_VALIDATOR_WITHDRAWABILITY_DELAY#phase0
