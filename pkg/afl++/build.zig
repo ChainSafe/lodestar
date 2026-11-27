@@ -9,11 +9,6 @@ pub fn addInstrumentedExe(
     obj: *std.Build.Step.Compile,
     extra_libs: []const *std.Build.Step.Compile,
 ) std.Build.LazyPath {
-    // Force the build system to produce the binary artifact even though we
-    // only consume the LLVM bitcode below. Without this, the dependency
-    // tracking doesn't wire up correctly.
-    _ = obj.getEmittedBin();
-
     const pkg = b.dependencyFromBuildZig(
         @This(),
         .{},
@@ -27,7 +22,14 @@ pub fn addInstrumentedExe(
     afl_cc.addArg("-o");
     const fuzz_exe = afl_cc.addOutputFileArg(obj.name);
     afl_cc.addFileArg(pkg.path("afl.c"));
-    afl_cc.addFileArg(obj.getEmittedLlvmBc());
+    const archive = obj.getEmittedBin();
+    // Zig already instruments the ELF archive with sanitizer coverage. Link it
+    // directly on Linux so AFL++ does not need a compatible LLVM bitcode reader.
+    // Preserve the existing Mach-O path, where section placement differs.
+    afl_cc.addFileArg(if (obj.root_module.resolved_target.?.result.os.tag == .linux)
+        archive
+    else
+        obj.getEmittedLlvmBc());
     for (extra_libs) |lib| {
         afl_cc.addFileArg(lib.getEmittedBin());
     }

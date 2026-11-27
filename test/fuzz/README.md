@@ -47,9 +47,10 @@ From this directory (`test/fuzz`):
 zig build
 ```
 
-This compiles Zig static libraries for each fuzz target, emits LLVM bitcode,
-then links each with `afl.c` using `afl-cc` to produce instrumented binaries
-at `zig-out/bin/fuzz-*`.
+This compiles instrumented Zig static libraries for each fuzz target. On Linux,
+`afl-cc` links the native archives with `afl.c` without reading LLVM bitcode.
+On macOS the build still uses LLVM bitcode and requires compatible LLVM versions.
+Both write binaries to `zig-out/bin/fuzz-*`.
 
 ## Running the Fuzzer
 
@@ -342,7 +343,7 @@ __sanitizer_cov_trace_pc_guard_init(&__start___sancov_guards,
 On Linux (ELF), the linker automatically synthesizes `__start___sancov_guards`
 and `__stop___sancov_guards` symbols for any custom section. On macOS (Mach-O),
 these symbols are not automatic — they only exist if the section is present and
-non-empty in the final binary. If the Zig-compiled bitcode does not produce the
+non-empty in the final binary. If the Zig-compiled archive does not produce the
 `__sancov_guards` section in the expected Mach-O layout, the symbols are absent
 and calling `__sanitizer_cov_trace_pc_guard_init` crashes at startup.
 
