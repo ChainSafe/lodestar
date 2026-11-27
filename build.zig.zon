@@ -28,20 +28,20 @@
             },
         },
         .hashtree = .{
-            .url = "git+https://github.com/ChainSafe/hashtree-z.git#ca91fa19bc3e4b7a3935a5c4e0be98f66cf20c55",
-            .hash = "hashtree-0.1.0-sBOoviUXAAAcTlzwp7I6WCi5uZMVMRKpkGZITB5pao-w",
+            .url = "git+https://github.com/ChainSafe/hashtree-z.git#4cd425a568033ef47f38842e7c36cc0d1ceadc59",
+            .hash = "hashtree-0.1.0-sBOovlgYAAAdfP42btHEsOZqwTx_YHiEu-z27lK55IDO",
         },
         .snappy = .{
-            .url = "git+https://github.com/ChainSafe/snappy.zig#a0516e5a715492c8c82f3b27bc70adc807ea8018",
-            .hash = "snappy-0.1.0-n4Aaquw5AADrjJWb_eG50h4Ltp1vMaCdsLYKZaxln9di",
+            .url = "git+https://github.com/ChainSafe/snappy.zig.git#c99e69b21408301fbd96bd0021df1769426cbad5",
+            .hash = "snappy-0.1.0-n4Aaqh87AACs8DOky8JoMfhha-vHr23O6Dj98BYFH3OS",
         },
         .yaml = .{
-            .url = "git+https://github.com/ChainSafe/zig-yaml#99cdaeb24fe93ce07a5483c6ccbacd8f56027554",
-            .hash = "zig_yaml-0.1.0-C1161kFRAwBaIWvgk28Pvf9Rnj04pvWO577QGnIeHdJg",
+            .url = "git+https://github.com/ChainSafe/zig-yaml.git#e27f31598cb38a94e21cf41bb3d867eb16af7d2e",
+            .hash = "zig_yaml-0.1.0-C1161hNSAwCdxkyou487JzcEk4aQw8VIjIfLBmOHr6zh",
         },
         .zapi = .{
-            .url = "git+https://github.com/ChainSafe/zapi.git#efde10ba49b149ddc942cf4309909c0fbaf04933",
-            .hash = "zapi-4.5.0-rIqzUcs9BQBi1365ssBXgSmgJSw7qGJtaaEe0luQ3X3O",
+            .url = "git+https://github.com/ChainSafe/zapi.git#1cb2c8c3b0b37cf5c65b766d2031e8a50352c0fb",
+            .hash = "zapi-4.5.0-rIqzUf4-BQCl1lHP8frxdsbQinwzOTwYy6llSvp8vmT8",
         },
         .zbench = .{
             .url = "git+https://github.com/hendriknielaender/zBench#f12a2262bcd9d300207890555c577da5e29de453",
@@ -378,18 +378,6 @@
             .root_module = .{
                 .root_source_file = "bench/state_transition/process_epoch.zig",
                 .imports = .{ .state_transition, .fork_types, .consensus_types, .config, .zbench, .persistent_merkle_tree, .download_era_options, .era, .time },
-            },
-        },
-        .bench_flat_cache = .{
-            .root_module = .{
-                .root_source_file = "bench/state_transition/flat_cache.zig",
-                .imports = .{ .state_transition, .fork_types, .config, .persistent_merkle_tree, .time },
-            },
-        },
-        .bench_locality_decay = .{
-            .root_module = .{
-                .root_source_file = "bench/state_transition/locality_decay.zig",
-                .imports = .{ .state_transition, .fork_types, .consensus_types, .config, .persistent_merkle_tree, .time },
             },
         },
     },

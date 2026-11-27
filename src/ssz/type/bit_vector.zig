@@ -24,11 +24,11 @@ pub fn BitVectorType(comptime _length: comptime_int) type {
         pub const kind = TypeKind.vector;
         pub const Element: type = BoolType();
         pub const length: usize = _length;
-        pub const byte_length = std.math.divCeil(usize, length, 8) catch unreachable;
+        pub const byte_length = @divCeil(@as(usize, length), 8);
         pub const Type: type = BitVector(length);
         pub const TreeView: type = BitVectorTreeView(@This());
         pub const fixed_size: usize = byte_length;
-        pub const chunk_count: usize = std.math.divCeil(usize, fixed_size, 32) catch unreachable;
+        pub const chunk_count: usize = @divCeil(@as(usize, fixed_size), 32);
         pub const chunk_depth: u8 = maxChunksToDepth(chunk_count);
 
         pub const default_value: Type = Type.empty;

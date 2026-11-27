@@ -30,8 +30,8 @@ pub fn BitListType(comptime _limit: comptime_int) type {
         pub const Type: type = BitList(.{ .limit = limit });
         pub const TreeView: type = BitListTreeView(@This());
         pub const min_size: usize = 1;
-        pub const max_size: usize = std.math.divCeil(usize, limit + 1, 8) catch unreachable;
-        pub const max_chunk_count: usize = std.math.divCeil(usize, limit, 256) catch unreachable;
+        pub const max_size: usize = @divCeil(@as(usize, limit + 1), 8);
+        pub const max_chunk_count: usize = @divCeil(@as(usize, limit), 256);
         pub const chunk_depth: u8 = maxChunksToDepth(max_chunk_count);
 
         pub const default_value: Type = Type.empty;
@@ -58,7 +58,7 @@ pub fn BitListType(comptime _limit: comptime_int) type {
         pub fn hashTreeRoot(_: std.mem.Allocator, value: *const Type, out: *[32]u8) !void {
             const data = value.data.items;
             std.debug.assert(value.bit_len <= limit);
-            std.debug.assert(data.len == (std.math.divCeil(usize, value.bit_len, 8) catch unreachable));
+            std.debug.assert(data.len == (@divCeil(@as(usize, value.bit_len), 8)));
 
             const full_chunk_count = data.len / 32;
             var accumulator = MerkleAccumulator.init(chunk_depth);
@@ -93,12 +93,12 @@ pub fn BitListType(comptime _limit: comptime_int) type {
         }
 
         pub fn serializedSize(value: *const Type) usize {
-            return std.math.divCeil(usize, value.bit_len + 1, 8) catch unreachable;
+            return @divCeil(@as(usize, value.bit_len + 1), 8);
         }
 
         pub fn serializeIntoBytes(value: *const Type, out: []u8) usize {
             const bit_len = value.bit_len + 1; // + 1 for padding bit
-            const byte_len = std.math.divCeil(usize, bit_len, 8) catch unreachable;
+            const byte_len = @divCeil(@as(usize, bit_len), 8);
             if (value.bit_len % 8 == 0) {
                 @memcpy(out[0 .. byte_len - 1], value.data.items);
                 // setting the byte in its entirety here
@@ -330,7 +330,7 @@ pub fn BitListType(comptime _limit: comptime_int) type {
             pub fn serializeIntoBytes(node: Node.Id, pool: *Node.Pool, out: []u8) !usize {
                 const bit_len = try length(node, pool);
                 const serialized_bit_len = bit_len + 1; // + 1 for padding bit
-                const byte_len = std.math.divCeil(usize, serialized_bit_len, 8) catch unreachable;
+                const byte_len = @divCeil(@as(usize, serialized_bit_len), 8);
                 const chunk_count = (bit_len + 255) / 256;
 
                 if (chunk_count == 0) {
@@ -362,7 +362,7 @@ pub fn BitListType(comptime _limit: comptime_int) type {
 
             pub fn serializedSize(node: Node.Id, pool: *Node.Pool) !usize {
                 const bit_len = try length(node, pool);
-                return std.math.divCeil(usize, bit_len + 1, 8) catch unreachable;
+                return @divCeil(@as(usize, bit_len + 1), 8);
             }
         };
 

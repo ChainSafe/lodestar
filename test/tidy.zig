@@ -97,7 +97,7 @@ const Errors = struct {
         comptime assert(fmt[fmt.len - 1] == '\n');
         errors.count += 1;
         if (errors.captured) |captured| {
-            const line = std.fmt.allocPrint(errors.gpa, fmt, args) catch @panic("OOM");
+            const line = errors.gpa.print(fmt, args) catch @panic("OOM");
             defer errors.gpa.free(line);
             captured.appendSlice(errors.gpa, line) catch @panic("OOM");
         } else {
@@ -690,7 +690,7 @@ fn tidyAllowlists(files: []const File, errors: *Errors) void {
 fn tidyCiCoverage(gpa: Allocator, zon: []const u8, ci: []const u8, errors: *Errors) !void {
     const modules = try declaredTestModules(gpa, zon);
     for (modules) |module| {
-        const needle = try std.fmt.allocPrint(gpa, "zig build test:{s}", .{module});
+        const needle = try gpa.print("zig build test:{s}", .{module});
         if (!containsStep(ci, needle)) errors.addModuleNotInCi(module);
     }
 }

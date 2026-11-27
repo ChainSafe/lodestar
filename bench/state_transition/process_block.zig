@@ -429,12 +429,12 @@ fn ProcessBlockSegmentedBench(comptime fork: ForkSeq) type {
     };
 }
 
-var gpa: std.heap.DebugAllocator(.{}) = .init;
+var gpa: std.heap.SafeAllocator = .init(std.heap.page_allocator, .{});
 
 pub fn main(init: std.process.Init) !void {
-    defer if (builtin.mode == .debug) std.debug.assert(gpa.deinit() == .ok);
+    defer if (builtin.optimize == .debug) std.debug.assert(gpa.deinit() == 0);
 
-    const allocator = if (builtin.mode == .debug)
+    const allocator = if (builtin.optimize == .debug)
         gpa.allocator()
     else
         std.heap.c_allocator;

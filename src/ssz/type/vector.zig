@@ -49,7 +49,7 @@ pub fn FixedVectorType(comptime ST: type, comptime _length: comptime_int, compti
         else
             ArrayCompositeTreeView(@This());
         pub const fixed_size: usize = Element.fixed_size * length;
-        pub const chunk_count: usize = if (isBasicType(Element)) std.math.divCeil(usize, fixed_size, 32) catch unreachable else length;
+        pub const chunk_count: usize = if (isBasicType(Element)) @divCeil(@as(usize, fixed_size), 32) else length;
         pub const chunk_depth: u8 = maxChunksToDepth(chunk_count);
         pub const use_chunked_leaf: bool = _opts.chunked_leaf;
         const ChunkedLeaf = if (use_chunked_leaf) pmt.ChunkedLeaf else struct {};

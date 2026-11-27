@@ -153,7 +153,7 @@ pub fn BlocksTestCase(comptime fork: ForkSeq) type {
             }
             for (tc.blocks, 0..) |*block, i| {
                 block.* = SignedBeaconBlock.default_value;
-                const block_filename = try std.fmt.allocPrint(allocator, "blocks_{d}.ssz_snappy", .{i});
+                const block_filename = try allocator.print("blocks_{d}.ssz_snappy", .{i});
                 defer allocator.free(block_filename);
                 try loadSszValue(SignedBeaconBlock, allocator, dir, block_filename, block);
             }

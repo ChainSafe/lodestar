@@ -369,8 +369,8 @@ test "effectiveBalanceIncrementsAppend grows in place only when the list is not 
 }
 
 test "memory_safety: attesting indices belong to the caller's allocator, not the cache's" {
-    var cache_allocator_state: std.heap.DebugAllocator(.{}) = .init;
-    defer std.debug.assert(cache_allocator_state.deinit() == .ok);
+    var cache_allocator_state: std.heap.SafeAllocator = .init(std.heap.page_allocator, .{});
+    defer std.debug.assert(cache_allocator_state.deinit() == 0);
     const cache_allocator = cache_allocator_state.allocator();
     const caller_allocator = std.testing.allocator;
 

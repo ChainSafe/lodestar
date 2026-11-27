@@ -64,7 +64,7 @@ pub fn FixedListType(comptime ST: type, comptime _limit: comptime_int, comptime 
             ListCompositeTreeView(@This());
         pub const min_size: usize = 0;
         pub const max_size: usize = Element.fixed_size * limit;
-        pub const max_chunk_count: usize = if (isBasicType(Element)) std.math.divCeil(usize, max_size, 32) catch unreachable else limit;
+        pub const max_chunk_count: usize = if (isBasicType(Element)) @divCeil(@as(usize, max_size), 32) else limit;
         pub const chunk_depth: u8 = maxChunksToDepth(max_chunk_count);
         pub const use_chunked_leaf: bool = _opts.chunked_leaf;
         const ChunkedLeaf = if (use_chunked_leaf) pmt.ChunkedLeaf else struct {};

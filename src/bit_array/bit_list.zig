@@ -29,7 +29,7 @@ pub fn BitList(comptime options: BitListOptions) type {
                 return error.tooLarge;
             }
 
-            const byte_len = std.math.divCeil(usize, bit_len, 8) catch unreachable;
+            const byte_len = @divCeil(@as(usize, bit_len), 8);
 
             var data = try std.ArrayList(u8).initCapacity(allocator, byte_len);
             data.appendNTimesAssumeCapacity(0, byte_len);
@@ -142,8 +142,8 @@ pub fn BitList(comptime options: BitListOptions) type {
                 return error.tooLarge;
             }
 
-            const old_byte_len = std.math.divCeil(usize, self.bit_len, 8) catch unreachable;
-            const byte_len = std.math.divCeil(usize, bit_len, 8) catch unreachable;
+            const old_byte_len = @divCeil(@as(usize, self.bit_len), 8);
+            const byte_len = @divCeil(@as(usize, bit_len), 8);
             try self.data.resize(allocator, byte_len);
             // zero out additionally allocated bytes
             if (old_byte_len < byte_len) {

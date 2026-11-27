@@ -95,12 +95,12 @@ pub fn ProgressiveBitListType(comptime opts: TypeOpts) type {
         }
 
         pub fn serializedSize(value: *const Type) usize {
-            return std.math.divCeil(usize, value.bit_len + 1, 8) catch unreachable;
+            return @divCeil(@as(usize, value.bit_len + 1), 8);
         }
 
         pub fn serializeIntoBytes(value: *const Type, out: []u8) usize {
             const bit_len = value.bit_len + 1; // + 1 for padding bit
-            const byte_len = std.math.divCeil(usize, bit_len, 8) catch unreachable;
+            const byte_len = @divCeil(@as(usize, bit_len), 8);
             if (value.bit_len % 8 == 0) {
                 @memcpy(out[0 .. byte_len - 1], value.data.items);
                 // setting the byte in its entirety here

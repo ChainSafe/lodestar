@@ -199,7 +199,7 @@ fn kernelSize(handle: net.Socket.Handle, option: u32) !u32 {
 }
 
 test "UDP records the kernel's socket buffer sizes and receive drops after a request" {
-    const os = @import("builtin").os.tag;
+    const os = @import("builtin").target.os.tag;
     if (os != .linux and os != .macos) return error.SkipZigTest;
     var plain = try SocketPair.bind(std.testing.io, loopbacks);
     defer plain.close(std.testing.io);
@@ -238,7 +238,7 @@ test "UDP records the kernel's socket buffer sizes and receive drops after a req
 }
 
 test "UDP drop totals extend kernel counter wraps independently without recounting" {
-    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
+    if (@import("builtin").target.os.tag != .linux) return error.SkipZigTest;
     var sockets = try SocketPair.bind(std.testing.io, loopbacks);
     defer sockets.close(std.testing.io);
 
@@ -258,7 +258,7 @@ test "UDP drop totals extend kernel counter wraps independently without recounti
 }
 
 test "UDP records a failed size readback as unknown and not below the request" {
-    const os = @import("builtin").os.tag;
+    const os = @import("builtin").target.os.tag;
     if (os != .linux and os != .macos) return error.SkipZigTest;
     // getsockopt fails on a descriptor that is not open.
     var sockets: SocketPair = .{ .native = .{ true, false }, .values = .{ .{ .handle = -1, .address = .{ .ip4 = .loopback(0) } }, null } };
@@ -292,7 +292,7 @@ test "UDP batches report the exact prefix before a failing datagram and resume a
 }
 
 test "UDP native single batch and ready receive check cancellation before I/O" {
-    const os = @import("builtin").os.tag;
+    const os = @import("builtin").target.os.tag;
     if (os != .linux and os != .macos) return error.SkipZigTest;
     const Canceled = struct {
         fn check(_: ?*anyopaque) std.Io.Cancelable!void {
@@ -319,7 +319,7 @@ test "UDP native single batch and ready receive check cancellation before I/O" {
 }
 
 test "UDP native retry cancellation preserves a same-family successful prefix" {
-    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
+    if (@import("builtin").target.os.tag != .linux) return error.SkipZigTest;
     const Cancel = struct {
         checks: usize = 0,
         fn check(context: ?*anyopaque) std.Io.Cancelable!void {

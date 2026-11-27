@@ -94,7 +94,9 @@ test "SlashingsCache - clone creates independent copy" {
     var original = try SlashingsCache.initFromValidators(allocator, 10, &validator_ptrs);
     defer original.deinit();
 
-    var cloned = try original.clone(allocator);
+    var clone_buffer: [256]u8 = undefined;
+    var clone_fba = std.heap.FixedBufferAllocator.init(&clone_buffer);
+    var cloned = try original.clone(clone_fba.allocator());
     defer cloned.deinit();
 
     // Both should see validator 1 as slashed
@@ -107,4 +109,9 @@ test "SlashingsCache - clone creates independent copy" {
 
     try std.testing.expectEqual(@as(?Slot, 10), cloned.latest_block_slot);
     try std.testing.expect(!cloned.isSlashed(2));
+
+    // Resizing and freeing the clone must use its own allocator, not the original's.
+    try cloned.recordValidatorSlashing(10, 128);
+    try std.testing.expect(cloned.isSlashed(128));
+    try std.testing.expect(!original.isSlashed(128));
 }

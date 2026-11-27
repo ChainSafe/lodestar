@@ -43,7 +43,7 @@ fn download_era_file(
         base_url,
     });
 
-    const url = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ base_url, era_file });
+    const url = try allocator.print("{s}/{s}", .{ base_url, era_file });
     defer allocator.free(url);
 
     var client: std.http.Client = .{ .allocator = allocator, .io = io };

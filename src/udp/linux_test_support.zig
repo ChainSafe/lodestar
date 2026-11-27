@@ -77,7 +77,7 @@ pub const SendFilter = struct {
         const linux = std.os.linux;
         const bpf = linux.BPF;
         std.debug.assert(rules.len > 0 and rules.len <= rules_max);
-        const little = comptime @import("builtin").cpu.arch.endian() == .little;
+        const little = comptime @import("builtin").target.cpu.arch.endian() == .little;
         const descriptor: u32 = @offsetOf(linux.SECCOMP.data, "arg0") + if (little) 0 else 4;
         const flags: u32 = @offsetOf(linux.SECCOMP.data, "arg3") + if (little) 0 else 4;
         var length: usize = 5;
@@ -106,6 +106,6 @@ pub const SendFilter = struct {
 };
 
 test {
-    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
+    if (@import("builtin").target.os.tag != .linux) return error.SkipZigTest;
     _ = @import("linux_test_support_test.zig");
 }

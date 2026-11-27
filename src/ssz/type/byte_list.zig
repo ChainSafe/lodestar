@@ -31,7 +31,7 @@ pub fn ByteListType(comptime _limit: comptime_int) type {
         pub const TreeView: type = ListBasicTreeView(@This());
         pub const min_size: usize = 0;
         pub const max_size: usize = Element.fixed_size * limit;
-        pub const max_chunk_count: usize = std.math.divCeil(usize, max_size, 32) catch unreachable;
+        pub const max_chunk_count: usize = @divCeil(@as(usize, max_size), 32);
         pub const chunk_depth: Depth = maxChunksToDepth(max_chunk_count);
         const GenericList = @import("list.zig").FixedListType(Element, limit, .{});
 

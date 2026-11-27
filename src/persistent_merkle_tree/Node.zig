@@ -1485,7 +1485,7 @@ pub const Id = enum(u32) {
     /// Pool's ZeroHash sentinels live at Node.Id `0..max_depth-1`. `depthi`
     /// tops out at `depth-1`, so the largest sentinel index used is
     /// `depth-1 + leaf_offset`; `depth + leaf_offset <= max_depth` keeps every
-    /// `@enumFromInt(zero_depth)` within that range.
+    /// `@fromBackingInt(zero_depth)` within that range.
     pub fn truncateAfterIndexWithLeafOffset(root_node: Id, pool: *Pool, depth: Depth, index: usize, leaf_offset: Depth) Error!Id {
         std.debug.assert(@as(usize, depth) + @as(usize, leaf_offset) <= max_depth);
         if (depth == 0) {
@@ -1942,7 +1942,7 @@ pub const SubtreeBuilder = struct {
 
     /// Initialize a builder where each appended Id is a depth-`leaf_offset`
     /// subtree (e.g. a chunked_leaf Id is a depth-`ChunkedLeaf.k_log2` subtree of K chunks).
-    /// Zero fillers in `finish()` use `@enumFromInt(level + leaf_offset)`
+    /// Zero fillers in `finish()` use `@fromBackingInt(level + leaf_offset)`
     /// so the resulting tree's root is correct under standard SSZ
     /// merkleization at absolute depth `depth + leaf_offset`.
     pub fn initWithOffset(pool: *Pool, depth: Depth, leaf_offset: Depth) SubtreeBuilder {

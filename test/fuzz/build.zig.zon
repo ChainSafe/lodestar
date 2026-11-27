@@ -11,12 +11,12 @@
         .lodestar_z = .{ .path = "../../" },
         .afl = .{ .path = "../../pkg/afl++" },
         .snappy = .{
-            .url = "git+https://github.com/ChainSafe/snappy.zig#a0516e5a715492c8c82f3b27bc70adc807ea8018",
-            .hash = "snappy-0.1.0-n4Aaquw5AADrjJWb_eG50h4Ltp1vMaCdsLYKZaxln9di",
+            .url = "git+https://github.com/ChainSafe/snappy.zig.git#c99e69b21408301fbd96bd0021df1769426cbad5",
+            .hash = "snappy-0.1.0-n4Aaqh87AACs8DOky8JoMfhha-vHr23O6Dj98BYFH3OS",
         },
         .hashtree = .{
-            .url = "git+https://github.com/ChainSafe/hashtree-z.git#ca91fa19bc3e4b7a3935a5c4e0be98f66cf20c55",
-            .hash = "hashtree-0.1.0-sBOoviUXAAAcTlzwp7I6WCi5uZMVMRKpkGZITB5pao-w",
+            .url = "git+https://github.com/ChainSafe/hashtree-z.git#4cd425a568033ef47f38842e7c36cc0d1ceadc59",
+            .hash = "hashtree-0.1.0-sBOovlgYAAAdfP42btHEsOZqwTx_YHiEu-z27lK55IDO",
         },
     },
     .paths = .{ "build.zig", "build.zig.zon", "src", "tools" },

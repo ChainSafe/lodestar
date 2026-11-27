@@ -29,7 +29,7 @@ pub fn ByteVectorType(comptime _length: comptime_int) type {
         pub const Type: type = [length]Element.Type;
         pub const TreeView: type = ArrayBasicTreeView(@This());
         pub const fixed_size: usize = Element.fixed_size * length;
-        pub const chunk_count: usize = std.math.divCeil(usize, fixed_size, 32) catch unreachable;
+        pub const chunk_count: usize = @divCeil(@as(usize, fixed_size), 32);
         pub const chunk_depth: Depth = maxChunksToDepth(chunk_count);
 
         pub const default_value: Type = @as([length]Element.Type, @splat(Element.default_value));

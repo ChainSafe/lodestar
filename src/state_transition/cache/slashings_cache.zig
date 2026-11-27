@@ -1,6 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const DynamicBitSet = std.DynamicBitSet;
+const DynamicBitSet = std.bit_set.Dynamic;
 const types = @import("consensus_types");
 const Slot = types.primitive.Slot.Type;
 const ValidatorIndex = types.primitive.ValidatorIndex.Type;
@@ -8,11 +8,13 @@ const Validator = types.phase0.Validator.Type;
 
 /// Cache of slashed validator indices with an initialization slot.
 pub const SlashingsCache = struct {
+    allocator: Allocator,
     latest_block_slot: ?Slot,
     slashed_validators: DynamicBitSet,
 
     pub fn initEmpty(allocator: Allocator) !SlashingsCache {
         return .{
+            .allocator = allocator,
             .latest_block_slot = null,
             .slashed_validators = try DynamicBitSet.initEmpty(allocator, 0),
         };
@@ -24,7 +26,7 @@ pub const SlashingsCache = struct {
         validators: []const *const Validator,
     ) !SlashingsCache {
         var slashed_validators = try DynamicBitSet.initEmpty(allocator, validators.len);
-        errdefer slashed_validators.deinit();
+        errdefer slashed_validators.deinit(allocator);
         for (validators, 0..) |validator, i| {
             if (validator.slashed) {
                 slashed_validators.set(i);
@@ -32,6 +34,7 @@ pub const SlashingsCache = struct {
         }
 
         return .{
+            .allocator = allocator,
             .latest_block_slot = latest_block_slot,
             .slashed_validators = slashed_validators,
         };
@@ -39,16 +42,17 @@ pub const SlashingsCache = struct {
 
     pub fn clone(self: *const SlashingsCache, allocator: Allocator) !SlashingsCache {
         var slashed_validators = try self.slashed_validators.clone(allocator);
-        errdefer slashed_validators.deinit();
+        errdefer slashed_validators.deinit(allocator);
 
         return .{
+            .allocator = allocator,
             .latest_block_slot = self.latest_block_slot,
             .slashed_validators = slashed_validators,
         };
     }
 
     pub fn deinit(self: *SlashingsCache) void {
-        self.slashed_validators.deinit();
+        self.slashed_validators.deinit(self.allocator);
         self.* = undefined;
     }
 
@@ -65,7 +69,7 @@ pub const SlashingsCache = struct {
         try self.checkInitialized(block_slot);
         const idx: usize = @intCast(validator_index);
         if (idx >= self.slashed_validators.capacity()) {
-            try self.slashed_validators.resize(idx + 1, false);
+            try self.slashed_validators.resize(self.allocator, idx + 1, false);
         }
         self.slashed_validators.set(idx);
     }

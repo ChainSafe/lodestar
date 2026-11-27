@@ -53,8 +53,8 @@ pub fn writeTest(
     test_case_name: []const u8,
 ) !void {
     const execute_call = switch (handler) {
-        .slots => std.fmt.allocPrint(std.heap.page_allocator, "try Sanity.SlotsTestCase(.{s}).execute(allocator, pool, test_dir);", .{@tagName(fork)}) catch unreachable,
-        .blocks => std.fmt.allocPrint(std.heap.page_allocator, "try Sanity.BlocksTestCase(.{s}).execute(allocator, pool, test_dir);", .{@tagName(fork)}) catch unreachable,
+        .slots => std.heap.page_allocator.print("try Sanity.SlotsTestCase(.{s}).execute(allocator, pool, test_dir);", .{@tagName(fork)}) catch unreachable,
+        .blocks => std.heap.page_allocator.print("try Sanity.BlocksTestCase(.{s}).execute(allocator, pool, test_dir);", .{@tagName(fork)}) catch unreachable,
     };
     defer std.heap.page_allocator.free(execute_call);
     try writer.print(test_template, .{

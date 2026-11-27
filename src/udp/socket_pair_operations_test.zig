@@ -383,7 +383,7 @@ test "UDP missing family and native cancellation retain the exact mixed prefix" 
     try std.testing.expectEqual(SocketPair.SendOutcome{ .sent = 1, .failure = error.AddressFamilyUnsupported }, sockets.sendMany(std.testing.io, &batch, 8, &scratch));
     var buffer: [8]u8 = undefined;
     try std.testing.expectEqualStrings("first", (try sockets.receiveDatagram(std.testing.io, &buffer, oneSecond())).bytes);
-    if (@import("builtin").os.tag != .linux and @import("builtin").os.tag != .macos) return;
+    if (@import("builtin").target.os.tag != .linux and @import("builtin").target.os.tag != .macos) return;
     var dual = try SocketPair.bind(std.testing.io, .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } });
     defer dual.close(std.testing.io);
     const Cancel = struct {

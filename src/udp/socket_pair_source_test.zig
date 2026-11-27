@@ -5,7 +5,7 @@ const Address = @import("address.zig").Address;
 const net = std.Io.net;
 const waitForDatagram = @import("socket_test_support").waitForDatagram;
 const io = std.testing.io;
-const os = @import("builtin").os.tag;
+const os = @import("builtin").target.os.tag;
 const payload_max = 1_200;
 
 const wildcards: SocketPair.Bindings = .{ .dual = .{ .ip4 = .unspecified(0), .ip6 = .unspecified(0) } };

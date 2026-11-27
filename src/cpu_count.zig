@@ -47,7 +47,7 @@ pub fn getNumCpus(gpa: Allocator, io: Io) !usize {
 /// unopenable cgroup dir) or malformed content — so a *readable* quota is never
 /// silently masked.
 fn cgroupsNumCpus(gpa: Allocator, io: Io) !?usize {
-    if (builtin.os.tag != .linux) return null;
+    if (builtin.target.os.tag != .linux) return null;
 
     const cwd = Io.Dir.cwd();
 

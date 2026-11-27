@@ -39,7 +39,7 @@ pub fn ContainerTreeView(comptime ST: type) type {
         /// a tuple of either Optional(Value) for basic type or Optional(ChildTreeView) for composite type
         child_data: TreeViewData,
         /// whether the corresponding child node/data has changed since the last update of the root
-        changed: std.StaticBitSet(ST.fields.len),
+        changed: std.bit_set.Static(ST.fields.len),
         original_nodes: [ST.fields.len]?Node.Id,
         /// View-owned backing for `getFieldRoot` snapshots of dirty basic fields.
         field_root_cache: [ST.fields.len][32]u8,
@@ -57,7 +57,7 @@ pub fn ContainerTreeView(comptime ST: type) type {
                 .child_data = empty_child_data,
                 .original_nodes = @splat(null),
                 .root = root,
-                .changed = std.StaticBitSet(ST.fields.len).empty,
+                .changed = std.bit_set.Static(ST.fields.len).empty,
                 .field_root_cache = undefined,
             };
             try pool.ref(root);
@@ -91,7 +91,7 @@ pub fn ContainerTreeView(comptime ST: type) type {
             // clear self's caches
             self.child_data = empty_child_data;
             self.original_nodes = @splat(null);
-            self.changed = std.StaticBitSet(ST.fields.len).empty;
+            self.changed = std.bit_set.Static(ST.fields.len).empty;
 
             return ptr;
         }
@@ -115,7 +115,7 @@ pub fn ContainerTreeView(comptime ST: type) type {
                 // these nodes are unref by root
                 self.original_nodes[i] = null;
             }
-            self.changed = std.StaticBitSet(ST.fields.len).empty;
+            self.changed = std.bit_set.Static(ST.fields.len).empty;
         }
 
         pub fn commit(self: *Self) !void {
@@ -163,7 +163,7 @@ pub fn ContainerTreeView(comptime ST: type) type {
             }
 
             if (changed_idx == 0) {
-                self.changed = std.StaticBitSet(ST.fields.len).empty;
+                self.changed = std.bit_set.Static(ST.fields.len).empty;
                 return;
             }
             const new_root = if (comptime ST.kind == .progressive_container) blk: {
@@ -209,7 +209,7 @@ pub fn ContainerTreeView(comptime ST: type) type {
             for (indices[0..changed_idx], nodes[0..changed_idx]) |index, node| {
                 self.original_nodes[index] = node;
             }
-            self.changed = std.StaticBitSet(ST.fields.len).empty;
+            self.changed = std.bit_set.Static(ST.fields.len).empty;
         }
 
         pub fn getRoot(self: *const Self) Node.Id {
@@ -494,7 +494,7 @@ pub fn StructContainerTreeView(comptime ST: type) type {
         /// Cached copy of the deserialized struct. Mutated in place by `set`.
         value: T,
         /// Bit per field; tracks whether `value` diverges from `root`.
-        changed: std.StaticBitSet(ST.chunk_count),
+        changed: std.bit_set.Static(ST.chunk_count),
         /// Stable backing store for `getFieldRoot` return pointers. The hash
         /// is computed in place here so we can return `*const [32]u8` without
         /// allocating a temporary PMT slot per call (which previously leaked).
@@ -513,7 +513,7 @@ pub fn StructContainerTreeView(comptime ST: type) type {
             ptr.allocator = allocator;
             ptr.pool = pool;
             ptr.root = root;
-            ptr.changed = std.StaticBitSet(ST.chunk_count).empty;
+            ptr.changed = std.bit_set.Static(ST.chunk_count).empty;
             ptr.field_root_cache = undefined;
             try pool.ref(root);
             return ptr;
@@ -531,7 +531,7 @@ pub fn StructContainerTreeView(comptime ST: type) type {
             ptr.allocator = self.allocator;
             ptr.pool = self.pool;
             ptr.root = self.root;
-            ptr.changed = std.StaticBitSet(ST.chunk_count).empty;
+            ptr.changed = std.bit_set.Static(ST.chunk_count).empty;
 
             if (opts.transfer_cache and self.changed.count() == 0) {
                 ptr.value = self.value;
@@ -540,7 +540,7 @@ pub fn StructContainerTreeView(comptime ST: type) type {
             }
             if (opts.transfer_cache and self.changed.count() != 0) {
                 self.value = ptr.value;
-                self.changed = std.StaticBitSet(ST.chunk_count).empty;
+                self.changed = std.bit_set.Static(ST.chunk_count).empty;
             }
 
             return ptr;
@@ -558,7 +558,7 @@ pub fn StructContainerTreeView(comptime ST: type) type {
             try self.pool.ref(new_root);
             self.pool.unref(self.root);
             self.root = new_root;
-            self.changed = std.StaticBitSet(ST.chunk_count).empty;
+            self.changed = std.bit_set.Static(ST.chunk_count).empty;
         }
 
         pub fn getRoot(self: *const Self) Node.Id {

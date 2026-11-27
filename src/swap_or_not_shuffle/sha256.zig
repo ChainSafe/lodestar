@@ -14,9 +14,9 @@ pub const digest_length = StdSha256.digest_length;
 
 /// The condition std's SHA-256 tests before compiling its hardware path. If the two drift apart,
 /// only speed changes: both branches of `hash` return the same digest.
-const std_uses_hardware = builtin.zig_backend != .stage2_c and switch (builtin.cpu.arch) {
-    .x86_64 => builtin.cpu.hasAll(.x86, &.{ .sha, .avx2 }),
-    .aarch64 => builtin.cpu.has(.aarch64, .sha2),
+const std_uses_hardware = builtin.zig_backend != .stage2_c and switch (builtin.target.cpu.arch) {
+    .x86_64 => builtin.target.cpu.hasAll(.x86, &.{ .sha, .avx2 }),
+    .aarch64 => builtin.target.cpu.has(.aarch64, .sha2),
     else => false,
 };
 
