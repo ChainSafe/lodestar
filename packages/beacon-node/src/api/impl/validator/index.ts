@@ -1219,7 +1219,11 @@ export function getValidatorApi(
       });
 
       const [engineResult, bidBlockResult] = await resolveOrRacePromises([enginePromise, bidBlockPromise], {
-        resolveTimeoutMs: cutoffMs,
+        // Preparing the parent state above took time, keep the cutoff relative to the slot start
+        resolveTimeoutMs: Math.max(
+          0,
+          config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS) - chain.clock.msFromSlot(slot)
+        ),
         raceTimeoutMs: config.getSlotDurationMs(fork),
         signal: controller.signal,
       });
