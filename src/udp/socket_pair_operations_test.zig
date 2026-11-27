@@ -110,6 +110,45 @@ test "UDP reuses the same scratch for a smaller batch with new payloads and dest
     try std.testing.expectEqualSlices(u8, &.{ 4, 5 }, recorder.payloads[0]);
 }
 
+test "UDP provider short successful sends preserve the prefix before cancellation" {
+    const Provider = struct {
+        accepted: usize = 0,
+        cancel_after: usize = 0,
+
+        fn send(context: ?*anyopaque, operation: std.Io.Operation) std.Io.Cancelable!std.Io.Operation.Result {
+            const self: *@This() = @ptrCast(@alignCast(context.?));
+            if (self.accepted == self.cancel_after) return error.Canceled;
+            const messages = operation.net_send.messages;
+            std.debug.assert(messages.len > 0);
+            std.debug.assert(messages[0].data_len == 1);
+            std.debug.assert(messages[0].data_ptr[0] == self.accepted);
+            self.accepted += 1;
+            return .{ .net_send = .{ null, 1 } };
+        }
+    };
+    var socket = try SocketPair.bind(std.testing.io, .{ .ip4 = .loopback(0) });
+    defer socket.close(std.testing.io);
+    var provider: Provider = .{};
+    var vtable = std.testing.io.vtable.*;
+    vtable.operate = Provider.send;
+    const io: std.Io = .{ .userdata = &provider, .vtable = &vtable };
+    const destination = socket.localAddress();
+    var payloads = [_]u8{ 0, 1, 2 };
+    const outgoing = [_]SocketPair.Outgoing{
+        .{ .to = destination, .bytes = payloads[0..1] },
+        .{ .to = destination, .bytes = payloads[1..2] },
+        .{ .to = destination, .bytes = payloads[2..3] },
+    };
+    var scratch: SocketPair.BatchScratch = undefined;
+    for (0..outgoing.len + 1) |prefix| {
+        provider = .{ .cancel_after = prefix };
+        const result = socket.sendMany(io, &outgoing, payload_max, &scratch);
+        try std.testing.expectEqual(prefix, result.sent);
+        try std.testing.expectEqual(prefix, provider.accepted);
+        try std.testing.expectEqual(if (prefix < outgoing.len) @as(?SocketPair.SendError, error.Canceled) else null, result.failure);
+    }
+}
+
 test "dual-stack UDP sends an ordered mixed batch and receives both datagram families" {
     var buffer: [payload_max]u8 = undefined;
     var target = try SocketPair.bind(std.testing.io, .{ .dual = .{ .ip4 = .loopback(0), .ip6 = .loopback(0) } });

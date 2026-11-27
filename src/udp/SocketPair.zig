@@ -456,7 +456,8 @@ pub fn sendMany(self: *const SocketPair, io: std.Io, messages: []const Outgoing,
             break :blk native_io.sendMany(io, socket.handle, run, &scratch.native);
         } else sendProvider(io, socket.handle, run, scratch);
         assert(outcome.sent <= run.len);
-        assert((outcome.failure == null) == (outcome.sent == run.len));
+        // Io may return a successful prefix while deferring cancellation to the next operation.
+        assert(outcome.failure != null or outcome.sent > 0);
         begin += outcome.sent;
         if (outcome.failure) |err| return .{ .sent = begin, .failure = err };
     }
