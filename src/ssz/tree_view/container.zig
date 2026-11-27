@@ -511,6 +511,7 @@ pub fn StructContainerTreeView(comptime ST: type) type {
             ptr.changed = std.StaticBitSet(ST.chunk_count).empty;
             ptr.field_root_cache = undefined;
             try pool.ref(root);
+            pool.struct_container_tree_views.add(@sizeOf(Self));
             return ptr;
         }
 
@@ -538,11 +539,13 @@ pub fn StructContainerTreeView(comptime ST: type) type {
                 self.changed = std.StaticBitSet(ST.chunk_count).empty;
             }
 
+            self.pool.struct_container_tree_views.add(@sizeOf(Self));
             return ptr;
         }
 
         pub fn deinit(self: *Self) void {
             self.pool.unref(self.root);
+            self.pool.struct_container_tree_views.remove(@sizeOf(Self));
             self.allocator.destroy(self);
         }
 
