@@ -124,11 +124,11 @@ describe("cmds / beacon / args handler", () => {
     expect(options.network.advertiseVersion).toBe(true);
   });
 
-  it("uses the native state transition by default", async () => {
+  it("uses the JS state transition by default", async () => {
     const defaultResult = await runBeaconHandlerInit({});
-    expect(defaultResult.options.chain.nativeStateTransition).toBe(true);
-    const optOut = await runBeaconHandlerInit({"chain.nativeStateTransition": false});
-    expect(optOut.options.chain.nativeStateTransition).toBe(false);
+    expect(defaultResult.options.chain.nativeStateTransition).toBe(false);
+    const optIn = await runBeaconHandlerInit({"chain.nativeStateTransition": true});
+    expect(optIn.options.chain.nativeStateTransition).toBe(true);
   });
 
   it("resolves the data column directory independently of the database directory", async () => {

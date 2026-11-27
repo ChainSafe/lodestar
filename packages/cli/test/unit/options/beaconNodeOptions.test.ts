@@ -195,7 +195,7 @@ describe("options / beaconNodeOptions", () => {
         archiveMode: ArchiveMode.Frequency,
         graffitiAppend: false,
         nHistoricalStatesFileDataStore: true,
-        nativeStateTransition: true,
+        nativeStateTransition: false,
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
         maxCPStateEpochsOnDisk: 1000,
