@@ -156,6 +156,7 @@ describe("network / peers / PeerManager", () => {
     async ({action, actionCount, reason}) => {
       const discovery = {
         discoverPeers: vi.fn<PeerDiscovery["discoverPeers"]>(),
+        getDiscoveredEnr: vi.fn<PeerDiscovery["getDiscoveredEnr"]>(),
         stop: vi.fn<PeerDiscovery["stop"]>(),
       };
       const {libp2p, reqResp, peerManager, gossip, mockSubnetsService} = await mockModules({

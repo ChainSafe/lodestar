@@ -496,7 +496,7 @@ export class NetworkCore implements INetworkCore {
         (peerData.status as fulu.Status).earliestAvailableSlot ?? 0;
     }
     return {
-      ...formatNodePeer(peerIdStr, connections),
+      ...formatNodePeer(peerIdStr, connections, peerData?.enr?.txt),
       agentVersion: peerData?.agentVersion ?? "NA",
       status: peerData?.status ? sszTypesFor(fork).Status.toJson(peerData.status) : null,
       metadata: peerData?.metadata ? sszTypesFor(fork).Metadata.toJson(peerData.metadata) : null,
@@ -509,7 +509,8 @@ export class NetworkCore implements INetworkCore {
 
   async dumpPeer(peerIdStr: string): Promise<routes.lodestar.LodestarNodePeer | undefined> {
     const connections = this.getConnectionsByPeer().get(peerIdStr);
-    return connections ? this._dumpPeer(peerIdStr, connections) : undefined;
+    if (!connections) return undefined;
+    return this._dumpPeer(peerIdStr, connections);
   }
 
   async dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]> {

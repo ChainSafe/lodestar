@@ -1,7 +1,8 @@
-import {generateKeyPair} from "@libp2p/crypto/keys";
+import {EventEmitter} from "node:events";
+import {generateKeyPair, privateKeyFromRaw} from "@libp2p/crypto/keys";
 import {multiaddr} from "@multiformats/multiaddr";
-import {describe, expect, it} from "vitest";
-import {SignableENR} from "@chainsafe/enr";
+import {describe, expect, it, vi} from "vitest";
+import {type ENR, SignableENR} from "@chainsafe/enr";
 import {config} from "@lodestar/config/default";
 import type {LoggerNode} from "@lodestar/logger/node";
 import type {Discv5Worker} from "../../../../src/network/discv5/index.js";
@@ -13,6 +14,7 @@ import {
   type PeerDiscoveryModules,
   type PeerDiscoveryOpts,
 } from "../../../../src/network/peers/discover.js";
+import {PeersData} from "../../../../src/network/peers/peersData.js";
 import {type IPeerRpcScoreStore, ScoreState} from "../../../../src/network/peers/score/index.js";
 import type {IClock} from "../../../../src/util/clock.js";
 import {peerIdFromString} from "../../../../src/util/peerId.js";
@@ -25,6 +27,74 @@ describe("network / peers / discover", () => {
     const peerIdStr = peerId.toString();
     const peerFromHex = peerIdFromString(peerIdStr);
     expect(peerFromHex.toString()).toBe(peerIdStr);
+  });
+
+  it.each([true, false])("handles ENRs that fail to encode (transport: %s)", async (hasTransport) => {
+    const logger = getMockedLogger();
+    const keyBytes = new Uint8Array(32);
+    keyBytes[31] = 1;
+    const privateKey = privateKeyFromRaw(keyBytes);
+    const signableEnr = SignableENR.createFromPrivateKey(privateKey);
+    const address = multiaddr("/ip4/127.0.0.1/tcp/9000");
+    if (hasTransport) signableEnr.setLocationMultiaddr(address);
+    const enr = signableEnr.toENR();
+    const error = new Error("invalid ENR");
+    const encode = vi.spyOn(enr, "encodeTxt").mockImplementation(() => {
+      throw error;
+    });
+    const merge = vi.fn().mockResolvedValue({addresses: [{multiaddr: address}]});
+    const dial = vi.fn().mockResolvedValue(undefined);
+    const libp2p = {
+      addEventListener: () => {},
+      peerStore: {merge},
+      dial,
+      services: {
+        components: {
+          transportManager: {getTransports: () => [{[Symbol.toStringTag]: "@libp2p/tcp"}]},
+          connectionManager: {getConnectionsMap: () => ({map: new Map()}), getDialQueue: () => []},
+        },
+      },
+    } as unknown as Libp2p;
+    const discv5 = new EventEmitter();
+    const discovery = new PeerDiscovery(
+      {
+        privateKey,
+        networkConfig: {config} as unknown as NetworkConfig,
+        libp2p,
+        clock: {currentSlot: 0, genesisTime: 0} as unknown as IClock,
+        peerRpcScores: {
+          getScoreState: () => ScoreState.Healthy,
+          isCoolingDown: () => false,
+        } as unknown as IPeerRpcScoreStore,
+        peersData: new PeersData(),
+        metrics: null,
+        logger: logger as unknown as LoggerNode,
+      },
+      {
+        maxPeers: 50,
+        discv5FirstQueryDelayMs: 0,
+        discv5: {bootEnrs: []} as unknown as LodestarDiscv5Opts,
+      },
+      discv5 as unknown as Discv5Worker
+    );
+    const onDiscovered = discv5.listeners("discovered")[0] as (enr: ENR) => Promise<void>;
+
+    await expect(onDiscovered(enr)).resolves.toBeUndefined();
+
+    expect(discovery.getDiscoveredEnr(enr.peerId.toString())).toBeUndefined();
+    expect(encode).toHaveBeenCalledOnce();
+    expect(logger.debug).toHaveBeenCalledWith("Could not encode peer ENR", {}, error);
+    if (hasTransport) {
+      discovery.discoverPeers(1, new Map());
+      await Promise.resolve();
+      expect(merge).toHaveBeenCalledWith(enr.peerId, {multiaddrs: [address]});
+      expect(dial).toHaveBeenCalledWith(enr.peerId);
+    } else {
+      expect(logger.warn).toHaveBeenCalledWith("Discv5 worker sent enr without any transport multiaddr", {
+        enr: undefined,
+      });
+      expect(dial).not.toHaveBeenCalled();
+    }
   });
 
   // Regression test for https://github.com/ChainSafe/lodestar/pull/9560
@@ -61,10 +131,12 @@ describe("network / peers / discover", () => {
         getScoreState: () => ScoreState.Healthy,
         isCoolingDown: () => false,
       } as unknown as IPeerRpcScoreStore,
+      peersData: new PeersData(),
       metrics: null,
       logger: logger as unknown as LoggerNode,
     };
     const opts: PeerDiscoveryOpts = {
+      maxPeers: 50,
       discv5FirstQueryDelayMs: 0,
       discv5: {bootEnrs: [bootEnr]} as unknown as LodestarDiscv5Opts,
       connectToDiscv5Bootnodes: true,
