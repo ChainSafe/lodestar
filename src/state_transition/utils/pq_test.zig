@@ -31,17 +31,24 @@ test "deposit public keys" {
     try std.testing.expectEqualSlices(u8, &expected, &pq.computeDepositPubkey(&bls_pubkey));
 }
 
-test "VRF proof opens the leaf of its slot" {
+test "VRF proof reveals the secret that the leaf of its slot commits to" {
     const slot: u64 = 0b101;
     var proof: pq.VrfProof = undefined;
     for (&proof, 0..) |*node, i| node.* = @splat(@intCast(i));
-    var root = proof[0];
+    var leaf: [32]u8 = undefined;
+    std.crypto.hash.sha3.Keccak256.hash("VRF_LEAF" ++ proof[0] ++ [8]u8{ 0b101, 0, 0, 0, 0, 0, 0, 0 }, &leaf, .{});
+    var root = leaf;
     for (proof[1..], 0..) |sibling, depth| {
         const pair = if ((slot >> @intCast(depth)) & 1 == 1) sibling ++ root else root ++ sibling;
         std.crypto.hash.sha3.Keccak256.hash(&pair, &root, .{});
     }
     try std.testing.expect(pq.isValidVrfProof(&root, slot, &proof));
     try std.testing.expect(!pq.isValidVrfProof(&root, slot + 1, &proof));
+
+    // The leaf in place of the secret does not open it
+    var leaf_proof = proof;
+    leaf_proof[0] = leaf;
+    try std.testing.expect(!pq.isValidVrfProof(&root, slot, &leaf_proof));
 }
 
 test "an attestation proof of nothing is empty" {

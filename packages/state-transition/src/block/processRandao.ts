@@ -16,8 +16,8 @@ export function processRandao(state: CachedBeaconStateAllForks, block: BeaconBlo
   const {epochCtx, config} = state;
   const epoch = epochCtx.epoch;
 
-  // From pq the reveal is a leaf of the tree under the proposer's VRF root, which the proposer
-  // committed to before it knew the slot's randomness. Checking it is hashing, not a signature.
+  // From pq the reveal is a secret that a leaf of the tree under the proposer's VRF root commits to,
+  // which the proposer committed to before it knew the slot's randomness. Checking it is hashing, not a signature.
   if (config.getForkSeq(block.slot) === ForkSeq.pq) {
     const reveal = (block as BeaconBlock<ForkName.pq>).body.randaoReveal;
     const proposer = (state as CachedBeaconStatePq).validators.getReadonly(block.proposerIndex);
