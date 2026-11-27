@@ -7,6 +7,7 @@ import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
 import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/types.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
 import {ZERO_HASH} from "../../constants/constants.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
@@ -748,7 +749,12 @@ export class Batch {
 
   private routeProcessingFailure(err: Error, attempt: Attempt): void {
     const code = err instanceof BlockError || err instanceof PayloadError ? err.type.code : null;
-    const failedAttempt: FailedAttempt = {...attempt, peerAttributable: isPeerAttributableFailure(code)};
+    const peerAttributable =
+      isPeerAttributableFailure(code) &&
+      (!(err instanceof PayloadError) ||
+        (err.payloadInput.hasPayloadEnvelope() &&
+          err.payloadInput.getPayloadEnvelopeSource().source === PayloadEnvelopeInputSource.byRange));
+    const failedAttempt: FailedAttempt = {...attempt, peerAttributable};
 
     if (isExecutionEngineFailure(code)) {
       this.onExecutionEngineError(failedAttempt);
@@ -850,9 +856,6 @@ function isExecutionEngineFailure(code: BlockErrorCode | PayloadErrorCode | null
  */
 function isPeerAttributableFailure(code: BlockErrorCode | PayloadErrorCode | null): boolean {
   switch (code) {
-    // EL returned a definitive INVALID verdict on the payload
-    case BlockErrorCode.EXECUTION_ENGINE_INVALID:
-    case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
     // a block or envelope signature is invalid
     case BlockErrorCode.INVALID_SIGNATURE:
     case PayloadErrorCode.INVALID_SIGNATURE:

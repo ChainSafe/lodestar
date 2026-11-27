@@ -504,12 +504,15 @@ describe("getGossipHandlers", () => {
       execStatus: ExecutionPayloadStatus.INVALID,
       errorMessage: "invalid payload",
     },
-  ])("evicts the cached envelope and reports the peer when payload processing fails with $code", async (errorType) => {
-    const {removeInvalid, payloadInput, reportPeer, peerIdStr} = await runExecutionPayloadProcessingError(errorType);
+  ])(
+    "evicts the cached envelope without reporting the gossip peer when payload processing fails with $code",
+    async (errorType) => {
+      const {removeInvalid, payloadInput, reportPeer} = await runExecutionPayloadProcessingError(errorType);
 
-    expect(removeInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
-    expect(reportPeer).toHaveBeenCalledExactlyOnceWith(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
-  });
+      expect(removeInvalid).toHaveBeenCalledExactlyOnceWith(payloadInput);
+      expect(reportPeer).not.toHaveBeenCalled();
+    }
+  );
 
   it.each<PayloadErrorType>([
     {code: PayloadErrorCode.INVALID_SIGNATURE},
