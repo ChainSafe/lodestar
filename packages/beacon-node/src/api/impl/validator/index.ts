@@ -1050,6 +1050,12 @@ export function getValidatorApi(
         ? Promise.resolve()
         : sleep(Math.min(chain.builderApiClient.bidDeadline, cutoffMs));
 
+      let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
+      const getParentExecutionRequests = (): Promise<gloas.ExecutionRequests> => {
+        parentExecutionRequestsPromise ??= chain.getParentExecutionRequests(parentSlot, parentBlockRootHex);
+        return parentExecutionRequestsPromise;
+      };
+
       // Candidates are ranked by their boosted counted total payment, the p2p bid is governed
       // by the top-level factors and each builder API bid by its own entry. Ties prefer the
       // earliest received builder API bid, so the signed block can be routed back to its
@@ -1061,7 +1067,6 @@ export function getValidatorApi(
           Promise.race([builderApiBidsPromise, sleep(cutoffMs).then(() => null)]),
           bidDeadlinePromise,
         ]);
-        let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
 
         let p2pBid: PooledExecutionPayloadBid | null = circuitBreakerActive
           ? null
@@ -1090,10 +1095,7 @@ export function getValidatorApi(
                   parentBlockHash: bidParentBlockHash,
                   parentBlockRoot: parentBlockRootHex,
                   entry,
-                  getParentExecutionRequests: () => {
-                    parentExecutionRequestsPromise ??= chain.getParentExecutionRequests(parentSlot, parentBlockRootHex);
-                    return parentExecutionRequestsPromise;
-                  },
+                  getParentExecutionRequests,
                 });
                 return {
                   signedBid,
@@ -1156,7 +1158,7 @@ export function getValidatorApi(
       // (so both are guaranteed consistent). Only needed when building on FULL; empty parent has none.
       const parentExecutionRequests =
         isBuildingOnFull && isStatePostGloas(parentState)
-          ? await chain.getParentExecutionRequests(parentSlot, parentBlockRootHex)
+          ? await getParentExecutionRequests()
           : ssz.gloas.ExecutionRequests.defaultValue();
       // When building on EMPTY there is nothing to apply, so it stays the same view as parentState
       // (the availability bit for parentSlot stays false, which is correct).
