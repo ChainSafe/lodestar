@@ -28,6 +28,7 @@ overrides:
   sigstore: 4.0.0
 
 patchedDependencies:
+  '@chainsafe/zapi@4.5.0': 4ac2cca3d2326acf123aa7c912736ba77bb6d5f64ada79fafc30ff9405071427
   sigstore@4.0.0: 0d9fa39ff088202d74fca3bec0d7bc1c2822b4bddcab7cd31627235b21b52b32
 
 importers:
@@ -151,7 +152,7 @@ importers:
     dependencies:
       '@chainsafe/zapi':
         specifier: 4.5.0
-        version: 4.5.0
+        version: 4.5.0(patch_hash=4ac2cca3d2326acf123aa7c912736ba77bb6d5f64ada79fafc30ff9405071427)
     devDependencies:
       '@chainsafe/benchmark':
         specifier: 2.1.0
@@ -6594,7 +6595,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@chainsafe/zapi@4.5.0': {}
+  '@chainsafe/zapi@4.5.0(patch_hash=4ac2cca3d2326acf123aa7c912736ba77bb6d5f64ada79fafc30ff9405071427)': {}
 
   '@colors/colors@1.5.0': {}
 

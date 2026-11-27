@@ -46,4 +46,5 @@ overrides:
   sigstore: "4.0.0"
 
 patchedDependencies:
+  "@chainsafe/zapi@4.5.0": patches/@chainsafe__zapi@4.5.0.patch
   sigstore@4.0.0: patches/sigstore@4.0.0.patch
