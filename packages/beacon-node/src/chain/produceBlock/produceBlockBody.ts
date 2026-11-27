@@ -24,6 +24,7 @@ import {
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
   type IBeaconStateViewBellatrix,
+  type IBeaconStateViewGloas,
   computeEpochAtSlot,
   computeTimeAtSlot,
   getExpectedGasLimit,
@@ -287,11 +288,13 @@ export async function produceBlockBody<T extends BlockType>(
 
     // Get execution payload from EL
     let parentBlockHash: Bytes32;
-    const stateAfterParentPayload = parentStateWithPayload as IBeaconStateViewBellatrix;
-    // Spec: should_build_on_full(store, head, slot). `parentBlock` is the proposer's head
-    // (set by chain.getProposerHead(slot)). Returns false when the PTC majority signalled
-    // the blob data is not available or the payload was not timely, forcing a build on EMPTY (reorg).
-    const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock, blockSlot);
+    const stateAfterParentPayload = parentStateWithPayload as IBeaconStateViewGloas;
+    // Spec: should_build_on_full(store, head, slot), decided by the caller when applying the parent payload.
+    // Querying fork choice again could disagree with parentExecutionRequests if a late PTC vote flipped it.
+    const isBuildingOnFull = byteArrayEquals(
+      stateAfterParentPayload.latestBlockHash,
+      parentState.latestExecutionPayloadBid.blockHash
+    );
     if (isBuildingOnFull) {
       parentBlockHash = parentState.latestExecutionPayloadBid.blockHash;
     } else {
