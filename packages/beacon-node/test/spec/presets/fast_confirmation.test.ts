@@ -821,13 +821,5 @@ specTestIterator(
   {
     fast_confirmation: {type: RunnerType.default, fn: fastConfirmationTest({onlyPredefinedResponses: false})},
   },
-  {
-    ...defaultSkipOpts,
-    skippedTests: [
-      ...(defaultSkipOpts.skippedTests ?? []),
-      // v1.7.0-beta.4 vectors predate https://github.com/ethereum/consensus-specs/pull/5670, unskip on the next release
-      /^(altair|bellatrix|capella|deneb|electra|fulu|gloas|heze)\/fast_confirmation\/empty_slots\/pyspec_tests\/fcr_handles_multiple_consecutive_empty_slots$/,
-      /^(electra|fulu|gloas|heze)\/fast_confirmation\/is_one_confirmed\/pyspec_tests\/is_one_confirmed_(fails_recently_activated_validator_voting_in_empty_slot|passes_large_validator_voting_in_empty_slot|passes_with_empty_slot_and_attester_in_two_consecutive_slots_[12])$/,
-    ],
-  }
+  defaultSkipOpts
 );

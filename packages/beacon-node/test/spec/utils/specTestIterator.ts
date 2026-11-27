@@ -78,21 +78,12 @@ export const defaultSkipOpts: SkipOpts = {
     // All networks have already completed the merge, so this code path is no longer needed.
     /^bellatrix\/fork_choice\/on_merge_block\/.*/,
     /^.+\/light_client\/data_collection\/.*/,
-    // The gossip harness still lacks coverage for parent validation and voluntary-exit anchors.
-    /^.+\/networking\/gossip_beacon_block\/.*$/,
-    /^.+\/networking\/gossip_voluntary_exit\/.*$/,
-    // Deneb+ epoch-boundary attestations and Electra+ single attestations need harness updates.
-    /^(deneb|electra|fulu|gloas|heze)\/networking\/gossip_beacon_(attestation|aggregate_and_proof)\/.*$/,
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     /^heze\/fork_choice_compliance\/.*/,
-    // TODO GLOAS: unskip with the v1.7.0-beta.5 spec tests, the v1.7.0-beta.4 vectors predate
-    // upgrade_to_gloas unsetting the fork slot's payload availability (consensus-specs#5808)
-    /^gloas\/fork\/fork\/.*/,
-    /^gloas\/transition\/core\/.*/,
   ],
   skippedTests: [
     // deneb..electra fork_choice/on_block negative vectors whose only invalid property is the blob data.

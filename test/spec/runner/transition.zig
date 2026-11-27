@@ -22,9 +22,6 @@ pub fn Transition(comptime fork: ForkSeq) type {
         const Self = @This();
 
         pub fn execute(allocator: std.mem.Allocator, dir: std.Io.Dir) !void {
-            // TODO GLOAS: unskip with the v1.7.0-beta.5 spec tests, the v1.7.0-beta.4 vectors predate
-            // upgrade_to_gloas unsetting the fork slot's payload availability (consensus-specs#5808)
-            if (fork == .gloas) return error.SkipZigTest;
             const pool_size = if (active_preset == .mainnet) 10_000_000 else 1_000_000;
             const pool = try test_case.acquirePool(allocator, pool_size);
             defer test_case.releasePool();

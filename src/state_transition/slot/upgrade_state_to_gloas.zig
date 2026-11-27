@@ -107,9 +107,7 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
         const result = try lookup.getOrPutContext(allocator, deposit.pubkey, context);
         if (!result.found_existing) result.value_ptr.* = .{};
         const entry = result.value_ptr;
-        const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
-        const known_validator = try isValidatorKnown(.gloas, state, validator_index);
-        if (!known_validator) {
+        if (gloas.isBuilderWithdrawalCredential(&deposit.withdrawal_credentials)) {
             if (entry.builder_index) |builder_index| {
                 var builder: ct.gloas.Builder.Type = undefined;
                 try builders.getValue(undefined, builder_index, &builder);
@@ -118,7 +116,29 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
                 topups += 1;
                 continue;
             }
-            if (gloas.isBuilderWithdrawalCredential(&deposit.withdrawal_credentials)) {
+            if (try isValidCachedDeposit(
+                config,
+                epoch_cache.builder_deposit_signature_cache,
+                &deposit,
+                item.root,
+                &checks,
+            )) {
+                const builder = ct.gloas.Builder.Type{
+                    .pubkey = deposit.pubkey,
+                    .version = c.PAYLOAD_BUILDER_VERSION,
+                    .execution_address = deposit.withdrawal_credentials[12..32].*,
+                    .balance = deposit.amount,
+                    .deposit_epoch = computeEpochAtSlot(deposit.slot),
+                    .withdrawable_epoch = c.FAR_FUTURE_EPOCH,
+                };
+                const builder_index = try builders.length();
+                try builders.pushValue(&builder);
+                entry.builder_index = builder_index;
+                onboarded += 1;
+                continue;
+            }
+            const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
+            if (!try isValidatorKnown(.gloas, state, validator_index)) {
                 // Walk oldest first: a valid validator deposit suppresses all later
                 // signatures for this pubkey, matching the pre-verification scanner.
                 while (!entry.has_pending_validator and entry.unchecked_head != std.math.maxInt(usize)) {
@@ -137,28 +157,7 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
                     entry.has_pending_validator = true;
                 }
                 if (!entry.has_pending_validator) {
-                    if (!try isValidCachedDeposit(
-                        config,
-                        epoch_cache.builder_deposit_signature_cache,
-                        &deposit,
-                        item.root,
-                        &checks,
-                    )) {
-                        dropped += 1;
-                        continue;
-                    }
-                    const builder = ct.gloas.Builder.Type{
-                        .pubkey = deposit.pubkey,
-                        .version = c.PAYLOAD_BUILDER_VERSION,
-                        .execution_address = deposit.withdrawal_credentials[12..32].*,
-                        .balance = deposit.amount,
-                        .deposit_epoch = computeEpochAtSlot(deposit.slot),
-                        .withdrawable_epoch = c.FAR_FUTURE_EPOCH,
-                    };
-                    const builder_index = try builders.length();
-                    try builders.pushValue(&builder);
-                    entry.builder_index = builder_index;
-                    onboarded += 1;
+                    dropped += 1;
                     continue;
                 }
             }
