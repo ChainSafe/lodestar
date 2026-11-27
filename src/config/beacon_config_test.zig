@@ -28,7 +28,7 @@ test "Heze timing uses the fork-specific slot duration" {
     try std.testing.expectEqual(6000, config.getSlotDurationMs(.heze));
     try std.testing.expectEqual(3000, config.getAttestationDueMs(.gloas));
     try std.testing.expectEqual(1500, config.getAttestationDueMs(.heze));
-    try std.testing.expectEqual(4000, config.getInclusionListDueMs(.heze));
+    try std.testing.expectEqual(4500, config.getInclusionListDueMs(.heze));
     try std.testing.expectEqual(1000, config.getProposerReorgCutoffMs(.heze));
 }
 
