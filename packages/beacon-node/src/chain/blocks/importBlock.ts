@@ -1,4 +1,3 @@
-import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {
   ForkChoiceError,
@@ -39,6 +38,7 @@ import {
 } from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../../constants/index.js";
+import {countTrueBits, sliceBitArray} from "../../util/bitArray.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -654,18 +654,16 @@ export function addAttestationPostElectra(
       this.shufflingCache.getSync(attEpoch, state.getShufflingDecisionRoot(attEpoch)) ??
       state.getShufflingAtEpoch(attEpoch);
     const committees = getBeaconCommittees(shuffling, attSlot, committeeIndices);
-    const aggregationBools = attestation.aggregationBits.toBoolArray();
     let offset = 0;
     for (let i = 0; i < committees.length; i++) {
-      const committee = committees[i];
-      const aggregationBits = BitArray.fromBoolArray(aggregationBools.slice(offset, offset + committee.length));
-      const trueBitCount = aggregationBits.getTrueBitIndexes().length;
-      offset += committee.length;
+      const committeeSize = committees[i].length;
+      const aggregationBits = sliceBitArray(attestation.aggregationBits, offset, committeeSize);
+      offset += committeeSize;
       this.seenAggregatedAttestations.add(
         target.epoch,
         committeeIndices[i],
         attDataRoot,
-        {aggregationBits, trueBitCount},
+        {aggregationBits, trueBitCount: countTrueBits(aggregationBits)},
         true
       );
     }

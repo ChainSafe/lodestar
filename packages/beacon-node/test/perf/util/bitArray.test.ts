@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {BitArray} from "@chainsafe/ssz";
-import {intersectUint8Arrays} from "../../../src/util/bitArray.js";
+import {countTrueBits, intersectUint8Arrays, sliceBitArray} from "../../../src/util/bitArray.js";
 
 /**
  * 16_000 items: push then shift  - LinkedList is >200x faster than regular array
@@ -55,7 +55,42 @@ describe("BitArray.trueBitCount", () => {
         bitArray.getTrueBitIndexes().length;
       },
     });
+
+    bench({
+      id: `countTrueBits bitLen ${bitLen}`,
+      beforeEach: () => new BitArray(crypto.randomBytes(Math.ceil(bitLen / 8)), bitLen),
+      fn: (bitArray) => {
+        countTrueBits(bitArray);
+      },
+    });
   }
+});
+
+describe("Split aggregation bits by committee", () => {
+  const committeeCount = 64;
+  const committeeSize = 507;
+  const bitLen = committeeCount * committeeSize;
+  const aggregationBits = new BitArray(crypto.randomBytes(bitLen / 8), bitLen);
+
+  bench({
+    id: `sliceBitArray + countTrueBits ${committeeCount} committees of ${committeeSize}`,
+    fn: () => {
+      for (let i = 0; i < committeeCount; i++) {
+        countTrueBits(sliceBitArray(aggregationBits, i * committeeSize, committeeSize));
+      }
+    },
+  });
+
+  bench({
+    id: `boolean array slice + getTrueBitIndexes ${committeeCount} committees of ${committeeSize}`,
+    fn: () => {
+      const aggregationBools = aggregationBits.toBoolArray();
+      for (let i = 0; i < committeeCount; i++) {
+        const offset = i * committeeSize;
+        BitArray.fromBoolArray(aggregationBools.slice(offset, offset + committeeSize)).getTrueBitIndexes().length;
+      }
+    },
+  });
 });
 
 function linspace(start: number, end: number, step: number): number[] {
