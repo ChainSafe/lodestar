@@ -39,6 +39,8 @@ function setup(fork: ForkName.fulu | ForkName.gloas | ForkName.heze = ForkName.f
     parentBlock,
     randaoReveal: new Uint8Array(96).fill(2),
     graffiti: new Uint8Array(32).fill(3),
+    parentState: state,
+    parentStateWithPayload: state,
   };
   const {
     executionPayload: _executionPayload,
@@ -66,7 +68,7 @@ describe("supported proposal body fields", () => {
     for (const blockType of [BlockType.Full, BlockType.Blinded]) {
       it(`${fork} ${blockType} includes selected operations and the parent sync aggregate`, async () => {
         const {state, modules, chain, attrs, common, parentBlockRoot} = setup(fork);
-        const body = await produceCommonBlockBody.call(chain, blockType, state, attrs);
+        const body = await produceCommonBlockBody.call(chain, blockType, attrs);
         expect(body).toEqual({
           randaoReveal: attrs.randaoReveal,
           graffiti: attrs.graffiti,
@@ -102,7 +104,7 @@ describe("Fulu builder body", () => {
     context.modules.chain.executionBuilder.getHeader = vi.fn().mockResolvedValue(response);
     context.modules.chain.executionBuilder.getValidatorRegistration = vi.fn();
     const produce = () =>
-      produceBlockBody.call(context.chain, BlockType.Blinded, context.state, {
+      produceBlockBody.call(context.chain, BlockType.Blinded, {
         ...context.attrs,
         proposerIndex: 0,
         proposerPubKey: new Uint8Array(48),
@@ -150,7 +152,7 @@ describe("Fulu engine body", () => {
         blobsBundle: ssz.fulu.BlobsBundle.defaultValue(),
         executionRequests: ssz.electra.ExecutionRequests.defaultValue(),
       });
-      const result = await produceBlockBody.call(chain, BlockType.Full, state, {
+      const result = await produceBlockBody.call(chain, BlockType.Full, {
         ...attrs,
         feeRecipient: requested ? requestedRecipient : undefined,
         proposerIndex: 0,
@@ -253,13 +255,14 @@ describe("Gloas engine body", () => {
     ["cached", false, false, cachedRecipient],
   ] as const) {
     it(`uses the ${source} fee recipient for payload preparation`, async () => {
-      const {state, modules, chain, attrs, common} = setupGloas(pooled);
-      await produceBlockBody.call(chain, BlockType.Full, state, {
+      const {modules, chain, attrs, common} = setupGloas(pooled);
+      await produceBlockBody.call(chain, BlockType.Full, {
         ...attrs,
         feeRecipient: requested ? requestedRecipient : undefined,
         proposerIndex: 0,
         proposerPubKey: new Uint8Array(48),
         commonBlockBodyPromise: Promise.resolve(common),
+        parentExecutionRequests: ssz.gloas.ExecutionRequests.defaultValue(),
       });
       expect(modules.chain.executionEngine.notifyForkchoiceUpdate).toHaveBeenCalledExactlyOnceWith(
         ForkName.gloas,
@@ -288,12 +291,13 @@ describe("Gloas engine body", () => {
       );
       vi.advanceTimersByTime(100);
 
-      const producing = produceBlockBody.call(chain, BlockType.Full, state, {
+      const producing = produceBlockBody.call(chain, BlockType.Full, {
         ...attrs,
         feeRecipient: undefined,
         proposerIndex: 0,
         proposerPubKey: new Uint8Array(48),
         commonBlockBodyPromise: Promise.resolve(common),
+        parentExecutionRequests: ssz.gloas.ExecutionRequests.defaultValue(),
       });
       await vi.advanceTimersByTimeAsync(399);
       expect(modules.chain.executionEngine.getPayload).not.toHaveBeenCalled();

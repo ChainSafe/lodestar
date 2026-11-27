@@ -15,6 +15,7 @@ const state_cache = @import("../cache/state_cache.zig");
 const CachedBeaconState = state_cache.CachedBeaconState;
 const ProposerRewards = state_cache.ProposerRewards;
 const processAttestationsAltair = @import("../block/process_attestation_altair.zig").processAttestationsAltair;
+const processParentExecutionPayload = @import("../block/process_parent_execution_payload.zig").processParentExecutionPayload;
 const findAttesterSlashableIndices = @import("../utils/attestation.zig").findAttesterSlashableIndices;
 const findAttesterSlashableIndicesFromSlices = @import("../utils/attestation.zig").findAttesterSlashableIndicesFromSlices;
 
@@ -66,7 +67,7 @@ pub fn computeBlockRewards(
     const attestations = if (cached_rewards.attestations != 0)
         cached_rewards.attestations
     else
-        try computeAttestationsReward(fork, block_type, allocator, io, pre_state, body);
+        try computeAttestationsReward(fork, block_type, allocator, io, pre_state, block);
 
     const sync_aggregate = if (cached_rewards.sync_aggregate != 0)
         cached_rewards.sync_aggregate
@@ -105,7 +106,7 @@ fn computeAttestationsReward(
     allocator: Allocator,
     io: std.Io,
     pre_state: *CachedBeaconState,
-    body: *const fork_types.BeaconBlockBody(block_type, fork),
+    block: *const BeaconBlock(block_type, fork),
 ) !u64 {
     if (comptime !fork.gte(.altair)) return error.BlockAttestationRewardUnsupportedFork;
 
@@ -115,6 +116,22 @@ fn computeAttestationsReward(
         allocator.destroy(scratch);
     }
 
+    // The block applies the parent payload before its attestations, the head flag of an attestation that
+    // is not same-slot depends on the payload availability of the parent slot
+    if (comptime fork.gte(.gloas)) {
+        if (comptime block_type != .full) return error.InvalidBlockTypeForFork;
+        try processParentExecutionPayload(
+            fork,
+            allocator,
+            io,
+            scratch.config,
+            scratch.epoch_cache,
+            scratch.state.castToFork(fork),
+            block,
+        );
+    }
+
+    const body = block.body();
     try processAttestationsAltair(
         fork,
         allocator,

@@ -922,6 +922,8 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     const stateCopy = this.cachedState.clone(true) as CachedBeaconStateGloas;
 
     applyParentExecutionPayload(stateCopy, executionRequests);
+    // Getters such as executionPayloadAvailability read committed nodes
+    stateCopy.commit();
 
     const stateView = new BeaconStateView(stateCopy);
     if (!isStatePostGloas(stateView)) {

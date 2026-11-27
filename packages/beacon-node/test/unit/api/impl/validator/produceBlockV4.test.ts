@@ -2,6 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {BUILDER_INDEX_SELF_BUILD, ForkName, MAX_EXECUTION_PAYMENT} from "@lodestar/params";
+import {IBeaconStateView} from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {defer, fromHex, toRootHex} from "@lodestar/utils";
 import {EngineBlockSelectionReason, getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
@@ -75,6 +76,14 @@ describe("api/validator - produceBlockV4", () => {
     modules.chain.getProposerHead.mockReturnValue(parentBlock);
     modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(zeroProtoBlock);
     modules.chain.forkChoice.shouldBuildOnFull.mockReturnValue(true);
+    // produceBlockV4 fetches the production state once and applies the parent payload before delegating
+    // to the (mocked) chain.produceCommonBlockBody / chain.produceBlock
+    const parentState = {forkName: ForkName.gloas} as unknown as IBeaconStateView & {
+      withParentPayloadApplied: () => unknown;
+    };
+    parentState.withParentPayloadApplied = vi.fn().mockReturnValue(parentState);
+    modules.chain.regen.getBlockSlotState.mockResolvedValue(parentState);
+    modules.chain.getParentExecutionRequests.mockResolvedValue(ssz.gloas.ExecutionRequests.defaultValue());
     modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
       block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
       executionPayloadValue: 0n,

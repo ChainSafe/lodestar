@@ -177,6 +177,8 @@ function compareBidCandidates(a: BidCandidate, b: BidCandidate): number {
   return a.receivedMs - b.receivedMs;
 }
 
+type ParentStates = {parentState: IBeaconStateView; parentStateWithPayload: IBeaconStateView};
+
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: BlockContents<ForkPreGloas>;
   version: ForkPreGloas;
@@ -448,9 +450,11 @@ export function getValidatorApi(
     {
       commonBlockBodyPromise,
       parentBlock,
+      parentStatesPromise,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlock: ProtoBlock;
+      parentStatesPromise: Promise<ParentStates>;
     }
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
@@ -485,6 +489,7 @@ export function getValidatorApi(
         randaoReveal,
         graffiti,
         commonBlockBodyPromise,
+        ...(await parentStatesPromise),
       });
 
       metrics?.blockProductionSuccess.inc({source});
@@ -517,9 +522,11 @@ export function getValidatorApi(
       strictFeeRecipientCheck,
       commonBlockBodyPromise,
       parentBlock,
+      parentStatesPromise,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlock: ProtoBlock;
+      parentStatesPromise: Promise<ParentStates>;
     }
   ): Promise<ProduceBlockContentsRes & {shouldOverrideBuilder?: boolean}> {
     const version = config.getForkName(slot);
@@ -539,6 +546,7 @@ export function getValidatorApi(
         graffiti,
         feeRecipient,
         commonBlockBodyPromise,
+        ...(await parentStatesPromise),
       });
       if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
         const blockFeeRecipient = toHex((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);
@@ -634,6 +642,13 @@ export function getValidatorApi(
     notOnOutOfRangeData(parentBlockRoot);
     metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
+    // Fetch the production state once and thread it to all downstream production calls, not awaited so each
+    // block source includes it in its production time. Only reached for pre-gloas slots (produceBlockV3 rejects
+    // post-gloas forks), the execution payload is part of the parent block so its state already includes it
+    const parentStatesPromise: Promise<ParentStates> = chain.regen
+      .getBlockSlotState(parentBlock, slot, {dontTransferCache: true}, RegenCaller.produceBlock)
+      .then((parentState) => ({parentState, parentStateWithPayload: parentState}));
+
     const fork = config.getForkName(slot);
 
     const isBuilderEnabled =
@@ -676,6 +691,7 @@ export function getValidatorApi(
           strictFeeRecipientCheck: false,
           commonBlockBodyPromise,
           parentBlock,
+          parentStatesPromise,
         })
       : Promise.reject(new Error("Builder disabled"));
 
@@ -684,6 +700,7 @@ export function getValidatorApi(
       strictFeeRecipientCheck,
       commonBlockBodyPromise,
       parentBlock,
+      parentStatesPromise,
     }).then((engineBlock) => {
       // Once the engine returns a block, in the event of either:
       // - suspected builder censorship
@@ -719,28 +736,28 @@ export function getValidatorApi(
     });
 
     // Ensure builder and engine HTTP requests are sent before starting common block body production
-    // by deferring the call to next event loop iteration, allowing pending I/O operations like
-    // HTTP requests to be processed first and sent out early in slot.
-    callInNextEventLoop(() => {
-      logger.verbose("Producing common block body", loggerContext);
-      const commonBlockBodyStartedAt = Date.now();
+    // by deferring the call to next event loop iteration once the state is available, allowing pending
+    // I/O operations like HTTP requests to be processed first and sent out early in slot.
+    parentStatesPromise.then(
+      (parentStates) =>
+        callInNextEventLoop(() => {
+          logger.verbose("Producing common block body", loggerContext);
+          const commonBlockBodyStartedAt = Date.now();
 
-      chain
-        .produceCommonBlockBody({
-          slot,
-          parentBlock,
-          randaoReveal,
-          graffiti: graffitiBytes,
-        })
-        .then((commonBlockBody) => {
-          deferredCommonBlockBody.resolve(commonBlockBody);
-          logger.verbose("Produced common block body", {
-            ...loggerContext,
-            durationMs: Date.now() - commonBlockBodyStartedAt,
-          });
-        })
-        .catch(deferredCommonBlockBody.reject);
-    });
+          chain
+            .produceCommonBlockBody({slot, parentBlock, randaoReveal, graffiti: graffitiBytes, ...parentStates})
+            .then((commonBlockBody) => {
+              deferredCommonBlockBody.resolve(commonBlockBody);
+              logger.verbose("Produced common block body", {
+                ...loggerContext,
+                durationMs: Date.now() - commonBlockBodyStartedAt,
+              });
+            })
+            .catch(deferredCommonBlockBody.reject);
+        }),
+      // Both block sources fail on the state themselves and do not await the common block body
+      () => {}
+    );
 
     const [builder, engine] = await blockProductionRacePromise;
 
@@ -1008,19 +1025,23 @@ export function getValidatorApi(
         (!circuitBreakerActive &&
           chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex) !== null);
 
-      // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
-      // not delay the proposal when a builder bid block is available (and vice versa)
-      const cutoffMs = Math.max(
-        0,
-        config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS) - chain.clock.msFromSlot(slot)
-      );
+      // Cutoff time into the slot, ensures a slow local payload build does not delay the proposal when a
+      // builder bid block is available (and vice versa). Each timer waits for the time left until the cutoff
+      const cutoffMs = config.getSlotComponentDurationMs(fork, BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS);
+      const msToCutoff = (): number => Math.max(0, cutoffMs - chain.clock.msFromSlot(slot));
 
       // Give p2p bids the same time to bid up as granted to builder API bid requests via the advertised
       // deadline, the pool is read once the deadline passed and the bid requests settled. A late request
       // does not wait past the race cutoff, a pooled bid is still the fastest fallback if the local block fails
       const bidDeadlinePromise = circuitBreakerActive
         ? Promise.resolve()
-        : sleep(Math.min(chain.builderApiClient.bidDeadline, cutoffMs));
+        : sleep(Math.min(chain.builderApiClient.bidDeadline, msToCutoff()));
+
+      let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
+      const getParentExecutionRequests = (): Promise<gloas.ExecutionRequests> => {
+        parentExecutionRequestsPromise ??= chain.getParentExecutionRequests(parentSlot, parentBlockRootHex);
+        return parentExecutionRequestsPromise;
+      };
 
       // Candidates are ranked by their boosted counted total payment, the p2p bid is governed
       // by the top-level factors and each builder API bid by its own entry. Ties prefer the
@@ -1030,10 +1051,9 @@ export function getValidatorApi(
         // Past the race cutoff a pooled p2p bid is used right away rather than waiting for pending
         // builder API requests, the local block is selected at the cutoff anyway if it is ready
         let [builderApiBids] = await Promise.all([
-          Promise.race([builderApiBidsPromise, sleep(cutoffMs).then(() => null)]),
+          Promise.race([builderApiBidsPromise, sleep(msToCutoff()).then(() => null)]),
           bidDeadlinePromise,
         ]);
-        let parentExecutionRequestsPromise: Promise<gloas.ExecutionRequests> | null = null;
 
         let p2pBid: PooledExecutionPayloadBid | null = circuitBreakerActive
           ? null
@@ -1062,10 +1082,7 @@ export function getValidatorApi(
                   parentBlockHash: bidParentBlockHash,
                   parentBlockRoot: parentBlockRootHex,
                   entry,
-                  getParentExecutionRequests: () => {
-                    parentExecutionRequestsPromise ??= chain.getParentExecutionRequests(parentSlot, parentBlockRootHex);
-                    return parentExecutionRequestsPromise;
-                  },
+                  getParentExecutionRequests,
                 });
                 return {
                   signedBid,
@@ -1114,23 +1131,6 @@ export function getValidatorApi(
         return rankedCandidates[0];
       })();
 
-      const commonBlockBodyPromise = chain.produceCommonBlockBody({
-        slot,
-        parentBlock,
-        randaoReveal,
-        graffiti: graffitiBytes,
-      });
-
-      const baseAttrs = {
-        slot,
-        parentBlock,
-        randaoReveal,
-        graffiti: graffitiBytes,
-        feeRecipient,
-        strictFeeRecipientCheck,
-        commonBlockBodyPromise,
-      };
-
       metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
 
       const timed = <T>(source: ProducedBlockSource, fn: () => Promise<T>): Promise<T> => {
@@ -1138,11 +1138,59 @@ export function getValidatorApi(
         return fn().finally(() => t?.({source}));
       };
 
+      // Fetch the production state once and apply the parent execution payload once here, so all
+      // downstream consumers share a single state: the un-applied `parentState` (for `computeNewStateRoot`)
+      // and the applied `parentStateWithPayload` (for attestation scoring and execution-payload prep).
+      // Not awaited, the race below covers it and both blocks are produced from it
+      const baseAttrsPromise = (async () => {
+        const parentState = await chain.regen.getBlockSlotState(
+          parentBlock,
+          slot,
+          {dontTransferCache: true},
+          RegenCaller.produceBlock
+        );
+        // Fetch the parent's execution requests once here and thread them via blockAttributes: they are
+        // used both to apply the parent payload below and as the block's `parentExecutionRequests` field
+        // (so both are guaranteed consistent). Only needed when building on FULL; empty parent has none.
+        const parentExecutionRequests =
+          isBuildingOnFull && isStatePostGloas(parentState)
+            ? await getParentExecutionRequests()
+            : ssz.gloas.ExecutionRequests.defaultValue();
+        // When building on EMPTY there is nothing to apply, so it stays the same view as parentState
+        // (the availability bit for parentSlot stays false, which is correct).
+        const parentStateWithPayload =
+          isBuildingOnFull && isStatePostGloas(parentState)
+            ? parentState.withParentPayloadApplied(parentExecutionRequests)
+            : parentState;
+
+        const commonBlockBodyPromise = chain.produceCommonBlockBody({
+          slot,
+          parentBlock,
+          randaoReveal,
+          graffiti: graffitiBytes,
+          parentState,
+          parentStateWithPayload,
+        });
+
+        return {
+          slot,
+          parentBlock,
+          randaoReveal,
+          graffiti: graffitiBytes,
+          feeRecipient,
+          strictFeeRecipientCheck,
+          commonBlockBodyPromise,
+          parentState,
+          parentStateWithPayload,
+          parentExecutionRequests,
+        };
+      })();
+
       // use abort controller to stop waiting for the bid block if the engine block will be selected
       const controller = new AbortController();
 
-      const enginePromise: ReturnType<typeof chain.produceBlock> = timed(ProducedBlockSource.engine, () =>
-        chain.produceBlock(baseAttrs)
+      const enginePromise: ReturnType<typeof chain.produceBlock> = timed(ProducedBlockSource.engine, async () =>
+        chain.produceBlock(await baseAttrsPromise)
       ).then((engineBlock) => {
         // No need to wait for the bid block if the engine block will always be selected, either
         // due to suspected builder censorship, or because no builders are configured and the
@@ -1157,13 +1205,13 @@ export function getValidatorApi(
           throw new NoBidReceived();
         }
         metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
-        return timed(ProducedBlockSource.builder, () =>
-          chain.produceBlock({...baseAttrs, builderBid: candidate.signedBid})
+        return timed(ProducedBlockSource.builder, async () =>
+          chain.produceBlock({...(await baseAttrsPromise), builderBid: candidate.signedBid})
         );
       });
 
       const [engineResult, bidBlockResult] = await resolveOrRacePromises([enginePromise, bidBlockPromise], {
-        resolveTimeoutMs: cutoffMs,
+        resolveTimeoutMs: msToCutoff(),
         raceTimeoutMs: config.getSlotDurationMs(fork),
         signal: controller.signal,
       });
