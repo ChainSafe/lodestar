@@ -277,6 +277,58 @@ describe("Gloas Fork Choice", () => {
       );
       expect(protoArray.isDescendant("0x04", PayloadStatus.FULL, "0x05", PayloadStatus.PENDING)).toBe(false);
     });
+
+    it("compares payload status variants of the same root", () => {
+      const currentSlot = gloasForkSlot + 1;
+      const protoArray = ProtoArray.initialize(
+        createTestBlock(gloasForkSlot - 1, genesisRoot, "0x00"),
+        gloasForkSlot - 1
+      );
+      protoArray.onBlock(createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot), currentSlot, null);
+
+      const {PENDING, EMPTY, FULL} = PayloadStatus;
+      // ancestor status, descendant status, isDescendant
+      const assertions: [PayloadStatus, PayloadStatus, boolean][] = [
+        [PENDING, PENDING, true],
+        [PENDING, EMPTY, true],
+        [EMPTY, EMPTY, true],
+        [EMPTY, PENDING, false],
+        // The FULL variant does not exist before the payload is revealed
+        [PENDING, FULL, false],
+        [FULL, FULL, false],
+      ];
+      for (const [ancestorStatus, descendantStatus, isDescendant] of assertions) {
+        expect(protoArray.isDescendant("0x02", ancestorStatus, "0x02", descendantStatus)).toBeWithMessage(
+          isDescendant,
+          `ancestor=${ancestorStatus} descendant=${descendantStatus} before payload`
+        );
+      }
+
+      protoArray.onExecutionPayload(
+        "0x02",
+        currentSlot,
+        "0x02ff",
+        1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      const assertionsWithPayload: [PayloadStatus, PayloadStatus, boolean][] = [
+        [PENDING, FULL, true],
+        [FULL, FULL, true],
+        [FULL, PENDING, false],
+        [EMPTY, FULL, false],
+        [FULL, EMPTY, false],
+      ];
+      for (const [ancestorStatus, descendantStatus, isDescendant] of assertionsWithPayload) {
+        expect(protoArray.isDescendant("0x02", ancestorStatus, "0x02", descendantStatus)).toBeWithMessage(
+          isDescendant,
+          `ancestor=${ancestorStatus} descendant=${descendantStatus} after payload`
+        );
+      }
+    });
   });
 
   describe("Pre-Gloas (Fulu) behavior", () => {
