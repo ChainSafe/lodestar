@@ -76,8 +76,8 @@ export async function getBlockResponse(
 
 /**
  * Whether the payload of a finalized post-gloas block is orphaned. The archive keeps canonical payloads only, but
- * until the archiver migrates the block it is still in fork choice and the hot db may hold the payload of a variant
- * the canonical chain does not build on.
+ * while the block is in fork choice the hot db may still hold the payload of a variant the canonical chain does not
+ * build on. The finalized block stays in fork choice after it is archived.
  */
 export function isFinalizedPayloadOrphaned(chain: IBeaconChain, slot: Slot, blockRootHex: RootHex): boolean {
   if (!chain.forkChoice.hasBlockHexUnsafe(blockRootHex)) {
