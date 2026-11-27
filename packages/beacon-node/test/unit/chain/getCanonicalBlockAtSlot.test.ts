@@ -149,7 +149,7 @@ describe("BeaconChain getCanonicalBlockAtSlot", () => {
   it.each([
     ["hot db", "hotBlocks"],
     ["block input cache", "cachedBlocks"],
-  ] as const)("returns null for a skipped slot that fork choice assigns to an earlier block in the %s", async (_, source) => {
+  ] as const)("returns null for a skipped slot assigned to an earlier block in the %s", async (_, source) => {
     // Fork choice initialized from an unfinalized state puts the finalized block at its epoch start slot
     const {block, blockRoot} = generateBlock(finalizedSlot - 1);
     const {getCanonicalBlockAtSlot} = setup({
