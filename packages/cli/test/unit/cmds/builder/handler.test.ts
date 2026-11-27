@@ -53,6 +53,7 @@ describe("cmds / builder / args handler", () => {
       {option: "bidding.deadlineBps", value: 0},
       {option: "bidding.deadlineBps", value: 10_000},
       {option: "bidding.deadlineBps", value: 9500.5},
+      {option: "bidding.deadlineBps", value: chainConfig.PAYLOAD_ATTESTATION_DUE_BPS - 1},
       {option: "reveal.cutoffBps", value: 0},
       {option: "reveal.cutoffBps", value: 10_000},
       {option: "reveal.cutoffBps", value: Number.NaN},
@@ -73,6 +74,12 @@ describe("cmds / builder / args handler", () => {
     it("Should accept the default options", async () => {
       // Fails on the missing keystore, which is only loaded after the options are validated
       await expect(runBuilderHandler(validArgs)).rejects.not.toThrow(/^Invalid/);
+    });
+
+    it("Should accept a bid deadline at the payload attestation deadline", async () => {
+      await expect(
+        runBuilderHandler({...validArgs, "bidding.deadlineBps": chainConfig.PAYLOAD_ATTESTATION_DUE_BPS})
+      ).rejects.not.toThrow(/^Invalid/);
     });
   });
 });
