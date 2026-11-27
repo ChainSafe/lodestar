@@ -28,6 +28,7 @@ import {INetwork} from "../../network/index.js";
 import {CustodyConfig, getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult} from "../../util/wrapError.js";
+import {getRateLimitedUntilMs} from "./rateLimit.js";
 
 export type DownloadByRangeRequests = {
   blocksRequest?: phase0.BeaconBlocksByRangeRequest;
@@ -327,6 +328,8 @@ export async function downloadByRange({
       parentPayloadRequest,
     });
   } catch (err) {
+    // Rethrow rate limit errors as is, so range sync can back off from the peer instead of counting a failed download
+    if (getRateLimitedUntilMs(err) !== null) throw err;
     throw new DownloadByRangeError({
       code: DownloadByRangeErrorCode.REQ_RESP_ERROR,
       reason: (err as Error).message,

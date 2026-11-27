@@ -1,6 +1,8 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
+import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
@@ -14,16 +16,20 @@ import {
   CreateFromBidProps,
   PayloadEnvelopeInputSource,
 } from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {INetwork} from "../../../../src/network/index.js";
 import {
+  DownloadByRangeError,
   DownloadByRangeErrorCode,
   ParentPayload,
   ValidatedBlock,
   cacheByRangeResponses,
+  downloadByRange,
   getBlocksForDataValidation,
   validateBlockByRangeResponse,
   validateEnvelopesByRangeResponse,
   validateResponses,
 } from "../../../../src/sync/utils/downloadByRange.js";
+import {getRateLimitedUntilMs} from "../../../../src/sync/utils/rateLimit.js";
 import {generateChainOfBlockMaybeSidecars} from "../../../utils/blocksAndData.js";
 
 /**
@@ -382,6 +388,50 @@ describe("getBlocksForDataValidation", () => {
 //   it("should handle far future slot requests");
 // });
 // });
+
+describe("downloadByRange request errors", () => {
+  const blocksRequest = {startSlot: 64, count: 32, step: 1};
+
+  function networkRejectingWith(error: Error): INetwork {
+    return {sendBeaconBlocksByRange: () => Promise.reject(error)} as Partial<INetwork> as INetwork;
+  }
+
+  async function downloadError(error: Error): Promise<unknown> {
+    try {
+      await downloadByRange({
+        config,
+        network: networkRejectingWith(error),
+        logger: testLogger(),
+        peerIdStr: "peer",
+        blocksRequest,
+      });
+    } catch (e) {
+      return e;
+    }
+    throw new Error("downloadByRange did not throw");
+  }
+
+  it("keeps rate limit metadata when the peer rate limits us", async () => {
+    const rateLimitedUntilMs = Date.now() + 5_000;
+    const err = await downloadError(new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs}));
+    expect(getRateLimitedUntilMs(err)).toBe(rateLimitedUntilMs);
+  });
+
+  it("keeps rate limit metadata when we rate limit ourselves", async () => {
+    const rateLimitedUntilMs = Date.now() + 5_000;
+    const err = await downloadError(
+      new RequestError({code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED, rateLimitedUntilMs})
+    );
+    expect(getRateLimitedUntilMs(err)).toBe(rateLimitedUntilMs);
+  });
+
+  it("wraps other request errors as REQ_RESP_ERROR", async () => {
+    const err = await downloadError(new RequestError({code: RequestErrorCode.REQUEST_TIMEOUT}));
+    expect(err).toBeInstanceOf(DownloadByRangeError);
+    expect((err as DownloadByRangeError).type.code).toBe(DownloadByRangeErrorCode.REQ_RESP_ERROR);
+    expect(getRateLimitedUntilMs(err)).toBeNull();
+  });
+});
 
 describe("0-block epoch", () => {
   const blocksRequest = {startSlot: 64, count: 32, step: 1};
