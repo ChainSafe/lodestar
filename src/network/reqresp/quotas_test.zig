@@ -54,7 +54,7 @@ test "reqresp quotas preserve every protocol rate across chain configurations an
 test "reqresp light client quotas use chain slot durations across forks" {
     for ([_]*const config.BeaconConfig{ &config.mainnet.config, &config.minimal.config, &config.gnosis.config }) |base| {
         for ([_]u64{ 1, 1000, 5000, 6000, 12000, 24000, 86_400_000 }) |slot_ms| {
-            const chain = base.chain.merge(.{ .SLOT_DURATION_MS_HEZE = slot_ms });
+            const chain = base.chain.merge(.{ .SLOT_DURATION_MS = slot_ms });
             const beacon = config.BeaconConfig.init(chain, @splat(0));
             const policy = try request_policy.Config.fromBeaconConfig(&beacon);
             const limits = try Options.defaults(&policy, 8);
@@ -75,13 +75,10 @@ test "reqresp light client quotas use chain slot durations across forks" {
 }
 
 test "reqresp quota derivation rejects invalid slot durations" {
-    inline for (.{ "SLOT_DURATION_MS", "SLOT_DURATION_MS_HEZE" }) |field| {
-        for ([_]u64{ 0, 86_400_001, std.math.maxInt(u64) }) |duration| {
-            var chain = config.mainnet.chain_config;
-            @field(chain, field) = duration;
-            const beacon = config.BeaconConfig.init(chain, @splat(0));
-            try std.testing.expectError(error.InvalidPolicy, request_policy.Config.fromBeaconConfig(&beacon));
-        }
+    for ([_]u64{ 0, 86_400_001, std.math.maxInt(u64) }) |duration| {
+        const chain = config.mainnet.chain_config.merge(.{ .SLOT_DURATION_MS = duration });
+        const beacon = config.BeaconConfig.init(chain, @splat(0));
+        try std.testing.expectError(error.InvalidPolicy, request_policy.Config.fromBeaconConfig(&beacon));
     }
 }
 
