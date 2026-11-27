@@ -326,4 +326,5 @@ pub const Handler = struct {
 test {
     _ = @import("handler_options_test.zig");
     _ = @import("handler_protocols_test.zig");
+    _ = @import("handler_test.zig");
 }

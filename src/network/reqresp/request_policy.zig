@@ -195,3 +195,7 @@ fn offset(bytes: []const u8, at: usize) u32 {
     std.debug.assert(at <= bytes.len and bytes.len - at >= 4);
     return std.mem.readInt(u32, bytes[at..][0..4], .little);
 }
+
+test {
+    _ = @import("request_policy_test.zig");
+}
