@@ -196,7 +196,7 @@ pub fn computeBlockHash(
 /// EIP-7685 requests hash over the type-prefixed, non-empty request lists.
 ///
 /// The lists have fixed-size elements, so each one's SSZ serialization is
-/// already its `requests_data`, and the list's position is its request type.
+/// already its `requests_data`, and `requestType` gives its request type.
 fn computeRequestsHash(fork: ForkSeq, requests: []const u8) Error!Hash {
     const lists_len: usize = switch (fork) {
         .phase0, .altair, .bellatrix, .capella, .deneb => unreachable,
@@ -206,15 +206,15 @@ fn computeRequestsHash(fork: ForkSeq, requests: []const u8) Error!Hash {
     if (requests.len < fixed_bytes) return error.InvalidExecutionRequests;
 
     var outer = Sha256.init(.{});
-    for (0..lists_len) |request_type| {
-        const start = readU32(requests, request_type * 4);
-        const end = if (request_type + 1 < lists_len) readU32(requests, (request_type + 1) * 4) else requests.len;
-        if (request_type == 0 and start != fixed_bytes) return error.InvalidExecutionRequests;
+    for (0..lists_len) |position| {
+        const start = readU32(requests, position * 4);
+        const end = if (position + 1 < lists_len) readU32(requests, (position + 1) * 4) else requests.len;
+        if (position == 0 and start != fixed_bytes) return error.InvalidExecutionRequests;
         if (start > end or end > requests.len) return error.InvalidExecutionRequests;
         if (start == end) continue;
 
         var inner = Sha256.init(.{});
-        inner.update(&[_]u8{@intCast(request_type)});
+        inner.update(&[_]u8{requestType(fork, position)});
         inner.update(requests[start..end]);
         var digest: Hash = undefined;
         inner.final(&digest);
@@ -223,6 +223,17 @@ fn computeRequestsHash(fork: ForkSeq, requests: []const u8) Error!Hash {
     var requests_hash: Hash = undefined;
     outer.final(&requests_hash);
     return requests_hash;
+}
+
+/// A list's request type is its field index, which from pq skips the gaps that removed fields leave.
+fn requestType(fork: ForkSeq, position: usize) u8 {
+    return switch (fork) {
+        .phase0, .altair, .bellatrix, .capella, .deneb => unreachable,
+        inline else => |f| blk: {
+            const T = ForkTypes(f).ExecutionRequests;
+            break :blk @intCast(if (comptime @hasDecl(T, "field_indices")) T.field_indices[position] else position);
+        },
+    };
 }
 
 /// An SSZ list of byte lists with validated offsets and no empty element.
