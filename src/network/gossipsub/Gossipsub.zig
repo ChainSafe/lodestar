@@ -738,6 +738,7 @@ test {
     _ = @import("gossipsub_accounting_test.zig");
     _ = @import("gossipsub_deadlines_test.zig");
     _ = @import("gossipsub_flow_control_test.zig");
+    _ = @import("gossipsub_forwarding_test.zig");
     _ = @import("gossipsub_framing_test.zig");
     _ = @import("gossipsub_history_test.zig");
     _ = @import("gossipsub_policy_test.zig");
@@ -749,4 +750,5 @@ test {
     _ = @import("gossipsub_simulation_test.zig");
     _ = @import("gossipsub_test.zig");
     _ = @import("gossipsub_validation_test.zig");
+    _ = @import("gossipsub_work_budget_test.zig");
 }

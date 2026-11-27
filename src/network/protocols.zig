@@ -220,4 +220,5 @@ pub const Protocols = struct {
 test {
     _ = @import("protocols_test.zig");
     _ = @import("protocols_reqresp_test.zig");
+    _ = @import("protocols_gossipsub_test.zig");
 }

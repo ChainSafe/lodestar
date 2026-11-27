@@ -31,14 +31,24 @@
 //! Qualify names at domain boundaries. Protocol and JavaScript terminology keeps its
 //! domain meaning, including consensus slots and epochs and Promise settlement.
 
+pub const gossip_processor = @import("gossip_processor/root.zig");
 pub const index_list = @import("index_list.zig");
+pub const chain = @import("chain.zig");
+pub const application_policy = @import("application_policy.zig");
+pub const SlotClock = @import("slot_clock.zig").SlotClock;
+pub const application_state = @import("application_state.zig");
+pub const configuration = @import("configuration.zig");
+pub const metrics = @import("metrics/export.zig");
 pub const logging = @import("logging.zig");
 pub const stream_trace = @import("stream_trace.zig");
+pub const xray = @import("xray/probe.zig");
 pub const identify = @import("identify/root.zig");
 pub const capabilities = @import("capabilities.zig");
 pub const peer_manager = @import("peer_manager.zig");
 pub const PeerManager = peer_manager.PeerManager;
+pub const NetworkCore = @import("network_core.zig").NetworkCore;
 pub const transport_driver = @import("transport_driver.zig");
+pub const driver = @import("driver.zig");
 pub const Schedule = types.Schedule;
 pub const peers = @import("peers/root.zig");
 pub const advertisement = @import("advertisement.zig");
@@ -73,6 +83,9 @@ pub const Multiaddr = wire.multiaddr.Multiaddr;
 pub const KeyPair = wire.keys.KeyPair;
 
 test {
+    _ = xray;
+    _ = @import("chain.zig");
+    _ = gossip_processor;
     _ = peers;
     _ = local_state;
     _ = control_wire;
@@ -90,12 +103,18 @@ test {
     _ = @import("wait.zig");
     _ = Router;
     _ = Protocols;
+    _ = @import("network_core.zig");
+    _ = driver;
     _ = transport_driver;
     _ = @import("counting_allocator.zig");
     _ = @import("deadline_heap.zig");
     _ = index_list;
+    _ = configuration;
+    _ = application_policy;
+    _ = application_state;
     _ = @import("capabilities.zig");
     _ = identify;
+    _ = metrics;
     _ = logging;
     _ = @import("metrics/histogram.zig");
     _ = @import("reqresp/metrics.zig");
