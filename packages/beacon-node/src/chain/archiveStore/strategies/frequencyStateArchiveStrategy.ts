@@ -1,6 +1,6 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {IBeaconStateView, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
@@ -34,6 +34,7 @@ export enum FrequencyStateArchiveStep {
 export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
   constructor(
     private readonly regen: IStateRegenerator,
+    private readonly getHeadState: () => IBeaconStateView,
     private readonly db: IBeaconDb,
     private readonly logger: Logger,
     private readonly opts: StatesArchiveOpts,
@@ -117,8 +118,22 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
     }
     if (finalizedStateOrBytes instanceof Uint8Array) {
       const slot = getStateSlotFromBytes(finalizedStateOrBytes);
+      // The state root is not part of the bytes, the head state's state roots history has it
+      const headState = this.getHeadState();
+      const stateRoot =
+        slot < headState.slot && headState.slot - slot <= SLOTS_PER_HISTORICAL_ROOT
+          ? headState.getStateRootAtSlot(slot)
+          : null;
       timer = metrics?.processFinalizedCheckpoint.frequencyStateArchive.startTimer();
-      await this.db.stateArchive.putBinary(slot, finalizedStateOrBytes);
+      if (stateRoot === null) {
+        this.logger.warn("Archiving finalized state without root index, slot too far behind head", {
+          slot,
+          headSlot: headState.slot,
+        });
+        await this.db.stateArchive.putBinary(slot, finalizedStateOrBytes);
+      } else {
+        await this.db.stateArchive.putBinaryWithRoot(slot, finalizedStateOrBytes, stateRoot);
+      }
       timer?.({step: FrequencyStateArchiveStep.PersistState});
       this.logger.verbose("Archived finalized state bytes", {epoch: finalized.epoch, slot, root: rootHex});
     } else {
@@ -130,7 +145,11 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
         async (stateBytes) => {
           sszTimer?.();
           timer = metrics?.processFinalizedCheckpoint.frequencyStateArchive.startTimer();
-          await this.db.stateArchive.putBinary(finalizedStateOrBytes.slot, stateBytes);
+          await this.db.stateArchive.putBinaryWithRoot(
+            finalizedStateOrBytes.slot,
+            stateBytes,
+            finalizedStateOrBytes.hashTreeRoot()
+          );
           timer?.({step: FrequencyStateArchiveStep.PersistState});
         },
         this.bufferPool
