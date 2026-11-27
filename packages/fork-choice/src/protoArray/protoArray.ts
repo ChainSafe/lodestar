@@ -990,10 +990,6 @@ export class ProtoArray {
       return false;
     }
 
-    if (this.payloadInclusionListSatisfaction.get(blockRoot) === false) {
-      return false;
-    }
-
     // Condition 1: Payload is timely AND data is available
     if (this.isPayloadTimely(blockRoot) && this.isPayloadDataAvailable(blockRoot)) {
       return true;
@@ -1352,7 +1348,8 @@ export class ProtoArray {
    * Spec: gloas/fork-choice.md#new-get_payload_status_tiebreaker
    *
    * For PENDING nodes: always returns 0
-   * For EMPTY/FULL variants from slot n-1: implements tiebreaker logic based on should_extend_payload
+   * For EMPTY/FULL variants from slot n or n-1: implements tiebreaker logic based on
+   * is_payload_inclusion_list_satisfied and, for slot n-1, should_extend_payload
    * For older blocks: returns node.payloadStatus
    *
    * Note: pre-gloas logic won't reach here. Pre-Gloas blocks have different roots, so they are always resolved by the weight and root tiebreaker before reaching here.
@@ -1364,28 +1361,23 @@ export class ProtoArray {
       return node.payloadStatus;
     }
 
-    // For Gloas: check if from previous slot
-    if (node.slot + 1 !== currentSlot) {
-      // During the block's own slot a payload known to not satisfy the inclusion list
-      // constraints ranks below its EMPTY variant, as it will from the next slot on
-      if (
-        node.slot === currentSlot &&
-        node.payloadStatus === PayloadStatus.FULL &&
-        this.payloadInclusionListSatisfaction.get(node.blockRoot) === false
-      ) {
-        return PayloadStatus.PENDING;
-      }
+    const isCurrentSlot = node.slot === currentSlot;
+    const isPreviousSlot = node.slot + 1 === currentSlot;
+    if (!isCurrentSlot && !isPreviousSlot) {
       return node.payloadStatus;
     }
 
-    // For previous slot blocks in Gloas, decide between FULL and EMPTY
-    // based on should_extend_payload
+    // To decide on a payload from the current or previous slot, choose between FULL and EMPTY
     if (node.payloadStatus === PayloadStatus.EMPTY) {
       return PayloadStatus.EMPTY;
     }
-    // FULL - check should_extend_payload
-    const shouldExtend = this.shouldExtendPayload(node.blockRoot, proposerBoostRoot);
-    return shouldExtend ? PayloadStatus.FULL : PayloadStatus.PENDING;
+    if (!this.isPayloadInclusionListSatisfied(node.blockRoot)) {
+      return PayloadStatus.PENDING;
+    }
+    if (isCurrentSlot || this.shouldExtendPayload(node.blockRoot, proposerBoostRoot)) {
+      return PayloadStatus.FULL;
+    }
+    return PayloadStatus.PENDING;
   }
 
   /**
