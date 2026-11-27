@@ -106,6 +106,7 @@ pub fn TestCase(comptime fork: ForkSeq, comptime epoch_process_fn: EpochProcessi
 
             var epoch_transition_cache = try EpochTransitionCache.init(
                 allocator,
+                std.testing.io,
                 config,
                 epoch_cache,
                 state,
@@ -115,16 +116,16 @@ pub fn TestCase(comptime fork: ForkSeq, comptime epoch_process_fn: EpochProcessi
             const fork_state = state.castToFork(fork);
 
             switch (epoch_process_fn) {
-                .effective_balance_updates => _ = try state_transition.processEffectiveBalanceUpdates(fork, allocator, epoch_cache, fork_state, &epoch_transition_cache),
+                .effective_balance_updates => _ = try state_transition.processEffectiveBalanceUpdates(fork, allocator, std.testing.io, epoch_cache, fork_state, &epoch_transition_cache),
                 .eth1_data_reset => try state_transition.processEth1DataReset(fork, fork_state, &epoch_transition_cache),
                 .historical_roots_update => try state_transition.processHistoricalRootsUpdate(fork, fork_state, &epoch_transition_cache),
-                .inactivity_updates => try state_transition.processInactivityUpdates(fork, config, epoch_cache, fork_state, &epoch_transition_cache),
+                .inactivity_updates => try state_transition.processInactivityUpdates(fork, std.testing.io, config, epoch_cache, fork_state, &epoch_transition_cache),
                 .justification_and_finalization => try state_transition.processJustificationAndFinalization(fork, fork_state, &epoch_transition_cache),
                 .participation_flag_updates => try state_transition.processParticipationFlagUpdates(fork, fork_state),
                 .participation_record_updates => try state_transition.processParticipationRecordUpdates(fork, fork_state),
                 .randao_mixes_reset => try state_transition.processRandaoMixesReset(fork, fork_state, &epoch_transition_cache),
                 .registry_updates => try state_transition.processRegistryUpdates(fork, config, epoch_cache, fork_state, &epoch_transition_cache),
-                .rewards_and_penalties => try state_transition.processRewardsAndPenalties(fork, config, epoch_cache, fork_state, &epoch_transition_cache, null),
+                .rewards_and_penalties => try state_transition.processRewardsAndPenalties(fork, std.testing.io, config, epoch_cache, fork_state, &epoch_transition_cache, null),
                 .slashings => _ = try state_transition.processSlashings(fork, epoch_cache, fork_state, &epoch_transition_cache, true),
                 .slashings_reset => try state_transition.processSlashingsReset(fork, epoch_cache, fork_state, &epoch_transition_cache),
                 .sync_committee_updates => try state_transition.processSyncCommitteeUpdates(fork, allocator, std.testing.io, epoch_cache, fork_state),
@@ -132,11 +133,11 @@ pub fn TestCase(comptime fork: ForkSeq, comptime epoch_process_fn: EpochProcessi
                 .pending_deposits, .pending_deposits_churn => try state_transition.processPendingDeposits(fork, allocator, std.testing.io, config, epoch_cache, fork_state, &epoch_transition_cache),
                 .pending_consolidations => try state_transition.processPendingConsolidations(fork, epoch_cache, fork_state, &epoch_transition_cache),
                 .proposer_lookahead => {
-                    try state_transition.processProposerLookahead(fork, allocator, epoch_cache, fork_state, &epoch_transition_cache);
+                    try state_transition.processProposerLookahead(fork, allocator, std.testing.io, epoch_cache, fork_state, &epoch_transition_cache);
                 },
                 .builder_pending_payments => try state_transition.processBuilderPendingPayments(fork, allocator, fork_state, epoch_cache),
-                .ptc_window => try state_transition.processPtcWindow(fork, allocator, epoch_cache, fork_state, &epoch_transition_cache),
-                .aggregation_committee_window => try state_transition.processAggregationCommitteeWindow(fork, allocator, epoch_cache, fork_state, &epoch_transition_cache),
+                .ptc_window => try state_transition.processPtcWindow(fork, allocator, std.testing.io, epoch_cache, fork_state, &epoch_transition_cache),
+                .aggregation_committee_window => try state_transition.processAggregationCommitteeWindow(fork, allocator, std.testing.io, epoch_cache, fork_state, &epoch_transition_cache),
                 .preregistration_expiry => try state_transition.processPreregistrationExpiry(fork, allocator, fork_state),
             }
         }

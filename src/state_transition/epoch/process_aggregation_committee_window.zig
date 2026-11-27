@@ -88,6 +88,7 @@ pub fn computeAggregationCommitteesForEpoch(
 pub fn processAggregationCommitteeWindow(
     comptime f: ForkSeq,
     allocator: Allocator,
+    io: std.Io,
     epoch_cache: *const EpochCache,
     state: *BeaconState(f),
     cache: *EpochTransitionCache,
@@ -99,7 +100,7 @@ pub fn processAggregationCommitteeWindow(
     const shuffling = if (cache.next_shuffling) |shared| shared.get() else blk: {
         const indices = try allocator.dupe(u32, cache.next_shuffling_active_indices);
         errdefer allocator.free(indices);
-        owned_shuffling = try computeEpochShufflingForFork(fork, allocator, state, indices, next_epoch);
+        owned_shuffling = try computeEpochShufflingForFork(fork, allocator, io, state, indices, next_epoch);
         break :blk owned_shuffling.?;
     };
     var committees = try computeAggregationCommitteesForEpoch(allocator, state, shuffling, epoch_cache.getEffectiveBalanceIncrements().items);

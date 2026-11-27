@@ -76,7 +76,7 @@ pub fn isValidProof(root: js.Uint8Array, slot: js.Number, proof: js.Uint8Array) 
     if (root_slice.len != @sizeOf(vrf_tree.Root) or proof_slice.len != PROOF_SIZE) return js.Boolean.from(false);
     var decoded: vrf_tree.Proof = undefined;
     @memcpy(std.mem.asBytes(&decoded), proof_slice);
-    return js.Boolean.from(vrf_tree.isValidProof(root_slice[0..@sizeOf(vrf_tree.Root)], try slot.toU64Exact(), &decoded));
+    return js.Boolean.from(vrf_tree.isValidProof(root_slice[0..@sizeOf(vrf_tree.Root)], try slot.toSafeInteger(), &decoded));
 }
 
 /// A VRF tree. Instances come from `build`: one built with `new` holds no tree
@@ -140,7 +140,7 @@ pub const VrfTree = struct {
     /// The leaf of `slot` then its Merkle branch, `PROOF_SIZE` bytes.
     pub fn proof(self: *VrfTree, slot: js.Number) !js.Uint8Array {
         const tree = &(self.tree orelse return error.TreeNotLoaded);
-        const out = try tree.proof(try slot.toU64Exact());
+        const out = try tree.proof(try slot.toSafeInteger());
         return js.Uint8Array.from(std.mem.asBytes(&out));
     }
 };

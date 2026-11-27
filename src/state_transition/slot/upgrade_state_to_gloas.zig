@@ -12,6 +12,9 @@ const computeEpochAtSlot = @import("../utils/epoch.zig").computeEpochAtSlot;
 const validateDepositSignature = @import("../block/process_deposit.zig").validateDepositSignature;
 const isValidatorKnown = @import("../utils/electra.zig").isValidatorKnown;
 const PubkeyHashContext = @import("../cache/pubkey_cache.zig").PubkeyHashContext;
+const BuilderDepositSignatureCacheRc = @import("../cache/builder_deposit_signature_cache.zig").BuilderDepositSignatureCacheRc;
+const metrics = @import("../metrics.zig");
+const time = @import("time");
 
 /// Consumes fulu_state only on success. Compatible element roots remain shared.
 pub fn upgradeStateToGloas(allocator: Allocator, io: std.Io, config: *const BeaconConfig, epoch_cache: *const EpochCache, fulu_state: *BeaconState(.fulu)) !BeaconState(.gloas) {
@@ -51,8 +54,10 @@ pub fn upgradeStateToGloas(allocator: Allocator, io: std.Io, config: *const Beac
     try state.inner.setValue("latest_execution_payload_bid", &bid);
     try state.inner.setValue("latest_block_hash", &header.block_hash);
     var availability = try state.inner.get("execution_payload_availability");
-    for (0..preset.SLOTS_PER_HISTORICAL_ROOT) |slot| try availability.set(slot, true);
-    const ptc_window = try gloas.initializePtcWindow(.fulu, allocator, epoch_cache, fulu_state);
+    for (0..preset.SLOTS_PER_HISTORICAL_ROOT) |i| try availability.set(i, true);
+    // process_slot of the last pre-fork slot ran with Fulu rules and did not unset the fork slot
+    try availability.set(@intCast((try state.slot()) % preset.SLOTS_PER_HISTORICAL_ROOT), false);
+    const ptc_window = try gloas.initializePtcWindow(.fulu, allocator, io, epoch_cache, fulu_state);
     try state.inner.setValue("ptc_window", &ptc_window);
     try onboardBuilders(allocator, io, config, epoch_cache, &state);
     try state.commit();
@@ -72,10 +77,16 @@ fn migrateComposite(comptime Before: type, comptime After: type, allocator: Allo
 }
 
 fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig, epoch_cache: *const EpochCache, state: *BeaconState(.gloas)) !void {
+    const started = time.start(io);
+    var checks: SignatureChecks = .{};
+    var onboarded: u64 = 0;
+    var topups: u64 = 0;
+    var kept: u64 = 0;
+    var dropped: u64 = 0;
     const Entry = struct {
         builder_index: ?usize = null,
-        pending_head: usize = std.math.maxInt(usize),
-        checked_head: usize = std.math.maxInt(usize),
+        pending_tail: usize = std.math.maxInt(usize),
+        unchecked_head: usize = std.math.maxInt(usize),
         has_pending_validator: bool = false,
     };
     var lookup: std.array_hash_map.Custom([48]u8, Entry, PubkeyHashContext, true) = .empty;
@@ -84,62 +95,119 @@ fn onboardBuilders(allocator: Allocator, io: std.Io, config: *const BeaconConfig
     var pending = try state.pendingDeposits();
     try pending.commit();
     const len = try pending.length();
-    const previous = try allocator.alloc(usize, len);
-    defer allocator.free(previous);
+    const next = try allocator.alloc(usize, len);
+    defer allocator.free(next);
     var remaining = try ct.gloas.PendingDeposits.TreeView.fromValue(state.inner.allocator, state.inner.pool, &ct.gloas.PendingDeposits.default_value);
     errdefer remaining.deinit();
     var builders = try state.inner.get("builders");
     var it = pending.iteratorReadonly(0);
     for (0..len) |index| {
-        const deposit = try it.nextValue();
+        const item = try it.nextValueWithRoot();
+        const deposit = item.value;
         const result = try lookup.getOrPutContext(allocator, deposit.pubkey, context);
         if (!result.found_existing) result.value_ptr.* = .{};
         const entry = result.value_ptr;
-        const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
-        const known_validator = try isValidatorKnown(.gloas, state, validator_index);
-        if (!known_validator) {
+        if (gloas.isBuilderWithdrawalCredential(&deposit.withdrawal_credentials)) {
             if (entry.builder_index) |builder_index| {
                 var builder: ct.gloas.Builder.Type = undefined;
                 try builders.getValue(undefined, builder_index, &builder);
                 builder.balance = try std.math.add(u64, builder.balance, deposit.amount);
                 try builders.setValue(builder_index, &builder);
+                topups += 1;
                 continue;
             }
-            if (gloas.isBuilderWithdrawalCredential(&deposit.withdrawal_credentials)) {
-                var pending_index = entry.pending_head;
-                // Each retained deposit's signature is checked at most once per pubkey.
-                while (!entry.has_pending_validator and pending_index != entry.checked_head) {
-                    var prior: ct.electra.PendingDeposit.Type = undefined;
-                    try pending.getValue(undefined, pending_index, &prior);
-                    validateDepositSignature(config, &prior.pubkey, &prior.withdrawal_credentials, prior.amount, prior.signature) catch {
-                        pending_index = previous[pending_index];
+            if (try isValidCachedDeposit(
+                config,
+                epoch_cache.builder_deposit_signature_cache,
+                &deposit,
+                item.root,
+                &checks,
+            )) {
+                const builder = ct.gloas.Builder.Type{
+                    .pubkey = deposit.pubkey,
+                    .version = c.PAYLOAD_BUILDER_VERSION,
+                    .execution_address = deposit.withdrawal_credentials[12..32].*,
+                    .balance = deposit.amount,
+                    .deposit_epoch = computeEpochAtSlot(deposit.slot),
+                    .withdrawable_epoch = c.FAR_FUTURE_EPOCH,
+                };
+                const builder_index = try builders.length();
+                try builders.pushValue(&builder);
+                entry.builder_index = builder_index;
+                onboarded += 1;
+                continue;
+            }
+            const validator_index = epoch_cache.pubkey_cache.get(io, deposit.pubkey);
+            if (!try isValidatorKnown(.gloas, state, validator_index)) {
+                // Walk oldest first: a valid validator deposit suppresses all later
+                // signatures for this pubkey, matching the pre-verification scanner.
+                while (!entry.has_pending_validator and entry.unchecked_head != std.math.maxInt(usize)) {
+                    const pending_index = entry.unchecked_head;
+                    const prior = try pending.getValueWithRoot(pending_index);
+                    entry.unchecked_head = next[pending_index];
+                    if (!try isValidCachedDeposit(
+                        config,
+                        epoch_cache.builder_deposit_signature_cache,
+                        &prior.value,
+                        prior.root,
+                        &checks,
+                    )) {
                         continue;
-                    };
+                    }
                     entry.has_pending_validator = true;
                 }
-                entry.checked_head = entry.pending_head;
                 if (!entry.has_pending_validator) {
-                    validateDepositSignature(config, &deposit.pubkey, &deposit.withdrawal_credentials, deposit.amount, deposit.signature) catch continue;
-                    const builder = ct.gloas.Builder.Type{
-                        .pubkey = deposit.pubkey,
-                        .version = c.PAYLOAD_BUILDER_VERSION,
-                        .execution_address = deposit.withdrawal_credentials[12..32].*,
-                        .balance = deposit.amount,
-                        .deposit_epoch = computeEpochAtSlot(deposit.slot),
-                        .withdrawable_epoch = c.FAR_FUTURE_EPOCH,
-                    };
-                    const builder_index = try builders.length();
-                    try builders.pushValue(&builder);
-                    entry.builder_index = builder_index;
+                    dropped += 1;
                     continue;
                 }
             }
         }
         try remaining.pushValue(&deposit);
-        previous[index] = entry.pending_head;
-        entry.pending_head = index;
+        next[index] = std.math.maxInt(usize);
+        if (entry.pending_tail != std.math.maxInt(usize)) next[entry.pending_tail] = index;
+        if (entry.unchecked_head == std.math.maxInt(usize)) entry.unchecked_head = index;
+        entry.pending_tail = index;
+        kept += 1;
     }
+    metrics.state_transition.onboard_builders.observe(time.durationSeconds(time.since(io, started)));
+    metrics.state_transition.onboard_builders_deposits.set(.{ .outcome = .onboarded }, onboarded) catch {};
+    metrics.state_transition.onboard_builders_deposits.set(.{ .outcome = .topup }, topups) catch {};
+    metrics.state_transition.onboard_builders_deposits.set(.{ .outcome = .kept }, kept) catch {};
+    metrics.state_transition.onboard_builders_deposits.set(.{ .outcome = .dropped }, dropped) catch {};
+    metrics.state_transition.onboard_builders_signature_checks.set(.{ .source = .cache }, checks.from_cache) catch {};
+    metrics.state_transition.onboard_builders_signature_checks.set(.{ .source = .verified }, checks.verified) catch {};
     try state.setPendingDeposits(remaining);
+}
+
+const SignatureChecks = struct {
+    from_cache: u64 = 0,
+    verified: u64 = 0,
+};
+
+fn isValidCachedDeposit(
+    config: *const BeaconConfig,
+    cache_rc: *BuilderDepositSignatureCacheRc,
+    deposit: *const ct.electra.PendingDeposit.Type,
+    deposit_root: [32]u8,
+    checks: *SignatureChecks,
+) !bool {
+    const cache = &cache_rc.instance;
+    if (cache.get(deposit_root)) |valid| {
+        checks.from_cache += 1;
+        return valid;
+    }
+    checks.verified += 1;
+    const valid = if (validateDepositSignature(
+        config,
+        &deposit.pubkey,
+        &deposit.withdrawal_credentials,
+        deposit.amount,
+        deposit.signature,
+    )) true else |err| switch (err) {
+        error.BadEncoding, error.PointNotOnCurve, error.PointNotInGroup, error.VerifyFail, error.PkIsInfinity => false,
+        else => return err,
+    };
+    return valid;
 }
 
 test {

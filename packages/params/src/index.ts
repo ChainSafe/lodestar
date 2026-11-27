@@ -3,7 +3,7 @@ import {presetStatus} from "./presetStatus.js";
 import {gnosisPreset} from "./presets/gnosis.js";
 import {mainnetPreset} from "./presets/mainnet.js";
 import {minimalPreset} from "./presets/minimal.js";
-import {userOverrides, userSelectedPreset} from "./setPreset.js";
+import {userSelectedPreset} from "./setPreset.js";
 
 export * from "./forkName.js";
 export {presetToJson} from "./json.js";
@@ -31,7 +31,7 @@ export const ACTIVE_PRESET =
   userSelectedPreset ??
   (typeof process !== "undefined" ? PresetName[process?.env?.LODESTAR_PRESET as PresetName] : undefined) ??
   PresetName.mainnet;
-export const activePreset = {...presets[ACTIVE_PRESET], ...userOverrides};
+export const activePreset = presets[ACTIVE_PRESET];
 
 // These variables must be exported individually and explicitly
 // in order to be accessible as top-level exports
@@ -325,13 +325,6 @@ export const NEXT_SYNC_COMMITTEE_INDEX = 23;
 export const MAX_REQUEST_LIGHT_CLIENT_UPDATES = 128;
 export const MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES = 128;
 
-/**
- * Optimistic sync
- * @deprecated All networks have completed the merge transition, blocks are always safe to import optimistically.
- */
-export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
-/** @deprecated */
-export const INTERVALS_PER_SLOT = 3;
 export const BASIS_POINTS = 10000;
 
 // EIP-4844: Crypto const

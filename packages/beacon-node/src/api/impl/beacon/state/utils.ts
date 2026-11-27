@@ -75,7 +75,8 @@ export async function getStateResponseWithRegen(
     const finalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
     return {
       state,
-      executionOptimistic: isOptimisticBlock(head),
+      // The head can be the FULL variant, a state reports the status of the payload its block builds on
+      executionOptimistic: isOptimisticBlock(chain.forkChoice.getBlockHexDefaultStatus(head.blockRoot) ?? head),
       finalized: state.epoch <= finalizedEpoch && finalizedEpoch !== GENESIS_EPOCH,
     };
   }

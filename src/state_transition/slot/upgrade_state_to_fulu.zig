@@ -1,4 +1,4 @@
-const Allocator = @import("std").mem.Allocator;
+const std = @import("std");
 const BeaconConfig = @import("config").BeaconConfig;
 const EpochCache = @import("../cache/epoch_cache.zig").EpochCache;
 const ForkSeq = @import("config").ForkSeq;
@@ -13,7 +13,7 @@ const getSeed = seed_utils.getSeed;
 const computeProposers = seed_utils.computeProposers;
 
 pub fn upgradeStateToFulu(
-    allocator: Allocator,
+    io: std.Io,
     config: *const BeaconConfig,
     epoch_cache: *const EpochCache,
     electra_state: *BeaconState(.electra),
@@ -32,7 +32,7 @@ pub fn upgradeStateToFulu(
     var proposer_lookahead = ct.fulu.ProposerLookahead.default_value;
     try initializeProposerLookahead(
         .fulu,
-        allocator,
+        io,
         epoch_cache,
         &state,
         proposer_lookahead[0..],
@@ -48,7 +48,7 @@ pub fn upgradeStateToFulu(
 /// Uses active indices from the epoch cache shufflings.
 fn initializeProposerLookahead(
     comptime fork: ForkSeq,
-    allocator: Allocator,
+    io: std.Io,
     epoch_cache: *const EpochCache,
     state: *BeaconState(fork),
     out: []ValidatorIndex,
@@ -73,7 +73,7 @@ fn initializeProposerLookahead(
 
         try computeProposers(
             fork,
-            allocator,
+            io,
             seed,
             epoch,
             active_indices,

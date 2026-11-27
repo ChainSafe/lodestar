@@ -85,7 +85,7 @@ export const ValidatorIdentityType = new ContainerType(
   {
     index: ssz.ValidatorIndex,
     pubkey: ApiPubkey,
-    activationEpoch: ssz.UintNum64,
+    activationEpoch: ssz.EpochInf,
   },
   {jsonCase: "eth2"}
 );

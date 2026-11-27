@@ -44,7 +44,7 @@ export async function verifySignatureSetsAtLeaves(
   }
   return verifiers.pq.verifySignatureSets(
     sets.map((set, i) => {
-      if (set.type === SignatureSetType.aggregate) {
+      if (set.type === SignatureSetType.aggregate || set.type === SignatureSetType.committee) {
         throw Error("pq has no aggregate signatures");
       }
       return {

@@ -12,7 +12,6 @@ import {
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostGloas,
-  isForkPostHeze,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
@@ -233,6 +232,20 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
 
       return undefined;
     },
+    getMinEpochsForBlockRequests(epoch: Epoch): number {
+      if (epoch < config.GLOAS_FORK_EPOCH) {
+        return config.MIN_EPOCHS_FOR_BLOCK_REQUESTS;
+      }
+
+      // Max weak subjectivity period with the churn limits from EIP-8061. Exit churn is weighted 2/3,
+      // consolidation churn 1 and the capped activation churn is negligible for a large validator set.
+      const exitQuotient = config.CHURN_LIMIT_QUOTIENT_GLOAS;
+      const consolidationQuotient = config.CONSOLIDATION_CHURN_LIMIT_QUOTIENT;
+      return (
+        config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY +
+        Math.floor((3 * exitQuotient * consolidationQuotient) / (2 * (2 * consolidationQuotient + 3 * exitQuotient)))
+      );
+    },
     getAttestationDueMs(fork: ForkName): number {
       if (isForkPostGloas(fork)) {
         return this.getSlotComponentDurationMs(fork, config.ATTESTATION_DUE_BPS_GLOAS);
@@ -275,13 +288,16 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getPayloadDueMs(fork: ForkName): number {
       return this.getSlotComponentDurationMs(fork, config.PAYLOAD_DUE_BPS);
     },
+    getPayloadAttestationDueMs(fork: ForkName): number {
+      return this.getSlotComponentDurationMs(fork, config.PAYLOAD_ATTESTATION_DUE_BPS);
+    },
 
     getInclusionListDueMs(fork: ForkName): number {
       return this.getSlotComponentDurationMs(fork, config.INCLUSION_LIST_DUE_BPS);
     },
 
-    getSlotDurationMs(fork: ForkName): number {
-      return isForkPostHeze(fork) ? config.SLOT_DURATION_MS_HEZE : config.SLOT_DURATION_MS;
+    getSlotDurationMs(_fork: ForkName): number {
+      return config.SLOT_DURATION_MS;
     },
 
     getSlotComponentDurationMs(fork: ForkName, basisPoints: number): number {

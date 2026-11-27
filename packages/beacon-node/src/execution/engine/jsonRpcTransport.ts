@@ -1,18 +1,24 @@
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {ExecutionPayload, ExecutionRequests, Root, RootHex, bellatrix} from "@lodestar/types";
-import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {strip0xPrefix} from "@lodestar/utils";
-import {ClientCode, ClientVersion, PayloadAttributes, PayloadId, VersionedHashes} from "./interface.js";
+import {
+  ClientCode,
+  ClientVersion,
+  ForkchoiceUpdatedResult,
+  PayloadAttributes,
+  PayloadId,
+  PayloadStatusResult,
+  VersionedHashes,
+} from "./interface.js";
 import {IJsonRpcHttpClient, JsonRpcHttpClientEventEmitter, ReqOpts} from "./jsonRpcHttpClient.js";
-import {ForkchoiceUpdatedResult, GetPayloadResult, IEngineTransport, PayloadStatusResult} from "./transport.js";
+import {GetPayloadResult, IEngineTransport} from "./transport.js";
 import {
   BLOB_AND_PROOF_V2_RPC_BYTES,
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
   ExecutionPayloadBodyV2,
   assertReqSizeLimit,
-  deserializeBlobAndProofs,
   deserializeBlobAndProofsV2,
   deserializeBlobAndProofsV2IntoBytes,
   deserializeExecutionPayloadBodyV2,
@@ -39,7 +45,6 @@ const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedOpts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
 const getPayloadBodiesByHashOpts: ReqOpts = {routeId: "getPayloadBodiesByHash"};
-const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
 const getInclusionListOpts: ReqOpts = {routeId: "getInclusionList"};
@@ -136,7 +141,8 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
+    payloadAttributes?: PayloadAttributes,
+    signal?: AbortSignal
   ): Promise<ForkchoiceUpdatedResult> {
     const method =
       ForkSeq[fork] >= ForkSeq.heze
@@ -156,12 +162,15 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     const {payloadStatus, payloadId} = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, payloadAttributesRpc]}, fcUReqOpts);
+    >(
+      {method, params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, payloadAttributesRpc]},
+      {...fcUReqOpts, signal}
+    );
 
     return {payloadStatus, payloadId: payloadId && payloadId !== "0x" ? payloadId : null};
   }
 
-  async getPayload(fork: ForkName, payloadId: PayloadId): Promise<GetPayloadResult> {
+  async getPayload(fork: ForkName, payloadId: PayloadId, signal?: AbortSignal): Promise<GetPayloadResult> {
     let method: keyof EngineApiRpcReturnTypes;
     switch (fork) {
       case ForkName.phase0:
@@ -188,7 +197,7 @@ export class JsonRpcEngineTransport implements IEngineTransport {
     const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [payloadId]}, getPayloadOpts);
+    >({method, params: [payloadId]}, {...getPayloadOpts, signal});
     return parseExecutionPayload(fork, payloadResponse);
   }
 
@@ -200,23 +209,6 @@ export class JsonRpcEngineTransport implements IEngineTransport {
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [blockHashes]}, getPayloadBodiesByHashOpts);
     return response.map(deserializeExecutionPayloadBodyV2);
-  }
-
-  async getBlobsV1(versionedHashes: VersionedHashes): Promise<(BlobAndProof | null)[]> {
-    assertReqSizeLimit(versionedHashes.length, MAX_VERSIONED_HASHES);
-    const versionedHashesHex = versionedHashes.map(bytesToData);
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes["engine_getBlobsV1"],
-      EngineApiRpcParamTypes["engine_getBlobsV1"]
-    >({method: "engine_getBlobsV1", params: [versionedHashesHex]}, getBlobsV1Opts);
-
-    if (response.length !== versionedHashesHex.length) {
-      throw Error(
-        `Invalid engine_getBlobsV1 response length=${response.length} versionedHashes=${versionedHashesHex.length}`
-      );
-    }
-
-    return response.map(deserializeBlobAndProofs);
   }
 
   async getBlobsV2(versionedHashes: VersionedHashes, buffers?: Uint8Array[]): Promise<BlobAndProofV2[] | null> {

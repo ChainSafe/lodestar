@@ -234,6 +234,10 @@ export class DoppelgangerService {
       //
       // Do not bother iterating through the current epoch responses since they've already been
       // checked for violators and they don't result in updating the state.
+      //
+      // A validator missing from the current epoch responses (failed or partial request) was not
+      // observed in the current epoch, so its check must not complete until the next poll.
+      const observedInCurrentEpoch = new Set(currentEpochLiveness.responses.map((response) => response.index));
       for (const response of previousEpochLiveness.responses) {
         const state = this.doppelgangerStateByPubkey.get(indicesToCheckMap.get(response.index) ?? "");
         if (!state) {
@@ -241,7 +245,7 @@ export class DoppelgangerService {
           continue;
         }
 
-        if (!response.isLive && state.nextEpochToCheck <= previousEpoch) {
+        if (!response.isLive && state.nextEpochToCheck <= previousEpoch && observedInCurrentEpoch.has(response.index)) {
           state.remainingEpochs--;
           state.nextEpochToCheck = currentEpoch;
           this.metrics?.doppelganger.epochsChecked.inc(1);

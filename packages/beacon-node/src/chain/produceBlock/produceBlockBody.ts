@@ -77,12 +77,13 @@ import {
 } from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
-import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
+import {IExecutionBuilder, PayloadAttributes, PayloadId} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import type {BeaconChain} from "../chain.js";
+import {ForkChoiceExecutionEngine} from "../forkChoiceExecutionEngine.js";
 import {CommonBlockBody} from "../interface.js";
 import {InclusionListStore, ProposerPreferencesPool} from "../opPools/index.js";
 import {getPqAttestationFilters} from "../opPools/pqAttestationPool.js";
@@ -340,7 +341,7 @@ export async function produceBlockBody<T extends BlockType>(
       feeRecipient
     );
 
-    const {prepType, payloadId} = prepareRes;
+    const {prepType, payloadId, preparedAtMs} = prepareRes;
     Object.assign(logMeta, {executionPayloadPrepType: prepType});
 
     this.logger.verbose("Prepared execution payload from engine", {
@@ -353,9 +354,7 @@ export async function produceBlockBody<T extends BlockType>(
       isBuildingOnFull,
     });
 
-    if (prepType !== PayloadPreparationType.Cached) {
-      await sleep(PAYLOAD_GENERATION_TIME_MS);
-    }
+    await waitForPayloadGeneration(preparedAtMs);
 
     this.logger.verbose("Fetching execution payload from engine", {slot: blockSlot, payloadId});
     const payloadRes = await this.executionEngine.getPayload(fork, payloadId);
@@ -612,17 +611,10 @@ export async function produceBlockBody<T extends BlockType>(
           feeRecipient
         );
 
-        const {prepType, payloadId} = prepareRes;
+        const {prepType, payloadId, preparedAtMs} = prepareRes;
         Object.assign(logMeta, {executionPayloadPrepType: prepType});
 
-        if (prepType !== PayloadPreparationType.Cached) {
-          // Wait for 500ms to allow EL to add some txs to the payload
-          // the pitfalls of this have been put forward here, but 500ms delay for block proposal
-          // seems marginal even with unhealthy network
-          //
-          // See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
-          await sleep(PAYLOAD_GENERATION_TIME_MS);
-        }
+        await waitForPayloadGeneration(preparedAtMs);
 
         this.logger.verbose("Fetching execution payload from engine", {slot: blockSlot, payloadId});
         const payloadRes = await this.executionEngine.getPayload(fork, payloadId);
@@ -766,7 +758,7 @@ export async function produceBlockBody<T extends BlockType>(
  */
 export async function prepareExecutionPayload(
   chain: {
-    executionEngine: IExecutionEngine;
+    executionEngine: ForkChoiceExecutionEngine;
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
@@ -786,7 +778,7 @@ export async function prepareExecutionPayload(
   suggestedFeeRecipient: string,
   /** Attributes already computed for the same state and fee recipient, e.g. for the SSE event */
   payloadAttributes?: PayloadAttributes
-): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
+): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId; preparedAtMs: number}> {
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = state.getRandaoMix(state.epoch);
 
@@ -815,10 +807,11 @@ export async function prepareExecutionPayload(
   // the EL returns Syncing on this request to prepare a payload
   // TODO: Handle only this case, DO NOT put a generic try / catch that discards all errors
   let payloadId: PayloadId | null;
+  let preparedAtMs: number;
   let prepType: PayloadPreparationType;
 
   if (payloadIdCached) {
-    payloadId = payloadIdCached;
+    ({payloadId, preparedAtMs} = payloadIdCached);
     prepType = PayloadPreparationType.Cached;
   } else {
     // If there was a payload assigned to this timestamp, it would imply that there some sort
@@ -831,6 +824,7 @@ export async function prepareExecutionPayload(
 
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
+      toRootHex(parentBlockRoot),
       toRootHex(parentBlockHash),
       safeBlockHash,
       finalizedBlockHash,
@@ -843,6 +837,7 @@ export async function prepareExecutionPayload(
           feeRecipient: suggestedFeeRecipient,
         })
     );
+    preparedAtMs = performance.now();
     logger.verbose("Prepared payload id from execution engine", {payloadId});
   }
 
@@ -855,7 +850,23 @@ export async function prepareExecutionPayload(
   // We are only returning payloadId here because prepareExecutionPayload is also called from
   // prepareNextSlot, which is an advance call to execution engine to start building payload
   // Actual payload isn't produced till getPayload is called.
-  return {payloadId, prepType};
+  return {payloadId, prepType, preparedAtMs};
+}
+
+/**
+ * Give the engine PAYLOAD_GENERATION_TIME_MS since the payload was requested before fetching it. A payload prepared
+ * in advance usually had seconds, one prepared or re-prepared right before the slot gets the same time as a fresh one.
+ *
+ * The pitfalls of this delay have been put forward here, but 500ms delay for block proposal
+ * seems marginal even with unhealthy network
+ *
+ * See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
+ */
+async function waitForPayloadGeneration(preparedAtMs: number): Promise<void> {
+  const remainingMs = PAYLOAD_GENERATION_TIME_MS - (performance.now() - preparedAtMs);
+  if (remainingMs > 0) {
+    await sleep(remainingMs);
+  }
 }
 
 async function prepareExecutionPayloadHeader(
@@ -1186,11 +1197,13 @@ export async function produceCommonBlockBody<T extends BlockType>(
     attestations = packed.attestations;
     proof = packed.proof;
   } else {
+    // TODO: extract to a separate BeaconChain method to coordinate the 2 op-pools
     attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
       fork,
       this.forkChoice,
       this.shufflingCache,
-      currentState
+      currentState,
+      this.singleAttestationPool
     );
   }
   endAttestations?.({

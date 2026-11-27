@@ -109,6 +109,15 @@ pub fn canBuilderCoverBid(comptime fork: ForkSeq, state: *BeaconState(fork), bui
     return builder.balance - min_balance >= bid_amount;
 }
 
+pub fn getBuilderBidLimit(comptime fork: ForkSeq, state: *BeaconState(fork), builder_index: u64) !u64 {
+    var builders = try state.inner.getReadonly("builders");
+    var builder: ForkTypes(fork).Builder.Type = undefined;
+    try builders.getValue(undefined, builder_index, &builder);
+
+    const pending_balance = try getPendingBalanceToWithdrawForBuilder(fork, state, builder_index);
+    return (builder.balance -| pending_balance) / c.ETH_TO_GWEI;
+}
+
 pub fn initiateBuilderExit(comptime fork: ForkSeq, config: *const BeaconConfig, state: *BeaconState(fork), builder_index: u64) !void {
     var builders = try state.inner.get("builders");
     var builder: ForkTypes(fork).Builder.Type = undefined;
@@ -240,6 +249,7 @@ pub fn isParentBlockFull(comptime fork: ForkSeq, state: *BeaconState(fork)) !boo
 pub fn initializePtcWindow(
     comptime fork: ForkSeq,
     allocator: Allocator,
+    io: std.Io,
     epoch_cache: *const EpochCache,
     state: *BeaconState(fork),
 ) !ct.gloas.PtcWindow.Type {
@@ -263,7 +273,7 @@ pub fn initializePtcWindow(
             }
             const indices = try active.toOwnedSlice(allocator);
             errdefer allocator.free(indices);
-            owned_shuffling = try computeEpochShufflingForFork(fork, allocator, state, indices, epoch);
+            owned_shuffling = try computeEpochShufflingForFork(fork, allocator, io, state, indices, epoch);
             break :blk owned_shuffling.?;
         };
         const committees = try computePayloadTimelinessCommitteesForEpoch(

@@ -1,4 +1,4 @@
-version: v1.7.0-beta.4
+version: v1.7.0-beta.5
 style: full
 
 specrefs:
@@ -20,6 +20,9 @@ exceptions:
     # phase0
     - UINT64_MAX#phase0
     - UINT64_MAX_SQRT#phase0
+
+    # bellatrix
+    - SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY#bellatrix
 
     # fulu
     - UINT256_MAX#fulu
@@ -73,6 +76,7 @@ exceptions:
 
     # gloas
     - LatestMessage#gloas
+    - OptimisticStore#gloas
     - Seen#gloas
 
     # heze
@@ -122,10 +126,17 @@ exceptions:
     - validate_merge_block#bellatrix
 
     # deneb
+    # Pre-fulu blob sidecar functions, replaced by data columns in fulu
+    - compute_subnet_for_blob_sidecar#deneb
+    - get_blob_sidecars#deneb
     - is_within_epoch#deneb
+    - validate_blob_sidecar_gossip#deneb
+    - verify_blob_sidecar_inclusion_proof#deneb
 
     # electra
+    - compute_subnet_for_blob_sidecar#electra
     - get_eth1_vote#electra
+    - validate_blob_sidecar_gossip#electra
 
     # fulu
     - verify_partial_data_column_header_inclusion_proof#fulu
@@ -136,6 +147,7 @@ exceptions:
     - compute_max_partial_data_column_sidecar_size#gloas
     - get_node_children#gloas
     - get_upcoming_proposal_slots#gloas
+    - latest_verified_ancestor#gloas
     - is_current_or_next_slot#gloas
     - validate_partial_data_column_sidecar_gossip#gloas
 

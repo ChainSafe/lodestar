@@ -293,6 +293,7 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   getBuilder(index: BuilderIndex): gloas.Builder;
   getBuildersLength(): number;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
+  getBuilderBidLimit(builderIndex: BuilderIndex): number;
   getEpochPTCs(epoch: Epoch): Uint32Array[];
   getPayloadTimelinessCommittee(slot: Slot): Uint32Array;
   getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[];
@@ -351,8 +352,6 @@ export type IBeaconStateViewNative = Omit<
   | "pendingConsolidations"
   | "pendingDeposits"
   | "pendingPartialWithdrawals"
-  | "preVerifyBuilderDepositsPreGloas"
-  | "clearPreGloasBuilderDepositCache"
   | "processSlots"
   | "proposerLookahead"
   | "stateTransition"

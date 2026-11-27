@@ -55,6 +55,11 @@ export type EpochShuffling = {
    * Committees per slot, for fast attestation verification
    */
   committeesPerSlot: number;
+
+  /**
+   * Native committee aggregate pubkeys of this shuffling, set once `computeCommitteePubkeys()` resolves
+   */
+  committeePubkeysId?: number;
 };
 
 export function computeCommitteeCount(

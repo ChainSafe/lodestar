@@ -117,6 +117,5 @@ export {
   bytesToBigInt,
   bytesToInt,
   intToBytes,
-  toHexString,
   xor,
 } from "./browser.js";

@@ -135,6 +135,7 @@ pub fn generateElectraState(allocator: Allocator, pool: *Node.Pool, chain_config
     try getNextSyncCommitteeIndices(
         .electra,
         allocator,
+        std.testing.io,
         beacon_state.castToFork(.electra),
         active_validator_indices.items,
         effective_balance_increments,
@@ -179,7 +180,10 @@ pub const TestCachedBeaconState = struct {
     owned_blob_schedule: []const ChainConfig.BlobScheduleEntry,
 
     pub fn init(allocator: Allocator, pool: *Node.Pool, validator_count: usize) !TestCachedBeaconState {
-        var state = try generateElectraState(allocator, pool, active_chain_config, validator_count);
+        const configured_epoch = active_chain_config.ELECTRA_FORK_EPOCH;
+        const initial_epoch = if (configured_epoch == std.math.maxInt(Epoch)) 0 else configured_epoch;
+        const chain_config = getConfig(active_chain_config, .electra, initial_epoch);
+        var state = try generateElectraState(allocator, pool, chain_config, validator_count);
         errdefer {
             state.deinit();
             allocator.destroy(state);
@@ -194,9 +198,12 @@ pub const TestCachedBeaconState = struct {
         return initFromStateWithConfig(allocator, pool, state, fork, fork_epoch, .{});
     }
 
-    /// Apply explicit fixture overrides after scheduling the test fork. Copies all borrowed
-    /// config slices, so the fixture parser may be released immediately after this call.
-    /// Takes ownership of `state` only on success; callers retain it on every error path.
+    /// Schedule the test fork from the state after applying explicit fixture overrides. Since
+    /// consensus-specs#5757 every state test's config.yaml pins the tested fork epoch to 0, while
+    /// some vectors move `state.fork.epoch` after setup and the spec reads `state.fork`, so the
+    /// state wins for fork epochs. Copies all borrowed config slices, so the fixture parser may be
+    /// released immediately after this call. Takes ownership of `state` only on success; callers
+    /// retain it on every error path.
     pub fn initFromStateWithConfig(
         allocator: Allocator,
         pool: *Node.Pool,
@@ -205,7 +212,7 @@ pub const TestCachedBeaconState = struct {
         fork_epoch: Epoch,
         overrides: ChainConfig.OptionalChainConfig,
     ) !TestCachedBeaconState {
-        var chain_config = getConfig(active_chain_config, fork, fork_epoch).merge(overrides);
+        var chain_config = getConfig(active_chain_config.merge(overrides), fork, fork_epoch);
         const owned_config_name = try allocator.dupe(u8, chain_config.CONFIG_NAME);
         errdefer allocator.free(owned_config_name);
         const owned_blob_schedule = try allocator.dupe(ChainConfig.BlobScheduleEntry, chain_config.BLOB_SCHEDULE);
@@ -250,6 +257,7 @@ pub const TestCachedBeaconState = struct {
         errdefer allocator.destroy(epoch_transition_cache);
         epoch_transition_cache.* = try state_transition.EpochTransitionCache.init(
             allocator,
+            std.testing.io,
             cached_state.config,
             cached_state.epoch_cache,
             cached_state.state,

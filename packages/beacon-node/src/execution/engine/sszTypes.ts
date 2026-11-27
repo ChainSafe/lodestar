@@ -253,14 +253,6 @@ export const BlobsRequest = new ContainerType(
   {typeName: "BlobsRequest"}
 );
 
-const BlobAndProofV1 = new ContainerType(
-  {
-    blob: ssz.deneb.Blob,
-    proof: Bytes48,
-  },
-  {typeName: "BlobAndProofV1"}
-);
-
 const BlobAndProofV2 = new ContainerType(
   {
     blob: ssz.deneb.Blob,
@@ -274,7 +266,6 @@ function BlobsResponseType<T extends CompositeType<ValueOf<T>, CompositeView<T>,
   return new ContainerType({entries: new ListCompositeType(BlobEntry, MAX_BLOBS_REQUEST)}, {typeName: "BlobsResponse"});
 }
 
-export const BlobsV1Response = BlobsResponseType(BlobAndProofV1);
 export const BlobsV2Response = BlobsResponseType(BlobAndProofV2);
 
 const bellatrix = {

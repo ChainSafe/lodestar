@@ -23,7 +23,6 @@ import {
 export function processExecutionPayloadBid(
   state: CachedBeaconStateGloas | CachedBeaconStateHeze,
   signedBid: gloas.SignedExecutionPayloadBid,
-  /** Only honoured from pq, where a verifier outside the state transition can check the bid */
   verifySignature = true
 ): void {
   const isPq = state.config.getForkSeq(state.slot) === ForkSeq.pq;
@@ -64,10 +63,11 @@ export function processExecutionPayloadBid(
     }
 
     // Verify that the bid signature is valid
-    const isValid = isPq
-      ? !verifySignature ||
-        verifyXmssSignatureSet(getXmssExecutionPayloadBidSignatureSet(state.config, builder.pubkey, signedBid))
-      : verifyExecutionPayloadBidSignature(state, builder.pubkey, signedBid);
+    const isValid =
+      !verifySignature ||
+      (isPq
+        ? verifyXmssSignatureSet(getXmssExecutionPayloadBidSignatureSet(state.config, builder.pubkey, signedBid))
+        : verifyExecutionPayloadBidSignature(state, builder.pubkey, signedBid));
     if (!isValid) {
       throw Error(`Invalid execution payload bid: invalid signature for builder ${builderIndex}`);
     }

@@ -4,7 +4,7 @@
 # Run this on local host only.
 # Generated image is larger than production image. Do not use this for production.
 
-FROM --platform=${BUILDPLATFORM:-amd64} node:24 AS build_dev
+FROM --platform=${BUILDPLATFORM:-amd64} node:26 AS build_dev
 
 # Install zig toolchain
 # Required to build the @lodestar/native workspace package
@@ -39,8 +39,8 @@ ENV PATH=/root/.cargo/bin:$PATH
 
 WORKDIR /usr/app
 
-# Enable corepack for pnpm support
-RUN corepack enable
+# Node 26 no longer bundles corepack
+RUN npm install -g corepack@0.36.0 && corepack enable
 
 # Copy dependency manifests first for optimal layer caching.
 # Only changes to package.json or lockfile will invalidate the install layer,
@@ -93,6 +93,6 @@ RUN pnpm -r --filter "!@lodestar/native" --filter "!{.}" build
 ARG COMMIT
 RUN cd packages/cli && GIT_COMMIT=${COMMIT} pnpm write-git-data
 
-ENV NODE_OPTIONS=--max-old-space-size=8192
+ENV NODE_OPTIONS="--max-old-space-size=8192 --max-semi-space-size=64"
 
 ENTRYPOINT ["node", "./packages/cli/bin/lodestar"]

@@ -1,10 +1,9 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostFulu, ForkPreFulu} from "@lodestar/params";
-import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {DataColumnSidecar, SignedBeaconBlock, Slot, deneb, gloas, isGloasDataColumnSidecar} from "@lodestar/types";
+import {ForkPostFulu} from "@lodestar/params";
+import {DataColumnSidecar, SignedBeaconBlock, Slot, gloas, isGloasDataColumnSidecar} from "@lodestar/types";
 import {Logger, fromHex, toHex, toRootHex} from "@lodestar/utils";
-import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
+import {isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
@@ -16,7 +15,6 @@ import {IBeaconDb} from "../db/index.js";
 import {ArchivedEnvelope, decodeArchivedEnvelope} from "../db/repositories/index.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
-import {computePreFuluKzgCommitmentsInclusionProof} from "./blobs.js";
 import {
   getCellsAndProofs,
   getDataColumnSidecarsFromBlock,
@@ -41,98 +39,6 @@ export enum DataColumnEngineResult {
   Failed = "failed",
 }
 
-export async function getBlobSidecarsFromExecution(
-  config: ChainForkConfig,
-  executionEngine: IExecutionEngine,
-  metrics: Metrics | null,
-  emitter: ChainEventEmitter,
-  blockInput: IBlockInput
-) {
-  if (!isBlockInputBlobs(blockInput)) {
-    return;
-  }
-
-  if (blockInput.hasAllData()) {
-    return;
-  }
-
-  const forkName = blockInput.forkName as ForkPreFulu;
-  const blobMeta = blockInput.getMissingBlobMeta();
-
-  metrics?.blobs.getBlobsV1Requests.inc();
-  metrics?.blobs.getBlobsV1RequestedBlobCount.inc(blobMeta.length);
-  const enginedResponse = await executionEngine
-    .getBlobs(
-      forkName,
-      blobMeta.map(({versionedHash}) => versionedHash)
-    )
-    .catch((_e) => {
-      // TODO(fulu): this should only count as a single error? need to update the promql to reflect this
-      metrics?.blobs.getBlobsV1Error.inc(blobMeta.length);
-      return null;
-    });
-
-  if (enginedResponse === null) {
-    return;
-  }
-
-  const block = blockInput.getBlock();
-
-  const blobSidecars: deneb.BlobSidecars = [];
-  // response.length should always match blobMeta.length and they should be in the same order
-  for (let i = 0; i < blobMeta.length; i++) {
-    const blobAndProof = enginedResponse[i];
-
-    if (!blobAndProof) {
-      metrics?.blobs.getBlobsV1Miss.inc();
-    } else {
-      metrics?.blobs.getBlobsV1Hit.inc();
-
-      if (blockInput.hasBlob(blobMeta[i].index)) {
-        // blob arrived and was cached while waiting for API response
-        metrics?.blobs.getBlobsV1HitButArrivedWhileWaiting.inc();
-        continue;
-      }
-
-      metrics?.blobs.getBlobsV1HitUseful.inc();
-      const {blob, proof} = blobAndProof;
-      const index = blobMeta[i].index;
-      const kzgCommitment = block.message.body.blobKzgCommitments[index];
-      const blobSidecar: deneb.BlobSidecar = {
-        index,
-        blob,
-        kzgProof: proof,
-        kzgCommitment,
-        // TODO(fulu): refactor this to only calculate the root inside these following two functions once
-        kzgCommitmentInclusionProof: computePreFuluKzgCommitmentsInclusionProof(forkName, block.message.body, index),
-        signedBlockHeader: signedBlockToSignedHeader(config, block),
-      };
-
-      blockInput.addBlob({
-        blobSidecar,
-        blockRootHex: blockInput.blockRootHex,
-        seenTimestampSec: Date.now() / 1000,
-        source: BlockInputSource.engine,
-      });
-
-      if (emitter.listenerCount(routes.events.EventType.blobSidecar)) {
-        emitter.emit(routes.events.EventType.blobSidecar, {
-          blockRoot: blockInput.blockRootHex,
-          slot: blockInput.slot,
-          index,
-          kzgCommitment: toHex(kzgCommitment),
-          versionedHash: toHex(blobMeta[i].versionedHash),
-        });
-      }
-
-      blobSidecars.push(blobSidecar);
-    }
-  }
-
-  emitter.emit(ChainEvent.publishBlobSidecars, blobSidecars);
-  metrics?.gossipBlob.publishedFromEngine.inc(blobSidecars.length);
-}
-
 /**
  * Call getBlobsV2 from execution engine once per slot to fetch blobs and compute data columns.
  *
@@ -141,7 +47,7 @@ export async function getBlobSidecarsFromExecution(
  */
 export async function getDataColumnSidecarsFromExecution(
   config: ChainForkConfig,
-  executionEngine: IExecutionEngine,
+  executionEngine: Pick<IExecutionEngine, "getBlobs">,
   emitter: ChainEventEmitter,
   input: IBlockInput | PayloadEnvelopeInput,
   metrics: Metrics | null,
@@ -290,7 +196,7 @@ export type RebuildMiss = {slot: Slot; reason: "unavailable" | "mismatch"; error
  */
 export async function* reconstructExecutionPayloadEnvelopesByRange(
   db: IBeaconDb,
-  executionEngine: IExecutionEngine,
+  executionEngine: Pick<IExecutionEngine, "getPayloadBodiesByHashV2">,
   logger: Logger,
   metrics: Metrics | null,
   startSlot: Slot,
@@ -316,7 +222,7 @@ export async function* reconstructExecutionPayloadEnvelopesByRange(
  * RANGE_UNSERVABLE for it
  */
 async function* reconstructBatch(
-  executionEngine: IExecutionEngine,
+  executionEngine: Pick<IExecutionEngine, "getPayloadBodiesByHashV2">,
   logger: Logger,
   metrics: Metrics | null,
   batch: RangeEntry[]
@@ -359,7 +265,7 @@ async function* reconstructBatch(
  * on its path. Throws ENGINE_UNAVAILABLE only.
  */
 export async function reconstructExecutionPayloadEnvelopes(
-  executionEngine: IExecutionEngine,
+  executionEngine: Pick<IExecutionEngine, "getPayloadBodiesByHashV2">,
   metrics: Metrics | null,
   headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {
@@ -386,7 +292,7 @@ export function isRebuildMiss(result: gloas.SignedExecutionPayloadEnvelope | Reb
  * incremented once, in this function.
  */
 async function reconstructEnvelopesBatch(
-  executionEngine: IExecutionEngine,
+  executionEngine: Pick<IExecutionEngine, "getPayloadBodiesByHashV2">,
   metrics: Metrics | null,
   headerEnvelopes: gloas.SignedExecutionPayloadHeaderEnvelope[]
 ): Promise<(gloas.SignedExecutionPayloadEnvelope | RebuildMiss)[]> {

@@ -11,6 +11,7 @@ import {
   ForkPreDeneb,
   ForkPreGloas,
   ForkSeq,
+  GENESIS_EPOCH,
   GENESIS_SLOT,
   MAX_COMMITTEES_PER_SLOT_PQ,
   SLOTS_PER_EPOCH,
@@ -146,8 +147,6 @@ const BLOCK_PRODUCTION_RACE_CUTOFF_BPS = 1667;
  * TODO GLOAS: revisit, the block propagates faster as it only commits to a bid and the attestation deadline changed
  */
 export const BLOCK_PRODUCTION_RACE_CUTOFF_GLOAS_BPS = 1667;
-/** Rejection message of the bid block branch when there is no viable bid to commit to */
-const NO_BID_AVAILABLE = "No builder bid available";
 
 type BidCandidate = {
   signedBid: gloas.SignedExecutionPayloadBid;
@@ -423,7 +422,7 @@ export function getValidatorApi(
    * Both the above scenarios could be problematic and hence validator shouldn't participate
    * or weigh its vote on a head till it resolves to a Valid execution status.
    * Following activities should be skipped on an Optimistic head (with Syncing status):
-   * 1. Attestation if targetRoot is optimistic
+   * 1. Attestation if the head block voted for (post-gloas the variant voted for) or the targetRoot is optimistic
    * 2. SyncCommitteeContribution if if the root for which to produce contribution is Optimistic.
    * 3. ProduceBlock if the parentRoot (chain's current head) is optimistic. Must be checked
    *    explicitly as only local payload production consults the EL, blinded blocks from an
@@ -1170,7 +1169,7 @@ export function getValidatorApi(
       });
       const bidBlockPromise: ReturnType<typeof chain.produceBlock> = bestBidPromise.then((candidate) => {
         if (candidate === null) {
-          throw new Error(NO_BID_AVAILABLE);
+          throw new NoBidReceived();
         }
         metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
         return timed(ProducedBlockSource.builder, () =>
@@ -1284,7 +1283,7 @@ export function getValidatorApi(
         source = ProducedBlockSource.engine;
         bestResult = engineResult;
         const reason =
-          bidBlockResult.status === "rejected" && (bidBlockResult.reason as Error).message === NO_BID_AVAILABLE
+          bidBlockResult.status === "rejected" && bidBlockResult.reason instanceof NoBidReceived
             ? EngineBlockSelectionReason.BuilderNoBid
             : bidBlockResult.status === "pending"
               ? EngineBlockSelectionReason.BuilderPending
@@ -1415,10 +1414,18 @@ export function getValidatorApi(
         // After Gloas, attestation.data.index signals payload status in fork-choice:
         // - 0 = EMPTY / not present, 1 = FULL / present
         // - same-slot attestations must always use index = 0
+        // Validator shouldn't vote on an optimistic head, post-gloas that is the variant voted for
         if (canonicalBlock.slot !== slot) {
           index = canonicalBlock.payloadStatus === PayloadStatus.FULL ? 1 : 0;
+          if (isOptimisticBlock(canonicalBlock)) {
+            throw new NodeIsSyncing(
+              `Head block's execution payload not yet validated, executionPayloadBlockHash=${canonicalBlock.executionPayloadBlockHash}`
+            );
+          }
         } else {
           index = 0;
+          // Same-slot votes support the PENDING variant, which does not depend on the block's own payload
+          notOnOptimisticBlockRoot(beaconBlockRoot);
         }
       } else if (isForkPostElectra(fork)) {
         index = 0;
@@ -1436,8 +1443,11 @@ export function getValidatorApi(
             headBlockRoot
           : headState.getBlockRootAtSlot(targetSlot);
 
-      // Check the execution status as validator shouldn't vote on an optimistic head
-      // Check on target is sufficient as a valid target would imply a valid source
+      // Check the execution status as validator shouldn't vote on an optimistic head, post-gloas the
+      // variant voted for is checked above. Check on target is sufficient for a valid source
+      if (!isForkPostGloas(fork)) {
+        notOnOptimisticBlockRoot(beaconBlockRoot);
+      }
       notOnOptimisticBlockRoot(targetRoot);
       notOnOutOfRangeData(targetRoot);
 
@@ -1703,7 +1713,8 @@ export function getValidatorApi(
 
       // should not compare to headEpoch in order to handle skipped slots
       // Check if the epoch is in the future after waiting for requested slot
-      if (epoch > chain.clock.currentEpoch + 1) {
+      // Before genesis the clock epoch is negative, treat it as GENESIS_EPOCH so the next epoch can be requested
+      if (epoch > Math.max(chain.clock.currentEpoch, GENESIS_EPOCH) + 1) {
         throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
       }
 
@@ -1775,7 +1786,7 @@ export function getValidatorApi(
 
       await waitForNextClosestEpoch();
 
-      if (epoch > chain.clock.currentEpoch + 1) {
+      if (epoch > Math.max(chain.clock.currentEpoch, GENESIS_EPOCH) + 1) {
         throw new ApiError(400, "Cannot get PTC duties for epoch more than one ahead");
       }
 
@@ -2403,8 +2414,7 @@ export function getValidatorApi(
       metrics?.inclusionListsValid.inc({source: InclusionListSource.api});
       metrics?.inclusionListsValidSize.inc(totalBytes);
 
-      const isTimely =
-        secFromSlot >= 0 && secFromSlot * 1000 < chain.config.getInclusionListDueMs(chain.config.getForkName(slot));
+      const isTimely = secFromSlot * 1000 < chain.config.getInclusionListDueMs(chain.config.getForkName(slot));
       chain.inclusionListStore.process(signedInclusionList, committeeIndices, isTimely);
 
       chain.emitter.emit(routes.events.EventType.inclusionList, {

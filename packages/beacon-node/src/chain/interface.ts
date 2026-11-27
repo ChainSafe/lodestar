@@ -27,7 +27,7 @@ import {
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {BuilderApiClient} from "../execution/builder/apiClient.js";
-import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
+import {IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
@@ -44,6 +44,7 @@ import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
+import {ForkChoiceExecutionEngine} from "./forkChoiceExecutionEngine.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
@@ -55,6 +56,7 @@ import {
   OpPool,
   PayloadAttestationPool,
   ProposerPreferencesPool,
+  SingleAttestationPool,
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
@@ -64,6 +66,7 @@ import {PqAggregationScheduler} from "./pq/aggregationScheduler.js";
 import {IPqVerifier} from "./pq/index.js";
 import {PqTiming} from "./pq/timing.js";
 import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
+import {ProposerTracker} from "./proposerTracker.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {
@@ -104,7 +107,7 @@ export interface IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
   earliestAvailableSlot: Slot;
-  readonly executionEngine: IExecutionEngine;
+  readonly executionEngine: ForkChoiceExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   readonly builderCircuitBreaker: BuilderCircuitBreaker;
   readonly builderApiClient: BuilderApiClient;
@@ -133,6 +136,8 @@ export interface IBeaconChain {
   // Ops pool
   readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
+  readonly singleAttestationPool: SingleAttestationPool;
+  readonly proposerTracker: ProposerTracker;
   readonly pqTiming: PqTiming | null;
   readonly pqAttestationPool: PqAttestationPool;
   readonly pqAggregationScheduler: PqAggregationScheduler;
@@ -240,7 +245,6 @@ export interface IBeaconChain {
     root: RootHex
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
   getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
-  getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
   getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]>;
   getSerializedDataColumnSidecars(
     blockSlot: Slot,
@@ -309,8 +313,8 @@ export interface IBeaconChain {
     postState: IBeaconStateView,
     block: SignedBeaconBlock
   ): Promise<void>;
+  persistInvalidSignature(state: IBeaconStateView, block: SignedBeaconBlock): Promise<void>;
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string, rootHex?: RootHex): void;
-  persistInvalidSszBytes(type: string, sszBytes: Uint8Array, rootHex: RootHex, suffix?: string): void;
   regenStateForAttestationVerification(
     attEpoch: Epoch,
     shufflingDependentRoot: RootHex,

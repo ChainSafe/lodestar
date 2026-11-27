@@ -50,9 +50,7 @@ pub fn processExecutionPayloadBid(
 
         if (!(try canBuilderCoverBid(fork, state, builder_index, amount))) return error.BuilderInsufficientBalance;
 
-        if (verify_signature) {
-            if (!(try verifyExecutionPayloadBidSignature(fork, allocator, config, &builder.pubkey, signed_bid))) return error.InvalidBidSignature;
-        }
+        if (verify_signature and !(try verifyExecutionPayloadBidSignature(fork, allocator, config, &builder.pubkey, signed_bid))) return error.InvalidBidSignature;
     }
 
     if (bid.slot != state_slot) return error.BidSlotMismatch;
@@ -105,4 +103,8 @@ fn verifyExecutionPayloadBidSignature(
     const signature = bls.Signature.uncompress(&signed_bid.signature) catch return false;
     verify(&signing_root, &public_key, &signature, .{ .sig_groupcheck = true, .pk_validate = true }) catch return false;
     return true;
+}
+
+test {
+    _ = @import("process_execution_payload_bid_test.zig");
 }

@@ -25,22 +25,18 @@ pub const ValidatorStatus = enum {
         return std.meta.stringToEnum(ValidatorStatus, s);
     }
 
-    /// Check if this status matches a general category.
-    /// Categories: "pending", "active", "exited", "withdrawal"
-    pub fn matchesCategory(self: ValidatorStatus, category: []const u8) bool {
-        if (std.mem.eql(u8, category, "pending")) {
-            return self == .pending_initialized or self == .pending_queued;
-        }
-        if (std.mem.eql(u8, category, "active")) {
-            return self == .active_ongoing or self == .active_exiting or self == .active_slashed;
-        }
-        if (std.mem.eql(u8, category, "exited")) {
-            return self == .exited_unslashed or self == .exited_slashed;
-        }
-        if (std.mem.eql(u8, category, "withdrawal")) {
-            return self == .withdrawal_possible or self == .withdrawal_done;
-        }
-        return false;
+    /// General status: "pending", "active", "exited" or "withdrawal".
+    pub fn category(self: ValidatorStatus) [:0]const u8 {
+        return switch (self) {
+            .pending_initialized, .pending_queued => "pending",
+            .active_ongoing, .active_exiting, .active_slashed => "active",
+            .exited_unslashed, .exited_slashed => "exited",
+            .withdrawal_possible, .withdrawal_done => "withdrawal",
+        };
+    }
+
+    pub fn matchesCategory(self: ValidatorStatus, name: []const u8) bool {
+        return std.mem.eql(u8, self.category(), name);
     }
 };
 

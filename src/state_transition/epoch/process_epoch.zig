@@ -50,7 +50,7 @@ pub fn processEpoch(
 
     if (comptime fork.gte(.altair)) {
         timer = time.start(io);
-        try processInactivityUpdates(fork, config, epoch_cache, state, cache);
+        try processInactivityUpdates(fork, io, config, epoch_cache, state, cache);
         try observeEpochTransitionStep(.{ .step = .process_inactivity_updates }, @as(u64, @intCast(time.since(io, timer).nanoseconds)));
     }
 
@@ -65,7 +65,7 @@ pub fn processEpoch(
     try observeEpochTransitionStep(.{ .step = .process_slashings }, @as(u64, @intCast(time.since(io, timer).nanoseconds)));
 
     timer = time.start(io);
-    try processRewardsAndPenalties(fork, config, epoch_cache, state, cache, slashing_penalties);
+    try processRewardsAndPenalties(fork, io, config, epoch_cache, state, cache, slashing_penalties);
     try observeEpochTransitionStep(.{ .step = .process_rewards_and_penalties }, @as(u64, @intCast(time.since(io, timer).nanoseconds)));
 
     if (comptime fork.lt(.heze)) try processEth1DataReset(fork, state, cache);
@@ -85,7 +85,7 @@ pub fn processEpoch(
     }
 
     timer = time.start(io);
-    const num_update = try processEffectiveBalanceUpdates(fork, allocator, epoch_cache, state, cache);
+    const num_update = try processEffectiveBalanceUpdates(fork, allocator, io, epoch_cache, state, cache);
     try observeEpochTransitionStep(.{ .step = .process_effective_balance_updates }, @as(u64, @intCast(time.since(io, timer).nanoseconds)));
     metrics.state_transition.num_effective_balance_updates.set(@intCast(num_update));
 
@@ -114,14 +114,14 @@ pub fn processEpoch(
 
     if (comptime fork.gte(.fulu)) {
         timer = time.start(io);
-        try processProposerLookahead(fork, allocator, epoch_cache, state, cache);
+        try processProposerLookahead(fork, allocator, io, epoch_cache, state, cache);
         try observeEpochTransitionStep(.{ .step = .process_proposer_lookahead }, @as(u64, @intCast(time.since(io, timer).nanoseconds)));
     }
     if (comptime fork.gte(.gloas)) {
-        try processPtcWindow(fork, allocator, epoch_cache, state, cache);
+        try processPtcWindow(fork, allocator, io, epoch_cache, state, cache);
     }
     if (comptime fork == .pq) {
-        try processAggregationCommitteeWindow(fork, allocator, epoch_cache, state, cache);
+        try processAggregationCommitteeWindow(fork, allocator, io, epoch_cache, state, cache);
         try processPreregistrationExpiry(fork, allocator, state);
     }
 }

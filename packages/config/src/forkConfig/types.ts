@@ -58,6 +58,8 @@ export type ForkConfig = {
   getBlobParameters(epoch: Epoch): BlobParameters;
   /** Get the scheduled gas limit at a post-Gloas epoch, if an entry is active */
   getScheduledGasLimit(epoch: Epoch): number | undefined;
+  /** Get the minimum epoch range over which blocks must be retained and served at a given epoch */
+  getMinEpochsForBlockRequests(epoch: Epoch): number;
 
   getAttestationDueMs(fork: ForkName): number;
   /** From pq the aggregators of a committee take turns: `position` is the aggregator's in its aggregation committee */
@@ -68,6 +70,7 @@ export type ForkConfig = {
   getSyncContributionDueMs(fork: ForkName): number;
   getProposerReorgCutoffMs(fork: ForkName): number;
   getPayloadDueMs(fork: ForkName): number;
+  getPayloadAttestationDueMs(fork: ForkName): number;
   getInclusionListDueMs(fork: ForkName): number;
 
   /** Get slot duration in ms for a given fork */

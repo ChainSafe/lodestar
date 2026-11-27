@@ -137,6 +137,32 @@ export function getBeaconPoolApi({
               logger.debug("Error adding unaggregated attestation to pool", {subnet}, e as Error);
             }
 
+            // Collected only for vote slots that an upcoming block of a connected validator can include
+            if (isForkPostElectra(fork) && chain.proposerTracker.shouldCollect(slot)) {
+              try {
+                const insertOutcome = chain.singleAttestationPool.add(
+                  attestation as SingleAttestation<ForkPostElectra>,
+                  attDataRootHex,
+                  validatorCommitteeIndex,
+                  committeeSize
+                );
+                metrics?.opPool.singleAttestationPool.apiInsertOutcome.inc({insertOutcome});
+              } catch (e) {
+                logger.debug(
+                  "Error adding single attestation to pool",
+                  {
+                    slot,
+                    committeeIndex,
+                    validatorCommitteeIndex,
+                    validatorIndex: (attestation as SingleAttestation<ForkPostElectra>).attesterIndex,
+                    subnet,
+                    attDataRoot: attDataRootHex,
+                  },
+                  e as Error
+                );
+              }
+            }
+
             if (isForkPostElectra(fork)) {
               chain.emitter.emit(
                 routes.events.EventType.singleAttestation,
@@ -283,13 +309,15 @@ export function getBeaconPoolApi({
               metrics?.opPool.payloadAttestationPool.apiInsertOutcome.inc({insertOutcome});
             }
 
-            chain.forkChoice.notifyPtcMessages(
-              toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
-              payloadAttestationMessage.data.slot,
-              validatorCommitteeIndices,
-              payloadAttestationMessage.data.payloadPresent,
-              payloadAttestationMessage.data.blobDataAvailable
-            );
+            if (slot === chain.clock.currentSlot) {
+              chain.forkChoice.notifyPtcMessages(
+                toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+                payloadAttestationMessage.data.slot,
+                validatorCommitteeIndices,
+                payloadAttestationMessage.data.payloadPresent,
+                payloadAttestationMessage.data.blobDataAvailable
+              );
+            }
 
             chain.emitter.emit(routes.events.EventType.payloadAttestationMessage, {
               version: chain.config.getForkName(slot),

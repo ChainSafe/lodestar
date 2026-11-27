@@ -19,9 +19,10 @@ For MacOS, there is no direct equivalent package to Linux's `python3-distutils`.
 
 Lodestar relies on [Corepack](https://nodejs.org/api/corepack.html) and associated `packageManager` value to manage its package manager version.
 
-Make sure `corepack` is correctly enabled if you encounter some package manager related issues:
+Make sure `corepack` is correctly enabled if you encounter some package manager related issues. Node.js 26 no longer bundles Corepack, so install it first:
 
 ```bash
+npm install -g corepack # Node.js 26 only
 corepack enable
 ```
 

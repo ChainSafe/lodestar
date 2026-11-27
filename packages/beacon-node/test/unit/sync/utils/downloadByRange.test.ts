@@ -1,8 +1,13 @@
 import {beforeEach, describe, expect, it} from "vitest";
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {config} from "@lodestar/config/default";
+import {ForkName} from "@lodestar/params";
 import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {BlockInputNoData, BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {
+  BlockInputColumns,
+  BlockInputNoData,
+  BlockInputPreData,
+} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {
@@ -19,13 +24,14 @@ import {
   validateEnvelopesByRangeResponse,
   validateResponses,
 } from "../../../../src/sync/utils/downloadByRange.js";
-import {config, generateChainOfBlockMaybeSidecars, slots} from "../../../utils/blocksAndData.js";
+import {generateChainOfBlockMaybeSidecars} from "../../../utils/blocksAndData.js";
 
 /**
  * Logic errors and gaps identified during test case creation:
  *
  * INSERT_LOGIC_ERROR_BULLET_POINTS_HERE
  *
+ * - validateBlockByRangeResponse: Commented out zero blocks check breaks during chain liveness issues (line 445-453)
  * - validateBlobsByRangeResponse: Missing validation that blob sidecars are in consecutive (slot, index) order as per spec
  * - validateColumnsByRangeResponse: Missing validation that column sidecars are in consecutive (slot, index) order
  * - cacheByRangeResponses: Error handling for wrong chain only breaks loop but doesn't throw/propagate error properly
@@ -178,35 +184,6 @@ import {config, generateChainOfBlockMaybeSidecars, slots} from "../../../utils/b
 //   it("should validate column sidecars in parallel");
 //   it("should propagate validation errors from validateBlockDataColumnSidecars");
 // });
-
-describe("empty epoch", () => {
-  it("validateBlockByRangeResponse accepts zero blocks with a warning", () => {
-    const blocksRequest = {startSlot: slots.gloas, count: SLOTS_PER_EPOCH, step: 1};
-
-    const {result, warnings} = validateBlockByRangeResponse(config, blocksRequest, []);
-
-    expect(result).toEqual([]);
-    expect(warnings?.map((w) => w.type.code)).toEqual([DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE]);
-  });
-
-  it("validateResponses accepts zero blocks when columns and envelopes are also requested", async () => {
-    const startSlot = slots.gloas;
-
-    const {result} = await validateResponses({
-      config,
-      blocksRequest: {startSlot, count: SLOTS_PER_EPOCH, step: 1},
-      columnsRequest: {startSlot, count: SLOTS_PER_EPOCH, columns: [0, 1]},
-      envelopesRequest: {startSlot, count: SLOTS_PER_EPOCH},
-      blocks: [],
-      columnSidecars: [],
-      payloadEnvelopes: [],
-    });
-
-    expect(result.responses.validatedBlocks).toEqual([]);
-    expect(result.responses.validatedColumnSidecars).toBeUndefined();
-    expect(result.payloadEnvelopes?.size).toBe(0);
-  });
-});
 
 describe("getBlocksForDataValidation", () => {
   const forkName = ForkName.capella;
@@ -406,6 +383,62 @@ describe("getBlocksForDataValidation", () => {
 // });
 // });
 
+describe("0-block epoch", () => {
+  const blocksRequest = {startSlot: 64, count: 32, step: 1};
+  const columnsRequest = {startSlot: 64, count: 32, columns: [0, 1, 2, 3]};
+
+  it("validateBlockByRangeResponse returns no blocks with a MISSING_BLOCKS_RESPONSE warning", () => {
+    const {result, warnings} = validateBlockByRangeResponse(config, blocksRequest, []);
+    expect(result).toEqual([]);
+    expect(warnings?.map((w) => w.type.code)).toEqual([DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE]);
+  });
+
+  it("validateResponses skips by-range column validation when the range has no blocks", async () => {
+    const {result, warnings} = await validateResponses({
+      config,
+      blocksRequest,
+      columnsRequest,
+      blocks: [],
+      columnSidecars: [],
+    });
+    expect(result.responses.validatedBlocks).toEqual([]);
+    expect(result.responses.validatedColumnSidecars).toBeUndefined();
+    expect(warnings?.map((w) => w.type.code)).toEqual([DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE]);
+  });
+
+  it("validateResponses throws DATA_WITHOUT_BLOCKS for columns returned without blocks", async () => {
+    await expect(
+      validateResponses({
+        config,
+        blocksRequest,
+        columnsRequest,
+        blocks: [],
+        columnSidecars: [ssz.fulu.DataColumnSidecar.defaultValue()],
+      })
+    ).rejects.toMatchObject({type: {code: DownloadByRangeErrorCode.DATA_WITHOUT_BLOCKS, columnSidecarCount: 1}});
+  });
+
+  it.each([
+    {name: "with", withColumns: true},
+    {name: "without", withColumns: false},
+  ])(
+    "validateResponses throws DATA_WITHOUT_BLOCKS for envelopes returned without blocks, $name columns request",
+    async ({withColumns}) => {
+      await expect(
+        validateResponses({
+          config,
+          blocksRequest,
+          columnsRequest: withColumns ? columnsRequest : undefined,
+          envelopesRequest: {startSlot: blocksRequest.startSlot, count: blocksRequest.count},
+          blocks: [],
+          columnSidecars: [],
+          payloadEnvelopes: [ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue()],
+        })
+      ).rejects.toMatchObject({type: {code: DownloadByRangeErrorCode.DATA_WITHOUT_BLOCKS, payloadEnvelopeCount: 1}});
+    }
+  );
+});
+
 describe("validateEnvelopesByRangeResponse", () => {
   const blockHash = Buffer.alloc(32, 0x11);
   const block = ssz.gloas.SignedBeaconBlock.defaultValue();
@@ -564,5 +597,59 @@ describe("cacheByRangeResponses", () => {
     expect(entries.size).toBe(1);
     expect(existing.getPayloadEnvelope()).toBe(envelope);
     expect(payloadEnvelopes?.get(block.message.slot)).toBe(existing);
+  });
+
+  it("only adds fulu columns whose header signature matches the cached block", () => {
+    const cachedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+    cachedBlock.message.slot = 5;
+    cachedBlock.signature = Buffer.alloc(96, 0xaa);
+    const fuluBlockRoot = ssz.fulu.BeaconBlock.hashTreeRoot(cachedBlock.message);
+    const blockInput = BlockInputColumns.createFromBlock({
+      block: cachedBlock,
+      blockRootHex: toRootHex(fuluBlockRoot),
+      forkName: ForkName.fulu,
+      daOutOfRange: false,
+      source: BlockInputSource.gossip,
+      seenTimestampSec: 0,
+      sampledColumns: [0],
+      custodyColumns: [0],
+    });
+    const downloadedBlock = {...cachedBlock, signature: Buffer.alloc(96, 0xbb)};
+    const columnSidecar = ssz.fulu.DataColumnSidecar.defaultValue();
+    columnSidecar.signedBlockHeader.message.slot = cachedBlock.message.slot;
+    columnSidecar.signedBlockHeader.signature = downloadedBlock.signature;
+
+    function cacheColumns(): ReturnType<typeof cacheByRangeResponses> {
+      return cacheByRangeResponses({
+        cache: {getByBlock: () => blockInput},
+        seenPayloadEnvelopeInputCache: {
+          add: () => {
+            throw new Error("Not expected to add a payload input");
+          },
+          addFromBid: () => {
+            throw new Error("Not expected to add a payload input");
+          },
+        },
+        peerIdStr: "peer",
+        responses: {
+          validatedBlocks: [{block: downloadedBlock, blockRoot: fuluBlockRoot}],
+          validatedColumnSidecars: [{blockRoot: fuluBlockRoot, columnSidecars: [columnSidecar]}],
+        },
+        batchBlocks: [],
+        downloadedPayloadEnvelopes: null,
+        existingPayloadEnvelopes: null,
+        custodyConfig: {sampledColumns: [0], custodyColumns: [0]},
+        seenTimestampSec: 0,
+      });
+    }
+
+    const {signatureMismatch} = cacheColumns();
+    expect(signatureMismatch?.blockInput).toBe(blockInput);
+    expect(signatureMismatch?.columnSidecar).toBe(columnSidecar);
+    expect(blockInput.hasColumn(0)).toBe(false);
+
+    columnSidecar.signedBlockHeader.signature = cachedBlock.signature;
+    expect(cacheColumns().signatureMismatch).toBeNull();
+    expect(blockInput.hasColumn(0)).toBe(true);
   });
 });

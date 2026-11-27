@@ -1,17 +1,18 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
+import {ApiError} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {SecretKey} from "@lodestar/native/blst";
-import {ForkName} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
-import {BidLedger} from "../../../src/services/bidLedger.js";
+import {ErrorAborted, FetchError, TimeoutError, toRootHex} from "@lodestar/utils";
+import {BidLedger, BidLedgerError, BidLedgerErrorCode, BidLedgerErrorType} from "../../../src/services/bidLedger.js";
 import {ObservedBlock} from "../../../src/services/blockObserver.js";
 import {BuilderSigner} from "../../../src/services/builderSigner.js";
 import {PayloadStore} from "../../../src/services/payloadStore.js";
 import {ProposerPreferencesTracker} from "../../../src/services/proposerPreferencesTracker.js";
-import {Revealer} from "../../../src/services/revealer.js";
-import {getApiClientStub, mockApiResponse} from "../utils/apiStub.js";
+import {Revealer, isRetryableRevealError} from "../../../src/services/revealer.js";
+import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "../utils/apiStub.js";
 import {createBiddingModules, getPayloadSourceStub} from "../utils/bidding.js";
 import {ClockMock} from "../utils/clock.js";
 import {getMockedLogger} from "../utils/logger.js";
@@ -35,8 +36,12 @@ describe("Revealer", () => {
     logger = getMockedLogger();
     clock = new ClockMock();
     payloadStore = new PayloadStore();
+    ({ledger, revealer} = createModules());
+  });
+
+  function createModules(requestTimeout?: number): ReturnType<typeof createBiddingModules> {
     const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
-    ({ledger, revealer} = createBiddingModules({
+    return createBiddingModules({
       api,
       config,
       logger,
@@ -50,11 +55,12 @@ describe("Revealer", () => {
       payloadSource: getPayloadSourceStub(),
       signal: new AbortController().signal,
       index: builderIndex,
-    }));
-  });
+      requestTimeout,
+    });
+  }
 
   /** Block that selected a bid for a payload, optionally recorded as our bid and retained */
-  function selectedBlock({recordBid = true, retainPayload = true} = {}): ObservedBlock {
+  function selectedBlock({recordBid = true, retainPayload = true, value = 5} = {}): ObservedBlock {
     const payload = mockBuiltPayload({slot});
     const block = ssz.gloas.SignedBeaconBlock.defaultValue();
     block.message.slot = slot;
@@ -64,16 +70,14 @@ describe("Revealer", () => {
     signedBid.message.parentBlockHash = payload.executionPayload.parentHash;
     signedBid.message.parentBlockRoot = Buffer.alloc(32, 4);
     signedBid.message.blockHash = payload.executionPayload.blockHash;
+    signedBid.message.value = value;
     signedBid.message.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(payload.executionRequests);
     const blockHash = toRootHex(signedBid.message.blockHash);
 
     if (recordBid) {
+      // The ledger holds the bid we signed, not the one decoded from the block
       ledger.recordBid({
-        slot,
-        parentBlockHash: toRootHex(signedBid.message.parentBlockHash),
-        parentBlockRoot: toRootHex(signedBid.message.parentBlockRoot),
-        blockHash,
-        valueGwei: 5,
+        signedBid: ssz.gloas.SignedExecutionPayloadBid.clone(signedBid),
         signedBidRoot: toRootHex(ssz.gloas.SignedExecutionPayloadBid.hashTreeRoot(signedBid)),
       });
     }
@@ -115,14 +119,56 @@ describe("Revealer", () => {
   });
 
   it("ignores a block that selected another builder", async () => {
-    const observed = selectedBlock();
+    const observed = selectedBlock({value: 1_000_000_000});
     observed.signedBid.message.builderIndex = builderIndex + 1;
+    observed.signedBid.message.value = 2_500_000_000;
     observed.blockRoot = toRootHex(config.getForkTypes(observed.slot).BeaconBlock.hashTreeRoot(observed.block.message));
 
     await revealer.onBlock(observed);
 
     expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
     expect(ledger.getUnsettledValueGwei(0)).toBe(0);
+    expect(logger.info).toHaveBeenCalledWith("Execution payload bid not selected", {
+      slot,
+      blockRoot: observed.blockRoot,
+      builderIndex,
+      value: "1.00000 ETH",
+      selectedBuilderIndex: builderIndex + 1,
+      selectedValue: "2.50000 ETH",
+    });
+  });
+
+  it("logs a self-built block in a slot with own bid", async () => {
+    const observed = selectedBlock({value: 1_000_000_000});
+    observed.signedBid.message.builderIndex = BUILDER_INDEX_SELF_BUILD;
+    observed.signedBid.message.value = 0;
+
+    await revealer.onBlock(observed);
+
+    expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+    expect(logger.info).toHaveBeenCalledWith(
+      "Execution payload bid not selected",
+      expect.objectContaining({value: "1.00000 ETH", selectedBuilderIndex: "self-build", selectedValue: "0.00000 ETH"})
+    );
+  });
+
+  it("does not log a block built on a parent we did not bid on", async () => {
+    const observed = selectedBlock();
+    observed.signedBid.message.builderIndex = builderIndex + 1;
+    observed.signedBid.message.parentBlockRoot = Buffer.alloc(32, 0xaa);
+
+    await revealer.onBlock(observed);
+
+    expect(logger.info).not.toHaveBeenCalledWith("Execution payload bid not selected", expect.anything());
+  });
+
+  it("does not log a block of another builder in a slot without own bid", async () => {
+    const observed = selectedBlock({recordBid: false});
+    observed.signedBid.message.builderIndex = builderIndex + 1;
+
+    await revealer.onBlock(observed);
+
+    expect(logger.info).not.toHaveBeenCalledWith("Execution payload bid not selected", expect.anything());
   });
 
   it("records the win but cannot reveal a payload that is not retained", async () => {
@@ -137,15 +183,133 @@ describe("Revealer", () => {
 
   it("does not reveal after the cutoff", async () => {
     const observed = selectedBlock();
-    vi.spyOn(clock, "msFromSlot").mockReturnValue(
-      config.getSlotComponentDurationMs(ForkName.gloas, config.PAYLOAD_ATTESTATION_DUE_BPS) + 1
-    );
+    vi.spyOn(clock, "msFromSlot").mockReturnValue(config.getPayloadAttestationDueMs(ForkName.gloas) + 1);
 
     await revealer.onBlock(observed);
 
     expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
     expect(ledger.hasRevealed(observed.blockRoot)).toBe(false);
     expect(ledger.getUnsettledValueGwei(0)).toBe(5);
+  });
+
+  it("retries a transient publish failure within the reveal window", async () => {
+    const observed = selectedBlock();
+    api.beacon.publishExecutionPayloadEnvelope
+      .mockResolvedValueOnce(await mockApiErrorResponse(503))
+      .mockResolvedValueOnce(mockApiResponse({}));
+
+    await revealer.onBlock(observed);
+
+    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledTimes(2);
+    expect(logger.debug).toHaveBeenCalledWith(
+      "Retrying execution payload reveal",
+      expect.objectContaining({attempt: 2})
+    );
+    expect(logger.warn).not.toHaveBeenCalled();
+    expect(ledger.hasPublishedReveal(observed.blockRoot)).toBe(true);
+  });
+
+  it("retries a publish request that timed out", async () => {
+    const observed = selectedBlock();
+    api.beacon.publishExecutionPayloadEnvelope
+      .mockRejectedValueOnce(new TimeoutError("request"))
+      .mockResolvedValueOnce(mockApiResponse({}));
+
+    await revealer.onBlock(observed);
+
+    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledTimes(2);
+    // Each request is limited to less than the reveal window, the default request timeout would use it up
+    const cutoffMs = config.getSlotComponentDurationMs(ForkName.gloas, config.PAYLOAD_ATTESTATION_DUE_BPS);
+    for (const [i, [, init]] of api.beacon.publishExecutionPayloadEnvelope.mock.calls.entries()) {
+      expect(init?.timeoutMs, `publish call ${i}`).toBeLessThan(cutoffMs);
+    }
+    expect(ledger.hasPublishedReveal(observed.blockRoot)).toBe(true);
+  });
+
+  it.each([
+    {requestTimeout: 500, attemptTimeout: 500},
+    {requestTimeout: 10_000, attemptTimeout: 1000},
+  ])(
+    "limits a publish request to $attemptTimeout ms with a request timeout of $requestTimeout ms",
+    async ({requestTimeout, attemptTimeout}) => {
+      ({ledger, revealer} = createModules(requestTimeout));
+      api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(mockApiResponse({}));
+
+      await revealer.onBlock(selectedBlock());
+
+      expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledExactlyOnceWith(
+        expect.anything(),
+        expect.objectContaining({timeoutMs: attemptTimeout})
+      );
+    }
+  );
+
+  it.each([
+    {msToCutoff: 1200, limited: true},
+    {msToCutoff: 1199, limited: false},
+  ])("limits a publish request sent $msToCutoff ms before the cutoff: $limited", async ({msToCutoff, limited}) => {
+    const cutoffMs = config.getSlotComponentDurationMs(ForkName.gloas, config.PAYLOAD_ATTESTATION_DUE_BPS);
+    vi.spyOn(clock, "msFromSlot").mockReturnValue(cutoffMs - msToCutoff);
+    api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(mockApiResponse({}));
+
+    await revealer.onBlock(selectedBlock());
+
+    // The last request that can be sent before the cutoff uses the request timeout of the api client
+    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
+    expect(api.beacon.publishExecutionPayloadEnvelope.mock.calls[0][1]?.timeoutMs).toBe(limited ? 1000 : undefined);
+  });
+
+  it("only retries failures that can resolve while the reveal window is open", () => {
+    const fetchFailure = new FetchError(
+      "http://127.0.0.1:9596",
+      new TypeError("fetch failed", {
+        cause: Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:9596"), {code: "ECONNREFUSED"}),
+      })
+    );
+    const inputError = new FetchError(
+      "invalid-url",
+      new TypeError("Failed to parse URL from invalid-url", {
+        cause: Object.assign(new Error("Invalid URL"), {input: "invalid-url", code: "ERR_INVALID_URL"}),
+      })
+    );
+    const ledgerError = new BidLedgerError(
+      {code: BidLedgerErrorCode.INVALID_BID_VALUE} as BidLedgerErrorType,
+      "invalid bid value"
+    );
+    const route = "publishExecutionPayloadEnvelope";
+
+    expect(isRetryableRevealError(new ApiError("unavailable", 503, route))).toBe(true);
+    expect(isRetryableRevealError(new TimeoutError("request"))).toBe(true);
+    expect(isRetryableRevealError(fetchFailure)).toBe(true);
+    expect(isRetryableRevealError(new ApiError("bad request", 400, route))).toBe(false);
+    expect(isRetryableRevealError(new ApiError("not found", 404, route))).toBe(false);
+    expect(isRetryableRevealError(inputError)).toBe(false);
+    expect(isRetryableRevealError(new ErrorAborted("request"))).toBe(false);
+    expect(isRetryableRevealError(ledgerError)).toBe(false);
+    expect(isRetryableRevealError(Error("decode failed"))).toBe(false);
+  });
+
+  it("does not retry a rejected envelope", async () => {
+    const observed = selectedBlock();
+    api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(await mockApiErrorResponse(400));
+
+    await expect(revealer.onBlock(observed)).rejects.toThrow();
+
+    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
+    expect(ledger.hasPublishedReveal(observed.blockRoot)).toBe(false);
+  });
+
+  it("stops retrying once a reveal can no longer start before the cutoff", async () => {
+    const observed = selectedBlock();
+    const cutoffMs = config.getSlotComponentDurationMs(ForkName.gloas, config.PAYLOAD_ATTESTATION_DUE_BPS);
+    // Within the window when the block arrives, at the cutoff after the first failed attempt
+    vi.spyOn(clock, "msFromSlot").mockReturnValueOnce(0).mockReturnValue(cutoffMs);
+    api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(await mockApiErrorResponse(503));
+
+    await expect(revealer.onBlock(observed)).rejects.toThrow();
+
+    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
+    expect(ledger.hasPublishedReveal(observed.blockRoot)).toBe(false);
   });
 
   it("rejects a selected bid of our builder that was not recorded", async () => {

@@ -52,7 +52,7 @@ export class ChainPeersBalancer {
 
   /**
    * Return the most suitable peer to retry
-   * Sort peers by (1) less active requests (2) most columns we need.
+   * Sort peers by (1) fewer failed attempts for this batch (2) less active requests (3) most columns we need.
    * Peers that failed this batch or already succeeded for the same request are excluded inside `filterPeers`.
    */
   bestPeerToRetryBatch(batch: Batch): PeerSyncMeta | undefined {
@@ -63,9 +63,12 @@ export class ChainPeersBalancer {
     // TODO(fulu): This is fulu specific and hinders our peer selection PreFulu
     const pendingDataColumns = columnsRequest?.columns ?? this.custodyConfig.sampledColumns;
     const eligiblePeers = this.filterPeers(batch, pendingDataColumns, false);
+    const triedPeerCounts = batch.getTriedPeerCounts();
 
     const sortedBestPeers = sortBy(
       eligiblePeers,
+      // prefer peers not tried for this batch yet
+      ({syncInfo}) => triedPeerCounts.get(syncInfo.peerId) ?? 0,
       ({syncInfo}) => this.activeRequestsByPeer.get(syncInfo.peerId) ?? 0, // prefer peers with least active req
       ({columns}) => -1 * columns // prefer peers with the most columns
     );

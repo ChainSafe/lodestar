@@ -10,7 +10,7 @@ test "merge" {
     try std.testing.expect(merged_config.ALTAIR_FORK_EPOCH == old_altair_epoch + 1000);
 }
 
-test "Heze timing defaults preserve current slot durations" {
+test "Heze is unscheduled by default" {
     inline for (.{
         @import("networks/mainnet.zig"),
         @import("networks/minimal.zig"),
@@ -21,7 +21,6 @@ test "Heze timing defaults preserve current slot durations" {
     }) |network| {
         const chain = network.chain_config;
         try std.testing.expectEqual(std.math.maxInt(u64), chain.HEZE_FORK_EPOCH);
-        try std.testing.expectEqual(chain.SLOT_DURATION_MS, chain.SLOT_DURATION_MS_HEZE);
     }
 }
 
@@ -39,19 +38,16 @@ test "Heze fork versions are network specific" {
     }
 }
 
-test "merge preserves or overrides Heze timing independently" {
+test "merge preserves or overrides Heze fork epoch independently" {
     const chain = @import("networks/mainnet.zig").chain_config;
     const unchanged = chain.merge(.{});
     try std.testing.expectEqual(chain.HEZE_FORK_EPOCH, unchanged.HEZE_FORK_EPOCH);
-    try std.testing.expectEqual(chain.SLOT_DURATION_MS_HEZE, unchanged.SLOT_DURATION_MS_HEZE);
 
     const overrides: ChainConfig.OptionalChainConfig = .{
         .HEZE_FORK_EPOCH = 3,
-        .SLOT_DURATION_MS_HEZE = 4000,
     };
     const merged = chain.merge(overrides);
     try std.testing.expectEqual(3, merged.HEZE_FORK_EPOCH);
-    try std.testing.expectEqual(4000, merged.SLOT_DURATION_MS_HEZE);
     try std.testing.expectEqual(chain.SLOT_DURATION_MS, merged.SLOT_DURATION_MS);
     try std.testing.expectEqual(chain.SECONDS_PER_SLOT, merged.SECONDS_PER_SLOT);
 }
@@ -65,6 +61,5 @@ test "merge preserves or overrides Heze fork version independently" {
     const merged = chain.merge(.{ .HEZE_FORK_VERSION = version });
     try std.testing.expectEqualSlices(u8, &version, &merged.HEZE_FORK_VERSION);
     try std.testing.expectEqual(chain.HEZE_FORK_EPOCH, merged.HEZE_FORK_EPOCH);
-    try std.testing.expectEqual(chain.SLOT_DURATION_MS_HEZE, merged.SLOT_DURATION_MS_HEZE);
     try std.testing.expectEqualSlices(u8, &chain.GLOAS_FORK_VERSION, &merged.GLOAS_FORK_VERSION);
 }

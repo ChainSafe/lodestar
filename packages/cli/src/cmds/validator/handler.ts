@@ -48,8 +48,12 @@ import {logSigners, warnOrExitNoSigners} from "./signers/logSigners.js";
 
 /**
  * Runs a validator client.
+ * Set `exitOnShutdown` to false if something else in the process exits it after its own shutdown.
  */
-export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Promise<void> {
+export async function validatorHandler(
+  args: IValidatorCliArgs & GlobalArgs,
+  {exitOnShutdown = true}: {exitOnShutdown?: boolean} = {}
+): Promise<void> {
   const {config, network} = getBeaconConfigFromArgs(args);
 
   const {doppelgangerProtection} = args;
@@ -78,16 +82,17 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   const onGracefulShutdownCbs: (() => Promise<void> | void)[] = [];
   onGracefulShutdown(async () => {
-    let exitCode = 0;
     try {
       for (const cb of onGracefulShutdownCbs) await cb();
       logger.debug("Validator client closed");
     } catch (e) {
       logger.warn("Error closing validator client", {}, e as Error);
-      exitCode = 1;
+      process.exitCode = 1;
     }
-    // Explicitly exit process due to potential active handles (e.g. EventSource / in-flight HTTP via DVT middleware)
-    process.exit(exitCode);
+    if (exitOnShutdown) {
+      // Explicitly exit process due to potential active handles (e.g. EventSource / in-flight HTTP via DVT middleware)
+      process.exit(process.exitCode ?? 0);
+    }
   }, logger.info.bind(logger));
 
   // Callback for validator to request forced exit, in case of doppelganger detection
