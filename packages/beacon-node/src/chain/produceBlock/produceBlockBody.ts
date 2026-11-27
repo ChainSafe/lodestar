@@ -112,9 +112,9 @@ export type BlockAttributes = {
   graffiti: Bytes32;
   slot: Slot;
   parentBlock: ProtoBlock;
-  // the state of parentBlock dialing to slot
+  // the state of parentBlock processed to slot
   parentState: IBeaconStateView;
-  // parentStateWithPayload is the same to parentState for pre-gloas or if building on EMPTY
+  // parentStateWithPayload is the same as parentState for pre-gloas or if building on EMPTY
   parentStateWithPayload: IBeaconStateView;
   // Parent's execution requests, undefined pre-gloas.
   parentExecutionRequests?: gloas.ExecutionRequests;
@@ -289,8 +289,7 @@ export async function produceBlockBody<T extends BlockType>(
     // Get execution payload from EL
     let parentBlockHash: Bytes32;
     const stateAfterParentPayload = parentStateWithPayload as IBeaconStateViewGloas;
-    // Spec: should_build_on_full(store, head, slot), decided by the caller when applying the parent payload.
-    // Querying fork choice again could disagree with parentExecutionRequests if a late PTC vote flipped it.
+    // Spec: should_build_on_full(store, head, slot), decided by the caller when applying the parent payload
     const isBuildingOnFull = byteArrayEquals(
       stateAfterParentPayload.latestBlockHash,
       parentState.latestExecutionPayloadBid.blockHash
