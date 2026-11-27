@@ -1,0 +1,118 @@
+# Install Options
+
+Lodestar requires Node.js **24.22.1 or a newer 24.x release**, or **26.13.0 or a newer 26.x release**. Use the latest release of your chosen LTS line to receive security updates and bug fixes.
+
+For source installations, upgrade the Node.js runtime used by the service and restart Lodestar. Docker images and standalone binaries include their own runtime, so update those artifacts and restart to receive runtime updates. When building Docker images locally, use `docker build --pull` to refresh the base image.
+
+## Binaries
+
+Binaries can be downloaded from the Lodestar [release page](https://github.com/ChainSafe/lodestar/releases/latest) under the `Assets` section.
+
+The binaries bundle Node.js 26, which needs `libatomic1` on the host. Install it with `sudo apt-get install libatomic1` on Debian/Ubuntu or `sudo dnf install libatomic` on Fedora/RHEL.
+
+Run the following command to install the latest version
+
+```bash
+curl -fsSL https://chainsafe.github.io/lodestar/install | bash
+```
+
+## Docker Installation
+
+The [`chainsafe/lodestar`](https://hub.docker.com/r/chainsafe/lodestar) Docker Hub repository is maintained actively. It contains the `lodestar` CLI preinstalled.
+
+:::info
+The Docker Hub image tagged as `chainsafe/lodestar:next` is run on CI every commit on our `unstable` branch.
+For `stable` releases, the image is tagged as `chainsafe/lodestar:latest`.
+:::
+
+Ensure you have Docker installed by issuing the command:
+
+```bash
+docker -v
+```
+
+It should return a non error message such as `Docker version xxxx, build xxxx`.
+
+Pull, run the image and Lodestar should now be ready to use
+
+```bash
+docker pull chainsafe/lodestar
+docker run chainsafe/lodestar --help
+```
+
+:::info
+Docker is the recommended setup for Lodestar. Use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart) with Docker for detailed instructions.
+:::
+
+## Build from Source
+
+### Prerequisites
+
+Make sure to have [pnpm installed](https://pnpm.io/). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the latest 24.x (at least 24.22.1) or 26.x (at least 26.13.0) release of [Node.js](https://nodejs.org/en/).
+
+Building from source also requires [Zig 0.16.0](https://ziglang.org/download/) to compile the native bindings.
+
+:::info
+Lodestar supports Node.js 24.22.1 and newer releases within the 24.x LTS line, and Node.js 26.13.0 and newer releases within the 26.x LTS line.
+It is important to make sure the NodeJS version is not changed after reboot by setting a default `nvm alias default <version> && nvm use default`.
+:::
+
+:::note
+Node Version Manager (NVM) will only install NodeJS for use with the active user. If you intend on setting up Lodestar to run under another user, we recommend using [NodeSource's source for NodeJS](https://github.com/nodesource/distributions/blob/master/README.md#installation-instructions) so you can install NodeJS globally.
+:::
+
+### Clone repository
+
+Clone the repository locally and build from the stable release branch.
+
+```bash
+git clone -b stable https://github.com/chainsafe/lodestar.git
+```
+
+Switch to created directory.
+
+```bash
+cd lodestar
+```
+
+### Install packages
+
+Install across all packages. Lodestar follows a [monorepo](https://github.com/lerna/lerna) structure, so all commands below must be run in the project root.
+
+```bash
+pnpm install
+```
+
+### Build source code
+
+Build across all packages.
+
+```bash
+pnpm run build
+```
+
+### Lodestar CLI
+
+Lodestar should now be ready for use.
+
+```bash
+./lodestar --help
+```
+
+See [Command Line Reference](./../beacon-management/beacon-cli.md) for further information.
+
+### Known Issues
+
+**ModuleNotFoundError: No module named 'distutils'**
+
+If you stump upon this issue while running `pnpm install`, it's because Python 3.12 had removed `distutils` package. That package is required for node build tool. You can install it with following command.
+
+```bash
+pip3 install setuptools --force-reinstall --user
+```
+
+## Install from NPM [not recommended]
+
+:::danger
+For mainnet (production) usage, we only recommend installing with Docker, using binaries or building from source due to [NPM supply chain attacks](https://hackaday.com/2021/10/22/supply-chain-attack-npm-library-used-by-facebook-and-others-was-compromised/). Until a [safer installation method has been found](https://github.com/ChainSafe/lodestar/issues/3596), do not use this install method except for experimental purposes only.
+:::
