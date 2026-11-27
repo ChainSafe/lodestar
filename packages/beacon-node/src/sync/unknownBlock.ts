@@ -1501,10 +1501,22 @@ export class BlockInputSync {
         return;
       }
       if (validationResult.err) {
+        const err = validationResult.err;
+        const {envelopePeerId} = pendingPayload;
+        // Same penalties as for an envelope validated right after download in fetchPayloadInput
+        if (
+          envelopePeerId !== undefined &&
+          err instanceof ExecutionPayloadEnvelopeError &&
+          (pendingPayload.envelope.message.payload.slotNumber !== payloadInput.slot ||
+            toRootHex(pendingPayload.envelope.message.payload.blockHash) !== payloadInput.getBlockHashHex())
+        ) {
+          this.network.reportPeer(envelopePeerId, PeerAction.LowToleranceError, err.type.code);
+        }
+
         this.logger.debug(
           "Pending payload envelope failed validation after block import, refetching by root",
           {slot: pendingPayload.envelope.message.payload.slotNumber, root: rootHex},
-          validationResult.err
+          err
         );
 
         const pendingPayloadByRoot: PendingPayloadRootHex = {
@@ -1514,6 +1526,10 @@ export class BlockInputSync {
           timeAddedSec: pendingPayload.timeAddedSec,
           peerIdStrings: new Set(pendingPayload.peerIdStrings),
         };
+        // Do not prefer the peer whose envelope just failed validation
+        if (envelopePeerId !== undefined) {
+          pendingPayloadByRoot.peerIdStrings.delete(envelopePeerId);
+        }
         this.pendingPayloads.set(rootHex, pendingPayloadByRoot);
 
         if (this.network.getConnectedPeers().length > 0) {
@@ -1722,6 +1738,8 @@ export class BlockInputSync {
       ? cacheItem.payloadInput
       : await this.chain.seenPayloadEnvelopeInputCache.getOrReload(rootHex);
     let envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
+    // An envelope downloaded in an earlier attempt is validated with the peer of a later one
+    let envelopePeerId: PeerIdStr | undefined;
 
     const fetchStartSec = Date.now() / 1000;
     if (typeof slot === "number") {
@@ -1769,6 +1787,7 @@ export class BlockInputSync {
       try {
         if (!envelope) {
           envelope = await this.fetchExecutionPayloadEnvelope(peerId, blockRoot, rootHex);
+          envelopePeerId = peerId;
           cacheItem.peerIdStrings.add(peerId);
           const slotWasUnknown = typeof slot !== "number";
           slot = envelope.message.payload.slotNumber;
@@ -1792,6 +1811,7 @@ export class BlockInputSync {
           return {
             status: PendingPayloadInputStatus.waitingForBlock,
             envelope,
+            envelopePeerId,
             timeAddedSec: cacheItem.timeAddedSec,
             peerIdStrings: cacheItem.peerIdStrings,
           };
@@ -1877,24 +1897,39 @@ export class BlockInputSync {
           excludedPeers.add(peerId);
         }
 
+        // Honest peers serve the requested root and columns, and every path that stores payload columns verifies them
+        if (e instanceof DownloadByRootError || e instanceof DataColumnSidecarValidationError) {
+          this.network.reportPeer(peerId, PeerAction.LowToleranceError, e.type.code);
+        }
+
         if (e instanceof ExecutionPayloadEnvelopeError) {
-          switch (e.type.code) {
-            // Caused by local state, the downloaded envelope may still be valid
-            case ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN:
-            case ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN:
-            case ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING:
-            case ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE:
-              break;
-            // Every copy fails once the block is finalized, only a wrong slot makes the served copy invalid
-            case ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK:
-              if (envelope?.message.payload.slotNumber !== payloadInput?.slot) {
+          // Range sync stores an envelope after checking only its root, slot and block hash, so an honest peer may
+          // serve one that fails the other checks. Compared directly since validation stops at the first failure.
+          if (
+            envelope !== undefined &&
+            payloadInput &&
+            (envelope.message.payload.slotNumber !== payloadInput.slot ||
+              toRootHex(envelope.message.payload.blockHash) !== payloadInput.getBlockHashHex())
+          ) {
+            if (envelopePeerId !== undefined) {
+              this.network.reportPeer(envelopePeerId, PeerAction.LowToleranceError, e.type.code);
+            }
+            envelope = payloadInput.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
+          } else {
+            switch (e.type.code) {
+              // Caused by local state, the downloaded envelope may still be valid
+              case ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN:
+              case ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN:
+              case ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING:
+              case ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE:
+              // Every copy fails once the block is finalized
+              case ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK:
+                break;
+              // The served copy is invalid, take the envelope from payloadInput or another peer on the next attempt
+              default:
                 envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
-              }
-              break;
-            // The served copy is invalid, take the envelope from payloadInput or another peer on the next attempt
-            default:
-              envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
-              break;
+                break;
+            }
           }
         }
       } finally {
@@ -1931,7 +1966,12 @@ export class BlockInputSync {
 
     const receivedRootHex = toRootHex(envelope.message.beaconBlockRoot);
     if (receivedRootHex !== rootHex) {
-      throw new Error(`Execution payload envelope root mismatch requested=${rootHex} received=${receivedRootHex}`);
+      throw new DownloadByRootError({
+        code: DownloadByRootErrorCode.MISMATCH_BLOCK_ROOT,
+        peer: prettyPrintPeerIdStr(peerIdStr),
+        requestedBlockRoot: rootHex,
+        receivedBlockRoot: receivedRootHex,
+      });
     }
 
     return envelope;
@@ -1960,9 +2000,13 @@ export class BlockInputSync {
     const requestedColumnsSet = new Set(requestedColumns);
     const extraColumns = columnSidecars.filter((columnSidecar) => !requestedColumnsSet.has(columnSidecar.index));
     if (extraColumns.length > 0) {
-      throw new Error(
-        `Received unexpected payload data columns indices=${prettyPrintIndices(extraColumns.map((column) => column.index))}`
-      );
+      throw new DownloadByRootError({
+        code: DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED,
+        peer: prettyPrintPeerIdStr(peerIdStr),
+        slot: payloadInput.slot,
+        blockRoot: payloadInput.blockRootHex,
+        invalidIndices: prettyPrintIndices(extraColumns.map((column) => column.index)),
+      });
     }
 
     // PayloadEnvelopeInput already carries the block slot, root, and commitments, so reuse the
@@ -1999,7 +2043,20 @@ export class BlockInputSync {
 
     let i = 0;
     let deferredByRateLimit = false;
+    let requestedWhenReconstructable = false;
     while (i++ < this.getMaxDownloadAttempts()) {
+      const reconstructable =
+        isPendingBlockInput(cacheItem) &&
+        isBlockInputColumns(cacheItem.blockInput) &&
+        cacheItem.blockInput.hasBlockAndAllData();
+      // Reconstruction recovers whole rows however many columns are missing, so only one more request is worth it,
+      // further peers could each hold the import until their response times out
+      if (reconstructable) {
+        if (requestedWhenReconstructable) {
+          break;
+        }
+        requestedWhenReconstructable = true;
+      }
       const pendingColumns =
         isPendingBlockInput(cacheItem) && isBlockInputColumns(cacheItem.blockInput)
           ? new Set(cacheItem.blockInput.getMissingSampledColumnMeta().missing)
@@ -2014,6 +2071,10 @@ export class BlockInputSync {
         now
       );
       if (peerMeta === null) {
+        if (reconstructable) {
+          break;
+        }
+
         const retryAt = this.peerBalancer.getNextRateLimitRetryAt(pendingColumns, excludedPeers, now);
         if (retryAt !== null) {
           throw new UnknownBlockRateLimitedError(
@@ -2061,6 +2122,10 @@ export class BlockInputSync {
             // A partial response is legal, columns that were not requested are not
             if (warning.type.code === DownloadByRootErrorCode.EXTRA_SIDECAR_RECEIVED) {
               this.network.reportPeer(peerId, PeerAction.LowToleranceError, warning.type.code);
+              excludedPeers.add(peerId);
+            }
+            // Not picked again for this block, it would be preferred as a previous source of it
+            if (warning.type.code === DownloadByRootErrorCode.NOT_ENOUGH_SIDECARS_RECEIVED) {
               excludedPeers.add(peerId);
             }
           }
@@ -2153,6 +2218,30 @@ export class BlockInputSync {
     } // end while loop over peers
 
     const message = `Error fetching BlockInput with slot=${slot} root=${rootHex} after ${i - 1} attempts.`;
+
+    if (
+      isPendingBlockInput(cacheItem) &&
+      isBlockInputColumns(cacheItem.blockInput) &&
+      cacheItem.blockInput.hasBlockAndAllData()
+    ) {
+      // Peers cannot serve the remaining columns now, half of them is enough to reconstruct the rest
+      this.logger.verbose("BlockInputSync.fetchBlockInput: reconstructing columns peers could not serve", {
+        slot,
+        rootHex,
+        missing: cacheItem.blockInput.getMissingSampledColumnMeta().missing.length,
+      });
+      this.chain.columnReconstructionTracker.triggerColumnReconstruction(cacheItem.blockInput);
+      cacheItem = {...cacheItem, status: PendingBlockInputStatus.downloaded, timeSyncedSec: Date.now() / 1000};
+      if (this.pendingBlocks.has(rootHex)) {
+        this.pendingBlocks.set(rootHex, cacheItem);
+      }
+      const result = this.chain.forkChoice.hasBlockHex(cacheItem.blockInput.parentRootHex)
+        ? FetchResult.SuccessResolved
+        : FetchResult.SuccessMissingParent;
+      this.metrics?.blockInputSync.fetchTime.observe({result}, Date.now() / 1000 - fetchStartSec);
+      this.metrics?.blockInputSync.fetchPeers.set({result}, i - 1);
+      return cacheItem;
+    }
 
     const retryAt = deferredByRateLimit ? this.peerBalancer.getNextRateLimitRetryAt() : null;
     if (retryAt !== null) {

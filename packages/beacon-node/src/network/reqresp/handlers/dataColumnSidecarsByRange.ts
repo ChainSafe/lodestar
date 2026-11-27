@@ -216,7 +216,7 @@ export function validateDataColumnSidecarsByRangeRequest(
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
-  // Spec: [max(compute_blob_data_retention_start_epoch(current_epoch), FULU_FORK_EPOCH), current_epoch]
+  // Spec: [max(current_epoch - MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, FULU_FORK_EPOCH), current_epoch]
   const minimumRequestEpoch = Math.max(getBlobDataRetentionStartEpoch(config, currentEpoch), config.FULU_FORK_EPOCH);
   if (computeEpochAtSlot(startSlot) < minimumRequestEpoch) {
     throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "startSlot is before the blob data retention window");

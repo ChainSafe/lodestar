@@ -2,7 +2,7 @@ import {Logger} from "@lodestar/logger";
 import {ForkName, ForkPostFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, bellatrix} from "@lodestar/types";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {isErrorAborted} from "@lodestar/utils";
+import {ErrorAborted, isErrorAborted} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
@@ -11,6 +11,8 @@ import {JobItemQueue} from "../../util/queue/index.js";
 import {
   ClientVersion,
   ExecutePayloadResponse,
+  ExecutionEngineError,
+  ExecutionEngineErrorCode,
   ExecutionEngineState,
   ExecutionPayloadStatus,
   ForkchoiceUpdatedResult,
@@ -334,13 +336,18 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
+    payloadAttributes?: PayloadAttributes,
+    signal?: AbortSignal
   ): Promise<ForkchoiceUpdatedResult> {
-    const result = await this.enqueue(() =>
-      this.withTransport(fork, undefined, (transport) =>
-        transport.forkchoiceUpdated(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes)
-      )
-    );
+    const result = await this.enqueue(() => {
+      // Aborted while waiting in the queue, do not select a transport and sign a request that is not sent
+      if (signal?.aborted) {
+        throw new ErrorAborted("notifyForkchoiceUpdate");
+      }
+      return this.withTransport(fork, undefined, (transport) =>
+        transport.forkchoiceUpdated(fork, headBlockHash, safeBlockHash, finalizedBlockHash, payloadAttributes, signal)
+      );
+    });
     const {
       payloadStatus: {status},
       payloadId,
@@ -373,7 +380,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       case ExecutionPayloadStatus.SYNCING:
         // Throw error on syncing if requested to produce a block, else silently ignore
         if (payloadAttributes) {
-          throw Error("Execution Layer Syncing");
+          throw new ExecutionEngineError({code: ExecutionEngineErrorCode.SYNCING}, "Execution Layer Syncing");
         }
         return result;
 
@@ -394,7 +401,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async getPayload(
     fork: ForkName,
-    payloadId: PayloadId
+    payloadId: PayloadId,
+    signal?: AbortSignal
   ): Promise<{
     executionPayload: ExecutionPayload;
     executionPayloadValue: Wei;
@@ -402,7 +410,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionRequests?: ExecutionRequests;
     shouldOverrideBuilder?: boolean;
   }> {
-    return this.withTransport(fork, undefined, (transport) => transport.getPayload(fork, payloadId));
+    return this.withTransport(fork, undefined, (transport) => transport.getPayload(fork, payloadId, signal));
   }
 
   async prunePayloadIdCache(): Promise<void> {
