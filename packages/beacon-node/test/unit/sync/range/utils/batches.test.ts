@@ -230,6 +230,7 @@ describe("sync / range / batches", () => {
     function fakeBatch(startSlot: Slot, blockSlots: Slot[] = [], payloadSlots: Slot[] = []): Batch {
       return {
         startSlot,
+        count: SLOTS_PER_EPOCH,
         getBlocks: () => blockSlots.map((slot) => ({slot}) as IBlockInput),
         getPayloadEnvelopes: () =>
           payloadSlots.length > 0
@@ -259,11 +260,11 @@ describe("sync / range / batches", () => {
       const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
       signedBlock.message.slot = startSlot;
       const err = new BlockError(signedBlock, {code: BlockErrorCode.NON_LINEAR_SLOTS});
-      expect(classifyProcessingFault(err, batch, undefined)).toBe(ProcessingFaultKind.CurrentBatch);
+      expect(classifyProcessingFault(err, batch, undefined).kind).toBe(ProcessingFaultKind.CurrentBatch);
     });
 
     it("non-BlockError => CurrentBatch", () => {
-      expect(classifyProcessingFault(new Error("boom"), batch, undefined)).toBe(ProcessingFaultKind.CurrentBatch);
+      expect(classifyProcessingFault(new Error("boom"), batch, undefined).kind).toBe(ProcessingFaultKind.CurrentBatch);
     });
 
     it("internal-linkage codes => CurrentBatch, never escalate", () => {
@@ -274,60 +275,105 @@ describe("sync / range / batches", () => {
         parentBlockHash: "0x00",
         expectedBlockHash: "0x11",
       });
-      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [startSlot - 3]))).toBe(
+      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [startSlot - 3])).kind).toBe(
         ProcessingFaultKind.CurrentBatch
       );
     });
 
-    it("PARENT_BLOCK_UNKNOWN at startSlot with a previous batch => PreviousBatch", () => {
+    it("PARENT_BLOCK_UNKNOWN at startSlot with a previous batch => ParentBatch", () => {
       const err = parentError(BlockErrorCode.PARENT_BLOCK_UNKNOWN, startSlot);
-      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [startSlot - 1]))).toBe(
-        ProcessingFaultKind.PreviousBatch
+      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [startSlot - 1])).kind).toBe(
+        ProcessingFaultKind.ParentBatch
       );
     });
 
     it("PARENT_BLOCK_UNKNOWN at startSlot with no previous batch => CurrentBatch", () => {
       const err = parentError(BlockErrorCode.PARENT_BLOCK_UNKNOWN, startSlot);
-      expect(classifyProcessingFault(err, batch, undefined)).toBe(ProcessingFaultKind.CurrentBatch);
+      expect(classifyProcessingFault(err, batch, undefined).kind).toBe(ProcessingFaultKind.CurrentBatch);
     });
 
-    it("PARENT_PAYLOAD_UNKNOWN at startSlot with a previous batch => PreviousBatch", () => {
+    it("PARENT_PAYLOAD_UNKNOWN at startSlot with a previous batch => ParentBatch", () => {
       const err = parentError(BlockErrorCode.PARENT_PAYLOAD_UNKNOWN, startSlot);
-      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [], [startSlot - 1]))).toBe(
-        ProcessingFaultKind.PreviousBatch
+      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [], [startSlot - 1])).kind).toBe(
+        ProcessingFaultKind.ParentBatch
       );
     });
 
     it("PARENT_PAYLOAD_UNKNOWN at startSlot with no previous batch => CurrentBatch", () => {
       const err = parentError(BlockErrorCode.PARENT_PAYLOAD_UNKNOWN, startSlot);
-      expect(classifyProcessingFault(err, batch, undefined)).toBe(ProcessingFaultKind.CurrentBatch);
+      expect(classifyProcessingFault(err, batch, undefined).kind).toBe(ProcessingFaultKind.CurrentBatch);
     });
 
     it("PARENT_BLOCK_UNKNOWN after startSlot, prev batch delivered tail block => CurrentBatch", () => {
       const err = parentError(BlockErrorCode.PARENT_BLOCK_UNKNOWN, startSlot + 1);
-      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [startSlot - 1]))).toBe(
+      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [startSlot - 1])).kind).toBe(
         ProcessingFaultKind.CurrentBatch
       );
     });
 
     it("PARENT_BLOCK_UNKNOWN after startSlot, prev batch missing tail block => Ambiguous", () => {
       const err = parentError(BlockErrorCode.PARENT_BLOCK_UNKNOWN, startSlot + 1);
-      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [startSlot - 3]))).toBe(
+      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [startSlot - 3])).kind).toBe(
         ProcessingFaultKind.Ambiguous
       );
     });
 
-    it("PARENT_BLOCK_UNKNOWN after startSlot, prevBatch undefined => Ambiguous", () => {
+    it("PARENT_BLOCK_UNKNOWN after startSlot, parentBatch undefined => CurrentBatch", () => {
       const err = parentError(BlockErrorCode.PARENT_BLOCK_UNKNOWN, startSlot + 1);
-      expect(classifyProcessingFault(err, batch, undefined)).toBe(ProcessingFaultKind.Ambiguous);
+      expect(classifyProcessingFault(err, batch, undefined).kind).toBe(ProcessingFaultKind.CurrentBatch);
     });
 
     it("PARENT_PAYLOAD_UNKNOWN after startSlot keys off prev batch tail payload", () => {
       const err = parentError(BlockErrorCode.PARENT_PAYLOAD_UNKNOWN, startSlot + 1);
-      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [], [startSlot - 1]))).toBe(
+      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [], [startSlot - 1])).kind).toBe(
         ProcessingFaultKind.CurrentBatch
       );
-      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [], []))).toBe(ProcessingFaultKind.Ambiguous);
+      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [], [])).kind).toBe(
+        ProcessingFaultKind.Ambiguous
+      );
+    });
+
+    describe("parentBatch followed by 0-block batches", () => {
+      // parentBatch at epoch -3 relative to `batch`, with 0-block epochs in between
+      const parentStartSlot = startSlot - 3 * SLOTS_PER_EPOCH;
+      const parentTailSlot = parentStartSlot + SLOTS_PER_EPOCH - 1;
+
+      it("PARENT_BLOCK_UNKNOWN at startSlot => ParentBatch carrying parentBatch", () => {
+        const err = parentError(BlockErrorCode.PARENT_BLOCK_UNKNOWN, startSlot);
+        const parentBatch = fakeBatch(parentStartSlot, [parentTailSlot]);
+        expect(classifyProcessingFault(err, batch, parentBatch)).toEqual({
+          kind: ProcessingFaultKind.ParentBatch,
+          parentBatch,
+        });
+      });
+
+      it("PARENT_BLOCK_UNKNOWN after startSlot, parentBatch delivered its tail block => Ambiguous", () => {
+        const err = parentError(BlockErrorCode.PARENT_BLOCK_UNKNOWN, startSlot + 1);
+        const parentBatch = fakeBatch(parentStartSlot, [parentTailSlot]);
+        expect(classifyProcessingFault(err, batch, parentBatch)).toEqual({
+          kind: ProcessingFaultKind.Ambiguous,
+          parentBatch,
+        });
+      });
+
+      it("PARENT_BLOCK_UNKNOWN after startSlot, parentBatch missing its tail block => Ambiguous", () => {
+        const err = parentError(BlockErrorCode.PARENT_BLOCK_UNKNOWN, startSlot + 1);
+        const parentBatch = fakeBatch(parentStartSlot, [parentTailSlot - 2]);
+        expect(classifyProcessingFault(err, batch, parentBatch)).toEqual({
+          kind: ProcessingFaultKind.Ambiguous,
+          parentBatch,
+        });
+      });
+
+      it("PARENT_PAYLOAD_UNKNOWN after startSlot => Ambiguous regardless of parentBatch tail payload", () => {
+        const err = parentError(BlockErrorCode.PARENT_PAYLOAD_UNKNOWN, startSlot + 1);
+        expect(classifyProcessingFault(err, batch, fakeBatch(parentStartSlot, [], [parentTailSlot])).kind).toBe(
+          ProcessingFaultKind.Ambiguous
+        );
+        expect(classifyProcessingFault(err, batch, fakeBatch(parentStartSlot, [], [])).kind).toBe(
+          ProcessingFaultKind.Ambiguous
+        );
+      });
     });
   });
 

@@ -61,10 +61,7 @@ export class PtcService {
       return;
     }
 
-    const payloadAttestationDueMs = this.config.getSlotComponentDurationMs(
-      fork,
-      this.config.PAYLOAD_ATTESTATION_DUE_BPS
-    );
+    const payloadAttestationDueMs = this.config.getPayloadAttestationDueMs(fork);
     // Submit as soon as the canonical head block's payload is available, or at the deadline
     const payloadAvailable = new AbortController();
     try {
@@ -151,9 +148,7 @@ export class PtcService {
     );
 
     this.metrics?.ptcStepCallPublishPayloadAttestation.observe(
-      this.clock.secFromSlot(slot) -
-        this.config.getSlotComponentDurationMs(this.config.getForkName(slot), this.config.PAYLOAD_ATTESTATION_DUE_BPS) /
-          1000
+      this.clock.secFromSlot(slot) - this.config.getPayloadAttestationDueMs(this.config.getForkName(slot)) / 1000
     );
 
     if (payloadAttestationMessages.length > 0) {

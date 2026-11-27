@@ -288,8 +288,8 @@ pub fn getAttestationDueMs(self: *const BeaconConfig, fork: ForkSeq) u64 {
     return self.getSlotComponentDurationMs(fork, self.chain.ATTESTATION_DUE_BPS);
 }
 
-pub fn getSlotDurationMs(self: *const BeaconConfig, fork: ForkSeq) u64 {
-    return if (fork.gte(.heze)) self.chain.SLOT_DURATION_MS_HEZE else self.chain.SLOT_DURATION_MS;
+pub fn getSlotDurationMs(self: *const BeaconConfig, _: ForkSeq) u64 {
+    return self.chain.SLOT_DURATION_MS;
 }
 
 pub fn getInclusionListDueMs(self: *const BeaconConfig, fork: ForkSeq) u64 {

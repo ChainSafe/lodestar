@@ -78,11 +78,6 @@ export const defaultSkipOpts: SkipOpts = {
     // All networks have already completed the merge, so this code path is no longer needed.
     /^bellatrix\/fork_choice\/on_merge_block\/.*/,
     /^.+\/light_client\/data_collection\/.*/,
-    // The gossip harness still lacks coverage for parent validation and voluntary-exit anchors.
-    /^.+\/networking\/gossip_beacon_block\/.*$/,
-    /^.+\/networking\/gossip_voluntary_exit\/.*$/,
-    // Deneb+ epoch-boundary attestations and Electra+ single attestations need harness updates.
-    /^(deneb|electra|fulu|gloas|heze)\/networking\/gossip_beacon_(attestation|aggregate_and_proof)\/.*$/,
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
@@ -95,6 +90,10 @@ export const defaultSkipOpts: SkipOpts = {
     // Legacy blob sidecars are not tracked for these forks, so the runner does not load the blobs and the
     // block imports successfully. See https://github.com/ChainSafe/lodestar/issues/9956
     /^(deneb|electra)\/fork_choice\/on_block\/pyspec_tests\/invalid_(incorrect_proof|data_unavailable|wrong_blobs_length|wrong_proofs_length)$/,
+    // v1.7.0-beta.5 compliance vector expects no proposer boost at step 119, but pyspec boosts the block there too:
+    // the consensus-specs reference runner (tests/generators/compliance_runners/fork_choice/runner/test_run.py)
+    // fails this case at the same proposer_boost_root check
+    /^gloas\/fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_5_196133628_1$/,
   ],
   skippedRunners: [],
   // Gossip handlers not implemented in the spec runner.
@@ -103,7 +102,6 @@ export const defaultSkipOpts: SkipOpts = {
     "gossip_data_column_sidecar",
     "gossip_partial_data_column_sidecar",
     "gossip_execution_payload_bid",
-    "gossip_execution_payload_envelope",
     "gossip_payload_attestation_message",
     "gossip_proposer_preferences",
   ],
